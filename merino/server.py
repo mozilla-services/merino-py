@@ -5,7 +5,7 @@ from sanic import Sanic, Request
 from sanic.response import json
 from dockerflow.sanic import Dockerflow
 
-from merino.providers import wikipedia, adm, base
+from merino.providers import adm, base
 
 log_config = {
     'version': 1,
@@ -37,7 +37,6 @@ dockerflow = Dockerflow(app)
 async def main_start(_):
     providers: Dict[str, base.BaseProvider] = {
         "adm": adm.Provider(),
-        "wiki": wikipedia.Provider()
     }
     app.ctx.providers = providers
     app.ctx.default_providers = [p for p in providers.values() if p.enabled_by_default() ]
