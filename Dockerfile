@@ -20,9 +20,9 @@ RUN useradd -m -g app --uid 10001 -s /usr/sbin/nologin app
 RUN pip install --no-cache-dir -r requirements.txt
 
 USER app
+
 # Run the web service on container startup. Here we use the gunicorn
 # webserver, with one worker process and 8 threads.
 # For environments with multiple CPU cores, increase the number of workers
 # to be equal to the cores available.
-# Timeout is set to 0 to disable the timeouts of the workers to allow Cloud Run to handle instance scaling.
-CMD exec gunicorn --worker-class uvicorn.workers.UvicornWorker --bind :$PORT --threads 8 --timeout 0 merino.server:app
+CMD exec gunicorn --worker-class uvicorn.workers.UvicornWorker --bind :$PORT --threads 8 merino.server:app
