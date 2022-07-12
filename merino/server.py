@@ -35,7 +35,7 @@ dockerflow = Dockerflow(app)
 
 @app.before_server_start
 async def main_start(_):
-    providers: Dict[str, base.BaseProvider] = {
+    providers: Dict[str, base.Provider] = {
         "adm": adm.Provider(),
     }
     app.ctx.providers = providers

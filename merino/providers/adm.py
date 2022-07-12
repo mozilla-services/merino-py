@@ -1,9 +1,9 @@
 from typing import List, Dict, Any
 
 from merino import remotesettings
-from merino.providers.base import DefaultProvider
+from merino.providers.base import BaseProvider, DefaultProvider
 
-class Provider(DefaultProvider):
+class Provider(BaseProvider, DefaultProvider):
     
     suggestions: Dict[str, int] = {}
     results: List[Dict[str, Any]] = []
@@ -25,7 +25,7 @@ class Provider(DefaultProvider):
             id = int(icon['id'].replace('icon-', ''))
             self.icons[id] = icon["attachment"]["location"]
 
-    async def query(self, q: str):
+    async def query(self, q: str) -> List[Dict[str, Any]]:
         id = self.suggestions.get(q)
         if id != None:
             res = self.results[id]

@@ -1,5 +1,13 @@
-class BaseProvider:
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List
+
+
+class BaseProvider(ABC):
     
+    @abstractmethod
+    async def query(self, query: str) -> List[Dict[str, Any]]:
+        ...
+
     def enabled_by_default(self) -> bool:
         return False
 
@@ -14,7 +22,10 @@ class BaseProvider:
         else:
             return "disabled_by_default"
 
-class DefaultProvider(BaseProvider):
+"""
+Default on provider
+"""
+class DefaultProvider():
 
     def enabled_by_default(self) -> bool:
         return True
