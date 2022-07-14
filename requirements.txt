@@ -1,0 +1,6 @@
+dockerflow==2022.1.0
+gunicorn==20.1.0
+kinto-http==10.9.0
+requests==2.27.1
+sanic==22.3.1
+uvicorn==0.17.6
