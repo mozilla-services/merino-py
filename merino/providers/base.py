@@ -3,7 +3,10 @@ from typing import Any, Dict, List
 
 
 class BaseProvider(ABC):
-    
+    """
+    Abstract class for suggestion providers.
+    """
+
     @abstractmethod
     async def query(self, query: str) -> List[Dict[str, Any]]:
         ...
@@ -22,11 +25,11 @@ class BaseProvider(ABC):
         else:
             return "disabled_by_default"
 
-"""
-Default on provider
-"""
-class DefaultProvider():
+
+class DefaultProvider:
+    """
+    Default on provider.
+    """
 
     def enabled_by_default(self) -> bool:
         return True
-
