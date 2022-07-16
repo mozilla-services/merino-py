@@ -13,3 +13,10 @@ async def init_providers() -> None:
     """
     providers["adm"] = AdmProvider()
     default_providers.extend([p for p in providers.values() if p.enabled_by_default()])
+
+
+def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
+    """
+    Return a tuple of all the providers and default providers.
+    """
+    return providers, default_providers

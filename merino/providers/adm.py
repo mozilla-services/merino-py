@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 from merino import remotesettings
 from merino.providers.base import BaseProvider, DefaultProvider
@@ -6,9 +6,9 @@ from merino.providers.base import BaseProvider, DefaultProvider
 
 class Provider(BaseProvider, DefaultProvider):
 
-    suggestions: Dict[str, int] = {}
-    results: List[Dict[str, Any]] = []
-    icons: Dict[int, str] = {}
+    suggestions: dict[str, int] = {}
+    results: list[dict[str, Any]] = []
+    icons: dict[int, str] = {}
 
     def __init__(self) -> None:
         rs = remotesettings.Client()
@@ -34,7 +34,7 @@ class Provider(BaseProvider, DefaultProvider):
     def hidden(self) -> bool:
         return False
 
-    async def query(self, q: str) -> List[Dict[str, Any]]:
+    async def query(self, q: str) -> list[dict[str, Any]]:
         if (id := self.suggestions.get(q)) is not None:
             if (res := self.results[id]) is not None:
                 return [

@@ -2,11 +2,11 @@ import asyncio
 import uuid
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from merino.providers import default_providers
-from merino.providers import providers as active_providers
+from merino.providers import get_providers
+from merino.providers.base import BaseProvider
 
 
 class Provider(BaseModel):
@@ -30,7 +30,13 @@ SUGGEST_RESPONSE = {
 
 
 @router.get("/suggest", tags=["suggest"], summary="Merino suggest endpoint")
-async def suggest(q: str, providers: str | None = None) -> Any:
+async def suggest(
+    q: str,
+    providers: str | None = None,
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
+        get_providers
+    ),
+) -> Any:
     """
     Query Merino for suggestions.
 
@@ -42,6 +48,7 @@ async def suggest(q: str, providers: str | None = None) -> Any:
     Returns:
     A list of suggestions or an empty list if nothing was found.
     """
+    active_providers, default_providers = sources
     if providers is not None:
         search_from = [
             active_providers[p] for p in providers.split(",") if p in active_providers
@@ -64,13 +71,18 @@ async def suggest(q: str, providers: str | None = None) -> Any:
     summary="Merino provider endpoint",
     response_model=list[Provider],
 )
-async def providers() -> Any:
+async def providers(
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
+        get_providers
+    ),
+) -> Any:
     """
     Query Merino for suggestion providers.
 
     Returns:
     A list of search providers.
     """
+    active_providers, _ = sources
     return [
         {"id": id, "availability": provider.availability()}
         for id, provider in active_providers.items()
