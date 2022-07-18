@@ -1,1 +1,15 @@
-venv/
+*.pyc
+*.pyd
+*.pyo
+.circleci
+.coverage
+.coverage.*
+.git
+.install.stamp
+.mypy_cache
+.pytest_cache
+.venv
+**/__pycache__
+env
+pyrightconfig.json
+venv
