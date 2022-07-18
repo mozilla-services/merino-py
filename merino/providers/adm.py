@@ -1,10 +1,10 @@
 from typing import Any
 
 from merino import remotesettings
-from merino.providers.base import BaseProvider, DefaultProvider
+from merino.providers.base import BaseProvider
 
 
-class Provider(BaseProvider, DefaultProvider):
+class Provider(BaseProvider):
 
     suggestions: dict[str, int] = {}
     results: list[dict[str, Any]] = []

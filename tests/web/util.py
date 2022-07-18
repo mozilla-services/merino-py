@@ -1,9 +1,9 @@
 from typing import Any
 
-from merino.providers.base import BaseProvider, DefaultProvider
+from merino.providers.base import BaseProvider
 
 
-class SponsoredProvider(BaseProvider, DefaultProvider):
+class SponsoredProvider(BaseProvider):
     """
     A test sponsored provider that only responds to query "sponsored".
     """
@@ -38,7 +38,7 @@ class SponsoredProvider(BaseProvider, DefaultProvider):
             return []
 
 
-class NonsponsoredProvider(BaseProvider, DefaultProvider):
+class NonsponsoredProvider(BaseProvider):
     """
     A test nonsponsored provider that only responds to query "nonsponsored".
     """

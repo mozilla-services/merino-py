@@ -11,8 +11,9 @@ class BaseProvider(ABC):
     async def query(self, query: str) -> List[Dict[str, Any]]:
         ...
 
+    @abstractmethod
     def enabled_by_default(self) -> bool:
-        return False
+        ...
 
     def hidden(self) -> bool:
         return False
@@ -24,12 +25,3 @@ class BaseProvider(ABC):
             return "enabled_by_default"
         else:
             return "disabled_by_default"
-
-
-class DefaultProvider:
-    """
-    Default on provider.
-    """
-
-    def enabled_by_default(self) -> bool:
-        return True
