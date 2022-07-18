@@ -20,6 +20,9 @@ show_error_codes = true
 [tool.pydocstyle]
 match = "(?!test_).*\\.py"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.poetry]
 name = "merino-py"
 version = "0.1.0"

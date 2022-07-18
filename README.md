@@ -28,6 +28,30 @@ $ poetry shell
 $ uvicorn merino.main:app --reload
 ```
 
+### Shortcuts
+
+Following common actions are provided via Makefile for convenience:
+
+```
+# Just like `poetry install`
+$ make install
+
+# Run all linting checks
+$ make lint
+
+# Run all formatters
+$ make format
+
+# Run tests
+$ make test
+
+# Run merino-py with the auto code reloading
+$ make dev
+
+# Run merino-py without the auto code reloading
+$ make run
+```
+
 ### Configuration
 
 Most project configurations are managed by `pyproject.toml` through Poetry.
@@ -45,18 +69,6 @@ git hook by:
 ```
 $ pre-commit install
 $ pre-commit install-hooks
-```
-
-To manually run those check:
-
-```
-$ pre-commit run all-files
-```
-
-Or you can run individual checks:
-
-```
-$ pre-commit run flake8 all-files
 ```
 
 [1]: https://python-poetry.org/
