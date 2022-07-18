@@ -1,0 +1,37 @@
+version: 2.1
+
+jobs:
+  checks:
+    docker:
+      - image: circleci/python:3.10
+    steps:
+      - checkout
+      - run:
+          name: Code linting
+          command: make lint
+  run-tests:
+    docker:
+      - image: circleci/python:3.10
+    steps:
+      - checkout
+      - run:
+          name: Testing
+          command: make test
+
+workflows:
+  pr-workflow:
+    jobs:
+      - checks: &pr-filters
+          filters:
+            branches:
+              ignore: main
+      - run-tests:
+          <<: *pr-filters
+  main-workflow:
+    jobs:
+      - checks: &main-filters
+          filters:
+            branches:
+              only: main
+      - run-tests:
+          <<: *main-filters
