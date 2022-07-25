@@ -20,3 +20,6 @@ class Client:
     def fetch_attachment(self, attachement_uri):
         uri = urljoin(self.attachment_host, attachement_uri)
         return requests.get(uri)
+
+    def get_icon_url(self, icon_uri: str) -> str:
+        return urljoin(self.attachment_host, icon_uri)

@@ -1,22 +1,18 @@
 import asyncio
-import uuid
-from typing import Any
+from itertools import chain
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider
-
-
-class Provider(BaseModel):
-    """
-    Model for the providers response.
-    """
-
-    id: str
-    availability: str
-
+from merino.web.models_v1 import (
+    NonsponsoredSuggestion,
+    ProviderResponse,
+    SponsoredSuggestion,
+    SuggestResponse,
+)
 
 router = APIRouter()
 
@@ -36,7 +32,9 @@ async def suggest(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
-) -> Any:
+    summary="Merino suggest endpoint",
+    response_model=SuggestResponse,
+) -> JSONResponse:
     """
     Query Merino for suggestions.
 
@@ -57,25 +55,31 @@ async def suggest(
         search_from = default_providers
     lookups = [p.query(q) for p in search_from]
     results = await asyncio.gather(*lookups)
-    if len(results):
-        SUGGEST_RESPONSE["suggestions"] = [
-            sugg for provider_results in results for sugg in provider_results
-        ]
-    SUGGEST_RESPONSE["request_id"] = str(uuid.uuid4())
-    return SUGGEST_RESPONSE
+
+    for suggestion in chain(*results):
+        print(suggestion)
+
+    suggestions = [
+        SponsoredSuggestion(**suggestion)
+        if suggestion["is_sponsored"]
+        else NonsponsoredSuggestion(**suggestion)
+        for suggestion in chain(*results)
+    ]
+    response = SuggestResponse(suggestions=suggestions)
+    return JSONResponse(content=jsonable_encoder(response))
 
 
 @router.get(
     "/providers",
     tags=["providers"],
     summary="Merino provider endpoint",
-    response_model=list[Provider],
+    response_model=list[ProviderResponse],
 )
 async def providers(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
-) -> Any:
+) -> JSONResponse:
     """
     Query Merino for suggestion providers.
 
@@ -83,7 +87,8 @@ async def providers(
     A list of search providers.
     """
     active_providers, _ = sources
-    return [
-        {"id": id, "availability": provider.availability()}
+    providers = [
+        ProviderResponse(**{"id": id, "availability": provider.availability()})
         for id, provider in active_providers.items()
     ]
+    return JSONResponse(content=jsonable_encoder(providers))

@@ -30,7 +30,7 @@ class SponsoredProvider(BaseProvider):
                     "provider": "test provider",
                     "advertiser": "test advertiser",
                     "is_sponsored": True,
-                    "icon": "",
+                    "icon": "https://www.sponsoredicon.com",
                     "score": 0.5,
                 }
             ]
@@ -63,7 +63,7 @@ class NonsponsoredProvider(BaseProvider):
                     "provider": "test provider",
                     "advertiser": "test nonadvertiser",
                     "is_sponsored": False,
-                    "icon": "",
+                    "icon": "https://www.nonsponsoredicon.com",
                     "score": 0.5,
                 }
             ]

@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from merino.main import app
@@ -31,6 +32,17 @@ def test_suggest_nonsponsored():
 
 def test_no_suggestion():
     response = client.get("/api/v1/suggest?q=nope")
+    assert response.status_code == 200
+    assert len(response.json()["suggestions"]) == 0
+
+
+@pytest.mark.parametrize("query", ["sponsored", "nonsponsored"])
+def test_suggest_from_missing_providers(query):
+    """
+    Despite the keyword is available for other providers, it should not return any suggestions if
+    the requested provider does not exist.
+    """
+    response = client.get(f"/api/v1/suggest?q={query}&providers=nonexist")
     assert response.status_code == 200
     assert len(response.json()["suggestions"]) == 0
 
