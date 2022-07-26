@@ -56,9 +56,6 @@ async def suggest(
     lookups = [p.query(q) for p in search_from]
     results = await asyncio.gather(*lookups)
 
-    for suggestion in chain(*results):
-        print(suggestion)
-
     suggestions = [
         SponsoredSuggestion(**suggestion)
         if suggestion["is_sponsored"]

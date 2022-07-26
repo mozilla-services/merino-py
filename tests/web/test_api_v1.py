@@ -39,8 +39,8 @@ def test_no_suggestion():
 @pytest.mark.parametrize("query", ["sponsored", "nonsponsored"])
 def test_suggest_from_missing_providers(query):
     """
-    Despite the keyword is available for other providers, it should not return any suggestions if
-    the requested provider does not exist.
+    Despite the keyword being available for other providers, it should not return any suggestions
+    if the requested provider does not exist.
     """
     response = client.get(f"/api/v1/suggest?q={query}&providers=nonexist")
     assert response.status_code == 200
