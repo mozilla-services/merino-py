@@ -1,11 +1,22 @@
+from enum import Enum, unique
 from typing import Any
 
 from merino import remotesettings
 from merino.providers.base import BaseProvider
 
-# The IAB category for online shopping. Suggestions with this value will be labelled as sponsored
-# suggestions. Otherwise, they're nonsponsored.
-IAB_CAT_SHOPPING: str = "22 - Shopping"
+
+@unique
+class IABCategory(str, Enum):
+    """
+    Enum for IAB categories.
+
+    Suggestions with the category `SHOPPING` will be labelled as sponsored suggestions.
+    Otherwise, they're nonsponsored.
+    """
+
+    SHOPPING = "22 - Shopping"
+    EDUCATION = "5 - Education"
+
 
 # Used whenever the `icon` field is missing from the suggestion payload.
 MISSING_ICON_ID = "-1"
@@ -57,7 +68,7 @@ class Provider(BaseProvider):
                         "click_url": res.get("click_url"),
                         "provider": "adm",
                         "advertiser": res.get("advertiser"),
-                        "is_sponsored": res.get("iab_category") == IAB_CAT_SHOPPING,
+                        "is_sponsored": res.get("iab_category") == IABCategory.SHOPPING,
                         "icon": self.icons.get(
                             int(res.get("icon", MISSING_ICON_ID)), ""
                         ),
