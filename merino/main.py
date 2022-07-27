@@ -4,7 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from merino import providers
-from merino.web import api_v1
+from merino.web import api_v1, dockerflow
 
 app = FastAPI()
 
@@ -28,4 +28,5 @@ async def validation_exception_handler(_, exc) -> JSONResponse:
     )
 
 
+app.include_router(dockerflow.router)
 app.include_router(api_v1.router, prefix="/api/v1")
