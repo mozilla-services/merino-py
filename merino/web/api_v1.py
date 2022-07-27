@@ -25,15 +25,18 @@ SUGGEST_RESPONSE = {
 }
 
 
-@router.get("/suggest", tags=["suggest"], summary="Merino suggest endpoint")
+@router.get(
+    "/suggest",
+    tags=["suggest"],
+    summary="Merino suggest endpoint",
+    response_model=SuggestResponse,
+)
 async def suggest(
     q: str,
     providers: str | None = None,
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
-    summary="Merino suggest endpoint",
-    response_model=SuggestResponse,
 ) -> JSONResponse:
     """
     Query Merino for suggestions.
