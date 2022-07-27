@@ -1,10 +1,31 @@
+from enum import Enum, unique
 from typing import Any
 
 from merino import remotesettings
 from merino.providers.base import BaseProvider
 
 
+@unique
+class IABCategory(str, Enum):
+    """
+    Enum for IAB categories.
+
+    Suggestions with the category `SHOPPING` will be labelled as sponsored suggestions.
+    Otherwise, they're nonsponsored.
+    """
+
+    SHOPPING = "22 - Shopping"
+    EDUCATION = "5 - Education"
+
+
+# Used whenever the `icon` field is missing from the suggestion payload.
+MISSING_ICON_ID = "-1"
+
+
 class Provider(BaseProvider):
+    """
+    Suggestion provider for adMarketplace through Remote Settings.
+    """
 
     suggestions: dict[str, int] = {}
     results: list[dict[str, Any]] = []
@@ -26,7 +47,7 @@ class Provider(BaseProvider):
         icon_items = [i for i in suggest_settings if i["type"] == "icon"]
         for icon in icon_items:
             id = int(icon["id"].replace("icon-", ""))
-            self.icons[id] = icon["attachment"]["location"]
+            self.icons[id] = rs.get_icon_url(icon["attachment"]["location"])
 
     def enabled_by_default(self) -> bool:
         return True
@@ -47,8 +68,10 @@ class Provider(BaseProvider):
                         "click_url": res.get("click_url"),
                         "provider": "adm",
                         "advertiser": res.get("advertiser"),
-                        "is_sponsored": True,
-                        "icon": self.icons.get(res.get("icon", ""), ""),
+                        "is_sponsored": res.get("iab_category") == IABCategory.SHOPPING,
+                        "icon": self.icons.get(
+                            int(res.get("icon", MISSING_ICON_ID)), ""
+                        ),
                         "score": 0.5,
                     }
                 ]
