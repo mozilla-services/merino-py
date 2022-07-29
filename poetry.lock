@@ -16,6 +16,17 @@ test = ["coverage[toml] (>=4.5)", "hypothesis (>=4.0)", "pytest (>=7.0)", "pytes
 trio = ["trio (>=0.16)"]
 
 [[package]]
+name = "asgi-correlation-id"
+version = "3.0.1"
+description = "Middleware correlating project logs to individual requests"
+category = "main"
+optional = false
+python-versions = ">=3.7,<4.0"
+
+[package.dependencies]
+starlette = ">=0.18,<0.21"
+
+[[package]]
 name = "atomicwrites"
 version = "1.4.1"
 description = "Atomic file writes."
@@ -133,6 +144,19 @@ description = "Distribution utilities"
 category = "dev"
 optional = false
 python-versions = "*"
+
+[[package]]
+name = "dockerflow"
+version = "2022.7.0"
+description = "Python tools and helpers for Mozilla's Dockerflow"
+category = "main"
+optional = false
+python-versions = ">=3.7,<4"
+
+[package.extras]
+django = ["django"]
+flask = ["flask", "blinker"]
+sanic = ["sanic"]
 
 [[package]]
 name = "fastapi"
@@ -664,12 +688,16 @@ python-versions = ">=3.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "34255869ea1d8748b21adc625600215c25d23e6babc61e082591b1f972c72f4a"
+content-hash = "92c718e2b28e195d4f1263ec1c5c5aa17322fa3f4fb450121f60ac0c88debe7f"
 
 [metadata.files]
 anyio = [
     {file = "anyio-3.6.1-py3-none-any.whl", hash = "sha256:cb29b9c70620506a9a8f87a309591713446953302d7d995344d0d7c6c0c9a7be"},
     {file = "anyio-3.6.1.tar.gz", hash = "sha256:413adf95f93886e442aea925f3ee43baa5a765a64a0f52c6081894f9992fdd0b"},
+]
+asgi-correlation-id = [
+    {file = "asgi-correlation-id-3.0.1.tar.gz", hash = "sha256:8e79ce4556f480cfd7be20504665afc3595dddd0c716d631f3c2c1900514a54f"},
+    {file = "asgi_correlation_id-3.0.1-py3-none-any.whl", hash = "sha256:f8c64b34bc41d08cd373f80daacf1c6163c69e60e6a653dc10d28c0567f4c2bc"},
 ]
 atomicwrites = [
     {file = "atomicwrites-1.4.1.tar.gz", hash = "sha256:81b2c9071a49367a7f770170e5eec8cb66567cfbbc8c73d20ce5ca4a8d71cf11"},
@@ -773,6 +801,10 @@ coverage = [
 distlib = [
     {file = "distlib-0.3.5-py2.py3-none-any.whl", hash = "sha256:b710088c59f06338ca514800ad795a132da19fda270e3ce4affc74abf955a26c"},
     {file = "distlib-0.3.5.tar.gz", hash = "sha256:a7f75737c70be3b25e2bee06288cec4e4c221de18455b2dd037fe2a795cab2fe"},
+]
+dockerflow = [
+    {file = "dockerflow-2022.7.0-py2.py3-none-any.whl", hash = "sha256:f2b7a484f94910aeb2fb35b7ef67d08e40abbb42c806de6da0589f51fe50d1b1"},
+    {file = "dockerflow-2022.7.0.tar.gz", hash = "sha256:6b15c6904198095225c167abb4e1b3547220cd1faccd786b92f314e46bbecc7c"},
 ]
 fastapi = [
     {file = "fastapi-0.79.0-py3-none-any.whl", hash = "sha256:d337563424ceada23857f73d5abe8dae0c28e4cccb53b2af06e78b7bb4a1c7d7"},

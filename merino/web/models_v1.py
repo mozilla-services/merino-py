@@ -1,7 +1,6 @@
 from typing import Optional
-from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, HttpUrl
 
 
 class ProviderResponse(BaseModel):
@@ -56,6 +55,6 @@ class SuggestResponse(BaseModel):
     """
 
     suggestions: list[SponsoredSuggestion | NonsponsoredSuggestion]
+    request_id: str
     client_variants: list[str] = []
     server_variants: list[str] = []
-    request_id: UUID = Field(default_factory=uuid4)

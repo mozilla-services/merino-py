@@ -1,20 +1,31 @@
+from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from merino import providers
+from merino.config import configure_logging
+from merino.middleware import logging
 from merino.web import api_v1, dockerflow
 
 app = FastAPI()
 
 
 @app.on_event("startup")
-async def startup_event() -> None:
+async def startup_providers() -> None:
     """
     Run tasks at application startup.
     """
     await providers.init_providers()
+
+
+@app.on_event("startup")
+async def startup_configuration() -> None:
+    """
+    Set up various configurations such as logging.
+    """
+    configure_logging()
 
 
 @app.exception_handler(RequestValidationError)
@@ -27,6 +38,9 @@ async def validation_exception_handler(_, exc) -> JSONResponse:
         content=jsonable_encoder({"detail": exc.errors()}),
     )
 
+
+app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(logging.LoggingMiddleware)
 
 app.include_router(dockerflow.router)
 app.include_router(api_v1.router, prefix="/api/v1")
