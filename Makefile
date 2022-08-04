@@ -22,7 +22,7 @@ format: $(INSTALL_STAMP)
 	$(POETRY) run black $(APP_TEST_DIR)
 
 test: $(INSTALL_STAMP)
-	$(POETRY) run pytest $(TEST_DIR) --cov $(APP_DIR)
+	$(POETRY) run pytest -v $(TEST_DIR) --cov $(APP_DIR)
 
 dev: $(INSTALL_STAMP)
 	$(POETRY) run uvicorn $(APP_DIR).main:app --reload

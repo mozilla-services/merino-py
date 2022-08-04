@@ -1,6 +1,7 @@
 import asyncio
 from itertools import chain
 
+from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
@@ -65,7 +66,7 @@ async def suggest(
         else NonsponsoredSuggestion(**suggestion)
         for suggestion in chain(*results)
     ]
-    response = SuggestResponse(suggestions=suggestions)
+    response = SuggestResponse(suggestions=suggestions, request_id=correlation_id.get())
     return JSONResponse(content=jsonable_encoder(response))
 
 

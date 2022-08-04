@@ -36,6 +36,8 @@ fastapi = "^0.79.0"
 uvicorn = {extras = ["standard"], version = "^0.18.2"}
 kinto-http = "^10.10.1"
 requests = "^2.28.1"
+dockerflow = "^2022.7.0"
+asgi-correlation-id = "^3.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
