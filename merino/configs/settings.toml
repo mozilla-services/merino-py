@@ -1,0 +1,11 @@
+# Configurations defined here will override the counterparts in `default_settings.toml`
+
+[development]
+debug = true
+
+[development.logging]
+# Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+level = "DEBUG"
+
+# Uncomment to define production configurations
+#[production]

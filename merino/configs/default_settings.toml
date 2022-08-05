@@ -1,0 +1,36 @@
+# Default configurations that may be overridden by the counterparts defined in
+# `settings.toml` or environment variables.
+
+# Configurations can be defined by:
+#
+# * Directly under the `[default]` table, e.g.
+#
+#   [default]
+#   foo = "bar"
+#
+# * Or use an inline table if it has multiple sub-configurations, e.g.
+#
+#   [default]
+#   foo = { bar = "baz", egg = "spam" }
+#
+# * Or use a nested table if it's hard to define by above, e.g.
+#
+#   [default.foo]
+#   bar = "baz"
+#   egg = "spam"
+#   fiz = "buz"
+
+[default]
+debug = false
+
+[default.logging]
+# Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+level = "INFO"
+format = "json"
+
+[default.remote_settings]
+server = "https://firefox.settings.services.mozilla.com"
+bucket = "main"
+collection = "quicksuggest"
+# Can be "data" or "offline-expansion-data"
+record_type = "data"

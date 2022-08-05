@@ -130,3 +130,6 @@ dmypy.json
 
 # For poetry install
 .install.stamp
+
+# Dynaconf secret files
+merino/configs/.secrets.*

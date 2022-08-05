@@ -1,35 +1,15 @@
-from logging.config import dictConfig
-from os import environ
+from dynaconf import Dynaconf
 
-log_level: str = environ.get("LOG_LEVEL", "INFO").upper()
-# TODO: Add another formatter for development
-log_format: str = "json"
+# `root_path` = The root path for Dynaconf, DO NOT CHANGE.
+# `envvar_prefix` = Export envvars with `export MERINO_FOO=bar`.
+# `settings_files` = Load these files in the order.
+# `environments` = Enable layered environments such as `development`, `production`, `testing` etc.
+# `env_switcher` = Switch environments by `export MERINO_ENV=production`. Default: `development`.
 
-
-def configure_logging() -> None:  # pragma: no cover
-    """
-    Configures logging with MozLog.
-    """
-
-    dictConfig(
-        {
-            "version": 1,
-            "formatters": {
-                "json": {
-                    "()": "dockerflow.logging.JsonLogFormatter",
-                    "logger_name": "merino",
-                },
-            },
-            "handlers": {
-                "console": {
-                    "level": log_level,
-                    "class": "logging.StreamHandler",
-                    "formatter": log_format,
-                }
-            },
-            "loggers": {
-                "merino": {"handlers": ["console"], "level": log_level},
-                "request.summary": {"handlers": ["console"], "level": log_level},
-            },
-        }
-    )
+settings = Dynaconf(
+    root_path="merino",
+    envvar_prefix="MERINO",
+    settings_files=["configs/default_settings.toml", "configs/settings.toml"],
+    environments=True,
+    env_switcher="MERINO_ENV",
+)

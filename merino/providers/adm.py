@@ -2,6 +2,7 @@ from enum import Enum, unique
 from typing import Any
 
 from merino import remotesettings
+from merino.config import settings
 from merino.providers.base import BaseProvider
 
 
@@ -33,8 +34,14 @@ class Provider(BaseProvider):
 
     def __init__(self) -> None:
         rs = remotesettings.Client()
-        suggest_settings = rs.get("main", "quicksuggest")
-        data_items = [i for i in suggest_settings if i["type"] == "data"]
+        suggest_settings = rs.get(
+            settings.remote_settings.bucket, settings.remote_settings.collection
+        )
+        data_items = [
+            i
+            for i in suggest_settings
+            if i["type"] == settings.remote_settings.record_type
+        ]
         for item in data_items:
             res = rs.fetch_attachment(item["attachment"]["location"])
             for suggestion in res.json():
