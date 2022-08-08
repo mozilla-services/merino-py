@@ -10,6 +10,10 @@ show_missing = true
 profile = "black"
 skip_gitignore = true
 
+[tool.bandit]
+# skips asserts https://bandit.readthedocs.io/en/1.7.4/plugins/b101_assert_used.html#
+skips = ["B101"]
+
 [tool.mypy]
 python_version = "3.10"
 pretty = true
@@ -49,6 +53,7 @@ mypy = "^0.961"
 pytest-cov = "^3.0.0"
 pre-commit = "^2.20.0"
 pytest-mock = "^3.8.2"
+bandit = "^1.7.4"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
