@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   checks:
     docker:
-      - image: circleci/python:3.10
+      - image: cimg/python:3.10
     steps:
       - checkout
       - run:
@@ -11,7 +11,7 @@ jobs:
           command: make lint
   run-tests:
     docker:
-      - image: circleci/python:3.10
+      - image: cimg/python:3.10
     steps:
       - checkout
       - run:
