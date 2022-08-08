@@ -6,6 +6,7 @@ debug = true
 [development.logging]
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 level = "DEBUG"
+format = "json"
 
 # Uncomment to define production configurations
 #[production]
