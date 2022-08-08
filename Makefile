@@ -16,7 +16,7 @@ lint: $(INSTALL_STAMP)
 	$(POETRY) run isort --check-only $(APP_TEST_DIR)
 	$(POETRY) run black --quiet --diff --check merino $(APP_TEST_DIR)
 	$(POETRY) run flake8 $(APP_TEST_DIR)
-	$(POETRY) run bandit -r $(APP_TEST_DIR) -c "pyproject.toml"
+	$(POETRY) run bandit --quiet -r $(APP_TEST_DIR) -c "pyproject.toml"
 
 format: $(INSTALL_STAMP)
 	$(POETRY) run isort $(APP_TEST_DIR)
