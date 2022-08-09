@@ -43,6 +43,7 @@ requests = "^2.28.1"
 dockerflow = "^2022.7.0"
 asgi-correlation-id = "^3.0.1"
 dynaconf = "^3.1.9"
+httpx = "^0.23.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

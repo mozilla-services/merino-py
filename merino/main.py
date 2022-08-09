@@ -13,19 +13,19 @@ app = FastAPI()
 
 
 @app.on_event("startup")
+def startup_configuration() -> None:
+    """
+    Set up various configurations such as logging.
+    """
+    configure_logging()
+
+
+@app.on_event("startup")
 async def startup_providers() -> None:
     """
     Run tasks at application startup.
     """
     await providers.init_providers()
-
-
-@app.on_event("startup")
-async def startup_configuration() -> None:
-    """
-    Set up various configurations such as logging.
-    """
-    configure_logging()
 
 
 @app.exception_handler(RequestValidationError)
