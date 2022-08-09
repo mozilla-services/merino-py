@@ -37,13 +37,13 @@ class Provider(BaseProvider):
         suggest_settings = rs.get(
             settings.remote_settings.bucket, settings.remote_settings.collection
         )
-        data_items = [
-            i
-            for i in suggest_settings
-            if i["type"] == settings.remote_settings.record_type
+        records = [
+            record
+            for record in suggest_settings
+            if record["type"] == settings.remote_settings.record_type
         ]
-        for item in data_items:
-            res = rs.fetch_attachment(item["attachment"]["location"])
+        for record in records:
+            res = rs.fetch_attachment(record["attachment"]["location"])
             for suggestion in res.json():
                 id = len(self.results)
                 for kw in suggestion.get("keywords"):
@@ -51,8 +51,10 @@ class Provider(BaseProvider):
                 self.results.append(
                     {k: suggestion[k] for k in suggestion if k != "keywords"}
                 )
-        icon_items = [i for i in suggest_settings if i["type"] == "icon"]
-        for icon in icon_items:
+        icon_recrod = [
+            record for record in suggest_settings if record["type"] == "icon"
+        ]
+        for icon in icon_recrod:
             id = int(icon["id"].replace("icon-", ""))
             self.icons[id] = rs.get_icon_url(icon["attachment"]["location"])
 
