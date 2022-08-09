@@ -51,10 +51,10 @@ class Provider(BaseProvider):
                 self.results.append(
                     {k: suggestion[k] for k in suggestion if k != "keywords"}
                 )
-        icon_recrod = [
+        icon_record = [
             record for record in suggest_settings if record["type"] == "icon"
         ]
-        for icon in icon_recrod:
+        for icon in icon_record:
             id = int(icon["id"].replace("icon-", ""))
             self.icons[id] = rs.get_icon_url(icon["attachment"]["location"])
 
