@@ -2,6 +2,7 @@ from enum import Enum, unique
 from typing import Any
 
 from merino import remotesettings
+from merino.config import settings
 from merino.providers.base import BaseProvider
 
 
@@ -33,10 +34,16 @@ class Provider(BaseProvider):
 
     def __init__(self) -> None:
         rs = remotesettings.Client()
-        suggest_settings = rs.get("main", "quicksuggest")
-        data_items = [i for i in suggest_settings if i["type"] == "data"]
-        for item in data_items:
-            res = rs.fetch_attachment(item["attachment"]["location"])
+        suggest_settings = rs.get(
+            settings.remote_settings.bucket, settings.remote_settings.collection
+        )
+        records = [
+            record
+            for record in suggest_settings
+            if record["type"] == settings.remote_settings.record_type
+        ]
+        for record in records:
+            res = rs.fetch_attachment(record["attachment"]["location"])
             for suggestion in res.json():
                 id = len(self.results)
                 for kw in suggestion.get("keywords"):
@@ -44,8 +51,10 @@ class Provider(BaseProvider):
                 self.results.append(
                     {k: suggestion[k] for k in suggestion if k != "keywords"}
                 )
-        icon_items = [i for i in suggest_settings if i["type"] == "icon"]
-        for icon in icon_items:
+        icon_record = [
+            record for record in suggest_settings if record["type"] == "icon"
+        ]
+        for icon in icon_record:
             id = int(icon["id"].replace("icon-", ""))
             self.icons[id] = rs.get_icon_url(icon["attachment"]["location"])
 

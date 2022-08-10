@@ -13,3 +13,4 @@
 env
 pyrightconfig.json
 venv
+merino/configs/.secrets.*

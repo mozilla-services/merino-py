@@ -1,0 +1,10 @@
+# Configurations for production. Configurations defined here will override the
+# counterparts in `default.toml`.
+
+# You can manually switch to this environment via:
+#
+# MERINO_ENV=production /path/to/your/command
+
+
+# Uncomment to define production configurations
+#[production]

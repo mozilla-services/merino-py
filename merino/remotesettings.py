@@ -3,13 +3,14 @@ from urllib.parse import urljoin
 import kinto_http
 import requests
 
+from merino.config import settings
+
 
 class Client:
     attachment_host: str = ""
-    host: str = "https://firefox.settings.services.mozilla.com"
 
     def __init__(self) -> None:
-        self.client = kinto_http.Client(server_url=self.host)
+        self.client = kinto_http.Client(server_url=settings.remote_settings.server)
         self.attachment_host = self.client.server_info()["capabilities"]["attachments"][
             "base_url"
         ]
