@@ -1,5 +1,5 @@
 # Default configurations that may be overridden by the counterparts defined in
-# `settings.toml` or environment variables.
+# `development.toml` or `production.toml` or environment variables.
 
 # Configurations can be defined by:
 #

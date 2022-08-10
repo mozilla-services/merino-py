@@ -17,7 +17,11 @@ _validators = [
 settings = Dynaconf(
     root_path="merino",
     envvar_prefix="MERINO",
-    settings_files=["configs/default_settings.toml", "configs/settings.toml"],
+    settings_files=[
+        "configs/default.toml",
+        "configs/development.toml",
+        "configs/production.toml",
+    ],
     environments=True,
     env_switcher="MERINO_ENV",
     validators=_validators,

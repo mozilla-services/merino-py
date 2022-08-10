@@ -1,4 +1,8 @@
-# Configurations defined here will override the counterparts in `default_settings.toml`
+# Configurations for development, should be *only* used for development.
+# Configurations defined here will override the counterparts in `default.toml`.
+
+# This would be the default environment for development.
+
 
 [development]
 debug = true
@@ -10,6 +14,3 @@ level = "DEBUG"
 # settings. For instance, `logging.level` in this case will override its counterpart defined in
 # `default_settings`.
 dynaconf_merge = true
-
-# Uncomment to define production configurations
-#[production]
