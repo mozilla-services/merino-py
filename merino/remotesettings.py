@@ -8,8 +8,7 @@ from merino.config import settings
 
 class Client:
     client: kinto_http.AsyncClient
-    attachment_host: str
-    host: str
+    attachment_host: str = ""
 
     def __init__(self) -> None:
         self.client = kinto_http.AsyncClient(server_url=settings.remote_settings.server)
