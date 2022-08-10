@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 from merino.providers.base import BaseProvider
@@ -9,6 +10,9 @@ class SponsoredProvider(BaseProvider):
     """
 
     def __init__(self) -> None:
+        ...
+
+    async def initialize(self) -> None:
         ...
 
     def enabled_by_default(self) -> bool:
@@ -46,6 +50,9 @@ class NonsponsoredProvider(BaseProvider):
     def __init__(self) -> None:
         ...
 
+    async def initialize(self) -> None:
+        ...
+
     def enabled_by_default(self) -> bool:
         return True
 
@@ -71,7 +78,7 @@ class NonsponsoredProvider(BaseProvider):
             return []
 
 
-def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
+async def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
     """
     Return a tuple of all the providers and default providers.
     """
@@ -79,5 +86,6 @@ def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
         "sponsored-provider": SponsoredProvider(),
         "nonsponsored-provider": NonsponsoredProvider(),
     }
+    await asyncio.gather(*[p.initialize() for p in providers.values()])
     default_providers = [p for p in providers.values() if p.enabled_by_default()]
     return providers, default_providers

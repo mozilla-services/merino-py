@@ -1,3 +1,4 @@
+from asyncio import as_completed
 from enum import Enum, unique
 from typing import Any
 
@@ -32,9 +33,13 @@ class Provider(BaseProvider):
     results: list[dict[str, Any]] = []
     icons: dict[int, str] = {}
 
-    def __init__(self) -> None:
+    async def initialize(self) -> None:
+        suggestions: dict[str, int] = {}
+        results: list[dict[str, Any]] = []
+        icons: dict[int, str] = {}
+
         rs = remotesettings.Client()
-        suggest_settings = rs.get(
+        suggest_settings = await rs.get(
             settings.remote_settings.bucket, settings.remote_settings.collection
         )
         records = [
@@ -42,13 +47,17 @@ class Provider(BaseProvider):
             for record in suggest_settings
             if record["type"] == settings.remote_settings.record_type
         ]
-        for record in records:
-            res = rs.fetch_attachment(record["attachment"]["location"])
+
+        fetch_tasks = [
+            rs.fetch_attachment(item["attachment"]["location"]) for item in records
+        ]
+        for done_task in as_completed(fetch_tasks):
+            res = await done_task
             for suggestion in res.json():
-                id = len(self.results)
+                id = len(results)
                 for kw in suggestion.get("keywords"):
-                    self.suggestions[kw] = id
-                self.results.append(
+                    suggestions[kw] = id
+                results.append(
                     {k: suggestion[k] for k in suggestion if k != "keywords"}
                 )
         icon_record = [
@@ -56,7 +65,12 @@ class Provider(BaseProvider):
         ]
         for icon in icon_record:
             id = int(icon["id"].replace("icon-", ""))
-            self.icons[id] = rs.get_icon_url(icon["attachment"]["location"])
+            icons[id] = rs.get_icon_url(icon["attachment"]["location"])
+
+        # overwrite the instance variables
+        self.suggestions = suggestions
+        self.results = results
+        self.icons = icons
 
     def enabled_by_default(self) -> bool:
         return True

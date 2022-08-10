@@ -1,26 +1,32 @@
 from urllib.parse import urljoin
 
+import httpx
 import kinto_http
-import requests
 
 from merino.config import settings
 
 
 class Client:
-    attachment_host: str = ""
+    client: kinto_http.AsyncClient
+    attachment_host: str
+    host: str
 
     def __init__(self) -> None:
-        self.client = kinto_http.Client(server_url=settings.remote_settings.server)
-        self.attachment_host = self.client.server_info()["capabilities"]["attachments"][
-            "base_url"
-        ]
+        self.client = kinto_http.AsyncClient(server_url=settings.remote_settings.server)
 
-    def get(self, bucket, collection):
-        return self.client.get_records(collection=collection, bucket=bucket)
+    async def fetch_attachment_host(self) -> str:
+        server_info = await self.client.server_info()
+        return server_info["capabilities"]["attachments"]["base_url"]
 
-    def fetch_attachment(self, attachement_uri):
+    async def get(self, bucket, collection) -> list[dict]:
+        return await self.client.get_records(collection=collection, bucket=bucket)
+
+    async def fetch_attachment(self, attachement_uri) -> httpx.Response:
+        if not self.attachment_host:
+            self.attachment_host = await self.fetch_attachment_host()
         uri = urljoin(self.attachment_host, attachement_uri)
-        return requests.get(uri)
+        async with httpx.AsyncClient() as client:
+            return await client.get(uri)
 
     def get_icon_url(self, icon_uri: str) -> str:
         return urljoin(self.attachment_host, icon_uri)

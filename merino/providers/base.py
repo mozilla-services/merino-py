@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any
 
 
 class BaseProvider(ABC):
@@ -8,7 +8,16 @@ class BaseProvider(ABC):
     """
 
     @abstractmethod
-    async def query(self, query: str) -> List[Dict[str, Any]]:
+    async def initialize(self) -> None:
+        """
+        Abstract method for defining an initialize method for bootstrapping the Provider.
+        This allows us to use Async API's within as well as initialize providers in parallel
+
+        """
+        ...
+
+    @abstractmethod
+    async def query(self, query: str) -> list[dict[str, Any]]:
         ...
 
     @abstractmethod
