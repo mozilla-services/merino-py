@@ -8,7 +8,7 @@ from merino.providers.base import BaseProvider
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
 
-logger = logging.getLogger("merino.providers")
+logger = logging.getLogger(__name__)
 
 
 async def init_providers() -> None:
@@ -27,7 +27,7 @@ async def init_providers() -> None:
     )
 
 
-async def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
+def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
     """
     Return a tuple of all the providers and default providers.
     """
