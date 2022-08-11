@@ -5,6 +5,8 @@ _validators = [
     Validator("logging.level", is_in=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     Validator("logging.format", is_in=["json"]),
     Validator("remote_settings.record_type", is_in=["data", "offline-expansion-data"]),
+    Validator("providers.adm.cron_interval_sec", gt=0),
+    Validator("providers.adm.resync_interval_sec", gt=0),
 ]
 
 # `root_path` = The root path for Dynaconf, DO NOT CHANGE.
