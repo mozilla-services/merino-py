@@ -49,6 +49,7 @@ app.include_router(api_v1.router, prefix="/api/v1")
 cors_origins = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "http://localhost:80",
 ]
 
 app.add_middleware(
