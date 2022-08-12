@@ -46,17 +46,9 @@ app.add_middleware(logging.LoggingMiddleware)
 app.include_router(dockerflow.router)
 app.include_router(api_v1.router, prefix="/api/v1")
 
-cors_origins = [
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-    "http://localhost:80",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_origin_regex=r"http://localhost:^([1-9][0-9]{0,3}|[1-5][0-9]{4}"
-    / r"|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS", "HEAD"],
     allow_headers=["*"],
