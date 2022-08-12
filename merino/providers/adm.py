@@ -1,3 +1,6 @@
+import asyncio
+import logging
+import time
 from asyncio import as_completed
 from enum import Enum, unique
 from typing import Any
@@ -5,6 +8,8 @@ from typing import Any
 from merino import remotesettings
 from merino.config import settings
 from merino.providers.base import BaseProvider
+
+logger = logging.getLogger(__name__)
 
 
 @unique
@@ -32,8 +37,58 @@ class Provider(BaseProvider):
     suggestions: dict[str, int] = {}
     results: list[dict[str, Any]] = []
     icons: dict[int, str] = {}
+    last_fetch_at: float
+    cron_task: asyncio.Task
 
     async def initialize(self) -> None:
+        await self._fetch()
+        self.cron_task = asyncio.create_task(self._cron())
+
+    async def _cron(self):
+        """
+        A cron job that resyncs data from Remote Settings in the background.
+
+        Note that the cron job interval and the resync interval are configured separately to
+        facilitate the retry logic upon sync failures.
+        """
+
+        last_tick: float = time.time()
+        while True:
+            if self._should_fetch():
+                begin = time.perf_counter()
+                try:
+                    await self._fetch()
+                except Exception as e:
+                    logger.warning(
+                        "Cron: failed to fetch data from Remote Setting",
+                        extra={"error message": f"{e}"},
+                    )
+                else:
+                    logger.info(
+                        "Cron: resync data from Remote Settings",
+                        extra={"duration": time.perf_counter() - begin},
+                    )
+            sleep_duration = max(
+                0, settings.providers.adm.cron_interval_sec + last_tick - time.time()
+            )
+            await asyncio.sleep(sleep_duration)
+            last_tick = time.time()
+
+    def _should_fetch(self) -> bool:
+        """
+        Check if it should fetch data from Remote Settings.
+        """
+
+        return (
+            time.time() - self.last_fetch_at
+            >= settings.providers.adm.resync_interval_sec
+        )
+
+    async def _fetch(self) -> None:
+        """
+        Fetch suggestions, keywords, and icons from Remote Settings.
+        """
+
         suggestions: dict[str, int] = {}
         results: list[dict[str, Any]] = []
         icons: dict[int, str] = {}
@@ -71,6 +126,7 @@ class Provider(BaseProvider):
         self.suggestions = suggestions
         self.results = results
         self.icons = icons
+        self.last_fetch_at = time.time()
 
     def enabled_by_default(self) -> bool:
         return True
