@@ -59,7 +59,7 @@ of `<type>: <subject>` where `type` must be one of:
 * **chore**: Changes to the build process or auxiliary tools and libraries such as documentation
   generation
 
-Name the branch using this nomenclature with the `<type>` followed by a forward slash, followed by a dash-seperated description of the task. Ex. `feat/add-sentry-sdk-MOZ-1234`. Note, if associated with a Jira ticket, synchronization with Jira and GitHub is possible by appending the suffix of the Jira ticket to the branch name (`-MOZ-1234` in the example above). This can be added anywhere in the branch name, but adding to the end is ideal.
+Name the branch using this nomenclature with the `<type>` followed by a forward slash, followed by a dash-seperated description of the task. Ex. `feat/add-sentry-sdk-MOZ-1234`. Note, if associated with a Jira ticket, synchronization with Jira and GitHub is possible by appending the suffix of the Jira ticket to the branch name (`-MOZ-1234` in the example above). This can be added anywhere in the branch name, but adding to the end is ideal. You can also include the Jira issue at the end of ccommit messages to keep the task up to date. See Jira Docs for referencing issues [here](https://support.atlassian.com/jira-software-cloud/docs/reference-issues-in-your-development-work/)
 
 ### Subject
 
