@@ -45,6 +45,7 @@ asgi-correlation-id = "^3.0.1"
 dynaconf = "^3.1.9"
 httpx = "^0.23.0"
 maxminddb = "^2.2.0"
+sentry-sdk = "1.9.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
