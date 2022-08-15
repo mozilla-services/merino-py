@@ -43,10 +43,10 @@ optional = false
 python-versions = ">=3.5"
 
 [package.extras]
-dev = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "mypy (>=0.900,!=0.940)", "pytest-mypy-plugins", "zope.interface", "furo", "sphinx", "sphinx-notfound-page", "pre-commit", "cloudpickle"]
-docs = ["furo", "sphinx", "zope.interface", "sphinx-notfound-page"]
-tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "mypy (>=0.900,!=0.940)", "pytest-mypy-plugins", "zope.interface", "cloudpickle"]
-tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "mypy (>=0.900,!=0.940)", "pytest-mypy-plugins", "cloudpickle"]
+tests_no_zope = ["cloudpickle", "pytest-mypy-plugins", "mypy (>=0.900,!=0.940)", "pytest (>=4.3.0)", "pympler", "hypothesis", "coverage[toml] (>=5.0.2)"]
+tests = ["cloudpickle", "zope.interface", "pytest-mypy-plugins", "mypy (>=0.900,!=0.940)", "pytest (>=4.3.0)", "pympler", "hypothesis", "coverage[toml] (>=5.0.2)"]
+docs = ["sphinx-notfound-page", "zope.interface", "sphinx", "furo"]
+dev = ["cloudpickle", "pre-commit", "sphinx-notfound-page", "sphinx", "furo", "zope.interface", "pytest-mypy-plugins", "mypy (>=0.900,!=0.940)", "pytest (>=4.3.0)", "pympler", "hypothesis", "coverage[toml] (>=5.0.2)"]
 
 [[package]]
 name = "backoff"
@@ -71,9 +71,9 @@ PyYAML = ">=5.3.1"
 stevedore = ">=1.20.0"
 
 [package.extras]
-test = ["coverage (>=4.5.4)", "fixtures (>=3.0.0)", "flake8 (>=4.0.0)", "stestr (>=2.5.0)", "testscenarios (>=0.5.0)", "testtools (>=2.3.0)", "toml", "beautifulsoup4 (>=4.8.0)", "pylint (==1.9.4)"]
-toml = ["toml"]
 yaml = ["pyyaml"]
+toml = ["toml"]
+test = ["pylint (==1.9.4)", "beautifulsoup4 (>=4.8.0)", "toml", "testtools (>=2.3.0)", "testscenarios (>=0.5.0)", "stestr (>=2.5.0)", "flake8 (>=4.0.0)", "fixtures (>=3.0.0)", "coverage (>=4.5.4)"]
 
 [[package]]
 name = "black"
@@ -91,10 +91,10 @@ platformdirs = ">=2"
 tomli = {version = ">=1.1.0", markers = "python_full_version < \"3.11.0a7\""}
 
 [package.extras]
-colorama = ["colorama (>=0.4.3)"]
-d = ["aiohttp (>=3.7.4)"]
-jupyter = ["ipython (>=7.8.0)", "tokenize-rt (>=3.2.0)"]
 uvloop = ["uvloop (>=0.15.2)"]
+jupyter = ["tokenize-rt (>=3.2.0)", "ipython (>=7.8.0)"]
+d = ["aiohttp (>=3.7.4)"]
+colorama = ["colorama (>=0.4.3)"]
 
 [[package]]
 name = "certifi"
@@ -173,9 +173,9 @@ optional = false
 python-versions = ">=3.7,<4"
 
 [package.extras]
-django = ["django"]
-flask = ["flask", "blinker"]
 sanic = ["sanic"]
+flask = ["blinker", "flask"]
+django = ["django"]
 
 [[package]]
 name = "dynaconf"
@@ -186,14 +186,14 @@ optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-all = ["redis", "ruamel.yaml", "configobj", "hvac"]
-configobj = ["configobj"]
-ini = ["configobj"]
-redis = ["redis"]
-test = ["pytest", "pytest-cov", "pytest-xdist", "pytest-mock", "flake8", "pep8-naming", "flake8-debugger", "flake8-print", "flake8-todo", "radon", "flask (>=0.12)", "django", "python-dotenv", "toml", "codecov", "redis", "hvac", "configobj"]
-toml = ["toml"]
-vault = ["hvac"]
 yaml = ["ruamel.yaml"]
+vault = ["hvac"]
+toml = ["toml"]
+test = ["configobj", "hvac", "redis", "codecov", "toml", "python-dotenv", "django", "flask (>=0.12)", "radon", "flake8-todo", "flake8-print", "flake8-debugger", "pep8-naming", "flake8", "pytest-mock", "pytest-xdist", "pytest-cov", "pytest"]
+redis = ["redis"]
+ini = ["configobj"]
+configobj = ["configobj"]
+all = ["hvac", "configobj", "ruamel.yaml", "redis"]
 
 [[package]]
 name = "fastapi"
@@ -208,10 +208,10 @@ pydantic = ">=1.6.2,<1.7 || >1.7,<1.7.1 || >1.7.1,<1.7.2 || >1.7.2,<1.7.3 || >1.
 starlette = "0.19.1"
 
 [package.extras]
-all = ["requests (>=2.24.0,<3.0.0)", "jinja2 (>=2.11.2,<4.0.0)", "python-multipart (>=0.0.5,<0.0.6)", "itsdangerous (>=1.1.0,<3.0.0)", "pyyaml (>=5.3.1,<7.0.0)", "ujson (>=4.0.1,!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0,<6.0.0)", "orjson (>=3.2.1,<4.0.0)", "email_validator (>=1.1.1,<2.0.0)", "uvicorn[standard] (>=0.12.0,<0.18.0)"]
-dev = ["python-jose[cryptography] (>=3.3.0,<4.0.0)", "passlib[bcrypt] (>=1.7.2,<2.0.0)", "autoflake (>=1.4.0,<2.0.0)", "flake8 (>=3.8.3,<4.0.0)", "uvicorn[standard] (>=0.12.0,<0.18.0)", "pre-commit (>=2.17.0,<3.0.0)"]
-doc = ["mkdocs (>=1.1.2,<2.0.0)", "mkdocs-material (>=8.1.4,<9.0.0)", "mdx-include (>=1.4.1,<2.0.0)", "mkdocs-markdownextradata-plugin (>=0.1.7,<0.3.0)", "typer (>=0.4.1,<0.5.0)", "pyyaml (>=5.3.1,<7.0.0)"]
-test = ["pytest (>=6.2.4,<7.0.0)", "pytest-cov (>=2.12.0,<4.0.0)", "mypy (==0.910)", "flake8 (>=3.8.3,<4.0.0)", "black (==22.3.0)", "isort (>=5.0.6,<6.0.0)", "requests (>=2.24.0,<3.0.0)", "httpx (>=0.14.0,<0.19.0)", "email_validator (>=1.1.1,<2.0.0)", "sqlalchemy (>=1.3.18,<1.5.0)", "peewee (>=3.13.3,<4.0.0)", "databases[sqlite] (>=0.3.2,<0.6.0)", "orjson (>=3.2.1,<4.0.0)", "ujson (>=4.0.1,!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0,<6.0.0)", "python-multipart (>=0.0.5,<0.0.6)", "flask (>=1.1.2,<3.0.0)", "anyio[trio] (>=3.2.1,<4.0.0)", "types-ujson (==4.2.1)", "types-orjson (==3.6.2)", "types-dataclasses (==0.6.5)"]
+test = ["types-dataclasses (==0.6.5)", "types-orjson (==3.6.2)", "types-ujson (==4.2.1)", "anyio[trio] (>=3.2.1,<4.0.0)", "flask (>=1.1.2,<3.0.0)", "python-multipart (>=0.0.5,<0.0.6)", "ujson (>=4.0.1,!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0,<6.0.0)", "orjson (>=3.2.1,<4.0.0)", "databases[sqlite] (>=0.3.2,<0.6.0)", "peewee (>=3.13.3,<4.0.0)", "sqlalchemy (>=1.3.18,<1.5.0)", "email_validator (>=1.1.1,<2.0.0)", "httpx (>=0.14.0,<0.19.0)", "requests (>=2.24.0,<3.0.0)", "isort (>=5.0.6,<6.0.0)", "black (==22.3.0)", "flake8 (>=3.8.3,<4.0.0)", "mypy (==0.910)", "pytest-cov (>=2.12.0,<4.0.0)", "pytest (>=6.2.4,<7.0.0)"]
+doc = ["pyyaml (>=5.3.1,<7.0.0)", "typer (>=0.4.1,<0.5.0)", "mkdocs-markdownextradata-plugin (>=0.1.7,<0.3.0)", "mdx-include (>=1.4.1,<2.0.0)", "mkdocs-material (>=8.1.4,<9.0.0)", "mkdocs (>=1.1.2,<2.0.0)"]
+dev = ["pre-commit (>=2.17.0,<3.0.0)", "uvicorn[standard] (>=0.12.0,<0.18.0)", "flake8 (>=3.8.3,<4.0.0)", "autoflake (>=1.4.0,<2.0.0)", "passlib[bcrypt] (>=1.7.2,<2.0.0)", "python-jose[cryptography] (>=3.3.0,<4.0.0)"]
+all = ["uvicorn[standard] (>=0.12.0,<0.18.0)", "email_validator (>=1.1.1,<2.0.0)", "orjson (>=3.2.1,<4.0.0)", "ujson (>=4.0.1,!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0,<6.0.0)", "pyyaml (>=5.3.1,<7.0.0)", "itsdangerous (>=1.1.0,<3.0.0)", "python-multipart (>=0.0.5,<0.0.6)", "jinja2 (>=2.11.2,<4.0.0)", "requests (>=2.24.0,<3.0.0)"]
 
 [[package]]
 name = "filelock"
@@ -222,8 +222,8 @@ optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-docs = ["furo (>=2022.6.21)", "sphinx (>=5.1.1)", "sphinx-autodoc-typehints (>=1.19.1)"]
-testing = ["covdefaults (>=2.2)", "coverage (>=6.4.2)", "pytest (>=7.1.2)", "pytest-cov (>=3)", "pytest-timeout (>=2.1)"]
+testing = ["pytest-timeout (>=2.1)", "pytest-cov (>=3)", "pytest (>=7.1.2)", "coverage (>=6.4.2)", "covdefaults (>=2.2)"]
+docs = ["sphinx-autodoc-typehints (>=1.19.1)", "sphinx (>=5.1.1)", "furo (>=2022.6.21)"]
 
 [[package]]
 name = "flake8"
@@ -283,8 +283,8 @@ h11 = ">=0.11,<0.13"
 sniffio = ">=1.0.0,<2.0.0"
 
 [package.extras]
-http2 = ["h2 (>=3,<5)"]
 socks = ["socksio (>=1.0.0,<2.0.0)"]
+http2 = ["h2 (>=3,<5)"]
 
 [[package]]
 name = "httptools"
@@ -312,10 +312,10 @@ rfc3986 = {version = ">=1.3,<2", extras = ["idna2008"]}
 sniffio = "*"
 
 [package.extras]
-brotli = ["brotlicffi", "brotli"]
-cli = ["click (>=8.0.0,<9.0.0)", "rich (>=10,<13)", "pygments (>=2.0.0,<3.0.0)"]
-http2 = ["h2 (>=3,<5)"]
 socks = ["socksio (>=1.0.0,<2.0.0)"]
+http2 = ["h2 (>=3,<5)"]
+cli = ["pygments (>=2.0.0,<3.0.0)", "rich (>=10,<13)", "click (>=8.0.0,<9.0.0)"]
+brotli = ["brotli", "brotlicffi"]
 
 [[package]]
 name = "identify"
@@ -353,10 +353,10 @@ optional = false
 python-versions = ">=3.6.1,<4.0"
 
 [package.extras]
-pipfile_deprecated_finder = ["pipreqs", "requirementslib"]
-requirements_deprecated_finder = ["pipreqs", "pip-api"]
-colors = ["colorama (>=0.4.3,<0.5.0)"]
 plugins = ["setuptools"]
+colors = ["colorama (>=0.4.3,<0.5.0)"]
+requirements_deprecated_finder = ["pip-api", "pipreqs"]
+pipfile_deprecated_finder = ["requirementslib", "pipreqs"]
 
 [[package]]
 name = "kinto-http"
@@ -397,9 +397,9 @@ tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 typing-extensions = ">=3.10"
 
 [package.extras]
-dmypy = ["psutil (>=4.0)"]
-python2 = ["typed-ast (>=1.4.0,<2)"]
 reports = ["lxml"]
+python2 = ["typed-ast (>=1.4.0,<2)"]
+dmypy = ["psutil (>=4.0)"]
 
 [[package]]
 name = "mypy-extensions"
@@ -453,8 +453,8 @@ optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-docs = ["furo (>=2021.7.5b38)", "proselint (>=0.10.2)", "sphinx-autodoc-typehints (>=1.12)", "sphinx (>=4)"]
-test = ["appdirs (==1.4.4)", "pytest-cov (>=2.7)", "pytest-mock (>=3.6)", "pytest (>=6)"]
+test = ["pytest (>=6)", "pytest-mock (>=3.6)", "pytest-cov (>=2.7)", "appdirs (==1.4.4)"]
+docs = ["sphinx (>=4)", "sphinx-autodoc-typehints (>=1.12)", "proselint (>=0.10.2)", "furo (>=2021.7.5b38)"]
 
 [[package]]
 name = "pluggy"
@@ -512,8 +512,8 @@ python-versions = ">=3.6.1"
 typing-extensions = ">=3.7.4.3"
 
 [package.extras]
-dotenv = ["python-dotenv (>=0.10.4)"]
 email = ["email-validator (>=1.0.3)"]
+dotenv = ["python-dotenv (>=0.10.4)"]
 
 [[package]]
 name = "pydocstyle"
@@ -567,7 +567,7 @@ py = ">=1.8.2"
 tomli = ">=1.0.0"
 
 [package.extras]
-testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "pygments (>=2.7.2)", "requests", "xmlschema"]
+testing = ["xmlschema", "requests", "pygments (>=2.7.2)", "nose", "mock", "hypothesis (>=3.56)", "argcomplete"]
 
 [[package]]
 name = "pytest-cov"
@@ -596,7 +596,7 @@ python-versions = ">=3.7"
 pytest = ">=5.0"
 
 [package.extras]
-dev = ["pre-commit", "tox", "pytest-asyncio"]
+dev = ["pytest-asyncio", "tox", "pre-commit"]
 
 [[package]]
 name = "python-dotenv"
@@ -632,8 +632,8 @@ idna = ">=2.5,<4"
 urllib3 = ">=1.21.1,<1.27"
 
 [package.extras]
-socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use_chardet_on_py3 = ["chardet (>=3.0.2,<6)"]
+socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 
 [[package]]
 name = "rfc3986"
@@ -648,6 +648,38 @@ idna = {version = "*", optional = true, markers = "extra == \"idna2008\""}
 
 [package.extras]
 idna2008 = ["idna"]
+
+[[package]]
+name = "sentry-sdk"
+version = "1.9.0"
+description = "Python client for Sentry (https://sentry.io)"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+certifi = "*"
+urllib3 = ">=1.10.0"
+
+[package.extras]
+aiohttp = ["aiohttp (>=3.5)"]
+beam = ["apache-beam (>=2.12)"]
+bottle = ["bottle (>=0.12.13)"]
+celery = ["celery (>=3)"]
+chalice = ["chalice (>=1.16.0)"]
+django = ["django (>=1.8)"]
+falcon = ["falcon (>=1.4)"]
+fastapi = ["fastapi (>=0.79.0)"]
+flask = ["flask (>=0.11)", "blinker (>=1.1)"]
+httpx = ["httpx (>=0.16.0)"]
+pure_eval = ["pure-eval", "executing", "asttokens"]
+pyspark = ["pyspark (>=2.4.4)"]
+quart = ["quart (>=0.16.1)", "blinker (>=1.1)"]
+rq = ["rq (>=0.6)"]
+sanic = ["sanic (>=0.8)"]
+sqlalchemy = ["sqlalchemy (>=1.2)"]
+starlette = ["starlette (>=0.19.1)"]
+tornado = ["tornado (>=5)"]
 
 [[package]]
 name = "smmap"
@@ -685,7 +717,7 @@ python-versions = ">=3.6"
 anyio = ">=3.4.0,<5"
 
 [package.extras]
-full = ["itsdangerous", "jinja2", "python-multipart", "pyyaml", "requests"]
+full = ["requests", "pyyaml", "python-multipart", "jinja2", "itsdangerous"]
 
 [[package]]
 name = "stevedore"
@@ -739,9 +771,9 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4"
 
 [package.extras]
-brotli = ["brotlipy (>=0.6.0)"]
-secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "certifi", "ipaddress"]
 socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
+secure = ["ipaddress", "certifi", "idna (>=2.0.0)", "cryptography (>=1.3.4)", "pyOpenSSL (>=0.14)"]
+brotli = ["brotlipy (>=0.6.0)"]
 
 [[package]]
 name = "uvicorn"
@@ -763,7 +795,7 @@ watchfiles = {version = ">=0.13", optional = true, markers = "extra == \"standar
 websockets = {version = ">=10.0", optional = true, markers = "extra == \"standard\""}
 
 [package.extras]
-standard = ["websockets (>=10.0)", "httptools (>=0.4.0)", "watchfiles (>=0.13)", "python-dotenv (>=0.13)", "PyYAML (>=5.1)", "uvloop (>=0.14.0,!=0.15.0,!=0.15.1)", "colorama (>=0.4)"]
+standard = ["colorama (>=0.4)", "uvloop (>=0.14.0,!=0.15.0,!=0.15.1)", "PyYAML (>=5.1)", "python-dotenv (>=0.13)", "watchfiles (>=0.13)", "httptools (>=0.4.0)", "websockets (>=10.0)"]
 
 [[package]]
 name = "uvloop"
@@ -774,9 +806,9 @@ optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-dev = ["Cython (>=0.29.24,<0.30.0)", "pytest (>=3.6.0)", "Sphinx (>=4.1.2,<4.2.0)", "sphinxcontrib-asyncio (>=0.3.0,<0.4.0)", "sphinx-rtd-theme (>=0.5.2,<0.6.0)", "aiohttp", "flake8 (>=3.9.2,<3.10.0)", "psutil", "pycodestyle (>=2.7.0,<2.8.0)", "pyOpenSSL (>=19.0.0,<19.1.0)", "mypy (>=0.800)"]
-docs = ["Sphinx (>=4.1.2,<4.2.0)", "sphinxcontrib-asyncio (>=0.3.0,<0.4.0)", "sphinx-rtd-theme (>=0.5.2,<0.6.0)"]
-test = ["aiohttp", "flake8 (>=3.9.2,<3.10.0)", "psutil", "pycodestyle (>=2.7.0,<2.8.0)", "pyOpenSSL (>=19.0.0,<19.1.0)", "mypy (>=0.800)"]
+test = ["mypy (>=0.800)", "pyOpenSSL (>=19.0.0,<19.1.0)", "pycodestyle (>=2.7.0,<2.8.0)", "psutil", "flake8 (>=3.9.2,<3.10.0)", "aiohttp"]
+docs = ["sphinx-rtd-theme (>=0.5.2,<0.6.0)", "sphinxcontrib-asyncio (>=0.3.0,<0.4.0)", "Sphinx (>=4.1.2,<4.2.0)"]
+dev = ["mypy (>=0.800)", "pyOpenSSL (>=19.0.0,<19.1.0)", "pycodestyle (>=2.7.0,<2.8.0)", "psutil", "flake8 (>=3.9.2,<3.10.0)", "aiohttp", "sphinx-rtd-theme (>=0.5.2,<0.6.0)", "sphinxcontrib-asyncio (>=0.3.0,<0.4.0)", "Sphinx (>=4.1.2,<4.2.0)", "pytest (>=3.6.0)", "Cython (>=0.29.24,<0.30.0)"]
 
 [[package]]
 name = "virtualenv"
@@ -792,8 +824,8 @@ filelock = ">=3.4.1,<4"
 platformdirs = ">=2.4,<3"
 
 [package.extras]
-docs = ["proselint (>=0.13)", "sphinx (>=5.1.1)", "sphinx-argparse (>=0.3.1)", "sphinx-rtd-theme (>=1)", "towncrier (>=21.9)"]
-testing = ["coverage (>=6.2)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7)", "packaging (>=21.3)", "pytest (>=7.0.1)", "pytest-env (>=0.6.2)", "pytest-freezegun (>=0.4.2)", "pytest-mock (>=3.6.1)", "pytest-randomly (>=3.10.3)", "pytest-timeout (>=2.1)"]
+testing = ["pytest-timeout (>=2.1)", "pytest-randomly (>=3.10.3)", "pytest-mock (>=3.6.1)", "pytest-freezegun (>=0.4.2)", "pytest-env (>=0.6.2)", "pytest (>=7.0.1)", "packaging (>=21.3)", "flaky (>=3.7)", "coverage-enable-subprocess (>=1)", "coverage (>=6.2)"]
+docs = ["towncrier (>=21.9)", "sphinx-rtd-theme (>=1)", "sphinx-argparse (>=0.3.1)", "sphinx (>=5.1.1)", "proselint (>=0.13)"]
 
 [[package]]
 name = "watchfiles"
@@ -817,7 +849,7 @@ python-versions = ">=3.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "e9e80edaec6ae6840e6e67c415366f876be495f218696f8e7f08484fed452f73"
+content-hash = "ff3ff28f52f784dd14e6a62831622b245796603ac66ee259d7dd236b609cda5c"
 
 [metadata.files]
 anyio = [
@@ -1207,6 +1239,10 @@ requests = [
 rfc3986 = [
     {file = "rfc3986-1.5.0-py2.py3-none-any.whl", hash = "sha256:a86d6e1f5b1dc238b218b012df0aa79409667bb209e58da56d0b94704e712a97"},
     {file = "rfc3986-1.5.0.tar.gz", hash = "sha256:270aaf10d87d0d4e095063c65bf3ddbc6ee3d0b226328ce21e036f946e421835"},
+]
+sentry-sdk = [
+    {file = "sentry-sdk-1.9.0.tar.gz", hash = "sha256:f185c53496d79b280fe5d9d21e6572aee1ab802d3354eb12314d216cfbaa8d30"},
+    {file = "sentry_sdk-1.9.0-py2.py3-none-any.whl", hash = "sha256:60b13757d6344a94bf0ccb3c0a006c4de77daab09871b30fbbd05d5ec24e54fb"},
 ]
 smmap = [
     {file = "smmap-5.0.0-py3-none-any.whl", hash = "sha256:2aba19d6a040e78d8b09de5c57e96207b09ed71d8e55ce0959eeee6c8e190d94"},

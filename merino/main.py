@@ -7,8 +7,10 @@ from fastapi.responses import JSONResponse
 
 from merino import providers
 from merino.config_logging import configure_logging
-from merino.middleware import logging
+from merino.middleware import logging, sentry
 from merino.web import api_v1, dockerflow
+
+sentry.sentry_init()
 
 app = FastAPI()
 
