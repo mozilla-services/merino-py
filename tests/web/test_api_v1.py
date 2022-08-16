@@ -69,7 +69,7 @@ def test_request_logs_contain_required_info(mocker):
     spy = mocker.spy(logging.Logger, "info")
     query = "nope"
     sid = "deadbeef-0000-1111-2222-333344445555"
-    seq = "22"
+    seq = 0
     root_path = "/api/v1/suggest"
     client.get(f"{root_path}?q={query}&sid={sid}&seq={seq}")
     extra_dict = spy.call_args[1].get("extra")
