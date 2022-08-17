@@ -30,7 +30,14 @@ COPY . $APP_HOME
 
 COPY --from=build /tmp/requirements.txt $APP_HOME/requirements.txt
 
-RUN pip install --no-cache-dir --quiet --upgrade -r requirements.txt
+# Install libmaxminddb* to build the MaxMindDB Python client with C extension.
+RUN apt-get update && \
+    apt-get install --yes build-essential libmaxminddb0 libmaxminddb-dev && \
+    pip install --no-cache-dir --quiet --upgrade -r requirements.txt && \
+    apt-get remove --yes build-essential && \
+    apt-get -q --yes autoremove && \
+    apt-get clean && \
+    rm -rf /root/.cache
 
 EXPOSE 8000
 
