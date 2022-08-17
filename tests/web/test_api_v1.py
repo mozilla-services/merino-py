@@ -61,3 +61,18 @@ def test_providers():
     assert set([provider["id"] for provider in providers]) == set(
         ["sponsored-provider", "nonsponsored-provider"]
     )
+
+
+def test_request_logs_contain_required_info(mocker):
+    import logging
+
+    spy = mocker.spy(logging.Logger, "info")
+    query = "nope"
+    sid = "deadbeef-0000-1111-2222-333344445555"
+    seq = 0
+    root_path = "/api/v1/suggest"
+    client.get(f"{root_path}?q={query}&sid={sid}&seq={seq}")
+    extra_dict = spy.call_args[1].get("extra")
+    assert extra_dict["path"] == root_path
+    assert extra_dict["session_id"] == sid
+    assert extra_dict["sequence_no"] == seq
