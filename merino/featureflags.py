@@ -34,25 +34,32 @@ class FeatureFlags:
         if enabled <= 0.0 or enabled > 1.0:
             return False
 
-        # override bucketing id if specified in args
-        bucketing_id: bytes = bytes()
-        if bucket_for is not None:
-            bucket_type = type(bucket_for)
-            if bucket_type is str:
-                bucketing_id = self._get_digest(cast(str, bucket_for))
-            elif bucket_type is bytes:
-                bucketing_id = cast(bytes, bucket_for)
-        else:
-            match config.get("scheme"):
-                case "random":
-                    bucketing_id = self._get_random()
-                case "session" if (session_id := session_id_context.get()) is not None:
-                    bucketing_id = self._get_digest(session_id)
-                case _:  # Only currently supporting 'random' as a bucketing scheme
-                    return False
+        bucket_scheme = config.get("scheme")
+        if (bucketing_id := self._get_bucketing_id(bucket_scheme, bucket_for)) is None:
+            return False
 
         bucket_value = self._bytes_to_interval(bucketing_id)
         return bucket_value <= enabled
+
+    def _get_bucketing_id(
+        self, scheme: str, bucket_for: str | bytes | None
+    ) -> bytes | None:
+        # override bucketing id if specified in args
+        if bucket_for is not None:
+            bucket_type = type(bucket_for)
+            if bucket_type is str:
+                return self._get_digest(cast(str, bucket_for))
+            elif bucket_type is bytes:
+                return cast(bytes, bucket_for)
+        else:
+            # Otherwise use the scheme specified in the config
+            match scheme:
+                case "random":
+                    return self._get_random()
+                case "session" if (session_id := session_id_context.get()) is not None:
+                    return self._get_digest(session_id)
+                case _:
+                    return None
 
     def _get_random(self) -> bytes:
         return randbytes(32)

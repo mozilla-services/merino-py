@@ -9,9 +9,20 @@ mocked_settings = DynaconfDict(
             "test-not-enabled": {"scheme": "random", "enabled": 0},
             "test-perc-enabled": {"scheme": "random", "enabled": 0.5},
             "test-perc-enabled-session": {"scheme": "session", "enabled": 0.5},
+            "test-no-scheme": {"scheme": "foobar", "enabled": 0.5},
         }
     }
 )
+
+
+def test_missing():
+    flags = FeatureFlags(mocked_settings)
+    assert flags.is_enabled("test-missing") is False
+
+
+def test_no_scheme():
+    flags = FeatureFlags(mocked_settings)
+    assert flags.is_enabled("test-no-scheme") is False
 
 
 def test_enabled():
