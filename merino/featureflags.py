@@ -5,7 +5,6 @@ from typing import cast
 
 from dynaconf import Dynaconf, Validator
 
-
 _flags = Dynaconf(
     root_path="merino",
     envvar_prefix="MERINO",
@@ -45,6 +44,7 @@ class FeatureFlags:
     `scheme` - This is the bucketing scheme for the flag. Allowed values are 'random' and 'session'
     `enabled` - This represents the % enabled for the flag and must be a float between 0 and 1
     """
+
     flags: dict
 
     def __init__(self) -> None:
