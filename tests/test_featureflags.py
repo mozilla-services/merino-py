@@ -1,42 +1,28 @@
-from dynaconf.utils import DynaconfDict
-
 from merino.featureflags import FeatureFlags, session_id_context
-
-mocked_settings = DynaconfDict(
-    {
-        "flags": {
-            "test-enabled": {"scheme": "random", "enabled": 1},
-            "test-not-enabled": {"scheme": "random", "enabled": 0},
-            "test-perc-enabled": {"scheme": "random", "enabled": 0.5},
-            "test-perc-enabled-session": {"scheme": "session", "enabled": 0.5},
-            "test-no-scheme": {"scheme": "foobar", "enabled": 0.5},
-        }
-    }
-)
 
 
 def test_missing():
-    flags = FeatureFlags(mocked_settings)
+    flags = FeatureFlags()
     assert flags.is_enabled("test-missing") is False
 
 
 def test_no_scheme():
-    flags = FeatureFlags(mocked_settings)
+    flags = FeatureFlags()
     assert flags.is_enabled("test-no-scheme") is False
 
 
 def test_enabled():
-    flags = FeatureFlags(mocked_settings)
+    flags = FeatureFlags()
     assert flags.is_enabled("test-enabled") is True
 
 
 def test_not_enabled():
-    flags = FeatureFlags(mocked_settings)
+    flags = FeatureFlags()
     assert flags.is_enabled("test-not-enabled") is False
 
 
 def test_enabled_perc():
-    flags = FeatureFlags(mocked_settings)
+    flags = FeatureFlags()
     assertions = {
         b"\x00\x00\x00\x00": True,
         b"\xff\xff\xff\xff": False,
@@ -47,7 +33,7 @@ def test_enabled_perc():
 
 
 def test_enabled_perc_session():
-    flags = FeatureFlags(mocked_settings)
+    flags = FeatureFlags()
     assertions = {
         "000": True,
         "fff": False,

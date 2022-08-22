@@ -1,0 +1,19 @@
+
+[testing.flags.test-enabled]
+enabled = 1
+scheme = 'random'
+
+[testing.flags.test-not-enabled]
+enabled = 0
+scheme = 'random'
+
+[testing.flags.test-perc-enabled]
+enabled = 0.5
+scheme = 'random'
+
+[testing.flags.test-perc-enabled-session]
+enabled = 0.5
+scheme = 'session'
+
+[testing.flags.test-no-scheme]
+enabled = 0.5

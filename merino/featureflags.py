@@ -3,13 +3,19 @@ from contextvars import ContextVar
 from random import randbytes
 from typing import cast
 
-from dynaconf import Dynaconf
+from dynaconf import Dynaconf, Validator
+
 
 _flags = Dynaconf(
     root_path="merino",
-    envvar_prefix="MERINO_FLAGS",
+    envvar_prefix="MERINO",
     settings_files=[
-        "configs/flags.toml",
+        "configs/flags/default.toml",
+        "configs/flags/testing.toml",
+    ],
+    validators=[
+        Validator(r"flags\.\w+\.enabled", gt=0.0, lte=1.0),
+        Validator(r"flags\.\w+\.scheme", is_in=["random", "session"]),
     ],
     environments=True,
     env_switcher="MERINO_ENV",
@@ -19,12 +25,36 @@ session_id_context: ContextVar[str | None] = ContextVar("session_id", default=No
 
 
 class FeatureFlags:
+    """
+    A very basic implementation of featureflags using dynaconf as the configuration system.
+    It supports two bucketing schemes `random` and `session`. Random does what it says on the tin.
+    It generates a random bucketing id for every flag check. Session bucketing uses the session id
+    of the request as the bucketing key so that feature checks within a given search session would
+    be consistent. Additionally you can pass a custom bucketing_id via the `bucket_for` parameter.
+    This is useful when you have an ad-hoc bucketing identifier that is not supported via one of
+    the standard schemes.
+
+    Each flag has a very simple configuration:
+
+    ```
+    [default.flags.<flag_name>]
+    scheme = 'session'
+    enabled = 0.5
+    ```
+
+    `scheme` - This is the bucketing scheme for the flag. Allowed values are 'random' and 'session'
+    `enabled` - This represents the % enabled for the flag and must be a float between 0 and 1
+    """
     flags: dict
 
-    def __init__(self, flags: dict | None = None) -> None:
-        self.flags = (flags if flags is not None else _flags).get("flags", {})
+    def __init__(self) -> None:
+        self.flags = _flags.get("flags", {})
 
     def is_enabled(self, flag: str, bucket_for: str | bytes | None = None) -> bool:
+        """
+        Checks if a given flag is enabled via a feature flag configuration block.
+        As a principal it fails closed as quickly as possible.
+        """
         config = self.flags.get(flag)
         if config is None:
             return False

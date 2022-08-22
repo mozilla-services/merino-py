@@ -1,0 +1,5 @@
+# Example feature flag configuration block.
+# 
+# [default.flags.example]
+# scheme="random"
+# enabled=0.5
