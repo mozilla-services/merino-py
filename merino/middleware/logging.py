@@ -30,6 +30,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             "sequence_no": int(seq)
             if (seq := request.query_params.get("seq"))
             else None,
+            "country": request.state.location.country,
+            "region": request.state.location.region,
+            "city": request.state.location.city,
+            "dma": request.state.location.dma,
         }
         logger.info("", extra=data)
 

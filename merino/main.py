@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from merino import providers
 from merino.config_logging import configure_logging
-from merino.middleware import logging
+from merino.middleware import geolocation, logging
 from merino.web import api_v1, dockerflow
 
 app = FastAPI()
@@ -40,15 +40,18 @@ async def validation_exception_handler(_, exc) -> JSONResponse:
     )
 
 
-app.add_middleware(CorrelationIdMiddleware)
-app.add_middleware(logging.LoggingMiddleware)
-
-app.include_router(dockerflow.router)
-app.include_router(api_v1.router, prefix="/api/v1")
-
+# Note: the order of the following middleware registration matters.
+# Specifically, `LoggingMiddleware` should be added after `CorrelationIdMiddleware` and
+# `GeolocationMiddleware`.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["GET", "OPTIONS", "HEAD"],
 )
+app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(geolocation.GeolocationMiddleware)
+app.add_middleware(logging.LoggingMiddleware)
+
+app.include_router(dockerflow.router)
+app.include_router(api_v1.router, prefix="/api/v1")

@@ -28,6 +28,10 @@ debug = false
 level = "INFO"
 format = "json"
 
+[default.location]
+# Path to the MaxMindDB file. This should be overridden in production.
+maxmind_database = "./dev/GeoLite2-City-Test.mmdb"
+
 [default.remote_settings]
 server = "https://firefox.settings.services.mozilla.com"
 bucket = "main"

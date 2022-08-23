@@ -63,16 +63,25 @@ def test_providers():
     )
 
 
-def test_request_logs_contain_required_info(mocker):
+def test_request_logs_contain_required_info(mocker, caplog):
     import logging
 
-    spy = mocker.spy(logging.Logger, "info")
+    caplog.set_level(logging.INFO)
+
+    # Use a valid IP to avoid the geolocation errors/logs
+    mock_client = mocker.patch("fastapi.Request.client")
+    mock_client.host = "127.0.0.1"
+
     query = "nope"
     sid = "deadbeef-0000-1111-2222-333344445555"
     seq = 0
     root_path = "/api/v1/suggest"
     client.get(f"{root_path}?q={query}&sid={sid}&seq={seq}")
-    extra_dict = spy.call_args[1].get("extra")
-    assert extra_dict["path"] == root_path
-    assert extra_dict["session_id"] == sid
-    assert extra_dict["sequence_no"] == seq
+
+    assert len(caplog.records) == 1
+
+    record = caplog.records[0]
+
+    assert record.path == root_path
+    assert record.session_id == sid
+    assert record.sequence_no == seq
