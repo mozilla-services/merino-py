@@ -8,9 +8,8 @@ from fastapi.responses import JSONResponse
 from merino import providers
 from merino.config_logging import configure_logging
 from merino.middleware import featureflags, geolocation, logging
+from merino.config_sentry import configure_sentry
 from merino.web import api_v1, dockerflow
-
-sentry.sentry_init()
 
 app = FastAPI()
 
@@ -21,6 +20,7 @@ def startup_configuration() -> None:
     Set up various configurations such as logging.
     """
     configure_logging()
+    configure_sentry()
 
 
 @app.on_event("startup")
