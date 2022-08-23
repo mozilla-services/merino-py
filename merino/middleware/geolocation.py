@@ -33,23 +33,21 @@ class GeolocationMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         # `request.client.host` should be the first remote client address of `X-Forwarded-For`.
+        record = None
         try:
             record = reader.get(request.client.host)
         except ValueError:
             logger.warning("Invalid IP address for geolocation parsing")
-            request.state.location = Location()
-        else:
-            request.state.location = (
-                Location(
-                    country=record["country"].get("iso_code"),
-                    region=record["subdivisions"][0].get("iso_code"),
-                    city=record["city"]["names"].get("en"),
-                    dma=record["location"].get("metro_code"),
-                )
-                if record
-                else Location()
+
+        request.state.location = (
+            Location(
+                country=record["country"].get("iso_code"),
+                region=record["subdivisions"][0].get("iso_code"),
+                city=record["city"]["names"].get("en"),
+                dma=record["location"].get("metro_code"),
             )
+            if record
+            else Location()
+        )
 
-        response = await call_next(request)
-
-        return response
+        return await call_next(request)
