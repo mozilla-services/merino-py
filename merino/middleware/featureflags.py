@@ -12,5 +12,5 @@ class FeatureFlagsMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         session_id = request.query_params.get("sid")
-        session_id_context.set(str(session_id))
+        session_id_context.set(session_id)
         return await call_next(request)
