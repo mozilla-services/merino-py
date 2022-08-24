@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 # Configuration and schema
-def dynaconf_loader():
+def _dynaconf_loader():
     return Dynaconf(
         root_path="merino",
         envvar_prefix="MERINO",
@@ -53,7 +53,8 @@ class FeatureFlagConfigs(BaseModel):
         return self.flags.get(flag_name, None)
 
 
-_flags = FeatureFlagConfigs(flags=dynaconf_loader())
+# Initialize the flag configs at the module level
+_flags = FeatureFlagConfigs(flags=_dynaconf_loader())
 
 
 # The session ID is set on this context variable by the FeatureFlagsMiddleware
@@ -184,7 +185,7 @@ class FeatureFlags:
     @staticmethod
     def _bytes_to_interval(bucketing_id: bytes) -> float:
         """
-        Takes an arbitrarily long bytearray and maps it to an float between [0,1)
+        Takes an arbitrarily long bytearray and maps it to a float between [0,1)
         """
         out = 0
         for byte in bucketing_id:
