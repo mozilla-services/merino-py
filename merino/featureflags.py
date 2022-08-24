@@ -143,7 +143,7 @@ class FeatureFlags:
         Returns:
             bytes
         Raises:
-            RuntimeError
+            TypeError, ValueError
         """
         # Override bucketing id if specified in args
         if bucket_for is not None:
