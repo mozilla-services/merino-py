@@ -1,44 +1,66 @@
+import pytest
+
 from merino.featureflags import FeatureFlags, session_id_context
 
 
 def test_missing():
     flags = FeatureFlags()
-    assert flags.is_enabled("test-missing") is False
-
-
-def test_no_scheme():
-    flags = FeatureFlags()
-    assert flags.is_enabled("test-no-scheme") is False
+    assert not flags.is_enabled("test-missing")
 
 
 def test_enabled():
     flags = FeatureFlags()
-    assert flags.is_enabled("test-enabled") is True
+    assert flags.is_enabled("test-enabled")
 
 
 def test_not_enabled():
     flags = FeatureFlags()
-    assert flags.is_enabled("test-not-enabled") is False
+    assert not flags.is_enabled("test-not-enabled")
 
 
-def test_enabled_perc():
+def test_no_scheme():
     flags = FeatureFlags()
-    assertions = {
-        b"\x00\x00\x00\x00": True,
-        b"\xff\xff\xff\xff": False,
-    }
-
-    for bid, test in assertions.items():
-        assert flags.is_enabled("test-perc-enabled", bucket_for=bid) is test
+    assert not flags.is_enabled("test-no-scheme")
 
 
-def test_enabled_perc_session():
+@pytest.mark.parametrize(
+    "bucket_id, want",
+    [
+        ("000", True),
+        ("fff", False),
+    ],
+    ids=["session_id_on", "session_id_off"],
+)
+def test_no_scheme_default_session_id(bucket_id: str, want: bool):
+    session_id_context.set(bucket_id)
     flags = FeatureFlags()
-    assertions = {
-        "000": True,
-        "fff": False,
-    }
+    assert flags.is_enabled("test-no-scheme") is want
 
-    for bid, test in assertions.items():
-        session_id_context.set(bid)
-        assert flags.is_enabled("test-perc-enabled-session") is test
+
+@pytest.mark.parametrize(
+    "bucket_id, want",
+    [
+        (b"\x00\x00\x00\x00", True),
+        (b"\xff\xff\xff\xff", False),
+    ],
+    ids=["enabed_on", "enabled_off"],
+)
+def test_enabled_perc(bucket_id: str, want: bool):
+    """Test for feature flags with "random" scheme and passing in bucket_for value."""
+    flags = FeatureFlags()
+    assert flags.is_enabled("test-perc-enabled", bucket_for=bucket_id) is want
+
+
+@pytest.mark.parametrize(
+    "bucket_id, want",
+    [
+        ("000", True),
+        ("fff", False),
+    ],
+    ids=["session_id_on", "session_id_off"],
+)
+def test_enabled_perc_session(bucket_id: str, want: bool):
+    """Test for feature flags with "random" scheme and passing in bucket_for value."""
+    session_id_context.set(bucket_id)
+    flags = FeatureFlags()
+    assert flags.is_enabled("test-perc-enabled-session") is want
