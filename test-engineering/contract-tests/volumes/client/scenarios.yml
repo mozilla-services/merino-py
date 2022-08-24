@@ -1,0 +1,233 @@
+scenarios:
+  - name: wiki_fruit__apple
+    description: Test that Merino successfully returns a WikiFruit suggestion
+    steps:
+      - request:
+          service: merino
+          method: GET
+          path: '/api/v1/suggest?q=apple'
+          headers:
+            - name: User-Agent
+              value: 'Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0'
+            - name: Accept-Language
+              value: 'en-US'
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            # The request_id field is required to be included in response from Merino.
+            # But due to its dynamic nature, we cannot test its value in a reproducible way.
+            # The client test framework knows how to interpret a value of `null` for this field.
+            request_id: null
+            suggestions:
+              - block_id: 1
+                full_keyword: 'apple'
+                title: 'Wikipedia - Apple'
+                url: 'https://en.wikipedia.org/wiki/Apple'
+                impression_url: 'https://127.0.0.1/'
+                click_url: 'https://127.0.0.1/'
+                provider: 'test_wiki_fruit'
+                advertiser: 'test_advertiser'
+                is_sponsored: false
+                icon: 'https://en.wikipedia.org/favicon.ico'
+                score: 0.0
+
+  - name: wiki_fruit__apple_with_client_variants
+    description: Test that Merino successfully returns client variants
+    steps:
+      - request:
+          service: merino
+          method: GET
+          path: '/api/v1/suggest?q=apple&client_variants=one,two'
+          headers:
+            - name: User-Agent
+              value: 'Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0'
+            - name: Accept-Language
+              value: 'en-US'
+        response:
+          status_code: 200
+          content:
+            client_variants:
+              - 'one'
+              - 'two'
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 1
+                full_keyword: 'apple'
+                title: 'Wikipedia - Apple'
+                url: 'https://en.wikipedia.org/wiki/Apple'
+                impression_url: 'https://127.0.0.1/'
+                click_url: 'https://127.0.0.1/'
+                provider: 'test_wiki_fruit'
+                advertiser: 'test_advertiser'
+                is_sponsored: false
+                icon: 'https://en.wikipedia.org/favicon.ico'
+                score: 0.0
+
+  - name: wiki_fruit__cherry
+    description: Test that Merino successfully returns a WikiFruit suggestion
+    steps:
+      - request:
+          service: merino
+          method: GET
+          path: '/api/v1/suggest?q=cherry'
+          headers:
+            - name: User-Agent
+              value: 'Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0'
+            - name: Accept-Language
+              value: 'en-US'
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 1
+                full_keyword: 'cherry'
+                title: 'Wikipedia - Cherry'
+                url: 'https://en.wikipedia.org/wiki/Cherry'
+                impression_url: 'https://127.0.0.1/'
+                click_url: 'https://127.0.0.1/'
+                provider: 'test_wiki_fruit'
+                advertiser: 'test_advertiser'
+                is_sponsored: false
+                icon: 'https://en.wikipedia.org/favicon.ico'
+                score: 0.0
+
+  - name: remote_settings__coffee
+    description: Test that Merino successfully returns a Remote Settings suggestion
+    steps:
+      - request:
+          service: kinto
+          filename: "data-01.json"
+          data_type: "data"
+      - request:
+          service: kinto
+          filename: "data-02.json"
+          data_type: "data"
+      - request:
+          delay: 3 # Wait for remote settings data to load into merino
+          service: merino
+          method: GET
+          path: '/api/v1/suggest?q=coffee'
+          headers:
+            - name: User-Agent
+              value: 'Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0'
+            - name: Accept-Language
+              value: 'en-US'
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 3
+                full_keyword: 'coffee'
+                title: 'Coffee'
+                url: 'https://example.com/target/coffee'
+                impression_url: 'https://example.com/impression/coffee'
+                click_url: 'https://example.com/click/coffee'
+                provider: 'test_remote_settings'
+                advertiser: 'Example.com'
+                is_sponsored: true
+                # The client test framework knows how to interpret a value of `null` for this field.
+                icon: null
+                score: 0.3
+
+  - name: remote_settings__offline_expansion_orange
+    description: Test that Merino successfully returns a Remote Settings suggestion for Offline Expansion
+    steps:
+      - request:
+          service: kinto
+          filename: "data-01.json"
+          data_type: "data"
+      - request:
+          service: kinto
+          filename: "data-02.json"
+          data_type: "data"
+      - request:
+          service: kinto
+          filename: "offline-expansion-data-01.json"
+          data_type: "offline-expansion-data"
+      - request:
+          delay: 3 # Wait for remote settings data to load into merino
+          service: merino
+          method: GET
+          path: '/api/v1/suggest?q=orange'
+          headers:
+            - name: User-Agent
+              value: 'Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0'
+            - name: Accept-Language
+              value: 'en-US'
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 10
+                full_keyword: 'orange'
+                title: 'Orange - Offline Expansion'
+                url: 'https://example.org/target/orange-offline-expansion'
+                provider: 'test_remote_settings'
+                advertiser: 'Example.org'
+                is_sponsored: false
+                # The client test framework knows how to interpret a value of `null` for this field.
+                icon: null
+                score: 0.3
+
+  - name: multiple_providers__banana
+    description: Test that Merino successfully returns suggestions from multiple providers
+    steps:
+      - request:
+          service: kinto
+          filename: "data-01.json"
+          data_type: "data"
+      - request:
+          service: kinto
+          filename: "data-02.json"
+          data_type: "data"
+      - request:
+          delay: 3  # Wait for remote settings data to load into merino
+          service: merino
+          method: GET
+          path: '/api/v1/suggest?q=banana'
+          headers:
+            - name: User-Agent
+              value: 'Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0'
+            - name: Accept-Language
+              value: 'en-US'
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 1
+                full_keyword: 'banana'
+                title: 'Wikipedia - Banana'
+                url: 'https://en.wikipedia.org/wiki/Banana'
+                impression_url: 'https://127.0.0.1/'
+                click_url: 'https://127.0.0.1/'
+                provider: 'test_wiki_fruit'
+                advertiser: 'test_advertiser'
+                is_sponsored: false
+                icon: https://en.wikipedia.org/favicon.ico
+                score: 0.0
+              - block_id: 2
+                full_keyword: 'banana'
+                title: 'Banana'
+                url: 'https://example.org/target/banana'
+                impression_url: 'https://example.org/impression/banana'
+                click_url: 'https://example.org/click/banana'
+                provider: 'test_remote_settings'
+                advertiser: 'Example.org'
+                is_sponsored: true
+                icon: null
+                score: 0.3
