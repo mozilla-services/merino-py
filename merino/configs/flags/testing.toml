@@ -15,5 +15,9 @@ scheme = 'random'
 enabled = 0.5
 scheme = 'session'
 
+[testing.flags.test-invalid-scheme]
+enabled = 1
+scheme = 'invalid'
+
 [testing.flags.test-no-scheme]
 enabled = 0.5

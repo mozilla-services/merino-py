@@ -18,6 +18,22 @@ def test_not_enabled():
     assert not flags.is_enabled("test-not-enabled")
 
 
+def test_invalid_scheme(caplog):
+    import logging
+
+    caplog.set_level(logging.WARNING)
+
+    flags = FeatureFlags()
+    enabled = flags.is_enabled("test-invalid-scheme")
+    assert not enabled
+
+    assert len(caplog.records) == 1
+    assert (
+        caplog.messages[0]
+        == "bucketing_id: scheme must be on of `random`, `session`. got `invalid`"
+    )
+
+
 def test_no_scheme():
     flags = FeatureFlags()
     assert not flags.is_enabled("test-no-scheme")

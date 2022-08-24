@@ -1,9 +1,11 @@
 import hashlib
+import logging
 from contextvars import ContextVar
 from random import randbytes
-from typing import cast
 
 from dynaconf import Dynaconf, Validator
+
+logger = logging.getLogger(__name__)
 
 _flags = Dynaconf(
     root_path="merino",
@@ -77,15 +79,15 @@ class FeatureFlags:
             return False
 
         bucket_scheme = config.get("scheme", self.default_scheme)
-        if (bucketing_id := self._get_bucketing_id(bucket_scheme, bucket_for)) is None:
+        try:
+            bucketing_id = self._get_bucketing_id(bucket_scheme, bucket_for)
+            bucket_value = self._bytes_to_interval(bucketing_id)
+            return bucket_value <= enabled
+        except RuntimeError as err:
+            logger.exception(err)
             return False
 
-        bucket_value = self._bytes_to_interval(bucketing_id)
-        return bucket_value <= enabled
-
-    def _get_bucketing_id(
-        self, scheme: str, bucket_for: str | bytes | None
-    ) -> bytes | None:
+    def _get_bucketing_id(self, scheme: str, bucket_for: str | bytes | None) -> bytes:
         """
         Returns a bytearray that can then be used to check against the enabled percent
         for inclusion into the feature
@@ -98,6 +100,8 @@ class FeatureFlags:
                 using sha256.
         Returns:
             bytes
+        Raises:
+            RuntimeError
         """
         # Override bucketing id if specified in args
         if bucket_for is not None:
@@ -107,7 +111,9 @@ class FeatureFlags:
                 case bytes():
                     return bucket_for
                 case _:
-                    return None
+                    raise RuntimeError(
+                        f"bucketing_id: bucket_for must be str | bytes. got {type(bucket_for)}"
+                    )
         else:
             # If bucket_for is None use the scheme specified in the config
             match scheme:
@@ -118,7 +124,9 @@ class FeatureFlags:
                     # Otherwise return the digest of the session_id.
                     return self._get_digest(session_id)
                 case _:
-                    return None
+                    raise RuntimeError(
+                        f"bucketing_id: scheme must be on of `random`, `session`. got `{scheme}`"
+                    )
 
     @staticmethod
     def _get_random() -> bytes:
