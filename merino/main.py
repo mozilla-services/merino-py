@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from merino import providers
 from merino.config_logging import configure_logging
-from merino.middleware import geolocation, logging, featureflags
+from merino.middleware import featureflags, geolocation, logging
 from merino.web import api_v1, dockerflow
 
 app = FastAPI()
