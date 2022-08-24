@@ -159,7 +159,9 @@ class FeatureFlags:
                 case "session":
                     session_id = session_id_context.get()
                     if session_id is None:
-                        raise ValueError("Expected a session_id but none exist in this context")
+                        raise ValueError(
+                            "Expected a session_id but none exist in this context"
+                        )
                     return self._get_digest(session_id)
                 case _:
                     # This is now validated by the pydantic schema.

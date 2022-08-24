@@ -1,6 +1,6 @@
 import pytest
-
 from pydantic import ValidationError
+
 from merino.featureflags import FeatureFlagConfigs, FeatureFlags, session_id_context
 
 
@@ -79,7 +79,7 @@ def test_enabled_perc_session(bucket_id: str, want: bool):
         {"invalid-scheme": {"scheme": "invalid", "enabled": 0}},
         {"enabled-range": {"enabled": 42}},
     ],
-    ids=["invalid-scheme", "enabled-range"]
+    ids=["invalid-scheme", "enabled-range"],
 )
 def test_raises_malformed_config(config: dict):
     with pytest.raises(ValidationError):
