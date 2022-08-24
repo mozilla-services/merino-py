@@ -111,16 +111,18 @@ class FeatureFlags:
         if config is None:
             return False
 
-        enabled = config.enabled
-        # enabled should be gt 0 and lt 1
-        if enabled <= 0.0 or enabled > 1.0:
-            return False
+        # Short circuits for enabled values of 0 or 1
+        match config.enabled:
+            case 0.0:
+                return False
+            case 1.0:
+                return True
 
         bucket_scheme = config.scheme or self.default_scheme
         try:
             bucketing_id = self._get_bucketing_id(bucket_scheme, bucket_for)
             bucket_value = self._bytes_to_interval(bucketing_id)
-            return bucket_value <= enabled
+            return bucket_value <= config.enabled
         except (RuntimeError, TypeError, ValueError) as err:
             logger.exception(err)
             return False
