@@ -32,14 +32,14 @@ class Enabled(ConstrainedFloat):
     le: OptionalIntFloat = 1.0
 
 
-class Scheme(str, Enum):
+class BucketingScheme(str, Enum):
     random = "random"
     session = "session"
 
 
 class FeatureFlag(BaseModel):
     enabled: Enabled
-    scheme: Optional[Scheme]
+    scheme: Optional[BucketingScheme]
 
 
 class FeatureFlagConfigs(BaseModel):
@@ -85,7 +85,7 @@ class FeatureFlags:
     """
 
     flags: FeatureFlagConfigs
-    default_scheme: str = "session"
+    default_scheme: BucketingScheme = BucketingScheme.session
 
     def __init__(self) -> None:
         self.flags = _flags
@@ -124,7 +124,9 @@ class FeatureFlags:
             logger.exception(err)
             return False
 
-    def _get_bucketing_id(self, scheme: str, bucket_for: str | bytes | None) -> bytes:
+    def _get_bucketing_id(
+        self, scheme: BucketingScheme, bucket_for: str | bytes | None
+    ) -> bytes:
         """
         Returns a bytearray that can then be used to check against the enabled percent
         for inclusion into the feature
@@ -154,21 +156,15 @@ class FeatureFlags:
         else:
             # If bucket_for is None use the scheme specified in the config
             match scheme:
-                case "random":
+                case BucketingScheme.random:
                     return self._get_random()
-                case "session":
+                case BucketingScheme.session:
                     session_id = session_id_context.get()
                     if session_id is None:
                         raise ValueError(
                             "Expected a session_id but none exist in this context"
                         )
                     return self._get_digest(session_id)
-                case _:
-                    # This is now validated by the pydantic schema.
-                    # However mypy complains about a None return type without this block.
-                    raise RuntimeError(
-                        f"bucketing_id: scheme must be on of `random`, `session`. got `{scheme}`"
-                    )
 
     @staticmethod
     def _get_random() -> bytes:
