@@ -5,6 +5,7 @@ from dynaconf import Dynaconf, Validator
 _validators = [
     Validator("logging.level", is_in=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     Validator("logging.format", is_in=["mozlog", "pretty"]),
+    Validator("metrics.port", gte=0),
     Validator("providers.adm.cron_interval_sec", gt=0),
     Validator("providers.adm.resync_interval_sec", gt=0),
     Validator("providers.adm.score", gte=0, lte=1),

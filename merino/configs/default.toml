@@ -29,6 +29,11 @@ level = "INFO"
 # Any of "mozlog" (i.e. JSON) or "pretty"
 format = "mozlog"
 
+[default.metrics]
+dev_logger = true
+host = "localhost"
+port = 8092
+
 [default.location]
 # Path to the MaxMindDB file. This should be overridden in production.
 maxmind_database = "./dev/GeoLite2-City-Test.mmdb"

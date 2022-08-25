@@ -1,4 +1,16 @@
 [[package]]
+name = "aiodogstatsd"
+version = "0.16.0.post0"
+description = "An asyncio-based client for sending metrics to StatsD with support of DogStatsD extension"
+category = "main"
+optional = false
+python-versions = ">=3.7,<4.0"
+
+[package.extras]
+aiohttp = ["aiohttp (>=3.0)"]
+starlette = ["starlette (>=0.13)"]
+
+[[package]]
 name = "anyio"
 version = "3.6.1"
 description = "High level compatibility layer for multiple asynchronous event loop implementations"
@@ -908,6 +920,10 @@ python-versions = "^3.10"
 content-hash = "01f4d306395cf88ffec636431eda27c474f1c9176355faa0c9c7df1b08c5bdbb"
 
 [metadata.files]
+aiodogstatsd = [
+    {file = "aiodogstatsd-0.16.0.post0-py3-none-any.whl", hash = "sha256:82000e6da599aee92e3c129d8cdf05cd102e2ac7a8a7da7ec07a16967031c865"},
+    {file = "aiodogstatsd-0.16.0.post0.tar.gz", hash = "sha256:f783c7d6d74edd160b34141ff5f069c9a935bb32636823e39e36f0d1dbe14931"},
+]
 anyio = [
     {file = "anyio-3.6.1-py3-none-any.whl", hash = "sha256:cb29b9c70620506a9a8f87a309591713446953302d7d995344d0d7c6c0c9a7be"},
     {file = "anyio-3.6.1.tar.gz", hash = "sha256:413adf95f93886e442aea925f3ee43baa5a765a64a0f52c6081894f9992fdd0b"},
