@@ -64,9 +64,7 @@ async def suggest(
     else:
         search_from = default_providers
     lookups = [
-        metrics_client.timeit_task(
-            p.query(q), f"{p.__module__}.query"
-        )
+        metrics_client.timeit_task(p.query(q), f"{p.__module__}.query")
         for p in search_from
     ]
     results = await asyncio.gather(*lookups)

@@ -7,9 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from merino import providers
-from merino.metrics import configure_metrics, get_client
 from merino.config_logging import configure_logging
 from merino.config_sentry import configure_sentry
+from merino.metrics import configure_metrics, get_client
 from merino.middleware import featureflags, geolocation, logging, metrics
 from merino.web import api_v1, dockerflow
 
