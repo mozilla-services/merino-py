@@ -23,6 +23,7 @@ settings = Dynaconf(
         "configs/default.toml",
         "configs/development.toml",
         "configs/production.toml",
+        "configs/ci.toml",
     ],
     environments=True,
     env_switcher="MERINO_ENV",

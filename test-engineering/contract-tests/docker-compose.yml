@@ -7,21 +7,13 @@ services:
     container_name: merino
     environment:
       # The configuration preset to use
-      MERINO__ENV: "ci"
-      MERINO__LOG_FULL_REQUEST: "true"
-      MERINO__REMOTE_SETTINGS__CRON_INTERVAL_SEC: "1"
-      MERINO__REMOTE_SETTINGS__DEFAULT_BUCKET: main
-      MERINO__REMOTE_SETTINGS__DEFAULT_COLLECTION: quicksuggest
-      MERINO__REMOTE_SETTINGS__RESYNC_INTERVAL_SEC: "2"
-      MERINO__REMOTE_SETTINGS__SERVER: http://kinto:8888
+      MERINO_ENV: "ci"
     depends_on:
       - kinto
       - kinto-attachments
       - kinto-setup
     volumes:
       - ../../dev:/tmp/dev
-    command: >
-      sh -c 'sleep 10 && /app/bin/merino'
 
   client:
     image: client

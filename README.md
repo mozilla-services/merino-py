@@ -50,6 +50,13 @@ $ make dev
 
 # Run merino-py without the auto code reloading
 $ make run
+
+# Run contract tests
+$ make contract-test
+
+# Run contract tests cleanup
+$ make contract-test-clean
+
 ```
 
 ### Configuration

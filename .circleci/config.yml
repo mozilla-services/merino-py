@@ -17,6 +17,16 @@ jobs:
       - run:
           name: Testing
           command: make test
+  contract-tests:
+    machine:
+      docker_layer_caching: true
+      image: ubuntu-2004:202101-01 # Ubuntu 20.04, Docker v20.10.2, Docker Compose v1.28.2
+    working_directory: ~/merino
+    steps:
+      - checkout
+      - run:
+          name: Contract tests
+          command: make contract-test
 
 workflows:
   pr-workflow:
@@ -27,6 +37,11 @@ workflows:
               ignore: main
       - run-tests:
           <<: *pr-filters
+      - contract-tests:
+          <<: *pr-filters
+          requires:
+            - checks
+
   main-workflow:
     jobs:
       - checks: &main-filters
@@ -35,3 +50,7 @@ workflows:
               only: main
       - run-tests:
           <<: *main-filters
+      - contract-tests:
+          <<: *pr-filters
+          requires:
+            - checks
