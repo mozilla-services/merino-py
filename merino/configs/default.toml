@@ -30,7 +30,7 @@ level = "INFO"
 format = "mozlog"
 
 [default.metrics]
-dev_logger = true
+dev_logger = false
 host = "localhost"
 port = 8092
 
