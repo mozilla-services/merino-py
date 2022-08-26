@@ -6,8 +6,6 @@
 class KintoError(Exception):
     """Error specific to Kinto service interactions."""
 
-    pass
-
 
 class MissingKintoDataFilesError(KintoError):
     """Error finding Kinto data files"""

@@ -26,7 +26,7 @@ jobs:
       - checkout
       - run:
           name: Contract tests
-          command: make contract-test
+          command: make contract-tests
 
 workflows:
   pr-workflow:
