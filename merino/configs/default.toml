@@ -44,3 +44,6 @@ record_type = "data"
 # the resync failure can be retried soon.
 cron_interval_sec = 60
 resync_interval_sec = 10800
+
+[default.providers.wiki_fruit]
+enabled = false

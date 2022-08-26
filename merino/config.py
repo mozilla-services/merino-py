@@ -7,6 +7,7 @@ _validators = [
     Validator("remote_settings.record_type", is_in=["data", "offline-expansion-data"]),
     Validator("providers.adm.cron_interval_sec", gt=0),
     Validator("providers.adm.resync_interval_sec", gt=0),
+    Validator("providers.wikifruit.enabled", is_type_of=bool),
 ]
 
 # `root_path` = The root path for Dynaconf, DO NOT CHANGE.

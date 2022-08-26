@@ -20,3 +20,6 @@ collection = "quicksuggest"
 cron_interval_sec = 1
 resync_interval_sec = 2
 score = 0.3
+
+[ci.providers.wiki_fruit]
+enabled = true

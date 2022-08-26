@@ -6,7 +6,13 @@ from merino.providers import get_providers
 from tests.web.util import get_providers as override_dependency
 
 client = TestClient(app)
-app.dependency_overrides[get_providers] = override_dependency
+
+
+@pytest.fixture(scope="module", autouse=True)
+def inject_providers():
+    app.dependency_overrides[get_providers] = override_dependency
+    yield
+    del app.dependency_overrides[get_providers]
 
 
 def test_suggest_sponsored():
