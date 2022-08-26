@@ -225,7 +225,7 @@ scenarios:
                 full_keyword: 'orange'
                 title: 'Orange - Offline Expansion'
                 url: 'https://example.org/target/orange-offline-expansion'
-                provider: 'test_remote_settings'
+                provider: 'adm'
                 advertiser: 'Example.org'
                 is_sponsored: false
                 # The client test framework knows how to interpret a value of `null` for this field.
