@@ -1,46 +1,22 @@
-# Default configurations that may be overridden by the counterparts defined in
-# `development.toml` or `production.toml` or environment variables.
+# Configurations for CI, should be *only* used for CI.
+# Configurations defined here will override the counterparts in `default.toml`.
 
-# Configurations can be defined by:
-#
-# * Directly under the `[default]` table, e.g.
-#
-#   [default]
-#   foo = "bar"
-#
-# * Or use an inline table if it has multiple sub-configurations, e.g.
-#
-#   [default]
-#   foo = { bar = "baz", egg = "spam" }
-#
-# * Or use a nested table if it's hard to define by above, e.g.
-#
-#   [default.foo]
-#   bar = "baz"
-#   egg = "spam"
-#   fiz = "buz"
+[ci]
+debug = true
 
-[default]
-debug = false
-
-[default.logging]
+[ci.logging]
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
-level = "INFO"
+level = "DEBUG"
 format = "json"
 
-[default.location]
-# Path to the MaxMindDB file. This should be overridden in production.
-maxmind_database = "./dev/GeoLite2-City-Test.mmdb"
-
-[default.remote_settings]
+[ci.remote_settings]
 server = "http://kinto:8888"
 bucket = "main"
 collection = "quicksuggest"
-# Can be "data" or "offline-expansion-data"
-record_type = "data"
 
-[default.providers.adm]
+[ci.providers.adm]
 # The cron job should tick more frequently than `resync_interval_sec` so that
 # the resync failure can be retried soon.
 cron_interval_sec = 1
 resync_interval_sec = 2
+score = 0.3
