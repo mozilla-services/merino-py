@@ -99,9 +99,11 @@ class Provider(BaseProvider):
         )
 
         # Falls back to "data" records if "offline-expansion-data" records do not exist
-        records = filter(
-            lambda record: record["type"] == "offline-expansion-data", suggest_settings
-        ) or filter(lambda record: record["type"] == "data", suggest_settings)
+        records = [
+            record
+            for record in suggest_settings
+            if record["type"] == "offline-expansion-data"
+        ] or [record for record in suggest_settings if record["type"] == "data"]
 
         fetch_tasks = [
             rs.fetch_attachment(item["attachment"]["location"]) for item in records

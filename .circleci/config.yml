@@ -26,7 +26,9 @@ jobs:
       - checkout
       - run:
           name: Contract tests
-          command: make contract-tests
+          command: |
+            sudo chown 1000:1000 test-engineering/contract-tests/kinto-attachments
+            make contract-tests
 
 workflows:
   pr-workflow:
