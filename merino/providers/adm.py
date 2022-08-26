@@ -97,11 +97,11 @@ class Provider(BaseProvider):
         suggest_settings = await rs.get(
             settings.remote_settings.bucket, settings.remote_settings.collection
         )
-        records = [
-            record
-            for record in suggest_settings
-            if record["type"] == settings.remote_settings.record_type
-        ]
+
+        # Falls back to "data" records if "offline-expansion-data" records do not exist
+        records = filter(
+            lambda record: record["type"] == "offline-expansion-data", suggest_settings
+        ) or filter(lambda record: record["type"] == "data", suggest_settings)
 
         fetch_tasks = [
             rs.fetch_attachment(item["attachment"]["location"]) for item in records
@@ -148,10 +148,8 @@ class Provider(BaseProvider):
                         "provider": "adm",
                         "advertiser": res.get("advertiser"),
                         "is_sponsored": res.get("iab_category") == IABCategory.SHOPPING,
-                        "icon": self.icons.get(
-                            int(res.get("icon", MISSING_ICON_ID)), ""
-                        ),
-                        "score": 0.5,
+                        "icon": self.icons.get(int(res.get("icon", MISSING_ICON_ID))),
+                        "score": settings.providers.adm.score,
                     }
                 ]
         return []

@@ -69,6 +69,15 @@ def test_providers():
     )
 
 
+def test_client_variants():
+    response = client.get("/api/v1/suggest?q=sponsored&client_variants=foo,bar")
+    assert response.status_code == 200
+
+    result = response.json()
+    assert len(result["suggestions"]) == 1
+    assert result["client_variants"] == ["foo", "bar"]
+
+
 def test_request_logs_contain_required_info(mocker, caplog):
     import logging
 

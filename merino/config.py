@@ -4,9 +4,9 @@ from dynaconf import Dynaconf, Validator
 _validators = [
     Validator("logging.level", is_in=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     Validator("logging.format", is_in=["json"]),
-    Validator("remote_settings.record_type", is_in=["data", "offline-expansion-data"]),
     Validator("providers.adm.cron_interval_sec", gt=0),
     Validator("providers.adm.resync_interval_sec", gt=0),
+    Validator("providers.adm.score", gte=0, lte=1),
     Validator("providers.wikifruit.enabled", is_type_of=bool),
 ]
 

@@ -25,8 +25,8 @@ class BaseSuggestion(BaseModel):
     advertiser: str
     provider: str
     is_sponsored: bool
-    icon: HttpUrl
     score: float
+    icon: str | None = None
 
 
 class SponsoredSuggestion(BaseSuggestion):

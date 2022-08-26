@@ -131,7 +131,7 @@ scenarios:
                 url: 'https://example.com/target/coffee'
                 impression_url: 'https://example.com/impression/coffee'
                 click_url: 'https://example.com/click/coffee'
-                provider: 'test_remote_settings'
+                provider: 'adm'
                 advertiser: 'Example.com'
                 is_sponsored: true
                 # The client test framework knows how to interpret a value of `null` for this field.
@@ -183,9 +183,9 @@ scenarios:
                 url: 'https://example.org/target/banana'
                 impression_url: 'https://example.org/impression/banana'
                 click_url: 'https://example.org/click/banana'
-                provider: 'test_remote_settings'
+                provider: 'adm'
                 advertiser: 'Example.org'
-                is_sponsored: true
+                is_sponsored: false
                 icon: null
                 score: 0.3
 
