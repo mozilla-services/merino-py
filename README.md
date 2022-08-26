@@ -52,10 +52,10 @@ $ make dev
 $ make run
 
 # Run contract tests
-$ make contract-test
+$ make contract-tests
 
 # Run contract tests cleanup
-$ make contract-test-clean
+$ make contract-tests-clean
 
 ```
 
