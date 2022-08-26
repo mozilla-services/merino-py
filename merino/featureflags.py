@@ -24,7 +24,7 @@ def _dynaconf_loader():
         ],
         environments=True,
         env_switcher="MERINO_ENV",
-    ).get("flags")
+    ).get("flags", {})
 
 
 class Enabled(ConstrainedFloat):
@@ -39,7 +39,7 @@ class BucketingScheme(str, Enum):
 
 class FeatureFlag(BaseModel):
     enabled: Enabled
-    scheme: Optional[BucketingScheme]
+    scheme: BucketingScheme = BucketingScheme.session
 
 
 class FeatureFlagConfigs(BaseModel):
@@ -86,7 +86,6 @@ class FeatureFlags:
     """
 
     flags: FeatureFlagConfigs
-    default_scheme: BucketingScheme = BucketingScheme.session
 
     def __init__(self) -> None:
         self.flags = _flags
@@ -118,9 +117,8 @@ class FeatureFlags:
             case 1.0:
                 return True
 
-        bucket_scheme = config.scheme or self.default_scheme
         try:
-            bucketing_id = self._get_bucketing_id(bucket_scheme, bucket_for)
+            bucketing_id = self._get_bucketing_id(config.scheme, bucket_for)
             bucket_value = self._bytes_to_interval(bucketing_id)
             return bucket_value <= config.enabled
         except (RuntimeError, TypeError, ValueError) as err:
