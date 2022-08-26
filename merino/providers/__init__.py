@@ -2,8 +2,10 @@ import asyncio
 import logging
 from timeit import default_timer as timer
 
+from merino.config import settings
 from merino.providers.adm import Provider as AdmProvider
 from merino.providers.base import BaseProvider
+from merino.providers.wiki_fruit import WikiFruitProvider
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
@@ -19,6 +21,8 @@ async def init_providers() -> None:
     """
     start = timer()
     providers["adm"] = AdmProvider()
+    if settings.providers.wiki_fruit.enabled:
+        providers["wiki_fruit"] = WikiFruitProvider()
     await asyncio.gather(*[p.initialize() for p in providers.values()])
     default_providers.extend([p for p in providers.values() if p.enabled_by_default()])
     logger.info(
