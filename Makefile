@@ -30,3 +30,15 @@ dev: $(INSTALL_STAMP)
 
 run: $(INSTALL_STAMP)
 	$(POETRY) run uvicorn $(APP_DIR).main:app
+
+contract-tests:
+	docker-compose \
+      -f test-engineering/contract-tests/docker-compose.yml \
+      -p merino-py-contract-tests \
+      up --abort-on-container-exit --build
+
+contract-tests-clean:
+	docker-compose \
+      -f test-engineering/contract-tests/docker-compose.yml \
+      -p merino-py-contract-tests \
+      down

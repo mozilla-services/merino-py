@@ -36,11 +36,13 @@ maxmind_database = "./dev/GeoLite2-City-Test.mmdb"
 server = "https://firefox.settings.services.mozilla.com"
 bucket = "main"
 collection = "quicksuggest"
-# Can be "data" or "offline-expansion-data"
-record_type = "data"
 
 [default.providers.adm]
 # The cron job should tick more frequently than `resync_interval_sec` so that
 # the resync failure can be retried soon.
 cron_interval_sec = 60
 resync_interval_sec = 10800
+score = 0.3
+
+[default.providers.wiki_fruit]
+enabled = false

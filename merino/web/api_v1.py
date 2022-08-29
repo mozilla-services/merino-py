@@ -35,6 +35,7 @@ SUGGEST_RESPONSE = {
 async def suggest(
     q: str,
     providers: str | None = None,
+    client_variants: str | None = None,
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
@@ -44,6 +45,7 @@ async def suggest(
 
     Args:
     - `q`: The query string
+    - `client_variants`: [Optional] A comma separated string indicating the client variants
     - `providers`: [Optional] A comma separated string indicating the suggestion providers for
       this query
 
@@ -66,7 +68,12 @@ async def suggest(
         else NonsponsoredSuggestion(**suggestion)
         for suggestion in chain(*results)
     ]
-    response = SuggestResponse(suggestions=suggestions, request_id=correlation_id.get())
+
+    response = SuggestResponse(
+        suggestions=suggestions,
+        request_id=correlation_id.get(),
+        client_variants=client_variants.split(",") if client_variants else [],
+    )
     return JSONResponse(content=jsonable_encoder(response))
 
 

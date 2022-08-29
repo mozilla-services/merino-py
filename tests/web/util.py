@@ -2,6 +2,7 @@ import asyncio
 from typing import Any
 
 from merino.providers.base import BaseProvider
+from merino.providers.wiki_fruit import WikiFruitProvider
 
 
 class SponsoredProvider(BaseProvider):
@@ -85,6 +86,20 @@ async def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
     providers = {
         "sponsored-provider": SponsoredProvider(),
         "nonsponsored-provider": NonsponsoredProvider(),
+    }
+    await asyncio.gather(*[p.initialize() for p in providers.values()])
+    default_providers = [p for p in providers.values() if p.enabled_by_default()]
+    return providers, default_providers
+
+
+async def get_wiki_fruit_provider() -> tuple[
+    dict[str, BaseProvider], list[BaseProvider]
+]:
+    """
+    A test provider for WikiFruit.
+    """
+    providers = {
+        "wiki_fruit": WikiFruitProvider(),
     }
     await asyncio.gather(*[p.initialize() for p in providers.values()])
     default_providers = [p for p in providers.values() if p.enabled_by_default()]

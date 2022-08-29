@@ -6,7 +6,13 @@ from merino.providers import get_providers
 from tests.web.util import get_providers as override_dependency
 
 client = TestClient(app)
-app.dependency_overrides[get_providers] = override_dependency
+
+
+@pytest.fixture(scope="module", autouse=True)
+def inject_providers():
+    app.dependency_overrides[get_providers] = override_dependency
+    yield
+    del app.dependency_overrides[get_providers]
 
 
 def test_suggest_sponsored():
@@ -61,6 +67,15 @@ def test_providers():
     assert set([provider["id"] for provider in providers]) == set(
         ["sponsored-provider", "nonsponsored-provider"]
     )
+
+
+def test_client_variants():
+    response = client.get("/api/v1/suggest?q=sponsored&client_variants=foo,bar")
+    assert response.status_code == 200
+
+    result = response.json()
+    assert len(result["suggestions"]) == 1
+    assert result["client_variants"] == ["foo", "bar"]
 
 
 def test_request_logs_contain_required_info(mocker, caplog):
