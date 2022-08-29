@@ -30,6 +30,10 @@ def configure_logging() -> None:  # pragma: no cover
                     "handlers": ["console"],
                     "level": settings.logging.level,
                 },
+                "web.suggest.request": {
+                    "handlers": ["console"],
+                    "level": settings.logging.level,
+                },
             },
         }
     )
