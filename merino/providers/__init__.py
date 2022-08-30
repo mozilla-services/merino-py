@@ -6,6 +6,7 @@ from timeit import default_timer as timer
 from merino import remotesettings
 from merino.config import settings
 from merino import metrics
+from merino.config import settings
 from merino.providers.adm import Provider as AdmProvider
 from merino.providers.base import BaseProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
