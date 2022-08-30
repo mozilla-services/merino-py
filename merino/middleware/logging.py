@@ -13,7 +13,7 @@ suggest_request_logger = logging.getLogger("web.suggest.request")
 logger = logging.getLogger("request.summary")
 
 # The path pattern for the suggest API
-PATTERN: Pattern = re.compile(r"/api/v[1-9][0-9]*/suggest$")
+PATTERN: Pattern = re.compile(r"/api/v[1-9]\d*/suggest$")
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
