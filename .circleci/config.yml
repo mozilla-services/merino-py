@@ -1,4 +1,56 @@
+# These environment variables must be set in CircleCI UI
+#
+# DOCKERHUB_REPO - docker hub repo, format: <username>/<repo>
+# DOCKER_USER    - login info for docker hub
+# DOCKER_PASS
+
 version: 2.1
+
+workflows:
+  pr-workflow:
+    jobs:
+      - checks: &pr-filters
+          filters:
+            branches:
+              ignore: main
+      - run-tests:
+          <<: *pr-filters
+      - contract-tests:
+          <<: *pr-filters
+          requires:
+            - checks
+
+  main-workflow:
+    jobs:
+      - checks: &main-filters
+          filters:
+            branches:
+              only: main
+      - run-tests:
+          <<: *main-filters
+      - contract-tests:
+          <<: *pr-filters
+          requires:
+            - checks
+      - docker-image-publish-stage:
+          <<: *main-filters
+          requires:
+            - checks
+            - run-tests
+      # The following job will require manual approval in the CircleCI web application.
+      # Once provided, and when all the requirements are fullfilled (e.g. tests)
+      - unhold-to-deploy-to-prod:
+          <<: *main-filters
+          type: approval
+          requires:
+            - checks
+            - run-tests
+      # On approval of the `unhold-to-deploy-to-prod` job, any successive job that requires it
+      # will run. In this case, it's manually triggering deployment to production.
+      - docker-image-publish-prod:
+          <<: *main-filters
+          requires:
+            - unhold-to-deploy-to-prod
 
 jobs:
   checks:
@@ -29,30 +81,107 @@ jobs:
           command: |
             sudo chown 1000:1000 test-engineering/contract-tests/kinto-attachments
             make contract-tests
+  docker-image-publish-stage:
+    docker:
+      - image: cimg/base:2022.08
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - write-version
+      - store_artifacts:
+          path: version.json
+      - run:
+          name: Build image
+          command: docker build -t app:build .
+      - dockerhub-login
+      - run:
+          name: Push to Docker Hub
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "main" ]; then
+              DOCKER_TAG="${CIRCLE_SHA1}"
+            fi
 
-workflows:
-  pr-workflow:
-    jobs:
-      - checks: &pr-filters
-          filters:
-            branches:
-              ignore: main
-      - run-tests:
-          <<: *pr-filters
-      - contract-tests:
-          <<: *pr-filters
-          requires:
-            - checks
+            if [ -n "${DOCKER_TAG}" ]; then
+              echo ${DOCKERHUB_REPO}:${DOCKER_TAG}
+              docker tag app:build ${DOCKERHUB_REPO}:${DOCKER_TAG}
+              docker images
+              docker push "${DOCKERHUB_REPO}:${DOCKER_TAG}"
+            else
+              echo "Not pushing to dockerhub for tag=${CIRCLE_TAG} branch=${CIRCLE_BRANCH}"
+            fi
+  docker-image-publish-prod:
+    docker:
+      - image: cimg/base:2022.08
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - write-version
+      - store_artifacts:
+          path: version.json
+      - run:
+          name: Build image
+          command: docker build -t app:build .
+      - dockerhub-login
+      - run:
+          name: Push to Docker Hub (prod)
+          # Using a different tag `prod-{CIRCLE_SHA1}` for production deployments
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "main" ]; then
+              DOCKER_TAG="prod-${CIRCLE_SHA1}"
+            fi
 
-  main-workflow:
-    jobs:
-      - checks: &main-filters
-          filters:
-            branches:
-              only: main
-      - run-tests:
-          <<: *main-filters
-      - contract-tests:
-          <<: *pr-filters
-          requires:
-            - checks
+            if [ -n "${DOCKER_TAG}" ]; then
+              echo ${DOCKERHUB_REPO}:${DOCKER_TAG}
+              docker tag app:build ${DOCKERHUB_REPO}:${DOCKER_TAG}
+              docker images
+              docker push "${DOCKERHUB_REPO}:${DOCKER_TAG}"
+            else
+              echo "Not pushing to dockerhub for tag=${CIRCLE_TAG} branch=${CIRCLE_BRANCH}"
+            fi
+
+commands:
+  dockerhub-login:
+    steps:
+      - run:
+          name: Login to Dockerhub
+          command: |
+            if [ "${DOCKER_USER}" == "" ] || [ "${DOCKER_PASS}" == "" ]; then
+              echo "Skipping Login to DockerHub, credentials unavailable"
+            else
+              echo "${DOCKER_PASS}" | docker login -u="${DOCKER_USER}" --password-stdin
+            fi
+
+  write-version:
+    steps:
+      - run:
+          name: Create a version.json
+          command: |
+            # create a version.json per
+            # https://github.com/mozilla-services/Dockerflow/blob/master/docs/version_object.md
+            printf '{"commit":"%s","version":"%s","source":"https://github.com/%s/%s","build":"%s"}\n' \
+            "$CIRCLE_SHA1" \
+            "$CIRCLE_TAG" \
+            "$CIRCLE_PROJECT_USERNAME" \
+            "$CIRCLE_PROJECT_REPONAME" \
+            "$CIRCLE_BUILD_URL" > version.json
+
+  skip-if-do-not-deploy:
+    steps:
+      - run:
+          name: Check if deployment is disallowed
+          # This relies on the [do not deploy] text to be available in the
+          # merge commit when merging the PR to 'main'.
+          command: |
+            if git log -1 "$CIRCLE_SHA1" | grep -q '\[do not deploy\]'; then
+                echo "Skipping remaining steps in this job: deployment was disabled for this commit."
+                circleci-agent step halt
+
+                # No need to deploy, just cancel the rest of jobs of the workflow.
+                # See API detail: https://circleci.com/docs/api/v2/index.html#operation/cancelWorkflow
+
+                curl -X POST https://circleci.com/api/v2/workflow/${CIRCLE_WORKFLOW_ID}/cancel \
+                -H 'Accept: application/json' \
+                -H 'Circle-Token: ${SKIP_DEPLOY_API_TOKEN}'
+            fi

@@ -7,7 +7,7 @@ debug = true
 [ci.logging]
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 level = "DEBUG"
-format = "json"
+format = "pretty"
 
 [ci.remote_settings]
 server = "http://kinto:8888"

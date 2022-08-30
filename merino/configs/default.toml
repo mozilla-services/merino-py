@@ -26,7 +26,8 @@ debug = false
 [default.logging]
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 level = "INFO"
-format = "json"
+# Any of "mozlog" (i.e. JSON) or "pretty"
+format = "mozlog"
 
 [default.location]
 # Path to the MaxMindDB file. This should be overridden in production.
