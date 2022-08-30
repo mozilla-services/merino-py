@@ -60,6 +60,10 @@ def configure_logging() -> None:
                     "handlers": handler,
                     "level": settings.logging.level,
                 },
+                "web.suggest.request": {
+                    "handlers": handler,
+                    "level": settings.logging.level,
+                },
                 "uvicorn.error": {
                     "handlers": ["uvicorn-error-handler"],
                     "level": "ERROR",
