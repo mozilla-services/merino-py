@@ -16,7 +16,16 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-        if request.url.path.endswith("/api/v1/suggest"):
+   import re
+   from typing imoprt Pattern
+   
+   # The path pattern for the suggest API 
+   PATTERN: Pattern = re.compile(r"/api/v[1-9][0-9]*/suggest$")
+
+   async def dispatch(...):
+       ...
+       if PATTERN.match(request.url.path):
+           ...
             data = {
                 "sensitive": True,
                 "path": request.url.path,
