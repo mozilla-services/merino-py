@@ -5,8 +5,10 @@ from datetime import datetime
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-logger = logging.getLogger("request.summary")
+# web.suggest.request is used for logs coming from the /suggest endpoint
 suggest_request_logger = logging.getLogger("web.suggest.request")
+# all other requests will be logged to request.summary
+logger = logging.getLogger("request.summary")
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
