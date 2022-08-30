@@ -1,0 +1,6 @@
+[testing]
+debug = true
+dynaconf_merge = true
+
+[testing.metrics]
+dev_logger = true

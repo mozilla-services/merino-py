@@ -25,12 +25,12 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             with client.timeit(f"{metric_name}.timing"):
                 response = await call_next(request)
             status_code = response.status_code
+            return response
         except HTTPException as e:
             status_code = e.status_code
             raise e
         finally:
             client.increment(f"{metric_name}.status_codes.{status_code}")
-        return response
 
     def build_metric_name(self, path: str) -> str:
         if path not in self._metric_names:
