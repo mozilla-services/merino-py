@@ -16,7 +16,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         client = get_client()
-        metric_name = self._build_metric_name(request.url.path)
+        metric_name = self._build_metric_name(request.method, request.url.path)
         status_code = 0
 
         try:
@@ -31,5 +31,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             client.increment(f"{metric_name}.status_codes.{status_code}")
 
     @cache
-    def _build_metric_name(self, path: str) -> str:
-        return path.lower().lstrip("/").replace("/", ".")
+    def _build_metric_name(self, method: str, path: str) -> str:
+        return "{}.{}".format(
+            method, path.lower().lstrip("/").replace("/", ".")
+        ).lower()

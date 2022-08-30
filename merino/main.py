@@ -58,11 +58,11 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "OPTIONS", "HEAD"],
 )
+app.add_middleware(metrics.MetricsMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(featureflags.FeatureFlagsMiddleware)
 app.add_middleware(geolocation.GeolocationMiddleware)
 app.add_middleware(logging.LoggingMiddleware)
-app.add_middleware(metrics.MetricsMiddleware)
 
 app.include_router(dockerflow.router)
 app.include_router(api_v1.router, prefix="/api/v1")
