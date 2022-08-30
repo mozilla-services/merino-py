@@ -8,6 +8,7 @@ from typing import Any
 from merino import remotesettings
 from merino.config import settings
 from merino.providers.base import BaseProvider
+from merino.providers.cron import CronJob
 
 logger = logging.getLogger(__name__)
 
@@ -42,37 +43,14 @@ class Provider(BaseProvider):
 
     async def initialize(self) -> None:
         await self._fetch()
-        self.cron_task = asyncio.create_task(self._cron())
-
-    async def _cron(self):
-        """
-        A cron job that resyncs data from Remote Settings in the background.
-
-        Note that the cron job interval and the resync interval are configured separately to
-        facilitate the retry logic upon sync failures.
-        """
-
-        last_tick: float = time.time()
-        while True:
-            if self._should_fetch():
-                begin = time.perf_counter()
-                try:
-                    await self._fetch()
-                except Exception as e:
-                    logger.warning(
-                        "Cron: failed to fetch data from Remote Setting",
-                        extra={"error message": f"{e}"},
-                    )
-                else:
-                    logger.info(
-                        "Cron: resync data from Remote Settings",
-                        extra={"duration": time.perf_counter() - begin},
-                    )
-            sleep_duration = max(
-                0, settings.providers.adm.cron_interval_sec + last_tick - time.time()
-            )
-            await asyncio.sleep(sleep_duration)
-            last_tick = time.time()
+        # Run a cron job that resyncs data from Remote Settings in the background.
+        cron_job = CronJob(
+            name="resync_rs_data",
+            interval=settings.providers.adm.resync_interval_sec,
+            condition=self._should_fetch,
+            task=self._fetch,
+        )
+        asyncio.create_task(cron_job())
 
     def _should_fetch(self) -> bool:
         """
