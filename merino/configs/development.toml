@@ -10,7 +10,4 @@ debug = true
 [development.logging]
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 level = "DEBUG"
-# For `list` or `table` settings, `dynaconf_merge` allows you to merge settings with the default
-# settings. For instance, `logging.level` in this case will override its counterpart defined in
-# `default_settings`.
-dynaconf_merge = true
+format = "pretty"

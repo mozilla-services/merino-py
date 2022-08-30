@@ -3,7 +3,7 @@ from dynaconf import Dynaconf, Validator
 # Validators for Merino settings.
 _validators = [
     Validator("logging.level", is_in=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
-    Validator("logging.format", is_in=["json"]),
+    Validator("logging.format", is_in=["mozlog", "pretty"]),
     Validator("providers.adm.cron_interval_sec", gt=0),
     Validator("providers.adm.resync_interval_sec", gt=0),
     Validator("providers.adm.score", gte=0, lte=1),
