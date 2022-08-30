@@ -1,0 +1,39 @@
+version: "3"
+services:
+  merino:
+    image: merino
+    container_name: locust_merino
+    build: ../..
+    environment:
+      # TODO: This needs to be updated or kinto needs to be added
+      MERINO__ENV: "ci"
+    volumes:
+      - ../../dev:/tmp/dev
+
+  locust_master:
+    image: locust
+    build: .
+    container_name: locust_master
+    depends_on:
+      - merino
+    ports:
+      - "8089:8089"
+    environment:
+      # Set environment variables, see https://docs.locust.io/en/stable/configuration.html#environment-variables
+      LOCUST_HOST: http://merino:8000
+    command: >
+      --master
+
+  locust_worker:
+    image: locust
+    build: .
+    depends_on:
+      - merino
+    environment:
+      # Set environment variables, see https://docs.locust.io/en/stable/configuration.html#environment-variables
+      LOCUST_MASTER_NODE_HOST: locust_master
+      RS_QUERIES_FILE: /tmp/rs_queries.json
+    volumes:
+      - ./rs_queries.json:/tmp/rs_queries.json
+    command: >
+      --worker
