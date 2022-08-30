@@ -13,21 +13,28 @@ client = TestClient(app)
 metrics_client = get_client()
 
 
-# # The first two IP addresses are taken from `GeoLite2-City-Test.mmdb`
 @pytest.mark.parametrize(
     "url,metric,expected_count",
     [
-        ("/api/v1/suggest?q=none", "api.v1.suggest.timing", 1),
-        ("/api/v1/suggest?q=none", "api.v1.suggest.status_codes.200", 1),
-        ("/api/v1/no", "api.v1.no.timing", 1),
-        ("/api/v1/no", "api.v1.no.status_codes.404", 1),
+        ("/api/v1/suggest?q=none", "get.api.v1.suggest.timing", 1),
+        ("/api/v1/suggest?q=none", "get.api.v1.suggest.status_codes.200", 1),
+        ("/api/v1/no", "get.api.v1.no.timing", 1),
+        ("/api/v1/no", "get.api.v1.no.status_codes.404", 1),
+        ("/api/v1/suggest", "get.api.v1.suggest.timing", 1),
+        ("/api/v1/suggest", "get.api.v1.suggest.status_codes.400", 1),
+        ("/api/v1/providers", "get.api.v1.providers.timing", 1),
+        # ("/api/v1/providers", "get.api.v1.providers.status_codes.500", 1),
     ],
 )
 @pytest.mark.asyncio
-async def test_metrics(caplog, url, metric, expected_count):
+async def test_metrics(mocker, caplog, url, metric, expected_count):
     import logging
 
     caplog.set_level(logging.DEBUG)
+
+    if "providers" in url:
+        mock_endpoint = mocker.patch("merino.web.api_v1.providers")
+        mock_endpoint.side_effect = KeyError("nope")
 
     await configure_metrics()
     client.get(url)
