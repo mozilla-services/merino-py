@@ -5,10 +5,9 @@ from asyncio import as_completed
 from enum import Enum, unique
 from typing import Any
 
-from merino import remotesettings
+from merino import cron, remotesettings
 from merino.config import settings
 from merino.providers.base import BaseProvider
-from merino.providers.cron import CronJob
 
 logger = logging.getLogger(__name__)
 
@@ -44,13 +43,16 @@ class Provider(BaseProvider):
     async def initialize(self) -> None:
         await self._fetch()
         # Run a cron job that resyncs data from Remote Settings in the background.
-        cron_job = CronJob(
+        cron_job = cron.Job(
             name="resync_rs_data",
             interval=settings.providers.adm.resync_interval_sec,
             condition=self._should_fetch,
             task=self._fetch,
         )
-        asyncio.create_task(cron_job())
+        # Store the created task on the instance variable. Otherwise it will get
+        # garbage collected because asyncio's runtime only holds a weak
+        # reference to it.
+        self.cron_task = asyncio.create_task(cron_job())
 
     def _should_fetch(self) -> bool:
         """

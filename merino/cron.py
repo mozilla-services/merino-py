@@ -24,16 +24,16 @@ class Task(Protocol):
         ...
 
 
-class CronJob:
+class Job:
     """Periodally run a given task if a given condition is met."""
 
     name: str
-    interval: int
+    interval: float
     condition: Condition
     task: Task
 
     def __init__(
-        self, *, name: str, interval: int, condition: Condition, task: Task
+        self, *, name: str, interval: float, condition: Condition, task: Task
     ) -> None:
         self.name = name
         self.interval = interval

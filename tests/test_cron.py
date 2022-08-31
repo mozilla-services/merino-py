@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from merino.providers.cron import Condition, CronJob, Task
+from merino import cron
 
 
 @pytest.fixture(name="numbers")
@@ -18,7 +18,7 @@ def fixture_numbers() -> list[int]:
 
 
 @pytest.fixture(name="condition")
-def fixture_condition(numbers: list[int]) -> Condition:
+def fixture_condition(numbers: list[int]) -> cron.Condition:
     """Return a condition for a cron job."""
 
     def should_run() -> bool:
@@ -29,7 +29,7 @@ def fixture_condition(numbers: list[int]) -> Condition:
 
 
 @pytest.fixture(name="task")
-def fixture_task(numbers: list[int]) -> Task:
+def fixture_task(numbers: list[int]) -> cron.Task:
     """Return a task for a cron job."""
 
     async def add_number() -> None:
@@ -46,14 +46,14 @@ def fixture_task(numbers: list[int]) -> Task:
 
 
 @pytest.fixture(name="cron_job")
-def fixture_cron_job(condition: Condition, task: Task) -> CronJob:
+def fixture_cron_job(condition: cron.Condition, task: cron.Task) -> cron.Job:
     """Return a cron job."""
 
-    return CronJob(name="create_numbers", interval=1, condition=condition, task=task)
+    return cron.Job(name="create_numbers", interval=0.1, condition=condition, task=task)
 
 
 @pytest.mark.asyncio
-async def test_cron(caplog: Any, cron_job: CronJob, numbers: list[int]) -> None:
+async def test_cron(caplog: Any, cron_job: cron.Job, numbers: list[int]) -> None:
     """Test for the CronJob implementation."""
 
     caplog.set_level(logging.INFO)
@@ -61,8 +61,8 @@ async def test_cron(caplog: Any, cron_job: CronJob, numbers: list[int]) -> None:
     # Schedule the task like adm.Provider does it
     cron_task = asyncio.create_task(cron_job())
 
-    # Cancel the task after 3 seconds
-    await asyncio.sleep(3)
+    # Cancel the task after 0.5 seconds
+    await asyncio.sleep(0.5)
     cron_task.cancel()
 
     assert numbers == [1, 3, 4]
@@ -70,12 +70,12 @@ async def test_cron(caplog: Any, cron_job: CronJob, numbers: list[int]) -> None:
     # Verify log messages for the different branches
     assert caplog.record_tuples == [
         (
-            "merino.providers.cron",
+            "merino.cron",
             logging.WARNING,
             "Cron: failed to run task create_numbers",
         ),
         (
-            "merino.providers.cron",
+            "merino.cron",
             logging.INFO,
             "Cron: successfully ran task create_numbers",
         ),
