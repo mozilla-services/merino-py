@@ -205,7 +205,7 @@ scenarios:
           filename: "offline-expansion-data-01.json"
           data_type: "offline-expansion-data"
       - request:
-          delay: 3 # Wait for remote settings data to load into merino
+          delay: 5 # Wait for remote settings data to load into merino
           service: merino
           method: GET
           path: '/api/v1/suggest?q=orange'
