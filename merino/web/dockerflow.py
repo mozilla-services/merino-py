@@ -1,3 +1,4 @@
+"""Dockerflow Endpoints."""
 import json
 import os
 
@@ -14,10 +15,7 @@ router = APIRouter()
     summary="Dockerflow: __version__",
 )
 async def version() -> JSONResponse:
-    """
-    Dockerflow: Query service version.
-    """
-
+    """Dockerflow: Query service version."""
     if not os.path.exists("version.json"):
         raise HTTPException(status_code=500, detail="Version file does not exist")
 
@@ -30,9 +28,7 @@ async def version() -> JSONResponse:
     "/__heartbeat__", tags=["__heartbeat__"], summary="Dockerflow: __heartbeat__"
 )
 async def heartbeat() -> Response:
-    """
-    Dockerflow: Query service heartbeat. It returns an empty string in the response.
-    """
+    """Dockerflow: Query service heartbeat. It returns an empty string in the response."""
     return Response(content="")
 
 

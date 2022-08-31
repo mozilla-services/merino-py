@@ -1,3 +1,4 @@
+"""Logging Value Configuration"""
 import logging
 import re
 import time
@@ -17,11 +18,10 @@ PATTERN: Pattern = re.compile(r"/api/v[1-9]\d*/suggest$")
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
-    """
-    Logging middleware for MozLog.
-    """
+    """Logging middleware for MozLog."""
 
     async def dispatch(self, request: Request, call_next):
+        """Log while handling request"""
         response = await call_next(request)
         if PATTERN.match(request.url.path):
             data = {

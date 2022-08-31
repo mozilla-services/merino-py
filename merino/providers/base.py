@@ -1,11 +1,10 @@
+"""Abstract class for Providers"""
 from abc import ABC, abstractmethod
 from typing import Any
 
 
 class BaseProvider(ABC):
-    """
-    Abstract class for suggestion providers.
-    """
+    """Abstract class for suggestion providers."""
 
     @abstractmethod
     async def initialize(self) -> None:
@@ -18,16 +17,20 @@ class BaseProvider(ABC):
 
     @abstractmethod
     async def query(self, query: str) -> list[dict[str, Any]]:
+        """TODO:"""
         ...
 
     @abstractmethod
     def enabled_by_default(self) -> bool:
+        """TODO"""
         ...
 
     def hidden(self) -> bool:
+        """TODO"""
         return False
 
     def availability(self) -> str:
+        """TODO"""
         if self.hidden():
             return "hidden"
         elif self.enabled_by_default():

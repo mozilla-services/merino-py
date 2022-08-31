@@ -1,3 +1,4 @@
+"""TODO: Geolocation."""
 import logging
 from typing import Optional
 
@@ -14,9 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class Location(BaseModel):
-    """
-    Data model for geolocation.
-    """
+    """Data model for geolocation."""
 
     country: Optional[str] = None
     region: Optional[str] = None
@@ -25,13 +24,14 @@ class Location(BaseModel):
 
 
 class GeolocationMiddleware(BaseHTTPMiddleware):
-    """
-    A middleware to populate geolocation from client's IP address.
+    """A middleware to populate geolocation from client's IP address.
 
-    The geolocation result `Location` (if any) is stored in `Request.state.location`.
+    The geolocation result `Location` (if any) is stored in
+    `Request.state.location`.
     """
 
     async def dispatch(self, request: Request, call_next):
+        """Provide Geolocation before handling request"""
         # `request.client.host` should be the first remote client address of `X-Forwarded-For`.
         record = None
         try:

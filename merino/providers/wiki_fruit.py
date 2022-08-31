@@ -1,17 +1,21 @@
+"""A Suggestion provider that provides toy responses, meant for development and testing purposes"""
 from typing import Any
 
 from merino.providers.base import BaseProvider
 
 
 class WikiFruitProvider(BaseProvider):
-    """
-    A test provider for Wikipedia. Shouldn't be used in production.
+    """A test provider for Wikipedia.
+
+    Shouldn't be used in production.
     """
 
     async def initialize(self) -> None:
+        """Initialize wiki fruit"""
         pass
 
     async def query(self, query: str) -> list[dict[str, Any]]:
+        """Provide wiki_fruit suggestsion based on query."""
         if query not in ["apple", "banana", "cherry"]:
             return []
 
@@ -32,4 +36,5 @@ class WikiFruitProvider(BaseProvider):
         ]
 
     def enabled_by_default(self) -> bool:
+        """TODO"""
         return True

@@ -1,3 +1,4 @@
+"""AdM integration that uses the remote-settings provided data."""
 import asyncio
 import logging
 import time
@@ -14,11 +15,10 @@ logger = logging.getLogger(__name__)
 
 @unique
 class IABCategory(str, Enum):
-    """
-    Enum for IAB categories.
+    """Enum for IAB categories.
 
-    Suggestions with the category `SHOPPING` will be labelled as sponsored suggestions.
-    Otherwise, they're nonsponsored.
+    Suggestions with the category `SHOPPING` will be labelled as
+    sponsored suggestions. Otherwise, they're nonsponsored.
     """
 
     SHOPPING = "22 - Shopping"
@@ -30,9 +30,7 @@ MISSING_ICON_ID = "-1"
 
 
 class Provider(BaseProvider):
-    """
-    Suggestion provider for adMarketplace through Remote Settings.
-    """
+    """Suggestion provider for adMarketplace through Remote Settings."""
 
     suggestions: dict[str, int] = {}
     results: list[dict[str, Any]] = []
@@ -41,6 +39,7 @@ class Provider(BaseProvider):
     cron_task: asyncio.Task
 
     async def initialize(self) -> None:
+        """Initialize cron job."""
         await self._fetch()
         # Run a cron job that resyncs data from Remote Settings in the background.
         cron_job = cron.Job(
@@ -55,20 +54,14 @@ class Provider(BaseProvider):
         self.cron_task = asyncio.create_task(cron_job())
 
     def _should_fetch(self) -> bool:
-        """
-        Check if it should fetch data from Remote Settings.
-        """
-
+        """Check if it should fetch data from Remote Settings."""
         return (
             time.time() - self.last_fetch_at
             >= settings.providers.adm.resync_interval_sec
         )
 
     async def _fetch(self) -> None:
-        """
-        Fetch suggestions, keywords, and icons from Remote Settings.
-        """
-
+        """Fetch suggestions, keywords, and icons from Remote Settings."""
         suggestions: dict[str, int] = {}
         results: list[dict[str, Any]] = []
         icons: dict[int, str] = {}
@@ -111,12 +104,15 @@ class Provider(BaseProvider):
         self.last_fetch_at = time.time()
 
     def enabled_by_default(self) -> bool:
+        """TODO: help please"""
         return True
 
     def hidden(self) -> bool:
+        """TODO: help please"""
         return False
 
     async def query(self, q: str) -> list[dict[str, Any]]:
+        """Provide suggestion for a given query."""
         if (id := self.suggestions.get(q)) is not None:
             if (res := self.results[id]) is not None:
                 return [

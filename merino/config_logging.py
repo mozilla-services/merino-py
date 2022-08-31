@@ -1,13 +1,11 @@
+"""Logging configuration"""
 from logging.config import dictConfig
 
 from merino.config import settings
 
 
 def configure_logging() -> None:
-    """
-    Configures logging with MozLog.
-    """
-
+    """Configure logging with MozLog."""
     match settings.logging.format:
         case "mozlog":
             handler = ["console-mozlog"]
