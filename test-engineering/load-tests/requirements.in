@@ -1,0 +1,4 @@
+locust
+pydantic
+Faker
+kinto-http
