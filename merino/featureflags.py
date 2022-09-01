@@ -1,3 +1,4 @@
+"""TODO"""
 import hashlib
 import logging
 from collections.abc import Iterable
@@ -28,28 +29,37 @@ def _dynaconf_loader():
 
 
 class Enabled(ConstrainedFloat):
+    """TODO"""
+
     ge: OptionalIntFloat = 0.0
     le: OptionalIntFloat = 1.0
 
 
 class BucketingScheme(str, Enum):
+    """TODO"""
+
     random = "random"
     session = "session"
 
 
 class FeatureFlag(BaseModel):
+    """TODO"""
+
     enabled: Enabled
     scheme: BucketingScheme = BucketingScheme.session
 
 
 class FeatureFlagConfigs(BaseModel):
+    """Feature Flag Configs Class"""
 
     flags: dict[str, Optional[FeatureFlag]]
 
     def __iter__(self) -> Iterable[str]:
+        """TODO"""
         return iter(self.flags)
 
     def __getitem__(self, flag_name) -> FeatureFlag | None:
+        """TODO"""
         return self.flags.get(flag_name, None)
 
 
@@ -89,6 +99,7 @@ class FeatureFlags:
     flags: FeatureFlagConfigs
 
     def __init__(self) -> None:
+        """Init for FeatureFlags"""
         self.flags = _flags
 
     def is_enabled(self, flag_name: str, bucket_for: str | bytes | None = None) -> bool:
