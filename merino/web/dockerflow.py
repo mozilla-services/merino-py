@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 from fastapi import APIRouter, HTTPException
@@ -6,6 +7,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get(
@@ -33,6 +35,7 @@ async def heartbeat() -> Response:
     """
     Dockerflow: Query service heartbeat. It returns an empty string in the response.
     """
+
     return Response(content="")
 
 
@@ -44,4 +47,15 @@ async def lbheartbeat() -> Response:
     Dockerflow: Query service heartbeat for load balancer. It returns an empty string in the
     response.
     """
+
     return Response(content="")
+
+
+@router.get("/__error__", tags=["__error__"], summary="Dockerflow: __error__")
+async def test_error() -> Response:
+    """
+    Dockerflow: Return an API error to test service error handling.
+    """
+
+    logger.error("The __error__ endpoint was called")
+    raise HTTPException(status_code=500, detail="")

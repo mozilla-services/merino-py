@@ -27,3 +27,15 @@ def test_version_error(mocker):
 def test_heartbeats(endpoint):
     response = client.get(f"/{endpoint}")
     assert response.status_code == 200
+
+
+def test_error(mocker, caplog):
+    import logging
+
+    caplog.set_level(logging.ERROR)
+
+    response = client.get("/__error__")
+    assert response.status_code == 500
+
+    assert len(caplog.records) == 1
+    assert caplog.messages[0] == "The __error__ endpoint was called"

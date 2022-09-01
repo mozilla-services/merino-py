@@ -8,6 +8,9 @@ _validators = [
     Validator("providers.adm.resync_interval_sec", gt=0),
     Validator("providers.adm.score", gte=0, lte=1),
     Validator("providers.wikifruit.enabled", is_type_of=bool),
+    Validator("sentry.mode", is_in=["disabled", "release", "debug"]),
+    Validator("sentry.env", is_in=["prod", "stage", "dev"]),
+    Validator("sentry.traces_sample_rate", gte=0, lte=1),
 ]
 
 # `root_path` = The root path for Dynaconf, DO NOT CHANGE.
