@@ -44,13 +44,13 @@ license = "Mozilla Public License Version 2.0"
 python = "^3.10"
 fastapi = "^0.79.0"
 uvicorn = {extras = ["standard"], version = "^0.18.2"}
-kinto-http = "^10.10.1"
-requests = "^2.28.1"
 dockerflow = "^2022.7.0"
 asgi-correlation-id = "^3.0.1"
 dynaconf = "^3.1.9"
 httpx = "^0.23.0"
 maxminddb = "^2.2.0"
+sentry-sdk = {extras = ["fastapi"], version = "^1.9.5"}
+kinto-http = "^11.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

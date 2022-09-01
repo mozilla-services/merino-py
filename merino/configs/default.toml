@@ -38,6 +38,17 @@ server = "https://firefox.settings.services.mozilla.com"
 bucket = "main"
 collection = "quicksuggest"
 
+[default.sentry]
+# Any of "release", "debug", or "disabled".
+# Using "debug" will enable logging for Sentry.
+mode = "disabled"
+# Sentry will not send events out when given an empty string `dsn`.
+dsn = ""
+# Any of "prod", "stage", or "dev".
+env = "dev"
+# A setting for the tracing sample rate. Should be a float in range [0, 1.0].
+traces_sample_rate = 0.1
+
 [default.providers.adm]
 # The cron job should tick more frequently than `resync_interval_sec` so that
 # the resync failure can be retried soon.
