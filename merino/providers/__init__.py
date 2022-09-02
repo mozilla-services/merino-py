@@ -1,3 +1,4 @@
+"""Initialize all Providers."""
 import asyncio
 import logging
 from timeit import default_timer as timer
@@ -32,7 +33,5 @@ async def init_providers() -> None:
 
 
 def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
-    """
-    Return a tuple of all the providers and default providers.
-    """
+    """Return a tuple of all the providers and default providers."""
     return providers, default_providers

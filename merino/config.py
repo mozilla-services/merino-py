@@ -1,3 +1,4 @@
+"""Configuration for merino-py"""
 from dynaconf import Dynaconf, Validator
 
 # Validators for Merino settings.

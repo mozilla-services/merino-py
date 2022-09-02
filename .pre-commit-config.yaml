@@ -31,8 +31,10 @@ repos:
   # - id: mypy
     # exclude: tests/
     # args: ["--ignore-missing-imports", "--follow-imports=skip", "--no-strict-optional"]
-# - repo: https://github.com/pycqa/pydocstyle
-  # rev: 6.1.1
-  # hooks:
-  # - id: pydocstyle
-    # exclude: tests/
+ - repo: https://github.com/pycqa/pydocstyle
+   rev: 6.1.1
+   hooks:
+   - id: pydocstyle
+     exclude: tests/
+     args: [--convention, "pep257", --add-ignore, "D203,D205,D400"]
+

@@ -1,3 +1,4 @@
+"""App startup point"""
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, status
 from fastapi.encoders import jsonable_encoder
@@ -16,26 +17,20 @@ app = FastAPI()
 
 @app.on_event("startup")
 def startup_configuration() -> None:
-    """
-    Set up various configurations such as logging.
-    """
+    """Set up various configurations such as logging."""
     configure_logging()
     configure_sentry()
 
 
 @app.on_event("startup")
 async def startup_providers() -> None:
-    """
-    Run tasks at application startup.
-    """
+    """Run tasks at application startup."""
     await providers.init_providers()
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(_, exc) -> JSONResponse:
-    """
-    Use HTTP status code: 400 for all invalid requests.
-    """
+    """Use HTTP status code: 400 for all invalid requests."""
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content=jsonable_encoder({"detail": exc.errors()}),

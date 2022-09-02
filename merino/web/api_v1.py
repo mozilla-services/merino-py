@@ -1,3 +1,4 @@
+"""Merino V1 API"""
 import asyncio
 from itertools import chain
 

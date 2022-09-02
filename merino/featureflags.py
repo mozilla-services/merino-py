@@ -1,3 +1,4 @@
+"""Implementation of Feature Flags (feature toggles) for Merino"""
 import hashlib
 import logging
 from collections.abc import Iterable
@@ -28,28 +29,37 @@ def _dynaconf_loader():
 
 
 class Enabled(ConstrainedFloat):
+    """TODO"""
+
     ge: OptionalIntFloat = 0.0
     le: OptionalIntFloat = 1.0
 
 
 class BucketingScheme(str, Enum):
+    """TODO"""
+
     random = "random"
     session = "session"
 
 
 class FeatureFlag(BaseModel):
+    """TODO"""
+
     enabled: Enabled
     scheme: BucketingScheme = BucketingScheme.session
 
 
 class FeatureFlagConfigs(BaseModel):
+    """Feature Flag Configs Class"""
 
     flags: dict[str, Optional[FeatureFlag]]
 
     def __iter__(self) -> Iterable[str]:
+        """TODO"""
         return iter(self.flags)
 
     def __getitem__(self, flag_name) -> FeatureFlag | None:
+        """TODO"""
         return self.flags.get(flag_name, None)
 
 
@@ -64,14 +74,25 @@ session_id_context: ContextVar[str | None] = ContextVar("session_id", default=No
 
 
 class FeatureFlags:
-    """
-    A very basic implementation of featureflags using dynaconf as the configuration system.
-    It supports two bucketing schemes `random` and `session`. Random does what it says on the tin.
-    It generates a random bucketing id for every flag check. Session bucketing uses the session id
-    of the request as the bucketing key so that feature checks within a given search session would
-    be consistent. Additionally you can pass a custom bucketing_id via the `bucket_for` parameter.
-    This is useful when you have an ad-hoc bucketing identifier that is not supported via one of
-    the standard schemes.
+    """A very basic implementation of feature flags using dynaconf as the
+     configuration system.
+
+    It supports two bucketing schemes `random` and
+    `session`. Random does what it says on the tin. It generates a random
+    bucketing id for every flag check. Session bucketing uses the session id of
+    the request as the bucketing key so that feature checks within a given
+    search session would be consistent. Additionally you can pass a custom
+    bucketing_id via the `bucket_for` parameter. This is useful when you have
+    an ad-hoc bucketing identifier that is not supported via one of the
+    standard schemes.
+    configuration system. It supports two bucketing schemes `random` and
+    `session`. Random does what it says on the tin. It generates a random
+    bucketing id for every flag check. Session bucketing uses the session id of
+    the request as the bucketing key so that feature checks within a given
+    search session would be consistent. Additionally you can pass a custom
+    bucketing_id via the `bucket_for` parameter. This is useful when you have
+    an ad-hoc bucketing identifier that is not supported via one of the
+    standard schemes.
 
     Each flag defines the following fields:
 
@@ -88,13 +109,13 @@ class FeatureFlags:
     flags: FeatureFlagConfigs
 
     def __init__(self) -> None:
+        """Init for FeatureFlags"""
         self.flags = _flags
 
     def is_enabled(self, flag_name: str, bucket_for: str | bytes | None = None) -> bool:
-        """
-        Checks if a given flag is enabled via a feature flag configuration block.
-        Two of the guiding principals for this method are: fail to 'off' as quickly as possible,
-        and do not throw exceptions.
+        """Check if a given flag is enabled via a feature flag configuration
+        block. Two of the guiding principals for this method are: fail to 'off'
+        as quickly as possible, and do not throw exceptions.
 
         Args:
             flag_name:
@@ -104,7 +125,6 @@ class FeatureFlags:
                 not present in the currently supported bucket schemes.
         Returns:
             bool: Returns true if the feature should be enabled.
-
         """
         config = self.flags[flag_name]
         if config is None:
@@ -128,9 +148,8 @@ class FeatureFlags:
     def _get_bucketing_id(
         self, scheme: BucketingScheme, bucket_for: str | bytes | None
     ) -> bytes:
-        """
-        Returns a bytearray that can then be used to check against the enabled percent
-        for inclusion into the feature
+        """Return a bytearray that can then be used to check against the
+        enabled percent for inclusion into the feature.
 
         Args:
             scheme: The bucketing scheme. Can be `random` or `session`
@@ -169,23 +188,19 @@ class FeatureFlags:
 
     @staticmethod
     def _get_random() -> bytes:
-        """
-        Returns bytearray with 32 random bytes
-        """
+        """Return bytearray with 32 random bytes."""
         return randbytes(32)
 
     @staticmethod
     def _get_digest(id: str) -> bytes:
-        """
-        Hashes a string into a 32 byte bytearray
-        """
+        """Hash a string into a 32 byte bytearray."""
         hash = hashlib.sha256(bytes(id, "utf-8"))
         return hash.digest()
 
     @staticmethod
     def _bytes_to_interval(bucketing_id: bytes) -> float:
-        """
-        Takes an arbitrarily long bytearray and maps it to a float between [0,1)
+        """Take an arbitrarily long bytearray and maps it to a float between
+        [0,1)
         """
         out = 0
         for byte in bucketing_id:

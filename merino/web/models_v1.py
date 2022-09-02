@@ -1,21 +1,19 @@
+"""Suggest and Provider Models"""
 from typing import Optional
 
 from pydantic import BaseModel, HttpUrl
 
 
 class ProviderResponse(BaseModel):
-    """
-    Model for the `providers` API response.
-    """
+    """Model for the `providers` API response."""
 
     id: str
     availability: str
 
 
 class BaseSuggestion(BaseModel):
-    """
-    Base model for suggestions, can be extended for sponsored and nonsponsored
-    suggestions.
+    """Base model for suggestions, can be extended for sponsored and
+    nonsponsored suggestions.
     """
 
     block_id: int
@@ -30,19 +28,17 @@ class BaseSuggestion(BaseModel):
 
 
 class SponsoredSuggestion(BaseSuggestion):
-    """
-    Model for sponsored suggestions.
-    """
+    """Model for sponsored suggestions."""
 
     impression_url: HttpUrl
     click_url: HttpUrl
 
 
 class NonsponsoredSuggestion(BaseSuggestion):
-    """
-    Model for nonsponsored suggestions.
+    """Model for nonsponsored suggestions.
 
-    Both `impression_url` and `click_url` are optional compared to sponsored suggestions.
+    Both `impression_url` and `click_url` are optional compared to
+    sponsored suggestions.
     """
 
     impression_url: Optional[HttpUrl] = None
@@ -50,9 +46,7 @@ class NonsponsoredSuggestion(BaseSuggestion):
 
 
 class SuggestResponse(BaseModel):
-    """
-    Model for the `suggest` API response.
-    """
+    """Model for the `suggest` API response."""
 
     suggestions: list[SponsoredSuggestion | NonsponsoredSuggestion]
     request_id: str
