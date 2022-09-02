@@ -8,7 +8,7 @@ from merino.config import settings
 
 
 class Client:
-    """Remote Settings Client Class."""
+    """A utility class for Remote Settings client."""
 
     client: kinto_http.AsyncClient
     attachment_host: str = ""
