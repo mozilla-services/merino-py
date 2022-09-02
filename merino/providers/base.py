@@ -22,7 +22,7 @@ class BaseProvider(ABC):
 
     @abstractmethod
     def enabled_by_default(self) -> bool:
-        """TODO"""
+        """A boolean indicating whether or not provider is enabled."""
         ...
 
     def hidden(self) -> bool:
