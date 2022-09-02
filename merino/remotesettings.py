@@ -44,5 +44,9 @@ class Client:
             return await client.get(uri)
 
     def get_icon_url(self, icon_uri: str) -> str:
-        """TODO: Get Icon Url"""
+        """Get the URL for an icon.
+        
+        Args:
+          - `icon_uri`: a URI path for an icon stored on Remote Settings
+        """
         return urljoin(self.attachment_host, icon_uri)
