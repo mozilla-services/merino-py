@@ -34,7 +34,7 @@ class BaseProvider(ABC):
         return False
 
     def availability(self) -> str:
-        """TODO"""
+        """Return the status of this provider."""
         if self.hidden():
             return "hidden"
         elif self.enabled_by_default():
