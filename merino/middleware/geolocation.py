@@ -1,4 +1,4 @@
-"""TODO: Geolocation."""
+"""The middleware that parses geolocation from the client IP address."""
 import logging
 from typing import Optional
 
