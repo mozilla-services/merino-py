@@ -18,7 +18,7 @@ class Client:
         self.client = kinto_http.AsyncClient(server_url=settings.remote_settings.server)
 
     async def fetch_attachment_host(self) -> str:
-        """TODO: Get attachment host"""
+        """Fetch the attachment host from the Remote Settings server."""
         server_info = await self.client.server_info()
         return server_info["capabilities"]["attachments"]["base_url"]
 
