@@ -23,7 +23,12 @@ class Client:
         return server_info["capabilities"]["attachments"]["base_url"]
 
     async def get(self, bucket, collection) -> list[dict]:
-        """TODO: Get records from specified collection and bucket"""
+        """Get records from Remote Settings server.
+        
+        Args:
+          - `collection`: the collection name
+          -  `bucket`: the bucket name
+        """
         return await self.client.get_records(collection=collection, bucket=bucket)
 
     async def fetch_attachment(self, attachement_uri) -> httpx.Response:
