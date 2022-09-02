@@ -17,7 +17,11 @@ class BaseProvider(ABC):
 
     @abstractmethod
     async def query(self, query: str) -> list[dict[str, Any]]:
-        """TODO:"""
+        """Query against this provider.
+        
+        Args:
+          - `query`: the query string.
+        """
         ...
 
     @abstractmethod
