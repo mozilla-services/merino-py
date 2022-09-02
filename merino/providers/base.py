@@ -30,7 +30,7 @@ class BaseProvider(ABC):
         ...
 
     def hidden(self) -> bool:
-        """TODO"""
+        """A boolean indicating whether or not this provider is hidden."""
         return False
 
     def availability(self) -> str:
