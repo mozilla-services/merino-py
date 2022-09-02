@@ -32,7 +32,11 @@ class Client:
         return await self.client.get_records(collection=collection, bucket=bucket)
 
     async def fetch_attachment(self, attachement_uri) -> httpx.Response:
-        """TODO: Get attachment"""
+        """Fetch an attachment from Remote Settings server for a given URI.
+        
+        Args:
+          - `attachment_uri`: the URI of the attachment
+        """
         if not self.attachment_host:
             self.attachment_host = await self.fetch_attachment_host()
         uri = urljoin(self.attachment_host, attachement_uri)
