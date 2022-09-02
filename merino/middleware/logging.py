@@ -1,4 +1,4 @@
-"""Logging Value Configuration"""
+"""The middleware that records various access logs for Merino."""
 import logging
 import re
 import time
