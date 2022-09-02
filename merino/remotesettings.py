@@ -1,4 +1,4 @@
-"""RemoteSettings Client"""
+"""A thin wrapper around the Remote Settings client."""
 from urllib.parse import urljoin
 
 import httpx
