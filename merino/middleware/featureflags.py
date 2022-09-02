@@ -7,7 +7,7 @@ from merino.featureflags import session_id_context
 
 class FeatureFlagsMiddleware(BaseHTTPMiddleware):
     """
-    Sets a ContextVar for session_id so that it can be used
+    """Sets a ContextVar for session_id so that it can be used
     to consistently bucket flags within a search session.
     """
 
