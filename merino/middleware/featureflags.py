@@ -1,4 +1,4 @@
-"""TODO:Feature Flag Module."""
+"""The middleware that configures features flags for Merino"""
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
