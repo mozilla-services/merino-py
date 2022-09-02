@@ -25,10 +25,12 @@ show_error_codes = true
 match = "(?!test_).*\\.py"
 convention = "pep257"
 # Error Code Ref: https://www.pydocstyle.org/en/stable/error_codes.html
+# D105 Docstrings for magic methods
+# D107 Docstrings for __init__
 # D203 as it conflicts with D211 https://github.com/PyCQA/pydocstyle/issues/141
 # D205 1 blank line required between summary line and description, awkward spacing
 # D400 First line should end with a period, doesn't work when sentence spans 2 lines
-add-ignore = ["D203", "D205", "D400"]
+add-ignore = ["D105","D107","D203", "D205", "D400"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

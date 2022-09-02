@@ -24,7 +24,7 @@ class Client:
 
     async def get(self, bucket, collection) -> list[dict]:
         """Get records from Remote Settings server.
-        
+
         Args:
           - `collection`: the collection name
           -  `bucket`: the bucket name
@@ -33,7 +33,7 @@ class Client:
 
     async def fetch_attachment(self, attachement_uri) -> httpx.Response:
         """Fetch an attachment from Remote Settings server for a given URI.
-        
+
         Args:
           - `attachment_uri`: the URI of the attachment
         """
@@ -45,7 +45,7 @@ class Client:
 
     def get_icon_url(self, icon_uri: str) -> str:
         """Get the URL for an icon.
-        
+
         Args:
           - `icon_uri`: a URI path for an icon stored on Remote Settings
         """

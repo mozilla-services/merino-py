@@ -1,4 +1,4 @@
-"""TODO"""
+"""Implementation of Feature Flags (feature toggles) for Merino"""
 import hashlib
 import logging
 from collections.abc import Iterable
@@ -76,7 +76,7 @@ session_id_context: ContextVar[str | None] = ContextVar("session_id", default=No
 class FeatureFlags:
     """A very basic implementation of feature flags using dynaconf as the
      configuration system.
-     
+
     It supports two bucketing schemes `random` and
     `session`. Random does what it says on the tin. It generates a random
     bucketing id for every flag check. Session bucketing uses the session id of

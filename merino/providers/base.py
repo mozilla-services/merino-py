@@ -18,7 +18,7 @@ class BaseProvider(ABC):
     @abstractmethod
     async def query(self, query: str) -> list[dict[str, Any]]:
         """Query against this provider.
-        
+
         Args:
           - `query`: the query string.
         """
@@ -26,11 +26,11 @@ class BaseProvider(ABC):
 
     @abstractmethod
     def enabled_by_default(self) -> bool:
-        """A boolean indicating whether or not provider is enabled."""
+        """Boolean indicating whether or not provider is enabled."""
         ...
 
     def hidden(self) -> bool:
-        """A boolean indicating whether or not this provider is hidden."""
+        """Boolean indicating whether or not this provider is hidden."""
         return False
 
     def availability(self) -> str:
