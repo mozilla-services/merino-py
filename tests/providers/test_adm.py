@@ -15,7 +15,7 @@ class FakeRSClient:
     """Fake Remote Settings client that returns suggest data for tests."""
 
     async def get(self, bucket: Any, collection: Any) -> list[dict[Any, Any]]:
-        """Return fake records.."""
+        """Return fake records."""
 
         return [
             {
@@ -116,7 +116,7 @@ def test_hidden(adm: Provider) -> None:
 
 @pytest.mark.asyncio
 async def test_initialize(adm: Provider) -> None:
-    """Test for the the initialize() method of the adM provider."""
+    """Test for the initialize() method of the adM provider."""
 
     await adm.initialize()
 
