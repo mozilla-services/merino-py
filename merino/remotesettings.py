@@ -1,4 +1,5 @@
 """A thin wrapper around the Remote Settings client."""
+from typing import Any
 from urllib.parse import urljoin
 
 import httpx
@@ -7,8 +8,8 @@ import kinto_http
 from merino.config import settings
 
 
-class Client:
-    """A utility class for Remote Settings client."""
+class LiveBackend:
+    """Backend that connects to a live Remote Settings server."""
 
     client: kinto_http.AsyncClient
     attachment_host: str = ""
@@ -22,7 +23,7 @@ class Client:
         server_info = await self.client.server_info()
         return server_info["capabilities"]["attachments"]["base_url"]
 
-    async def get(self, bucket, collection) -> list[dict]:
+    async def get(self, bucket: str, collection: str) -> list[dict[str, Any]]:
         """Get records from Remote Settings server.
 
         Args:

@@ -11,8 +11,8 @@ import pytest
 from merino.providers.adm import Provider
 
 
-class FakeRSClient:
-    """Fake Remote Settings client that returns suggest data for tests."""
+class FakeBackend:
+    """Fake Remote Settings backend that returns suggest data for tests."""
 
     async def get(self, bucket: Any, collection: Any) -> list[dict[Any, Any]]:
         """Return fake records."""
@@ -99,7 +99,7 @@ class FakeRSClient:
 def fixture_adm() -> Provider:
     """Return an adM provider that uses a fake remote settings client."""
 
-    return Provider(rs_client=FakeRSClient())
+    return Provider(backend=FakeBackend())
 
 
 def test_enabled_by_default(adm: Provider) -> None:

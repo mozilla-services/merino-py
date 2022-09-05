@@ -15,17 +15,17 @@ from merino.providers.base import BaseProvider
 logger = logging.getLogger(__name__)
 
 
-class RemoteSettingsClient(Protocol):
-    """Protocol for a Remote Settings client that this provider depends on.
+class RemoteSettingsBackend(Protocol):
+    """Protocol for a Remote Settings backend that this provider depends on.
 
-    Note: This only defines the methods used by the provider. The actual
-    provider might define additional methods and attributes which this provider
-    doesn't directly depend on.
+    Note: This only defines the methods used by the provider. The actual backend
+    might define additional methods and attributes which this provider doesn't
+    directly depend on.
     """
 
     async def get(
-        self, bucket: Any, collection: Any
-    ) -> list[dict[Any, Any]]:  # pragma: no cover
+        self, bucket: str, collection: str
+    ) -> list[dict[str, Any]]:  # pragma: no cover
         """Get records from Remote Settings."""
         ...
 
@@ -64,11 +64,11 @@ class Provider(BaseProvider):
     icons: dict[int, str] = {}
     last_fetch_at: float
     cron_task: asyncio.Task
-    rs_client: RemoteSettingsClient
+    backend: RemoteSettingsBackend
 
-    def __init__(self, rs_client: RemoteSettingsClient, **kwargs: Any) -> None:
-        """Store the given Remote Settings client on the provider."""
-        self.rs_client = rs_client
+    def __init__(self, backend: RemoteSettingsBackend, **kwargs: Any) -> None:
+        """Store the given Remote Settings backend on the provider."""
+        self.backend = backend
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
@@ -99,7 +99,7 @@ class Provider(BaseProvider):
         results: list[dict[str, Any]] = []
         icons: dict[int, str] = {}
 
-        suggest_settings = await self.rs_client.get(
+        suggest_settings = await self.backend.get(
             settings.remote_settings.bucket, settings.remote_settings.collection
         )
 
@@ -111,7 +111,7 @@ class Provider(BaseProvider):
         ] or [record for record in suggest_settings if record["type"] == "data"]
 
         fetch_tasks = [
-            self.rs_client.fetch_attachment(item["attachment"]["location"])
+            self.backend.fetch_attachment(item["attachment"]["location"])
             for item in records
         ]
         for done_task in as_completed(fetch_tasks):
@@ -128,7 +128,7 @@ class Provider(BaseProvider):
         ]
         for icon in icon_record:
             id = int(icon["id"].replace("icon-", ""))
-            icons[id] = self.rs_client.get_icon_url(icon["attachment"]["location"])
+            icons[id] = self.backend.get_icon_url(icon["attachment"]["location"])
 
         # overwrite the instance variables
         self.suggestions = suggestions

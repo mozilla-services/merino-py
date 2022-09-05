@@ -23,7 +23,7 @@ async def init_providers() -> None:
     """
     start = timer()
 
-    providers["adm"] = AdmProvider(rs_client=remotesettings.Client())
+    providers["adm"] = AdmProvider(backend=remotesettings.LiveBackend())
 
     if settings.providers.wiki_fruit.enabled:
         providers["wiki_fruit"] = WikiFruitProvider()
