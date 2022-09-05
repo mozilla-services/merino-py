@@ -60,7 +60,7 @@ class FakeBackend:
             },
         ]
 
-    async def fetch_attachment(self, attachement_uri: Any) -> httpx.Response:
+    async def fetch_attachment(self, attachment_uri: Any) -> httpx.Response:
         """Return a fake attachment for the given URI."""
 
         attachments = {
@@ -87,7 +87,7 @@ class FakeBackend:
             },
         }
 
-        return httpx.Response(200, text=json.dumps([attachments[attachement_uri]]))
+        return httpx.Response(200, text=json.dumps([attachments[attachment_uri]]))
 
     def get_icon_url(self, icon_uri: str) -> str:
         """Return a fake icon URL for the given URI."""

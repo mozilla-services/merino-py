@@ -30,7 +30,7 @@ class RemoteSettingsBackend(Protocol):
         ...
 
     async def fetch_attachment(
-        self, attachement_uri: Any
+        self, attachment_uri: Any
     ) -> httpx.Response:  # pragma: no cover
         """Fetch the attachment for the given URI."""
         ...
