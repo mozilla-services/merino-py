@@ -18,9 +18,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def startup_configuration() -> None:
-    """
-    Set up various configurations such as logging.
-    """
+    """Set up various configurations such as logging."""
     configure_logging()
     configure_sentry()
     await configure_metrics()
@@ -34,9 +32,7 @@ async def startup_providers() -> None:
 
 @app.on_event("shutdown")
 async def shutdown() -> None:
-    """
-    Clean up for the application shutdown.
-    """
+    """Clean up for the application shutdown."""
     await get_metrics_client().close()
 
 

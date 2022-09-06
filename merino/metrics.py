@@ -1,3 +1,4 @@
+"""Configuration for aiodogstatsd Client"""
 import logging
 from functools import cache
 
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 @cache
 def get_metrics_client() -> Client:
+    """Instantiate and memoize the metrics client."""
     return Client(
         host=settings.metrics.host,
         port=settings.metrics.port,
@@ -19,13 +21,20 @@ def get_metrics_client() -> Client:
 
 
 async def configure_metrics() -> None:
+    """Configure metrics client. Used in application startup."""
     client = get_metrics_client()
     if settings.metrics.dev_logger:
-        client._protocol = LocalDatagramLogger()
+        client._protocol = _LocalDatagramLogger()
     await client.connect()
 
 
-class LocalDatagramLogger(DatagramProtocol):
+class _LocalDatagramLogger(DatagramProtocol):
+    """
+    This class can be used to override the default DatagramProtocol.
+    Instead of writing bytes to a socket, it logs them.
+    The purpose is to make it easy to see the metrics in development environments.
+    """
+
     def send(self, data: bytes):
         logger.debug("sending metrics", extra={"data": data.decode("utf8")})
 
