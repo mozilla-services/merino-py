@@ -10,28 +10,23 @@ logger = logging.getLogger(__name__)
 
 
 @cache
-def get_client() -> Client:
+def get_metrics_client() -> Client:
     return Client(
         host=settings.metrics.host,
         port=settings.metrics.port,
-        constant_tags={"application": "merino"},
+        constant_tags={"application": "merino-py"},
     )
 
 
-async def configure_metrics() -> Client:
-    client = get_client()
-    try:
-        if settings.metrics.dev_logger:
-            client._protocol = LocalDatagramLogger()
-        await client.connect()
-    except Exception as e:
-        logger.exception(e)
-    finally:
-        return client
+async def configure_metrics() -> None:
+    client = get_metrics_client()
+    if settings.metrics.dev_logger:
+        client._protocol = LocalDatagramLogger()
+    await client.connect()
 
 
 class LocalDatagramLogger(DatagramProtocol):
-    def send(self, data):
+    def send(self, data: bytes):
         logger.debug("sending metrics", extra={"data": data.decode("utf8")})
 
     def error_received(self, exc):

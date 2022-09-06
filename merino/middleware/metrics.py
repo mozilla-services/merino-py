@@ -6,7 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
-from merino.metrics import get_client
+from merino.metrics import get_metrics_client
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        client = get_client()
+        client = get_metrics_client()
         metric_name = self._build_metric_name(request.method, request.url.path)
         status_code = 0
 

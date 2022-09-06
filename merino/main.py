@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from merino import providers
 from merino.config_logging import configure_logging
 from merino.config_sentry import configure_sentry
-from merino.metrics import configure_metrics, get_client
+from merino.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging, metrics
 from merino.web import api_v1, dockerflow
 
@@ -37,7 +37,7 @@ async def shutdown() -> None:
     """
     Set up various configurations such as logging.
     """
-    await get_client().close()
+    await get_metrics_client().close()
 
 
 @app.exception_handler(RequestValidationError)

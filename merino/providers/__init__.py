@@ -32,7 +32,7 @@ async def init_providers() -> None:
 
     # initialize providers and record time
     init_metric = f"{__name__}.initialize"
-    client = metrics.get_client()
+    client = metrics.get_metrics_client()
     with client.timeit(init_metric):
         wrapped_tasks = [
             client.timeit_task(p.initialize(), f"{init_metric}.{provider_name}")

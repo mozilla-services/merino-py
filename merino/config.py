@@ -27,7 +27,6 @@ settings = Dynaconf(
     envvar_prefix="MERINO",
     settings_files=[
         "configs/default.toml",
-        "configs/testing.toml",
         "configs/development.toml",
         "configs/production.toml",
         "configs/ci.toml",

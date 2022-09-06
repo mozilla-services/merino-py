@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from merino.metrics import get_client
+from merino.metrics import get_metrics_client
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider
 from merino.web.models_v1 import (
@@ -42,7 +42,7 @@ async def suggest(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
-    metrics_client: Client = Depends(get_client),
+    metrics_client: Client = Depends(get_metrics_client),
 ) -> JSONResponse:
     """
     Query Merino for suggestions.
