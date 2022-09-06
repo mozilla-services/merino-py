@@ -3,6 +3,7 @@ import asyncio
 import logging
 from timeit import default_timer as timer
 
+from merino import remotesettings
 from merino.config import settings
 from merino.providers.adm import Provider as AdmProvider
 from merino.providers.base import BaseProvider
@@ -21,9 +22,12 @@ async def init_providers() -> None:
     This should only be called once at the startup of application.
     """
     start = timer()
-    providers["adm"] = AdmProvider()
+
+    providers["adm"] = AdmProvider(backend=remotesettings.LiveBackend())
+
     if settings.providers.wiki_fruit.enabled:
         providers["wiki_fruit"] = WikiFruitProvider()
+
     await asyncio.gather(*[p.initialize() for p in providers.values()])
     default_providers.extend([p for p in providers.values() if p.enabled_by_default()])
     logger.info(
