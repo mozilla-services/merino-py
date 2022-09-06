@@ -95,8 +95,12 @@ class Provider(BaseProvider):
 
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
+        # A dictionary keyed on suggestion keywords, each value stores an index
+        # (pointer) to one entry of the suggestion result list.
         suggestions: dict[str, int] = {}
+        # A list of suggestion results.
         results: list[dict[str, Any]] = []
+        # A dictionary of icon IDs to icon URLs.
         icons: dict[int, str] = {}
 
         suggest_settings = await self.backend.get(
@@ -118,11 +122,11 @@ class Provider(BaseProvider):
             res = await done_task
             for suggestion in res.json():
                 id = len(results)
-                for kw in suggestion.get("keywords"):
+                for kw in suggestion.pop("keywords", []):
+                    # Note that for adM suggestions, each keyword can only be mapped to
+                    # a single suggestion.
                     suggestions[kw] = id
-                results.append(
-                    {k: suggestion[k] for k in suggestion if k != "keywords"}
-                )
+                results.append(suggestion)
         icon_record = [
             record for record in suggest_settings if record["type"] == "icon"
         ]
