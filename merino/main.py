@@ -35,7 +35,7 @@ async def startup_providers() -> None:
 @app.on_event("shutdown")
 async def shutdown() -> None:
     """
-    Set up various configurations such as logging.
+    Clean up for the application shutdown.
     """
     await get_metrics_client().close()
 
