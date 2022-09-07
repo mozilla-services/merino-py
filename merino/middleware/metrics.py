@@ -49,8 +49,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
                 client.increment(f"{metric_name}.status_codes.{status_code}")
 
             # track all status codes here.
-            client.increment(f"request.status_codes.{status_code}")
-
+            client.increment(f"response.status_codes.{status_code}")
         return response
 
     @cache

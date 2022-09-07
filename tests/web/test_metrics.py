@@ -5,14 +5,20 @@ import pytest
 from fastapi.testclient import TestClient
 
 from merino.main import app
-from merino.metrics import get_metrics_client
 from merino.providers import get_providers
 from merino.web import api_v1
-from tests.web.util import get_providers as override_dependency
+from tests.web.util import CorruptProvider, get_provider_factory
 
-app.dependency_overrides[get_providers] = override_dependency
 client = TestClient(app)
-metrics_client = get_metrics_client()
+
+
+@pytest.fixture()
+def corrupt_provider():
+    app.dependency_overrides[get_providers] = get_provider_factory({
+        "corrupt": CorruptProvider(),
+    })
+    yield
+    del app.dependency_overrides[get_providers]
 
 
 @pytest.mark.parametrize(
@@ -24,7 +30,7 @@ metrics_client = get_metrics_client()
         ),
         (
             "/api/v1/nonono",
-            ["get.api.v1.nonono.timing", "get.api.v1.nonono.status_codes.404"],
+            ["response.status_codes.404"],
         ),
         (
             "/api/v1/suggest",
@@ -36,7 +42,7 @@ metrics_client = get_metrics_client()
         ),
     ],
 )
-def test_metrics_spy(url, metric_keys):
+def test_metrics(url, metric_keys):
 
     with mock.patch.object(aiodogstatsd.Client, "_report") as reporter:
         client.get(url)
@@ -44,20 +50,17 @@ def test_metrics_spy(url, metric_keys):
             reporter.assert_any_call(metric, mock.ANY, mock.ANY, mock.ANY, mock.ANY)
 
 
-def test_metrics_side_effect(mocker):
-    error_msg = "Error creating ProviderResponse model instance"
+def test_metrics_500(mocker, corrupt_provider):
+    error_msg = "test"
     metric_keys = [
-        "get.api.v1.providers.timing",
-        "get.api.v1.providers.status_codes.500",
+        "get.api.v1.suggest.timing",
+        "get.api.v1.suggest.status_codes.500",
     ]
 
-    mocker.patch.object(
-        api_v1, "ProviderResponse", side_effect=RuntimeError(error_msg), autospec=True
-    )
     reporter = mocker.patch.object(aiodogstatsd.Client, "_report")
 
     with pytest.raises(RuntimeError) as excinfo:
-        client.get("/api/v1/providers")
+        client.get(f"/api/v1/suggest?q={error_msg}")
 
     for metric in metric_keys:
         reporter.assert_any_call(metric, mock.ANY, mock.ANY, mock.ANY, mock.ANY)
