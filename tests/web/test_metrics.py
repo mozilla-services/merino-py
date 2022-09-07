@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 
 from merino.main import app
 from merino.providers import get_providers
-from merino.web import api_v1
 from tests.web.util import CorruptProvider, get_provider_factory
 
 client = TestClient(app)
@@ -14,9 +13,11 @@ client = TestClient(app)
 
 @pytest.fixture()
 def corrupt_provider():
-    app.dependency_overrides[get_providers] = get_provider_factory({
-        "corrupt": CorruptProvider(),
-    })
+    app.dependency_overrides[get_providers] = get_provider_factory(
+        {
+            "corrupt": CorruptProvider(),
+        }
+    )
     yield
     del app.dependency_overrides[get_providers]
 
@@ -50,7 +51,8 @@ def test_metrics(url, metric_keys):
             reporter.assert_any_call(metric, mock.ANY, mock.ANY, mock.ANY, mock.ANY)
 
 
-def test_metrics_500(mocker, corrupt_provider):
+@pytest.mark.usefixtures("corrupt_provider")
+def test_metrics_500(mocker):
     error_msg = "test"
     metric_keys = [
         "get.api.v1.suggest.timing",

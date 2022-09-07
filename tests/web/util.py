@@ -3,7 +3,6 @@ from collections.abc import Callable, Coroutine
 from typing import Any
 
 from merino.providers.base import BaseProvider
-from merino.providers.wiki_fruit import WikiFruitProvider
 
 
 class SponsoredProvider(BaseProvider):
@@ -107,6 +106,7 @@ def get_provider_factory(
     ..., Coroutine[Any, Any, tuple[dict[str, BaseProvider], list[BaseProvider]]]
 ]:
     """Returns a callable that builds and initializes the given providers."""
+
     async def provider_factory() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
         await asyncio.gather(*[p.initialize() for p in providers.values()])
         default_providers = [p for p in providers.values() if p.enabled_by_default()]
@@ -119,7 +119,9 @@ async def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
     """
     Return a tuple of all the providers and default providers.
     """
-    return await get_provider_factory({
-        "sponsored-provider": SponsoredProvider(),
-        "nonsponsored-provider": NonsponsoredProvider(),
-    })()
+    return await get_provider_factory(
+        {
+            "sponsored-provider": SponsoredProvider(),
+            "nonsponsored-provider": NonsponsoredProvider(),
+        }
+    )()

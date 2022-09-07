@@ -11,9 +11,11 @@ client = TestClient(app)
 
 @pytest.fixture(scope="module", autouse=True)
 def inject_providers():
-    app.dependency_overrides[get_providers] = get_provider_factory({
-        "wiki_fruit": WikiFruitProvider(),
-    })
+    app.dependency_overrides[get_providers] = get_provider_factory(
+        {
+            "wiki_fruit": WikiFruitProvider(),
+        }
+    )
     yield
     del app.dependency_overrides[get_providers]
 
