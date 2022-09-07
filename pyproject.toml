@@ -53,6 +53,7 @@ httpx = "^0.23.0"
 maxminddb = "^2.2.0"
 sentry-sdk = {extras = ["fastapi"], version = "^1.9.5"}
 kinto-http = "^11.0.0"
+aiodogstatsd = "^0.16.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

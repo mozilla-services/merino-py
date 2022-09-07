@@ -2,11 +2,13 @@
 import asyncio
 from itertools import chain
 
+from aiodogstatsd import Client
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
+from merino.metrics import get_metrics_client
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider
 from merino.web.models_v1 import (
@@ -40,6 +42,7 @@ async def suggest(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
+    metrics_client: Client = Depends(get_metrics_client),
 ) -> JSONResponse:
     """
     Query Merino for suggestions.
@@ -60,7 +63,11 @@ async def suggest(
         ]
     else:
         search_from = default_providers
-    lookups = [p.query(q) for p in search_from]
+
+    lookups = [
+        metrics_client.timeit_task(p.query(q), f"{p.__module__}.query")
+        for p in search_from
+    ]
     results = await asyncio.gather(*lookups)
 
     suggestions = [

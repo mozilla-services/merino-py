@@ -1,8 +1,7 @@
 import asyncio
-from typing import Any
+from typing import Any, Callable, Coroutine
 
 from merino.providers.base import BaseProvider
-from merino.providers.wiki_fruit import WikiFruitProvider
 
 
 class SponsoredProvider(BaseProvider):
@@ -79,28 +78,49 @@ class NonsponsoredProvider(BaseProvider):
             return []
 
 
+class CorruptProvider(BaseProvider):
+    """
+    A test corrupted provider that raises `RuntimeError` for all queries received.
+    """
+
+    def __init__(self) -> None:
+        ...
+
+    async def initialize(self) -> None:
+        ...
+
+    def enabled_by_default(self) -> bool:
+        return True
+
+    def hidden(self) -> bool:
+        return False
+
+    async def query(self, q: str) -> list[dict[str, Any]]:
+        raise RuntimeError(q)
+
+
+def get_provider_factory(
+    providers: dict[str, BaseProvider]
+) -> Callable[
+    ..., Coroutine[Any, Any, tuple[dict[str, BaseProvider], list[BaseProvider]]]
+]:
+    """Returns a callable that builds and initializes the given providers."""
+
+    async def provider_factory() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
+        await asyncio.gather(*[p.initialize() for p in providers.values()])
+        default_providers = [p for p in providers.values() if p.enabled_by_default()]
+        return providers, default_providers
+
+    return provider_factory
+
+
 async def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
     """
     Return a tuple of all the providers and default providers.
     """
-    providers = {
-        "sponsored-provider": SponsoredProvider(),
-        "nonsponsored-provider": NonsponsoredProvider(),
-    }
-    await asyncio.gather(*[p.initialize() for p in providers.values()])
-    default_providers = [p for p in providers.values() if p.enabled_by_default()]
-    return providers, default_providers
-
-
-async def get_wiki_fruit_provider() -> tuple[
-    dict[str, BaseProvider], list[BaseProvider]
-]:
-    """
-    A test provider for WikiFruit.
-    """
-    providers = {
-        "wiki_fruit": WikiFruitProvider(),
-    }
-    await asyncio.gather(*[p.initialize() for p in providers.values()])
-    default_providers = [p for p in providers.values() if p.enabled_by_default()]
-    return providers, default_providers
+    return await get_provider_factory(
+        {
+            "sponsored-provider": SponsoredProvider(),
+            "nonsponsored-provider": NonsponsoredProvider(),
+        }
+    )()
