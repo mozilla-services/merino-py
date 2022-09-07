@@ -42,7 +42,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         finally:
             duration = (loop.time() - started_at) * 1000
             # don't track NOT_FOUND statuses by path.
-            # Instead we will track those within a general `status_codes` bucket.
+            # Instead we will track those within a general `response.status_codes` metric.
             if status_code != HTTPStatus.NOT_FOUND.value:
                 metric_name = self._build_metric_name(request.method, request.url.path)
                 client.timing(f"{metric_name}.timing", value=duration)
