@@ -70,7 +70,7 @@ class UserAgentMiddleware(BaseHTTPMiddleware):
             case {"family": browser}:
                 # Do not bother parsing the browser version for non-Firefox user agents.
                 return browser
-            case _:
+            case _:  # pragma: no cover
                 return "Other"
 
     @staticmethod

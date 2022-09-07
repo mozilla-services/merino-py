@@ -107,6 +107,9 @@ def test_suggest_request_logs_contain_required_info(mocker, caplog):
     assert record.sequence_no == seq
     assert record.query == query
     assert record.client_variants == ["foo", "bar"]
+    assert record.browser == "Other"
+    assert record.os_family == "other"
+    assert record.form_factor == "other"
 
 
 def test_non_suggest_request_logs_contain_required_info(mocker, caplog):

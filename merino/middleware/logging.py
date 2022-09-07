@@ -48,6 +48,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 "requested_providers": request.query_params.get("providers", "").split(
                     ","
                 ),
+                "browser": request.state.user_agent.browser,
+                "os_family": request.state.user_agent.os_family,
+                "form_factor": request.state.user_agent.form_factor,
             }
             suggest_request_logger.info("", extra=data)
         else:

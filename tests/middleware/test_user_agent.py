@@ -34,42 +34,43 @@ FIXTURE = [
         "tablet",
     ),
     (
-        """
-            Mozilla/5.0 (iPhone; CPU iPhone OS 12_5_1 like Mac OS X) AppleWebKit/605.1.15
-             (KHTML, like Gecko) FxiOS/104.0 Mobile/15E148 Safari/605.1.15
-        """,
+        (
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 12_5_1 like Mac OS X) AppleWebKit/605.1.15"
+            " (KHTML, like Gecko) FxiOS/104.0 Mobile/15E148 Safari/605.1.15"
+        ),
         "Firefox(104.0)",
         "ios",
         "phone",
     ),
     (
-        """
-            Mozilla/5.0 (iPad; CPU OS 12_5_1 like Mac OS X) AppleWebKit/605.1.15
-             (KHTML, like Gecko) FxiOS/104.0 Mobile/15E148 Safari/605.1.15
-        """,
+        (
+            "Mozilla/5.0 (iPad; CPU OS 12_5_1 like Mac OS X) AppleWebKit/605.1.15"
+            " (KHTML, like Gecko) FxiOS/104.0 Mobile/15E148 Safari/605.1.15"
+        ),
         "Firefox(104.0)",
         "ios",
         "tablet",
     ),
     (
-        """
-            Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/605.1.15
-             (KHTML, like Gecko) Version/13.1 Safari/605.1.15
-        """,
+        (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/605.1.15"
+            " (KHTML, like Gecko) Version/13.1 Safari/605.1.15"
+        ),
         "Safari",
         "macos",
         "desktop",
     ),
     (
-        """
-            Mozilla/5.0 (X11; CrOS x86_64 13816.64.0) AppleWebKit/537.36
-             (KHTML, like Gecko) Chrome/90.0.4430.100 Safari/537.36
-        """,
+        (
+            "Mozilla/5.0 (X11; CrOS x86_64 13816.64.0) AppleWebKit/537.36"
+            " (KHTML, like Gecko) Chrome/90.0.4430.100 Safari/537.36"
+        ),
         "Chrome",
         "chromeos",
         "other",
     ),
     ("curl/7.84.0", "curl", "other", "other"),
+    ("", "Other", "other", "other"),
 ]
 
 
