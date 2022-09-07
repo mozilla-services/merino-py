@@ -1,6 +1,5 @@
 import asyncio
-from collections.abc import Callable, Coroutine
-from typing import Any
+from typing import Any, Callable, Coroutine
 
 from merino.providers.base import BaseProvider
 
@@ -81,7 +80,7 @@ class NonsponsoredProvider(BaseProvider):
 
 class CorruptProvider(BaseProvider):
     """
-    A test nonsponsored provider that only responds to query "nonsponsored".
+    A test corrupted provider that raises `RuntimeError` for all queries received.
     """
 
     def __init__(self) -> None:
