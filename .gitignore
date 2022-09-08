@@ -133,3 +133,6 @@ dmypy.json
 
 # Dynaconf secret files
 merino/configs/.secrets.*
+
+# Dynaconf local config files
+merino/configs/*.local.*
