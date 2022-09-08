@@ -1,8 +1,10 @@
 import pytest
 
-from merino.middleware.user_agent import UserAgentMiddleware
+from merino.util.user_agent_parsing import parse
 
-FIXTURE = [
+Scenario = tuple[str, str, str, str]
+
+SCENARIOS: list[Scenario] = [
     (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0) Gecko/20100101 Firefox/103.0",
         "Firefox(103.0)",
@@ -76,11 +78,11 @@ FIXTURE = [
 
 @pytest.mark.parametrize(
     "ua,expected_browser,expected_os_family,expected_form_factor",
-    FIXTURE,
+    SCENARIOS,
 )
 def test_ua_parsing(ua, expected_browser, expected_os_family, expected_form_factor):
-    browser, os_family, form_factor = UserAgentMiddleware.parse(ua)
+    result = parse(ua)
 
-    assert browser == expected_browser
-    assert os_family == expected_os_family
-    assert form_factor == expected_form_factor
+    assert result["browser"] == expected_browser
+    assert result["os_family"] == expected_os_family
+    assert result["form_factor"] == expected_form_factor

@@ -55,7 +55,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             suggest_request_logger.info("", extra=data)
         else:
             data = {
-                "agent": request.headers["User-Agent"],
+                "agent": request.headers.get("User-Agent"),
                 "path": request.url.path,
                 "method": request.method,
                 "lang": request.headers.get("Accept-Language"),

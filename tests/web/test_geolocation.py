@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from merino.main import app
 from merino.providers import get_providers
+from tests.web.util import filter_caplog
 from tests.web.util import get_providers as override_dependency
 
 client = TestClient(app)
@@ -30,9 +31,11 @@ def test_geolocation(
 
     client.get("/api/v1/suggest?q=nope")
 
-    assert len(caplog.records) == 1
+    records = filter_caplog(caplog.records, "web.suggest.request")
 
-    record = caplog.records[0]
+    assert len(records) == 1
+
+    record = records[0]
 
     assert record.country == expected_country
     assert record.region == expected_region
@@ -50,5 +53,7 @@ def test_geolocation_with_invalid_ip(mocker, caplog):
 
     client.get("/api/v1/suggest?q=nope")
 
-    assert len(caplog.records) == 1
-    assert caplog.messages[0] == "Invalid IP address for geolocation parsing"
+    records = filter_caplog(caplog.records, "merino.middleware.geolocation")
+
+    assert len(records) == 1
+    assert records[0].message == "Invalid IP address for geolocation parsing"
