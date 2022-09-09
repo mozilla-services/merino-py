@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import time
-from typing import Callable, Dict, List, Set, Tuple
+from typing import Callable
 
 import pytest
 import requests
@@ -28,12 +28,12 @@ from requests import Response as RequestsResponse
 # We need to exclude the following fields on the response level:
 # The request ID is dynamic in nature and the value cannot be validated here.
 # The suggestions are validated separately in a different step.
-CONTENT_EXCLUDE: Set[str] = {"request_id", "suggestions"}
+CONTENT_EXCLUDE: set[str] = {"request_id", "suggestions"}
 
 # We need to exclude the following field on the suggestion level:
 # The icon URL for RS suggestions is dynamic in nature and handed to Merino by
 # Kinto. We validate that in a separate step.
-SUGGESTION_EXCLUDE: Set[str] = {"icon"}
+SUGGESTION_EXCLUDE: set[str] = {"icon"}
 
 
 @pytest.fixture(scope="session", name="merino_url")
@@ -46,7 +46,7 @@ def fixture_merino_url(request) -> str:
 
 @pytest.fixture(scope="session", name="kinto_step")
 def fixture_kinto_step(
-    kinto_environment: KintoEnvironment, kinto_records: Dict[str, KintoRequestRecord]
+    kinto_environment: KintoEnvironment, kinto_records: dict[str, KintoRequestRecord]
 ) -> Callable:
     """Define execution instructions for Kinto scenario step."""
 
@@ -60,7 +60,7 @@ def fixture_kinto_step(
 
         upload_attachment(kinto_environment, record, step.request.data_type)
 
-        icon_ids: Set[str] = {
+        icon_ids: set[str] = {
             suggestion.icon for suggestion in record.attachment.suggestions
         }
         upload_icons(kinto_environment, icon_ids)
@@ -87,7 +87,7 @@ def fixture_merino_step(merino_url: str, fetch_kinto_icon_url: Callable) -> Call
 
         method: str = step.request.method
         url: str = f"{merino_url}{step.request.path}"
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             header.name: header.value for header in step.request.headers
         }
 
@@ -132,7 +132,7 @@ def fixture_merino_step(merino_url: str, fetch_kinto_icon_url: Callable) -> Call
 @pytest.fixture(scope="session", name="step_functions")
 def fixture_step_functions(
     kinto_step: Callable, merino_step: Callable
-) -> Dict[Service, Callable]:
+) -> dict[Service, Callable]:
     """Return a dict mapping from a service name to request function."""
 
     return {
@@ -141,7 +141,7 @@ def fixture_step_functions(
     }
 
 
-def suggestion_id(suggestion: Suggestion) -> Tuple:
+def suggestion_id(suggestion: Suggestion) -> tuple:
     """Return the values for the fields that identify a suggestion."""
     return suggestion.provider, suggestion.block_id
 
@@ -201,7 +201,7 @@ def fixture_function_teardown(kinto_environment: KintoEnvironment):
     delete_records(kinto_environment)
 
 
-def test_merino(steps: List[Step], step_functions: Dict[Service, Callable]):
+def test_merino(steps: list[Step], step_functions: dict[Service, Callable]):
     """Test for requesting suggestions from Merino."""
 
     for step in steps:

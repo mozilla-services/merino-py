@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from typing import List, Optional, Set
+from typing import Optional
 
 import requests
 from pydantic import BaseModel, Field
@@ -26,7 +26,7 @@ class KintoSuggestion(BaseModel):
     icon: str
     advertiser: str
     title: str
-    keywords: List[str] = Field(default_factory=list)
+    keywords: list[str] = Field(default_factory=list)
     # Both impression_url and click_url are optional. They're absent for
     # Mozilla-provided Wikipedia suggestions.
     click_url: Optional[str]
@@ -44,7 +44,7 @@ class KintoRequestAttachment(KintoAttachment):
     """Class that holds information about an attachment for the Kinto API."""
 
     filecontent: bytes
-    suggestions: List[KintoSuggestion]
+    suggestions: list[KintoSuggestion]
 
 
 class KintoResponseAttachment(KintoAttachment):
@@ -132,7 +132,7 @@ def upload_attachment(
     response.raise_for_status()
 
 
-def upload_icons(environment: KintoEnvironment, icon_ids: Set[str]) -> None:
+def upload_icons(environment: KintoEnvironment, icon_ids: set[str]) -> None:
     """Upload icon attachments to Kinto for the given icon IDs."""
 
     for icon_id in icon_ids:

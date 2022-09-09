@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from enum import Enum
-from typing import Any, List, Literal, Optional, Union
+from typing import Any, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Extra, Field
@@ -43,7 +43,7 @@ class MerinoRequest(Request):
 
     method: str
     path: str
-    headers: List[Header] = []
+    headers: list[Header] = []
 
 
 class Suggestion(BaseModel, extra=Extra.allow):
@@ -67,9 +67,9 @@ class Suggestion(BaseModel, extra=Extra.allow):
 class ResponseContent(BaseModel):
     """Class that contains suggestions and variants returned by Merino."""
 
-    suggestions: List[Suggestion] = Field(default_factory=list)
-    client_variants: List[str] = Field(default_factory=list)
-    server_variants: List[str] = Field(default_factory=list)
+    suggestions: list[Suggestion] = Field(default_factory=list)
+    client_variants: list[str] = Field(default_factory=list)
+    server_variants: list[str] = Field(default_factory=list)
     request_id: Optional[UUID] = Field(...)
 
 
@@ -77,13 +77,13 @@ class Response(BaseModel):
     """Class that holds information about an HTTP response from Merino."""
 
     status_code: int
-    content: Union[ResponseContent, Any]
+    content: ResponseContent | Any
 
 
 class Step(BaseModel):
     """Class that holds information about a step in a test scenario."""
 
-    request: Union[KintoRequest, MerinoRequest]
+    request: KintoRequest | MerinoRequest
     response: Optional[Response]
 
 
@@ -92,4 +92,4 @@ class Scenario(BaseModel):
 
     name: str
     description: str
-    steps: List[Step]
+    steps: list[Step]

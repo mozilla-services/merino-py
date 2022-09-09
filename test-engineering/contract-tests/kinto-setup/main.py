@@ -2,16 +2,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import re
 from time import sleep
 
 import requests
 import typer
 from kinto import create_bucket, create_collection
 from requests import HTTPError
-
-# Pattern to extract data types of Kinto attachment files.
-PATTERN_DATA_TYPE = re.compile(r"^(?P<data_type>.*)-\d{2}$")
 
 
 def main(

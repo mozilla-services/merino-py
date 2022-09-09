@@ -5,7 +5,7 @@
 import json
 import os
 import pathlib
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 import pytest
 import yaml
@@ -43,16 +43,16 @@ def fixture_kinto_environment(request: Any) -> KintoEnvironment:
 
 
 @pytest.fixture(scope="session", name="kinto_records")
-def fixture_kinto_records(request: Any) -> Dict[str, KintoRequestRecord]:
+def fixture_kinto_records(request: Any) -> dict[str, KintoRequestRecord]:
     """Return a map from data file name to suggestion data."""
 
     # Load Kinto data from the given Kinto data directory
     kinto_data_dir: str = request.config.option.kinto_data_dir
-    kinto_records: Dict[str, KintoRequestRecord] = {}
+    kinto_records: dict[str, KintoRequestRecord] = {}
     for data_file in pathlib.Path(kinto_data_dir).glob("*.json"):
 
         content: bytes = data_file.read_bytes()
-        suggestions: List[KintoSuggestion] = [
+        suggestions: list[KintoSuggestion] = [
             KintoSuggestion(**suggestion)
             for suggestion in json.loads(data_file.read_text())
         ]
@@ -76,7 +76,7 @@ def fixture_kinto_records(request: Any) -> Dict[str, KintoRequestRecord]:
 def fixture_fetch_kinto_icon_url(
     request: Any,
     kinto_environment: KintoEnvironment,
-    kinto_records: Dict[str, KintoRequestRecord],
+    kinto_records: dict[str, KintoRequestRecord],
 ) -> Callable:
     """Return a function that will query for an icon URL from a suggestion title"""
 
