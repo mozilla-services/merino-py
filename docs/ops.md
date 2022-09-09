@@ -2,10 +2,12 @@
 
 ## Settings
 
-Merino's settings can be specified in two ways: a YAML file placed in a specific
-location, or via environment variables. Not all settings can be set with
-environment variables, however. Notably, provider configuration must be done
-with its own YAML file.
+Merino's settings are managed via Dynaconf and can be specified in two ways: by a 
+TOML file in the `merino/configs/` directory, or via environment variables. Environment 
+variables take precedence over the values set in the TOML files. TOML files set with the 
+same environment name that is currently activated also automatically override defaults.
+Any config file that is pointed to will override the `merino/configs/default.toml` file. 
+Read below for more specific details.
 
 ### [File organization](#file-organization)
 
@@ -14,9 +16,9 @@ These are the settings sources, with later sources overriding earlier ones.
 - A base configuration checked into the repository, in `config/base.yaml`. This
   provides the default values for most settings.
 
-- Per-environment configuration files in the `config` directory. The environment
+- Per-environment configuration files in the `configs` directory. The environment
   is selected using the environment variable `MERINO__ENV`. The settings for
-  that environment are then loaded from `config/${env}.yaml`, if it exists. The
+  that environment are then loaded from `configs/${env}.toml`, if it exists. The
   default environment is "development". A "production" environment is also
   provided.
 
@@ -73,7 +75,7 @@ Settings to control the format and amount of logs generated.
 
 - `logging.info` (`MERINO__LOGGING__LEVELS`) - Minimum level of logs that should
   be reported. This should be a number of _entries_ separated by commas (for
-  environment variables) or specified as list (YAML).
+  environment variables) or specified as list (TOML).
 
   This will be combined with the contents of the `RUST_LOG` environment variable
   for compatibility. `RUST_LOG` will take precedence over this setting. If the

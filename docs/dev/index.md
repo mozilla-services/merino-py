@@ -62,7 +62,7 @@ which you can get with `cargo install mdbook`.
 ## Local configuration
 
 The default configuration of Merino is `development`, which has human-oriented
-logging and debugging enabled. For settings that you wish to change in the
+pretty-print logging and debugging enabled. For settings that you wish to change in the
 development configuration, you have two options, listed below.
 
 > For full details, make sure to check out the documentation for
@@ -71,17 +71,21 @@ development configuration, you have two options, listed below.
 ### Update the defaults
 
 Dynaconf is used for all configuration management in Merino, where 
-values are specified in the `merino/configs/` directory in `.toml` files.
+values are specified in the `merino/configs/` directory in `.toml` files. Environment variables
+are set for each environment as well and can be set when using the cli to launch the 
+Merino service. 
 Environment variables take precedence over the values set in the `.toml` files, so
 any environment variable set will automatically override defaults. By the same token,
 any config file that is pointed to will override the `merino/configs/default.toml` file.
 
 If the change you want to make makes the system better for most development
-tasks, consider adding it to `config/development.yaml`, so that other developers
-can take advantage of it. You can look at `config/base.yaml`, which defines all
-requires configuration, to see an example of the structure.
+tasks, consider adding it to `merino/configs/development.toml`, so that other developers
+can take advantage of it. If you do so, you likely want to add validation to those settings
+which needs to be added in `merino/config.py`, where the Dynaconf instance exists along 
+with its validators. For examples of the various config settings, look at `configs/default.toml`
+and `merino/config.py` to see an example of the structure.
 
-It is not suitable to put secrets in `config/development.yaml`.
+It is not suitable to put secrets in `configs/secrets.toml`.
 
 ### Create a local override
 
@@ -104,77 +108,12 @@ This is a brief overview of the subdirectories found in the repository.
 
 WIP
 
-## Project crates
-
-
-
-### [`merino`](../rustdoc/merino/)
-
-This is the main Merino application, and one of the _binary_ crates in the
-repository. It brings together and configures the other crates to create a
-production-like environment for Firefox Suggest.
-
-### [`merino-settings`](../rustdoc/merino_settings/)
-
-This defines and documents the settings of the application. These settings
-should be initialized by one of the _binary_ crates, and passed into the other
-crates to configure them.
-
-### [`merino-web`](../rustdoc/merino_web/)
-
-This crate provides an HTTP API to access Merino, including providing
-observability into the running of the application via that API.
-
-### [`merino-suggest`](../rustdoc/merino_suggest/)
-
-This is a _domain_ crate that defines the data model and traits needed to
-provide suggestions to Firefox.
-
-### [`merino-cache`](../rustdoc/merino_cache/)
-
-This crate contains domain models and behavior for Merino's caching
-functionality.
-
-### [`merino-adm`](../rustdoc/merino_adm/)
-
-This crate provides integration with the AdMarketplace APIs, and implements the
-traits from `merino-suggest`.
-
-### [`merino-showroom`](./showroom.html)
-
-This is not a Rust crate, but instead a small Javascript application. It can be
-used to test Merino during development and demos.
-
-### [`merino-integration-tests`](../rustdoc/merino_integration_tests/)
-
-This crate is a separate test system. It works much like `merino`, in that it
-brings together the other crates to produce a complete Merino environment.
-However, this binary crate produces an application that exercise the service as
-a whole, instead of providing a server to manual test against.
-
-### [`merino-integration-tests-macro`](../rustdoc/merino_integration_tests_macro/)
-
-This crate provides a procmacro used in `merino-integration-tests`. Rust
-requires that procmacros be in their own crate.
-
 ## Recommended Tools
 
-- [rust-analyzer][] - IDE-like tools for many editors. This provides easy access
-  to type inference and documentation while editing Rust code, which can make
-  the development process much easier.
-- [cargo-watch][] - A Cargo subcommand that re-runs a task when files change.
-  Very useful for things like `cargo watch -x clippy` or
-  `cargo watch -x "test -- merino-adm"`.
-
-[rust-analyzer]: https://rust-analyzer.github.io/
-[cargo-watch]: https://crates.io/crates/cargo-watch
+WIP 
+Optional, but may be useful to link to some tools we use in this project.
 
 ## Recommended Reading
 
-These works have influenced the design of Merino.
-
-- The Contextual Services
-  [Skeleton Actix project](https://github.com/mozilla-services/skeleton/)
-- [Zero to Production in Rust](https://www.zero2prod.com/) by Luca Palmieri
-- [Error Handling Isn't All About Errors](https://www.youtube.com/watch?v=rAF8mLI0naQ),
-  by Jane "[yaahc](https://twitter.com/yaahc_/)" Lusby, from RustConf 2020.
+WIP
+May be valuable to link some docs here
