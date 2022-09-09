@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from merino.main import app
 from merino.providers import get_providers
-from tests.web.util import CorruptProvider, get_provider_factory
+from tests.unit.web.util import CorruptProvider, get_provider_factory
 
 client = TestClient(app)
 

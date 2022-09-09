@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from merino.main import app
-from tests.web.util import filter_caplog
+from tests.unit.web.util import filter_caplog
 
 client = TestClient(app)
 

@@ -9,12 +9,11 @@ from typing import Any, Dict, List
 
 import faker
 import kinto_http
+from client_info import DESKTOP_FIREFOX, LOCALES
+from kinto import download_suggestions
 from locust import HttpUser, events, task
 from locust.clients import HttpSession
 from locust.runners import MasterRunner
-
-from client_info import DESKTOP_FIREFOX, LOCALES
-from kinto import download_suggestions
 from models import ResponseContent
 
 LOGGING_LEVEL = os.environ["LOAD_TESTS__LOGGING_LEVEL"]
@@ -96,7 +95,7 @@ def request_suggestions(client: HttpSession, query: str) -> None:
     if PROVIDERS:
         params = {**params, "providers": PROVIDERS}
 
-    headers: Dict[str, str] = {
+    headers: Dict[str, str] = {  # nosec
         "Accept-Language": choice(LOCALES),
         "User-Agent": choice(DESKTOP_FIREFOX),
     }
@@ -136,7 +135,7 @@ class MerinoUser(HttpUser):
     def rs_suggestions(self) -> None:
         """Send multiple requests for Remote Settings queries."""
 
-        suggestion = choice(RS_SUGGESTIONS)
+        suggestion = choice(RS_SUGGESTIONS)  # nosec
 
         for query in suggestion["keywords"]:
             request_suggestions(self.client, query)
@@ -146,7 +145,7 @@ class MerinoUser(HttpUser):
         """Send multiple requests for random queries."""
 
         # This produces a query between 2 and 4 random words
-        full_query = " ".join(self.faker.words(nb=randint(2, 4)))
+        full_query = " ".join(self.faker.words(nb=randint(2, 4)))  # nosec
 
         for query in [full_query[: i + 1] for i in range(len(full_query))]:
             # Send multiple requests for the entire query, but skip spaces

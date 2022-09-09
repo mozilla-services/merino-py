@@ -24,7 +24,7 @@ RUN python -m pip install --upgrade pip
 COPY requirements.txt /tmp/requirements.txt
 RUN python -m pip install -r /tmp/requirements.txt
 
-COPY tests/ ./
+COPY tests ./
 
 USER locust
 ENTRYPOINT [ "locust" ]
