@@ -50,7 +50,7 @@ $ make contract-tests
 # Run contract tests cleanup
 $ make contract-tests-clean
 
-# Docker 
+# Docker
 $ docker-compose up
 ```
 
@@ -75,10 +75,10 @@ development configuration, you have two options, listed below.
 
 ### Update the defaults
 
-Dynaconf is used for all configuration management in Merino, where 
+Dynaconf is used for all configuration management in Merino, where
 values are specified in the `merino/configs/` directory in `.toml` files. Environment variables
-are set for each environment as well and can be set when using the cli to launch the 
-Merino service. 
+are set for each environment as well and can be set when using the cli to launch the
+Merino service.
 Environment variables take precedence over the values set in the `.toml` files, so
 any environment variable set will automatically override defaults. By the same token,
 any config file that is pointed to will override the `merino/configs/default.toml` file.
@@ -86,7 +86,7 @@ any config file that is pointed to will override the `merino/configs/default.tom
 If the change you want to make makes the system better for most development
 tasks, consider adding it to `merino/configs/development.toml`, so that other developers
 can take advantage of it. If you do so, you likely want to add validation to those settings
-which needs to be added in `merino/config.py`, where the Dynaconf instance exists along 
+which needs to be added in `merino/config.py`, where the Dynaconf instance exists along
 with its validators. For examples of the various config settings, look at `configs/default.toml`
 and `merino/config.py` to see an example of the structure.
 
@@ -94,22 +94,22 @@ It is not advisable to put secrets in `configs/secrets.toml`.
 
 ### Create a local override
 
-Dynaconf will use the specified values and environment variables in the 
-`merino/configs/default.toml` file. You can change the environment you 
-want to use as mentioned abouve, but for local changes to adapt to your 
-machine or tastes, you can put the configuration in `merino/configs/development.local.toml`. 
-This file doesn't exist by default, so you will have to create it. 
+Dynaconf will use the specified values and environment variables in the
+`merino/configs/default.toml` file. You can change the environment you
+want to use as mentioned abouve, but for local changes to adapt to your
+machine or tastes, you can put the configuration in `merino/configs/development.local.toml`.
+This file doesn't exist by default, so you will have to create it.
 Then simply copy from the other config files and make the adjustments
 that you require. These files should however not be checked into source
-control and are configured to be ignored, so long as they follow the `*.local.toml` 
-format. Please follow this convention and take extra care to not check them in 
-and only use them locally. 
+control and are configured to be ignored, so long as they follow the `*.local.toml`
+format. Please follow this convention and take extra care to not check them in
+and only use them locally.
 
-See the [Dynaconf Documentation](https://www.dynaconf.com/) for more details. 
+See the [Dynaconf Documentation](https://www.dynaconf.com/) for more details.
 
 ## Repository structure
 
-This is a brief overview of the subdirectories found in the repository. 
+This is a brief overview of the subdirectories found in the repository.
 
 WIP
 
