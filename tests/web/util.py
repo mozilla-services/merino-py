@@ -1,4 +1,5 @@
 import asyncio
+from logging import LogRecord
 from typing import Any, Callable, Coroutine
 
 from merino.providers.base import BaseProvider
@@ -124,3 +125,8 @@ async def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
             "nonsponsored-provider": NonsponsoredProvider(),
         }
     )()
+
+
+def filter_caplog(records: list[LogRecord], logger_name: str) -> list[LogRecord]:
+    """Filter pytest captured log records for a given logger name."""
+    return [record for record in records if record.name == logger_name]

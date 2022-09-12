@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from merino.main import app
 from merino.providers import get_providers
+from tests.web.util import filter_caplog
 from tests.web.util import get_providers as override_dependency
 
 client = TestClient(app)
@@ -96,9 +97,11 @@ def test_suggest_request_logs_contain_required_info(mocker, caplog):
         f"{root_path}?q={query}&sid={sid}&seq={seq}&client_variants={client_variants}"
     )
 
-    assert len(caplog.records) == 1
+    records = filter_caplog(caplog.records, "web.suggest.request")
 
-    record = caplog.records[0]
+    assert len(records) == 1
+
+    record = records[0]
 
     assert record.name == "web.suggest.request"
     assert record.sensitive is True
@@ -107,6 +110,9 @@ def test_suggest_request_logs_contain_required_info(mocker, caplog):
     assert record.sequence_no == seq
     assert record.query == query
     assert record.client_variants == ["foo", "bar"]
+    assert record.browser == "Other"
+    assert record.os_family == "other"
+    assert record.form_factor == "other"
 
 
 def test_non_suggest_request_logs_contain_required_info(mocker, caplog):
@@ -120,9 +126,11 @@ def test_non_suggest_request_logs_contain_required_info(mocker, caplog):
 
     client.get("/__heartbeat__")
 
-    assert len(caplog.records) == 1
+    records = filter_caplog(caplog.records, "request.summary")
 
-    record = caplog.records[0]
+    assert len(records) == 1
+
+    record = records[0]
 
     assert record.name == "request.summary"
     assert "country" not in record.args

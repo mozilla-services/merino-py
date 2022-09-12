@@ -10,7 +10,7 @@ from merino import providers
 from merino.config_logging import configure_logging
 from merino.config_sentry import configure_sentry
 from merino.metrics import configure_metrics, get_metrics_client
-from merino.middleware import featureflags, geolocation, logging, metrics
+from merino.middleware import featureflags, geolocation, logging, metrics, user_agent
 from merino.web import api_v1, dockerflow
 
 app = FastAPI()
@@ -58,6 +58,7 @@ app.add_middleware(metrics.MetricsMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(featureflags.FeatureFlagsMiddleware)
 app.add_middleware(geolocation.GeolocationMiddleware)
+app.add_middleware(user_agent.UserAgentMiddleware)
 app.add_middleware(logging.LoggingMiddleware)
 
 app.include_router(dockerflow.router)

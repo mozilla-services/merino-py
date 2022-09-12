@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from merino.main import app
+from tests.web.util import filter_caplog
 
 client = TestClient(app)
 
@@ -29,7 +30,7 @@ def test_heartbeats(endpoint):
     assert response.status_code == 200
 
 
-def test_error(mocker, caplog):
+def test_error(caplog):
     import logging
 
     caplog.set_level(logging.ERROR)
@@ -37,5 +38,7 @@ def test_error(mocker, caplog):
     response = client.get("/__error__")
     assert response.status_code == 500
 
-    assert len(caplog.records) == 1
-    assert caplog.messages[0] == "The __error__ endpoint was called"
+    records = filter_caplog(caplog.records, "merino.web.dockerflow")
+
+    assert len(records) == 1
+    assert records[0].message == "The __error__ endpoint was called"
