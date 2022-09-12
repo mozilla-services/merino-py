@@ -233,7 +233,7 @@ scenarios:
                 score: 0.3
 
   - name: remote_settings__refresh
-    description: Test that Merino successfully returns a refreshed output for the same suggestion search term.
+    description: Test that Merino successfully returns a refreshed output for the same suggestion search term
     steps:
       - request:
           service: kinto
