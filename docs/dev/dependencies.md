@@ -1,30 +1,39 @@
 # Development Dependencies
 
-Merino uses a Redis-based caching system, and so requires a Redis instance to
-connect to.
+This project uses [Poetry][1] for dependency management. While you can use the
+vanilla virtualenv to set up the dev environment, we highly recommend to check
+out [pyenv][2] and [pyenv-virtualenv][3], as they work nicely with Poetry.
+Follow the instructions to install [pyenv][4], [pyenv-virtualenv][5], and
+[poetry][6].
 
-To make things simple, Redis (and any future service dependencies) can be
-started with Docker Compose, using the `docker-compose.yaml` file in the `dev/`
-directory. Notably, this does not run any Merino components that have source
-code in this repository.
+Feel free to browse the [pyproject.toml][7] file for a listing of dependencies
+and their versions.
 
-```shell
-$ cd dev
-$ docker-compose up
+Once Poetry is installed, install all the dependencies:
+
+```
+$ poetry install
 ```
 
-This Dockerized set up is optional. Feel free to run the dependent services by
-any other means as well.
+After that you should be to run Merino as follows:
 
+```
+$ poetry run uvicorn merino.main:app --reload
+
+# Or you can fire up a poetry shell to make it shorter
+$ poetry shell
+$ uvicorn merino.main:app --reload
+```
 ### Dev Helpers
 
-The docker-compose setup also includes some services that can help during
-development.
-
-- Redis Commander, http://localhost:8081 - Explore the Redis database started
-  above.
-- Statsd Logger - Receives statsd metrics emitted by Merino (and any thing else
-  on your system using statsd). Available through docker-compose logs. For
-  example with `docker-compose logs -f statsd-logger`.
 - Kinto - Runs a local Remote Settings service that is used by "merino-adm".
 - Kinto-attachments - Provides the attachment feature for the "Kinto" service.
+
+
+[1]: https://python-poetry.org/
+[2]: https://github.com/pyenv/pyenv
+[3]: https://github.com/pyenv/pyenv-virtualenv
+[4]: https://github.com/pyenv/pyenv#installation
+[5]: https://github.com/pyenv/pyenv-virtualenv#installation
+[6]: https://python-poetry.org/docs/#installation
+[7]: /pyproject.toml

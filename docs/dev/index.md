@@ -6,13 +6,18 @@ Here are some useful commands when working on Merino.
 
 ### Run the main app
 
-Once Poetry is installed, install all the dependencies:
+Install all the dependencies:
 
 ```
 $ poetry install
 ```
 
-After that, you should be to run Merino as follows:
+Add packages to project via poetry
+```
+$ poetry add <package_name>
+```
+
+Run Merino:
 
 ```
 $ poetry run uvicorn merino.main:app --reload
@@ -55,7 +60,7 @@ You can generate documentation, both code level and book level, for Merino and
 all related crates by running `./dev/make-all-docs.sh`. You'll need [mdBook][],
 which you can get with `cargo install mdbook`.
 
-[Pre-built code docs are also available](/merino/rustdoc/).
+[Pre-built code docs are also available](/merino-py/book/).
 
 [mdbook]: https://rust-lang.github.io/mdBook/
 
@@ -66,7 +71,7 @@ pretty-print logging and debugging enabled. For settings that you wish to change
 development configuration, you have two options, listed below.
 
 > For full details, make sure to check out the documentation for
-> [Merino's setting system](../ops.md).
+> [Merino's setting system (ops.md)](../ops.md).
 
 ### Update the defaults
 
@@ -85,7 +90,7 @@ which needs to be added in `merino/config.py`, where the Dynaconf instance exist
 with its validators. For examples of the various config settings, look at `configs/default.toml`
 and `merino/config.py` to see an example of the structure.
 
-It is not suitable to put secrets in `configs/secrets.toml`.
+It is not advisable to put secrets in `configs/secrets.toml`.
 
 ### Create a local override
 
@@ -110,10 +115,9 @@ WIP
 
 ## Recommended Tools
 
-WIP 
-Optional, but may be useful to link to some tools we use in this project.
+WIP  - Optional, but may be useful to link to some tools we use in this project.
 
 ## Recommended Reading
 
-WIP
-May be valuable to link some docs here
+WIP - May be valuable to link some docs here. Somewhat redundant as these
+readings are recommended ad hoc though the individual doc pages.

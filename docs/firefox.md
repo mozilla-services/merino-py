@@ -8,7 +8,7 @@ will connect to the production environments. This is controlled with the
 You can also query any of the endpoint URLs below with something like:
 
 ```sh
-curl 'https://stage.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest?q=your query'
+curl 'https://stage.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest?q=your+query'
 ```
 
 ## Environments

@@ -10,12 +10,16 @@ After the deployment is complete, accessing the [`__version__` endpoint][stage_v
 
 [stage_version]: https://stage.merino.nonprod.cloudops.mozgcp.net/__version__
 
+## Development Guidelines
+Please see the [CONTRIBUTING.md][contributing] docs on commit guidelines and pull request best practices.
+
 ## Versioning
 The commit hash of the deployed code is considered its version identifier. The commit hash can be retrieved locally via `git rev-parse HEAD`.
 
-## Preventing deployment
+## Preventing deployment via [do not deploy]
 Occasionally developers might want to prevent a commit from triggering the deployment pipeline. While this should be discouraged, there are some legitimate cases for doing so (e.g. docs only changes).
-In order to prevent the deployment of the code from a PR when merging to `main`, the **title of that PR** must contain the `[do not deploy]` text. Note that, when generating the merge commit for a branch within the GitHub UI, the extened description must not be changed or care must be taken to ensure that `[do not deploy]`  is still present.
+In order to prevent the deployment of the code from a PR when merging to `main`, the **title of that PR** must contain the `[do not deploy]` text. When generating the merge commit for a branch within the GitHub UI, ensure that `[do not deploy]` is still present in the description, especially if you change or rename the PR later on. 
+
 For example:
 
 ```
@@ -23,14 +27,14 @@ For example:
 doc: Add documentation for the release process [do not deploy]
 ```
 
-While the `[do not deploy]` can be anywhere in the title, it is recommended to place it at its end in order to better integrate with the current PR title practices.
+While the `[do not deploy]` can be anywhere in the title, it is recommended to place it at its end in order to better integrate with the current PR title practices and improve readability.
 
-The deployment pipeline will analyse the message of the merge commit (which will be contain the PR title) and make a decision based on it.
+The deployment pipeline will analyze the message of the merge commit (which will contain the PR title) and make a decision based on it.
 
 ## Releasing to production
 Developers with write access to the Merino repository can initiate a deployment to production after a Pull-Request on the Merino GitHub repository is merged to the `main` branch.
 While any developer with write access can trigger the deployment to production, the _expectation_ is that individual(s) who authored and merged the Pull-Request should do so, as they are the ones most familiar with their changes and who can tell, by looking at the data, if anything looks anomalous.
-In general authors should feel _responsible_ for the changes they make and shepherd throught their deployment.
+In general authors should feel _responsible_ for the changes they make and shepherd these changes through to deployment.
 
 Releasing to production can be done by:
 
@@ -56,3 +60,4 @@ Don't panic and follow the instructions below:
 - if the root cause of the problem is harder to track down, revert the last commit and then [deploy the revert commit to production](#releasing-to-production).
 
 [incident_docs]: https://mana.mozilla.org/wiki/pages/viewpage.action?pageId=150549987
+[contributing]: ../../CONTRIBUTING.md

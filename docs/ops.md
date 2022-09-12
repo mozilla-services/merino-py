@@ -13,26 +13,44 @@ Read below for more specific details.
 
 These are the settings sources, with later sources overriding earlier ones.
 
-- A base configuration checked into the repository, in `config/base.yaml`. This
-  provides the default values for most settings.
+- A `config.py` file establishes a Dynaconf instance and environment-specific values
+are pulled in from the corresponding TOML files and environment variables. Other 
+configurations are established by files that are prefixed with `config_*.py`, 
+such as `config_sentry.py` or `config_logging.py`.
 
-- Per-environment configuration files in the `configs` directory. The environment
+- Per-environment configuration files are in the `configs` directory. The environment
   is selected using the environment variable `MERINO__ENV`. The settings for
-  that environment are then loaded from `configs/${env}.toml`, if it exists. The
+  that environment are then loaded from `configs/${env}.toml`, if the file/env exists. The
   default environment is "development". A "production" environment is also
   provided.
 
-- A local configuration file not checked into the repository, at
-  `config/local.yaml`. This file is in `.gitignore` and is safe to use for local
-  configuration and secrets if desired.
+- Local configuration files are not checked into the repository, but if created should be named
+  `configs/development.local.toml`, following the format of `<environment>.local.toml`. 
+  This file is listed in the `.gitignore` file and is safe to use for local configuration. 
+  One may secrets here if desired, though it is advised to exercise great caution.
 
 - Environment variables that begin with `MERINO` and use `__` (a double
   underscore) as a level separator. For example, `Settings::http::workers` can
   be controlled from the environment variable `MERINO__HTTP__WORKERS`.
 
-The names given below are of the form "`yaml.path` (`ENVIRONMENT_VAR`)"
 
 ### General
+
+- All environments are prefixed with `MERINO_`. This is established in the 
+  `config.py` file by setting the `envvar_prefix="MERINO"` for the Dynaconf
+  instance.
+
+- Production environment variables are set by SRE and stored in the 
+  cloudops project in the `configmap.yml` file. Contact SRE if you require
+  information or access on this file, or request access to the cloudops infra
+  repo.
+
+- You can set these environment variables in your setup by modifying the `.toml` files.
+  Conversely, when using `make`, you can prefix `make run` with overrides to the 
+  desired environment variables using CLI flags. 
+
+  Example:
+  `MERINO_ENV=production MERINO_LOGGING__FORMAT=pretty make dev`
 
 - `env` (`MERINO__ENV`) - Only settable from environment variables. Controls
   which environment configuration is loaded, as described above.
@@ -40,6 +58,9 @@ The names given below are of the form "`yaml.path` (`ENVIRONMENT_VAR`)"
 - `debug` (`MERINO__DEBUG`) - Boolean that enables additional features to debug
   the application. This should not be set to true in public environments, as it
   reveals all configuration, including any configured secrets.
+
+- `format` (`MERINO_LOGGING__FORMAT`) - Controls the format of outputted logs in
+  either `pretty` or `mozlog` format. See [../config_logging.py][log]. 
 
 - `public_documentation` (`MERINO__PUBLIC_DOCUMENTATION`) - When users visit the
   root of the server, they will be redirected to this URL. Preferable a public
@@ -50,6 +71,7 @@ The names given below are of the form "`yaml.path` (`ENVIRONMENT_VAR`)"
   the search query. When the setting is false (default), the suggest request
   object should be logged, but the search query should be blank. Note that
   access to the collected query logs is restricted.
+
 
 ### HTTP
 
@@ -391,3 +413,5 @@ testing.
 
   - `value` - A string that will be used for the title of the fixed suggestion.
     Required.
+
+[log]:../merino/config_logging.py
