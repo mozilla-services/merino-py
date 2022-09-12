@@ -19,6 +19,8 @@ workflows:
           <<: *pr-filters
           requires:
             - checks
+      - docs-build:
+          <<: *pr-filters
 
   main-workflow:
     jobs:
@@ -32,11 +34,18 @@ workflows:
           <<: *pr-filters
           requires:
             - checks
+      - docs-build:
+          <<: *main-filters
+      - docs-publish-github-pages:
+          <<: *main-filters
+          requires:
+            - docs-build
       - docker-image-publish-stage:
           <<: *main-filters
           requires:
             - checks
             - run-tests
+            - contract-tests
       # The following job will require manual approval in the CircleCI web application.
       # Once provided, and when all the requirements are fullfilled (e.g. tests)
       - unhold-to-deploy-to-prod:
@@ -45,6 +54,7 @@ workflows:
           requires:
             - checks
             - run-tests
+            - contract-tests
       # On approval of the `unhold-to-deploy-to-prod` job, any successive job that requires it
       # will run. In this case, it's manually triggering deployment to production.
       - docker-image-publish-prod:
@@ -140,6 +150,45 @@ jobs:
             else
               echo "Not pushing to dockerhub for tag=${CIRCLE_TAG} branch=${CIRCLE_BRANCH}"
             fi
+  docs-build:
+    docker:
+      - image: cimg/rust:1.63
+    steps:
+      - checkout
+      - run:
+          name: Setup Build docs
+          command: |
+            cargo install mdbook
+      - run:
+          name: Build docs
+          command: |
+            ./dev/make-all-docs.sh
+            mkdir workspace
+            cp -r ./book workspace/doc
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - doc
+  docs-publish-github-pages:
+    docker:
+      - image: node
+    steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: Disable jekyll builds
+          command: touch workspace/doc/.nojekyll
+      - add_ssh_keys:
+          fingerprints:
+            - "af:ac:a0:85:b4:a1:af:4d:e1:08:42:b5:16:e3:67:2d"
+      - run:
+          name: Deploy docs to gh-pages
+          command: |
+            npx --yes gh-pages@4.0.0 \
+              --user "ci-build <ci-build@merino.mozilla.org>" \
+              --message "[skip ci] Docs updates" \
+              --dist workspace/doc
 
 commands:
   dockerhub-login:
