@@ -15,6 +15,11 @@ Once Poetry is installed, install all the dependencies:
 $ poetry install
 ```
 
+Add packages to project via poetry
+```
+$ poetry add <package_name>
+```
+
 After that you should be to run Merino as follows:
 
 ```
@@ -24,11 +29,6 @@ $ poetry run uvicorn merino.main:app --reload
 $ poetry shell
 $ uvicorn merino.main:app --reload
 ```
-### Dev Helpers
-
-- Kinto - Runs a local Remote Settings service that is used by "merino-adm".
-- Kinto-attachments - Provides the attachment feature for the "Kinto" service.
-
 
 [1]: https://python-poetry.org/
 [2]: https://github.com/pyenv/pyenv

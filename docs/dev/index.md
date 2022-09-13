@@ -6,15 +6,13 @@ Here are some useful commands when working on Merino.
 
 ### Run the main app
 
+This project uses [Poetry][1] for dependency management.
+See [dependencies](./dependencies.md) for how to install Poetry on your machine.
+
 Install all the dependencies:
 
 ```
 $ poetry install
-```
-
-Add packages to project via poetry
-```
-$ poetry add <package_name>
 ```
 
 Run Merino:
@@ -22,9 +20,8 @@ Run Merino:
 ```
 $ poetry run uvicorn merino.main:app --reload
 
-# Or you can fire up a poetry shell to make it shorter
-$ poetry shell
-$ uvicorn merino.main:app --reload
+# Or you can use a shortcut
+$ make run
 ```
 
 ### General commands
@@ -50,8 +47,11 @@ $ make contract-tests
 # Run contract tests cleanup
 $ make contract-tests-clean
 
-# Docker
-$ docker-compose up
+# Generate documents
+$ make doc
+
+# Preview the generated documents
+$ make doc-preview
 ```
 
 ## Documentation
@@ -59,8 +59,6 @@ $ docker-compose up
 You can generate documentation, both code level and book level, for Merino and
 all related crates by running `./dev/make-all-docs.sh`. You'll need [mdBook][],
 which you can get with `cargo install mdbook`.
-
-[Pre-built code docs are also available](/merino-py/book/).
 
 [mdbook]: https://rust-lang.github.io/mdBook/
 
@@ -107,17 +105,4 @@ and only use them locally.
 
 See the [Dynaconf Documentation](https://www.dynaconf.com/) for more details.
 
-## Repository structure
-
-This is a brief overview of the subdirectories found in the repository.
-
-WIP
-
-## Recommended Tools
-
-WIP  - Optional, but may be useful to link to some tools we use in this project.
-
-## Recommended Reading
-
-WIP - May be valuable to link some docs here. Somewhat redundant as these
-readings are recommended ad hoc though the individual doc pages.
+[1]: https://python-poetry.org/
