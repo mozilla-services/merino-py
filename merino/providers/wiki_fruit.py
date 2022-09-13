@@ -10,6 +10,12 @@ class WikiFruitProvider(BaseProvider):
     Shouldn't be used in production.
     """
 
+    enabled: bool
+
+    def __init__(self, enabled: bool = True):
+        """Init for WikiFruitProvider."""
+        self.enabled = enabled
+
     async def initialize(self) -> None:
         """Initialize wiki fruit"""
         pass
@@ -36,5 +42,5 @@ class WikiFruitProvider(BaseProvider):
         ]
 
     def enabled_by_default(self) -> bool:
-        """TODO"""
-        return True
+        """Whether or not this provider is enabled."""
+        return self.enabled

@@ -65,10 +65,14 @@ class Provider(BaseProvider):
     last_fetch_at: float
     cron_task: asyncio.Task
     backend: RemoteSettingsBackend
+    enabled: bool
 
-    def __init__(self, backend: RemoteSettingsBackend, **kwargs: Any) -> None:
+    def __init__(
+        self, backend: RemoteSettingsBackend, enabled: bool = True, **kwargs: Any
+    ) -> None:
         """Store the given Remote Settings backend on the provider."""
         self.backend = backend
+        self.enabled = enabled
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
@@ -151,7 +155,7 @@ class Provider(BaseProvider):
         self.last_fetch_at = time.time()
 
     def enabled_by_default(self) -> bool:  # noqa: D102
-        return True
+        return self.enabled
 
     def hidden(self) -> bool:  # noqa: D102
         return False

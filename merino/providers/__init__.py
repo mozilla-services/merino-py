@@ -1,6 +1,7 @@
 """Initialize all Providers."""
 import asyncio
 import logging
+from enum import Enum, unique
 from timeit import default_timer as timer
 
 from merino import metrics, remotesettings
@@ -15,6 +16,14 @@ default_providers: list[BaseProvider] = []
 logger = logging.getLogger(__name__)
 
 
+@unique
+class ProviderType(str, Enum):
+    """Enum for provider type."""
+
+    ADM = "adm"
+    WIKI_FRUIT = "wiki_fruit"
+
+
 async def init_providers() -> None:
     """
     Initialize all suggestion providers.
@@ -24,9 +33,15 @@ async def init_providers() -> None:
     start = timer()
 
     # register providers
-    providers["adm"] = AdmProvider(backend=remotesettings.LiveBackend())
-    if settings.providers.wiki_fruit.enabled:
-        providers["wiki_fruit"] = WikiFruitProvider()
+    for type, setting in settings.providers.items():
+        match type:
+            case ProviderType.ADM:
+                providers["adm"] = AdmProvider(
+                    backend=remotesettings.LiveBackend(),
+                    enabled=setting.enabled,
+                )
+            case ProviderType.WIKI_FRUIT:
+                providers["wiki_fruit"] = WikiFruitProvider(enabled=setting.enabled)
 
     # initialize providers and record time
     init_metric = f"{__name__}.initialize"

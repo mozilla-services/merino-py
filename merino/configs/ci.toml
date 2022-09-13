@@ -3,6 +3,9 @@
 
 [ci]
 debug = true
+# For `list` or `table` settings, `dynaconf_merge` allows you to merge settings with the default
+# settings. This enables merge for the entire `development` environment.
+dynaconf_merge = true
 
 [ci.logging]
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
@@ -15,6 +18,8 @@ bucket = "main"
 collection = "quicksuggest"
 
 [ci.providers.adm]
+# Whether or not this provider is enabled by default.
+enabled = true
 # The cron job should tick more frequently than `resync_interval_sec` so that
 # the resync failure can be retried soon.
 cron_interval_sec = 1
@@ -22,4 +27,5 @@ resync_interval_sec = 2
 score = 0.3
 
 [ci.providers.wiki_fruit]
+# Whether or not this provider is enabled by default.
 enabled = true
