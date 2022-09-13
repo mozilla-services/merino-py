@@ -55,7 +55,7 @@ of `<type>: <subject>` where `type` must be one of:
   semi-colons, etc)
 * **refactor**: A code change that neither fixes a bug or adds a feature
 * **perf**: A code change that improves performance
-* **test**: Adding missing tests
+* **test**: Adding missing tests, test maintenance, and adding test features
 * **chore**: Changes to the build process or auxiliary tools and libraries such as documentation
   generation
 
