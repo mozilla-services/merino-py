@@ -1,7 +1,7 @@
 # Testing strategies
 
 There are four major testing strategies used in this repository: unit tests,
-Python integration tests, Python contract tests, and Python load tests. 
+Python integration tests, Python contract tests, and Python load tests.
 
 Test code resides in the [tests][tests] directory and [test-engineering][test-engineering]
 directories.
@@ -11,13 +11,6 @@ directories.
 Unit tests should appear close to the code they are testing, using standard Rust
 unit tests. This is suitable for testing complex behavior at a small scale, with
 fine grained control over the inputs.
-
-## Integration tests
-
-Many behaviors are difficult to test as unit tests, especially details like the
-URLs we expose via the web service. To test these parts of Merino, we use integration tests,
-which starts a configurable instance of Merino with mock data sources. HTTP requests can 
-then be made to that server in order to test its behavior.
 
 ## Contract tests
 

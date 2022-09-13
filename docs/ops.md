@@ -2,11 +2,11 @@
 
 ## Settings
 
-Merino's settings are managed via Dynaconf and can be specified in two ways: by a 
-TOML file in the `merino/configs/` directory, or via environment variables. Environment 
-variables take precedence over the values set in the TOML files. TOML files set with the 
+Merino's settings are managed via Dynaconf and can be specified in two ways: by a
+TOML file in the `merino/configs/` directory, or via environment variables. Environment
+variables take precedence over the values set in the TOML files. TOML files set with the
 same environment name that is currently activated also automatically override defaults.
-Any config file that is pointed to will override the `merino/configs/default.toml` file. 
+Any config file that is pointed to will override the `merino/configs/default.toml` file.
 Read below for more specific details.
 
 ### [File organization](#file-organization)
@@ -14,8 +14,8 @@ Read below for more specific details.
 These are the settings sources, with later sources overriding earlier ones.
 
 - A `config.py` file establishes a Dynaconf instance and environment-specific values
-are pulled in from the corresponding TOML files and environment variables. Other 
-configurations are established by files that are prefixed with `config_*.py`, 
+are pulled in from the corresponding TOML files and environment variables. Other
+configurations are established by files that are prefixed with `config_*.py`,
 such as `config_sentry.py` or `config_logging.py`.
 
 - Per-environment configuration files are in the `configs` directory. The environment
@@ -25,8 +25,8 @@ such as `config_sentry.py` or `config_logging.py`.
   provided.
 
 - Local configuration files are not checked into the repository, but if created should be named
-  `configs/development.local.toml`, following the format of `<environment>.local.toml`. 
-  This file is listed in the `.gitignore` file and is safe to use for local configuration. 
+  `configs/development.local.toml`, following the format of `<environment>.local.toml`.
+  This file is listed in the `.gitignore` file and is safe to use for local configuration.
   One may secrets here if desired, though it is advised to exercise great caution.
 
 - Environment variables that begin with `MERINO` and use `__` (a double
@@ -36,18 +36,18 @@ such as `config_sentry.py` or `config_logging.py`.
 
 ### General
 
-- All environments are prefixed with `MERINO_`. This is established in the 
+- All environments are prefixed with `MERINO_`. This is established in the
   `config.py` file by setting the `envvar_prefix="MERINO"` for the Dynaconf
   instance.
 
-- Production environment variables are set by SRE and stored in the 
+- Production environment variables are set by SRE and stored in the
   cloudops project in the `configmap.yml` file. Contact SRE if you require
   information or access on this file, or request access to the cloudops infra
   repo.
 
 - You can set these environment variables in your setup by modifying the `.toml` files.
-  Conversely, when using `make`, you can prefix `make run` with overrides to the 
-  desired environment variables using CLI flags. 
+  Conversely, when using `make`, you can prefix `make run` with overrides to the
+  desired environment variables using CLI flags.
 
   Example:
   `MERINO_ENV=production MERINO_LOGGING__FORMAT=pretty make dev`
@@ -60,28 +60,8 @@ such as `config_sentry.py` or `config_logging.py`.
   reveals all configuration, including any configured secrets.
 
 - `format` (`MERINO_LOGGING__FORMAT`) - Controls the format of outputted logs in
-  either `pretty` or `mozlog` format. See [../config_logging.py][log]. 
+  either `pretty` or `mozlog` format. See [../config_logging.py][log].
 
-- `public_documentation` (`MERINO__PUBLIC_DOCUMENTATION`) - When users visit the
-  root of the server, they will be redirected to this URL. Preferable a public
-  wiki page that explains what the server is and does.
-
-- `log_full_request` (`MERINO__LOG_FULL_REQUEST`) - Boolean that enables logging
-  the entire suggestion request object as a part of the tracing log, including
-  the search query. When the setting is false (default), the suggest request
-  object should be logged, but the search query should be blank. Note that
-  access to the collected query logs is restricted.
-
-
-### HTTP
-
-Settings for the HTTP server.
-
-- `http.listen` (`MERINO__HTTP__LISTEN`) - An IP and port to listen on, such as
-  `127.0.0.1:8080` or `0.0.0.0:80`.
-- `http.workers` (`MERINO__HTTP__WORKERS`) - Optional. The number of worker
-  threads that should be spawned to handle tasks. If not provided will default
-  to the number of logical CPU cores available.
 
 ### Logging
 
@@ -91,327 +71,99 @@ Settings to control the format and amount of logs generated.
 
   - `pretty` (default in development) - Multiple lines per event, human-oriented
     formatting and color.
-  - `compact`- A single line per event, with formatting and colors.
   - `mozlog` (default in production) - A single line per event, formatted as
     JSON in [MozLog](https://wiki.mozilla.org/Firefox/Services/Logging) format.
 
-- `logging.info` (`MERINO__LOGGING__LEVELS`) - Minimum level of logs that should
+- `logging.info` (`MERINO_LOGGING_LEVEL`) - Minimum level of logs that should
   be reported. This should be a number of _entries_ separated by commas (for
   environment variables) or specified as list (TOML).
 
-  This will be combined with the contents of the `RUST_LOG` environment variable
-  for compatibility. `RUST_LOG` will take precedence over this setting. If the
-  environment variable `MERINO__LOGGING__LEVELS` is specified, all the settings
-  in the YAML file will be ignored.
-
-  Each entry can be one of `ERROR`, `WARN`, `INFO`, `DEBUG`, or `TRACE` (in
-  increasing verbosity), with an optional component that specifies the source of
-  the logs. For example `INFO,merino_web=DEBUG,reqwest=WARN` would set the
-  default log level to INFO, but would lower the level to `DEBUG` for the
-  `merino-web` crate and raise it to `WARN` for the reqwest crate.
+  Each entry can be one of `CRITICAL`, `ERROR`, `WARN`, `INFO`,  or `DEBUG` (in
+  increasing verbosity).
 
 ### Metrics
 
 Settings for Statsd/Datadog style metrics reporting.
 
-- `metrics.sink_host` (`MERINO__METRICS__SINK_ADDRESS`) - The IP or hostname to
-  send metrics to over UDP. Defaults to `0.0.0.0`.
+- `metrics.host` (`MERINO_METRICS__HOST`) - The IP or hostname to send metrics
+  to over UDP. Defaults to localhost.
 
-- `metrics.sink_port` (`MERINO__METRICS__SINK_PORT`) - The port to send metrics
-  to over UDP. Defaults to 8125.
+- `metrics.port` (`MERINO_METRICS__PORT`) - The port to send metrics to over
+  UDP. Defaults to 8092.
 
-- `max_queue_size_kb` (`MERINO__METRICS__MAX_QUEUE_SIZE_KB`) - The maximum size
-  of the buffer that holds events waiting to be sent. If unsent events rise
-  above this, then metrics will be lost. Defaults to 32KB.
+- `metrics.dev_logger` (`MERINO_METRICS__DEV_LOGGER`) - Whether or not to send
+  metrics over to the logger. Should only be used for non-production environments.
 
 ### Sentry
 
 Error reporting via Sentry.
 
-- `sentry.mode` (`MERINO__SENTRY__MODE`) - The type of Sentry integration to
-  enable. One of `release`, `server_debug`, `local_debug`, or `disabled`. The
-  two `debug` settings should only be used for local development.
+- `sentry.mode` (`MERINO_SENTRY__MODE`) - The type of Sentry integration to
+  enable. One of `release`, `debug`, or `disabled`. The `debug` setting
+  should only be used for local development.
 
 If `sentry.mode` is set to `release`, then the following two settings are
 required:
 
 - `sentry.dsn` - Configuration to connect to the Sentry project.
-- `sentry.env` - The environment to report to Sentry. Probably "production",
+- `sentry.env` - The environment to report to Sentry. Probably "prod",
   "stage", or "dev".
 
 If `sentry.mode` is set to `disabled`, no Sentry integration will be activated.
-If it is set to `local_debug`, the DSN will be set to a testing value
+If it is set to `debug`, the DSN will be set to a testing value
 recommended by Sentry, and extra output will be included in the logs.
-
-The mode can be set to `server_debug`, which will allow testing real integration
-with Sentry. Sentry integration and debug logging will be activated. It is
-recommended to use the [merino-local][sentry-merino-local] sentry environment.
-See that page for DSN information. The following two settings are required:
-
-[sentry-merino-local]: https://sentry.io/organizations/mozilla/projects/merino-local/
-
-- `sentry.dsn` - Configuration to connect to the Sentry project. A testing
-  project should be used.
-- `sentry.who` - Your username, which will be used as the environment, so that
-  you can filter your results out in Sentry's web interface.
-
-### Redis
-
-Connection to Redis. This is used by the Redis provider cache below.
-
-- `redis.url` (`MERINO__REDIS__URL`) - The URL to connect Redis at. Example:
-  `redis://127.0.0.1/0`.
 
 ### Remote_settings
 
 Connection to Remote Settings. This is used by the Remote Settings suggestion
 provider below.
 
-- `remote_settings.server` (`MERINO__REMOTE_SETTINGS__SERVER`) - The server to
+- `remote_settings.server` (`MERINO_REMOTE_SETTINGS__SERVER`) - The server to
   sync from. Example: `https://firefox.settings.services.mozilla.com`.
 
-- `remote_settings.default_bucket` (`MERINO__REMOTE_SETTINGS__DEFAULT_BUCKET`) -
+- `remote_settings.bucket` (`MERINO__REMOTE_SETTINGS__BUCKET`) -
   The bucket to use for Remote Settings providers if not specified in the
   provider config. Example: "main".
 
-- `remote_settings.default_collection`
-  (`MERINO__REMOTE_SETTINGS__DEFAULT_COLLECTION`) - The collection to use for
+- `remote_settings.collection`
+  (`MERINO__REMOTE_SETTINGS__COLLECTION`) - The collection to use for
   Remote Settings providers if not specified in the provider config. Example:
   "quicksuggest".
-
-- `remote_settings.cron_interval_sec`
-  (`MERINO__REMOTE_SETTINGS__CRON_INTERVAL_SEC`) - The interval of the Remote
-  Settings cron job (in seconds). Following tasks are done in this cron job:
-  - Resync with Remote Settings if needed. The resync interval is configured
-    separately by the provider. Note that this interval should be set smaller
-    than `resync_interval_sec` of the Remote Settings leaf provider.
-  - Retry if the regular resync fails.
 
 ### Location
 
 Configuration for determining the location of users.
 
-- `location.maxmind_database` (`MERINO__LOCATION__MAXMIND_DATABASE`) - Path to a
-  MaxMind GeoIP database file. Optional. If not specified, geolocation will be
-  disabled.
+- `location.maxmind_database` (`MERINO_LOCATION__MAXMIND_DATABASE`) - Path to a
+  MaxMind GeoIP database file.
 
 ### Provider Configuration
 
 The configuration for suggestion providers.
 
-Note that the provider settings are configured either by a separate YAML file
-located in `config/providers` or by a remote source backed by an HTTP endpoint.
-You can use `provider_settings` to configure how & where Merino to load the
-settings.
-
-#### `Provider Settings`
-
-You can specify the "type" and the "location" of the provider settings. The
-"type" could be `local` or `remote`. For `local` sources, use `path` to specify
-the location; Use `uri` for `remote` sources. Note that only JSON is supported
-for remote sources, whereas all the common formats (JSON, YAML, TOML, etc) are
-supported for local sources.
-
-_Examples_:
-
-- A local source
-
-```yaml
-provider_settings:
-  type: local
-  path: ./config/providers/base.yaml
-```
-
-- A remote source
-
-```yaml
-provider_settings:
-  type: remote
-  uri: https://example.org/settings
-```
-
-#### Configuration Object
-
-Each provider configuration has a `type`, listed below, and it's own individual
-settings.
-
-_Example_:
-
-```yaml
-wiki_fruit:
-  type: wiki_fruit
-```
-
-#### Configuration File
-
-Each configuration file should be a map where the keys are provider IDs will be
-used in the API to enable and disable providers per request. The values are
-provider configuration objects, detailed below. Some providers can takes other
-providers as children. Because of this, each key in this config is referred to
-as a "provider tree".
-
-_Example_:
-
-```yaml
-adm:
-  type: memory_cache
-  inner:
-    type: remote_settings
-    collection: "quicksuggest"
-wiki_fruit:
-  type: wiki_fruit
-debug:
-  type: debug
-```
-
-#### Leaf Providers
+#### Adm Provider
 
 These are production providers that generate suggestions.
 
 - Remote Settings - Provides suggestions from a RS collection, such as the
   suggestions provided by adM. See also the top level configuration for Remote
-  Settings, below.
-  - `type=remote_settings`
-  - `bucket` - Optional. The name of the Remote Settings collection to pull
-    suggestions from. If not specified, the global default will be used.
-  - `collection` - Optional. The name of the Remote Settings collection to pull
-    suggestions from. If not specifeid, the global default will be used.
-  - `resync_interval_sec` - Optional. The time between re-syncs of Remote
-    Settings data, in seconds. Defaults to 3 hours.
+  Settings above.
+  - `resync_interval_sec` (`MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC`) - The time
+    between re-syncs of Remote Settings data, in seconds. Defaults to 3 hours.
+  - `cron_interval_sec`
+    (`MERINO_PROVIDERS__ADM__CRON_INTERVAL_SEC`) - The interval of the Remote
+    Settings cron job (in seconds). Following tasks are done in this cron job:
+    - Resync with Remote Settings if needed. The resync interval is configured
+      separately by the provider. Note that this interval should be set smaller
+      than `resync_interval_sec` of the Remote Settings leaf provider.
+    - Retry if the regular resync fails.
+  - `score` (`MERINO_PROVIDERS__ADM__SCORE`) - The ranking score for this provider
+    as a floating point number. Defaults to 0.3.
 
-#### Combinators
-
-These are providers that extend, combine, or otherwise modify other providers.
-
-- Multiplexer - Combines providers from multiple sub-providers.
-
-  - `type=multiplexer`
-  - `providers` - A list of other provider configs to draw suggestions from.
-
-  _Example_:
-
-  ```yaml
-  sample_multi:
-    type: multiplexer
-    providers:
-      - fixed:
-        type: fixed
-        value: I'm a banana
-      - debug:
-        type: debug
-  ```
-
-- Timeout - Returns an empty response if the wrapped provider takes too long to
-  respond.
-
-  - `type=timeout`
-  - `inner` - Another provider configuration to generate suggestions with.
-  - `max_time_ms` - The time, in milliseconds, that a provider has to respond
-    before an empty result is returned.
-
-- KeywordFilter - Filters the suggestions coming from the wrapped provider with
-  the given blocklist.
-
-  - `type=keyword_filter`
-  - `suggestion_blocklist` - The map used to define the blocklist rules. Each
-    entry contains a rule id and an associated regular expression that
-    recommended titles are matched against.
-  - `inner` - The wrapped provider to draw suggestions from.
-
-  _Example_:
-
-  ```yaml
-  filtered:
-    type: keyword_filter
-    suggestion_blocklist:
-      no_banana: "(Banana|banana|plant)"
-    inner:
-      type: multiplexer
-      providers:
-        - fixed:
-          type: fixed
-          value: I'm a banana
-        - debug:
-          type: debug
-  ```
-- ClientVariantSwitch - Switches between two providers based on whether a request's client variants matches the configured client variant string
-
-  - `type=client_variant_switch`
-  - `client_variant` - the string used to determine whether the matching or default provider is used
-  - `matching_provider` - The wrapped provider to draw suggestions from for a client variant match.
-  - `default_provider` - The wrapped provider to draw suggestions when there is not a client variant match.
-
-  _Example_:
-
-  ```yaml
-  client_variant_switch:
-    type: client_variant_switch
-    client_variant: "hello"
-    matching_provider:
-      type: wiki_fruit
-    default_provider:
-      type: debug
-  ```
-- Stealth - Runs another provider, but hides the results. Useful for load
-  testing of new behavior.
-
-  - `type=stealth`
-  - `inner` - Another provider configuration to run.
-
-#### Caches
-
-These providers take suggestions from their children and cache them for future
-use.
-
-- Memory Cache - An in-memory, per process cache.
-
-  - `type=memory_cache`
-  - `default_ttl_sec` - The time to store suggestions before, if the inner
-    provider does not specify a time.
-  - `cleanup_interval_sec` - The cache will automatically remove expired entries
-    with this period. Note that expired entries are also removed dynamically if
-    a matching request is processed.
-  - `max_removed_entries` - While running the cleanup task, at most this many
-    entries will be removed before cancelling the task. This should be used to
-    limit the maximum amount of time the cleanup task takes. Defaults to
-    100_000.
-  - `default_lock_timeout_sec` - The amount of time a cache entry can be locked
-    for writing.
-  - `inner` - Another provider configuration to generate suggestions with.
-
-- Redis Cache - A remote cache that can be shared between processes.
-  - `type=redis_cache`
-  - `default_ttl_sec` - The time to store suggestions before, if the inner
-    provider does not specify a time.
-  - `default_lock_timeout_sec` - The amount of time a cache entry can be locked
-    for writing.
-  - `inner` - Another provider configuration to generate suggestions with.
-
-#### Development providers
-
-These should not be used in production, but are useful for development and
-testing.
-
-- Debug - Echos back the suggestion request that it receives formatted as JSON
-  in the `title` field of a suggestion.
-
-  - `type=debug`
-
-- WikiFruit - A very basic provider that suggests Wikipedia articles for the
-  exact phrases "apple", "banana", and "cherry".
-
-  - `type=wiki_fruit`
-
-- Null - A provider that never suggests anything. Useful to fill in combinators
-  and caches for testing.
-
-  - `type="null"` - Note that `null` in YAML is an actual null value, so this
-    must be specified as the string `"null"`.
-
-- Fixed - A suggestion provider that provides a fixed response with a
-  customizable title.
-
-  - `value` - A string that will be used for the title of the fixed suggestion.
-    Required.
+#### Adm Provider
+- Wiki Fruit - Provides suggestions from a test provider. Should not be used
+  in production.
+  - `enabled` (`MERINO_PROVIDERS__WIKI_FRUIT__ENABLED`) - Whether or not to enable
+    this provider.
 
 [log]:../merino/config_logging.py
