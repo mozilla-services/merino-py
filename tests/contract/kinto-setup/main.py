@@ -6,7 +6,7 @@ from time import sleep
 
 import requests
 import typer
-from kinto import create_bucket, create_collection
+from kinto_requests import create_bucket, create_collection
 from requests import HTTPError
 
 
@@ -14,7 +14,7 @@ def main(
     kinto_url: str = typer.Argument(..., envvar="KINTO_URL"),
     kinto_bucket: str = typer.Argument(..., envvar="KINTO_BUCKET"),
     kinto_collection: str = typer.Argument(..., envvar="KINTO_COLLECTION"),
-):
+) -> None:
     """Run the CLI application."""
     kinto_api = f"{kinto_url}/v1"
 

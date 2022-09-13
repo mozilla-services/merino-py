@@ -37,12 +37,22 @@ repos:
           - pep257
           - '--add-ignore'
           - 'D203,D205,D400'
-  # - repo: 'https://github.com/pre-commit/mirrors-mypy'
-  #   rev: v0.961
-  #   hooks:
-  #     - id: mypy
-  #       exclude: tests/
-  #       args:
-  #         - '--ignore-missing-imports'
-  #         - '--follow-imports=skip'
-  #         - '--no-strict-optional'
+  - repo: 'https://github.com/pre-commit/mirrors-mypy'
+    rev: v0.971
+    hooks:
+      - id: mypy
+        files: tests/contract
+        args: [
+          --python-version=3.10,
+          --disallow-untyped-calls,
+          --follow-imports=normal,
+          --ignore-missing-imports,
+          --pretty,
+          --show-error-codes,
+          --strict-optional,
+          --warn-no-return,
+          --warn-redundant-casts,
+          --warn-return-any,
+          --warn-unused-ignores
+        ]
+        additional_dependencies: ["pydantic", "types-PyYAML", "types-requests"]

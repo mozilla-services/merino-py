@@ -23,6 +23,7 @@ lint: $(INSTALL_STAMP)  ##  Run various linters
 	$(POETRY) run flake8 $(APP_TEST_DIR)
 	$(POETRY) run bandit --quiet -r $(APP_TEST_DIR) -c "pyproject.toml"
 	$(POETRY) run pydocstyle $(APP_DIR) --config="pyproject.toml"
+	$(POETRY) run mypy $(CONTRACT_TEST_DIR) --config-file="pyproject.toml"
 
 .PHONY: format
 format: $(INSTALL_STAMP)  ##  Sort imports and reformat code

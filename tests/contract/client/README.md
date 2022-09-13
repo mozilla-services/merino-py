@@ -11,16 +11,6 @@ The HTTP client used in the framework supports:
 For more details on contract test design, refer to the contract-tests
 [README][contract_tests_readme].
 
-## Contributing
-
-**mypy** is used for type checking. Execute from the root using command:
-
-```text
-mypy \
-test-engineering/contract-tests/client/ \
---config-file=test-engineering/contract-tests/client/mypy.ini
-```
-
 ## Scenarios
 
 The client is instructed on request and response check actions via scenarios,

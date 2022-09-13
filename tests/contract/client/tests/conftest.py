@@ -77,12 +77,12 @@ def fixture_fetch_kinto_icon_url(
     request: Any,
     kinto_environment: KintoEnvironment,
     kinto_records: dict[str, KintoRequestRecord],
-) -> Callable:
+) -> Callable[[str], str]:
     """Return a function that will query for an icon URL from a suggestion title"""
 
     attachments_url: str = request.config.option.kinto_attachments_url
 
-    def fetch_icon_url(*, suggestion_title: str) -> str:
+    def fetch_icon_url(suggestion_title: str) -> str:
         """Fetch the icon URL for the given Kinto record ID from Kinto."""
 
         record_id: str = next(
@@ -97,7 +97,7 @@ def fixture_fetch_kinto_icon_url(
     return fetch_icon_url
 
 
-def pytest_configure(config):
+def pytest_configure(config: Any) -> None:
     """Load data for tests and store it on config."""
 
     for option_name in REQUIRED_OPTIONS:
@@ -112,7 +112,7 @@ def pytest_configure(config):
     ]
 
 
-def pytest_generate_tests(metafunc):
+def pytest_generate_tests(metafunc: Any) -> None:
     """Generate tests from the loaded test scenarios."""
 
     if "steps" not in metafunc.fixturenames:
@@ -128,7 +128,7 @@ def pytest_generate_tests(metafunc):
     metafunc.parametrize(["steps"], argvalues, ids=ids)
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: Any) -> None:
     """Define custom CLI options."""
     parser.addoption(
         "--scenarios_file",

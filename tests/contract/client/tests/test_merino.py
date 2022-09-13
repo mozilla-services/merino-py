@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import time
-from typing import Callable
+from typing import Any, Callable
 
 import pytest
 import requests
@@ -37,7 +37,7 @@ SUGGESTION_EXCLUDE: set[str] = {"icon"}
 
 
 @pytest.fixture(scope="session", name="merino_url")
-def fixture_merino_url(request) -> str:
+def fixture_merino_url(request: Any) -> str:
     """Read the merino URL from the pytest config."""
 
     merino_url: str = request.config.option.merino_url
@@ -47,7 +47,7 @@ def fixture_merino_url(request) -> str:
 @pytest.fixture(scope="session", name="kinto_step")
 def fixture_kinto_step(
     kinto_environment: KintoEnvironment, kinto_records: dict[str, KintoRequestRecord]
-) -> Callable:
+) -> Callable[[Step], None]:
     """Define execution instructions for Kinto scenario step."""
 
     def kinto_step(step: Step) -> None:
@@ -69,7 +69,9 @@ def fixture_kinto_step(
 
 
 @pytest.fixture(scope="session", name="merino_step")
-def fixture_merino_step(merino_url: str, fetch_kinto_icon_url: Callable) -> Callable:
+def fixture_merino_step(
+    merino_url: str, fetch_kinto_icon_url: Callable[[str], str]
+) -> Callable[[Step], None]:
     """Define execution instructions for Merino scenario step."""
 
     def merino_step(step: Step) -> None:
@@ -131,8 +133,8 @@ def fixture_merino_step(merino_url: str, fetch_kinto_icon_url: Callable) -> Call
 
 @pytest.fixture(scope="session", name="step_functions")
 def fixture_step_functions(
-    kinto_step: Callable, merino_step: Callable
-) -> dict[Service, Callable]:
+    kinto_step: Callable[[Step], None], merino_step: Callable[[Step], None]
+) -> dict[Service, Callable[[Step], None]]:
     """Return a dict mapping from a service name to request function."""
 
     return {
@@ -141,7 +143,7 @@ def fixture_step_functions(
     }
 
 
-def suggestion_id(suggestion: Suggestion) -> tuple:
+def suggestion_id(suggestion: Suggestion) -> tuple[str, int]:
     """Return the values for the fields that identify a suggestion."""
     return suggestion.provider, suggestion.block_id
 
@@ -150,7 +152,7 @@ def assert_200_response(
     *,
     step_content: ResponseContent,
     merino_content: ResponseContent,
-    fetch_kinto_icon_url: Callable,
+    fetch_kinto_icon_url: Callable[[str], str],
 ) -> None:
     """Check that the content for a 200 OK response is what we expect."""
 
@@ -179,9 +181,7 @@ def assert_200_response(
     for suggestion in merino_content.suggestions:
         if "remote_settings" in suggestion.provider:
             # The icon URL is not static for RS suggestions
-            expected_suggestion_icon: str = fetch_kinto_icon_url(
-                suggestion_title=suggestion.title
-            )
+            expected_suggestion_icon: str = fetch_kinto_icon_url(suggestion.title)
             assert suggestion.icon == expected_suggestion_icon
             continue
 
@@ -201,7 +201,9 @@ def fixture_function_teardown(kinto_environment: KintoEnvironment):
     delete_records(kinto_environment)
 
 
-def test_merino(steps: list[Step], step_functions: dict[Service, Callable]):
+def test_merino(
+    steps: list[Step], step_functions: dict[Service, Callable[[Step], None]]
+) -> None:
     """Test for requesting suggestions from Merino."""
 
     for step in steps:
