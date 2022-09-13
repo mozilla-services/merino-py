@@ -37,10 +37,10 @@ def test_geolocation(
 
     record = records[0]
 
-    assert record.country == expected_country
-    assert record.region == expected_region
-    assert record.city == expected_city
-    assert record.dma == expected_dma
+    assert record.__dict__["country"] == expected_country
+    assert record.__dict__["region"] == expected_region
+    assert record.__dict__["city"] == expected_city
+    assert record.__dict__["dma"] == expected_dma
 
 
 def test_geolocation_with_invalid_ip(mocker, caplog):
