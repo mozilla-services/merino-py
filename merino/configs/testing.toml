@@ -1,0 +1,24 @@
+# Configurations for testing, should be *only* used for testing.
+# Configurations defined here will override the counterparts in `default.toml`.
+
+[testing]
+debug = true
+# For `list` or `table` settings, `dynaconf_merge` allows you to merge settings with the default
+# settings. This enables merge for the entire `testing` environment.
+dynaconf_merge = true
+
+[testing.metrics]
+dev_logger = true
+
+[testing.logging]
+# Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+level = "DEBUG"
+format = "pretty"
+
+[testing.providers.adm]
+# Whether or not this provider is enabled by default.
+enabled_by_default = true
+
+[testing.providers.wiki_fruit]
+# Whether or not this provider is enabled by default.
+enabled_by_default = true
