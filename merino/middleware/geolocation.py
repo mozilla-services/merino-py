@@ -5,8 +5,9 @@ from typing import Optional
 import geoip2.database
 from geoip2.errors import AddressNotFoundError
 from pydantic import BaseModel
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
+from starlette.responses import Response
 
 from merino.config import settings
 
@@ -31,7 +32,9 @@ class GeolocationMiddleware(BaseHTTPMiddleware):
     `Request.state.location`.
     """
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         """Provide Geolocation before handling request"""
         # `request.client.host` should be the first remote client address of `X-Forwarded-For`.
         record = None

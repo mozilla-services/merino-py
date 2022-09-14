@@ -1,3 +1,5 @@
+from typing import Any, Optional
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -20,8 +22,14 @@ app.dependency_overrides[get_providers] = override_dependency
     ],
 )
 def test_geolocation(
-    mocker, caplog, ip, expected_country, expected_region, expected_city, expected_dma
-):
+    mocker: Any,
+    caplog: Any,
+    ip: str,
+    expected_country: Optional[str],
+    expected_region: Optional[str],
+    expected_city: Optional[str],
+    expected_dma: Optional[int],
+) -> None:
     import logging
 
     caplog.set_level(logging.INFO)
@@ -43,7 +51,7 @@ def test_geolocation(
     assert record.__dict__["dma"] == expected_dma
 
 
-def test_geolocation_with_invalid_ip(mocker, caplog):
+def test_geolocation_with_invalid_ip(mocker: Any, caplog: Any) -> None:
     import logging
 
     caplog.set_level(logging.WARNING)
@@ -59,7 +67,7 @@ def test_geolocation_with_invalid_ip(mocker, caplog):
     assert records[0].message == "Invalid IP address for geolocation parsing"
 
 
-def test_geolocation_with_none_ip(mocker, caplog):
+def test_geolocation_with_none_ip(mocker: Any, caplog: Any) -> None:
     import logging
 
     caplog.set_level(logging.WARNING)
@@ -75,7 +83,7 @@ def test_geolocation_with_none_ip(mocker, caplog):
     assert records[0].message == "Invalid IP address for geolocation parsing"
 
 
-def test_geolocation_with_no_client(mocker, caplog):
+def test_geolocation_with_no_client(mocker: Any, caplog: Any) -> None:
     import logging
 
     caplog.set_level(logging.WARNING)
