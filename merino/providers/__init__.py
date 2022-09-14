@@ -44,6 +44,8 @@ async def init_providers() -> None:
                 providers["wiki_fruit"] = WikiFruitProvider(
                     enabled_by_default=setting.enabled_by_default
                 )
+            case _:
+                raise TypeError(f"Unknown provider type: {type}")
 
     # initialize providers and record time
     init_metric = f"{__name__}.initialize"
