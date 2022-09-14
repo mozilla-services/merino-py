@@ -59,6 +59,22 @@ def test_geolocation_with_invalid_ip(mocker, caplog):
     assert records[0].message == "Invalid IP address for geolocation parsing"
 
 
+def test_geolocation_with_none_ip(mocker, caplog):
+    import logging
+
+    caplog.set_level(logging.WARNING)
+
+    mock_client = mocker.patch("fastapi.Request.client")
+    mock_client.host = None
+
+    client.get("/api/v1/suggest?q=nope")
+
+    records = filter_caplog(caplog.records, "merino.middleware.geolocation")
+
+    assert len(records) == 1
+    assert records[0].message == "Invalid IP address for geolocation parsing"
+
+
 def test_geolocation_with_no_client(mocker, caplog):
     import logging
 
