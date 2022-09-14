@@ -36,7 +36,7 @@ class GeolocationMiddleware(BaseHTTPMiddleware):
         # `request.client.host` should be the first remote client address of `X-Forwarded-For`.
         record = None
         try:
-            record = reader.city(request.client.host if request.client else "")
+            record = reader.city(request.client.host or "" if request.client else "")
         except ValueError:
             logger.warning("Invalid IP address for geolocation parsing")
         except AddressNotFoundError:
