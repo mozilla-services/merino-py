@@ -12,9 +12,9 @@ class WikiFruitProvider(BaseProvider):
 
     enabled: bool
 
-    def __init__(self, enabled: bool = True):
+    def __init__(self, enabled_by_default: bool = True):
         """Init for WikiFruitProvider."""
-        self.enabled = enabled
+        self._enabled_by_default = enabled_by_default
 
     async def initialize(self) -> None:
         """Initialize wiki fruit"""
@@ -43,4 +43,4 @@ class WikiFruitProvider(BaseProvider):
 
     def enabled_by_default(self) -> bool:
         """Whether or not this provider is enabled."""
-        return self.enabled
+        return self._enabled_by_default

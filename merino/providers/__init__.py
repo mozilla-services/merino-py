@@ -38,10 +38,12 @@ async def init_providers() -> None:
             case ProviderType.ADM:
                 providers["adm"] = AdmProvider(
                     backend=remotesettings.LiveBackend(),
-                    enabled=setting.enabled,
+                    enabled_by_default=setting.enabled_by_default,
                 )
             case ProviderType.WIKI_FRUIT:
-                providers["wiki_fruit"] = WikiFruitProvider(enabled=setting.enabled)
+                providers["wiki_fruit"] = WikiFruitProvider(
+                    enabled_by_default=setting.enabled_by_default
+                )
 
     # initialize providers and record time
     init_metric = f"{__name__}.initialize"
