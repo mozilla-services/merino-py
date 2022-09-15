@@ -54,6 +54,7 @@ class NonsponsoredProvider(BaseProvider):
     async def initialize(self) -> None:
         ...
 
+    @property
     def enabled_by_default(self) -> bool:
         return True
 
@@ -90,6 +91,7 @@ class CorruptProvider(BaseProvider):
     async def initialize(self) -> None:
         ...
 
+    @property
     def enabled_by_default(self) -> bool:
         return True
 
@@ -109,7 +111,7 @@ def get_provider_factory(
 
     async def provider_factory() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
         await asyncio.gather(*[p.initialize() for p in providers.values()])
-        default_providers = [p for p in providers.values() if p.enabled_by_default()]
+        default_providers = [p for p in providers.values() if p.enabled_by_default]
         return providers, default_providers
 
     return provider_factory

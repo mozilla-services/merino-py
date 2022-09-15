@@ -1,16 +1,21 @@
 import asyncio
+from typing import Awaitable
 
 import pytest
+from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
 from merino.config import settings
+from merino.exceptions import InvalidProviderError
+from merino.main import app
 from merino.providers import ProviderType, get_providers, init_providers
 
 
 @pytest.mark.asyncio
-async def test_init_providers(mocker) -> None:
+async def test_init_providers(mocker: MockerFixture) -> None:
     """Test for the `init_providers` method of the Merino providers module."""
 
-    future = asyncio.Future()
+    future: Awaitable[None] = asyncio.Future()
     # Don't fetch Remote Settings for tests
     mocker.patch("merino.providers.adm.Provider._fetch", return_value=future)
 
@@ -26,12 +31,26 @@ async def test_init_providers(mocker) -> None:
 
 
 @pytest.mark.asyncio
-async def test_init_providers_unknown_provider_type(mocker) -> None:
-    """Test for the `init_providers` method of the Merino providers module."""
+async def test_init_providers_unknown_provider_type(mocker: MockerFixture) -> None:
+    """Test for the `init_providers` with an unknown provider."""
 
     mocker.patch.dict(settings.providers, values={"unknown-provider": {}})
 
-    with pytest.raises(TypeError) as excinfo:
+    with pytest.raises(InvalidProviderError) as excinfo:
         await init_providers()
 
-        assert str(excinfo) == "Unknown provider type: unknown-provider"
+    assert str(excinfo.value) == "Unknown provider type: unknown-provider"
+
+
+def test_unknow_providers_should_shutdown_app(mocker: MockerFixture) -> None:
+    """Test Merino should shut down upon an unknown provider."""
+
+    mocker.patch.dict(settings.providers, values={"unknown-provider": {}})
+
+    with pytest.raises(InvalidProviderError) as excinfo:
+        # This will run all the FastAPI startup event handlers.
+        with TestClient(app):
+            # should never make to here
+            assert False
+
+    assert str(excinfo.value) == "Unknown provider type: unknown-provider"

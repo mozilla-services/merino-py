@@ -40,7 +40,3 @@ class WikiFruitProvider(BaseProvider):
                 "score": 0,
             }
         ]
-
-    def enabled_by_default(self) -> bool:
-        """Whether or not this provider is enabled."""
-        return self._enabled_by_default

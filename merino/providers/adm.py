@@ -157,9 +157,6 @@ class Provider(BaseProvider):
         self.icons = icons
         self.last_fetch_at = time.time()
 
-    def enabled_by_default(self) -> bool:  # noqa: D102
-        return self._enabled_by_default
-
     def hidden(self) -> bool:  # noqa: D102
         return False
 

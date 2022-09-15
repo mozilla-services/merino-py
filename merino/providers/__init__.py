@@ -6,6 +6,7 @@ from timeit import default_timer as timer
 
 from merino import metrics, remotesettings
 from merino.config import settings
+from merino.exceptions import InvalidProviderError
 from merino.providers.adm import Provider as AdmProvider
 from merino.providers.base import BaseProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
@@ -33,8 +34,8 @@ async def init_providers() -> None:
     start = timer()
 
     # register providers
-    for type, setting in settings.providers.items():
-        match type:
+    for provider_type, setting in settings.providers.items():
+        match provider_type:
             case ProviderType.ADM:
                 providers["adm"] = AdmProvider(
                     backend=remotesettings.LiveBackend(),
@@ -45,7 +46,7 @@ async def init_providers() -> None:
                     enabled_by_default=setting.enabled_by_default
                 )
             case _:
-                raise TypeError(f"Unknown provider type: {type}")
+                raise InvalidProviderError(f"Unknown provider type: {provider_type}")
 
     # initialize providers and record time
     init_metric = f"{__name__}.initialize"
@@ -57,7 +58,7 @@ async def init_providers() -> None:
         ]
         await asyncio.gather(*wrapped_tasks)
         default_providers.extend(
-            [p for p in providers.values() if p.enabled_by_default()]
+            [p for p in providers.values() if p.enabled_by_default]
         )
         logger.info(
             "Provider initialization complete",
