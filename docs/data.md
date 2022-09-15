@@ -33,7 +33,7 @@ log inspection interfaces.
   - `browser` - The browser and possibly version detected. Either "Firefox(XX)"
     where XX is the version, or "Other".
   - `rid` - The request ID.
-  - `accepts_english` - True if the user's Accept-Language header includes an
+  - WIP `accepts_english` - True if the user's Accept-Language header includes an
     English locale, false otherwise.
   - `requested_providers` - A comma separated list of providers requested via
     the query string, or an empty string if none were requested (in which case

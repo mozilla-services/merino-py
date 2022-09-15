@@ -19,7 +19,7 @@ configurations are established by files that are prefixed with `config_*.py`,
 such as `config_sentry.py` or `config_logging.py`.
 
 - Per-environment configuration files are in the `configs` directory. The environment
-  is selected using the environment variable `MERINO__ENV`. The settings for
+  is selected using the environment variable `MERINO_ENV`. The settings for
   that environment are then loaded from `configs/${env}.toml`, if the file/env exists. The
   default environment is "development". A "production" environment is also
   provided.
@@ -29,16 +29,13 @@ such as `config_sentry.py` or `config_logging.py`.
   This file is listed in the `.gitignore` file and is safe to use for local configuration.
   One may secrets here if desired, though it is advised to exercise great caution.
 
-- Environment variables that begin with `MERINO` and use `__` (a double
-  underscore) as a level separator. For example, `Settings::http::workers` can
-  be controlled from the environment variable `MERINO__HTTP__WORKERS`.
-
-
 ### General
 
 - All environments are prefixed with `MERINO_`. This is established in the
   `config.py` file by setting the `envvar_prefix="MERINO"` for the Dynaconf
-  instance.
+  instance. The first level following `MERINO_` is accessed with a single underscore `_`
+  and any subsequent levels require two underscores `__`. For example, `Settings::http::workers` can
+  be controlled from the environment variable `MERINO_HTTP_WORKERS`.
 
 - Production environment variables are set by SRE and stored in the
   cloudops project in the `configmap.yml` file. Contact SRE if you require
@@ -52,10 +49,10 @@ such as `config_sentry.py` or `config_logging.py`.
   Example:
   `MERINO_ENV=production MERINO_LOGGING__FORMAT=pretty make dev`
 
-- `env` (`MERINO__ENV`) - Only settable from environment variables. Controls
+- `env` (`MERINO_ENV`) - Only settable from environment variables. Controls
   which environment configuration is loaded, as described above.
 
-- `debug` (`MERINO__DEBUG`) - Boolean that enables additional features to debug
+- `debug` (`MERINO_DEBUG`) - Boolean that enables additional features to debug
   the application. This should not be set to true in public environments, as it
   reveals all configuration, including any configured secrets.
 
@@ -121,12 +118,12 @@ provider below.
 - `remote_settings.server` (`MERINO_REMOTE_SETTINGS__SERVER`) - The server to
   sync from. Example: `https://firefox.settings.services.mozilla.com`.
 
-- `remote_settings.bucket` (`MERINO__REMOTE_SETTINGS__BUCKET`) -
+- `remote_settings.bucket` (`MERINO_REMOTE_SETTINGS__BUCKET`) -
   The bucket to use for Remote Settings providers if not specified in the
   provider config. Example: "main".
 
 - `remote_settings.collection`
-  (`MERINO__REMOTE_SETTINGS__COLLECTION`) - The collection to use for
+  (`MERINO_REMOTE_SETTINGS__COLLECTION`) - The collection to use for
   Remote Settings providers if not specified in the provider config. Example:
   "quicksuggest".
 
