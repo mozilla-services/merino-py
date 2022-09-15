@@ -56,6 +56,14 @@ contract-tests-clean:  ##  Stop and remove containers and networks for contract 
       -p merino-py-contract-tests \
       down
 
+.PHONY: doc
+doc:  ##  Generate Merino docs via mdBook
+	./dev/make-all-docs.sh
+
+.PHONY: doc-preview
+doc-preview:  ##  Preview Merino docs via the default browser
+	mdbook serve --open
+
 .PHONY: help
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
