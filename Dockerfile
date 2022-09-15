@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir --quiet poetry
 COPY ./pyproject.toml ./poetry.lock /tmp/
 
 # Just need the requirements.txt from Poetry
-RUN poetry export --no-interaction --dev --output requirements.txt --without-hashes
+RUN poetry export --no-interaction --output requirements.txt --without-hashes
 
 FROM python:${PYTHON_VERSION}-slim
 
