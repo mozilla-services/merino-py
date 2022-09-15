@@ -36,6 +36,9 @@ CONTENT_EXCLUDE: set[str] = {"request_id", "suggestions"}
 SUGGESTION_EXCLUDE: set[str] = {"icon"}
 
 
+StepFunction = Callable[[Step], None]
+
+
 @pytest.fixture(scope="session", name="merino_url")
 def fixture_merino_url(request: Any) -> str:
     """Read the merino URL from the pytest config."""
@@ -47,7 +50,7 @@ def fixture_merino_url(request: Any) -> str:
 @pytest.fixture(scope="session", name="kinto_step")
 def fixture_kinto_step(
     kinto_environment: KintoEnvironment, kinto_records: dict[str, KintoRequestRecord]
-) -> Callable[[Step], None]:
+) -> StepFunction:
     """Define execution instructions for Kinto scenario step."""
 
     def kinto_step(step: Step) -> None:
@@ -71,7 +74,7 @@ def fixture_kinto_step(
 @pytest.fixture(scope="session", name="merino_step")
 def fixture_merino_step(
     merino_url: str, fetch_kinto_icon_url: Callable[[str], str]
-) -> Callable[[Step], None]:
+) -> StepFunction:
     """Define execution instructions for Merino scenario step."""
 
     def merino_step(step: Step) -> None:
@@ -133,8 +136,8 @@ def fixture_merino_step(
 
 @pytest.fixture(scope="session", name="step_functions")
 def fixture_step_functions(
-    kinto_step: Callable[[Step], None], merino_step: Callable[[Step], None]
-) -> dict[Service, Callable[[Step], None]]:
+    kinto_step: StepFunction, merino_step: StepFunction
+) -> dict[Service, StepFunction]:
     """Return a dict mapping from a service name to request function."""
 
     return {
@@ -201,9 +204,7 @@ def fixture_function_teardown(kinto_environment: KintoEnvironment):
     delete_records(kinto_environment)
 
 
-def test_merino(
-    steps: list[Step], step_functions: dict[Service, Callable[[Step], None]]
-) -> None:
+def test_merino(steps: list[Step], step_functions: dict[Service, StepFunction]) -> None:
     """Test for requesting suggestions from Merino."""
 
     for step in steps:
