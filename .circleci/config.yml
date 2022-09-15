@@ -13,7 +13,7 @@ workflows:
           filters:
             branches:
               ignore: main
-      - run-tests:
+      - unit-tests:
           <<: *pr-filters
       - contract-tests:
           <<: *pr-filters
@@ -26,7 +26,7 @@ workflows:
           filters:
             branches:
               only: main
-      - run-tests:
+      - unit-tests:
           <<: *main-filters
       - contract-tests:
           <<: *pr-filters
@@ -36,7 +36,7 @@ workflows:
           <<: *main-filters
           requires:
             - checks
-            - run-tests
+            - unit-tests
       # The following job will require manual approval in the CircleCI web application.
       # Once provided, and when all the requirements are fullfilled (e.g. tests)
       - unhold-to-deploy-to-prod:
@@ -44,7 +44,7 @@ workflows:
           type: approval
           requires:
             - checks
-            - run-tests
+            - unit-tests
       # On approval of the `unhold-to-deploy-to-prod` job, any successive job that requires it
       # will run. In this case, it's manually triggering deployment to production.
       - docker-image-publish-prod:
@@ -61,7 +61,7 @@ jobs:
       - run:
           name: Code linting
           command: make lint
-  run-tests:
+  unit-tests:
     docker:
       - image: cimg/python:3.10
     steps:
@@ -79,7 +79,7 @@ jobs:
       - run:
           name: Contract tests
           command: |
-            sudo chown 1000:1000 test-engineering/contract-tests/kinto-attachments
+            sudo chown 1000:1000 tests/contract/kinto-attachments
             make contract-tests
   docker-image-publish-stage:
     docker:

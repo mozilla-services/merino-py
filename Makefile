@@ -1,5 +1,7 @@
 APP_DIR := merino
 TEST_DIR := tests
+UNIT_TEST_DIR := $(TEST_DIR)/unit
+CONTRACT_TEST_DIR := $(TEST_DIR)/contract
 APP_TEST_DIR := $(APP_DIR) $(TEST_DIR)
 INSTALL_STAMP := .install.stamp
 POETRY := $(shell command -v poetry 2> /dev/null)
@@ -21,6 +23,7 @@ lint: $(INSTALL_STAMP)  ##  Run various linters
 	$(POETRY) run flake8 $(APP_TEST_DIR)
 	$(POETRY) run bandit --quiet -r $(APP_TEST_DIR) -c "pyproject.toml"
 	$(POETRY) run pydocstyle $(APP_DIR) --config="pyproject.toml"
+	$(POETRY) run mypy $(CONTRACT_TEST_DIR) --config-file="pyproject.toml"
 
 .PHONY: format
 format: $(INSTALL_STAMP)  ##  Sort imports and reformat code
@@ -29,7 +32,7 @@ format: $(INSTALL_STAMP)  ##  Sort imports and reformat code
 
 .PHONY: test
 test: $(INSTALL_STAMP)  ##  Run unit tests
-	MERINO_ENV=testing $(POETRY) run pytest -v $(TEST_DIR) --cov $(APP_DIR)
+	MERINO_ENV=testing $(POETRY) run pytest -v $(UNIT_TEST_DIR) --cov $(APP_DIR)
 
 .PHONY: dev
 dev: $(INSTALL_STAMP)  ##  Run merino locally and reload automatically
@@ -42,14 +45,14 @@ run: $(INSTALL_STAMP)  ##  Run merino locally
 .PHONY: contract-tests
 contract-tests:  ##  Run contract tests using docker compose
 	docker-compose \
-      -f test-engineering/contract-tests/docker-compose.yml \
+      -f $(CONTRACT_TEST_DIR)/docker-compose.yml \
       -p merino-py-contract-tests \
       up --abort-on-container-exit --build
 
 .PHONY: contract-tests-clean
 contract-tests-clean:  ##  Stop and remove containers and networks for contract tests
 	docker-compose \
-      -f test-engineering/contract-tests/docker-compose.yml \
+      -f $(CONTRACT_TEST_DIR)/docker-compose.yml \
       -p merino-py-contract-tests \
       down
 

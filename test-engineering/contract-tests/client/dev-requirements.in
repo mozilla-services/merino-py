@@ -1,4 +1,0 @@
--c requirements.txt
-mypy
-types-PyYAML
-types-requests
