@@ -1,3 +1,5 @@
+from typing import Any, Optional
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -20,8 +22,14 @@ app.dependency_overrides[get_providers] = override_dependency
     ],
 )
 def test_geolocation(
-    mocker, caplog, ip, expected_country, expected_region, expected_city, expected_dma
-):
+    mocker: Any,
+    caplog: Any,
+    ip: str,
+    expected_country: Optional[str],
+    expected_region: Optional[str],
+    expected_city: Optional[str],
+    expected_dma: Optional[int],
+) -> None:
     import logging
 
     caplog.set_level(logging.INFO)
@@ -37,19 +45,51 @@ def test_geolocation(
 
     record = records[0]
 
-    assert record.country == expected_country
-    assert record.region == expected_region
-    assert record.city == expected_city
-    assert record.dma == expected_dma
+    assert record.__dict__["country"] == expected_country
+    assert record.__dict__["region"] == expected_region
+    assert record.__dict__["city"] == expected_city
+    assert record.__dict__["dma"] == expected_dma
 
 
-def test_geolocation_with_invalid_ip(mocker, caplog):
+def test_geolocation_with_invalid_ip(mocker: Any, caplog: Any) -> None:
     import logging
 
     caplog.set_level(logging.WARNING)
 
     mock_client = mocker.patch("fastapi.Request.client")
     mock_client.host = "invalid-ip"
+
+    client.get("/api/v1/suggest?q=nope")
+
+    records = filter_caplog(caplog.records, "merino.middleware.geolocation")
+
+    assert len(records) == 1
+    assert records[0].message == "Invalid IP address for geolocation parsing"
+
+
+def test_geolocation_with_none_ip(mocker: Any, caplog: Any) -> None:
+    import logging
+
+    caplog.set_level(logging.WARNING)
+
+    mock_client = mocker.patch("fastapi.Request.client")
+    mock_client.host = None
+
+    client.get("/api/v1/suggest?q=nope")
+
+    records = filter_caplog(caplog.records, "merino.middleware.geolocation")
+
+    assert len(records) == 1
+    assert records[0].message == "Invalid IP address for geolocation parsing"
+
+
+def test_geolocation_with_no_client(mocker: Any, caplog: Any) -> None:
+    import logging
+
+    caplog.set_level(logging.WARNING)
+
+    mock_req = mocker.patch("fastapi.Request")
+    mock_req.client = None
 
     client.get("/api/v1/suggest?q=nope")
 
