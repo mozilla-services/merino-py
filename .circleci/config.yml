@@ -13,7 +13,7 @@ workflows:
           filters:
             branches:
               ignore: main
-      - run-tests:
+      - unit-tests:
           <<: *pr-filters
       - contract-tests:
           <<: *pr-filters
@@ -28,7 +28,7 @@ workflows:
           filters:
             branches:
               only: main
-      - run-tests:
+      - unit-tests:
           <<: *main-filters
       - contract-tests:
           <<: *pr-filters
@@ -71,7 +71,7 @@ jobs:
       - run:
           name: Code linting
           command: make lint
-  run-tests:
+  unit-tests:
     docker:
       - image: cimg/python:3.10
     steps:
@@ -89,7 +89,7 @@ jobs:
       - run:
           name: Contract tests
           command: |
-            sudo chown 1000:1000 test-engineering/contract-tests/kinto-attachments
+            sudo chown 1000:1000 tests/contract/kinto-attachments
             make contract-tests
   docker-image-publish-stage:
     docker:

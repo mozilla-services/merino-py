@@ -3,9 +3,14 @@
 
 # This would be the default environment for development.
 
-
 [development]
 debug = true
+# For `list` or `table` settings, `dynaconf_merge` allows you to merge settings with the default
+# settings. This enables merge for the entire `development` environment.
+dynaconf_merge = true
+
+[development.metrics]
+dev_logger = true
 
 [development.logging]
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
