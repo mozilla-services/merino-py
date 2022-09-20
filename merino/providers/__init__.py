@@ -4,12 +4,14 @@ import logging
 from enum import Enum, unique
 from timeit import default_timer as timer
 
-from merino import metrics, remotesettings
+from merino import metrics
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
 from merino.providers.adm import Provider as AdmProvider
+from merino.providers.adm import TestBackend
 from merino.providers.base import BaseProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
+from merino.remotesettings import LiveBackend
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
@@ -38,7 +40,11 @@ async def init_providers() -> None:
         match provider_type:
             case ProviderType.ADM:
                 providers["adm"] = AdmProvider(
-                    backend=remotesettings.LiveBackend(),
+                    backend=(
+                        LiveBackend()
+                        if setting.backend == "remote-settings"
+                        else TestBackend()
+                    ),
                     enabled_by_default=setting.enabled_by_default,
                 )
             case ProviderType.WIKI_FRUIT:

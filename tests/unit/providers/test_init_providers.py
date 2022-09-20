@@ -1,6 +1,3 @@
-import asyncio
-from typing import Awaitable
-
 import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
@@ -12,12 +9,8 @@ from merino.providers import ProviderType, get_providers, init_providers
 
 
 @pytest.mark.asyncio
-async def test_init_providers(mocker: MockerFixture) -> None:
+async def test_init_providers() -> None:
     """Test for the `init_providers` method of the Merino providers module."""
-
-    future: Awaitable[None] = asyncio.Future()
-    # Don't fetch Remote Settings for tests
-    mocker.patch("merino.providers.adm.Provider._fetch", return_value=future)
 
     await init_providers()
 

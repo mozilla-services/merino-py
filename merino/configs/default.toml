@@ -57,6 +57,8 @@ traces_sample_rate = 0.1
 [default.providers.adm]
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
+# The backend of the provider. Either "remote-settings" or "test".
+backend = "remote-settings"
 # The cron job should tick more frequently than `resync_interval_sec` so that
 # the resync failure can be retried soon.
 cron_interval_sec = 60

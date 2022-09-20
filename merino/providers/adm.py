@@ -40,6 +40,22 @@ class RemoteSettingsBackend(Protocol):
         ...
 
 
+class TestBackend:
+    """A test backend that always returns empty results for tests."""
+
+    async def get(self, bucket: Any, collection: Any) -> list[dict[Any, Any]]:
+        """Return fake records."""
+        return []
+
+    async def fetch_attachment(self, attachment_uri: Any) -> httpx.Response:
+        """Return a fake attachment for the given URI."""
+        return httpx.Response(200, text="")
+
+    def get_icon_url(self, icon_uri: str) -> str:
+        """Return a fake icon URL for the given URI."""
+        return ""
+
+
 @unique
 class IABCategory(str, Enum):
     """Enum for IAB categories.
