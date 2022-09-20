@@ -12,7 +12,7 @@ class WikiFruitProvider(BaseProvider):
 
     enabled: bool
 
-    def __init__(self, enabled_by_default: bool = True):
+    def __init__(self, enabled_by_default: bool):
         """Init for WikiFruitProvider."""
         self._enabled_by_default = enabled_by_default
 
