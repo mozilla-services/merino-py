@@ -81,7 +81,6 @@ class Provider(BaseProvider):
     last_fetch_at: float
     cron_task: asyncio.Task
     backend: RemoteSettingsBackend
-    _enabled_by_default: bool
 
     def __init__(
         self,
