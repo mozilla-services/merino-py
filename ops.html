@@ -179,8 +179,9 @@ One may secrets here if desired, though it is advised to exercise great caution.
 <p>All environments are prefixed with <code>MERINO_</code>. This is established in the
 <code>config.py</code> file by setting the <code>envvar_prefix=&quot;MERINO&quot;</code> for the Dynaconf
 instance. The first level following <code>MERINO_</code> is accessed with a single underscore <code>_</code>
-and any subsequent levels require two underscores <code>__</code>. For example, <code>Settings::http::workers</code> can
-be controlled from the environment variable <code>MERINO_HTTP_WORKERS</code>.</p>
+and any subsequent levels require two underscores <code>__</code>. For example,
+the logging format can be controlled from the environment variable
+<code>MERINO_LOGGING__FORMAT</code>.</p>
 </li>
 <li>
 <p>Production environment variables are set by SRE and stored in the
@@ -213,7 +214,7 @@ either <code>pretty</code> or <code>mozlog</code> format. See <a href="../merino
 <p>Settings to control the format and amount of logs generated.</p>
 <ul>
 <li>
-<p><code>logging.format</code> - The format to emit logs in. One of</p>
+<p><code>logging.format</code> (<code>MERINO_LOGGING__FORMAT</code>) - The format to emit logs in. One of</p>
 <ul>
 <li><code>pretty</code> (default in development) - Multiple lines per event, human-oriented
 formatting and color.</li>
@@ -222,7 +223,7 @@ JSON in <a href="https://wiki.mozilla.org/Firefox/Services/Logging">MozLog</a> f
 </ul>
 </li>
 <li>
-<p><code>logging.info</code> (<code>MERINO_LOGGING_LEVEL</code>) - Minimum level of logs that should
+<p><code>logging.level</code> (<code>MERINO_LOGGING__LEVEL</code>) - Minimum level of logs that should
 be reported. This should be a number of <em>entries</em> separated by commas (for
 environment variables) or specified as list (TOML).</p>
 <p>Each entry can be one of <code>CRITICAL</code>, <code>ERROR</code>, <code>WARN</code>, <code>INFO</code>,  or <code>DEBUG</code> (in
@@ -255,9 +256,9 @@ should only be used for local development.</li>
 <p>If <code>sentry.mode</code> is set to <code>release</code>, then the following two settings are
 required:</p>
 <ul>
-<li><code>sentry.dsn</code> - Configuration to connect to the Sentry project.</li>
-<li><code>sentry.env</code> - The environment to report to Sentry. Probably &quot;prod&quot;,
-&quot;stage&quot;, or &quot;dev&quot;.</li>
+<li><code>sentry.dsn</code> (<code>MERINO_SENTRY__DSN</code>) - Configuration to connect to the Sentry project.</li>
+<li><code>sentry.env</code> (<code>MERINO_SENTRY__ENV</code>) - The environment to report to Sentry.
+Probably &quot;prod&quot;, &quot;stage&quot;, or &quot;dev&quot;.</li>
 </ul>
 <p>If <code>sentry.mode</code> is set to <code>disabled</code>, no Sentry integration will be activated.
 If it is set to <code>debug</code>, the DSN will be set to a testing value
@@ -314,7 +315,7 @@ as a floating point number. Defaults to 0.3.</li>
 </ul>
 </li>
 </ul>
-<h4 id="adm-provider-1"><a class="header" href="#adm-provider-1">Adm Provider</a></h4>
+<h4 id="wiki-fruit-provider"><a class="header" href="#wiki-fruit-provider">Wiki Fruit Provider</a></h4>
 <ul>
 <li>Wiki Fruit - Provides suggestions from a test provider. Should not be used
 in production.
