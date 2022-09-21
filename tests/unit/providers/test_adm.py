@@ -154,16 +154,19 @@ async def test_initialize_failure(
 
     await adm.initialize()
 
-    records = filter_caplog(caplog.records, "merino.providers.adm")
+    try:
+        records = filter_caplog(caplog.records, "merino.providers.adm")
 
-    assert adm.last_fetch_at == 0
+        assert adm.last_fetch_at == 0
 
-    assert len(records) == 1
-    assert records[0].__dict__["error message"] == "The remote server was unreachable"
-
-    # Clean up the cron task. Unlike other test cases, this action is necessary here
-    # since the cron job has kicked in as the initial fetch fails.
-    adm.cron_task.cancel()
+        assert len(records) == 1
+        assert (
+            records[0].__dict__["error message"] == "The remote server was unreachable"
+        )
+    finally:
+        # Clean up the cron task. Unlike other test cases, this action is necessary here
+        # since the cron job has kicked in as the initial fetch fails.
+        adm.cron_task.cancel()
 
 
 @pytest.mark.asyncio
