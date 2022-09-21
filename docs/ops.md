@@ -34,8 +34,9 @@ such as `config_sentry.py` or `config_logging.py`.
 - All environments are prefixed with `MERINO_`. This is established in the
   `config.py` file by setting the `envvar_prefix="MERINO"` for the Dynaconf
   instance. The first level following `MERINO_` is accessed with a single underscore `_`
-  and any subsequent levels require two underscores `__`. For example, `Settings::http::workers` can
-  be controlled from the environment variable `MERINO_HTTP_WORKERS`.
+  and any subsequent levels require two underscores `__`. For example,
+  the logging format can be controlled from the environment variable
+  `MERINO_LOGGING__FORMAT`.
 
 - Production environment variables are set by SRE and stored in the
   cloudops project in the `configmap.yml` file. Contact SRE if you require
@@ -64,14 +65,14 @@ such as `config_sentry.py` or `config_logging.py`.
 
 Settings to control the format and amount of logs generated.
 
-- `logging.format` - The format to emit logs in. One of
+- `logging.format` (`MERINO_LOGGING__FORMAT`) - The format to emit logs in. One of
 
   - `pretty` (default in development) - Multiple lines per event, human-oriented
     formatting and color.
   - `mozlog` (default in production) - A single line per event, formatted as
     JSON in [MozLog](https://wiki.mozilla.org/Firefox/Services/Logging) format.
 
-- `logging.info` (`MERINO_LOGGING_LEVEL`) - Minimum level of logs that should
+- `logging.level` (`MERINO_LOGGING__LEVEL`) - Minimum level of logs that should
   be reported. This should be a number of _entries_ separated by commas (for
   environment variables) or specified as list (TOML).
 
@@ -102,9 +103,9 @@ Error reporting via Sentry.
 If `sentry.mode` is set to `release`, then the following two settings are
 required:
 
-- `sentry.dsn` - Configuration to connect to the Sentry project.
-- `sentry.env` - The environment to report to Sentry. Probably "prod",
-  "stage", or "dev".
+- `sentry.dsn` (`MERINO_SENTRY__DSN`) - Configuration to connect to the Sentry project.
+- `sentry.env` (`MERINO_SENTRY__ENV`) - The environment to report to Sentry.
+  Probably "prod", "stage", or "dev".
 
 If `sentry.mode` is set to `disabled`, no Sentry integration will be activated.
 If it is set to `debug`, the DSN will be set to a testing value
@@ -157,7 +158,7 @@ These are production providers that generate suggestions.
   - `score` (`MERINO_PROVIDERS__ADM__SCORE`) - The ranking score for this provider
     as a floating point number. Defaults to 0.3.
 
-#### Adm Provider
+#### Wiki Fruit Provider
 - Wiki Fruit - Provides suggestions from a test provider. Should not be used
   in production.
   - `enabled` (`MERINO_PROVIDERS__WIKI_FRUIT__ENABLED`) - Whether or not to enable
