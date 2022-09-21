@@ -8,7 +8,7 @@ Test code resides in the `tests` directory.
 ## Unit Tests
 
 Unit tests, located in the `tests/unit` directory, should appear close to the
-code they are testing, using standard Rust unit tests. This is suitable for
+code they are testing, using the pytest unit test library. This is suitable for
 testing complex behavior at a small scale, with fine grained control over the
 inputs.
 
