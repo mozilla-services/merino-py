@@ -3,12 +3,16 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import json
+import logging
 from typing import Any
 
 import httpx
 import pytest
+from pytest_mock import MockerFixture
 
+from merino.config import settings
 from merino.providers.adm import Provider
+from tests.unit.web.util import filter_caplog
 
 
 class FakeBackend:
@@ -133,3 +137,66 @@ async def test_initialize(adm: Provider) -> None:
         }
     ]
     assert adm.icons == {1: "attachment-host/main-workspace/quicksuggest/icon-01"}
+
+
+@pytest.mark.asyncio
+async def test_initialize_failure(
+    adm: Provider,
+    mocker: MockerFixture,
+    caplog: Any,
+) -> None:
+    """Test exception handling for the initialize() method."""
+
+    caplog.set_level(logging.WARNING)
+    mocker.patch.object(
+        adm, "_fetch", side_effect=Exception("The remote server was unreachable")
+    )
+
+    await adm.initialize()
+
+    try:
+        records = filter_caplog(caplog.records, "merino.providers.adm")
+
+        assert adm.last_fetch_at == 0
+
+        assert len(records) == 1
+        assert (
+            records[0].__dict__["error message"] == "The remote server was unreachable"
+        )
+    finally:
+        # Clean up the cron task. Unlike other test cases, this action is necessary here
+        # since the cron job has kicked in as the initial fetch fails.
+        adm.cron_task.cancel()
+
+
+@pytest.mark.asyncio
+async def test_query_success(adm: Provider) -> None:
+    """Test for the query() method of the adM provider."""
+
+    await adm.initialize()
+
+    res = await adm.query("banana")
+    assert res == [
+        {
+            "block_id": 2,
+            "full_keyword": "banana",
+            "title": "Hello Banana",
+            "url": "https://example.org/target/banana",
+            "impression_url": None,
+            "click_url": "https://example.org/click/banana",
+            "provider": "adm",
+            "advertiser": "Example.org",
+            "is_sponsored": False,
+            "icon": "attachment-host/main-workspace/quicksuggest/icon-01",
+            "score": settings.providers.adm.score,
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_query_with_missing_key(adm: Provider) -> None:
+    """Test for the query() method of the adM provider with a missing key."""
+
+    await adm.initialize()
+
+    assert await adm.query("nope") == []

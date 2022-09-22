@@ -73,7 +73,17 @@ class Provider(BaseProvider):
 
     async def initialize(self) -> None:
         """Initialize cron job."""
-        await self._fetch()
+        try:
+            await self._fetch()
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch data from Remote Settings, will retry it soon",
+                extra={"error message": f"{e}"},
+            )
+            # Set the last fetch timestamp to 0 so that the cron job will retry
+            # the fetch upon the next tick.
+            self.last_fetch_at = 0
+
         # Run a cron job that resyncs data from Remote Settings in the background.
         cron_job = cron.Job(
             name="resync_rs_data",
@@ -149,20 +159,20 @@ class Provider(BaseProvider):
     async def query(self, q: str) -> list[dict[str, Any]]:
         """Provide suggestion for a given query."""
         if (id := self.suggestions.get(q)) is not None:
-            if (res := self.results[id]) is not None:
-                return [
-                    {
-                        "block_id": res.get("id"),
-                        "full_keyword": q,
-                        "title": res.get("title"),
-                        "url": res.get("url"),
-                        "impression_url": res.get("impression_url"),
-                        "click_url": res.get("click_url"),
-                        "provider": "adm",
-                        "advertiser": res.get("advertiser"),
-                        "is_sponsored": res.get("iab_category") == IABCategory.SHOPPING,
-                        "icon": self.icons.get(int(res.get("icon", MISSING_ICON_ID))),
-                        "score": settings.providers.adm.score,
-                    }
-                ]
+            res = self.results[id]
+            return [
+                {
+                    "block_id": res.get("id"),
+                    "full_keyword": q,
+                    "title": res.get("title"),
+                    "url": res.get("url"),
+                    "impression_url": res.get("impression_url"),
+                    "click_url": res.get("click_url"),
+                    "provider": "adm",
+                    "advertiser": res.get("advertiser"),
+                    "is_sponsored": res.get("iab_category") == IABCategory.SHOPPING,
+                    "icon": self.icons.get(int(res.get("icon", MISSING_ICON_ID))),
+                    "score": settings.providers.adm.score,
+                }
+            ]
         return []
