@@ -2,7 +2,7 @@ APP_DIR := merino
 TEST_DIR := tests
 UNIT_TEST_DIR := $(TEST_DIR)/unit
 CONTRACT_TEST_DIR := $(TEST_DIR)/contract
-APP_TEST_DIR := $(APP_DIR) $(TEST_DIR)
+APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR)
 INSTALL_STAMP := .install.stamp
 POETRY := $(shell command -v poetry 2> /dev/null)
 
@@ -18,17 +18,17 @@ $(INSTALL_STAMP): pyproject.toml poetry.lock
 
 .PHONY: lint
 lint: $(INSTALL_STAMP)  ##  Run various linters
-	$(POETRY) run isort --check-only $(APP_TEST_DIR)
-	$(POETRY) run black --quiet --diff --check merino $(APP_TEST_DIR)
-	$(POETRY) run flake8 $(APP_TEST_DIR)
-	$(POETRY) run bandit --quiet -r $(APP_TEST_DIR) -c "pyproject.toml"
+	$(POETRY) run isort --check-only $(APP_AND_TEST_DIRS)
+	$(POETRY) run black --quiet --diff --check merino $(APP_AND_TEST_DIRS)
+	$(POETRY) run flake8 $(APP_AND_TEST_DIRS)
+	$(POETRY) run bandit --quiet -r $(APP_AND_TEST_DIRS) -c "pyproject.toml"
 	$(POETRY) run pydocstyle $(APP_DIR) --config="pyproject.toml"
 	$(POETRY) run mypy $(CONTRACT_TEST_DIR) --config-file="pyproject.toml"
 
 .PHONY: format
 format: $(INSTALL_STAMP)  ##  Sort imports and reformat code
-	$(POETRY) run isort $(APP_TEST_DIR)
-	$(POETRY) run black $(APP_TEST_DIR)
+	$(POETRY) run isort $(APP_AND_TEST_DIRS)
+	$(POETRY) run black $(APP_AND_TEST_DIRS)
 
 .PHONY: test
 test: $(INSTALL_STAMP)  ##  Run unit tests
