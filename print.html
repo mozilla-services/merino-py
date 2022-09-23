@@ -544,6 +544,10 @@ MaxMind GeoIP database file.</li>
 suggestions provided by adM. See also the top level configuration for Remote
 Settings above.
 <ul>
+<li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__ADM__ENABLED_BY_DEFAULT</code>) - Whether
+or not this provider is enabled by default.</li>
+<li><code>backend</code> (<code>MERINO_PROVIDERS__ADM__backend</code>) - The backend of the provider.
+Either <code>remote-settings</code> or <code>test</code>.</li>
 <li><code>resync_interval_sec</code> (<code>MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC</code>) - The time
 between re-syncs of Remote Settings data, in seconds. Defaults to 3 hours.</li>
 <li><code>cron_interval_sec</code>
@@ -566,8 +570,8 @@ as a floating point number. Defaults to 0.3.</li>
 <li>Wiki Fruit - Provides suggestions from a test provider. Should not be used
 in production.
 <ul>
-<li><code>enabled</code> (<code>MERINO_PROVIDERS__WIKI_FRUIT__ENABLED</code>) - Whether or not to enable
-this provider.</li>
+<li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__WIKI_FRUIT__ENABLED_BY_DEFAULT</code>) - Whether
+or not this provider is enabled by default.</li>
 </ul>
 </li>
 </ul>
