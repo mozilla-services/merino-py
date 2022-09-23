@@ -1,18 +1,30 @@
 """Initialize all Providers."""
 import asyncio
 import logging
+from enum import Enum, unique
 from timeit import default_timer as timer
 
-from merino import metrics, remotesettings
+from merino import metrics
 from merino.config import settings
+from merino.exceptions import InvalidProviderError
 from merino.providers.adm import Provider as AdmProvider
+from merino.providers.adm import TestBackend
 from merino.providers.base import BaseProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
+from merino.remotesettings import LiveBackend
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
 
 logger = logging.getLogger(__name__)
+
+
+@unique
+class ProviderType(str, Enum):
+    """Enum for provider type."""
+
+    ADM = "adm"
+    WIKI_FRUIT = "wiki_fruit"
 
 
 async def init_providers() -> None:
@@ -24,9 +36,23 @@ async def init_providers() -> None:
     start = timer()
 
     # register providers
-    providers["adm"] = AdmProvider(backend=remotesettings.LiveBackend())
-    if settings.providers.wiki_fruit.enabled:
-        providers["wiki_fruit"] = WikiFruitProvider()
+    for provider_type, setting in settings.providers.items():
+        match provider_type:
+            case ProviderType.ADM:
+                providers["adm"] = AdmProvider(
+                    backend=(
+                        LiveBackend()
+                        if setting.backend == "remote-settings"
+                        else TestBackend()
+                    ),
+                    enabled_by_default=setting.enabled_by_default,
+                )
+            case ProviderType.WIKI_FRUIT:
+                providers["wiki_fruit"] = WikiFruitProvider(
+                    enabled_by_default=setting.enabled_by_default
+                )
+            case _:
+                raise InvalidProviderError(f"Unknown provider type: {provider_type}")
 
     # initialize providers and record time
     init_metric = f"{__name__}.initialize"
@@ -38,7 +64,7 @@ async def init_providers() -> None:
         ]
         await asyncio.gather(*wrapped_tasks)
         default_providers.extend(
-            [p for p in providers.values() if p.enabled_by_default()]
+            [p for p in providers.values() if p.enabled_by_default]
         )
         logger.info(
             "Provider initialization complete",

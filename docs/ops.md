@@ -146,6 +146,10 @@ These are production providers that generate suggestions.
 - Remote Settings - Provides suggestions from a RS collection, such as the
   suggestions provided by adM. See also the top level configuration for Remote
   Settings above.
+  - `enabled_by_default` (`MERINO_PROVIDERS__ADM__ENABLED_BY_DEFAULT`) - Whether
+    or not this provider is enabled by default.
+  - `backend` (`MERINO_PROVIDERS__ADM__backend`) - The backend of the provider.
+    Either `remote-settings` or `test`.
   - `resync_interval_sec` (`MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC`) - The time
     between re-syncs of Remote Settings data, in seconds. Defaults to 3 hours.
   - `cron_interval_sec`
@@ -161,7 +165,7 @@ These are production providers that generate suggestions.
 #### Wiki Fruit Provider
 - Wiki Fruit - Provides suggestions from a test provider. Should not be used
   in production.
-  - `enabled` (`MERINO_PROVIDERS__WIKI_FRUIT__ENABLED`) - Whether or not to enable
-    this provider.
+  - `enabled_by_default` (`MERINO_PROVIDERS__WIKI_FRUIT__ENABLED_BY_DEFAULT`) - Whether
+    or not this provider is enabled by default.
 
 [log]:../merino/config_logging.py

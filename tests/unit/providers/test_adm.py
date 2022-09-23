@@ -109,7 +109,7 @@ def fixture_adm() -> Provider:
 def test_enabled_by_default(adm: Provider) -> None:
     """Test for the enabled_by_default method."""
 
-    assert adm.enabled_by_default() is True
+    assert adm.enabled_by_default is True
 
 
 def test_hidden(adm: Provider) -> None:

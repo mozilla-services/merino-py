@@ -10,14 +10,11 @@ class SponsoredProvider(BaseProvider):
     A test sponsored provider that only responds to query "sponsored".
     """
 
-    def __init__(self) -> None:
-        ...
+    def __init__(self, enabled_by_default) -> None:
+        self._enabled_by_default = enabled_by_default
 
     async def initialize(self) -> None:
         ...
-
-    def enabled_by_default(self) -> bool:
-        return True
 
     def hidden(self) -> bool:
         return False
@@ -48,14 +45,11 @@ class NonsponsoredProvider(BaseProvider):
     A test nonsponsored provider that only responds to query "nonsponsored".
     """
 
-    def __init__(self) -> None:
-        ...
+    def __init__(self, enabled_by_default) -> None:
+        self._enabled_by_default = enabled_by_default
 
     async def initialize(self) -> None:
         ...
-
-    def enabled_by_default(self) -> bool:
-        return True
 
     def hidden(self) -> bool:
         return False
@@ -90,6 +84,7 @@ class CorruptProvider(BaseProvider):
     async def initialize(self) -> None:
         ...
 
+    @property
     def enabled_by_default(self) -> bool:
         return True
 
@@ -109,7 +104,7 @@ def get_provider_factory(
 
     async def provider_factory() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
         await asyncio.gather(*[p.initialize() for p in providers.values()])
-        default_providers = [p for p in providers.values() if p.enabled_by_default()]
+        default_providers = [p for p in providers.values() if p.enabled_by_default]
         return providers, default_providers
 
     return provider_factory
@@ -121,8 +116,8 @@ async def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
     """
     return await get_provider_factory(
         {
-            "sponsored-provider": SponsoredProvider(),
-            "nonsponsored-provider": NonsponsoredProvider(),
+            "sponsored-provider": SponsoredProvider(enabled_by_default=True),
+            "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
         }
     )()
 

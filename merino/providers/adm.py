@@ -40,6 +40,22 @@ class RemoteSettingsBackend(Protocol):
         ...
 
 
+class TestBackend:
+    """A test backend that always returns empty results for tests."""
+
+    async def get(self, bucket: Any, collection: Any) -> list[dict[Any, Any]]:
+        """Return fake records."""
+        return []
+
+    async def fetch_attachment(self, attachment_uri: Any) -> httpx.Response:
+        """Return a fake attachment for the given URI."""
+        return httpx.Response(200, text="")
+
+    def get_icon_url(self, icon_uri: str) -> str:
+        """Return a fake icon URL for the given URI."""
+        return ""
+
+
 @unique
 class IABCategory(str, Enum):
     """Enum for IAB categories.
@@ -66,9 +82,15 @@ class Provider(BaseProvider):
     cron_task: asyncio.Task
     backend: RemoteSettingsBackend
 
-    def __init__(self, backend: RemoteSettingsBackend, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        backend: RemoteSettingsBackend,
+        enabled_by_default: bool = True,
+        **kwargs: Any,
+    ) -> None:
         """Store the given Remote Settings backend on the provider."""
         self.backend = backend
+        self._enabled_by_default = enabled_by_default
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
@@ -149,9 +171,6 @@ class Provider(BaseProvider):
         self.results = results
         self.icons = icons
         self.last_fetch_at = time.time()
-
-    def enabled_by_default(self) -> bool:  # noqa: D102
-        return True
 
     def hidden(self) -> bool:  # noqa: D102
         return False

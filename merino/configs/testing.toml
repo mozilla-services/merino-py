@@ -1,31 +1,25 @@
-# Configurations for CI, should be *only* used for CI.
+# Configurations for testing, should be *only* used for testing.
 # Configurations defined here will override the counterparts in `default.toml`.
 
-[ci]
+[testing]
 debug = true
 # For `list` or `table` settings, `dynaconf_merge` allows you to merge settings with the default
-# settings. This enables merge for the entire `development` environment.
+# settings. This enables merge for the entire `testing` environment.
 dynaconf_merge = true
 
-[ci.logging]
+[testing.metrics]
+dev_logger = true
+
+[testing.logging]
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 level = "DEBUG"
 format = "pretty"
 
-[ci.remote_settings]
-server = "http://kinto:8888"
-bucket = "main"
-collection = "quicksuggest"
-
-[ci.providers.adm]
+[testing.providers.adm]
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
-# The cron job should tick more frequently than `resync_interval_sec` so that
-# the resync failure can be retried soon.
-cron_interval_sec = 1
-resync_interval_sec = 2
-score = 0.3
+backend= "test"
 
-[ci.providers.wiki_fruit]
+[testing.providers.wiki_fruit]
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
