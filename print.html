@@ -367,7 +367,7 @@ Firefox preference <code>browser.urlbar.merino.enabled</code> to <code>true</cod
 will connect to the production environments. This is controlled with the
 <code>browser.urlbar.merino.endpointURL</code> preference. See below for other options.</p>
 <p>You can also query any of the endpoint URLs below with something like:</p>
-<pre><code class="language-sh">curl 'https://stage.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest?q=your+query'
+<pre><code class="language-sh">curl 'https://stagepy.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest?q=your+query'
 </code></pre>
 <h2 id="environments"><a class="header" href="#environments">Environments</a></h2>
 <h3 id="production"><a class="header" href="#production">Production</a></h3>
@@ -377,17 +377,11 @@ default. As of 2021-10-25, this server is not active yet.</p>
 <p>This environment only deploys manually as a result of operations triggering
 deploys.</p>
 <h3 id="stage"><a class="header" href="#stage">Stage</a></h3>
-<p><em>Endpoint URL</em>: <a href="https://stage.merinopy.nonprod.cloudops.mozgcp.net/api/v1/suggest">https://stage.merinopy.nonprod.cloudops.mozgcp.net/api/v1/suggest</a></p>
+<p><em>Endpoint URL</em>: <a href="https://stagepy.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest">https://stagepy.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest</a></p>
 <p>This environment is used for manual and load testing of the server. It is not
 guaranteed to be stable or available. It is used as a part of the deploy process
 to verify new releases before they got to production.</p>
 <p>This environment automatically deploys new tags on the Merino repository.</p>
-<h3 id="dev"><a class="header" href="#dev">Dev</a></h3>
-<p><em>Endpoint URL</em>: <a href="https://dev.merinopy.nonprod.cloudops.mozgcp.net/api/v1/suggest">https://dev.merinopy.nonprod.cloudops.mozgcp.net/api/v1/suggest</a></p>
-<p>This environment is unstable and is not guaranteed to work. It's primary use is
-as a development area for operations.</p>
-<p>This environment automatically deploys the latest commit to the <code>main</code> branch of
-the repository.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configuring-merino-operations"><a class="header" href="#configuring-merino-operations">Configuring Merino (Operations)</a></h1>
 <h2 id="settings"><a class="header" href="#settings">Settings</a></h2>
 <p>Merino's settings are managed via Dynaconf and can be specified in two ways: by a
@@ -879,14 +873,14 @@ CI. We run them manually to simulate real-world load on the Merino infrastructur
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-release-process"><a class="header" href="#the-release-process">The Release Process</a></h1>
 <p>This project currently follows a <a href="https://en.wikipedia.org/wiki/Continuous_delivery">Continuous Delivery</a> process, but it's gradually moving toward <a href="https://en.wikipedia.org/wiki/Continuous_deployment">Continuous Deployment</a>.</p>
 <p>Whenever a commit is pushed to this repository's <code>main</code> branch, the deployment pipeline kicks in, deploying the changeset to the <a href="dev/../firefox.html#stage"><code>stage</code> environment</a>.
-After the deployment is complete, accessing the <a href="https://stage.merino.nonprod.cloudops.mozgcp.net/__version__"><code>__version__</code> endpoint</a> will show the commit hash of the deployed version, which will eventually match to the one of the latest commit on the <code>main</code> branch (a node with an older version might still serve the request before it is shut down).</p>
+After the deployment is complete, accessing the <a href="https://stagepy.merino.nonprod.cloudops.mozgcp.net/__version__"><code>__version__</code> endpoint</a> will show the commit hash of the deployed version, which will eventually match to the one of the latest commit on the <code>main</code> branch (a node with an older version might still serve the request before it is shut down).</p>
 <h2 id="development-guidelines"><a class="header" href="#development-guidelines">Development Guidelines</a></h2>
 <p>Please see the <a href="dev/../../CONTRIBUTING.html">CONTRIBUTING.md</a> docs on commit guidelines and pull request best practices.</p>
 <h2 id="versioning"><a class="header" href="#versioning">Versioning</a></h2>
 <p>The commit hash of the deployed code is considered its version identifier. The commit hash can be retrieved locally via <code>git rev-parse HEAD</code>.</p>
 <h2 id="preventing-deployment-via-do-not-deploy"><a class="header" href="#preventing-deployment-via-do-not-deploy">Preventing deployment via [do not deploy]</a></h2>
 <p>Occasionally developers might want to prevent a commit from triggering the deployment pipeline. While this should be discouraged, there are some legitimate cases for doing so (e.g. docs only changes).
-In order to prevent the deployment of the code from a PR when merging to <code>main</code>, the <strong>title of that PR</strong> must contain the <code>[do not deploy]</code> text. When generating the merge commit for a branch within the GitHub UI, ensure that <code>[do not deploy]</code> is still present in the description, especially if you change or rename the PR later on. </p>
+In order to prevent the deployment of the code from a PR when merging to <code>main</code>, the <strong>title of that PR</strong> must contain the <code>[do not deploy]</code> text. When generating the merge commit for a branch within the GitHub UI, ensure that <code>[do not deploy]</code> is still present in the description, especially if you change or rename the PR later on.</p>
 <p>For example:</p>
 <pre><code># PR title (NOT the commit message)
 doc: Add documentation for the release process [do not deploy]
