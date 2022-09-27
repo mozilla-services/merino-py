@@ -23,10 +23,14 @@ repos:
     rev: 1.7.4
     hooks:
       - id: bandit
-        # skips asserts https://bandit.readthedocs.io/en/1.7.4/plugins/b101_assert_used.html#
+        # skips asserts
+        #   - https://bandit.readthedocs.io/en/latest/plugins/b101_assert_used.html#
+        #   - https://bandit.readthedocs.io/en/latest/plugins/b104_hardcoded_bind_all_interfaces.html
         args:
           - '--skip'
           - B101
+          - '--skip'
+          - B104
   - repo: 'https://github.com/pycqa/pydocstyle'
     rev: 6.1.1
     hooks:
