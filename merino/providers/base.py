@@ -1,6 +1,19 @@
 """Abstract class for Providers"""
 from abc import ABC, abstractmethod
-from typing import Any
+
+from pydantic import BaseModel, HttpUrl
+
+
+class BaseSuggestion(BaseModel):
+    """Base model for suggestions. Each provider should extend this class for
+    its specific suggestion model.
+    """
+
+    title: str
+    url: HttpUrl
+    provider: str
+    score: float
+    icon: str | None = None
 
 
 class BaseProvider(ABC):
@@ -19,7 +32,7 @@ class BaseProvider(ABC):
         ...
 
     @abstractmethod
-    async def query(self, query: str) -> list[dict[str, Any]]:
+    async def query(self, query: str) -> list[BaseSuggestion]:
         """Query against this provider.
 
         Args:

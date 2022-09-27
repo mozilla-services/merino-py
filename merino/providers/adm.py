@@ -4,13 +4,14 @@ import logging
 import time
 from asyncio import as_completed
 from enum import Enum, unique
-from typing import Any, Final, Protocol, cast
+from typing import Any, Final, Optional, Protocol, cast
 
 import httpx
+from pydantic import HttpUrl
 
 from merino import cron
 from merino.config import settings
-from merino.providers.base import BaseProvider
+from merino.providers.base import BaseProvider, BaseSuggestion
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,30 @@ class IABCategory(str, Enum):
 
 # Used whenever the `icon` field is missing from the suggestion payload.
 MISSING_ICON_ID: Final = "-1"
+
+
+class SponsoredSuggestion(BaseSuggestion):
+    """Model for sponsored suggestions."""
+
+    block_id: int
+    full_keyword: str
+    advertiser: str
+    impression_url: HttpUrl
+    click_url: HttpUrl
+
+
+class NonsponsoredSuggestion(BaseSuggestion):
+    """Model for nonsponsored suggestions.
+
+    Both `impression_url` and `click_url` are optional compared to
+    sponsored suggestions.
+    """
+
+    block_id: int
+    full_keyword: str
+    advertiser: str
+    impression_url: Optional[HttpUrl] = None
+    click_url: Optional[HttpUrl] = None
 
 
 class Provider(BaseProvider):
@@ -185,19 +210,22 @@ class Provider(BaseProvider):
         """Provide suggestion for a given query."""
         if (id := self.suggestions.get(q)) is not None:
             res = self.results[id]
+            is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
+            suggestion_dict = {
+                "block_id": res.get("id"),
+                "full_keyword": q,
+                "title": res.get("title"),
+                "url": res.get("url"),
+                "impression_url": res.get("impression_url"),
+                "click_url": res.get("click_url"),
+                "provider": self.name,
+                "advertiser": res.get("advertiser"),
+                "icon": self.icons.get(int(res.get("icon", MISSING_ICON_ID))),
+                "score": self.score,
+            }
             return [
-                {
-                    "block_id": res.get("id"),
-                    "full_keyword": q,
-                    "title": res.get("title"),
-                    "url": res.get("url"),
-                    "impression_url": res.get("impression_url"),
-                    "click_url": res.get("click_url"),
-                    "provider": self.name,
-                    "advertiser": res.get("advertiser"),
-                    "is_sponsored": res.get("iab_category") == IABCategory.SHOPPING,
-                    "icon": self.icons.get(int(res.get("icon", MISSING_ICON_ID))),
-                    "score": self.score,
-                }
+                SponsoredSuggestion(**suggestion_dict)
+                if is_sponsored
+                else NonsponsoredSuggestion(**suggestion_dict)
             ]
         return []

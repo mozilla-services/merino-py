@@ -2,7 +2,25 @@ import asyncio
 from logging import LogRecord
 from typing import Any, Callable, Coroutine
 
-from merino.providers.base import BaseProvider
+from merino.providers.base import BaseProvider, BaseSuggestion
+
+
+class SponsoredSuggestion(BaseSuggestion):
+    """Model for sponsored suggestions."""
+
+    block_id: int
+    full_keyword: str
+    advertiser: str
+    impression_url: str
+    click_url: str
+
+
+class NonsponsoredSuggestion(BaseSuggestion):
+    """Model for nonsponsored suggestions."""
+
+    block_id: int
+    full_keyword: str
+    advertiser: str
 
 
 class SponsoredProvider(BaseProvider):
@@ -23,19 +41,18 @@ class SponsoredProvider(BaseProvider):
     async def query(self, q: str) -> list[dict[str, Any]]:
         if q.lower() == "sponsored":
             return [
-                {
-                    "block_id": 0,
-                    "full_keyword": "sponsored",
-                    "title": "sponsored title",
-                    "url": "https://www.sponsored.com",
-                    "impression_url": "https://www.sponsoredimpression.com",
-                    "click_url": "https://www.sponsoredclick.com",
-                    "provider": "test provider",
-                    "advertiser": "test advertiser",
-                    "is_sponsored": True,
-                    "icon": "https://www.sponsoredicon.com",
-                    "score": 0.5,
-                }
+                SponsoredSuggestion(
+                    block_id=0,
+                    full_keyword="sponsored",
+                    title="sponsored title",
+                    url="https://www.sponsored.com",
+                    impression_url="https://www.sponsoredimpression.com",
+                    click_url="https://www.sponsoredclick.com",
+                    provider="test provider",
+                    advertiser="test advertiser",
+                    icon="https://www.sponsoredicon.com",
+                    score=0.5,
+                )
             ]
         else:
             return []
@@ -59,17 +76,16 @@ class NonsponsoredProvider(BaseProvider):
     async def query(self, q: str) -> list[dict[str, Any]]:
         if q.lower() == "nonsponsored":
             return [
-                {
-                    "block_id": 0,
-                    "full_keyword": "nonsponsored",
-                    "title": "nonsponsored title",
-                    "url": "https://www.nonsponsored.com",
-                    "provider": "test provider",
-                    "advertiser": "test nonadvertiser",
-                    "is_sponsored": False,
-                    "icon": "https://www.nonsponsoredicon.com",
-                    "score": 0.5,
-                }
+                NonsponsoredSuggestion(
+                    block_id=0,
+                    full_keyword="nonsponsored",
+                    title="nonsponsored title",
+                    url="https://www.nonsponsored.com",
+                    provider="test provider",
+                    advertiser="test nonadvertiser",
+                    icon="https://www.nonsponsoredicon.com",
+                    score=0.5,
+                )
             ]
         else:
             return []

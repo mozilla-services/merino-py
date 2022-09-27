@@ -11,12 +11,7 @@ from fastapi.responses import JSONResponse
 from merino.metrics import get_metrics_client
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider
-from merino.web.models_v1 import (
-    NonsponsoredSuggestion,
-    ProviderResponse,
-    SponsoredSuggestion,
-    SuggestResponse,
-)
+from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 router = APIRouter()
 
@@ -68,14 +63,9 @@ async def suggest(
         metrics_client.timeit_task(p.query(q), f"providers.{p.name}.query")
         for p in search_from
     ]
-    results = await asyncio.gather(*lookups)
 
-    suggestions = [
-        SponsoredSuggestion(**suggestion)
-        if suggestion["is_sponsored"]
-        else NonsponsoredSuggestion(**suggestion)
-        for suggestion in chain(*results)
-    ]
+    suggestions_lists = await asyncio.gather(*lookups)
+    suggestions = [s for s in chain(*suggestions_lists)]
 
     response = SuggestResponse(
         suggestions=suggestions,

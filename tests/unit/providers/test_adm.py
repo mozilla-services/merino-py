@@ -11,7 +11,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from merino.config import settings
-from merino.providers.adm import Provider
+from merino.providers.adm import NonsponsoredSuggestion, Provider
 from tests.unit.web.util import filter_caplog
 
 
@@ -177,19 +177,18 @@ async def test_query_success(adm: Provider) -> None:
 
     res = await adm.query("banana")
     assert res == [
-        {
-            "block_id": 2,
-            "full_keyword": "banana",
-            "title": "Hello Banana",
-            "url": "https://example.org/target/banana",
-            "impression_url": None,
-            "click_url": "https://example.org/click/banana",
-            "provider": "adm",
-            "advertiser": "Example.org",
-            "is_sponsored": False,
-            "icon": "attachment-host/main-workspace/quicksuggest/icon-01",
-            "score": settings.providers.adm.score,
-        }
+        NonsponsoredSuggestion(
+            block_id=2,
+            full_keyword="banana",
+            title="Hello Banana",
+            url="https://example.org/target/banana",
+            impression_url=None,
+            click_url="https://example.org/click/banana",
+            provider="adm",
+            advertiser="Example.org",
+            icon="attachment-host/main-workspace/quicksuggest/icon-01",
+            score=settings.providers.adm.score,
+        )
     ]
 
 

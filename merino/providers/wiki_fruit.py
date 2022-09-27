@@ -1,7 +1,19 @@
 """A Suggestion provider that provides toy responses, meant for development and testing purposes"""
 from typing import Any
 
-from merino.providers.base import BaseProvider
+from pydantic import HttpUrl
+
+from merino.providers.base import BaseProvider, BaseSuggestion
+
+
+class Suggestion(BaseSuggestion):
+    """Model for the test provider."""
+
+    block_id: int
+    full_keyword: str
+    advertiser: str
+    impression_url: HttpUrl
+    click_url: HttpUrl
 
 
 class WikiFruitProvider(BaseProvider):
@@ -20,22 +32,20 @@ class WikiFruitProvider(BaseProvider):
         pass
 
     async def query(self, query: str) -> list[dict[str, Any]]:
-        """Provide wiki_fruit suggestsion based on query."""
+        """Provide wiki_fruit suggestions based on query."""
         if query not in ["apple", "banana", "cherry"]:
             return []
-
         return [
-            {
-                "block_id": 1,
-                "full_keyword": query,
-                "title": f"Wikipedia - {query.capitalize()}",
-                "url": f"https://en.wikipedia.org/wiki/{query.capitalize()}",
-                "impression_url": "https://127.0.0.1/",
-                "click_url": "https://127.0.0.1/",
-                "provider": "test_wiki_fruit",
-                "advertiser": "test_advertiser",
-                "is_sponsored": False,
-                "icon": "https://en.wikipedia.org/favicon.ico",
-                "score": 0,
-            }
+            Suggestion(
+                block_id=1,
+                full_keyword=query,
+                title=f"Wikipedia - {query.capitalize()}",
+                url=f"https://en.wikipedia.org/wiki/{query.capitalize()}",
+                impression_url="https://127.0.0.1/",
+                click_url="https://127.0.0.1/",
+                provider="test_wiki_fruit",
+                advertiser="test_advertiser",
+                icon="https://en.wikipedia.org/favicon.ico",
+                score=0,
+            )
         ]
