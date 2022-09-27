@@ -1,4 +1,5 @@
 """Logging configuration"""
+import sys
 from logging.config import dictConfig
 
 from merino.config import settings
@@ -37,6 +38,7 @@ def configure_logging() -> None:
                     "level": settings.logging.level,
                     "class": "logging.StreamHandler",
                     "formatter": "json",
+                    "stream": sys.stdout,
                 },
                 "console-pretty": {
                     "level": settings.logging.level,
@@ -47,6 +49,7 @@ def configure_logging() -> None:
                     "level": "ERROR",
                     "class": "logging.StreamHandler",
                     "formatter": "text",
+                    "stream": sys.stderr,
                 },
             },
             "loggers": {
