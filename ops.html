@@ -210,6 +210,14 @@ reveals all configuration, including any configured secrets.</p>
 either <code>pretty</code> or <code>mozlog</code> format. See <a href="../merino/config_logging.py">../config_logging.py</a>.</p>
 </li>
 </ul>
+<h3 id="caveat"><a class="header" href="#caveat">Caveat</a></h3>
+<p>Be extra careful whenever you need to reference those deeply nested settings
+(e.g. <code>settings.foo.bar.baz</code>) in the hot paths of the code base, such as middlewares
+or route handlers. Under the hood, Dynaconf will perform a dictionary lookup
+for each level of the configuration hierarchy. While it's harmless to do those
+lookups once or twice, it comes a surprisingly high overhead if accessing them
+repeatedly in the hot paths. You can cache those settings somewhere to mitigate
+this issue.</p>
 <h3 id="logging"><a class="header" href="#logging">Logging</a></h3>
 <p>Settings to control the format and amount of logs generated.</p>
 <ul>
