@@ -60,6 +60,15 @@ such as `config_sentry.py` or `config_logging.py`.
 - `format` (`MERINO_LOGGING__FORMAT`) - Controls the format of outputted logs in
   either `pretty` or `mozlog` format. See [../config_logging.py][log].
 
+### Caveat
+
+Be extra careful whenever you need to reference those deeply nested settings
+(e.g. `settings.foo.bar.baz`) in the hot paths of the code base, such as middlewares
+or route handlers. Under the hood, Dynaconf will perform a dictionary lookup
+for each level of the configuration hierarchy. While it's harmless to do those
+lookups once or twice, it comes a surprisingly high overhead if accessing them
+repeatedly in the hot paths. You can cache those settings somewhere to mitigate
+this issue.
 
 ### Logging
 
