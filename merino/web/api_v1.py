@@ -4,7 +4,7 @@ from itertools import chain
 
 from aiodogstatsd import Client
 from asgi_correlation_id.context import correlation_id
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
@@ -31,6 +31,7 @@ SUGGEST_RESPONSE = {
     response_model=SuggestResponse,
 )
 async def suggest(
+    request: Request,
     q: str,
     providers: str | None = None,
     client_variants: str | None = None,
@@ -60,7 +61,7 @@ async def suggest(
         search_from = default_providers
 
     lookups = [
-        metrics_client.timeit_task(p.query(q), f"providers.{p.name}.query")
+        metrics_client.timeit_task(p.handle_request(request), f"providers.{p.name}.query")
         for p in search_from
     ]
 

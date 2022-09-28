@@ -1,6 +1,5 @@
 """A Suggestion provider that provides toy responses, meant for development and testing purposes"""
-from typing import Any
-
+from fastapi import Request
 from pydantic import HttpUrl
 
 from merino.providers.base import BaseProvider, BaseSuggestion
@@ -31,7 +30,12 @@ class WikiFruitProvider(BaseProvider):
         """Initialize wiki fruit"""
         pass
 
-    async def query(self, query: str) -> list[dict[str, Any]]:
+    async def handle_request(self, request: Request) -> list[BaseSuggestion]:
+        """Provide suggestion for a given request."""
+        suggestions = await self.query(request.query_params.get("q", ""))
+        return suggestions
+
+    async def query(self, query: str) -> list[BaseSuggestion]:
         """Provide wiki_fruit suggestions based on query."""
         if query not in ["apple", "banana", "cherry"]:
             return []

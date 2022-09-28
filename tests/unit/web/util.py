@@ -2,6 +2,8 @@ import asyncio
 from logging import LogRecord
 from typing import Any, Callable, Coroutine
 
+from fastapi import Request
+
 from merino.providers.base import BaseProvider, BaseSuggestion
 
 
@@ -38,7 +40,8 @@ class SponsoredProvider(BaseProvider):
     def hidden(self) -> bool:
         return False
 
-    async def query(self, q: str) -> list[dict[str, Any]]:
+    async def handle_request(self, request: Request) -> list[BaseSuggestion]:
+        q = request.query_params.get("q", "")
         if q.lower() == "sponsored":
             return [
                 SponsoredSuggestion(
@@ -73,7 +76,8 @@ class NonsponsoredProvider(BaseProvider):
     def hidden(self) -> bool:
         return False
 
-    async def query(self, q: str) -> list[dict[str, Any]]:
+    async def handle_request(self, request: Request) -> list[BaseSuggestion]:
+        q = request.query_params.get("q", "")
         if q.lower() == "nonsponsored":
             return [
                 NonsponsoredSuggestion(
@@ -110,7 +114,8 @@ class CorruptProvider(BaseProvider):
     def hidden(self) -> bool:
         return False
 
-    async def query(self, q: str) -> list[dict[str, Any]]:
+    async def handle_request(self, request: Request) -> list[BaseSuggestion]:
+        q = request.query_params.get("q", "")
         raise RuntimeError(q)
 
 

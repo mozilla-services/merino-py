@@ -1,6 +1,7 @@
 """Abstract class for Providers"""
 from abc import ABC, abstractmethod
 
+from fastapi import Request
 from pydantic import BaseModel, HttpUrl
 
 
@@ -32,11 +33,11 @@ class BaseProvider(ABC):
         ...
 
     @abstractmethod
-    async def query(self, query: str) -> list[BaseSuggestion]:
+    async def handle_request(self, request: Request) -> list[BaseSuggestion]:
         """Query against this provider.
 
         Args:
-          - `query`: the query string.
+          - `request`: the `Request` object.
         """
         ...
 

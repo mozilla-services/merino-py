@@ -7,6 +7,7 @@ from enum import Enum, unique
 from typing import Any, Final, Optional, Protocol, cast
 
 import httpx
+from fastapi import Request
 from pydantic import HttpUrl
 
 from merino import cron
@@ -206,7 +207,12 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
-    async def query(self, q: str) -> list[dict[str, Any]]:
+    async def handle_request(self, request: Request) -> list[BaseSuggestion]:
+        """Provide suggestion for a given request."""
+        suggestions = await self.query(request.query_params.get("q", ""))
+        return suggestions
+
+    async def query(self, q: str) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         if (id := self.suggestions.get(q)) is not None:
             res = self.results[id]
