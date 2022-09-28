@@ -78,6 +78,9 @@ class Provider(BaseProvider):
     suggestions: dict[str, int] = {}
     results: list[dict[str, Any]] = []
     icons: dict[int, str] = {}
+    # Store the value to avoid fetching it from settings every time as that'd
+    # require a three-way dict lookup.
+    score: float = settings.providers.adm.score
     last_fetch_at: float
     cron_task: asyncio.Task
     backend: RemoteSettingsBackend
@@ -191,7 +194,7 @@ class Provider(BaseProvider):
                     "advertiser": res.get("advertiser"),
                     "is_sponsored": res.get("iab_category") == IABCategory.SHOPPING,
                     "icon": self.icons.get(int(res.get("icon", MISSING_ICON_ID))),
-                    "score": settings.providers.adm.score,
+                    "score": self.score,
                 }
             ]
         return []
