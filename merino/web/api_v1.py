@@ -32,7 +32,6 @@ SUGGEST_RESPONSE = {
 )
 async def suggest(
     request: Request,
-    q: str,
     providers: str | None = None,
     client_variants: str | None = None,
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
@@ -44,7 +43,7 @@ async def suggest(
     Query Merino for suggestions.
 
     Args:
-    - `q`: The query string
+    - `request`: The `Request` object
     - `client_variants`: [Optional] A comma separated string indicating the client variants
     - `providers`: [Optional] A comma separated string indicating the suggestion providers for
       this query

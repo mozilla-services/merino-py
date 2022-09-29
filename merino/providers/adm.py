@@ -8,7 +8,10 @@ from typing import Any, Final, Optional, Protocol, cast
 
 import httpx
 from fastapi import Request
+from fastapi.exceptions import RequestValidationError
 from pydantic import HttpUrl
+from pydantic.error_wrappers import ErrorWrapper
+from pydantic.errors import MissingError
 
 from merino import cron
 from merino.config import settings
@@ -209,7 +212,12 @@ class Provider(BaseProvider):
 
     async def handle_request(self, request: Request) -> list[BaseSuggestion]:
         """Provide suggestion for a given request."""
-        suggestions = await self.query(request.query_params.get("q", ""))
+        q = request.query_params.get("q")
+        if not q:
+            raise RequestValidationError(
+                [ErrorWrapper(MissingError(), loc=("query", "q"))]
+            )
+        suggestions = await self.query(q)
         return suggestions
 
     async def query(self, q: str) -> list[BaseSuggestion]:

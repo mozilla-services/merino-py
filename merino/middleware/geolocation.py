@@ -1,5 +1,6 @@
 """The middleware that parses geolocation from the client IP address."""
 import logging
+import os
 from contextvars import ContextVar
 from typing import Optional
 
@@ -23,6 +24,7 @@ class Location(BaseModel):
     region: Optional[str] = None
     city: Optional[str] = None
     dma: Optional[int] = None
+    postal_code: Optional[str] = None
 
 
 # A `ContextVar` to store the geolocation result.
@@ -51,8 +53,14 @@ class GeolocationMiddleware:
 
         request = Request(scope=scope)
         record = None
+
+        # The `MERINO_CLIENT_IP_OVERRIDE` environment variable can be set to
+        # facilitate manual testing during development.
+        ip_address = os.environ.get("MERINO_CLIENT_IP_OVERRIDE") or (
+            request.client.host or "" if request.client else ""
+        )
         try:
-            record = reader.city(request.client.host or "" if request.client else "")
+            record = reader.city(ip_address)
         except ValueError:
             logger.warning("Invalid IP address for geolocation parsing")
         except AddressNotFoundError:
@@ -64,6 +72,7 @@ class GeolocationMiddleware:
                 region=record.subdivisions[0].iso_code,
                 city=record.city.names["en"],
                 dma=record.location.metro_code,
+                postal_code=record.postal.code if record.postal else None,
             )
             if record
             else Location()

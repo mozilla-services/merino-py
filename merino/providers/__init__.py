@@ -7,6 +7,7 @@ from timeit import default_timer as timer
 from merino import metrics
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
+from merino.providers.accuweather import Provider as AccuWeatherProvider
 from merino.providers.adm import Provider as AdmProvider
 from merino.providers.adm import TestBackend
 from merino.providers.base import BaseProvider
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 class ProviderType(str, Enum):
     """Enum for provider type."""
 
+    ACCUWEATHER = "accuweather"
     ADM = "adm"
     WIKI_FRUIT = "wiki_fruit"
 
@@ -38,6 +40,11 @@ async def init_providers() -> None:
     # register providers
     for provider_type, setting in settings.providers.items():
         match provider_type:
+            case ProviderType.ACCUWEATHER:
+                providers["accuweather"] = AccuWeatherProvider(
+                    enabled_by_default=setting.enabled_by_default,
+                )
+                pass
             case ProviderType.ADM:
                 providers["adm"] = AdmProvider(
                     backend=(

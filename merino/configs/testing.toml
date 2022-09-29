@@ -15,6 +15,10 @@ dev_logger = true
 level = "DEBUG"
 format = "pretty"
 
+[testing.providers.accuweather]
+# Whether or not this provider is enabled by default.
+enabled_by_default = false
+
 [testing.providers.adm]
 # Whether or not this provider is enabled by default.
 enabled_by_default = true

@@ -54,6 +54,15 @@ env = "dev"
 # A setting for the tracing sample rate. Should be a float in range [0, 1.0].
 traces_sample_rate = 0.1
 
+[default.providers.accuweather]
+enabled_by_default = false
+score = 0.3
+api_base_url = "https://apidev.accuweather.com"
+api_param_key = "apikey"
+api_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
+api_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"
+api_postalcodes_param_query = "q"
+
 [default.providers.adm]
 # Whether or not this provider is enabled by default.
 enabled_by_default = true

@@ -16,7 +16,7 @@ async def test_init_providers() -> None:
 
     providers, default_providers = get_providers()
 
-    assert len(providers) == 2
+    assert len(providers) == 3
     assert ProviderType.ADM in providers
     assert ProviderType.WIKI_FRUIT in providers
 

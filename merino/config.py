@@ -8,6 +8,7 @@ _validators = [
     Validator("metrics.host", is_type_of=str),
     Validator("metrics.port", gte=0, is_type_of=int),
     Validator("metrics.dev_logger", is_type_of=bool),
+    Validator("providers.accuweather.enabled_by_default", is_type_of=bool),
     Validator("providers.adm.enabled_by_default", is_type_of=bool),
     Validator("providers.adm.cron_interval_sec", gt=0),
     Validator("providers.adm.resync_interval_sec", gt=0),
