@@ -3,9 +3,11 @@
 Note that Merino is a service made for Firefox users, this middleware only
 focuses on Firefox related user agents.
 """
+from contextvars import ContextVar
+
 from pydantic import BaseModel
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
+from starlette.datastructures import Headers
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from merino.util.user_agent_parsing import parse
 
@@ -25,16 +27,33 @@ class UserAgent(BaseModel):
     form_factor: str
 
 
-class UserAgentMiddleware(BaseHTTPMiddleware):
-    """A middleware to populate user agent information from the HTTP request header.
+# A `ContextVar` to store the user agent parsing result.
+ctxvar_user_agent: ContextVar[UserAgent] = ContextVar("merino_user_agent")
 
-    The parsed result `UserAgent` is stored in `Request.state.user_agent`.
+
+class UserAgentMiddleware:
+    """An ASGI middleware to parse and populate user agent information from
+    `User-Agent` header.
+
+    The user agent result `UserAgent` (if any) is stored in a `ContextVar` called
+    `merino_user_agent`.
     """
 
-    async def dispatch(self, request: Request, call_next):
-        """Provide user agent information before handling request"""
-        ua = parse(request.headers.get("User-Agent", ""))
+    def __init__(self, app: ASGIApp) -> None:
+        """Initialize."""
+        self.app = app
 
-        request.state.user_agent = UserAgent(**ua)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        """Parse user agent information through "User-Agent" and store the result
+        (if any) to the `ContextVar`.
+        """
+        if scope["type"] != "http":  # pragma: no cover
+            await self.app(scope, receive, send)
+            return
 
-        return await call_next(request)
+        ua = parse(Headers(scope=scope).get("User-Agent", ""))
+
+        ctxvar_user_agent.set(UserAgent(**ua))
+
+        await self.app(scope, receive, send)
+        return

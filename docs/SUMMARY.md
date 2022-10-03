@@ -11,5 +11,6 @@
 - [Working on the code](./dev/index.md)
   - [Dependencies](./dev/dependencies.md)
   - [Logging and Metrics](./dev/logging-and-metrics.md)
+  - [Middlewares](./dev/middlewares.md)
   - [Testing Strategies](./dev/testing.md)
   - [Release Process](./dev/release-process.md)
