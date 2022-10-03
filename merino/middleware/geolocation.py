@@ -1,13 +1,13 @@
 """The middleware that parses geolocation from the client IP address."""
 import logging
+from contextvars import ContextVar
 from typing import Optional
 
 import geoip2.database
 from geoip2.errors import AddressNotFoundError
 from pydantic import BaseModel
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from merino.config import settings
 
@@ -25,18 +25,31 @@ class Location(BaseModel):
     dma: Optional[int] = None
 
 
-class GeolocationMiddleware(BaseHTTPMiddleware):
-    """A middleware to populate geolocation from client's IP address.
+# A `ContextVar` to store the geolocation result.
+ctxvar_geolocation: ContextVar[Location] = ContextVar("merino_geolocation")
 
-    The geolocation result `Location` (if any) is stored in
-    `Request.state.location`.
+
+class GeolocationMiddleware:
+    """An ASGI middleware to parse and populate geolocation from client's IP
+    address.
+
+    The geolocation result `Location` (if any) is stored in a `ContextVar` called
+    `merino_geolocation`.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        """Provide Geolocation before handling request"""
-        # `request.client.host` should be the first remote client address of `X-Forwarded-For`.
+    def __init__(self, app: ASGIApp) -> None:
+        """Initialize."""
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Parse geolocation through client's IP address and store the result
+        (if any) to the `ContextVar`.
+        """
+        if scope["type"] != "http":  # pragma: no cover
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope=scope)
         record = None
         try:
             record = reader.city(request.client.host or "" if request.client else "")
@@ -45,7 +58,7 @@ class GeolocationMiddleware(BaseHTTPMiddleware):
         except AddressNotFoundError:
             pass
 
-        request.state.location = (
+        ctxvar_geolocation.set(
             Location(
                 country=record.country.iso_code,
                 region=record.subdivisions[0].iso_code,
@@ -56,4 +69,5 @@ class GeolocationMiddleware(BaseHTTPMiddleware):
             else Location()
         )
 
-        return await call_next(request)
+        await self.app(scope, receive, send)
+        return
