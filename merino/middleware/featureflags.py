@@ -1,17 +1,28 @@
 """The middleware that configures features flags for Merino"""
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from merino.featureflags import session_id_context
 
 
-class FeatureFlagsMiddleware(BaseHTTPMiddleware):
+class FeatureFlagsMiddleware:
     """Sets a ContextVar for session_id so that it can be used
     to consistently bucket flags within a search session.
     """
 
-    async def dispatch(self, request: Request, call_next):
+    def __init__(self, app: ASGIApp) -> None:
+        """Initialize."""
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Insert session id before handing request"""
+        if scope["type"] != "http":  # pragma: no cover
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope=scope)
         session_id = request.query_params.get("sid")
         session_id_context.set(session_id)
-        return await call_next(request)
+
+        await self.app(scope, receive, send)
+        return
