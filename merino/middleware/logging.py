@@ -48,6 +48,7 @@ class LoggingMiddleware:
                         "errno": 0,
                         "code": message["status"],
                         "time": datetime.fromtimestamp(time.time()).isoformat(),
+                        # Provided by the asgi-correlation-id middleware.
                         "rid": Headers(scope=message)["X-Request-ID"],
                         "session_id": request.query_params.get("sid"),
                         "sequence_no": int(seq)

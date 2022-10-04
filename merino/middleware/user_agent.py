@@ -43,7 +43,7 @@ class UserAgentMiddleware:
         """Initialize."""
         self.app = app
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Parse user agent information through "User-Agent" and store the result
         (if any) to the `ContextVar`.
         """
