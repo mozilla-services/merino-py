@@ -82,7 +82,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev/dependencies.html"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="dev/testing.html"><strong aria-hidden="true">5.3.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="dev/release-process.html"><strong aria-hidden="true">5.4.</strong> Release Process</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev/dependencies.html"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="dev/middlewares.html"><strong aria-hidden="true">5.3.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="dev/testing.html"><strong aria-hidden="true">5.4.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="dev/release-process.html"><strong aria-hidden="true">5.5.</strong> Release Process</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -856,6 +856,20 @@ concerns.</p>
 <em>cardinality</em>. The number of metric IDs we have and the combination of tag
 values that we supply. Often the number of individual events doesn't matter as
 much, since multiple events are aggregated together.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="middlwares"><a class="header" href="#middlwares">Middlwares</a></h1>
+<p>Merino leverages middleware for various functionalities such as logging, metrics,
+parsing for geolocation &amp; user agent, feature flags etc. Middleware is defined
+in the <code>merino/middleware</code> directory.</p>
+<h2 id="caveat-1"><a class="header" href="#caveat-1">Caveat</a></h2>
+<p>We currently don't implement middleware using the middleware facilities provided
+by FastAPI/Starlette as they've shown significant performance overhead, preventing
+Merino from achieving the SLOs required by Firefox Suggest.</p>
+<p>Before those performance issues get resolved in the upstream, we will be implementing
+middleware for Merino through the <a href="https://asgi.readthedocs.io/en/latest/specs/www.html">ASGI protocol</a>. You can also reference this
+<a href="https://florimond.dev/en/posts/2019/08/introduction-to-asgi-async-python-web/">tutorial</a> to learn more about ASGI. See Starlette's <a href="https://www.starlette.io/middleware/">middleware</a> document
+for more details about how to write pure ASGI middlewares. Specifically, we can reuse
+Starlette's data structures (<code>Request</code>, <code>Headers</code>, <code>QueryParams</code> etc.) to facilitate
+the implementation.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="testing-strategies"><a class="header" href="#testing-strategies">Testing strategies</a></h1>
 <p>There are three major testing strategies used in this repository: unit tests,
 Python contract tests, and Python load tests.</p>

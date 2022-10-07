@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Release Process - Merino Book</title>
+        <title>Middlewares - Merino Book</title>
 
 
         <!-- Custom HTML head -->
@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="../api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="../firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="../ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="../data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="../dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/dependencies.html"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="../dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="../dev/middlewares.html"><strong aria-hidden="true">5.3.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="../dev/testing.html"><strong aria-hidden="true">5.4.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="../dev/release-process.html" class="active"><strong aria-hidden="true">5.5.</strong> Release Process</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="../api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="../firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="../ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="../data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="../dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/dependencies.html"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="../dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="../dev/middlewares.html" class="active"><strong aria-hidden="true">5.3.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="../dev/testing.html"><strong aria-hidden="true">5.4.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="../dev/release-process.html"><strong aria-hidden="true">5.5.</strong> Release Process</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -142,59 +142,32 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="the-release-process"><a class="header" href="#the-release-process">The Release Process</a></h1>
-<p>This project currently follows a <a href="https://en.wikipedia.org/wiki/Continuous_delivery">Continuous Delivery</a> process, but it's gradually moving toward <a href="https://en.wikipedia.org/wiki/Continuous_deployment">Continuous Deployment</a>.</p>
-<p>Whenever a commit is pushed to this repository's <code>main</code> branch, the deployment pipeline kicks in, deploying the changeset to the <a href="../firefox.html#stage"><code>stage</code> environment</a>.
-After the deployment is complete, accessing the <a href="https://stagepy.merino.nonprod.cloudops.mozgcp.net/__version__"><code>__version__</code> endpoint</a> will show the commit hash of the deployed version, which will eventually match to the one of the latest commit on the <code>main</code> branch (a node with an older version might still serve the request before it is shut down).</p>
-<h2 id="development-guidelines"><a class="header" href="#development-guidelines">Development Guidelines</a></h2>
-<p>Please see the <a href="../../CONTRIBUTING.html">CONTRIBUTING.md</a> docs on commit guidelines and pull request best practices.</p>
-<h2 id="versioning"><a class="header" href="#versioning">Versioning</a></h2>
-<p>The commit hash of the deployed code is considered its version identifier. The commit hash can be retrieved locally via <code>git rev-parse HEAD</code>.</p>
-<h2 id="preventing-deployment-via-do-not-deploy"><a class="header" href="#preventing-deployment-via-do-not-deploy">Preventing deployment via [do not deploy]</a></h2>
-<p>Occasionally developers might want to prevent a commit from triggering the deployment pipeline. While this should be discouraged, there are some legitimate cases for doing so (e.g. docs only changes).
-In order to prevent the deployment of the code from a PR when merging to <code>main</code>, the <strong>title of that PR</strong> must contain the <code>[do not deploy]</code> text. When generating the merge commit for a branch within the GitHub UI, ensure that <code>[do not deploy]</code> is still present in the description, especially if you change or rename the PR later on.</p>
-<p>For example:</p>
-<pre><code># PR title (NOT the commit message)
-doc: Add documentation for the release process [do not deploy]
-</code></pre>
-<p>While the <code>[do not deploy]</code> can be anywhere in the title, it is recommended to place it at its end in order to better integrate with the current PR title practices and improve readability.</p>
-<p>The deployment pipeline will analyze the message of the merge commit (which will contain the PR title) and make a decision based on it.</p>
-<h2 id="releasing-to-production"><a class="header" href="#releasing-to-production">Releasing to production</a></h2>
-<p>Developers with write access to the Merino repository can initiate a deployment to production after a Pull-Request on the Merino GitHub repository is merged to the <code>main</code> branch.
-While any developer with write access can trigger the deployment to production, the <em>expectation</em> is that individual(s) who authored and merged the Pull-Request should do so, as they are the ones most familiar with their changes and who can tell, by looking at the data, if anything looks anomalous.
-In general authors should feel <em>responsible</em> for the changes they make and shepherd these changes through to deployment.</p>
-<p>Releasing to production can be done by:</p>
-<ol>
-<li>opening the <a href="https://app.circleci.com/pipelines/github/mozilla-services/merino?branch=main&amp;filter=all">CircleCI dashboard</a>;</li>
-<li>looking up the pipeline named <code>merino &lt;PR NUMBER&gt;</code> running in the <code>main-workflow</code>; this pipeline should either be in a running status (if the required test jobs are still running) or in the &quot;on hold&quot; status, with the <code>unhold-to-deploy-to-prod</code> being held;</li>
-<li>once in the &quot;on hold&quot; status, with all the other jobs successfully completed, clicking on the &quot;thumbs up&quot; action on the <code>unhold-to-deploy-to-prod</code> job row will approve it and trigger the deployment, unblocking the <code>deploy-to-prod</code> job;</li>
-<li>developers <strong>must</strong> monitor the <a href="https://earthangel-b40313e5.influxcloud.net/d/Cm83vS57z/merino-application-and-infrastructure?orgId=1&amp;refresh=1m">Merino Application &amp; Infrastructure</a> dashboard for any anomaly, for example significant changes in HTTP response codes, increase in latency, cpu/memory usage (most things under the infrastructure heading).</li>
-</ol>
-<h2 id="what-to-do-if-production-is-broken"><a class="header" href="#what-to-do-if-production-is-broken">What to do if production is broken?</a></h2>
-<p>Don't panic and follow the instructions below:</p>
-<ul>
-<li>depending on the severity of the problem, decide if this warrants <a href="https://mana.mozilla.org/wiki/pages/viewpage.action?pageId=150549987">kicking off an incident</a>;</li>
-<li>if the root cause of the problem can be identified in a relatively small time, create a PR for the fix.
-<ul>
-<li>verify the fix locally;</li>
-<li>verify the fix on <code>stage</code>, after it is reviewed by a Merino developer and merged;</li>
-<li><a href="#releasing-to-production">deploy it to production</a>.</li>
-</ul>
-</li>
-</ul>
-<p><strong>OR</strong></p>
-<ul>
-<li>if the root cause of the problem is harder to track down, revert the last commit and then <a href="#releasing-to-production">deploy the revert commit to production</a>.</li>
-</ul>
+                        <h1 id="middlwares"><a class="header" href="#middlwares">Middlwares</a></h1>
+<p>Merino leverages middleware for various functionalities such as logging, metrics,
+parsing for geolocation &amp; user agent, feature flags etc. Middleware is defined
+in the <code>merino/middleware</code> directory.</p>
+<h2 id="caveat"><a class="header" href="#caveat">Caveat</a></h2>
+<p>We currently don't implement middleware using the middleware facilities provided
+by FastAPI/Starlette as they've shown significant performance overhead, preventing
+Merino from achieving the SLOs required by Firefox Suggest.</p>
+<p>Before those performance issues get resolved in the upstream, we will be implementing
+middleware for Merino through the <a href="https://asgi.readthedocs.io/en/latest/specs/www.html">ASGI protocol</a>. You can also reference this
+<a href="https://florimond.dev/en/posts/2019/08/introduction-to-asgi-async-python-web/">tutorial</a> to learn more about ASGI. See Starlette's <a href="https://www.starlette.io/middleware/">middleware</a> document
+for more details about how to write pure ASGI middlewares. Specifically, we can reuse
+Starlette's data structures (<code>Request</code>, <code>Headers</code>, <code>QueryParams</code> etc.) to facilitate
+the implementation.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../dev/testing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../dev/logging-and-metrics.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
+                            <a rel="next" href="../dev/testing.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -202,10 +175,13 @@ In general authors should feel <em>responsible</em> for the changes they make an
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../dev/testing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../dev/logging-and-metrics.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
+                    <a rel="next" href="../dev/testing.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>
