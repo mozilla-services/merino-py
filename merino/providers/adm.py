@@ -93,6 +93,7 @@ class Provider(BaseProvider):
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
         self.backend = backend
+        self._name = "adm"
         self._enabled_by_default = enabled_by_default
         super().__init__(**kwargs)
 

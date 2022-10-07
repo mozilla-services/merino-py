@@ -55,7 +55,7 @@ async def init_providers() -> None:
                 raise InvalidProviderError(f"Unknown provider type: {provider_type}")
 
     # initialize providers and record time
-    init_metric = f"{__name__}.initialize"
+    init_metric = "providers.initialize"
     client = metrics.get_metrics_client()
     with client.timeit(init_metric):
         wrapped_tasks = [

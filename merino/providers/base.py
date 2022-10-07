@@ -6,6 +6,7 @@ from typing import Any
 class BaseProvider(ABC):
     """Abstract class for suggestion providers."""
 
+    _name: str
     _enabled_by_default: bool
 
     @abstractmethod
@@ -43,3 +44,7 @@ class BaseProvider(ABC):
             return "enabled_by_default"
         else:
             return "disabled_by_default"
+
+    def name(self) -> str:
+        """Return the name of the provider for use in logging and metrics"""
+        return self._name

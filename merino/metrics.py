@@ -16,6 +16,7 @@ def get_metrics_client() -> Client:
     return Client(
         host=settings.metrics.host,
         port=settings.metrics.port,
+        namespace="merino",
         constant_tags={"application": "merino-py"},
     )
 

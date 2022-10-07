@@ -13,6 +13,7 @@ class WikiFruitProvider(BaseProvider):
     def __init__(self, enabled_by_default: bool):
         """Init for WikiFruitProvider."""
         self._enabled_by_default = enabled_by_default
+        self._name = "wiki_fruit"
 
     async def initialize(self) -> None:
         """Initialize wiki fruit"""

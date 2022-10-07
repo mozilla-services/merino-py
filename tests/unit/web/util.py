@@ -12,6 +12,7 @@ class SponsoredProvider(BaseProvider):
 
     def __init__(self, enabled_by_default) -> None:
         self._enabled_by_default = enabled_by_default
+        self._name = "sponsored"
 
     async def initialize(self) -> None:
         ...
@@ -47,6 +48,7 @@ class NonsponsoredProvider(BaseProvider):
 
     def __init__(self, enabled_by_default) -> None:
         self._enabled_by_default = enabled_by_default
+        self._name = "non-sponsored"
 
     async def initialize(self) -> None:
         ...
@@ -79,6 +81,7 @@ class CorruptProvider(BaseProvider):
     """
 
     def __init__(self) -> None:
+        self._name = "corrupted"
         ...
 
     async def initialize(self) -> None:
