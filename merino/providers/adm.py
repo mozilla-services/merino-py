@@ -4,7 +4,7 @@ import logging
 import time
 from asyncio import as_completed
 from enum import Enum, unique
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 import httpx
 
@@ -30,7 +30,7 @@ class RemoteSettingsBackend(Protocol):
         ...
 
     async def fetch_attachment(
-        self, attachment_uri: Any
+        self, attachment_uri: str
     ) -> httpx.Response:  # pragma: no cover
         """Fetch the attachment for the given URI."""
         ...
@@ -43,11 +43,11 @@ class RemoteSettingsBackend(Protocol):
 class TestBackend:
     """A test backend that always returns empty results for tests."""
 
-    async def get(self, bucket: Any, collection: Any) -> list[dict[Any, Any]]:
+    async def get(self, bucket: str, collection: str) -> list[dict[str, Any]]:
         """Return fake records."""
         return []
 
-    async def fetch_attachment(self, attachment_uri: Any) -> httpx.Response:
+    async def fetch_attachment(self, attachment_uri: str) -> httpx.Response:
         """Return a fake attachment for the given URI."""
         return httpx.Response(200, text="")
 
@@ -124,9 +124,9 @@ class Provider(BaseProvider):
     def _should_fetch(self) -> bool:
         """Check if it should fetch data from Remote Settings."""
         return (
-            time.time() - self.last_fetch_at
-            >= settings.providers.adm.resync_interval_sec
-        )
+            cast(bool, (time.time() - self.last_fetch_at)
+                 >= settings.providers.adm.resync_interval_sec
+                 ))
 
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
