@@ -123,10 +123,11 @@ class Provider(BaseProvider):
 
     def _should_fetch(self) -> bool:
         """Check if it should fetch data from Remote Settings."""
-        return (
-            cast(bool, (time.time() - self.last_fetch_at)
-                 >= settings.providers.adm.resync_interval_sec
-                 ))
+        return cast(
+            bool,
+            (time.time() - self.last_fetch_at)
+            >= settings.providers.adm.resync_interval_sec,
+        )
 
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""

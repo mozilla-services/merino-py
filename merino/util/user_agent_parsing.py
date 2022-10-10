@@ -1,5 +1,5 @@
 """A utility module for user agent parsing."""
-from typing import Any, cast
+from typing import Any
 
 from ua_parser import user_agent_parser
 
