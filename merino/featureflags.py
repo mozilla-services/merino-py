@@ -15,8 +15,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-
+reveal_locals()
 # Configuration and schema
+
+
 def _dynaconf_loader() -> Any:
     return Dynaconf(
         root_path="merino",

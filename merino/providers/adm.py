@@ -4,7 +4,7 @@ import logging
 import time
 from asyncio import as_completed
 from enum import Enum, unique
-from typing import Any, Protocol, cast
+from typing import Any, Protocol, cast, Final
 
 import httpx
 
@@ -64,12 +64,12 @@ class IABCategory(str, Enum):
     sponsored suggestions. Otherwise, they're nonsponsored.
     """
 
-    SHOPPING = "22 - Shopping"
-    EDUCATION = "5 - Education"
+    SHOPPING: Final = "22 - Shopping"
+    EDUCATION: Final = "5 - Education"
 
 
 # Used whenever the `icon` field is missing from the suggestion payload.
-MISSING_ICON_ID = "-1"
+MISSING_ICON_ID: Final = "-1"
 
 
 class Provider(BaseProvider):
@@ -125,7 +125,7 @@ class Provider(BaseProvider):
         """Check if it should fetch data from Remote Settings."""
         return cast(
             bool,
-            (time.time() - self.last_fetch_at)
+            time.time() - self.last_fetch_at
             >= settings.providers.adm.resync_interval_sec,
         )
 
