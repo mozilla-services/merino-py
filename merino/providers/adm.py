@@ -4,7 +4,7 @@ import logging
 import time
 from asyncio import as_completed
 from enum import Enum, unique
-from typing import Any, Protocol, cast, Final
+from typing import Any, Final, Protocol, cast
 
 import httpx
 
