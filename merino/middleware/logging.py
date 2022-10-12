@@ -60,10 +60,10 @@ class LoggingMiddleware:
                         "dma": location.dma,
                         "client_variants": request.query_params.get(
                             "client_variants", ""
-                        ).split(","),
+                        ),
                         "requested_providers": request.query_params.get(
                             "providers", ""
-                        ).split(","),
+                        ),
                         "browser": ua.browser,
                         "os_family": ua.os_family,
                         "form_factor": ua.form_factor,

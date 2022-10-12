@@ -92,9 +92,11 @@ def test_suggest_request_logs_contain_required_info(mocker, caplog):
     sid = "deadbeef-0000-1111-2222-333344445555"
     seq = 0
     client_variants = "foo,bar"
+    providers = "pro,vider"
     root_path = "/api/v1/suggest"
     client.get(
-        f"{root_path}?q={query}&sid={sid}&seq={seq}&client_variants={client_variants}"
+        f"{root_path}?q={query}&sid={sid}&seq={seq}"
+        f"&client_variants={client_variants}&providers={providers}"
     )
 
     records = filter_caplog(caplog.records, "web.suggest.request")
@@ -104,15 +106,16 @@ def test_suggest_request_logs_contain_required_info(mocker, caplog):
     record = records[0]
 
     assert record.name == "web.suggest.request"
-    assert record.sensitive is True
-    assert record.path == root_path
-    assert record.session_id == sid
-    assert record.sequence_no == seq
-    assert record.query == query
-    assert record.client_variants == ["foo", "bar"]
-    assert record.browser == "Other"
-    assert record.os_family == "other"
-    assert record.form_factor == "other"
+    assert record.__dict__["sensitive"] is True
+    assert record.__dict__["path"] == root_path
+    assert record.__dict__["session_id"] == sid
+    assert record.__dict__["sequence_no"] == seq
+    assert record.__dict__["query"] == query
+    assert record.__dict__["client_variants"] == client_variants
+    assert record.__dict__["requested_providers"] == providers
+    assert record.__dict__["browser"] == "Other"
+    assert record.__dict__["os_family"] == "other"
+    assert record.__dict__["form_factor"] == "other"
 
 
 def test_non_suggest_request_logs_contain_required_info(mocker, caplog):
@@ -133,6 +136,6 @@ def test_non_suggest_request_logs_contain_required_info(mocker, caplog):
     record = records[0]
 
     assert record.name == "request.summary"
-    assert "country" not in record.args
-    assert "session_id" not in record.args
-    assert record.path == "/__heartbeat__"
+    assert "country" not in record.__dict__["args"]
+    assert "session_id" not in record.__dict__["args"]
+    assert record.__dict__["path"] == "/__heartbeat__"
