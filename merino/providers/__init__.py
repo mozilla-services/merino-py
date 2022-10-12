@@ -45,11 +45,12 @@ async def init_providers() -> None:
                         if setting.backend == "remote-settings"
                         else TestBackend()
                     ),
+                    name=provider_type,
                     enabled_by_default=setting.enabled_by_default,
                 )
             case ProviderType.WIKI_FRUIT:
                 providers["wiki_fruit"] = WikiFruitProvider(
-                    enabled_by_default=setting.enabled_by_default
+                    name=provider_type, enabled_by_default=setting.enabled_by_default
                 )
             case _:
                 raise InvalidProviderError(f"Unknown provider type: {provider_type}")

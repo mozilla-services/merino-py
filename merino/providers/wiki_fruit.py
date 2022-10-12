@@ -10,10 +10,10 @@ class WikiFruitProvider(BaseProvider):
     Shouldn't be used in production.
     """
 
-    def __init__(self, enabled_by_default: bool):
+    def __init__(self, name: str, enabled_by_default: bool):
         """Init for WikiFruitProvider."""
         self._enabled_by_default = enabled_by_default
-        self._name = "wiki_fruit"
+        self._name = name
 
     async def initialize(self) -> None:
         """Initialize wiki fruit"""

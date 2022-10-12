@@ -45,6 +45,7 @@ class BaseProvider(ABC):
         else:
             return "disabled_by_default"
 
+    @property
     def name(self) -> str:
         """Return the name of the provider for use in logging and metrics"""
         return self._name
