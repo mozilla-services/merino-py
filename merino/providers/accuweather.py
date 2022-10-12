@@ -1,6 +1,5 @@
 """AccuWeather integration."""
 import logging
-import os
 from typing import Any, Optional
 from urllib.parse import urlencode, urlunparse
 
@@ -8,18 +7,10 @@ import httpx
 from fastapi import FastAPI, Request
 
 from merino.config import settings
+from merino.middleware.geolocation import ctxvar_geolocation
 from merino.providers.base import BaseProvider, BaseSuggestion
 
 logger = logging.getLogger(__name__)
-
-
-def get_value(d: dict, keys: list, default_value: Any = None) -> Any:
-    """Get a nested value in a sequence of dictionaries."""
-    for k in keys:
-        if d is None or not isinstance(d, dict):
-            return default_value
-        d = d.get(k)
-    return d
 
 
 class Suggestion(BaseSuggestion):
@@ -56,28 +47,20 @@ class Provider(BaseProvider):
 
     async def handle_request(self, request: Request) -> list[BaseSuggestion]:
         """Provide suggestions for a given request."""
-        api_key = os.environ.get("MERINO_ACCUWEATHER_API_KEY")
-        if api_key is None:
+        api_key = settings.providers.accuweather.api_key
+        if api_key == "":
             logger.warning("AccuWeather API key not specified")
             return []
 
-        country = None
-        postal_code = None
-        try:
-            country = request.state.location.country
-            postal_code = request.state.location.postal_code
-        except AttributeError:
-            logger.warning("Country and/or postal codes unknown")
-            return []
-
-        suggestions = await self.query(api_key, country, postal_code)
+        location = ctxvar_geolocation.get()
+        suggestions = await self.query(api_key, location.country, location.postal_code)
         return suggestions
 
     async def query(
         self, api_key: str, country: str, postal_code: str
     ) -> list[BaseSuggestion]:
         """Provide suggestions for a given postal code."""
-        base_url = settings.providers.accuweather.api_base_url
+        base_url = settings.providers.accuweather.url_base
         async with httpx.AsyncClient(app=self._app, base_url=base_url) as client:
             suggestions = await self._get_forecast(
                 client, api_key=api_key, country=country, postal_code=postal_code
@@ -94,12 +77,12 @@ class Provider(BaseProvider):
             (
                 "",
                 "",
-                aw.api_postalcodes_path.format(country_code=country),
+                aw.url_postalcodes_path.format(country_code=country),
                 "",
                 urlencode(
                     {
-                        aw.api_postalcodes_param_query: postal_code,
-                        aw.api_param_key: api_key,
+                        aw.url_postalcodes_param_query: postal_code,
+                        aw.url_param_key: api_key,
                     }
                 ),
                 "",
@@ -117,11 +100,11 @@ class Provider(BaseProvider):
             (
                 "",
                 "",
-                aw.api_forecasts_path.format(location_key=location_key),
+                aw.url_forecasts_path.format(location_key=location_key),
                 "",
                 urlencode(
                     {
-                        aw.api_param_key: api_key,
+                        aw.url_param_key: api_key,
                     }
                 ),
                 "",
@@ -133,22 +116,39 @@ class Provider(BaseProvider):
         except Exception:
             return []
 
-        return [
-            Suggestion(
-                title="Forecast",
-                url=forecast.get("Link"),
-                provider="accuweather",
-                score=aw.score,
-                icon=None,
-                city_name=location.get("LocalizedName"),
-                temperature_unit=get_value(
-                    forecast, ["Temperature", "Maximum", "Unit"]
-                ),
-                high=get_value(forecast, ["Temperature", "Maximum", "Value"]),
-                low=get_value(forecast, ["Temperature", "Minimum", "Value"]),
-                day_summary=get_value(forecast, ["Day", "IconPhrase"]),
-                day_precipitation=get_value(forecast, ["Day", "HasPrecipitation"]),
-                night_summary=get_value(forecast, ["Night", "IconPhrase"]),
-                night_precipitation=get_value(forecast, ["Night", "HasPrecipitation"]),
-            )
-        ]
+        match forecast:
+            case {
+                "Link": url,
+                "Temperature": {
+                    "Maximum": {"Value": high, "Unit": temperature_unit},
+                    "Minimum": {"Value": low},
+                },
+                "Day": {
+                    "IconPhrase": day_summary,
+                    "HasPrecipitation": day_precipitation,
+                },
+                "Night": {
+                    "IconPhrase": night_summary,
+                    "HasPrecipitation": night_precipitation,
+                },
+            }:
+                return [
+                    Suggestion(
+                        title="Forecast",
+                        url=url,
+                        provider="accuweather",
+                        score=aw.score,
+                        icon=None,
+                        city_name=location.get("LocalizedName"),
+                        temperature_unit=temperature_unit,
+                        high=high,
+                        low=low,
+                        day_summary=day_summary,
+                        day_precipitation=day_precipitation,
+                        night_summary=night_summary,
+                        night_precipitation=night_precipitation,
+                    )
+                ]
+
+        logger.warning("Unexpected AccuWeather response")
+        return []

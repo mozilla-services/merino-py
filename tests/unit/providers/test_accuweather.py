@@ -171,7 +171,7 @@ def test_hidden(accuweather: Provider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_success(accuweather: Provider) -> None:
+async def test_forecast_returned(accuweather: Provider) -> None:
     """Test for a successful query."""
 
     set_response_bodies()

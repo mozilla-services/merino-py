@@ -37,6 +37,8 @@ port = 8092
 [default.location]
 # Path to the MaxMindDB file. This should be overridden in production.
 maxmind_database = "./dev/GeoLite2-City-Test.mmdb"
+# This can be set to facilitate manual testing during development.
+client_ip_override = ""
 
 [default.remote_settings]
 server = "https://firefox.settings.services.mozilla.com"
@@ -57,11 +59,15 @@ traces_sample_rate = 0.1
 [default.providers.accuweather]
 enabled_by_default = false
 score = 0.3
-api_base_url = "https://apidev.accuweather.com"
-api_param_key = "apikey"
-api_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
-api_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"
-api_postalcodes_param_query = "q"
+# Our API key used to access the AccuWeather API.
+api_key = ""
+# The remainder of these variables are related to endpoint URLs.
+url_base = "https://apidev.accuweather.com"
+# The name of the query param whose value is the API key, not the key itself.
+url_param_key = "apikey"
+url_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
+url_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"
+url_postalcodes_param_query = "q"
 
 [default.providers.adm]
 # Whether or not this provider is enabled by default.

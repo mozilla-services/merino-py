@@ -1,6 +1,5 @@
 """The middleware that parses geolocation from the client IP address."""
 import logging
-import os
 from contextvars import ContextVar
 from typing import Optional
 
@@ -11,6 +10,8 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from merino.config import settings
+
+CLIENT_IP_OVERRIDE: str = settings.location.client_ip_override
 
 reader = geoip2.database.Reader(settings.location.maxmind_database)
 
@@ -53,10 +54,7 @@ class GeolocationMiddleware:
 
         request = Request(scope=scope)
         record = None
-
-        # The `MERINO_CLIENT_IP_OVERRIDE` environment variable can be set to
-        # facilitate manual testing during development.
-        ip_address = os.environ.get("MERINO_CLIENT_IP_OVERRIDE") or (
+        ip_address = CLIENT_IP_OVERRIDE or (
             request.client.host or "" if request.client else ""
         )
         try:
