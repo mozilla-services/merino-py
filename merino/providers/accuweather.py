@@ -47,23 +47,30 @@ class Provider(BaseProvider):
 
     async def handle_request(self, request: Request) -> list[BaseSuggestion]:
         """Provide suggestions for a given request."""
+        suggestions = await self.query()
+        return suggestions
+
+    async def query(self) -> list[BaseSuggestion]:
+        """Provide suggestions that don't depend on a client query string."""
         api_key = settings.providers.accuweather.api_key
         if api_key == "":
             logger.warning("AccuWeather API key not specified")
             return []
 
         location = ctxvar_geolocation.get()
-        suggestions = await self.query(api_key, location.country, location.postal_code)
-        return suggestions
+        country = location.country
+        postal_code = location.postal_code
+        if country is None or postal_code is None:
+            logger.warning("Country and/or postal code unknown")
+            return []
 
-    async def query(
-        self, api_key: str, country: str, postal_code: str
-    ) -> list[BaseSuggestion]:
-        """Provide suggestions for a given postal code."""
         base_url = settings.providers.accuweather.url_base
         async with httpx.AsyncClient(app=self._app, base_url=base_url) as client:
             suggestions = await self._get_forecast(
-                client, api_key=api_key, country=country, postal_code=postal_code
+                client,
+                api_key=api_key,
+                country=country,
+                postal_code=postal_code,
             )
             return suggestions
 

@@ -18,6 +18,10 @@ format = "pretty"
 [testing.providers.accuweather]
 # Whether or not this provider is enabled by default.
 enabled_by_default = false
+api_key = "test"
+# The URL in `url_base` isn't actually pinged during testing but we set it
+# anyway to make sure the production server isn't accidentally pinged.
+url_base = "test://test"
 
 [testing.providers.adm]
 # Whether or not this provider is enabled by default.
