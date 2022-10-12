@@ -29,7 +29,7 @@ class Suggestion(BaseSuggestion):
 class Provider(BaseProvider):
     """Suggestion provider for AccuWeather."""
 
-    _app: FastAPI
+    _app: Optional[FastAPI]
 
     def __init__(
         self, app: FastAPI = None, enabled_by_default: bool = False, **kwargs: Any
