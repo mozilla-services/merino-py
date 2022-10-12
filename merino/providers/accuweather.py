@@ -10,6 +10,19 @@ from merino.config import settings
 from merino.middleware.geolocation import ctxvar_geolocation
 from merino.providers.base import BaseProvider, BaseSuggestion
 
+API_KEY: str = settings.providers.accuweather.api_key
+CLIENT_IP_OVERRIDE: str = settings.location.client_ip_override
+SCORE: float = settings.providers.accuweather.score
+
+# Endpoint URL components
+URL_BASE: str = settings.providers.accuweather.url_base
+URL_PARAM_API_KEY: str = settings.providers.accuweather.url_param_api_key
+URL_POSTALCODES_PATH: str = settings.providers.accuweather.url_postalcodes_path
+URL_POSTALCODES_PARAM_QUERY: str = (
+    settings.providers.accuweather.url_postalcodes_param_query
+)
+URL_FORECASTS_PATH: str = settings.providers.accuweather.url_forecasts_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -52,8 +65,7 @@ class Provider(BaseProvider):
 
     async def query(self) -> list[BaseSuggestion]:
         """Provide suggestions that don't depend on a client query string."""
-        api_key = settings.providers.accuweather.api_key
-        if api_key == "":
+        if API_KEY == "":
             logger.warning("AccuWeather API key not specified")
             return []
 
@@ -64,32 +76,28 @@ class Provider(BaseProvider):
             logger.warning("Country and/or postal code unknown")
             return []
 
-        base_url = settings.providers.accuweather.url_base
-        async with httpx.AsyncClient(app=self._app, base_url=base_url) as client:
+        async with httpx.AsyncClient(app=self._app, base_url=URL_BASE) as client:
             suggestions = await self._get_forecast(
                 client,
-                api_key=api_key,
                 country=country,
                 postal_code=postal_code,
             )
             return suggestions
 
     async def _get_forecast(
-        self, client: httpx.AsyncClient, api_key: str, country: str, postal_code: str
+        self, client: httpx.AsyncClient, country: str, postal_code: str
     ) -> list[BaseSuggestion]:
-        aw = settings.providers.accuweather
-
         # Get the AccuWeather location key for the country and postal codes.
         location_url = urlunparse(
             (
                 "",
                 "",
-                aw.url_postalcodes_path.format(country_code=country),
+                URL_POSTALCODES_PATH.format(country_code=country),
                 "",
                 urlencode(
                     {
-                        aw.url_postalcodes_param_query: postal_code,
-                        aw.url_param_key: api_key,
+                        URL_PARAM_API_KEY: API_KEY,
+                        URL_POSTALCODES_PARAM_QUERY: postal_code,
                     }
                 ),
                 "",
@@ -107,11 +115,11 @@ class Provider(BaseProvider):
             (
                 "",
                 "",
-                aw.url_forecasts_path.format(location_key=location_key),
+                URL_FORECASTS_PATH.format(location_key=location_key),
                 "",
                 urlencode(
                     {
-                        aw.url_param_key: api_key,
+                        URL_PARAM_API_KEY: API_KEY,
                     }
                 ),
                 "",
@@ -144,7 +152,7 @@ class Provider(BaseProvider):
                         title="Forecast",
                         url=url,
                         provider="accuweather",
-                        score=aw.score,
+                        score=SCORE,
                         icon=None,
                         city_name=location.get("LocalizedName"),
                         temperature_unit=temperature_unit,
