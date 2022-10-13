@@ -1,37 +1,54 @@
-# Merino Contract Test Client
+# Merino Contract Tests - Client
 
 ## Overview
 
 This directory contains a Python-based test framework for the contract tests.
 The HTTP client used in the framework supports:
 
-* Requests to Kinto (Remote Settings) for record population.
-* Requests for suggestions from Merino, with response checks.
+* Requests to Kinto (Remote Settings) for record population
+* Requests for suggestions from Merino, with response checks
 
 For more details on contract test design, refer to the contract-tests
 [README][contract_tests_readme].
 
-## Scenarios
+### Scenarios
 
 The client is instructed on request and response check actions via scenarios,
 recorded in the `scenarios.yml` file. A scenario is defined by a name, a description
 and steps.
 
-### Steps
+#### Name
 
-#### Kinto Service
+A test name should identify the use case under test . Names are written in snake case
+with double-underscores `__` for scenario and behavior delineation.
+
+Example:
+`remote_settings__refresh`
+
+#### Description
+
+A test description should outline, in greater detail, the purpose of a test, meaning
+the feature or common user interaction being verified.
+
+Example:
+_Test that Merino successfully returns refreshed output in the cases of
+suggestion content updates and additions_
+
+#### Steps
+
+##### Kinto Service
 
 * The Kinto service scenario step populates the records used by the Merino service
 * Kinto `request` fields:
-  * `service` - Set the value to `kinto`, to direct requests to the Kinto service.
-  * `delay` - (optional) Set seconds to pause before execution of request.
+  * `service` - Set the value to `kinto`, to direct requests to the Kinto service
+  * `delay` - (optional) Set seconds to pause before execution of request
   * `filename` - Set the file with records to upload. The files are located in
-                 `..\volumes\kinto`.
-  * `data_type` - Set to `data` or `offline-expansion-data`.
+                 `..\volumes\kinto`
+  * `data_type` - Set to `data` or `offline-expansion-data`
 * A Kinto service scenario step will not check a `response` defined in the scenario,
-  but will raise an error in the event of an unexpected HTTP response.
-* All records populated by Kinto service scenario steps are deleted as part of the 
-  scenario teardown.
+  but will raise an error in the event of an unexpected HTTP response
+* All records populated by Kinto service scenario steps are deleted as part of the
+  scenario teardown
 
 Example:
 ```yaml
@@ -41,21 +58,21 @@ Example:
     data_type: "data"
 ```
 
-#### Merino Service
+##### Merino Service
 
 * The Merino service scenario step sends queries to merino and checks the validity of
-  the responses.
+  the responses
 * Merino `request` fields:
-  * `service` - Set the value to `merino`, to direct requests to the Merino service.
-  * `delay` - (optional) Set seconds to pause before execution of request.
-  * `method` - Set the HTTP request method.
-  * `path` - Set the query and parameters for the request method.
-  * `headers` - Set a list of HTTP request headers.
+  * `service` - Set the value to `merino`, to direct requests to the Merino service
+  * `delay` - (optional) Set seconds to pause before execution of request
+  * `method` - Set the HTTP request method
+  * `path` - Set the query and parameters for the request method
+  * `headers` - Set a list of HTTP request headers
 * Merino `response` fields:
-  * `status_code` - Set the expected HTTP response status code.
-  * `content` - Set a list of expected merino suggestion content.
+  * `status_code` - Set the expected HTTP response status code
+  * `content` - Set a list of expected merino suggestion content
     * The `request_id` is excluded from verification and can be set to `null` in the
-    scenario.
+    scenario
 
 Example:
 ```yaml
@@ -91,4 +108,81 @@ Example:
               score: 0.0
 ```
 
+## Local Execution
+
+To execute the test scenarios outside the client Docker container, create a python
+virtual environment, set environment variables, expose the Merino and Kinto API ports
+in the docker-compose.yml and use a pytest command. It is recommended to execute the
+tests within a Python virtual environment to prevent dependency cross contamination.
+
+1. Create a Virtual Environment
+
+    The [Developer documentation for working on Merino][merino_dev_docs], provides
+    instruction on creating a virtual environment via pyenv and installing all
+    requirements via poetry.
+
+2. Setup Environment Variables
+
+    The following environment variables are set in `docker-compose.yml`, but will
+    require local setup via command line, pytest.ini file or IDE configuration:
+    * `MERION_URL`: The URL of the Merino service
+      * Example: `MERINO_URL=http://localhost:8000`
+    * `KINTO_URL`: The URL of the Kinto service
+      * Example: `KINTO_URL=http://localhost:8888`
+    * `KINTO_ATTACHMENTS_URL`: The URL of the Kinto Attachments service
+      * Example: `KINTO_ATTACHMENTS_URL=http://localhost:80`
+    * `KINTO_BUCKET`: The ID of the Kinto bucket to create
+      * Example: `KINTO_BUCKET=main`
+    * `KINTO_COLLECTION`: The ID of the Kinto collection to create
+      * Example: `KINTO_COLLECTION=quicksuggest`
+    * `KINTO_DATA_DIR`: The directory containing advertiser data
+      * Example: `KINTO_DATA_DIR=tests/contract/volumes/kinto`
+    * `SCENARIOS_FILE`: The directory containing contract test scenario files
+      * Example: `SCENARIOS_FILE=tests/contract/volumes/client/scenarios.yml`
+
+3. Modify `tests/contract/docker-compose.yml`
+
+    In the `merino` definition, expose port 8000 by adding the following:
+    ```yaml
+    ports:
+      - "8000:8000"
+    ```
+
+    In the `kinto` definition, expose port 8888 by adding the following:
+    ```yaml
+    ports:
+      - "8888:8888"
+    ```
+
+    In the `kinto-attachments` definition, expose port 80 by adding the following:
+    ```yaml
+    ports:
+      - "80:80"
+    ```
+
+4. Run `merino`, `kinto-setup`, `kinto` and `kinto-attachment` docker containers.
+
+   Execute the following from the project root:
+   ```shell
+    docker-compose \
+      -f tests/contract/docker-compose.yml \
+      -p merino-py-contract-tests \
+      up merino
+   ```
+
+5. Run the contract tests
+
+    Execute the following from the project root:
+    ```shell
+    pytest tests/contract/client/tests/test_merino.py -vv
+    ```
+    * Tests can be run individually using [-k _expr_][pytest-k].
+
+      Example executing the `remote_settings__refresh` scenario:
+      ```shell
+      pytest tests/contract/client/tests/test_contile.py -vv -k remote_settings__refresh
+      ```
+
 [contract_tests_readme]: ../README.md
+[merino_dev_docs]: ../../../docs/dev/index.md
+[pytest-k]: https://docs.pytest.org/en/latest/example/markers.html#using-k-expr-to-select-tests-based-on-their-name
