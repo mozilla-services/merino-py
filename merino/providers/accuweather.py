@@ -3,7 +3,7 @@ import logging
 from typing import Any, Optional
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 
 from merino.config import settings
 from merino.middleware.geolocation import ctxvar_geolocation
@@ -62,13 +62,8 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
-    async def handle_request(self, request: Request) -> list[BaseSuggestion]:
-        """Provide suggestions for a given request."""
-        suggestions = await self.query()
-        return suggestions
-
-    async def query(self) -> list[BaseSuggestion]:
-        """Provide suggestions that don't depend on a client query string."""
+    async def query(self, q: str) -> list[BaseSuggestion]:
+        """Provide AccuWeather suggestions."""
         if API_KEY == "":
             logger.warning("AccuWeather API key not specified")
             return []

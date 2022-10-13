@@ -1,9 +1,5 @@
 """A Suggestion provider that provides toy responses, meant for development and testing purposes"""
-from fastapi import Request
-from fastapi.exceptions import RequestValidationError
 from pydantic import HttpUrl
-from pydantic.error_wrappers import ErrorWrapper
-from pydantic.errors import MissingError
 
 from merino.providers.base import BaseProvider, BaseSuggestion
 
@@ -32,16 +28,6 @@ class WikiFruitProvider(BaseProvider):
     async def initialize(self) -> None:
         """Initialize wiki fruit"""
         pass
-
-    async def handle_request(self, request: Request) -> list[BaseSuggestion]:
-        """Provide suggestion for a given request."""
-        q = request.query_params.get("q")
-        if not q:
-            raise RequestValidationError(
-                [ErrorWrapper(MissingError(), loc=("query", "q"))]
-            )
-        suggestions = await self.query(q)
-        return suggestions
 
     async def query(self, query: str) -> list[BaseSuggestion]:
         """Provide wiki_fruit suggestions based on query."""

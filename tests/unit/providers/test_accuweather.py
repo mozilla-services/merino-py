@@ -187,7 +187,7 @@ async def test_forecast_returned(accuweather: Provider) -> None:
 
     set_response_bodies()
 
-    res = await accuweather.query()
+    res = await accuweather.query("")
     assert res == [
         Suggestion(
             title="Forecast",
@@ -216,7 +216,7 @@ async def test_no_location_returned(accuweather: Provider) -> None:
 
     set_response_bodies(location=[])
 
-    res = await accuweather.query()
+    res = await accuweather.query("")
     assert res == []
 
 
@@ -226,7 +226,7 @@ async def test_no_forecast_returned(accuweather: Provider) -> None:
 
     set_response_bodies(forecast={})
 
-    res = await accuweather.query()
+    res = await accuweather.query("")
     assert res == []
 
 
@@ -243,7 +243,7 @@ async def test_invalid_location_key(accuweather: Provider) -> None:
         }
     )
 
-    res = await accuweather.query()
+    res = await accuweather.query("")
     assert res == []
 
 
@@ -263,7 +263,7 @@ async def test_no_client_country(accuweather: Provider) -> None:
 
     set_response_bodies()
 
-    res = await accuweather.query()
+    res = await accuweather.query("")
     assert res == []
 
 
@@ -283,7 +283,7 @@ async def test_no_client_postal_code(accuweather: Provider) -> None:
 
     set_response_bodies()
 
-    res = await accuweather.query()
+    res = await accuweather.query("")
     assert res == []
 
 
@@ -303,5 +303,5 @@ async def test_no_client_country_postal_code(accuweather: Provider) -> None:
 
     set_response_bodies()
 
-    res = await accuweather.query()
+    res = await accuweather.query("")
     assert res == []

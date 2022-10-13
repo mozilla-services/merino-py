@@ -56,8 +56,7 @@ def test_suggest_from_missing_providers(query):
 
 def test_no_query_string():
     response = client.get("/api/v1/suggest")
-    assert response.status_code == 200
-    assert len(response.json()["suggestions"]) == 0
+    assert response.status_code == 400
 
 
 def test_providers():
