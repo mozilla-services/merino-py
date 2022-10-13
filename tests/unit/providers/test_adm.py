@@ -12,7 +12,7 @@ from pytest_mock import MockerFixture
 
 from merino.config import settings
 from merino.providers.adm import NonsponsoredSuggestion, Provider
-from tests.unit.web.util import filter_caplog
+from tests.unit.web.util import filter_caplog, srequest
 
 
 class FakeBackend:
@@ -175,7 +175,7 @@ async def test_query_success(adm: Provider) -> None:
 
     await adm.initialize()
 
-    res = await adm.query("banana")
+    res = await adm.query(srequest("banana"))
     assert res == [
         NonsponsoredSuggestion(
             block_id=2,
@@ -199,4 +199,4 @@ async def test_query_with_missing_key(adm: Provider) -> None:
 
     await adm.initialize()
 
-    assert await adm.query("nope") == []
+    assert await adm.query(srequest("nope")) == []

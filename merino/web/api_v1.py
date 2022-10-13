@@ -7,10 +7,11 @@ from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from starlette.requests import Request
 
 from merino.metrics import get_metrics_client
 from merino.providers import get_providers
-from merino.providers.base import BaseProvider
+from merino.providers.base import BaseProvider, SuggestionRequest
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 router = APIRouter()
@@ -31,6 +32,7 @@ SUGGEST_RESPONSE = {
     response_model=SuggestResponse,
 )
 async def suggest(
+    request: Request,
     q: str,
     providers: str | None = None,
     client_variants: str | None = None,
@@ -59,8 +61,11 @@ async def suggest(
     else:
         search_from = default_providers
 
+    srequest = SuggestionRequest(
+        query=q, geolocation=request.scope["merino_geolocation"]
+    )
     lookups = [
-        metrics_client.timeit_task(p.query(q), f"providers.{p.name}.query")
+        metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
         for p in search_from
     ]
 

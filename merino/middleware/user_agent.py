@@ -3,8 +3,6 @@
 Note that Merino is a service made for Firefox users, this middleware only
 focuses on Firefox related user agents.
 """
-from contextvars import ContextVar
-
 from pydantic import BaseModel
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -27,16 +25,12 @@ class UserAgent(BaseModel):
     form_factor: str
 
 
-# A `ContextVar` to store the user agent parsing result.
-ctxvar_user_agent: ContextVar[UserAgent] = ContextVar("merino_user_agent")
-
-
 class UserAgentMiddleware:
     """An ASGI middleware to parse and populate user agent information from
     `User-Agent` header.
 
-    The user agent result `UserAgent` (if any) is stored in a `ContextVar` called
-    `merino_user_agent`.
+    The user agent result `UserAgent` (if any) is stored in
+    `scope["merino_user_agent"]`.
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -45,7 +39,7 @@ class UserAgentMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Parse user agent information through "User-Agent" and store the result
-        (if any) to the `ContextVar`.
+        to scope.
         """
         if scope["type"] != "http":  # pragma: no cover
             await self.app(scope, receive, send)
@@ -53,7 +47,7 @@ class UserAgentMiddleware:
 
         ua = parse(Headers(scope=scope).get("User-Agent", ""))
 
-        ctxvar_user_agent.set(UserAgent(**ua))
+        scope["merino_user_agent"] = UserAgent(**ua)
 
         await self.app(scope, receive, send)
         return

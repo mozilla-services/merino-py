@@ -9,9 +9,6 @@ from starlette.datastructures import Headers
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from merino.middleware.geolocation import ctxvar_geolocation
-from merino.middleware.user_agent import ctxvar_user_agent
-
 # web.suggest.request is used for logs coming from the /suggest endpoint
 suggest_request_logger = logging.getLogger("web.suggest.request")
 # all other requests will be logged to request.summary
@@ -38,8 +35,8 @@ class LoggingMiddleware:
             if message["type"] == "http.response.start":
                 request = Request(scope=scope)
                 if PATTERN.match(request.url.path):
-                    location = ctxvar_geolocation.get()
-                    ua = ctxvar_user_agent.get()
+                    location = scope["merino_geolocation"]
+                    ua = scope["merino_user_agent"]
                     data = {
                         "sensitive": True,
                         "path": request.url.path,

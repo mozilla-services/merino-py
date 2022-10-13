@@ -6,8 +6,9 @@ import pytest
 from fastapi import APIRouter, FastAPI
 
 from merino.config import settings
-from merino.middleware.geolocation import Location, ctxvar_geolocation
+from merino.middleware.geolocation import Location
 from merino.providers.accuweather import Provider, Suggestion
+from merino.providers.base import SuggestionRequest
 
 default_location_body = [
     {
@@ -152,20 +153,21 @@ async def forecasts_daily_1day():
 app.include_router(router)
 
 
+@pytest.fixture(name="geolocation")
+def fixture_geolocation() -> Location:
+    """Return an test Location."""
+    return Location(
+        country="US",
+        region="CA",
+        city="San Francisco",
+        dma=807,
+        postal_code="94105",
+    )
+
+
 @pytest.fixture(name="accuweather")
 def fixture_accuweather() -> Provider:
     """Return an AccuWeather provider."""
-
-    ctxvar_geolocation.set(
-        Location(
-            country="US",
-            region="CA",
-            city="San Francisco",
-            dma=807,
-            postal_code="94105",
-        )
-    )
-
     return Provider(app)
 
 
@@ -182,12 +184,12 @@ def test_hidden(accuweather: Provider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_forecast_returned(accuweather: Provider) -> None:
+async def test_forecast_returned(accuweather: Provider, geolocation: Location) -> None:
     """Test for a successful query."""
 
     set_response_bodies()
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest("", geolocation))
     assert res == [
         Suggestion(
             title="Forecast",
@@ -212,27 +214,33 @@ async def test_forecast_returned(accuweather: Provider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_no_location_returned(accuweather: Provider) -> None:
+async def test_no_location_returned(
+    accuweather: Provider, geolocation: Location
+) -> None:
     """Test for a query that doesn't return a location."""
 
     set_response_bodies(location=[])
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest("", geolocation))
     assert res == []
 
 
 @pytest.mark.asyncio
-async def test_no_forecast_returned(accuweather: Provider) -> None:
+async def test_no_forecast_returned(
+    accuweather: Provider, geolocation: Location
+) -> None:
     """Test for a query that doesn't return a forecast for a valid location."""
 
     set_response_bodies(forecast={})
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest("", geolocation))
     assert res == []
 
 
 @pytest.mark.asyncio
-async def test_invalid_location_key(accuweather: Provider) -> None:
+async def test_invalid_location_key(
+    accuweather: Provider, geolocation: Location
+) -> None:
     """Test for a query that doesn't return a forecast due to an invalid
     location key."""
 
@@ -244,7 +252,7 @@ async def test_invalid_location_key(accuweather: Provider) -> None:
         }
     )
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest("", geolocation))
     assert res == []
 
 
@@ -252,19 +260,17 @@ async def test_invalid_location_key(accuweather: Provider) -> None:
 async def test_no_client_country(accuweather: Provider) -> None:
     """Test a client with an unknown country."""
 
-    ctxvar_geolocation.set(
-        Location(
-            country=None,
-            region=None,
-            city=None,
-            dma=None,
-            postal_code=94105,
-        )
+    geolocation = Location(
+        country=None,
+        region=None,
+        city=None,
+        dma=None,
+        postal_code=94105,
     )
 
     set_response_bodies()
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest("", geolocation))
     assert res == []
 
 
@@ -272,19 +278,17 @@ async def test_no_client_country(accuweather: Provider) -> None:
 async def test_no_client_postal_code(accuweather: Provider) -> None:
     """Test a client with an unknown postal code."""
 
-    ctxvar_geolocation.set(
-        Location(
-            country="US",
-            region="CA",
-            city="Some City",
-            dma=555,
-            postal_code=None,
-        )
+    geolocation = Location(
+        country="US",
+        region="CA",
+        city="Some City",
+        dma=555,
+        postal_code=None,
     )
 
     set_response_bodies()
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest("", geolocation))
     assert res == []
 
 
@@ -292,17 +296,15 @@ async def test_no_client_postal_code(accuweather: Provider) -> None:
 async def test_no_client_country_postal_code(accuweather: Provider) -> None:
     """Test a client with an unknown country and postal code."""
 
-    ctxvar_geolocation.set(
-        Location(
-            country=None,
-            region=None,
-            city=None,
-            dma=None,
-            postal_code=None,
-        )
+    geolocation = Location(
+        country=None,
+        region=None,
+        city=None,
+        dma=None,
+        postal_code=None,
     )
 
     set_response_bodies()
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest("", geolocation))
     assert res == []
