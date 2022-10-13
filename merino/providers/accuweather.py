@@ -48,10 +48,12 @@ class Provider(BaseProvider):
     def __init__(
         self,
         app: Optional[FastAPI] = None,
+        name: str = "accuweather",
         enabled_by_default: bool = False,
         **kwargs: Any
     ) -> None:
         self._app = app
+        self._name = name
         self._enabled_by_default = enabled_by_default
         super().__init__(**kwargs)
 
@@ -132,7 +134,7 @@ class Provider(BaseProvider):
                     Suggestion(
                         title="Forecast",
                         url=url,
-                        provider="accuweather",
+                        provider=self.name,
                         score=SCORE,
                         icon=None,
                         city_name=location.get("LocalizedName"),
