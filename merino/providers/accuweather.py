@@ -1,7 +1,6 @@
 """AccuWeather integration."""
 import logging
 from typing import Any, Optional
-from urllib.parse import urlencode, urlunparse
 
 import httpx
 from fastapi import FastAPI, Request
@@ -42,10 +41,15 @@ class Suggestion(BaseSuggestion):
 class Provider(BaseProvider):
     """Suggestion provider for AccuWeather."""
 
+    # In normal usage this is None, but tests can create the provider with a
+    # FastAPI instance to fetch mock responses from it. See `__init__()`.
     _app: Optional[FastAPI]
 
     def __init__(
-        self, app: FastAPI = None, enabled_by_default: bool = False, **kwargs: Any
+        self,
+        app: Optional[FastAPI] = None,
+        enabled_by_default: bool = False,
+        **kwargs: Any
     ) -> None:
         self._app = app
         self._enabled_by_default = enabled_by_default
@@ -88,45 +92,27 @@ class Provider(BaseProvider):
         self, client: httpx.AsyncClient, country: str, postal_code: str
     ) -> list[BaseSuggestion]:
         # Get the AccuWeather location key for the country and postal codes.
-        location_url = urlunparse(
-            (
-                "",
-                "",
-                URL_POSTALCODES_PATH.format(country_code=country),
-                "",
-                urlencode(
-                    {
-                        URL_PARAM_API_KEY: API_KEY,
-                        URL_POSTALCODES_PARAM_QUERY: postal_code,
-                    }
-                ),
-                "",
-            )
-        )
         try:
-            location_resp = await client.get(location_url)
+            location_resp = await client.get(
+                URL_POSTALCODES_PATH.format(country_code=country),
+                params={
+                    URL_PARAM_API_KEY: API_KEY,
+                    URL_POSTALCODES_PARAM_QUERY: postal_code,
+                },
+            )
             location = location_resp.json()[0]
             location_key = location["Key"]
         except Exception:
             return []
 
         # Get the forecast for the location key.
-        forecasts_url = urlunparse(
-            (
-                "",
-                "",
-                URL_FORECASTS_PATH.format(location_key=location_key),
-                "",
-                urlencode(
-                    {
-                        URL_PARAM_API_KEY: API_KEY,
-                    }
-                ),
-                "",
-            )
-        )
         try:
-            forecasts_resp = await client.get(forecasts_url)
+            forecasts_resp = await client.get(
+                URL_FORECASTS_PATH.format(location_key=location_key),
+                params={
+                    URL_PARAM_API_KEY: API_KEY,
+                },
+            )
             forecast = forecasts_resp.json()["DailyForecasts"][0]
         except Exception:
             return []
@@ -164,6 +150,6 @@ class Provider(BaseProvider):
                         night_precipitation=night_precipitation,
                     )
                 ]
-
-        logger.warning("Unexpected AccuWeather response")
-        return []
+            case _:
+                logger.warning("Unexpected AccuWeather response")
+                return []
