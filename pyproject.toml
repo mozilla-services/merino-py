@@ -26,6 +26,7 @@ warn_no_return = true
 warn_redundant_casts = true
 warn_return_any = true
 warn_unused_ignores = true
+warn_unreachable = true
 
 [tool.pydocstyle]
 match = "(?!test_).*\\.py"

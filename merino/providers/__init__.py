@@ -41,7 +41,7 @@ async def init_providers() -> None:
             case ProviderType.ADM:
                 providers["adm"] = AdmProvider(
                     backend=(
-                        LiveBackend()
+                        LiveBackend()  # type: ignore [arg-type]
                         if setting.backend == "remote-settings"
                         else TestBackend()
                     ),

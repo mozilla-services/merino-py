@@ -36,8 +36,8 @@ class _LocalDatagramLogger(DatagramProtocol):
     The purpose is to make it easy to see the metrics in development environments.
     """
 
-    def send(self, data: bytes):
+    def send(self, data: bytes) -> None:
         logger.debug("sending metrics", extra={"data": data.decode("utf8")})
 
-    def error_received(self, exc):
+    def error_received(self, exc) -> None:
         logger.exception(exc)

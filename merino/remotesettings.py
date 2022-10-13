@@ -1,5 +1,5 @@
 """A thin wrapper around the Remote Settings client."""
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urljoin
 
 import httpx
@@ -21,7 +21,7 @@ class LiveBackend:
     async def fetch_attachment_host(self) -> str:
         """Fetch the attachment host from the Remote Settings server."""
         server_info = await self.client.server_info()
-        return server_info["capabilities"]["attachments"]["base_url"]
+        return cast(str, server_info["capabilities"]["attachments"]["base_url"])
 
     async def get(self, bucket: str, collection: str) -> list[dict[str, Any]]:
         """Get records from Remote Settings server.
@@ -30,9 +30,12 @@ class LiveBackend:
           - `collection`: the collection name
           -  `bucket`: the bucket name
         """
-        return await self.client.get_records(collection=collection, bucket=bucket)
+        return cast(
+            list[dict[str, Any]],
+            await self.client.get_records(collection=collection, bucket=bucket),
+        )
 
-    async def fetch_attachment(self, attachment_uri) -> httpx.Response:
+    async def fetch_attachment(self, attachment_uri: str) -> httpx.Response:
         """Fetch an attachment from Remote Settings server for a given URI.
 
         Args:

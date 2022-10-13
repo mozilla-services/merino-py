@@ -1,21 +1,24 @@
 """Implementation of Feature Flags (feature toggles) for Merino"""
 import hashlib
 import logging
-from collections.abc import Iterable
 from contextvars import ContextVar
 from enum import Enum
 from random import randbytes
-from typing import Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from dynaconf import Dynaconf
 from pydantic import BaseModel, ConstrainedFloat
 from pydantic.types import OptionalIntFloat
 
+if TYPE_CHECKING:
+    from pydantic.typing import TupleGenerator
+
 logger = logging.getLogger(__name__)
 
-
 # Configuration and schema
-def _dynaconf_loader():
+
+
+def _dynaconf_loader() -> Any:
     return Dynaconf(
         root_path="merino",
         envvar_prefix="MERINO",
@@ -54,9 +57,9 @@ class FeatureFlagConfigs(BaseModel):
 
     flags: dict[str, Optional[FeatureFlag]]
 
-    def __iter__(self) -> Iterable[str]:
+    def __iter__(self) -> "TupleGenerator":
         """TODO"""
-        return iter(self.flags)
+        yield from self.flags.items()
 
     def __getitem__(self, flag_name) -> FeatureFlag | None:
         """TODO"""

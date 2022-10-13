@@ -1,4 +1,5 @@
 """Sentry Configuration"""
+
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
@@ -6,7 +7,7 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 from merino.config import settings
 
 
-def configure_sentry():  # pragma: no cover
+def configure_sentry() -> None:  # pragma: no cover
     """Configure and initialize Sentry integration."""
     if settings.sentry.mode == "disabled":
         return
