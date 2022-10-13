@@ -21,7 +21,7 @@ class LiveBackend:
     async def fetch_attachment_host(self) -> str:
         """Fetch the attachment host from the Remote Settings server."""
         server_info = await self.client.server_info()
-        return str(server_info["capabilities"]["attachments"]["base_url"])
+        return cast(str, server_info["capabilities"]["attachments"]["base_url"])
 
     async def get(self, bucket: str, collection: str) -> list[dict[str, Any]]:
         """Get records from Remote Settings server.

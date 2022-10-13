@@ -1,5 +1,5 @@
 """A utility module for user agent parsing."""
-from typing import Any
+from typing import Any, cast
 
 from ua_parser import user_agent_parser
 
@@ -29,7 +29,7 @@ def _parse_browser(user_agent: dict[str, Any]) -> str:
             return "Firefox" if major is None else f"Firefox({version.rstrip('.')})"
         case {"family": browser}:
             # Do not bother parsing the browser version for non-Firefox user agents.
-            return str(browser)
+            return cast(str, browser)
         case _:  # pragma: no cover
             return "Other"
 
