@@ -13,7 +13,7 @@ client = TestClient(app)
 def inject_providers():
     app.dependency_overrides[get_providers] = get_provider_factory(
         {
-            "wiki_fruit": WikiFruitProvider(enabled_by_default=True),
+            "wiki_fruit": WikiFruitProvider(name="wiki_fruit", enabled_by_default=True),
         }
     )
     yield

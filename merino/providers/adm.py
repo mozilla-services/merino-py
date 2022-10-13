@@ -88,11 +88,13 @@ class Provider(BaseProvider):
     def __init__(
         self,
         backend: RemoteSettingsBackend,
+        name: str = "adm",
         enabled_by_default: bool = True,
         **kwargs: Any,
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
         self.backend = backend
+        self._name = name
         self._enabled_by_default = enabled_by_default
         super().__init__(**kwargs)
 
@@ -190,7 +192,7 @@ class Provider(BaseProvider):
                     "url": res.get("url"),
                     "impression_url": res.get("impression_url"),
                     "click_url": res.get("click_url"),
-                    "provider": "adm",
+                    "provider": self.name,
                     "advertiser": res.get("advertiser"),
                     "is_sponsored": res.get("iab_category") == IABCategory.SHOPPING,
                     "icon": self.icons.get(int(res.get("icon", MISSING_ICON_ID))),
