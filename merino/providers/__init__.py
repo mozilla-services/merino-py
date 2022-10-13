@@ -42,6 +42,7 @@ async def init_providers() -> None:
         match provider_type:
             case ProviderType.ACCUWEATHER:
                 providers["accuweather"] = AccuWeatherProvider(
+                    name=provider_type,
                     enabled_by_default=setting.enabled_by_default,
                 )
             case ProviderType.ADM:
