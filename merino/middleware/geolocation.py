@@ -48,7 +48,7 @@ class GeolocationMiddleware:
         """Parse geolocation through client's IP address and store the result
         (if any) to the `ContextVar`.
         """
-        if scope["type"] != "http":  # pragma: no cover
+        if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 

@@ -58,6 +58,7 @@ class LoggingMiddleware:
                         "region": location.region,
                         "city": location.city,
                         "dma": location.dma,
+                        "postal_code": location.postal_code,
                         "client_variants": request.query_params.get(
                             "client_variants", ""
                         ),
