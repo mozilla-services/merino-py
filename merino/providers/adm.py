@@ -220,6 +220,7 @@ class Provider(BaseProvider):
                 "click_url": res.get("click_url"),
                 "provider": self.name,
                 "advertiser": res.get("advertiser"),
+                "is_sponsored": is_sponsored,
                 "icon": self.icons.get(int(res.get("icon", MISSING_ICON_ID))),
                 "score": self.score,
             }

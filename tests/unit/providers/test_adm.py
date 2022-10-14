@@ -186,6 +186,7 @@ async def test_query_success(adm: Provider) -> None:
             click_url="https://example.org/click/banana",
             provider="adm",
             advertiser="Example.org",
+            is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=settings.providers.adm.score,
         )

@@ -12,6 +12,7 @@ class BaseSuggestion(BaseModel):
     title: str
     url: HttpUrl
     provider: str
+    is_sponsored: bool
     score: float
     icon: str | None = None
 

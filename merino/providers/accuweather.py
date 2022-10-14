@@ -135,6 +135,7 @@ class Provider(BaseProvider):
                         title="Forecast",
                         url=url,
                         provider=self.name,
+                        is_sponsored=False,
                         score=SCORE,
                         icon=None,
                         city_name=location.get("LocalizedName"),

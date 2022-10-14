@@ -196,6 +196,7 @@ async def test_forecast_returned(accuweather: Provider) -> None:
                 "94103/daily-weather-forecast/39376_pc?day=1&lang=en-us"
             ),
             provider="accuweather",
+            is_sponsored=False,
             score=settings.providers.accuweather.score,
             icon=None,
             city_name="San Francisco",

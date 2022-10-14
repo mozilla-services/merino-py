@@ -41,8 +41,9 @@ class WikiFruitProvider(BaseProvider):
                 url=f"https://en.wikipedia.org/wiki/{query.capitalize()}",
                 impression_url="https://127.0.0.1/",
                 click_url="https://127.0.0.1/",
-                provider=self.name,
+                provider="test_wiki_fruit",
                 advertiser="test_advertiser",
+                is_sponsored=False,
                 icon="https://en.wikipedia.org/favicon.ico",
                 score=0,
             )

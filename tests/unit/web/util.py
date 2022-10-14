@@ -50,6 +50,7 @@ class SponsoredProvider(BaseProvider):
                     click_url="https://www.sponsoredclick.com",
                     provider="test provider",
                     advertiser="test advertiser",
+                    is_sponsored=True,
                     icon="https://www.sponsoredicon.com",
                     score=0.5,
                 )
@@ -83,6 +84,7 @@ class NonsponsoredProvider(BaseProvider):
                     url="https://www.nonsponsored.com",
                     provider="test provider",
                     advertiser="test nonadvertiser",
+                    is_sponsored=False,
                     icon="https://www.nonsponsoredicon.com",
                     score=0.5,
                 )
