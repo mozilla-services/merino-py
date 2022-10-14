@@ -1,5 +1,6 @@
 """Top Pick Navigational Queries Provider"""
 import logging
+import os
 from typing import Any, Optional
 
 # import httpx
@@ -9,6 +10,8 @@ from pydantic import HttpUrl
 from merino.config import settings
 from merino.providers.base import BaseProvider, BaseSuggestion
 
+SCORE: float = settings.providers.top_pick.score
+LOCAL_TOP_PICK_FILE: str = settings.providers.top_pick.top_pick_file_path
 logger = logging.getLogger(__name__)
 
 
@@ -20,6 +23,8 @@ class Suggestion(BaseSuggestion):
     full_keyword: str
     title: str
     is_sponsored_suggestion: bool
+    top_pick: bool
+    score: float
     impression_url: HttpUrl
     click_url: HttpUrl
 
@@ -56,6 +61,25 @@ class Provider(BaseProvider):
         """Initialize the provider."""
         ...
 
-    async def query(self, q: str) -> list[BaseSuggestion]:
-        """Provide Top Pick suggestions."""
+    def hidden(self) -> bool:  # noqa: D102
+        return False
+
+    async def query(self, query: str) -> list[BaseSuggestion]:
+        """Query Top Pick provider.
+
+        Args:
+            - `query`: the query string.
+        """
         ...
+
+    def read_domain_list(self, file: str) -> Any:
+        """Read local domain list file"""
+        if not os.path.exists(LOCAL_TOP_PICK_FILE):
+            logger.warning("Local file does not exist")
+            raise Exception
+        try:
+            with open(file, "r") as readfile:
+                domain_list = readfile.readlines()
+                return domain_list
+        except Exception as e:
+            return e
