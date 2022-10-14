@@ -43,8 +43,8 @@ Releasing to production can be done by:
 3. once in the "on hold" status, with all the other jobs successfully completed, clicking on the "thumbs up" action on the `unhold-to-deploy-to-prod` job row will approve it and trigger the deployment, unblocking the `deploy-to-prod` job;
 4. developers **must** monitor the [Merino Application & Infrastructure][merino_app_info] dashboard for any anomaly, for example significant changes in HTTP response codes, increase in latency, cpu/memory usage (most things under the infrastructure heading).
 
-[circleci_dashboard]: https://app.circleci.com/pipelines/github/mozilla-services/merino?branch=main&filter=all
-[merino_app_info]: https://earthangel-b40313e5.influxcloud.net/d/Cm83vS57z/merino-application-and-infrastructure?orgId=1&refresh=1m
+[circleci_dashboard]: https://app.circleci.com/pipelines/github/mozilla-services/merino-py?branch=main&filter=all
+[merino_app_info]: https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&from=now-24h&to=now&var-environment=prodpy&refresh=1m
 
 ## What to do if production is broken?
 Don't panic and follow the instructions below:
