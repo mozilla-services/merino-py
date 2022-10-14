@@ -14,3 +14,4 @@
   - [Middlewares](./dev/middlewares.md)
   - [Testing Strategies](./dev/testing.md)
   - [Release Process](./dev/release-process.md)
+  - [Profiling](./dev/profiling.md)
