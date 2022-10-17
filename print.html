@@ -362,9 +362,11 @@ or other internal uses. */</li>
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configuring-firefox-and-merino-environments"><a class="header" href="#configuring-firefox-and-merino-environments">Configuring Firefox and Merino Environments</a></h1>
-<p>As of Firefox 93.0, Merino is not enabled by default. To enable it, type <code>about:config</code> in the URL bar set the
-Firefox preference <code>browser.urlbar.merino.enabled</code> to <code>true</code>. By default, Merino
-will connect to the production environments. This is controlled with the
+<p>Merino has been enabled by default in Firefox. Though, you will need to enable
+the data sharing for Firefox Suggest to fully enable the feature. To enable it,
+type <code>about:config</code> in the URL bar set the Firefox preference
+<code>browser.urlbar.quicksuggest.dataCollection.enabled</code> to <code>true</code>. By default,
+Merino will connect to the production environments. This is controlled with the
 <code>browser.urlbar.merino.endpointURL</code> preference. See below for other options.</p>
 <p>You can also query any of the endpoint URLs below with something like:</p>
 <pre><code class="language-sh">curl 'https://stagepy.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest?q=your+query'
@@ -373,15 +375,12 @@ will connect to the production environments. This is controlled with the
 <h3 id="production"><a class="header" href="#production">Production</a></h3>
 <p><em>Endpoint URL</em>: <a href="https://merinopy.services.mozilla.com/api/v1/suggest">https://merinopy.services.mozilla.com/api/v1/suggest</a></p>
 <p>The primary environment for end users. Firefox is configured to use this by
-default. As of 2021-10-25, this server is not active yet.</p>
-<p>This environment only deploys manually as a result of operations triggering
-deploys.</p>
+default.</p>
 <h3 id="stage"><a class="header" href="#stage">Stage</a></h3>
 <p><em>Endpoint URL</em>: <a href="https://stagepy.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest">https://stagepy.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest</a></p>
 <p>This environment is used for manual and load testing of the server. It is not
 guaranteed to be stable or available. It is used as a part of the deploy process
 to verify new releases before they got to production.</p>
-<p>This environment automatically deploys new tags on the Merino repository.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configuring-merino-operations"><a class="header" href="#configuring-merino-operations">Configuring Merino (Operations)</a></h1>
 <h2 id="settings"><a class="header" href="#settings">Settings</a></h2>
 <p>Merino's settings are managed via Dynaconf and can be specified in two ways: by a
@@ -915,10 +914,10 @@ While any developer with write access can trigger the deployment to production, 
 In general authors should feel <em>responsible</em> for the changes they make and shepherd these changes through to deployment.</p>
 <p>Releasing to production can be done by:</p>
 <ol>
-<li>opening the <a href="https://app.circleci.com/pipelines/github/mozilla-services/merino?branch=main&amp;filter=all">CircleCI dashboard</a>;</li>
+<li>opening the <a href="https://app.circleci.com/pipelines/github/mozilla-services/merino-py?branch=main&amp;filter=all">CircleCI dashboard</a>;</li>
 <li>looking up the pipeline named <code>merino &lt;PR NUMBER&gt;</code> running in the <code>main-workflow</code>; this pipeline should either be in a running status (if the required test jobs are still running) or in the &quot;on hold&quot; status, with the <code>unhold-to-deploy-to-prod</code> being held;</li>
 <li>once in the &quot;on hold&quot; status, with all the other jobs successfully completed, clicking on the &quot;thumbs up&quot; action on the <code>unhold-to-deploy-to-prod</code> job row will approve it and trigger the deployment, unblocking the <code>deploy-to-prod</code> job;</li>
-<li>developers <strong>must</strong> monitor the <a href="https://earthangel-b40313e5.influxcloud.net/d/Cm83vS57z/merino-application-and-infrastructure?orgId=1&amp;refresh=1m">Merino Application &amp; Infrastructure</a> dashboard for any anomaly, for example significant changes in HTTP response codes, increase in latency, cpu/memory usage (most things under the infrastructure heading).</li>
+<li>developers <strong>must</strong> monitor the <a href="https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&amp;from=now-24h&amp;to=now&amp;var-environment=prodpy&amp;refresh=1m">Merino Application &amp; Infrastructure</a> dashboard for any anomaly, for example significant changes in HTTP response codes, increase in latency, cpu/memory usage (most things under the infrastructure heading).</li>
 </ol>
 <h2 id="what-to-do-if-production-is-broken"><a class="header" href="#what-to-do-if-production-is-broken">What to do if production is broken?</a></h2>
 <p>Don't panic and follow the instructions below:</p>

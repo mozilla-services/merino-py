@@ -165,10 +165,10 @@ While any developer with write access can trigger the deployment to production, 
 In general authors should feel <em>responsible</em> for the changes they make and shepherd these changes through to deployment.</p>
 <p>Releasing to production can be done by:</p>
 <ol>
-<li>opening the <a href="https://app.circleci.com/pipelines/github/mozilla-services/merino?branch=main&amp;filter=all">CircleCI dashboard</a>;</li>
+<li>opening the <a href="https://app.circleci.com/pipelines/github/mozilla-services/merino-py?branch=main&amp;filter=all">CircleCI dashboard</a>;</li>
 <li>looking up the pipeline named <code>merino &lt;PR NUMBER&gt;</code> running in the <code>main-workflow</code>; this pipeline should either be in a running status (if the required test jobs are still running) or in the &quot;on hold&quot; status, with the <code>unhold-to-deploy-to-prod</code> being held;</li>
 <li>once in the &quot;on hold&quot; status, with all the other jobs successfully completed, clicking on the &quot;thumbs up&quot; action on the <code>unhold-to-deploy-to-prod</code> job row will approve it and trigger the deployment, unblocking the <code>deploy-to-prod</code> job;</li>
-<li>developers <strong>must</strong> monitor the <a href="https://earthangel-b40313e5.influxcloud.net/d/Cm83vS57z/merino-application-and-infrastructure?orgId=1&amp;refresh=1m">Merino Application &amp; Infrastructure</a> dashboard for any anomaly, for example significant changes in HTTP response codes, increase in latency, cpu/memory usage (most things under the infrastructure heading).</li>
+<li>developers <strong>must</strong> monitor the <a href="https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&amp;from=now-24h&amp;to=now&amp;var-environment=prodpy&amp;refresh=1m">Merino Application &amp; Infrastructure</a> dashboard for any anomaly, for example significant changes in HTTP response codes, increase in latency, cpu/memory usage (most things under the infrastructure heading).</li>
 </ol>
 <h2 id="what-to-do-if-production-is-broken"><a class="header" href="#what-to-do-if-production-is-broken">What to do if production is broken?</a></h2>
 <p>Don't panic and follow the instructions below:</p>
