@@ -1,8 +1,10 @@
 # Configuring Firefox and Merino Environments
 
-As of Firefox 93.0, Merino is not enabled by default. To enable it, type `about:config` in the URL bar set the
-Firefox preference `browser.urlbar.merino.enabled` to `true`. By default, Merino
-will connect to the production environments. This is controlled with the
+Merino has been enabled by default in Firefox. Though, you will need to enable
+the data sharing for Firefox Suggest to fully enable the feature. To enable it,
+type `about:config` in the URL bar set the Firefox preference
+`browser.urlbar.quicksuggest.dataCollection.enabled` to `true`. By default,
+Merino will connect to the production environments. This is controlled with the
 `browser.urlbar.merino.endpointURL` preference. See below for other options.
 
 You can also query any of the endpoint URLs below with something like:
@@ -18,10 +20,7 @@ curl 'https://stagepy.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest?q=your+q
 *Endpoint URL*: <https://merinopy.services.mozilla.com/api/v1/suggest>
 
 The primary environment for end users. Firefox is configured to use this by
-default. As of 2021-10-25, this server is not active yet.
-
-This environment only deploys manually as a result of operations triggering
-deploys.
+default.
 
 ### Stage
 
@@ -30,5 +29,3 @@ deploys.
 This environment is used for manual and load testing of the server. It is not
 guaranteed to be stable or available. It is used as a part of the deploy process
 to verify new releases before they got to production.
-
-This environment automatically deploys new tags on the Merino repository.
