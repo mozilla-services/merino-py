@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 from pytest import LogCaptureFixture
-from starlette.types import Receive, Scope, Send
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from merino.middleware.geolocation import (
     GeolocationMiddleware,
@@ -20,7 +20,7 @@ from merino.middleware.geolocation import (
 def fixture_geolocation_middleware() -> GeolocationMiddleware:
     """Creates a GeolocationMiddleware object for test"""
 
-    asgiapp_mock = AsyncMock(spec="starlette.types.ASGIApp")
+    asgiapp_mock = AsyncMock(spec=ASGIApp)
     return GeolocationMiddleware(asgiapp_mock)
 
 
