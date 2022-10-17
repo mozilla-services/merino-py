@@ -55,6 +55,7 @@ class Provider(BaseProvider):
         self._app = app
         self._name = name
         self._enabled_by_default = enabled_by_default
+        self._is_top_pick = True
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:

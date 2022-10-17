@@ -84,5 +84,5 @@ score = 0.3
 [default.providers.top_pick]
 enabled_by_default = false
 score = 0.25
-top_pick = true
+is_top_pick = true
 top_pick_file_path = "/merino/providers/top_picks.json"
