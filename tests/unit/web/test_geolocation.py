@@ -17,7 +17,6 @@ def test_geolocation(mocker: Any, caplog: Any) -> None:
     expected_region = "WA"
     expected_city = "Milton"
     expected_dma = 819
-    expected_postal_code = "98354"
 
     mock_client = mocker.patch("fastapi.Request.client")
     mock_client.host = ip
@@ -34,7 +33,6 @@ def test_geolocation(mocker: Any, caplog: Any) -> None:
     assert record.__dict__["region"] == expected_region
     assert record.__dict__["city"] == expected_city
     assert record.__dict__["dma"] == expected_dma
-    assert record.__dict__["postal_code"] == expected_postal_code
 
 
 def test_geolocation_with_invalid_ip(mocker: Any, caplog: Any) -> None:
