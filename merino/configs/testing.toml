@@ -14,6 +14,7 @@ dev_logger = true
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 level = "DEBUG"
 format = "pretty"
+collect_location = true
 
 [testing.providers.accuweather]
 # Whether or not this provider is enabled by default.

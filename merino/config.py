@@ -5,6 +5,7 @@ from dynaconf import Dynaconf, Validator
 _validators = [
     Validator("logging.level", is_in=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     Validator("logging.format", is_in=["mozlog", "pretty"]),
+    Validator("logging.collection_location", is_type_of=bool),
     Validator("metrics.host", is_type_of=str),
     Validator("metrics.port", gte=0, is_type_of=int),
     Validator("metrics.dev_logger", is_type_of=bool),

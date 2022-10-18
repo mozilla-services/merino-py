@@ -21,6 +21,12 @@ def configure_logging() -> None:
     if settings.current_env.lower() == "production" and handler != ["console-mozlog"]:
         raise ValueError("Log format must be 'mozlog' in production")
 
+    if (
+        settings.current_env.lower() == "production"
+        and settings.logging.collect_location
+    ):
+        raise ValueError("`collect_location` should be `false` in production")
+
     dictConfig(
         {
             "version": 1,

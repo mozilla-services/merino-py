@@ -9,7 +9,8 @@ from starlette.datastructures import Headers
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from merino.middleware.geolocation import ctxvar_geolocation
+from merino.config import settings
+from merino.middleware.geolocation import Location, ctxvar_geolocation
 from merino.middleware.user_agent import ctxvar_user_agent
 
 # web.suggest.request is used for logs coming from the /suggest endpoint
@@ -19,6 +20,13 @@ logger = logging.getLogger("request.summary")
 
 # The path pattern for the suggest API
 PATTERN: Pattern = re.compile(r"/api/v[1-9]\d*/suggest$")
+
+# Whether or not to collect location data in the query log.
+COLLECT_LOCATION: bool = settings.logging.collect_location
+
+# A sentinel location object (all fields are `None`) used for location logging
+# in production.
+EMPTY_LOCATION: Location = Location()
 
 
 class LoggingMiddleware:
@@ -38,7 +46,11 @@ class LoggingMiddleware:
             if message["type"] == "http.response.start":
                 request = Request(scope=scope)
                 if PATTERN.match(request.url.path):
-                    location = ctxvar_geolocation.get()
+                    location = (
+                        EMPTY_LOCATION
+                        if not COLLECT_LOCATION
+                        else ctxvar_geolocation.get()
+                    )
                     ua = ctxvar_user_agent.get()
                     data = {
                         "sensitive": True,

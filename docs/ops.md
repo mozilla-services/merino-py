@@ -88,6 +88,11 @@ Settings to control the format and amount of logs generated.
   Each entry can be one of `CRITICAL`, `ERROR`, `WARN`, `INFO`,  or `DEBUG` (in
   increasing verbosity).
 
+- `logging.collect_location` (`MERINO_LOGGING__COLLECT_LOCATION`) - Whether or
+  not to collect location data in the query log. By the data collection policy
+  of Firefox Suggest, we shouldn't collect location data in the stage or production
+  environments.
+
 ### Metrics
 
 Settings for Statsd/Datadog style metrics reporting.

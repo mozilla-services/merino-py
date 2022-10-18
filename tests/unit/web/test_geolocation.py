@@ -35,6 +35,28 @@ def test_geolocation(mocker: Any, caplog: Any) -> None:
     assert record.__dict__["dma"] == expected_dma
 
 
+def test_geolocation_not_collected(mocker, caplog):
+    mocker.patch("merino.middleware.logging.COLLECT_LOCATION", False)
+
+    ip: str = "216.160.83.56"  # The IP address is taken from `GeoLite2-City-Test.mmdb`
+
+    mock_client = mocker.patch("fastapi.Request.client")
+    mock_client.host = ip
+
+    client.get("/api/v1/suggest?q=nope")
+
+    records = filter_caplog(caplog.records, "web.suggest.request")
+
+    assert len(records) == 1
+
+    record = records[0]
+
+    assert record.__dict__["country"] is None
+    assert record.__dict__["region"] is None
+    assert record.__dict__["city"] is None
+    assert record.__dict__["dma"] is None
+
+
 def test_geolocation_with_invalid_ip(mocker: Any, caplog: Any) -> None:
     mock_client = mocker.patch("fastapi.Request.client")
     mock_client.host = "invalid-ip"
