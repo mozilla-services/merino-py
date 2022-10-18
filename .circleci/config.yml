@@ -96,6 +96,7 @@ jobs:
       - image: cimg/base:2022.08
     steps:
       - checkout
+      - skip-if-do-not-deploy
       - setup_remote_docker:
           docker_layer_caching: true
       - write-version
@@ -125,6 +126,7 @@ jobs:
       - image: cimg/base:2022.08
     steps:
       - checkout
+      - skip-if-do-not-deploy
       - setup_remote_docker:
           docker_layer_caching: true
       - write-version
