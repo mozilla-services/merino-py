@@ -82,7 +82,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev/dependencies.html"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="dev/middlewares.html"><strong aria-hidden="true">5.3.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="dev/testing.html"><strong aria-hidden="true">5.4.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="dev/release-process.html"><strong aria-hidden="true">5.5.</strong> Release Process</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev/dependencies.html"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="dev/middlewares.html"><strong aria-hidden="true">5.3.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="dev/testing.html"><strong aria-hidden="true">5.4.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="dev/release-process.html"><strong aria-hidden="true">5.5.</strong> Release Process</a></li><li class="chapter-item expanded "><a href="dev/profiling.html"><strong aria-hidden="true">5.6.</strong> Profiling</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -147,7 +147,7 @@
 <p>Merino is a service that provides address bar suggestions to Firefox. Some of this content
 comes from third party providers. In this case, Merino serves as a privacy preserving
 buffer. User input in the address bar is handled by Merino and any clicked impression
-will be delegated to a Mozilla-controlled service which will then send an interaction 
+will be delegated to a Mozilla-controlled service which will then send an interaction
 ping if defined in the request and not to a provider directly. See API documentation
 for more details.</p>
 <h2 id="table-of-contents"><a class="header" href="#table-of-contents">Table of Contents</a></h2>
@@ -155,7 +155,7 @@ for more details.</p>
 <p><a href="./firefox.html">firefox.md - Firefox and Merino Environments</a> describes how to enable
 Merino in Firefox and lists the endpoints for the service in Production,
 State and Dev.</p>
-<p><a href="./ops.html">ops.md - Configuring Merino - Operations</a> describes configuration management 
+<p><a href="./ops.html">ops.md - Configuring Merino - Operations</a> describes configuration management
 of the project, Dynaconf setup, and the configuration of the HTTP server, logging, metrics, Remote Settings, and Sentry.</p>
 <p><a href="./data.html">data.md - Data, Metrics, Logging</a> describes all metrics and logs.</p>
 <p><a href="./dev/index.html">dev/index.md - Basic Developer Docs</a> describes basics of working on Merino.</p>
@@ -164,6 +164,7 @@ dependencies required for Merino.</p>
 <p><a href="./dev/logging-and-metrics.html">dev/logging-and-metrics.md - Logging and Metrics</a> describes metrics, logging, and telemetry.</p>
 <p><a href="./dev/release-process.html">dev/release-process.md - Release Process</a> describes the release process of Merino in detail.</p>
 <p><a href="./dev/testing.html">dev/testing.md - Testing</a> describes unit, integration, contract and load tests for Merino.</p>
+<p><a href="./dev/profiling.html">dev/profiling.md - Profiling</a> describes how to profile Merino to address performance issues.</p>
 <h2 id="about-the-name"><a class="header" href="#about-the-name">About the Name</a></h2>
 <p>This project drives an important part of Firefox's &quot;felt experience&quot;. That is,
 the feeling of using Firefox, hopefully in a delightful way. The word &quot;felt&quot; in
@@ -935,6 +936,40 @@ In general authors should feel <em>responsible</em> for the changes they make an
 <ul>
 <li>if the root cause of the problem is harder to track down, revert the last commit and then <a href="dev/release-process.html#releasing-to-production">deploy the revert commit to production</a>.</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="profiling"><a class="header" href="#profiling">Profiling</a></h1>
+<p>As Merino runs as a single-threaded application using the asyncio-based
+framework, it would be useful for engineers to get a good understanding
+about how Merino performs and where it spends time and memory doing what
+tasks to serve the requests. Local profiling offers us a way to look into
+those low-level details.</p>
+<p>We use <a href="https://github.com/plasma-umass/scalene">Scalene</a> as the profiler to conduct the profiling for Merino.
+It's very easy to use, offers extremely detailed (at the line level)
+insights with much lower overhead compared to other profilers.</p>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<p>To start the profiling, you can run the following to start Merino with
+Scalene:</p>
+<pre><code class="language-sh">$ make profile
+
+# or you can run it directly
+
+$ python -m scalene merino/main.py
+</code></pre>
+<p>Then you can send requests to Merino manually or through using other
+load testing tools. Once that's done, you can terminate the Merino
+application. It will automatically collect profiling outputs (CPU &amp; Memory)
+and open it in your browser.</p>
+<h2 id="understand-the-outputs"><a class="header" href="#understand-the-outputs">Understand the outputs</a></h2>
+<p>Out of the box, Scalene provides a very intuitive web interface to display
+the profiling outputs. It's organized at the file (module) level. For each
+file, it shows the CPU time and average memory usage for both the line profile
+and the function profile of that module. You can also click on specific columns
+to sort the lines or functions accordingly.</p>
+<p>For more details of how to read the outputs, you can reference Scalene's
+<a href="https://github.com/plasma-umass/scalene#output">documents</a>.</p>
+<p>Equipped with those insights, you can have a good understanding about the
+application, identify hotspots, bottlenecks, or other findings that are
+not easy to uncover by only reading the source code. And then, you can tweak
+or fix those issues, test or profile it again to verify if the fix is working.</p>
 
                     </main>
 

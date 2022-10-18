@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Dependencies - Merino Book</title>
+        <title>Profiling - Merino Book</title>
 
 
         <!-- Custom HTML head -->
@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="../api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="../firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="../ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="../data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="../dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/dependencies.html" class="active"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="../dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="../dev/middlewares.html"><strong aria-hidden="true">5.3.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="../dev/testing.html"><strong aria-hidden="true">5.4.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="../dev/release-process.html"><strong aria-hidden="true">5.5.</strong> Release Process</a></li><li class="chapter-item expanded "><a href="../dev/profiling.html"><strong aria-hidden="true">5.6.</strong> Profiling</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="../api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="../firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="../ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="../data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="../dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/dependencies.html"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="../dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="../dev/middlewares.html"><strong aria-hidden="true">5.3.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="../dev/testing.html"><strong aria-hidden="true">5.4.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="../dev/release-process.html"><strong aria-hidden="true">5.5.</strong> Release Process</a></li><li class="chapter-item expanded "><a href="../dev/profiling.html" class="active"><strong aria-hidden="true">5.6.</strong> Profiling</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -142,39 +142,49 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="development-dependencies"><a class="header" href="#development-dependencies">Development Dependencies</a></h1>
-<p>This project uses <a href="https://python-poetry.org/">Poetry</a> for dependency management. While you can use the
-vanilla virtualenv to set up the dev environment, we highly recommend to check
-out <a href="https://github.com/pyenv/pyenv">pyenv</a> and <a href="https://github.com/pyenv/pyenv-virtualenv">pyenv-virtualenv</a>, as they work nicely with Poetry.
-Follow the instructions to install <a href="https://github.com/pyenv/pyenv#installation">pyenv</a>, <a href="https://github.com/pyenv/pyenv-virtualenv#installation">pyenv-virtualenv</a>, and
-<a href="https://python-poetry.org/docs/#installation">poetry</a>.</p>
-<p>Feel free to browse the <a href="/pyproject.toml">pyproject.toml</a> file for a listing of dependencies
-and their versions.</p>
-<p>Once Poetry is installed, install all the dependencies:</p>
-<pre><code>$ poetry install
-</code></pre>
-<p>Add packages to project via poetry</p>
-<pre><code>$ poetry add &lt;package_name&gt;
-</code></pre>
-<p>After that you should be to run Merino as follows:</p>
-<pre><code>$ poetry run uvicorn merino.main:app --reload
+                        <h1 id="profiling"><a class="header" href="#profiling">Profiling</a></h1>
+<p>As Merino runs as a single-threaded application using the asyncio-based
+framework, it would be useful for engineers to get a good understanding
+about how Merino performs and where it spends time and memory doing what
+tasks to serve the requests. Local profiling offers us a way to look into
+those low-level details.</p>
+<p>We use <a href="https://github.com/plasma-umass/scalene">Scalene</a> as the profiler to conduct the profiling for Merino.
+It's very easy to use, offers extremely detailed (at the line level)
+insights with much lower overhead compared to other profilers.</p>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<p>To start the profiling, you can run the following to start Merino with
+Scalene:</p>
+<pre><code class="language-sh">$ make profile
 
-# Or you can fire up a poetry shell to make it shorter
-$ poetry shell
-$ uvicorn merino.main:app --reload
+# or you can run it directly
+
+$ python -m scalene merino/main.py
 </code></pre>
+<p>Then you can send requests to Merino manually or through using other
+load testing tools. Once that's done, you can terminate the Merino
+application. It will automatically collect profiling outputs (CPU &amp; Memory)
+and open it in your browser.</p>
+<h2 id="understand-the-outputs"><a class="header" href="#understand-the-outputs">Understand the outputs</a></h2>
+<p>Out of the box, Scalene provides a very intuitive web interface to display
+the profiling outputs. It's organized at the file (module) level. For each
+file, it shows the CPU time and average memory usage for both the line profile
+and the function profile of that module. You can also click on specific columns
+to sort the lines or functions accordingly.</p>
+<p>For more details of how to read the outputs, you can reference Scalene's
+<a href="https://github.com/plasma-umass/scalene#output">documents</a>.</p>
+<p>Equipped with those insights, you can have a good understanding about the
+application, identify hotspots, bottlenecks, or other findings that are
+not easy to uncover by only reading the source code. And then, you can tweak
+or fix those issues, test or profile it again to verify if the fix is working.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../dev/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../dev/release-process.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="../dev/logging-and-metrics.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -182,13 +192,10 @@ $ uvicorn merino.main:app --reload
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../dev/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../dev/release-process.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="../dev/logging-and-metrics.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
-                    </a>
             </nav>
 
         </div>

@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html" class="active">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev/dependencies.html"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="dev/middlewares.html"><strong aria-hidden="true">5.3.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="dev/testing.html"><strong aria-hidden="true">5.4.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="dev/release-process.html"><strong aria-hidden="true">5.5.</strong> Release Process</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html" class="active">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev/dependencies.html"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="dev/middlewares.html"><strong aria-hidden="true">5.3.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="dev/testing.html"><strong aria-hidden="true">5.4.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="dev/release-process.html"><strong aria-hidden="true">5.5.</strong> Release Process</a></li><li class="chapter-item expanded "><a href="dev/profiling.html"><strong aria-hidden="true">5.6.</strong> Profiling</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -146,7 +146,7 @@
 <p>Merino is a service that provides address bar suggestions to Firefox. Some of this content
 comes from third party providers. In this case, Merino serves as a privacy preserving
 buffer. User input in the address bar is handled by Merino and any clicked impression
-will be delegated to a Mozilla-controlled service which will then send an interaction 
+will be delegated to a Mozilla-controlled service which will then send an interaction
 ping if defined in the request and not to a provider directly. See API documentation
 for more details.</p>
 <h2 id="table-of-contents"><a class="header" href="#table-of-contents">Table of Contents</a></h2>
@@ -154,7 +154,7 @@ for more details.</p>
 <p><a href="./firefox.html">firefox.md - Firefox and Merino Environments</a> describes how to enable
 Merino in Firefox and lists the endpoints for the service in Production,
 State and Dev.</p>
-<p><a href="./ops.html">ops.md - Configuring Merino - Operations</a> describes configuration management 
+<p><a href="./ops.html">ops.md - Configuring Merino - Operations</a> describes configuration management
 of the project, Dynaconf setup, and the configuration of the HTTP server, logging, metrics, Remote Settings, and Sentry.</p>
 <p><a href="./data.html">data.md - Data, Metrics, Logging</a> describes all metrics and logs.</p>
 <p><a href="./dev/index.html">dev/index.md - Basic Developer Docs</a> describes basics of working on Merino.</p>
@@ -163,6 +163,7 @@ dependencies required for Merino.</p>
 <p><a href="./dev/logging-and-metrics.html">dev/logging-and-metrics.md - Logging and Metrics</a> describes metrics, logging, and telemetry.</p>
 <p><a href="./dev/release-process.html">dev/release-process.md - Release Process</a> describes the release process of Merino in detail.</p>
 <p><a href="./dev/testing.html">dev/testing.md - Testing</a> describes unit, integration, contract and load tests for Merino.</p>
+<p><a href="./dev/profiling.html">dev/profiling.md - Profiling</a> describes how to profile Merino to address performance issues.</p>
 <h2 id="about-the-name"><a class="header" href="#about-the-name">About the Name</a></h2>
 <p>This project drives an important part of Firefox's &quot;felt experience&quot;. That is,
 the feeling of using Firefox, hopefully in a delightful way. The word &quot;felt&quot; in
