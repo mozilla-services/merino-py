@@ -139,3 +139,6 @@ merino/configs/*.local.*
 
 # mdBook generated files
 book/
+
+# Scalene profile artifacts
+profile.json

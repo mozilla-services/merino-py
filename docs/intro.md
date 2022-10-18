@@ -3,7 +3,7 @@
 Merino is a service that provides address bar suggestions to Firefox. Some of this content
 comes from third party providers. In this case, Merino serves as a privacy preserving
 buffer. User input in the address bar is handled by Merino and any clicked impression
-will be delegated to a Mozilla-controlled service which will then send an interaction 
+will be delegated to a Mozilla-controlled service which will then send an interaction
 ping if defined in the request and not to a provider directly. See API documentation
 for more details.
 
@@ -14,7 +14,7 @@ for more details.
 Merino in Firefox and lists the endpoints for the service in Production,
 State and Dev.
 
-[ops.md - Configuring Merino - Operations][3] describes configuration management 
+[ops.md - Configuring Merino - Operations][3] describes configuration management
 of the project, Dynaconf setup, and the configuration of the HTTP server, logging, metrics, Remote Settings, and Sentry.
 
 [data.md - Data, Metrics, Logging][4] describes all metrics and logs.
@@ -30,15 +30,18 @@ dependencies required for Merino.
 
 [dev/testing.md - Testing][9] describes unit, integration, contract and load tests for Merino.
 
+[dev/profiling.md - Profiling][10] describes how to profile Merino to address performance issues.
+
 [1]: ./api.md
 [2]: ./firefox.md
 [3]: ./ops.md
 [4]: ./data.md
 [5]: ./dev/index.md
-[6]: ./dev/dependencies.md 
+[6]: ./dev/dependencies.md
 [7]: ./dev/logging-and-metrics.md
-[8]: ./dev/release-process.md 
-[9]: ./dev/testing.md 
+[8]: ./dev/release-process.md
+[9]: ./dev/testing.md
+[10]: ./dev/profiling.md
 
 ## About the Name
 

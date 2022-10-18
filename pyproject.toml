@@ -11,8 +11,10 @@ profile = "black"
 skip_gitignore = true
 
 [tool.bandit]
-# skips asserts https://bandit.readthedocs.io/en/1.7.4/plugins/b101_assert_used.html#
-skips = ["B101"]
+# skips asserts
+# B101: https://bandit.readthedocs.io/en/latest/plugins/b101_assert_used.html#
+# B104: https://bandit.readthedocs.io/en/latest/plugins/b104_hardcoded_bind_all_interfaces.html
+skips = ["B101", "B104"]
 
 [tool.mypy]
 python_version = "3.10"
@@ -79,6 +81,7 @@ pytest-asyncio = "^0.19.0"
 types-PyYAML = "^6.0.11"
 types-requests = "^2.28.10"
 types-geoip2 = "^3.0.0"
+scalene = "^1.5.13"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
