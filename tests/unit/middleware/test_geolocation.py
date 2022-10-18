@@ -9,6 +9,7 @@ import pytest
 from pytest import LogCaptureFixture
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from merino.middleware import ScopeKey
 from merino.middleware.geolocation import GeolocationMiddleware, Location
 
 
@@ -75,7 +76,7 @@ async def test_geolocation_address_found(
 
     await geolocation_middleware(scope, receive_mock, send_mock)
 
-    assert scope["merino_geolocation"] == expected_location
+    assert scope[ScopeKey.GEOLOCATION] == expected_location
     assert len(caplog.messages) == 0
 
 
@@ -96,7 +97,7 @@ async def test_geolocation_address_not_found(
 
     await geolocation_middleware(scope, receive_mock, send_mock)
 
-    assert scope["merino_geolocation"] == expected_location
+    assert scope[ScopeKey.GEOLOCATION] == expected_location
     assert len(caplog.messages) == 0
 
 
@@ -121,7 +122,7 @@ async def test_geolocation_client_ip_override(
     ):
         await geolocation_middleware(scope, receive_mock, send_mock)
 
-    assert scope["merino_geolocation"] == expected_location
+    assert scope[ScopeKey.GEOLOCATION] == expected_location
     assert len(caplog.messages) == 0
 
 
@@ -147,7 +148,7 @@ async def test_geolocation_invalid_address(
 
     await geolocation_middleware(scope, receive_mock, send_mock)
 
-    assert scope["merino_geolocation"] == expected_location
+    assert scope[ScopeKey.GEOLOCATION] == expected_location
     assert len(caplog.messages) == 1
     assert caplog.messages[0] == "Invalid IP address for geolocation parsing"
 
@@ -167,5 +168,5 @@ async def test_geolocation_invalid_scope_type(
 
     await geolocation_middleware(scope, receive_mock, send_mock)
 
-    assert "merino_geolocation" not in scope
+    assert ScopeKey.GEOLOCATION not in scope
     assert len(caplog.messages) == 0

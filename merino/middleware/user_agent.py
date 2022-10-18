@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from merino.middleware import ScopeKey
 from merino.util.user_agent_parsing import parse
 
 
@@ -30,7 +31,7 @@ class UserAgentMiddleware:
     `User-Agent` header.
 
     The user agent result `UserAgent` (if any) is stored in
-    `scope["merino_user_agent"]`.
+    `scope[ScopeKey.USER_AGENT]`.
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -47,7 +48,7 @@ class UserAgentMiddleware:
 
         ua = parse(Headers(scope=scope).get("User-Agent", ""))
 
-        scope["merino_user_agent"] = UserAgent(**ua)
+        scope[ScopeKey.USER_AGENT] = UserAgent(**ua)
 
         await self.app(scope, receive, send)
         return

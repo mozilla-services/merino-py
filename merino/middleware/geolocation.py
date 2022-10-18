@@ -9,6 +9,7 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from merino.config import settings
+from merino.middleware import ScopeKey
 
 CLIENT_IP_OVERRIDE: str = settings.location.client_ip_override
 
@@ -32,7 +33,7 @@ class GeolocationMiddleware:
     address.
 
     The geolocation result `Location` (if any) is stored in
-    `scope["merino_geolocation"]`.
+    `scope[ScopeKey.GEOLOCATION]`.
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -59,7 +60,7 @@ class GeolocationMiddleware:
         except AddressNotFoundError:
             pass
 
-        scope["merino_geolocation"] = (
+        scope[ScopeKey.GEOLOCATION] = (
             Location(
                 country=record.country.iso_code,
                 region=record.subdivisions[0].iso_code,

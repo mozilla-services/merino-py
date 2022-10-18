@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 from merino.metrics import get_metrics_client
+from merino.middleware import ScopeKey
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider, SuggestionRequest
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
@@ -62,7 +63,7 @@ async def suggest(
         search_from = default_providers
 
     srequest = SuggestionRequest(
-        query=q, geolocation=request.scope["merino_geolocation"]
+        query=q, geolocation=request.scope[ScopeKey.GEOLOCATION]
     )
     lookups = [
         metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
