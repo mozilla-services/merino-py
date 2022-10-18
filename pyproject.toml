@@ -55,7 +55,7 @@ fastapi = "^0.79.0"
 uvicorn = {extras = ["standard"], version = "^0.18.2"}
 dockerflow = "^2022.7.0"
 asgi-correlation-id = "^3.0.1"
-dynaconf = "^3.1.9"
+dynaconf = "^3.1.11"
 httpx = "^0.23.0"
 sentry-sdk = {extras = ["fastapi"], version = "^1.9.5"}
 kinto-http = "^11.0.0"
