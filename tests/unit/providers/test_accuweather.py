@@ -4,6 +4,7 @@
 
 import pytest
 from fastapi import APIRouter, FastAPI
+from pytest import LogCaptureFixture
 
 from merino.config import settings
 from merino.middleware.geolocation import Location
@@ -155,7 +156,7 @@ app.include_router(router)
 
 @pytest.fixture(name="geolocation")
 def fixture_geolocation() -> Location:
-    """Return an test Location."""
+    """Return a test Location."""
     return Location(
         country="US",
         region="CA",
@@ -256,55 +257,24 @@ async def test_invalid_location_key(
     assert res == []
 
 
+@pytest.mark.parametrize(
+    "geolocation",
+    [
+        Location(postal_code=94105),
+        Location(country="US", region="CA", city="Some City", dma=555),
+        Location(),
+    ],
+)
 @pytest.mark.asyncio
-async def test_no_client_country(accuweather: Provider) -> None:
-    """Test a client with an unknown country."""
-
-    geolocation = Location(
-        country=None,
-        region=None,
-        city=None,
-        dma=None,
-        postal_code=94105,
-    )
-
+async def test_no_client_country_or_postal_code(
+    caplog: LogCaptureFixture, accuweather: Provider, geolocation: Location
+):
+    """Test that if a client has an unknown country or postal code, that a
+    warning is logged and no suggestions are returned."""
     set_response_bodies()
 
     res = await accuweather.query(SuggestionRequest("", geolocation))
+
     assert res == []
-
-
-@pytest.mark.asyncio
-async def test_no_client_postal_code(accuweather: Provider) -> None:
-    """Test a client with an unknown postal code."""
-
-    geolocation = Location(
-        country="US",
-        region="CA",
-        city="Some City",
-        dma=555,
-        postal_code=None,
-    )
-
-    set_response_bodies()
-
-    res = await accuweather.query(SuggestionRequest("", geolocation))
-    assert res == []
-
-
-@pytest.mark.asyncio
-async def test_no_client_country_postal_code(accuweather: Provider) -> None:
-    """Test a client with an unknown country and postal code."""
-
-    geolocation = Location(
-        country=None,
-        region=None,
-        city=None,
-        dma=None,
-        postal_code=None,
-    )
-
-    set_response_bodies()
-
-    res = await accuweather.query(SuggestionRequest("", geolocation))
-    assert res == []
+    assert len(caplog.messages) == 1
+    assert caplog.messages[0] == "Country and/or postal code unknown"
