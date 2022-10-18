@@ -2,8 +2,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import os
+
 import pytest
 from fastapi import APIRouter, FastAPI
+
+from merino.config import settings
 
 # from merino.config import settings
 from merino.providers.top_pick import Provider
@@ -32,4 +36,4 @@ def test_hidden(top_pick: Provider) -> None:
 
 def test_local_file_exists(top_pick: Provider) -> None:
     """Test that the Top Picks Nav Query file exists locally"""
-    pass
+    assert os.path.exists(settings.providers.top_pick.top_pick_file_path) is True

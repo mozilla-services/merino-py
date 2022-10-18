@@ -1,4 +1,5 @@
 """Top Pick Navigational Queries Provider"""
+import json
 import logging
 import os
 from typing import Any, Optional
@@ -76,10 +77,10 @@ class Provider(BaseProvider):
         """Read local domain list file"""
         if not os.path.exists(LOCAL_TOP_PICK_FILE):
             logger.warning("Local file does not exist")
-            raise Exception
+            raise FileNotFoundError
         try:
             with open(file, "r") as readfile:
-                domain_list = readfile.readlines()
+                domain_list = json.loads(readfile.read())
                 return domain_list
         except Exception as e:
             return e

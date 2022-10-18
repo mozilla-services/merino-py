@@ -1,0 +1,38 @@
+{
+    "properties": {
+        "domains": {
+            "items": [
+                {
+                    "properties": {
+                        "rank": 2.5,
+                        "domain": "https://youtube.com",
+                        "title": "YouTube",
+                        "url": "https://youtube.com",
+                        "icon": "https://youtube.com",
+                        "categories": {
+                            "type": "array",
+                            "items": [
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "similars": {
+                            "type": "array",
+                            "items": [
+                                "youtube",
+                                "YouTube"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "rank",
+                        "domain",
+                        "url",
+                        "icon"
+                    ]
+                }
+            ]
+        }
+    }
+}
