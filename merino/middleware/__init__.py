@@ -1,9 +1,7 @@
 """Merino middlewares"""
-from enum import Enum, unique
 
 
-@unique
-class ScopeKey(str, Enum):
+class ScopeKey:
     """Keys into the ASGI scope dict"""
 
     GEOLOCATION = "merino_geolocation"
