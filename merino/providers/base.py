@@ -48,7 +48,7 @@ class BaseProvider(ABC):
         """Query against this provider.
 
         Args:
-          - `SuggestionRequest`: the query requested.
+          - `srequest`: the suggestion request.
         """
         ...
 
