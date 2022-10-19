@@ -190,7 +190,7 @@ async def test_forecast_returned(accuweather: Provider, geolocation: Location) -
 
     set_response_bodies()
 
-    res = await accuweather.query(SuggestionRequest("", geolocation))
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
     assert res == [
         Suggestion(
             title="Forecast",
@@ -222,7 +222,7 @@ async def test_no_location_returned(
 
     set_response_bodies(location=[])
 
-    res = await accuweather.query(SuggestionRequest("", geolocation))
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
     assert res == []
 
 
@@ -234,7 +234,7 @@ async def test_no_forecast_returned(
 
     set_response_bodies(forecast={})
 
-    res = await accuweather.query(SuggestionRequest("", geolocation))
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
     assert res == []
 
 
@@ -253,7 +253,7 @@ async def test_invalid_location_key(
         }
     )
 
-    res = await accuweather.query(SuggestionRequest("", geolocation))
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
     assert res == []
 
 
@@ -273,7 +273,7 @@ async def test_no_client_country_or_postal_code(
     warning is logged and no suggestions are returned."""
     set_response_bodies()
 
-    res = await accuweather.query(SuggestionRequest("", geolocation))
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
 
     assert res == []
     assert len(caplog.messages) == 1

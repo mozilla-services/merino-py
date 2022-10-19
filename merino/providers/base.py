@@ -1,14 +1,12 @@
 """Abstract class for Providers"""
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 
 from pydantic import BaseModel, HttpUrl
 
 from merino.middleware.geolocation import Location
 
 
-@dataclass
-class SuggestionRequest:
+class SuggestionRequest(BaseModel):
     """A request for suggestions."""
 
     query: str
