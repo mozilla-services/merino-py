@@ -40,7 +40,7 @@ class UserAgentMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Parse user agent information through "User-Agent" and store the result
-        to scope.
+        to `scope`.
         """
         if scope["type"] != "http":  # pragma: no cover
             await self.app(scope, receive, send)
