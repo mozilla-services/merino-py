@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 import httpx
 from fastapi import FastAPI
+from pydantic import BaseModel, HttpUrl
 
 from merino.config import settings
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
@@ -15,6 +16,9 @@ SCORE: float = settings.providers.accuweather.score
 # Endpoint URL components
 URL_BASE: str = settings.providers.accuweather.url_base
 URL_PARAM_API_KEY: str = settings.providers.accuweather.url_param_api_key
+URL_CURRENT_CONDITIONS_PATH: str = (
+    settings.providers.accuweather.url_current_conditions_path
+)
 URL_POSTALCODES_PATH: str = settings.providers.accuweather.url_postalcodes_path
 URL_POSTALCODES_PARAM_QUERY: str = (
     settings.providers.accuweather.url_postalcodes_param_query
@@ -24,17 +28,37 @@ URL_FORECASTS_PATH: str = settings.providers.accuweather.url_forecasts_path
 logger = logging.getLogger(__name__)
 
 
+class Temperature(BaseModel):
+    """Model for temperature with C and F values."""
+
+    c: Optional[float] = None
+    f: Optional[float] = None
+
+
+class CurrentConditions(BaseModel):
+    """Model for AccuWeather current conditions."""
+
+    url: HttpUrl
+    summary: str
+    icon_id: int
+    temperature: Temperature
+
+
+class Forecast(BaseModel):
+    """Model for AccuWeather one-day forecasts."""
+
+    url: HttpUrl
+    summary: str
+    high: Temperature
+    low: Temperature
+
+
 class Suggestion(BaseSuggestion):
     """Model for AccuWeather suggestions."""
 
-    city_name: Optional[str] = None
-    temperature_unit: Optional[str] = None
-    high: Optional[float] = None
-    low: Optional[float] = None
-    day_summary: Optional[str] = None
-    day_precipitation: Optional[bool] = None
-    night_summary: Optional[str] = None
-    night_precipitation: Optional[bool] = None
+    city_name: str
+    current_conditions: CurrentConditions
+    forecast: Forecast
 
 
 class Provider(BaseProvider):
@@ -49,7 +73,7 @@ class Provider(BaseProvider):
         app: Optional[FastAPI] = None,
         name: str = "accuweather",
         enabled_by_default: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         self._app = app
         self._name = name
@@ -77,14 +101,14 @@ class Provider(BaseProvider):
             return []
 
         async with httpx.AsyncClient(app=self._app, base_url=URL_BASE) as client:
-            suggestions = await self._get_forecast(
+            suggestions = await self._get_weather(
                 client,
                 country=country,
                 postal_code=postal_code,
             )
             return suggestions
 
-    async def _get_forecast(
+    async def _get_weather(
         self, client: httpx.AsyncClient, country: str, postal_code: str
     ) -> list[BaseSuggestion]:
         # Get the AccuWeather location key for the country and postal codes.
@@ -101,6 +125,23 @@ class Provider(BaseProvider):
         except Exception:
             return []
 
+        # Get the current conditions for the location key.
+        try:
+            current_conditions_resp = await client.get(
+                URL_CURRENT_CONDITIONS_PATH.format(location_key=location_key),
+                params={
+                    URL_PARAM_API_KEY: API_KEY,
+                },
+            )
+            current_conditions_data = current_conditions_resp.json()[0]
+        except Exception:
+            return []
+
+        current_conditions = self._parse_current_conditions(current_conditions_data)
+        if current_conditions is None:
+            logger.warning("Unexpected current conditions response")
+            return []
+
         # Get the forecast for the location key.
         try:
             forecasts_resp = await client.get(
@@ -109,44 +150,101 @@ class Provider(BaseProvider):
                     URL_PARAM_API_KEY: API_KEY,
                 },
             )
-            forecast = forecasts_resp.json()["DailyForecasts"][0]
+            forecasts_data = forecasts_resp.json()
         except Exception:
             return []
 
-        match forecast:
+        forecast = self._parse_forecast(forecasts_data)
+        if forecast is None:
+            logger.warning("Unexpected forecast response")
+            return []
+
+        city_name = location.get("LocalizedName")
+        return [
+            Suggestion(
+                title=f"Weather for {city_name}",
+                url=current_conditions.url,
+                provider=self.name,
+                is_sponsored=False,
+                score=SCORE,
+                icon=None,
+                city_name=city_name,
+                current_conditions=current_conditions,
+                forecast=forecast,
+            )
+        ]
+
+    def _parse_current_conditions(self, data: Any) -> Optional[CurrentConditions]:
+        match data:
             case {
                 "Link": url,
+                "WeatherText": summary,
+                "WeatherIcon": icon_id,
                 "Temperature": {
-                    "Maximum": {"Value": high, "Unit": temperature_unit},
-                    "Minimum": {"Value": low},
-                },
-                "Day": {
-                    "IconPhrase": day_summary,
-                    "HasPrecipitation": day_precipitation,
-                },
-                "Night": {
-                    "IconPhrase": night_summary,
-                    "HasPrecipitation": night_precipitation,
+                    "Metric": {
+                        "Value": c,
+                    },
+                    "Imperial": {
+                        "Value": f,
+                    },
                 },
             }:
-                return [
-                    Suggestion(
-                        title="Forecast",
-                        url=url,
-                        provider=self.name,
-                        is_sponsored=False,
-                        score=SCORE,
-                        icon=None,
-                        city_name=location.get("LocalizedName"),
-                        temperature_unit=temperature_unit,
-                        high=high,
-                        low=low,
-                        day_summary=day_summary,
-                        day_precipitation=day_precipitation,
-                        night_summary=night_summary,
-                        night_precipitation=night_precipitation,
-                    )
-                ]
+                return CurrentConditions(
+                    url=url,
+                    summary=summary,
+                    icon_id=icon_id,
+                    temperature=Temperature(c=c, f=f),
+                )
             case _:
-                logger.warning("Unexpected AccuWeather response")
-                return []
+                return None
+
+    def _parse_forecast(self, data: Any) -> Optional[Forecast]:
+        match data:
+            case {
+                "Headline": {
+                    "Text": summary,
+                    "Link": url,
+                },
+                "DailyForecasts": [
+                    {
+                        "Temperature": {
+                            "Maximum": {
+                                "Value": high_value,
+                                "Unit": high_unit,
+                            },
+                            "Minimum": {
+                                "Value": low_value,
+                                "Unit": low_unit,
+                            },
+                        },
+                    }
+                ],
+            }:
+                # `type: ignore` is necessary because mypy gets confused when
+                # matching structures of type `Any` and reports the following
+                # line as unreachable. See
+                # https://github.com/python/mypy/issues/12770
+                high = self._parse_forecast_temperature(high_value, high_unit)  # type: ignore
+                if high is None:
+                    logger.warning("Unexpected forecast high")
+                    return None
+
+                low = self._parse_forecast_temperature(low_value, low_unit)
+                if low is None:
+                    logger.warning("Unexpected forecast low")
+                    return None
+
+                return Forecast(url=url, summary=summary, high=high, low=low)
+            case _:
+                return None
+
+    def _parse_forecast_temperature(
+        self, value: float, unit: str
+    ) -> Optional[Temperature]:
+        match unit:
+            case "C" | "c":
+                return Temperature(c=value, f=None)
+            case "F" | "f":
+                return Temperature(c=None, f=value)
+            case _:
+                return None

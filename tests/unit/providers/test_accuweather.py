@@ -8,7 +8,13 @@ from pytest import LogCaptureFixture
 
 from merino.config import settings
 from merino.middleware.geolocation import Location
-from merino.providers.accuweather import Provider, Suggestion
+from merino.providers.accuweather import (
+    CurrentConditions,
+    Forecast,
+    Provider,
+    Suggestion,
+    Temperature,
+)
 from merino.providers.base import SuggestionRequest
 
 default_location_body = [
@@ -81,6 +87,38 @@ default_location_body = [
     }
 ]
 
+default_current_conditions_body = [
+    {
+        "LocalObservationDateTime": "2022-10-21T15:34:00-07:00",
+        "EpochTime": 1666391640,
+        "WeatherText": "Mostly cloudy",
+        "WeatherIcon": 6,
+        "HasPrecipitation": False,
+        "PrecipitationType": None,
+        "IsDayTime": True,
+        "Temperature": {
+            "Metric": {
+                "Value": 15.5,
+                "Unit": "C",
+                "UnitType": 17,
+            },
+            "Imperial": {
+                "Value": 60.0,
+                "Unit": "F",
+                "UnitType": 18,
+            },
+        },
+        "MobileLink": (
+            "http://www.accuweather.com/en/us/san-francisco-ca/"
+            "94103/current-weather/39376_pc?lang=en-us"
+        ),
+        "Link": (
+            "http://www.accuweather.com/en/us/san-francisco-ca/"
+            "94103/current-weather/39376_pc?lang=en-us"
+        ),
+    },
+]
+
 default_forecast_body = {
     "Headline": {
         "EffectiveDate": "2022-10-01T08:00:00-07:00",
@@ -129,25 +167,35 @@ default_forecast_body = {
 app = FastAPI()
 router = APIRouter()
 location_body = default_location_body
+current_conditions_body = default_current_conditions_body
 forecast_body = default_forecast_body
 
 
 def set_response_bodies(
-    location: dict = default_location_body, forecast: dict = default_forecast_body
+    location: dict = default_location_body,
+    current_conditions: dict = default_current_conditions_body,
+    forecast: dict = default_forecast_body,
 ):
     global location_body
+    global current_conditions_body
     global forecast_body
     location_body = location
+    current_conditions_body = current_conditions
     forecast_body = forecast
 
 
 @router.get("/locations/v1/postalcodes/US/search.json")
-async def locations_postalcodes_search():
+async def router_locations_postalcodes_search():
     return location_body
 
 
+@router.get("/currentconditions/v1/39376_PC.json")
+async def router_current_conditions():
+    return current_conditions_body
+
+
 @router.get("/forecasts/v1/daily/1day/39376_PC.json")
-async def forecasts_daily_1day():
+async def router_forecasts_daily_1day():
     return forecast_body
 
 
@@ -193,23 +241,37 @@ async def test_forecast_returned(accuweather: Provider, geolocation: Location) -
     res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
     assert res == [
         Suggestion(
-            title="Forecast",
+            title="Weather for San Francisco",
             url=(
                 "http://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/daily-weather-forecast/39376_pc?day=1&lang=en-us"
+                "94103/current-weather/39376_pc?lang=en-us"
             ),
             provider="accuweather",
             is_sponsored=False,
             score=settings.providers.accuweather.score,
             icon=None,
             city_name="San Francisco",
-            temperature_unit="F",
-            high=70.0,
-            low=57.0,
-            day_summary="Clear",
-            day_precipitation=False,
-            night_summary="Intermittent clouds",
-            night_precipitation=True,
+            current_conditions=CurrentConditions(
+                url=(
+                    "http://www.accuweather.com/en/us/san-francisco-ca/"
+                    "94103/current-weather/39376_pc?lang=en-us"
+                ),
+                summary="Mostly cloudy",
+                icon_id=6,
+                temperature=Temperature(
+                    c=15.5,
+                    f=60.0,
+                ),
+            ),
+            forecast=Forecast(
+                url=(
+                    "http://www.accuweather.com/en/us/san-francisco-ca/"
+                    "94103/daily-weather-forecast/39376_pc?lang=en-us"
+                ),
+                summary="Pleasant Saturday",
+                high=Temperature(f=70.0),
+                low=Temperature(f=57.0),
+            ),
         )
     ]
 
@@ -221,6 +283,19 @@ async def test_no_location_returned(
     """Test for a query that doesn't return a location."""
 
     set_response_bodies(location=[])
+
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
+    assert res == []
+
+
+@pytest.mark.asyncio
+async def test_no_current_conditions_returned(
+    accuweather: Provider, geolocation: Location
+) -> None:
+    """Test for a query that doesn't return current conditions for a valid
+    location."""
+
+    set_response_bodies(current_conditions=[])
 
     res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
     assert res == []
@@ -239,7 +314,26 @@ async def test_no_forecast_returned(
 
 
 @pytest.mark.asyncio
-async def test_invalid_location_key(
+async def test_invalid_location_key_current_conditions(
+    accuweather: Provider, geolocation: Location
+) -> None:
+    """Test for a query that doesn't return current conditions due to an invalid
+    location key."""
+
+    set_response_bodies(
+        current_conditions={
+            "Code": "400",
+            "Message": "Invalid location key: bogus",
+            "Reference": "/currentconditions/v1/bogus",
+        }
+    )
+
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
+    assert res == []
+
+
+@pytest.mark.asyncio
+async def test_invalid_location_key_forecast(
     accuweather: Provider, geolocation: Location
 ) -> None:
     """Test for a query that doesn't return a forecast due to an invalid
