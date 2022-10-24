@@ -6,8 +6,7 @@ import httpx
 from fastapi import FastAPI
 
 from merino.config import settings
-from merino.middleware.geolocation import ctxvar_geolocation
-from merino.providers.base import BaseProvider, BaseSuggestion
+from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 API_KEY: str = settings.providers.accuweather.api_key
 CLIENT_IP_OVERRIDE: str = settings.location.client_ip_override
@@ -64,13 +63,13 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
-    async def query(self, q: str) -> list[BaseSuggestion]:
+    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide AccuWeather suggestions."""
         if API_KEY == "":
             logger.warning("AccuWeather API key not specified")
             return []
 
-        location = ctxvar_geolocation.get()
+        location = srequest.geolocation
         country = location.country
         postal_code = location.postal_code
         if country is None or postal_code is None:

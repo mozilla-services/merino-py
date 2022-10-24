@@ -1,6 +1,5 @@
 """The middleware that parses geolocation from the client IP address."""
 import logging
-from contextvars import ContextVar
 from typing import Optional
 
 import geoip2.database
@@ -10,6 +9,7 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from merino.config import settings
+from merino.middleware import ScopeKey
 
 CLIENT_IP_OVERRIDE: str = settings.location.client_ip_override
 
@@ -28,16 +28,12 @@ class Location(BaseModel):
     postal_code: Optional[str] = None
 
 
-# A `ContextVar` to store the geolocation result.
-ctxvar_geolocation: ContextVar[Location] = ContextVar("merino_geolocation")
-
-
 class GeolocationMiddleware:
     """An ASGI middleware to parse and populate geolocation from client's IP
     address.
 
-    The geolocation result `Location` (if any) is stored in a `ContextVar` called
-    `merino_geolocation`.
+    The geolocation result `Location` (if any) is stored in
+    `scope[ScopeKey.GEOLOCATION]`.
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -46,7 +42,7 @@ class GeolocationMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Parse geolocation through client's IP address and store the result
-        (if any) to the `ContextVar`.
+        to `scope`.
         """
         if scope["type"] != "http":
             await self.app(scope, receive, send)
@@ -64,7 +60,7 @@ class GeolocationMiddleware:
         except AddressNotFoundError:
             pass
 
-        ctxvar_geolocation.set(
+        scope[ScopeKey.GEOLOCATION] = (
             Location(
                 country=record.country.iso_code,
                 region=record.subdivisions[0].iso_code,

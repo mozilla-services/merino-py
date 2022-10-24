@@ -11,7 +11,7 @@ from pydantic import HttpUrl
 
 from merino import cron
 from merino.config import settings
-from merino.providers.base import BaseProvider, BaseSuggestion
+from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 logger = logging.getLogger(__name__)
 
@@ -206,8 +206,9 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
-    async def query(self, q: str) -> list[BaseSuggestion]:
+    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
+        q = srequest.query
         if (id := self.suggestions.get(q)) is not None:
             res = self.results[id]
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING

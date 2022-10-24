@@ -2,7 +2,8 @@ import asyncio
 from logging import LogRecord
 from typing import Any, Callable, Coroutine
 
-from merino.providers.base import BaseProvider, BaseSuggestion
+from merino.middleware.geolocation import Location
+from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -38,8 +39,8 @@ class SponsoredProvider(BaseProvider):
     def hidden(self) -> bool:
         return False
 
-    async def query(self, q: str) -> list[BaseSuggestion]:
-        if q.lower() == "sponsored":
+    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        if srequest.query.lower() == "sponsored":
             return [
                 SponsoredSuggestion(
                     block_id=0,
@@ -74,8 +75,8 @@ class NonsponsoredProvider(BaseProvider):
     def hidden(self) -> bool:
         return False
 
-    async def query(self, q: str) -> list[BaseSuggestion]:
-        if q.lower() == "nonsponsored":
+    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        if srequest.query.lower() == "nonsponsored":
             return [
                 NonsponsoredSuggestion(
                     block_id=0,
@@ -112,8 +113,8 @@ class CorruptProvider(BaseProvider):
     def hidden(self) -> bool:
         return False
 
-    async def query(self, q: str) -> list[BaseSuggestion]:
-        raise RuntimeError(q)
+    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        raise RuntimeError(srequest.query)
 
 
 def get_provider_factory(
@@ -146,3 +147,8 @@ async def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
 def filter_caplog(records: list[LogRecord], logger_name: str) -> list[LogRecord]:
     """Filter pytest captured log records for a given logger name."""
     return [record for record in records if record.name == logger_name]
+
+
+def srequest(q: str) -> SuggestionRequest:
+    """Return a simple SuggestionRequest from `q`"""
+    return SuggestionRequest(query=q, geolocation=Location())

@@ -3,6 +3,15 @@ from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, HttpUrl
 
+from merino.middleware.geolocation import Location
+
+
+class SuggestionRequest(BaseModel):
+    """A request for suggestions."""
+
+    query: str
+    geolocation: Location
+
 
 class BaseSuggestion(BaseModel):
     """Base model for suggestions. Each provider should extend this class for
@@ -33,11 +42,11 @@ class BaseProvider(ABC):
         ...
 
     @abstractmethod
-    async def query(self, query: str) -> list[BaseSuggestion]:
+    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Query against this provider.
 
         Args:
-          - `query`: the query string.
+          - `srequest`: the suggestion request.
         """
         ...
 

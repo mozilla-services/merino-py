@@ -4,10 +4,12 @@
 
 import pytest
 from fastapi import APIRouter, FastAPI
+from pytest import LogCaptureFixture
 
 from merino.config import settings
-from merino.middleware.geolocation import Location, ctxvar_geolocation
+from merino.middleware.geolocation import Location
 from merino.providers.accuweather import Provider, Suggestion
+from merino.providers.base import SuggestionRequest
 
 default_location_body = [
     {
@@ -152,20 +154,21 @@ async def forecasts_daily_1day():
 app.include_router(router)
 
 
+@pytest.fixture(name="geolocation")
+def fixture_geolocation() -> Location:
+    """Return a test Location."""
+    return Location(
+        country="US",
+        region="CA",
+        city="San Francisco",
+        dma=807,
+        postal_code="94105",
+    )
+
+
 @pytest.fixture(name="accuweather")
 def fixture_accuweather() -> Provider:
     """Return an AccuWeather provider."""
-
-    ctxvar_geolocation.set(
-        Location(
-            country="US",
-            region="CA",
-            city="San Francisco",
-            dma=807,
-            postal_code="94105",
-        )
-    )
-
     return Provider(app)
 
 
@@ -182,12 +185,12 @@ def test_hidden(accuweather: Provider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_forecast_returned(accuweather: Provider) -> None:
+async def test_forecast_returned(accuweather: Provider, geolocation: Location) -> None:
     """Test for a successful query."""
 
     set_response_bodies()
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
     assert res == [
         Suggestion(
             title="Forecast",
@@ -212,27 +215,33 @@ async def test_forecast_returned(accuweather: Provider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_no_location_returned(accuweather: Provider) -> None:
+async def test_no_location_returned(
+    accuweather: Provider, geolocation: Location
+) -> None:
     """Test for a query that doesn't return a location."""
 
     set_response_bodies(location=[])
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
     assert res == []
 
 
 @pytest.mark.asyncio
-async def test_no_forecast_returned(accuweather: Provider) -> None:
+async def test_no_forecast_returned(
+    accuweather: Provider, geolocation: Location
+) -> None:
     """Test for a query that doesn't return a forecast for a valid location."""
 
     set_response_bodies(forecast={})
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
     assert res == []
 
 
 @pytest.mark.asyncio
-async def test_invalid_location_key(accuweather: Provider) -> None:
+async def test_invalid_location_key(
+    accuweather: Provider, geolocation: Location
+) -> None:
     """Test for a query that doesn't return a forecast due to an invalid
     location key."""
 
@@ -244,65 +253,28 @@ async def test_invalid_location_key(accuweather: Provider) -> None:
         }
     )
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
     assert res == []
 
 
+@pytest.mark.parametrize(
+    "geolocation",
+    [
+        Location(postal_code=94105),
+        Location(country="US", region="CA", city="Some City", dma=555),
+        Location(),
+    ],
+)
 @pytest.mark.asyncio
-async def test_no_client_country(accuweather: Provider) -> None:
-    """Test a client with an unknown country."""
-
-    ctxvar_geolocation.set(
-        Location(
-            country=None,
-            region=None,
-            city=None,
-            dma=None,
-            postal_code=94105,
-        )
-    )
-
+async def test_no_client_country_or_postal_code(
+    caplog: LogCaptureFixture, accuweather: Provider, geolocation: Location
+):
+    """Test that if a client has an unknown country or postal code, that a
+    warning is logged and no suggestions are returned."""
     set_response_bodies()
 
-    res = await accuweather.query("")
+    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
+
     assert res == []
-
-
-@pytest.mark.asyncio
-async def test_no_client_postal_code(accuweather: Provider) -> None:
-    """Test a client with an unknown postal code."""
-
-    ctxvar_geolocation.set(
-        Location(
-            country="US",
-            region="CA",
-            city="Some City",
-            dma=555,
-            postal_code=None,
-        )
-    )
-
-    set_response_bodies()
-
-    res = await accuweather.query("")
-    assert res == []
-
-
-@pytest.mark.asyncio
-async def test_no_client_country_postal_code(accuweather: Provider) -> None:
-    """Test a client with an unknown country and postal code."""
-
-    ctxvar_geolocation.set(
-        Location(
-            country=None,
-            region=None,
-            city=None,
-            dma=None,
-            postal_code=None,
-        )
-    )
-
-    set_response_bodies()
-
-    res = await accuweather.query("")
-    assert res == []
+    assert len(caplog.messages) == 1
+    assert caplog.messages[0] == "Country and/or postal code unknown"
