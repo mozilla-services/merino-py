@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+from collections import defaultdict
 from typing import Any, Optional
 
 # import httpx
@@ -13,6 +14,9 @@ from merino.providers.base import BaseProvider, BaseSuggestion
 
 SCORE: float = settings.providers.top_pick.score
 LOCAL_TOP_PICK_FILE: str = settings.providers.top_pick.top_pick_file_path
+QUERY_CHAR_LIMIT: int = settings.providers.top_pick.query_char_limit
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -38,7 +42,10 @@ class Provider(BaseProvider):
     _app: Optional[FastAPI]
 
     suggestions: dict[str, int] = {}
-    results: list[dict[str, Any]] = []
+    primary_index: defaultdict = defaultdict(list)
+    primary_results: list[dict[str, Any]] = []
+    secondary_index: defaultdict = defaultdict(list)
+    secondary_results: list[dict[str, Any]] = []
     icons: dict[int, str] = {}
     # Store the value to avoid fetching it from settings every time as that'd
     # require a three-way dict lookup.
@@ -84,3 +91,7 @@ class Provider(BaseProvider):
                 return domain_list
         except Exception as e:
             return e
+
+    def process_suggestion(self, term: str) -> Any:
+        """Search for matching domain from search term"""
+        pass

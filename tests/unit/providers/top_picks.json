@@ -1,0 +1,20 @@
+{
+    "domains": {
+        "items": [
+            {
+                "rank": 1,
+                "domain": "mozilla.org/",
+                "title": "Mozilla",
+                "url": "https://mozilla.org/en-US/",
+                "icon": "https://mozilla.org/en-US/",
+                "categories": {
+                    "items": []
+                },
+                "similars": [
+                    "mozzilla",
+                    "mozila"
+                ]
+            }
+        ]
+    }
+}
