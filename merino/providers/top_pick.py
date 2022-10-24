@@ -2,8 +2,11 @@
 import json
 import logging
 import os
+
+# from asyncio import to_thread
 from collections import defaultdict
-from typing import Any, Optional
+from enum import Enum
+from typing import Any, Final, Optional, Union
 
 # import httpx
 from fastapi import FastAPI
@@ -18,6 +21,18 @@ QUERY_CHAR_LIMIT: int = settings.providers.top_pick.query_char_limit
 
 
 logger = logging.getLogger(__name__)
+
+
+class TopPickCategory(str, Enum):
+    """Enum for Top Pick Category.
+
+    There are two possible Top Pick suggestions.
+    A Primary suggestion means the query term matched the string exactly.
+    A Secondary suggestion captures a mis-typed or similar query to the match.
+    """
+
+    PRIMARY: Final = "PRIMARY"
+    SECONDARY: Final = "SECONDARY"
 
 
 class Suggestion(BaseSuggestion):
@@ -41,6 +56,7 @@ class Provider(BaseProvider):
     # FastAPI instance to fetch mock responses from it. See `__init__()`.
     _app: Optional[FastAPI]
 
+    domain_list: dict[str, Any] = {}
     suggestions: dict[str, int] = {}
     primary_index: defaultdict = defaultdict(list)
     primary_results: list[dict[str, Any]] = []
@@ -72,26 +88,43 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
-    async def query(self, query: str) -> list[BaseSuggestion]:
+    async def query(self, q: str) -> Optional[list[BaseSuggestion]]:  # type: ignore
         """Query Top Pick provider.
 
         Args:
-            - `query`: the query string.
+            - `q`: the query string.
         """
-        ...
+        if len(q) < QUERY_CHAR_LIMIT:
+            return []
+        match q:
+            case _:
+                logger.warning("Unexpected Top Pick response")
+        return []
 
-    def read_domain_list(self, file: str) -> Any:
+    @staticmethod
+    def read_domain_list(file: str) -> Union[dict[str, Any], Exception]:
         """Read local domain list file"""
         if not os.path.exists(LOCAL_TOP_PICK_FILE):
             logger.warning("Local file does not exist")
             raise FileNotFoundError
         try:
             with open(file, "r") as readfile:
-                domain_list = json.loads(readfile.read())
+                domain_list: dict[str, Any] = json.load(readfile)
                 return domain_list
         except Exception as e:
+            logger.warning("Cannot Process File: {e}")
             return e
 
-    def process_suggestion(self, term: str) -> Any:
-        """Search for matching domain from search term"""
-        pass
+    @staticmethod
+    def build_index(domain_list: dict[str, Any]) -> None:
+        """Construct indexes and results from Top Picks"""
+        _index: defaultdict = defaultdict(list)
+        _results: list[dict[str, Any]] = []
+
+        domains = domain_list["domains"]["items"]
+        for domain in domains:
+            index_key = len(_results)
+            for char_len in range(QUERY_CHAR_LIMIT, len(domain) + 1):
+                # See configs/default.toml for character limit for Top Picks
+                _index[domain["domain"][:char_len]] = index_key
+            _results.append(domain)
