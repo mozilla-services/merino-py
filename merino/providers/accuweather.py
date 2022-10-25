@@ -243,8 +243,8 @@ class Provider(BaseProvider):
     ) -> Optional[Temperature]:
         match unit:
             case "C" | "c":
-                return Temperature(c=value, f=None)
+                return Temperature(c=value)
             case "F" | "f":
-                return Temperature(c=None, f=value)
+                return Temperature(f=value)
             case _:
                 return None
