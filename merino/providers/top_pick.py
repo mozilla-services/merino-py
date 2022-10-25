@@ -1,4 +1,5 @@
 """Top Pick Navigational Queries Provider"""
+import asyncio
 import json
 import logging
 import os
@@ -74,7 +75,7 @@ class Provider(BaseProvider):
         app: Optional[FastAPI] = None,
         name: str = "top_pick",
         enabled_by_default: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         self._app = app
         self._name = name
@@ -83,7 +84,14 @@ class Provider(BaseProvider):
 
     async def initialize(self) -> None:
         """Initialize the provider."""
-        ...
+        try:
+            primary, secondary = await asyncio.to_thread(Provider.build_indices())
+            self.primary_index = primary[0]
+            self.primary_results = primary[1]
+            self.secondary_index = secondary[0]
+            self.secondary_results = secondary[1]
+        except Exception as e:
+            logger.warning(f"Could not instantiate Top Pick Provider: {e}")
 
     def hidden(self) -> bool:  # noqa: D102
         return False
