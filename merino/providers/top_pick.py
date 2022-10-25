@@ -6,7 +6,7 @@ import os
 # from asyncio import to_thread
 from collections import defaultdict
 from enum import Enum
-from typing import Any, Final, Optional, Union
+from typing import Any, Final, Optional
 
 # import httpx
 from fastapi import FastAPI
@@ -102,7 +102,7 @@ class Provider(BaseProvider):
         return []
 
     @staticmethod
-    def read_domain_list(file: str) -> Union[dict[str, Any], Exception]:
+    def read_domain_list(file: str) -> Any:
         """Read local domain list file"""
         if not os.path.exists(LOCAL_TOP_PICK_FILE):
             logger.warning("Local file does not exist")
@@ -116,27 +116,42 @@ class Provider(BaseProvider):
             return e
 
     @staticmethod
-    def build_index(domain_list: dict[str, Any], category: TopPickCategory) -> None:
+    def build_index(domain_list: dict[str, Any]) -> Any:
         """Construct indexes and results from Top Picks"""
-        _index: defaultdict = defaultdict(list)
-        _results: list[dict[str, Any]] = []
+        domains: list[dict[str, Any]] = domain_list["domains"]["items"]
+        index: defaultdict = defaultdict(list)
+        results: list[dict[str, Any]] = []
 
-        domains = domain_list["domains"]["items"]
-        if category == TopPickCategory.PRIMARY:
-            for domain in domains:
-                index_key = len(_results)
-                for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
-                    # See configs/default.toml for character limit for Top Picks
-                    _index[domain["domain"][:chars]].append(index_key)
-                _results.append(domain)
-        elif category == TopPickCategory.SECONDARY:
-            alt_domains: list[dict[str, Any]] = []
-            for domain in domains:
-                for alt in domain["similar"]:
-                    alt_domains.append(domain.update({"domain": alt}))
-            for domain in alt_domains:
-                index_key = len(_results)
-                for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
-                    # See configs/default.toml for character limit for Top Picks
-                    _index[domain["domain"][:chars]].appemd(index_key)
-                _results.append(domain)
+        for domain in domains:
+            index_key = len(results)
+            for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
+                # See configs/default.toml for character limit for Top Picks
+                index[domain["domain"][:chars]].append(index_key)
+            results.append(domain)
+
+        alt_domains: list[dict[str, Any]] = []
+        secondary_index: defaultdict = defaultdict(list)
+        secondary_results: list[dict[str, Any]] = []
+
+        for domain in domains:
+            if not domain["similars"]:
+                alt_domains.append(domain)
+            else:
+                for alt in domain["similars"]:
+                    alt_domain = domain.copy()
+                    alt_domain.update({"domain": alt})
+                    alt_domains.append(alt_domain)
+        for domain in alt_domains:
+            index_key = len(secondary_results)
+            for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
+                # See configs/default.toml for character limit for Top Picks
+                secondary_index[domain["domain"][:chars]].append(index_key)
+            secondary_results.append(domain)
+        return (index, results), (secondary_index, secondary_results)
+
+    @staticmethod
+    def build_indices() -> Any:
+        """Read domain file, create indexes and suggestions"""
+        domains = Provider.read_domain_list(LOCAL_TOP_PICK_FILE)
+        primary, secondary = Provider.build_index(domains)
+        return primary, secondary
