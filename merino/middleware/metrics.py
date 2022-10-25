@@ -7,7 +7,9 @@ from http import HTTPStatus
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from merino.metrics import get_metrics_client
+from merino.featureflags import FeatureFlags
+from merino.metrics import Client, get_metrics_client
+from merino.middleware import ScopeKey
 
 logger = logging.getLogger(__name__)
 
@@ -18,14 +20,35 @@ class MetricsMiddleware:
     """
 
     def __init__(self, app: ASGIApp) -> None:
-        """Initilize."""
-        self.app = app
+        """Initialize the metrics middleware."""
+        self.app: ASGIApp = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Wrap the request with metrics."""
         if scope["type"] != "http":  # pragma: no cover
             await self.app(scope, receive, send)
             return
+
+        # The metrics client needs to be able to read feature flags
+        feature_flags = FeatureFlags()
+
+        # We don't use the StatsD client directly
+        statsd_client = get_metrics_client()
+
+        # Instead we use our own proxy client which adds feature flags to metrics
+        client = Client(
+            statsd_client=statsd_client,
+            feature_flags=feature_flags,
+        )
+
+        # Store the `FeatureFlags` instance and the `Client` instance in the
+        # request scope, so that it can be used by other middleware and endpoints.
+        scope[ScopeKey.FEATURE_FLAGS] = feature_flags
+        scope[ScopeKey.METRICS_CLIENT] = client
+
+        loop = get_event_loop()
+        request = Request(scope=scope)
+        started_at = loop.time()
 
         async def send_wrapper(message: Message) -> None:
             if message["type"] == "http.response.start":
@@ -38,18 +61,18 @@ class MetricsMiddleware:
                     metric_name = self._build_metric_name(
                         request.method, request.url.path
                     )
-                    client.timing(f"{metric_name}.timing", value=duration)
-                    client.increment(f"{metric_name}.status_codes.{status_code}")
+                    client.timing(
+                        f"{metric_name}.timing",
+                        value=duration,
+                    )
+                    client.increment(
+                        f"{metric_name}.status_codes.{status_code}",
+                    )
 
                 # track all status codes here.
                 client.increment(f"response.status_codes.{status_code}")
 
             await send(message)
-
-        client = get_metrics_client()
-        loop = get_event_loop()
-        request = Request(scope=scope)
-        started_at = loop.time()
 
         try:
             await self.app(scope, receive, send_wrapper)

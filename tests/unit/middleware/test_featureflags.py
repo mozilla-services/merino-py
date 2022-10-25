@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from merino.featureflags import FeatureFlagConfigs, FeatureFlags, session_id_context
+from merino.featureflags import FeatureFlags, session_id_context
 
 
 def test_missing():
@@ -83,4 +83,4 @@ def test_enabled_perc_session(bucket_id: str, want: bool):
 )
 def test_raises_malformed_config(config: dict):
     with pytest.raises(ValidationError):
-        FeatureFlagConfigs(flags=config)
+        FeatureFlags(flags=config)

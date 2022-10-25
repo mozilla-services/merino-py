@@ -4,21 +4,18 @@ import logging
 from contextvars import ContextVar
 from enum import Enum
 from random import randbytes
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Callable
 
 from dynaconf import Dynaconf
-from pydantic import BaseModel, ConstrainedFloat
+from pydantic import BaseModel, ConstrainedFloat, parse_obj_as
 from pydantic.types import OptionalIntFloat
-
-if TYPE_CHECKING:
-    from pydantic.typing import TupleGenerator
+from wrapt import decorator
 
 logger = logging.getLogger(__name__)
 
-# Configuration and schema
-
 
 def _dynaconf_loader() -> Any:
+    """Load configuration from disk using dynaconf."""
     return Dynaconf(
         root_path="merino",
         envvar_prefix="MERINO",
@@ -32,42 +29,60 @@ def _dynaconf_loader() -> Any:
 
 
 class Enabled(ConstrainedFloat):
-    """TODO"""
+    """Constrained float for the enabled state of a feature flag."""
 
     ge: OptionalIntFloat = 0.0
     le: OptionalIntFloat = 1.0
 
 
 class BucketingScheme(str, Enum):
-    """TODO"""
+    """Enum for accepted feature flag bucketing schemes."""
 
     random = "random"
     session = "session"
 
 
 class FeatureFlag(BaseModel):
-    """TODO"""
+    """Model representing a feature flag."""
 
     enabled: Enabled
     scheme: BucketingScheme = BucketingScheme.session
 
 
-class FeatureFlagConfigs(BaseModel):
-    """Feature Flag Configs Class"""
+# Type aliases for feature flags
+FeatureFlagsConfigurations = dict[str, FeatureFlag]
+FeatureFlagsDecisions = dict[str, bool]
 
-    flags: dict[str, Optional[FeatureFlag]]
-
-    def __iter__(self) -> "TupleGenerator":
-        """TODO"""
-        yield from self.flags.items()
-
-    def __getitem__(self, flag_name) -> FeatureFlag | None:
-        """TODO"""
-        return self.flags.get(flag_name, None)
+# Load the dynaconf configuration and parse it into pydantic models once and
+# then use it as the default value for `flags` in `FeatureFlags`.
+_DYNACONF_FLAGS = parse_obj_as(FeatureFlagsConfigurations, _dynaconf_loader())
 
 
-# Initialize the flag configs at the module level
-_flags = FeatureFlagConfigs(flags=_dynaconf_loader())
+@decorator
+def record_decision(
+    wrapped_method: Callable[..., bool],
+    instance: "FeatureFlags",
+    args: tuple,
+    kwargs: dict,
+) -> bool:
+    """Record the decision for when is_enabled() is called for a feature flag."""
+    # `flag_name` is expected to be the first positional argument
+    [flag_name, *remaining_args] = args
+
+    if flag_name in instance.decisions:
+        # There has been a previous call to `is_enabled()` for this feature flag
+        # name. Return the recorded decision rather than generating a new one.
+        return instance.decisions[flag_name]
+
+    # Call the decorated callable with the given arguments
+    decision = wrapped_method(flag_name, *remaining_args, **kwargs)
+
+    instance.decisions[flag_name] = decision
+    logger.info(
+        f"Record feature flag decision for {flag_name}", extra={flag_name: decision}
+    )
+
+    return decision
 
 
 # The session ID is set on this context variable by the FeatureFlagsMiddleware
@@ -109,12 +124,20 @@ class FeatureFlags:
     `enabled` - This represents the % enabled for the flag and must be a float between 0 and 1
     """
 
-    flags: FeatureFlagConfigs
+    flags: FeatureFlagsConfigurations
+    decisions: FeatureFlagsDecisions
 
-    def __init__(self) -> None:
-        """Init for FeatureFlags"""
-        self.flags = _flags
+    def __init__(self, flags: dict | None = None) -> None:
+        """Initialize feature flags."""
+        if flags is None:
+            self.flags = _DYNACONF_FLAGS
+        else:
+            self.flags = parse_obj_as(FeatureFlagsConfigurations, flags)
 
+        # This dict is populated by @record_decision when is_enabled() is called
+        self.decisions = {}
+
+    @record_decision
     def is_enabled(self, flag_name: str, bucket_for: str | bytes | None = None) -> bool:
         """Check if a given flag is enabled via a feature flag configuration
         block. Two of the guiding principals for this method are: fail to 'off'
@@ -129,9 +152,10 @@ class FeatureFlags:
         Returns:
             bool: Returns true if the feature should be enabled.
         """
-        config = self.flags[flag_name]
-        if config is None:
+        if flag_name not in self.flags:
             return False
+
+        config = self.flags[flag_name]
 
         # Short circuits for enabled values of 0 or 1
         match config.enabled:

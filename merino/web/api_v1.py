@@ -1,22 +1,22 @@
 """Merino V1 API"""
 import asyncio
+import os
 from itertools import chain
 
-from aiodogstatsd import Client
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
-from merino.metrics import get_metrics_client
+from merino.featureflags import FeatureFlags
+from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider, SuggestionRequest
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 router = APIRouter()
-
 
 SUGGEST_RESPONSE = {
     "suggestions": [],
@@ -40,7 +40,6 @@ async def suggest(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
-    metrics_client: Client = Depends(get_metrics_client),
 ) -> JSONResponse:
     """
     Query Merino for suggestions.
@@ -54,6 +53,24 @@ async def suggest(
     Returns:
     A list of suggestions or an empty list if nothing was found.
     """
+    feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
+    metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
+
+    if os.environ["MERINO_ENV"] == "testing":
+        if feature_flags.is_enabled("test-perc-enabled"):
+            print("test-perc-enabled is enabled")
+
+        if feature_flags.is_enabled("test-perc-enabled"):
+            # TODO: Do we expect a decision for a `random` scheme flag to be
+            # consistent across the handling of a request? Do we expect to call
+            # is_enabled() multiple times for a feature flag or just once have
+            # retrieve the recorded decision for future calls in
+            # @record_decision?
+            print("test-perc-enabled is enabled")
+
+        if feature_flags.is_enabled("test-perc-enabled-session"):
+            print("test-perc-enabled-session is enabled")
+
     active_providers, default_providers = sources
     if providers is not None:
         search_from = [
@@ -65,8 +82,15 @@ async def suggest(
     srequest = SuggestionRequest(
         query=q, geolocation=request.scope[ScopeKey.GEOLOCATION]
     )
+
+    # # Retrieve feature flags decisions as metric tags
+    # metrics_tags = feature_flags_as_tags(request.scope[ScopeKey.FEATURE_FLAGS])
+
     lookups = [
-        metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
+        metrics_client.timeit_task(
+            p.query(srequest),
+            f"providers.{p.name}.query",
+        )
         for p in search_from
     ]
 
