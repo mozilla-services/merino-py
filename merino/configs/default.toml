@@ -65,6 +65,7 @@ api_key = ""
 url_base = "https://apidev.accuweather.com"
 # The name of the query param whose value is the API key, not the key itself.
 url_param_api_key = "apikey"
+url_current_conditions_path = "/currentconditions/v1/{location_key}.json"
 url_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
 url_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"
 url_postalcodes_param_query = "q"
