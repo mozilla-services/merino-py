@@ -13,7 +13,6 @@ from exceptions import MissingKintoDataFilesError
 from kinto import (
     KintoEnvironment,
     KintoRequestAttachment,
-    KintoRequestRecord,
     KintoResponseRecord,
     KintoSuggestion,
     get_record,
@@ -43,12 +42,12 @@ def fixture_kinto_environment(request: Any) -> KintoEnvironment:
 
 
 @pytest.fixture(scope="session", name="kinto_records")
-def fixture_kinto_records(request: Any) -> dict[str, KintoRequestRecord]:
+def fixture_kinto_records(request: Any) -> dict[str, KintoRequestAttachment]:
     """Return a map from data file name to suggestion data."""
 
     # Load Kinto data from the given Kinto data directory
     kinto_data_dir: str = request.config.option.kinto_data_dir
-    kinto_records: dict[str, KintoRequestRecord] = {}
+    kinto_records: dict[str, KintoRequestAttachment] = {}
     for data_file in pathlib.Path(kinto_data_dir).glob("*.json"):
 
         content: bytes = data_file.read_bytes()
@@ -56,14 +55,11 @@ def fixture_kinto_records(request: Any) -> dict[str, KintoRequestRecord]:
             KintoSuggestion(**suggestion)
             for suggestion in json.loads(data_file.read_text())
         ]
-        kinto_records[data_file.name] = KintoRequestRecord(
-            id=data_file.stem,
-            attachment=KintoRequestAttachment(
-                filename=data_file.name,
-                filecontent=content,
-                mimetype="application/json",
-                suggestions=suggestions,
-            ),
+        kinto_records[data_file.name] = KintoRequestAttachment(
+            filename=data_file.name,
+            filecontent=content,
+            mimetype="application/json",
+            suggestions=suggestions,
         )
 
     if not kinto_records:
@@ -76,7 +72,7 @@ def fixture_kinto_records(request: Any) -> dict[str, KintoRequestRecord]:
 def fixture_fetch_kinto_icon_url(
     request: Any,
     kinto_environment: KintoEnvironment,
-    kinto_records: dict[str, KintoRequestRecord],
+    kinto_records: dict[str, KintoRequestAttachment],
 ) -> Callable[[str], str]:
     """Return a function that will query for an icon URL from a suggestion title"""
 
@@ -88,7 +84,7 @@ def fixture_fetch_kinto_icon_url(
         record_id: str = next(
             f"icon-{suggestion.icon}"
             for record in kinto_records.values()
-            for suggestion in record.attachment.suggestions
+            for suggestion in record.suggestions
             if suggestion.title == suggestion_title
         )
         record: KintoResponseRecord = get_record(kinto_environment, record_id)
