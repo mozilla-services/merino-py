@@ -130,11 +130,13 @@ class Provider(BaseProvider):
                     _index[domain["domain"][:chars]] = index_key
                 _results.append(domain)
         elif category == TopPickCategory.SECONDARY:
+            alt_domains: list[dict[str, Any]] = []
             for domain in domains:
+                for alt in domain["similar"]:
+                    alt_domains.append(domain.update({"domain": alt}))
+            for domain in alt_domains:
                 index_key = len(_results)
-                similars = domain["similars"]
-                for similar in similars:
-                    for chars in range(QUERY_CHAR_LIMIT, len(similar) + 1):
-                        # See configs/default.toml for character limit for Top Picks
-                        _index[domain["domain"][:chars]] = index_key
-                    _results.append(domain)
+                for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
+                    # See configs/default.toml for character limit for Top Picks
+                    _index[domain["domain"][:chars]] = index_key
+                _results.append(domain)
