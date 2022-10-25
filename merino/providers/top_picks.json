@@ -3,7 +3,7 @@
         "items": [
             {
                 "rank": 1,
-                "domain": "example.com/",
+                "domain": "example",
                 "title": "Example",
                 "url": "https://example.com",
                 "icon": "https://example.com",
@@ -18,7 +18,7 @@
             },
             {
                 "rank": 2,
-                "domain": "firefox.com/",
+                "domain": "firefox",
                 "title": "Firefox",
                 "url": "https://firefox.com",
                 "icon": "https://firefox.com",
@@ -35,38 +35,17 @@
             },
             {
                 "rank": 3,
-                "domain": "example.com/",
-                "title": "Example",
-                "url": "https://example.com",
-                "icon": "https://example.com",
+                "domain": "mozilla",
+                "title": "Mozilla",
+                "url": "https://mozilla.org/en-US/",
+                "icon": "https://mozilla.org/en-US/",
                 "categories": {
                     "items": []
                 },
                 "similars": [
-                    "exxample",
-                    "exampple",
-                    "eexample"
+                    "mozzilla",
+                    "mozila"
                 ]
-            },
-            {
-                "domains": {
-                    "items": [
-                        {
-                            "rank": 2.5,
-                            "domain": "mozilla.org/",
-                            "title": "Mozilla",
-                            "url": "https://mozilla.org/en-US/",
-                            "icon": "https://mozilla.org/en-US/",
-                            "categories": {
-                                "items": []
-                            },
-                            "similars": [
-                                "mozzilla",
-                                "mozila"
-                            ]
-                        }
-                    ]
-                }
             }
         ]
     }
