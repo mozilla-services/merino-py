@@ -118,7 +118,7 @@ class Provider(BaseProvider):
     @staticmethod
     def build_index(domain_list: dict[str, Any], category: TopPickCategory) -> None:
         """Construct indexes and results from Top Picks"""
-        _index: defaultdict = defaultdict(int)
+        _index: defaultdict = defaultdict(list)
         _results: list[dict[str, Any]] = []
 
         domains = domain_list["domains"]["items"]
@@ -127,7 +127,7 @@ class Provider(BaseProvider):
                 index_key = len(_results)
                 for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
                     # See configs/default.toml for character limit for Top Picks
-                    _index[domain["domain"][:chars]] = index_key
+                    _index[domain["domain"][:chars]].append(index_key)
                 _results.append(domain)
         elif category == TopPickCategory.SECONDARY:
             alt_domains: list[dict[str, Any]] = []
@@ -138,5 +138,5 @@ class Provider(BaseProvider):
                 index_key = len(_results)
                 for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
                     # See configs/default.toml for character limit for Top Picks
-                    _index[domain["domain"][:chars]] = index_key
+                    _index[domain["domain"][:chars]].appemd(index_key)
                 _results.append(domain)
