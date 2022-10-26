@@ -12,6 +12,9 @@
             "hello",
             "world",
             "hello world"
+        ],
+        "full_keywords": [
+            ["hello world", 3]
         ]
     },
     {
@@ -25,6 +28,9 @@
         "title": "Banana",
         "keywords": [
             "banana"
+        ],
+        "full_keywords": [
+            ["banana", 1]
         ]
     },
     {
@@ -39,6 +45,10 @@
         "keywords": [
             "coffee",
             "kaffee"
+        ],
+        "full_keywords": [
+            ["coffee", 1],
+            ["kaffee", 1]
         ]
     },
     {
@@ -51,10 +61,15 @@
         "advertiser": "Example.org",
         "title": "Test Engineering",
         "keywords": [
-            "test-engineering",
-            "test engineering",
+            "engineering",
             "test",
-            "engineering"
+            "test-engineering",
+            "test engineering"
+        ],
+        "full_keywords": [
+            ["engineering", 1],
+            ["test-engineering", 2],
+            ["test engineering", 1]
         ]
     },
     {
@@ -68,6 +83,9 @@
         "title": "DunBroch",
         "keywords": [
             "DunBroch"
+        ],
+        "full_keywords": [
+            ["DunBroch", 1]
         ]
     },
     {
@@ -79,6 +97,9 @@
         "title": "Orange - Offline Expansion",
         "keywords": [
             "orange"
+        ],
+        "full_keywords": [
+            ["orange", 1]
         ]
     }
 ]

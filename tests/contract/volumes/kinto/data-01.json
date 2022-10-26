@@ -12,6 +12,9 @@
             "hello",
             "world",
             "hello world"
+        ],
+        "full_keywords": [
+            ["hello world",3]
         ]
     },
     {
@@ -25,6 +28,9 @@
         "title": "Banana",
         "keywords": [
             "banana"
+        ],
+        "full_keywords": [
+            ["banana", 1]
         ]
     }
 ]

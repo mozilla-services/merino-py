@@ -11,6 +11,10 @@
         "keywords": [
             "coffee",
             "kaffee"
+        ],
+        "full_keywords": [
+           [ "coffee",1],
+            ["kaffee",1]
         ]
     },
     {
@@ -23,10 +27,15 @@
         "advertiser": "Example.org",
         "title": "Test Engineering",
         "keywords": [
-            "test-engineering",
-            "test engineering",
+            "engineering",
             "test",
-            "engineering"
+            "test-engineering",
+            "test engineering"
+        ],
+        "full_keywords": [
+            ["engineering", 1],
+            ["test-engineering", 2],
+            ["test engineering", 1]
         ]
     },
     {
@@ -40,6 +49,9 @@
         "title": "DunBroch",
         "keywords": [
             "DunBroch"
+        ],
+        "full_keywords": [
+            ["DunBroch", 1]
         ]
     }
 ]

@@ -9,9 +9,14 @@
         "advertiser": "Example.org",
         "title": "Tree",
         "keywords": [
-            "tree",
             "birch tree",
-            "maple tree"
+            "maple tree",
+            "tree"
+        ],
+        "full_keywords": [
+            ["birch tree", 1],
+            ["maple tree", 1],
+            ["tree", 1]
         ]
     }
 ]
