@@ -6,7 +6,7 @@
                 "domain": "example",
                 "title": "Example",
                 "url": "https://example.com",
-                "icon": "https://example.com",
+                "icon": -1,
                 "categories": {
                     "items": []
                 },
@@ -21,7 +21,7 @@
                 "domain": "firefox",
                 "title": "Firefox",
                 "url": "https://firefox.com",
-                "icon": "https://firefox.com",
+                "icon": -1,
                 "categories": {
                     "items": []
                 },
@@ -38,7 +38,7 @@
                 "domain": "mozilla",
                 "title": "Mozilla",
                 "url": "https://mozilla.org/en-US/",
-                "icon": "https://mozilla.org/en-US/",
+                "icon": -1,
                 "categories": {
                     "items": []
                 },
