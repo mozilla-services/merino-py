@@ -181,16 +181,3 @@ class Provider(BaseProvider):
         domains = Provider.read_domain_list(LOCAL_TOP_PICK_FILE)
         primary, secondary = Provider.build_index(domains)
         return primary, secondary
-
-
-# {'exxa': [0], 'exxam': [0], 'exxamp': [0], 'exxampl': [0],
-# 'exam': [1], 'examp': [1], 'exampp': [1], 'examppl': [1],
-# 'eexa': [2], 'eexam': [2], 'eexamp': [2], 'eexampl': [2],
-# 'fire': [3, 6, 7], 'firef': [3, 7], 'firefo': [3, 7],
-# 'firefox': [3, 7], 'foye': [4], 'foyer': [4],
-# 'foyerf': [4], 'foyerfo': [4], 'fiir': [5],
-# 'fiire': [5], 'fiiref': [5], 'fiirefo': [5],
-# 'fires': [6], 'firesf': [6], 'firesfo': [6],
-# 'mozz': [8], 'mozzi': [8], 'mozzil': [8],
-# 'mozzill': [8], 'mozi': [9], 'mozil': [9],
-# 'mozila': [9, 9]})
