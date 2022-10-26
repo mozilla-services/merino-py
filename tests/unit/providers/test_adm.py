@@ -78,6 +78,7 @@ class FakeBackend:
                 "advertiser": "Example.com",
                 "title": "Hello World",
                 "keywords": ["hello", "world", "hello world"],
+                "full_keywords": [("hello world", 3)],
             },
             "main-workspace/quicksuggest/attachment-02.json": {
                 "id": 2,
@@ -87,7 +88,8 @@ class FakeBackend:
                 "icon": "01",
                 "advertiser": "Example.org",
                 "title": "Hello Banana",
-                "keywords": ["hello", "banana", "hello banana"],
+                "keywords": ["banana", "hello", "hello banana"],
+                "full_keywords": [("banana", 1), ("hello banana", 2)],
             },
         }
 
@@ -124,7 +126,11 @@ async def test_initialize(adm: Provider) -> None:
 
     await adm.initialize()
 
-    assert adm.suggestions == {"banana": 0, "hello": 0, "hello banana": 0}
+    assert adm.suggestions == {
+        "banana": (0, "banana"),
+        "hello": (0, "hello banana"),
+        "hello banana": (0, "hello banana"),
+    }
     assert adm.results == [
         {
             "id": 2,
