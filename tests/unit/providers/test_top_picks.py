@@ -2,14 +2,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import os
-from collections import defaultdict
 
 import pytest
 from fastapi import APIRouter, FastAPI
 
 from merino.config import settings
-
-# from merino.config import settings
 from merino.providers.top_picks import Provider, Suggestion
 
 app = FastAPI()
@@ -115,9 +112,9 @@ def test_build_indeces(top_picks: Provider) -> None:
 async def test_initialize(top_picks: Provider) -> None:
     """Test initialization of top pick provider"""
     await top_picks.initialize()
-    assert type(top_picks.primary_index) == defaultdict
-    assert type(top_picks.secondary_index) == defaultdict
-    assert type(top_picks.results) == list
+    assert top_picks.primary_index
+    assert top_picks.secondary_index
+    assert top_picks.results
 
 
 @pytest.mark.asyncio
