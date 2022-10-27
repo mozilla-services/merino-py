@@ -80,6 +80,7 @@ backend = "remote-settings"
 cron_interval_sec = 60
 resync_interval_sec = 10800
 score = 0.3
+score_wikipedia = 0.2
 
 [default.providers.top_picks]
 enabled_by_default = false
