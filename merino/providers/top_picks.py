@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from collections import defaultdict
-from typing import Any, Final, Optional
+from typing import Any, Optional
 
 from fastapi import FastAPI
 
@@ -14,8 +14,6 @@ from merino.providers.base import BaseProvider, BaseSuggestion
 SCORE: float = settings.providers.top_picks.score
 LOCAL_TOP_PICKS_FILE: str = settings.providers.top_picks.top_picks_file_path
 QUERY_CHAR_LIMIT: int = settings.providers.top_picks.query_char_limit
-# Used whenever the `icon` field is missing from the top pick payload.
-MISSING_ICON_ID: Final = "-1"
 
 
 logger = logging.getLogger(__name__)
