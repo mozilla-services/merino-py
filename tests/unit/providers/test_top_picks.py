@@ -103,9 +103,10 @@ def test_build_index(top_picks: Provider) -> None:
 def test_build_indeces(top_picks: Provider) -> None:
     """Test to build indexes and result data structures"""
     source_dict = top_picks.build_indices()
-    source_dict["primary_index"]
-    source_dict["secondary_index"]
-    source_dict["results"]
+    assert source_dict["primary_index"]
+    assert source_dict["secondary_index"]
+    assert source_dict["results"]
+    assert source_dict["index_char_range"]
 
 
 @pytest.mark.asyncio
@@ -134,39 +135,33 @@ async def test_query(top_picks: Provider) -> None:
     assert await top_picks.query("supercalifragilisticexpialidocious") == []
 
     res = await top_picks.query("example")
-    assert (
-        res
-        == [
-            Suggestion(
-                block_id=0,
-                rank=1,
-                title="Example",
-                domain="example",
-                url="https://example.com",
-                provider="top_picks",
-                is_top_pick=True,
-                is_sponsored=False,
-                icon="",
-                score=settings.providers.top_picks.score,
-            )
-        ][0]
-    )
+    assert res == [
+        Suggestion(
+            block_id=0,
+            rank=1,
+            title="Example",
+            domain="example",
+            url="https://example.com",
+            provider="top_picks",
+            is_top_pick=True,
+            is_sponsored=False,
+            icon="",
+            score=settings.providers.top_picks.score,
+        )
+    ]
 
     res = await top_picks.query("exxamp")
-    assert (
-        res
-        == [
-            Suggestion(
-                block_id=0,
-                rank=1,
-                title="Example",
-                domain="example",
-                url="https://example.com",
-                provider="top_picks",
-                is_top_pick=True,
-                is_sponsored=False,
-                icon="",
-                score=settings.providers.top_picks.score,
-            )
-        ][0]
-    )
+    assert res == [
+        Suggestion(
+            block_id=0,
+            rank=1,
+            title="Example",
+            domain="example",
+            url="https://example.com",
+            provider="top_picks",
+            is_top_pick=True,
+            is_sponsored=False,
+            icon="",
+            score=settings.providers.top_picks.score,
+        )
+    ]

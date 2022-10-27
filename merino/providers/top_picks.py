@@ -76,10 +76,10 @@ class Provider(BaseProvider):
             return []
         if ids := self.primary_index.get(q, []):
             res = self.results[ids[0]]
-            return res
+            return [res]
         elif ids := self.secondary_index.get(q, []):
             res = self.results[ids[0]]
-            return res
+            return [res]
         return []
 
     @staticmethod
