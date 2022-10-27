@@ -127,9 +127,9 @@ async def test_initialize(adm: Provider) -> None:
     await adm.initialize()
 
     assert adm.suggestions == {
-        "banana": (0, "banana"),
-        "hello": (0, "hello banana"),
-        "hello banana": (0, "hello banana"),
+        "banana": (0, 0),
+        "hello": (0, 1),
+        "hello banana": (0, 1),
     }
     assert adm.results == [
         {

@@ -96,10 +96,15 @@
         "advertiser": "Example.org",
         "title": "Orange - Offline Expansion",
         "keywords": [
+            "fruit",
+            "fruit ora",
+            "fruit orange",
+            "orang",
             "orange"
         ],
         "full_keywords": [
-            ["orange", 1]
+            ["fruit orange", 3],
+            ["orange", 2]
         ]
     }
 ]

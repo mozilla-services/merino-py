@@ -101,7 +101,8 @@ class NonsponsoredSuggestion(BaseSuggestion):
 class Provider(BaseProvider):
     """Suggestion provider for adMarketplace through Remote Settings."""
 
-    suggestions: dict[str, Tuple[int, str]] = {}
+    suggestions: dict[str, Tuple[int, int]] = {}
+    full_keywords_list: list[str] = []
     results: list[dict[str, Any]] = []
     icons: dict[int, str] = {}
     # Store the value to avoid fetching it from settings every time as that'd
@@ -161,7 +162,9 @@ class Provider(BaseProvider):
         """Fetch suggestions, keywords, and icons from Remote Settings."""
         # A dictionary keyed on suggestion keywords, each value stores an index
         # (pointer) to one entry of the suggestion result list.
-        suggestions: dict[str, Tuple[int, str]] = {}
+        suggestions: dict[str, Tuple[int, int]] = {}
+        # A list of full keywords
+        full_keywords_list: list[str] = []
         # A list of suggestion results.
         results: list[dict[str, Any]] = []
         # A dictionary of icon IDs to icon URLs.
@@ -182,21 +185,28 @@ class Provider(BaseProvider):
             self.backend.fetch_attachment(item["attachment"]["location"])
             for item in records
         ]
+
         for done_task in as_completed(fetch_tasks):
             res = await done_task
+
             for suggestion in res.json():
-                kw_id = len(results)
+                result_id = len(results)
                 keywords = suggestion.pop("keywords")
-                full_keywords = suggestion.pop("full_keywords")
+                full_keywords_tuples = suggestion.pop("full_keywords")
+                full_keywords_list.append(full_keywords_tuples[0][0])
+                fkw_index = len(full_keywords_list) - 1
                 begin = 0
-                for full_keyword, n in full_keywords:
+                for full_keyword, n in full_keywords_tuples:
                     for query, fkw in zip(
                         islice(keywords, begin, begin + n), repeat(full_keyword, n)
                     ):
+                        if full_keywords_list[fkw_index] != full_keyword:
+                            full_keywords_list.append(full_keyword)
+                            fkw_index += 1
                         # Note that for adM suggestions, each keyword can only be mapped to
                         # a single suggestion.
-                        suggestions[query] = (kw_id, full_keyword)
-                        begin += n
+                        suggestions[query] = (result_id, fkw_index)
+                    begin += n
                 results.append(suggestion)
         icon_record = [
             record for record in suggest_settings if record["type"] == "icon"
@@ -208,6 +218,7 @@ class Provider(BaseProvider):
         # overwrite the instance variables
         self.suggestions = suggestions
         self.results = results
+        self.full_keywords_list = full_keywords_list
         self.icons = icons
         self.last_fetch_at = time.time()
 
@@ -219,12 +230,12 @@ class Provider(BaseProvider):
         q = srequest.query
         if (suggest_look_ups := self.suggestions.get(q)) is not None:
             results_id = suggest_look_ups[0]
-            full_keyword = suggest_look_ups[1]
+            fkw_id = suggest_look_ups[1]
             res = self.results[results_id]
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
             suggestion_dict = {
                 "block_id": res.get("id"),
-                "full_keyword": full_keyword,
+                "full_keyword": self.full_keywords_list[fkw_id],
                 "title": res.get("title"),
                 "url": res.get("url"),
                 "impression_url": res.get("impression_url"),
