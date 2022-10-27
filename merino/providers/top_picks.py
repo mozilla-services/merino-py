@@ -40,6 +40,7 @@ class Provider(BaseProvider):
     primary_index: defaultdict = defaultdict(list)
     secondary_index: defaultdict = defaultdict(list)
     results: list[dict[str, Any]] = []
+    query_char_count_dict: dict[str, int]
 
     def __init__(
         self,
@@ -60,6 +61,7 @@ class Provider(BaseProvider):
             self.primary_index = index_results_dict["primary_index"]
             self.secondary_index = index_results_dict["secondary_index"]
             self.results = index_results_dict["results"]
+            self.query_char_count_dict = index_results_dict["char_count_dict"]
 
         except Exception as e:
             logger.warning(f"Could not instantiate Top Pick Provider: {e}")
@@ -72,8 +74,11 @@ class Provider(BaseProvider):
         """Query Top Pick provider."""
         if q.startswith("http"):
             return []
-        if len(q) < QUERY_CHAR_LIMIT:
+        if len(q) < self.query_char_count_dict["min"]:
             return []
+        if len(q) > self.query_char_count_dict["max"]:
+            return []
+
         if ids := self.primary_index.get(q, []):
             res = self.results[ids[0]]
             logger.warning(res)
@@ -103,6 +108,10 @@ class Provider(BaseProvider):
         primary_index: defaultdict = defaultdict(list)
         secondary_index: defaultdict = defaultdict(list)
         results: list[dict[str, Any]] = []
+        min_max_chars: dict[str, int] = {
+            "min": QUERY_CHAR_LIMIT,
+            "max": QUERY_CHAR_LIMIT,
+        }
 
         for record in domain_list["domains"]:
             index_key = len(results)
@@ -125,11 +134,15 @@ class Provider(BaseProvider):
             # Insertion of keys into primary index.
             for chars in range(QUERY_CHAR_LIMIT, len(record["domain"]) + 1):
                 # See configs/default.toml for character limit for Top Picks
+                if chars > min_max_chars["max"]:
+                    min_max_chars["max"] = chars
                 primary_index[record["domain"][:chars]].append(index_key)
 
             # Insertion of keys into primary index.
             for variant in record.get("similars", []):
                 for chars in range(QUERY_CHAR_LIMIT, len(variant) + 1):
+                    if chars > min_max_chars["max"]:
+                        min_max_chars["max"] = chars
                     secondary_index[variant[:chars]].append(index_key)
 
             results.append(suggestion)
@@ -138,6 +151,7 @@ class Provider(BaseProvider):
             "primary_index": primary_index,
             "secondary_index": secondary_index,
             "results": results,
+            "char_count_dict": min_max_chars,
         }
 
     @staticmethod

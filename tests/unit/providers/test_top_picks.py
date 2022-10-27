@@ -134,6 +134,7 @@ async def test_query(top_picks: Provider) -> None:
     await top_picks.initialize()
     assert await top_picks.query("am") == []
     assert await top_picks.query("https://") == []
+    assert await top_picks.query("supercalifragilisticexpialidocious") == []
 
     res = await top_picks.query("example")
     assert (
