@@ -23,8 +23,6 @@ class Suggestion(BaseSuggestion):
     """Model for Top Pick Query Suggestion"""
 
     block_id: int
-    domain: str
-    rank: int
     is_top_pick: bool
     score: float
     is_sponsored: bool = False
@@ -111,15 +109,14 @@ class Provider(BaseProvider):
 
         for record in domain_list["domains"]:
             index_key: int = len(results)
+            domain = record["domain"]
 
             if len(record["domain"]) < QUERY_CHAR_LIMIT:
                 continue
 
             suggestion = Suggestion(
                 block_id=0,
-                rank=record["rank"],
                 title=record["title"],
-                domain=record["domain"],
                 url=record["url"],
                 provider="top_picks",
                 is_top_pick=True,
@@ -128,11 +125,11 @@ class Provider(BaseProvider):
             )
 
             # Insertion of keys into primary index.
-            for chars in range(QUERY_CHAR_LIMIT, len(record["domain"]) + 1):
+            for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
                 # See configs/default.toml for character limit for Top Picks
                 if chars > index_char_range["max"]:
                     index_char_range["max"] = chars
-                primary_index[record["domain"][:chars]].append(index_key)
+                primary_index[domain[:chars]].append(index_key)
 
             # Insertion of keys into secondary index.
             for variant in record.get("similars", []):

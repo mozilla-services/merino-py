@@ -18,12 +18,10 @@ router = APIRouter()
 top_picks_example = {
     "domains": [
         {
-            "rank": 3,
-            "domain": "mozilla",
             "title": "Mozilla",
             "url": "https://mozilla.org/en-US/",
-            "icon": -1,
-            "categories": {"items": []},
+            "icon": "",
+            "categories": ["web-browser"],
             "similars": ["mozzilla", "mozila"],
         },
     ]
@@ -86,10 +84,10 @@ def test_build_index(top_picks: Provider) -> None:
     short_domain_list = {
         "domains": [
             {
-                "rank": 1,
                 "title": "aaa",
-                "domain": "aaa",
+                "rank": 1,
                 "url": "https://aaa.com",
+                "domain": "aaa",
                 "icon": "",
                 "categories": ["web-browser"],
                 "similars": [],
@@ -142,9 +140,7 @@ async def test_query(top_picks: Provider) -> None:
     assert res == [
         Suggestion(
             block_id=0,
-            rank=1,
             title="Example",
-            domain="example",
             url="https://example.com",
             provider="top_picks",
             is_top_pick=True,
@@ -158,9 +154,7 @@ async def test_query(top_picks: Provider) -> None:
     assert res == [
         Suggestion(
             block_id=0,
-            rank=1,
             title="Example",
-            domain="example",
             url="https://example.com",
             provider="top_picks",
             is_top_pick=True,
