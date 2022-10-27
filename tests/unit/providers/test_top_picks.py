@@ -55,13 +55,17 @@ def test_local_file_exists() -> None:
 
 def test_read_domain_list(top_picks: Provider) -> None:
     """Test that the JSON file containing the domain list can be processed"""
-    with pytest.raises(FileNotFoundError):
-        top_picks.read_domain_list("./wrongfile.json")
     domain_list = top_picks.read_domain_list(
         settings.providers.top_picks.top_picks_file_path
     )
     assert domain_list["domains"][0]["domain"] == "example"
     assert len(domain_list["domains"][1]["similars"]) == 5
+
+
+def test_read_domain_list_exception(top_picks: Provider) -> None:
+    """Test that the JSON file containing the domain list can be processed"""
+    with pytest.raises(FileNotFoundError):
+        top_picks.read_domain_list("./wrongfile.json")
 
 
 def test_build_index(top_picks: Provider) -> None:

@@ -47,12 +47,10 @@ class Provider(BaseProvider):
         app: Optional[FastAPI] = None,
         name: str = "top_picks",
         enabled_by_default: bool = False,
-        **kwargs: Any,
     ) -> None:
         self._app = app
         self._name = name
         self._enabled_by_default = enabled_by_default
-        super().__init__(**kwargs)
 
     async def initialize(self) -> None:
         """Initialize the provider."""
@@ -70,20 +68,20 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
-    async def query(self, q: str) -> Any:
+    async def query(self, srequest: str) -> list[BaseSuggestion]:
         """Query Top Pick provider."""
-        if q.startswith("http"):
+        if srequest.startswith("http"):
             return []
-        if ids := self.primary_index.get(q, []):
+        if ids := self.primary_index.get(srequest, []):
             res = self.results[ids[0]]
             return [res]
-        elif ids := self.secondary_index.get(q, []):
+        elif ids := self.secondary_index.get(srequest, []):
             res = self.results[ids[0]]
             return [res]
         return []
 
     @staticmethod
-    def read_domain_list(file: str) -> dict[str, Union[str, int, list[str]]]:
+    def read_domain_list(file: str) -> dict[str, Any]:
         """Read local domain list file"""
         if not os.path.exists(file):
             logger.warning("Local file does not exist")
@@ -97,7 +95,7 @@ class Provider(BaseProvider):
             raise e
 
     @staticmethod
-    def build_index(domain_list: dict) -> dict[str, Union[list, dict]]:
+    def build_index(domain_list: dict[str, Any]) -> dict[str, Any]:
         """Construct indexes and results from Top Picks"""
         # A dictionary of keyed values that point to the matching index
         primary_index: defaultdict = defaultdict(list)
@@ -153,7 +151,7 @@ class Provider(BaseProvider):
         }
 
     @staticmethod
-    def build_indices() -> dict[str, Union[list, dict]]:
+    def build_indices() -> dict[str, Any]:
         """Read domain file, create indices and suggestions"""
         domains = Provider.read_domain_list(LOCAL_TOP_PICKS_FILE)
         index_results_dict = Provider.build_index(domains)
