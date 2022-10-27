@@ -74,10 +74,6 @@ class Provider(BaseProvider):
         """Query Top Pick provider."""
         if q.startswith("http"):
             return []
-        # if len(q) < self.index_char_range["min"]:
-        #     return []
-        # if len(q) > self.index_char_range["max"]:
-        #     return []
         if ids := self.primary_index.get(q, []):
             res = self.results[ids[0]]
             return res
@@ -87,9 +83,7 @@ class Provider(BaseProvider):
         return []
 
     @staticmethod
-    def read_domain_list(
-        file: str,
-    ) -> Union[dict[str, Union[str, int, list[str]]], Exception]:
+    def read_domain_list(file: str) -> dict[str, Union[str, int, list[str]]]:
         """Read local domain list file"""
         if not os.path.exists(file):
             logger.warning("Local file does not exist")
@@ -103,7 +97,7 @@ class Provider(BaseProvider):
             raise e
 
     @staticmethod
-    def build_index(domain_list: Any) -> Any:
+    def build_index(domain_list: dict) -> dict[str, Union[list, dict]]:
         """Construct indexes and results from Top Picks"""
         # A dictionary of keyed values that point to the matching index
         primary_index: defaultdict = defaultdict(list)
@@ -118,7 +112,7 @@ class Provider(BaseProvider):
         }
 
         for record in domain_list["domains"]:
-            index_key = len(results)
+            index_key: int = len(results)
 
             if len(record["domain"]) < QUERY_CHAR_LIMIT:
                 continue
@@ -159,7 +153,7 @@ class Provider(BaseProvider):
         }
 
     @staticmethod
-    def build_indices() -> Any:
+    def build_indices() -> dict[str, Union[list, dict]]:
         """Read domain file, create indices and suggestions"""
         domains = Provider.read_domain_list(LOCAL_TOP_PICKS_FILE)
         index_results_dict = Provider.build_index(domains)
