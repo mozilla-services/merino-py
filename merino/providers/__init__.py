@@ -11,7 +11,7 @@ from merino.providers.accuweather import Provider as AccuWeatherProvider
 from merino.providers.adm import Provider as AdmProvider
 from merino.providers.adm import TestBackend
 from merino.providers.base import BaseProvider
-from merino.providers.top_pick import Provider as TopPickProvider
+from merino.providers.top_picks import Provider as TopPicksProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
 from merino.remotesettings import LiveBackend
 
@@ -27,7 +27,7 @@ class ProviderType(str, Enum):
 
     ACCUWEATHER = "accuweather"
     ADM = "adm"
-    TOP_PICK = "top_pick"
+    TOP_PICKS = "top_picks"
     WIKI_FRUIT = "wiki_fruit"
 
 
@@ -57,8 +57,8 @@ async def init_providers() -> None:
                     name=provider_type,
                     enabled_by_default=setting.enabled_by_default,
                 )
-            case ProviderType.TOP_PICK:
-                providers["top_pick"] = TopPickProvider(
+            case ProviderType.TOP_PICKS:
+                providers["top_picks"] = TopPicksProvider(
                     name=provider_type,
                     enabled_by_default=setting.enabled_by_default,
                 )

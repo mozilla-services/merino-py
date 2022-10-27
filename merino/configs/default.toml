@@ -81,9 +81,8 @@ cron_interval_sec = 60
 resync_interval_sec = 10800
 score = 0.3
 
-[default.providers.top_pick]
+[default.providers.top_picks]
 enabled_by_default = false
 score = 0.2
-is_top_pick = true
 query_char_limit = 4
-top_pick_file_path = "merino/providers/top_picks.json"
+top_picks_file_path = "dev/top_picks.json"

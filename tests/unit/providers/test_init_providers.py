@@ -19,9 +19,9 @@ async def test_init_providers() -> None:
     assert len(providers) == 4
     assert ProviderType.ADM in providers
     assert ProviderType.WIKI_FRUIT in providers
-    assert ProviderType.TOP_PICK in providers
+    assert ProviderType.TOP_PICKS in providers
 
-    assert len(default_providers) == 2
+    assert len(default_providers) == 3
 
 
 @pytest.mark.asyncio

@@ -1,20 +1,50 @@
 {
-    "domains": {
-        "items": [
-            {
-                "rank": 1,
-                "domain": "mozilla.org/",
-                "title": "Mozilla",
-                "url": "https://mozilla.org/en-US/",
-                "icon": "https://mozilla.org/en-US/",
-                "categories": {
-                    "items": []
-                },
-                "similars": [
-                    "mozzilla",
-                    "mozila"
-                ]
-            }
-        ]
-    }
+    "domains": [
+        {
+            "rank": 1,
+            "title": "Example",
+            "domain": "example",
+            "url": "https://example.com",
+            "icon": -1,
+            "categories": [
+                "web-browser"
+            ],
+            "similars": [
+                "exxample",
+                "exampple",
+                "eexample"
+            ]
+        },
+        {
+            "rank": 2,
+            "title": "Firefox",
+            "domain": "firefox",
+            "url": "https://firefox.com",
+            "icon": -1,
+            "categories": [
+                "web-browser"
+            ],
+            "similars": [
+                "firefoxx",
+                "foyerfox",
+                "fiirefox",
+                "firesfox",
+                "firefoxes"
+            ]
+        },
+        {
+            "rank": 3,
+            "title": "Mozilla",
+            "domain": "mozilla",
+            "url": "https://mozilla.org/en-US/",
+            "icon": -1,
+            "categories": [
+                "web-browser"
+            ],
+            "similars": [
+                "mozzilla",
+                "mozila"
+            ]
+        }
+    ]
 }
