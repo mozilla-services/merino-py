@@ -98,7 +98,7 @@ def get_record(environment: KintoEnvironment, record_id: str) -> KintoResponseRe
 def upload_attachment(
     environment: KintoEnvironment,
     record_id: str,
-    record: KintoRequestAttachment,
+    attachment: KintoRequestAttachment,
     data_type: str,
 ) -> None:
     """Upload attachment to Kinto for the given record."""
@@ -113,7 +113,11 @@ def upload_attachment(
     response: RequestsResponse = requests.post(
         url=url,
         files={
-            "attachment": (record.filename, record.filecontent, record.mimetype),
+            "attachment": (
+                attachment.filename,
+                attachment.filecontent,
+                attachment.mimetype,
+            ),
         },
         data={"data": f'{{"type": "{data_type}"}}'},
     )

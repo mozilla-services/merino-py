@@ -50,7 +50,7 @@ def fixture_merino_url(request: Any) -> str:
 @pytest.fixture(scope="session", name="kinto_step")
 def fixture_kinto_step(
     kinto_environment: KintoEnvironment,
-    kinto_records: dict[str, KintoRequestAttachment],
+    kinto_attachments: dict[str, KintoRequestAttachment],
 ) -> StepFunction:
     """Define execution instructions for Kinto scenario step."""
 
@@ -60,13 +60,12 @@ def fixture_kinto_step(
                 f"Unsupported request type {type(step.request)} for Kinto service step."
             )
 
-        record: KintoRequestAttachment = kinto_records[step.request.filename]
+        attachment: KintoRequestAttachment = kinto_attachments[step.request.filename]
+        record_id: str = step.request.record_id
+        data_type: str = step.request.data_type
+        upload_attachment(kinto_environment, record_id, attachment, data_type)
 
-        upload_attachment(
-            kinto_environment, step.request.record_id, record, step.request.data_type
-        )
-
-        icon_ids: set[str] = {suggestion.icon for suggestion in record.suggestions}
+        icon_ids: set[str] = {suggestion.icon for suggestion in attachment.suggestions}
         upload_icons(kinto_environment, icon_ids)
 
     return kinto_step
