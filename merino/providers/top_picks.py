@@ -110,12 +110,11 @@ class Provider(BaseProvider):
             index_key = len(results)
 
             if len(record["domain"]) < QUERY_CHAR_LIMIT:
-                pass
+                continue
 
             suggestion = {
-                "block_id": 1,
+                "block_id": 0,
                 "rank": record["rank"],
-                "full_keyword": record["domain"],
                 "title": record["title"],
                 "domain": record["domain"],
                 "url": record["url"],

@@ -65,7 +65,6 @@ def test_read_domain_list(top_picks: Provider) -> None:
     assert type(domain_list) == dict
     assert domain_list["domains"][0]["domain"] == "example"
     assert len(domain_list["domains"][1]["similars"]) == 5
-    # assert domain_list["domains"][2] == top_picks_example["domains"][0]
 
 
 def test_build_index(top_picks: Provider) -> None:
@@ -81,12 +80,27 @@ def test_build_index(top_picks: Provider) -> None:
     assert "exampl" in source_dict["primary_index"]
     assert "example" in source_dict["primary_index"]
 
-    # assert len(source_dict["results"]) == 3
-    # assert source_dict["results"][0]["domain"] == "example"
-    # assert source_dict["results"][1]["url"] == "https://firefox.com"
+    # Assertions to ensure any domains short of query limit
+    # return empty collections
+    short_domain_list = {
+        "domains": [
+            {
+                "rank": 1,
+                "title": "aaa",
+                "domain": "aaa",
+                "url": "https://aaa.com",
+                "icon": "",
+                "categories": ["web-browser"],
+                "similars": [],
+            },
+        ]
+    }
 
-    # for key, value in source_dict["primary_index"].items():
-    #     assert key in source_dict["results"][value][0]["domain"]
+    short_domain_dict = top_picks.build_index(short_domain_list)
+
+    assert len(short_domain_dict["results"]) == 0
+    assert short_domain_dict["results"] == []
+    assert short_domain_dict["primary_index"] == {}
 
 
 def test_build_indeces(top_picks: Provider) -> None:
@@ -107,20 +121,46 @@ async def test_initialize(top_picks: Provider) -> None:
 
 
 @pytest.mark.asyncio
+async def test_initialize_exception(top_picks: Provider) -> None:
+    """Test that proper exception is thrown if initialization is unsuccessful"""
+    with pytest.raises(Exception):
+        top_picks.initialize(0)
+
+
+@pytest.mark.asyncio
 async def test_query(top_picks: Provider) -> None:
     """Test for the query method of the Top Pick provider."""
-    await top_picks.initialize()
 
-    res = await top_picks.query("am")
-    assert res == []
+    await top_picks.initialize()
+    assert await top_picks.query("am") == []
+    assert await top_picks.query("https://") == []
+
     res = await top_picks.query("example")
     assert (
         res
         == [
             Suggestion(
-                block_id=1,
+                block_id=0,
                 rank=1,
-                full_keyword="example",
+                title="Example",
+                domain="example",
+                url="https://example.com",
+                provider="top_picks",
+                is_top_pick=True,
+                is_sponsored=False,
+                icon="",
+                score=settings.providers.top_picks.score,
+            )
+        ][0]
+    )
+
+    res = await top_picks.query("exxamp")
+    assert (
+        res
+        == [
+            Suggestion(
+                block_id=0,
+                rank=1,
                 title="Example",
                 domain="example",
                 url="https://example.com",
