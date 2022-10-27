@@ -5,7 +5,7 @@
             "title": "Example",
             "domain": "example",
             "url": "https://example.com",
-            "icon": -1,
+            "icon": "",
             "categories": [
                 "web-browser"
             ],
@@ -20,7 +20,7 @@
             "title": "Firefox",
             "domain": "firefox",
             "url": "https://firefox.com",
-            "icon": -1,
+            "icon": "",
             "categories": [
                 "web-browser"
             ],
@@ -37,7 +37,7 @@
             "title": "Mozilla",
             "domain": "mozilla",
             "url": "https://mozilla.org/en-US/",
-            "icon": -1,
+            "icon": "",
             "categories": [
                 "web-browser"
             ],

@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from collections import defaultdict
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from fastapi import FastAPI
 
@@ -39,8 +39,8 @@ class Provider(BaseProvider):
 
     primary_index: defaultdict = defaultdict(list)
     secondary_index: defaultdict = defaultdict(list)
-    results: list[dict[str, Any]] = []
-    query_char_count_dict: dict[str, int]
+    results: list[dict[str, Union[str, list, int]]]
+    index_char_range = dict[str, int]
 
     def __init__(
         self,
@@ -58,10 +58,10 @@ class Provider(BaseProvider):
         """Initialize the provider."""
         try:
             index_results_dict: dict = await asyncio.to_thread(Provider.build_indices)
-            self.primary_index = index_results_dict["primary_index"]
-            self.secondary_index = index_results_dict["secondary_index"]
-            self.results = index_results_dict["results"]
-            self.query_char_count_dict = index_results_dict["char_count_dict"]
+            self.primary_index: dict = index_results_dict["primary_index"]
+            self.secondary_index: list = index_results_dict["secondary_index"]
+            self.results: list[Suggestion] = index_results_dict["results"]
+            self.index_char_range: dict = index_results_dict["index_char_range"]
 
         except Exception as e:
             logger.warning(f"Could not instantiate Top Pick Provider: {e}")
@@ -74,29 +74,29 @@ class Provider(BaseProvider):
         """Query Top Pick provider."""
         if q.startswith("http"):
             return []
-        if len(q) < self.query_char_count_dict["min"]:
-            return []
-        if len(q) > self.query_char_count_dict["max"]:
-            return []
-
+        # if len(q) < self.index_char_range["min"]:
+        #     return []
+        # if len(q) > self.index_char_range["max"]:
+        #     return []
         if ids := self.primary_index.get(q, []):
             res = self.results[ids[0]]
-            logger.warning(res)
-            return Suggestion(**res)
+            return res
         elif ids := self.secondary_index.get(q, []):
             res = self.results[ids[0]]
-            return Suggestion(**res)
+            return res
         return []
 
     @staticmethod
-    def read_domain_list(file: str) -> Any:
+    def read_domain_list(
+        file: str,
+    ) -> Union[dict[str, Union[str, int, list[str]]], Exception]:
         """Read local domain list file"""
         if not os.path.exists(file):
             logger.warning("Local file does not exist")
             raise FileNotFoundError
         try:
             with open(file, "r") as readfile:
-                domain_list = json.load(readfile)
+                domain_list: dict = json.load(readfile)
                 return domain_list
         except Exception as e:
             logger.warning("Cannot Process File: {e}")
@@ -105,10 +105,14 @@ class Provider(BaseProvider):
     @staticmethod
     def build_index(domain_list: Any) -> Any:
         """Construct indexes and results from Top Picks"""
+        # A dictionary of keyed values that point to the matching index
         primary_index: defaultdict = defaultdict(list)
+        # A dictionary of keyed values that point to the matching index
         secondary_index: defaultdict = defaultdict(list)
-        results: list[dict[str, Any]] = []
-        min_max_chars: dict[str, int] = {
+        # A list of suggestions
+        results: list[Suggestion] = []
+        # A tuple encapsulating the min and max character length in the indexes
+        index_char_range: dict[str, int] = {
             "min": QUERY_CHAR_LIMIT,
             "max": QUERY_CHAR_LIMIT,
         }
@@ -119,30 +123,30 @@ class Provider(BaseProvider):
             if len(record["domain"]) < QUERY_CHAR_LIMIT:
                 continue
 
-            suggestion = {
-                "block_id": 0,
-                "rank": record["rank"],
-                "title": record["title"],
-                "domain": record["domain"],
-                "url": record["url"],
-                "provider": "top_picks",
-                "is_top_pick": True,
-                "icon": "",
-                "score": settings.providers.top_picks.score,
-            }
+            suggestion = Suggestion(
+                block_id=0,
+                rank=record["rank"],
+                title=record["title"],
+                domain=record["domain"],
+                url=record["url"],
+                provider="top_picks",
+                is_top_pick=True,
+                icon="",
+                score=settings.providers.top_picks.score,
+            )
 
             # Insertion of keys into primary index.
             for chars in range(QUERY_CHAR_LIMIT, len(record["domain"]) + 1):
                 # See configs/default.toml for character limit for Top Picks
-                if chars > min_max_chars["max"]:
-                    min_max_chars["max"] = chars
+                if chars > index_char_range["max"]:
+                    index_char_range["max"] = chars
                 primary_index[record["domain"][:chars]].append(index_key)
 
-            # Insertion of keys into primary index.
+            # Insertion of keys into secondary index.
             for variant in record.get("similars", []):
                 for chars in range(QUERY_CHAR_LIMIT, len(variant) + 1):
-                    if chars > min_max_chars["max"]:
-                        min_max_chars["max"] = chars
+                    if chars > index_char_range["max"]:
+                        index_char_range["max"] = chars
                     secondary_index[variant[:chars]].append(index_key)
 
             results.append(suggestion)
@@ -151,7 +155,7 @@ class Provider(BaseProvider):
             "primary_index": primary_index,
             "secondary_index": secondary_index,
             "results": results,
-            "char_count_dict": min_max_chars,
+            "index_char_range": index_char_range,
         }
 
     @staticmethod

@@ -16,19 +16,17 @@ app = FastAPI()
 router = APIRouter()
 
 top_picks_example = {
-    "domains": {
-        "items": [
-            {
-                "rank": 3,
-                "domain": "mozilla",
-                "title": "Mozilla",
-                "url": "https://mozilla.org/en-US/",
-                "icon": -1,
-                "categories": {"items": []},
-                "similars": ["mozzilla", "mozila"],
-            }
-        ]
-    }
+    "domains": [
+        {
+            "rank": 3,
+            "domain": "mozilla",
+            "title": "Mozilla",
+            "url": "https://mozilla.org/en-US/",
+            "icon": -1,
+            "categories": {"items": []},
+            "similars": ["mozzilla", "mozila"],
+        },
+    ]
 }
 
 
@@ -62,7 +60,6 @@ def test_read_domain_list(top_picks: Provider) -> None:
     domain_list = top_picks.read_domain_list(
         settings.providers.top_picks.top_picks_file_path
     )
-    assert type(domain_list) == dict
     assert domain_list["domains"][0]["domain"] == "example"
     assert len(domain_list["domains"][1]["similars"]) == 5
 

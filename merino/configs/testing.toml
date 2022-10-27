@@ -35,6 +35,6 @@ enabled_by_default = true
 [testing.providers.top_picks]
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
-score = 0.2
+score = 0.25
 query_char_limit = 4
 top_picks_file_path = "tests/unit/providers/top_picks.json"
