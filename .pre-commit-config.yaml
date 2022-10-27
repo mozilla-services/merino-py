@@ -28,9 +28,7 @@ repos:
         #   - https://bandit.readthedocs.io/en/latest/plugins/b104_hardcoded_bind_all_interfaces.html
         args:
           - '--skip'
-          - B101
-          - '--skip'
-          - B104
+          - B101,B104
   - repo: 'https://github.com/pycqa/pydocstyle'
     rev: 6.1.1
     hooks:
