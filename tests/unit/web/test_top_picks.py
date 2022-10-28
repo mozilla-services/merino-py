@@ -33,7 +33,7 @@ def inject_providers():
     ],
 )
 def test_top_picks_query(query, title, url):
-    """Test to determine if primary and secondary Top Picks provider results return"""
+    """Test if Top Picks provider returns result for indexed Top Pick"""
     response = client.get(f"/api/v1/suggest?q={query}")
     assert response.status_code == 200
 
@@ -42,3 +42,18 @@ def test_top_picks_query(query, title, url):
     assert result
     assert result["suggestions"][0]["url"] == url
     assert result["suggestions"][0]["title"] == title
+    assert result["suggestions"][0]["is_top_pick"]
+    assert not result["suggestions"][0]["is_sponsored"]
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["m", "mo", "mox", "moz", "mozzarella", "http", "http:", "https:", "https://"],
+)
+def test_top_picks_no_result(query):
+    """Test if Top Picks provider does respond when provided invalid query term"""
+    response = client.get(f"/api/v1/suggest?q={query}")
+    assert response.status_code == 200
+
+    result = response.json()
+    assert result["suggestions"] == []
