@@ -36,7 +36,6 @@ class Provider(BaseProvider):
     primary_index: defaultdict = defaultdict(list)
     secondary_index: defaultdict = defaultdict(list)
     results: list[dict[str, Any]]
-    index_char_range = dict[str, int]
     query_min: int
     query_max: int
 
