@@ -45,7 +45,13 @@ def test_hidden(top_picks: Provider) -> None:
 
 def test_local_file_exists() -> None:
     """Test that the Top Picks Nav Query file exists locally"""
-    assert os.path.exists(settings.providers.top_picks.top_picks_file_path) is True
+    assert os.path.exists(settings.providers.top_picks.top_picks_file_path)
+
+
+def test_local_file_not_found(mocker) -> None:
+    """Test that the Top Picks Nav Query file exists locally"""
+    mocker.patch("os.path.exists", return_value=False)
+    assert not os.path.exists(settings.providers.top_picks.top_picks_file_path)
 
 
 def test_read_domain_list(top_picks: Provider) -> None:
@@ -76,28 +82,6 @@ def test_build_index(top_picks: Provider) -> None:
     assert "exampl" in source_dict["primary_index"]
     assert "example" in source_dict["primary_index"]
 
-    # Assertions to ensure any domains short of query limit
-    # return empty collections
-    short_domain_list = {
-        "domains": [
-            {
-                "title": "aaa",
-                "rank": 1,
-                "url": "https://aaa.com",
-                "domain": "aaa",
-                "icon": "",
-                "categories": ["web-browser"],
-                "similars": [],
-            },
-        ]
-    }
-
-    short_domain_dict = top_picks.build_index(short_domain_list)
-
-    assert len(short_domain_dict["results"]) == 0
-    assert short_domain_dict["results"] == []
-    assert short_domain_dict["primary_index"] == {}
-
 
 def test_build_indeces(top_picks: Provider) -> None:
     """Test to build indexes and result data structures"""
@@ -118,10 +102,13 @@ async def test_initialize(top_picks: Provider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_initialize_exception(top_picks: Provider) -> None:
+async def test_initialize_exception(top_picks: Provider, mocker) -> None:
     """Test that proper exception is thrown if initialization is unsuccessful"""
+    mocker.patch.object(
+        top_picks, "initialize", side_effect=Exception
+    )
     with pytest.raises(Exception):
-        top_picks.initialize(0)
+        await top_picks.initialize()
 
 
 @pytest.mark.asyncio
