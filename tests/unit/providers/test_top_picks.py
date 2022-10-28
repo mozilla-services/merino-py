@@ -12,6 +12,8 @@ from merino.providers.top_picks import Provider, Suggestion
 app = FastAPI()
 router = APIRouter()
 
+QUERY_CHAR_LIMIT: int = settings.providers.top_picks.query_char_limit
+
 top_picks_example = {
     "domains": [
         {
@@ -33,13 +35,11 @@ def fixture_top_pick() -> Provider:
 
 def test_enabled_by_default(top_picks: Provider) -> None:
     """Test for the enabled_by_default method."""
-
     assert top_picks.enabled_by_default is False
 
 
 def test_hidden(top_picks: Provider) -> None:
     """Test for the hidden method."""
-
     assert top_picks.hidden() is False
 
 
@@ -69,18 +69,26 @@ def test_read_domain_list_exception(top_picks: Provider) -> None:
         top_picks.read_domain_list("./wrongfile.json")
 
 
-def test_build_index(top_picks: Provider) -> None:
+def test_build_indexes(top_picks: Provider) -> None:
     """Test constructing the primary and secondary indexes and suggestions"""
     domain_list = top_picks.read_domain_list(
         settings.providers.top_picks.top_picks_file_path
     )
-    source_dict = top_picks.build_index(domain_list)
+    result = top_picks.build_index(domain_list)
+    primary_index = result["primary_index"]
+    secondary_index = result["secondary_index"]
+    results = result["results"]
+    # primary
 
-    assert "exa" not in source_dict["primary_index"]
-    assert "exam" in source_dict["primary_index"]
-    assert "examp" in source_dict["primary_index"]
-    assert "exampl" in source_dict["primary_index"]
-    assert "example" in source_dict["primary_index"]
+    example_query = "example"
+    for chars in range(QUERY_CHAR_LIMIT, len("example_query") + 1):
+        assert example_query[:chars] in result["primary_index"]
+        assert results[primary_index[example_query[:chars]][0]]
+    #  secondary
+    example_query = "fiirefox"
+    for chars in range(QUERY_CHAR_LIMIT, len("example_query") + 1):
+        assert example_query[:chars] in result["secondary_index"]
+        assert results[secondary_index[example_query[:chars]][0]]
 
 
 def test_build_indeces(top_picks: Provider) -> None:
