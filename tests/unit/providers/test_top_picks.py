@@ -8,6 +8,7 @@ from fastapi import APIRouter, FastAPI
 
 from merino.config import settings
 from merino.providers.top_picks import Provider, Suggestion
+from tests.unit.web.util import srequest
 
 app = FastAPI()
 router = APIRouter()
@@ -122,11 +123,11 @@ async def test_query(top_picks: Provider) -> None:
     """Test for the query method of the Top Pick provider."""
 
     await top_picks.initialize()
-    assert await top_picks.query("am") == []
-    assert await top_picks.query("https://") == []
-    assert await top_picks.query("supercalifragilisticexpialidocious") == []
+    assert await top_picks.query(srequest("am")) == []
+    assert await top_picks.query(srequest("https://")) == []
+    assert await top_picks.query(srequest("supercalifragilisticexpialidocious")) == []
 
-    res = await top_picks.query("example")
+    res = await top_picks.query(srequest("example"))
     assert res == [
         Suggestion(
             block_id=0,
@@ -140,7 +141,7 @@ async def test_query(top_picks: Provider) -> None:
         )
     ]
 
-    res = await top_picks.query("exxamp")
+    res = await top_picks.query(srequest("exxamp"))
     assert res == [
         Suggestion(
             block_id=0,

@@ -9,7 +9,7 @@ from typing import Any, Optional
 from fastapi import FastAPI
 
 from merino.config import settings
-from merino.providers.base import BaseProvider, BaseSuggestion
+from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 SCORE: float = settings.providers.top_picks.score
 LOCAL_TOP_PICKS_FILE: str = settings.providers.top_picks.top_picks_file_path
@@ -66,16 +66,16 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
-    async def query(self, srequest: str) -> list[BaseSuggestion]:
+    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Query Top Pick provider and return suggestion"""
-        if srequest.startswith("http"):
+        if srequest.query.startswith("http"):
             return []
-        if len(srequest) < self.query_min or len(srequest) > self.query_max:
+        if len(srequest.query) < self.query_min or len(srequest.query) > self.query_max:
             return []
-        if ids := self.primary_index.get(srequest, []):
+        if ids := self.primary_index.get(srequest.query, []):
             res = self.results[ids[0]]
             return [res]
-        elif ids := self.secondary_index.get(srequest, []):
+        elif ids := self.secondary_index.get(srequest.query, []):
             res = self.results[ids[0]]
             return [res]
         return []
