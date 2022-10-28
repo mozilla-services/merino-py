@@ -104,9 +104,7 @@ async def test_initialize(top_picks: Provider) -> None:
 @pytest.mark.asyncio
 async def test_initialize_exception(top_picks: Provider, mocker) -> None:
     """Test that proper exception is thrown if initialization is unsuccessful"""
-    mocker.patch.object(
-        top_picks, "initialize", side_effect=Exception
-    )
+    mocker.patch.object(top_picks, "initialize", side_effect=Exception)
     with pytest.raises(Exception):
         await top_picks.initialize()
 
