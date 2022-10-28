@@ -13,7 +13,7 @@ _validators = [
     Validator("providers.adm.cron_interval_sec", gt=0),
     Validator("providers.adm.resync_interval_sec", gt=0),
     Validator("providers.adm.score", gte=0, lte=1),
-    Validator("providesr.adm.backend", is_in=["remote-settings", "test"]),
+    Validator("providers.adm.backend", is_in=["remote-settings", "test"]),
     Validator("providers.wikifruit.enabled_by_default", is_type_of=bool),
     Validator("sentry.mode", is_in=["disabled", "release", "debug"]),
     Validator("sentry.env", is_in=["prod", "stage", "dev"]),
