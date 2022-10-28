@@ -185,7 +185,7 @@ class Provider(BaseProvider):
             self.backend.fetch_attachment(item["attachment"]["location"])
             for item in records
         ]
-
+        fkw_index = 0
         for done_task in as_completed(fetch_tasks):
             res = await done_task
 
@@ -193,20 +193,17 @@ class Provider(BaseProvider):
                 result_id = len(results)
                 keywords = suggestion.pop("keywords")
                 full_keywords_tuples = suggestion.pop("full_keywords")
-                full_keywords_list.append(full_keywords_tuples[0][0])
-                fkw_index = len(full_keywords_list) - 1
                 begin = 0
                 for full_keyword, n in full_keywords_tuples:
                     for query, fkw in zip(
                         islice(keywords, begin, begin + n), repeat(full_keyword, n)
                     ):
-                        if full_keywords_list[fkw_index] != full_keyword:
-                            full_keywords_list.append(full_keyword)
-                            fkw_index += 1
                         # Note that for adM suggestions, each keyword can only be mapped to
                         # a single suggestion.
                         suggestions[query] = (result_id, fkw_index)
                     begin += n
+                    full_keywords_list.append(full_keyword)
+                    fkw_index = len(full_keywords_list)
                 results.append(suggestion)
         icon_record = [
             record for record in suggest_settings if record["type"] == "icon"
