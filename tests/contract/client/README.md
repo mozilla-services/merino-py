@@ -42,6 +42,8 @@ suggestion content updates and additions_
 * Kinto `request` fields:
   * `service` - Set the value to `kinto`, to direct requests to the Kinto service
   * `delay` - (optional) Set seconds to pause before execution of request
+  * `record_id` - Set the ID that will correspond with the records specified in
+                  `filename`
   * `filename` - Set the file with records to upload. The files are located in
                  `..\volumes\kinto`
   * `data_type` - Set to `data` or `offline-expansion-data`
@@ -54,6 +56,7 @@ Example:
 ```yaml
 - request:
     service: kinto
+    record_id: "data-01"
     filename: "data-01.json"
     data_type: "data"
 ```
