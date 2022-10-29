@@ -35,7 +35,7 @@ class Provider(BaseProvider):
 
     primary_index: defaultdict = defaultdict(list)
     secondary_index: defaultdict = defaultdict(list)
-    results: list[dict[str, Any]]
+    results: list[Suggestion]
     query_min: int
     query_max: int
 
@@ -52,12 +52,14 @@ class Provider(BaseProvider):
     async def initialize(self) -> None:
         """Initialize the provider."""
         try:
-            index_results_dict: dict = await asyncio.to_thread(Provider.build_indices)
-            self.primary_index: dict = index_results_dict["primary_index"]
-            self.secondary_index: list = index_results_dict["secondary_index"]
-            self.results: list[Suggestion] = index_results_dict["results"]
-            self.query_min: int = index_results_dict["index_char_range"][0]
-            self.query_max: int = index_results_dict["index_char_range"][1]
+            index_results: dict[str, Any] = await asyncio.to_thread(
+                Provider.build_indices
+            )
+            self.primary_index: defaultdict = index_results["primary_index"]
+            self.secondary_index: defaultdict = index_results["secondary_index"]
+            self.results: list[Suggestion] = index_results["results"]
+            self.query_min: int = index_results["index_char_range"][0]
+            self.query_max: int = index_results["index_char_range"][1]
 
         except Exception as e:
             logger.warning(f"Could not instantiate Top Pick Provider: {e}")
@@ -68,8 +70,10 @@ class Provider(BaseProvider):
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Query Top Pick provider and return suggestion"""
+        # Ignore https:// and http://
         if srequest.query.startswith("http"):
             return []
+        # Ignore requests below or above character minimums
         if len(srequest.query) < self.query_min or len(srequest.query) > self.query_max:
             return []
         if ids := self.primary_index.get(srequest.query, []):
@@ -153,5 +157,5 @@ class Provider(BaseProvider):
     def build_indices() -> dict[str, Any]:
         """Read domain file, create indices and suggestions"""
         domains = Provider.read_domain_list(LOCAL_TOP_PICKS_FILE)
-        index_results_dict = Provider.build_index(domains)
-        return index_results_dict
+        index_results = Provider.build_index(domains)
+        return index_results
