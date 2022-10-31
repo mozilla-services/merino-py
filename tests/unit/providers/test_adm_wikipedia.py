@@ -60,6 +60,7 @@ class FakeBackend:
                 "advertiser": "Wikipedia",
                 "title": "Mozilla",
                 "keywords": ["mozilla"],
+                "full_keywords": [["mozilla", 1]]
             },
         }
 
@@ -84,7 +85,7 @@ async def test_initialize(adm: Provider) -> None:
 
     await adm.initialize()
 
-    assert adm.suggestions == {"mozilla": 0}
+    assert adm.suggestions == {"mozilla": (0, 0)}
     assert adm.results == [
         {
             "id": 1,
