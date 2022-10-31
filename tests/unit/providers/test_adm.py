@@ -18,7 +18,7 @@ from tests.unit.web.util import filter_caplog, srequest
 class FakeBackend:
     """Fake Remote Settings backend that returns suggest data for tests."""
 
-    async def get(self, bucket: Any, collection: Any) -> list[dict[Any, Any]]:
+    async def get(self, bucket: str, collection: str) -> list[dict[str, Any]]:
         """Return fake records."""
 
         return [
@@ -64,7 +64,7 @@ class FakeBackend:
             },
         ]
 
-    async def fetch_attachment(self, attachment_uri: Any) -> httpx.Response:
+    async def fetch_attachment(self, attachment_uri: str) -> httpx.Response:
         """Return a fake attachment for the given URI."""
 
         attachments = {

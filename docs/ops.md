@@ -170,6 +170,9 @@ These are production providers that generate suggestions.
     - Retry if the regular resync fails.
   - `score` (`MERINO_PROVIDERS__ADM__SCORE`) - The ranking score for this provider
     as a floating point number. Defaults to 0.3.
+  - `score_wikipedia` (`MERINO_PROVIDERS__ADM__SCORE_WIKIPEDIA`) - The ranking score
+    of Wikipedia suggestions for this provider as a floating point number.
+    Defaults to 0.2.
 
 #### Wiki Fruit Provider
 - Wiki Fruit - Provides suggestions from a test provider. Should not be used

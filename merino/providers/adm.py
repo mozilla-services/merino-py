@@ -108,6 +108,7 @@ class Provider(BaseProvider):
     # Store the value to avoid fetching it from settings every time as that'd
     # require a three-way dict lookup.
     score: float = settings.providers.adm.score
+    score_wikipedia: float = settings.providers.adm.score_wikipedia
     last_fetch_at: float
     cron_task: asyncio.Task
     backend: RemoteSettingsBackend
@@ -229,6 +230,11 @@ class Provider(BaseProvider):
             results_id, fkw_id = suggest_look_ups
             res = self.results[results_id]
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
+            score = (
+                self.score_wikipedia
+                if (advertiser := res.get("advertiser")) == "Wikipedia"
+                else self.score
+            )
             suggestion_dict = {
                 "block_id": res.get("id"),
                 "full_keyword": self.full_keywords[fkw_id],
@@ -237,10 +243,10 @@ class Provider(BaseProvider):
                 "impression_url": res.get("impression_url"),
                 "click_url": res.get("click_url"),
                 "provider": self.name,
-                "advertiser": res.get("advertiser"),
+                "advertiser": advertiser,
                 "is_sponsored": is_sponsored,
                 "icon": self.icons.get(int(res.get("icon", MISSING_ICON_ID))),
-                "score": self.score,
+                "score": score,
             }
             return [
                 SponsoredSuggestion(**suggestion_dict)

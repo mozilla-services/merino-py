@@ -16,11 +16,12 @@ async def test_init_providers() -> None:
 
     providers, default_providers = get_providers()
 
-    assert len(providers) == 3
+    assert len(providers) == 4
     assert ProviderType.ADM in providers
     assert ProviderType.WIKI_FRUIT in providers
+    assert ProviderType.TOP_PICKS in providers
 
-    assert len(default_providers) == 2
+    assert len(default_providers) == 3
 
 
 @pytest.mark.asyncio

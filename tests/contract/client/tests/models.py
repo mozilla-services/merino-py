@@ -17,7 +17,7 @@ class Service(Enum):
 
 
 class Header(BaseModel):
-    """Class that holds information about a HTTP header."""
+    """Class that holds information about an HTTP header."""
 
     name: str
     value: str
@@ -27,13 +27,14 @@ class Request(BaseModel):
     """Class that holds information about an HTTP request."""
 
     service: Service
-    # Delay is optional, providing time for data refresh
+    # Delay is optional, providing time for data refresh in seconds
     delay: Optional[float] = None
 
 
 class KintoRequest(Request):
     """Class that holds information about a Kinto HTTP request."""
 
+    record_id: str
     data_type: Literal["data", "offline-expansion-data"]
     filename: str
 
