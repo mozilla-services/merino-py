@@ -164,7 +164,7 @@ class Provider(BaseProvider):
         # (pointer) to one entry of the suggestion result list.
         suggestions: dict[str, Tuple[int, int]] = {}
         # A list of full keywords
-        full_keywords_list: list[str] = []
+        full_keywords: list[str] = []
         # A list of suggestion results.
         results: list[dict[str, Any]] = []
         # A dictionary of icon IDs to icon URLs.
@@ -191,8 +191,8 @@ class Provider(BaseProvider):
 
             for suggestion in res.json():
                 result_id = len(results)
-                keywords = suggestion.pop("keywords")
-                full_keywords_tuples = suggestion.pop("full_keywords")
+                keywords = suggestion.pop("keywords", [])
+                full_keywords_tuples = suggestion.pop("full_keywords", [])
                 begin = 0
                 for full_keyword, n in full_keywords_tuples:
                     for query, fkw in zip(
@@ -202,8 +202,8 @@ class Provider(BaseProvider):
                         # a single suggestion.
                         suggestions[query] = (result_id, fkw_index)
                     begin += n
-                    full_keywords_list.append(full_keyword)
-                    fkw_index = len(full_keywords_list)
+                    full_keywords.append(full_keyword)
+                    fkw_index = len(full_keywords)
                 results.append(suggestion)
         icon_record = [
             record for record in suggest_settings if record["type"] == "icon"
@@ -215,7 +215,7 @@ class Provider(BaseProvider):
         # overwrite the instance variables
         self.suggestions = suggestions
         self.results = results
-        self.full_keywords_list = full_keywords_list
+        self.full_keywords = full_keywords
         self.icons = icons
         self.last_fetch_at = time.time()
 
@@ -226,13 +226,12 @@ class Provider(BaseProvider):
         """Provide suggestion for a given query."""
         q = srequest.query
         if (suggest_look_ups := self.suggestions.get(q)) is not None:
-            results_id = suggest_look_ups[0]
-            fkw_id = suggest_look_ups[1]
+            results_id, fkw_id = suggest_look_ups
             res = self.results[results_id]
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
             suggestion_dict = {
                 "block_id": res.get("id"),
-                "full_keyword": self.full_keywords_list[fkw_id],
+                "full_keyword": self.full_keywords[fkw_id],
                 "title": res.get("title"),
                 "url": res.get("url"),
                 "impression_url": res.get("impression_url"),
