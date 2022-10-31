@@ -1,17 +1,19 @@
+import logging
 from typing import Any
 
 from fastapi.testclient import TestClient
 
 from merino.main import app
 from merino.providers import get_providers
-from tests.unit.web.util import filter_caplog
-from tests.unit.web.util import get_providers as override_dependency
+from tests.integration.api.v1.util import filter_caplog
+from tests.integration.api.v1.util import get_providers as override_dependency
 
 client = TestClient(app)
 app.dependency_overrides[get_providers] = override_dependency
 
 
 def test_geolocation(mocker: Any, caplog: Any) -> None:
+    caplog.set_level(logging.INFO)
     ip: str = "216.160.83.56"  # The IP address is taken from `GeoLite2-City-Test.mmdb`
     expected_country = "US"
     expected_region = "WA"

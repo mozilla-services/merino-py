@@ -46,7 +46,7 @@ For more details see the kinto-setup [README][kinto_setup_readme]
 The `kinto` container holds a minimalist storage service with synchronisation and
 sharing abilities. It uses the `kinto-attachments` container to store data locally.
 
-For more details see the kinto [documentation][kinto_docs]
+For more details see the Remote Settings [documentation][kinto_docs]
 
 ## Local Execution
 
@@ -64,7 +64,7 @@ make contract-tests-clean
 ```
 
 [client_readme]: ./client/README.md
-[kinto_docs]: https://pypi.org/project/kinto/
+[kinto_docs]: https://remote-settings.readthedocs.io/en/latest/
 [kinto_setup_readme]: ./kinto-setup/README.md
 [merino_docs]: ../../docs/SUMMARY.md
 [merino_readme]: ../../README.md

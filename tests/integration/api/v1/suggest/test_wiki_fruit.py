@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from merino.main import app
 from merino.providers import get_providers
 from merino.providers.wiki_fruit import WikiFruitProvider
-from tests.unit.web.util import get_provider_factory
+from tests.integration.api.v1.util import get_provider_factory
 
 client = TestClient(app)
 

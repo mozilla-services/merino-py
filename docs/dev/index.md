@@ -41,6 +41,12 @@ $ make dev
 # Run merino-py without the auto code reloading
 $ make run
 
+# Run unit tests
+$ make unit-tests
+
+# Run integration tests
+$ make integration-tests
+
 # Run contract tests
 $ make contract-tests
 

@@ -183,7 +183,7 @@ tests within a Python virtual environment to prevent dependency cross contaminat
 
       Example executing the `remote_settings__refresh` scenario:
       ```shell
-      pytest tests/contract/client/tests/test_contile.py -vv -k remote_settings__refresh
+      pytest tests/contract/client/tests/test_merino.py -vv -k remote_settings__refresh
       ```
 
 [contract_tests_readme]: ../README.md

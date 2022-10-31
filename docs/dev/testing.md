@@ -1,16 +1,29 @@
 # Testing strategies
 
-There are three major testing strategies used in this repository: unit tests,
-Python contract tests, and Python load tests.
+Merino is tested using a four tier strategy composed of unit, integration, contract
+and load level testing.
 
 Test code resides in the `tests` directory.
 
 ## Unit Tests
 
-Unit tests, located in the `tests/unit` directory, should appear close to the
-code they are testing, using the pytest unit test library. This is suitable for
-testing complex behavior at a small scale, with fine grained control over the
-inputs.
+The unit layer is suitable for testing complex behavior at a small scale, with fine
+grained control over the inputs. Due to their narrow scope, unit tests are fundamental
+to thorough test coverage.
+
+Unit tests are written and executed with pytest and are located in the `tests/unit`
+directory, using the same organizational structure as the merino source code.
+
+## Integration Tests
+
+The integration layer of testing allows for verification of interactions between
+service components, with lower development, maintenance and execution costs compared
+with higher level tests, such as contract tests.
+
+Integration tests are located in the `tests/integration` directory. They use pytest and
+the FAST API TestClient to send requests to specific merino endpoints and verify
+responses as well as other outputs, such as logs. Tests are organized according to the
+API path under test.
 
 ## Contract tests
 
