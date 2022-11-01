@@ -62,6 +62,7 @@ def test_metrics(mocker, client, url: str, metric_keys: list):
                 "get.api.v1.suggest.status_codes.200",
                 "providers.adm.query",
                 "providers.wiki_fruit.query",
+                "providers.top_picks.query",
                 "response.status_codes.200",
             ],
             [
