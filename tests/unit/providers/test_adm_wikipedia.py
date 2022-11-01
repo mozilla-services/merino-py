@@ -60,7 +60,7 @@ class FakeBackend:
                 "advertiser": "Wikipedia",
                 "title": "Mozilla",
                 "keywords": ["mozilla"],
-                "full_keywords": [["mozilla", 1]]
+                "full_keywords": [["mozilla", 1]],
             },
         }
 
