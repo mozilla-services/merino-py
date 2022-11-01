@@ -1,8 +1,18 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import asyncio
-from logging import LogRecord
 from typing import Any, Callable, Coroutine
 
+import pytest
+
+from merino.main import app
+from merino.providers import get_providers
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
+
+SetupProvidersFixture = Callable[[dict[str, BaseProvider]], None]
+TeardownProvidersFixture = Callable[[], None]
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -131,18 +141,31 @@ def get_provider_factory(
     return provider_factory
 
 
-async def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
+@pytest.fixture(name="setup_providers")
+def fixture_setup_providers() -> SetupProvidersFixture:
     """
-    Return a tuple of all the providers and default providers.
+    Returns a function that sets application provider dependency overrides
     """
-    return await get_provider_factory(
-        {
-            "sponsored-provider": SponsoredProvider(enabled_by_default=True),
-            "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
-        }
-    )()
+
+    def setup_providers(providers: dict[str, BaseProvider]) -> None:
+        """
+        Sets application provider dependency overrides
+        """
+        app.dependency_overrides[get_providers] = get_provider_factory(providers)
+
+    return setup_providers
 
 
-def filter_caplog(records: list[LogRecord], logger_name: str) -> list[LogRecord]:
-    """Filter pytest captured log records for a given logger name."""
-    return [record for record in records if record.name == logger_name]
+@pytest.fixture(name="teardown_providers")
+def fixture_teardown_providers() -> TeardownProvidersFixture:
+    """
+    Returns a function that resets application provider dependency overrides
+    """
+
+    def teardown_providers() -> None:
+        """
+        Resets application provider dependency overrides
+        """
+        del app.dependency_overrides[get_providers]
+
+    return teardown_providers

@@ -1,17 +1,43 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import logging
+
+import pytest
 from fastapi.testclient import TestClient
+from pytest import LogCaptureFixture
+from pytest_mock import MockerFixture
 
-from merino.main import app
-from merino.providers import get_providers
-from tests.integration.api.v1.util import filter_caplog
-from tests.integration.api.v1.util import get_providers as override_dependency
+from merino.providers import BaseProvider
+from tests.conftest import FilterCaplogFixture
+from tests.integration.api.v1.conftest import (
+    NonsponsoredProvider,
+    SetupProvidersFixture,
+    SponsoredProvider,
+    TeardownProvidersFixture,
+)
 
-client = TestClient(app)
-app.dependency_overrides[get_providers] = override_dependency
+
+@pytest.fixture(autouse=True)
+def inject_providers(
+    setup_providers: SetupProvidersFixture, teardown_providers: TeardownProvidersFixture
+):
+    providers: dict[str, BaseProvider] = {
+        "sponsored-provider": SponsoredProvider(enabled_by_default=True),
+        "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
+    }
+    setup_providers(providers)
+    yield
+    teardown_providers()
 
 
-def test_user_agent_middleware(mocker, caplog):
-    import logging
-
+def test_user_agent_middleware(
+    mocker: MockerFixture,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    client: TestClient,
+) -> None:
     caplog.set_level(logging.INFO)
 
     mock_client = mocker.patch("fastapi.Request.client")
@@ -35,9 +61,12 @@ def test_user_agent_middleware(mocker, caplog):
     assert record.form_factor == "desktop"
 
 
-def test_user_agent_middleware_with_missing_ua_str(mocker, caplog):
-    import logging
-
+def test_user_agent_middleware_with_missing_ua_str(
+    mocker: MockerFixture,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    client: TestClient,
+) -> None:
     caplog.set_level(logging.INFO)
 
     mock_client = mocker.patch("fastapi.Request.client")
