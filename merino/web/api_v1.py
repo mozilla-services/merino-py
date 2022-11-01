@@ -1,6 +1,5 @@
 """Merino V1 API"""
 import asyncio
-import os
 from itertools import chain
 
 from asgi_correlation_id.context import correlation_id
@@ -9,7 +8,6 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
-from merino.featureflags import FeatureFlags
 from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
@@ -53,23 +51,12 @@ async def suggest(
     Returns:
     A list of suggestions or an empty list if nothing was found.
     """
-    feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
+    # Do you plan to release code behind a feature flag? Uncomment the following
+    # line to get access to feature flags and then check if your feature flag is
+    # enabled for this request by calling feature_flags.is_enabled("example").
+    # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
+
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
-
-    if os.environ["MERINO_ENV"] == "testing":
-        if feature_flags.is_enabled("test-perc-enabled"):
-            print("test-perc-enabled is enabled")
-
-        if feature_flags.is_enabled("test-perc-enabled"):
-            # TODO: Do we expect a decision for a `random` scheme flag to be
-            # consistent across the handling of a request? Do we expect to call
-            # is_enabled() multiple times for a feature flag or just once have
-            # retrieve the recorded decision for future calls in
-            # @record_decision?
-            print("test-perc-enabled is enabled")
-
-        if feature_flags.is_enabled("test-perc-enabled-session"):
-            print("test-perc-enabled-session is enabled")
 
     active_providers, default_providers = sources
     if providers is not None:
@@ -82,9 +69,6 @@ async def suggest(
     srequest = SuggestionRequest(
         query=q, geolocation=request.scope[ScopeKey.GEOLOCATION]
     )
-
-    # # Retrieve feature flags decisions as metric tags
-    # metrics_tags = feature_flags_as_tags(request.scope[ScopeKey.FEATURE_FLAGS])
 
     lookups = [
         metrics_client.timeit_task(
