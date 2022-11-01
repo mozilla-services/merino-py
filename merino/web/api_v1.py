@@ -54,6 +54,7 @@ async def suggest(
     # Do you plan to release code behind a feature flag? Uncomment the following
     # line to get access to feature flags and then check if your feature flag is
     # enabled for this request by calling feature_flags.is_enabled("example").
+    # Then unskip test_feature_flags and update it with your feature flag.
     # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
 
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]

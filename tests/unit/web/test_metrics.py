@@ -52,6 +52,7 @@ def test_metrics(mocker, client, url: str, metric_keys: list):
         report.assert_any_call(metric, mocker.ANY, mocker.ANY, mocker.ANY, mocker.ANY)
 
 
+@pytest.mark.skip(reason="currently no feature flags in use")
 @pytest.mark.parametrize(
     ["url", "metric_keys", "tags"],
     [
@@ -93,7 +94,7 @@ def test_metrics(mocker, client, url: str, metric_keys: list):
     ids=["200_with_feature_flags_tags", "404_no_tags", "400_no_tags", "500_no_tags"],
 )
 def test_feature_flags(mocker, client, url: str, metric_keys: list, tags: list):
-    """Test that all metrics have tags for feature flags."""
+    """Test that feature flags are added for successful requests."""
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
     client.get(url)
