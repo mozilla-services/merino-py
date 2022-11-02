@@ -12,8 +12,8 @@ grained control over the inputs. Due to their narrow scope, unit tests are funda
 to thorough test coverage.
 
 Unit tests are written and executed with pytest and are located in the `tests/unit`
-directory, using the same organizational structure as the merino source code.
-
+directory, using the same organizational structure as the source code of the merino
+service.
 ## Integration Tests
 
 The integration layer of testing allows for verification of interactions between
@@ -21,7 +21,7 @@ service components, with lower development, maintenance and execution costs comp
 with higher level tests, such as contract tests.
 
 Integration tests are located in the `tests/integration` directory. They use pytest and
-the FAST API TestClient to send requests to specific merino endpoints and verify
+the FastAPI `TestClient` to send requests to specific merino endpoints and verify
 responses as well as other outputs, such as logs. Tests are organized according to the
 API path under test.
 
