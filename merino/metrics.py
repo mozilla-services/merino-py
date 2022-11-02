@@ -60,7 +60,7 @@ def add_feature_flags(
     feature_flags_tags = feature_flags_as_tags(instance.feature_flags)
 
     # The order is important here. Feature flag tags added manually take
-    # precendence over the auto-generated ones.
+    # precedence over the auto-generated ones.
     kwargs["tags"] = {**feature_flags_tags, **tags}
 
     return wrapped_method(*args, **kwargs)
