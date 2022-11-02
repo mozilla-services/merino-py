@@ -4,7 +4,6 @@ import logging
 import time
 from asyncio import as_completed
 from enum import Enum, unique
-from itertools import islice, repeat
 from typing import Any, Final, Optional, Protocol, Tuple, cast
 
 import httpx
@@ -196,9 +195,7 @@ class Provider(BaseProvider):
                 full_keywords_tuples = suggestion.pop("full_keywords", [])
                 begin = 0
                 for full_keyword, n in full_keywords_tuples:
-                    for query, fkw in zip(
-                        islice(keywords, begin, begin + n), repeat(full_keyword, n)
-                    ):
+                    for query in keywords[begin : begin + n]:
                         # Note that for adM suggestions, each keyword can only be mapped to
                         # a single suggestion.
                         suggestions[query] = (result_id, fkw_index)
