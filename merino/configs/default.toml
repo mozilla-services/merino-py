@@ -83,7 +83,7 @@ score = 0.3
 score_wikipedia = 0.2
 
 [default.providers.top_picks]
-enabled_by_default = true
+enabled_by_default = false
 score = 0.25
 query_char_limit = 4
 top_picks_file_path = "dev/top_picks.json"

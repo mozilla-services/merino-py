@@ -33,3 +33,7 @@ score = 0.3
 [ci.providers.wiki_fruit]
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
+
+[ci.providers.top_picks]
+# Whether or not this provider is enabled by default.
+enabled_by_default = true
