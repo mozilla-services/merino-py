@@ -41,15 +41,15 @@ run: $(INSTALL_STAMP)  ##  Run merino locally
 
 .PHONY: test
 test: $(INSTALL_STAMP)  ##  Run unit and integration tests
-	MERINO_ENV=testing $(POETRY) run pytest -v $(UNIT_TEST_DIR) $(INTEGRATION_TEST_DIR) --cov $(APP_DIR)
+	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) $(INTEGRATION_TEST_DIR) --cov $(APP_DIR)
 
 .PHONY: unit-tests
 unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
-	MERINO_ENV=testing $(POETRY) run pytest -v $(UNIT_TEST_DIR) --cov $(APP_DIR)
+	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) --cov $(APP_DIR)
 
 .PHONY: integration-tests
 integration-tests: $(INSTALL_STAMP)  ##  Run integration tests
-	MERINO_ENV=testing $(POETRY) run pytest -v $(INTEGRATION_TEST_DIR) --cov $(APP_DIR)
+	MERINO_ENV=testing $(POETRY) run pytest $(INTEGRATION_TEST_DIR) --cov $(APP_DIR)
 
 .PHONY: contract-tests
 contract-tests:  ##  Run contract tests using docker compose
