@@ -193,6 +193,131 @@ scenarios:
                 icon: null
                 score: 0.3
 
+  - name: top_picks__mozilla
+    description: Test that Merino successfully returns suggestion for Top Pick Navigational Query
+    steps:
+      - request:
+          service: merino
+          method: GET
+          path: '/api/v1/suggest?q=mozi'
+          headers:
+            - name: User-Agent
+              value: 'Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0'
+            - name: Accept-Language
+              value: 'en-US'
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 0
+                title: 'Mozilla'
+                url: 'https://mozilla.org/en-US/'
+                provider: 'top_picks'
+                is_sponsored: false
+                is_top_pick: true
+                score: 0.25
+                icon: ""
+      - request:
+          service: merino
+          method: GET
+          path: '/api/v1/suggest?q=mozil'
+          headers:
+            - name: User-Agent
+              value: 'Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0'
+            - name: Accept-Language
+              value: 'en-US'
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 0
+                title: 'Mozilla'
+                url: 'https://mozilla.org/en-US/'
+                provider: 'top_picks'
+                is_sponsored: false
+                is_top_pick: true
+                score: 0.25
+                icon: ""
+      - request:
+          service: merino
+          method: GET
+          path: '/api/v1/suggest?q=mozill'
+          headers:
+            - name: User-Agent
+              value: 'Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0'
+            - name: Accept-Language
+              value: 'en-US'
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 0
+                title: 'Mozilla'
+                url: 'https://mozilla.org/en-US/'
+                provider: 'top_picks'
+                is_sponsored: false
+                is_top_pick: true
+                score: 0.25
+                icon: ""
+      - request:
+          service: merino
+          method: GET
+          path: '/api/v1/suggest?q=mozzil'
+          headers:
+            - name: User-Agent
+              value: 'Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0'
+            - name: Accept-Language
+              value: 'en-US'
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 0
+                title: 'Mozilla'
+                url: 'https://mozilla.org/en-US/'
+                provider: 'top_picks'
+                is_sponsored: false
+                is_top_pick: true
+                score: 0.25
+                icon: ""
+      - request:
+          service: merino
+          method: GET
+          path: '/api/v1/suggest?q=exxamp'
+          headers:
+            - name: User-Agent
+              value: 'Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0'
+            - name: Accept-Language
+              value: 'en-US'
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 0
+                title: 'Example'
+                url: 'https://example.com'
+                provider: 'top_picks'
+                is_sponsored: false
+                is_top_pick: true
+                score: 0.25
+                icon: ""
+
+                
   - name: remote_settings__offline_expansion_orange
     description: Test that Merino successfully returns a Remote Settings suggestion for Offline Expansion
     steps:
