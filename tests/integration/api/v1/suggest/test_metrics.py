@@ -50,7 +50,7 @@ def test_metrics(
     client: TestClient,
     setup_providers: SetupProvidersFixture,
     url: str,
-    metric_keys: [str],
+    metric_keys: list[str],
 ) -> None:
     providers: dict[str, BaseProvider] = {
         "sponsored-provider": SponsoredProvider(enabled_by_default=True),

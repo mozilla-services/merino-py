@@ -56,9 +56,9 @@ def test_user_agent_middleware(
     assert len(records) == 1
 
     record = records[0]
-    assert record.browser == "Firefox(103.0)"
-    assert record.os_family == "macos"
-    assert record.form_factor == "desktop"
+    assert record.__dict__["browser"] == "Firefox(103.0)"
+    assert record.__dict__["os_family"] == "macos"
+    assert record.__dict__["form_factor"] == "desktop"
 
 
 def test_user_agent_middleware_with_missing_ua_str(
@@ -72,14 +72,13 @@ def test_user_agent_middleware_with_missing_ua_str(
     mock_client = mocker.patch("fastapi.Request.client")
     mock_client.host = "127.0.0.1"
 
-    headers = {}
-    client.get("/api/v1/suggest?q=nope", headers=headers)
+    client.get("/api/v1/suggest?q=nope", headers={})
 
     records = filter_caplog(caplog.records, "web.suggest.request")
 
     assert len(records) == 1
 
     record = records[0]
-    assert record.browser == "Other"
-    assert record.os_family == "other"
-    assert record.form_factor == "other"
+    assert record.__dict__["browser"] == "Other"
+    assert record.__dict__["os_family"] == "other"
+    assert record.__dict__["form_factor"] == "other"
