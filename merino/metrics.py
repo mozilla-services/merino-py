@@ -21,6 +21,18 @@ MetricTags = Mapping[MetricTagKey, MetricTagValue]
 MetricCall = dict[str, str | tuple | dict]
 MetricCalls = list[MetricCall]
 
+# TypeVar for the `ClientMeta` meta class
+M = TypeVar("M", bound="ClientMeta")
+
+# TypeVar for the `Client` class
+C = TypeVar("C", bound="Client")
+
+# ParamSpec for the client_method
+P = ParamSpec("P")
+
+# TypeVar for the return type of the StatsD client method
+R = TypeVar("R")
+
 # The following methods are added to the `Client` class by the meta class
 SUPPORTED_METHODS: Final[list[str]] = [
     "gauge",
@@ -46,7 +58,7 @@ def feature_flags_as_tags(feature_flags: FeatureFlags) -> MetricTags:
 
 @decorator
 def add_feature_flags(
-    wrapped_method: Callable, instance: "Client", args: tuple, kwargs: dict
+    wrapped_method: Callable, instance: C, args: tuple, kwargs: dict
 ) -> Any:
     """Add feature flag decisions as tags when recording metrics."""
     # Tags added manually to the metrics client call
@@ -60,19 +72,6 @@ def add_feature_flags(
     kwargs["tags"] = {**feature_flags_tags, **tags}
 
     return wrapped_method(*args, **kwargs)
-
-
-# TypeVar for the `ClientMeta` meta class
-M = TypeVar("M", bound="ClientMeta")
-
-# TypeVar for the `Client` class
-C = TypeVar("C", bound="Client")
-
-# ParamSpec for the client_method
-P = ParamSpec("P")
-
-# TypeVar for the return type of the StatsD client method
-R = TypeVar("R")
 
 
 class ClientMeta(type):
