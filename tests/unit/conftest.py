@@ -13,7 +13,7 @@ SuggestionRequestFixture = Callable[[str], SuggestionRequest]
 
 
 @pytest.fixture(scope="session", name="srequest")
-def fixture_suggestion_request() -> SuggestionRequestFixture:
+def fixture_srequest() -> SuggestionRequestFixture:
     """
     Return a function that will create a SuggestionRequest object with a given
     `query`
