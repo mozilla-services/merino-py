@@ -39,6 +39,6 @@ def test_non_suggest_request_logs_contain_required_info(
 
     record = records[0]
     assert record.name == "request.summary"
-    assert "country" not in record.__dict__["args"]
-    assert "session_id" not in record.__dict__["args"]
+    assert "country" not in record.args
+    assert "session_id" not in record.args
     assert record.__dict__["path"] == "/__heartbeat__"
