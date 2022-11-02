@@ -8,7 +8,7 @@ from fastapi import APIRouter, FastAPI
 
 from merino.config import settings
 from merino.providers.top_picks import Provider, Suggestion
-from tests.unit.conftest import SuggestionRequestFixture
+from tests.unit.types import SuggestionRequestFixture
 
 app = FastAPI()
 router = APIRouter()

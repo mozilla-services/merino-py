@@ -7,7 +7,7 @@ import logging
 from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 
-from tests.conftest import FilterCaplogFixture
+from tests.types import FilterCaplogFixture
 
 
 def test_error(

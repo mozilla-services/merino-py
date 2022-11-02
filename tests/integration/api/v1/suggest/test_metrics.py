@@ -10,17 +10,20 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from merino.providers import BaseProvider
-from tests.integration.api.v1.conftest import (
+from tests.integration.api.v1.models import (
     CorruptProvider,
     NonsponsoredProvider,
-    SetupProvidersFixture,
     SponsoredProvider,
+)
+from tests.integration.api.v1.types import (
+    SetupProvidersFixture,
     TeardownProvidersFixture,
 )
 
 
 @pytest.fixture(autouse=True)
-def inject_providers(teardown_providers: TeardownProvidersFixture):
+def teardown(teardown_providers: TeardownProvidersFixture):
+    """Cleans-up between test executions for tests in this module"""
     yield
     teardown_providers()
 

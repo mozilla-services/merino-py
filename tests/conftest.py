@@ -3,11 +3,10 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from logging import LogRecord
-from typing import Callable
 
 import pytest
 
-FilterCaplogFixture = Callable[[list[LogRecord], str], list[LogRecord]]
+from tests.types import FilterCaplogFixture
 
 
 @pytest.fixture(scope="session", name="filter_caplog")

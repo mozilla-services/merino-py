@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from merino.providers import BaseProvider
 from merino.providers.top_picks import Provider as TopPicksProvider
-from tests.integration.api.v1.conftest import (
+from tests.integration.api.v1.types import (
     SetupProvidersFixture,
     TeardownProvidersFixture,
 )

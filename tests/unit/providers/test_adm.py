@@ -12,8 +12,8 @@ from pytest import LogCaptureFixture
 
 from merino.config import settings
 from merino.providers.adm import NonsponsoredSuggestion, Provider, RemoteSettingsBackend
-from tests.conftest import FilterCaplogFixture
-from tests.unit.conftest import SuggestionRequestFixture
+from tests.types import FilterCaplogFixture
+from tests.unit.types import SuggestionRequestFixture
 
 
 class FakeBackend:

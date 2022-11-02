@@ -10,13 +10,12 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.providers import BaseProvider
-from tests.conftest import FilterCaplogFixture
-from tests.integration.api.v1.conftest import (
-    NonsponsoredProvider,
+from tests.integration.api.v1.models import NonsponsoredProvider, SponsoredProvider
+from tests.integration.api.v1.types import (
     SetupProvidersFixture,
-    SponsoredProvider,
     TeardownProvidersFixture,
 )
+from tests.types import FilterCaplogFixture
 
 
 @pytest.fixture(autouse=True)

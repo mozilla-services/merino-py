@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from tests.conftest import FilterCaplogFixture
+from tests.types import FilterCaplogFixture
 
 
 @pytest.mark.parametrize("endpoint", ["__heartbeat__", "__lbheartbeat__"])

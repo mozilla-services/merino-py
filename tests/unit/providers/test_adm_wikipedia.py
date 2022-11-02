@@ -9,7 +9,7 @@ import pytest
 
 from merino.config import settings
 from merino.providers.adm import NonsponsoredSuggestion, Provider
-from tests.unit.conftest import SuggestionRequestFixture
+from tests.unit.types import SuggestionRequestFixture
 
 
 class FakeBackend:
