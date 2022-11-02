@@ -34,9 +34,7 @@ class NonsponsoredSuggestion(BaseSuggestion):
 
 
 class SponsoredProvider(BaseProvider):
-    """
-    A test sponsored provider that only responds to query "sponsored".
-    """
+    """A test sponsored provider that only responds to query 'sponsored'"""
 
     def __init__(self, enabled_by_default) -> None:
         self._enabled_by_default = enabled_by_default
@@ -70,9 +68,7 @@ class SponsoredProvider(BaseProvider):
 
 
 class NonsponsoredProvider(BaseProvider):
-    """
-    A test nonsponsored provider that only responds to query "nonsponsored".
-    """
+    """A test nonsponsored provider that only responds to query 'nonsponsored'"""
 
     def __init__(self, enabled_by_default) -> None:
         self._enabled_by_default = enabled_by_default
@@ -104,9 +100,7 @@ class NonsponsoredProvider(BaseProvider):
 
 
 class CorruptProvider(BaseProvider):
-    """
-    A test corrupted provider that raises `RuntimeError` for all queries received.
-    """
+    """A test corrupted provider that raises `RuntimeError` for all queries received"""
 
     def __init__(self) -> None:
         self._name = "corrupted"
@@ -131,7 +125,7 @@ def get_provider_factory(
 ) -> Callable[
     ..., Coroutine[Any, Any, tuple[dict[str, BaseProvider], list[BaseProvider]]]
 ]:
-    """Returns a callable that builds and initializes the given providers."""
+    """Return a callable that builds and initializes the given providers"""
 
     async def provider_factory() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
         await asyncio.gather(*[p.initialize() for p in providers.values()])
@@ -143,14 +137,10 @@ def get_provider_factory(
 
 @pytest.fixture(name="setup_providers")
 def fixture_setup_providers() -> SetupProvidersFixture:
-    """
-    Returns a function that sets application provider dependency overrides
-    """
+    """Return a function that sets application provider dependency overrides"""
 
     def setup_providers(providers: dict[str, BaseProvider]) -> None:
-        """
-        Sets application provider dependency overrides
-        """
+        """Set application provider dependency overrides"""
         app.dependency_overrides[get_providers] = get_provider_factory(providers)
 
     return setup_providers
@@ -158,14 +148,10 @@ def fixture_setup_providers() -> SetupProvidersFixture:
 
 @pytest.fixture(name="teardown_providers")
 def fixture_teardown_providers() -> TeardownProvidersFixture:
-    """
-    Returns a function that resets application provider dependency overrides
-    """
+    """Return a function that resets application provider dependency overrides"""
 
     def teardown_providers() -> None:
-        """
-        Resets application provider dependency overrides
-        """
+        """Reset application provider dependency overrides"""
         del app.dependency_overrides[get_providers]
 
     return teardown_providers

@@ -13,9 +13,7 @@ from tests.conftest import FilterCaplogFixture
 def test_error(
     client: TestClient, caplog: LogCaptureFixture, filter_caplog: FilterCaplogFixture
 ) -> None:
-    """
-    Test that the error endpoint is supported to conform to dockerflow
-    """
+    """Test that the error endpoint is supported to conform to dockerflow"""
     caplog.set_level(logging.ERROR)
 
     response = client.get("/__error__")

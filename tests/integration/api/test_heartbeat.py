@@ -14,9 +14,7 @@ from tests.conftest import FilterCaplogFixture
 
 @pytest.mark.parametrize("endpoint", ["__heartbeat__", "__lbheartbeat__"])
 def test_heartbeats(client: TestClient, endpoint: str) -> None:
-    """
-    Test that the heartbeat endpoint is supported to conform to dockerflow
-    """
+    """Test that the heartbeat endpoint is supported to conform to dockerflow"""
     response = client.get(f"/{endpoint}")
 
     assert response.status_code == 200

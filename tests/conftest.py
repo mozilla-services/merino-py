@@ -18,9 +18,7 @@ def fixture_filter_caplog() -> FilterCaplogFixture:
     """
 
     def filter_caplog(records: list[LogRecord], logger_name: str) -> list[LogRecord]:
-        """
-        Filter pytest captured log records for a given logger name
-        """
+        """Filter pytest captured log records for a given logger name"""
         return [record for record in records if record.name == logger_name]
 
     return filter_caplog

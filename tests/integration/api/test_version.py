@@ -7,9 +7,7 @@ from pytest_mock import MockerFixture
 
 
 def test_version(client: TestClient) -> None:
-    """
-    Test that the version endpoint is supported to conform to dockerflow
-    """
+    """Test that the version endpoint is supported to conform to dockerflow"""
     response = client.get("/__version__")
 
     assert response.status_code == 200
