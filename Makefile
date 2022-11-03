@@ -32,7 +32,7 @@ format: $(INSTALL_STAMP)  ##  Sort imports and reformat code
 
 .PHONY: test
 test: $(INSTALL_STAMP)  ##  Run unit tests
-	MERINO_ENV=testing $(POETRY) run pytest -v $(UNIT_TEST_DIR) --cov $(APP_DIR)
+	MERINO_ENV=testing $(POETRY) run pytest -v $(UNIT_TEST_DIR) --cov $(APP_DIR) -r s
 
 .PHONY: dev
 dev: $(INSTALL_STAMP)  ##  Run merino locally and reload automatically
