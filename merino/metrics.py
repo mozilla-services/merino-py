@@ -2,7 +2,7 @@
 
 import logging
 from functools import cache
-from typing import Any, Callable, Concatenate, Final, Mapping, ParamSpec, TypeVar, Union
+from typing import Any, Callable, Concatenate, Final, Mapping, ParamSpec, TypeVar
 
 import aiodogstatsd
 from wrapt import decorator
@@ -12,10 +12,8 @@ from merino.featureflags import FeatureFlags
 
 logger = logging.getLogger(__name__)
 
-# Type definitions for tags in aiodogstatsd metrics
-MetricTagKey = str
-MetricTagValue = Union[float, int, str]
-MetricTags = Mapping[MetricTagKey, MetricTagValue]
+# Type definition for tags in aiodogstatsd metrics
+MetricTags = Mapping[str, float | int | str]
 
 # Type definitions for the `calls` attribute on the `Client` class
 MetricCall = dict[str, str | tuple | dict]
