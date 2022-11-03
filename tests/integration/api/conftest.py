@@ -24,8 +24,8 @@ def fixture_test_client() -> TestClient:
 def fixture_test_client_with_events() -> Iterator[TestClient]:
     """Return a FastAPI TestClient instance.
 
-    This test client will trigger event handlers for the app, see:
-    https://fastapi.tiangolo.com/advanced/testing-events/
+    This test client will trigger event handlers (i.e. `startup` and `shutdown`) for
+    the app, see: https://fastapi.tiangolo.com/advanced/testing-events/
     """
     with TestClient(app) as client:
         yield client
