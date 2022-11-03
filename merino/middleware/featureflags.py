@@ -25,4 +25,5 @@ class FeatureFlagsMiddleware:
         session_id_context.set(session_id)
 
         await self.app(scope, receive, send)
+
         return

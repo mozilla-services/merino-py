@@ -12,6 +12,7 @@
   - [Dependencies](./dev/dependencies.md)
   - [Logging and Metrics](./dev/logging-and-metrics.md)
   - [Middlewares](./dev/middlewares.md)
+  - [Feature Flags](./dev/feature_flags.md)
   - [Testing Strategies](./dev/testing.md)
   - [Release Process](./dev/release-process.md)
   - [Profiling](./dev/profiling.md)

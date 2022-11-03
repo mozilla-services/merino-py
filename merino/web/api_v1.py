@@ -2,21 +2,19 @@
 import asyncio
 from itertools import chain
 
-from aiodogstatsd import Client
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
-from merino.metrics import get_metrics_client
+from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider, SuggestionRequest
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 router = APIRouter()
-
 
 SUGGEST_RESPONSE = {
     "suggestions": [],
@@ -40,7 +38,6 @@ async def suggest(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
-    metrics_client: Client = Depends(get_metrics_client),
 ) -> JSONResponse:
     """
     Query Merino for suggestions.
@@ -54,6 +51,16 @@ async def suggest(
     Returns:
     A list of suggestions or an empty list if nothing was found.
     """
+    # Do you plan to release code behind a feature flag? Uncomment the following
+    # line to get access to feature flags and then check if your feature flag is
+    # enabled for this request by calling feature_flags.is_enabled("example").
+    # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
+
+    # Then remove the `pytest.mark.skip` decorator from the test
+    # `test_feature_flags` and update it with your feature flag.
+
+    metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
+
     active_providers, default_providers = sources
     if providers is not None:
         search_from = [
@@ -65,8 +72,12 @@ async def suggest(
     srequest = SuggestionRequest(
         query=q, geolocation=request.scope[ScopeKey.GEOLOCATION]
     )
+
     lookups = [
-        metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
+        metrics_client.timeit_task(
+            p.query(srequest),
+            f"providers.{p.name}.query",
+        )
         for p in search_from
     ]
 
