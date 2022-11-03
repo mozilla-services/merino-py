@@ -4,7 +4,7 @@ import logging
 import time
 from asyncio import as_completed
 from enum import Enum, unique
-from typing import Any, Final, Optional, Protocol, cast
+from typing import Any, Final, Optional, Protocol, Tuple, cast
 
 import httpx
 from pydantic import HttpUrl
@@ -100,7 +100,8 @@ class NonsponsoredSuggestion(BaseSuggestion):
 class Provider(BaseProvider):
     """Suggestion provider for adMarketplace through Remote Settings."""
 
-    suggestions: dict[str, int] = {}
+    suggestions: dict[str, Tuple[int, int]] = {}
+    full_keywords_list: list[str] = []
     results: list[dict[str, Any]] = []
     icons: dict[int, str] = {}
     # Store the value to avoid fetching it from settings every time as that'd
@@ -161,7 +162,9 @@ class Provider(BaseProvider):
         """Fetch suggestions, keywords, and icons from Remote Settings."""
         # A dictionary keyed on suggestion keywords, each value stores an index
         # (pointer) to one entry of the suggestion result list.
-        suggestions: dict[str, int] = {}
+        suggestions: dict[str, Tuple[int, int]] = {}
+        # A list of full keywords
+        full_keywords: list[str] = []
         # A list of suggestion results.
         results: list[dict[str, Any]] = []
         # A dictionary of icon IDs to icon URLs.
@@ -182,14 +185,23 @@ class Provider(BaseProvider):
             self.backend.fetch_attachment(item["attachment"]["location"])
             for item in records
         ]
+        fkw_index = 0
         for done_task in as_completed(fetch_tasks):
             res = await done_task
+
             for suggestion in res.json():
-                id = len(results)
-                for kw in suggestion.pop("keywords", []):
-                    # Note that for adM suggestions, each keyword can only be mapped to
-                    # a single suggestion.
-                    suggestions[kw] = id
+                result_id = len(results)
+                keywords = suggestion.pop("keywords", [])
+                full_keywords_tuples = suggestion.pop("full_keywords", [])
+                begin = 0
+                for full_keyword, n in full_keywords_tuples:
+                    for query in keywords[begin : begin + n]:
+                        # Note that for adM suggestions, each keyword can only be mapped to
+                        # a single suggestion.
+                        suggestions[query] = (result_id, fkw_index)
+                    begin += n
+                    full_keywords.append(full_keyword)
+                    fkw_index = len(full_keywords)
                 results.append(suggestion)
         icon_record = [
             record for record in suggest_settings if record["type"] == "icon"
@@ -201,6 +213,7 @@ class Provider(BaseProvider):
         # overwrite the instance variables
         self.suggestions = suggestions
         self.results = results
+        self.full_keywords = full_keywords
         self.icons = icons
         self.last_fetch_at = time.time()
 
@@ -210,8 +223,9 @@ class Provider(BaseProvider):
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         q = srequest.query
-        if (id := self.suggestions.get(q)) is not None:
-            res = self.results[id]
+        if (suggest_look_ups := self.suggestions.get(q)) is not None:
+            results_id, fkw_id = suggest_look_ups
+            res = self.results[results_id]
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
             score = (
                 self.score_wikipedia
@@ -220,7 +234,7 @@ class Provider(BaseProvider):
             )
             suggestion_dict = {
                 "block_id": res.get("id"),
-                "full_keyword": q,
+                "full_keyword": self.full_keywords[fkw_id],
                 "title": res.get("title"),
                 "url": res.get("url"),
                 "impression_url": res.get("impression_url"),
