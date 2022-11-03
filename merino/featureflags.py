@@ -92,25 +92,18 @@ session_id_context: ContextVar[str | None] = ContextVar("session_id", default=No
 
 
 class FeatureFlags:
-    """A very basic implementation of feature flags using dynaconf as the
-     configuration system.
+    """Feature flags implementation using dynaconf as the configuration system.
 
-    It supports two bucketing schemes `random` and
-    `session`. Random does what it says on the tin. It generates a random
-    bucketing id for every flag check. Session bucketing uses the session id of
-    the request as the bucketing key so that feature checks within a given
-    search session would be consistent. Additionally you can pass a custom
-    bucketing_id via the `bucket_for` parameter. This is useful when you have
-    an ad-hoc bucketing identifier that is not supported via one of the
-    standard schemes.
-    configuration system. It supports two bucketing schemes `random` and
-    `session`. Random does what it says on the tin. It generates a random
-    bucketing id for every flag check. Session bucketing uses the session id of
-    the request as the bucketing key so that feature checks within a given
-    search session would be consistent. Additionally you can pass a custom
-    bucketing_id via the `bucket_for` parameter. This is useful when you have
-    an ad-hoc bucketing identifier that is not supported via one of the
-    standard schemes.
+    It supports two bucketing schemes `random` and `session`.
+
+    Random does what it says on the tin. It generates a random bucketing id for
+    every flag check. Session bucketing uses the session id of the request as
+    the bucketing key so that feature checks within a given search session would
+    be consistent.
+
+    Additionally you can pass a custom bucketing_id via the `bucket_for`
+    parameter. This is useful when you have an ad-hoc bucketing identifier that
+    is not supported via one of the standard schemes.
 
     Each flag defines the following fields:
 
