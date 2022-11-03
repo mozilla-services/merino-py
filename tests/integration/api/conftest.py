@@ -14,8 +14,8 @@ from merino.main import app
 def fixture_test_client() -> TestClient:
     """Return a FastAPI TestClient instance.
 
-    Note that this will NOT trigger event handlers for the app, see:
-    https://fastapi.tiangolo.com/advanced/testing-events/
+    Note that this will NOT trigger event handlers (i.e. `startup` and `shutdown`) for
+    the app, see: https://fastapi.tiangolo.com/advanced/testing-events/
     """
     return TestClient(app)
 

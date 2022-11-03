@@ -1,7 +1,7 @@
 # Testing strategies
 
 Merino is tested using a four tier strategy composed of unit, integration, contract
-and load level testing.
+and load testing.
 
 Test code resides in the `tests` directory.
 
@@ -14,6 +14,7 @@ to thorough test coverage.
 Unit tests are written and executed with pytest and are located in the `tests/unit`
 directory, using the same organizational structure as the source code of the merino
 service.
+
 ## Integration Tests
 
 The integration layer of testing allows for verification of interactions between
