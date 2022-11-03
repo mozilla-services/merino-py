@@ -1,0 +1,50 @@
+{
+    "domains": [
+        {
+            "rank": 1,
+            "title": "Example",
+            "domain": "example",
+            "url": "https://example.com",
+            "icon": "",
+            "categories": [
+                "web-browser"
+            ],
+            "similars": [
+                "exxample",
+                "exampple",
+                "eexample"
+            ]
+        },
+        {
+            "rank": 2,
+            "title": "Firefox",
+            "domain": "firefox",
+            "url": "https://firefox.com",
+            "icon": "",
+            "categories": [
+                "web-browser"
+            ],
+            "similars": [
+                "firefoxx",
+                "foyerfox",
+                "fiirefox",
+                "firesfox",
+                "firefoxes"
+            ]
+        },
+        {
+            "rank": 3,
+            "title": "Mozilla",
+            "domain": "mozilla",
+            "url": "https://mozilla.org/en-US/",
+            "icon": "",
+            "categories": [
+                "web-browser"
+            ],
+            "similars": [
+                "mozzilla",
+                "mozila"
+            ]
+        }
+    ]
+}

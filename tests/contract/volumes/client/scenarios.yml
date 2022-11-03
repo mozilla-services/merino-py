@@ -324,30 +324,6 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
-      - request:
-          service: merino
-          method: GET
-          path: "/api/v1/suggest?q=mozill"
-          headers:
-            - name: User-Agent
-              value: "Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0"
-            - name: Accept-Language
-              value: "en-US"
-        response:
-          status_code: 200
-          content:
-            client_variants: []
-            server_variants: []
-            request_id: null
-            suggestions:
-              - block_id: 0
-                title: "Mozilla"
-                url: "https://mozilla.org/en-US/"
-                provider: "top_picks"
-                is_sponsored: false
-                is_top_pick: true
-                score: 0.25
-                icon: ""
 
   - name: top_picks__secondary_similars_match
     description: >
@@ -373,30 +349,6 @@ scenarios:
               - block_id: 0
                 title: "Mozilla"
                 url: "https://mozilla.org/en-US/"
-                provider: "top_picks"
-                is_sponsored: false
-                is_top_pick: true
-                score: 0.25
-                icon: ""
-      - request:
-          service: merino
-          method: GET
-          path: "/api/v1/suggest?q=exxamp"
-          headers:
-            - name: User-Agent
-              value: "Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0"
-            - name: Accept-Language
-              value: "en-US"
-        response:
-          status_code: 200
-          content:
-            client_variants: []
-            server_variants: []
-            request_id: null
-            suggestions:
-              - block_id: 0
-                title: "Example"
-                url: "https://example.com"
                 provider: "top_picks"
                 is_sponsored: false
                 is_top_pick: true

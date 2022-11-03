@@ -37,3 +37,4 @@ enabled_by_default = true
 [ci.providers.top_picks]
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
+top_picks_file_path = "dev/top_picks_for_ci.json"
