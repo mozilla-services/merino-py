@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Testing Strategies - Merino Book</title>
+        <title>Feature Flags - Merino Book</title>
 
 
         <!-- Custom HTML head -->
@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="../api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="../firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="../ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="../data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="../dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/dependencies.html"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="../dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="../dev/middlewares.html"><strong aria-hidden="true">5.3.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="../dev/feature_flags.html"><strong aria-hidden="true">5.4.</strong> Feature Flags</a></li><li class="chapter-item expanded "><a href="../dev/testing.html" class="active"><strong aria-hidden="true">5.5.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="../dev/release-process.html"><strong aria-hidden="true">5.6.</strong> Release Process</a></li><li class="chapter-item expanded "><a href="../dev/profiling.html"><strong aria-hidden="true">5.7.</strong> Profiling</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="../api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="../firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="../ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="../data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="../dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/dependencies.html"><strong aria-hidden="true">5.1.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="../dev/logging-and-metrics.html"><strong aria-hidden="true">5.2.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="../dev/middlewares.html"><strong aria-hidden="true">5.3.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="../dev/feature_flags.html" class="active"><strong aria-hidden="true">5.4.</strong> Feature Flags</a></li><li class="chapter-item expanded "><a href="../dev/testing.html"><strong aria-hidden="true">5.5.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="../dev/release-process.html"><strong aria-hidden="true">5.6.</strong> Release Process</a></li><li class="chapter-item expanded "><a href="../dev/profiling.html"><strong aria-hidden="true">5.7.</strong> Profiling</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -142,38 +142,69 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="testing-strategies"><a class="header" href="#testing-strategies">Testing strategies</a></h1>
-<p>There are three major testing strategies used in this repository: unit tests,
-Python contract tests, and Python load tests.</p>
-<p>Test code resides in the <code>tests</code> directory.</p>
-<h2 id="unit-tests"><a class="header" href="#unit-tests">Unit Tests</a></h2>
-<p>Unit tests, located in the <code>tests/unit</code> directory, should appear close to the
-code they are testing, using the pytest unit test library. This is suitable for
-testing complex behavior at a small scale, with fine grained control over the
-inputs.</p>
-<h2 id="contract-tests"><a class="header" href="#contract-tests">Contract tests</a></h2>
-<p>The tests in the <code>tests/contract</code> directory are contract tests
-that consume Merino's APIs using more opaque techniques. These tests run against
-a Docker container of the service, specify settings via environment variables,
-and operate on the HTTP API layer only and as such are more concerned with
-external contracts and behavior. The contract tests cannot configure the server
-per test.</p>
-<p>For more details see the README.md file in the <code>test/contract</code>
-directory.</p>
-<h2 id="load-tests"><a class="header" href="#load-tests">Load tests</a></h2>
-<p>The tests in the <code>tests/load</code> directory are load tests that
-spawn multiple HTTP clients that consume Merino's API. These tests do not run on
-CI. We run them manually to simulate real-world load on the Merino infrastructure.</p>
+                        <h1 id="feature-flags"><a class="header" href="#feature-flags">Feature Flags</a></h1>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<p>Do you plan to release code behind a feature flag? Great! 😃</p>
+<p>Your feature flag needs to be defined first. If it's already defined, go ahead.
+Otherwise check the configuration section <a href="#configuration">below</a> before you
+continue.</p>
+<p>Use the following line in API endpoint code to gain access to the feature flags
+object:</p>
+<pre><code class="language-python">feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
+</code></pre>
+<p>Then check whether a certain feature flag, such as <code>example</code>, is enabled by calling:</p>
+<pre><code class="language-python">if feature_flags.is_enabled(&quot;example&quot;):
+    print(&quot;feature flag 'example' is enabled! 🚀&quot;)
+</code></pre>
+<p>When you do that, the decision (whether the feature flag is enabled or not) is
+recorded and stored in a <code>dict</code> on the <code>decisions</code> attribute of the feature
+flags object.</p>
+<h2 id="implementation"><a class="header" href="#implementation">Implementation</a></h2>
+<p>The feature flags system in Merino consists of three components:</p>
+<div class="table-wrapper"><table><thead><tr><th>Description</th><th>Location</th></tr></thead><tbody>
+<tr><td>A FastAPI middleware that reads the query parameter <code>sid</code> sent by the client application and sets a session ID for the current request based on that.</td><td><code>merino/middleware/featureflags.py</code></td></tr>
+<tr><td>A <code>FeatureFlags</code> class which you can use to check if a certain feature flag is enabled.</td><td><code>merino/featureflags.py</code></td></tr>
+<tr><td>A local directory containing static files that define and configure feature flags for Merino.</td><td><code>merino/configs/flags/</code></td></tr>
+</tbody></table>
+</div>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<p>Currently two bucketing schemes are supported: <code>random</code> and <code>session</code>.</p>
+<h3 id="random"><a class="header" href="#random">Random</a></h3>
+<p>Random does what it says on the tin. It generates a random bucketing ID for
+every flag check.</p>
+<h3 id="session"><a class="header" href="#session">Session</a></h3>
+<p>Session bucketing uses the session ID of the request as the bucketing key so
+that feature checks within a given search session would be consistent.</p>
+<h3 id="fields"><a class="header" href="#fields">Fields</a></h3>
+<p>Each flag defines the following fields:</p>
+<pre><code class="language-toml">[default.flags.&lt;flag_name&gt;]
+scheme = 'session'
+enabled = 0.5
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Field</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>scheme</code></td><td>This is the bucketing scheme for the flag. Allowed values are <code>'random'</code> and <code>'session'</code></td></tr>
+<tr><td><code>enabled</code></td><td>This represents the % enabled for the flag and must be a float between <code>0</code> and <code>1</code></td></tr>
+</tbody></table>
+</div>
+<h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>
+<p>When submitting application metrics, feature flag decisions that were made while
+processing the current request up to this point are <strong>automatically</strong> added as
+tags to the emitted metrics.</p>
+<p>The format of these tags is:</p>
+<pre><code>feature_flag.&lt;feature_flag_name&gt;
+</code></pre>
+<p>For more information about this see the <code>ClientMeta</code> meta class and the
+<code>add_feature_flags</code> decorator in <code>merino/metrics.py</code>.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../dev/feature_flags.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../dev/middlewares.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="../dev/release-process.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../dev/testing.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -183,11 +214,11 @@ CI. We run them manually to simulate real-world load on the Merino infrastructur
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../dev/feature_flags.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../dev/middlewares.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="../dev/release-process.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../dev/testing.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
