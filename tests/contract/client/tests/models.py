@@ -51,11 +51,11 @@ class Suggestion(BaseModel, extra=Extra.allow):
     """Class that holds information about a Suggestion returned by Merino."""
 
     block_id: int
-    full_keyword: str
+    full_keyword: Optional[str]
     title: str
     url: str
     provider: str
-    advertiser: str
+    advertiser: Optional[str]
     is_sponsored: bool
     score: float
     icon: Optional[str] = Field(...)
@@ -63,6 +63,8 @@ class Suggestion(BaseModel, extra=Extra.allow):
     # Mozilla-provided Wikipedia suggestions.
     impression_url: Optional[str]
     click_url: Optional[str]
+    # Field for Top Picks Nav Queries that are absent for other providers.
+    is_top_pick: Optional[bool]
 
 
 class ResponseContent(BaseModel):
