@@ -79,16 +79,29 @@ class FakeBackend:
                 "advertiser": "Example.com",
                 "title": "Hello World",
                 "keywords": ["hello", "world", "hello world"],
+                "full_keywords": [("hello world", 3)],
             },
             "main-workspace/quicksuggest/attachment-02.json": {
                 "id": 2,
-                "url": "https://example.org/target/banana",
-                "click_url": "https://example.org/click/banana",
+                "url": "https://example.org/target/mozfirefoxaccounts",
+                "click_url": "https://example.org/click/mozilla",
                 "iab_category": "5 - Education",
                 "icon": "01",
                 "advertiser": "Example.org",
-                "title": "Hello Banana",
-                "keywords": ["hello", "banana", "hello banana"],
+                "title": "Mozilla Firefox Accounts",
+                "keywords": [
+                    "firefox",
+                    "firefox account",
+                    "firefox accounts",
+                    "mozilla",
+                    "mozilla firefox",
+                    "mozilla firefox account",
+                    "mozilla firefox accounts",
+                ],
+                "full_keywords": [
+                    ("firefox accounts", 3),
+                    ("mozilla firefox accounts", 4),
+                ],
             },
         }
 
@@ -125,16 +138,24 @@ async def test_initialize(adm: Provider) -> None:
 
     await adm.initialize()
 
-    assert adm.suggestions == {"banana": 0, "hello": 0, "hello banana": 0}
+    assert adm.suggestions == {
+        "firefox": (0, 0),
+        "firefox account": (0, 0),
+        "firefox accounts": (0, 0),
+        "mozilla": (0, 1),
+        "mozilla firefox": (0, 1),
+        "mozilla firefox account": (0, 1),
+        "mozilla firefox accounts": (0, 1),
+    }
     assert adm.results == [
         {
             "id": 2,
-            "url": "https://example.org/target/banana",
-            "click_url": "https://example.org/click/banana",
+            "url": "https://example.org/target/mozfirefoxaccounts",
+            "click_url": "https://example.org/click/mozilla",
             "iab_category": "5 - Education",
             "icon": "01",
             "advertiser": "Example.org",
-            "title": "Hello Banana",
+            "title": "Mozilla Firefox Accounts",
         }
     ]
     assert adm.icons == {1: "attachment-host/main-workspace/quicksuggest/icon-01"}
@@ -170,15 +191,15 @@ async def test_query_success(srequest: SuggestionRequestFixture, adm: Provider) 
 
     await adm.initialize()
 
-    res = await adm.query(srequest("banana"))
+    res = await adm.query(srequest("firefox"))
     assert res == [
         NonsponsoredSuggestion(
             block_id=2,
-            full_keyword="banana",
-            title="Hello Banana",
-            url="https://example.org/target/banana",
+            full_keyword="firefox accounts",
+            title="Mozilla Firefox Accounts",
+            url="https://example.org/target/mozfirefoxaccounts",
             impression_url=None,
-            click_url="https://example.org/click/banana",
+            click_url="https://example.org/click/mozilla",
             provider="adm",
             advertiser="Example.org",
             is_sponsored=False,
