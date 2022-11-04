@@ -43,6 +43,10 @@ run: $(INSTALL_STAMP)  ##  Run merino locally
 test: $(INSTALL_STAMP)  ##  Run unit and integration tests
 	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) $(INTEGRATION_TEST_DIR) --cov $(APP_DIR)
 
+.PHONY: test-fixtures
+test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per test
+	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) $(INTEGRATION_TEST_DIR) --fixtures-per-test
+
 .PHONY: unit-tests
 unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
 	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) --cov $(APP_DIR)

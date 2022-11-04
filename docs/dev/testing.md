@@ -11,11 +11,17 @@ The unit layer is suitable for testing complex behavior at a small scale, with f
 grained control over the inputs. Due to their narrow scope, unit tests are fundamental
 to thorough test coverage.
 
+To execute unit tests, use: `make unit-tests`
+
 Unit tests are written and executed with pytest and are located in the `tests/unit`
 directory, using the same organizational structure as the source code of the merino
 service. Any type aliases or models dedicated for test should be stored in the
 `types.py` and `models.py` modules respectively. The `conftest.py` modules contain
-common utilities in fixtures. Available fixtures include:
+common utilities in fixtures.
+
+For a breakdown of fixtures in use per test, use: `make test-fixtures`
+
+Available fixtures include:
 
 #### FilterCaplogFixture
 Useful when verifying log messages, this fixture filters log records captured with
@@ -48,12 +54,18 @@ The integration layer of testing allows for verification of interactions between
 service components, with lower development, maintenance and execution costs compared
 with higher level tests, such as contract tests.
 
+To execute integration tests, use: `make integration-tests`
+
 Integration tests are located in the `tests/integration` directory. They use pytest and
 the FastAPI `TestClient` to send requests to specific merino endpoints and verify
 responses as well as other outputs, such as logs. Tests are organized according to the
 API path under test. Any type aliases or models dedicated for test should be stored in
 the `types.py` and `models.py` modules respectively. The `conftest.py` modules contains
-common utilities in fixtures. Available fixtures include:
+common utilities in fixtures.
+
+For a breakdown of fixtures in use per test, use: `make test-fixtures`
+
+Available fixtures include:
 
 #### FilterCaplogFixture
 
@@ -76,6 +88,24 @@ _**Usage:**_
 ```python
 def test_with_test_client_with_event(client_with_events: TestClient):
     response: Response = client_with_events.get("/api/v1/endpoint")
+```
+
+#### InjectProvidersFixture & ProvidersFixture
+These fixture will setup and teardown given providers.
+
+_**Usage:**_
+
+If specifying providers for a module:
+```python
+@pytest.fixture(name="providers")
+def fixture_providers() -> Providers:
+    return {"test-provider": TestProvider()}
+```
+
+If specifying providers for a test:
+```python
+@pytest.mark.parametrize("providers", [{"test-provider": TestProvider()}])
+def test_with_provider() -> None:
 ```
 
 #### SetupProvidersFixture
