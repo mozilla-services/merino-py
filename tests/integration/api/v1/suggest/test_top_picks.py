@@ -5,24 +5,14 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from merino.providers import BaseProvider
 from merino.providers.top_picks import Provider as TopPicksProvider
-from tests.integration.api.v1.types import (
-    SetupProvidersFixture,
-    TeardownProvidersFixture,
-)
+from tests.integration.api.v1.types import Providers
 
 
-@pytest.fixture(autouse=True)
-def inject_providers(
-    setup_providers: SetupProvidersFixture, teardown_providers: TeardownProvidersFixture
-):
-    providers: dict[str, BaseProvider] = {
-        "top_picks": TopPicksProvider(name="top_picks", enabled_by_default=True)
-    }
-    setup_providers(providers)
-    yield
-    teardown_providers()
+@pytest.fixture(name="providers")
+def fixture_providers() -> Providers:
+    """Define providers for this module which are injected automatically."""
+    return {"top_picks": TopPicksProvider(name="top_picks", enabled_by_default=True)}
 
 
 @pytest.mark.parametrize(

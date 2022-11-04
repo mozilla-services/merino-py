@@ -9,26 +9,18 @@ from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.providers import BaseProvider
 from tests.integration.api.v1.models import NonsponsoredProvider, SponsoredProvider
-from tests.integration.api.v1.types import (
-    SetupProvidersFixture,
-    TeardownProvidersFixture,
-)
+from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
 
 
-@pytest.fixture(autouse=True)
-def inject_providers(
-    setup_providers: SetupProvidersFixture, teardown_providers: TeardownProvidersFixture
-):
-    providers: dict[str, BaseProvider] = {
+@pytest.fixture(name="providers")
+def fixture_providers() -> Providers:
+    """Define providers for this module which are injected automatically."""
+    return {
         "sponsored-provider": SponsoredProvider(enabled_by_default=True),
         "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
     }
-    setup_providers(providers)
-    yield
-    teardown_providers()
 
 
 def test_user_agent_middleware(

@@ -7,25 +7,22 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from merino.providers import BaseProvider
 from tests.integration.api.v1.models import (
     CorruptProvider,
     NonsponsoredProvider,
     SponsoredProvider,
 )
-from tests.integration.api.v1.types import (
-    SetupProvidersFixture,
-    TeardownProvidersFixture,
+
+
+@pytest.mark.parametrize(
+    "providers",
+    [
+        {
+            "sponsored-provider": SponsoredProvider(enabled_by_default=True),
+            "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
+        }
+    ],
 )
-
-
-@pytest.fixture(autouse=True)
-def teardown(teardown_providers: TeardownProvidersFixture):
-    """Cleans-up between test executions for tests in this module"""
-    yield
-    teardown_providers()
-
-
 @pytest.mark.parametrize(
     ["url", "metric_keys"],
     [
@@ -47,16 +44,9 @@ def teardown(teardown_providers: TeardownProvidersFixture):
 def test_metrics(
     mocker: MockerFixture,
     client: TestClient,
-    setup_providers: SetupProvidersFixture,
     url: str,
     metric_keys: list[str],
 ) -> None:
-    providers: dict[str, BaseProvider] = {
-        "sponsored-provider": SponsoredProvider(enabled_by_default=True),
-        "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
-    }
-    setup_providers(providers)
-
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
     client.get(url)
@@ -122,12 +112,9 @@ def test_feature_flags(
     assert got == want
 
 
-def test_metrics_500(
-    mocker: MockerFixture, client: TestClient, setup_providers: SetupProvidersFixture
-) -> None:
-    providers: dict[str, BaseProvider] = {"corrupt": CorruptProvider()}
-    setup_providers(providers)
-
+@pytest.mark.parametrize("providers", [{"corrupt": CorruptProvider()}])
+def test_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
+    """Test that 500 status codes are recorded as metrics."""
     error_msg = "test"
     metric_keys = [
         "get.api.v1.suggest.timing",

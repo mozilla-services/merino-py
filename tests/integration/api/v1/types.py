@@ -6,5 +6,6 @@ from typing import Callable
 
 from merino.providers import BaseProvider
 
-SetupProvidersFixture = Callable[[dict[str, BaseProvider]], None]
+Providers = dict[str, BaseProvider]
+SetupProvidersFixture = Callable[[Providers], None]
 TeardownProvidersFixture = Callable[[], None]
