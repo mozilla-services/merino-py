@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from tests.integration.api.v1.models import (
+from tests.integration.api.v1.fake_providers import (
     CorruptProvider,
     NonsponsoredProvider,
     SponsoredProvider,

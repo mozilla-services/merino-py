@@ -5,7 +5,10 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.integration.api.v1.models import NonsponsoredProvider, SponsoredProvider
+from tests.integration.api.v1.fake_providers import (
+    NonsponsoredProvider,
+    SponsoredProvider,
+)
 from tests.integration.api.v1.types import Providers
 
 

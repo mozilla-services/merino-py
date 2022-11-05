@@ -11,7 +11,6 @@ class CorruptProvider(BaseProvider):
 
     def __init__(self) -> None:
         self._name = "corrupted"
-        ...
 
     async def initialize(self) -> None:
         ...

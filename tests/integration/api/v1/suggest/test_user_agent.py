@@ -9,7 +9,10 @@ from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from tests.integration.api.v1.models import NonsponsoredProvider, SponsoredProvider
+from tests.integration.api.v1.fake_providers import (
+    NonsponsoredProvider,
+    SponsoredProvider,
+)
 from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
 
