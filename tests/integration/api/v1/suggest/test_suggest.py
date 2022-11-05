@@ -87,7 +87,7 @@ def test_suggest_request_logs_contain_required_info(
 
     caplog.set_level(logging.INFO)
 
-    # Use a valid IP to avoid the geolocation errors/logs
+    # The IP address is taken from `GeoLite2-City-Test.mmdb`
     mock_client = mocker.patch("fastapi.Request.client")
     mock_client.host = "216.160.83.56"
 
