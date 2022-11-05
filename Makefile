@@ -43,17 +43,21 @@ run: $(INSTALL_STAMP)  ##  Run merino locally
 test: $(INSTALL_STAMP)  ##  Run unit and integration tests
 	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) $(INTEGRATION_TEST_DIR) --cov $(APP_DIR)
 
-.PHONY: test-fixtures
-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per test
-	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) $(INTEGRATION_TEST_DIR) --fixtures-per-test
-
 .PHONY: unit-tests
 unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
 	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) --cov $(APP_DIR)
 
+.PHONY: unit-test-fixtures
+unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test
+	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) --fixtures-per-test
+
 .PHONY: integration-tests
 integration-tests: $(INSTALL_STAMP)  ##  Run integration tests
 	MERINO_ENV=testing $(POETRY) run pytest $(INTEGRATION_TEST_DIR) --cov $(APP_DIR)
+
+.PHONY: integration-test-fixtures
+integration-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per integration test
+	MERINO_ENV=testing $(POETRY) run pytest $(INTEGRATION_TEST_DIR) --fixtures-per-test
 
 .PHONY: contract-tests
 contract-tests:  ##  Run contract tests using docker compose

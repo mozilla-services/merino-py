@@ -19,7 +19,7 @@ service. Any type aliases or models dedicated for test should be stored in the
 `types.py` and `models.py` modules respectively. The `conftest.py` modules contain
 common utilities in fixtures.
 
-For a breakdown of fixtures in use per test, use: `make test-fixtures`
+For a breakdown of fixtures in use per test, use: `make unit-test-fixtures`
 
 Available fixtures include:
 
@@ -63,7 +63,7 @@ API path under test. Any type aliases or models dedicated for test should be sto
 the `types.py` and `models.py` modules respectively. The `conftest.py` modules contains
 common utilities in fixtures.
 
-For a breakdown of fixtures in use per test, use: `make test-fixtures`
+For a breakdown of fixtures in use per test, use: `make integration-test-fixtures`
 
 Available fixtures include:
 
