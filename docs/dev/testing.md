@@ -106,6 +106,7 @@ If specifying providers for a test:
 ```python
 @pytest.mark.parametrize("providers", [{"test-provider": TestProvider()}])
 def test_with_provider() -> None:
+    pass
 ```
 
 #### SetupProvidersFixture
