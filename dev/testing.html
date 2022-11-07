@@ -143,14 +143,95 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="testing-strategies"><a class="header" href="#testing-strategies">Testing strategies</a></h1>
-<p>There are three major testing strategies used in this repository: unit tests,
-Python contract tests, and Python load tests.</p>
+<p>Merino is tested using a four tier strategy composed of unit, integration, contract
+and load testing.</p>
 <p>Test code resides in the <code>tests</code> directory.</p>
 <h2 id="unit-tests"><a class="header" href="#unit-tests">Unit Tests</a></h2>
-<p>Unit tests, located in the <code>tests/unit</code> directory, should appear close to the
-code they are testing, using the pytest unit test library. This is suitable for
-testing complex behavior at a small scale, with fine grained control over the
-inputs.</p>
+<p>The unit layer is suitable for testing complex behavior at a small scale, with
+fine-grained control over the inputs. Due to their narrow scope, unit tests are
+fundamental to thorough test coverage.</p>
+<p>To execute unit tests, use: <code>make unit-tests</code></p>
+<p>Unit tests are written and executed with pytest and are located in the <code>tests/unit</code>
+directory, using the same organizational structure as the source code of the merino
+service. Type aliases dedicated for test should be stored in the <code>types.py</code> module.
+The <code>conftest.py</code> modules contain common utilities in fixtures.</p>
+<p>For a breakdown of fixtures in use per test, use: <code>make unit-test-fixtures</code></p>
+<p>Available fixtures include:</p>
+<h4 id="filtercaplogfixture"><a class="header" href="#filtercaplogfixture">FilterCaplogFixture</a></h4>
+<p>Useful when verifying log messages, this fixture filters log records captured with
+pytest's caplog by a given <code>logger_name</code>.</p>
+<p><em><strong>Usage:</strong></em></p>
+<pre><code class="language-python">def test_with_filter_caplog(
+    caplog: LogCaptureFixture, filter_caplog: FilterCaplogFixture
+) -&gt; None:
+    records: list[LogRecord] = filter_caplog(caplog.records, &quot;merino.providers.adm&quot;)
+</code></pre>
+<p>Note: This fixture is shared with integration tests.</p>
+<h4 id="suggestionrequestfixture"><a class="header" href="#suggestionrequestfixture">SuggestionRequestFixture</a></h4>
+<p>For use when querying providers, this fixture creates a SuggestionRequest object with
+a given <code>query</code></p>
+<p><em><strong>Usage:</strong></em></p>
+<pre><code class="language-python">def test_with_suggestion_request(srequest: SuggestionRequestFixture) -&gt; None:
+    request: SuggestionRequest = srequest(&quot;example&quot;)
+    result: list[BaseSuggestion] = await provider.query(request)
+</code></pre>
+<h2 id="integration-tests"><a class="header" href="#integration-tests">Integration Tests</a></h2>
+<p>The integration layer of testing allows for verification of interactions between
+service components, with lower development, maintenance and execution costs compared
+with higher level tests, such as contract tests.</p>
+<p>To execute integration tests, use: <code>make integration-tests</code></p>
+<p>Integration tests are located in the <code>tests/integration</code> directory. They use pytest and
+the FastAPI <code>TestClient</code> to send requests to specific merino endpoints and verify
+responses as well as other outputs, such as logs. Tests are organized according to the
+API path under test. Type aliases dedicated for test should be stored in the <code>types.py</code>
+module. Fake providers created for test should be stored in the <code>fake_providers.py</code>
+module. The <code>conftest.py</code> modules contain common utilities in fixtures.</p>
+<p>For a breakdown of fixtures in use per test, use: <code>make integration-test-fixtures</code></p>
+<p>Available fixtures include:</p>
+<h4 id="filtercaplogfixture-1"><a class="header" href="#filtercaplogfixture-1">FilterCaplogFixture</a></h4>
+<p><a href="#FilterCaplogFixture">Details</a> available in Unit Tests section</p>
+<h4 id="testclientfixture"><a class="header" href="#testclientfixture">TestClientFixture</a></h4>
+<p>This fixture creates an instance of the TestClient to be used in testing API calls.</p>
+<p><em><strong>Usage:</strong></em></p>
+<pre><code class="language-python">def test_with_test_client(client: TestClient):
+    response: Response = client.get(&quot;/api/v1/endpoint&quot;)
+</code></pre>
+<h4 id="testclientwitheventsfixture"><a class="header" href="#testclientwitheventsfixture">TestClientWithEventsFixture</a></h4>
+<p>This fixture creates an instance of the TestClient, that will trigger event handlers
+(i.e. <code>startup</code> and <code>shutdown</code>) to be used in testing API calls.</p>
+<p><em><strong>Usage:</strong></em></p>
+<pre><code class="language-python">def test_with_test_client_with_event(client_with_events: TestClient):
+    response: Response = client_with_events.get(&quot;/api/v1/endpoint&quot;)
+</code></pre>
+<h4 id="injectprovidersfixture--providersfixture"><a class="header" href="#injectprovidersfixture--providersfixture">InjectProvidersFixture &amp; ProvidersFixture</a></h4>
+<p>These fixture will setup and teardown given providers.</p>
+<p><em><strong>Usage:</strong></em></p>
+<p>If specifying providers for a module:</p>
+<pre><code class="language-python">@pytest.fixture(name=&quot;providers&quot;)
+def fixture_providers() -&gt; Providers:
+    return {&quot;test-provider&quot;: TestProvider()}
+</code></pre>
+<p>If specifying providers for a test:</p>
+<pre><code class="language-python">@pytest.mark.parametrize(&quot;providers&quot;, [{&quot;test-provider&quot;: TestProvider()}])
+def test_with_provider() -&gt; None:
+    pass
+</code></pre>
+<h4 id="setupprovidersfixture"><a class="header" href="#setupprovidersfixture">SetupProvidersFixture</a></h4>
+<p>This fixture sets application provider dependency overrides.</p>
+<p><em><strong>Usage:</strong></em></p>
+<pre><code class="language-python">def test_with_setup_providers(setup_providers: SetupProvidersFixture):
+    providers: dict[str, BaseProvider] = {&quot;test-provider&quot;: TestProvider()}
+    setup_providers(providers)
+</code></pre>
+<h4 id="teardownprovidersfixture"><a class="header" href="#teardownprovidersfixture">TeardownProvidersFixture</a></h4>
+<p>This fixture resets application provider dependency overrides and is often used in
+teardown fixtures.</p>
+<p><em><strong>Usage:</strong></em></p>
+<pre><code class="language-python">@pytest.fixture(autouse=True)
+def teardown(teardown_providers: TeardownProvidersFixture):
+    yield
+    teardown_providers()
+</code></pre>
 <h2 id="contract-tests"><a class="header" href="#contract-tests">Contract tests</a></h2>
 <p>The tests in the <code>tests/contract</code> directory are contract tests
 that consume Merino's APIs using more opaque techniques. These tests run against
