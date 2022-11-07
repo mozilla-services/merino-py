@@ -52,3 +52,26 @@ def test_top_picks_no_result(client: TestClient, query: str):
 
     result = response.json()
     assert result["suggestions"] == []
+
+
+@pytest.mark.parametrize(
+    "query,title,url",
+    [
+        ("ab", "Abc", "https://abc.test"),
+        ("abc", "Abc", "https://abc.test"),
+        ("acb", "Abc", "https://abc.test"),
+    ],
+)
+def test_top_picks_short_domains(
+    client: TestClient, query: str, title: str, url: str
+) -> None:
+    """Test if Top Picks provider responds with a short domain or similar"""
+    response = client.get(f"/api/v1/suggest?q={query}")
+    assert response.status_code == 200
+
+    result = response.json()
+    assert result
+    assert result["suggestions"][0]["url"] == url
+    assert result["suggestions"][0]["title"] == title
+    assert result["suggestions"][0]["is_top_pick"]
+    assert not result["suggestions"][0]["is_sponsored"]
