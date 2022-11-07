@@ -83,7 +83,7 @@ class Provider(BaseProvider):
             if ids := self.short_domain_index.get(srequest.query):
                 res = self.results[ids[0]]
                 return [res]
-            # Ignore requests below or above character minimums
+        # Ignore requests below or above character minimums
         if len(srequest.query) < self.query_min or len(srequest.query) > self.query_max:
             return []
         if ids := self.primary_index.get(srequest.query):
