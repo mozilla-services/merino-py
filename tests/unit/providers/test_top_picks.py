@@ -154,3 +154,60 @@ async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) ->
             score=settings.providers.top_picks.score,
         )
     ]
+
+
+@pytest.mark.asyncio
+async def test_short_domain_query(
+    srequest: SuggestionRequestFixture, top_picks: Provider
+) -> None:
+    """Test the Top Pick Provider returns results for short domain queries."""
+
+    await top_picks.initialize()
+
+    # Below limits
+    assert await top_picks.query(srequest("a")) == []
+    # Meets limitation, not a domain or similar
+    assert await top_picks.query(srequest("aaa")) == []
+
+    res = await top_picks.query(srequest("abc"))
+    assert res == [
+        Suggestion(
+            block_id=0,
+            title="Abc",
+            url="https://abc.test",
+            provider="top_picks",
+            is_top_pick=True,
+            is_sponsored=False,
+            icon="",
+            score=settings.providers.top_picks.score,
+        )
+    ]
+
+    # Test that matching suggestion similar with low char threshold returns
+    res = await top_picks.query(srequest("aa"))
+    assert res == [
+        Suggestion(
+            block_id=0,
+            title="Abc",
+            url="https://abc.test",
+            provider="top_picks",
+            is_top_pick=True,
+            is_sponsored=False,
+            icon="",
+            score=settings.providers.top_picks.score,
+        )
+    ]
+
+    res = await top_picks.query(srequest("aa"))
+    assert res == [
+        Suggestion(
+            block_id=0,
+            title="Abc",
+            url="https://abc.test",
+            provider="top_picks",
+            is_top_pick=True,
+            is_sponsored=False,
+            icon="",
+            score=settings.providers.top_picks.score,
+        )
+    ]
