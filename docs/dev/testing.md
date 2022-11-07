@@ -7,17 +7,16 @@ Test code resides in the `tests` directory.
 
 ## Unit Tests
 
-The unit layer is suitable for testing complex behavior at a small scale, with fine
-grained control over the inputs. Due to their narrow scope, unit tests are fundamental
-to thorough test coverage.
+The unit layer is suitable for testing complex behavior at a small scale, with
+fine-grained control over the inputs. Due to their narrow scope, unit tests are
+fundamental to thorough test coverage.
 
 To execute unit tests, use: `make unit-tests`
 
 Unit tests are written and executed with pytest and are located in the `tests/unit`
 directory, using the same organizational structure as the source code of the merino
-service. Any type aliases or models dedicated for test should be stored in the
-`types.py` and `models.py` modules respectively. The `conftest.py` modules contain
-common utilities in fixtures.
+service. Type aliases dedicated for test should be stored in the `types.py` module.
+The `conftest.py` modules contain common utilities in fixtures.
 
 For a breakdown of fixtures in use per test, use: `make unit-test-fixtures`
 
@@ -59,9 +58,9 @@ To execute integration tests, use: `make integration-tests`
 Integration tests are located in the `tests/integration` directory. They use pytest and
 the FastAPI `TestClient` to send requests to specific merino endpoints and verify
 responses as well as other outputs, such as logs. Tests are organized according to the
-API path under test. Any type aliases or models dedicated for test should be stored in
-the `types.py` and `models.py` modules respectively. The `conftest.py` modules contains
-common utilities in fixtures.
+API path under test. Type aliases dedicated for test should be stored in the `types.py`
+module. Fake providers created for test should be stored in the `fake_providers.py`
+module. The `conftest.py` modules contain common utilities in fixtures.
 
 For a breakdown of fixtures in use per test, use: `make integration-test-fixtures`
 
