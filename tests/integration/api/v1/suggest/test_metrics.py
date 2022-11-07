@@ -1,30 +1,28 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import aiodogstatsd
 import pytest
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
-from merino.main import app
-from merino.providers import get_providers
-from tests.unit.web.util import CorruptProvider, get_provider_factory
-
-
-@pytest.fixture(name="client")
-def fixture_client() -> TestClient:
-    """Return a FastAPI test client. This doesn't trigger events."""
-    return TestClient(app)
+from tests.integration.api.v1.fake_providers import (
+    CorruptProvider,
+    NonsponsoredProvider,
+    SponsoredProvider,
+)
 
 
-@pytest.fixture(name="corrupt_provider")
-def fixture_corrupt_provider():
-    """Set up a corrupt suggestions provider."""
-    app.dependency_overrides[get_providers] = get_provider_factory(
+@pytest.mark.parametrize(
+    "providers",
+    [
         {
-            "corrupt": CorruptProvider(),
+            "sponsored-provider": SponsoredProvider(enabled_by_default=True),
+            "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
         }
-    )
-    yield
-    del app.dependency_overrides[get_providers]
-
-
+    ],
+)
 @pytest.mark.parametrize(
     ["url", "metric_keys"],
     [
@@ -43,11 +41,15 @@ def fixture_corrupt_provider():
         ("/__error__", ["get.__error__.timing", "get.__error__.status_codes.500"]),
     ],
 )
-def test_metrics(mocker, client, url: str, metric_keys: list):
+def test_metrics(
+    mocker: MockerFixture,
+    client: TestClient,
+    url: str,
+    metric_keys: list[str],
+) -> None:
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
     client.get(url)
-
     for metric in metric_keys:
         report.assert_any_call(metric, mocker.ANY, mocker.ANY, mocker.ANY, mocker.ANY)
 
@@ -93,7 +95,9 @@ def test_metrics(mocker, client, url: str, metric_keys: list):
     ],
     ids=["200_with_feature_flags_tags", "404_no_tags", "400_no_tags", "500_no_tags"],
 )
-def test_feature_flags(mocker, client, url: str, metric_keys: list, tags: list):
+def test_feature_flags(
+    mocker: MockerFixture, client: TestClient, url: str, metric_keys: list, tags: list
+):
     """Test that feature flags are added for successful requests."""
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
@@ -108,8 +112,9 @@ def test_feature_flags(mocker, client, url: str, metric_keys: list, tags: list):
     assert got == want
 
 
-@pytest.mark.usefixtures("corrupt_provider")
-def test_metrics_500(mocker, client):
+@pytest.mark.parametrize("providers", [{"corrupt": CorruptProvider()}])
+def test_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
+    """Test that 500 status codes are recorded as metrics."""
     error_msg = "test"
     metric_keys = [
         "get.api.v1.suggest.timing",

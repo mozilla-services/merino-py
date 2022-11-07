@@ -1,27 +1,24 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import pytest
 from fastapi.testclient import TestClient
 
-from merino.main import app
-from merino.providers import get_providers
 from merino.providers.wiki_fruit import WikiFruitProvider
-from tests.unit.web.util import get_provider_factory
-
-client = TestClient(app)
+from tests.integration.api.v1.types import Providers
 
 
-@pytest.fixture(scope="module", autouse=True)
-def inject_providers():
-    app.dependency_overrides[get_providers] = get_provider_factory(
-        {
-            "wiki_fruit": WikiFruitProvider(name="wiki_fruit", enabled_by_default=True),
-        }
-    )
-    yield
-    del app.dependency_overrides[get_providers]
+@pytest.fixture(name="providers")
+def fixture_providers() -> Providers:
+    """Define providers for this module which are injected automatically."""
+    return {
+        "wiki_fruit": WikiFruitProvider(name="wiki_fruit", enabled_by_default=True),
+    }
 
 
 @pytest.mark.parametrize("query", ["apple", "banana", "cherry"])
-def test_suggest_hit(query):
+def test_suggest_hit(client: TestClient, query: str) -> None:
     response = client.get(f"/api/v1/suggest?q={query}")
     assert response.status_code == 200
 
@@ -31,7 +28,7 @@ def test_suggest_hit(query):
     assert result["request_id"] is not None
 
 
-def test_suggest_miss():
+def test_suggest_miss(client: TestClient) -> None:
     response = client.get("/api/v1/suggest?q=nope")
     assert response.status_code == 200
 

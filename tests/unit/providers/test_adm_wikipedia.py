@@ -9,7 +9,7 @@ import pytest
 
 from merino.config import settings
 from merino.providers.adm import NonsponsoredSuggestion, Provider
-from tests.unit.web.util import srequest
+from tests.unit.types import SuggestionRequestFixture
 
 
 class FakeBackend:
@@ -100,7 +100,9 @@ async def test_initialize(adm: Provider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_wikipedia_specific_score(adm: Provider) -> None:
+async def test_wikipedia_specific_score(
+    srequest: SuggestionRequestFixture, adm: Provider
+) -> None:
     """Test for the query() method of the adM provider."""
 
     await adm.initialize()

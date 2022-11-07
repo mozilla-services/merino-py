@@ -8,7 +8,7 @@ from fastapi import APIRouter, FastAPI
 
 from merino.config import settings
 from merino.providers.top_picks import Provider, Suggestion
-from tests.unit.web.util import srequest
+from tests.unit.types import SuggestionRequestFixture
 
 app = FastAPI()
 router = APIRouter()
@@ -119,7 +119,7 @@ async def test_initialize_exception(top_picks: Provider, mocker) -> None:
 
 
 @pytest.mark.asyncio
-async def test_query(top_picks: Provider) -> None:
+async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) -> None:
     """Test for the query method of the Top Pick provider."""
 
     await top_picks.initialize()

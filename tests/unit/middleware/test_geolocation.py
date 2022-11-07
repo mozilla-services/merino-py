@@ -69,9 +69,7 @@ async def test_geolocation_address_found(
     expected_location: Location,
     client_ip_and_port: list,
 ) -> None:
-    """
-    Test the proper assignment of Location properties given a request IP address.
-    """
+    """Test the proper assignment of Location properties given a request IP address."""
     scope["client"] = client_ip_and_port
 
     await geolocation_middleware(scope, receive_mock, send_mock)

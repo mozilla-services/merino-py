@@ -1,23 +1,18 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 import pytest
 from fastapi.testclient import TestClient
 
-from merino.main import app
-from merino.providers import get_providers
 from merino.providers.top_picks import Provider as TopPicksProvider
-from tests.unit.web.util import get_provider_factory
-
-client = TestClient(app)
+from tests.integration.api.v1.types import Providers
 
 
-@pytest.fixture(scope="module", autouse=True)
-def inject_providers():
-    app.dependency_overrides[get_providers] = get_provider_factory(
-        {
-            "top_picks": TopPicksProvider(name="top_picks", enabled_by_default=True),
-        }
-    )
-    yield
-    del app.dependency_overrides[get_providers]
+@pytest.fixture(name="providers")
+def fixture_providers() -> Providers:
+    """Define providers for this module which are injected automatically."""
+    return {"top_picks": TopPicksProvider(name="top_picks", enabled_by_default=True)}
 
 
 @pytest.mark.parametrize(
@@ -32,7 +27,7 @@ def inject_providers():
         ("mozz", "Mozilla", "https://mozilla.org/en-US/"),
     ],
 )
-def test_top_picks_query(query, title, url):
+def test_top_picks_query(client: TestClient, query: str, title: str, url: str) -> None:
     """Test if Top Picks provider returns result for indexed Top Pick"""
     response = client.get(f"/api/v1/suggest?q={query}")
     assert response.status_code == 200
@@ -50,7 +45,7 @@ def test_top_picks_query(query, title, url):
     "query",
     ["m", "mo", "mox", "moz", "mozzarella", "http", "http:", "https:", "https://"],
 )
-def test_top_picks_no_result(query):
+def test_top_picks_no_result(client: TestClient, query: str):
     """Test if Top Picks provider does respond when provided invalid query term"""
     response = client.get(f"/api/v1/suggest?q={query}")
     assert response.status_code == 200
