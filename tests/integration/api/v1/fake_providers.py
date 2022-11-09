@@ -26,6 +26,21 @@ class CorruptProvider(BaseProvider):
         raise RuntimeError(srequest.query)
 
 
+class HiddenProvider(BaseProvider):
+    def __init__(self, enabled_by_default) -> None:
+        self._enabled_by_default = enabled_by_default
+        self._name = "hidden"
+
+    async def initialize(self) -> None:
+        ...
+
+    def hidden(self) -> bool:
+        return True
+
+    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        raise RuntimeError(srequest.query)
+
+
 class NonsponsoredSuggestion(BaseSuggestion):
     """Model for nonsponsored suggestions."""
 
