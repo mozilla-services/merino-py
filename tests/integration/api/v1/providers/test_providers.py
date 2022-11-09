@@ -54,6 +54,13 @@ from tests.integration.api.v1.fake_providers import (
             },
         ),
     ],
+    ids=[
+        "no-providers",
+        "one-provider-enabled_by_default",
+        "one-provider-disabled_by_default",
+        "one-provider-hidden",
+        "three-providers-all-availabilities",
+    ],
 )
 def test_providers(
     client: TestClient,
