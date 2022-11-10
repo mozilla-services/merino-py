@@ -16,7 +16,7 @@ class FeatureFlagsMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Insert session id before handing request"""
-        if scope["type"] != "http":  # pragma: no cover
+        if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
