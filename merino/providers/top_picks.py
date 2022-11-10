@@ -14,7 +14,8 @@ from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionReques
 SCORE: float = settings.providers.top_picks.score
 LOCAL_TOP_PICKS_FILE: str = settings.providers.top_picks.top_picks_file_path
 QUERY_CHAR_LIMIT: int = settings.providers.top_picks.query_char_limit
-FIREFOX_CHAR_LIMIT: Final = 2
+# The minimal characters that Firefox Urlbar would send to Merino
+FIREFOX_CHAR_LIMIT: Final[int] = 2
 
 
 logger = logging.getLogger(__name__)
@@ -77,9 +78,7 @@ class Provider(BaseProvider):
         if srequest.query.startswith("http"):
             return []
         # Suggestions between Firefox char min of 2 and query limit - 1 for short domains
-        if len(srequest.query) >= FIREFOX_CHAR_LIMIT and len(srequest.query) <= (
-            QUERY_CHAR_LIMIT - 1
-        ):
+        if FIREFOX_CHAR_LIMIT <= len(srequest.query) <= (QUERY_CHAR_LIMIT - 1):
             if ids := self.short_domain_index.get(srequest.query):
                 res = self.results[ids[0]]
                 return [res]
@@ -146,10 +145,9 @@ class Provider(BaseProvider):
             )
 
             # Insertion of short keys between Firefox limit of 2 and QUERY_CHAR_LIMIT - 1
-            if (
-                len(domain) >= FIREFOX_CHAR_LIMIT
-                and len(domain) <= QUERY_CHAR_LIMIT - 1
-            ):
+            # QUERY_CHAR_LIMIT can be modified, therefore suggestions in this category
+            # should be less than QUERY_CHAR_LIMIT, not equal.
+            if FIREFOX_CHAR_LIMIT <= len(domain) <= (QUERY_CHAR_LIMIT - 1):
                 for chars in range(FIREFOX_CHAR_LIMIT, len(domain) + 1):
                     short_domain_index[domain[:chars]].append(index_key)
                 for variant in record.get("similars", []):

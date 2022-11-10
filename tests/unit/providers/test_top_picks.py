@@ -156,25 +156,78 @@ async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) ->
     ]
 
 
+@pytest.mark.parametrize(
+    "query,title,url",
+    [
+        ("aa", "Abc", "https://abc.test"),
+        ("ab", "Abc", "https://abc.test"),
+        ("abc", "Abc", "https://abc.test"),
+    ],
+)
 @pytest.mark.asyncio
 async def test_short_domain_query(
-    srequest: SuggestionRequestFixture, top_picks: Provider
+    query, title, url, srequest: SuggestionRequestFixture, top_picks: Provider
 ) -> None:
-    """Test the Top Pick Provider returns results for short domain queries."""
-
+    """Test the Top Pick Provider returns results for short domain queries.
+    Ensure that matching suggestion and similar variants with low char
+    threshold return suggestions."""
+    expected_suggestion: list[Suggestion] = [
+        Suggestion(
+            block_id=0,
+            title=title,
+            url=url,
+            provider="top_picks",
+            is_top_pick=True,
+            is_sponsored=False,
+            icon="",
+            score=settings.providers.top_picks.score,
+        )
+    ]
     await top_picks.initialize()
 
-    # Below limits
-    assert await top_picks.query(srequest("a")) == []
-    # Meets limitation, not a domain or similar
-    assert await top_picks.query(srequest("aaa")) == []
+    res = await top_picks.query(srequest(query))
+    assert res == expected_suggestion
 
-    res = await top_picks.query(srequest("abc"))
-    assert res == [
+
+@pytest.mark.parametrize(
+    "query",
+    ["a", "ad", "bb"],
+)
+@pytest.mark.asyncio
+async def test_short_domain_query_fails(
+    query, srequest: SuggestionRequestFixture, top_picks: Provider
+) -> None:
+    """Test invalid inputs for Top Pick Provider when providing short domain queries."""
+    await top_picks.initialize()
+
+    res = await top_picks.query(srequest(query))
+    assert res == []
+
+
+@pytest.mark.parametrize(
+    "query,title,url",
+    [
+        ("ac", "Abc", "https://abc.test"),
+        ("acb", "Abc", "https://abc.test"),
+        ("acbc", "Abc", "https://abc.test"),
+        ("ae", "Abc", "https://abc.test"),
+        ("aec", "Abc", "https://abc.test"),
+        ("aecbc", "Abc", "https://abc.test"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_short_domain_query_similars_longer_than_domain(
+    query, title, url, srequest: SuggestionRequestFixture, top_picks: Provider
+) -> None:
+    """Test suggestion results for similar inputs that are indexed for short domains. These
+    similar suggestion results may be longer than the input, so if the domain is
+    categorized as short and the similar is longer than it, the result should
+    still return a valid suggestion as its characters will be a subset of the similar."""
+    expected_suggestion: list[Suggestion] = [
         Suggestion(
             block_id=0,
-            title="Abc",
-            url="https://abc.test",
+            title=title,
+            url=url,
             provider="top_picks",
             is_top_pick=True,
             is_sponsored=False,
@@ -182,32 +235,7 @@ async def test_short_domain_query(
             score=settings.providers.top_picks.score,
         )
     ]
+    await top_picks.initialize()
 
-    # Test that matching suggestion similar with low char threshold returns
-    res = await top_picks.query(srequest("aa"))
-    assert res == [
-        Suggestion(
-            block_id=0,
-            title="Abc",
-            url="https://abc.test",
-            provider="top_picks",
-            is_top_pick=True,
-            is_sponsored=False,
-            icon="",
-            score=settings.providers.top_picks.score,
-        )
-    ]
-
-    res = await top_picks.query(srequest("aa"))
-    assert res == [
-        Suggestion(
-            block_id=0,
-            title="Abc",
-            url="https://abc.test",
-            provider="top_picks",
-            is_top_pick=True,
-            is_sponsored=False,
-            icon="",
-            score=settings.providers.top_picks.score,
-        )
-    ]
+    res = await top_picks.query(srequest(query))
+    assert res == expected_suggestion
