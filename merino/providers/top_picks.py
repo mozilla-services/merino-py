@@ -114,7 +114,7 @@ class Provider(BaseProvider):
         primary_index: defaultdict = defaultdict(list)
         # A dictionary of keyed values that point to the matching index
         secondary_index: defaultdict = defaultdict(list)
-        # A dictionary encapsulating short domains
+        # A dictionary encapsulating short domains and their similars
         short_domain_index: defaultdict = defaultdict(list)
         # A list of suggestions
         results: list[Suggestion] = []
