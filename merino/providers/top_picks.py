@@ -82,7 +82,10 @@ class Provider(BaseProvider):
             if ids := self.short_domain_index.get(srequest.query):
                 res = self.results[ids[0]]
                 return [res]
-        # Ignore requests below or above character minimums
+            elif ids := self.secondary_index.get(srequest.query):
+                res = self.results[ids[0]]
+                return [res]
+        # Ignore requests below or above character min/max after checking short domains above
         if len(srequest.query) < self.query_min or len(srequest.query) > self.query_max:
             return []
         if ids := self.primary_index.get(srequest.query):
@@ -145,14 +148,17 @@ class Provider(BaseProvider):
             )
 
             # Insertion of short keys between Firefox limit of 2 and QUERY_CHAR_LIMIT - 1
-            # QUERY_CHAR_LIMIT can be modified, therefore suggestions in this category
-            # should be less than QUERY_CHAR_LIMIT, not equal.
+            # For similars, the values are added to the secondary index.
             if FIREFOX_CHAR_LIMIT <= len(domain) <= (QUERY_CHAR_LIMIT - 1):
                 for chars in range(FIREFOX_CHAR_LIMIT, len(domain) + 1):
                     short_domain_index[domain[:chars]].append(index_key)
-                for variant in record.get("similars", []):
-                    for chars in range(FIREFOX_CHAR_LIMIT, len(variant) + 1):
-                        short_domain_index[variant[:chars]].append(index_key)
+                if not record.get("similars"):
+                    continue
+                else:
+                    for variant in record.get("similars", []):
+                        for chars in range(FIREFOX_CHAR_LIMIT, len(variant) + 1):
+                            secondary_index[variant[:chars]].append(index_key)
+                        continue
 
             # Insertion of keys into primary index.
             for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
