@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Integration tests for the Merino v1 suggest API endpoint."""
+
 import logging
 
 import pytest
@@ -97,9 +99,16 @@ def test_suggest_request_logs_contain_required_info(
     client_variants = "foo,bar"
     providers = "pro,vider"
     root_path = "/api/v1/suggest"
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2;"
+            " rv:85.0) Gecko/20100101 Firefox/103.0"
+        )
+    }
     client.get(
         f"{root_path}?q={query}&sid={sid}&seq={seq}"
-        f"&client_variants={client_variants}&providers={providers}"
+        f"&client_variants={client_variants}&providers={providers}",
+        headers=headers,
     )
 
     records = filter_caplog(caplog.records, "web.suggest.request")
@@ -116,9 +125,9 @@ def test_suggest_request_logs_contain_required_info(
     assert record.__dict__["query"] == query
     assert record.__dict__["client_variants"] == client_variants
     assert record.__dict__["requested_providers"] == providers
-    assert record.__dict__["browser"] == "Other"
-    assert record.__dict__["os_family"] == "other"
-    assert record.__dict__["form_factor"] == "other"
+    assert record.__dict__["browser"] == "Firefox(103.0)"
+    assert record.__dict__["os_family"] == "macos"
+    assert record.__dict__["form_factor"] == "desktop"
     assert record.__dict__["country"] == "US"
     assert record.__dict__["region"] == "WA"
     assert record.__dict__["city"] == "Milton"
@@ -131,9 +140,7 @@ def test_geolocation_with_invalid_ip(
     filter_caplog: FilterCaplogFixture,
     client: TestClient,
 ) -> None:
-    """
-    Test that a warning message is logged if geolocation data is invalid
-    """
+    """Test that a warning message is logged if geolocation data is invalid"""
     mock_client = mocker.patch("fastapi.Request.client")
     mock_client.host = "invalid-ip"
 

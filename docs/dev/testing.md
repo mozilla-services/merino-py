@@ -46,6 +46,15 @@ def test_with_suggestion_request(srequest: SuggestionRequestFixture) -> None:
     result: list[BaseSuggestion] = await provider.query(request)
 ```
 
+#### ScopeFixture, ReceiveMockFixture & SendMockFixture
+For use when testing middleware, these fixtures initialize or mock the common Scope,
+Receive and Send object dependencies.
+
+_**Usage:**_
+```python
+def test_middleware(scope: Scope, receive_mock: Receive, send_mock: Send) -> None:
+    pass
+````
 
 ## Integration Tests
 
