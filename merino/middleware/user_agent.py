@@ -8,7 +8,7 @@ from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from merino.middleware import ScopeKey
-from merino.util.user_agent_parsing import parse
+from merino.utils.user_agent_parsing import parse
 
 
 class UserAgent(BaseModel):

@@ -70,6 +70,13 @@ lookups once or twice, it comes a surprisingly high overhead if accessing them
 repeatedly in the hot paths. You can cache those settings somewhere to mitigate
 this issue.
 
+### Runtime configurations
+
+- `runtime.query_timeout_sec` (`MERINO_RUNTIME__QUERY_TIMEOUT_SEC`) - A floating
+  point (in seconds) indicating the maximum waiting period for queries issued within
+  the handler of the `suggest` endpoint. All the unfinished query tasks will be
+  cancelled once the timeout gets triggered.
+
 ### Logging
 
 Settings to control the format and amount of logs generated.

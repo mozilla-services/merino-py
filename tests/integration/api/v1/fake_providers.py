@@ -2,6 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import asyncio
+
+from merino.config import settings
 from merino.providers import BaseProvider
 from merino.providers.base import BaseSuggestion, SuggestionRequest
 
@@ -123,3 +126,17 @@ class SponsoredProvider(BaseProvider):
             ]
         else:
             return []
+
+
+class TimeoutSponsoredProvider(SponsoredProvider):
+    """A sponsored provider that always returns the result in
+    `2 * settings.runtime.query_timeout_sec`
+    """
+
+    def __init__(self, enabled_by_default) -> None:
+        super().__init__(enabled_by_default=enabled_by_default)
+        self._name = "timedout-sponsored"
+
+    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        await asyncio.sleep(settings.runtime.query_timeout_sec * 2)
+        return await super().query(srequest)

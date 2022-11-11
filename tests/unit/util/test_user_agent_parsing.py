@@ -1,6 +1,6 @@
 import pytest
 
-from merino.util.user_agent_parsing import parse
+from merino.utils.user_agent_parsing import parse
 
 Scenario = tuple[str, str, str, str]
 

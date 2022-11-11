@@ -23,6 +23,10 @@
 [default]
 debug = false
 
+[default.runtime]
+# A float timeout (in seconds) for all queries issued in "web/api_v1.py"
+query_timeout_sec = 0.2
+
 [default.logging]
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 level = "INFO"
