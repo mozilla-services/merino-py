@@ -2,15 +2,25 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Integration tests for the Merino v1 providers API endpoint."""
+
+import logging
+from logging import LogRecord
+from typing import Any
+
 import pytest
 from fastapi.testclient import TestClient
+from freezegun import freeze_time
+from pytest import LogCaptureFixture
 
 from merino.providers import BaseProvider
+from tests.integration.api.types import LogDataFixture
 from tests.integration.api.v1.fake_providers import (
     HiddenProvider,
     NonsponsoredProvider,
     SponsoredProvider,
 )
+from tests.types import FilterCaplogFixture
 
 
 @pytest.mark.parametrize(
@@ -75,3 +85,50 @@ def test_providers(
 
     assert response.status_code == 200
     assert response.json() == expected_response
+
+
+@freeze_time("1998-03-31")
+@pytest.mark.parametrize("providers", [{}])
+def test_providers_request_log_data(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    log_data: LogDataFixture,
+    client: TestClient,
+) -> None:
+    """
+    Tests that the request logs for the 'providers' endpoint contain the required
+    extra data
+    """
+    caplog.set_level(logging.INFO)
+
+    expected_log_data: dict[str, Any] = {
+        "name": "request.summary",
+        "agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0)"
+            " Gecko/20100101 Firefox/103.0"
+        ),
+        "path": "/api/v1/providers",
+        "method": "GET",
+        "lang": "en-US",
+        "querystring": {},
+        "errno": 0,
+        "code": 200,
+        "time": "1998-03-31T00:00:00",
+    }
+
+    client.get(
+        "/api/v1/providers",
+        headers={
+            "accept-language": "en-US",
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0) "
+                "Gecko/20100101 Firefox/103.0"
+            ),
+        },
+    )
+
+    records: list[LogRecord] = filter_caplog(caplog.records, "request.summary")
+    assert len(records) == 1
+
+    record: LogRecord = records[0]
+    assert log_data(record) == expected_log_data

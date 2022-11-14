@@ -5,9 +5,11 @@
 """Integration tests for the Merino v1 suggest API endpoint."""
 
 import logging
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from freezegun import freeze_time
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
@@ -80,61 +82,91 @@ def test_client_variants(client: TestClient) -> None:
     assert result["client_variants"] == ["foo", "bar"]
 
 
-def test_suggest_request_logs_contain_required_info(
+@freeze_time("1998-03-31")
+def test_suggest_request_log_data(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     client: TestClient,
 ) -> None:
-
+    """
+    Tests that the request logs for the 'suggest' endpoint contain the required
+    extra data
+    """
     caplog.set_level(logging.INFO)
 
     # The IP address is taken from `GeoLite2-City-Test.mmdb`
     mock_client = mocker.patch("fastapi.Request.client")
     mock_client.host = "216.160.83.56"
 
-    query = "nope"
-    sid = "deadbeef-0000-1111-2222-333344445555"
-    seq = 0
-    client_variants = "foo,bar"
-    providers = "pro,vider"
-    root_path = "/api/v1/suggest"
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2;"
-            " rv:85.0) Gecko/20100101 Firefox/103.0"
-        )
+    expected_log_data: dict[str, Any] = {
+        "name": "web.suggest.request",
+        "sensitive": True,
+        "errno": 0,
+        "time": "1998-03-31T00:00:00",
+        "path": "/api/v1/suggest",
+        "method": "GET",
+        "query": "nope",
+        "code": 200,
+        "rid": "1b11844c52b34c33a6ad54b7bc2eb7c7",
+        "session_id": "deadbeef-0000-1111-2222-333344445555",
+        "sequence_no": 0,
+        "client_variants": "foo,bar",
+        "requested_providers": "pro,vider",
+        "country": "US",
+        "region": "WA",
+        "city": "Milton",
+        "dma": 819,
+        "browser": "Firefox(103.0)",
+        "os_family": "macos",
+        "form_factor": "desktop",
     }
+
     client.get(
-        f"{root_path}?q={query}&sid={sid}&seq={seq}"
-        f"&client_variants={client_variants}&providers={providers}",
-        headers=headers,
+        f"{expected_log_data['path']}?q={expected_log_data['query']}"
+        f"&sid={expected_log_data['session_id']}"
+        f"&seq={expected_log_data['sequence_no']}"
+        f"&client_variants={expected_log_data['client_variants']}"
+        f"&providers={expected_log_data['requested_providers']}",
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0) "
+                "Gecko/20100101 Firefox/103.0"
+            ),
+            "x-request-id": "1b11844c52b34c33a6ad54b7bc2eb7c7",
+        },
     )
 
     records = filter_caplog(caplog.records, "web.suggest.request")
-
     assert len(records) == 1
 
     record = records[0]
+    log_data: dict[str, Any] = {
+        "name": record.name,
+        "sensitive": record.__dict__["sensitive"],
+        "errno": record.__dict__["errno"],
+        "time": record.__dict__["time"],
+        "path": record.__dict__["path"],
+        "method": record.__dict__["method"],
+        "query": record.__dict__["query"],
+        "code": record.__dict__["code"],
+        "rid": record.__dict__["rid"],
+        "session_id": record.__dict__["session_id"],
+        "sequence_no": record.__dict__["sequence_no"],
+        "client_variants": record.__dict__["client_variants"],
+        "requested_providers": record.__dict__["requested_providers"],
+        "country": record.__dict__["country"],
+        "region": record.__dict__["region"],
+        "city": record.__dict__["city"],
+        "dma": record.__dict__["dma"],
+        "browser": record.__dict__["browser"],
+        "os_family": record.__dict__["os_family"],
+        "form_factor": record.__dict__["form_factor"],
+    }
+    assert log_data == expected_log_data
 
-    assert record.name == "web.suggest.request"
-    assert record.__dict__["sensitive"] is True
-    assert record.__dict__["path"] == root_path
-    assert record.__dict__["session_id"] == sid
-    assert record.__dict__["sequence_no"] == seq
-    assert record.__dict__["query"] == query
-    assert record.__dict__["client_variants"] == client_variants
-    assert record.__dict__["requested_providers"] == providers
-    assert record.__dict__["browser"] == "Firefox(103.0)"
-    assert record.__dict__["os_family"] == "macos"
-    assert record.__dict__["form_factor"] == "desktop"
-    assert record.__dict__["country"] == "US"
-    assert record.__dict__["region"] == "WA"
-    assert record.__dict__["city"] == "Milton"
-    assert record.__dict__["dma"] == 819
 
-
-def test_geolocation_with_invalid_ip(
+def test_suggest_with_invalid_geolocation_ip(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,

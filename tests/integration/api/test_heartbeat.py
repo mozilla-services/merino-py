@@ -2,13 +2,18 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Integration tests for the Merino __heartbeat__ and __lbheartbeat__ API endpoints."""
+
 import logging
+from logging import LogRecord
+from typing import Any
 
 import pytest
+from _pytest.logging import LogCaptureFixture
 from fastapi.testclient import TestClient
-from pytest import LogCaptureFixture
-from pytest_mock import MockerFixture
+from freezegun import freeze_time
 
+from tests.integration.api.types import LogDataFixture
 from tests.types import FilterCaplogFixture
 
 
@@ -20,25 +25,49 @@ def test_heartbeats(client: TestClient, endpoint: str) -> None:
     assert response.status_code == 200
 
 
-def test_non_suggest_request_logs_contain_required_info(
-    mocker: MockerFixture,
+@freeze_time("1998-03-31")
+@pytest.mark.parametrize("endpoint", ["__heartbeat__", "__lbheartbeat__"])
+def test_heartbeat_request_log_data(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
+    log_data: LogDataFixture,
     client: TestClient,
+    endpoint: str,
 ) -> None:
+    """
+    Tests that the request logs for the '__heartbeat__' and '__lbheartbeat__' endpoints
+    contain the required extra data
+    """
     caplog.set_level(logging.INFO)
 
-    # Use a valid IP to avoid the geolocation errors/logs
-    mock_client = mocker.patch("fastapi.Request.client")
-    mock_client.host = "127.0.0.1"
+    expected_log_data: dict[str, Any] = {
+        "name": "request.summary",
+        "agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0)"
+            " Gecko/20100101 Firefox/103.0"
+        ),
+        "path": f"/{endpoint}",
+        "method": "GET",
+        "lang": "en-US",
+        "querystring": {},
+        "errno": 0,
+        "code": 200,
+        "time": "1998-03-31T00:00:00",
+    }
 
-    client.get("/__heartbeat__")
+    client.get(
+        f"/{endpoint}",
+        headers={
+            "accept-language": "en-US",
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0) "
+                "Gecko/20100101 Firefox/103.0"
+            ),
+        },
+    )
 
-    records = filter_caplog(caplog.records, "request.summary")
+    records: list[LogRecord] = filter_caplog(caplog.records, "request.summary")
     assert len(records) == 1
 
-    record = records[0]
-    assert record.name == "request.summary"
-    assert "country" not in record.__dict__["args"]
-    assert "session_id" not in record.__dict__["args"]
-    assert record.__dict__["path"] == "/__heartbeat__"
+    record: LogRecord = records[0]
+    assert log_data(record) == expected_log_data

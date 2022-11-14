@@ -2,12 +2,16 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from typing import Iterator
+"""Module for test fixtures for the integration test directory."""
+
+from logging import LogRecord
+from typing import Any, Iterator
 
 import pytest
 from starlette.testclient import TestClient
 
 from merino.main import app
+from tests.integration.api.types import LogDataFixture
 
 
 @pytest.fixture(name="client")
@@ -29,3 +33,26 @@ def fixture_test_client_with_events() -> Iterator[TestClient]:
     """
     with TestClient(app) as client:
         yield client
+
+
+@pytest.fixture(name="log_data")
+def fixture_log_data() -> LogDataFixture:
+    """
+    Return a function that will extract the extra log data from a captured
+    "request.summary" log record
+    """
+
+    def log_data(record: LogRecord) -> dict[str, Any]:
+        return {
+            "name": record.name,
+            "errno": record.__dict__["errno"],
+            "time": record.__dict__["time"],
+            "agent": record.__dict__["agent"],
+            "path": record.__dict__["path"],
+            "method": record.__dict__["method"],
+            "lang": record.__dict__["lang"],
+            "querystring": record.__dict__["querystring"],
+            "code": record.__dict__["code"],
+        }
+
+    return log_data

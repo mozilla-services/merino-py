@@ -2,50 +2,31 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Integration tests for the Merino __version__ API endpoint."""
+"""Integration tests for unsupported Merino v1 API endpoints."""
 
 import logging
 from logging import LogRecord
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from freezegun import freeze_time
 from pytest import LogCaptureFixture
-from pytest_mock import MockerFixture
 
 from tests.integration.api.types import LogDataFixture
 from tests.types import FilterCaplogFixture
 
 
-def test_version(client: TestClient) -> None:
-    """Test that the version endpoint is supported to conform to dockerflow"""
-    response = client.get("/__version__")
-
-    assert response.status_code == 200
-    result = response.json()
-    assert "source" in result
-    assert "version" in result
-    assert "commit" in result
-    assert "build" in result
-
-
-def test_version_error(mocker: MockerFixture, client: TestClient) -> None:
-    mocker.patch("os.path.exists", return_value=False)
-
-    response = client.get("/__version__")
-
-    assert response.status_code == 500
-
-
 @freeze_time("1998-03-31")
-def test_version_request_log_data(
+@pytest.mark.parametrize("providers", [{}])
+def test_unsupported_request_log_data(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     log_data: LogDataFixture,
     client: TestClient,
 ) -> None:
     """
-    Tests that the request logs for the '__version__' endpoint contain the required
+    Tests that the request logs for to unsupported endpoints contain the required
     extra data
     """
     caplog.set_level(logging.INFO)
@@ -56,17 +37,17 @@ def test_version_request_log_data(
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0)"
             " Gecko/20100101 Firefox/103.0"
         ),
-        "path": "/__version__",
+        "path": "/api/v1/unknown",
         "method": "GET",
         "lang": "en-US",
         "querystring": {},
         "errno": 0,
-        "code": 200,
+        "code": 404,
         "time": "1998-03-31T00:00:00",
     }
 
     client.get(
-        "/__version__",
+        "/api/v1/unknown",
         headers={
             "accept-language": "en-US",
             "User-Agent": (
