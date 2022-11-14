@@ -35,7 +35,7 @@ def test_heartbeat_request_log_data(
     endpoint: str,
 ) -> None:
     """
-    Tests that the request logs for the '__heartbeat__' and '__lbheartbeat__' endpoints
+    Test that the request log for the '__heartbeat__' and '__lbheartbeat__' endpoints
     contain the required extra data
     """
     caplog.set_level(logging.INFO)

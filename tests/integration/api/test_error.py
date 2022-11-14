@@ -8,9 +8,11 @@ import logging
 from logging import LogRecord
 from typing import Any
 
+import aiodogstatsd
 from fastapi.testclient import TestClient
 from freezegun import freeze_time
 from pytest import LogCaptureFixture
+from pytest_mock import MockerFixture
 
 from tests.integration.api.types import LogDataFixture
 from tests.types import FilterCaplogFixture
@@ -38,7 +40,7 @@ def test_error_request_log_data(
     client: TestClient,
 ) -> None:
     """
-    Tests that the request logs for the '__error__' endpoint contain the required
+    Test that the request log for the '__error__' endpoint contains the required
     extra data
     """
     caplog.set_level(logging.INFO)
@@ -74,3 +76,41 @@ def test_error_request_log_data(
 
     record: LogRecord = records[0]
     assert log_data(record) == expected_log_data
+
+
+def test_error_metrics(mocker: MockerFixture, client: TestClient) -> None:
+    """Test that metrics are recorded for the '__error__' endpoint (status code 500)"""
+    expected_metric_keys: list[str] = [
+        "get.__error__.timing",
+        "get.__error__.status_codes.500",
+        "response.status_codes.500",
+    ]
+
+    report = mocker.patch.object(aiodogstatsd.Client, "_report")
+
+    client.get("/__error__")
+
+    # TODO: Remove reliance on internal details of aiodogstatsd
+    metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
+    assert metric_keys == expected_metric_keys
+
+
+def test_error_feature_flags(mocker: MockerFixture, client: TestClient) -> None:
+    """
+    Test that feature flags are not added for the '__error__' endpoint (status code 500)
+    """
+    expected_tags_per_metric: dict[str, list[str]] = {
+        "get.__error__.timing": [],
+        "get.__error__.status_codes.500": [],
+        "response.status_codes.500": [],
+    }
+
+    report = mocker.patch.object(aiodogstatsd.Client, "_report")
+
+    client.get("/__error__")
+
+    # TODO: Remove reliance on internal details of aiodogstatsd
+    tags_per_metric: dict[str, list[str]] = {
+        call.args[0]: [*call.args[3].keys()] for call in report.call_args_list
+    }
+    assert tags_per_metric == expected_tags_per_metric

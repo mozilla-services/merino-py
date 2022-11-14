@@ -25,7 +25,7 @@ class MetricsMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Wrap the request with metrics."""
-        if scope["type"] != "http":  # pragma: no cover
+        if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 

@@ -7,6 +7,7 @@
 import logging
 from typing import Any
 
+import aiodogstatsd
 import pytest
 from fastapi.testclient import TestClient
 from freezegun import freeze_time
@@ -14,22 +15,22 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from tests.integration.api.v1.fake_providers import (
+    CorruptProvider,
     NonsponsoredProvider,
     SponsoredProvider,
 )
-from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
 
 
-@pytest.fixture(name="providers")
-def fixture_providers() -> Providers:
-    """Define providers for this module which are injected automatically."""
-    return {
-        "sponsored-provider": SponsoredProvider(enabled_by_default=True),
-        "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
-    }
-
-
+@pytest.mark.parametrize(
+    "providers",
+    [
+        {
+            "sponsored-provider": SponsoredProvider(enabled_by_default=True),
+            "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
+        }
+    ],
+)
 def test_suggest_sponsored(client: TestClient) -> None:
     response = client.get("/api/v1/suggest?q=sponsored")
     assert response.status_code == 200
@@ -40,6 +41,15 @@ def test_suggest_sponsored(client: TestClient) -> None:
     assert result["request_id"] is not None
 
 
+@pytest.mark.parametrize(
+    "providers",
+    [
+        {
+            "sponsored-provider": SponsoredProvider(enabled_by_default=True),
+            "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
+        }
+    ],
+)
 def test_suggest_nonsponsored(client: TestClient) -> None:
     response = client.get("/api/v1/suggest?q=nonsponsored")
 
@@ -51,12 +61,20 @@ def test_suggest_nonsponsored(client: TestClient) -> None:
     assert result["request_id"] is not None
 
 
+@pytest.mark.parametrize(
+    "providers",
+    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
+)
 def test_no_suggestion(client: TestClient) -> None:
     response = client.get("/api/v1/suggest?q=nope")
     assert response.status_code == 200
     assert len(response.json()["suggestions"]) == 0
 
 
+@pytest.mark.parametrize(
+    "providers",
+    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
+)
 @pytest.mark.parametrize("query", ["sponsored", "nonsponsored"])
 def test_suggest_from_missing_providers(client: TestClient, query: str) -> None:
     """
@@ -68,11 +86,19 @@ def test_suggest_from_missing_providers(client: TestClient, query: str) -> None:
     assert len(response.json()["suggestions"]) == 0
 
 
+@pytest.mark.parametrize(
+    "providers",
+    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
+)
 def test_no_query_string(client: TestClient) -> None:
     response = client.get("/api/v1/suggest")
     assert response.status_code == 400
 
 
+@pytest.mark.parametrize(
+    "providers",
+    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
+)
 def test_client_variants(client: TestClient) -> None:
     response = client.get("/api/v1/suggest?q=sponsored&client_variants=foo,bar")
     assert response.status_code == 200
@@ -83,6 +109,10 @@ def test_client_variants(client: TestClient) -> None:
 
 
 @freeze_time("1998-03-31")
+@pytest.mark.parametrize(
+    "providers",
+    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
+)
 def test_suggest_request_log_data(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
@@ -166,6 +196,10 @@ def test_suggest_request_log_data(
     assert log_data == expected_log_data
 
 
+@pytest.mark.parametrize(
+    "providers",
+    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
+)
 def test_suggest_with_invalid_geolocation_ip(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
@@ -182,3 +216,134 @@ def test_suggest_with_invalid_geolocation_ip(
 
     assert len(records) == 1
     assert records[0].message == "Invalid IP address for geolocation parsing"
+
+
+@pytest.mark.parametrize(
+    "providers",
+    [
+        {
+            "sponsored-provider": SponsoredProvider(enabled_by_default=True),
+            "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
+        }
+    ],
+)
+@pytest.mark.parametrize(
+    ["url", "expected_metric_keys"],
+    [
+        (
+            "/api/v1/suggest?q=none",
+            [
+                "providers.sponsored.query",
+                "providers.non-sponsored.query",
+                "get.api.v1.suggest.timing",
+                "get.api.v1.suggest.status_codes.200",
+                "response.status_codes.200",
+            ],
+        ),
+        (
+            "/api/v1/suggest",
+            [
+                "get.api.v1.suggest.timing",
+                "get.api.v1.suggest.status_codes.400",
+                "response.status_codes.400",
+            ],
+        ),
+    ],
+    ids=["status_code_200", "status_code_400"],
+)
+def test_suggest_metrics(
+    mocker: MockerFixture,
+    client: TestClient,
+    url: str,
+    expected_metric_keys: list[str],
+) -> None:
+    """
+    Test that metrics are recorded for the 'suggest' endpoint (status codes: 200 & 400)
+    """
+    report = mocker.patch.object(aiodogstatsd.Client, "_report")
+
+    client.get(url)
+
+    # TODO: Remove reliance on internal details of aiodogstatsd
+    metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
+    assert metric_keys == expected_metric_keys
+
+
+@pytest.mark.parametrize("providers", [{"corrupt": CorruptProvider()}])
+def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
+    """Test that 500 status codes are recorded as metrics"""
+    error_msg = "test"
+    expected_metric_keys = [
+        "providers.corrupted.query",
+        "get.api.v1.suggest.timing",
+        "get.api.v1.suggest.status_codes.500",
+        "response.status_codes.500",
+    ]
+
+    report = mocker.patch.object(aiodogstatsd.Client, "_report")
+
+    with pytest.raises(RuntimeError) as excinfo:
+        client.get(f"/api/v1/suggest?q={error_msg}")
+
+    # TODO: Remove reliance on internal details of aiodogstatsd
+    metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
+    assert metric_keys == expected_metric_keys
+
+    assert str(excinfo.value) == error_msg
+
+
+@pytest.mark.skip(reason="currently no feature flags in use")
+@pytest.mark.parametrize(
+    ["url", "expected_metric_keys", "expected_tags"],
+    [
+        (
+            "/api/v1/suggest?q=none",
+            [
+                "get.api.v1.suggest.timing",
+                "get.api.v1.suggest.status_codes.200",
+                "providers.adm.query",
+                "providers.wiki_fruit.query",
+                "providers.top_picks.query",
+                "response.status_codes.200",
+            ],
+            [
+                "feature_flag.test-perc-enabled",
+                "feature_flag.test-perc-enabled-session",
+            ],
+        ),
+        (
+            "/api/v1/suggest",
+            [
+                "get.api.v1.suggest.timing",
+                "get.api.v1.suggest.status_codes.400",
+                "response.status_codes.400",
+            ],
+            [],
+        ),
+    ],
+    ids=["200_with_feature_flags_tags", "400_no_tags"],
+)
+def test_suggest_feature_flags(
+    mocker: MockerFixture,
+    client: TestClient,
+    url: str,
+    expected_metric_keys: list,
+    expected_tags: list,
+):
+    """
+    Test that feature flags are added for the 'suggest' endpoint
+    (status codes: 200 & 400)
+    """
+    expected_tags_per_metric = {
+        metric_key: expected_tags for metric_key in expected_metric_keys
+    }
+
+    report = mocker.patch.object(aiodogstatsd.Client, "_report")
+
+    client.get(url)
+
+    # TODO: Remove reliance on internal details of aiodogstatsd
+    tags_per_metric = {
+        call.args[0]: [*call.args[3].keys()] for call in report.call_args_list
+    }
+    assert tags_per_metric == expected_tags_per_metric

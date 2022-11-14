@@ -45,7 +45,7 @@ def test_version_request_log_data(
     client: TestClient,
 ) -> None:
     """
-    Tests that the request logs for the '__version__' endpoint contain the required
+    Test that the request log for the '__version__' endpoint contains the required
     extra data
     """
     caplog.set_level(logging.INFO)
