@@ -11,7 +11,7 @@ import pytest
 from starlette.testclient import TestClient
 
 from merino.main import app
-from tests.integration.api.types import LogDataFixture
+from tests.integration.api.types import RequestSummaryLogDataFixture
 
 
 @pytest.fixture(name="client")
@@ -35,14 +35,14 @@ def fixture_test_client_with_events() -> Iterator[TestClient]:
         yield client
 
 
-@pytest.fixture(name="log_data")
-def fixture_log_data() -> LogDataFixture:
+@pytest.fixture(name="extract_request_summary_log_data")
+def fixture_extract_request_summary_log_data() -> RequestSummaryLogDataFixture:
     """
     Return a function that will extract the extra log data from a captured
     "request.summary" log record
     """
 
-    def log_data(record: LogRecord) -> dict[str, Any]:
+    def extract_request_summary_log_data(record: LogRecord) -> dict[str, Any]:
         return {
             "name": record.name,
             "errno": record.__dict__["errno"],
@@ -55,4 +55,4 @@ def fixture_log_data() -> LogDataFixture:
             "code": record.__dict__["code"],
         }
 
-    return log_data
+    return extract_request_summary_log_data

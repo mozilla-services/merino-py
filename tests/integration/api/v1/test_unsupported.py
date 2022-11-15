@@ -15,7 +15,7 @@ from freezegun import freeze_time
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from tests.integration.api.types import LogDataFixture
+from tests.integration.api.types import RequestSummaryLogDataFixture
 from tests.types import FilterCaplogFixture
 
 
@@ -24,7 +24,7 @@ from tests.types import FilterCaplogFixture
 def test_unsupported_endpoint_request_log_data(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
-    log_data: LogDataFixture,
+    extract_request_summary_log_data: RequestSummaryLogDataFixture,
     client: TestClient,
 ) -> None:
     """
@@ -62,7 +62,8 @@ def test_unsupported_endpoint_request_log_data(
     assert len(records) == 1
 
     record: LogRecord = records[0]
-    assert log_data(record) == expected_log_data
+    log_data: dict[str, Any] = extract_request_summary_log_data(record)
+    assert log_data == expected_log_data
 
 
 @pytest.mark.parametrize("providers", [{}])

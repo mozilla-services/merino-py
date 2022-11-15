@@ -13,7 +13,7 @@ from _pytest.logging import LogCaptureFixture
 from fastapi.testclient import TestClient
 from freezegun import freeze_time
 
-from tests.integration.api.types import LogDataFixture
+from tests.integration.api.types import RequestSummaryLogDataFixture
 from tests.types import FilterCaplogFixture
 
 
@@ -30,7 +30,7 @@ def test_heartbeats(client: TestClient, endpoint: str) -> None:
 def test_heartbeat_request_log_data(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
-    log_data: LogDataFixture,
+    extract_request_summary_log_data: RequestSummaryLogDataFixture,
     client: TestClient,
     endpoint: str,
 ) -> None:
@@ -70,4 +70,5 @@ def test_heartbeat_request_log_data(
     assert len(records) == 1
 
     record: LogRecord = records[0]
-    assert log_data(record) == expected_log_data
+    log_data: dict[str, Any] = extract_request_summary_log_data(record)
+    assert log_data == expected_log_data

@@ -14,7 +14,10 @@ from starlette.types import Message
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
-from merino.util.log_data_creators import create_log_data, create_suggest_log_data
+from merino.util.log_data_creators import (
+    create_request_summary_log_data,
+    create_suggest_log_data,
+)
 
 
 @pytest.mark.parametrize(
@@ -26,7 +29,7 @@ from merino.util.log_data_creators import create_log_data, create_suggest_log_da
     ],
     ids=["no_headers", "user_agent_header", "accept_language_header"],
 )
-def test_create_log_data(
+def test_create_request_summary_log_data(
     headers: list[tuple[bytes, bytes]],
     expected_agent: str | None,
     expected_lang: str | None,
@@ -53,7 +56,7 @@ def test_create_log_data(
     message: Message = {"type": "http.response.start", "status": "200"}
     dt: datetime = datetime(1998, 3, 31)
 
-    log_data: dict[str, Any] = create_log_data(request, message, dt)
+    log_data: dict[str, Any] = create_request_summary_log_data(request, message, dt)
 
     assert log_data == expected_log_data
 

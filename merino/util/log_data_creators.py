@@ -11,7 +11,9 @@ from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
 
 
-def create_log_data(request: Request, message: Message, dt: datetime) -> dict[str, Any]:
+def create_request_summary_log_data(
+    request: Request, message: Message, dt: datetime
+) -> dict[str, Any]:
     """Create log data for API endpoints."""
     general_data = {
         "errno": 0,

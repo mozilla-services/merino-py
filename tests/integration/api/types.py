@@ -7,4 +7,4 @@
 from logging import LogRecord
 from typing import Any, Callable
 
-LogDataFixture = Callable[[LogRecord], dict[str, Any]]
+RequestSummaryLogDataFixture = Callable[[LogRecord], dict[str, Any]]

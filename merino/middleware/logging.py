@@ -8,7 +8,10 @@ from typing import Pattern
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from merino.util.log_data_creators import create_log_data, create_suggest_log_data
+from merino.util.log_data_creators import (
+    create_request_summary_log_data,
+    create_suggest_log_data,
+)
 
 # web.suggest.request is used for logs coming from the /suggest endpoint
 suggest_request_logger = logging.getLogger("web.suggest.request")
@@ -40,7 +43,7 @@ class LoggingMiddleware:
                     data = create_suggest_log_data(request, message, dt)
                     suggest_request_logger.info("", extra=data)
                 else:
-                    data = create_log_data(request, message, dt)
+                    data = create_request_summary_log_data(request, message, dt)
                     logger.info("", extra=data)
 
             await send(message)
