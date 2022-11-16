@@ -210,8 +210,6 @@ async def test_short_domain_query_fails(
         ("ac", "Abc", "https://abc.test"),
         ("acb", "Abc", "https://abc.test"),
         ("acbc", "Abc", "https://abc.test"),
-        ("ae", "Abc", "https://abc.test"),
-        ("aec", "Abc", "https://abc.test"),
         ("aecbc", "Abc", "https://abc.test"),
     ],
 )

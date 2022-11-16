@@ -82,11 +82,12 @@ class Provider(BaseProvider):
             if ids := self.short_domain_index.get(srequest.query):
                 res = self.results[ids[0]]
                 return [res]
-            elif ids := self.secondary_index.get(srequest.query):
-                res = self.results[ids[0]]
-                return [res]
+
         # Ignore requests below or above character min/max after checking short domains above
-        if len(srequest.query) < self.query_min or len(srequest.query) > self.query_max:
+        if (
+            len(srequest.query) < FIREFOX_CHAR_LIMIT
+            or len(srequest.query) > self.query_max
+        ):
             return []
         if ids := self.primary_index.get(srequest.query):
             res = self.results[ids[0]]
@@ -152,20 +153,21 @@ class Provider(BaseProvider):
             if FIREFOX_CHAR_LIMIT <= len(domain) <= (QUERY_CHAR_LIMIT - 1):
                 for chars in range(FIREFOX_CHAR_LIMIT, len(domain) + 1):
                     short_domain_index[domain[:chars]].append(index_key)
-                if not record.get("similars"):
-                    continue
-                else:
-                    for variant in record.get("similars", []):
-                        for chars in range(FIREFOX_CHAR_LIMIT, len(variant) + 1):
-                            secondary_index[variant[:chars]].append(index_key)
+                for variant in record.get("similars"):
+                    if len(variant) >= QUERY_CHAR_LIMIT:
+                        # Long variants will be indexed later into `secondary_index`
                         continue
+
+                    for chars in range(FIREFOX_CHAR_LIMIT, len(variant) + 1):
+                        # logger.warning(f"HERE I AM: {variant}")
+                        short_domain_index[variant[:chars]].append(index_key)
 
             # Insertion of keys into primary index.
             for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
                 primary_index[domain[:chars]].append(index_key)
 
             # Insertion of keys into secondary index.
-            for variant in record.get("similars", []):
+            for variant in record.get("similars"):
                 if len(variant) > query_max:
                     query_max = len(variant)
                 for chars in range(QUERY_CHAR_LIMIT, len(variant) + 1):
