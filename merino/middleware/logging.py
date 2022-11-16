@@ -8,7 +8,7 @@ from typing import Pattern
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from merino.util.log_data_creators import (
+from merino.utils.log_data_creators import (
     create_request_summary_log_data,
     create_suggest_log_data,
 )
