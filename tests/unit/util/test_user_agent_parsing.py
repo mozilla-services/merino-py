@@ -77,7 +77,7 @@ SCENARIOS: list[Scenario] = [
 
 
 @pytest.mark.parametrize(
-    "ua,expected_browser,expected_os_family,expected_form_factor",
+    ["ua", "expected_browser", "expected_os_family", "expected_form_factor"],
     SCENARIOS,
 )
 def test_ua_parsing(ua, expected_browser, expected_os_family, expected_form_factor):

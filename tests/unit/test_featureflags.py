@@ -31,7 +31,7 @@ def test_no_scheme_no_session_id(caplog):
 
 
 @pytest.mark.parametrize(
-    "bucket_id, want",
+    ["bucket_id", "want"],
     [
         ("000", True),
         ("fff", False),
@@ -45,7 +45,7 @@ def test_no_scheme_default_session_id(bucket_id: str, want: bool):
 
 
 @pytest.mark.parametrize(
-    "bucket_id, want",
+    ["bucket_id", "want"],
     [
         (b"\x00\x00\x00\x00", True),
         (b"\xff\xff\xff\xff", False),
@@ -59,7 +59,7 @@ def test_enabled_perc(bucket_id: str, want: bool):
 
 
 @pytest.mark.parametrize(
-    "bucket_id, want",
+    ["bucket_id", "want"],
     [
         ("000", True),
         ("fff", False),

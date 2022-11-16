@@ -21,7 +21,7 @@ from merino.util.log_data_creators import (
 
 
 @pytest.mark.parametrize(
-    "headers,expected_agent,expected_lang",
+    ["headers", "expected_agent", "expected_lang"],
     [
         ([], None, None),
         ([(b"user-agent", b"curl/7.84.0")], "curl/7.84.0", None),
@@ -62,14 +62,14 @@ def test_create_request_summary_log_data(
 
 
 @pytest.mark.parametrize(
-    (
-        "query,"
-        "expected_query,"
-        "expected_sid,"
-        "expected_client_variants,"
-        "expected_providers,"
-        "expected_seq"
-    ),
+    [
+        "query",
+        "expected_query",
+        "expected_sid",
+        "expected_client_variants",
+        "expected_providers",
+        "expected_seq",
+    ],
     [
         (b"", None, None, "", "", None),
         (

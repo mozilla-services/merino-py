@@ -22,7 +22,7 @@ def fixture_geolocation_middleware(mocker: MockerFixture) -> GeolocationMiddlewa
 
 # The first two IP addresses are taken from `GeoLite2-City-Test.mmdb`
 @pytest.mark.parametrize(
-    "expected_location, client_ip_and_port",
+    ["expected_location", "client_ip_and_port"],
     [
         (
             Location(

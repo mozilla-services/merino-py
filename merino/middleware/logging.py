@@ -26,7 +26,7 @@ class LoggingMiddleware:
     """An ASGI middleware for logging."""
 
     def __init__(self, app: ASGIApp) -> None:
-        """Initialize."""
+        """Initialize the middleware and store the ASGI app instance."""
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send):

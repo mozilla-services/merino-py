@@ -19,18 +19,24 @@ from tests.integration.api.v1.fake_providers import (
     NonsponsoredProvider,
     SponsoredProvider,
 )
+from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
 
 
-@pytest.mark.parametrize(
-    "providers",
-    [
-        {
-            "sponsored-provider": SponsoredProvider(enabled_by_default=True),
-            "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
-        }
-    ],
-)
+@pytest.fixture(name="providers")
+def fixture_providers() -> Providers:
+    """
+    Define providers for this module which are injected automatically.
+
+    Note: This fixture will be overridden if a test method has a
+          'pytest.mark.parametrize' decorator with a 'providers' definition
+    """
+    return {
+        "sponsored-provider": SponsoredProvider(enabled_by_default=True),
+        "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
+    }
+
+
 def test_suggest_sponsored(client: TestClient) -> None:
     response = client.get("/api/v1/suggest?q=sponsored")
     assert response.status_code == 200
@@ -41,15 +47,6 @@ def test_suggest_sponsored(client: TestClient) -> None:
     assert result["request_id"] is not None
 
 
-@pytest.mark.parametrize(
-    "providers",
-    [
-        {
-            "sponsored-provider": SponsoredProvider(enabled_by_default=True),
-            "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
-        }
-    ],
-)
 def test_suggest_nonsponsored(client: TestClient) -> None:
     response = client.get("/api/v1/suggest?q=nonsponsored")
 
@@ -61,20 +58,12 @@ def test_suggest_nonsponsored(client: TestClient) -> None:
     assert result["request_id"] is not None
 
 
-@pytest.mark.parametrize(
-    "providers",
-    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
-)
 def test_no_suggestion(client: TestClient) -> None:
     response = client.get("/api/v1/suggest?q=nope")
     assert response.status_code == 200
     assert len(response.json()["suggestions"]) == 0
 
 
-@pytest.mark.parametrize(
-    "providers",
-    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
-)
 @pytest.mark.parametrize("query", ["sponsored", "nonsponsored"])
 def test_suggest_from_missing_providers(client: TestClient, query: str) -> None:
     """
@@ -86,19 +75,11 @@ def test_suggest_from_missing_providers(client: TestClient, query: str) -> None:
     assert len(response.json()["suggestions"]) == 0
 
 
-@pytest.mark.parametrize(
-    "providers",
-    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
-)
 def test_no_query_string(client: TestClient) -> None:
     response = client.get("/api/v1/suggest")
     assert response.status_code == 400
 
 
-@pytest.mark.parametrize(
-    "providers",
-    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
-)
 def test_client_variants(client: TestClient) -> None:
     response = client.get("/api/v1/suggest?q=sponsored&client_variants=foo,bar")
     assert response.status_code == 200
@@ -109,10 +90,6 @@ def test_client_variants(client: TestClient) -> None:
 
 
 @freeze_time("1998-03-31")
-@pytest.mark.parametrize(
-    "providers",
-    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
-)
 def test_suggest_request_log_data(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
@@ -153,11 +130,14 @@ def test_suggest_request_log_data(
     }
 
     client.get(
-        f"{expected_log_data['path']}?q={expected_log_data['query']}"
-        f"&sid={expected_log_data['session_id']}"
-        f"&seq={expected_log_data['sequence_no']}"
-        f"&client_variants={expected_log_data['client_variants']}"
-        f"&providers={expected_log_data['requested_providers']}",
+        url=expected_log_data["path"],
+        params={
+            "q": expected_log_data["query"],
+            "sid": expected_log_data["session_id"],
+            "seq": expected_log_data["sequence_no"],
+            "client_variants": expected_log_data["client_variants"],
+            "providers": expected_log_data["requested_providers"],
+        },
         headers={
             "User-Agent": (
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0) "
@@ -196,10 +176,6 @@ def test_suggest_request_log_data(
     assert log_data == expected_log_data
 
 
-@pytest.mark.parametrize(
-    "providers",
-    [{"sponsored-provider": SponsoredProvider(enabled_by_default=True)}],
-)
 def test_suggest_with_invalid_geolocation_ip(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
@@ -218,15 +194,6 @@ def test_suggest_with_invalid_geolocation_ip(
     assert records[0].message == "Invalid IP address for geolocation parsing"
 
 
-@pytest.mark.parametrize(
-    "providers",
-    [
-        {
-            "sponsored-provider": SponsoredProvider(enabled_by_default=True),
-            "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
-        }
-    ],
-)
 @pytest.mark.parametrize(
     ["url", "expected_metric_keys"],
     [

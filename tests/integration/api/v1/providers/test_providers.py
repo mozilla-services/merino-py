@@ -24,7 +24,7 @@ from tests.types import FilterCaplogFixture
 
 
 @pytest.mark.parametrize(
-    "expected_response, providers",
+    ["expected_response", "providers"],
     [
         ([], {}),
         (
