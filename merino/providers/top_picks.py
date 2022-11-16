@@ -123,8 +123,7 @@ class Provider(BaseProvider):
         # A list of suggestions
         results: list[Suggestion] = []
 
-        # These variables hold the max and min lengths
-        # of queries possible given the domain list.
+        # These variables hold the max and min lengths of queries possible given the domain list.
         # See configs/default.toml for character limit for Top Picks
         # For testing, see configs/testing.toml for character limit for Top Picks
         query_min: int = QUERY_CHAR_LIMIT
