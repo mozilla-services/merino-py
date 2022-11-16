@@ -159,7 +159,6 @@ class Provider(BaseProvider):
                         continue
 
                     for chars in range(FIREFOX_CHAR_LIMIT, len(variant) + 1):
-                        # logger.warning(f"HERE I AM: {variant}")
                         short_domain_index[variant[:chars]].append(index_key)
 
             # Insertion of keys into primary index.
