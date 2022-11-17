@@ -331,6 +331,61 @@ scenarios:
                 score: 0.25
                 icon: ""
 
+  - name: top_picks__short_domain_match
+    description: >
+      Test that Merino successfully returns suggestion for Top Pick Navigational Queries /
+      with matches for short domains between 2 characters and the query limit, as well as /
+      for possible similars subset matches of those short search terms.
+    steps:
+      - request:
+          service: merino
+          method: GET
+          path: "/api/v1/suggest?q=abc"
+          headers:
+            - name: User-Agent
+              value: "Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0"
+            - name: Accept-Language
+              value: "en-US"
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 0
+                title: "Abc"
+                url: "https://abc.test"
+                provider: "top_picks"
+                is_sponsored: false
+                is_top_pick: true
+                score: 0.25
+                icon: ""
+      - request:
+          service: merino
+          method: GET
+          path: "/api/v1/suggest?q=ab"
+          headers:
+            - name: User-Agent
+              value: "Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0"
+            - name: Accept-Language
+              value: "en-US"
+        response:
+          status_code: 200
+          content:
+            client_variants: []
+            server_variants: []
+            request_id: null
+            suggestions:
+              - block_id: 0
+                title: "Abc"
+                url: "https://abc.test"
+                provider: "top_picks"
+                is_sponsored: false
+                is_top_pick: true
+                score: 0.25
+                icon: ""
+
   - name: remote_settings__offline_expansion_orange
     description: Test that Merino successfully returns a Remote Settings suggestion for Offline Expansion
     steps:

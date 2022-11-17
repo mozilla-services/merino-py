@@ -45,6 +45,21 @@
                 "mozzilla",
                 "mozila"
             ]
+        },
+        {
+            "rank": 4,
+            "title": "Abc",
+            "domain": "abc",
+            "url": "https://abc.test",
+            "icon": "",
+            "categories": [
+                "web-browser"
+            ],
+            "similars": [
+                "aa",
+                "ab",
+                "acb"
+            ]
         }
     ]
 }

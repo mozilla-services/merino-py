@@ -5,7 +5,9 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from merino.config import settings
 from merino.providers.top_picks import Provider as TopPicksProvider
+from merino.providers.top_picks import Suggestion
 from tests.integration.api.v1.types import Providers
 
 
@@ -52,3 +54,36 @@ def test_top_picks_no_result(client: TestClient, query: str):
 
     result = response.json()
     assert result["suggestions"] == []
+
+
+@pytest.mark.parametrize(
+    ["query", "title", "url"],
+    [
+        ("abc", "Abc", "https://abc.test"),
+        ("aa", "Abc", "https://abc.test"),
+        ("acb", "Abc", "https://abc.test"),
+    ],
+)
+def test_top_picks_short_domains(
+    client: TestClient, query: str, title: str, url: str
+) -> None:
+    """Test if Top Picks provider responds with a short domain or similar"""
+    expected_suggestion: list[Suggestion] = [
+        Suggestion(
+            block_id=0,
+            title=title,
+            url=url,
+            provider="top_picks",
+            is_top_pick=True,
+            is_sponsored=False,
+            icon="",
+            score=settings.providers.top_picks.score,
+        )
+    ]
+
+    response = client.get(f"/api/v1/suggest?q={query}")
+    assert response.status_code == 200
+
+    result = response.json()
+    assert result
+    assert result["suggestions"] == expected_suggestion
