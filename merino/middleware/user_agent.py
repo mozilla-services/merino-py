@@ -42,7 +42,7 @@ class UserAgentMiddleware:
         """Parse user agent information through "User-Agent" and store the result
         to `scope`.
         """
-        if scope["type"] != "http":  # pragma: no cover
+        if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
