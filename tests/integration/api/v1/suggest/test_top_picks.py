@@ -18,7 +18,7 @@ def fixture_providers() -> Providers:
 
 
 @pytest.mark.parametrize(
-    "query,title,url",
+    ["query", "title", "url"],
     [
         ("exam", "Example", "https://example.com"),
         ("exxa", "Example", "https://example.com"),
@@ -57,7 +57,7 @@ def test_top_picks_no_result(client: TestClient, query: str):
 
 
 @pytest.mark.parametrize(
-    "query,title,url",
+    ["query", "title", "url"],
     [
         ("abc", "Abc", "https://abc.test"),
         ("aa", "Abc", "https://abc.test"),

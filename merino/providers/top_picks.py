@@ -148,7 +148,8 @@ class Provider(BaseProvider):
             )
 
             # Insertion of short keys between Firefox limit of 2 and QUERY_CHAR_LIMIT - 1
-            # For similars, the values are added to the secondary index.
+            # For similars equal to or longer than QUERY_CHAR_LIMIT, the values are added
+            # to the secondary index.
             if FIREFOX_CHAR_LIMIT <= len(domain) <= (QUERY_CHAR_LIMIT - 1):
                 for chars in range(FIREFOX_CHAR_LIMIT, len(domain) + 1):
                     short_domain_index[domain[:chars]].append(index_key)

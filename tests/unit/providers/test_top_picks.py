@@ -157,7 +157,7 @@ async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) ->
 
 
 @pytest.mark.parametrize(
-    "query,title,url",
+    ["query", "title", "url"],
     [
         ("aa", "Abc", "https://abc.test"),
         ("ab", "Abc", "https://abc.test"),
@@ -205,7 +205,7 @@ async def test_short_domain_query_fails(
 
 
 @pytest.mark.parametrize(
-    "query,title,url",
+    ["query", "title", "url"],
     [
         ("ac", "Abc", "https://abc.test"),
         ("acb", "Abc", "https://abc.test"),
