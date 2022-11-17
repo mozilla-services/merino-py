@@ -34,6 +34,13 @@ class Temperature(BaseModel):
     c: Optional[float] = None
     f: Optional[float] = None
 
+    def __init__(self, c: Optional[float] = None, f: Optional[float] = None):
+        super().__init__(c=c, f=f)
+        if c is None and f is not None:
+            self.c = round((f - 32) * 5 / 9, 1)
+        if f is None and c is not None:
+            self.f = round(c * 9 / 5 + 32)
+
 
 class CurrentConditions(BaseModel):
     """Model for AccuWeather current conditions."""
