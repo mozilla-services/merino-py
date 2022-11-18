@@ -69,6 +69,7 @@ ua-parser = "^0.16.1"
 geoip2 = "^4.6.0"
 rich = "^12.5.1"
 wrapt = "^1.14.1"
+elasticsearch = {extras = ["async"], version = "^8.5.0"}
 
 [tool.poetry.dev-dependencies]
 black = "^22.6.0"

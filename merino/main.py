@@ -31,6 +31,12 @@ async def startup_providers() -> None:
 
 
 @app.on_event("shutdown")
+async def shutdown_providers() -> None:
+    """Shut down all the providers."""
+    await providers.shutdown_providers()
+
+
+@app.on_event("shutdown")
 async def shutdown() -> None:
     """Clean up for the application shutdown."""
     await get_metrics_client().close()

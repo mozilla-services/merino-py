@@ -99,3 +99,20 @@ enabled_by_default = false
 score = 0.25
 query_char_limit = 4
 top_picks_file_path = "dev/top_picks.json"
+
+[default.providers.wikipedia]
+enabled_by_default = false
+# The backend of the provider. Either "elasticsearch" or "test".
+backend = "elasticsearch"
+# Elasticsearch hosts.
+es_hosts = ""
+# Elasticsearch password
+es_password = ""
+# Elasticsearch index
+es_index = "enwiki"
+# The maximum suggestions for each search request.
+es_max_suggestions = 3
+# The timeout (in millisecond) for each request to ES
+es_request_timeout_ms = 200
+# Suggestion score
+score = 0.23

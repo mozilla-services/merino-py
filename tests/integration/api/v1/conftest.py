@@ -7,7 +7,7 @@
 import asyncio
 from typing import Any, Callable, Coroutine
 
-import pytest
+import pytest_asyncio
 
 from merino.main import app
 from merino.providers import get_providers
@@ -34,7 +34,7 @@ def get_provider_factory(
     return provider_factory
 
 
-@pytest.fixture(name="setup_providers")
+@pytest_asyncio.fixture(name="setup_providers")
 def fixture_setup_providers() -> SetupProvidersFixture:
     """Return a function that sets application provider dependency overrides"""
 
@@ -45,19 +45,21 @@ def fixture_setup_providers() -> SetupProvidersFixture:
     return setup_providers
 
 
-@pytest.fixture(name="teardown_providers")
+@pytest_asyncio.fixture(name="teardown_providers")
 def fixture_teardown_providers() -> TeardownProvidersFixture:
     """Return a function that resets application provider dependency overrides"""
 
-    def teardown_providers() -> None:
+    async def teardown_providers(providers: Providers) -> None:
         """Reset application provider dependency overrides"""
+        for p in providers.values():
+            await p.shutdown()
         del app.dependency_overrides[get_providers]
 
     return teardown_providers
 
 
-@pytest.fixture(name="inject_providers", autouse=True)
-def fixture_inject_providers(
+@pytest_asyncio.fixture(name="inject_providers", autouse=True)
+async def fixture_inject_providers(
     setup_providers: SetupProvidersFixture,
     teardown_providers: TeardownProvidersFixture,
     providers: Providers,
@@ -92,4 +94,4 @@ def fixture_inject_providers(
     """
     setup_providers(providers)
     yield
-    teardown_providers()
+    await teardown_providers(providers)

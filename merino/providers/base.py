@@ -42,6 +42,10 @@ class BaseProvider(ABC):
         """
         ...
 
+    async def shutdown(self) -> None:
+        """Shut down the Provider. The default implementaion is no-op."""
+        return
+
     @abstractmethod
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Query against this provider.

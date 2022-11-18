@@ -224,4 +224,25 @@ These are production providers that generate suggestions.
   - `enabled_by_default` (`MERINO_PROVIDERS__WIKI_FRUIT__ENABLED_BY_DEFAULT`) - Whether
     or not this provider is enabled by default.
 
+#### Wikipedia Dynamic Match Provider
+
+The provider that is backed by the locally indexed Wikipedia through Elasticsearch.
+
+- `enabled_by_default` (`MERINO_PROVIDERS__WIKIPEDIA__ENABLED_BY_DEFAULT`) - Whether
+  or not this provider is enabled by default.
+  - `backend` (`MERINO_PROVIDERS__WIKIPEDIA__backend`) - The backend of the provider.
+    Either `elasticsearch` or `test`.
+- `es_hosts` (`MERINO_PROVIDERS__WIKIPEDIA__ES_HOSTS`) - The host(s) of the
+  Elasticsearch cluster.
+- `es_password` (`MERINO_PROVIDERS__WIKIPEDIA__ES_PASSWORD`) - The password for
+  accessing the Elasticsearch cluster.
+- `es_index` (`MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX`) - The index identifier
+  of Wikipedia in Elasticsearch.
+- `es_max_suggestions` (`MERINO_PROVIDERS__WIKIPEDIA__ES_MAX_SUGGESTIONS`) - The
+  maximum suggestions for each search request to Elasticsearch.
+- `es_request_timeout_ms` (`MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS`) - The
+  timeout in milliseconds for each search request to Elasticsearch.
+- `score` (`MERINO_PROVIDERS__WIKIPEDIA__SCORE`) - The ranking score for this provider
+  as a floating point number. Defaults to 0.23.
+
 [log]:../merino/config_logging.py
