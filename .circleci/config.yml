@@ -191,7 +191,7 @@ jobs:
             - doc
   docs-publish-github-pages:
     docker:
-      - image: node
+      - image: cimg/node:18
     steps:
       - checkout
       - attach_workspace:
@@ -213,7 +213,7 @@ jobs:
               --user "ci-build <ci-build@merino.mozilla.org>" \
               --message "[skip ci] Docs updates" \
               --repo "git@github.com:mozilla-services/merino-py.git" \
-              --dist workspace/doc 2>&1
+              --dist workspace/doc
 
 commands:
   dockerhub-login:
