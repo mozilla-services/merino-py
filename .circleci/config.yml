@@ -23,6 +23,10 @@ workflows:
             - checks
       - docs-build:
           <<: *pr-filters
+      - docs-publish-github-pages:
+          <<: *pr-filters
+          requires:
+            - docs-build
 
   main-workflow:
     jobs:
@@ -210,6 +214,8 @@ jobs:
               --message "[skip ci] Docs updates" \
               --repo "git@github.com:mozilla-services/merino-py.git" \
               --dist workspace/doc
+          environment:
+            NODE_DEBUG: gh-pages
 
 commands:
   dockerhub-login:
