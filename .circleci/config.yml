@@ -187,7 +187,7 @@ jobs:
             - doc
   docs-publish-github-pages:
     docker:
-      - image: node
+      - image: cimg/node:16.18.1
     steps:
       - checkout
       - attach_workspace:
