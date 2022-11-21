@@ -26,6 +26,9 @@ $ make run
 
 ### General commands
 ```shell
+# List all available make commands with descriptions
+$ make help
+
 # Just like `poetry install`
 $ make install
 
@@ -41,11 +44,23 @@ $ make dev
 # Run merino-py without the auto code reloading
 $ make run
 
+# Run unit and integration tests and evaluate combined coverage
+$ make test
+
+# Evaluate combined unit and integration test coverage
+$ make test-coverage-check
+
 # Run unit tests
 $ make unit-tests
 
+# List fixtures in use per unit test
+$ make unit-test-fixtures
+
 # Run integration tests
 $ make integration-tests
+
+# List fixtures in use per integration test
+$ make integration-test-fixtures
 
 # Run contract tests
 $ make contract-tests
@@ -58,6 +73,9 @@ $ make doc
 
 # Preview the generated documents
 $ make doc-preview
+
+# Profile Merino with Scalene
+$ make profile
 ```
 
 ## Documentation
