@@ -199,6 +199,10 @@ jobs:
           fingerprints:
             - "af:ac:a0:85:b4:a1:af:4d:e1:08:42:b5:16:e3:67:2d"
       - run:
+          name: Set remote orgin if needed
+          command: |
+            git remote add origin git@github.com:mozilla-services/merino-py.git || true
+      - run:
           name: Deploy docs to gh-pages
           command: |
             npx --yes gh-pages@3.0.0 \
