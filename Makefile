@@ -53,7 +53,9 @@ test-coverage-check: $(INSTALL_STAMP)  ##  Evaluate combined unit and integratio
 unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
 	COVERAGE_FILE=$(TEST_RESULT_DIR)/.coverage.unit \
 	    MERINO_ENV=testing \
-	    $(POETRY) run pytest $(UNIT_TEST_DIR) --cov $(APP_DIR)
+	    $(POETRY) run pytest $(UNIT_TEST_DIR) \
+	    --cov $(APP_DIR) \
+	    --junit-xml=$(TEST_RESULT_DIR)/unit_results.xml
 
 .PHONY: unit-test-fixtures
 unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test
@@ -63,7 +65,9 @@ unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test
 integration-tests: $(INSTALL_STAMP)  ##  Run integration tests
 	COVERAGE_FILE=$(TEST_RESULT_DIR)/.coverage.integration \
 	    MERINO_ENV=testing \
-	    $(POETRY) run pytest $(INTEGRATION_TEST_DIR) --cov $(APP_DIR)
+	    $(POETRY) run pytest $(INTEGRATION_TEST_DIR) \
+	    --cov $(APP_DIR) \
+	    --junit-xml=$(TEST_RESULT_DIR)/integration_results.xml
 
 .PHONY: integration-test-fixtures
 integration-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per integration test
