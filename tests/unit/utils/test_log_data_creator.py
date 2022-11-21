@@ -14,7 +14,7 @@ from starlette.types import Message
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
-from merino.util.log_data_creators import (
+from merino.utils.log_data_creators import (
     create_request_summary_log_data,
     create_suggest_log_data,
 )

@@ -1,5 +1,6 @@
 """Merino V1 API"""
-import asyncio
+from asyncio import Task
+from functools import partial
 from itertools import chain
 
 from asgi_correlation_id.context import correlation_id
@@ -8,10 +9,12 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
+from merino.config import settings
 from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider, SuggestionRequest
+from merino.utils import task_runner
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 router = APIRouter()
@@ -22,6 +25,9 @@ SUGGEST_RESPONSE = {
     "server_variants": [],
     "request_id": "",
 }
+
+# Timeout for query tasks.
+QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
 
 
 @router.get(
@@ -73,16 +79,30 @@ async def suggest(
         query=q, geolocation=request.scope[ScopeKey.GEOLOCATION]
     )
 
-    lookups = [
-        metrics_client.timeit_task(
-            p.query(srequest),
-            f"providers.{p.name}.query",
+    lookups: list[Task] = []
+    for p in search_from:
+        task = metrics_client.timeit_task(
+            p.query(srequest), f"providers.{p.name}.query"
         )
-        for p in search_from
-    ]
+        # `timeit_task()` doesn't support task naming, need to set the task name manually
+        task.set_name(p.name)
+        lookups.append(task)
 
-    suggestions_lists = await asyncio.gather(*lookups)
-    suggestions = [s for s in chain(*suggestions_lists)]
+    completed_tasks, _ = await task_runner.gather(
+        lookups,
+        timeout=QUERY_TIMEOUT_SEC,
+        timeout_cb=partial(task_runner.metrics_timeout_handler, metrics_client),
+    )
+    suggestions = list(
+        chain.from_iterable(
+            # TODO: handle exceptions. `task.result()` will throw if the task was
+            # completed with an exception. This is OK for now as Merino will return
+            # an HTTP 500 response for unhandled exceptions, but we will want better
+            # exception handling for query tasks in the future.
+            task.result()
+            for task in completed_tasks
+        )
+    )
 
     response = SuggestResponse(
         suggestions=suggestions,
