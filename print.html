@@ -458,6 +458,13 @@ for each level of the configuration hierarchy. While it's harmless to do those
 lookups once or twice, it comes a surprisingly high overhead if accessing them
 repeatedly in the hot paths. You can cache those settings somewhere to mitigate
 this issue.</p>
+<h3 id="runtime-configurations"><a class="header" href="#runtime-configurations">Runtime configurations</a></h3>
+<ul>
+<li><code>runtime.query_timeout_sec</code> (<code>MERINO_RUNTIME__QUERY_TIMEOUT_SEC</code>) - A floating
+point (in seconds) indicating the maximum waiting period for queries issued within
+the handler of the <code>suggest</code> endpoint. All the unfinished query tasks will be
+cancelled once the timeout gets triggered.</li>
+</ul>
 <h3 id="logging"><a class="header" href="#logging">Logging</a></h3>
 <p>Settings to control the format and amount of logs generated.</p>
 <ul>
@@ -965,6 +972,13 @@ a given <code>query</code></p>
     request: SuggestionRequest = srequest(&quot;example&quot;)
     result: list[BaseSuggestion] = await provider.query(request)
 </code></pre>
+<h4 id="scopefixture-receivemockfixture--sendmockfixture"><a class="header" href="#scopefixture-receivemockfixture--sendmockfixture">ScopeFixture, ReceiveMockFixture &amp; SendMockFixture</a></h4>
+<p>For use when testing middleware, these fixtures initialize or mock the common Scope,
+Receive and Send object dependencies.</p>
+<p><em><strong>Usage:</strong></em></p>
+<pre><code class="language-python">def test_middleware(scope: Scope, receive_mock: Receive, send_mock: Send) -&gt; None:
+    pass
+</code></pre>
 <h2 id="integration-tests"><a class="header" href="#integration-tests">Integration Tests</a></h2>
 <p>The integration layer of testing allows for verification of interactions between
 service components, with lower development, maintenance and execution costs compared
@@ -992,6 +1006,22 @@ module. The <code>conftest.py</code> modules contain common utilities in fixture
 <p><em><strong>Usage:</strong></em></p>
 <pre><code class="language-python">def test_with_test_client_with_event(client_with_events: TestClient):
     response: Response = client_with_events.get(&quot;/api/v1/endpoint&quot;)
+</code></pre>
+<h4 id="requestsummarylogdatafixture"><a class="header" href="#requestsummarylogdatafixture">RequestSummaryLogDataFixture</a></h4>
+<p>This fixture will extract the extra log data from a captured 'request.summary'
+LogRecord for verification</p>
+<p><em><strong>Usage:</strong></em></p>
+<pre><code class="language-python">def test_with_log_data(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    extract_request_summary_log_data: LogDataFixture
+):
+    records: list[LogRecord] = filter_caplog(caplog.records, &quot;request.summary&quot;)
+    assert len(records) == 1
+
+    record: LogRecord = records[0]
+    log_data: dict[str, Any] = extract_request_summary_log_data(record)
+    assert log_data == expected_log_data
 </code></pre>
 <h4 id="injectprovidersfixture--providersfixture"><a class="header" href="#injectprovidersfixture--providersfixture">InjectProvidersFixture &amp; ProvidersFixture</a></h4>
 <p>These fixture will setup and teardown given providers.</p>
