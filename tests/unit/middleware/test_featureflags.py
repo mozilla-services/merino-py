@@ -1,86 +1,63 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+"""Unit tests for the middleware featureflags module."""
+
 import pytest
-from pydantic import ValidationError
+from pytest_mock import MockerFixture
+from starlette.types import ASGIApp, Receive, Scope, Send
 
-from merino.featureflags import FeatureFlags, session_id_context
-
-
-def test_missing():
-    flags = FeatureFlags()
-    assert not flags.is_enabled("test-missing")
+from merino.featureflags import session_id_context
+from merino.middleware.featureflags import FeatureFlagsMiddleware
 
 
-def test_enabled():
-    flags = FeatureFlags()
-    assert flags.is_enabled("test-enabled")
+@pytest.fixture(name="featureflags_middleware")
+def fixture_featureflags_middleware(mocker: MockerFixture) -> FeatureFlagsMiddleware:
+    """Creates a FeatureFlagsMiddleware object for test"""
+    asgiapp_mock = mocker.AsyncMock(spec=ASGIApp)
+    return FeatureFlagsMiddleware(asgiapp_mock)
 
 
-def test_not_enabled():
-    flags = FeatureFlags()
-    assert not flags.is_enabled("test-not-enabled")
+@pytest.mark.asyncio
+async def test_featureflags_sid_found(
+    featureflags_middleware: FeatureFlagsMiddleware,
+    scope: Scope,
+    receive_mock: Receive,
+    send_mock: Send,
+) -> None:
+    expected_sid: str = "9aadf682-2f7a-4ad1-9976-dc30b60451d8"
+    scope["query_string"] = f"q=nope&sid={expected_sid}"
+
+    await featureflags_middleware(scope, receive_mock, send_mock)
+
+    assert session_id_context.get() == expected_sid
 
 
-def test_no_scheme_no_session_id(caplog):
-    import logging
+@pytest.mark.asyncio
+async def test_featureflags_sid_not_found(
+    featureflags_middleware: FeatureFlagsMiddleware,
+    scope: Scope,
+    receive_mock: Receive,
+    send_mock: Send,
+) -> None:
+    """Test that SID is assigned `None` is `sid` query parameter is not available."""
+    scope["query_string"] = "q=nope"
 
-    caplog.set_level(logging.ERROR)
-    flags = FeatureFlags()
-    assert not flags.is_enabled("test-no-scheme")
+    await featureflags_middleware(scope, receive_mock, send_mock)
 
-    assert len(caplog.records) == 1
-    assert caplog.messages[0] == "Expected a session_id but none exist in this context"
-
-
-@pytest.mark.parametrize(
-    "bucket_id, want",
-    [
-        ("000", True),
-        ("fff", False),
-    ],
-    ids=["session_id_on", "session_id_off"],
-)
-def test_no_scheme_default_session_id(bucket_id: str, want: bool):
-    session_id_context.set(bucket_id)
-    flags = FeatureFlags()
-    assert flags.is_enabled("test-no-scheme") is want
+    assert session_id_context.get() is None
 
 
-@pytest.mark.parametrize(
-    "bucket_id, want",
-    [
-        (b"\x00\x00\x00\x00", True),
-        (b"\xff\xff\xff\xff", False),
-    ],
-    ids=["enabed_on", "enabled_off"],
-)
-def test_enabled_perc(bucket_id: str, want: bool):
-    """Test for feature flags with "random" scheme and passing in bucket_for value."""
-    flags = FeatureFlags()
-    assert flags.is_enabled("test-perc-enabled", bucket_for=bucket_id) is want
+@pytest.mark.asyncio
+async def test_featureflags_invalid_scope_type(
+    featureflags_middleware: FeatureFlagsMiddleware,
+    receive_mock: Receive,
+    send_mock: Send,
+) -> None:
+    """Test that no SID assignment takes place for an unexpected Scope type."""
+    scope: Scope = {"type": "not-http"}
 
+    await featureflags_middleware(scope, receive_mock, send_mock)
 
-@pytest.mark.parametrize(
-    "bucket_id, want",
-    [
-        ("000", True),
-        ("fff", False),
-    ],
-    ids=["session_id_on", "session_id_off"],
-)
-def test_enabled_perc_session(bucket_id: str, want: bool):
-    """Test for feature flags with "random" scheme and passing in bucket_for value."""
-    session_id_context.set(bucket_id)
-    flags = FeatureFlags()
-    assert flags.is_enabled("test-perc-enabled-session") is want
-
-
-@pytest.mark.parametrize(
-    "config",
-    [
-        {"invalid-scheme": {"scheme": "invalid", "enabled": 0}},
-        {"enabled-range": {"enabled": 42}},
-    ],
-    ids=["invalid-scheme", "enabled-range"],
-)
-def test_raises_malformed_config(config: dict):
-    with pytest.raises(ValidationError):
-        FeatureFlags(flags=config)
+    assert session_id_context.get() == "fff"

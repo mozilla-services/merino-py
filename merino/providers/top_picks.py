@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from collections import defaultdict
-from typing import Any, Optional
+from typing import Any, Final, Optional
 
 from fastapi import FastAPI
 
@@ -14,6 +14,8 @@ from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionReques
 SCORE: float = settings.providers.top_picks.score
 LOCAL_TOP_PICKS_FILE: str = settings.providers.top_picks.top_picks_file_path
 QUERY_CHAR_LIMIT: int = settings.providers.top_picks.query_char_limit
+# The minimal characters that Firefox Urlbar would send to Merino
+FIREFOX_CHAR_LIMIT: Final[int] = 2
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +37,7 @@ class Provider(BaseProvider):
 
     primary_index: defaultdict = defaultdict(list)
     secondary_index: defaultdict = defaultdict(list)
+    short_domain_index: defaultdict = defaultdict(list)
     results: list[Suggestion]
     query_min: int
     query_max: int
@@ -57,6 +60,7 @@ class Provider(BaseProvider):
             )
             self.primary_index: defaultdict = index_results["primary_index"]
             self.secondary_index: defaultdict = index_results["secondary_index"]
+            self.short_domain_index: defaultdict = index_results["short_domain_index"]
             self.results: list[Suggestion] = index_results["results"]
             self.query_min: int = index_results["index_char_range"][0]
             self.query_max: int = index_results["index_char_range"][1]
@@ -73,8 +77,17 @@ class Provider(BaseProvider):
         # Ignore https:// and http://
         if srequest.query.startswith("http"):
             return []
-        # Ignore requests below or above character minimums
-        if len(srequest.query) < self.query_min or len(srequest.query) > self.query_max:
+        # Suggestions between Firefox char min of 2 and query limit - 1 for short domains
+        if FIREFOX_CHAR_LIMIT <= len(srequest.query) <= (QUERY_CHAR_LIMIT - 1):
+            if ids := self.short_domain_index.get(srequest.query):
+                res = self.results[ids[0]]
+                return [res]
+
+        # Ignore requests below or above character min/max after checking short domains above
+        if (
+            len(srequest.query) < FIREFOX_CHAR_LIMIT
+            or len(srequest.query) > self.query_max
+        ):
             return []
         if ids := self.primary_index.get(srequest.query):
             res = self.results[ids[0]]
@@ -105,11 +118,12 @@ class Provider(BaseProvider):
         primary_index: defaultdict = defaultdict(list)
         # A dictionary of keyed values that point to the matching index
         secondary_index: defaultdict = defaultdict(list)
+        # A dictionary encapsulating short domains and their similars
+        short_domain_index: defaultdict = defaultdict(list)
         # A list of suggestions
         results: list[Suggestion] = []
 
-        # These variables hold the max and min lengths
-        # of queries possible given the domain list.
+        # These variables hold the max and min lengths of queries possible given the domain list.
         # See configs/default.toml for character limit for Top Picks
         # For testing, see configs/testing.toml for character limit for Top Picks
         query_min: int = QUERY_CHAR_LIMIT
@@ -133,6 +147,20 @@ class Provider(BaseProvider):
                 score=SCORE,
             )
 
+            # Insertion of short keys between Firefox limit of 2 and QUERY_CHAR_LIMIT - 1
+            # For similars equal to or longer than QUERY_CHAR_LIMIT, the values are added
+            # to the secondary index.
+            if FIREFOX_CHAR_LIMIT <= len(domain) <= (QUERY_CHAR_LIMIT - 1):
+                for chars in range(FIREFOX_CHAR_LIMIT, len(domain) + 1):
+                    short_domain_index[domain[:chars]].append(index_key)
+                for variant in record.get("similars", []):
+                    if len(variant) >= QUERY_CHAR_LIMIT:
+                        # Long variants will be indexed later into `secondary_index`
+                        continue
+
+                    for chars in range(FIREFOX_CHAR_LIMIT, len(variant) + 1):
+                        short_domain_index[variant[:chars]].append(index_key)
+
             # Insertion of keys into primary index.
             for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
                 primary_index[domain[:chars]].append(index_key)
@@ -149,6 +177,7 @@ class Provider(BaseProvider):
         return {
             "primary_index": primary_index,
             "secondary_index": secondary_index,
+            "short_domain_index": short_domain_index,
             "results": results,
             "index_char_range": (query_min, query_max),
         }

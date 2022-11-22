@@ -8,7 +8,7 @@ from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from merino.middleware import ScopeKey
-from merino.util.user_agent_parsing import parse
+from merino.utils.user_agent_parsing import parse
 
 
 class UserAgent(BaseModel):
@@ -42,7 +42,7 @@ class UserAgentMiddleware:
         """Parse user agent information through "User-Agent" and store the result
         to `scope`.
         """
-        if scope["type"] != "http":  # pragma: no cover
+        if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 

@@ -2,11 +2,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-from unittest import mock
-from unittest.mock import AsyncMock, Mock
+"""Unit tests for the middleware geolocation module."""
 
 import pytest
 from pytest import LogCaptureFixture
+from pytest_mock import MockerFixture
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from merino.middleware import ScopeKey
@@ -14,34 +14,15 @@ from merino.middleware.geolocation import GeolocationMiddleware, Location
 
 
 @pytest.fixture(name="geolocation_middleware")
-def fixture_geolocation_middleware() -> GeolocationMiddleware:
+def fixture_geolocation_middleware(mocker: MockerFixture) -> GeolocationMiddleware:
     """Creates a GeolocationMiddleware object for test"""
-    asgiapp_mock = AsyncMock(spec=ASGIApp)
+    asgiapp_mock = mocker.AsyncMock(spec=ASGIApp)
     return GeolocationMiddleware(asgiapp_mock)
-
-
-@pytest.fixture(name="scope")
-def fixture_scope() -> Scope:
-    """Creates a Scope object for test"""
-    scope: Scope = {"type": "http"}
-    return scope
-
-
-@pytest.fixture(name="receive_mock")
-def fixture_receive_mock() -> Receive:
-    """Creates a Receive mock object for test"""
-    return Mock()
-
-
-@pytest.fixture(name="send_mock")
-def fixture_send_mock() -> Send:
-    """Creates a Send mock object for test"""
-    return Mock()
 
 
 # The first two IP addresses are taken from `GeoLite2-City-Test.mmdb`
 @pytest.mark.parametrize(
-    "expected_location, client_ip_and_port",
+    ["expected_location", "client_ip_and_port"],
     [
         (
             Location(
@@ -101,6 +82,7 @@ async def test_geolocation_address_not_found(
 
 @pytest.mark.asyncio
 async def test_geolocation_client_ip_override(
+    mocker: MockerFixture,
     caplog: LogCaptureFixture,
     geolocation_middleware: GeolocationMiddleware,
     scope: Scope,
@@ -114,11 +96,9 @@ async def test_geolocation_client_ip_override(
     expected_location: Location = Location(
         country="US", region="WA", city="Milton", dma=819, postal_code="98354"
     )
+    mocker.patch("merino.middleware.geolocation.CLIENT_IP_OVERRIDE", "216.160.83.56")
 
-    with mock.patch(
-        "merino.middleware.geolocation.CLIENT_IP_OVERRIDE", "216.160.83.56"
-    ):
-        await geolocation_middleware(scope, receive_mock, send_mock)
+    await geolocation_middleware(scope, receive_mock, send_mock)
 
     assert scope[ScopeKey.GEOLOCATION] == expected_location
     assert len(caplog.messages) == 0

@@ -258,10 +258,7 @@ async def test_forecast_returned(accuweather: Provider, geolocation: Location) -
                 ),
                 summary="Mostly cloudy",
                 icon_id=6,
-                temperature=Temperature(
-                    c=15.5,
-                    f=60.0,
-                ),
+                temperature=Temperature(c=15.5, f=60.0),
             ),
             forecast=Forecast(
                 url=(
@@ -269,8 +266,8 @@ async def test_forecast_returned(accuweather: Provider, geolocation: Location) -
                     "94103/daily-weather-forecast/39376_pc?lang=en-us"
                 ),
                 summary="Pleasant Saturday",
-                high=Temperature(f=70.0),
-                low=Temperature(f=57.0),
+                high=Temperature(c=21.1, f=70.0),
+                low=Temperature(c=13.9, f=57.0),
             ),
         )
     ]

@@ -17,6 +17,7 @@ _validators = [
     Validator("providers.adm.backend", is_in=["remote-settings", "test"]),
     Validator("providers.adm.score_wikipedia", gte=0, lte=1),
     Validator("providers.wikifruit.enabled_by_default", is_type_of=bool),
+    Validator("runtime.query_timeout_sec", is_type_of=float, gte=0),
     Validator("sentry.mode", is_in=["disabled", "release", "debug"]),
     Validator("sentry.env", is_in=["prod", "stage", "dev"]),
     Validator("sentry.traces_sample_rate", gte=0, lte=1),

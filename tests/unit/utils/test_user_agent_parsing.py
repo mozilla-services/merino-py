@@ -1,6 +1,6 @@
 import pytest
 
-from merino.util.user_agent_parsing import parse
+from merino.utils.user_agent_parsing import parse
 
 Scenario = tuple[str, str, str, str]
 
@@ -77,7 +77,7 @@ SCENARIOS: list[Scenario] = [
 
 
 @pytest.mark.parametrize(
-    "ua,expected_browser,expected_os_family,expected_form_factor",
+    ["ua", "expected_browser", "expected_os_family", "expected_form_factor"],
     SCENARIOS,
 )
 def test_ua_parsing(ua, expected_browser, expected_os_family, expected_form_factor):

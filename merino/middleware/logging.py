@@ -5,11 +5,13 @@ import time
 from datetime import datetime
 from typing import Pattern
 
-from starlette.datastructures import Headers
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from merino.middleware import ScopeKey
+from merino.utils.log_data_creators import (
+    create_request_summary_log_data,
+    create_suggest_log_data,
+)
 
 # web.suggest.request is used for logs coming from the /suggest endpoint
 suggest_request_logger = logging.getLogger("web.suggest.request")
@@ -24,61 +26,24 @@ class LoggingMiddleware:
     """An ASGI middleware for logging."""
 
     def __init__(self, app: ASGIApp) -> None:
-        """Initilize."""
+        """Initialize the middleware and store the ASGI app instance."""
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send):
         """Log requests."""
-        if scope["type"] != "http":  # pragma: no cover
+        if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
         async def send_wrapper(message: Message) -> None:
             if message["type"] == "http.response.start":
                 request = Request(scope=scope)
+                dt: datetime = datetime.fromtimestamp(time.time())
                 if PATTERN.match(request.url.path):
-                    location = scope[ScopeKey.GEOLOCATION]
-                    ua = scope[ScopeKey.USER_AGENT]
-                    data = {
-                        "sensitive": True,
-                        "path": request.url.path,
-                        "method": request.method,
-                        "query": request.query_params.get("q"),
-                        "errno": 0,
-                        "code": message["status"],
-                        "time": datetime.fromtimestamp(time.time()).isoformat(),
-                        # Provided by the asgi-correlation-id middleware.
-                        "rid": Headers(scope=message)["X-Request-ID"],
-                        "session_id": request.query_params.get("sid"),
-                        "sequence_no": int(seq)
-                        if (seq := request.query_params.get("seq"))
-                        else None,
-                        "country": location.country,
-                        "region": location.region,
-                        "city": location.city,
-                        "dma": location.dma,
-                        "client_variants": request.query_params.get(
-                            "client_variants", ""
-                        ),
-                        "requested_providers": request.query_params.get(
-                            "providers", ""
-                        ),
-                        "browser": ua.browser,
-                        "os_family": ua.os_family,
-                        "form_factor": ua.form_factor,
-                    }
+                    data = create_suggest_log_data(request, message, dt)
                     suggest_request_logger.info("", extra=data)
                 else:
-                    data = {
-                        "agent": request.headers.get("User-Agent"),
-                        "path": request.url.path,
-                        "method": request.method,
-                        "lang": request.headers.get("Accept-Language"),
-                        "querystring": dict(request.query_params),
-                        "errno": 0,
-                        "code": message["status"],
-                        "time": datetime.fromtimestamp(time.time()).isoformat(),
-                    }
+                    data = create_request_summary_log_data(request, message, dt)
                     logger.info("", extra=data)
 
             await send(message)
