@@ -77,7 +77,7 @@ This group currently features a single setting:
 - `deployment.canary` (`MERINO_DEPLOYMENT__CANARY`) - a boolean that represents
 whether the pod running this application is deployed as a canary. The value is
 added as a constant tag `deployment.canary` with type `int` to emitted metrics.
-Note: This setting is supposed to be controled exclusively by deployment
+Note that this setting is supposed to be controlled exclusively by deployment
 tooling.
 
 ### Runtime configurations
