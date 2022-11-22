@@ -38,6 +38,10 @@ dev_logger = false
 host = "localhost"
 port = 8092
 
+[default.deployment]
+# The deployment workflow is expected to set this to true for canary pods
+canary = false
+
 [default.location]
 # Path to the MaxMindDB file. This should be overridden in production.
 maxmind_database = "./dev/GeoLite2-City-Test.mmdb"

@@ -141,11 +141,16 @@ class Client(metaclass=ClientMeta):
 @cache
 def get_metrics_client() -> aiodogstatsd.Client:
     """Instantiate and memoize the StatsD client."""
+    constant_tags: MetricTags = {
+        "application": "merino-py",
+        "deployment.canary": int(settings.deployment.canary),
+    }
+
     return aiodogstatsd.Client(
         host=settings.metrics.host,
         port=settings.metrics.port,
         namespace="merino",
-        constant_tags={"application": "merino-py"},
+        constant_tags=constant_tags,
     )
 
 
