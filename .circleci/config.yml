@@ -92,6 +92,8 @@ jobs:
   unit-tests:
     docker:
       - image: cimg/python:3.10
+    environment:
+      TEST_RESULTS_DIR: workspace/test-results
     steps:
       - checkout
       - run:
@@ -99,9 +101,9 @@ jobs:
           command: mkdir -p workspace
       - run:
           name: Unit tests
-          command: make unit-tests
+          command: make unit-tests TEST_RESULTS_DIR=$TEST_RESULTS_DIR
       - store_test_results:
-          path: workspace/test-results
+          path: $TEST_RESULTS_DIR
       - persist_to_workspace:
           root: workspace
           paths:
@@ -109,6 +111,8 @@ jobs:
   integration-tests:
     docker:
       - image: cimg/python:3.10
+    environment:
+      TEST_RESULTS_DIR: workspace/test-results
     steps:
       - checkout
       - run:
@@ -116,9 +120,9 @@ jobs:
           command: mkdir -p workspace
       - run:
           name: Integration tests
-          command: make integration-tests
+          command: make integration-tests TEST_RESULTS_DIR=$TEST_RESULTS_DIR
       - store_test_results:
-          path: workspace/test-results
+          path: $TEST_RESULTS_DIR
       - persist_to_workspace:
           root: workspace
           paths:
@@ -126,13 +130,15 @@ jobs:
   test-coverage-check:
     docker:
       - image: cimg/python:3.10
+    environment:
+      TEST_RESULTS_DIR: workspace/test-results
     steps:
       - checkout
       - attach_workspace:
           at: workspace
       - run:
           name: Evaluate minimum test coverage
-          command: make test-coverage-check
+          command: make test-coverage-check TEST_RESULTS_DIR=$TEST_RESULTS_DIR
   contract-tests:
     machine:
       docker_layer_caching: true
