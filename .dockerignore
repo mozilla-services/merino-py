@@ -17,4 +17,3 @@ merino/configs/.secrets.*
 book/
 profile.json
 workspace/
-test-results/
