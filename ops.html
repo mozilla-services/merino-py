@@ -218,6 +218,15 @@ for each level of the configuration hierarchy. While it's harmless to do those
 lookups once or twice, it comes a surprisingly high overhead if accessing them
 repeatedly in the hot paths. You can cache those settings somewhere to mitigate
 this issue.</p>
+<h3 id="deployment"><a class="header" href="#deployment">Deployment</a></h3>
+<p>This group currently features a single setting:</p>
+<ul>
+<li><code>deployment.canary</code> (<code>MERINO_DEPLOYMENT__CANARY</code>) - a boolean that represents
+whether the pod running this application is deployed as a canary. The value is
+added as a constant tag <code>deployment.canary</code> with type <code>int</code> to emitted metrics.
+Note that this setting is supposed to be controlled exclusively by deployment
+tooling.</li>
+</ul>
 <h3 id="runtime-configurations"><a class="header" href="#runtime-configurations">Runtime configurations</a></h3>
 <ul>
 <li><code>runtime.query_timeout_sec</code> (<code>MERINO_RUNTIME__QUERY_TIMEOUT_SEC</code>) - A floating
