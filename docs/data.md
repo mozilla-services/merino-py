@@ -103,4 +103,10 @@ log inspection interfaces.
   a certain suggestion provider.
 
   **Example**:
-  `merino.provider.adm.query`
+  `merino.providers.adm.query`
+
+- `<provider_module>.query.timeout` - A counter to measure the query timeouts of
+  a certain suggestion provider.
+
+  **Example**:
+  `merino.providers.wikipedia.query.timeout`
