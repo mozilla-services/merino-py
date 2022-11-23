@@ -17,6 +17,11 @@ workflows:
           <<: *pr-filters
       - integration-tests:
           <<: *pr-filters
+      - test-coverage-check:
+          <<: *pr-filters
+          requires:
+            - unit-tests
+            - integration-tests
       - contract-tests:
           <<: *pr-filters
           requires:
@@ -34,6 +39,11 @@ workflows:
           <<: *main-filters
       - integration-tests:
           <<: *main-filters
+      - test-coverage-check:
+          <<: *main-filters
+          requires:
+            - unit-tests
+            - integration-tests
       - contract-tests:
           <<: *main-filters
           requires:
@@ -50,6 +60,7 @@ workflows:
             - checks
             - unit-tests
             - integration-tests
+            - test-coverage-check
             - contract-tests
       # The following job will require manual approval in the CircleCI web application.
       # Once provided, and when all the requirements are fullfilled (e.g. tests)
@@ -60,6 +71,7 @@ workflows:
             - checks
             - unit-tests
             - integration-tests
+            - test-coverage-check
             - contract-tests
       # On approval of the `unhold-to-deploy-to-prod` job, any successive job that requires it
       # will run. In this case, it's manually triggering deployment to production.
@@ -83,16 +95,50 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Create Workspace
+          command: mkdir -p workspace
+      - run:
           name: Unit tests
           command: make unit-tests
+          environment:
+            TEST_RESULTS_DIR: workspace/test-results
+      - store_test_results:
+          path: workspace/test-results
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - test-results
   integration-tests:
     docker:
       - image: cimg/python:3.10
     steps:
       - checkout
       - run:
+          name: Create Workspace
+          command: mkdir -p workspace
+      - run:
           name: Integration tests
           command: make integration-tests
+          environment:
+            TEST_RESULTS_DIR: workspace/test-results
+      - store_test_results:
+          path: workspace/test-results
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - test-results
+  test-coverage-check:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: Evaluate minimum test coverage
+          command: make test-coverage-check
+          environment:
+            TEST_RESULTS_DIR: workspace/test-results
   contract-tests:
     machine:
       docker_layer_caching: true

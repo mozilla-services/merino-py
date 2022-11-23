@@ -1,5 +1,7 @@
 APP_DIR := merino
 TEST_DIR := tests
+TEST_RESULTS_DIR ?= "workspace/test-results"
+COV_FAIL_UNDER := 95
 UNIT_TEST_DIR := $(TEST_DIR)/unit
 INTEGRATION_TEST_DIR := $(TEST_DIR)/integration
 CONTRACT_TEST_DIR := $(TEST_DIR)/contract
@@ -40,12 +42,22 @@ run: $(INSTALL_STAMP)  ##  Run merino locally
 	$(POETRY) run uvicorn $(APP_DIR).main:app
 
 .PHONY: test
-test: $(INSTALL_STAMP)  ##  Run unit and integration tests
-	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) $(INTEGRATION_TEST_DIR) --cov $(APP_DIR)
+test: unit-tests integration-tests test-coverage-check  ##  Run unit and integration tests and evaluate combined coverage
+
+.PHONY: test-coverage-check
+test-coverage-check: $(INSTALL_STAMP)  ##  Evaluate combined unit and integration test coverage
+	$(POETRY) run coverage combine --data-file=$(TEST_RESULTS_DIR)/.coverage
+	$(POETRY) run coverage report \
+	    --data-file=$(TEST_RESULTS_DIR)/.coverage \
+	    --fail-under=$(COV_FAIL_UNDER)
 
 .PHONY: unit-tests
 unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
-	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) --cov $(APP_DIR)
+	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.unit \
+	    MERINO_ENV=testing \
+	    $(POETRY) run pytest $(UNIT_TEST_DIR) \
+	    --cov $(APP_DIR) \
+	    --junit-xml=$(TEST_RESULTS_DIR)/unit_results.xml
 
 .PHONY: unit-test-fixtures
 unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test
@@ -53,7 +65,11 @@ unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test
 
 .PHONY: integration-tests
 integration-tests: $(INSTALL_STAMP)  ##  Run integration tests
-	MERINO_ENV=testing $(POETRY) run pytest $(INTEGRATION_TEST_DIR) --cov $(APP_DIR)
+	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.integration \
+	    MERINO_ENV=testing \
+	    $(POETRY) run pytest $(INTEGRATION_TEST_DIR) \
+	    --cov $(APP_DIR) \
+	    --junit-xml=$(TEST_RESULTS_DIR)/integration_results.xml
 
 .PHONY: integration-test-fixtures
 integration-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per integration test

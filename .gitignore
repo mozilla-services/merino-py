@@ -142,3 +142,6 @@ book/
 
 # Scalene profile artifacts
 profile.json
+
+# CircleCI workspace artifacts
+workspace/

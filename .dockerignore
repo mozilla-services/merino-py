@@ -16,3 +16,4 @@ venv
 merino/configs/.secrets.*
 book/
 profile.json
+workspace/
