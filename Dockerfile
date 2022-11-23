@@ -1,4 +1,4 @@
-ARG PYTHON_VERSION=3.10
+ARG PYTHON_VERSION=3.11
 
 # This stage is used to generate requirements.txt from Poetry
 FROM python:${PYTHON_VERSION}-slim AS build
