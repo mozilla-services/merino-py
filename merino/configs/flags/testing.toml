@@ -1,3 +1,5 @@
+[testing]
+dynaconf_merge = true
 
 [testing.flags.test-enabled]
 enabled = 1

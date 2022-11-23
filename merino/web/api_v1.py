@@ -1,4 +1,5 @@
 """Merino V1 API"""
+import logging
 from asyncio import Task
 from functools import partial
 from itertools import chain
@@ -10,6 +11,7 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 from merino.config import settings
+from merino.featureflags import FeatureFlags
 from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
@@ -17,6 +19,7 @@ from merino.providers.base import BaseProvider, SuggestionRequest
 from merino.utils import task_runner
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 SUGGEST_RESPONSE = {
@@ -57,13 +60,13 @@ async def suggest(
     Returns:
     A list of suggestions or an empty list if nothing was found.
     """
-    # Do you plan to release code behind a feature flag? Uncomment the following
-    # line to get access to feature flags and then check if your feature flag is
-    # enabled for this request by calling feature_flags.is_enabled("example").
-    # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
+    feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
 
-    # Then remove the `pytest.mark.skip` decorator from the test
-    # `test_feature_flags` and update it with your feature flag.
+    if decision := feature_flags.is_enabled("hello_world"):
+        logger.debug(
+            "feature flag hello_world is enabled for this request",
+            extra={"hello_word": decision},
+        )
 
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
 
