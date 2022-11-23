@@ -1,6 +1,6 @@
 APP_DIR := merino
 TEST_DIR := tests
-TEST_RESULTS_DIR := "workspace/test-results"
+TEST_RESULTS_DIR ?= "workspace/test-results"
 COV_FAIL_UNDER := 95
 UNIT_TEST_DIR := $(TEST_DIR)/unit
 INTEGRATION_TEST_DIR := $(TEST_DIR)/integration
