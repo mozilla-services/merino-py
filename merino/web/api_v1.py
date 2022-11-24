@@ -62,10 +62,10 @@ async def suggest(
     """
     feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
 
-    if decision := feature_flags.is_enabled("hello_world"):
+    if decision := feature_flags.is_enabled("test_flight_01"):
         logger.debug(
-            "feature flag hello_world is enabled for this request",
-            extra={"hello_word": decision},
+            "feature flag test_flight_01 is enabled for this request",
+            extra={"test_flight_01": decision},
         )
 
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]

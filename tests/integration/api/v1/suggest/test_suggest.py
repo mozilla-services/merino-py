@@ -272,7 +272,7 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
                 "response.status_codes.200",
             ],
             [
-                "feature_flag.hello_world",
+                "feature_flag.test_flight_01",
             ],
         ),
         (
