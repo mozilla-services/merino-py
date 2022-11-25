@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Module for test fixtures for the middleware unit test directory."""
+"""Module for test configurations for the middleware unit test directory."""
 
 from typing import Any
 

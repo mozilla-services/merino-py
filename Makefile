@@ -25,7 +25,7 @@ lint: $(INSTALL_STAMP)  ##  Run various linters
 	$(POETRY) run black --quiet --diff --check merino $(APP_AND_TEST_DIRS)
 	$(POETRY) run flake8 $(APP_AND_TEST_DIRS)
 	$(POETRY) run bandit --quiet -r $(APP_AND_TEST_DIRS) -c "pyproject.toml"
-	$(POETRY) run pydocstyle $(APP_DIR) --config="pyproject.toml"
+	$(POETRY) run pydocstyle $(APP_AND_TEST_DIRS) --config="pyproject.toml"
 	$(POETRY) run mypy $(APP_DIR) $(INTEGRATION_TEST_DIR) $(CONTRACT_TEST_DIR) --config-file="pyproject.toml"
 
 .PHONY: format

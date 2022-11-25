@@ -31,7 +31,7 @@ warn_unused_ignores = true
 warn_unreachable = true
 
 [tool.pydocstyle]
-match = "(?!test_).*\\.py"
+match = ".*\\.py"
 convention = "pep257"
 # Error Code Ref: https://www.pydocstyle.org/en/stable/error_codes.html
 # D105 Docstrings for magic methods

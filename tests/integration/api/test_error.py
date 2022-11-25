@@ -21,7 +21,7 @@ from tests.types import FilterCaplogFixture
 def test_error(
     client: TestClient, caplog: LogCaptureFixture, filter_caplog: FilterCaplogFixture
 ) -> None:
-    """Test that the error endpoint is supported to conform to dockerflow"""
+    """Test that the error endpoint conforms to dockerflow specifications."""
     caplog.set_level(logging.ERROR)
 
     response = client.get("/__error__")
@@ -41,7 +41,7 @@ def test_error_request_log_data(
 ) -> None:
     """
     Test that the request log for the '__error__' endpoint contains the required
-    extra data
+    extra data.
     """
     caplog.set_level(logging.INFO)
 
@@ -80,7 +80,7 @@ def test_error_request_log_data(
 
 
 def test_error_metrics(mocker: MockerFixture, client: TestClient) -> None:
-    """Test that metrics are recorded for the '__error__' endpoint (status code 500)"""
+    """Test that metrics are recorded for the '__error__' endpoint (status code 500)."""
     expected_metric_keys: list[str] = [
         "get.__error__.timing",
         "get.__error__.status_codes.500",
@@ -98,7 +98,8 @@ def test_error_metrics(mocker: MockerFixture, client: TestClient) -> None:
 
 def test_error_feature_flags(mocker: MockerFixture, client: TestClient) -> None:
     """
-    Test that feature flags are not added for the '__error__' endpoint (status code 500)
+    Test that feature flags are not added for the '__error__' endpoint
+    (status code 500).
     """
     expected_tags_per_metric: dict[str, list[str]] = {
         "get.__error__.timing": [],

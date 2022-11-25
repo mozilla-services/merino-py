@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Module for communication with Kinto (Remote Settings)."""
+
 import logging
 from typing import Dict, List
 
@@ -22,7 +24,6 @@ class KintoSuggestion(BaseModel, extra=Extra.ignore):
 
 def download_suggestions(client: kinto_http.Client) -> Dict[int, KintoSuggestion]:
     """Get records, download attachments and return the suggestions."""
-
     # Retrieve the base_url for attachments
     server_info = client.server_info()
     attachments_base_url = server_info["capabilities"]["attachments"]["base_url"]

@@ -14,7 +14,7 @@ from merino.middleware.featureflags import FeatureFlagsMiddleware
 
 @pytest.fixture(name="featureflags_middleware")
 def fixture_featureflags_middleware(mocker: MockerFixture) -> FeatureFlagsMiddleware:
-    """Creates a FeatureFlagsMiddleware object for test"""
+    """Create a FeatureFlagsMiddleware object for test"""
     asgiapp_mock = mocker.AsyncMock(spec=ASGIApp)
     return FeatureFlagsMiddleware(asgiapp_mock)
 
@@ -26,6 +26,7 @@ async def test_featureflags_sid_found(
     receive_mock: Receive,
     send_mock: Send,
 ) -> None:
+    """Test that SID is assigned given an `sid` query parameter."""
     expected_sid: str = "9aadf682-2f7a-4ad1-9976-dc30b60451d8"
     scope["query_string"] = f"q=nope&sid={expected_sid}"
 
@@ -41,7 +42,7 @@ async def test_featureflags_sid_not_found(
     receive_mock: Receive,
     send_mock: Send,
 ) -> None:
-    """Test that SID is assigned `None` is `sid` query parameter is not available."""
+    """Test that SID is assigned `None` if `sid` query parameter is not available."""
     scope["query_string"] = "q=nope"
 
     await featureflags_middleware(scope, receive_mock, send_mock)

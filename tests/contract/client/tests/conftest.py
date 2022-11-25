@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Contract tests client test configurations."""
+
 import json
 import os
 import pathlib
@@ -33,7 +35,6 @@ REQUIRED_OPTIONS = (
 @pytest.fixture(scope="session", name="kinto_environment")
 def fixture_kinto_environment(request: Any) -> KintoEnvironment:
     """Return Kinto environment data."""
-
     return KintoEnvironment(
         server=request.config.option.kinto_url,
         bucket=request.config.option.kinto_bucket,
@@ -44,7 +45,6 @@ def fixture_kinto_environment(request: Any) -> KintoEnvironment:
 @pytest.fixture(scope="session", name="kinto_attachments")
 def fixture_kinto_attachments(request: Any) -> dict[str, KintoRequestAttachment]:
     """Return a map from data file name to suggestion data."""
-
     # Load Kinto data from the given Kinto data directory
     kinto_data_dir: str = request.config.option.kinto_data_dir
     kinto_attachments: dict[str, KintoRequestAttachment] = {}
@@ -74,12 +74,10 @@ def fixture_fetch_kinto_icon_url(
     kinto_attachments: dict[str, KintoRequestAttachment],
 ) -> Callable[[str], str]:
     """Return a function that will query for an icon URL from a suggestion title"""
-
     attachments_url: str = request.config.option.kinto_attachments_url
 
     def fetch_icon_url(suggestion_title: str) -> str:
         """Fetch the icon URL for the given Kinto record ID from Kinto."""
-
         record_id: str = next(
             f"icon-{suggestion.icon}"
             for attachment in kinto_attachments.values()
@@ -94,7 +92,6 @@ def fixture_fetch_kinto_icon_url(
 
 def pytest_configure(config: Any) -> None:
     """Load data for tests and store it on config."""
-
     for option_name in REQUIRED_OPTIONS:
         if getattr(config.option, option_name) is None:
             raise pytest.UsageError(f"Required option '{option_name}' is not set.")
@@ -109,7 +106,6 @@ def pytest_configure(config: Any) -> None:
 
 def pytest_generate_tests(metafunc: Any) -> None:
     """Generate tests from the loaded test scenarios."""
-
     if "steps" not in metafunc.fixturenames:
         return
 

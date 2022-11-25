@@ -2,6 +2,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""
+Integration tests for the Merino v1 suggest API endpoint configured with the
+Wiki Fruit provider.
+"""
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -19,6 +24,10 @@ def fixture_providers() -> Providers:
 
 @pytest.mark.parametrize("query", ["apple", "banana", "cherry"])
 def test_suggest_hit(client: TestClient, query: str) -> None:
+    """
+    Test that the suggest endpoint response is as expected when a suggestion is
+    supplied from the wiki fruit provider.
+    """
     response = client.get(f"/api/v1/suggest?q={query}")
     assert response.status_code == 200
 
@@ -29,6 +38,10 @@ def test_suggest_hit(client: TestClient, query: str) -> None:
 
 
 def test_suggest_miss(client: TestClient) -> None:
+    """
+    Test that the suggest endpoint response is as expected when a suggestion is not
+    supplied from the wiki fruit provider.
+    """
     response = client.get("/api/v1/suggest?q=nope")
     assert response.status_code == 200
 

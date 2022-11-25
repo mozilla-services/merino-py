@@ -18,7 +18,7 @@ from tests.types import FilterCaplogFixture
 
 
 def test_version(client: TestClient) -> None:
-    """Test that the version endpoint is supported to conform to dockerflow"""
+    """Test that the version endpoint conforms to dockerflow specifications."""
     response = client.get("/__version__")
 
     assert response.status_code == 200
@@ -30,6 +30,10 @@ def test_version(client: TestClient) -> None:
 
 
 def test_version_error(mocker: MockerFixture, client: TestClient) -> None:
+    """
+    Test that the version endpoint returns a 500 status if an error occurs while
+    evaluating the response.
+    """
     mocker.patch("os.path.exists", return_value=False)
 
     response = client.get("/__version__")
@@ -46,7 +50,7 @@ def test_version_request_log_data(
 ) -> None:
     """
     Test that the request log for the '__version__' endpoint contains the required
-    extra data
+    extra data.
     """
     caplog.set_level(logging.INFO)
 

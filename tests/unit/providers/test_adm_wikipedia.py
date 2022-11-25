@@ -1,5 +1,8 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+"""Unit tests for the adm-wikipedia provider module."""
 
 import json
 from typing import Any
@@ -17,7 +20,6 @@ class FakeBackend:
 
     async def get(self, bucket: str, collection: str) -> list[dict[str, Any]]:
         """Return fake records."""
-
         return [
             {
                 "type": "data",
@@ -50,7 +52,6 @@ class FakeBackend:
 
     async def fetch_attachment(self, attachment_uri: str) -> httpx.Response:
         """Return a fake attachment for the given URI."""
-
         attachments = {
             "main-workspace/quicksuggest/attachment-01.json": {
                 "id": 1,
@@ -68,21 +69,18 @@ class FakeBackend:
 
     def get_icon_url(self, icon_uri: str) -> str:
         """Return a fake icon URL for the given URI."""
-
         return f"attachment-host/{icon_uri}"
 
 
 @pytest.fixture(name="adm")
 def fixture_adm() -> Provider:
     """Return an adM provider that uses a fake remote settings client."""
-
     return Provider(backend=FakeBackend())
 
 
 @pytest.mark.asyncio
 async def test_initialize(adm: Provider) -> None:
     """Test for the initialize() method of the adM provider."""
-
     await adm.initialize()
 
     assert adm.suggestions == {"mozilla": (0, 0)}
@@ -104,7 +102,6 @@ async def test_wikipedia_specific_score(
     srequest: SuggestionRequestFixture, adm: Provider
 ) -> None:
     """Test for the query() method of the adM provider."""
-
     await adm.initialize()
 
     res = await adm.query(srequest("mozilla"))

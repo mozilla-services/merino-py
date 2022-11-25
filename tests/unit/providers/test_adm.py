@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Unit tests for the adm provider module."""
+
 import json
 from typing import Any
 from unittest.mock import AsyncMock
@@ -21,7 +23,6 @@ class FakeBackend:
 
     async def get(self, bucket: str, collection: str) -> list[dict[str, Any]]:
         """Return fake records."""
-
         return [
             {
                 "type": "data",
@@ -67,7 +68,6 @@ class FakeBackend:
 
     async def fetch_attachment(self, attachment_uri: str) -> httpx.Response:
         """Return a fake attachment for the given URI."""
-
         attachments = {
             "main-workspace/quicksuggest/attachmment-01.json": {
                 "id": 1,
@@ -109,33 +109,28 @@ class FakeBackend:
 
     def get_icon_url(self, icon_uri: str) -> str:
         """Return a fake icon URL for the given URI."""
-
         return f"attachment-host/{icon_uri}"
 
 
 @pytest.fixture(name="adm")
 def fixture_adm() -> Provider:
     """Return an adM provider that uses a fake remote settings client."""
-
     return Provider(backend=FakeBackend())
 
 
 def test_enabled_by_default(adm: Provider) -> None:
     """Test for the enabled_by_default method."""
-
     assert adm.enabled_by_default is True
 
 
 def test_hidden(adm: Provider) -> None:
     """Test for the hidden method."""
-
     assert adm.hidden() is False
 
 
 @pytest.mark.asyncio
 async def test_initialize(adm: Provider) -> None:
     """Test for the initialize() method of the adM provider."""
-
     await adm.initialize()
 
     assert adm.suggestions == {
@@ -166,7 +161,6 @@ async def test_initialize_remote_settings_failure(
     caplog: LogCaptureFixture, filter_caplog: FilterCaplogFixture
 ) -> None:
     """Test exception handling for the initialize() method."""
-
     error_message: str = "The remote server was unreachable"
     backend_mock = AsyncMock(spec=RemoteSettingsBackend)
     backend_mock.get.side_effect = Exception(error_message)
@@ -188,7 +182,6 @@ async def test_initialize_remote_settings_failure(
 @pytest.mark.asyncio
 async def test_query_success(srequest: SuggestionRequestFixture, adm: Provider) -> None:
     """Test for the query() method of the adM provider."""
-
     await adm.initialize()
 
     res = await adm.query(srequest("firefox"))
@@ -214,7 +207,6 @@ async def test_query_with_missing_key(
     srequest: SuggestionRequestFixture, adm: Provider
 ) -> None:
     """Test for the query() method of the adM provider with a missing key."""
-
     await adm.initialize()
 
     assert await adm.query(srequest("nope")) == []

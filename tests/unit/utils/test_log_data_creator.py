@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Unit tests for the log data creator utility module."""
+"""Unit tests for the log_data_creator.py utility module."""
 
 from datetime import datetime
 from typing import Any
@@ -34,6 +34,10 @@ def test_create_request_summary_log_data(
     expected_agent: str | None,
     expected_lang: str | None,
 ) -> None:
+    """
+    Test that the create_request_summary_log_data method properly constructs log data
+    given different headers.
+    """
     expected_log_data: dict[str, Any] = {
         "errno": 0,
         "time": "1998-03-31T00:00:00",
@@ -100,6 +104,10 @@ def test_create_suggest_log_data(
     expected_providers: str,
     expected_seq: int | None,
 ) -> None:
+    """
+    Test that the create_suggest_log_data method properly constructs log data given
+    different query parameters.
+    """
     location: Location = Location(
         country="US", region="WA", city="Milton", dma=819, postal_code="98354"
     )

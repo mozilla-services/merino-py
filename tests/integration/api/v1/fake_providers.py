@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Provider fakes for the v1 integration test modules."""
+
 import asyncio
 
 from merino.config import settings
@@ -16,31 +18,40 @@ class CorruptProvider(BaseProvider):
         self._name = "corrupted"
 
     async def initialize(self) -> None:
+        """Initialize method for the CorruptProvider."""
         ...
 
     @property
     def enabled_by_default(self) -> bool:
+        """Return boolean indicating whether the provider is enabled."""
         return True
 
     def hidden(self) -> bool:
+        """Return boolean indicating whether the provider is hidden."""
         return False
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Query against the CorruptProvider."""
         raise RuntimeError(srequest.query)
 
 
 class HiddenProvider(BaseProvider):
+    """A provider fake intended for test with a 'hidden' property set to return True."""
+
     def __init__(self, enabled_by_default) -> None:
         self._enabled_by_default = enabled_by_default
         self._name = "hidden"
 
     async def initialize(self) -> None:
+        """Initialize method for the HiddenProvider."""
         ...
 
     def hidden(self) -> bool:
+        """Return boolean indicating whether the provider is hidden."""
         return True
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Query against the HiddenProvider."""
         raise RuntimeError(srequest.query)
 
 
@@ -60,12 +71,15 @@ class NonsponsoredProvider(BaseProvider):
         self._name = "non-sponsored"
 
     async def initialize(self) -> None:
+        """Initialize method for the NonsponsoredProvider."""
         ...
 
     def hidden(self) -> bool:
+        """Return boolean indicating whether the provider is hidden."""
         return False
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Query against the NonsponsoredProvider."""
         if srequest.query.lower() == "nonsponsored":
             return [
                 NonsponsoredSuggestion(
@@ -102,12 +116,15 @@ class SponsoredProvider(BaseProvider):
         self._name = "sponsored"
 
     async def initialize(self) -> None:
+        """Initialize method for the SponsoredProvider."""
         ...
 
     def hidden(self) -> bool:
+        """Return boolean indicating whether the provider is hidden."""
         return False
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Query against the SponsoredProvider."""
         if srequest.query.lower() == "sponsored":
             return [
                 SponsoredSuggestion(
@@ -138,5 +155,6 @@ class TimeoutSponsoredProvider(SponsoredProvider):
         self._name = "timedout-sponsored"
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Query against the TimeoutSponsoredProvider."""
         await asyncio.sleep(settings.runtime.query_timeout_sec * 2)
         return await super().query(srequest)
