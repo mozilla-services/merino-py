@@ -1,3 +1,9 @@
+[testing]
+dynaconf_merge = true
+
+[testing.flags.test_flight_01]
+scheme = 'random'
+enabled = 0.5
 
 [testing.flags.test-enabled]
 enabled = 1
