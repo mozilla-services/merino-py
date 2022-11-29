@@ -15,7 +15,7 @@ from merino.middleware.geolocation import GeolocationMiddleware, Location
 
 @pytest.fixture(name="geolocation_middleware")
 def fixture_geolocation_middleware(mocker: MockerFixture) -> GeolocationMiddleware:
-    """Create a GeolocationMiddleware object for test"""
+    """Create a GeolocationMiddleware object for test."""
     asgiapp_mock = mocker.AsyncMock(spec=ASGIApp)
     return GeolocationMiddleware(asgiapp_mock)
 

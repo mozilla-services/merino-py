@@ -14,7 +14,7 @@ from merino.middleware.featureflags import FeatureFlagsMiddleware
 
 @pytest.fixture(name="featureflags_middleware")
 def fixture_featureflags_middleware(mocker: MockerFixture) -> FeatureFlagsMiddleware:
-    """Create a FeatureFlagsMiddleware object for test"""
+    """Create a FeatureFlagsMiddleware object for test."""
     asgiapp_mock = mocker.AsyncMock(spec=ASGIApp)
     return FeatureFlagsMiddleware(asgiapp_mock)
 

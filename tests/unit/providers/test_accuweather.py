@@ -357,7 +357,7 @@ async def test_invalid_location_key_forecast(
 async def test_no_client_country_or_postal_code(
     caplog: LogCaptureFixture, accuweather: Provider, geolocation: Location
 ):
-    """Test that if a client has an unknown country or postal code, that a warning is
+    """Test that if a client has an unknown country or postal code, a warning is
     logged and no suggestions are returned.
     """
     set_response_bodies()

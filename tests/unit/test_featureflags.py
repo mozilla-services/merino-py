@@ -4,7 +4,7 @@
 
 """Unit tests for the featureflags.py module.
 
-This module depends on testing.toml
+This module depends on testing.toml.
 """
 
 import pytest

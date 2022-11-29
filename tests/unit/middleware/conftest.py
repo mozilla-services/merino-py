@@ -13,18 +13,18 @@ from starlette.types import Receive, Scope, Send
 
 @pytest.fixture(name="scope")
 def fixture_scope() -> Scope:
-    """Create a Scope object for test"""
+    """Create a Scope object for test."""
     scope: Scope = {"type": "http"}
     return scope
 
 
 @pytest.fixture(name="receive_mock")
 def fixture_receive_mock(mocker: MockerFixture) -> Any:
-    """Create a Receive mock object for test"""
+    """Create a Receive mock object for test."""
     return mocker.AsyncMock(spec=Receive)
 
 
 @pytest.fixture(name="send_mock")
 def fixture_send_mock(mocker: MockerFixture) -> Any:
-    """Create a Send mock object for test"""
+    """Create a Send mock object for test."""
     return mocker.AsyncMock(spec=Send)
