@@ -63,7 +63,7 @@ class GeolocationMiddleware:
         scope[ScopeKey.GEOLOCATION] = (
             Location(
                 country=record.country.iso_code,
-                region=record.subdivisions[0].iso_code,
+                region=record.subdivisions[0].iso_code if record.subdivisions else None,
                 city=record.city.names["en"],
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,
