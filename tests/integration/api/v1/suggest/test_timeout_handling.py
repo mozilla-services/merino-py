@@ -1,3 +1,11 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+"""Integration tests for the Merino v1 suggest API endpoint focusing on time out
+behavior.
+"""
+
 import aiodogstatsd
 import pytest
 from fastapi.testclient import TestClient
@@ -27,6 +35,9 @@ def test_with_timedout_provider(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
 ) -> None:
+    """Test that the suggest endpoint response is as expected when providers don't
+    supply suggestions within a configured time limit.
+    """
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
     response = client.get("/api/v1/suggest?q=sponsored")

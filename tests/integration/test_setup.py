@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Integration tests for Merino application startup."""
+
 import pytest
 from pytest_mock import MockerFixture
 from starlette.testclient import TestClient
@@ -13,7 +15,6 @@ from merino.main import app
 
 def test_unknown_providers_should_shutdown_app(mocker: MockerFixture) -> None:
     """Test Merino should shut down upon an unknown provider."""
-
     mocker.patch.dict(settings.providers, values={"unknown-provider": {}})
 
     with pytest.raises(InvalidProviderError) as excinfo:

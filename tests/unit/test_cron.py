@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Unit tests for the cron.py module."""
+
 import asyncio
 import logging
 from typing import Any
@@ -22,7 +24,7 @@ def fixture_condition(numbers: list[int]) -> cron.Condition:
     """Return a condition for a cron job."""
 
     def should_run() -> bool:
-        """Returns True if there are no more than 2 items in numbers."""
+        """Return True if there are no more than 2 items in numbers."""
         return len(numbers) <= 2
 
     return should_run
@@ -33,7 +35,7 @@ def fixture_task(numbers: list[int]) -> cron.Task:
     """Return a task for a cron job."""
 
     async def add_number() -> None:
-        """Adds a new number to the list."""
+        """Add a new number to the list."""
         new_number = numbers[-1] + 1
 
         if new_number == 2:
@@ -48,14 +50,12 @@ def fixture_task(numbers: list[int]) -> cron.Task:
 @pytest.fixture(name="cron_job")
 def fixture_cron_job(condition: cron.Condition, task: cron.Task) -> cron.Job:
     """Return a cron job."""
-
     return cron.Job(name="create_numbers", interval=0.1, condition=condition, task=task)
 
 
 @pytest.mark.asyncio
 async def test_cron(caplog: Any, cron_job: cron.Job, numbers: list[int]) -> None:
     """Test for the CronJob implementation."""
-
     caplog.set_level(logging.INFO)
 
     # Schedule the task like adm.Provider does it

@@ -1,6 +1,9 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+"""Unit tests for the top picks provider module."""
+
 import os
 
 import pytest
@@ -121,7 +124,6 @@ async def test_initialize_exception(top_picks: Provider, mocker) -> None:
 @pytest.mark.asyncio
 async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) -> None:
     """Test for the query method of the Top Pick provider."""
-
     await top_picks.initialize()
     assert await top_picks.query(srequest("am")) == []
     assert await top_picks.query(srequest("https://")) == []
@@ -170,7 +172,8 @@ async def test_short_domain_query(
 ) -> None:
     """Test the Top Pick Provider returns results for short domain queries.
     Ensure that matching suggestion and similar variants with low char
-    threshold return suggestions."""
+    threshold return suggestions.
+    """
     expected_suggestion: list[Suggestion] = [
         Suggestion(
             block_id=0,
@@ -217,10 +220,11 @@ async def test_short_domain_query_fails(
 async def test_short_domain_query_similars_longer_than_domain(
     query, title, url, srequest: SuggestionRequestFixture, top_picks: Provider
 ) -> None:
-    """Test suggestion results for similar inputs that are indexed for short domains. These
-    similar suggestion results may be longer than the input, so if the domain is
+    """Test suggestion results for similar inputs that are indexed for short domains.
+    These similar suggestion results may be longer than the input, so if the domain is
     categorized as short and the similar is longer than it, the result should
-    still return a valid suggestion as its characters will be a subset of the similar."""
+    still return a valid suggestion as its characters will be a subset of the similar.
+    """
     expected_suggestion: list[Suggestion] = [
         Suggestion(
             block_id=0,

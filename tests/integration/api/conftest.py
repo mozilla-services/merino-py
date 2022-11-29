@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Module for test fixtures for the integration test directory."""
+"""Module for test configurations for the integration test directory."""
 
 from logging import LogRecord
 from typing import Any, Iterator
@@ -37,8 +37,7 @@ def fixture_test_client_with_events() -> Iterator[TestClient]:
 
 @pytest.fixture(name="extract_request_summary_log_data")
 def fixture_extract_request_summary_log_data() -> RequestSummaryLogDataFixture:
-    """
-    Return a function that will extract the extra log data from a captured
+    """Return a function that will extract the extra log data from a captured
     "request.summary" log record
     """
 

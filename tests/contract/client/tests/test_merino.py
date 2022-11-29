@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Contract tests client."""
+
 import time
 from typing import Any, Callable
 
@@ -42,7 +44,6 @@ StepFunction = Callable[[Step], None]
 @pytest.fixture(scope="session", name="merino_url")
 def fixture_merino_url(request: Any) -> str:
     """Read the merino URL from the pytest config."""
-
     merino_url: str = request.config.option.merino_url
     return merino_url
 
@@ -139,7 +140,6 @@ def fixture_step_functions(
     kinto_step: StepFunction, merino_step: StepFunction
 ) -> dict[Service, StepFunction]:
     """Return a dict mapping from a service name to request function."""
-
     return {
         Service.KINTO: kinto_step,
         Service.MERINO: merino_step,
@@ -158,7 +158,6 @@ def assert_200_response(
     fetch_kinto_icon_url: Callable[[str], str],
 ) -> None:
     """Check that the content for a 200 OK response is what we expect."""
-
     expected_content_dict = step_content.dict(exclude=CONTENT_EXCLUDE)
     merino_content_dict = merino_content.dict(exclude=CONTENT_EXCLUDE)
     assert expected_content_dict == merino_content_dict
@@ -198,7 +197,6 @@ def assert_200_response(
 @pytest.fixture(scope="function", autouse=True)
 def fixture_function_teardown(kinto_environment: KintoEnvironment):
     """Execute instructions after each test."""
-
     yield  # Allow test to execute
 
     delete_records(kinto_environment)
@@ -206,7 +204,6 @@ def fixture_function_teardown(kinto_environment: KintoEnvironment):
 
 def test_merino(steps: list[Step], step_functions: dict[Service, StepFunction]) -> None:
     """Test for requesting suggestions from Merino."""
-
     for step in steps:
         # Process delay if defined in request model
         if (delay := step.request.delay) is not None:

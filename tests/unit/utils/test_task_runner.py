@@ -1,3 +1,9 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+"""Unit tests for the task_runner.py utility module."""
+
 import asyncio
 
 import pytest
@@ -14,6 +20,8 @@ SLOW_COROUTINE_DURATION = 0.5
 
 @pytest_asyncio.fixture(name="normal_task")
 async def fixture_normal_task() -> asyncio.Task:
+    """Return a function that will return True."""
+
     async def normal_op() -> bool:
         return True
 
@@ -22,6 +30,8 @@ async def fixture_normal_task() -> asyncio.Task:
 
 @pytest_asyncio.fixture(name="timedout_task")
 async def fixture_timedout_task() -> asyncio.Task:
+    """Return a function that will return True after a given SLOW_COROUTINE_DURATION."""
+
     async def some_slow_op() -> bool:
         await asyncio.sleep(SLOW_COROUTINE_DURATION)
         return True
@@ -31,6 +41,8 @@ async def fixture_timedout_task() -> asyncio.Task:
 
 @pytest_asyncio.fixture(name="raised_task")
 async def fixture_raised_task() -> asyncio.Task:
+    """Return a function that will raise a RuntimeError."""
+
     async def will_raise() -> None:
         raise RuntimeError("error")
 

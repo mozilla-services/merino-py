@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Load test."""
+
 import logging
 import os
 from random import choice, randint
@@ -47,7 +49,6 @@ RS_SUGGESTIONS: List[Dict] = []
 @events.test_start.add_listener
 def on_locust_test_start(environment, **kwargs):
     """Download suggestions from Kinto and store suggestions on workers."""
-
     if not isinstance(environment.runner, MasterRunner):
         return
 
@@ -86,7 +87,6 @@ def on_locust_init(environment, **kwargs):
 
 def request_suggestions(client: HttpSession, query: str) -> None:
     """Request suggestions from Merino for the given query string."""
-
     params: Dict[str, Any] = {"q": query}
 
     if CLIENT_VARIANTS:
@@ -120,6 +120,7 @@ class MerinoUser(HttpUser):
     """User that sends requests to the Merino API."""
 
     def on_start(self):
+        """Instructions to execute for each simulated user when they start."""
         # Create a Faker instance for generating random suggest queries
         self.faker = faker.Faker(locale="en-US", providers=["faker.providers.lorem"])
 
@@ -134,7 +135,6 @@ class MerinoUser(HttpUser):
     @task(weight=10)
     def rs_suggestions(self) -> None:
         """Send multiple requests for Remote Settings queries."""
-
         suggestion = choice(RS_SUGGESTIONS)  # nosec
 
         for query in suggestion["keywords"]:
@@ -143,7 +143,6 @@ class MerinoUser(HttpUser):
     @task(weight=90)
     def faker_suggestions(self) -> None:
         """Send multiple requests for random queries."""
-
         # This produces a query between 2 and 4 random words
         full_query = " ".join(self.faker.words(nb=randint(2, 4)))  # nosec
 
@@ -157,7 +156,6 @@ class MerinoUser(HttpUser):
     @task(weight=1)
     def wikifruit_suggestions(self) -> None:
         """Send multiple requests for random WikiFruit queries."""
-
         # These queries are supported by the WikiFruit provider
         for fruit in ("apple", "banana", "cherry"):
             request_suggestions(self.client, fruit)

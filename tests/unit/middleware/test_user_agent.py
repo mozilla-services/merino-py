@@ -14,7 +14,7 @@ from merino.middleware.user_agent import UserAgent, UserAgentMiddleware
 
 @pytest.fixture(name="user_agent_middleware")
 def fixture_user_agent_middleware(mocker: MockerFixture) -> UserAgentMiddleware:
-    """Creates a UserAgentMiddleware object for test"""
+    """Create a UserAgentMiddleware object for test."""
     asgiapp_mock = mocker.AsyncMock(spec=ASGIApp)
     return UserAgentMiddleware(asgiapp_mock)
 

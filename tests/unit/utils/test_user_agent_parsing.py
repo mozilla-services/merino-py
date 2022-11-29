@@ -1,3 +1,9 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+"""Unit tests for the user_agent_parsing.py utility module."""
+
 import pytest
 
 from merino.utils.user_agent_parsing import parse
@@ -81,6 +87,9 @@ SCENARIOS: list[Scenario] = [
     SCENARIOS,
 )
 def test_ua_parsing(ua, expected_browser, expected_os_family, expected_form_factor):
+    """Test that the parse method assigns the 'browser', 'os_family' and 'form_factor'
+    values as expected from a User-Agent heading.
+    """
     result = parse(ua)
 
     assert result["browser"] == expected_browser

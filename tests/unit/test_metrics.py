@@ -1,4 +1,8 @@
-"""Unit tests for the metrics client."""
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+"""Unit tests for the metrics.py module."""
 
 import aiodogstatsd
 import pytest
@@ -25,7 +29,6 @@ def fixture_metrics_client(statsd_mock):
 
 def test_unsupported_method(metrics_client: Client, statsd_mock):
     """Test that the metrics client raises an error for unsupported methods."""
-
     want = "attribute 'hello_world' is not supported by metrics.Client class"
 
     with pytest.raises(AttributeError) as exc_info:

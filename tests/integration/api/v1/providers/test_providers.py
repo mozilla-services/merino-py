@@ -77,8 +77,7 @@ def test_providers(
     expected_response: list[dict[str, str]],
     providers: dict[str, BaseProvider],
 ) -> None:
-    """
-    Test that the response to the 'providers' endpoint is as expected when 0-to-many
+    """Test that the response to the 'providers' endpoint is as expected when 0-to-many
     providers are registered with different availabilities
     """
     response = client.get("/api/v1/providers")
@@ -95,8 +94,7 @@ def test_providers_request_log_data(
     extract_request_summary_log_data: RequestSummaryLogDataFixture,
     client: TestClient,
 ) -> None:
-    """
-    Test that the request log for the 'providers' endpoint contains the required
+    """Test that the request log for the 'providers' endpoint contains the required
     extra data
     """
     caplog.set_level(logging.INFO)

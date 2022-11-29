@@ -32,8 +32,7 @@ class ProviderType(str, Enum):
 
 
 async def init_providers() -> None:
-    """
-    Initialize all suggestion providers.
+    """Initialize all suggestion providers.
 
     This should only be called once at the startup of application.
     """

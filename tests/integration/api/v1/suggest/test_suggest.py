@@ -25,11 +25,10 @@ from tests.types import FilterCaplogFixture
 
 @pytest.fixture(name="providers")
 def fixture_providers() -> Providers:
-    """
-    Define providers for this module which are injected automatically.
+    """Define providers for this module which are injected automatically.
 
     Note: This fixture will be overridden if a test method has a
-          'pytest.mark.parametrize' decorator with a 'providers' definition
+          'pytest.mark.parametrize' decorator with a 'providers' definition.
     """
     return {
         "sponsored-provider": SponsoredProvider(enabled_by_default=True),
@@ -38,6 +37,9 @@ def fixture_providers() -> Providers:
 
 
 def test_suggest_sponsored(client: TestClient) -> None:
+    """Test that the suggest endpoint response is as expected using a sponsored
+    provider.
+    """
     response = client.get("/api/v1/suggest?q=sponsored")
     assert response.status_code == 200
 
@@ -48,6 +50,9 @@ def test_suggest_sponsored(client: TestClient) -> None:
 
 
 def test_suggest_nonsponsored(client: TestClient) -> None:
+    """Test that the suggest endpoint response is as expected using a non-sponsored
+    provider.
+    """
     response = client.get("/api/v1/suggest?q=nonsponsored")
 
     assert response.status_code == 200
@@ -59,6 +64,9 @@ def test_suggest_nonsponsored(client: TestClient) -> None:
 
 
 def test_no_suggestion(client: TestClient) -> None:
+    """Test that the suggest endpoint response is as expected when no suggestions are
+    returned from providers.
+    """
     response = client.get("/api/v1/suggest?q=nope")
     assert response.status_code == 200
     assert len(response.json()["suggestions"]) == 0
@@ -66,9 +74,8 @@ def test_no_suggestion(client: TestClient) -> None:
 
 @pytest.mark.parametrize("query", ["sponsored", "nonsponsored"])
 def test_suggest_from_missing_providers(client: TestClient, query: str) -> None:
-    """
-    Despite the keyword being available for other providers, it should not return any
-    suggestions if the requested provider does not exist.
+    """Despite the keyword being available for other providers, it should not return
+    any suggestions if the requested provider does not exist.
     """
     response = client.get(f"/api/v1/suggest?q={query}&providers=nonexist")
     assert response.status_code == 200
@@ -76,11 +83,17 @@ def test_suggest_from_missing_providers(client: TestClient, query: str) -> None:
 
 
 def test_no_query_string(client: TestClient) -> None:
+    """Test that a status code of 400 is returned for suggest endpoint calls without
+    a query string.
+    """
     response = client.get("/api/v1/suggest")
     assert response.status_code == 400
 
 
 def test_client_variants(client: TestClient) -> None:
+    """Test that the suggest endpoint response is as expected when called with the
+    client_variants parameter.
+    """
     response = client.get("/api/v1/suggest?q=sponsored&client_variants=foo,bar")
     assert response.status_code == 200
 
@@ -96,9 +109,8 @@ def test_suggest_request_log_data(
     filter_caplog: FilterCaplogFixture,
     client: TestClient,
 ) -> None:
-    """
-    Tests that the request logs for the 'suggest' endpoint contain the required
-    extra data
+    """Tests that the request logs for the 'suggest' endpoint contain the required
+    extra data.
     """
     caplog.set_level(logging.INFO)
 
@@ -182,7 +194,7 @@ def test_suggest_with_invalid_geolocation_ip(
     filter_caplog: FilterCaplogFixture,
     client: TestClient,
 ) -> None:
-    """Test that a warning message is logged if geolocation data is invalid"""
+    """Test that a warning message is logged if geolocation data is invalid."""
     mock_client = mocker.patch("fastapi.Request.client")
     mock_client.host = "invalid-ip"
 
@@ -224,8 +236,8 @@ def test_suggest_metrics(
     url: str,
     expected_metric_keys: list[str],
 ) -> None:
-    """
-    Test that metrics are recorded for the 'suggest' endpoint (status codes: 200 & 400)
+    """Test that metrics are recorded for the 'suggest' endpoint
+    (status codes: 200 & 400).
     """
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
@@ -238,7 +250,7 @@ def test_suggest_metrics(
 
 @pytest.mark.parametrize("providers", [{"corrupt": CorruptProvider()}])
 def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
-    """Test that 500 status codes are recorded as metrics"""
+    """Test that 500 status codes are recorded as metrics."""
     error_msg = "test"
     expected_metric_keys = [
         "providers.corrupted.query",
@@ -294,9 +306,8 @@ def test_suggest_feature_flags_tags_in_metrics(
     expected_metric_keys: list,
     expected_tags: list,
 ):
-    """
-    Test that feature flags are added for the 'suggest' endpoint
-    (status codes: 200 & 400)
+    """Test that feature flags are added for the 'suggest' endpoint
+    (status codes: 200 & 400).
     """
     expected_tags_per_metric = {
         metric_key: expected_tags for metric_key in expected_metric_keys

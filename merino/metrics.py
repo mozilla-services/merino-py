@@ -163,8 +163,7 @@ async def configure_metrics() -> None:
 
 
 class _LocalDatagramLogger(aiodogstatsd.client.DatagramProtocol):
-    """
-    This class can be used to override the default DatagramProtocol.
+    """This class can be used to override the default DatagramProtocol.
     Instead of writing bytes to a socket, it logs them.
     The purpose is to make it easy to see the metrics in development environments.
     """

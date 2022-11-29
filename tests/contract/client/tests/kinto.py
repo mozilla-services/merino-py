@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+"""Module for communication with Kinto (Remote Settings)."""
+
 from typing import Optional
 
 import requests
@@ -68,7 +70,6 @@ class KintoResponse(BaseModel):
 
 def delete_records(environment: KintoEnvironment) -> None:
     """Clear all record information from Kinto."""
-
     url: str = (
         f"{environment.server}/v1/"
         f"buckets/{environment.bucket}/"
@@ -81,7 +82,6 @@ def delete_records(environment: KintoEnvironment) -> None:
 
 def get_record(environment: KintoEnvironment, record_id: str) -> KintoResponseRecord:
     """Get attachment information from Kinto for the given record ID."""
-
     url: str = (
         f"{environment.server}/v1/"
         f"buckets/{environment.bucket}/"
@@ -102,7 +102,6 @@ def upload_attachment(
     data_type: str,
 ) -> None:
     """Upload attachment to Kinto for the given record."""
-
     url: str = (
         f"{environment.server}/v1/"
         f"buckets/{environment.bucket}/"
@@ -126,7 +125,6 @@ def upload_attachment(
 
 def upload_icons(environment: KintoEnvironment, icon_ids: set[str]) -> None:
     """Upload icon attachments to Kinto for the given icon IDs."""
-
     for icon_id in icon_ids:
         url: str = (
             f"{environment.server}/v1/"
