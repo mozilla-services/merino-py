@@ -128,7 +128,7 @@ tests within a Python virtual environment to prevent dependency cross contaminat
 
     The following environment variables are set in `docker-compose.yml`, but will
     require local setup via command line, pytest.ini file or IDE configuration:
-    * `MERION_URL`: The URL of the Merino service
+    * `MERINO_URL`: The URL of the Merino service
       * Example: `MERINO_URL=http://localhost:8000`
     * `KINTO_URL`: The URL of the Kinto service
       * Example: `KINTO_URL=http://localhost:8888`

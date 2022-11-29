@@ -118,7 +118,7 @@ It is not advisable to put secrets in `configs/secrets.toml`.
 
 Dynaconf will use the specified values and environment variables in the
 `merino/configs/default.toml` file. You can change the environment you
-want to use as mentioned abouve, but for local changes to adapt to your
+want to use as mentioned above, but for local changes to adapt to your
 machine or tastes, you can put the configuration in `merino/configs/development.local.toml`.
 This file doesn't exist by default, so you will have to create it.
 Then simply copy from the other config files and make the adjustments
