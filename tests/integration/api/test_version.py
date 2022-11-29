@@ -30,8 +30,7 @@ def test_version(client: TestClient) -> None:
 
 
 def test_version_error(mocker: MockerFixture, client: TestClient) -> None:
-    """
-    Test that the version endpoint returns a 500 status if an error occurs while
+    """Test that the version endpoint returns a 500 status if an error occurs while
     evaluating the response.
     """
     mocker.patch("os.path.exists", return_value=False)
@@ -48,8 +47,7 @@ def test_version_request_log_data(
     extract_request_summary_log_data: RequestSummaryLogDataFixture,
     client: TestClient,
 ) -> None:
-    """
-    Test that the request log for the '__version__' endpoint contains the required
+    """Test that the request log for the '__version__' endpoint contains the required
     extra data.
     """
     caplog.set_level(logging.INFO)

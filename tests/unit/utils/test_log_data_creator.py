@@ -34,9 +34,8 @@ def test_create_request_summary_log_data(
     expected_agent: str | None,
     expected_lang: str | None,
 ) -> None:
-    """
-    Test that the create_request_summary_log_data method properly constructs log data
-    given different headers.
+    """Test that the create_request_summary_log_data method properly constructs log
+    data given different headers.
     """
     expected_log_data: dict[str, Any] = {
         "errno": 0,
@@ -104,8 +103,7 @@ def test_create_suggest_log_data(
     expected_providers: str,
     expected_seq: int | None,
 ) -> None:
-    """
-    Test that the create_suggest_log_data method properly constructs log data given
+    """Test that the create_suggest_log_data method properly constructs log data given
     different query parameters.
     """
     location: Location = Location(

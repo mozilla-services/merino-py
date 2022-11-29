@@ -37,8 +37,7 @@ def fixture_test_client_with_events() -> Iterator[TestClient]:
 
 @pytest.fixture(name="extract_request_summary_log_data")
 def fixture_extract_request_summary_log_data() -> RequestSummaryLogDataFixture:
-    """
-    Return a function that will extract the extra log data from a captured
+    """Return a function that will extract the extra log data from a captured
     "request.summary" log record
     """
 

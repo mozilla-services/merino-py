@@ -313,9 +313,8 @@ async def test_no_forecast_returned(
 async def test_invalid_location_key_current_conditions(
     accuweather: Provider, geolocation: Location
 ) -> None:
-    """
-    Test for a query that doesn't return current conditions due to an invalid location
-    key.
+    """Test for a query that doesn't return current conditions due to an invalid
+    location key.
     """
     set_response_bodies(
         current_conditions={
@@ -358,8 +357,7 @@ async def test_invalid_location_key_forecast(
 async def test_no_client_country_or_postal_code(
     caplog: LogCaptureFixture, accuweather: Provider, geolocation: Location
 ):
-    """
-    Test that if a client has an unknown country or postal code, that a warning is
+    """Test that if a client has an unknown country or postal code, that a warning is
     logged and no suggestions are returned.
     """
     set_response_bodies()

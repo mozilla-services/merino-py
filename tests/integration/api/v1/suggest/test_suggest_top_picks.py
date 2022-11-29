@@ -2,8 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""
-Integration tests for the Merino v1 suggest API endpoint configured with the
+"""Integration tests for the Merino v1 suggest API endpoint configured with the
 Top Picks provider.
 """
 

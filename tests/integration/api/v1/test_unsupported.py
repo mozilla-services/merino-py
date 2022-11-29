@@ -27,8 +27,7 @@ def test_unsupported_endpoint_request_log_data(
     extract_request_summary_log_data: RequestSummaryLogDataFixture,
     client: TestClient,
 ) -> None:
-    """
-    Test that the request log for unsupported endpoints contains the required extra
+    """Test that the request log for unsupported endpoints contains the required extra
     data.
     """
     caplog.set_level(logging.INFO)
@@ -85,8 +84,7 @@ def test_unsupported_endpoint_metrics(
 
 @pytest.mark.parametrize("providers", [{}])
 def test_unsupported_endpoint_flags(mocker: MockerFixture, client: TestClient) -> None:
-    """
-    Test that feature flags are not added for unsupported endpoints
+    """Test that feature flags are not added for unsupported endpoints
     (status code 404).
     """
     expected_tags_per_metric: dict[str, list[str]] = {"response.status_codes.404": []}

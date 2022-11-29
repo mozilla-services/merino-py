@@ -2,8 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""
-Unit tests for the featureflags.py module.
+"""Unit tests for the featureflags.py module.
 
 This module depends on testing.toml
 """
@@ -33,9 +32,8 @@ def test_not_enabled():
 
 
 def test_no_scheme_no_session_id(caplog):
-    """
-    Test that if a flag is defined without a 'scheme' then is_enabled will return False
-    and an error message will be logged.
+    """Test that if a flag is defined without a 'scheme' then is_enabled will return
+    False and an error message will be logged.
     """
     import logging
 
@@ -56,9 +54,8 @@ def test_no_scheme_no_session_id(caplog):
     ids=["session_id_on", "session_id_off"],
 )
 def test_no_scheme_default_session_id(bucket_id: str, want: bool):
-    """
-    Test that is_enabled returns as expected given a flag with no 'scheme' definition
-    and a given session_id_context.
+    """Test that is_enabled returns as expected given a flag with no 'scheme'
+    definition and a given session_id_context.
     """
     session_id_context.set(bucket_id)
     flags = FeatureFlags()

@@ -170,8 +170,7 @@ async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) ->
 async def test_short_domain_query(
     query, title, url, srequest: SuggestionRequestFixture, top_picks: Provider
 ) -> None:
-    """
-    Test the Top Pick Provider returns results for short domain queries.
+    """Test the Top Pick Provider returns results for short domain queries.
     Ensure that matching suggestion and similar variants with low char
     threshold return suggestions.
     """
@@ -221,9 +220,8 @@ async def test_short_domain_query_fails(
 async def test_short_domain_query_similars_longer_than_domain(
     query, title, url, srequest: SuggestionRequestFixture, top_picks: Provider
 ) -> None:
-    """
-    Test suggestion results for similar inputs that are indexed for short domains. These
-    similar suggestion results may be longer than the input, so if the domain is
+    """Test suggestion results for similar inputs that are indexed for short domains.
+    These similar suggestion results may be longer than the input, so if the domain is
     categorized as short and the similar is longer than it, the result should
     still return a valid suggestion as its characters will be a subset of the similar.
     """

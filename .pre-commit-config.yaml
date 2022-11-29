@@ -36,6 +36,8 @@ repos:
         args:
           - '--convention'
           - pep257
+          - '--add-select'
+          - 'D212'
           - '--add-ignore'
           - 'D105,D107,D203,D205,D400'
   - repo: 'https://github.com/pre-commit/mirrors-mypy'

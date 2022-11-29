@@ -11,8 +11,7 @@ from merino.config_logging import configure_logging
 
 
 def test_configure_logging_invalid_format():
-    """
-    Test that configure_logging will raise a ValueError when encountering unknown log
+    """Test that configure_logging will raise a ValueError when encountering unknown log
     formats.
     """
     old_format = settings.logging.format
@@ -27,9 +26,8 @@ def test_configure_logging_invalid_format():
 
 
 def test_configure_logging_mozlog_production():
-    """
-    Test that configure_logging will raise a ValueError when using a format other than
-    'mozlog' in production.
+    """Test that configure_logging will raise a ValueError when using a format other
+    than 'mozlog' in production.
     """
     with settings.using_env("production"):
         old_format = settings.logging.format

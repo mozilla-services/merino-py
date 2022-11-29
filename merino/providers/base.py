@@ -34,8 +34,7 @@ class BaseProvider(ABC):
 
     @abstractmethod
     async def initialize(self) -> None:
-        """
-        Abstract method for defining an initialize method for bootstrapping the Provider.
+        """Abstract method for defining an initialize method for bootstrapping the Provider.
         This allows us to use Async API's within as well as initialize providers in parallel
 
         """

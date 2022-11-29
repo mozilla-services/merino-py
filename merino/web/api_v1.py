@@ -45,8 +45,7 @@ async def suggest(
         get_providers
     ),
 ) -> JSONResponse:
-    """
-    Query Merino for suggestions.
+    """Query Merino for suggestions.
 
     Args:
     - `q`: The query string
@@ -123,8 +122,7 @@ async def providers(
         get_providers
     ),
 ) -> JSONResponse:
-    """
-    Query Merino for suggestion providers.
+    """Query Merino for suggestion providers.
 
     Returns:
     A list of search providers.

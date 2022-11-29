@@ -39,8 +39,7 @@ def test_error_request_log_data(
     extract_request_summary_log_data: RequestSummaryLogDataFixture,
     client: TestClient,
 ) -> None:
-    """
-    Test that the request log for the '__error__' endpoint contains the required
+    """Test that the request log for the '__error__' endpoint contains the required
     extra data.
     """
     caplog.set_level(logging.INFO)
@@ -97,8 +96,7 @@ def test_error_metrics(mocker: MockerFixture, client: TestClient) -> None:
 
 
 def test_error_feature_flags(mocker: MockerFixture, client: TestClient) -> None:
-    """
-    Test that feature flags are not added for the '__error__' endpoint
+    """Test that feature flags are not added for the '__error__' endpoint
     (status code 500).
     """
     expected_tags_per_metric: dict[str, list[str]] = {

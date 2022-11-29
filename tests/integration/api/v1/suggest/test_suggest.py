@@ -25,8 +25,7 @@ from tests.types import FilterCaplogFixture
 
 @pytest.fixture(name="providers")
 def fixture_providers() -> Providers:
-    """
-    Define providers for this module which are injected automatically.
+    """Define providers for this module which are injected automatically.
 
     Note: This fixture will be overridden if a test method has a
           'pytest.mark.parametrize' decorator with a 'providers' definition.
@@ -38,8 +37,7 @@ def fixture_providers() -> Providers:
 
 
 def test_suggest_sponsored(client: TestClient) -> None:
-    """
-    Test that the suggest endpoint response is as expected using a sponsored
+    """Test that the suggest endpoint response is as expected using a sponsored
     provider.
     """
     response = client.get("/api/v1/suggest?q=sponsored")
@@ -52,8 +50,7 @@ def test_suggest_sponsored(client: TestClient) -> None:
 
 
 def test_suggest_nonsponsored(client: TestClient) -> None:
-    """
-    Test that the suggest endpoint response is as expected using a non-sponsored
+    """Test that the suggest endpoint response is as expected using a non-sponsored
     provider.
     """
     response = client.get("/api/v1/suggest?q=nonsponsored")
@@ -67,8 +64,7 @@ def test_suggest_nonsponsored(client: TestClient) -> None:
 
 
 def test_no_suggestion(client: TestClient) -> None:
-    """
-    Test that the suggest endpoint response is as expected when no suggestions are
+    """Test that the suggest endpoint response is as expected when no suggestions are
     returned from providers.
     """
     response = client.get("/api/v1/suggest?q=nope")
@@ -78,9 +74,8 @@ def test_no_suggestion(client: TestClient) -> None:
 
 @pytest.mark.parametrize("query", ["sponsored", "nonsponsored"])
 def test_suggest_from_missing_providers(client: TestClient, query: str) -> None:
-    """
-    Despite the keyword being available for other providers, it should not return any
-    suggestions if the requested provider does not exist.
+    """Despite the keyword being available for other providers, it should not return
+    any suggestions if the requested provider does not exist.
     """
     response = client.get(f"/api/v1/suggest?q={query}&providers=nonexist")
     assert response.status_code == 200
@@ -88,8 +83,7 @@ def test_suggest_from_missing_providers(client: TestClient, query: str) -> None:
 
 
 def test_no_query_string(client: TestClient) -> None:
-    """
-    Test that a status code of 400 is returned for suggest endpoint calls without
+    """Test that a status code of 400 is returned for suggest endpoint calls without
     a query string.
     """
     response = client.get("/api/v1/suggest")
@@ -97,8 +91,7 @@ def test_no_query_string(client: TestClient) -> None:
 
 
 def test_client_variants(client: TestClient) -> None:
-    """
-    Test that the suggest endpoint response is as expected when called with the
+    """Test that the suggest endpoint response is as expected when called with the
     client_variants parameter.
     """
     response = client.get("/api/v1/suggest?q=sponsored&client_variants=foo,bar")
@@ -116,8 +109,7 @@ def test_suggest_request_log_data(
     filter_caplog: FilterCaplogFixture,
     client: TestClient,
 ) -> None:
-    """
-    Tests that the request logs for the 'suggest' endpoint contain the required
+    """Tests that the request logs for the 'suggest' endpoint contain the required
     extra data.
     """
     caplog.set_level(logging.INFO)
@@ -244,8 +236,7 @@ def test_suggest_metrics(
     url: str,
     expected_metric_keys: list[str],
 ) -> None:
-    """
-    Test that metrics are recorded for the 'suggest' endpoint
+    """Test that metrics are recorded for the 'suggest' endpoint
     (status codes: 200 & 400).
     """
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
@@ -318,8 +309,7 @@ def test_suggest_feature_flags(
     expected_metric_keys: list,
     expected_tags: list,
 ):
-    """
-    Test that feature flags are added for the 'suggest' endpoint
+    """Test that feature flags are added for the 'suggest' endpoint
     (status codes: 200 & 400).
     """
     expected_tags_per_metric = {

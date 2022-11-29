@@ -13,8 +13,7 @@ from tests.unit.types import SuggestionRequestFixture
 
 @pytest.fixture(scope="session", name="srequest")
 def fixture_srequest() -> SuggestionRequestFixture:
-    """
-    Return a function that will create a SuggestionRequest object with a given
+    """Return a function that will create a SuggestionRequest object with a given
     `query`
     """
 

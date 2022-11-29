@@ -13,9 +13,8 @@ from tests.types import FilterCaplogFixture
 
 @pytest.fixture(scope="session", name="filter_caplog")
 def fixture_filter_caplog() -> FilterCaplogFixture:
-    """
-    Return a function that will filter pytest captured log records for a given logger
-    name
+    """Return a function that will filter pytest captured log records for a given logger
+    name.
     """
 
     def filter_caplog(records: list[LogRecord], logger_name: str) -> list[LogRecord]:

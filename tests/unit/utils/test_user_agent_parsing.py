@@ -87,8 +87,7 @@ SCENARIOS: list[Scenario] = [
     SCENARIOS,
 )
 def test_ua_parsing(ua, expected_browser, expected_os_family, expected_form_factor):
-    """
-    Test that the parse method assigns the 'browser', 'os_family' and 'form_factor'
+    """Test that the parse method assigns the 'browser', 'os_family' and 'form_factor'
     values as expected from a User-Agent heading.
     """
     result = parse(ua)

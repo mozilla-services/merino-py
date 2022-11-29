@@ -67,9 +67,8 @@ async def test_geolocation_address_not_found(
     receive_mock: Receive,
     send_mock: Send,
 ) -> None:
-    """
-    Test that no assignment of Location properties takes place, given a request with an
-    unrecognised IP address.
+    """Test that no assignment of Location properties takes place, given a request
+    with an unrecognised IP address.
     """
     expected_location: Location = Location()
     scope["client"] = ["255.255.255.255", 50000]  # IP and port
@@ -89,8 +88,7 @@ async def test_geolocation_client_ip_override(
     receive_mock: Receive,
     send_mock: Send,
 ) -> None:
-    """
-    Test that the CLIENT_IP_OVERRIDE environment variable will take precedence over
+    """Test that the CLIENT_IP_OVERRIDE environment variable will take precedence over
     request IP assignment.
     """
     expected_location: Location = Location(
@@ -117,9 +115,8 @@ async def test_geolocation_invalid_address(
     send_mock: Send,
     client_ip_and_port: list,
 ) -> None:
-    """
-    Test that a warning is logged and no assignment of Location properties takes place,
-    given a request with an unexpected IP addresses.
+    """Test that a warning is logged and no assignment of Location properties takes
+    place, given a request with an unexpected IP addresses.
     """
     expected_location: Location = Location()
     scope["client"] = client_ip_and_port
@@ -138,9 +135,8 @@ async def test_geolocation_invalid_scope_type(
     receive_mock: Receive,
     send_mock: Send,
 ) -> None:
-    """
-    Test that no action, Location assignment or logging, takes place for an unexpected
-    Scope type.
+    """Test that no action, Location assignment or logging, takes place for an
+    unexpected Scope type.
     """
     scope: Scope = {"type": "not-http"}
 
