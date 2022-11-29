@@ -271,23 +271,20 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
     assert str(excinfo.value) == error_msg
 
 
-@pytest.mark.skip(reason="currently no feature flags in use")
 @pytest.mark.parametrize(
     ["url", "expected_metric_keys", "expected_tags"],
     [
         (
             "/api/v1/suggest?q=none",
             [
+                "providers.sponsored.query",
+                "providers.non-sponsored.query",
                 "get.api.v1.suggest.timing",
                 "get.api.v1.suggest.status_codes.200",
-                "providers.adm.query",
-                "providers.wiki_fruit.query",
-                "providers.top_picks.query",
                 "response.status_codes.200",
             ],
             [
-                "feature_flag.test-perc-enabled",
-                "feature_flag.test-perc-enabled-session",
+                "feature_flag.test_flight_01",
             ],
         ),
         (
@@ -302,7 +299,7 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
     ],
     ids=["200_with_feature_flags_tags", "400_no_tags"],
 )
-def test_suggest_feature_flags(
+def test_suggest_feature_flags_tags_in_metrics(
     mocker: MockerFixture,
     client: TestClient,
     url: str,

@@ -27,7 +27,7 @@ such as `config_sentry.py` or `config_logging.py`.
 - Local configuration files are not checked into the repository, but if created should be named
   `configs/development.local.toml`, following the format of `<environment>.local.toml`.
   This file is listed in the `.gitignore` file and is safe to use for local configuration.
-  One may secrets here if desired, though it is advised to exercise great caution.
+  One may add secrets here if desired, though it is advised to exercise great caution.
 
 ### General
 
