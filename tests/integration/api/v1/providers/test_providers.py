@@ -29,18 +29,18 @@ from tests.types import FilterCaplogFixture
         ([], {}),
         (
             [
-                {"id": "sponsored-provider", "availability": "enabled_by_default"},
+                {"id": "sponsored", "availability": "enabled_by_default"},
             ],
             {
-                "sponsored-provider": SponsoredProvider(enabled_by_default=True),
+                "sponsored": SponsoredProvider(enabled_by_default=True),
             },
         ),
         (
             [
-                {"id": "sponsored-provider", "availability": "disabled_by_default"},
+                {"id": "sponsored", "availability": "disabled_by_default"},
             ],
             {
-                "sponsored-provider": SponsoredProvider(enabled_by_default=False),
+                "sponsored": SponsoredProvider(enabled_by_default=False),
             },
         ),
         (
@@ -53,13 +53,13 @@ from tests.types import FilterCaplogFixture
         ),
         (
             [
-                {"id": "sponsored-provider", "availability": "enabled_by_default"},
-                {"id": "nonsponsored-provider", "availability": "disabled_by_default"},
+                {"id": "sponsored", "availability": "enabled_by_default"},
+                {"id": "nonsponsored", "availability": "disabled_by_default"},
                 {"id": "hidden-provider", "availability": "hidden"},
             ],
             {
-                "sponsored-provider": SponsoredProvider(enabled_by_default=True),
-                "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=False),
+                "sponsored": SponsoredProvider(enabled_by_default=True),
+                "nonsponsored": NonsponsoredProvider(enabled_by_default=False),
                 "hidden-provider": HiddenProvider(enabled_by_default=True),
             },
         ),
