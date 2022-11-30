@@ -31,8 +31,8 @@ def fixture_providers() -> Providers:
           'pytest.mark.parametrize' decorator with a 'providers' definition.
     """
     return {
-        "sponsored-provider": SponsoredProvider(enabled_by_default=True),
-        "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
+        "sponsored": SponsoredProvider(enabled_by_default=True),
+        "non-sponsored": NonsponsoredProvider(enabled_by_default=True),
     }
 
 
@@ -214,6 +214,11 @@ def test_suggest_with_invalid_geolocation_ip(
             [
                 "providers.sponsored.query",
                 "providers.non-sponsored.query",
+                "suggestions-per.request",
+                # suggestions-per.provider gets called twice
+                # because there are 2 active providers
+                "suggestions-per.provider",
+                "suggestions-per.provider",
                 "get.api.v1.suggest.timing",
                 "get.api.v1.suggest.status_codes.200",
                 "response.status_codes.200",
@@ -272,18 +277,21 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
-    ["url", "expected_metric_keys", "expected_tags"],
+    ["url", "expected_metric_keys", "feature_flag_tag", "should_contain_ff_tag"],
     [
         (
             "/api/v1/suggest?q=none",
             [
                 "providers.sponsored.query",
                 "providers.non-sponsored.query",
+                "suggestions-per.request",
+                "suggestions-per.provider",
                 "get.api.v1.suggest.timing",
                 "get.api.v1.suggest.status_codes.200",
                 "response.status_codes.200",
             ],
-            [],
+            "feature_flag.test_flight_01",
+            False,
         ),
         (
             "/api/v1/suggest",
@@ -292,7 +300,8 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
                 "get.api.v1.suggest.status_codes.400",
                 "response.status_codes.400",
             ],
-            [],
+            "feature_flag.test_flight_01",
+            False,
         ),
     ],
     ids=["200_with_feature_flags_tags", "400_no_tags"],
@@ -302,15 +311,12 @@ def test_suggest_feature_flags_tags_in_metrics(
     client: TestClient,
     url: str,
     expected_metric_keys: list,
-    expected_tags: list,
+    feature_flag_tag: str,
+    should_contain_ff_tag: bool,
 ):
     """Test that feature flags are added for the 'suggest' endpoint
     (status codes: 200 & 400).
     """
-    expected_tags_per_metric = {
-        metric_key: expected_tags for metric_key in expected_metric_keys
-    }
-
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
     client.get(url)
@@ -319,4 +325,7 @@ def test_suggest_feature_flags_tags_in_metrics(
     tags_per_metric = {
         call.args[0]: [*call.args[3].keys()] for call in report.call_args_list
     }
-    assert tags_per_metric == expected_tags_per_metric
+    for metric in expected_metric_keys:
+        tags = tags_per_metric.get(metric)
+        assert tags is not None
+        assert should_contain_ff_tag == (feature_flag_tag in tags)

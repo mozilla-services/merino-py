@@ -102,12 +102,35 @@ async def suggest(
         )
     )
 
+    emit_suggestions_per_metrics(
+        metrics_client, suggestions, list(active_providers.keys())
+    )
+
     response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),
         client_variants=client_variants.split(",") if client_variants else [],
     )
     return JSONResponse(content=jsonable_encoder(response))
+
+
+def emit_suggestions_per_metrics(
+    metrics_client: Client, suggestions: list, active_providers: list
+) -> None:
+    """Emit metrics for suggestions per request and suggestions per request by provider."""
+    metrics_client.histogram("suggestions-per.request", value=len(suggestions))
+
+    provider_suggestion_count = {p: 0 for p in active_providers}
+
+    for suggestion in suggestions:
+        provider_suggestion_count[suggestion.provider] += 1
+
+    for provider, suggestion_count in provider_suggestion_count.items():
+        metrics_client.histogram(
+            "suggestions-per.provider",
+            value=suggestion_count,
+            tags={"provider": provider},
+        )
 
 
 @router.get(

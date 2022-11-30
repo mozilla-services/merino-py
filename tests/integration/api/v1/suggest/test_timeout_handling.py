@@ -63,6 +63,11 @@ def test_with_timedout_provider(
     expected_metric_keys = [
         "providers.sponsored.query",
         "providers.timedout-sponsored.query.timeout",
+        "suggestions-per.request",
+        # suggestions-per.provider gets called twice
+        # because there are 2 active providers
+        "suggestions-per.provider",
+        "suggestions-per.provider",
         "get.api.v1.suggest.timing",
         "get.api.v1.suggest.status_codes.200",
         "response.status_codes.200",
