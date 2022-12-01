@@ -1,9 +1,9 @@
 """Merino V1 API"""
 import logging
 from asyncio import Task
+from collections import Counter
 from functools import partial
 from itertools import chain
-from typing import Iterable
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends
@@ -103,7 +103,7 @@ async def suggest(
         )
     )
 
-    emit_suggestions_per_metrics(metrics_client, suggestions, active_providers.keys())
+    emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 
     response = SuggestResponse(
         suggestions=suggestions,
@@ -116,21 +116,20 @@ async def suggest(
 def emit_suggestions_per_metrics(
     metrics_client: Client,
     suggestions: list[BaseSuggestion],
-    active_providers: Iterable[str],
+    searched_providers: list[BaseProvider],
 ) -> None:
     """Emit metrics for suggestions per request and suggestions per request by provider."""
     metrics_client.histogram("suggestions-per.request", value=len(suggestions))
 
-    provider_suggestion_count = {p: 0 for p in active_providers}
+    suggestion_counter = Counter(suggestion.provider for suggestion in suggestions)
 
-    for suggestion in suggestions:
-        provider_suggestion_count[suggestion.provider] += 1
-
-    for provider, suggestion_count in provider_suggestion_count.items():
+    for provider in searched_providers:
+        provider_name = provider.name
+        suggestion_count = suggestion_counter[provider_name]
         metrics_client.histogram(
             "suggestions-per.provider",
             value=suggestion_count,
-            tags={"provider": provider},
+            tags={"provider": provider_name},
         )
 
 
