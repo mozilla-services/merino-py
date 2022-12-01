@@ -14,10 +14,3 @@
 #   the flag is 'off' (meaning that a check for the flag will return False 100%
 #   of the time) and a value of 1 indicates that the flag is 'on' for all.
 # enabled=0.5
-
-# We define the following feature flag in the default config, so we can learn
-# about using StatsD tags as query filters in our Grafana dashboard, while we
-# don't use any actual feature flags in the suggest API.
-[default.flags.test_flight_01]
-scheme = 'random'
-enabled = 0.5

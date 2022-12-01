@@ -11,7 +11,6 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 from merino.config import settings
-from merino.featureflags import FeatureFlags
 from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
@@ -59,13 +58,10 @@ async def suggest(
     Returns:
     A list of suggestions or an empty list if nothing was found.
     """
-    feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
-
-    if decision := feature_flags.is_enabled("test_flight_01"):
-        logger.debug(
-            "feature flag test_flight_01 is enabled for this request",
-            extra={"test_flight_01": decision},
-        )
+    # Do you plan to release code behind a feature flag? Uncomment the following
+    # line to get access to feature flags and then check if your feature flag is
+    # enabled for this request by calling feature_flags.is_enabled("example").
+    # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
 
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
 
