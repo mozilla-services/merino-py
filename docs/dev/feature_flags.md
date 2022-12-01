@@ -80,3 +80,13 @@ feature_flag.<feature_flag_name>
 
 For more information about this see the `ClientMeta` meta class and the
 `add_feature_flags` decorator in `merino/metrics.py`.
+
+## Monitoring in Grafana
+
+Because feature flag decisions are automatically added as tags to emitted
+metrics, you can use them in your queries in Grafana. 📈
+
+For example, if you want to group by decisions for a feature flag with name
+`hello_world`, you can use `tag(feature_flag.hello_world)` in `GROUP BY` in
+Grafana. You can also use `[[tag_feature_flag.hello_world]]` in the `ALIAS` for
+panel legends.

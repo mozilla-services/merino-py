@@ -283,9 +283,7 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
                 "get.api.v1.suggest.status_codes.200",
                 "response.status_codes.200",
             ],
-            [
-                "feature_flag.test_flight_01",
-            ],
+            [],
         ),
         (
             "/api/v1/suggest",
