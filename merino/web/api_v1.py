@@ -3,6 +3,7 @@ import logging
 from asyncio import Task
 from functools import partial
 from itertools import chain
+from typing import Iterable
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends
@@ -14,7 +15,7 @@ from merino.config import settings
 from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
-from merino.providers.base import BaseProvider, SuggestionRequest
+from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.utils import task_runner
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
@@ -102,9 +103,7 @@ async def suggest(
         )
     )
 
-    emit_suggestions_per_metrics(
-        metrics_client, suggestions, list(active_providers.keys())
-    )
+    emit_suggestions_per_metrics(metrics_client, suggestions, active_providers.keys())
 
     response = SuggestResponse(
         suggestions=suggestions,
@@ -115,7 +114,9 @@ async def suggest(
 
 
 def emit_suggestions_per_metrics(
-    metrics_client: Client, suggestions: list, active_providers: list
+    metrics_client: Client,
+    suggestions: list[BaseSuggestion],
+    active_providers: Iterable[str],
 ) -> None:
     """Emit metrics for suggestions per request and suggestions per request by provider."""
     metrics_client.histogram("suggestions-per.request", value=len(suggestions))
