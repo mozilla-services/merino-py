@@ -73,7 +73,7 @@ log inspection interfaces.
 
 > A note on timers: Statsd timers are measured in milliseconds, and are reported
 > as integers (at least in Cadence). Milliseconds are often not precise enough
-> for the tasks we want to measure in Merino. Instead we use generic histograms
+> for the tasks we want to measure in Merino. Instead, we use generic histograms
 > to record microsecond times. Metrics recorded in this way should have `-us`
 > appended to their name, to mark the units used (since we shouldn't put the
 > proper unit μs in metric names).
@@ -87,26 +87,34 @@ log inspection interfaces.
   **Example**:
   `merino.providers.initialize.adm`
 
-- `<http_method>.<url_path>.status_codes.<status_code>` - A counter to measure
+- `merino.<http_method>.<url_path>.status_codes.<status_code>` - A counter to measure
   the status codes of an HTTP method for the `<url_path>`.
 
   **Example**:
-  `get.api.v1.suggest.status_codes.200`
+  `merino.get.api.v1.suggest.status_codes.200`
 
-- `<http_method>.<url_path>.timing` - A timer to measure the duration (in ms)
+- `merino.<http_method>.<url_path>.timing` - A timer to measure the duration (in ms)
   of an HTTP method for a URL path.
 
   **Example**:
-  `get.api.v1.suggest.timing`
+  `merino.get.api.v1.suggest.timing`
 
-- `<provider_module>.query` - A timer to measure the query duration (in ms) of
+- `merino.<provider_module>.query` - A timer to measure the query duration (in ms) of
   a certain suggestion provider.
 
   **Example**:
   `merino.providers.adm.query`
 
-- `<provider_module>.query.timeout` - A counter to measure the query timeouts of
+- `merino.<provider_module>.query.timeout` - A counter to measure the query timeouts of
   a certain suggestion provider.
 
   **Example**:
   `merino.providers.wikipedia.query.timeout`
+
+- `merino.suggestions-per.request` - A histogram metric to get the distribution of
+  suggestions per request.
+
+- `merino.suggestions-per.provider` - A histogram metric to get the distribution of
+  suggestions returned per provider (per request).
+  This metric is tagged with the provider name, so that aggregation can happen 
+  per provider or across all providers.
