@@ -216,7 +216,8 @@ def test_suggest_with_invalid_geolocation_ip(
                 "providers.non-sponsored.query",
                 "suggestions-per.request",
                 # suggestions-per.provider gets called twice
-                # because there are 2 active providers
+                # because there are 2 providers specified in
+                # injected into this test by fixture_providers
                 "suggestions-per.provider",
                 "suggestions-per.provider",
                 "get.api.v1.suggest.timing",
