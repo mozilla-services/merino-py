@@ -971,6 +971,13 @@ tags to the emitted metrics.</p>
 </code></pre>
 <p>For more information about this see the <code>ClientMeta</code> meta class and the
 <code>add_feature_flags</code> decorator in <code>merino/metrics.py</code>.</p>
+<h2 id="monitoring-in-grafana"><a class="header" href="#monitoring-in-grafana">Monitoring in Grafana</a></h2>
+<p>Because feature flag decisions are automatically added as tags to emitted
+metrics, you can use them in your queries in Grafana. 📈</p>
+<p>For example, if you want to group by decisions for a feature flag with name
+<code>hello_world</code>, you can use <code>tag(feature_flag.hello_world)</code> in <code>GROUP BY</code> in
+Grafana. You can also use <code>[[tag_feature_flag.hello_world]]</code> in the <code>ALIAS</code> for
+panel legends.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="testing-strategies"><a class="header" href="#testing-strategies">Testing strategies</a></h1>
 <p>Merino is tested using a four tier strategy composed of unit, integration, contract
 and load testing.</p>
