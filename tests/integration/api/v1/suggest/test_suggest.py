@@ -277,7 +277,7 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
-    ["url", "expected_metric_keys", "feature_flag_tag", "should_contain_ff_tag"],
+    ["url", "expected_metric_keys", "expected_feature_flag_tags"],
     [
         (
             "/api/v1/suggest?q=none",
@@ -290,8 +290,7 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
                 "get.api.v1.suggest.status_codes.200",
                 "response.status_codes.200",
             ],
-            "feature_flag.test_flight_01",
-            False,
+            [],
         ),
         (
             "/api/v1/suggest",
@@ -300,8 +299,7 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
                 "get.api.v1.suggest.status_codes.400",
                 "response.status_codes.400",
             ],
-            "feature_flag.test_flight_01",
-            False,
+            [],
         ),
     ],
     ids=["200_with_feature_flags_tags", "400_no_tags"],
@@ -311,21 +309,25 @@ def test_suggest_feature_flags_tags_in_metrics(
     client: TestClient,
     url: str,
     expected_metric_keys: list,
-    feature_flag_tag: str,
-    should_contain_ff_tag: bool,
+    expected_feature_flag_tags: list,
 ):
     """Test that feature flags are added for the 'suggest' endpoint
     (status codes: 200 & 400).
     """
+    expected_tags_per_metric = {
+        metric_key: expected_feature_flag_tags for metric_key in expected_metric_keys
+    }
+
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
     client.get(url)
 
     # TODO: Remove reliance on internal details of aiodogstatsd
-    tags_per_metric = {
-        call.args[0]: [*call.args[3].keys()] for call in report.call_args_list
+    feature_flag_tags_per_metric = {
+        call.args[0]: [
+            tag for tag in call.args[3].keys() if tag.startswith("feature_flag.")
+        ]
+        for call in report.call_args_list
     }
-    for metric in expected_metric_keys:
-        tags = tags_per_metric.get(metric)
-        assert tags is not None
-        assert should_contain_ff_tag == (feature_flag_tag in tags)
+
+    assert expected_tags_per_metric == feature_flag_tags_per_metric
