@@ -369,15 +369,15 @@ type <code>about:config</code> in the URL bar set the Firefox preference
 Merino will connect to the production environments. This is controlled with the
 <code>browser.urlbar.merino.endpointURL</code> preference. See below for other options.</p>
 <p>You can also query any of the endpoint URLs below with something like:</p>
-<pre><code class="language-sh">curl 'https://stagepy.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest?q=your+query'
+<pre><code class="language-sh">curl 'https://stage.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest?q=your+query'
 </code></pre>
 <h2 id="environments"><a class="header" href="#environments">Environments</a></h2>
 <h3 id="production"><a class="header" href="#production">Production</a></h3>
-<p><em>Endpoint URL</em>: <a href="https://merinopy.services.mozilla.com/api/v1/suggest">https://merinopy.services.mozilla.com/api/v1/suggest</a></p>
+<p><em>Endpoint URL</em>: <a href="https://merino.services.mozilla.com/api/v1/suggest">https://merino.services.mozilla.com/api/v1/suggest</a></p>
 <p>The primary environment for end users. Firefox is configured to use this by
 default.</p>
 <h3 id="stage"><a class="header" href="#stage">Stage</a></h3>
-<p><em>Endpoint URL</em>: <a href="https://stagepy.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest">https://stagepy.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest</a></p>
+<p><em>Endpoint URL</em>: <a href="https://stage.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest">https://stage.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest</a></p>
 <p>This environment is used for manual and load testing of the server. It is not
 guaranteed to be stable or available. It is used as a part of the deploy process
 to verify new releases before they got to production.</p>
@@ -1117,7 +1117,7 @@ CI. We run them manually to simulate real-world load on the Merino infrastructur
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-release-process"><a class="header" href="#the-release-process">The Release Process</a></h1>
 <p>This project currently follows a <a href="https://en.wikipedia.org/wiki/Continuous_delivery">Continuous Delivery</a> process, but it's gradually moving toward <a href="https://en.wikipedia.org/wiki/Continuous_deployment">Continuous Deployment</a>.</p>
 <p>Whenever a commit is pushed to this repository's <code>main</code> branch, the deployment pipeline kicks in, deploying the changeset to the <a href="dev/../firefox.html#stage"><code>stage</code> environment</a>.
-After the deployment is complete, accessing the <a href="https://stagepy.merino.nonprod.cloudops.mozgcp.net/__version__"><code>__version__</code> endpoint</a> will show the commit hash of the deployed version, which will eventually match to the one of the latest commit on the <code>main</code> branch (a node with an older version might still serve the request before it is shut down).</p>
+After the deployment is complete, accessing the <a href="https://stage.merino.nonprod.cloudops.mozgcp.net/__version__"><code>__version__</code> endpoint</a> will show the commit hash of the deployed version, which will eventually match to the one of the latest commit on the <code>main</code> branch (a node with an older version might still serve the request before it is shut down).</p>
 <h2 id="development-guidelines"><a class="header" href="#development-guidelines">Development Guidelines</a></h2>
 <p>Please see the <a href="dev/../../CONTRIBUTING.html">CONTRIBUTING.md</a> docs on commit guidelines and pull request best practices.</p>
 <h2 id="versioning"><a class="header" href="#versioning">Versioning</a></h2>

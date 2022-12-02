@@ -144,7 +144,7 @@
                         <h1 id="the-release-process"><a class="header" href="#the-release-process">The Release Process</a></h1>
 <p>This project currently follows a <a href="https://en.wikipedia.org/wiki/Continuous_delivery">Continuous Delivery</a> process, but it's gradually moving toward <a href="https://en.wikipedia.org/wiki/Continuous_deployment">Continuous Deployment</a>.</p>
 <p>Whenever a commit is pushed to this repository's <code>main</code> branch, the deployment pipeline kicks in, deploying the changeset to the <a href="../firefox.html#stage"><code>stage</code> environment</a>.
-After the deployment is complete, accessing the <a href="https://stagepy.merino.nonprod.cloudops.mozgcp.net/__version__"><code>__version__</code> endpoint</a> will show the commit hash of the deployed version, which will eventually match to the one of the latest commit on the <code>main</code> branch (a node with an older version might still serve the request before it is shut down).</p>
+After the deployment is complete, accessing the <a href="https://stage.merino.nonprod.cloudops.mozgcp.net/__version__"><code>__version__</code> endpoint</a> will show the commit hash of the deployed version, which will eventually match to the one of the latest commit on the <code>main</code> branch (a node with an older version might still serve the request before it is shut down).</p>
 <h2 id="development-guidelines"><a class="header" href="#development-guidelines">Development Guidelines</a></h2>
 <p>Please see the <a href="../../CONTRIBUTING.html">CONTRIBUTING.md</a> docs on commit guidelines and pull request best practices.</p>
 <h2 id="versioning"><a class="header" href="#versioning">Versioning</a></h2>
