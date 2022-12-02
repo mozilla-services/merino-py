@@ -1,6 +1,7 @@
 """Merino V1 API"""
 import logging
 from asyncio import Task
+from collections import Counter
 from functools import partial
 from itertools import chain
 
@@ -14,7 +15,7 @@ from merino.config import settings
 from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
-from merino.providers.base import BaseProvider, SuggestionRequest
+from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.utils import task_runner
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
@@ -102,12 +103,33 @@ async def suggest(
         )
     )
 
+    emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
+
     response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),
         client_variants=client_variants.split(",") if client_variants else [],
     )
     return JSONResponse(content=jsonable_encoder(response))
+
+
+def emit_suggestions_per_metrics(
+    metrics_client: Client,
+    suggestions: list[BaseSuggestion],
+    searched_providers: list[BaseProvider],
+) -> None:
+    """Emit metrics for suggestions per request and suggestions per request by provider."""
+    metrics_client.histogram("suggestions-per.request", value=len(suggestions))
+
+    suggestion_counter = Counter(suggestion.provider for suggestion in suggestions)
+
+    for provider in searched_providers:
+        provider_name = provider.name
+        suggestion_count = suggestion_counter[provider_name]
+        metrics_client.histogram(
+            f"suggestions-per.provider.{provider_name}",
+            value=suggestion_count,
+        )
 
 
 @router.get(

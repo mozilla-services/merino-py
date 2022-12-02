@@ -31,8 +31,8 @@ def fixture_providers() -> Providers:
           'pytest.mark.parametrize' decorator with a 'providers' definition.
     """
     return {
-        "sponsored-provider": SponsoredProvider(enabled_by_default=True),
-        "nonsponsored-provider": NonsponsoredProvider(enabled_by_default=True),
+        "sponsored": SponsoredProvider(enabled_by_default=True),
+        "non-sponsored": NonsponsoredProvider(enabled_by_default=True),
     }
 
 
@@ -214,6 +214,9 @@ def test_suggest_with_invalid_geolocation_ip(
             [
                 "providers.sponsored.query",
                 "providers.non-sponsored.query",
+                "suggestions-per.request",
+                "suggestions-per.provider.sponsored",
+                "suggestions-per.provider.non-sponsored",
                 "get.api.v1.suggest.timing",
                 "get.api.v1.suggest.status_codes.200",
                 "response.status_codes.200",
@@ -272,13 +275,16 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
-    ["url", "expected_metric_keys", "expected_tags"],
+    ["url", "expected_metric_keys", "expected_feature_flag_tags"],
     [
         (
             "/api/v1/suggest?q=none",
             [
                 "providers.sponsored.query",
                 "providers.non-sponsored.query",
+                "suggestions-per.request",
+                "suggestions-per.provider.sponsored",
+                "suggestions-per.provider.non-sponsored",
                 "get.api.v1.suggest.timing",
                 "get.api.v1.suggest.status_codes.200",
                 "response.status_codes.200",
@@ -302,13 +308,13 @@ def test_suggest_feature_flags_tags_in_metrics(
     client: TestClient,
     url: str,
     expected_metric_keys: list,
-    expected_tags: list,
+    expected_feature_flag_tags: list,
 ):
     """Test that feature flags are added for the 'suggest' endpoint
     (status codes: 200 & 400).
     """
     expected_tags_per_metric = {
-        metric_key: expected_tags for metric_key in expected_metric_keys
+        metric_key: expected_feature_flag_tags for metric_key in expected_metric_keys
     }
 
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
@@ -316,7 +322,11 @@ def test_suggest_feature_flags_tags_in_metrics(
     client.get(url)
 
     # TODO: Remove reliance on internal details of aiodogstatsd
-    tags_per_metric = {
-        call.args[0]: [*call.args[3].keys()] for call in report.call_args_list
+    feature_flag_tags_per_metric = {
+        call.args[0]: [
+            tag for tag in call.args[3].keys() if tag.startswith("feature_flag.")
+        ]
+        for call in report.call_args_list
     }
-    assert tags_per_metric == expected_tags_per_metric
+
+    assert expected_tags_per_metric == feature_flag_tags_per_metric

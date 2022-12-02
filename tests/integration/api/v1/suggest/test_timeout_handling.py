@@ -63,6 +63,9 @@ def test_with_timedout_provider(
     expected_metric_keys = [
         "providers.sponsored.query",
         "providers.timedout-sponsored.query.timeout",
+        "suggestions-per.request",
+        "suggestions-per.provider.sponsored",
+        "suggestions-per.provider.timedout-sponsored",
         "get.api.v1.suggest.timing",
         "get.api.v1.suggest.status_codes.200",
         "response.status_codes.200",

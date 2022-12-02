@@ -27,7 +27,7 @@ scenarios:
                 url: "https://en.wikipedia.org/wiki/Apple"
                 impression_url: "https://127.0.0.1/"
                 click_url: "https://127.0.0.1/"
-                provider: "test_wiki_fruit"
+                provider: "wiki_fruit"
                 advertiser: "test_advertiser"
                 is_sponsored: false
                 icon: "https://en.wikipedia.org/favicon.ico"
@@ -60,7 +60,7 @@ scenarios:
                 url: "https://en.wikipedia.org/wiki/Apple"
                 impression_url: "https://127.0.0.1/"
                 click_url: "https://127.0.0.1/"
-                provider: "test_wiki_fruit"
+                provider: "wiki_fruit"
                 advertiser: "test_advertiser"
                 is_sponsored: false
                 icon: "https://en.wikipedia.org/favicon.ico"
@@ -91,7 +91,7 @@ scenarios:
                 url: "https://en.wikipedia.org/wiki/Cherry"
                 impression_url: "https://127.0.0.1/"
                 click_url: "https://127.0.0.1/"
-                provider: "test_wiki_fruit"
+                provider: "wiki_fruit"
                 advertiser: "test_advertiser"
                 is_sponsored: false
                 icon: "https://en.wikipedia.org/favicon.ico"
@@ -176,7 +176,7 @@ scenarios:
                 url: "https://en.wikipedia.org/wiki/Banana"
                 impression_url: "https://127.0.0.1/"
                 click_url: "https://127.0.0.1/"
-                provider: "test_wiki_fruit"
+                provider: "wiki_fruit"
                 advertiser: "test_advertiser"
                 is_sponsored: false
                 icon: https://en.wikipedia.org/favicon.ico
