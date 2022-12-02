@@ -64,11 +64,8 @@ def test_with_timedout_provider(
         "providers.sponsored.query",
         "providers.timedout-sponsored.query.timeout",
         "suggestions-per.request",
-        # suggestions-per.provider gets called twice
-        # because there are 2 providers specified in
-        # injected into this test by fixture_providers
-        "suggestions-per.provider",
-        "suggestions-per.provider",
+        "suggestions-per.provider.sponsored",
+        "suggestions-per.provider.timedout-sponsored",
         "get.api.v1.suggest.timing",
         "get.api.v1.suggest.status_codes.200",
         "response.status_codes.200",

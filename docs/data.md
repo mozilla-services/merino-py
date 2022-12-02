@@ -114,7 +114,8 @@ log inspection interfaces.
 - `merino.suggestions-per.request` - A histogram metric to get the distribution of
   suggestions per request.
 
-- `merino.suggestions-per.provider` - A histogram metric to get the distribution of
+- `merino.suggestions-per.provider.<provider_module>` - A histogram metric to get the distribution of
   suggestions returned per provider (per request).
-  This metric is tagged with the provider name, so that aggregation can happen 
-  per provider or across all providers.
+
+  **Example**:
+  `merino.suggestions-per.provider.wikipedia`

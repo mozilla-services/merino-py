@@ -215,11 +215,8 @@ def test_suggest_with_invalid_geolocation_ip(
                 "providers.sponsored.query",
                 "providers.non-sponsored.query",
                 "suggestions-per.request",
-                # suggestions-per.provider gets called twice
-                # because there are 2 providers specified in
-                # injected into this test by fixture_providers
-                "suggestions-per.provider",
-                "suggestions-per.provider",
+                "suggestions-per.provider.sponsored",
+                "suggestions-per.provider.non-sponsored",
                 "get.api.v1.suggest.timing",
                 "get.api.v1.suggest.status_codes.200",
                 "response.status_codes.200",
@@ -286,7 +283,8 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
                 "providers.sponsored.query",
                 "providers.non-sponsored.query",
                 "suggestions-per.request",
-                "suggestions-per.provider",
+                "suggestions-per.provider.sponsored",
+                "suggestions-per.provider.non-sponsored",
                 "get.api.v1.suggest.timing",
                 "get.api.v1.suggest.status_codes.200",
                 "response.status_codes.200",

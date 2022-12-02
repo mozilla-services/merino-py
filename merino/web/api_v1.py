@@ -127,9 +127,8 @@ def emit_suggestions_per_metrics(
         provider_name = provider.name
         suggestion_count = suggestion_counter[provider_name]
         metrics_client.histogram(
-            "suggestions-per.provider",
+            f"suggestions-per.provider.{provider_name}",
             value=suggestion_count,
-            tags={"provider": provider_name},
         )
 
 
