@@ -44,7 +44,7 @@ repos:
     rev: v0.971
     hooks:
       - id: mypy
-        files: '^merino|^tests/contract'
+        files: '^merino|^tests'
         args: [
           --python-version=3.10,
           --disallow-untyped-calls,

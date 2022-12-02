@@ -174,10 +174,10 @@ forecast_body = default_forecast_body
 
 
 def set_response_bodies(
-    location: dict = default_location_body,
-    current_conditions: dict = default_current_conditions_body,
-    forecast: dict = default_forecast_body,
-):
+    location=default_location_body,
+    current_conditions=default_current_conditions_body,
+    forecast=default_forecast_body,
+) -> None:
     """Set the response body values for fake Accuweather API endpoints."""
     global location_body
     global current_conditions_body

@@ -12,11 +12,11 @@ from typing import Any, Dict, List
 import faker
 import kinto_http
 from client_info import DESKTOP_FIREFOX, LOCALES
-from kinto import download_suggestions
+from kinto_client import download_suggestions
 from locust import HttpUser, events, task
 from locust.clients import HttpSession
 from locust.runners import MasterRunner
-from models import ResponseContent
+from suggest_models import ResponseContent
 
 LOGGING_LEVEL = os.environ["LOAD_TESTS__LOGGING_LEVEL"]
 
