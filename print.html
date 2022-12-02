@@ -667,7 +667,7 @@ feature flag for a suggest API request.</li>
 <blockquote>
 <p>A note on timers: Statsd timers are measured in milliseconds, and are reported
 as integers (at least in Cadence). Milliseconds are often not precise enough
-for the tasks we want to measure in Merino. Instead we use generic histograms
+for the tasks we want to measure in Merino. Instead, we use generic histograms
 to record microsecond times. Metrics recorded in this way should have <code>-us</code>
 appended to their name, to mark the units used (since we shouldn't put the
 proper unit μs in metric names).</p>
@@ -684,28 +684,38 @@ duration (in ms) for the given <code>&lt;provider&gt;</code>.</p>
 <code>merino.providers.initialize.adm</code></p>
 </li>
 <li>
-<p><code>&lt;http_method&gt;.&lt;url_path&gt;.status_codes.&lt;status_code&gt;</code> - A counter to measure
+<p><code>merino.&lt;http_method&gt;.&lt;url_path&gt;.status_codes.&lt;status_code&gt;</code> - A counter to measure
 the status codes of an HTTP method for the <code>&lt;url_path&gt;</code>.</p>
 <p><strong>Example</strong>:
-<code>get.api.v1.suggest.status_codes.200</code></p>
+<code>merino.get.api.v1.suggest.status_codes.200</code></p>
 </li>
 <li>
-<p><code>&lt;http_method&gt;.&lt;url_path&gt;.timing</code> - A timer to measure the duration (in ms)
+<p><code>merino.&lt;http_method&gt;.&lt;url_path&gt;.timing</code> - A timer to measure the duration (in ms)
 of an HTTP method for a URL path.</p>
 <p><strong>Example</strong>:
-<code>get.api.v1.suggest.timing</code></p>
+<code>merino.get.api.v1.suggest.timing</code></p>
 </li>
 <li>
-<p><code>&lt;provider_module&gt;.query</code> - A timer to measure the query duration (in ms) of
+<p><code>merino.&lt;provider_module&gt;.query</code> - A timer to measure the query duration (in ms) of
 a certain suggestion provider.</p>
 <p><strong>Example</strong>:
 <code>merino.providers.adm.query</code></p>
 </li>
 <li>
-<p><code>&lt;provider_module&gt;.query.timeout</code> - A counter to measure the query timeouts of
+<p><code>merino.&lt;provider_module&gt;.query.timeout</code> - A counter to measure the query timeouts of
 a certain suggestion provider.</p>
 <p><strong>Example</strong>:
 <code>merino.providers.wikipedia.query.timeout</code></p>
+</li>
+<li>
+<p><code>merino.suggestions-per.request</code> - A histogram metric to get the distribution of
+suggestions per request.</p>
+</li>
+<li>
+<p><code>merino.suggestions-per.provider.&lt;provider_module&gt;</code> - A histogram metric to get the distribution of
+suggestions returned per provider (per request).</p>
+<p><strong>Example</strong>:
+<code>merino.suggestions-per.provider.wikipedia</code></p>
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="developer-documentation-for-working-on-merino"><a class="header" href="#developer-documentation-for-working-on-merino">Developer documentation for working on Merino</a></h1>
@@ -918,7 +928,7 @@ middleware for Merino through the <a href="https://asgi.readthedocs.io/en/latest
 for more details about how to write pure ASGI middlewares. Specifically, we can reuse
 Starlette's data structures (<code>Request</code>, <code>Headers</code>, <code>QueryParams</code> etc.) to facilitate
 the implementation.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="feature-flags"><a class="header" href="#feature-flags">Feature Flags</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><p>g# Feature Flags</p>
 <h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
 <p>Do you plan to release code behind a feature flag? Great! 😃</p>
 <p>Your feature flag needs to be defined first. If it's already defined, go ahead.
