@@ -9,7 +9,12 @@ from pytest_mock import MockerFixture
 
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
-from merino.providers import ProviderType, get_providers, init_providers
+from merino.providers import (
+    ProviderType,
+    get_max_timeout,
+    get_providers,
+    init_providers,
+)
 
 
 @pytest.mark.asyncio
@@ -25,6 +30,26 @@ async def test_init_providers() -> None:
     assert ProviderType.TOP_PICKS in providers
 
     assert len(default_providers) == 3
+
+
+@pytest.mark.parametrize(
+    ["providers", "default", "expected_timeout"],
+    [
+        (frozenset([ProviderType.ADM.value]), 0.1, settings.runtime.query_timeout_sec),
+        (
+            frozenset([ProviderType.ACCUWEATHER.value, ProviderType.ADM.value]),
+            0.1,
+            settings.providers.accuweather.query_timeout_sec,
+        ),
+        (frozenset(["a-missing-provider"]), 0.1, 0.1),
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_max_timeout(providers, default, expected_timeout) -> None:
+    """Test for the `get_max_timeout` method of the Merino providers module."""
+    await init_providers()
+
+    assert get_max_timeout(providers, default) == expected_timeout
 
 
 @pytest.mark.asyncio

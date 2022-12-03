@@ -24,7 +24,10 @@
 debug = false
 
 [default.runtime]
-# A float timeout (in seconds) for all queries issued in "web/api_v1.py"
+# A float timeout (in seconds) for all queries issued in "web/api_v1.py".
+# Each provider can overwrtie this timeout by specifying a provider-level
+# timeout with the same name `query_timeout_sec`. See `accuweather` as an
+# example.
 query_timeout_sec = 0.2
 
 [default.logging]
@@ -67,6 +70,7 @@ traces_sample_rate = 0.1
 [default.providers.accuweather]
 enabled_by_default = false
 score = 0.3
+query_timeout_sec = 1.0
 # Our API key used to access the AccuWeather API.
 api_key = ""
 # The remainder of these variables are related to endpoint URLs.

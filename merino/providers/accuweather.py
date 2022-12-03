@@ -12,6 +12,7 @@ from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionReques
 API_KEY: str = settings.providers.accuweather.api_key
 CLIENT_IP_OVERRIDE: str = settings.location.client_ip_override
 SCORE: float = settings.providers.accuweather.score
+QUERY_TIMEOUT_SEC: float = settings.providers.accuweather.query_timeout_sec
 
 # Endpoint URL components
 URL_BASE: str = settings.providers.accuweather.url_base
@@ -80,11 +81,13 @@ class Provider(BaseProvider):
         app: Optional[FastAPI] = None,
         name: str = "accuweather",
         enabled_by_default: bool = False,
+        query_timeout_sec: float = QUERY_TIMEOUT_SEC,
         **kwargs: Any,
     ) -> None:
         self._app = app
         self._name = name
         self._enabled_by_default = enabled_by_default
+        self._query_timeout_sec = query_timeout_sec
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:

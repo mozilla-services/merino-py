@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from enum import Enum, unique
+from functools import cache
 from timeit import default_timer as timer
 
 from merino import metrics
@@ -17,6 +18,7 @@ from merino.remotesettings import LiveBackend
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
+provider_timeouts: dict[str, float] = {}
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,7 @@ async def init_providers() -> None:
         match provider_type:
             case ProviderType.ACCUWEATHER:
                 providers["accuweather"] = AccuWeatherProvider(
+                    query_timeout_sec=setting.query_timeout_sec,
                     name=provider_type,
                     enabled_by_default=setting.enabled_by_default,
                 )
@@ -85,7 +88,23 @@ async def init_providers() -> None:
             extra={"providers": [*providers.keys()], "elapsed": timer() - start},
         )
 
+    # build the timeout dict
+    for id, provider in providers.items():
+        provider_timeouts[id] = provider.query_timeout_sec
+
 
 def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
     """Return a tuple of all the providers and default providers."""
     return providers, default_providers
+
+
+@cache
+def get_max_timeout(providers: frozenset[str], default: float) -> float:
+    """Get the maximum timeout for the given providers.
+
+    The `default_timeout` is returned if all the given providers are missing.
+    """
+    return max(
+        (provider_timeouts[p] for p in providers if p in provider_timeouts),
+        default=default,
+    )

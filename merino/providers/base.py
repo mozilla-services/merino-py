@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, HttpUrl
 
+from merino.config import settings
 from merino.middleware.geolocation import Location
 
 
@@ -31,6 +32,7 @@ class BaseProvider(ABC):
 
     _name: str
     _enabled_by_default: bool
+    _query_timeout_sec: float = settings.runtime.query_timeout_sec
 
     @abstractmethod
     async def initialize(self) -> None:
@@ -71,3 +73,8 @@ class BaseProvider(ABC):
     def name(self) -> str:
         """Return the name of the provider for use in logging and metrics"""
         return self._name
+
+    @property
+    def query_timeout_sec(self) -> float:
+        """Return the query timeout for this provider."""
+        return self._query_timeout_sec
