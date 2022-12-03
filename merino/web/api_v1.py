@@ -89,9 +89,7 @@ async def suggest(
 
     completed_tasks, _ = await task_runner.gather(
         lookups,
-        timeout=get_max_timeout(
-            frozenset(p.name for p in search_from), QUERY_TIMEOUT_SEC
-        ),
+        timeout=get_max_timeout([p.name for p in search_from], QUERY_TIMEOUT_SEC),
         timeout_cb=partial(task_runner.metrics_timeout_handler, metrics_client),
     )
     suggestions = list(

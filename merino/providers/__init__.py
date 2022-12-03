@@ -2,7 +2,6 @@
 import asyncio
 import logging
 from enum import Enum, unique
-from functools import cache
 from timeit import default_timer as timer
 
 from merino import metrics
@@ -98,8 +97,7 @@ def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
     return providers, default_providers
 
 
-@cache
-def get_max_timeout(providers: frozenset[str], default: float) -> float:
+def get_max_timeout(providers: list[str], default: float) -> float:
     """Get the maximum timeout for the given providers.
 
     The `default_timeout` is returned if all the given providers are missing.
