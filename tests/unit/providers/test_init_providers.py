@@ -35,13 +35,13 @@ async def test_init_providers() -> None:
 @pytest.mark.parametrize(
     ["providers", "default", "expected_timeout"],
     [
-        (frozenset([ProviderType.ADM.value]), 0.1, settings.runtime.query_timeout_sec),
+        ([ProviderType.ADM.value], 0.1, settings.runtime.query_timeout_sec),
         (
-            frozenset([ProviderType.ACCUWEATHER.value, ProviderType.ADM.value]),
+            [ProviderType.ACCUWEATHER.value, ProviderType.ADM.value],
             0.1,
             settings.providers.accuweather.query_timeout_sec,
         ),
-        (frozenset(["a-missing-provider"]), 0.1, 0.1),
+        (["a-missing-provider"], 0.1, 0.1),
     ],
 )
 @pytest.mark.asyncio

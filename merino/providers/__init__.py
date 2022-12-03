@@ -44,9 +44,9 @@ async def init_providers() -> None:
         match provider_type:
             case ProviderType.ACCUWEATHER:
                 providers["accuweather"] = AccuWeatherProvider(
-                    query_timeout_sec=setting.query_timeout_sec,
                     name=provider_type,
                     enabled_by_default=setting.enabled_by_default,
+                    query_timeout_sec=setting.query_timeout_sec,
                 )
             case ProviderType.ADM:
                 providers["adm"] = AdmProvider(
