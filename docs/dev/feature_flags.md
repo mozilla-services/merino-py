@@ -1,4 +1,4 @@
-g# Feature Flags
+# Feature Flags
 
 ## Usage
 
