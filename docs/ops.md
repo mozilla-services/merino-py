@@ -85,8 +85,9 @@ tooling.
 - `runtime.query_timeout_sec` (`MERINO_RUNTIME__QUERY_TIMEOUT_SEC`) - A floating
   point (in seconds) indicating the maximum waiting period for queries issued within
   the handler of the `suggest` endpoint. All the unfinished query tasks will be
-  cancelled once the timeout gets triggered. Note that this timeout could be overwritten
-  by individual providers with the same configuration.
+  cancelled once the timeout gets triggered. Note that this timeout can also be
+  configured by specific providers. The provider timeout takes precedence over this
+  value.
 
 ### Logging
 
