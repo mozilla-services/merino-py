@@ -201,7 +201,8 @@ These are production providers that generate suggestions.
     as a floating point number. Defaults to 0.3.
   - `query_timeout_sec` (`MERINO_PROVIDERS_ACCUWEATHER__QUERY_TIMEOUT_SEC`) - A floating
     point (in seconds) indicating the maximum waiting period when Merino queries Accuweather
-    for weather forecasts. This will overwrite the default query timeout `merino.runtime.query_timeout_sec`.
+    for weather forecasts. This will override the default query timeout
+    `merino.runtime.query_timeout_sec` for this provider.
   - `api_key` (`MERINO_PROVIDERS__ACCUWEATHER__API_KEY`) - The API key to Accuweather's API
     endpoint. In production, this should be set via environment variable as a secret.
   - `url_base` (`MERINO_PROVIDERS__ACCUWEATHER__URL_BASE`) - The base URL of Accuweather's

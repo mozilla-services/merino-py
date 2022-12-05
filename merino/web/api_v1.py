@@ -14,7 +14,7 @@ from starlette.requests import Request
 from merino.config import settings
 from merino.metrics import Client
 from merino.middleware import ScopeKey
-from merino.providers import get_max_timeout, get_providers
+from merino.providers import get_providers
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.utils import task_runner
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
@@ -89,7 +89,10 @@ async def suggest(
 
     completed_tasks, _ = await task_runner.gather(
         lookups,
-        timeout=get_max_timeout([p.name for p in search_from], QUERY_TIMEOUT_SEC),
+        timeout=max(
+            (provider.query_timeout_sec for provider in search_from),
+            default=QUERY_TIMEOUT_SEC,
+        ),
         timeout_cb=partial(task_runner.metrics_timeout_handler, metrics_client),
     )
     suggestions = list(

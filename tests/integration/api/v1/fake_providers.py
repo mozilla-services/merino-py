@@ -158,3 +158,13 @@ class TimeoutSponsoredProvider(SponsoredProvider):
         """Query against the TimeoutSponsoredProvider."""
         await asyncio.sleep(settings.runtime.query_timeout_sec * 2)
         return await super().query(srequest)
+
+
+class TimeoutTolerantSponsoredProvider(TimeoutSponsoredProvider):
+    """A timeout tolerant sponsored provider."""
+
+    def __init__(self, enabled_by_default) -> None:
+        super().__init__(enabled_by_default=enabled_by_default)
+        self._name = "timedout-tolerant-sponsored"
+        # It can tolerate for 4x of the default query timeout
+        self._query_timeout_sec = settings.runtime.query_timeout_sec * 4
