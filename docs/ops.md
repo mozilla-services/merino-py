@@ -85,7 +85,9 @@ tooling.
 - `runtime.query_timeout_sec` (`MERINO_RUNTIME__QUERY_TIMEOUT_SEC`) - A floating
   point (in seconds) indicating the maximum waiting period for queries issued within
   the handler of the `suggest` endpoint. All the unfinished query tasks will be
-  cancelled once the timeout gets triggered.
+  cancelled once the timeout gets triggered. Note that this timeout can also be
+  configured by specific providers. The provider timeout takes precedence over this
+  value.
 
 ### Logging
 
@@ -190,6 +192,30 @@ These are production providers that generate suggestions.
   - `score_wikipedia` (`MERINO_PROVIDERS__ADM__SCORE_WIKIPEDIA`) - The ranking score
     of Wikipedia suggestions for this provider as a floating point number.
     Defaults to 0.2.
+
+#### Accuweather Provider
+- Accuweather - Providers weather suggestions & forecasts from Accuweather.
+  - `enabled_by_default` (`MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT`) - Whether
+    or not this provider is enabled by default.
+  - `score` (`MERINO_PROVIDERS__ACCUWEATHER__SCORE`) - The ranking score for this provider
+    as a floating point number. Defaults to 0.3.
+  - `query_timeout_sec` (`MERINO_PROVIDERS_ACCUWEATHER__QUERY_TIMEOUT_SEC`) - A floating
+    point (in seconds) indicating the maximum waiting period when Merino queries Accuweather
+    for weather forecasts. This will overwrite the default query timeout `merino.runtime.query_timeout_sec`.
+  - `api_key` (`MERINO_PROVIDERS__ACCUWEATHER__API_KEY`) - The API key to Accuweather's API
+    endpoint. In production, this should be set via environment variable as a secret.
+  - `url_base` (`MERINO_PROVIDERS__ACCUWEATHER__URL_BASE`) - The base URL of Accuweather's
+    API endpoint.
+  - `url_param_api_key` (`MERINO_PROVIDERS__ACCUWEATHER__URL_PARAM_API_KEY`) - The parameter
+    of the API key for Accuweather's API endpoint.
+  - `url_current_conditions_path` (`MERINO_PROVIDERS__ACCUWEATHER__URL_CURRENT_CONDITIONS_PATH`) -
+    The URL path for current conditions.
+  - `url_forecasts_path` (`MERINO_PROVIDERS__ACCUWEATHER__URL_FORECASTS_PATH`) - The URL path
+    for forecasts.
+  - `url_postalcodes_path` (`MERINO_PROVIDERS__ACCUWEATHER__URL_POSTALCODES_PATH`) - The URL path
+    for postal codes.
+  - `url_postalcodes_param_query` (`MERINO_PROVIDERS__ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY`) -
+    The query parameter for postal codes.
 
 #### Wiki Fruit Provider
 - Wiki Fruit - Provides suggestions from a test provider. Should not be used
