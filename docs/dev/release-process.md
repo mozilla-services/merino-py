@@ -46,18 +46,16 @@ Releasing to production can be done by:
 [circleci_dashboard]: https://app.circleci.com/pipelines/github/mozilla-services/merino-py?branch=main&filter=all
 [merino_app_info]: https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&from=now-24h&to=now&var-environment=prodpy&refresh=1m
 
-## What to do if production is broken?
-Don't panic and follow the instructions below:
+## What to do if production breaks?
+If your latest release causes problems and needs to be rolled back:
+don't panic and follow the instructions below:
 
-- depending on the severity of the problem, decide if this warrants [kicking off an incident][incident_docs];
-- if the root cause of the problem can be identified in a relatively small time, create a PR for the fix.
-    - verify the fix locally;
-    - verify the fix on `stage`, after it is reviewed by a Merino developer and merged;
-    - [deploy it to production](#releasing-to-production).
+1. Depending on the severity of the problem, decide if this warrants [kicking off an incident][incident_docs];
+2. Identify the problematic commit, as it may not necessarily be the latest one!
+3. Revert the problematic commit, merge that into GitHub,
+   then [deploy the revert commit to production](#releasing-to-production).
+   - If a fix can be identified in a relatively short time,
+     then you may submit a fix, rather than reverting the problematic commit.
 
-**OR**
-
-- if the root cause of the problem is harder to track down, revert the last commit and then [deploy the revert commit to production](#releasing-to-production).
-
-[incident_docs]: https://mana.mozilla.org/wiki/pages/viewpage.action?pageId=150549987
+[incident_docs]: https://mozilla-hub.atlassian.net/wiki/spaces/MIR/overview
 [contributing]: ../../CONTRIBUTING.md

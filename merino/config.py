@@ -10,6 +10,7 @@ _validators = [
     Validator("metrics.dev_logger", is_type_of=bool),
     Validator("deployment.canary", is_type_of=bool),
     Validator("providers.accuweather.enabled_by_default", is_type_of=bool),
+    Validator("providers.accuweather.query_timeout_sec", is_type_of=float, gte=0),
     Validator("providers.adm.enabled_by_default", is_type_of=bool),
     Validator("providers.adm.cron_interval_sec", gt=0),
     Validator("providers.adm.resync_interval_sec", gt=0),
