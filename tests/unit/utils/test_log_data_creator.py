@@ -65,7 +65,7 @@ def test_create_request_summary_log_data(
 
     log_data: dict[str, Any] = create_request_summary_log_data(request, message, dt)
 
-    assert log_data == expected_log_data.dict()
+    assert log_data == expected_log_data
 
 
 @pytest.mark.parametrize(
@@ -163,4 +163,4 @@ def test_create_suggest_log_data(
 
     log_data: dict[str, Any] = create_suggest_log_data(request, message, dt)
 
-    assert log_data == expected_log_data.dict()
+    assert log_data == expected_log_data
