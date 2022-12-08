@@ -14,6 +14,7 @@ from freezegun import freeze_time
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
+from merino.utils.log_data_creators import SuggestLogDataModel
 from tests.integration.api.v1.fake_providers import (
     CorruptProvider,
     NonsponsoredProvider,
@@ -118,37 +119,36 @@ def test_suggest_request_log_data(
     mock_client = mocker.patch("fastapi.Request.client")
     mock_client.host = "216.160.83.56"
 
-    expected_log_data: dict[str, Any] = {
-        "name": "web.suggest.request",
-        "sensitive": True,
-        "errno": 0,
-        "time": "1998-03-31T00:00:00",
-        "path": "/api/v1/suggest",
-        "method": "GET",
-        "query": "nope",
-        "code": 200,
-        "rid": "1b11844c52b34c33a6ad54b7bc2eb7c7",
-        "session_id": "deadbeef-0000-1111-2222-333344445555",
-        "sequence_no": 0,
-        "client_variants": "foo,bar",
-        "requested_providers": "pro,vider",
-        "country": "US",
-        "region": "WA",
-        "city": "Milton",
-        "dma": 819,
-        "browser": "Firefox(103.0)",
-        "os_family": "macos",
-        "form_factor": "desktop",
-    }
+    expected_log_data: SuggestLogDataModel = SuggestLogDataModel(
+        sensitive=True,
+        errno=0,
+        time="1998-03-31T00:00:00",
+        path="/api/v1/suggest",
+        method="GET",
+        query="nope",
+        code=200,
+        rid="1b11844c52b34c33a6ad54b7bc2eb7c7",
+        session_id="deadbeef-0000-1111-2222-333344445555",
+        sequence_no=0,
+        client_variants="foo,bar",
+        requested_providers="pro,vider",
+        country="US",
+        region="WA",
+        city="Milton",
+        dma=819,
+        browser="Firefox(103.0)",
+        os_family="macos",
+        form_factor="desktop",
+    )
 
     client.get(
-        url=expected_log_data["path"],
+        url=expected_log_data.path,
         params={
-            "q": expected_log_data["query"],
-            "sid": expected_log_data["session_id"],
-            "seq": expected_log_data["sequence_no"],
-            "client_variants": expected_log_data["client_variants"],
-            "providers": expected_log_data["requested_providers"],
+            "q": expected_log_data.query,
+            "sid": expected_log_data.session_id,
+            "seq": expected_log_data.sequence_no,
+            "client_variants": expected_log_data.client_variants,
+            "providers": expected_log_data.requested_providers,
         },
         headers={
             "User-Agent": (
@@ -164,7 +164,6 @@ def test_suggest_request_log_data(
 
     record = records[0]
     log_data: dict[str, Any] = {
-        "name": record.name,
         "sensitive": record.__dict__["sensitive"],
         "errno": record.__dict__["errno"],
         "time": record.__dict__["time"],
@@ -185,7 +184,7 @@ def test_suggest_request_log_data(
         "os_family": record.__dict__["os_family"],
         "form_factor": record.__dict__["form_factor"],
     }
-    assert log_data == expected_log_data
+    assert log_data == expected_log_data.dict()
 
 
 def test_suggest_with_invalid_geolocation_ip(

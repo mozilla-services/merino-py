@@ -9,6 +9,8 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from merino.utils.log_data_creators import (
+    RequestSummaryLogDataModel,
+    SuggestLogDataModel,
     create_request_summary_log_data,
     create_suggest_log_data,
 )
@@ -40,11 +42,15 @@ class LoggingMiddleware:
                 request = Request(scope=scope)
                 dt: datetime = datetime.fromtimestamp(time.time())
                 if PATTERN.match(request.url.path):
-                    data = create_suggest_log_data(request, message, dt)
-                    suggest_request_logger.info("", extra=data)
+                    suggest_log_data: SuggestLogDataModel = create_suggest_log_data(
+                        request, message, dt
+                    )
+                    suggest_request_logger.info("", extra=suggest_log_data.dict())
                 else:
-                    data = create_request_summary_log_data(request, message, dt)
-                    logger.info("", extra=data)
+                    request_log_data: RequestSummaryLogDataModel = (
+                        create_request_summary_log_data(request, message, dt)
+                    )
+                    logger.info("", extra=request_log_data.dict())
 
             await send(message)
 

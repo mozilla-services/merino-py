@@ -5,7 +5,6 @@
 """Unit tests for the log_data_creator.py utility module."""
 
 from datetime import datetime
-from typing import Any
 
 import pytest
 from starlette.requests import Request
@@ -15,6 +14,8 @@ from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
 from merino.utils.log_data_creators import (
+    RequestSummaryLogDataModel,
+    SuggestLogDataModel,
     create_request_summary_log_data,
     create_suggest_log_data,
 )
@@ -37,16 +38,19 @@ def test_create_request_summary_log_data(
     """Test that the create_request_summary_log_data method properly constructs log
     data given different headers.
     """
-    expected_log_data: dict[str, Any] = {
-        "errno": 0,
-        "time": "1998-03-31T00:00:00",
-        "agent": expected_agent,
-        "path": "/__heartbeat__",
-        "method": "GET",
-        "lang": expected_lang,
-        "querystring": {},
-        "code": "200",
-    }
+    dt: datetime = datetime(1998, 3, 31)
+
+    expected_log_data: RequestSummaryLogDataModel = RequestSummaryLogDataModel(
+        errno=0,
+        time=dt,
+        agent=expected_agent,
+        path="/__heartbeat__",
+        method="GET",
+        lang=expected_lang,
+        querystring={},
+        code=200,
+    )
+
     request: Request = Request(
         scope={
             "type": "http",
@@ -57,9 +61,10 @@ def test_create_request_summary_log_data(
         }
     )
     message: Message = {"type": "http.response.start", "status": "200"}
-    dt: datetime = datetime(1998, 3, 31)
 
-    log_data: dict[str, Any] = create_request_summary_log_data(request, message, dt)
+    log_data: RequestSummaryLogDataModel = create_request_summary_log_data(
+        request, message, dt
+    )
 
     assert log_data == expected_log_data
 
@@ -112,27 +117,28 @@ def test_create_suggest_log_data(
     user_agent: UserAgent = UserAgent(
         browser="Firefox(103.0)", os_family="macos", form_factor="desktop"
     )
-    expected_log_data: dict[str, Any] = {
-        "sensitive": True,
-        "errno": 0,
-        "time": "1998-03-31T00:00:00",
-        "path": "/api/v1/suggest",
-        "method": "GET",
-        "query": expected_query,
-        "code": "200",
-        "rid": "1b11844c52b34c33a6ad54b7bc2eb7c7",
-        "session_id": expected_sid,
-        "sequence_no": expected_seq,
-        "client_variants": expected_client_variants,
-        "requested_providers": expected_providers,
-        "country": location.country,
-        "region": location.region,
-        "city": location.city,
-        "dma": location.dma,
-        "browser": user_agent.browser,
-        "os_family": user_agent.os_family,
-        "form_factor": user_agent.form_factor,
-    }
+    expected_log_data: SuggestLogDataModel = SuggestLogDataModel(
+        sensitive=True,
+        errno=0,
+        time="1998-03-31T00:00:00",
+        path="/api/v1/suggest",
+        method="GET",
+        query=expected_query,
+        code=200,
+        rid="1b11844c52b34c33a6ad54b7bc2eb7c7",
+        session_id=expected_sid,
+        sequence_no=expected_seq,
+        client_variants=expected_client_variants,
+        requested_providers=expected_providers,
+        country=location.country,
+        region=location.region,
+        city=location.city,
+        dma=location.dma,
+        browser=user_agent.browser,
+        os_family=user_agent.os_family,
+        form_factor=user_agent.form_factor,
+    )
+
     request: Request = Request(
         scope={
             "type": "http",
@@ -146,7 +152,7 @@ def test_create_suggest_log_data(
     )
     message: Message = {
         "type": "http.response.start",
-        "status": "200",
+        "status": 200,
         "headers": [
             (b"content-length", b"119"),
             (b"content-type", b"application/json"),
@@ -156,6 +162,6 @@ def test_create_suggest_log_data(
     }
     dt: datetime = datetime(1998, 3, 31)
 
-    log_data: dict[str, Any] = create_suggest_log_data(request, message, dt)
+    log_data: SuggestLogDataModel = create_suggest_log_data(request, message, dt)
 
     assert log_data == expected_log_data
