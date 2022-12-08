@@ -5,6 +5,8 @@
 """Type definitions for the integration test modules."""
 
 from logging import LogRecord
-from typing import Any, Callable
+from typing import Callable
 
-RequestSummaryLogDataFixture = Callable[[LogRecord], dict[str, Any]]
+from merino.utils.log_data_creators import RequestSummaryLogDataModel
+
+RequestSummaryLogDataFixture = Callable[[LogRecord], RequestSummaryLogDataModel]

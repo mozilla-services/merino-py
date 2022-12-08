@@ -5,12 +5,13 @@
 """Module for test configurations for the integration test directory."""
 
 from logging import LogRecord
-from typing import Any, Iterator
+from typing import Iterator
 
 import pytest
 from starlette.testclient import TestClient
 
 from merino.main import app
+from merino.utils.log_data_creators import RequestSummaryLogDataModel
 from tests.integration.api.types import RequestSummaryLogDataFixture
 
 
@@ -41,17 +42,18 @@ def fixture_extract_request_summary_log_data() -> RequestSummaryLogDataFixture:
     "request.summary" log record
     """
 
-    def extract_request_summary_log_data(record: LogRecord) -> dict[str, Any]:
-        return {
-            "name": record.name,
-            "errno": record.__dict__["errno"],
-            "time": record.__dict__["time"],
-            "agent": record.__dict__["agent"],
-            "path": record.__dict__["path"],
-            "method": record.__dict__["method"],
-            "lang": record.__dict__["lang"],
-            "querystring": record.__dict__["querystring"],
-            "code": record.__dict__["code"],
-        }
+    def extract_request_summary_log_data(
+        record: LogRecord,
+    ) -> RequestSummaryLogDataModel:
+        return RequestSummaryLogDataModel(
+            errno=record.__dict__["errno"],
+            time=record.__dict__["time"],
+            agent=record.__dict__["agent"],
+            path=record.__dict__["path"],
+            method=record.__dict__["method"],
+            lang=record.__dict__["lang"],
+            querystring=record.__dict__["querystring"],
+            code=record.__dict__["code"],
+        )
 
     return extract_request_summary_log_data
