@@ -5,7 +5,6 @@
 """Integration tests for the Merino v1 suggest API endpoint."""
 
 import logging
-from typing import Any
 
 import aiodogstatsd
 import pytest
@@ -163,28 +162,29 @@ def test_suggest_request_log_data(
     assert len(records) == 1
 
     record = records[0]
-    log_data: dict[str, Any] = {
-        "sensitive": record.__dict__["sensitive"],
-        "errno": record.__dict__["errno"],
-        "time": record.__dict__["time"],
-        "path": record.__dict__["path"],
-        "method": record.__dict__["method"],
-        "query": record.__dict__["query"],
-        "code": record.__dict__["code"],
-        "rid": record.__dict__["rid"],
-        "session_id": record.__dict__["session_id"],
-        "sequence_no": record.__dict__["sequence_no"],
-        "client_variants": record.__dict__["client_variants"],
-        "requested_providers": record.__dict__["requested_providers"],
-        "country": record.__dict__["country"],
-        "region": record.__dict__["region"],
-        "city": record.__dict__["city"],
-        "dma": record.__dict__["dma"],
-        "browser": record.__dict__["browser"],
-        "os_family": record.__dict__["os_family"],
-        "form_factor": record.__dict__["form_factor"],
-    }
-    assert log_data == expected_log_data.dict()
+    log_data: SuggestLogDataModel = SuggestLogDataModel(
+        sensitive=record.__dict__["sensitive"],
+        errno=record.__dict__["errno"],
+        time=record.__dict__["time"],
+        path=record.__dict__["path"],
+        method=record.__dict__["method"],
+        query=record.__dict__["query"],
+        code=record.__dict__["code"],
+        rid=record.__dict__["rid"],
+        session_id=record.__dict__["session_id"],
+        sequence_no=record.__dict__["sequence_no"],
+        client_variants=record.__dict__["client_variants"],
+        requested_providers=record.__dict__["requested_providers"],
+        country=record.__dict__["country"],
+        region=record.__dict__["region"],
+        city=record.__dict__["city"],
+        dma=record.__dict__["dma"],
+        browser=record.__dict__["browser"],
+        os_family=record.__dict__["os_family"],
+        form_factor=record.__dict__["form_factor"],
+    )
+
+    assert log_data == expected_log_data
 
 
 def test_suggest_with_invalid_geolocation_ip(
