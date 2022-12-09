@@ -1,4 +1,5 @@
 """The middleware that records various access logs for Merino."""
+import json
 import logging
 import re
 import time
@@ -45,12 +46,14 @@ class LoggingMiddleware:
                     suggest_log_data: SuggestLogDataModel = create_suggest_log_data(
                         request, message, dt
                     )
-                    suggest_request_logger.info("", extra=suggest_log_data.dict())
+                    suggest_request_logger.info(
+                        "", extra=json.loads(suggest_log_data.json())
+                    )
                 else:
                     request_log_data: RequestSummaryLogDataModel = (
                         create_request_summary_log_data(request, message, dt)
                     )
-                    logger.info("", extra=request_log_data.dict())
+                    logger.info("", extra=json.loads(request_log_data.json()))
 
             await send(message)
 

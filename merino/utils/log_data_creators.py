@@ -22,13 +22,6 @@ class LogDataModel(BaseModel):
     path: str
     method: str
 
-    def dict(self, **kwargs) -> dict[str, Any]:
-        """Override the dict method to convert the datetime type to iso-formatted string."""
-        d: dict[str, Any] = super().dict(**kwargs)
-        if d.get("time"):
-            d["time"] = d["time"].isoformat()
-        return d
-
 
 class RequestSummaryLogDataModel(LogDataModel):
     """Log metadata specific to Request Summary."""
