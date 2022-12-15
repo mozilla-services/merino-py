@@ -30,6 +30,7 @@ def fixture_providers() -> Providers:
     [("foo", "foo"), ("foo bar", "foo_bar"), ("foØ bÅr", "fo%C3%98_b%C3%85r")],
 )
 def test_suggest_wikipedia(client: TestClient, query: str, expected_title: str) -> None:
+    """Test for the Dynamic Wikipedia provider."""
     response = client.get(f"/api/v1/suggest?q={query}")
     assert response.status_code == 200
 

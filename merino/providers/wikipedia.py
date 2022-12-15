@@ -93,9 +93,9 @@ class ElasticBackend:
 
     client: AsyncElasticsearch
 
-    def __init__(self, hosts: str) -> None:
+    def __init__(self, *, cloud_id: str, user: str, password: str) -> None:
         """Initialize."""
-        self.client = AsyncElasticsearch(hosts=hosts)
+        self.client = AsyncElasticsearch(cloud_id=cloud_id, basic_auth=(user, password))
 
     async def shutdown(self) -> None:
         """Shut down the connection to the ES cluster."""

@@ -104,8 +104,10 @@ top_picks_file_path = "dev/top_picks.json"
 enabled_by_default = false
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "elasticsearch"
-# Elasticsearch hosts.
-es_hosts = ""
+# Elasticsearch Cloud ID.
+es_cloud_id = ""
+# Elasticsearch user
+es_user = ""
 # Elasticsearch password
 es_password = ""
 # Elasticsearch index

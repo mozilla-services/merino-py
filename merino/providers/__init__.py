@@ -84,7 +84,11 @@ async def init_providers() -> None:
             case ProviderType.WIKIPEDIA:
                 providers["wikipedia"] = wikipediaProvider(
                     backend=(
-                        ElasticBackend(setting.es_hosts)  # type: ignore [arg-type]
+                        ElasticBackend(
+                            cloud_id=setting.es_cloud_id,
+                            user=setting.es_user,
+                            password=setting.es_password,
+                        )  # type: ignore [arg-type]
                         if setting.backend == "elasticsearch"
                         else WikipediaTestBackend()
                     ),
@@ -113,8 +117,7 @@ async def init_providers() -> None:
 
 
 async def shutdown_providers() -> None:
-    """
-    Shut down all suggestion providers.
+    """Shut down all suggestion providers.
 
     This should only be called once at the shutdown of application.
     """

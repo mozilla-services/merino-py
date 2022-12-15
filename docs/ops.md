@@ -232,8 +232,10 @@ The provider that is backed by the locally indexed Wikipedia through Elasticsear
   or not this provider is enabled by default.
   - `backend` (`MERINO_PROVIDERS__WIKIPEDIA__backend`) - The backend of the provider.
     Either `elasticsearch` or `test`.
-- `es_hosts` (`MERINO_PROVIDERS__WIKIPEDIA__ES_HOSTS`) - The host(s) of the
+- `es_cloud_id` (`MERINO_PROVIDERS__WIKIPEDIA__ES_CLOUD_ID`) - The Cloud ID of the
   Elasticsearch cluster.
+- `es_user` (`MERINO_PROVIDERS__WIKIPEDIA__ES_USER`) - The user name of the Elasticsearch
+  cluster.
 - `es_password` (`MERINO_PROVIDERS__WIKIPEDIA__ES_PASSWORD`) - The password for
   accessing the Elasticsearch cluster.
 - `es_index` (`MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX`) - The index identifier

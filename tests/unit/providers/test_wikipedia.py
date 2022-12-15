@@ -19,23 +19,36 @@ from merino.providers.wikipedia import (
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
 
+# Fake Elastic Cloud ID and password for testing.
+TEST_CLOUD_ID: str = (
+    "testing:dXMtZWFzdC0xLmF3cy5mb3VuZC5pbyRjZWM2ZjI2MWE3NGJmMjRjZTMzYmI4ODExYj"
+    "g0Mjk0ZiRjNmMyY2E2ZDA0MjI0OWFmMGNjN2Q3YTllOTYyNTc0Mw=="
+)
+TEST_USER: str = "elastic"
+TEST_PASSWORD: str = "PASSWORD"
+
 
 @pytest.fixture(name="wikipedia")
 def fixture_wikipedia() -> Provider:
-    """Return an Wikipedia provider that uses a test backend."""
-
+    """Return a Wikipedia provider that uses a test backend."""
     return Provider(backend=TestEchoBackend())
+
+
+@pytest.fixture(name="es_backend")
+def fixture_es_backend() -> ElasticBackend:
+    """Return an ES backend instance."""
+    return ElasticBackend(
+        cloud_id=TEST_CLOUD_ID, user=TEST_USER, password=TEST_PASSWORD
+    )
 
 
 def test_enabled_by_default(wikipedia: Provider) -> None:
     """Test for the enabled_by_default method."""
-
     assert wikipedia.enabled_by_default
 
 
 def test_hidden(wikipedia: Provider) -> None:
     """Test for the hidden method."""
-
     assert not wikipedia.hidden()
 
 
@@ -79,7 +92,9 @@ async def test_query(
 
 
 @pytest.mark.asyncio
-async def test_es_backend_search_success(mocker: MockerFixture) -> None:
+async def test_es_backend_search_success(
+    mocker: MockerFixture, es_backend: ElasticBackend
+) -> None:
     """Test the search method of the ES backend."""
     async_mock = AsyncMock(
         return_value={
@@ -97,7 +112,6 @@ async def test_es_backend_search_success(mocker: MockerFixture) -> None:
     )
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
 
-    es_backend = ElasticBackend("http://localhost:9200/")
     suggestions = await es_backend.search("foo")
 
     assert suggestions == [
@@ -115,12 +129,13 @@ async def test_es_backend_search_success(mocker: MockerFixture) -> None:
 
 
 @pytest.mark.asyncio
-async def test_es_backend_search_without_suggest(mocker: MockerFixture) -> None:
+async def test_es_backend_search_without_suggest(
+    mocker: MockerFixture, es_backend: ElasticBackend
+) -> None:
     """Test it can handle malformed responses (i.e. without the `suggest` field) from ES."""
     async_mock = AsyncMock(return_value={})
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
 
-    es_backend = ElasticBackend("http://localhost:9200/")
     suggestions = await es_backend.search("foo")
 
     assert suggestions == []
@@ -128,14 +143,16 @@ async def test_es_backend_search_without_suggest(mocker: MockerFixture) -> None:
 
 @pytest.mark.asyncio
 async def test_es_backend_search_exception(
-    caplog: LogCaptureFixture, filter_caplog: FilterCaplogFixture, mocker: MockerFixture
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    mocker: MockerFixture,
+    es_backend: ElasticBackend,
 ) -> None:
     """Test the exception handling in the search method of the ES backend."""
     mocker.patch.object(
         AsyncElasticsearch, "search", side_effect=Exception("404 error")
     )
 
-    es_backend = ElasticBackend("http://localhost:9200/")
     suggestions = await es_backend.search("foo")
 
     records = filter_caplog(caplog.records, "merino.providers.wikipedia")
@@ -145,10 +162,11 @@ async def test_es_backend_search_exception(
 
 
 @pytest.mark.asyncio
-async def test_es_backend_shutdown(mocker: MockerFixture) -> None:
+async def test_es_backend_shutdown(
+    mocker: MockerFixture, es_backend: ElasticBackend
+) -> None:
     """Test the shutdown method of the ES backend."""
     spy = mocker.spy(AsyncElasticsearch, "close")
 
-    es_backend = ElasticBackend("http://localhost:9200/")
     await es_backend.shutdown()
     spy.assert_called_once()

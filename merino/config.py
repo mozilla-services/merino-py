@@ -24,11 +24,12 @@ _validators = [
     Validator("providers.wikifruit.enabled_by_default", is_type_of=bool),
     Validator("providers.wikipedia.backend", is_in=["elasticsearch", "test"]),
     Validator("providers.wikipedia.enabled_by_default", is_type_of=bool),
-    Validator("providers.wikipedia.es_hosts", is_type_of=str),
+    Validator("providers.wikipedia.es_cloud_id", is_type_of=str),
     Validator("providers.wikipedia.es_index", is_type_of=str),
     Validator("providers.wikipedia.es_max_suggestions", is_type_of=int, gte=1),
     Validator("providers.wikipedia.es_password", is_type_of=str),
     Validator("providers.wikipedia.es_request_timeout_ms", is_type_of=int, gte=1),
+    Validator("providers.wikipedia.es_user", is_type_of=str),
     Validator("providers.wikipedia.score", gte=0, lte=1),
     # Since Firefox will time out the request to Merino if it takes longer than 200ms,
     # the default query timeout of Merino should not be greater than that 200ms.
