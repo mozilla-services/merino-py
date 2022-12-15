@@ -597,7 +597,8 @@ or not this provider is enabled by default.</li>
 as a floating point number. Defaults to 0.3.</li>
 <li><code>query_timeout_sec</code> (<code>MERINO_PROVIDERS_ACCUWEATHER__QUERY_TIMEOUT_SEC</code>) - A floating
 point (in seconds) indicating the maximum waiting period when Merino queries Accuweather
-for weather forecasts. This will overwrite the default query timeout <code>merino.runtime.query_timeout_sec</code>.</li>
+for weather forecasts. This will override the default query timeout
+<code>merino.runtime.query_timeout_sec</code> for this provider.</li>
 <li><code>api_key</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__API_KEY</code>) - The API key to Accuweather's API
 endpoint. In production, this should be set via environment variable as a secret.</li>
 <li><code>url_base</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__URL_BASE</code>) - The base URL of Accuweather's
