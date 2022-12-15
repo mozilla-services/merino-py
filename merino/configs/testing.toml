@@ -7,7 +7,7 @@ debug = true
 # settings. This enables merge for the entire `testing` environment.
 dynaconf_merge = true
 
-[default.runtime]
+[testing.runtime]
 # Use a larger timeout for testing
 query_timeout_sec = 0.5
 

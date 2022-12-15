@@ -25,7 +25,7 @@ debug = false
 
 [default.runtime]
 # A float timeout (in seconds) for all queries issued in "web/api_v1.py".
-# Each provider can overwrtie this timeout by specifying a provider-level
+# Each provider can override this timeout by specifying a provider-level
 # timeout with the same name `query_timeout_sec`. See `accuweather` as an
 # example.
 query_timeout_sec = 0.2
