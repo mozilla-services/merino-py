@@ -91,6 +91,7 @@ def test_create_request_summary_log_data(
         (b"q=nope&client_variants=foo,bar", "nope", None, "foo,bar", "", None),
         (b"q=nope&providers=testprovider", "nope", None, "", "testprovider", None),
         (b"q=nope&seq=0", "nope", None, "", "", 0),
+        (b"q=nope&seq=hello", "nope", None, "", "", None),
     ],
     ids=[
         "no_query",
@@ -98,6 +99,7 @@ def test_create_request_summary_log_data(
         "query_with_client_variants",
         "query_with_providers",
         "query_with_seq",
+        "query_with_no_numeric_seq",
     ],
 )
 def test_create_suggest_log_data(
