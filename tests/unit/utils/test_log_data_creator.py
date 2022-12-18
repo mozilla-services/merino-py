@@ -4,9 +4,11 @@
 
 """Unit tests for the log_data_creator.py utility module."""
 
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Any, Union
 
 import pytest
+from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.types import Message
 
@@ -14,6 +16,7 @@ from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
 from merino.utils.log_data_creators import (
+    LogDataModel,
     RequestSummaryLogDataModel,
     SuggestLogDataModel,
     create_request_summary_log_data,
@@ -42,7 +45,7 @@ def test_create_request_summary_log_data(
 
     expected_log_data: RequestSummaryLogDataModel = RequestSummaryLogDataModel(
         errno=0,
-        time=dt,
+        time=dt.isoformat(),
         agent=expected_agent,
         path="/__heartbeat__",
         method="GET",
@@ -165,3 +168,44 @@ def test_create_suggest_log_data(
     log_data: SuggestLogDataModel = create_suggest_log_data(request, message, dt)
 
     assert log_data == expected_log_data
+
+
+@pytest.mark.parametrize(
+    "time_input",
+    ["invalid", {"invalid_set"}],
+    ids=["invalid_string", "invalid_object_type"],
+)
+def test_create_log_object_fails_on_invalid_time(time_input: Any):
+    """Test that `time` fails validation on invalid time input."""
+    with pytest.raises(ValidationError):
+        LogDataModel(
+            time=time_input,
+            path="/",
+            method="GET",
+            errno=0,
+        )
+
+
+@pytest.mark.parametrize(
+    ["datetime_rep", "expected_time"],
+    [
+        (1671379121, "2022-12-18T15:58:41+00:00"),
+        (
+            datetime(2022, 12, 18, hour=15, minute=58, second=41, tzinfo=timezone.utc),
+            "2022-12-18T15:58:41+00:00",
+        ),
+        ("2022-12-18T15:58:41Z", "2022-12-18T15:58:41+00:00"),
+    ],
+    ids=["epoch_time", "datetime_obj", "str"],
+)
+def test_create_log_object_can_convert_time_to_isoformat(
+    datetime_rep: Union[str, int, datetime], expected_time: str
+):
+    """Ensure that `time` field correctly validates datetime inputs and outputs as string."""
+    log_data = LogDataModel(
+        time=datetime_rep,
+        path="/",
+        method="GET",
+        errno=0,
+    )
+    assert log_data.time == expected_time
