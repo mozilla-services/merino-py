@@ -69,7 +69,10 @@ async def suggest(
     active_providers, default_providers = sources
     if providers is not None:
         search_from = [
-            active_providers[p] for p in providers.split(",") if p in active_providers
+            active_providers[p]
+            # Set used to filter out possible duplicate provider names.
+            for p in set(providers.split(","))
+            if p in active_providers
         ]
     else:
         search_from = default_providers
