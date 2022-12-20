@@ -12,20 +12,24 @@ Technical Story: [description | ticket/issue URL] <!-- optional -->
 
 ## Decision Drivers <!-- optional -->
 
-* [driver 1, e.g., a force, facing concern, …]
-* [driver 2, e.g., a force, facing concern, …]
-* … <!-- numbers of drivers can vary -->
+1. [primary driver, e.g., a force, facing concern, …]
+2. [secondary driver, e.g., a force, facing concern, …]
+3. … <!-- numbers of drivers can vary, ranked in order of importance -->
 
 ## Considered Options
 
-* [option 1]
-* [option 2]
-* [option 3]
-* … <!-- numbers of options can vary -->
+* A. [option A]
+* B. [option B]
+* C. [option C]
+* D. … <!-- numbers of options can vary -->
 
 ## Decision Outcome
 
-Chosen option: "[option 1]", because [justification. e.g., only option, which meets k.o. criterion decision driver | which resolves force force | … | comes out best (see below)].
+Chosen option:
+
+* A. "[option A]"
+
+[justification. e.g., only option, which meets primary decision driver | which resolves a force or facing concern | … | comes out best (see below)].
 
 ### Positive Consequences <!-- optional -->
 
@@ -39,32 +43,50 @@ Chosen option: "[option 1]", because [justification. e.g., only option, which me
 
 ## Pros and Cons of the Options <!-- optional -->
 
-### [option 1]
+### [option A]
 
 [example | description | pointer to more information | …] <!-- optional -->
 
-* Good, because [argument a]
-* Good, because [argument b]
-* Bad, because [argument c]
-* … <!-- numbers of pros and cons can vary -->
+#### Pros
 
-### [option 2]
+* [argument for]
+* [argument for]
+* … <!-- numbers of pros can vary -->
 
-[example | description | pointer to more information | …] <!-- optional -->
+#### Cons
 
-* Good, because [argument a]
-* Good, because [argument b]
-* Bad, because [argument c]
-* … <!-- numbers of pros and cons can vary -->
+* [argument against]
+* … <!-- numbers of cons can vary -->
 
-### [option 3]
+### [option B]
 
 [example | description | pointer to more information | …] <!-- optional -->
 
-* Good, because [argument a]
-* Good, because [argument b]
-* Bad, because [argument c]
-* … <!-- numbers of pros and cons can vary -->
+#### Pros
+
+* [argument for]
+* [argument for]
+* … <!-- numbers of pros can vary -->
+
+#### Cons
+
+* [argument against]
+* … <!-- numbers of cons can vary -->
+
+### [option C]
+
+[example | description | pointer to more information | …] <!-- optional -->
+
+#### Pros
+
+* [argument for]
+* [argument for]
+* … <!-- numbers of pros can vary -->
+
+#### Cons
+
+* [argument against]
+* … <!-- numbers of cons can vary -->
 
 ## Links <!-- optional -->
 
