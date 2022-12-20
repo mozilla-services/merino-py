@@ -5,7 +5,7 @@
 """Unit tests for the log_data_creator.py utility module."""
 
 from datetime import datetime, timezone
-from typing import Any, Union
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -186,15 +186,13 @@ def test_create_log_object_fails_on_invalid_time(time_input: Any):
         )
 
 
+@pytest.mark.parametrize("expected_time", ["2022-12-18T15:58:41+00:00"])
 @pytest.mark.parametrize(
-    ["datetime_rep", "expected_time"],
+    "datetime_rep",
     [
-        (1671379121, "2022-12-18T15:58:41+00:00"),
-        (
-            datetime(2022, 12, 18, hour=15, minute=58, second=41, tzinfo=timezone.utc),
-            "2022-12-18T15:58:41+00:00",
-        ),
-        ("2022-12-18T15:58:41Z", "2022-12-18T15:58:41+00:00"),
+        1671379121,
+        datetime(2022, 12, 18, hour=15, minute=58, second=41, tzinfo=timezone.utc),
+        "2022-12-18T15:58:41Z",
     ],
     ids=["epoch_time", "datetime_obj", "str"],
 )
