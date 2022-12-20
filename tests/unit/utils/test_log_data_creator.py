@@ -199,7 +199,7 @@ def test_create_log_object_fails_on_invalid_time(time_input: Any):
     ids=["epoch_time", "datetime_obj", "str"],
 )
 def test_create_log_object_can_convert_time_to_isoformat(
-    datetime_rep: Union[str, int, datetime], expected_time: str
+    datetime_rep: str | int | datetime, expected_time: str
 ):
     """Ensure that `time` field correctly validates datetime inputs and outputs as string."""
     log_data = LogDataModel(
