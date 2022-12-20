@@ -5,54 +5,19 @@
 """Provider fakes for the v1 integration test modules."""
 
 import asyncio
+from typing import Protocol
 
 from merino.config import settings
 from merino.providers import BaseProvider
 from merino.providers.base import BaseSuggestion, SuggestionRequest
 
 
-class CorruptProvider(BaseProvider):
-    """A test corrupted provider that raises `RuntimeError` for all queries received"""
+class QueryCallable(Protocol):
+    """Protocol for query functions used by FakeProvider instances."""
 
-    def __init__(self) -> None:
-        self._name = "corrupted"
-
-    async def initialize(self) -> None:
-        """Initialize method for the CorruptProvider."""
+    async def __call__(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Perform a query for the given SuggestionRequest."""
         ...
-
-    @property
-    def enabled_by_default(self) -> bool:
-        """Return boolean indicating whether the provider is enabled."""
-        return True
-
-    def hidden(self) -> bool:
-        """Return boolean indicating whether the provider is hidden."""
-        return False
-
-    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
-        """Query against the CorruptProvider."""
-        raise RuntimeError(srequest.query)
-
-
-class HiddenProvider(BaseProvider):
-    """A provider fake intended for test with a 'hidden' property set to return True."""
-
-    def __init__(self, enabled_by_default) -> None:
-        self._enabled_by_default = enabled_by_default
-        self._name = "hidden"
-
-    async def initialize(self) -> None:
-        """Initialize method for the HiddenProvider."""
-        ...
-
-    def hidden(self) -> bool:
-        """Return boolean indicating whether the provider is hidden."""
-        return True
-
-    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
-        """Query against the HiddenProvider."""
-        raise RuntimeError(srequest.query)
 
 
 class NonsponsoredSuggestion(BaseSuggestion):
@@ -61,41 +26,6 @@ class NonsponsoredSuggestion(BaseSuggestion):
     block_id: int
     full_keyword: str
     advertiser: str
-
-
-class NonsponsoredProvider(BaseProvider):
-    """A test nonsponsored provider that only responds to query 'nonsponsored'"""
-
-    def __init__(self, enabled_by_default) -> None:
-        self._enabled_by_default = enabled_by_default
-        self._name = "non-sponsored"
-
-    async def initialize(self) -> None:
-        """Initialize method for the NonsponsoredProvider."""
-        ...
-
-    def hidden(self) -> bool:
-        """Return boolean indicating whether the provider is hidden."""
-        return False
-
-    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
-        """Query against the NonsponsoredProvider."""
-        if srequest.query.lower() == "nonsponsored":
-            return [
-                NonsponsoredSuggestion(
-                    block_id=0,
-                    full_keyword="nonsponsored",
-                    title="nonsponsored title",
-                    url="https://www.nonsponsored.com",
-                    provider=self.name,
-                    advertiser="test nonadvertiser",
-                    is_sponsored=False,
-                    icon="https://www.nonsponsoredicon.com",
-                    score=0.5,
-                )
-            ]
-        else:
-            return []
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -108,23 +38,36 @@ class SponsoredSuggestion(BaseSuggestion):
     click_url: str
 
 
-class SponsoredProvider(BaseProvider):
-    """A test sponsored provider that only responds to query 'sponsored'"""
+def query_nonsponsored(provider_name: str) -> QueryCallable:
+    """Return a QueryCallable for nonsponsored suggestions."""
 
-    def __init__(self, enabled_by_default) -> None:
-        self._enabled_by_default = enabled_by_default
-        self._name = "sponsored"
+    async def nonsponsored(srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Query callable that returns a list with a single NonsponsoredSuggestion."""
+        if srequest.query.lower() == "nonsponsored":
+            return [
+                NonsponsoredSuggestion(
+                    block_id=0,
+                    full_keyword="nonsponsored",
+                    title="nonsponsored title",
+                    url="https://www.nonsponsored.com",
+                    provider=provider_name,
+                    advertiser="test nonadvertiser",
+                    is_sponsored=False,
+                    icon="https://www.nonsponsoredicon.com",
+                    score=0.5,
+                )
+            ]
+        else:
+            return []
 
-    async def initialize(self) -> None:
-        """Initialize method for the SponsoredProvider."""
-        ...
+    return nonsponsored
 
-    def hidden(self) -> bool:
-        """Return boolean indicating whether the provider is hidden."""
-        return False
 
-    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
-        """Query against the SponsoredProvider."""
+def query_sponsored(provider_name: str) -> QueryCallable:
+    """Return a QueryCallable for sponsored suggestions."""
+
+    async def sponsored(srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Query callable that returns a list with a single SponsoredSuggestion."""
         if srequest.query.lower() == "sponsored":
             return [
                 SponsoredSuggestion(
@@ -134,7 +77,7 @@ class SponsoredProvider(BaseProvider):
                     url="https://www.sponsored.com",
                     impression_url="https://www.sponsoredimpression.com",
                     click_url="https://www.sponsoredclick.com",
-                    provider=self.name,
+                    provider=provider_name,
                     advertiser="test advertiser",
                     is_sponsored=True,
                     icon="https://www.sponsoredicon.com",
@@ -144,27 +87,126 @@ class SponsoredProvider(BaseProvider):
         else:
             return []
 
+    return sponsored
 
-class TimeoutSponsoredProvider(SponsoredProvider):
-    """A sponsored provider that always returns the result in
-    `2 * settings.runtime.query_timeout_sec`
-    """
 
-    def __init__(self, enabled_by_default) -> None:
-        super().__init__(enabled_by_default=enabled_by_default)
-        self._name = "timedout-sponsored"
+async def raise_error(srequest: SuggestionRequest) -> list[BaseSuggestion]:
+    """Raise a RuntimeError instead of returning a list of suggestions."""
+    raise RuntimeError(srequest.query)
+
+
+class FakeProvider(BaseProvider):
+    """Fake provider for integration tests."""
+
+    def __init__(
+        self,
+        *,
+        name: str,
+        enabled_by_default: bool,
+        hidden: bool,
+        query_callable: QueryCallable,
+        query_timeout_sec: float = settings.runtime.query_timeout_sec,
+        sleep_before_sec: float = 0.0,
+    ) -> None:
+        super().__init__()
+        self._name = name
+        self._hidden = hidden
+        self._query_callable = query_callable
+        self._enabled_by_default = enabled_by_default
+        self._query_timeout_sec = query_timeout_sec
+        self._sleep_before_sec = sleep_before_sec
+
+    async def initialize(self) -> None:
+        """Initialize method for the fake provider."""
+        ...
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
-        """Query against the TimeoutSponsoredProvider."""
-        await asyncio.sleep(settings.runtime.query_timeout_sec * 2)
-        return await super().query(srequest)
+        """Run the query callable for this fake provider."""
+        if self._sleep_before_sec:
+            await asyncio.sleep(self._sleep_before_sec)
+
+        return await self._query_callable(srequest=srequest)
+
+    def hidden(self) -> bool:
+        """Return a boolean indicating whether the provider is hidden."""
+        return self._hidden
+
+    @property
+    def enabled_by_default(self) -> bool:
+        """Return a boolean indicating whether the provider is enabled."""
+        return self._enabled_by_default
 
 
-class TimeoutTolerantSponsoredProvider(TimeoutSponsoredProvider):
-    """A timeout tolerant sponsored provider."""
+class ProviderFactory:
+    """Class that holds static methods for creating various fake providers."""
 
-    def __init__(self, enabled_by_default) -> None:
-        super().__init__(enabled_by_default=enabled_by_default)
-        self._name = "timedout-tolerant-sponsored"
-        # It can tolerate for 4x of the default query timeout
-        self._query_timeout_sec = settings.runtime.query_timeout_sec * 4
+    @staticmethod
+    def corrupt(enabled_by_default: bool = True) -> FakeProvider:
+        """Return a new corrupt fake provider."""
+        return FakeProvider(
+            name="corrupted",
+            enabled_by_default=enabled_by_default,
+            hidden=False,
+            query_callable=raise_error,
+        )
+
+    @staticmethod
+    def hidden(enabled_by_default: bool = True) -> FakeProvider:
+        """Return a new hidden fake provider."""
+        return FakeProvider(
+            name="hidden",
+            enabled_by_default=enabled_by_default,
+            hidden=True,
+            query_callable=raise_error,
+        )
+
+    @staticmethod
+    def nonsponsored(enabled_by_default: bool = True) -> FakeProvider:
+        """Return a new nonsponsored fake provider."""
+        provider_name = "non-sponsored"
+
+        return FakeProvider(
+            name=provider_name,
+            enabled_by_default=enabled_by_default,
+            hidden=False,
+            query_callable=query_nonsponsored(provider_name),
+        )
+
+    @staticmethod
+    def sponsored(enabled_by_default: bool = True) -> FakeProvider:
+        """Return a new sponsored fake provider."""
+        provider_name = "sponsored"
+
+        return FakeProvider(
+            name=provider_name,
+            enabled_by_default=enabled_by_default,
+            hidden=False,
+            query_callable=query_sponsored(provider_name),
+        )
+
+    @staticmethod
+    def timeout_sponsored(enabled_by_default: bool = True) -> FakeProvider:
+        """Return a new sponsored fake provider that sleeps."""
+        provider_name = "timedout-sponsored"
+        return FakeProvider(
+            name=provider_name,
+            enabled_by_default=enabled_by_default,
+            hidden=False,
+            query_callable=query_sponsored(provider_name),
+            sleep_before_sec=settings.runtime.query_timeout_sec * 2,
+        )
+
+    @staticmethod
+    def timeout_tolerant_sponsored(
+        enabled_by_default: bool = True,
+    ) -> FakeProvider:
+        """Return a new sponsored fake provider with a higher timeout that sleeps."""
+        provider_name = "timedout-tolerant-sponsored"
+        return FakeProvider(
+            name=provider_name,
+            enabled_by_default=enabled_by_default,
+            hidden=False,
+            query_callable=query_sponsored(provider_name),
+            sleep_before_sec=settings.runtime.query_timeout_sec * 2,
+            query_timeout_sec=settings.runtime.query_timeout_sec * 4,
+        )
