@@ -172,7 +172,7 @@ def test_create_suggest_log_data(
 
 @pytest.mark.parametrize(
     "time_input",
-    ["invalid", {"invalid_set"}],
+    ["not a datetime string", {"not", "a", "datetime", "object"}],
     ids=["invalid_string", "invalid_object_type"],
 )
 def test_create_log_object_fails_on_invalid_time(time_input: Any):
