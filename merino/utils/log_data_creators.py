@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, parse_obj_as, validator
 from starlette.datastructures import Headers
 from starlette.requests import Request
 from starlette.types import Message
@@ -18,16 +18,19 @@ class LogDataModel(BaseModel):
     """
 
     errno: int
-    time: datetime
+    time: str
     path: str
     method: str
 
-    def dict(self, **kwargs) -> dict[str, Any]:
-        """Override the dict method to convert the datetime type to iso-formatted string."""
-        d: dict[str, Any] = super().dict(**kwargs)
-        if d.get("time"):
-            d["time"] = d["time"].isoformat()
-        return d
+    @validator("time", pre=True)
+    def validate_time(cls, v, values, **kwargs):
+        """Attempt to parse the provided value for `time` into a datetime
+        model which will check that the value is a valid datetime representation.
+        Then ensure that we output the datetime in a consistent isoformat,
+        if it wasn't already in that format.
+        """
+        dt: datetime = parse_obj_as(datetime, v)
+        return dt.isoformat()
 
 
 class RequestSummaryLogDataModel(LogDataModel):
