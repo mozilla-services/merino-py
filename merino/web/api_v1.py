@@ -70,7 +70,7 @@ async def suggest(
     if providers is not None:
         search_from = [
             active_providers[p]
-            # Set used to filter out possible duplicate provider names.
+            # Set used to filter out possible duplicate providers passed in.
             for p in set(providers.split(","))
             if p in active_providers
         ]
@@ -114,7 +114,11 @@ async def suggest(
     response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),
-        client_variants=client_variants.split(",") if client_variants else [],
+        # client_variant restriction: set to remove duplicates, [0:10] to
+        # limit potential reflection back to client.
+        client_variants=list(set(client_variants.split(",")))[:5]
+        if client_variants
+        else [],
     )
     return JSONResponse(content=jsonable_encoder(response))
 

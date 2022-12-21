@@ -5,6 +5,7 @@
 """Integration tests for the Merino v1 suggest API endpoint."""
 
 import logging
+import random
 from typing import Any
 
 import aiodogstatsd
@@ -100,7 +101,61 @@ def test_client_variants(client: TestClient) -> None:
 
     result = response.json()
     assert len(result["suggestions"]) == 1
-    assert result["client_variants"] == ["foo", "bar"]
+    # Both the client_variants and test data are converted to sets to check membership,
+    # irrespective of the order because set() is used to remove duplicates.
+    assert set(result["client_variants"]) == set(["foo", "bar"])
+
+
+def test_client_variants_duplicated_variant(client: TestClient) -> None:
+    """Test that the suggest endpoint response only returns a single client_variant,
+    even if the request is bombarded with an identical client_variant of the same name.
+    """
+    duplicated_client_variant = ("foo," * 10000).rstrip(",")  # nosec
+    response = client.get(
+        f"/api/v1/suggest?q=sponsored&client_variants={duplicated_client_variant}"
+    )
+    assert response.status_code == 200
+
+    result = response.json()
+    assert len(result["suggestions"]) == 1
+    assert result["client_variants"] == ["foo"]
+
+
+def test_client_variants_several_duplicated_variants(client: TestClient) -> None:
+    """Test that the suggest endpoint response only returns unique client_variants,
+    even if the request is bombarded with identical client_variants of different names.
+    """
+    variants = ["foo", "bar", "baz", "fizz", "buzz"]
+    duplicated_client_variants = ",".join(
+        [random.choice(variants) for _ in range(10000)]  # nosec
+    ).rstrip(",")
+    response = client.get(
+        f"/api/v1/suggest?q=sponsored&client_variants={duplicated_client_variants}"
+    )
+    assert response.status_code == 200
+
+    result = response.json()
+    assert len(result["suggestions"]) == 1
+    # Both the client_variants and test data are converted to sets to check membership,
+    # irrespective of the order because set() is used to remove duplicates.
+    assert set(result["client_variants"]) == set(["foo", "bar", "baz", "fizz", "buzz"])
+
+
+def test_client_variants_return_minimum_variants(client: TestClient) -> None:
+    """Test that the suggest endpoint restriction of 5 client variants for a suggestion.
+    Ensure that the response does not reflect back excessive client variants.
+    """
+    client_variants = ["foo", "bar", "baz", "fizz", "buzz", "foobar"]
+    response = client.get(
+        f"/api/v1/suggest?q=sponsored&client_variants={','.join(client_variants).rstrip(',')}"
+    )
+    assert response.status_code == 200
+
+    result = response.json()
+    assert len(result["suggestions"]) == 1
+    # Number of possible client variants counted here opposed to the exact matches, given
+    # set() operations do not guarantee order or precedence.
+    assert len(result["client_variants"]) == 5
 
 
 @freeze_time("1998-03-31")
