@@ -95,6 +95,17 @@ async def raise_error(srequest: SuggestionRequest) -> list[BaseSuggestion]:
     raise RuntimeError(srequest.query)
 
 
+def add_latency(query_callable: QueryCallable, *, latency: float) -> QueryCallable:
+    """Add latency to a QueryCallable."""
+
+    async def latent_call(srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Sleep before running the query callable."""
+        await asyncio.sleep(latency)
+        return await query_callable(srequest=srequest)
+
+    return latent_call
+
+
 class FakeProvider(BaseProvider):
     """Fake provider for integration tests."""
 
@@ -106,7 +117,6 @@ class FakeProvider(BaseProvider):
         hidden: bool,
         query_callable: QueryCallable,
         query_timeout_sec: float = settings.runtime.query_timeout_sec,
-        sleep_before_sec: float = 0.0,
     ) -> None:
         super().__init__()
         self._name = name
@@ -114,7 +124,6 @@ class FakeProvider(BaseProvider):
         self._query_callable = query_callable
         self._enabled_by_default = enabled_by_default
         self._query_timeout_sec = query_timeout_sec
-        self._sleep_before_sec = sleep_before_sec
 
     async def initialize(self) -> None:
         """Initialize method for the fake provider."""
@@ -122,9 +131,6 @@ class FakeProvider(BaseProvider):
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Run the query callable for this fake provider."""
-        if self._sleep_before_sec:
-            await asyncio.sleep(self._sleep_before_sec)
-
         return await self._query_callable(srequest=srequest)
 
     def hidden(self) -> bool:
@@ -192,8 +198,10 @@ class FakeProviderFactory:
             name=provider_name,
             enabled_by_default=enabled_by_default,
             hidden=False,
-            query_callable=query_sponsored(provider_name),
-            sleep_before_sec=settings.runtime.query_timeout_sec * 2,
+            query_callable=add_latency(
+                query_sponsored(provider_name),
+                latency=settings.runtime.query_timeout_sec * 2,
+            ),
         )
 
     @staticmethod
@@ -206,7 +214,9 @@ class FakeProviderFactory:
             name=provider_name,
             enabled_by_default=enabled_by_default,
             hidden=False,
-            query_callable=query_sponsored(provider_name),
-            sleep_before_sec=settings.runtime.query_timeout_sec * 2,
+            query_callable=add_latency(
+                query_sponsored(provider_name),
+                latency=settings.runtime.query_timeout_sec * 2,
+            ),
             query_timeout_sec=settings.runtime.query_timeout_sec * 4,
         )
