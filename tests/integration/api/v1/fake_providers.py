@@ -137,7 +137,7 @@ class FakeProvider(BaseProvider):
         return self._enabled_by_default
 
 
-class ProviderFactory:
+class FakeProviderFactory:
     """Class that holds static methods for creating various fake providers."""
 
     @staticmethod
