@@ -208,7 +208,7 @@ class FakeProviderFactory:
     def timeout_tolerant_sponsored(
         enabled_by_default: bool = True,
     ) -> FakeProvider:
-        """Return a new sponsored fake provider with a higher timeout that sleeps."""
+        """Return a new sponsored fake provider with its own custom query timeout."""
         provider_name = "timedout-tolerant-sponsored"
         return FakeProvider(
             name=provider_name,
