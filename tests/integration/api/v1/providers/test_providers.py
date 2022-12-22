@@ -15,11 +15,7 @@ from pytest import LogCaptureFixture
 from merino.providers import BaseProvider
 from merino.utils.log_data_creators import RequestSummaryLogDataModel
 from tests.integration.api.types import RequestSummaryLogDataFixture
-from tests.integration.api.v1.fake_providers import (
-    HiddenProvider,
-    NonsponsoredProvider,
-    SponsoredProvider,
-)
+from tests.integration.api.v1.fake_providers import FakeProviderFactory
 from tests.types import FilterCaplogFixture
 
 
@@ -32,7 +28,7 @@ from tests.types import FilterCaplogFixture
                 {"id": "sponsored", "availability": "enabled_by_default"},
             ],
             {
-                "sponsored": SponsoredProvider(enabled_by_default=True),
+                "sponsored": FakeProviderFactory.sponsored(enabled_by_default=True),
             },
         ),
         (
@@ -40,7 +36,7 @@ from tests.types import FilterCaplogFixture
                 {"id": "sponsored", "availability": "disabled_by_default"},
             ],
             {
-                "sponsored": SponsoredProvider(enabled_by_default=False),
+                "sponsored": FakeProviderFactory.sponsored(enabled_by_default=False),
             },
         ),
         (
@@ -48,7 +44,7 @@ from tests.types import FilterCaplogFixture
                 {"id": "hidden-provider", "availability": "hidden"},
             ],
             {
-                "hidden-provider": HiddenProvider(enabled_by_default=True),
+                "hidden-provider": FakeProviderFactory.hidden(enabled_by_default=True),
             },
         ),
         (
@@ -58,9 +54,11 @@ from tests.types import FilterCaplogFixture
                 {"id": "hidden-provider", "availability": "hidden"},
             ],
             {
-                "sponsored": SponsoredProvider(enabled_by_default=True),
-                "nonsponsored": NonsponsoredProvider(enabled_by_default=False),
-                "hidden-provider": HiddenProvider(enabled_by_default=True),
+                "sponsored": FakeProviderFactory.sponsored(enabled_by_default=True),
+                "nonsponsored": FakeProviderFactory.nonsponsored(
+                    enabled_by_default=False
+                ),
+                "hidden-provider": FakeProviderFactory.hidden(enabled_by_default=True),
             },
         ),
     ],

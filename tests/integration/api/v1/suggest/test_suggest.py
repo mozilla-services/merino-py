@@ -14,11 +14,7 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.utils.log_data_creators import SuggestLogDataModel
-from tests.integration.api.v1.fake_providers import (
-    CorruptProvider,
-    NonsponsoredProvider,
-    SponsoredProvider,
-)
+from tests.integration.api.v1.fake_providers import FakeProviderFactory
 from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
 
@@ -31,8 +27,8 @@ def fixture_providers() -> Providers:
           'pytest.mark.parametrize' decorator with a 'providers' definition.
     """
     return {
-        "sponsored": SponsoredProvider(enabled_by_default=True),
-        "non-sponsored": NonsponsoredProvider(enabled_by_default=True),
+        "sponsored": FakeProviderFactory.sponsored(enabled_by_default=True),
+        "non-sponsored": FakeProviderFactory.nonsponsored(enabled_by_default=True),
     }
 
 
@@ -250,7 +246,7 @@ def test_suggest_metrics(
     assert metric_keys == expected_metric_keys
 
 
-@pytest.mark.parametrize("providers", [{"corrupt": CorruptProvider()}])
+@pytest.mark.parametrize("providers", [{"corrupt": FakeProviderFactory.corrupt()}])
 def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
     """Test that 500 status codes are recorded as metrics."""
     error_msg = "test"

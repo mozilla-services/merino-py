@@ -13,11 +13,7 @@ from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from tests.integration.api.v1.fake_providers import (
-    SponsoredProvider,
-    TimeoutSponsoredProvider,
-    TimeoutTolerantSponsoredProvider,
-)
+from tests.integration.api.v1.fake_providers import FakeProviderFactory
 from tests.types import FilterCaplogFixture
 
 Scenario = namedtuple(
@@ -39,7 +35,9 @@ SCENARIOS: dict[str, Scenario] = {
     #     - Timeout metrics recorded in the task runner
     "Case-I: A-timed-out-provider": Scenario(
         providers={
-            "timedout-sponsored": TimeoutSponsoredProvider(enabled_by_default=True),
+            "timedout-sponsored": FakeProviderFactory.timeout_sponsored(
+                enabled_by_default=True
+            ),
         },
         expected_suggestion_count=0,
         expected_logs_on_task_runner={
@@ -64,8 +62,10 @@ SCENARIOS: dict[str, Scenario] = {
     #     - Timeout metrics recorded in the task runner
     "Case-II: A-non-timed-out-and-a-timed-out-providers": Scenario(
         providers={
-            "sponsored": SponsoredProvider(enabled_by_default=True),
-            "timedout-sponsored": TimeoutSponsoredProvider(enabled_by_default=True),
+            "sponsored": FakeProviderFactory.sponsored(enabled_by_default=True),
+            "timedout-sponsored": FakeProviderFactory.timeout_sponsored(
+                enabled_by_default=True
+            ),
         },
         expected_suggestion_count=1,
         expected_logs_on_task_runner={
@@ -93,7 +93,7 @@ SCENARIOS: dict[str, Scenario] = {
     #     - Timeout metrics should not be recorded in the task runner
     "Case-III: A-timed-out-tolerant-provider": Scenario(
         providers={
-            "timedout-tolerant-sponsored": TimeoutTolerantSponsoredProvider(
+            "timedout-tolerant-sponsored": FakeProviderFactory.timeout_tolerant_sponsored(
                 enabled_by_default=True
             ),
         },
@@ -118,9 +118,11 @@ SCENARIOS: dict[str, Scenario] = {
     #     - Timeout metrics should not be recorded in the task runner
     "Case-IV: A-non-timed-out-and-a-timed-out-tolerant-and-a-timed-out-providers": Scenario(
         providers={
-            "sponsored": SponsoredProvider(enabled_by_default=True),
-            "timedout-sponsored": TimeoutSponsoredProvider(enabled_by_default=True),
-            "timedout-tolerant-sponsored": TimeoutTolerantSponsoredProvider(
+            "sponsored": FakeProviderFactory.sponsored(enabled_by_default=True),
+            "timedout-sponsored": FakeProviderFactory.timeout_sponsored(
+                enabled_by_default=True
+            ),
+            "timedout-tolerant-sponsored": FakeProviderFactory.timeout_tolerant_sponsored(
                 enabled_by_default=True
             ),
         },
