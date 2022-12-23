@@ -29,6 +29,9 @@ debug = false
 # timeout with the same name `query_timeout_sec`. See `accuweather` as an
 # example.
 query_timeout_sec = 0.2
+# Setting to contol the limit on optional client variants passed
+# to suggest endpoint as part of experiments or rollouts.
+client_variant_max = 25
 
 [default.logging]
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"

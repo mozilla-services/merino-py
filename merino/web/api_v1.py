@@ -32,6 +32,11 @@ SUGGEST_RESPONSE = {
 # Timeout for query tasks.
 QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
 
+# Client Variant Maximum - used to limit the number of
+# possible client variants for experiments.
+# See https://mozilla-services.github.io/merino/api.html#suggest
+CLIENT_VARIANT_MAX = settings.runtime.client_variant_max
+
 
 @router.get(
     "/suggest",
@@ -114,9 +119,9 @@ async def suggest(
     response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),
-        # client_variant restriction: set to remove duplicates, [0:10] to
+        # client_variant restriction: set to remove duplicates, [0:CLIENT_VARIANT_MAX] to
         # limit potential reflection back to client.
-        client_variants=list(set(client_variants.split(",")))[:5]
+        client_variants=list(set(client_variants.split(",")))[:CLIENT_VARIANT_MAX]
         if client_variants
         else [],
     )

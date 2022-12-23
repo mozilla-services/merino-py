@@ -14,6 +14,7 @@ from freezegun import freeze_time
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
+from merino.config import settings
 from merino.utils.log_data_creators import SuggestLogDataModel
 from tests.integration.api.v1.fake_providers import (
     CorruptProvider,
@@ -22,6 +23,9 @@ from tests.integration.api.v1.fake_providers import (
 )
 from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
+
+# Defined in testing.toml under [testing.runtime]
+CLIENT_VARIANT_MAX = settings.runtime.client_variant_max
 
 
 @pytest.fixture(name="providers")
@@ -73,6 +77,17 @@ def test_no_suggestion(client: TestClient) -> None:
     assert len(response.json()["suggestions"]) == 0
 
 
+def test_suggest_duplicate_providers(client: TestClient) -> None:
+    """Test to ensure that duplicated providers passed into the suggest endpoint do not
+    result in a flood of responses that could result in Denial of Service. A duplicated
+    provider name should not result in an additional lookup.
+    """
+    provider = ("sponsored," * 100).rstrip(",")
+    response = client.get(f"/api/v1/suggest?q=sponsored&providers={provider}")
+    assert response.status_code == 200
+    assert len(response.json()["suggestions"]) == 1
+
+
 @pytest.mark.parametrize("query", ["sponsored", "nonsponsored"])
 def test_suggest_from_missing_providers(client: TestClient, query: str) -> None:
     """Despite the keyword being available for other providers, it should not return
@@ -109,7 +124,7 @@ def test_client_variants_duplicated_variant(client: TestClient) -> None:
     """Test that the suggest endpoint response only returns a single client_variant,
     even if the request is bombarded with an identical client_variant of the same name.
     """
-    duplicated_client_variant = ("foo," * 10000).rstrip(",")  # nosec
+    duplicated_client_variant = ("foo," * 10000).rstrip(",")
     response = client.get(
         f"/api/v1/suggest?q=sponsored&client_variants={duplicated_client_variant}"
     )
@@ -145,6 +160,7 @@ def test_client_variants_return_minimum_variants(client: TestClient) -> None:
     Ensure that the response does not reflect back excessive client variants.
     """
     client_variants = ["foo", "bar", "baz", "fizz", "buzz", "foobar"]
+
     response = client.get(
         f"/api/v1/suggest?q=sponsored&client_variants={','.join(client_variants).rstrip(',')}"
     )
@@ -152,9 +168,12 @@ def test_client_variants_return_minimum_variants(client: TestClient) -> None:
 
     result = response.json()
     assert len(result["suggestions"]) == 1
+    # NOTE: Shorter value of 5 for client_variant_max used for testing.
+    # See testing.runtime.client_variant_max. Prod value in default.runtime.client_variant_max.
+
     # Number of possible client variants counted here opposed to the exact matches, given
     # set() operations do not guarantee order or precedence.
-    assert len(result["client_variants"]) == 5
+    assert len(result["client_variants"]) == CLIENT_VARIANT_MAX
 
 
 @freeze_time("1998-03-31")

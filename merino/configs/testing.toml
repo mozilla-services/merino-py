@@ -10,6 +10,8 @@ dynaconf_merge = true
 [testing.runtime]
 # Use a larger timeout for testing
 query_timeout_sec = 0.5
+# Smaller max for testing
+client_variant_max = 5
 
 [testing.metrics]
 dev_logger = true
