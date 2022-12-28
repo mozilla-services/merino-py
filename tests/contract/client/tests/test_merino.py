@@ -158,7 +158,6 @@ def assert_200_response(
     fetch_kinto_icon_url: Callable[[str], str],
 ) -> None:
     """Check that the content for a 200 OK response is what we expect."""
-
     expected_content_dict = step_content.dict(exclude=CONTENT_EXCLUDE)
     merino_content_dict = merino_content.dict(exclude=CONTENT_EXCLUDE)
 
