@@ -158,9 +158,16 @@ def assert_200_response(
     fetch_kinto_icon_url: Callable[[str], str],
 ) -> None:
     """Check that the content for a 200 OK response is what we expect."""
+    # Because the order of client_variants and server_variants are not
+    # guaranteed, they are sorted before comparison.
     expected_content_dict = step_content.dict(exclude=CONTENT_EXCLUDE)
     merino_content_dict = merino_content.dict(exclude=CONTENT_EXCLUDE)
-    assert expected_content_dict == merino_content_dict
+
+    sorted_expected_content_dict = {
+        k: sorted(v) for k, v in expected_content_dict.items()
+    }
+    sorted_merino_content_dict = {k: sorted(v) for k, v in merino_content_dict.items()}
+    assert sorted_expected_content_dict == sorted_merino_content_dict
 
     # The order of suggestions in Merino's response is not guaranteed.
     # Sort them by ('provider', 'block_id') before validating them.
