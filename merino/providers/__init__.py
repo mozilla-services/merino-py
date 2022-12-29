@@ -5,15 +5,16 @@ from enum import Enum, unique
 from timeit import default_timer as timer
 
 from merino import metrics
+from merino.backends.accuweather import Accuweather
+from merino.backends.remotesettings import LiveBackend
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
-from merino.providers.accuweather import Provider as AccuWeatherProvider
+from merino.providers.accuweather import Provider as WeatherProvider
 from merino.providers.adm import Provider as AdmProvider
 from merino.providers.adm import TestBackend
 from merino.providers.base import BaseProvider
 from merino.providers.top_picks import Provider as TopPicksProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
-from merino.remotesettings import LiveBackend
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
@@ -42,10 +43,20 @@ async def init_providers() -> None:
     for provider_type, setting in settings.providers.items():
         match provider_type:
             case ProviderType.ACCUWEATHER:
-                providers["accuweather"] = AccuWeatherProvider(
+                providers["accuweather"] = WeatherProvider(
+                    backend=Accuweather(
+                        api_key=setting.api_key,
+                        url_base=setting.url_base,
+                        url_param_api_key=setting.url_param_api_key,
+                        url_postalcodes_path=setting.url_postalcodes_path,
+                        url_postalcodes_param_query=setting.url_postalcodes_param_query,
+                        url_current_conditions_path=setting.url_current_conditions_path,
+                        url_forecasts_path=setting.url_forecasts_path,
+                    ),
+                    score=setting.score,
                     name=provider_type,
-                    enabled_by_default=setting.enabled_by_default,
                     query_timeout_sec=setting.query_timeout_sec,
+                    enabled_by_default=setting.enabled_by_default,
                 )
             case ProviderType.ADM:
                 providers["adm"] = AdmProvider(

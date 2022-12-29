@@ -2,12 +2,15 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Unit tests for the accuweather provider module."""
+"""Unit tests for the weather provider module."""
+
+from typing import Any
 
 import pytest
-from fastapi import APIRouter, FastAPI
 from pytest import LogCaptureFixture
+from pytest_mock import MockerFixture
 
+from merino.backends.exceptions import BackendError
 from merino.config import settings
 from merino.middleware.geolocation import Location
 from merino.providers.accuweather import (
@@ -16,196 +19,11 @@ from merino.providers.accuweather import (
     Provider,
     Suggestion,
     Temperature,
+    WeatherBackend,
+    WeatherReport,
 )
-from merino.providers.base import SuggestionRequest
-
-default_location_body = [
-    {
-        "Version": 1,
-        "Key": "39376_PC",
-        "Type": "PostalCode",
-        "Rank": 35,
-        "LocalizedName": "San Francisco",
-        "EnglishName": "San Francisco",
-        "PrimaryPostalCode": "94105",
-        "Region": {
-            "ID": "NAM",
-            "LocalizedName": "North America",
-            "EnglishName": "North America",
-        },
-        "Country": {
-            "ID": "US",
-            "LocalizedName": "United States",
-            "EnglishName": "United States",
-        },
-        "AdministrativeArea": {
-            "ID": "CA",
-            "LocalizedName": "California",
-            "EnglishName": "California",
-            "Level": 1,
-            "LocalizedType": "State",
-            "EnglishType": "State",
-            "CountryID": "US",
-        },
-        "TimeZone": {
-            "Code": "PDT",
-            "Name": "America/Los_Angeles",
-            "GmtOffset": -7.0,
-            "IsDaylightSaving": True,
-            "NextOffsetChange": "2022-11-06T09:00:00Z",
-        },
-        "GeoPosition": {
-            "Latitude": 37.792,
-            "Longitude": -122.392,
-            "Elevation": {
-                "Metric": {"Value": 19.0, "Unit": "m", "UnitType": 5},
-                "Imperial": {"Value": 62.0, "Unit": "ft", "UnitType": 0},
-            },
-        },
-        "IsAlias": False,
-        "ParentCity": {
-            "Key": "347629",
-            "LocalizedName": "San Francisco",
-            "EnglishName": "San Francisco",
-        },
-        "SupplementalAdminAreas": [
-            {
-                "Level": 2,
-                "LocalizedName": "San Francisco",
-                "EnglishName": "San Francisco",
-            }
-        ],
-        "DataSets": [
-            "AirQualityCurrentConditions",
-            "AirQualityForecasts",
-            "Alerts",
-            "DailyAirQualityForecast",
-            "DailyPollenForecast",
-            "ForecastConfidence",
-            "FutureRadar",
-            "MinuteCast",
-            "Radar",
-        ],
-    }
-]
-
-default_current_conditions_body = [
-    {
-        "LocalObservationDateTime": "2022-10-21T15:34:00-07:00",
-        "EpochTime": 1666391640,
-        "WeatherText": "Mostly cloudy",
-        "WeatherIcon": 6,
-        "HasPrecipitation": False,
-        "PrecipitationType": None,
-        "IsDayTime": True,
-        "Temperature": {
-            "Metric": {
-                "Value": 15.5,
-                "Unit": "C",
-                "UnitType": 17,
-            },
-            "Imperial": {
-                "Value": 60.0,
-                "Unit": "F",
-                "UnitType": 18,
-            },
-        },
-        "MobileLink": (
-            "http://www.accuweather.com/en/us/san-francisco-ca/"
-            "94103/current-weather/39376_pc?lang=en-us"
-        ),
-        "Link": (
-            "http://www.accuweather.com/en/us/san-francisco-ca/"
-            "94103/current-weather/39376_pc?lang=en-us"
-        ),
-    },
-]
-
-default_forecast_body = {
-    "Headline": {
-        "EffectiveDate": "2022-10-01T08:00:00-07:00",
-        "EffectiveEpochDate": 1664636400,
-        "Severity": 4,
-        "Text": "Pleasant Saturday",
-        "Category": "mild",
-        "EndDate": None,
-        "EndEpochDate": None,
-        "MobileLink": (
-            "http://www.accuweather.com/en/us/san-francisco-ca/"
-            "94103/daily-weather-forecast/39376_pc?lang=en-us"
-        ),
-        "Link": (
-            "http://www.accuweather.com/en/us/san-francisco-ca/"
-            "94103/daily-weather-forecast/39376_pc?lang=en-us"
-        ),
-    },
-    "DailyForecasts": [
-        {
-            "Date": "2022-09-28T07:00:00-07:00",
-            "EpochDate": 1664373600,
-            "Temperature": {
-                "Minimum": {"Value": 57.0, "Unit": "F", "UnitType": 18},
-                "Maximum": {"Value": 70.0, "Unit": "F", "UnitType": 18},
-            },
-            "Day": {"Icon": 4, "IconPhrase": "Clear", "HasPrecipitation": False},
-            "Night": {
-                "Icon": 36,
-                "IconPhrase": "Intermittent clouds",
-                "HasPrecipitation": True,
-            },
-            "Sources": ["AccuWeather"],
-            "MobileLink": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/daily-weather-forecast/39376_pc?day=1&lang=en-us"
-            ),
-            "Link": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/daily-weather-forecast/39376_pc?day=1&lang=en-us"
-            ),
-        }
-    ],
-}
-
-app = FastAPI()
-router = APIRouter()
-location_body = default_location_body
-current_conditions_body = default_current_conditions_body
-forecast_body = default_forecast_body
-
-
-def set_response_bodies(
-    location=default_location_body,
-    current_conditions=default_current_conditions_body,
-    forecast=default_forecast_body,
-) -> None:
-    """Set the response body values for fake Accuweather API endpoints."""
-    global location_body
-    global current_conditions_body
-    global forecast_body
-    location_body = location
-    current_conditions_body = current_conditions
-    forecast_body = forecast
-
-
-@router.get("/locations/v1/postalcodes/US/search.json")
-async def router_locations_postalcodes_search():
-    """Return fake postal code data."""
-    return location_body
-
-
-@router.get("/currentconditions/v1/39376_PC.json")
-async def router_current_conditions():
-    """Return fake current conditions data."""
-    return current_conditions_body
-
-
-@router.get("/forecasts/v1/daily/1day/39376_PC.json")
-async def router_forecasts_daily_1day():
-    """Return fake forcast data."""
-    return forecast_body
-
-
-app.include_router(router)
+from merino.providers.base import BaseSuggestion, SuggestionRequest
+from tests.types import FilterCaplogFixture
 
 
 @pytest.fixture(name="geolocation")
@@ -220,150 +38,157 @@ def fixture_geolocation() -> Location:
     )
 
 
-@pytest.fixture(name="accuweather")
-def fixture_accuweather() -> Provider:
-    """Return an AccuWeather provider."""
-    return Provider(app)
+@pytest.fixture(name="backend_mock")
+def fixture_backend_mock(mocker: MockerFixture) -> Any:
+    """Create a WeatherBackend mock object for test."""
+    return mocker.AsyncMock(spec=WeatherBackend)
 
 
-def test_enabled_by_default(accuweather: Provider) -> None:
+@pytest.fixture(name="provider")
+def fixture_provider(backend_mock: Any) -> Provider:
+    """Create a weather Provider for test."""
+    return Provider(
+        backend=backend_mock,
+        name="weather",
+        score=0.3,
+        query_timeout_sec=0.2,
+    )
+
+
+def test_enabled_by_default(provider: Provider) -> None:
     """Test for the enabled_by_default method."""
-    assert accuweather.enabled_by_default is False
+    assert provider.enabled_by_default is False
 
 
-def test_hidden(accuweather: Provider) -> None:
+def test_hidden(provider: Provider) -> None:
     """Test for the hidden method."""
-    assert accuweather.hidden() is False
+    assert provider.hidden() is False
 
 
 @pytest.mark.asyncio
-async def test_forecast_returned(accuweather: Provider, geolocation: Location) -> None:
-    """Test for a successful query."""
-    set_response_bodies()
-
-    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
-    assert res == [
+async def test_query_weather_report_returned(
+    backend_mock: Any, provider: Provider, geolocation: Location
+) -> None:
+    """Test that the query method provides a valid weather suggestion."""
+    report: WeatherReport = WeatherReport(
+        city_name="San Francisco",
+        current_conditions=CurrentConditions(
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/current-weather/39376_pc?lang=en-us"
+            ),
+            summary="Mostly cloudy",
+            icon_id=6,
+            temperature=Temperature(c=15.5, f=60.0),
+        ),
+        forecast=Forecast(
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/daily-weather-forecast/39376_pc?lang=en-us"
+            ),
+            summary="Pleasant Saturday",
+            high=Temperature(c=21.1, f=70.0),
+            low=Temperature(c=13.9, f=57.0),
+        ),
+    )
+    expected_suggestions: list[Suggestion] = [
         Suggestion(
             title="Weather for San Francisco",
             url=(
                 "http://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/current-weather/39376_pc?lang=en-us"
             ),
-            provider="accuweather",
+            provider="weather",
             is_sponsored=False,
             score=settings.providers.accuweather.score,
             icon=None,
-            city_name="San Francisco",
-            current_conditions=CurrentConditions(
-                url=(
-                    "http://www.accuweather.com/en/us/san-francisco-ca/"
-                    "94103/current-weather/39376_pc?lang=en-us"
-                ),
-                summary="Mostly cloudy",
-                icon_id=6,
-                temperature=Temperature(c=15.5, f=60.0),
-            ),
-            forecast=Forecast(
-                url=(
-                    "http://www.accuweather.com/en/us/san-francisco-ca/"
-                    "94103/daily-weather-forecast/39376_pc?lang=en-us"
-                ),
-                summary="Pleasant Saturday",
-                high=Temperature(c=21.1, f=70.0),
-                low=Temperature(c=13.9, f=57.0),
-            ),
+            city_name=report.city_name,
+            current_conditions=report.current_conditions,
+            forecast=report.forecast,
         )
     ]
+    backend_mock.get_weather_report.return_value = report
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation)
+    )
+
+    assert suggestions == expected_suggestions
 
 
 @pytest.mark.asyncio
-async def test_no_location_returned(
-    accuweather: Provider, geolocation: Location
+async def test_query_no_weather_report_returned(
+    backend_mock: Any, provider: Provider, geolocation: Location
 ) -> None:
-    """Test for a query that doesn't return a location."""
-    set_response_bodies(location=[])
-
-    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
-    assert res == []
-
-
-@pytest.mark.asyncio
-async def test_no_current_conditions_returned(
-    accuweather: Provider, geolocation: Location
-) -> None:
-    """Test for a query that doesn't return current conditions for a valid location."""
-    set_response_bodies(current_conditions=[])
-
-    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
-    assert res == []
-
-
-@pytest.mark.asyncio
-async def test_no_forecast_returned(
-    accuweather: Provider, geolocation: Location
-) -> None:
-    """Test for a query that doesn't return a forecast for a valid location."""
-    set_response_bodies(forecast={})
-
-    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
-    assert res == []
-
-
-@pytest.mark.asyncio
-async def test_invalid_location_key_current_conditions(
-    accuweather: Provider, geolocation: Location
-) -> None:
-    """Test for a query that doesn't return current conditions due to an invalid
-    location key.
+    """Test that the query method doesn't provide a weather suggestion without a weather
+    report.
     """
-    set_response_bodies(
-        current_conditions={
-            "Code": "400",
-            "Message": "Invalid location key: bogus",
-            "Reference": "/currentconditions/v1/bogus",
-        }
+    expected_suggestions: list[Suggestion] = []
+    backend_mock.get_weather_report.return_value = None
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation)
     )
 
-    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
-    assert res == []
+    assert suggestions == expected_suggestions
 
 
 @pytest.mark.asyncio
-async def test_invalid_location_key_forecast(
-    accuweather: Provider, geolocation: Location
+async def test_query_error(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
 ) -> None:
-    """Test a query that doesn't return a forecast due to an invalid location key."""
-    set_response_bodies(
-        forecast={
-            "Code": "400",
-            "Message": "LocationKey is invalid: bogus",
-            "Reference": "/forecasts/v1/daily/1day/bogus.json",
-        }
+    """Test that the query method logs a warning and doesn't provide a weather
+    suggestion if the backend raises an error.
+    """
+    expected_suggestions: list[Suggestion] = []
+    expected_log_messages: list[dict[str, str]] = [
+        {"levelname": "WARNING", "message": "Could not generate a weather report"}
+    ]
+    backend_mock.get_weather_report.side_effect = BackendError(
+        expected_log_messages[0]["message"]
     )
 
-    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
-    assert res == []
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation)
+    )
+
+    assert suggestions == expected_suggestions
+    actual_log_messages: list[dict[str, str]] = [
+        {"levelname": record.levelname, "message": record.message}
+        for record in filter_caplog(caplog.records, "merino.providers.accuweather")
+    ]
+    assert actual_log_messages == expected_log_messages
 
 
 @pytest.mark.parametrize(
-    "geolocation",
+    ["parameters", "expected"],
     [
-        Location(postal_code=94105),
-        Location(country="US", region="CA", city="Some City", dma=555),
-        Location(),
+        ({"c": 1.0}, {"c": 1.0, "f": 34.0}),
+        ({"c": 0.0}, {"c": 0.0, "f": 32.0}),
+        ({"c": -1.0}, {"c": -1.0, "f": 30.0}),
+        ({"f": 1.0}, {"c": -17.2, "f": 1.0}),
+        ({"f": 0.0}, {"c": -17.8, "f": 0.0}),
+        ({"f": -1.0}, {"c": -18.3, "f": -1.0}),
+        ({"c": 10, "f": 70}, {"c": 10, "f": 70}),
+        ({}, {"c": None, "f": None}),
+    ],
+    ids=[
+        "c_positive",
+        "c_zero",
+        "c_negative",
+        "f_positive",
+        "f_zero",
+        "f_negative",
+        "mismatch",
+        "empty",
     ],
 )
-@pytest.mark.asyncio
-async def test_no_client_country_or_postal_code(
-    caplog: LogCaptureFixture, accuweather: Provider, geolocation: Location
-):
-    """Test that if a client has an unknown country or postal code, a warning is
-    logged and no suggestions are returned.
-    """
-    set_response_bodies()
+def test_temperature(parameters: dict[str, float], expected: dict[str, float]) -> None:
+    """Test that Temperature values evaluate as expected given different parameters."""
+    temperature: Temperature = Temperature(**parameters)
 
-    res = await accuweather.query(SuggestionRequest(query="", geolocation=geolocation))
-
-    assert res == []
-    assert len(caplog.messages) == 1
-    assert caplog.messages[0] == "Country and/or postal code unknown"
+    assert temperature == expected
