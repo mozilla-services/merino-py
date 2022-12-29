@@ -9,11 +9,11 @@ from merino.backends.accuweather import Accuweather
 from merino.backends.remotesettings import LiveBackend
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
-from merino.providers.accuweather import Provider as WeatherProvider
 from merino.providers.adm import Provider as AdmProvider
 from merino.providers.adm import TestBackend
 from merino.providers.base import BaseProvider
 from merino.providers.top_picks import Provider as TopPicksProvider
+from merino.providers.weather import Provider as WeatherProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
 
 providers: dict[str, BaseProvider] = {}

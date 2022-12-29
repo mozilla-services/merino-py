@@ -14,7 +14,7 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.backends.exceptions import BackendError
-from merino.providers.accuweather import (
+from merino.providers.weather import (
     CurrentConditions,
     Forecast,
     Provider,
@@ -139,6 +139,6 @@ def test_suggest_weather_backend_error(
 
     actual_log_messages: list[dict[str, str]] = [
         {"levelname": record.levelname, "message": record.message}
-        for record in filter_caplog(caplog.records, "merino.providers.accuweather")
+        for record in filter_caplog(caplog.records, "merino.providers.weather")
     ]
     assert actual_log_messages == expected_log_messages

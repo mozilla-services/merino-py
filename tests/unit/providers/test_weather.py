@@ -13,7 +13,8 @@ from pytest_mock import MockerFixture
 from merino.backends.exceptions import BackendError
 from merino.config import settings
 from merino.middleware.geolocation import Location
-from merino.providers.accuweather import (
+from merino.providers.base import BaseSuggestion, SuggestionRequest
+from merino.providers.weather import (
     CurrentConditions,
     Forecast,
     Provider,
@@ -22,7 +23,6 @@ from merino.providers.accuweather import (
     WeatherBackend,
     WeatherReport,
 )
-from merino.providers.base import BaseSuggestion, SuggestionRequest
 from tests.types import FilterCaplogFixture
 
 
@@ -159,7 +159,7 @@ async def test_query_error(
     assert suggestions == expected_suggestions
     actual_log_messages: list[dict[str, str]] = [
         {"levelname": record.levelname, "message": record.message}
-        for record in filter_caplog(caplog.records, "merino.providers.accuweather")
+        for record in filter_caplog(caplog.records, "merino.providers.weather")
     ]
     assert actual_log_messages == expected_log_messages
 

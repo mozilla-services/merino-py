@@ -18,7 +18,7 @@ from merino.backends.accuweather import (
     AccuweatherLocation,
 )
 from merino.middleware.geolocation import Location
-from merino.providers.accuweather import (
+from merino.providers.weather import (
     CurrentConditions,
     Forecast,
     Temperature,
