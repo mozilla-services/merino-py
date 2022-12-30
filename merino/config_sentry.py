@@ -63,7 +63,7 @@ def fetch_git_sha(path) -> str:  # pragma: no cover
                 f"{path} does not appear to be the root of a git repository."
             )
 
-    with open(revision_file, "r") as sha_file:
+    with open(revision_file_path, "r") as sha_file:
         return sha_file.read().strip()
 
 
