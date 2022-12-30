@@ -10,19 +10,21 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 from merino.config import settings
 
 logger = logging.getLogger(__name__)
+MERINO_PATH = os.path.dirname(os.path.abspath(__name__))
 
 
 def configure_sentry() -> None:  # pragma: no cover
     """Configure and initialize Sentry integration."""
     if settings.sentry.mode == "disabled":
         return
-
+    git_hash = fetch_git_sha(MERINO_PATH)
     sentry_sdk.init(
         dsn=settings.sentry.dsn,
         integrations=[
             StarletteIntegration(),
             FastApiIntegration(),
         ],
+        release=git_hash,
         debug="debug" == settings.sentry.mode,
         environment=settings.sentry.env,
         # Set traces_sample_rate to 1.0 to capture 100%
@@ -32,8 +34,8 @@ def configure_sentry() -> None:  # pragma: no cover
     )
 
 
-def fetch_git_sha(path):  # pragma: no cover
-    """Read and capture the the git SHA hash for the given path.
+def fetch_git_sha(path) -> str:  # pragma: no cover
+    """Read and capture the the git SHA hash for current HEAD of branch.
     It is valuable to pass this value to Sentry so the accurate
     version of Merino is emitted in Sentry's release tag.
     """
@@ -47,11 +49,22 @@ def fetch_git_sha(path):  # pragma: no cover
         head = file_path.read().strip()
 
     if head.startswith("ref: "):
-        head = head[5:]
-        revision_file = os.path.join(path, ".git", *head.split("/"))
-        return revision_file
-    else:
-        return head
+        head = head.lstrip("ref: ")
+
+    refs_heads_file = os.path.join(path, ".git", *head.split("/"))
+    revision_file = os.path.join(path, ".git", "refs", "heads", refs_heads_file)
+
+    if not os.path.exists(revision_file):
+        if not os.path.exists(os.path.join(path, ".git")):
+            logger.warning(
+                f"{path} does not appear to be the root of a git repository."
+            )
+            raise InvalidGitRepository(
+                f"{path} does not appear to be the root of a git repository."
+            )
+
+    with open(revision_file, "r") as sha_file:
+        return sha_file.read().strip()
 
 
 class InvalidGitRepository(Exception):
