@@ -36,7 +36,7 @@ def configure_sentry() -> None:  # pragma: no cover
 
 def fetch_git_sha(path) -> str:  # pragma: no cover
     """Read and capture the the git SHA hash for current HEAD of branch.
-    It is valuable to pass this value to Sentry so the accurate
+    Thus value is passed to Sentry as the release flag so that the
     version of Merino is emitted in Sentry's release tag.
     """
     head_path = os.path.join(path, ".git", "HEAD")
@@ -45,16 +45,16 @@ def fetch_git_sha(path) -> str:  # pragma: no cover
         raise InvalidGitRepository(
             f"Cannot identify HEAD for git repository at {head_path}"
         )
-    with open(head_path, "r") as file_path:
-        head = file_path.read().strip()
+    with open(head_path, "r") as head_file:
+        head = head_file.read().strip()
 
     if head.startswith("ref: "):
         head = head.lstrip("ref: ")
 
-    refs_heads_file = os.path.join(path, ".git", *head.split("/"))
-    revision_file = os.path.join(path, ".git", "refs", "heads", refs_heads_file)
+    refs_heads_path = os.path.join(path, ".git", *head.split("/"))
+    revision_file_path = os.path.join(path, ".git", "refs", "heads", refs_heads_path)
 
-    if not os.path.exists(revision_file):
+    if not os.path.exists(revision_file_path):
         if not os.path.exists(os.path.join(path, ".git")):
             logger.warning(
                 f"{path} does not appear to be the root of a git repository."
