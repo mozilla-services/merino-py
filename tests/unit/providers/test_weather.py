@@ -60,7 +60,7 @@ def test_enabled_by_default(provider: Provider) -> None:
     assert provider.enabled_by_default is False
 
 
-def test_hidden(provider: Provider) -> None:
+def test_not_hidden_by_default(provider: Provider) -> None:
     """Test for the hidden method."""
     assert provider.hidden() is False
 
