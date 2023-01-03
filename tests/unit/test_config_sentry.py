@@ -8,7 +8,7 @@ from subprocess import check_output  # nosec
 
 import pytest
 
-from merino.config_sentry import fetch_git_sha, read_git_head_file
+from merino.config_sentry import check_packed_refs, fetch_git_sha, read_git_head_file
 from merino.exceptions import InvalidGitRepository
 
 
@@ -27,8 +27,10 @@ def test_read_git_head_file(project_root) -> None:  # nosec
 
 def test_read_git_head_file_fails(project_root) -> None:  # nosec
     """Test that ensures invalid directory results in exception."""
+    with pytest.raises(InvalidGitRepository):
+        fetch_git_sha(f"{project_root}/merino")
     with pytest.raises(Exception):
-        read_git_head_file(f"{project_root}/merino")
+        fetch_git_sha(f"{project_root}/merino")
 
 
 @pytest.mark.has_git_requirements
@@ -51,8 +53,22 @@ def test_fetch_git_sha_invalid_directory(project_root) -> None:  # nosec
     """Test that ensures invalid directory results in exception."""
     with pytest.raises(InvalidGitRepository):
         fetch_git_sha(f"{project_root}/merino")
+    with pytest.raises(Exception):
+        fetch_git_sha(f"{project_root}/merino")
 
 
 def test_has_git_requirements(project_root) -> None:
     """Ensure that a valid path in the .git directory exists."""
     assert os.path.exists(os.path.join(project_root, ".git", "refs", "heads", "main"))
+
+
+def test_check_packed_refs(project_root) -> None:
+    """Test to verify call of possible packed refs."""
+    pass
+
+
+def test_check_packed_refs_fails(project_root) -> None:
+    """Test packed refs fails when passed invalid path."""
+    invalid_head_path = f"{project_root}/merino"
+    result = check_packed_refs(invalid_head_path)
+    assert result is None
