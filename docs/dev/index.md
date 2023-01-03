@@ -62,8 +62,14 @@ $ make integration-tests
 # List fixtures in use per integration test
 $ make integration-test-fixtures
 
-# Run contract tests
+# Build the merino-py docker image
+$ make docker-build
+
+# Run contract tests only
 $ make contract-tests
+
+# Run contract tests locally, ensuring merino builds
+$ make local-contract-tests
 
 # Run contract tests cleanup
 $ make contract-tests-clean
