@@ -76,6 +76,7 @@ def check_packed_refs(head) -> Optional[str]:  # pragma: no cover
                         revision_sha, ref = line.split(" ", 1)
                     except ValueError:
                         continue
+                    # If packed_ref file contains matching head reference, return.
                     if ref == head:
                         return revision_sha
     return None
