@@ -8,6 +8,7 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 from merino.config import settings
+from merino.exceptions import InvalidGitRepository
 
 logger = logging.getLogger(__name__)
 MERINO_PATH = os.path.dirname(os.path.abspath(__name__))
@@ -34,40 +35,48 @@ def configure_sentry() -> None:  # pragma: no cover
     )
 
 
-def fetch_git_sha(path) -> str:  # pragma: no cover
+def read_git_head_file(merino_root_dir: str) -> str:
+    """Given the project root, attempt to locate and read the remote HEAD
+    from the .git/HEAD file.
+    """
+    head_path = os.path.join(merino_root_dir, ".git", "HEAD")
+    if not os.path.exists(head_path):
+        message = f"Cannot identify HEAD for git repository at {head_path}"
+        logger.warning(message)
+        raise InvalidGitRepository(message)
+    with open(head_path, "r") as head_file:
+        head = head_file.read().strip()
+        if head.startswith("ref: "):
+            head = head[5:]
+    return head
+
+
+def fetch_git_sha(path: str) -> str:
     """Read and capture the the git SHA hash for current HEAD of branch.
     Thus value is passed to Sentry as the release flag so that the
     version of Merino is emitted in Sentry's release tag.
     """
-    head_path = os.path.join(path, ".git", "HEAD")
-    if not os.path.exists(head_path):
-        logger.warning(f"Cannot identify HEAD for git repository at {head_path}")
-        raise InvalidGitRepository(
-            f"Cannot identify HEAD for git repository at {head_path}"
-        )
-    with open(head_path, "r") as head_file:
-        head = head_file.read().strip()
-
-    if head.startswith("ref: "):
-        head = head.lstrip("ref: ")
-
-    refs_heads_path = os.path.join(path, ".git", *head.split("/"))
-    revision_file_path = os.path.join(path, ".git", "refs", "heads", refs_heads_path)
+    # head_path captures the name of the file in refs/heads that contains hash.
+    head_path: str = read_git_head_file(path)
+    # refs_heads_path creates the path ro the file in refs/heads.
+    refs_heads_path: str = os.path.join(path, ".git", *head_path.split("/"))
+    # the revision_file_path is the absolute path to the SHA hash.
+    revision_file_path: str = os.path.join(
+        path, ".git", "refs", "heads", refs_heads_path
+    )
 
     if not os.path.exists(revision_file_path):
         if not os.path.exists(os.path.join(path, ".git")):
-            logger.warning(
-                f"{path} does not appear to be the root of a git repository."
-            )
-            raise InvalidGitRepository(
-                f"{path} does not appear to be the root of a git repository."
-            )
+            message = f"{path} does not appear to be the root of a git repository."
+            logger.warning(message)
+            raise InvalidGitRepository(message)
 
     with open(revision_file_path, "r") as sha_file:
         return sha_file.read().strip()
 
-
-class InvalidGitRepository(Exception):
-    """Exception to handle invalid Git Repository."""
-
-    ...
+    # TODO: In the case git has run "auto gc" (garbage collection), loose objects could be moved
+    # into .git/packed-refs. This is where branch references could be moved, making it
+    # important to check if the hash is stored in packed-refs. Git automatically
+    # writes and updates references in refs/heads, but if that reference is not there
+    # packed-refs is checked.
+    # See: https://git-scm.com/book/en/v2/Git-Internals-Maintenance-and-Data-Recovery
