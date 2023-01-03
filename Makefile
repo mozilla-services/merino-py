@@ -80,7 +80,7 @@ contract-tests:  ##  Run contract tests using docker compose
 	docker-compose \
       -f $(CONTRACT_TEST_DIR)/docker-compose.yml \
       -p merino-py-contract-tests \
-      up --abort-on-container-exit --build
+      up --abort-on-container-exit 
 
 .PHONY: contract-tests-clean
 contract-tests-clean:  ##  Stop and remove containers and networks for contract tests

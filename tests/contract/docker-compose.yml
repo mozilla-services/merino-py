@@ -2,8 +2,7 @@ version: "3"
 services:
   merino:
     # See `docker-image-build` job in `.circleci/config.yml`
-    image: app:runtime
-    build: ../..
+    image: app:build
     container_name: merino
     environment:
       # The configuration preset to use
