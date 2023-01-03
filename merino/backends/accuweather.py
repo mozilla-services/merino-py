@@ -29,7 +29,7 @@ class AccuweatherError(BackendError):
     """Error during interaction with the AccuWeather API."""
 
 
-class Accuweather:
+class AccuweatherBackend:
     """Backend that connects to the AccuWeather API."""
 
     def __init__(

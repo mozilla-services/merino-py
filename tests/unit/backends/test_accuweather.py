@@ -13,7 +13,7 @@ from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 
 from merino.backends.accuweather import (
-    Accuweather,
+    AccuweatherBackend,
     AccuweatherError,
     AccuweatherLocation,
 )
@@ -41,9 +41,9 @@ def fixture_accuweather_parameters() -> dict[str, str]:
 
 
 @pytest.fixture(name="accuweather")
-def fixture_accuweather(accuweather_parameters: dict[str, str]) -> Accuweather:
+def fixture_accuweather(accuweather_parameters: dict[str, str]) -> AccuweatherBackend:
     """Create an Accuweather object for test."""
-    return Accuweather(**accuweather_parameters)
+    return AccuweatherBackend(**accuweather_parameters)
 
 
 @pytest.fixture(name="geolocation")
@@ -245,7 +245,7 @@ def test_init_api_key_value_error(accuweather_parameters: dict[str, str]) -> Non
     accuweather_parameters["api_key"] = ""
 
     with pytest.raises(ValueError) as accuweather_error:
-        Accuweather(**accuweather_parameters)
+        AccuweatherBackend(**accuweather_parameters)
 
     assert str(accuweather_error.value) == expected_error_value
 
@@ -271,7 +271,7 @@ def test_init_url_value_error(
     accuweather_parameters[url_value] = ""
 
     with pytest.raises(ValueError) as accuweather_error:
-        Accuweather(**accuweather_parameters)
+        AccuweatherBackend(**accuweather_parameters)
 
     assert str(accuweather_error.value) == expected_error_value
 
@@ -279,7 +279,7 @@ def test_init_url_value_error(
 @pytest.mark.asyncio
 async def test_get_weather_report(
     mocker: MockerFixture,
-    accuweather: Accuweather,
+    accuweather: AccuweatherBackend,
     geolocation: Location,
     accuweather_location_response: bytes,
     accuweather_current_conditions_response: bytes,
@@ -343,7 +343,7 @@ async def test_get_weather_report(
 @pytest.mark.asyncio
 async def test_get_weather_report_failed_location_query(
     mocker: MockerFixture,
-    accuweather: Accuweather,
+    accuweather: AccuweatherBackend,
     geolocation: Location,
 ) -> None:
     """Test that the get_weather_report method returns None if the AccuWeather
@@ -367,7 +367,7 @@ async def test_get_weather_report_failed_location_query(
 @pytest.mark.asyncio
 async def test_get_weather_report_failed_current_conditions_query(
     mocker: MockerFixture,
-    accuweather: Accuweather,
+    accuweather: AccuweatherBackend,
     geolocation: Location,
     accuweather_location_response: bytes,
 ) -> None:
@@ -402,7 +402,7 @@ async def test_get_weather_report_failed_current_conditions_query(
 @pytest.mark.asyncio
 async def test_get_weather_report_failed_forecast_query(
     mocker: MockerFixture,
-    accuweather: Accuweather,
+    accuweather: AccuweatherBackend,
     geolocation: Location,
     accuweather_location_response: bytes,
     accuweather_current_conditions_response: bytes,
@@ -453,7 +453,7 @@ async def test_get_weather_report_failed_forecast_query(
 )
 @pytest.mark.asyncio
 async def test_get_weather_report_invalid_location(
-    accuweather: Accuweather, location: Location
+    accuweather: AccuweatherBackend, location: Location
 ) -> None:
     """Test that the get_weather_report method raises an error if location information
     is missing.
@@ -469,7 +469,7 @@ async def test_get_weather_report_invalid_location(
 @pytest.mark.asyncio
 async def test_get_location(
     mocker: MockerFixture,
-    accuweather: Accuweather,
+    accuweather: AccuweatherBackend,
     accuweather_location_response: bytes,
 ) -> None:
     """Test that the get_location method returns an AccuweatherLocation."""
@@ -497,7 +497,7 @@ async def test_get_location(
 
 @pytest.mark.asyncio
 async def test_get_location_no_location_returned(
-    mocker: MockerFixture, accuweather: Accuweather
+    mocker: MockerFixture, accuweather: AccuweatherBackend
 ) -> None:
     """Test that the get_location method returns None if the response content is not as
     expected.
@@ -523,7 +523,7 @@ async def test_get_location_no_location_returned(
 
 @pytest.mark.asyncio
 async def test_get_location_error(
-    mocker: MockerFixture, accuweather: Accuweather
+    mocker: MockerFixture, accuweather: AccuweatherBackend
 ) -> None:
     """Test that the get_location method raises an appropriate exception in the event
     of an AccuWeather API error.
@@ -556,7 +556,7 @@ async def test_get_location_error(
 @pytest.mark.asyncio
 async def test_get_current_conditions(
     mocker: MockerFixture,
-    accuweather: Accuweather,
+    accuweather: AccuweatherBackend,
     accuweather_current_conditions_response: bytes,
 ) -> None:
     """Test that the get_current_conditions method returns CurrentConditions."""
@@ -589,7 +589,7 @@ async def test_get_current_conditions(
 
 @pytest.mark.asyncio
 async def test_get_current_conditions_no_current_conditions_returned(
-    mocker: MockerFixture, accuweather: Accuweather
+    mocker: MockerFixture, accuweather: AccuweatherBackend
 ) -> None:
     """Test that the get_current_conditions method returns None if the response content
     is not as expected.
@@ -614,7 +614,7 @@ async def test_get_current_conditions_no_current_conditions_returned(
 
 @pytest.mark.asyncio
 async def test_get_current_conditions_error(
-    mocker: MockerFixture, accuweather: Accuweather
+    mocker: MockerFixture, accuweather: AccuweatherBackend
 ) -> None:
     """Test that the get_current_conditions method raises an appropriate exception in
     the event of an AccuWeather API error.
@@ -655,7 +655,7 @@ async def test_get_current_conditions_error(
 async def test_get_forecast(
     request: FixtureRequest,
     mocker: MockerFixture,
-    accuweather: Accuweather,
+    accuweather: AccuweatherBackend,
     forecast_response_fixture: str,
 ) -> None:
     """Test that the get_forecast method returns a Forecast."""
@@ -689,7 +689,7 @@ async def test_get_forecast(
 
 @pytest.mark.asyncio
 async def test_get_forecast_no_forecast_returned(
-    mocker: MockerFixture, accuweather: Accuweather
+    mocker: MockerFixture, accuweather: AccuweatherBackend
 ) -> None:
     """Test that the get_forecast method returns None if the response content is not as
     expected.
@@ -714,7 +714,7 @@ async def test_get_forecast_no_forecast_returned(
 
 @pytest.mark.asyncio
 async def test_get_forecast_error(
-    mocker: MockerFixture, accuweather: Accuweather
+    mocker: MockerFixture, accuweather: AccuweatherBackend
 ) -> None:
     """Test that the get_forecast method raises an appropriate exception in the event
     of an AccuWeather API error.

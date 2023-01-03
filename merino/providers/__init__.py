@@ -5,7 +5,7 @@ from enum import Enum, unique
 from timeit import default_timer as timer
 
 from merino import metrics
-from merino.backends.accuweather import Accuweather
+from merino.backends.accuweather import AccuweatherBackend
 from merino.backends.remotesettings import LiveBackend
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
@@ -44,7 +44,7 @@ async def init_providers() -> None:
         match provider_type:
             case ProviderType.ACCUWEATHER:
                 providers["accuweather"] = WeatherProvider(
-                    backend=Accuweather(
+                    backend=AccuweatherBackend(
                         api_key=setting.api_key,
                         url_base=setting.url_base,
                         url_param_api_key=setting.url_param_api_key,
