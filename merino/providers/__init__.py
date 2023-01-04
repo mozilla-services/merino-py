@@ -5,15 +5,15 @@ from enum import Enum, unique
 from timeit import default_timer as timer
 
 from merino import metrics
-from merino.backends.accuweather import AccuweatherBackend
-from merino.backends.remotesettings import LiveBackend
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
-from merino.providers.adm import Provider as AdmProvider
-from merino.providers.adm import TestBackend
+from merino.providers.adm.adm import Provider as AdmProvider
+from merino.providers.adm.adm import TestBackend
+from merino.providers.adm.backends.remotesettings import LiveBackend
 from merino.providers.base import BaseProvider
 from merino.providers.top_picks import Provider as TopPicksProvider
-from merino.providers.weather import Provider as WeatherProvider
+from merino.providers.weather.backends.accuweather import AccuweatherBackend
+from merino.providers.weather.weather import Provider as WeatherProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
 
 providers: dict[str, BaseProvider] = {}

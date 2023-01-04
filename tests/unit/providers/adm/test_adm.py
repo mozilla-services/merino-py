@@ -13,7 +13,11 @@ import pytest
 from pytest import LogCaptureFixture
 
 from merino.config import settings
-from merino.providers.adm import NonsponsoredSuggestion, Provider, RemoteSettingsBackend
+from merino.providers.adm.adm import (
+    NonsponsoredSuggestion,
+    Provider,
+    RemoteSettingsBackend,
+)
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
 
@@ -173,7 +177,7 @@ async def test_initialize_remote_settings_failure(
         # since the cron job has kicked in as the initial fetch fails.
         adm.cron_task.cancel()
 
-    records = filter_caplog(caplog.records, "merino.providers.adm")
+    records = filter_caplog(caplog.records, "merino.providers.adm.adm")
     assert len(records) == 1
     assert records[0].__dict__["error message"] == error_message
     assert adm.last_fetch_at == 0

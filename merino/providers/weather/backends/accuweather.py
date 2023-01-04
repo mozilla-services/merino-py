@@ -4,9 +4,9 @@ from typing import Optional
 from httpx import AsyncClient, HTTPError, Response
 from pydantic import BaseModel
 
-from merino.backends.exceptions import BackendError
+from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
-from merino.providers.weather import (
+from merino.providers.weather.weather import (
     CurrentConditions,
     Forecast,
     Temperature,

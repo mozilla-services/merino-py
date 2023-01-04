@@ -11,7 +11,7 @@ import httpx
 import pytest
 
 from merino.config import settings
-from merino.providers.adm import NonsponsoredSuggestion, Provider
+from merino.providers.adm.adm import NonsponsoredSuggestion, Provider
 from tests.unit.types import SuggestionRequestFixture
 
 

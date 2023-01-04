@@ -12,13 +12,13 @@ from httpx import AsyncClient, Request, Response
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 
-from merino.backends.accuweather import (
+from merino.middleware.geolocation import Location
+from merino.providers.weather.backends.accuweather import (
     AccuweatherBackend,
     AccuweatherError,
     AccuweatherLocation,
 )
-from merino.middleware.geolocation import Location
-from merino.providers.weather import (
+from merino.providers.weather.weather import (
     CurrentConditions,
     Forecast,
     Temperature,

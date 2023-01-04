@@ -4,7 +4,7 @@ from typing import Any, Optional, Protocol
 
 from pydantic import BaseModel, HttpUrl
 
-from merino.backends.exceptions import BackendError
+from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
