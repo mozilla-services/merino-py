@@ -156,7 +156,7 @@ jobs:
             docker_layer_caching: true
       - run:
             name: Build image
-            command: docker build -t app:build .
+            command: make docker-build
       - run:
           name: Save image into workspace
           command: |
