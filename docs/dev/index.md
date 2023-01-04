@@ -62,7 +62,13 @@ $ make integration-tests
 # List fixtures in use per integration test
 $ make integration-test-fixtures
 
-# Run contract tests
+# Build the docker image for Merino named "app:build"
+$ make docker-build
+
+# Run contract tests on existing merino-py docker image
+$ make run-contract-tests
+
+# Run contract tests, with build step
 $ make contract-tests
 
 # Run contract tests cleanup

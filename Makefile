@@ -75,12 +75,19 @@ integration-tests: $(INSTALL_STAMP)  ##  Run integration tests
 integration-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per integration test
 	MERINO_ENV=testing $(POETRY) run pytest $(INTEGRATION_TEST_DIR) --fixtures-per-test
 
-.PHONY: contract-tests
-contract-tests:  ##  Run contract tests using docker compose
+.PHONY: docker-build
+docker-build:  ## Build the docker image for Merino named "app:build"
+	docker build -t app:build .
+
+.PHONY: run-contract-tests
+run-contract-tests:  ##  Run contract tests using docker compose
 	docker-compose \
       -f $(CONTRACT_TEST_DIR)/docker-compose.yml \
       -p merino-py-contract-tests \
-      up --abort-on-container-exit --build
+      up --abort-on-container-exit
+
+.PHONY: contract-tests
+contract-tests: docker-build run-contract-tests  ## Run contract tests, with build step
 
 .PHONY: contract-tests-clean
 contract-tests-clean:  ##  Stop and remove containers and networks for contract tests

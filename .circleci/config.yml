@@ -22,10 +22,13 @@ workflows:
           requires:
             - unit-tests
             - integration-tests
+      - docker-image-build:
+          <<: *pr-filters
       - contract-tests:
           <<: *pr-filters
           requires:
             - checks
+            - docker-image-build
       - docs-build:
           <<: *pr-filters
 
@@ -44,10 +47,13 @@ workflows:
           requires:
             - unit-tests
             - integration-tests
+      - docker-image-build:
+          <<: *main-filters
       - contract-tests:
           <<: *main-filters
           requires:
             - checks
+            - docker-image-build
       - docs-build:
           <<: *main-filters
       - docs-publish-github-pages:
@@ -62,6 +68,7 @@ workflows:
             - integration-tests
             - test-coverage-check
             - contract-tests
+            - docker-image-build
       # The following job will require manual approval in the CircleCI web application.
       # Once provided, and when all the requirements are fullfilled (e.g. tests)
       - unhold-to-deploy-to-prod:
@@ -73,6 +80,7 @@ workflows:
             - integration-tests
             - test-coverage-check
             - contract-tests
+            - docker-image-build
       # On approval of the `unhold-to-deploy-to-prod` job, any successive job that requires it
       # will run. In this case, it's manually triggering deployment to production.
       - docker-image-publish-prod:
@@ -139,6 +147,26 @@ jobs:
           command: make test-coverage-check
           environment:
             TEST_RESULTS_DIR: workspace/test-results
+  docker-image-build:
+    docker:
+      - image: cimg/base:2022.08
+    steps:
+      - checkout
+      - setup_remote_docker:
+            docker_layer_caching: true
+      - run:
+            name: Build image
+            command: make docker-build
+      - run:
+          name: Save image into workspace
+          command: |
+            mkdir -p /tmp/workspace
+            docker save -o /tmp/workspace/merinopy.tar app:build
+            gzip /tmp/workspace/merinopy.tar
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - merinopy.tar.gz
   contract-tests:
     machine:
       docker_layer_caching: true
@@ -146,25 +174,31 @@ jobs:
     working_directory: ~/merino
     steps:
       - checkout
+      - attach_workspace:
+            at: /tmp/workspace
+      - run:
+            name: Load Docker image from workspace
+            command: docker load -i /tmp/workspace/merinopy.tar.gz
       - run:
           name: Contract tests
           command: |
             sudo chown 1000:1000 tests/contract/kinto-attachments
-            make contract-tests
+            make run-contract-tests
   docker-image-publish-stage:
     docker:
       - image: cimg/base:2022.08
     steps:
       - checkout
       - skip-if-do-not-deploy
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - attach_workspace:
+            at: /tmp/workspace
+      - setup_remote_docker
       - write-version
       - store_artifacts:
           path: version.json
       - run:
-          name: Build image
-          command: docker build -t app:build .
+          name: Load Docker image from workspace
+          command: docker load -i /tmp/workspace/merino.tar.gz
       - dockerhub-login
       - run:
           name: Push to Docker Hub
@@ -187,14 +221,15 @@ jobs:
     steps:
       - checkout
       - skip-if-do-not-deploy
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - attach_workspace:
+            at: /tmp/workspace
+      - setup_remote_docker
       - write-version
       - store_artifacts:
           path: version.json
       - run:
-          name: Build image
-          command: docker build -t app:build .
+            name: Load Docker image from workspace
+            command: docker load -i /tmp/workspace/merino.tar.gz
       - dockerhub-login
       - run:
           name: Push to Docker Hub (prod)
