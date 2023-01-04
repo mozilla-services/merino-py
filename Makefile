@@ -76,7 +76,7 @@ integration-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per integr
 	MERINO_ENV=testing $(POETRY) run pytest $(INTEGRATION_TEST_DIR) --fixtures-per-test
 
 .PHONY: docker-build
-docker-build:
+docker-build:  ## Build the docker image for Merino named "app:build"
 	docker build -t app:build .
 
 .PHONY: contract-tests
