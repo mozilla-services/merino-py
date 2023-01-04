@@ -198,7 +198,7 @@ jobs:
           path: version.json
       - run:
           name: Load Docker image from workspace
-          command: docker load -i /tmp/workspace/merino.tar.gz
+          command: docker load -i /tmp/workspace/merinopy.tar.gz
       - dockerhub-login
       - run:
           name: Push to Docker Hub
@@ -229,7 +229,7 @@ jobs:
           path: version.json
       - run:
             name: Load Docker image from workspace
-            command: docker load -i /tmp/workspace/merino.tar.gz
+            command: docker load -i /tmp/workspace/merinopy.tar.gz
       - dockerhub-login
       - run:
           name: Push to Docker Hub (prod)
