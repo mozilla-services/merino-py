@@ -80,7 +80,7 @@ added as a constant tag `deployment.canary` with type `int` to emitted metrics.
 Note that this setting is supposed to be controlled exclusively by deployment
 tooling.
 
-### Runtime configurations
+### Runtime Configurations
 
 - `runtime.query_timeout_sec` (`MERINO_RUNTIME__QUERY_TIMEOUT_SEC`) - A floating
   point (in seconds) indicating the maximum waiting period for queries issued within
@@ -88,6 +88,14 @@ tooling.
   cancelled once the timeout gets triggered. Note that this timeout can also be
   configured by specific providers. The provider timeout takes precedence over this
   value.
+
+### API Configurations
+
+- `default.web.api.v1` (`MERINO_WEB__API__V1__CLIENT_VARIANT_MAX`)
+- A non-negative integer to contol the limit of optional client variants passed 
+  to suggest endpoint as part of experiments or rollouts.  Additional validators
+  can/will be implemented to ensure a limitation on the number of variants passed
+  to the request. See: https://mozilla-services.github.io/merino/api.html#suggest.
 
 ### Logging
 

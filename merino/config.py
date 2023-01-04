@@ -31,6 +31,7 @@ _validators = [
         lte=0.2,
         env=["production", "ci"],
     ),
+    Validator("web.api.v1.client_variant_max", is_type_of=int),
     # Allow a longer timeout for testing & development
     Validator(
         "runtime.query_timeout_sec",

@@ -24,8 +24,8 @@ from tests.integration.api.v1.fake_providers import (
 from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
 
-# Defined in testing.toml under [testing.runtime]
-CLIENT_VARIANT_MAX = settings.runtime.client_variant_max
+# Defined in testing.toml under [testing.web.api.v1]
+CLIENT_VARIANT_MAX = settings.web.api.v1.client_variant_max
 
 
 @pytest.fixture(name="providers")

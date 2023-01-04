@@ -10,8 +10,7 @@ dynaconf_merge = true
 [testing.runtime]
 # Use a larger timeout for testing
 query_timeout_sec = 0.5
-# Smaller max for testing
-client_variant_max = 5
+
 
 [testing.metrics]
 dev_logger = true
@@ -20,6 +19,12 @@ dev_logger = true
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 level = "DEBUG"
 format = "pretty"
+
+[testing.web.api.v1]
+# Setting to contol the limit on optional client variants passed
+# to suggest endpoint as part of experiments or rollouts.
+# Smaller max for testing
+client_variant_max = 5
 
 [testing.providers.accuweather]
 # Whether or not this provider is enabled by default.

@@ -35,7 +35,7 @@ QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
 # Client Variant Maximum - used to limit the number of
 # possible client variants for experiments.
 # See https://mozilla-services.github.io/merino/api.html#suggest
-CLIENT_VARIANT_MAX = settings.runtime.client_variant_max
+CLIENT_VARIANT_MAX = settings.web.api.v1.client_variant_max
 
 
 @router.get(
