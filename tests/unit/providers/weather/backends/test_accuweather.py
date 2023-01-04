@@ -18,7 +18,7 @@ from merino.providers.weather.backends.accuweather import (
     AccuweatherError,
     AccuweatherLocation,
 )
-from merino.providers.weather.weather import (
+from merino.providers.weather.provider import (
     CurrentConditions,
     Forecast,
     Temperature,

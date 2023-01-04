@@ -14,7 +14,7 @@ from merino.config import settings
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseSuggestion, SuggestionRequest
-from merino.providers.weather.weather import (
+from merino.providers.weather.provider import (
     CurrentConditions,
     Forecast,
     Provider,
@@ -159,7 +159,7 @@ async def test_query_error(
     assert suggestions == expected_suggestions
     actual_log_messages: list[dict[str, str]] = [
         {"levelname": record.levelname, "message": record.message}
-        for record in filter_caplog(caplog.records, "merino.providers.weather.weather")
+        for record in filter_caplog(caplog.records, "merino.providers.weather.provider")
     ]
     assert actual_log_messages == expected_log_messages
 

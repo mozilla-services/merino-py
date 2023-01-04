@@ -13,7 +13,7 @@ from merino.providers.adm.backends.remotesettings import LiveBackend
 from merino.providers.base import BaseProvider
 from merino.providers.top_picks import Provider as TopPicksProvider
 from merino.providers.weather.backends.accuweather import AccuweatherBackend
-from merino.providers.weather.weather import Provider as WeatherProvider
+from merino.providers.weather.provider import Provider as WeatherProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
 
 providers: dict[str, BaseProvider] = {}
