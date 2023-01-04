@@ -154,6 +154,7 @@ jobs:
       - checkout
       - setup_remote_docker:
             docker_layer_caching: true
+      - write-version
       - run:
             name: Build image
             command: make docker-build
