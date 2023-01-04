@@ -26,6 +26,9 @@ class Suggestion(BaseSuggestion):
 class Provider(BaseProvider):
     """Suggestion provider for weather."""
 
+    backend: WeatherBackend
+    score: float
+
     def __init__(
         self,
         backend: WeatherBackend,

@@ -32,6 +32,14 @@ class AccuweatherError(BackendError):
 class AccuweatherBackend:
     """Backend that connects to the AccuWeather API."""
 
+    api_key: str
+    url_base: str
+    url_param_api_key: str
+    url_postalcodes_path: str
+    url_postalcodes_param_query: str
+    url_current_conditions_path: str
+    url_forecasts_path: str
+
     def __init__(
         self,
         api_key: str,
