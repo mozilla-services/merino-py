@@ -183,7 +183,7 @@ jobs:
           name: Contract tests
           command: |
             sudo chown 1000:1000 tests/contract/kinto-attachments
-            make contract-tests
+            make run-contract-tests
   docker-image-publish-stage:
     docker:
       - image: cimg/base:2022.08

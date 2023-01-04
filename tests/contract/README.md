@@ -53,7 +53,7 @@ For more details see the Remote Settings [documentation][kinto_docs]
 To run the contract tests locally, execute the following from the repository root:
 
 ```shell
-make local-contract-tests
+make contract-tests
 ```
 
 To remove contract test containers and network artifacts, execute the following from
