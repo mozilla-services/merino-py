@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
-from merino.providers.weather.provider import (
+from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
     Temperature,

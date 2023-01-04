@@ -14,15 +14,14 @@ from merino.config import settings
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseSuggestion, SuggestionRequest
-from merino.providers.weather.provider import (
+from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
-    Provider,
-    Suggestion,
     Temperature,
     WeatherBackend,
     WeatherReport,
 )
+from merino.providers.weather.provider import Provider, Suggestion
 from tests.types import FilterCaplogFixture
 
 
@@ -162,33 +161,3 @@ async def test_query_error(
         for record in filter_caplog(caplog.records, "merino.providers.weather.provider")
     ]
     assert actual_log_messages == expected_log_messages
-
-
-@pytest.mark.parametrize(
-    ["parameters", "expected"],
-    [
-        ({"c": 1.0}, {"c": 1.0, "f": 34.0}),
-        ({"c": 0.0}, {"c": 0.0, "f": 32.0}),
-        ({"c": -1.0}, {"c": -1.0, "f": 30.0}),
-        ({"f": 1.0}, {"c": -17.2, "f": 1.0}),
-        ({"f": 0.0}, {"c": -17.8, "f": 0.0}),
-        ({"f": -1.0}, {"c": -18.3, "f": -1.0}),
-        ({"c": 10, "f": 70}, {"c": 10, "f": 70}),
-        ({}, {"c": None, "f": None}),
-    ],
-    ids=[
-        "c_positive",
-        "c_zero",
-        "c_negative",
-        "f_positive",
-        "f_zero",
-        "f_negative",
-        "mismatch",
-        "empty",
-    ],
-)
-def test_temperature(parameters: dict[str, float], expected: dict[str, float]) -> None:
-    """Test that Temperature values evaluate as expected given different parameters."""
-    temperature: Temperature = Temperature(**parameters)
-
-    assert temperature == expected

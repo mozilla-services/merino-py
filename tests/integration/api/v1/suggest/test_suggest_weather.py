@@ -14,15 +14,14 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.exceptions import BackendError
-from merino.providers.weather.provider import (
+from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
-    Provider,
-    Suggestion,
     Temperature,
     WeatherBackend,
     WeatherReport,
 )
+from merino.providers.weather.provider import Provider, Suggestion
 from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
 
