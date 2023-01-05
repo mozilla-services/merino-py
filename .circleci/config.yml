@@ -96,7 +96,7 @@ jobs:
       - checkout
       - run:
           name: Code linting
-          command: make lint
+          command: make -k lint
   unit-tests:
     docker:
       - image: cimg/python:3.11
