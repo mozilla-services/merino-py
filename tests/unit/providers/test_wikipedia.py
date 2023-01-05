@@ -7,13 +7,12 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.config import settings
-from merino.providers.wikipedia import (
+from merino.providers.wikipedia.backends.elastic import SUGGEST_ID, ElasticBackend
+from merino.providers.wikipedia.backends.test_backends import TestEchoBackend
+from merino.providers.wikipedia.provider import (
     ADVERTISER,
     ICON,
-    SUGGEST_ID,
-    ElasticBackend,
     Provider,
-    TestEchoBackend,
     WikipediaSuggestion,
 )
 from tests.types import FilterCaplogFixture
@@ -155,7 +154,9 @@ async def test_es_backend_search_exception(
 
     suggestions = await es_backend.search("foo")
 
-    records = filter_caplog(caplog.records, "merino.providers.wikipedia")
+    records = filter_caplog(
+        caplog.records, "merino.providers.wikipedia.backends.elastic"
+    )
 
     assert suggestions == []
     assert records[0].__dict__["msg"] == "Failed to search from ES: 404 error"

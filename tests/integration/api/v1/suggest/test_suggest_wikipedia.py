@@ -3,13 +3,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from merino.providers.wikipedia import (
-    ADVERTISER,
-    ICON,
-    SCORE,
-    Provider,
-    TestEchoBackend,
-)
+from merino.providers.wikipedia.backends.test_backends import TestEchoBackend
+from merino.providers.wikipedia.provider import ADVERTISER, ICON, SCORE, Provider
 from tests.integration.api.v1.types import Providers
 
 

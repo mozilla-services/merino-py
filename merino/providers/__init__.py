@@ -15,9 +15,11 @@ from merino.providers.top_picks import Provider as TopPicksProvider
 from merino.providers.weather.backends.accuweather import AccuweatherBackend
 from merino.providers.weather.provider import Provider as WeatherProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
-from merino.providers.wikipedia import ElasticBackend
-from merino.providers.wikipedia import Provider as wikipediaProvider
-from merino.providers.wikipedia import TestBackend as WikipediaTestBackend
+from merino.providers.wikipedia.backends.elastic import ElasticBackend
+from merino.providers.wikipedia.backends.test_backends import (
+    TestBackend as WikipediaTestBackend,
+)
+from merino.providers.wikipedia.provider import Provider as wikipediaProvider
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []

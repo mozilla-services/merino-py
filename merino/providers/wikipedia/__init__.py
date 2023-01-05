@@ -1,0 +1,1 @@
+"""Dynamic Wikipedia provider"""
