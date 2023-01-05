@@ -20,6 +20,8 @@ collection = "quicksuggest"
 [ci.providers.accuweather]
 # Whether or not this provider is enabled by default.
 enabled_by_default = false
+api_key = "test"
+url_base = "test://test"
 
 [ci.providers.adm]
 # Whether or not this provider is enabled by default.
