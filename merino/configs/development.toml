@@ -16,3 +16,6 @@ dev_logger = true
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 level = "DEBUG"
 format = "pretty"
+
+[development.providers.accuweather]
+api_key = "test"
