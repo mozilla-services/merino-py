@@ -1,19 +1,17 @@
 """The Elasticsearch backend for Dynamic Wikipedia."""
-import logging
 from typing import Any, Final
 from urllib.parse import quote
 
 from elasticsearch import AsyncElasticsearch
 
 from merino.config import settings
+from merino.exceptions import BackendError
 
 # The Index ID in Elasticsearch cluster.
 INDEX_ID: Final[str] = settings.providers.wikipedia.es_index
 SUGGEST_ID: Final[str] = "suggest-on-title"
 TIMEOUT_MS: Final[str] = f"{settings.providers.wikipedia.es_request_timeout_ms}ms"
 MAX_SUGGESTIONS: Final[int] = settings.providers.wikipedia.es_max_suggestions
-
-logger = logging.getLogger(__name__)
 
 
 class ElasticBackend:
@@ -30,7 +28,7 @@ class ElasticBackend:
         await self.client.close()
 
     async def search(self, q: str) -> list[dict[str, Any]]:
-        """Search suggestions for a given query from the ES cluster."""
+        """Search Wikipedia articles from the ES cluster."""
         suggest = {
             SUGGEST_ID: {
                 "prefix": q,
@@ -49,8 +47,7 @@ class ElasticBackend:
                 source_includes=["title"],
             )
         except Exception as e:
-            logger.warning(f"Failed to search from ES: {e}")
-            return []
+            raise BackendError(f"Failed to search from Elasticsearch: {e}") from e
 
         if "suggest" in res:
             return [
@@ -62,7 +59,7 @@ class ElasticBackend:
 
     @staticmethod
     def build_article(doc: dict[str, Any]) -> dict[str, Any]:
-        """Build a wikipedia article based on the ES result."""
+        """Build a Wikipedia article based on the ES result."""
         title = str(doc["_source"]["title"])
         quoted_title = quote(title.replace(" ", "_"))
         return {

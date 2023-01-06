@@ -1,50 +1,97 @@
 """Integration tests for the Wikipedia provider."""
 
+import logging
+from collections import namedtuple
+
 import pytest
 from fastapi.testclient import TestClient
+from pytest import LogCaptureFixture
 
-from merino.providers.wikipedia.backends.test_backends import TestEchoBackend
-from merino.providers.wikipedia.provider import ADVERTISER, ICON, SCORE, Provider
-from tests.integration.api.v1.types import Providers
+from merino.config import settings
+from merino.providers.wikipedia.backends.test_backends import (
+    TestEchoBackend,
+    TestExceptionBackend,
+)
+from merino.providers.wikipedia.provider import ADVERTISER, ICON, Provider
+from tests.types import FilterCaplogFixture
 
+Scenario = namedtuple(
+    "Scenario",
+    [
+        "providers",
+        "query",
+        "expected_suggestion_count",
+        "expected_title",
+        "expected_logs",
+    ],
+)
 
-@pytest.fixture(name="providers")
-def fixture_providers() -> Providers:
-    """Define providers for this module which are injected automatically.
-
-    Note: This fixture will be overridden if a test method has a
-          'pytest.mark.parametrize' decorator with a 'providers' definition
-    """
-    return {
-        "wikipedia": Provider(backend=TestEchoBackend()),
-    }
+SCENARIOS: dict[str, Scenario] = {
+    "Case-I: Backend returns": Scenario(
+        providers={"wikipedia": Provider(backend=TestEchoBackend())},
+        query="foo bar",
+        expected_suggestion_count=1,
+        expected_title="foo_bar",
+        expected_logs=set(),
+    ),
+    "Case-II: Backend raises": Scenario(
+        providers={"wikipedia": Provider(backend=TestExceptionBackend())},
+        query="foo bar",
+        expected_suggestion_count=0,
+        expected_title=None,
+        expected_logs={"A backend failure"},
+    ),
+}
 
 
 @pytest.mark.parametrize(
-    ["query", "expected_title"],
-    [("foo", "foo"), ("foo bar", "foo_bar"), ("foØ bÅr", "fo%C3%98_b%C3%85r")],
+    argnames=[
+        "providers",
+        "query",
+        "expected_suggestion_count",
+        "expected_title",
+        "expected_logs",
+    ],
+    argvalues=SCENARIOS.values(),
+    ids=SCENARIOS.keys(),
 )
-def test_suggest_wikipedia(client: TestClient, query: str, expected_title: str) -> None:
+def test_suggest_wikipedia(
+    client: TestClient,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    query: str,
+    expected_suggestion_count: int,
+    expected_title,
+    expected_logs: set[str],
+) -> None:
     """Test for the Dynamic Wikipedia provider."""
+    caplog.set_level(logging.WARNING)
+
     response = client.get(f"/api/v1/suggest?q={query}")
     assert response.status_code == 200
 
     result = response.json()
 
-    assert len(result["suggestions"]) == 1
+    assert len(result["suggestions"]) == expected_suggestion_count
 
-    suggestion = result["suggestions"][0]
+    if expected_suggestion_count > 0:
+        suggestion = result["suggestions"][0]
 
-    assert suggestion == {
-        "title": query,
-        "full_keyword": query,
-        "url": f"https://en.wikipedia.org/wiki/{expected_title}",
-        "advertiser": ADVERTISER,
-        "is_sponsored": False,
-        "provider": "wikipedia",
-        "score": SCORE,
-        "icon": ICON,
-        "block_id": 0,
-        "impression_url": None,
-        "click_url": None,
-    }
+        assert suggestion == {
+            "title": query,
+            "full_keyword": query,
+            "url": f"https://en.wikipedia.org/wiki/{expected_title}",
+            "advertiser": ADVERTISER,
+            "is_sponsored": False,
+            "provider": "wikipedia",
+            "score": settings.providers.wikipedia.score,
+            "icon": ICON,
+            "block_id": 0,
+            "impression_url": None,
+            "click_url": None,
+        }
+
+    # Check logs for the timed out query(-ies)
+    records = filter_caplog(caplog.records, "merino.providers.wikipedia.provider")
+
+    assert {record.__dict__["msg"] for record in records} == expected_logs

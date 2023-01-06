@@ -19,7 +19,7 @@ from merino.providers.wikipedia.backends.elastic import ElasticBackend
 from merino.providers.wikipedia.backends.test_backends import (
     TestBackend as WikipediaTestBackend,
 )
-from merino.providers.wikipedia.provider import Provider as wikipediaProvider
+from merino.providers.wikipedia.provider import Provider as WikipediaProvider
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
@@ -84,7 +84,7 @@ async def init_providers() -> None:
                     name=provider_type, enabled_by_default=setting.enabled_by_default
                 )
             case ProviderType.WIKIPEDIA:
-                providers["wikipedia"] = wikipediaProvider(
+                providers["wikipedia"] = WikipediaProvider(
                     backend=(
                         ElasticBackend(
                             cloud_id=setting.es_cloud_id,

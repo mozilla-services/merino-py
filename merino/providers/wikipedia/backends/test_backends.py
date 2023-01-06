@@ -2,6 +2,8 @@
 from typing import Any
 from urllib.parse import quote
 
+from merino.exceptions import BackendError
+
 
 class TestBackend:  # pragma: no cover
     """A mock backend for testing."""
@@ -34,3 +36,18 @@ class TestEchoBackend:
                 "url": f"""https://en.wikipedia.org/wiki/{quote(q.replace(" ", "_"))}""",
             }
         ]
+
+
+class TestExceptionBackend:
+    """A mock backend for testing.
+
+    It raises a `BackendError` for any given query.
+    """
+
+    async def shutdown(self) -> None:
+        """Nothing to shut down."""
+        return None
+
+    async def search(self, q: str) -> list[dict[str, Any]]:
+        """Echoing the query as the single suggestion."""
+        raise BackendError("A backend failure")

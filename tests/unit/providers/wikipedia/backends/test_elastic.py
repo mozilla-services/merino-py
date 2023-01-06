@@ -3,10 +3,10 @@ from unittest.mock import AsyncMock
 
 import pytest
 from elasticsearch import AsyncElasticsearch
-from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.config import settings
+from merino.exceptions import BackendError
 from merino.providers.wikipedia.backends.elastic import SUGGEST_ID, ElasticBackend
 from merino.providers.wikipedia.backends.test_backends import TestEchoBackend
 from merino.providers.wikipedia.provider import (
@@ -15,16 +15,7 @@ from merino.providers.wikipedia.provider import (
     Provider,
     WikipediaSuggestion,
 )
-from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
-
-# Fake Elastic Cloud ID and password for testing.
-TEST_CLOUD_ID: str = (
-    "testing:dXMtZWFzdC0xLmF3cy5mb3VuZC5pbyRjZWM2ZjI2MWE3NGJmMjRjZTMzYmI4ODExYj"
-    "g0Mjk0ZiRjNmMyY2E2ZDA0MjI0OWFmMGNjN2Q3YTllOTYyNTc0Mw=="
-)
-TEST_USER: str = "elastic"
-TEST_PASSWORD: str = "PASSWORD"
 
 
 @pytest.fixture(name="wikipedia")
@@ -37,7 +28,9 @@ def fixture_wikipedia() -> Provider:
 def fixture_es_backend() -> ElasticBackend:
     """Return an ES backend instance."""
     return ElasticBackend(
-        cloud_id=TEST_CLOUD_ID, user=TEST_USER, password=TEST_PASSWORD
+        cloud_id=settings.providers.wikipedia.es_cloud_id,
+        user=settings.providers.wikipedia.es_user,
+        password=settings.providers.wikipedia.es_password,
     )
 
 
@@ -142,8 +135,6 @@ async def test_es_backend_search_without_suggest(
 
 @pytest.mark.asyncio
 async def test_es_backend_search_exception(
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
     mocker: MockerFixture,
     es_backend: ElasticBackend,
 ) -> None:
@@ -152,14 +143,10 @@ async def test_es_backend_search_exception(
         AsyncElasticsearch, "search", side_effect=Exception("404 error")
     )
 
-    suggestions = await es_backend.search("foo")
+    with pytest.raises(BackendError) as excinfo:
+        await es_backend.search("foo")
 
-    records = filter_caplog(
-        caplog.records, "merino.providers.wikipedia.backends.elastic"
-    )
-
-    assert suggestions == []
-    assert records[0].__dict__["msg"] == "Failed to search from ES: 404 error"
+    assert str(excinfo.value) == "Failed to search from Elasticsearch: 404 error"
 
 
 @pytest.mark.asyncio

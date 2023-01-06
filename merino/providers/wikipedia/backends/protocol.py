@@ -16,5 +16,9 @@ class WikipediaBackend(Protocol):
         ...
 
     async def search(self, q: str) -> list[dict[str, Any]]:  # pragma: no cover
-        """Search suggestions for a given query from the backend."""
+        """Search Wikipedia and return articles relevant to the given query.
+
+        Raises:
+            BackendError: Category of error specific to provider backends.
+        """
         ...

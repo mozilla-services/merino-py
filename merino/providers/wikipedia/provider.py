@@ -1,19 +1,21 @@
 """The provider for the dynamic Wikipedia integration."""
+import logging
 from typing import Any, Final, Optional
 
 from pydantic import HttpUrl
 
 from merino.config import settings
+from merino.exceptions import BackendError
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.wikipedia.backends.protocol import WikipediaBackend
 
-# The Index ID in Elasticsearch cluster.
-SCORE: Final[float] = settings.providers.wikipedia.score
 # The packaged Wikipedia icon
 ICON: Final[
     str
 ] = "chrome://activity-stream/content/data/content/tippytop/favicons/wikipedia-org.ico"
 ADVERTISER: Final[str] = "dynamic-wikipedia"
+
+logger = logging.getLogger(__name__)
 
 
 class WikipediaSuggestion(BaseSuggestion):
@@ -34,18 +36,21 @@ class Provider(BaseProvider):
     """Suggestion provider for Wikipedia through Elasticsearch."""
 
     backend: WikipediaBackend
+    score: float
 
     def __init__(
         self,
         backend: WikipediaBackend,
         name: str = "wikipedia",
         enabled_by_default: bool = True,
+        score=settings.providers.wikipedia.score,
         **kwargs: Any,
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
         self.backend = backend
         self._name = name
         self._enabled_by_default = enabled_by_default
+        self.score = score
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
@@ -58,13 +63,18 @@ class Provider(BaseProvider):
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
-        suggestions = await self.backend.search(srequest.query)
+        try:
+            suggestions = await self.backend.search(srequest.query)
+        except BackendError as e:
+            logger.warning(f"{e}")
+            return []
+
         return [
             WikipediaSuggestion(
                 advertiser=ADVERTISER,
                 is_sponsored=False,
                 icon=ICON,
-                score=SCORE,
+                score=self.score,
                 provider=self.name,
                 **suggestion,
             )
