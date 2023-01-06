@@ -42,3 +42,7 @@ enabled_by_default = true
 score = 0.25
 query_char_limit = 4
 top_picks_file_path = "tests/data/top_picks.json"
+
+[testing.providers.wikipedia]
+# The backend of the provider. Either "elasticsearch" or "test".
+backend = "test"

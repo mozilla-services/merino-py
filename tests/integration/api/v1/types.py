@@ -4,10 +4,10 @@
 
 """Type definitions for the v1 integration test modules."""
 
-from typing import Callable
+from typing import Awaitable, Callable
 
 from merino.providers import BaseProvider
 
 Providers = dict[str, BaseProvider]
 SetupProvidersFixture = Callable[[Providers], None]
-TeardownProvidersFixture = Callable[[], None]
+TeardownProvidersFixture = Callable[[Providers], Awaitable[None]]

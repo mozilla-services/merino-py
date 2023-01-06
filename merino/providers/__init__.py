@@ -15,6 +15,11 @@ from merino.providers.top_picks import Provider as TopPicksProvider
 from merino.providers.weather.backends.accuweather import AccuweatherBackend
 from merino.providers.weather.provider import Provider as WeatherProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
+from merino.providers.wikipedia.backends.elastic import ElasticBackend
+from merino.providers.wikipedia.backends.test_backends import (
+    TestBackend as WikipediaTestBackend,
+)
+from merino.providers.wikipedia.provider import Provider as WikipediaProvider
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
@@ -30,6 +35,7 @@ class ProviderType(str, Enum):
     ADM = "adm"
     TOP_PICKS = "top_picks"
     WIKI_FRUIT = "wiki_fruit"
+    WIKIPEDIA = "wikipedia"
 
 
 async def init_providers() -> None:
@@ -77,6 +83,20 @@ async def init_providers() -> None:
                 providers["wiki_fruit"] = WikiFruitProvider(
                     name=provider_type, enabled_by_default=setting.enabled_by_default
                 )
+            case ProviderType.WIKIPEDIA:
+                providers["wikipedia"] = WikipediaProvider(
+                    backend=(
+                        ElasticBackend(
+                            cloud_id=setting.es_cloud_id,
+                            user=setting.es_user,
+                            password=setting.es_password,
+                        )  # type: ignore [arg-type]
+                        if setting.backend == "elasticsearch"
+                        else WikipediaTestBackend()
+                    ),
+                    name=provider_type,
+                    enabled_by_default=setting.enabled_by_default,
+                )
             case _:
                 raise InvalidProviderError(f"Unknown provider type: {provider_type}")
 
@@ -93,9 +113,24 @@ async def init_providers() -> None:
             [p for p in providers.values() if p.enabled_by_default]
         )
         logger.info(
-            "Provider initialization complete",
+            "Provider initialization completed",
             extra={"providers": [*providers.keys()], "elapsed": timer() - start},
         )
+
+
+async def shutdown_providers() -> None:
+    """Shut down all suggestion providers.
+
+    This should only be called once at the shutdown of application.
+    """
+    start = timer()
+
+    for provider in providers.values():
+        await provider.shutdown()
+    logger.info(
+        "Provider shutdown completed",
+        extra={"providers": [*providers.keys()], "elapsed": timer() - start},
+    )
 
 
 def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
