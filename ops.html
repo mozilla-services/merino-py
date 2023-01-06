@@ -386,6 +386,31 @@ or not this provider is enabled by default.</li>
 </ul>
 </li>
 </ul>
+<h4 id="wikipedia-dynamic-match-provider"><a class="header" href="#wikipedia-dynamic-match-provider">Wikipedia Dynamic Match Provider</a></h4>
+<p>The provider that is backed by the locally indexed Wikipedia through Elasticsearch.</p>
+<ul>
+<li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ENABLED_BY_DEFAULT</code>) - Whether
+or not this provider is enabled by default.
+<ul>
+<li><code>backend</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__backend</code>) - The backend of the provider.
+Either <code>elasticsearch</code> or <code>test</code>.</li>
+</ul>
+</li>
+<li><code>es_cloud_id</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_CLOUD_ID</code>) - The Cloud ID of the
+Elasticsearch cluster.</li>
+<li><code>es_user</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_USER</code>) - The user name of the Elasticsearch
+cluster.</li>
+<li><code>es_password</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_PASSWORD</code>) - The password for
+accessing the Elasticsearch cluster.</li>
+<li><code>es_index</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX</code>) - The index identifier
+of Wikipedia in Elasticsearch.</li>
+<li><code>es_max_suggestions</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_MAX_SUGGESTIONS</code>) - The
+maximum suggestions for each search request to Elasticsearch.</li>
+<li><code>es_request_timeout_ms</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS</code>) - The
+timeout in milliseconds for each search request to Elasticsearch.</li>
+<li><code>score</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__SCORE</code>) - The ranking score for this provider
+as a floating point number. Defaults to 0.23.</li>
+</ul>
 
                     </main>
 
