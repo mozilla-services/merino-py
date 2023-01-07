@@ -5,7 +5,6 @@
 """Integration tests for the Merino v1 suggest API endpoint."""
 
 import logging
-import random
 
 import aiodogstatsd
 import pytest
@@ -26,6 +25,7 @@ from tests.types import FilterCaplogFixture
 
 # Defined in testing.toml under [testing.web.api.v1]
 CLIENT_VARIANT_MAX = settings.web.api.v1.client_variant_max
+QUERY_MAX_LENGTH = settings.web.api.v1.query_max_length
 
 
 @pytest.fixture(name="providers")
@@ -77,6 +77,27 @@ def test_no_suggestion(client: TestClient) -> None:
     assert len(response.json()["suggestions"]) == 0
 
 
+def test_query_max_length(client: TestClient) -> None:
+    """Test that the suggest endpoint query is limited by the defined query_max_length.
+    While no result will return, this tests a matching string length up to max.
+    Constant in configuration under [default | testing].web.api.v1.query_max_length.
+    """
+    query_string = "a" * QUERY_MAX_LENGTH
+    response = client.get(f"/api/v1/suggest?q={query_string}")
+    assert response.status_code == 200
+    assert len(response.json()["suggestions"]) == 0
+
+
+def test_query_failure_exceeds_max_length(client: TestClient) -> None:
+    """Test that the suggest endpoint query is limited by the defined query_max_length.
+    This ensures a 400 code returns and the request fails.
+    Constant in configuration under [default | testing].web.api.v1.query_max_length.
+    """
+    query_string = "a" * (QUERY_MAX_LENGTH * 2)
+    response = client.get(f"/api/v1/suggest?q={query_string}")
+    assert response.status_code == 400
+
+
 def test_suggest_duplicate_providers(client: TestClient) -> None:
     """Test to ensure that duplicated providers passed into the suggest endpoint do not
     result in a flood of responses that could result in Denial of Service. A duplicated
@@ -115,13 +136,12 @@ def test_client_variants(client: TestClient) -> None:
 
     result = response.json()
     assert len(result["suggestions"]) == 1
-    # Both the client_variants and test data are converted to sets to check membership,
-    # irrespective of the order because set() is used to remove duplicates.
-    assert set(result["client_variants"]) == set(["foo", "bar"])
+    assert result["client_variants"] == ["foo", "bar"]
 
 
 def test_client_variants_duplicated_variant(client: TestClient) -> None:
-    """Test that the suggest endpoint response only returns a single client_variant,
+    """Test that the suggest endpoint response only returns a single value for client_variant,
+    limited by the CLIENT_VARIANT_MAX as the total possible recurrences of the value,
     even if the request is bombarded with an identical client_variant of the same name.
     """
     duplicated_client_variant = ("foo," * 10000).rstrip(",")
@@ -132,17 +152,18 @@ def test_client_variants_duplicated_variant(client: TestClient) -> None:
 
     result = response.json()
     assert len(result["suggestions"]) == 1
-    assert result["client_variants"] == ["foo"]
+    assert "foo" in result["client_variants"]
+    assert ["foo"] == list(set(result["client_variants"]))
+    assert len(result["client_variants"]) == CLIENT_VARIANT_MAX
 
 
 def test_client_variants_several_duplicated_variants(client: TestClient) -> None:
-    """Test that the suggest endpoint response only returns unique client_variants,
-    even if the request is bombarded with identical client_variants of different names.
+    """Test that the suggest endpoint response only returns client_variants not exceeding
+    the defined client_variant_max, not any trailing string values, even if the request
+    is bombarded with identical client_variants of different names.
     """
     variants = ["foo", "bar", "baz", "fizz", "buzz"]
-    duplicated_client_variants = ",".join(
-        [random.choice(variants) for _ in range(10000)]  # nosec
-    ).rstrip(",")
+    duplicated_client_variants = ",".join([*variants * 50]).rstrip(",")
     response = client.get(
         f"/api/v1/suggest?q=sponsored&client_variants={duplicated_client_variants}"
     )
@@ -150,14 +171,15 @@ def test_client_variants_several_duplicated_variants(client: TestClient) -> None
 
     result = response.json()
     assert len(result["suggestions"]) == 1
-    # Both the client_variants and test data are converted to sets to check membership,
-    # irrespective of the order because set() is used to remove duplicates.
-    assert set(result["client_variants"]) == set(["foo", "bar", "baz", "fizz", "buzz"])
+    # Both the client_variants and test data are converted to sets to check membership.
+    assert [*variants] == result["client_variants"]
+    assert len(result["client_variants"]) == CLIENT_VARIANT_MAX
 
 
 def test_client_variants_return_minimum_variants(client: TestClient) -> None:
-    """Test that the suggest endpoint restriction of 5 client variants for a suggestion.
-    Ensure that the response does not reflect back excessive client variants.
+    """Test that the suggest endpoint restriction of CLIENT_VARIANT_MAX is met.
+    Ensure that the response does not reflect back excessive client variants, nor trailing
+    string values.
     """
     client_variants = ["foo", "bar", "baz", "fizz", "buzz", "foobar"]
 
@@ -169,10 +191,8 @@ def test_client_variants_return_minimum_variants(client: TestClient) -> None:
     result = response.json()
     assert len(result["suggestions"]) == 1
     # NOTE: Shorter value of 5 for client_variant_max used for testing.
-    # See testing.runtime.client_variant_max. Prod value in default.runtime.client_variant_max.
-
-    # Number of possible client variants counted here opposed to the exact matches, given
-    # set() operations do not guarantee order or precedence.
+    # See testing..web.api.v1.client_variant_max.
+    # Prod value in default..web.api.v1.client_variant_max.
     assert len(result["client_variants"]) == CLIENT_VARIANT_MAX
 
 

@@ -6,7 +6,7 @@ from functools import partial
 from itertools import chain
 
 from asgi_correlation_id.context import correlation_id
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
@@ -36,6 +36,7 @@ QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
 # possible client variants for experiments.
 # See https://mozilla-services.github.io/merino/api.html#suggest
 CLIENT_VARIANT_MAX = settings.web.api.v1.client_variant_max
+QUERY_MAX_LENGTH = settings.web.api.v1.query_max_length
 
 
 @router.get(
@@ -46,7 +47,7 @@ CLIENT_VARIANT_MAX = settings.web.api.v1.client_variant_max
 )
 async def suggest(
     request: Request,
-    q: str,
+    q: str = Query(max_length=QUERY_MAX_LENGTH),
     providers: str | None = None,
     client_variants: str | None = None,
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
@@ -121,7 +122,10 @@ async def suggest(
         request_id=correlation_id.get(),
         # client_variant restriction: set to remove duplicates, [0:CLIENT_VARIANT_MAX] to
         # limit potential reflection back to client.
-        client_variants=list(set(client_variants.split(",")))[:CLIENT_VARIANT_MAX]
+        # [:CLIENT_VARIANT_MAX] filter at end to drop any trailing string.
+        client_variants=client_variants.split(",", maxsplit=CLIENT_VARIANT_MAX)[
+            :CLIENT_VARIANT_MAX
+        ]
         if client_variants
         else [],
     )

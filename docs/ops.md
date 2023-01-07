@@ -91,11 +91,17 @@ tooling.
 
 ### API Configurations
 
-- `default.web.api.v1` (`MERINO_WEB__API__V1__CLIENT_VARIANT_MAX`)
+- `default.web.api.v1.client_variant_max` (`MERINO_WEB__API__V1__CLIENT_VARIANT_MAX`)
 - A non-negative integer to contol the limit of optional client variants passed 
   to suggest endpoint as part of experiments or rollouts.  Additional validators
   can/will be implemented to ensure a limitation on the number of variants passed
   to the request. See: https://mozilla-services.github.io/merino/api.html#suggest.
+
+- `default.web.api.v1.query_max_length` (`MERINO_WEB__API__V1__QUERY_MAX_LENGTH`)
+- A non-negative integer value that is passed into the `max_length` parameter 
+  of the FastAPI Query object constructor.  This limits the string character length
+  of a given query string.
+  
 
 ### Logging
 
