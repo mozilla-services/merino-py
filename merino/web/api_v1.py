@@ -122,9 +122,7 @@ async def suggest(
     response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),
-        # client_variant restriction: set to remove duplicates, [0:CLIENT_VARIANT_MAX] to
-        # limit potential reflection back to client.
-        # [:CLIENT_VARIANT_MAX] filter at end to drop any trailing string.
+        # [:CLIENT_VARIANT_MAX] filter at end to drop any trailing string beyond max_split.
         client_variants=client_variants.split(",", maxsplit=CLIENT_VARIANT_MAX)[
             :CLIENT_VARIANT_MAX
         ]

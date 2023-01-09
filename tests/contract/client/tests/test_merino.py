@@ -160,14 +160,7 @@ def assert_200_response(
     """Check that the content for a 200 OK response is what we expect."""
     expected_content_dict = step_content.dict(exclude=CONTENT_EXCLUDE)
     merino_content_dict = merino_content.dict(exclude=CONTENT_EXCLUDE)
-
-    # Because the order of client_variants and server_variants are not
-    # guaranteed, they are sorted before comparison.
-    sorted_expected_content_dict = {
-        k: sorted(v) for k, v in expected_content_dict.items()
-    }
-    sorted_merino_content_dict = {k: sorted(v) for k, v in merino_content_dict.items()}
-    assert sorted_expected_content_dict == sorted_merino_content_dict
+    assert expected_content_dict == merino_content_dict
 
     # The order of suggestions in Merino's response is not guaranteed.
     # Sort them by ('provider', 'block_id') before validating them.

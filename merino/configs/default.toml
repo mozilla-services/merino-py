@@ -39,7 +39,7 @@ format = "mozlog"
 [default.web.api.v1]
 # Setting to contol the limit of optional client variants passed
 # to suggest endpoint as part of experiments or rollouts.
-client_variant_max = 25
+client_variant_max = 10
 # Values passed into Query object for FastAPI query parameter validator.
 # Sets limitation on the maximum string length of a query.
 client_variant_character_max = 100
