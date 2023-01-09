@@ -466,7 +466,7 @@ added as a constant tag <code>deployment.canary</code> with type <code>int</code
 Note that this setting is supposed to be controlled exclusively by deployment
 tooling.</li>
 </ul>
-<h3 id="runtime-configurations"><a class="header" href="#runtime-configurations">Runtime configurations</a></h3>
+<h3 id="runtime-configurations"><a class="header" href="#runtime-configurations">Runtime Configurations</a></h3>
 <ul>
 <li><code>runtime.query_timeout_sec</code> (<code>MERINO_RUNTIME__QUERY_TIMEOUT_SEC</code>) - A floating
 point (in seconds) indicating the maximum waiting period for queries issued within
@@ -474,6 +474,34 @@ the handler of the <code>suggest</code> endpoint. All the unfinished query tasks
 cancelled once the timeout gets triggered. Note that this timeout can also be
 configured by specific providers. The provider timeout takes precedence over this
 value.</li>
+</ul>
+<h3 id="api-configurations"><a class="header" href="#api-configurations">API Configurations</a></h3>
+<ul>
+<li>
+<p><code>default.web.api.v1.client_variant_max</code> (<code>MERINO_WEB__API__V1__CLIENT_VARIANT_MAX</code>)</p>
+</li>
+<li>
+<p>A non-negative integer to contol the limit of optional client variants passed 
+to suggest endpoint as part of experiments or rollouts.  Additional validators
+can/will be implemented to ensure a limitation on the number of variants passed
+to the request. See: https://mozilla-services.github.io/merino/api.html#suggest.</p>
+</li>
+<li>
+<p><code>default.web.api.v1.query_character_max</code> (<code>MERINO_WEB__API__V1__QUERY_CHARACTER_MAX</code>)</p>
+</li>
+<li>
+<p>A non-negative integer value that is passed into the <code>max_length</code> parameter 
+of the FastAPI Query object constructor.  This limits the string character length
+of a given query string, in this case the total string length count for the suggestion query.</p>
+</li>
+<li>
+<p><code>default.web.api.v1.client_variant_character_max</code> (<code>MERINO_WEB__API__V1__CLIENT_VARIANT_CHARACTER_MAX</code>)</p>
+</li>
+<li>
+<p>A non-negative integer value that is passed into the <code>max_length</code> parameter 
+of the FastAPI Query object constructor.  This limits the string character length
+of a given query string, in this case the total string length count for client variants.</p>
+</li>
 </ul>
 <h3 id="logging"><a class="header" href="#logging">Logging</a></h3>
 <p>Settings to control the format and amount of logs generated.</p>
