@@ -25,7 +25,8 @@ from tests.types import FilterCaplogFixture
 
 # Defined in testing.toml under [testing.web.api.v1]
 CLIENT_VARIANT_MAX = settings.web.api.v1.client_variant_max
-QUERY_MAX_LENGTH = settings.web.api.v1.query_max_length
+QUERY_CHARACTER_MAX = settings.web.api.v1.query_character_max
+CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
 
 
 @pytest.fixture(name="providers")
@@ -82,7 +83,7 @@ def test_query_max_length(client: TestClient) -> None:
     While no result will return, this tests a matching string length up to max.
     Constant in configuration under [default | testing].web.api.v1.query_max_length.
     """
-    query_string = "a" * QUERY_MAX_LENGTH
+    query_string = "a" * QUERY_CHARACTER_MAX
     response = client.get(f"/api/v1/suggest?q={query_string}")
     assert response.status_code == 200
     assert len(response.json()["suggestions"]) == 0
@@ -93,7 +94,7 @@ def test_query_failure_exceeds_max_length(client: TestClient) -> None:
     This ensures a 400 code returns and the request fails.
     Constant in configuration under [default | testing].web.api.v1.query_max_length.
     """
-    query_string = "a" * (QUERY_MAX_LENGTH * 2)
+    query_string = "a" * (QUERY_CHARACTER_MAX * 2)
     response = client.get(f"/api/v1/suggest?q={query_string}")
     assert response.status_code == 400
 
@@ -144,7 +145,9 @@ def test_client_variants_duplicated_variant(client: TestClient) -> None:
     limited by the CLIENT_VARIANT_MAX as the total possible recurrences of the value,
     even if the request is bombarded with an identical client_variant of the same name.
     """
-    duplicated_client_variant = ("foo," * 10000).rstrip(",")
+    # 24 selected as it results in total string length of 96 characters.
+    # ',' is inclusive, in addition to variant 'foo.'
+    duplicated_client_variant = ("foo," * 24).rstrip(",")
     response = client.get(
         f"/api/v1/suggest?q=sponsored&client_variants={duplicated_client_variant}"
     )
@@ -163,7 +166,9 @@ def test_client_variants_several_duplicated_variants(client: TestClient) -> None
     is bombarded with identical client_variants of different names.
     """
     variants = ["foo", "bar", "baz", "fizz", "buzz"]
-    duplicated_client_variants = ",".join([*variants * 50]).rstrip(",")
+    # 2 multiplications of the variants plus the comma values result in
+    # fewer than the defined maximum.
+    duplicated_client_variants = ",".join([*variants * 2]).rstrip(",")
     response = client.get(
         f"/api/v1/suggest?q=sponsored&client_variants={duplicated_client_variants}"
     )

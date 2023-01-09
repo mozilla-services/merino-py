@@ -25,9 +25,10 @@ format = "pretty"
 # to suggest endpoint as part of experiments or rollouts.
 # Smaller max for testing
 client_variant_max = 5
-# Value passed into Query object for FastAPI query parameter validator.
+# Values passed into Query object for FastAPI query parameter validator.
 # Sets limitation on the maximum string length of a query.
-query_max_length = 100
+client_variant_character_max = 100
+query_character_max = 500
 
 [testing.providers.accuweather]
 # Whether or not this provider is enabled by default.

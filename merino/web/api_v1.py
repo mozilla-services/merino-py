@@ -36,7 +36,8 @@ QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
 # possible client variants for experiments.
 # See https://mozilla-services.github.io/merino/api.html#suggest
 CLIENT_VARIANT_MAX = settings.web.api.v1.client_variant_max
-QUERY_MAX_LENGTH = settings.web.api.v1.query_max_length
+QUERY_CHARACTER_MAX = settings.web.api.v1.query_character_max
+CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
 
 
 @router.get(
@@ -47,9 +48,10 @@ QUERY_MAX_LENGTH = settings.web.api.v1.query_max_length
 )
 async def suggest(
     request: Request,
-    q: str = Query(max_length=QUERY_MAX_LENGTH),
+    q: str = Query(max_length=QUERY_CHARACTER_MAX),
     providers: str | None = None,
-    client_variants: str | None = None,
+    client_variants: str
+    | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
