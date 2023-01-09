@@ -6,7 +6,7 @@ from functools import partial
 from itertools import chain
 
 from asgi_correlation_id.context import correlation_id
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
@@ -32,6 +32,13 @@ SUGGEST_RESPONSE = {
 # Timeout for query tasks.
 QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
 
+# Client Variant Maximum - used to limit the number of
+# possible client variants for experiments.
+# See https://mozilla-services.github.io/merino/api.html#suggest
+CLIENT_VARIANT_MAX = settings.web.api.v1.client_variant_max
+QUERY_CHARACTER_MAX = settings.web.api.v1.query_character_max
+CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
+
 
 @router.get(
     "/suggest",
@@ -41,9 +48,10 @@ QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
 )
 async def suggest(
     request: Request,
-    q: str,
+    q: str = Query(max_length=QUERY_CHARACTER_MAX),
     providers: str | None = None,
-    client_variants: str | None = None,
+    client_variants: str
+    | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
@@ -69,7 +77,10 @@ async def suggest(
     active_providers, default_providers = sources
     if providers is not None:
         search_from = [
-            active_providers[p] for p in providers.split(",") if p in active_providers
+            active_providers[p]
+            # Set used to filter out possible duplicate providers passed in.
+            for p in set(providers.split(","))
+            if p in active_providers
         ]
     else:
         search_from = default_providers
@@ -111,7 +122,12 @@ async def suggest(
     response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),
-        client_variants=client_variants.split(",") if client_variants else [],
+        # [:CLIENT_VARIANT_MAX] filter at end to drop any trailing string beyond max_split.
+        client_variants=client_variants.split(",", maxsplit=CLIENT_VARIANT_MAX)[
+            :CLIENT_VARIANT_MAX
+        ]
+        if client_variants
+        else [],
     )
     return JSONResponse(content=jsonable_encoder(response))
 

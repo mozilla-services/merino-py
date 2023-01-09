@@ -40,6 +40,10 @@ _validators = [
         lte=0.2,
         env=["production", "ci"],
     ),
+    Validator("web.api.v1.client_variant_max", is_type_of=int, gte=0, lte=50),
+    # Max set that is passed into FastAPI Query constuctor param 'max_length'.
+    Validator("web.api.v1.query_character_max", is_type_of=int, gt=5, lte=500),
+    Validator("web.api.v1.client_variant_character_max", is_type_of=int, gt=0, lte=100),
     # Allow a longer timeout for testing & development
     Validator(
         "runtime.query_timeout_sec",
