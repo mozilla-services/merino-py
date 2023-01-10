@@ -9,7 +9,7 @@ Wiki Fruit provider.
 import pytest
 from fastapi import APIRouter, FastAPI
 
-from merino.providers.wiki_fruit import WikiFruitProvider, Suggestion
+from merino.providers.wiki_fruit import Suggestion, WikiFruitProvider
 from tests.unit.types import SuggestionRequestFixture
 
 app = FastAPI()
@@ -51,7 +51,7 @@ async def test_query_no_suggestion(
 async def test_query_suggestion(
     srequest: SuggestionRequestFixture, wiki_fruit: WikiFruitProvider, query: str
 ) -> None:
-    """Test for the successful return of a suggestion for query method of the Wiki Fruit provider."""
+    """Test for successful return of a suggestion for query method of the Wiki Fruit provider."""
     await wiki_fruit.initialize()
 
     res = await wiki_fruit.query(srequest(query))
