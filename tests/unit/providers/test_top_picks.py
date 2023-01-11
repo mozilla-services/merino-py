@@ -10,6 +10,7 @@ import pytest
 from fastapi import APIRouter, FastAPI
 
 from merino.config import settings
+from merino.providers.base import BaseSuggestion
 from merino.providers.top_picks import Provider, Suggestion
 from tests.unit.types import SuggestionRequestFixture
 
@@ -129,8 +130,8 @@ async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) ->
     assert await top_picks.query(srequest("https://")) == []
     assert await top_picks.query(srequest("supercalifragilisticexpialidocious")) == []
 
-    res = await top_picks.query(srequest("example"))
-    assert res == [
+    result: list[BaseSuggestion] = await top_picks.query(srequest("example"))
+    assert result == [
         Suggestion(
             block_id=0,
             title="Example",
@@ -143,8 +144,8 @@ async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) ->
         )
     ]
 
-    res = await top_picks.query(srequest("exxamp"))
-    assert res == [
+    result = await top_picks.query(srequest("exxamp"))
+    assert result == [
         Suggestion(
             block_id=0,
             title="Example",
