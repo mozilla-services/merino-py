@@ -45,21 +45,21 @@ def test_configure_logging_mozlog_production() -> None:
         settings.logging.format = old_format
 
 
-def test_log_handler_assigned_mozlog() -> None:
+def test_configure_log_handler_assigned_mozlog() -> None:
     """Test that the log handler is assigned as expected when the configured format is 'mozlog'"""
     settings.logging.format = "mozlog"
     configure_logging()
 
     merino_log_manager: Any = logging.root.manager
-    handler_name = merino_log_manager.loggerDict["merino"].handlers[0].name
-    assert handler_name == "console-mozlog"
+    merino_logger: Any = merino_log_manager.loggerDict["merino"].handlers[0].name
+    assert merino_logger == "console-mozlog"
 
 
-def test_log_handler_assigned_pretty() -> None:
+def test_configure_log_handler_assigned_pretty() -> None:
     """Test that the log handler is assigned as expected when the configured format is 'pretty'"""
     settings.logging.format = "pretty"
     configure_logging()
 
     merino_log_manager: Any = logging.root.manager
-    handler_name = merino_log_manager.loggerDict["merino"].handlers[0].name
-    assert handler_name == "console-pretty"
+    merino_logger: Any = merino_log_manager.loggerDict["merino"].handlers[0].name
+    assert merino_logger == "console-pretty"

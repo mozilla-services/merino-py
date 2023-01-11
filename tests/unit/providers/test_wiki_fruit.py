@@ -2,13 +2,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Integration tests for the Merino v1 suggest API endpoint configured with the
-Wiki Fruit provider.
-"""
+"""Unit tests for the Wiki Fruit provider module."""
 
 import pytest
 from fastapi import APIRouter, FastAPI
 
+from merino.providers.base import BaseSuggestion
 from merino.providers.wiki_fruit import Suggestion, WikiFruitProvider
 from tests.unit.types import SuggestionRequestFixture
 
@@ -38,12 +37,12 @@ async def test_query_no_suggestion(
     srequest: SuggestionRequestFixture, wiki_fruit: WikiFruitProvider, query: str
 ) -> None:
     """Test for the return of no suggestions when invalid query term provided to
-    query methodof the Wiki Fruit provider.
+    query method of the Wiki Fruit provider.
     """
     await wiki_fruit.initialize()
 
-    res = await wiki_fruit.query(srequest(query))
-    assert res == []
+    result: list[BaseSuggestion] = await wiki_fruit.query(srequest(query))
+    assert result == []
 
 
 @pytest.mark.asyncio
@@ -54,8 +53,8 @@ async def test_query_suggestion(
     """Test for successful return of a suggestion for query method of the Wiki Fruit provider."""
     await wiki_fruit.initialize()
 
-    res = await wiki_fruit.query(srequest(query))
-    assert res == [
+    result: list[BaseSuggestion] = await wiki_fruit.query(srequest(query))
+    assert result == [
         Suggestion(
             block_id=1,
             full_keyword=query,
