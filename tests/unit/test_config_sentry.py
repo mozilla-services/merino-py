@@ -97,4 +97,4 @@ def test_fetch_sha_hash_from_version_file_invalid_path(project_root) -> None:
     environments as there is no git directory created when service deployed.
     """
     with pytest.raises(FileNotFoundError):
-        fetch_sha_hash_from_version_file(f"{project_root}/wrong")
+        fetch_sha_hash_from_version_file(os.path.join(project_root, "wrong"))
