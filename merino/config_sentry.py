@@ -114,12 +114,12 @@ def fetch_git_sha(path: str) -> str:
 
 def fetch_sha_hash_from_version_file(
     merino_root_path: str,
-) -> Optional[str]:  # pragma: no cover
+) -> str:
     """In production and stage, fetch the SHA hash from the version.json file.
     During deployment, this file is written and values are populated for the current
     version of Merino.
     """
-    version_file_path: str = f"{merino_root_path}/version.json"
+    version_file_path: str = os.path.join(merino_root_path, "version.json")
     if not os.path.exists(version_file_path):
         error_message = (
             f"version.json file does not exist at file path: {merino_root_path}"
@@ -129,7 +129,5 @@ def fetch_sha_hash_from_version_file(
 
     with open(version_file_path) as file:
         version_file: dict = json.load(file)
-        commit_hash: str | None = version_file.get("commit")
-    if commit_hash:
-        return commit_hash
-    return None
+        commit_hash: str = version_file.get("commit", "")
+    return commit_hash
