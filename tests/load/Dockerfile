@@ -4,7 +4,11 @@
 
 FROM python:3.9-slim
 
-LABEL maintainer "Raphael Pierzina <raphael@hackebrot.de>"
+LABEL maintainer "Contextual Services Team <contextual-services-team@mozilla.com>"
+
+# Add gcc since there are no wheels for some packages for arm64/aarch64
+RUN apt-get update && apt-get install -y git
+RUN if [ -n "$(arch | grep 'arm64\|aarch64')" ]; then apt install -y --no-install-recommends gcc python3-dev; fi
 
 # Expose ports for the web UI and the locust master
 EXPOSE 8089 5557
@@ -24,7 +28,7 @@ RUN python -m pip install --upgrade pip
 COPY requirements.txt /tmp/requirements.txt
 RUN python -m pip install -r /tmp/requirements.txt
 
-COPY tests ./
+COPY locust_tests ./
 
 USER locust
 ENTRYPOINT [ "locust" ]

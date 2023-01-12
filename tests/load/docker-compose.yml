@@ -1,11 +1,10 @@
 version: "3"
 services:
   merino:
-    image: merino
+    image: mozilla/merino-py:latest
     container_name: locust_merino
     build: ../..
     environment:
-      # TODO: This needs to be updated or kinto needs to be added
       MERINO__ENV: "ci"
     volumes:
       - ../../dev:/tmp/dev

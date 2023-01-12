@@ -7,23 +7,18 @@
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, Extra, Field, HttpUrl
 
 
 class Suggestion(BaseModel, extra=Extra.allow):
     """Class that holds information about a Suggestion returned by Merino."""
 
-    block_id: int
-    full_keyword: str
     title: str
-    url: str
-    impression_url: str
-    click_url: str
+    url: HttpUrl
     provider: str
     is_sponsored: bool
-    icon: str
     score: float
-    advertiser: Optional[str]  # A deprecated alias of `provider`
+    icon: Optional[str]
 
 
 class ResponseContent(BaseModel):
