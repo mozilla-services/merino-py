@@ -1,5 +1,5 @@
 """Sentry Configuration"""
-
+import json
 import logging
 import os.path
 from typing import Optional
@@ -52,7 +52,7 @@ def read_git_head_file(merino_root_dir: str) -> str:
     return head
 
 
-def check_packed_refs(head) -> Optional[str]:  # pragma: no cover
+def check_git_packed_refs(head) -> Optional[str]:  # pragma: no cover
     """Check .git/packed-refs for SHA in the case garbage collection clared original
     hash in refs/heads directory.
     """
@@ -91,7 +91,7 @@ def fetch_git_sha(path: str) -> str:
     head_path: str = read_git_head_file(path)
 
     # check packed_refs for revision SHA. NOTE: See function notes for details.
-    packed_refs: Optional[str] = check_packed_refs(head_path)
+    packed_refs: Optional[str] = check_git_packed_refs(head_path)
     if packed_refs:
         return packed_refs
     # refs_heads_path creates the path ro the file in refs/heads.
@@ -110,3 +110,26 @@ def fetch_git_sha(path: str) -> str:
     with open(revision_file_path, "r") as sha_file:
         revision_sha = sha_file.read().strip()
         return revision_sha
+
+
+def fetch_sha_hash_from_version_file(
+    merino_root_path: str,
+) -> Optional[str]:  # pragma: no cover
+    """In production and stage, fetch the SHA hash from the version.json file.
+    During deployment, this file is written and values are populated for the current
+    version of Merino.
+    """
+    version_file_path: str = f"{merino_root_path}/version.json"
+    if not os.path.exists(version_file_path):
+        error_message = (
+            f"version.json file does not exist at file path: {merino_root_path}"
+        )
+        logger.warning(error_message)
+        raise FileNotFoundError(error_message)
+
+    with open(version_file_path) as file:
+        version_file: dict = json.load(file)
+        commit_hash: str | None = version_file.get("commit")
+    if commit_hash:
+        return commit_hash
+    return None

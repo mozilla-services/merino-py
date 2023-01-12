@@ -8,7 +8,11 @@ from subprocess import check_output  # nosec
 
 import pytest
 
-from merino.config_sentry import check_packed_refs, fetch_git_sha, read_git_head_file
+from merino.config_sentry import (
+    check_git_packed_refs,
+    fetch_git_sha,
+    read_git_head_file,
+)
 from merino.exceptions import InvalidGitRepository
 
 
@@ -70,5 +74,5 @@ def test_check_packed_refs(project_root) -> None:
 def test_check_packed_refs_fails(project_root) -> None:
     """Test packed refs fails when passed invalid path."""
     invalid_head_path = f"{project_root}/merino"
-    result = check_packed_refs(invalid_head_path)
+    result = check_git_packed_refs(invalid_head_path)
     assert result is None
