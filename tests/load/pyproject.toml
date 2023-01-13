@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "locust-load"
+version = "0.1.0"
+description = "A Merino load test framework"
+authors = ["Mozilla"]
+license = "Mozilla Public License Version 2.0"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+locust = "^2.14.2"
+pydantic = "^1.10.4"
+faker = "^16.4.0"
+kinto-http = "^11.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

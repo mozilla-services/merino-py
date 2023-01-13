@@ -5,6 +5,7 @@ COV_FAIL_UNDER := 95
 UNIT_TEST_DIR := $(TEST_DIR)/unit
 INTEGRATION_TEST_DIR := $(TEST_DIR)/integration
 CONTRACT_TEST_DIR := $(TEST_DIR)/contract
+LOAD_TEST_DIR := $(TEST_DIR)/load
 APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR)
 INSTALL_STAMP := .install.stamp
 POETRY := $(shell command -v poetry 2> /dev/null)
@@ -112,6 +113,23 @@ contract-tests-clean:  ##  Stop and remove containers and networks for contract 
 	docker-compose \
       -f $(CONTRACT_TEST_DIR)/docker-compose.yml \
       -p merino-py-contract-tests \
+      down
+
+.PHONY: run-load-tests
+run-load-tests:  ##  Run local execution of (Locust) load tests using existing merino-py docker image
+	docker-compose \
+      -f $(LOAD_TEST_DIR)/docker-compose.yml \
+      -p merino-py-load-tests \
+      up --scale locust_worker=4
+
+.PHONY: load-tests
+load-tests: docker-build run-load-tests  ## Run local execution of (Locust) load tests, with merino-py docker build step
+
+.PHONY: load-tests-clean
+load-tests-clean:  ##  Stop and remove containers and networks for load tests
+	docker-compose \
+      -f $(LOAD_TEST_DIR)/docker-compose.yml \
+      -p merino-py-load-tests \
       down
 
 .PHONY: doc

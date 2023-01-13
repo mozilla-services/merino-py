@@ -1,11 +1,9 @@
 version: "3"
 services:
   merino:
-    image: merino
-    container_name: locust_merino
-    build: ../..
+    image: app:build
+    container_name: merino
     environment:
-      # TODO: This needs to be updated or kinto needs to be added
       MERINO__ENV: "ci"
     volumes:
       - ../../dev:/tmp/dev

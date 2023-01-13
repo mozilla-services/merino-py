@@ -1,11 +1,15 @@
 # Testing strategies
 
-Merino is tested using a four tier strategy composed of unit, integration, contract
-and load testing.
+Merino is tested using a combination of functional and performance tests.
 
 Test code resides in the `tests` directory.
 
-## Unit Tests
+## Functional
+
+The functional test strategy is four-tiered, composed of: unit, integration, contract
+and end-to-end testing.
+
+### Unit Tests
 
 The unit layer is suitable for testing complex behavior at a small scale, with
 fine-grained control over the inputs. Due to their narrow scope, unit tests are
@@ -56,7 +60,7 @@ def test_middleware(scope: Scope, receive_mock: Receive, send_mock: Send) -> Non
     pass
 ````
 
-## Integration Tests
+### Integration Tests
 
 The integration layer of testing allows for verification of interactions between
 service components, with lower development, maintenance and execution costs compared
@@ -158,7 +162,7 @@ def teardown(teardown_providers: TeardownProvidersFixture):
     teardown_providers()
 ```
 
-## Contract tests
+### Contract Tests
 
 The tests in the `tests/contract` directory are contract tests
 that consume Merino's APIs using more opaque techniques. These tests run against
@@ -167,11 +171,20 @@ and operate on the HTTP API layer only and as such are more concerned with
 external contracts and behavior. The contract tests cannot configure the server
 per test.
 
-For more details see the README.md file in the `test/contract`
-directory.
+For more details see the README.md file in the `test/contract` directory.
 
-## Load tests
+### End-to-End Tests
 
-The tests in the `tests/load` directory are load tests that
-spawn multiple HTTP clients that consume Merino's API. These tests do not run on
-CI. We run them manually to simulate real-world load on the Merino infrastructure.
+The end-to-end tests are executed manually by Softvision.
+
+## Performance
+
+### Load Tests
+
+The tests in the `tests/load` directory are load tests that spawn multiple HTTP 
+clients that consume Merino's API in order to simulate real-world load on the Merino 
+infrastructure. These tests use the Locust framework and are triggered manually at the
+discretion of the Merino Engineering Team.
+
+
+For more details see the README.md file in the `test/load` directory.

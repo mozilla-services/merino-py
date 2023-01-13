@@ -92,6 +92,15 @@ $ make contract-tests
 # Run contract tests cleanup
 $ make contract-tests-clean
 
+# Run local execution of (Locust) load tests using existing merino-py docker image
+$ make run-load-tests
+
+# Run local execution of (Locust) load tests, with merino-py docker build step
+$ make load-tests
+
+# Stop and remove containers and networks for load tests
+$ make load-tests-clean
+
 # Generate documents
 $ make doc
 
