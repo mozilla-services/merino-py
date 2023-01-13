@@ -884,6 +884,15 @@ $ make contract-tests
 # Run contract tests cleanup
 $ make contract-tests-clean
 
+# Run local execution of (Locust) load tests using existing merino-py docker image
+$ make run-load-tests
+
+# Run local execution of (Locust) load tests, with merino-py docker build step
+$ make load-tests
+
+# Stop and remove containers and networks for load tests
+$ make load-tests-clean
+
 # Generate documents
 $ make doc
 
@@ -1097,10 +1106,12 @@ metrics, you can use them in your queries in Grafana. 📈</p>
 Grafana. You can also use <code>[[tag_feature_flag.hello_world]]</code> in the <code>ALIAS</code> for
 panel legends.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="testing-strategies"><a class="header" href="#testing-strategies">Testing strategies</a></h1>
-<p>Merino is tested using a four tier strategy composed of unit, integration, contract
-and load testing.</p>
+<p>Merino is tested using a combination of functional and performance tests.</p>
 <p>Test code resides in the <code>tests</code> directory.</p>
-<h2 id="unit-tests"><a class="header" href="#unit-tests">Unit Tests</a></h2>
+<h2 id="functional"><a class="header" href="#functional">Functional</a></h2>
+<p>The functional test strategy is four-tiered, composed of: unit, integration, contract
+and end-to-end testing.</p>
+<h3 id="unit-tests"><a class="header" href="#unit-tests">Unit Tests</a></h3>
 <p>The unit layer is suitable for testing complex behavior at a small scale, with
 fine-grained control over the inputs. Due to their narrow scope, unit tests are
 fundamental to thorough test coverage.</p>
@@ -1136,7 +1147,7 @@ Receive and Send object dependencies.</p>
 <pre><code class="language-python">def test_middleware(scope: Scope, receive_mock: Receive, send_mock: Send) -&gt; None:
     pass
 </code></pre>
-<h2 id="integration-tests"><a class="header" href="#integration-tests">Integration Tests</a></h2>
+<h3 id="integration-tests"><a class="header" href="#integration-tests">Integration Tests</a></h3>
 <p>The integration layer of testing allows for verification of interactions between
 service components, with lower development, maintenance and execution costs compared
 with higher level tests, such as contract tests.</p>
@@ -1209,19 +1220,23 @@ def teardown(teardown_providers: TeardownProvidersFixture):
     yield
     teardown_providers()
 </code></pre>
-<h2 id="contract-tests"><a class="header" href="#contract-tests">Contract tests</a></h2>
+<h3 id="contract-tests"><a class="header" href="#contract-tests">Contract Tests</a></h3>
 <p>The tests in the <code>tests/contract</code> directory are contract tests
 that consume Merino's APIs using more opaque techniques. These tests run against
 a Docker container of the service, specify settings via environment variables,
 and operate on the HTTP API layer only and as such are more concerned with
 external contracts and behavior. The contract tests cannot configure the server
 per test.</p>
-<p>For more details see the README.md file in the <code>test/contract</code>
-directory.</p>
-<h2 id="load-tests"><a class="header" href="#load-tests">Load tests</a></h2>
-<p>The tests in the <code>tests/load</code> directory are load tests that
-spawn multiple HTTP clients that consume Merino's API. These tests do not run on
-CI. We run them manually to simulate real-world load on the Merino infrastructure.</p>
+<p>For more details see the README.md file in the <code>test/contract</code> directory.</p>
+<h3 id="end-to-end-tests"><a class="header" href="#end-to-end-tests">End-to-End Tests</a></h3>
+<p>The end-to-end tests are executed manually by Softvision.</p>
+<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
+<h3 id="load-tests"><a class="header" href="#load-tests">Load Tests</a></h3>
+<p>The tests in the <code>tests/load</code> directory are load tests that spawn multiple HTTP 
+clients that consume Merino's API in order to simulate real-world load on the Merino 
+infrastructure. These tests use the Locust framework and are triggered manually at the
+discretion of the Merino Engineering Team.</p>
+<p>For more details see the README.md file in the <code>test/load</code> directory.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-release-process"><a class="header" href="#the-release-process">The Release Process</a></h1>
 <p>This project currently follows a <a href="https://en.wikipedia.org/wiki/Continuous_delivery">Continuous Delivery</a> process, but it's gradually moving toward <a href="https://en.wikipedia.org/wiki/Continuous_deployment">Continuous Deployment</a>.</p>
 <p>Whenever a commit is pushed to this repository's <code>main</code> branch, the deployment pipeline kicks in, deploying the changeset to the <a href="dev/../firefox.html#stage"><code>stage</code> environment</a>.
