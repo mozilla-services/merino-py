@@ -184,7 +184,7 @@ The end-to-end tests are executed manually by Softvision.
 The tests in the `tests/load` directory are load tests that spawn multiple HTTP 
 clients that consume Merino's API in order to simulate real-world load on the Merino 
 infrastructure. These tests use the Locust framework and are triggered manually at the
-discretion of the Content Discovery Team.
+discretion of the Merino Engineering Team.
 
 
 For more details see the README.md file in the `test/load` directory.
