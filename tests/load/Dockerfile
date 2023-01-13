@@ -10,12 +10,6 @@ LABEL maintainer "Contextual Services Team <contextual-services-team@mozilla.com
 RUN apt-get update && apt-get install -y git
 RUN if [ -n "$(arch | grep 'arm64\|aarch64')" ]; then apt install -y --no-install-recommends gcc python3-dev; fi
 
-# Expose ports for the web UI and the locust master
-EXPOSE 8089 5557
-
-RUN useradd --create-home locust
-WORKDIR /home/locust
-
 ENV LANG=C.UTF-8
 ENV PYTHONUNBUFFERED=1
 
@@ -25,10 +19,22 @@ ENV PATH="${PYTHON_VENV}/bin:${PATH}"
 
 RUN python -m pip install --upgrade pip
 
-COPY requirements.txt /tmp/requirements.txt
+# Setup poetry and extract requirements
+RUN python -m pip install --no-cache-dir --quiet poetry
+WORKDIR /tmp
+COPY ./pyproject.toml ./poetry.lock /tmp/
+RUN poetry export --no-interaction --with dev --output requirements.txt --without-hashes
+
+WORKDIR /
 RUN python -m pip install -r /tmp/requirements.txt
+
+RUN useradd --create-home locust
+WORKDIR /home/locust
 
 COPY locust_tests ./
 
+# Expose ports for the web UI and the locust master
+EXPOSE 8089 5557
+
 USER locust
-ENTRYPOINT [ "locust" ]
+ENTRYPOINT ["locust"]
