@@ -31,9 +31,7 @@ Follow the steps bellow to execute the load tests locally:
 
     Execute the following from the repository root:
     ```shell
-    docker-compose \
-      -f tests/load/docker-compose.yml up \
-      --scale locust_worker=4
+    make load-tests
     ```
 
 ### Run Test Session
@@ -62,7 +60,7 @@ Follow the steps bellow to execute the load tests locally:
 
     Execute the following from the repository root:
     ```shell
-    docker-compose -f tests/load/docker-compose.yml down
+    make load-tests-clean
     ```
 
 ## Distributed GCP Execution

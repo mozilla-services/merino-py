@@ -1,9 +1,8 @@
 version: "3"
 services:
   merino:
-    image: mozilla/merino-py:latest
-    container_name: locust_merino
-    build: ../..
+    image: app:build
+    container_name: merino
     environment:
       MERINO__ENV: "ci"
     volumes:
