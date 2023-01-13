@@ -7,9 +7,9 @@ from timeit import default_timer as timer
 from merino import metrics
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
-from merino.providers.adm.backends.remotesettings import LiveBackend
+from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
+from merino.providers.adm.backends.testbackend import TestBackend
 from merino.providers.adm.provider import Provider as AdmProvider
-from merino.providers.adm.provider import TestBackend
 from merino.providers.base import BaseProvider
 from merino.providers.top_picks import Provider as TopPicksProvider
 from merino.providers.weather.backends.accuweather import AccuweatherBackend
@@ -67,11 +67,18 @@ async def init_providers() -> None:
             case ProviderType.ADM:
                 providers["adm"] = AdmProvider(
                     backend=(
-                        LiveBackend()  # type: ignore [arg-type]
+                        RemoteSettingsBackend(
+                            server=settings.remote_settings.server,
+                            collection=settings.remote_settings.collection,
+                            bucket=settings.remote_settings.bucket,
+                        )  # type: ignore [arg-type]
                         if setting.backend == "remote-settings"
                         else TestBackend()
                     ),
+                    score=setting.score,
+                    score_wikipedia=setting.score_wikipedia,
                     name=provider_type,
+                    resync_interval_sec=setting.resync_interval_sec,
                     enabled_by_default=setting.enabled_by_default,
                 )
             case ProviderType.TOP_PICKS:

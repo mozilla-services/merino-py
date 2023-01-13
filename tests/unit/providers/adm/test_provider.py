@@ -6,18 +6,14 @@
 
 import json
 from typing import Any
-from unittest.mock import AsyncMock
 
 import httpx
 import pytest
 from pytest import LogCaptureFixture
+from pytest_mock import MockerFixture
 
-from merino.config import settings
-from merino.providers.adm.provider import (
-    NonsponsoredSuggestion,
-    Provider,
-    RemoteSettingsBackend,
-)
+from merino.providers.adm.backends.protocol import AdmBackend
+from merino.providers.adm.provider import NonsponsoredSuggestion, Provider
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
 
@@ -25,7 +21,7 @@ from tests.unit.types import SuggestionRequestFixture
 class FakeBackend:
     """Fake Remote Settings backend that returns suggest data for tests."""
 
-    async def get(self, bucket: str, collection: str) -> list[dict[str, Any]]:
+    async def get(self) -> list[dict[str, Any]]:
         """Return fake records."""
         return [
             {
@@ -116,10 +112,21 @@ class FakeBackend:
         return f"attachment-host/{icon_uri}"
 
 
+@pytest.fixture(name="adm_parameters")
+def fixture_adm_parameters() -> dict[str, Any]:
+    """Define provider parameters for test."""
+    return {
+        "score": 0.3,
+        "score_wikipedia": 0.2,
+        "name": "adm",
+        "resync_interval_sec": 10800,
+    }
+
+
 @pytest.fixture(name="adm")
-def fixture_adm() -> Provider:
-    """Return an adM provider that uses a fake remote settings client."""
-    return Provider(backend=FakeBackend())
+def fixture_adm(adm_parameters: dict[str, Any]) -> Provider:
+    """Create an AdM Provider for test using a fake backend."""
+    return Provider(backend=FakeBackend(), **adm_parameters)
 
 
 def test_enabled_by_default(adm: Provider) -> None:
@@ -162,13 +169,16 @@ async def test_initialize(adm: Provider) -> None:
 
 @pytest.mark.asyncio
 async def test_initialize_remote_settings_failure(
-    caplog: LogCaptureFixture, filter_caplog: FilterCaplogFixture
+    mocker: MockerFixture,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    adm_parameters: dict[str, Any],
 ) -> None:
     """Test exception handling for the initialize() method."""
     error_message: str = "The remote server was unreachable"
-    backend_mock = AsyncMock(spec=RemoteSettingsBackend)
+    backend_mock: Any = mocker.AsyncMock(spec=AdmBackend)
     backend_mock.get.side_effect = Exception(error_message)
-    adm: Provider = Provider(backend=backend_mock)
+    adm: Provider = Provider(backend=backend_mock, **adm_parameters)
 
     try:
         await adm.initialize()
@@ -201,7 +211,7 @@ async def test_query_success(srequest: SuggestionRequestFixture, adm: Provider) 
             advertiser="Example.org",
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
-            score=settings.providers.adm.score,
+            score=0.3,
         )
     ]
 

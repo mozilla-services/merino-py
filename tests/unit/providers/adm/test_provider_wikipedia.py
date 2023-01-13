@@ -10,7 +10,6 @@ from typing import Any
 import httpx
 import pytest
 
-from merino.config import settings
 from merino.providers.adm.provider import NonsponsoredSuggestion, Provider
 from tests.unit.types import SuggestionRequestFixture
 
@@ -18,7 +17,7 @@ from tests.unit.types import SuggestionRequestFixture
 class FakeBackend:
     """Fake Remote Settings backend that returns suggest data for tests."""
 
-    async def get(self, bucket: str, collection: str) -> list[dict[str, Any]]:
+    async def get(self) -> list[dict[str, Any]]:
         """Return fake records."""
         return [
             {
@@ -72,10 +71,21 @@ class FakeBackend:
         return f"attachment-host/{icon_uri}"
 
 
+@pytest.fixture(name="adm_parameters")
+def fixture_adm_parameters() -> dict[str, Any]:
+    """Define provider parameters for test."""
+    return {
+        "score": 0.3,
+        "score_wikipedia": 0.2,
+        "name": "adm",
+        "resync_interval_sec": 10800,
+    }
+
+
 @pytest.fixture(name="adm")
-def fixture_adm() -> Provider:
-    """Return an adM provider that uses a fake remote settings client."""
-    return Provider(backend=FakeBackend())
+def fixture_adm(adm_parameters: dict[str, Any]) -> Provider:
+    """Create an AdM Provider for test using a fake backend."""
+    return Provider(backend=FakeBackend(), **adm_parameters)
 
 
 @pytest.mark.asyncio
@@ -117,6 +127,6 @@ async def test_wikipedia_specific_score(
             advertiser="Wikipedia",
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
-            score=settings.providers.adm.score_wikipedia,
+            score=0.2,
         )
     ]

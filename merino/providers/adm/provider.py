@@ -4,57 +4,15 @@ import logging
 import time
 from asyncio import as_completed
 from enum import Enum, unique
-from typing import Any, Final, Optional, Protocol, Tuple, cast
+from typing import Any, Final, Optional, Tuple
 
-import httpx
 from pydantic import HttpUrl
 
 from merino import cron
-from merino.config import settings
+from merino.providers.adm.backends.protocol import AdmBackend
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 logger = logging.getLogger(__name__)
-
-
-class RemoteSettingsBackend(Protocol):
-    """Protocol for a Remote Settings backend that this provider depends on.
-
-    Note: This only defines the methods used by the provider. The actual backend
-    might define additional methods and attributes which this provider doesn't
-    directly depend on.
-    """
-
-    async def get(
-        self, bucket: str, collection: str
-    ) -> list[dict[str, Any]]:  # pragma: no cover
-        """Get records from Remote Settings."""
-        ...
-
-    async def fetch_attachment(
-        self, attachment_uri: str
-    ) -> httpx.Response:  # pragma: no cover
-        """Fetch the attachment for the given URI."""
-        ...
-
-    def get_icon_url(self, icon_uri: str) -> str:  # pragma: no cover
-        """Get the icon URL for the given URI."""
-        ...
-
-
-class TestBackend:
-    """A test backend that always returns empty results for tests."""
-
-    async def get(self, bucket: str, collection: str) -> list[dict[str, Any]]:
-        """Return fake records."""
-        return []
-
-    async def fetch_attachment(self, attachment_uri: str) -> httpx.Response:
-        """Return a fake attachment for the given URI."""
-        return httpx.Response(200, text="")
-
-    def get_icon_url(self, icon_uri: str) -> str:
-        """Return a fake icon URL for the given URI."""
-        return ""
 
 
 @unique
@@ -106,21 +64,28 @@ class Provider(BaseProvider):
     icons: dict[int, str] = {}
     # Store the value to avoid fetching it from settings every time as that'd
     # require a three-way dict lookup.
-    score: float = settings.providers.adm.score
-    score_wikipedia: float = settings.providers.adm.score_wikipedia
+    score: float
+    score_wikipedia: float
     last_fetch_at: float
     cron_task: asyncio.Task
-    backend: RemoteSettingsBackend
+    backend: AdmBackend
+    resync_interval_sec: float
 
     def __init__(
         self,
-        backend: RemoteSettingsBackend,
-        name: str = "adm",
+        backend: AdmBackend,
+        score: float,
+        score_wikipedia: float,
+        name: str,
+        resync_interval_sec: float,
         enabled_by_default: bool = True,
         **kwargs: Any,
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
         self.backend = backend
+        self.score = score
+        self.score_wikipedia = score_wikipedia
+        self.resync_interval_sec = resync_interval_sec
         self._name = name
         self._enabled_by_default = enabled_by_default
         super().__init__(**kwargs)
@@ -141,7 +106,7 @@ class Provider(BaseProvider):
         # Run a cron job that resyncs data from Remote Settings in the background.
         cron_job = cron.Job(
             name="resync_rs_data",
-            interval=settings.providers.adm.resync_interval_sec,
+            interval=self.resync_interval_sec,
             condition=self._should_fetch,
             task=self._fetch,
         )
@@ -152,11 +117,7 @@ class Provider(BaseProvider):
 
     def _should_fetch(self) -> bool:
         """Check if it should fetch data from Remote Settings."""
-        return cast(
-            bool,
-            time.time() - self.last_fetch_at
-            >= settings.providers.adm.resync_interval_sec,
-        )
+        return (time.time() - self.last_fetch_at) >= self.resync_interval_sec
 
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
@@ -170,9 +131,7 @@ class Provider(BaseProvider):
         # A dictionary of icon IDs to icon URLs.
         icons: dict[int, str] = {}
 
-        suggest_settings = await self.backend.get(
-            settings.remote_settings.bucket, settings.remote_settings.collection
-        )
+        suggest_settings = await self.backend.get()
 
         # Falls back to "data" records if "offline-expansion-data" records do not exist
         records = [
