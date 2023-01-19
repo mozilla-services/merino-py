@@ -5,8 +5,8 @@ from urllib.parse import quote
 from merino.exceptions import BackendError
 
 
-class TestBackend:  # pragma: no cover
-    """A mock backend for testing."""
+class FakeWikipediaBackend:  # pragma: no cover
+    """A fake backend that always returns empty results."""
 
     async def shutdown(self) -> None:
         """Nothing to shut down."""
@@ -17,11 +17,8 @@ class TestBackend:  # pragma: no cover
         return []
 
 
-class TestEchoBackend:
-    """A mock backend for testing.
-
-    It returns the exact same query as the search result.
-    """
+class FakeEchoWikipediaBackend:
+    """A fake backend that returns the exact same query as the search result."""
 
     async def shutdown(self) -> None:
         """Nothing to shut down."""
@@ -38,11 +35,8 @@ class TestEchoBackend:
         ]
 
 
-class TestExceptionBackend:
-    """A mock backend for testing.
-
-    It raises a `BackendError` for any given query.
-    """
+class FakeExceptionWikipediaBackend:
+    """A fake backend that raises a `BackendError` for any given query."""
 
     async def shutdown(self) -> None:
         """Nothing to shut down."""

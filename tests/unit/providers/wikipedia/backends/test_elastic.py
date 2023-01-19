@@ -8,7 +8,7 @@ from pytest_mock import MockerFixture
 from merino.config import settings
 from merino.exceptions import BackendError
 from merino.providers.wikipedia.backends.elastic import SUGGEST_ID, ElasticBackend
-from merino.providers.wikipedia.backends.test_backends import TestEchoBackend
+from merino.providers.wikipedia.backends.fake_backends import FakeEchoWikipediaBackend
 from merino.providers.wikipedia.provider import (
     ADVERTISER,
     ICON,
@@ -21,7 +21,7 @@ from tests.unit.types import SuggestionRequestFixture
 @pytest.fixture(name="wikipedia")
 def fixture_wikipedia() -> Provider:
     """Return a Wikipedia provider that uses a test backend."""
-    return Provider(backend=TestEchoBackend())
+    return Provider(backend=FakeEchoWikipediaBackend())
 
 
 @pytest.fixture(name="es_backend")
@@ -47,7 +47,7 @@ def test_hidden(wikipedia: Provider) -> None:
 @pytest.mark.asyncio
 async def test_shutdown(wikipedia: Provider, mocker: MockerFixture) -> None:
     """Test for the shutdown method."""
-    spy = mocker.spy(TestEchoBackend, "shutdown")
+    spy = mocker.spy(FakeEchoWikipediaBackend, "shutdown")
     await wikipedia.shutdown()
     spy.assert_called_once()
 

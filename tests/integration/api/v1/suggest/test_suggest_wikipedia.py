@@ -8,9 +8,9 @@ from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 
 from merino.config import settings
-from merino.providers.wikipedia.backends.test_backends import (
-    TestEchoBackend,
-    TestExceptionBackend,
+from merino.providers.wikipedia.backends.fake_backends import (
+    FakeEchoWikipediaBackend,
+    FakeExceptionWikipediaBackend,
 )
 from merino.providers.wikipedia.provider import ADVERTISER, ICON, Provider
 from tests.types import FilterCaplogFixture
@@ -28,14 +28,14 @@ Scenario = namedtuple(
 
 SCENARIOS: dict[str, Scenario] = {
     "Case-I: Backend returns": Scenario(
-        providers={"wikipedia": Provider(backend=TestEchoBackend())},
+        providers={"wikipedia": Provider(backend=FakeEchoWikipediaBackend())},
         query="foo bar",
         expected_suggestion_count=1,
         expected_title="foo_bar",
         expected_logs=set(),
     ),
     "Case-II: Backend raises": Scenario(
-        providers={"wikipedia": Provider(backend=TestExceptionBackend())},
+        providers={"wikipedia": Provider(backend=FakeExceptionWikipediaBackend())},
         query="foo bar",
         expected_suggestion_count=0,
         expected_title=None,
