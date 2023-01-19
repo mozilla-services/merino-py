@@ -22,7 +22,7 @@ class Content(BaseModel):
 
 
 class AdmBackend(Protocol):
-    """Protocol for a Remote Settings backend that this provider depends on.
+    """Protocol for an AdM backend that this provider depends on.
 
     Note: This only defines the methods used by the provider. The actual backend
     might define additional methods and attributes which this provider doesn't
