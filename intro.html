@@ -164,7 +164,7 @@ dependencies required for Merino.</p>
 <p><a href="./dev/testing.html">dev/testing.md - Testing</a> describes unit, integration, contract and load tests for Merino.</p>
 <p><a href="./dev/profiling.html">dev/profiling.md - Profiling</a> describes how to profile Merino to address performance issues.</p>
 <h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code class="language-mermaid">graph TD
+<pre class="mermaid">graph TD
     User[\User/]
 
     subgraph Fx
@@ -219,7 +219,7 @@ dependencies required for Merino.</p>
 
 
     online --&gt; |/api/v1/suggest| srh
-</code></pre>
+</pre>
 <h2 id="about-the-name"><a class="header" href="#about-the-name">About the Name</a></h2>
 <p>This project drives an important part of Firefox's &quot;felt experience&quot;. That is,
 the feeling of using Firefox, hopefully in a delightful way. The word &quot;felt&quot; in
@@ -267,6 +267,8 @@ Merino wool (from Merino sheep) produces exceptionally smooth felt.</p>
         <script src="book.js"></script>
 
         <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
 
 
     </body>
