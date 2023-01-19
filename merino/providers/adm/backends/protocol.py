@@ -1,7 +1,24 @@
 """Protocol for the AdM provider backends."""
 from typing import Any, Protocol
 
-import httpx
+from pydantic import BaseModel
+
+
+class Content(BaseModel):
+    """Class that holds the result from a fetch operation."""
+
+    # A dictionary keyed on suggestion keywords, each value stores an index
+    # (pointer) to one entry of the suggestion result list.
+    suggestions: dict[str, tuple[int, int]]
+
+    # A list of full keywords
+    full_keywords: list[str]
+
+    # A list of suggestion results.
+    results: list[dict[str, Any]]
+
+    # A dictionary of icon IDs to icon URLs.
+    icons: dict[int, str]
 
 
 class AdmBackend(Protocol):
@@ -12,16 +29,6 @@ class AdmBackend(Protocol):
     directly depend on.
     """
 
-    async def get(self) -> list[dict[str, Any]]:  # pragma: no cover
-        """Get records from Remote Settings."""
-        ...
-
-    async def fetch_attachment(
-        self, attachment_uri: str
-    ) -> httpx.Response:  # pragma: no cover
-        """Fetch the attachment for the given URI."""
-        ...
-
-    def get_icon_url(self, icon_uri: str) -> str:  # pragma: no cover
-        """Get the icon URL for the given URI."""
+    async def fetch(self) -> Content:  # pragma: no cover
+        """Get suggestion content from partner."""
         ...

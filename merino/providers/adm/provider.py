@@ -2,14 +2,13 @@
 import asyncio
 import logging
 import time
-from asyncio import as_completed
 from enum import Enum, unique
-from typing import Any, Final, Optional, Tuple
+from typing import Any, Final, Optional
 
 from pydantic import HttpUrl
 
 from merino import cron
-from merino.providers.adm.backends.protocol import AdmBackend
+from merino.providers.adm.backends.protocol import AdmBackend, Content
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 logger = logging.getLogger(__name__)
@@ -58,10 +57,7 @@ class NonsponsoredSuggestion(BaseSuggestion):
 class Provider(BaseProvider):
     """Suggestion provider for adMarketplace through Remote Settings."""
 
-    suggestions: dict[str, Tuple[int, int]] = {}
-    full_keywords_list: list[str] = []
-    results: list[dict[str, Any]] = []
-    icons: dict[int, str] = {}
+    content: Content
     # Store the value to avoid fetching it from settings every time as that'd
     # require a three-way dict lookup.
     score: float
@@ -121,59 +117,7 @@ class Provider(BaseProvider):
 
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
-        # A dictionary keyed on suggestion keywords, each value stores an index
-        # (pointer) to one entry of the suggestion result list.
-        suggestions: dict[str, Tuple[int, int]] = {}
-        # A list of full keywords
-        full_keywords: list[str] = []
-        # A list of suggestion results.
-        results: list[dict[str, Any]] = []
-        # A dictionary of icon IDs to icon URLs.
-        icons: dict[int, str] = {}
-
-        suggest_settings = await self.backend.get()
-
-        # Falls back to "data" records if "offline-expansion-data" records do not exist
-        records = [
-            record
-            for record in suggest_settings
-            if record["type"] == "offline-expansion-data"
-        ] or [record for record in suggest_settings if record["type"] == "data"]
-
-        fetch_tasks = [
-            self.backend.fetch_attachment(item["attachment"]["location"])
-            for item in records
-        ]
-        fkw_index = 0
-        for done_task in as_completed(fetch_tasks):
-            res = await done_task
-
-            for suggestion in res.json():
-                result_id = len(results)
-                keywords = suggestion.pop("keywords", [])
-                full_keywords_tuples = suggestion.pop("full_keywords", [])
-                begin = 0
-                for full_keyword, n in full_keywords_tuples:
-                    for query in keywords[begin : begin + n]:
-                        # Note that for adM suggestions, each keyword can only be mapped to
-                        # a single suggestion.
-                        suggestions[query] = (result_id, fkw_index)
-                    begin += n
-                    full_keywords.append(full_keyword)
-                    fkw_index = len(full_keywords)
-                results.append(suggestion)
-        icon_record = [
-            record for record in suggest_settings if record["type"] == "icon"
-        ]
-        for icon in icon_record:
-            id = int(icon["id"].replace("icon-", ""))
-            icons[id] = self.backend.get_icon_url(icon["attachment"]["location"])
-
-        # overwrite the instance variables
-        self.suggestions = suggestions
-        self.results = results
-        self.full_keywords = full_keywords
-        self.icons = icons
+        self.content = await self.backend.fetch()
         self.last_fetch_at = time.time()
 
     def hidden(self) -> bool:  # noqa: D102
@@ -182,9 +126,12 @@ class Provider(BaseProvider):
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         q = srequest.query
-        if (suggest_look_ups := self.suggestions.get(q)) is not None:
+        if (
+            self.content is not None
+            and (suggest_look_ups := self.content.suggestions.get(q)) is not None
+        ):
             results_id, fkw_id = suggest_look_ups
-            res = self.results[results_id]
+            res = self.content.results[results_id]
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
             score = (
                 self.score_wikipedia
@@ -193,7 +140,7 @@ class Provider(BaseProvider):
             )
             suggestion_dict = {
                 "block_id": res.get("id"),
-                "full_keyword": self.full_keywords[fkw_id],
+                "full_keyword": self.content.full_keywords[fkw_id],
                 "title": res.get("title"),
                 "url": res.get("url"),
                 "impression_url": res.get("impression_url"),
@@ -201,7 +148,7 @@ class Provider(BaseProvider):
                 "provider": self.name,
                 "advertiser": advertiser,
                 "is_sponsored": is_sponsored,
-                "icon": self.icons.get(int(res.get("icon", MISSING_ICON_ID))),
+                "icon": self.content.icons.get(int(res.get("icon", MISSING_ICON_ID))),
                 "score": score,
             }
             return [

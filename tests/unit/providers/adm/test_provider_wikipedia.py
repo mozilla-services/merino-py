@@ -4,112 +4,49 @@
 
 """Unit tests for the adm-wikipedia provider module."""
 
-import json
 from typing import Any
 
-import httpx
 import pytest
 
+from merino.providers.adm.backends.protocol import Content
 from merino.providers.adm.provider import NonsponsoredSuggestion, Provider
 from tests.unit.types import SuggestionRequestFixture
 
 
-class FakeBackend:
-    """Fake Remote Settings backend that returns suggest data for tests."""
-
-    async def get(self) -> list[dict[str, Any]]:
-        """Return fake records."""
-        return [
+@pytest.fixture(name="adm_suggestion_content")
+def fixture_adm_suggestion_content() -> Content:
+    """Define backend suggestion content for test.
+    This fixture overrides a fixture of the same name in conftest.py
+    """
+    return Content(
+        suggestions={"mozilla": (0, 0)},
+        full_keywords=["mozilla"],
+        results=[
             {
-                "type": "data",
-                "schema": 111,
-                "attachment": {
-                    "hash": "efgh",
-                    "size": 1,
-                    "filename": "data-01.json",
-                    "location": "main-workspace/quicksuggest/attachment-01.json",
-                    "mimetype": "application/octet-stream",
-                },
-                "id": "data-01",
-                "last_modified": 123,
-            },
-            {
-                "type": "icon",
-                "schema": 456,
-                "attachment": {
-                    "hash": "efghabcasd",
-                    "size": 1,
-                    "filename": "icon-01",
-                    "location": "main-workspace/quicksuggest/icon-01",
-                    "mimetype": "application/octet-stream",
-                },
-                "content_type": "image/png",
-                "id": "icon-01",
-                "last_modified": 123,
-            },
-        ]
-
-    async def fetch_attachment(self, attachment_uri: str) -> httpx.Response:
-        """Return a fake attachment for the given URI."""
-        attachments = {
-            "main-workspace/quicksuggest/attachment-01.json": {
                 "id": 1,
                 "url": "https://wikipedia.org/en/Mozilla",
                 "iab_category": "5 - Education",
                 "icon": "01",
                 "advertiser": "Wikipedia",
                 "title": "Mozilla",
-                "keywords": ["mozilla"],
-                "full_keywords": [["mozilla", 1]],
-            },
-        }
-
-        return httpx.Response(200, text=json.dumps([attachments[attachment_uri]]))
-
-    def get_icon_url(self, icon_uri: str) -> str:
-        """Return a fake icon URL for the given URI."""
-        return f"attachment-host/{icon_uri}"
-
-
-@pytest.fixture(name="adm_parameters")
-def fixture_adm_parameters() -> dict[str, Any]:
-    """Define provider parameters for test."""
-    return {
-        "score": 0.3,
-        "score_wikipedia": 0.2,
-        "name": "adm",
-        "resync_interval_sec": 10800,
-    }
-
-
-@pytest.fixture(name="adm")
-def fixture_adm(adm_parameters: dict[str, Any]) -> Provider:
-    """Create an AdM Provider for test using a fake backend."""
-    return Provider(backend=FakeBackend(), **adm_parameters)
+            }
+        ],
+        icons={1: "attachment-host/main-workspace/quicksuggest/icon-01"},
+    )
 
 
 @pytest.mark.asyncio
-async def test_initialize(adm: Provider) -> None:
+async def test_initialize(adm: Provider, adm_suggestion_content: Content) -> None:
     """Test for the initialize() method of the adM provider."""
     await adm.initialize()
 
-    assert adm.suggestions == {"mozilla": (0, 0)}
-    assert adm.results == [
-        {
-            "id": 1,
-            "url": "https://wikipedia.org/en/Mozilla",
-            "iab_category": "5 - Education",
-            "icon": "01",
-            "advertiser": "Wikipedia",
-            "title": "Mozilla",
-        },
-    ]
-    assert adm.icons == {1: "attachment-host/main-workspace/quicksuggest/icon-01"}
+    assert adm.content == adm_suggestion_content
+    assert adm.last_fetch_at > 0
 
 
 @pytest.mark.asyncio
 async def test_wikipedia_specific_score(
-    srequest: SuggestionRequestFixture, adm: Provider
+    srequest: SuggestionRequestFixture, adm: Provider, adm_parameters: dict[str, Any]
 ) -> None:
     """Test for the query() method of the adM provider."""
     await adm.initialize()
@@ -127,6 +64,6 @@ async def test_wikipedia_specific_score(
             advertiser="Wikipedia",
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
-            score=0.2,
+            score=adm_parameters["score_wikipedia"],
         )
     ]
