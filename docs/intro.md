@@ -47,24 +47,24 @@ dependencies required for Merino.
 
 ```mermaid
 graph TD
-    User[\User/]
+    User[\fa:fa-user User/]
 
-    subgraph Fx
+    subgraph Firefox [fa:fa-firefox Firefox]
         online(online)
         offline(offline)
     end
 
-    User --> |Accessing the Fx URL bar| Fx
+    User --> |Accessing the Firefox URL bar| Firefox
 
-    subgraph Merino
-        srh(Suggest Request Handler)
-        middlewares(Middlewares:<br/>Geolocation<br/>Logging<br/>Metrics<br/>User Agent)
+    subgraph Merino [fa:fa-leaf Merino]
+        srh(fa:fa-gears Suggest Request Handler)
+        middleware(fa:fa-paperclip Middleware:<br/>- Geolocation<br/>- Logging<br/>- Metrics<br/>- User Agent)
 
-        srh -..- middlewares
+        srh -..- middleware
 
-        subgraph providers
+        subgraph providers [fa:fa-truck Providers]
             adm(adm)
-            toppicks(toppicks)
+            toppicks(top-picks)
             weather(weather)
             wikipedia(wikipedia)
         end
@@ -74,7 +74,7 @@ graph TD
         srh --> weather
         srh --> wikipedia
 
-        subgraph backends
+        subgraph backends [fa:fa-server Beckends]
             rsb(remote settings)
             accuweather(accuweather)
             elastic(elastic)
@@ -95,7 +95,7 @@ graph TD
     accuweather_api(Accuweather API)
     accuweather --> accuweather_api
 
-    kinto[(Kinto: Remote Settings)]
+    kinto[(Remote Settings)]
     offline ..-> |fetches adMarketplace and  <br/> static Wikipedia suggestions only.  <br/> Offline mode is fallback if Merino times out.| kinto
     rsb --> kinto
 
