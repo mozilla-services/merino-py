@@ -8,14 +8,14 @@ from typing import Any
 import pytest
 from pytest_mock import MockerFixture
 
-from merino.providers.adm.backends.protocol import AdmBackend, Content
+from merino.providers.adm.backends.protocol import AdmBackend, SuggestionContent
 from merino.providers.adm.provider import Provider
 
 
 @pytest.fixture(name="adm_suggestion_content")
-def fixture_adm_suggestion_content() -> Content:
+def fixture_adm_suggestion_content() -> SuggestionContent:
     """Define backend suggestion content for test."""
-    return Content(
+    return SuggestionContent(
         suggestions={
             "firefox": (0, 0),
             "firefox account": (0, 0),
@@ -53,7 +53,9 @@ def fixture_adm_parameters() -> dict[str, Any]:
 
 
 @pytest.fixture(name="backend_mock")
-def fixture_backend_mock(mocker: MockerFixture, adm_suggestion_content: Content) -> Any:
+def fixture_backend_mock(
+    mocker: MockerFixture, adm_suggestion_content: SuggestionContent
+) -> Any:
     """Create an AdmBackend mock object for test."""
     backend_mock: Any = mocker.AsyncMock(spec=AdmBackend)
     backend_mock.fetch.return_value = adm_suggestion_content

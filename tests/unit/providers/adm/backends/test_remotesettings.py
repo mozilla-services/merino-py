@@ -3,7 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the Remote Settings backend module."""
-import json
 from typing import Any
 
 import httpx
@@ -12,7 +11,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from merino.providers import RemoteSettingsBackend
-from merino.providers.adm.backends.protocol import Content
+from merino.providers.adm.backends.protocol import SuggestionContent
 
 
 @pytest.fixture(name="rs_parameters")
@@ -147,7 +146,7 @@ def fixture_rs_attachment_response() -> httpx.Response:
             ("mozilla firefox accounts", 4),
         ],
     }
-    return httpx.Response(200, text=json.dumps([attachment]))
+    return httpx.Response(200, json=[attachment])
 
 
 @pytest.mark.parametrize(
@@ -195,7 +194,7 @@ async def test_fetch_attachment_host(
 @pytest.mark.parametrize(
     "attachment_host",
     ["", "attachment-host/"],
-    ids=["attachment_host_defined", "attachment_host_undefined"],
+    ids=["attachment_host_undefined", "attachment_host_defined"],
 )
 async def test_fetch_attachment(
     mocker: MockerFixture,
@@ -224,7 +223,7 @@ async def test_fetch_attachment(
 @pytest.mark.parametrize(
     "attachment_host",
     ["", "attachment-host/"],
-    ids=["attachment_host_defined", "attachment_host_undefined"],
+    ids=["attachment_host_undefined", "attachment_host_defined"],
 )
 def test_get_icon_url(rs_backend: RemoteSettingsBackend, attachment_host: str) -> None:
     """Test that the get_icon_url method returns a proper icon url."""
@@ -244,7 +243,7 @@ async def test_fetch(
     rs_get_records_response: list[dict[str, Any]],
     rs_server_info_response: dict[str, Any],
     rs_attachment_response: httpx.Response,
-    adm_suggestion_content: Content,
+    adm_suggestion_content: SuggestionContent,
 ) -> None:
     """Test that the fetch method returns the proper suggestion content."""
     rs_backend.attachment_host = "attachment-host/"
@@ -256,6 +255,6 @@ async def test_fetch(
     )
     mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
 
-    content: Content = await rs_backend.fetch()
+    suggestion_content: SuggestionContent = await rs_backend.fetch()
 
-    assert content == adm_suggestion_content
+    assert suggestion_content == adm_suggestion_content

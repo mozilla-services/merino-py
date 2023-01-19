@@ -8,17 +8,17 @@ from typing import Any
 
 import pytest
 
-from merino.providers.adm.backends.protocol import Content
+from merino.providers.adm.backends.protocol import SuggestionContent
 from merino.providers.adm.provider import NonsponsoredSuggestion, Provider
 from tests.unit.types import SuggestionRequestFixture
 
 
 @pytest.fixture(name="adm_suggestion_content")
-def fixture_adm_suggestion_content() -> Content:
+def fixture_adm_suggestion_content() -> SuggestionContent:
     """Define backend suggestion content for test.
     This fixture overrides a fixture of the same name in conftest.py
     """
-    return Content(
+    return SuggestionContent(
         suggestions={"mozilla": (0, 0)},
         full_keywords=["mozilla"],
         results=[
@@ -36,11 +36,13 @@ def fixture_adm_suggestion_content() -> Content:
 
 
 @pytest.mark.asyncio
-async def test_initialize(adm: Provider, adm_suggestion_content: Content) -> None:
+async def test_initialize(
+    adm: Provider, adm_suggestion_content: SuggestionContent
+) -> None:
     """Test for the initialize() method of the adM provider."""
     await adm.initialize()
 
-    assert adm.content == adm_suggestion_content
+    assert adm.suggestion_content == adm_suggestion_content
     assert adm.last_fetch_at > 0
 
 

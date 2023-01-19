@@ -8,7 +8,7 @@ from typing import Any, Final, Optional
 from pydantic import HttpUrl
 
 from merino import cron
-from merino.providers.adm.backends.protocol import AdmBackend, Content
+from merino.providers.adm.backends.protocol import AdmBackend, SuggestionContent
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ class NonsponsoredSuggestion(BaseSuggestion):
 class Provider(BaseProvider):
     """Suggestion provider for adMarketplace through Remote Settings."""
 
-    content: Content
+    suggestion_content: SuggestionContent
     # Store the value to avoid fetching it from settings every time as that'd
     # require a three-way dict lookup.
     score: float
@@ -117,7 +117,7 @@ class Provider(BaseProvider):
 
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
-        self.content = await self.backend.fetch()
+        self.suggestion_content = await self.backend.fetch()
         self.last_fetch_at = time.time()
 
     def hidden(self) -> bool:  # noqa: D102
@@ -126,12 +126,9 @@ class Provider(BaseProvider):
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         q = srequest.query
-        if (
-            self.content is not None
-            and (suggest_look_ups := self.content.suggestions.get(q)) is not None
-        ):
+        if (suggest_look_ups := self.suggestion_content.suggestions.get(q)) is not None:
             results_id, fkw_id = suggest_look_ups
-            res = self.content.results[results_id]
+            res = self.suggestion_content.results[results_id]
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
             score = (
                 self.score_wikipedia
@@ -140,7 +137,7 @@ class Provider(BaseProvider):
             )
             suggestion_dict = {
                 "block_id": res.get("id"),
-                "full_keyword": self.content.full_keywords[fkw_id],
+                "full_keyword": self.suggestion_content.full_keywords[fkw_id],
                 "title": res.get("title"),
                 "url": res.get("url"),
                 "impression_url": res.get("impression_url"),
@@ -148,7 +145,9 @@ class Provider(BaseProvider):
                 "provider": self.name,
                 "advertiser": advertiser,
                 "is_sponsored": is_sponsored,
-                "icon": self.content.icons.get(int(res.get("icon", MISSING_ICON_ID))),
+                "icon": self.suggestion_content.icons.get(
+                    int(res.get("icon", MISSING_ICON_ID))
+                ),
                 "score": score,
             }
             return [

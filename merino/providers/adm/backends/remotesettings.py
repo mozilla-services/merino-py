@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 import httpx
 import kinto_http
 
-from merino.providers.adm.backends.protocol import Content
+from merino.providers.adm.backends.protocol import SuggestionContent
 
 
 class RemoteSettingsBackend:
@@ -18,7 +18,7 @@ class RemoteSettingsBackend:
     collection: str
 
     def __init__(self, server: str, collection: str, bucket: str) -> None:
-        """Init Remote Settings Client
+        """Init the Remote Settings backend and create a new client.
 
         Args:
           - `server`: the server address
@@ -44,7 +44,7 @@ class RemoteSettingsBackend:
         return cast(str, server_info["capabilities"]["attachments"]["base_url"])
 
     async def get(self) -> list[dict[str, Any]]:
-        """Get records from Remote Settings server."""
+        """Get records from the Remote Settings server."""
         return cast(
             list[dict[str, Any]],
             await self.client.get_records(
@@ -72,7 +72,7 @@ class RemoteSettingsBackend:
         """
         return urljoin(self.attachment_host, icon_uri)
 
-    async def fetch(self) -> Content:
+    async def fetch(self) -> SuggestionContent:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
         suggestions: dict[str, tuple[int, int]] = {}
         full_keywords: list[str] = []
@@ -116,7 +116,7 @@ class RemoteSettingsBackend:
             id = int(icon["id"].replace("icon-", ""))
             icons[id] = self.get_icon_url(icon["attachment"]["location"])
 
-        return Content(
+        return SuggestionContent(
             suggestions=suggestions,
             full_keywords=full_keywords,
             results=results,

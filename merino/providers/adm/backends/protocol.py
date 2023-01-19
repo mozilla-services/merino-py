@@ -4,7 +4,7 @@ from typing import Any, Protocol
 from pydantic import BaseModel
 
 
-class Content(BaseModel):
+class SuggestionContent(BaseModel):
     """Class that holds the result from a fetch operation."""
 
     # A dictionary keyed on suggestion keywords, each value stores an index
@@ -29,6 +29,6 @@ class AdmBackend(Protocol):
     directly depend on.
     """
 
-    async def fetch(self) -> Content:  # pragma: no cover
+    async def fetch(self) -> SuggestionContent:  # pragma: no cover
         """Get suggestion content from partner."""
         ...
