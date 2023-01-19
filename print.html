@@ -164,6 +164,63 @@ dependencies required for Merino.</p>
 <p><a href="./dev/release-process.html">dev/release-process.md - Release Process</a> describes the release process of Merino in detail.</p>
 <p><a href="./dev/testing.html">dev/testing.md - Testing</a> describes unit, integration, contract and load tests for Merino.</p>
 <p><a href="./dev/profiling.html">dev/profiling.md - Profiling</a> describes how to profile Merino to address performance issues.</p>
+<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
+<pre><code class="language-mermaid">graph TD
+    User[\User/]
+
+    subgraph Fx
+        online(online)
+        offline(offline)
+    end
+
+    User --&gt; |Accessing the Fx URL bar| Fx
+
+    subgraph Merino
+        srh(Suggest Request Handler)
+        middlewares(Middlewares:&lt;br/&gt;Geolocation&lt;br/&gt;Logging&lt;br/&gt;Metrics&lt;br/&gt;User Agent)
+
+        srh -..- middlewares
+
+        subgraph providers
+            adm(adm)
+            toppicks(toppicks)
+            weather(weather)
+            wikipedia(wikipedia)
+        end
+
+        srh --&gt; adm
+        srh --&gt; toppicks
+        srh --&gt; weather
+        srh --&gt; wikipedia
+
+        subgraph backends
+            rsb(remote settings)
+            accuweather(accuweather)
+            elastic(elastic)
+            r_json(local JSON)
+
+            style r_json stroke-dasharray: 5 5
+        end
+
+        adm --&gt; rsb
+        toppicks ..-&gt; |local JSON  &lt;br/&gt; not actually a backend| r_json
+        weather --&gt; accuweather
+        wikipedia --&gt; elastic
+    end
+
+    elastico[(Elasticsearch)]
+    elastic --&gt; elastico
+
+    accuweather_api(Accuweather API)
+    accuweather --&gt; accuweather_api
+
+    kinto[(Kinto: Remote Settings)]
+    offline ..-&gt; |fetches adMarketplace and  &lt;br/&gt; static Wikipedia suggestions only.  &lt;br/&gt; Offline mode is fallback if Merino times out.| kinto
+    rsb --&gt; kinto
+
+
+    online --&gt; |/api/v1/suggest| srh
+</code></pre>
 <h2 id="about-the-name"><a class="header" href="#about-the-name">About the Name</a></h2>
 <p>This project drives an important part of Firefox's &quot;felt experience&quot;. That is,
 the feeling of using Firefox, hopefully in a delightful way. The word &quot;felt&quot; in
