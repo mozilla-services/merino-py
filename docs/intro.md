@@ -43,6 +43,66 @@ dependencies required for Merino.
 [9]: ./dev/testing.md
 [10]: ./dev/profiling.md
 
+## Architecture
+
+```mermaid
+graph TD
+    User[\User/]
+
+    subgraph Fx
+        online(online)
+        offline(offline)
+    end
+
+    User --> |Accessing the Fx URL bar| Fx
+
+    subgraph Merino
+        srh(Suggest Request Handler)
+        middlewares(Middlewares:<br/>Geolocation<br/>Logging<br/>Metrics<br/>User Agent)
+
+        srh -..- middlewares
+
+        subgraph providers
+            adm(adm)
+            toppicks(toppicks)
+            weather(weather)
+            wikipedia(wikipedia)
+        end
+
+        srh --> adm
+        srh --> toppicks
+        srh --> weather
+        srh --> wikipedia
+
+        subgraph backends
+            rsb(remote settings)
+            accuweather(accuweather)
+            elastic(elastic)
+            r_json(local JSON)
+
+            style r_json stroke-dasharray: 5 5
+        end
+
+        adm --> rsb
+        toppicks ..-> |local JSON  <br/> not actually a backend| r_json
+        weather --> accuweather
+        wikipedia --> elastic
+    end
+
+    elastico[(Elasticsearch)]
+    elastic --> elastico
+
+    accuweather_api(Accuweather API)
+    accuweather --> accuweather_api
+
+    kinto[(Kinto: Remote Settings)]
+    offline ..-> |fetches adMarketplace and  <br/> static Wikipedia suggestions only.  <br/> Offline mode is fallback if Merino times out.| kinto
+    rsb --> kinto
+
+
+    online --> |/api/v1/suggest| srh
+```
+
 ## About the Name
 
 This project drives an important part of Firefox's "felt experience". That is,
