@@ -7,18 +7,16 @@ from timeit import default_timer as timer
 from merino import metrics
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
-from merino.providers.adm.backends.remotesettings import LiveBackend
+from merino.providers.adm.backends.fake_backends import FakeAdmBackend
+from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
 from merino.providers.adm.provider import Provider as AdmProvider
-from merino.providers.adm.provider import TestBackend
 from merino.providers.base import BaseProvider
 from merino.providers.top_picks import Provider as TopPicksProvider
 from merino.providers.weather.backends.accuweather import AccuweatherBackend
 from merino.providers.weather.provider import Provider as WeatherProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
 from merino.providers.wikipedia.backends.elastic import ElasticBackend
-from merino.providers.wikipedia.backends.test_backends import (
-    TestBackend as WikipediaTestBackend,
-)
+from merino.providers.wikipedia.backends.fake_backends import FakeWikipediaBackend
 from merino.providers.wikipedia.provider import Provider as WikipediaProvider
 
 providers: dict[str, BaseProvider] = {}
@@ -67,11 +65,18 @@ async def init_providers() -> None:
             case ProviderType.ADM:
                 providers["adm"] = AdmProvider(
                     backend=(
-                        LiveBackend()  # type: ignore [arg-type]
+                        RemoteSettingsBackend(
+                            server=settings.remote_settings.server,
+                            collection=settings.remote_settings.collection,
+                            bucket=settings.remote_settings.bucket,
+                        )  # type: ignore [arg-type]
                         if setting.backend == "remote-settings"
-                        else TestBackend()
+                        else FakeAdmBackend()
                     ),
+                    score=setting.score,
+                    score_wikipedia=setting.score_wikipedia,
                     name=provider_type,
+                    resync_interval_sec=setting.resync_interval_sec,
                     enabled_by_default=setting.enabled_by_default,
                 )
             case ProviderType.TOP_PICKS:
@@ -92,7 +97,7 @@ async def init_providers() -> None:
                             password=setting.es_password,
                         )  # type: ignore [arg-type]
                         if setting.backend == "elasticsearch"
-                        else WikipediaTestBackend()
+                        else FakeWikipediaBackend()
                     ),
                     name=provider_type,
                     enabled_by_default=setting.enabled_by_default,
