@@ -14,10 +14,14 @@ class Temperature(BaseModel):
 
     def __init__(self, c: Optional[float] = None, f: Optional[float] = None):
         super().__init__(c=c, f=f)
-        if c is None and f is not None:
-            self.c = round((f - 32) * 5 / 9, 1)
-        if f is None and c is not None:
-            self.f = round(c * 9 / 5 + 32)
+        if c is not None:
+            self.c = round(c)
+            if f is None:
+                self.f = round(c * 9 / 5 + 32)
+        if f is not None:
+            self.f = round(f)
+            if c is None:
+                self.c = round((f - 32) * 5 / 9)
 
 
 class CurrentConditions(BaseModel):
