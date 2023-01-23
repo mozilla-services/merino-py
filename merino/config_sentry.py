@@ -1,16 +1,16 @@
 """Sentry Configuration"""
-import json
 import logging
-import os.path
+import pathlib
 
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 from merino.config import settings
+from merino.utils.version import fetch_app_version
 
 logger = logging.getLogger(__name__)
-MERINO_PATH = os.path.dirname(os.path.abspath(__name__))
+MERINO_PATH = pathlib.Path.cwd()
 
 
 def configure_sentry() -> None:  # pragma: no cover
@@ -18,7 +18,7 @@ def configure_sentry() -> None:  # pragma: no cover
     if settings.sentry.mode == "disabled":
         return
     # This is the SHA-1 hash of the HEAD of the current branch.
-    version_sha: str | None = fetch_sha_hash_from_version_file(MERINO_PATH)
+    version_sha: str | None = fetch_app_version(MERINO_PATH)
     sentry_sdk.init(
         dsn=settings.sentry.dsn,
         integrations=[
@@ -33,24 +33,3 @@ def configure_sentry() -> None:  # pragma: no cover
         # We recommend adjusting this value in production,
         traces_sample_rate=settings.sentry.traces_sample_rate,
     )
-
-
-def fetch_sha_hash_from_version_file(
-    merino_root_path: str,
-) -> str | None:
-    """Fetch the SHA hash from the version.json file.
-    During deployment, this file is written and values are
-    populated for the current version of Merino in production and staging.
-    """
-    version_file_path: str = os.path.join(merino_root_path, "version.json")
-    if not os.path.exists(version_file_path):
-        error_message = (
-            f"version.json file does not exist at file path: {merino_root_path}"
-        )
-        logger.warning(error_message)
-        raise FileNotFoundError(error_message)
-
-    with open(version_file_path) as file:
-        version_file: dict = json.load(file)
-        commit_hash: str | None = version_file.get("commit")
-    return commit_hash
