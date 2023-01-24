@@ -442,8 +442,8 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
 lock-version = "1.1"
-python-versions = "^3.10"
-content-hash = "a1ad59a5c2720cca548be728510e8b12734a82e3e08651ab700c80e2db66661b"
+python-versions = "^3.11"
+content-hash = "77f471faa8ab4eaf87228b6f3792583c343b6ab53deaefc701fddee009e69a4d"
 
 [metadata.files]
 backoff = [
