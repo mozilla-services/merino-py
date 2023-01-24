@@ -4,7 +4,6 @@
 
 """Load test models."""
 
-from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Extra, Field, HttpUrl
@@ -18,13 +17,13 @@ class Suggestion(BaseModel, extra=Extra.allow):
     provider: str
     is_sponsored: bool
     score: float
-    icon: Optional[str]
+    icon: str | None
 
 
 class ResponseContent(BaseModel):
     """Class that contains suggestions and variants returned by Merino."""
 
-    suggestions: List[Suggestion] = Field(default_factory=list)
-    client_variants: List[str] = Field(default_factory=list)
-    server_variants: List[str] = Field(default_factory=list)
-    request_id: Optional[UUID] = Field(...)
+    suggestions: list[Suggestion] = Field(default_factory=list)
+    client_variants: list[str] = Field(default_factory=list)
+    server_variants: list[str] = Field(default_factory=list)
+    request_id: UUID | None = Field(...)

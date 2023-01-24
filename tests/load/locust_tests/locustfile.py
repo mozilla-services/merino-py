@@ -7,7 +7,7 @@
 import logging
 import os
 from random import choice, randint
-from typing import Any, Dict, List
+from typing import Any
 
 import faker
 import kinto_http
@@ -43,7 +43,7 @@ KINTO__BUCKET = os.environ["KINTO__BUCKET"]
 KINTO__COLLECTION = os.environ["KINTO__COLLECTION"]
 
 # This will be populated on each worker and
-RS_SUGGESTIONS: List[Dict] = []
+RS_SUGGESTIONS: list[dict] = []
 
 
 @events.test_start.add_listener
@@ -87,7 +87,7 @@ def on_locust_init(environment, **kwargs):
 
 def request_suggestions(client: HttpSession, query: str) -> None:
     """Request suggestions from Merino for the given query string."""
-    params: Dict[str, Any] = {"q": query}
+    params: dict[str, Any] = {"q": query}
 
     if CLIENT_VARIANTS:
         params = {**params, "client_variants": CLIENT_VARIANTS}
@@ -95,7 +95,7 @@ def request_suggestions(client: HttpSession, query: str) -> None:
     if PROVIDERS:
         params = {**params, "providers": PROVIDERS}
 
-    headers: Dict[str, str] = {  # nosec
+    headers: dict[str, str] = {  # nosec
         "Accept-Language": choice(LOCALES),
         "User-Agent": choice(DESKTOP_FIREFOX),
     }
