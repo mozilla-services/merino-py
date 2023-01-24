@@ -7,7 +7,7 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 from merino.config import settings
-from merino.utils.version import fetch_app_version
+from merino.utils.version import fetch_app_version_file
 
 logger = logging.getLogger(__name__)
 MERINO_PATH = pathlib.Path.cwd()
@@ -17,8 +17,9 @@ def configure_sentry() -> None:  # pragma: no cover
     """Configure and initialize Sentry integration."""
     if settings.sentry.mode == "disabled":
         return
-    # This is the SHA-1 hash of the HEAD of the current branch.
-    version_sha: str | None = fetch_app_version(MERINO_PATH)
+    # This is the SHA-1 hash of the HEAD of the current branch stored in verison.json file.
+    # The file is read and the "commit" key accessed to provide this value.
+    version_sha = fetch_app_version_file(merino_root_path=MERINO_PATH).get("commit")
     sentry_sdk.init(
         dsn=settings.sentry.dsn,
         integrations=[

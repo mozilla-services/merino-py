@@ -7,7 +7,7 @@ import pathlib
 
 import pytest
 
-from merino.utils.version import fetch_app_version
+from merino.utils.version import fetch_app_version_file
 
 # NOTE: project_root argument is defined in the project_root fixture in
 # conftest.py, at the root of this directory.
@@ -20,7 +20,8 @@ def test_fetch_app_version(project_root) -> None:
     staging and production environments as there is no populated version.json
     file in dev. It defaults to 'TBD' in source control.
     """
-    commit_hash = fetch_app_version(project_root)
+    version_file = fetch_app_version_file(project_root)
+    commit_hash = version_file.get("commit")
     assert commit_hash == "TBD"
 
 
@@ -31,4 +32,4 @@ def test_fetch_app_version_invalid_path(project_root) -> None:
     environments as there is no populated version.json file in dev.
     """
     with pytest.raises(FileNotFoundError):
-        fetch_app_version(pathlib.Path(project_root) / "invalid" / "wrong.json")
+        fetch_app_version_file(pathlib.Path(project_root) / "invalid" / "wrong.json")
