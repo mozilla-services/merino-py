@@ -5,6 +5,7 @@
 """Integration tests for the Merino __version__ API endpoint."""
 
 import logging
+import pathlib
 from logging import LogRecord
 
 from fastapi.testclient import TestClient
@@ -33,7 +34,7 @@ def test_version_error(mocker: MockerFixture, client: TestClient) -> None:
     """Test that the version endpoint returns a 500 status if an error occurs while
     evaluating the response.
     """
-    mocker.patch("os.path.exists", return_value=False)
+    mocker.patch.object(pathlib.Path, "exists", return_value=False)
 
     response = client.get("/__version__")
 

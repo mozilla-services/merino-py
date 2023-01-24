@@ -18,8 +18,8 @@ def configure_sentry() -> None:  # pragma: no cover
     if settings.sentry.mode == "disabled":
         return
     # This is the SHA-1 hash of the HEAD of the current branch stored in verison.json file.
-    # The file is read and the "commit" key accessed to provide this value.
-    version_sha = fetch_app_version_file(merino_root_path=MERINO_PATH).get("commit")
+    # The file is read and the "commit" attribute accessed to provide this value.
+    version_sha = fetch_app_version_file(merino_root_path=MERINO_PATH).commit
     sentry_sdk.init(
         dsn=settings.sentry.dsn,
         integrations=[
