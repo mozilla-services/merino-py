@@ -13,7 +13,7 @@ COPY ./pyproject.toml ./poetry.lock /tmp/
 # Just need the requirements.txt from Poetry
 RUN poetry export --no-interaction --output requirements.txt --without-hashes
 
-FROM python:${PYTHON_VERSION}-slim
+FROM python:${PYTHON_VERSION}-slim AS app_base
 
 # Allow statements and log messages to immediately appear
 ENV PYTHONUNBUFFERED True
@@ -38,6 +38,15 @@ RUN apt-get update && \
     apt-get -q --yes autoremove && \
     apt-get clean && \
     rm -rf /root/.cache
+
+# Create a build context that can be used for running merino jobs
+FROM app_base as job_runner
+
+ENTRYPOINT ["python", "-m", "merino.jobs.cli"]
+
+
+# Now create the final context that runs the web api.
+FROM app_base as web_api
 
 EXPOSE 8000
 
