@@ -19,14 +19,13 @@ class Version(BaseModel):
 
 def fetch_app_version_file(
     merino_root_path: pathlib.Path = pathlib.Path.cwd(),
-    version_filename: str = "version.json",
 ) -> Version:
     """Fetch the content of the version.json file, which contains the SHA-1 hash
     commit value, repo source url, version, and CI build values .
     During deployment, this file is written and values are populated for
     the current version of Merino in production and staging.
     """
-    version_file: pathlib.Path = merino_root_path / version_filename
+    version_file: pathlib.Path = merino_root_path / "version.json"
 
     # pathlib has the 'read_text()' function that opens the file, reads it
     # and closes the file like a context manager. Uses built-in open() function.

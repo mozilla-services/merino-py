@@ -43,7 +43,7 @@ def test_fetch_app_version_get_commit_attribute(project_root) -> None:
     the SHA hash of the current main HEAD value.
     It defaults to 'TBD' in source control.
     """
-    version_file = fetch_app_version_file(merino_root_path=project_root)
+    version_file = fetch_app_version_file(project_root)
     commit_hash = version_file.commit
     assert commit_hash == "TBD"
 
@@ -53,6 +53,4 @@ def test_fetch_app_version_invalid_path(project_root) -> None:
     an invalid path, raising a FileNotFoundError.
     """
     with pytest.raises(FileNotFoundError):
-        fetch_app_version_file(
-            merino_root_path=pathlib.Path(project_root), version_filename="wrong.json"
-        )
+        fetch_app_version_file(pathlib.Path(project_root) / "invalid" / "wrong.json")

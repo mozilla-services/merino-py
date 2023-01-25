@@ -1,6 +1,5 @@
 """Dockerflow Endpoints."""
 import logging
-import pathlib
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
@@ -9,8 +8,6 @@ from merino.utils.version import Version, fetch_app_version_file
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-MERINO_PATH = pathlib.Path.cwd()
-VERSION_FILENAME = "version.json"
 
 
 @router.get(
@@ -20,13 +17,12 @@ VERSION_FILENAME = "version.json"
 )
 async def version() -> Version:
     """Dockerflow: Query service version."""
-    if not pathlib.Path(MERINO_PATH / VERSION_FILENAME).exists():
+    try:
+        version_file = fetch_app_version_file()
+    except FileNotFoundError:
         raise HTTPException(status_code=500, detail="Version file does not exist")
-
-    version_file = fetch_app_version_file(
-        merino_root_path=MERINO_PATH, version_filename=VERSION_FILENAME
-    )
-    return version_file
+    else:
+        return version_file
 
 
 @router.get(

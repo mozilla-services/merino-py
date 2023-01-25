@@ -34,11 +34,12 @@ def test_version_error(mocker: MockerFixture, client: TestClient) -> None:
     """Test that the version endpoint returns a 500 status if an error occurs while
     evaluating the response.
     """
-    mocker.patch.object(pathlib.Path, "exists", return_value=False)
+    mocker.patch.object(pathlib.Path, "read_text", side_effect=FileNotFoundError)
 
     response = client.get("/__version__")
 
     assert response.status_code == 500
+    assert response.json() == {"detail": "Version file does not exist"}
 
 
 @freeze_time("1998-03-31")
