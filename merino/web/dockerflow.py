@@ -3,10 +3,9 @@ import logging
 import pathlib
 
 from fastapi import APIRouter, HTTPException
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
 
-from merino.utils.version import fetch_app_version_file, Version
+from merino.utils.version import Version, fetch_app_version_file
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
