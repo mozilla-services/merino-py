@@ -5,7 +5,6 @@
 """Module for communication with Kinto (Remote Settings)."""
 
 import logging
-from typing import Dict, List
 
 import kinto_http
 import requests
@@ -19,10 +18,10 @@ class KintoSuggestion(BaseModel, extra=Extra.ignore):
 
     advertiser: str
     title: str
-    keywords: List[str]
+    keywords: list[str]
 
 
-def download_suggestions(client: kinto_http.Client) -> Dict[int, KintoSuggestion]:
+def download_suggestions(client: kinto_http.Client) -> dict[int, KintoSuggestion]:
     """Get records, download attachments and return the suggestions."""
     # Retrieve the base_url for attachments
     server_info = client.server_info()

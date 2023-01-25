@@ -6,10 +6,8 @@
 
 # See https://mozilla-services.github.io/merino/api.html#headers
 
-from typing import List
-
 # Examples for supported User-Agent header values
-DESKTOP_FIREFOX: List[str] = [
+DESKTOP_FIREFOX: list[str] = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:10.0) Gecko/20100101 Firefox/90.0"
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:10.0) Gecko/20100101 Firefox/91.0"
     "Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0"
@@ -17,4 +15,4 @@ DESKTOP_FIREFOX: List[str] = [
 ]
 
 # Examples for supported Accept-Language header values
-LOCALES: List[str] = ["en-US"]
+LOCALES: list[str] = ["en-US"]
