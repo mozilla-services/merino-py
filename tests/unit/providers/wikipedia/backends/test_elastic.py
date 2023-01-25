@@ -28,9 +28,8 @@ def fixture_wikipedia() -> Provider:
 def fixture_es_backend() -> ElasticBackend:
     """Return an ES backend instance."""
     return ElasticBackend(
-        cloud_id=settings.providers.wikipedia.es_cloud_id,
-        user=settings.providers.wikipedia.es_user,
-        password=settings.providers.wikipedia.es_password,
+        url="http://localhost:9200",
+        cloud_id=None,
     )
 
 

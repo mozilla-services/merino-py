@@ -1,5 +1,5 @@
 """The Elasticsearch backend for Dynamic Wikipedia."""
-from typing import Any, Final
+from typing import Any, Final, Optional
 from urllib.parse import quote
 
 from elasticsearch import AsyncElasticsearch
@@ -19,9 +19,15 @@ class ElasticBackend:
 
     client: AsyncElasticsearch
 
-    def __init__(self, *, cloud_id: str, user: str, password: str) -> None:
+    def __init__(self, *, url: str, cloud_id: Optional[str]) -> None:
         """Initialize."""
-        self.client = AsyncElasticsearch(cloud_id=cloud_id, basic_auth=(user, password))
+        # Only one of `cloud_id` or `hosts` can be passed.
+        # If the `cloud_id` is specified, then use that.
+        # Otherwise fallback to using the specified URL.
+        if cloud_id:
+            self.client = AsyncElasticsearch(cloud_id=cloud_id)
+        else:
+            self.client = AsyncElasticsearch(url)
 
     async def shutdown(self) -> None:
         """Shut down the connection to the ES cluster."""

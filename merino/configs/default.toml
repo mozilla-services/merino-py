@@ -113,18 +113,9 @@ top_picks_file_path = "dev/top_picks.json"
 enabled_by_default = false
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "elasticsearch"
-# Elasticsearch Cloud ID. The following one is *fake* and will be
-# overridden in production.
-es_cloud_id = """
-  testing:dXMtZWFzdC0xLmF3cy5mb3VuZC5pbyRjZWM2ZjI2MWE3NGJmMjRjZ
-  TMzYmI4ODExYjg0Mjk0ZiRjNmMyY2E2ZDA0MjI0OWFmMGNjN2Q3YTllOTYyNTc0Mw==
-"""
-# Elasticsearch user
-es_user = ""
-# Elasticsearch password
-es_password = ""
+es_url = ""
 # Elasticsearch index
-es_index = "enwiki"
+es_index = "enwiki_merino_test"
 # The maximum suggestions for each search request.
 es_max_suggestions = 3
 # The timeout (in millisecond) for each request to ES
