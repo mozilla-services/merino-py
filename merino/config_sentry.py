@@ -1,6 +1,5 @@
 """Sentry Configuration"""
 import logging
-import pathlib
 
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -10,7 +9,6 @@ from merino.config import settings
 from merino.utils.version import fetch_app_version_file
 
 logger = logging.getLogger(__name__)
-MERINO_PATH = pathlib.Path.cwd()
 
 
 def configure_sentry() -> None:  # pragma: no cover
@@ -19,7 +17,7 @@ def configure_sentry() -> None:  # pragma: no cover
         return
     # This is the SHA-1 hash of the HEAD of the current branch stored in verison.json file.
     # The file is read and the "commit" attribute accessed to provide this value.
-    version_sha = fetch_app_version_file(merino_root_path=MERINO_PATH).commit
+    version_sha = fetch_app_version_file().commit
     sentry_sdk.init(
         dsn=settings.sentry.dsn,
         integrations=[

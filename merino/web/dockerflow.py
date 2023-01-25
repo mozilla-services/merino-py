@@ -11,6 +11,7 @@ from merino.utils.version import fetch_app_version_file
 router = APIRouter()
 logger = logging.getLogger(__name__)
 MERINO_PATH = pathlib.Path.cwd()
+VERSION_FILENAME = "version.json"
 
 
 @router.get(
@@ -20,10 +21,12 @@ MERINO_PATH = pathlib.Path.cwd()
 )
 async def version() -> JSONResponse:
     """Dockerflow: Query service version."""
-    if not pathlib.Path("version.json").exists():
+    if not pathlib.Path(MERINO_PATH / VERSION_FILENAME).exists():
         raise HTTPException(status_code=500, detail="Version file does not exist")
 
-    version_file = fetch_app_version_file(merino_root_path=MERINO_PATH)
+    version_file = fetch_app_version_file(
+        merino_root_path=MERINO_PATH, version_filename=VERSION_FILENAME
+    )
     return JSONResponse(content=jsonable_encoder(version_file))
 
 

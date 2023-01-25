@@ -21,10 +21,20 @@ def test_fetch_app_version(project_root: pathlib.Path, attribute: str) -> None:
     This is the method implemented in the staging and production environments
     as there is no populated version.json file in dev.
     """
-    version_file = fetch_app_version_file(project_root)
+    version_file = fetch_app_version_file(merino_root_path=project_root)
     assert version_file
-    assert type(version_file) == Version
     assert hasattr(version_file, attribute)
+
+
+def test_version_contents(project_root: pathlib.Path) -> None:
+    """Happy path test for fetch_app_version_file()."""
+    expected_version = Version(
+        source="https://github.com/mozilla-services/merino-py",
+        version="dev",
+        commit="TBD",
+        build="TBD",
+    )
+    assert fetch_app_version_file(merino_root_path=project_root) == expected_version
 
 
 def test_fetch_app_version_get_commit_attribute(project_root) -> None:
@@ -33,7 +43,7 @@ def test_fetch_app_version_get_commit_attribute(project_root) -> None:
     the SHA hash of the current main HEAD value.
     It defaults to 'TBD' in source control.
     """
-    version_file = fetch_app_version_file(project_root)
+    version_file = fetch_app_version_file(merino_root_path=project_root)
     commit_hash = version_file.commit
     assert commit_hash == "TBD"
 
@@ -43,4 +53,6 @@ def test_fetch_app_version_invalid_path(project_root) -> None:
     an invalid path, raising a FileNotFoundError.
     """
     with pytest.raises(FileNotFoundError):
-        fetch_app_version_file(pathlib.Path(project_root) / "invalid" / "wrong.json")
+        fetch_app_version_file(
+            merino_root_path=pathlib.Path(project_root), version_filename="wrong.json"
+        )
