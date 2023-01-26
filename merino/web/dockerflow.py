@@ -1,11 +1,10 @@
 """Dockerflow Endpoints."""
-import json
 import logging
-import os
 
 from fastapi import APIRouter, HTTPException
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
+
+from merino.utils.version import Version, fetch_app_version_from_file
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -16,14 +15,14 @@ logger = logging.getLogger(__name__)
     tags=["__version__"],
     summary="Dockerflow: __version__",
 )
-async def version() -> JSONResponse:
+async def version() -> Version:
     """Dockerflow: Query service version."""
-    if not os.path.exists("version.json"):
+    try:
+        app_version = fetch_app_version_from_file()
+    except FileNotFoundError:
         raise HTTPException(status_code=500, detail="Version file does not exist")
-
-    with open("version.json") as f:
-        version = json.load(f)
-    return JSONResponse(content=jsonable_encoder(version))
+    else:
+        return app_version
 
 
 @router.get(
