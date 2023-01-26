@@ -3,54 +3,60 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the version.py utility module."""
+import json
 import pathlib
 
 import pytest
+from pydantic import ValidationError
 
-from merino.utils.version import Version, fetch_app_version_file
+from merino.utils.version import fetch_app_version_from_file
 
-# NOTE: project_root argument is defined in the project_root fixture in
+# NOTE:  argument is defined in the  fixture in
 # conftest.py, at the root of this directory.
 
 
-@pytest.mark.parametrize("attribute", ["source", "version", "commit", "build"])
-def test_fetch_app_version(project_root: pathlib.Path, attribute: str) -> None:
-    """Test that the 'version.json' file in the root merino directory
-    can be read. Used to populate values in __version__ endpoint and to
-    access the individual values held within the json file.
-    This is the method implemented in the staging and production environments
-    as there is no populated version.json file in dev.
-    """
-    version_file = fetch_app_version_file(merino_root_path=project_root)
-    assert version_file
-    assert hasattr(version_file, attribute)
+def test_fetch_app_version_from_file() -> None:
+    """Happy path test for fetch_app_version_from_file()."""
+    expected_information = {
+        "source": "https://github.com/mozilla-services/merino-py",
+        "version": "dev",
+        "commit": "TBD",
+        "build": "TBD",
+    }
+
+    version = fetch_app_version_from_file()
+    assert version.dict() == expected_information
 
 
-def test_version_contents(project_root: pathlib.Path) -> None:
-    """Happy path test for fetch_app_version_file()."""
-    expected_version = Version(
-        source="https://github.com/mozilla-services/merino-py",
-        version="dev",
-        commit="TBD",
-        build="TBD",
-    )
-    assert fetch_app_version_file(merino_root_path=project_root) == expected_version
-
-
-def test_fetch_app_version_get_commit_attribute(project_root) -> None:
-    """Test that the 'version.json' file in the root merino directory
-    can be read and the commit attribute can be accessed to populate
-    the SHA hash of the current main HEAD value.
-    It defaults to 'TBD' in source control.
-    """
-    version_file = fetch_app_version_file(project_root)
-    commit_hash = version_file.commit
-    assert commit_hash == "TBD"
-
-
-def test_fetch_app_version_invalid_path(project_root) -> None:
+def test_fetch_app_version_from_file_invalid_path() -> None:
     """Test that the 'version.json' file cannot be read when provided
     an invalid path, raising a FileNotFoundError.
     """
-    with pytest.raises(FileNotFoundError):
-        fetch_app_version_file(pathlib.Path(project_root) / "invalid" / "wrong.json")
+    with pytest.raises(FileNotFoundError) as excinfo:
+        fetch_app_version_from_file(pathlib.Path("invalid"))
+
+    assert "No such file or directory: 'invalid/version.json'" in str(excinfo.value)
+
+
+@pytest.fixture(name="dir_containing_incorrect_file")
+def fixture_dir_containing_incorrect_file(tmp_path: pathlib.Path) -> pathlib.Path:
+    """Create a version.json file that does not match the Version model."""
+    version_file = tmp_path / "version.json"
+    version_file.write_text(
+        json.dumps(
+            {
+                "source": "https://github.com/mozilla-services/merino-py",
+                "version": "dev",
+                "commit": "TBD",
+                "build": "TBD",
+                "incorrect": "this should not be here",
+            }
+        )
+    )
+    return tmp_path
+
+
+def test_version_extra_forbid(dir_containing_incorrect_file: pathlib.Path) -> None:
+    """Test that fetch_app_version_from_file raises an error for incorrect files."""
+    with pytest.raises(ValidationError):
+        fetch_app_version_from_file(merino_root_path=dir_containing_incorrect_file)

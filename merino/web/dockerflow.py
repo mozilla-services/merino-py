@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
-from merino.utils.version import Version, fetch_app_version_file
+from merino.utils.version import Version, fetch_app_version_from_file
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -18,11 +18,11 @@ logger = logging.getLogger(__name__)
 async def version() -> Version:
     """Dockerflow: Query service version."""
     try:
-        version_file = fetch_app_version_file()
+        app_version = fetch_app_version_from_file()
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="Version file does not exist")
     else:
-        return version_file
+        return app_version
 
 
 @router.get(

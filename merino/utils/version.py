@@ -3,12 +3,12 @@ import json
 import logging
 import pathlib
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Extra, HttpUrl
 
 logger = logging.getLogger(__name__)
 
 
-class Version(BaseModel):
+class Version(BaseModel, extra=Extra.forbid):
     """Model for version.json data"""
 
     source: HttpUrl
@@ -17,7 +17,7 @@ class Version(BaseModel):
     build: str
 
 
-def fetch_app_version_file(
+def fetch_app_version_from_file(
     merino_root_path: pathlib.Path = pathlib.Path.cwd(),
 ) -> Version:
     """Fetch the content of the version.json file, which contains the SHA-1 hash

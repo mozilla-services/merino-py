@@ -3,7 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Module for test configurations for the unit test directory."""
-import pathlib
 
 import pytest
 
@@ -23,12 +22,3 @@ def fixture_srequest() -> SuggestionRequestFixture:
         return SuggestionRequest(query=query, geolocation=Location())
 
     return srequest
-
-
-@pytest.fixture
-def project_root() -> pathlib.Path:
-    """Define the project root of merino for testing. Used for defining file path
-    when testing the read of the version.json file. This is passed to Sentry
-    for the release tag.
-    """
-    return pathlib.Path.cwd()
