@@ -2,7 +2,7 @@
 import logging
 from typing import Optional
 
-import click
+import typer
 from elasticsearch import Elasticsearch
 
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
@@ -11,45 +11,34 @@ from merino.jobs.wikipedia_indexer.indexer import Indexer
 logger = logging.getLogger(__name__)
 
 # Shared options
-gcs_path_option = click.option(
+gcs_path_option = typer.Option(
+    "merino-jobs-dev/wikipedia-exports",
     "--gcs-path",
-    default="merino-jobs-dev/wikipedia-exports",
-    type=str,
     help="Full gcs path to folder containing wikipedia exports on gcs",
 )
 
-gcp_project_option = click.option(
+gcp_project_option = typer.Option(
+    "contextual-services-dev",
     "--gcp-project",
-    default="contextual-services-dev",
-    type=str,
     help="GCP project to use for gcs",
 )
 
-
-@click.group(help="Commands for indexing wikipedia exports into elasticsearch")
-def indexer_cmd():
-    """Create the click group for the wikipedia indexer subcommands"""
-    pass
+indexer_cmd = typer.Typer(
+    name="wikipedia-indexer",
+    help="Commands for indexing wikipedia exports into elasticsearch",
+)
 
 
 @indexer_cmd.command()
-@click.option("--elasticsearch-hostname", default="http://35.192.164.92:9200/")
-@click.option("--elasticsearch-username", default=None)
-@click.option("--elasticsearch-password", default=None)
-@click.option("--elasticsearch-alias", default="enwiki-{version}")
-@click.option("--index-version", default="v1")
-@click.option("--total-docs", default=6_400_000)
-@gcp_project_option
-@gcs_path_option
 def index(
-    elasticsearch_hostname: str,
-    elasticsearch_alias: str,
-    elasticsearch_username: Optional[str],
-    elasticsearch_password: Optional[str],
-    index_version: str,
-    total_docs: int,
-    gcs_path: str,
-    gcp_project: str,
+    elasticsearch_hostname: str = "http://35.192.164.92:9200/",
+    elasticsearch_alias: str = "enwiki",
+    elasticsearch_username: Optional[str] = None,
+    elasticsearch_password: Optional[str] = None,
+    index_version: str = "v1",
+    total_docs: int = 6_400_00,
+    gcs_path: str = gcs_path_option,
+    gcp_project: str = gcp_project_option,
 ):
     """Index file from gcs to elasticsearch"""
     basic_auth = (
@@ -67,13 +56,11 @@ def index(
 
 
 @indexer_cmd.command()
-@click.option(
-    "--export-base-url",
-    default="https://dumps.wikimedia.org/other/cirrussearch/current/",
-)
-@gcp_project_option
-@gcs_path_option
-def copy_export(export_base_url: str, gcs_path: str, gcp_project: str):
+def copy_export(
+    export_base_url: str = "https://dumps.wikimedia.org/other/cirrussearch/current/",
+    gcs_path: str = gcs_path_option,
+    gcp_project: str = gcp_project_option,
+):
     """Copy file from wikimedia to gcs"""
     file_manager = FileManager(gcs_path, gcp_project, export_base_url)
 

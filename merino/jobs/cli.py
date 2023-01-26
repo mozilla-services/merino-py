@@ -1,16 +1,16 @@
 """Entrypoint for the command line interface."""
-import click
+import typer
 
 from merino.config_logging import configure_logging
 from merino.jobs.wikipedia_indexer import indexer_cmd
 
-commands = {
-    "wikipedia-indexer": indexer_cmd,
-}
+cli = typer.Typer(no_args_is_help=True, add_completion=False)
+# Add the wikipedia-indexer subcommands
+cli.add_typer(indexer_cmd, no_args_is_help=True)
 
 
-@click.group(commands=commands)
-def cli():
+@cli.callback("setup")
+def setup():
     """CLI Entrypoint"""
     configure_logging()
 
