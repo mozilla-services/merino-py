@@ -11,9 +11,6 @@ from pydantic import ValidationError
 
 from merino.utils.version import fetch_app_version_from_file
 
-# NOTE:  argument is defined in the  fixture in
-# conftest.py, at the root of this directory.
-
 
 def test_fetch_app_version_from_file() -> None:
     """Happy path test for fetch_app_version_from_file()."""
