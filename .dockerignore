@@ -15,5 +15,7 @@ pyrightconfig.json
 venv
 merino/configs/.secrets.*
 book/
+mermaid-init.js
+mermaid.min.js
 profile.json
 workspace/

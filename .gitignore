@@ -139,6 +139,8 @@ merino/configs/*.local.*
 
 # mdBook generated files
 book/
+mermaid-init.js
+mermaid.min.js
 
 # Scalene profile artifacts
 profile.json
