@@ -165,24 +165,24 @@ dependencies required for Merino.</p>
 <p><a href="./dev/profiling.html">dev/profiling.md - Profiling</a> describes how to profile Merino to address performance issues.</p>
 <h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
 <pre class="mermaid">graph TD
-    User[\User/]
+    User[\fa:fa-user User/]
 
-    subgraph Fx
+    subgraph Firefox [fa:fa-firefox Firefox]
         online(online)
         offline(offline)
     end
 
-    User --&gt; |Accessing the Fx URL bar| Fx
+    User --&gt; |Accessing the Firefox URL bar| Firefox
 
-    subgraph Merino
-        srh(Suggest Request Handler)
-        middlewares(Middlewares:&lt;br/&gt;Geolocation&lt;br/&gt;Logging&lt;br/&gt;Metrics&lt;br/&gt;User Agent)
+    subgraph Merino [fa:fa-leaf Merino]
+        srh(fa:fa-gears Suggest Request Handler)
+        middleware(fa:fa-paperclip Middleware:&lt;br/&gt;- Geolocation&lt;br/&gt;- Logging&lt;br/&gt;- Metrics&lt;br/&gt;- User Agent)
 
-        srh -..- middlewares
+        srh -..- middleware
 
-        subgraph providers
+        subgraph providers [fa:fa-truck Providers]
             adm(adm)
-            toppicks(toppicks)
+            toppicks(top-picks)
             weather(weather)
             wikipedia(wikipedia)
         end
@@ -192,7 +192,7 @@ dependencies required for Merino.</p>
         srh --&gt; weather
         srh --&gt; wikipedia
 
-        subgraph backends
+        subgraph backends [fa:fa-server Beckends]
             rsb(remote settings)
             accuweather(accuweather)
             elastic(elastic)
@@ -213,7 +213,7 @@ dependencies required for Merino.</p>
     accuweather_api(Accuweather API)
     accuweather --&gt; accuweather_api
 
-    kinto[(Kinto: Remote Settings)]
+    kinto[(Remote Settings)]
     offline ..-&gt; |fetches adMarketplace and  &lt;br/&gt; static Wikipedia suggestions only.  &lt;br/&gt; Offline mode is fallback if Merino times out.| kinto
     rsb --&gt; kinto
 
