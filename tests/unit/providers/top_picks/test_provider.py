@@ -11,7 +11,7 @@ from fastapi import APIRouter, FastAPI
 
 from merino.config import settings
 from merino.providers.base import BaseSuggestion
-from merino.providers.top_picks import Provider, Suggestion
+from merino.providers.top_picks.provider import Provider, Suggestion
 from tests.unit.types import SuggestionRequestFixture
 
 app = FastAPI()

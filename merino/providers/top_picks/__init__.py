@@ -1,0 +1,1 @@
+"""Top Picks Provider"""

@@ -10,8 +10,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from merino.config import settings
-from merino.providers.top_picks import Provider as TopPicksProvider
-from merino.providers.top_picks import Suggestion
+from merino.providers.top_picks.provider import Provider as TopPicksProvider
+from merino.providers.top_picks.provider import Suggestion
 from tests.integration.api.v1.types import Providers
 
 

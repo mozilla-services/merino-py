@@ -17,7 +17,6 @@ QUERY_CHAR_LIMIT: int = settings.providers.top_picks.query_char_limit
 # The minimal characters that Firefox Urlbar would send to Merino
 FIREFOX_CHAR_LIMIT: Final[int] = 2
 
-
 logger = logging.getLogger(__name__)
 
 
