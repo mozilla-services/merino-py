@@ -1,27 +1,26 @@
-"""Unit tests for the Merino v1 suggest API endpoint for the Wikipedia provider."""
+"""Unit tests for the Merino v1 suggest API endpoint for the Elastic Backend."""
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
 from elasticsearch import AsyncElasticsearch
 from pytest_mock import MockerFixture
 
-from merino.config import settings
 from merino.exceptions import BackendError
-from merino.providers.wikipedia.backends.elastic import SUGGEST_ID, ElasticBackend
-from merino.providers.wikipedia.backends.fake_backends import FakeEchoWikipediaBackend
-from merino.providers.wikipedia.provider import (
-    ADVERTISER,
-    ICON,
-    Provider,
-    WikipediaSuggestion,
+from merino.providers.wikipedia.backends.elastic import (
+    SUGGEST_ID,
+    ElasticBackend,
+    ElasticBackendError,
 )
-from tests.unit.types import SuggestionRequestFixture
 
 
-@pytest.fixture(name="wikipedia")
-def fixture_wikipedia() -> Provider:
-    """Return a Wikipedia provider that uses a test backend."""
-    return Provider(backend=FakeEchoWikipediaBackend())
+@pytest.fixture(name="fake_elastic_cloud_id")
+def fixture_fake_elastic_cloud_id() -> str:
+    """Return a fake but valid elastic cloud id"""
+    return (
+        "cluster:dXMtZWFzdC0xLmF3cy5mb3VuZC5pbyQ0ZmE4ODIxZTc1NjM0MDMyYmVk"
+        "MWNmMjIxMTBlMmY5NyQ0ZmE4ODIxZTc1NjM0MDMyYmVkMWNmMjIxMTBlMmY5Ng=="
+    )
 
 
 @pytest.fixture(name="es_backend")
@@ -33,53 +32,46 @@ def fixture_es_backend() -> ElasticBackend:
     )
 
 
-def test_enabled_by_default(wikipedia: Provider) -> None:
-    """Test for the enabled_by_default method."""
-    assert wikipedia.enabled_by_default
+def test_initialize_es_backend_cloud_id_success(
+    mocker: MockerFixture, fake_elastic_cloud_id: str
+):
+    """Test that the ElasticBackend initializes successfully with a cloud_id."""
+    es_client_spy: Any = mocker.spy(AsyncElasticsearch, "__init__")
+
+    ElasticBackend(cloud_id=fake_elastic_cloud_id)
+
+    es_client_spy.assert_called_once()
+
+    assert es_client_spy.call_args.kwargs["cloud_id"] == fake_elastic_cloud_id
 
 
-def test_hidden(wikipedia: Provider) -> None:
-    """Test for the hidden method."""
-    assert not wikipedia.hidden()
+def test_initialize_es_backend_url_success(
+    mocker: MockerFixture,
+):
+    """Test that the ElasticBackend initializes successfully with a URL."""
+    fake_url: str = "http://localhost:9200"
+    es_client_spy: Any = mocker.spy(AsyncElasticsearch, "__init__")
+
+    ElasticBackend(url=fake_url)
+
+    es_client_spy.assert_called_once()
+
+    assert fake_url in es_client_spy.call_args[0]
 
 
-@pytest.mark.asyncio
-async def test_shutdown(wikipedia: Provider, mocker: MockerFixture) -> None:
-    """Test for the shutdown method."""
-    spy = mocker.spy(FakeEchoWikipediaBackend, "shutdown")
-    await wikipedia.shutdown()
-    spy.assert_called_once()
+def test_initialize_es_backend_error_without_url_and_cloud_id():
+    """Test that the ElasticBackend returns an error for invalid initialization inputs."""
+    with pytest.raises(ElasticBackendError):
+        ElasticBackend()
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ["query", "expected_title"],
-    [("foo", "foo"), ("foo bar", "foo_bar"), ("foØ bÅr", "fo%C3%98_b%C3%85r")],
-)
-async def test_query(
-    wikipedia: Provider,
-    srequest: SuggestionRequestFixture,
-    query: str,
-    expected_title: str,
-) -> None:
-    """Test for the query method."""
-    suggestions = await wikipedia.query(srequest(query))
-
-    assert suggestions == [
-        WikipediaSuggestion(
-            title=query,
-            full_keyword=query,
-            url=f"https://en.wikipedia.org/wiki/{expected_title}",
-            advertiser=ADVERTISER,
-            is_sponsored=False,
-            provider="wikipedia",
-            score=settings.providers.wikipedia.score,
-            icon=ICON,
-            block_id=0,
-            impression_url=None,
-            click_url=None,
-        )
-    ]
+def test_initialize_es_backend_error_with_url_and_cloud_id(
+    fake_elastic_cloud_id: str,
+):
+    """Test that the ElasticBackend returns an error for invalid initialization inputs."""
+    fake_url: str = "http://localhost:9200"
+    with pytest.raises(ElasticBackendError):
+        ElasticBackend(url=fake_url, cloud_id=fake_elastic_cloud_id)
 
 
 @pytest.mark.asyncio

@@ -14,20 +14,28 @@ TIMEOUT_MS: Final[str] = f"{settings.providers.wikipedia.es_request_timeout_ms}m
 MAX_SUGGESTIONS: Final[int] = settings.providers.wikipedia.es_max_suggestions
 
 
+class ElasticBackendError(BackendError):
+    """Error during interactions with Elasticsearch"""
+
+
 class ElasticBackend:
     """The client that works with the Elasticsearch backend."""
 
     client: AsyncElasticsearch
 
-    def __init__(self, *, url: str, cloud_id: Optional[str]) -> None:
+    def __init__(
+        self, *, url: Optional[str] = None, cloud_id: Optional[str] = None
+    ) -> None:
         """Initialize."""
         # Only one of `cloud_id` or `hosts` can be passed.
-        # If the `cloud_id` is specified, then use that.
-        # Otherwise fallback to using the specified URL.
-        if cloud_id:
+        if cloud_id and not url:
             self.client = AsyncElasticsearch(cloud_id=cloud_id)
-        else:
+        elif url and not cloud_id:
             self.client = AsyncElasticsearch(url)
+        else:
+            raise ElasticBackendError(
+                "Elasticsearch requires one of: URL or cloud id to be specified."
+            )
 
     async def shutdown(self) -> None:
         """Shut down the connection to the ES cluster."""
