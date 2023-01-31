@@ -4,6 +4,7 @@ SUGGEST_MAPPING = {
     "dynamic": False,
     "properties": {
         "batch_id": {"type": "long"},
+        "version": {"type": "keyword"},
         "doc_id": {"type": "keyword"},
         "title": {"type": "keyword"},
         "suggest": {

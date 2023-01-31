@@ -22,8 +22,8 @@ class Indexer:
     QUEUE_MAX_LENGTH = 5000
 
     queue: List[Mapping[str, Any]] = []
-    suggestion_builder: Builder = Builder()
 
+    suggestion_builder: Builder
     export_file: Blob
     index_version: str
     file_manager: FileManager
@@ -36,6 +36,7 @@ class Indexer:
         self.index_version = index_version
         self.file_manager = file_manager
         self.es_client = client
+        self.suggestion_builder = Builder(index_version)
 
     def index_from_export(self, total_docs: int, elasticsearch_alias: str):
         """Primary indexer method.
@@ -130,7 +131,7 @@ class Indexer:
 
     def _get_index_name(self, file_name) -> str:
         if "/" in file_name:
-            _, file_name = file_name.split("/", 1)
+            file_name = file_name.split("/")[-1]
         base_name = "-".join(file_name.split("-")[:2])
         return f"{base_name}-{self.index_version}"
 

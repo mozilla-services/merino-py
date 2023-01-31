@@ -37,7 +37,7 @@ class Scorer:
     def __init__(self, max_docs: int) -> None:
         self.max_docs = max_docs
         self.incoming_links_norm = int(
-            self.max_docs * self.INCOMING_LINKS_MAX_DOCS_FACTOR
+            float(self.max_docs) * self.INCOMING_LINKS_MAX_DOCS_FACTOR
         )
 
     def score(self, doc: Dict) -> float:
@@ -99,9 +99,11 @@ class Builder:
 
     scorer: Scorer
     batch_id: int
+    version: str
 
-    def __init__(self, max_docs: int = 6_500_000) -> None:
+    def __init__(self, version: str, max_docs: int = 6_500_000) -> None:
         self.batch_id = int(time.time_ns() / 1000)
+        self.version = version
         self.scorer = Scorer(max_docs)
 
     def build(self, id: str, doc: Dict[str, Any]):
@@ -117,6 +119,7 @@ class Builder:
         score = self.scorer.score(doc)
 
         return {
+            "version": self.version,
             "batch_id": self.batch_id,
             "doc_id": id,
             "title": title,

@@ -49,7 +49,7 @@ def index(
     es_client = Elasticsearch(
         hosts=[elasticsearch_hostname], request_timeout=60, basic_auth=basic_auth
     )
-    file_manager = FileManager(gcs_path, gcp_project)
+    file_manager = FileManager(gcs_path, gcp_project, "")
 
     indexer = Indexer(index_version, file_manager, es_client)
     indexer.index_from_export(total_docs, elasticsearch_alias)

@@ -4,7 +4,7 @@ import re
 from datetime import datetime as dt
 from gzip import GzipFile
 from html.parser import HTMLParser
-from typing import Generator, List, Optional, Pattern, Tuple
+from typing import Generator, Optional, Pattern
 from urllib.parse import urljoin
 
 import requests
@@ -18,16 +18,17 @@ class DirectoryParser(HTMLParser):
     """Parse the directory listing to find the specified file."""
 
     filter: Pattern[str]
-    file_paths: List[str] = []
+    file_paths: list[str]
 
     def __init__(self, filter_wildcard: Pattern[str]) -> None:
         super().__init__()
+        self.file_paths = []
         self.filter = re.compile(filter_wildcard)
 
     def _is_href(self, k: str, v: str) -> bool:
         return k == "href" and re.search(self.filter, v) is not None
 
-    def handle_starttag(self, tag: str, attrs: List[Tuple[str, Optional[str]]]) -> None:
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
         """When the parser encounters a start tag check for Anchor and push into list."""
         if tag.lower() == "a":
             hrefs = [(k, v) for k, v in attrs if v is not None and self._is_href(k, v)]
@@ -37,16 +38,14 @@ class DirectoryParser(HTMLParser):
 class FileManager:
     """Tools for managing files on wikimedia export directory and copying into GCS"""
 
-    base_url: Optional[str]
+    base_url: str
     gcs_bucket: str
     object_prefix: str
     file_pattern: Pattern
     client: Client
 
-    def __init__(
-        self, gcs_bucket: str, gcs_project: str, export_base_url: Optional[str] = None
-    ) -> None:
-        self.file_pattern = re.compile("^enwiki-(\\d+)-cirrussearch-content.json.gz")
+    def __init__(self, gcs_bucket: str, gcs_project: str, export_base_url: str) -> None:
+        self.file_pattern = re.compile(r".*/?enwiki-(\d+)-cirrussearch-content.json.gz")
         self.client = Client(gcs_project)
         self.base_url = export_base_url
         if "/" in gcs_bucket:
@@ -55,10 +54,8 @@ class FileManager:
             self.gcs_bucket = gcs_bucket
             self.object_prefix = ""
 
-    def get_latest_dump(self, latest_gcs: Blob) -> str | None:
+    def get_latest_dump(self, latest_gcs: Blob) -> Optional[str]:
         """Find the latest export that's older than the latest on gcs."""
-        if self.base_url is None:
-            raise RuntimeError("Invalid base_url")
         resp = requests.get(self.base_url)
         parser = DirectoryParser(self.file_pattern)
         parser.feed(str(resp.content))
@@ -86,7 +83,7 @@ class FileManager:
     def get_latest_gcs(self) -> Blob:
         """Find the most recent file on GCS"""
         bucket = self.client.bucket(self.gcs_bucket)
-        blobs: List[Blob] = [b for b in bucket.list_blobs(prefix=self.object_prefix)]
+        blobs: list[Blob] = [b for b in bucket.list_blobs(prefix=self.object_prefix)]
         blobs.sort(key=lambda b: self._parse_date(str(b.name)))
         return blobs[-1]
 
@@ -105,8 +102,7 @@ class FileManager:
 
     def stream_latest_from_gcs(self) -> Generator:
         """Stream latest file from GCS"""
-        for chunk in self._stream_from_gcs(self.get_latest_gcs()):
-            yield chunk
+        yield from self._stream_from_gcs(self.get_latest_gcs())
 
     def _stream_dump_to_gcs(self, dump_url: str):
         """Write latest to GCS without storing locally"""
