@@ -45,7 +45,7 @@ def index(
     gcs_path: str = gcs_path_option,
     gcp_project: str = gcp_project_option,
 ):
-    """Index file from gcs to elasticsearch"""
+    """Index file from GCS to Elasticsearch"""
     basic_auth = (
         (elasticsearch_username, elasticsearch_password)
         if elasticsearch_username and elasticsearch_password
