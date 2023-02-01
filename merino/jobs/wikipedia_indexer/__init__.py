@@ -18,7 +18,7 @@ job_settings = config.jobs.wikipedia_indexer
 gcs_path_option = typer.Option(
     job_settings.gcs_path,
     "--gcs-path",
-    help="Full gcs path to folder containing wikipedia exports on gcs",
+    help="Full GCS path to the folder containing Wikipedia exports",
 )
 
 gcp_project_option = typer.Option(
