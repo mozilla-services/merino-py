@@ -29,7 +29,7 @@ gcp_project_option = typer.Option(
 
 indexer_cmd = typer.Typer(
     name="wikipedia-indexer",
-    help="Commands for indexing wikipedia exports into elasticsearch",
+    help="Commands for indexing Wikipedia exports into Elasticsearch",
 )
 
 
