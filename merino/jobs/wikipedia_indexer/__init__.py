@@ -80,4 +80,4 @@ def copy_export(
     )
     latest = file_manager.stream_latest_dump_to_gcs()
     if not latest.name:
-        raise RuntimeError("Unable to ensure latest dump on gcs or missing filename.")
+        raise RuntimeError("Unable to ensure latest dump on GCS or missing file name.")
