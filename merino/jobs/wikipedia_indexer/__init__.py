@@ -24,7 +24,7 @@ gcs_path_option = typer.Option(
 gcp_project_option = typer.Option(
     job_settings.gcp_project,
     "--gcp-project",
-    help="GCP project to use for gcs",
+    help="GCP project to use for GCS",
 )
 
 indexer_cmd = typer.Typer(
