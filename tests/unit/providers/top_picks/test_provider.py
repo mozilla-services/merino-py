@@ -3,21 +3,20 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the top picks provider module."""
-
-import os
+from typing import Any
 
 import pytest
-from fastapi import APIRouter, FastAPI
+from pytest import LogCaptureFixture
 
 from merino.config import settings
 from merino.providers.base import BaseSuggestion
+from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.provider import Provider, Suggestion
+from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
 
-app = FastAPI()
-router = APIRouter()
-
-QUERY_CHAR_LIMIT: int = settings.providers.top_picks.query_char_limit
+configs = settings.providers.top_picks
+# NOTE: top_picks provider fixture in conftest.py.
 
 top_picks_example = {
     "domains": [
@@ -32,15 +31,9 @@ top_picks_example = {
 }
 
 
-@pytest.fixture(name="top_picks")
-def fixture_top_pick() -> Provider:
-    """Return Top Pick Navigational Query Provider"""
-    return Provider(app, "top_picks", False)
-
-
 def test_enabled_by_default(top_picks: Provider) -> None:
     """Test for the enabled_by_default method."""
-    assert top_picks.enabled_by_default is False
+    assert top_picks.enabled_by_default is True
 
 
 def test_hidden(top_picks: Provider) -> None:
@@ -48,84 +41,46 @@ def test_hidden(top_picks: Provider) -> None:
     assert top_picks.hidden() is False
 
 
-def test_local_file_exists() -> None:
-    """Test that the Top Picks Nav Query file exists locally"""
-    assert os.path.exists(settings.providers.top_picks.top_picks_file_path)
-
-
-def test_local_file_not_found(mocker) -> None:
-    """Test that the Top Picks Nav Query file exists locally"""
-    mocker.patch("os.path.exists", return_value=False)
-    assert not os.path.exists(settings.providers.top_picks.top_picks_file_path)
-
-
-def test_read_domain_list(top_picks: Provider) -> None:
-    """Test that the JSON file containing the domain list can be processed"""
-    domain_list = top_picks.read_domain_list(
-        settings.providers.top_picks.top_picks_file_path
-    )
-    assert domain_list["domains"][0]["domain"] == "example"
-    assert len(domain_list["domains"][1]["similars"]) == 5
-
-
-def test_read_domain_list_exception(top_picks: Provider) -> None:
-    """Test that the JSON file containing the domain list can be processed"""
-    with pytest.raises(FileNotFoundError):
-        top_picks.read_domain_list("./wrongfile.json")
-
-
-def test_build_indexes(top_picks: Provider) -> None:
-    """Test constructing the primary and secondary indexes and suggestions"""
-    domain_list = top_picks.read_domain_list(
-        settings.providers.top_picks.top_picks_file_path
-    )
-    result = top_picks.build_index(domain_list)
-    primary_index = result["primary_index"]
-    secondary_index = result["secondary_index"]
-    results = result["results"]
-    # primary
-
-    example_query = "example"
-    for chars in range(QUERY_CHAR_LIMIT, len("example_query") + 1):
-        assert example_query[:chars] in result["primary_index"]
-        assert results[primary_index[example_query[:chars]][0]]
-    #  secondary
-    example_query = "fiirefox"
-    for chars in range(QUERY_CHAR_LIMIT, len("example_query") + 1):
-        assert example_query[:chars] in result["secondary_index"]
-        assert results[secondary_index[example_query[:chars]][0]]
-
-
-def test_build_indeces(top_picks: Provider) -> None:
-    """Test to build indexes and result data structures"""
-    source_dict = top_picks.build_indices()
-    assert source_dict["primary_index"]
-    assert source_dict["secondary_index"]
-    assert source_dict["results"]
-    assert source_dict["index_char_range"]
-
-
 @pytest.mark.asyncio
-async def test_initialize(top_picks: Provider) -> None:
+async def test_initialize(top_picks: Provider, top_picks_data: TopPicksData) -> None:
     """Test initialization of top pick provider"""
     await top_picks.initialize()
-    assert top_picks.primary_index
-    assert top_picks.secondary_index
-    assert top_picks.results
+
+    assert top_picks.top_picks_data == top_picks_data
 
 
 @pytest.mark.asyncio
 async def test_initialize_exception(top_picks: Provider, mocker) -> None:
-    """Test that proper exception is thrown if initialization is unsuccessful"""
+    """Test that exception is thrown if initialization is unsuccessful."""
     mocker.patch.object(top_picks, "initialize", side_effect=Exception)
     with pytest.raises(Exception):
         await top_picks.initialize()
 
 
 @pytest.mark.asyncio
+async def test_initialize_failure(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    backend_mock: Any,
+    top_picks: Provider,
+) -> None:
+    """Test exception handling for the initialize() method."""
+    error_message: str = "Failed to fetch data from Top Picks Backend."
+    # override default mocked behavior for fetch
+    backend_mock.fetch.side_effect = Exception(error_message)
+
+    await top_picks.initialize()
+
+    records = filter_caplog(caplog.records, "merino.providers.top_picks.provider")
+    assert len(records) == 1
+    assert records[0].__dict__["error message"] == error_message
+
+
+@pytest.mark.asyncio
 async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) -> None:
     """Test for the query method of the Top Pick provider."""
     await top_picks.initialize()
+
     assert await top_picks.query(srequest("am")) == []
     assert await top_picks.query(srequest("https://")) == []
     assert await top_picks.query(srequest("supercalifragilisticexpialidocious")) == []

@@ -1,39 +1,28 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 """Top Pick Navigational Queries Provider"""
-import asyncio
-import json
 import logging
-import os
 from collections import defaultdict
-from typing import Any, Final, Optional
 
-from fastapi import FastAPI
-
-from merino.config import settings
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
-
-SCORE: float = settings.providers.top_picks.score
-LOCAL_TOP_PICKS_FILE: str = settings.providers.top_picks.top_picks_file_path
-QUERY_CHAR_LIMIT: int = settings.providers.top_picks.query_char_limit
-# The minimal characters that Firefox Urlbar would send to Merino
-FIREFOX_CHAR_LIMIT: Final[int] = 2
+from merino.providers.top_picks.backends.protocol import TopPicksBackend, TopPicksData
 
 logger = logging.getLogger(__name__)
 
 
 class Suggestion(BaseSuggestion):
-    """Model for Top Pick Query Suggestion"""
+    """Model for Top Pick Suggestion."""
 
     block_id: int
     is_top_pick: bool
 
 
 class Provider(BaseProvider):
-    """Top Pick Query Suggestion Provider"""
+    """Top Pick Suggestion Provider."""
 
-    # In normal usage this is None, but tests can create the provider with a
-    # FastAPI instance to fetch mock responses from it. See `__init__()`.
-    _app: Optional[FastAPI]
-
+    top_picks_data: TopPicksData
     primary_index: defaultdict = defaultdict(list)
     secondary_index: defaultdict = defaultdict(list)
     short_domain_index: defaultdict = defaultdict(list)
@@ -43,48 +32,57 @@ class Provider(BaseProvider):
 
     def __init__(
         self,
-        app: Optional[FastAPI] = None,
-        name: str = "top_picks",
+        backend: TopPicksBackend,
+        name: str,
         enabled_by_default: bool = False,
     ) -> None:
-        self._app = app
+        self.backend = backend
         self._name = name
         self._enabled_by_default = enabled_by_default
 
     async def initialize(self) -> None:
         """Initialize the provider."""
         try:
-            index_results: dict[str, Any] = await asyncio.to_thread(
-                Provider.build_indices
-            )
-            self.primary_index: defaultdict = index_results["primary_index"]
-            self.secondary_index: defaultdict = index_results["secondary_index"]
-            self.short_domain_index: defaultdict = index_results["short_domain_index"]
-            self.results: list[Suggestion] = index_results["results"]
-            self.query_min: int = index_results["index_char_range"][0]
-            self.query_max: int = index_results["index_char_range"][1]
+            # Fetch Top Picks suggestions from domain list.
+            self.top_picks_data: TopPicksData = await self.backend.fetch()
+            self.primary_index = self.top_picks_data.primary_index
+            self.secondary_index = self.top_picks_data.secondary_index
+            self.short_domain_index = self.top_picks_data.short_domain_index
+            self.results: list[Suggestion] = [
+                Suggestion(**result) for result in self.top_picks_data.results
+            ]
+            self.query_min = self.top_picks_data.index_char_range[0]
+            self.query_max = self.top_picks_data.index_char_range[1]
+            self.query_char_limit = self.top_picks_data.query_char_limit
+            self.firefox_char_limit = self.top_picks_data.firefox_char_limit
 
         except Exception as e:
-            logger.warning(f"Could not instantiate Top Pick Provider: {e}")
-            raise e
+            logger.warning(
+                "Failed to fetch data from Top Picks Backend.",
+                extra={"error message": f"{e}"},
+            )
 
     def hidden(self) -> bool:  # noqa: D102
         return False
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
-        """Query Top Pick provider and return suggestion"""
+        """Query Top Pick data and return suggestions."""
         # Ignore https:// and http://
         if srequest.query.startswith("http"):
             return []
         # Suggestions between Firefox char min of 2 and query limit - 1 for short domains
-        if FIREFOX_CHAR_LIMIT <= len(srequest.query) <= (QUERY_CHAR_LIMIT - 1):
+        if (
+            self.firefox_char_limit
+            <= len(srequest.query)
+            <= (self.query_char_limit - 1)
+        ):
             if ids := self.short_domain_index.get(srequest.query):
                 res = self.results[ids[0]]
                 return [res]
 
         # Ignore requests below or above character min/max after checking short domains above
         if (
-            len(srequest.query) < FIREFOX_CHAR_LIMIT
+            len(srequest.query) < self.firefox_char_limit
             or len(srequest.query) > self.query_max
         ):
             return []
@@ -94,96 +92,5 @@ class Provider(BaseProvider):
         elif ids := self.secondary_index.get(srequest.query):
             res = self.results[ids[0]]
             return [res]
+
         return []
-
-    @staticmethod
-    def read_domain_list(file: str) -> dict[str, Any]:
-        """Read local domain list file"""
-        try:
-            if not os.path.exists(file):
-                logger.warning("Local file does not exist")
-                raise FileNotFoundError
-            with open(file, "r") as readfile:
-                domain_list: dict = json.load(readfile)
-                return domain_list
-        except Exception as e:
-            logger.warning("Cannot Process File: {e}")
-            raise e
-
-    @staticmethod
-    def build_index(domain_list: dict[str, Any]) -> dict[str, Any]:
-        """Construct indexes and results from Top Picks"""
-        # A dictionary of keyed values that point to the matching index
-        primary_index: defaultdict = defaultdict(list)
-        # A dictionary of keyed values that point to the matching index
-        secondary_index: defaultdict = defaultdict(list)
-        # A dictionary encapsulating short domains and their similars
-        short_domain_index: defaultdict = defaultdict(list)
-        # A list of suggestions
-        results: list[Suggestion] = []
-
-        # These variables hold the max and min lengths of queries possible given the domain list.
-        # See configs/default.toml for character limit for Top Picks
-        # For testing, see configs/testing.toml for character limit for Top Picks
-        query_min: int = QUERY_CHAR_LIMIT
-        query_max: int = QUERY_CHAR_LIMIT
-
-        for record in domain_list["domains"]:
-            index_key: int = len(results)
-            domain = record["domain"]
-
-            if len(domain) > query_max:
-                query_max = len(domain)
-
-            suggestion = Suggestion(
-                block_id=0,
-                title=record["title"],
-                url=record["url"],
-                provider="top_picks",
-                is_top_pick=True,
-                is_sponsored=False,
-                icon=record["icon"],
-                score=SCORE,
-            )
-
-            # Insertion of short keys between Firefox limit of 2 and QUERY_CHAR_LIMIT - 1
-            # For similars equal to or longer than QUERY_CHAR_LIMIT, the values are added
-            # to the secondary index.
-            if FIREFOX_CHAR_LIMIT <= len(domain) <= (QUERY_CHAR_LIMIT - 1):
-                for chars in range(FIREFOX_CHAR_LIMIT, len(domain) + 1):
-                    short_domain_index[domain[:chars]].append(index_key)
-                for variant in record.get("similars", []):
-                    if len(variant) >= QUERY_CHAR_LIMIT:
-                        # Long variants will be indexed later into `secondary_index`
-                        continue
-
-                    for chars in range(FIREFOX_CHAR_LIMIT, len(variant) + 1):
-                        short_domain_index[variant[:chars]].append(index_key)
-
-            # Insertion of keys into primary index.
-            for chars in range(QUERY_CHAR_LIMIT, len(domain) + 1):
-                primary_index[domain[:chars]].append(index_key)
-
-            # Insertion of keys into secondary index.
-            for variant in record.get("similars", []):
-                if len(variant) > query_max:
-                    query_max = len(variant)
-                for chars in range(QUERY_CHAR_LIMIT, len(variant) + 1):
-                    secondary_index[variant[:chars]].append(index_key)
-
-            results.append(suggestion)
-
-        return {
-            "primary_index": primary_index,
-            "secondary_index": secondary_index,
-            "short_domain_index": short_domain_index,
-            "results": results,
-            "index_char_range": (query_min, query_max),
-        }
-
-    @staticmethod
-    def build_indices() -> dict[str, Any]:
-        """Read domain file, create indices and suggestions"""
-        domains = Provider.read_domain_list(LOCAL_TOP_PICKS_FILE)
-        index_results = Provider.build_index(domains)
-        return index_results

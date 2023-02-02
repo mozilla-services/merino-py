@@ -5,89 +5,30 @@
 """Integration tests for the Merino v1 suggest API endpoint configured with the
 Top Picks provider.
 """
+from typing import Any
 
 import pytest
-from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
 from merino.config import settings
+from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider as TopPicksProvider
-from merino.providers.top_picks.provider import Suggestion
 from tests.integration.api.v1.types import Providers
 
 
+@pytest.fixture(name="backend_mock")
+def fixture_backend_mock(mocker: MockerFixture) -> Any:
+    """Create a TopPicksBackend mock object for test."""
+    return mocker.AsyncMock(spec=TopPicksBackend)
+
+
 @pytest.fixture(name="providers")
-def fixture_providers() -> Providers:
+def fixture_providers(backend_mock: Any) -> Providers:
     """Define providers for this module which are injected automatically."""
-    return {"top_picks": TopPicksProvider(name="top_picks", enabled_by_default=True)}
-
-
-@pytest.mark.parametrize(
-    ["query", "title", "url"],
-    [
-        ("exam", "Example", "https://example.com"),
-        ("exxa", "Example", "https://example.com"),
-        ("example", "Example", "https://example.com"),
-        ("firef", "Firefox", "https://firefox.com"),
-        ("firefoxes", "Firefox", "https://firefox.com"),
-        ("mozilla", "Mozilla", "https://mozilla.org/en-US/"),
-        ("mozz", "Mozilla", "https://mozilla.org/en-US/"),
-    ],
-)
-def test_top_picks_query(client: TestClient, query: str, title: str, url: str) -> None:
-    """Test if Top Picks provider returns result for indexed Top Pick"""
-    response = client.get(f"/api/v1/suggest?q={query}")
-    assert response.status_code == 200
-
-    result = response.json()
-    assert len(result["suggestions"]) == 1
-    assert result
-    assert result["suggestions"][0]["url"] == url
-    assert result["suggestions"][0]["title"] == title
-    assert result["suggestions"][0]["is_top_pick"]
-    assert not result["suggestions"][0]["is_sponsored"]
-
-
-@pytest.mark.parametrize(
-    "query",
-    ["m", "mo", "mox", "moz", "mozzarella", "http", "http:", "https:", "https://"],
-)
-def test_top_picks_no_result(client: TestClient, query: str):
-    """Test if Top Picks provider does respond when provided invalid query term"""
-    response = client.get(f"/api/v1/suggest?q={query}")
-    assert response.status_code == 200
-
-    result = response.json()
-    assert result["suggestions"] == []
-
-
-@pytest.mark.parametrize(
-    ["query", "title", "url"],
-    [
-        ("abc", "Abc", "https://abc.test"),
-        ("aa", "Abc", "https://abc.test"),
-        ("acb", "Abc", "https://abc.test"),
-    ],
-)
-def test_top_picks_short_domains(
-    client: TestClient, query: str, title: str, url: str
-) -> None:
-    """Test if Top Picks provider responds with a short domain or similar"""
-    expected_suggestion: list[Suggestion] = [
-        Suggestion(
-            block_id=0,
-            title=title,
-            url=url,
-            provider="top_picks",
-            is_top_pick=True,
-            is_sponsored=False,
-            icon="",
-            score=settings.providers.top_picks.score,
+    return {
+        "top_picks": TopPicksProvider(
+            backend=backend_mock,
+            name="top_picks",
+            enabled_by_default=settings.providers.top_picks.enabled_by_default,
         )
-    ]
-
-    response = client.get(f"/api/v1/suggest?q={query}")
-    assert response.status_code == 200
-
-    result = response.json()
-    assert result
-    assert result["suggestions"] == expected_suggestion
+    }

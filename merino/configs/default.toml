@@ -107,6 +107,7 @@ score_wikipedia = 0.2
 enabled_by_default = false
 score = 0.25
 query_char_limit = 4
+firefox_char_limit = 2
 top_picks_file_path = "dev/top_picks.json"
 
 [default.providers.wikipedia]
