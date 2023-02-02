@@ -9,7 +9,11 @@ from typing import Any
 import pytest
 
 from merino.config import settings
-from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksData
+from merino.providers.top_picks.backends.top_picks import (
+    TopPicksBackend,
+    TopPicksData,
+    TopPicksError,
+)
 
 
 @pytest.fixture(name="top_picks_parameters")
@@ -60,7 +64,7 @@ def test_read_domain_list(top_picks: TopPicksBackend) -> None:
 
 def test_read_domain_list_exception(top_picks: TopPicksBackend) -> None:
     """Test that the JSON file containing the domain list can be processed"""
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(TopPicksError):
         top_picks.read_domain_list("./wrongfile.json")
 
 

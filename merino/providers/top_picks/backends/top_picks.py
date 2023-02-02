@@ -1,15 +1,13 @@
 """A wrapper for Top Picks Provider I/O Interactions"""
 import asyncio
 import json
-import logging
 import os
 from collections import defaultdict
+from json import JSONDecodeError
 from typing import Any
 
 from merino.exceptions import BackendError
 from merino.providers.top_picks.backends.protocol import TopPicksData
-
-logger = logging.getLogger(__name__)
 
 
 class TopPicksError(BackendError):
@@ -38,30 +36,22 @@ class TopPicksBackend:
 
     async def fetch(self) -> TopPicksData:
         """Fetch Top Picks suggestions from domain list."""
-        try:
-            top_picks_data: TopPicksData = await asyncio.to_thread(self.build_indices)
-            return top_picks_data
-
-        except Exception as e:
-            logger.warning(
-                "Could not instantiate Top Pick Provider Backend.",
-                extra={"error message": f"{e}"},
-            )
-            raise e
+        top_picks_data: TopPicksData = await asyncio.to_thread(self.build_indices)
+        return top_picks_data
 
     @staticmethod
     def read_domain_list(file: str) -> dict[str, Any]:
         """Read local domain list file"""
         try:
             if not os.path.exists(file):
-                logger.warning("Local file does not exist")
-                raise FileNotFoundError
+                raise TopPicksError("Local file does not exist")
             with open(file, "r") as readfile:
                 domain_list: dict = json.load(readfile)
                 return domain_list
-        except Exception as e:
-            logger.warning("Cannot Process File: {e}")
-            raise e
+        except OSError as os_error:
+            raise TopPicksError(f"Cannot open file '{file}'") from os_error
+        except JSONDecodeError as json_error:
+            raise TopPicksError(f"Cannot decode file '{file}'") from json_error
 
     def build_index(self, domain_list: dict[str, Any]) -> TopPicksData:
         """Construct indexes and results from Top Picks"""
