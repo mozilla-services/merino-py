@@ -101,7 +101,11 @@ def request_suggestions(client: HttpSession, query: str) -> None:
     }
 
     with client.get(
-        url=SUGGEST_API, params=params, headers=headers, catch_response=True
+        url=SUGGEST_API,
+        params=params,
+        headers=headers,
+        catch_response=True,
+        name=SUGGEST_API,  # group all requests under the 'name' entry
     ) as response:
         # This contextmanager returns a response that provides the ability to
         # manually control if an HTTP request should be marked as successful or
