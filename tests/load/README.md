@@ -136,10 +136,7 @@ Follow the steps bellow to execute the distributed load tests on GCP:
       to errors in the load test execution, not Merino
     * Optionally, the locust reports can be saved and linked in the 
       [Merino Load Test Spreadsheet][merino_spreadsheet]:
-      * Download the results via command: 
-      
-          **WARNING!** Gathering logs via the Locust UI may cause the service to crash.
-          
+      * Download the results via command:
           ```bash
           kubectl cp <master-pod-name>:/home/locust/merino_stats.csv merino_stats.csv
           kubectl cp <master-pod-name>:/home/locust/merino_exceptions.csv merino_exceptions.csv
@@ -148,11 +145,6 @@ Follow the steps bellow to execute the distributed load tests on GCP:
         The `master-pod-name` can be found at the top of the pod list:
           ```bash 
           kubectl get pods -o wide
-          ```
-      * Aggregate the merino_stats.csv file:
-          ```bash
-          cat merino_stats.csv | grep -Ev "^GET," > merino_stats.csv.tmp
-          mv merino_stats.csv.tmp merino_stats.csv
           ```
       * Upload the files to [gist][gist] and record the links
 
