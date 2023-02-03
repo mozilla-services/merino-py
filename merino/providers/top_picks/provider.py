@@ -48,6 +48,7 @@ class Provider(BaseProvider):
             self.primary_index = self.top_picks_data.primary_index
             self.secondary_index = self.top_picks_data.secondary_index
             self.short_domain_index = self.top_picks_data.short_domain_index
+            # Convert result dictionaries into Suggestion objects.
             self.results: list[Suggestion] = [
                 Suggestion(**result) for result in self.top_picks_data.results
             ]
