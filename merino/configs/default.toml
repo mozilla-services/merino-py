@@ -136,13 +136,19 @@ score = 0.23
 
 
 [default.jobs.wikipedia_indexer]
+# Elasticsearch cloud ID for indexing job
+es_cloud_id = ""
+# Elasticsearch API key for indexing job
+es_api_key = ""
+# Elasticsearch API key for indexing job
+es_alias = "enwiki-{version}"
 # Index version that will be written.
 index_version = "v1"
 # Estimate of the total documents in the elasticsearch index.
 total_docs = 6_400_000
 # GCS path. Combined bucket and object prefix (folders).
-gcs_path = "merino-jobs-dev/wikipedia-exports"
+gcs_path = ""
 # GCP project name where the GCS bucket lives.
-gcp_project = "contextual-services-dev"
+gcp_project = ""
 # Wikipedia export base URL
 export_base_url = "https://dumps.wikimedia.org/other/cirrussearch/current/"

@@ -28,9 +28,9 @@ SUGGEST_MAPPING = {
 
 
 SUGGEST_SETTINGS = {
-    "number_of_replicas": "2",
+    "number_of_replicas": "1",
     "refresh_interval": "-1",
-    "number_of_shards": "8",
+    "number_of_shards": "2",
     "analysis": {
         "filter": {
             "stop_filter": {

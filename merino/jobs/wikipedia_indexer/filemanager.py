@@ -31,8 +31,8 @@ class DirectoryParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
         """When the parser encounters a start tag check for Anchor and push into list."""
         if tag.lower() == "a":
-            hrefs = [(k, v) for k, v in attrs if v is not None and self._is_href(k, v)]
-            self.file_paths.extend([v for _, v in hrefs])
+            hrefs = [v for k, v in attrs if v is not None and self._is_href(k, v)]
+            self.file_paths.extend(hrefs)
 
 
 class FileManager:
@@ -45,7 +45,9 @@ class FileManager:
     client: Client
 
     def __init__(self, gcs_bucket: str, gcs_project: str, export_base_url: str) -> None:
-        self.file_pattern = re.compile(r".*/?enwiki-(\d+)-cirrussearch-content.json.gz")
+        self.file_pattern = re.compile(
+            r"(?:.*/|^)enwiki-(\d+)-cirrussearch-content.json.gz"
+        )
         self.client = Client(gcs_project)
         self.base_url = export_base_url
         if "/" in gcs_bucket:

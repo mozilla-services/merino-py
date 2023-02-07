@@ -63,20 +63,20 @@ def test_ensure_index(file_manager, es_client):
         ),
         (
             "enwiki-123",
-            "enwiki",
+            "enwiki-{version}",
             ["enwiki-345", "enwiki-678"],
             [
-                {"add": {"index": "enwiki-123", "alias": "enwiki"}},
-                {"remove": {"index": "enwiki-345", "alias": "enwiki"}},
-                {"remove": {"index": "enwiki-678", "alias": "enwiki"}},
+                {"add": {"index": "enwiki-123", "alias": "enwiki-v1"}},
+                {"remove": {"index": "enwiki-345", "alias": "enwiki-v1"}},
+                {"remove": {"index": "enwiki-678", "alias": "enwiki-v1"}},
             ],
         ),
         (
             "enwiki-123",
-            "enwiki",
+            "enwiki-{version}",
             [],
             [
-                {"add": {"index": "enwiki-123", "alias": "enwiki"}},
+                {"add": {"index": "enwiki-123", "alias": "enwiki-v1"}},
             ],
         ),
     ],

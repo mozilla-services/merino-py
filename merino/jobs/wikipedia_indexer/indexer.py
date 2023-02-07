@@ -12,9 +12,6 @@ from merino.jobs.wikipedia_indexer.suggestion import Builder
 
 logger = logging.getLogger(__name__)
 
-# Maximum queue length
-MAX_LENGTH = 5000
-
 
 class Indexer:
     """Index documents from wikimedia search exports into Elasticsearch"""
@@ -48,34 +45,26 @@ class Indexer:
             raise RuntimeError("No exports available on gcs")
 
         # parse the index name out of the latest file name
-        print(latest.name)
         index_name = self._get_index_name(latest.name)
         logger.info("Ensuring index exists", extra={"index": index_name})
 
-        # TODO add configuration of optional indexing strategies
         if self._ensure_index(index_name)["acknowledged"]:
             prior: Optional[Mapping[str, Any]] = None
             logger.info("Start indexing", extra={"index": index_name})
+            indexed, perc_done = 0, 0.0
             for i, line in enumerate(self.file_manager._stream_from_gcs(latest)):
                 doc = json.loads(line)
                 if prior and (i + 1) % 2 == 0:
                     self._enqueue(index_name, (prior, doc))
-                    self._index_docs(False)
+                    indexed += self._index_docs(False)
                     prior = None
                 else:
                     prior = doc
-                perc_done = round((i / 2) / total_docs * 100, 5)
-                if perc_done > 1 and perc_done % 2 == 0:
-                    logger.info(
-                        "Indexing progress: {}%".format(perc_done),
-                        extra={
-                            "source": latest.name,
-                            "index": index_name,
-                            "percent_complete": perc_done,
-                            "completed": i,
-                            "total_size": total_docs,
-                        },
-                    )
+
+                # report percent completed
+                perc_done = self._report_completed(
+                    perc_done, latest.name, index_name, indexed, total_docs
+                )
 
             # Flush queue after enumerating the export to clear the queue
             self._index_docs(True)
@@ -97,23 +86,49 @@ class Indexer:
         else:
             raise Exception("could not create the index")
 
+    def _report_completed(
+        self,
+        last_perc: float,
+        source: str,
+        dest: str,
+        completed: int,
+        total: int,
+    ) -> float:
+        total = 100_000
+        perc_done = round(completed / total * 100, 5)
+        if last_perc != perc_done and perc_done > 1 and perc_done % 1 == 0:
+            logger.info(
+                f"Indexing progress: {perc_done}%",
+                extra={
+                    "source": source,
+                    "destination": dest,
+                    "percent_complete": perc_done,
+                    "completed": completed,
+                    "total_size": total,
+                },
+            )
+            return perc_done
+        return last_perc
+
     def _enqueue(self, index_name: str, tpl: Tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)
         self.queue.append(op)
         self.queue.append(doc)
 
-    def _index_docs(self, force: bool):
+    def _index_docs(self, force: bool) -> int:
         qlen = len(self.queue)
         if qlen > 0 and (qlen >= self.QUEUE_MAX_LENGTH or force is True):
-            res = None
+            res = {}
             try:
                 res = self.es_client.bulk(operations=self.queue)
                 if res["errors"] is not False:
                     raise Exception(res["errors"])
             except Exception as e:
-                print(res)
                 raise e
-            self.queue.clear()
+            finally:
+                self.queue.clear()
+                return len(res.get("items", []))
+        return 0
 
     def _parse_tuple(
         self, index_name: str, tpl: Tuple[Mapping[str, Any], ...]
@@ -148,6 +163,8 @@ class Indexer:
         return {"acknowledged": True}
 
     def _flip_alias_to_latest(self, current_index: str, alias: str):
+        alias = alias.format(version=self.index_version)
+
         # fetch previous index using alias so we know what to delete
         actions: List[Mapping[str, Any]] = [
             {"add": {"index": current_index, "alias": alias}}
