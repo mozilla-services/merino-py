@@ -107,7 +107,11 @@ def test_index_from_export(file_manager, es_client):
         "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
     )
 
-    es_client.bulk.return_value = {"acknowledged": True, "errors": False}
+    es_client.bulk.return_value = {
+        "acknowledged": True,
+        "errors": False,
+        "items": [{"id": 1000}],
+    }
     es_client.indices.exists.return_value = True
 
     operation = {"index": {"_type": "doc", "_id": "1000"}}

@@ -1,4 +1,4 @@
-"""Manage files between wikimedia exports and gcs bucket"""
+"""Manage files between Wikimedia exports and gcs bucket"""
 import logging
 import re
 from datetime import datetime as dt
@@ -30,13 +30,13 @@ class DirectoryParser(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
         """When the parser encounters a start tag check for Anchor and push into list."""
-        if tag.lower() == "a":
+        if tag == "a":
             hrefs = [v for k, v in attrs if v is not None and self._is_href(k, v)]
             self.file_paths.extend(hrefs)
 
 
 class FileManager:
-    """Tools for managing files on wikimedia export directory and copying into GCS"""
+    """Tools for managing files on Wikimedia export directory and copying into GCS"""
 
     base_url: str
     gcs_bucket: str
@@ -90,7 +90,7 @@ class FileManager:
         return blobs[-1]
 
     def stream_latest_dump_to_gcs(self, latest_gcs: Optional[Blob] = None) -> Blob:
-        """Stream the latest wikimedia dump to GCS"""
+        """Stream the latest Wikimedia dump to GCS"""
         if not latest_gcs:
             latest_gcs = self.get_latest_gcs()
         latest_dump_url = self.get_latest_dump(latest_gcs)

@@ -1,7 +1,7 @@
 """Builds the elasticsearch index from the export file"""
 import json
 import logging
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Mapping, Optional
 
 from elasticsearch import Elasticsearch
 from google.cloud.storage import Blob
@@ -18,8 +18,7 @@ class Indexer:
 
     QUEUE_MAX_LENGTH = 5000
 
-    queue: List[Mapping[str, Any]] = []
-
+    queue: list[Mapping[str, Any]]
     suggestion_builder: Builder
     export_file: Blob
     index_version: str
@@ -29,7 +28,7 @@ class Indexer:
     def __init__(
         self, index_version: str, file_manager: FileManager, client: Elasticsearch
     ):
-
+        self.queue = []
         self.index_version = index_version
         self.file_manager = file_manager
         self.es_client = client
@@ -48,7 +47,7 @@ class Indexer:
         index_name = self._get_index_name(latest.name)
         logger.info("Ensuring index exists", extra={"index": index_name})
 
-        if self._ensure_index(index_name)["acknowledged"]:
+        if self._ensure_index(index_name):
             prior: Optional[Mapping[str, Any]] = None
             logger.info("Start indexing", extra={"index": index_name})
             indexed, perc_done = 0, 0.0
@@ -110,29 +109,29 @@ class Indexer:
             return perc_done
         return last_perc
 
-    def _enqueue(self, index_name: str, tpl: Tuple[Mapping[str, Any], ...]):
+    def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)
         self.queue.append(op)
         self.queue.append(doc)
 
     def _index_docs(self, force: bool) -> int:
         qlen = len(self.queue)
-        if qlen > 0 and (qlen >= self.QUEUE_MAX_LENGTH or force is True):
-            res = {}
+        item_count = 0
+        if qlen > 0 and (qlen >= self.QUEUE_MAX_LENGTH or force):
             try:
                 res = self.es_client.bulk(operations=self.queue)
-                if res["errors"] is not False:
+                item_count = len(res.get("items", []))
+                if "errors" in res and res["errors"]:
                     raise Exception(res["errors"])
             except Exception as e:
                 raise e
             finally:
                 self.queue.clear()
-                return len(res.get("items", []))
-        return 0
+        return item_count
 
     def _parse_tuple(
-        self, index_name: str, tpl: Tuple[Mapping[str, Any], ...]
-    ) -> Tuple[Dict[str, Any], ...]:
+        self, index_name: str, tpl: tuple[Mapping[str, Any], ...]
+    ) -> tuple[dict[str, Any], ...]:
         op, doc = tpl
         if "index" not in op:
             raise Exception("invalid operation")
@@ -146,27 +145,29 @@ class Indexer:
 
     def _get_index_name(self, file_name) -> str:
         if "/" in file_name:
-            file_name = file_name.split("/")[-1]
+            _, file_name = file_name.rsplit("/", 1)
         base_name = "-".join(file_name.split("-")[:2])
         return f"{base_name}-{self.index_version}"
 
-    def _ensure_index(self, index_name: str):
+    def _ensure_index(self, index_name: str) -> bool:
         indices_client = self.es_client.indices
         exists = indices_client.exists(index=index_name)
         settings = get_settings_for_version(self.index_version)
         if not exists and settings:
-            return indices_client.create(
+            res = indices_client.create(
                 index=index_name,
                 mappings=settings.SUGGEST_MAPPING,
                 settings=settings.SUGGEST_SETTINGS,
             )
-        return {"acknowledged": True}
+            return bool(res.get("acknowledged", False))
+
+        return bool(exists)
 
     def _flip_alias_to_latest(self, current_index: str, alias: str):
         alias = alias.format(version=self.index_version)
 
         # fetch previous index using alias so we know what to delete
-        actions: List[Mapping[str, Any]] = [
+        actions: list[Mapping[str, Any]] = [
             {"add": {"index": current_index, "alias": alias}}
         ]
 
