@@ -93,7 +93,6 @@ class Indexer:
         completed: int,
         total: int,
     ) -> float:
-        total = 100_000
         perc_done = round(completed / total * 100, 5)
         if last_perc != perc_done and perc_done > 1 and perc_done % 1 == 0:
             logger.info(
