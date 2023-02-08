@@ -98,6 +98,10 @@ integration-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per integr
 docker-build:  ## Build the docker image for Merino named "app:build"
 	docker build -t app:build .
 
+.PHONY: docker-build-jobs
+docker-build-jobs:  ## Build the docker image for Merino job runner named "merino-jobs:build"
+	docker build --target job_runner -t merino-jobs:build .
+
 .PHONY: run-contract-tests
 run-contract-tests:  ##  Run contract tests using docker compose
 	docker-compose \

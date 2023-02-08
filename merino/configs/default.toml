@@ -119,6 +119,8 @@ es_cloud_id = """
   testing:dXMtZWFzdC0xLmF3cy5mb3VuZC5pbyRjZWM2ZjI2MWE3NGJmMjRjZ
   TMzYmI4ODExYjg0Mjk0ZiRjNmMyY2E2ZDA0MjI0OWFmMGNjN2Q3YTllOTYyNTc0Mw==
 """
+# Elasticsearch url
+es_url = ""
 # Elasticsearch user
 es_user = ""
 # Elasticsearch password
@@ -131,3 +133,22 @@ es_max_suggestions = 3
 es_request_timeout_ms = 200
 # Suggestion score
 score = 0.23
+
+
+[default.jobs.wikipedia_indexer]
+# Elasticsearch cloud ID for indexing job
+es_cloud_id = ""
+# Elasticsearch API key for indexing job
+es_api_key = ""
+# Elasticsearch API key for indexing job
+es_alias = "enwiki-{version}"
+# Index version that will be written.
+index_version = "v1"
+# Estimate of the total documents in the elasticsearch index.
+total_docs = 6_400_000
+# GCS path. Combined bucket and object prefix (folders).
+gcs_path = ""
+# GCP project name where the GCS bucket lives.
+gcp_project = ""
+# Wikipedia export base URL
+export_base_url = "https://dumps.wikimedia.org/other/cirrussearch/current/"

@@ -19,3 +19,9 @@ format = "pretty"
 
 [development.providers.accuweather]
 api_key = "test"
+
+[development.jobs.wikipedia_indexer]
+# GCS path. Combined bucket and object prefix (folders).
+gcs_path = "merino-jobs-dev/wikipedia-exports"
+# GCP project name where the GCS bucket lives.
+gcp_project = "contextual-services-dev"
