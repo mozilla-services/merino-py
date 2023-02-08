@@ -83,7 +83,7 @@ class Indexer:
                 extra={"index": index_name, "alias": elasticsearch_alias},
             )
         else:
-            raise Exception("could not create the index")
+            raise Exception("Could not create the index")
 
     def _report_completed(
         self,
