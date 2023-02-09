@@ -119,18 +119,14 @@ es_cloud_id = """
   testing:dXMtZWFzdC0xLmF3cy5mb3VuZC5pbyRjZWM2ZjI2MWE3NGJmMjRjZ
   TMzYmI4ODExYjg0Mjk0ZiRjNmMyY2E2ZDA0MjI0OWFmMGNjN2Q3YTllOTYyNTc0Mw==
 """
-# Elasticsearch url
-es_url = ""
-# Elasticsearch user
-es_user = ""
-# Elasticsearch password
-es_password = ""
+es_api_key = ""
 # Elasticsearch index
-es_index = "enwiki"
+es_index = "enwiki-v1"
 # The maximum suggestions for each search request.
 es_max_suggestions = 3
 # The timeout (in millisecond) for each request to ES
-es_request_timeout_ms = 200
+es_request_timeout_ms = 5000
+query_timeout_sec = 5.0
 # Suggestion score
 score = 0.23
 

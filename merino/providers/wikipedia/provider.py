@@ -43,6 +43,7 @@ class Provider(BaseProvider):
         backend: WikipediaBackend,
         name: str = "wikipedia",
         enabled_by_default: bool = True,
+        query_timeout_sec: float = settings.providers.wikipedia.query_timeout_sec,
         score=settings.providers.wikipedia.score,
         **kwargs: Any,
     ) -> None:
@@ -50,6 +51,7 @@ class Provider(BaseProvider):
         self.backend = backend
         self._name = name
         self._enabled_by_default = enabled_by_default
+        self._query_timeout_sec = query_timeout_sec
         self.score = score
         super().__init__(**kwargs)
 

@@ -92,14 +92,14 @@ async def init_providers() -> None:
                 providers["wikipedia"] = WikipediaProvider(
                     backend=(
                         ElasticBackend(
+                            api_key=setting.es_api_key,
                             cloud_id=setting.es_cloud_id,
-                            user=setting.es_user,
-                            password=setting.es_password,
-                        )  # type: ignore [arg-type]
-                        if setting.backend == "elasticsearch"
-                        else FakeWikipediaBackend()
-                    ),
+                        )
+                    )  # type: ignore [arg-type]
+                    if setting.backend == "elasticsearch"
+                    else FakeWikipediaBackend(),
                     name=provider_type,
+                    query_timeout_sec=setting.query_timeout_sec,
                     enabled_by_default=setting.enabled_by_default,
                 )
             case _:
