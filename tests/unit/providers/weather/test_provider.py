@@ -99,7 +99,7 @@ async def test_query_weather_report_returned(
             ),
             provider="weather",
             is_sponsored=False,
-            score=settings.providers.accuweather.score,
+            score=settings.providers.weather.score,
             icon=None,
             city_name=report.city_name,
             current_conditions=report.current_conditions,
