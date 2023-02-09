@@ -145,6 +145,18 @@ doc-preview:  ##  Preview Merino docs via the default browser
 profile:  ## Profile Merino with Scalene
 	MERINO_LOGGING__FORMAT=mozlog MERINO_LOGGING__LEVEL=INFO python -m scalene merino/main.py
 
+.PHONY: docker-compose-up
+docker-compose-up:  ## Run `docker-compose up` in `./dev`
+	docker-compose -f dev/docker-compose.yaml up
+
+.PHONY: docker-compose-up-daemon
+docker-compose-up-daemon:  ## Run `docker-compose up -d` in `./dev`
+	docker-compose -f dev/docker-compose.yaml up -d
+
+.PHONY: docker-compose-down
+docker-compose-down:  ## Run `docker-compose down` in `./dev`
+	docker-compose -f dev/docker-compose.yaml down
+
 .PHONY: help
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'

@@ -51,6 +51,12 @@ $ docker-compose up -d
 
 # Stop it
 $ docker-compose down
+
+
+# Shortcuts are also provided
+$ make docker-compose-up
+$ make docker-compose-up-daemon
+$ make docker-compose-down
 ```
 
 Redis is listening on port 6397 and can be connected via `redis://localhost:6397`.
