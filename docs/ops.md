@@ -237,8 +237,8 @@ These are production providers that generate suggestions.
   - `score` (`MERINO_PROVIDERS__WEATHER__SCORE`) - The ranking score for this provider
     as a floating point number. Defaults to 0.3.
   - `query_timeout_sec` (`MERINO_PROVIDERS__WEATHER__QUERY_TIMEOUT_SEC`) - A floating
-    point (in seconds) indicating the maximum waiting period when Merino queries Accuweather
-    for weather forecasts. This will override the default query timeout
+    point (in seconds) indicating the maximum waiting period when Merino queries
+    for weather forecasts. This will override the default query timeout.
 
 #### Wiki Fruit Provider
 - Wiki Fruit - Provides suggestions from a test provider. Should not be used
