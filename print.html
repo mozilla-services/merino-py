@@ -33,6 +33,7 @@
 
     </head>
     <body>
+    <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
             var path_to_root = "";
@@ -999,6 +1000,7 @@ format. Please follow this convention and take extra care to not check them in
 and only use them locally.</p>
 <p>See the <a href="https://www.dynaconf.com/">Dynaconf Documentation</a> for more details.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="development-dependencies"><a class="header" href="#development-dependencies">Development Dependencies</a></h1>
+<h2 id="package-dependencies"><a class="header" href="#package-dependencies">Package Dependencies</a></h2>
 <p>This project uses <a href="https://python-poetry.org/">Poetry</a> for dependency management. While you can use the
 vanilla virtualenv to set up the dev environment, we highly recommend to check
 out <a href="https://github.com/pyenv/pyenv">pyenv</a> and <a href="https://github.com/pyenv/pyenv-virtualenv">pyenv-virtualenv</a>, as they work nicely with Poetry.
@@ -1019,6 +1021,38 @@ and their versions.</p>
 $ poetry shell
 $ uvicorn merino.main:app --reload
 </code></pre>
+<h2 id="service-dependencies"><a class="header" href="#service-dependencies">Service Dependencies</a></h2>
+<p>Merino uses a Redis-based caching system, and so requires a Redis instance to
+connect to.</p>
+<p>To make things simple, Redis (and any future service dependencies) can be
+started with Docker Compose, using the <code>docker-compose.yaml</code> file in the <code>dev/</code>
+directory. Notably, this does not run any Merino components that have source
+code in this repository.</p>
+<pre><code class="language-shell">$ cd dev
+$ docker-compose up
+
+# Or run services in deamon mode
+$ docker-compose up -d
+
+# Stop it
+$ docker-compose down
+
+
+# Shortcuts are also provided
+$ make docker-compose-up
+$ make docker-compose-up-daemon
+$ make docker-compose-down
+</code></pre>
+<p>Redis is listening on port 6397 and can be connected via <code>redis://localhost:6397</code>.</p>
+<p>This Dockerized set up is optional. Feel free to run the dependent services by
+any other means as well.</p>
+<h3 id="dev-helpers"><a class="header" href="#dev-helpers">Dev Helpers</a></h3>
+<p>The docker-compose setup also includes some services that can help during
+development.</p>
+<ul>
+<li>Redis Commander, http://localhost:8081 - Explore the Redis database started
+above.</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="logging-and-metrics"><a class="header" href="#logging-and-metrics">Logging and Metrics</a></h1>
 <p>To get data out of Merino and into observable systems, we use <em>metrics</em> and
 <em>logging</em>. Each has a unique use case. Note that in general, because of the scale
@@ -1414,5 +1448,6 @@ or fix those issues, test or profile it again to verify if the fix is working.</
         });
         </script>
 
+    </div>
     </body>
 </html>
