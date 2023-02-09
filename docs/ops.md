@@ -231,7 +231,7 @@ These are production providers that generate suggestions.
     Defaults to 0.2.
 
 #### Weather Provider
-- Accuweather - Providers weather suggestions & forecasts from Accuweather.
+- AccuWeather - Provides weather suggestions & forecasts.
   - `enabled_by_default` (`MERINO_PROVIDERS__WEATHER__ENABLED_BY_DEFAULT`) - Whether
     or not this provider is enabled by default.
   - `score` (`MERINO_PROVIDERS__WEATHER__SCORE`) - The ranking score for this provider
