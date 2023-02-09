@@ -17,7 +17,7 @@ dev_logger = true
 level = "DEBUG"
 format = "pretty"
 
-[development.providers.weather]
+[development.providers.accuweather]
 api_key = "test"
 
 [development.jobs.wikipedia_indexer]

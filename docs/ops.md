@@ -182,7 +182,7 @@ Configuration for determining the location of users.
 - `location.maxmind_database` (`MERINO_LOCATION__MAXMIND_DATABASE`) - Path to a
   MaxMind GeoIP database file.
 
-### AccuWeather
+### AccuWeather Backend
 
 Configuration for using AccuWeather as a weather backend
   - `api_key` (`MERINO_ACCUWEATHER__API_KEY`) - The API key to AccuWeather's API
@@ -230,8 +230,10 @@ These are production providers that generate suggestions.
     of Wikipedia suggestions for this provider as a floating point number.
     Defaults to 0.2.
 
-#### Weather Provider
+#### AccuWeather Provider
 - AccuWeather - Provides weather suggestions & forecasts.
+  - `backend` (`MERINO_PROVIDERS__ACCUWEATHER__backend`) - The backend of the provider.
+    Either `accuweather` or `test`.
   - `enabled_by_default` (`MERINO_PROVIDERS__WEATHER__ENABLED_BY_DEFAULT`) - Whether
     or not this provider is enabled by default.
   - `score` (`MERINO_PROVIDERS__WEATHER__SCORE`) - The ranking score for this provider
