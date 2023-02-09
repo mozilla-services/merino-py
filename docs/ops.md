@@ -182,15 +182,15 @@ Configuration for determining the location of users.
 - `location.maxmind_database` (`MERINO_LOCATION__MAXMIND_DATABASE`) - Path to a
   MaxMind GeoIP database file.
 
-### Accuweather
+### AccuWeather
 
-Configuration for using Accuweather as a weather backend
-  - `api_key` (`MERINO_ACCUWEATHER__API_KEY`) - The API key to Accuweather's API
+Configuration for using AccuWeather as a weather backend
+  - `api_key` (`MERINO_ACCUWEATHER__API_KEY`) - The API key to AccuWeather's API
     endpoint. In production, this should be set via environment variable as a secret.
-  - `url_base` (`MERINO_ACCUWEATHER__URL_BASE`) - The base URL of Accuweather's
+  - `url_base` (`MERINO_ACCUWEATHER__URL_BASE`) - The base URL of AccuWeather's
     API endpoint.
   - `url_param_api_key` (`MERINO_ACCUWEATHER__URL_PARAM_API_KEY`) - The parameter
-    of the API key for Accuweather's API endpoint.
+    of the API key for AccuWeather's API endpoint.
   - `url_current_conditions_path` (`MERINO_ACCUWEATHER__URL_CURRENT_CONDITIONS_PATH`) -
     The URL path for current conditions.
   - `url_forecasts_path` (`MERINO_ACCUWEATHER__URL_FORECASTS_PATH`) - The URL path
