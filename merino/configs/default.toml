@@ -76,10 +76,13 @@ env = "dev"
 # A setting for the tracing sample rate. Should be a float in range [0, 1.0].
 traces_sample_rate = 0.1
 
-[default.providers.accuweather]
+[default.providers.weather]
+backend = "accuweather"
 enabled_by_default = false
 score = 0.3
 query_timeout_sec = 5.0
+
+[default.accuweather]
 # Our API key used to access the AccuWeather API.
 api_key = ""
 # The remainder of these variables are related to endpoint URLs.

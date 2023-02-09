@@ -13,6 +13,7 @@ from merino.providers.adm.provider import Provider as AdmProvider
 from merino.providers.base import BaseProvider
 from merino.providers.top_picks import Provider as TopPicksProvider
 from merino.providers.weather.backends.accuweather import AccuweatherBackend
+from merino.providers.weather.backends.fake_backends import FakeWeatherBackend
 from merino.providers.weather.provider import Provider as WeatherProvider
 from merino.providers.wiki_fruit import WikiFruitProvider
 from merino.providers.wikipedia.backends.elastic import ElasticBackend
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 class ProviderType(str, Enum):
     """Enum for provider type."""
 
-    ACCUWEATHER = "accuweather"
+    WEATHER = "weather"
     ADM = "adm"
     TOP_PICKS = "top_picks"
     WIKI_FRUIT = "wiki_fruit"
@@ -46,16 +47,20 @@ async def init_providers() -> None:
     # register providers
     for provider_type, setting in settings.providers.items():
         match provider_type:
-            case ProviderType.ACCUWEATHER:
-                providers["accuweather"] = WeatherProvider(
-                    backend=AccuweatherBackend(
-                        api_key=setting.api_key,
-                        url_base=setting.url_base,
-                        url_param_api_key=setting.url_param_api_key,
-                        url_postalcodes_path=setting.url_postalcodes_path,
-                        url_postalcodes_param_query=setting.url_postalcodes_param_query,
-                        url_current_conditions_path=setting.url_current_conditions_path,
-                        url_forecasts_path=setting.url_forecasts_path,
+            case ProviderType.WEATHER:
+                providers["weather"] = WeatherProvider(
+                    backend=(
+                        AccuweatherBackend(
+                            api_key=settings.accuweather.api_key,
+                            url_base=settings.accuweather.url_base,
+                            url_param_api_key=settings.accuweather.url_param_api_key,
+                            url_postalcodes_path=settings.accuweather.url_postalcodes_path,
+                            url_postalcodes_param_query=settings.accuweather.url_postalcodes_param_query,  # noqa
+                            url_current_conditions_path=settings.accuweather.url_current_conditions_path,  # noqa
+                            url_forecasts_path=settings.accuweather.url_forecasts_path,
+                        )  # type: ignore [arg-type]
+                        if setting.backend == "accuweather"
+                        else FakeWeatherBackend()
                     ),
                     score=setting.score,
                     name=provider_type,
