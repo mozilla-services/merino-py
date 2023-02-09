@@ -17,11 +17,11 @@ server = "http://kinto:8888"
 bucket = "main"
 collection = "quicksuggest"
 
-[ci.accuweather]
+[ci.accuweather_be]
 api_key = "test"
 url_base = "test://test"
 
-[ci.providers.weather]
+[ci.providers.accuweather]
 backend = "accuweather"
 # Whether or not this provider is enabled by default.
 enabled_by_default = false

@@ -30,13 +30,13 @@ client_variant_max = 5
 client_variant_character_max = 100
 query_character_max = 500
 
-[testing.accuweather]
+[testing.accuweather_be]
 api_key = "test"
 # The URL in `url_base` isn't actually pinged during testing but we set it
 # anyway to make sure the production server isn't accidentally pinged.
 url_base = "test://test"
 
-[test.providers.weather]
+[test.providers.accuweather]
 enabled_by_default = false
 
 [testing.providers.adm]
