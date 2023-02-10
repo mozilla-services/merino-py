@@ -77,6 +77,7 @@ env = "dev"
 traces_sample_rate = 0.1
 
 [default.providers.accuweather]
+type = "accuweather"
 backend = "accuweather"
 enabled_by_default = false
 score = 0.3
@@ -95,6 +96,7 @@ url_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"
 url_postalcodes_param_query = "q"
 
 [default.providers.adm]
+type = "adm"
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
 # The backend of the provider. Either "remote-settings" or "test".
@@ -107,6 +109,7 @@ score = 0.3
 score_wikipedia = 0.2
 
 [default.providers.top_picks]
+type = "top_picks"
 enabled_by_default = false
 score = 0.25
 query_char_limit = 4
@@ -114,6 +117,7 @@ firefox_char_limit = 2
 top_picks_file_path = "dev/top_picks.json"
 
 [default.providers.wikipedia]
+type = "wikipedia"
 enabled_by_default = false
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "elasticsearch"

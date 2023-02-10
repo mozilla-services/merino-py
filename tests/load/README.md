@@ -11,7 +11,7 @@ This directory contains source code for the load tests for Merino.
 
 ## Local Execution
 
-Follow the steps bellow to execute the load tests locally: 
+Follow the steps bellow to execute the load tests locally:
 
 ### Setup Environment
 
@@ -68,7 +68,7 @@ make load-tests-clean
 
 ## Distributed GCP Execution
 
-Follow the steps bellow to execute the distributed load tests on GCP: 
+Follow the steps bellow to execute the distributed load tests on GCP:
 
 ### Setup Environment
 

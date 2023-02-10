@@ -10,8 +10,8 @@ import kinto_http
 import pytest
 from pytest_mock import MockerFixture
 
-from merino.providers import RemoteSettingsBackend
 from merino.providers.adm.backends.protocol import SuggestionContent
+from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
 
 
 @pytest.fixture(name="rs_parameters")

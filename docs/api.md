@@ -8,9 +8,9 @@ Endpoint: `/api/v1/suggest`
 
 Example: `/api/v1/suggest?q=nelson%20mand&client_variants=one,two`
 
-This is the primary endpoint that consumes user input and suggests 
+This is the primary endpoint that consumes user input and suggests
 pages the user may want to visit. The expectation is that
-this is shown alongside other content the browser suggests 
+this is shown alongside other content the browser suggests
 to the user, such as bookmarks and history.
 
 This endpoint accepts GET requests and takes parameters as query string values

@@ -1,0 +1,121 @@
+"""Merino provider manager."""
+
+from enum import Enum, unique
+
+from dynaconf.base import Settings
+
+from merino.config import settings
+from merino.exceptions import InvalidProviderError
+from merino.providers.adm.backends.fake_backends import FakeAdmBackend
+from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
+from merino.providers.adm.provider import Provider as AdmProvider
+from merino.providers.base import BaseProvider
+from merino.providers.top_picks.backends.top_picks import TopPicksBackend
+from merino.providers.top_picks.provider import Provider as TopPicksProvider
+from merino.providers.weather.backends.accuweather import AccuweatherBackend
+from merino.providers.weather.backends.fake_backends import FakeWeatherBackend
+from merino.providers.weather.provider import Provider as WeatherProvider
+from merino.providers.wiki_fruit import WikiFruitProvider
+from merino.providers.wikipedia.backends.elastic import ElasticBackend
+from merino.providers.wikipedia.backends.fake_backends import FakeWikipediaBackend
+from merino.providers.wikipedia.provider import Provider as WikipediaProvider
+
+
+@unique
+class ProviderType(str, Enum):
+    """Enum for provider type."""
+
+    ACCUWEATHER = "accuweather"
+    ADM = "adm"
+    TOP_PICKS = "top_picks"
+    WIKI_FRUIT = "wiki_fruit"
+    WIKIPEDIA = "wikipedia"
+
+
+def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
+    """Create a provider for a given type and settings.
+
+    Exceptions:
+      - `InvalidProviderError` if the provider type is unknown.
+    """
+    match setting.type:
+        case ProviderType.ACCUWEATHER:
+            return WeatherProvider(
+                backend=AccuweatherBackend(
+                    api_key=settings.accuweather.api_key,
+                    url_base=settings.accuweather.url_base,
+                    url_param_api_key=settings.accuweather.url_param_api_key,
+                    url_postalcodes_path=settings.accuweather.url_postalcodes_path,
+                    url_postalcodes_param_query=settings.accuweather.url_postalcodes_param_query,
+                    url_current_conditions_path=settings.accuweather.url_current_conditions_path,
+                    url_forecasts_path=settings.accuweather.url_forecasts_path,
+                )  # type: ignore [arg-type]
+                if setting.backend == "accuweather"
+                else FakeWeatherBackend(),
+                score=setting.score,
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.ADM:
+            return AdmProvider(
+                backend=(
+                    RemoteSettingsBackend(
+                        server=settings.remote_settings.server,
+                        collection=settings.remote_settings.collection,
+                        bucket=settings.remote_settings.bucket,
+                    )  # type: ignore [arg-type]
+                    if setting.backend == "remote-settings"
+                    else FakeAdmBackend()
+                ),
+                score=setting.score,
+                score_wikipedia=setting.score_wikipedia,
+                name=provider_id,
+                resync_interval_sec=setting.resync_interval_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.TOP_PICKS:
+            return TopPicksProvider(
+                backend=TopPicksBackend(
+                    top_picks_file_path=setting.top_picks_file_path,
+                    query_char_limit=setting.query_char_limit,
+                    firefox_char_limit=setting.firefox_char_limit,
+                ),
+                score=setting.score,
+                name=provider_id,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.WIKI_FRUIT:
+            return WikiFruitProvider(
+                name=provider_id, enabled_by_default=setting.enabled_by_default
+            )
+        case ProviderType.WIKIPEDIA:
+            return WikipediaProvider(
+                backend=(
+                    ElasticBackend(
+                        api_key=setting.es_api_key,
+                        cloud_id=setting.es_cloud_id,
+                    )
+                )  # type: ignore [arg-type]
+                if setting.backend == "elasticsearch"
+                else FakeWikipediaBackend(),
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case _:
+            raise InvalidProviderError(f"Unknown provider type: {setting.type}")
+
+
+def load_providers() -> dict[str, BaseProvider]:
+    """Load providers from configurations.
+
+    Exceptions:
+      - `InvalidProviderError` if the provider type is unknown.
+    """
+    providers: dict[str, BaseProvider] = {}
+
+    for provider_id, setting in settings.providers.items():
+        providers[provider_id] = _create_provider(provider_id, setting)
+
+    return providers

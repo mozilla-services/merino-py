@@ -11,12 +11,8 @@ from pytest_mock import MockerFixture
 
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
-from merino.providers import (
-    ProviderType,
-    get_providers,
-    init_providers,
-    shutdown_providers,
-)
+from merino.providers import get_providers, init_providers, shutdown_providers
+from merino.providers.manager import ProviderType
 from tests.types import FilterCaplogFixture
 
 
@@ -37,12 +33,14 @@ async def test_init_providers() -> None:
 @pytest.mark.asyncio
 async def test_init_providers_unknown_provider_type(mocker: MockerFixture) -> None:
     """Test for the `init_providers` with an unknown provider."""
-    mocker.patch.dict(settings.providers, values={"unknown-provider": {}})
+    mocker.patch.dict(
+        settings.providers, values={"unknown-provider": {"type": "unknown-type"}}
+    )
 
     with pytest.raises(InvalidProviderError) as excinfo:
         await init_providers()
 
-    assert str(excinfo.value) == "Unknown provider type: unknown-provider"
+    assert str(excinfo.value) == "Unknown provider type: unknown-type"
 
 
 @pytest.mark.asyncio

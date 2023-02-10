@@ -92,21 +92,21 @@ tooling.
 ### API Configurations
 
 - `default.web.api.v1.client_variant_max` (`MERINO_WEB__API__V1__CLIENT_VARIANT_MAX`)
-- A non-negative integer to contol the limit of optional client variants passed 
+- A non-negative integer to contol the limit of optional client variants passed
   to suggest endpoint as part of experiments or rollouts.  Additional validators
   can/will be implemented to ensure a limitation on the number of variants passed
   to the request. See: https://mozilla-services.github.io/merino/api.html#suggest.
 
 - `default.web.api.v1.query_character_max` (`MERINO_WEB__API__V1__QUERY_CHARACTER_MAX`)
-- A non-negative integer value that is passed into the `max_length` parameter 
+- A non-negative integer value that is passed into the `max_length` parameter
   of the FastAPI Query object constructor.  This limits the string character length
   of a given query string, in this case the total string length count for the suggestion query.
 
 - `default.web.api.v1.client_variant_character_max` (`MERINO_WEB__API__V1__CLIENT_VARIANT_CHARACTER_MAX`)
-- A non-negative integer value that is passed into the `max_length` parameter 
+- A non-negative integer value that is passed into the `max_length` parameter
   of the FastAPI Query object constructor.  This limits the string character length
   of a given query string, in this case the total string length count for client variants.
-  
+
 
 ### Logging
 
@@ -211,6 +211,7 @@ These are production providers that generate suggestions.
 - Remote Settings - Provides suggestions from a RS collection, such as the
   suggestions provided by adM. See also the top level configuration for Remote
   Settings above.
+  - `type` (`MERINO_PROVIDERS__ADM__TYPE`) - The type of this provider, should be `adm`.
   - `enabled_by_default` (`MERINO_PROVIDERS__ADM__ENABLED_BY_DEFAULT`) - Whether
     this provider is enabled by default.
   - `backend` (`MERINO_PROVIDERS__ADM__BACKEND`) - The backend of the provider.
@@ -232,6 +233,8 @@ These are production providers that generate suggestions.
 
 #### AccuWeather Provider
 - AccuWeather - Provides weather suggestions & forecasts.
+  - `type` (`MERINO_PROVIDERS__ACCUWEATHER__TYPE`) - The type of this provider, should be
+    `accuweather`.
   - `backend` (`MERINO_PROVIDERS__ACCUWEATHER__backend`) - The backend of the provider.
     Either `accuweather` or `test`.
   - `enabled_by_default` (`MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT`) - Whether
@@ -261,28 +264,32 @@ These are production providers that generate suggestions.
 #### Wiki Fruit Provider
 - Wiki Fruit - Provides suggestions from a test provider. Should not be used
   in production.
+  - `type` (`MERINO_PROVIDERS__WIKI_FRUIT__TYPE`) - The type of this provider, should be
+    `wiki_fruit`.
   - `enabled_by_default` (`MERINO_PROVIDERS__WIKI_FRUIT__ENABLED_BY_DEFAULT`) - Whether
     this provider is enabled by default.
 
 #### Wikipedia Dynamic Match Provider
 
-The provider that is backed by the locally indexed Wikipedia through Elasticsearch.
-
-- `enabled_by_default` (`MERINO_PROVIDERS__WIKIPEDIA__ENABLED_BY_DEFAULT`) - Whether
-  this provider is enabled by default.
+<<<<<<< HEAD
+- Wikipedia - Provider backed by the locally indexed Wikipedia through Elasticsearch.
+  - `type` (`MERINO_PROVIDERS__WIKIPEDIA__TYPE`) - The type of this provider, should be
+    `wikipedia`.
+  - `enabled_by_default` (`MERINO_PROVIDERS__WIKIPEDIA__ENABLED_BY_DEFAULT`) - Whether
+    this provider is enabled by default.
   - `backend` (`MERINO_PROVIDERS__WIKIPEDIA__backend`) - The backend of the provider.
     Either `elasticsearch` or `test`.
-- `es_cloud_id` (`MERINO_PROVIDERS__WIKIPEDIA__ES_CLOUD_ID`) - The Cloud ID of the
-  Elasticsearch cluster.
-- `es_api_key` (`MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY`) - The base64 key used to 
-  authenticate on the Elasticsearch cluster specified by `es_cloud_id`.
-- `es_index` (`MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX`) - The index identifier
-  of Wikipedia in Elasticsearch.
-- `es_max_suggestions` (`MERINO_PROVIDERS__WIKIPEDIA__ES_MAX_SUGGESTIONS`) - The
-  maximum suggestions for each search request to Elasticsearch.
-- `es_request_timeout_ms` (`MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS`) - The
-  timeout in milliseconds for each search request to Elasticsearch.
-- `score` (`MERINO_PROVIDERS__WIKIPEDIA__SCORE`) - The ranking score for this provider
-  as a floating point number. Defaults to 0.23.
+  - `es_cloud_id` (`MERINO_PROVIDERS__WIKIPEDIA__ES_CLOUD_ID`) - The Cloud ID of the
+    Elasticsearch cluster.
+  - `es_api_key` (`MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY`) - The base64 key used to 
+    authenticate on the Elasticsearch cluster specified by `es_cloud_id`.
+  - `es_index` (`MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX`) - The index identifier
+    of Wikipedia in Elasticsearch.
+  - `es_max_suggestions` (`MERINO_PROVIDERS__WIKIPEDIA__ES_MAX_SUGGESTIONS`) - The
+    maximum suggestions for each search request to Elasticsearch.
+  - `es_request_timeout_ms` (`MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS`) - The
+    timeout in milliseconds for each search request to Elasticsearch.
+  - `score` (`MERINO_PROVIDERS__WIKIPEDIA__SCORE`) - The ranking score for this provider
+    as a floating point number. Defaults to 0.23.
 
 [log]:../merino/config_logging.py

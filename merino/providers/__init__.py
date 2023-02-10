@@ -1,41 +1,16 @@
 """Initialize all Providers."""
 import asyncio
 import logging
-from enum import Enum, unique
 from timeit import default_timer as timer
 
 from merino import metrics
-from merino.config import settings
-from merino.exceptions import InvalidProviderError
-from merino.providers.adm.backends.fake_backends import FakeAdmBackend
-from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
-from merino.providers.adm.provider import Provider as AdmProvider
 from merino.providers.base import BaseProvider
-from merino.providers.top_picks.backends.top_picks import TopPicksBackend
-from merino.providers.top_picks.provider import Provider as TopPicksProvider
-from merino.providers.weather.backends.accuweather import AccuweatherBackend
-from merino.providers.weather.backends.fake_backends import FakeWeatherBackend
-from merino.providers.weather.provider import Provider as WeatherProvider
-from merino.providers.wiki_fruit import WikiFruitProvider
-from merino.providers.wikipedia.backends.elastic import ElasticBackend
-from merino.providers.wikipedia.backends.fake_backends import FakeWikipediaBackend
-from merino.providers.wikipedia.provider import Provider as WikipediaProvider
+from merino.providers.manager import load_providers
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
 
 logger = logging.getLogger(__name__)
-
-
-@unique
-class ProviderType(str, Enum):
-    """Enum for provider type."""
-
-    ACCUWEATHER = "accuweather"
-    ADM = "adm"
-    TOP_PICKS = "top_picks"
-    WIKI_FRUIT = "wiki_fruit"
-    WIKIPEDIA = "wikipedia"
 
 
 async def init_providers() -> None:
@@ -46,76 +21,7 @@ async def init_providers() -> None:
     start = timer()
 
     # register providers
-    for provider_type, setting in settings.providers.items():
-        match provider_type:
-            case ProviderType.ACCUWEATHER:
-                providers["accuweather"] = WeatherProvider(
-                    backend=(
-                        AccuweatherBackend(
-                            api_key=settings.accuweather.api_key,
-                            url_base=settings.accuweather.url_base,
-                            url_param_api_key=settings.accuweather.url_param_api_key,
-                            url_postalcodes_path=settings.accuweather.url_postalcodes_path,
-                            url_postalcodes_param_query=settings.accuweather.url_postalcodes_param_query,  # noqa
-                            url_current_conditions_path=settings.accuweather.url_current_conditions_path,  # noqa
-                            url_forecasts_path=settings.accuweather.url_forecasts_path,
-                        )  # type: ignore [arg-type]
-                        if setting.backend == "accuweather"
-                        else FakeWeatherBackend()
-                    ),
-                    score=setting.score,
-                    name=provider_type,
-                    query_timeout_sec=setting.query_timeout_sec,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case ProviderType.ADM:
-                providers["adm"] = AdmProvider(
-                    backend=(
-                        RemoteSettingsBackend(
-                            server=settings.remote_settings.server,
-                            collection=settings.remote_settings.collection,
-                            bucket=settings.remote_settings.bucket,
-                        )  # type: ignore [arg-type]
-                        if setting.backend == "remote-settings"
-                        else FakeAdmBackend()
-                    ),
-                    score=setting.score,
-                    score_wikipedia=setting.score_wikipedia,
-                    name=provider_type,
-                    resync_interval_sec=setting.resync_interval_sec,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case ProviderType.TOP_PICKS:
-                providers["top_picks"] = TopPicksProvider(
-                    backend=TopPicksBackend(
-                        top_picks_file_path=setting.top_picks_file_path,
-                        query_char_limit=setting.query_char_limit,
-                        firefox_char_limit=setting.firefox_char_limit,
-                    ),
-                    score=setting.score,
-                    name=provider_type,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case ProviderType.WIKI_FRUIT:
-                providers["wiki_fruit"] = WikiFruitProvider(
-                    name=provider_type, enabled_by_default=setting.enabled_by_default
-                )
-            case ProviderType.WIKIPEDIA:
-                providers["wikipedia"] = WikipediaProvider(
-                    backend=(
-                        ElasticBackend(
-                            api_key=setting.es_api_key,
-                            cloud_id=setting.es_cloud_id,
-                        )
-                    )  # type: ignore [arg-type]
-                    if setting.backend == "elasticsearch"
-                    else FakeWikipediaBackend(),
-                    name=provider_type,
-                    query_timeout_sec=setting.query_timeout_sec,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case _:
-                raise InvalidProviderError(f"Unknown provider type: {provider_type}")
+    providers.update(load_providers())
 
     # initialize providers and record time
     init_metric = "providers.initialize"

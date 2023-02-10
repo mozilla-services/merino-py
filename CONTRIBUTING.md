@@ -14,7 +14,7 @@ you can and under what conditions you saw the issue.
 Patches should be submitted as pull requests (PR).
 
 Before submitting a PR:
-- Ensure you are pulling from the most recent `main` branch and install dependencies with Poetry. See 
+- Ensure you are pulling from the most recent `main` branch and install dependencies with Poetry. See
   [See the README](/README.md) for more details.
 - Your code must run and pass all the automated tests before you submit your PR
   for review. [See the README](/README.md) for information on linting, formatting and testing. "Work in progress" or "Draft" pull requests are allowed to be submitted, but
