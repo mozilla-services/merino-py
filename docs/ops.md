@@ -182,7 +182,7 @@ Configuration for determining the location of users.
 - `location.maxmind_database` (`MERINO_LOCATION__MAXMIND_DATABASE`) - Path to a
   MaxMind GeoIP database file.
 
-### AccuWeather Backend
+### AccuWeather 
 
 Configuration for using AccuWeather as a weather backend
   - `api_key` (`MERINO_ACCUWEATHER__API_KEY`) - The API key to AccuWeather's API
@@ -234,11 +234,11 @@ These are production providers that generate suggestions.
 - AccuWeather - Provides weather suggestions & forecasts.
   - `backend` (`MERINO_PROVIDERS__ACCUWEATHER__backend`) - The backend of the provider.
     Either `accuweather` or `test`.
-  - `enabled_by_default` (`MERINO_PROVIDERS__WEATHER__ENABLED_BY_DEFAULT`) - Whether
+  - `enabled_by_default` (`MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT`) - Whether
     or not this provider is enabled by default.
-  - `score` (`MERINO_PROVIDERS__WEATHER__SCORE`) - The ranking score for this provider
+  - `score` (`MERINO_PROVIDERS__ACCUWEATHER__SCORE`) - The ranking score for this provider
     as a floating point number. Defaults to 0.3.
-  - `query_timeout_sec` (`MERINO_PROVIDERS__WEATHER__QUERY_TIMEOUT_SEC`) - A floating
+  - `query_timeout_sec` (`MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC`) - A floating
     point (in seconds) indicating the maximum waiting period when Merino queries
     for weather forecasts. This will override the default query timeout.
 
