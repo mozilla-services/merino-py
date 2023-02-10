@@ -1,7 +1,6 @@
 """A wrapper for Top Picks Provider I/O Interactions"""
 import asyncio
 import json
-import os
 from collections import defaultdict
 from json import JSONDecodeError
 from typing import Any
@@ -17,34 +16,40 @@ class TopPicksError(BackendError):
 class TopPicksBackend:
     """Backend that indexes and provides Top Pick data."""
 
-    top_picks_file_path: str
-    query_char_limit: int
-    firefox_char_limit: int
-    score: float
-
     def __init__(
-        self, top_picks_file_path, query_char_limit, firefox_char_limit, score
+        self,
+        top_picks_file_path: str,
+        query_char_limit: int,
+        firefox_char_limit: int,
     ) -> None:
-        """Initialize Top Picks backend."""
+        """Initialize Top Picks backend.
+
+        Raises:
+            ValueError: If the top picks file path is not specified.
+        """
         if not top_picks_file_path:
             raise ValueError("Top Picks domain file not specified.")
 
         self.top_picks_file_path = top_picks_file_path
         self.query_char_limit = query_char_limit
         self.firefox_char_limit = firefox_char_limit
-        self.score = score
 
     async def fetch(self) -> TopPicksData:
-        """Fetch Top Picks suggestions from domain list."""
-        top_picks_data: TopPicksData = await asyncio.to_thread(self.build_indices)
-        return top_picks_data
+        """Fetch Top Picks suggestions from domain list.
+
+        Raises:
+            TopPicksError: If the top picks file path is not specified.
+        """
+        return await asyncio.to_thread(self.build_indices)
 
     @staticmethod
     def read_domain_list(file: str) -> dict[str, Any]:
-        """Read local domain list file"""
+        """Read local domain list file.
+
+        Raises:
+            TopPicksError: If the top picks file path cannot be opened or decoded.
+        """
         try:
-            if not os.path.exists(file):
-                raise TopPicksError("Local file does not exist")
             with open(file, "r") as readfile:
                 domain_list: dict = json.load(readfile)
                 return domain_list
@@ -85,7 +90,6 @@ class TopPicksBackend:
                 "is_top_pick": True,
                 "is_sponsored": False,
                 "icon": record["icon"],
-                "score": self.score,
             }
 
             # Insertion of short keys between Firefox limit of 2 and self.query_char_limit - 1
@@ -109,7 +113,7 @@ class TopPicksBackend:
             # Insertion of keys into secondary index.
             for variant in record.get("similars", []):
                 if len(variant) > query_max:
-                    self.query_max = len(variant)
+                    query_max = len(variant)
                 for chars in range(self.query_char_limit, len(variant) + 1):
                     secondary_index[variant[:chars]].append(index_key)
 
@@ -120,7 +124,8 @@ class TopPicksBackend:
             secondary_index=secondary_index,
             short_domain_index=short_domain_index,
             results=results,
-            index_char_range=(query_min, query_max),
+            query_min=query_min,
+            query_max=query_max,
             query_char_limit=self.query_char_limit,
             firefox_char_limit=self.firefox_char_limit,
         )

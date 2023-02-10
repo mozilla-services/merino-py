@@ -17,8 +17,6 @@ from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider, Suggestion
 from tests.integration.api.v1.types import Providers
 
-config = settings.providers.top_picks
-
 
 @pytest.fixture(name="top_picks_data")
 def fixture_top_picks_data() -> TopPicksData:
@@ -97,7 +95,6 @@ def fixture_top_picks_data() -> TopPicksData:
                 "is_top_pick": True,
                 "is_sponsored": False,
                 "icon": "",
-                "score": 0.25,
             },
             {
                 "block_id": 0,
@@ -107,7 +104,6 @@ def fixture_top_picks_data() -> TopPicksData:
                 "is_top_pick": True,
                 "is_sponsored": False,
                 "icon": "",
-                "score": 0.25,
             },
             {
                 "block_id": 0,
@@ -117,7 +113,6 @@ def fixture_top_picks_data() -> TopPicksData:
                 "is_top_pick": True,
                 "is_sponsored": False,
                 "icon": "",
-                "score": 0.25,
             },
             {
                 "block_id": 0,
@@ -127,10 +122,10 @@ def fixture_top_picks_data() -> TopPicksData:
                 "is_top_pick": True,
                 "is_sponsored": False,
                 "icon": "",
-                "score": 0.25,
             },
         ],
-        index_char_range=(4, 7),
+        query_min=4,
+        query_max=7,
         query_char_limit=4,
         firefox_char_limit=2,
     )
@@ -147,7 +142,11 @@ def fixture_backend_mock(mocker: MockerFixture, top_picks_data: TopPicksData) ->
 @pytest.fixture(name="top_picks_parameters")
 def fixture_top_picks_parameters() -> dict[str, Any]:
     """Define Top Pick provider parameters for test."""
-    return {"name": "top_picks", "enabled_by_default": True}
+    return {
+        "name": "top_picks",
+        "enabled_by_default": True,
+        "score": settings.providers.top_picks.score,
+    }
 
 
 @pytest.fixture(name="providers")
@@ -169,16 +168,19 @@ def test_top_picks_query(client: TestClient, query: str) -> None:
             provider="top_picks",
             is_top_pick=True,
             is_sponsored=False,
-            score=0.25,
+            score=settings.providers.top_picks.score,
             icon="",
         )
     ]
 
     response = client.get(f"/api/v1/suggest?q={query}")
     assert response.status_code == 200
+
     result = response.json()
-    assert Suggestion(**result["suggestions"][0]) == expected_suggestion[0]
-    result = response.json()
+    actual_suggestions: list[Suggestion] = [
+        Suggestion(**suggestion) for suggestion in result["suggestions"]
+    ]
+    assert actual_suggestions == expected_suggestion
 
 
 @pytest.mark.parametrize(
@@ -217,7 +219,7 @@ def test_top_picks_short_domains(
             is_top_pick=True,
             is_sponsored=False,
             icon="",
-            score=0.25,
+            score=settings.providers.top_picks.score,
         )
     ]
 

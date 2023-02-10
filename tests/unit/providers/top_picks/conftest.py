@@ -12,8 +12,6 @@ from merino.config import settings
 from merino.providers.top_picks.backends.protocol import TopPicksBackend, TopPicksData
 from merino.providers.top_picks.provider import Provider
 
-config = settings.providers.top_picks
-
 
 @pytest.fixture(name="top_picks_data")
 def fixture_top_picks_data() -> TopPicksData:
@@ -92,7 +90,6 @@ def fixture_top_picks_data() -> TopPicksData:
                 "is_top_pick": True,
                 "is_sponsored": False,
                 "icon": "",
-                "score": 0.25,
             },
             {
                 "block_id": 0,
@@ -102,7 +99,6 @@ def fixture_top_picks_data() -> TopPicksData:
                 "is_top_pick": True,
                 "is_sponsored": False,
                 "icon": "",
-                "score": 0.25,
             },
             {
                 "block_id": 0,
@@ -112,7 +108,6 @@ def fixture_top_picks_data() -> TopPicksData:
                 "is_top_pick": True,
                 "is_sponsored": False,
                 "icon": "",
-                "score": 0.25,
             },
             {
                 "block_id": 0,
@@ -122,10 +117,10 @@ def fixture_top_picks_data() -> TopPicksData:
                 "is_top_pick": True,
                 "is_sponsored": False,
                 "icon": "",
-                "score": 0.25,
             },
         ],
-        index_char_range=(4, 7),
+        query_min=4,
+        query_max=9,
         query_char_limit=4,
         firefox_char_limit=2,
     )
@@ -134,7 +129,11 @@ def fixture_top_picks_data() -> TopPicksData:
 @pytest.fixture(name="top_picks_parameters")
 def fixture_top_picks_parameters() -> dict[str, Any]:
     """Define Top Pick provider parameters for test."""
-    return {"name": "top_picks", "enabled_by_default": config.enabled_by_default}
+    return {
+        "name": "top_picks",
+        "enabled_by_default": settings.providers.top_picks.enabled_by_default,
+        "score": settings.providers.top_picks.score,
+    }
 
 
 @pytest.fixture(name="backend_mock")

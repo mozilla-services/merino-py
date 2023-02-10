@@ -9,13 +9,13 @@ import pytest
 from pytest import LogCaptureFixture
 
 from merino.config import settings
+from merino.exceptions import BackendError
 from merino.providers.base import BaseSuggestion
 from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.provider import Provider, Suggestion
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
 
-configs = settings.providers.top_picks
 # NOTE: top_picks provider fixture in conftest.py.
 
 top_picks_example = {
@@ -67,7 +67,7 @@ async def test_initialize_failure(
     """Test exception handling for the initialize() method."""
     error_message: str = "Failed to fetch data from Top Picks Backend."
     # override default mocked behavior for fetch
-    backend_mock.fetch.side_effect = Exception(error_message)
+    backend_mock.fetch.side_effect = BackendError(error_message)
 
     await top_picks.initialize()
 

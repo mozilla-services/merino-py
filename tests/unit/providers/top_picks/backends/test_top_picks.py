@@ -23,7 +23,6 @@ def fixture_top_picks_parameters() -> dict[str, Any]:
         "top_picks_file_path": settings.providers.top_picks.top_picks_file_path,
         "query_char_limit": settings.providers.top_picks.query_char_limit,
         "firefox_char_limit": settings.providers.top_picks.firefox_char_limit,
-        "score": settings.providers.top_picks.score,
     }
 
 
@@ -47,12 +46,6 @@ def test_local_file_exists() -> None:
     assert os.path.exists(settings.providers.top_picks.top_picks_file_path)
 
 
-def test_local_file_not_found(mocker) -> None:
-    """Test that the Top Picks Nav Query file exists locally"""
-    mocker.patch("os.path.exists", return_value=False)
-    assert not os.path.exists(settings.providers.top_picks.top_picks_file_path)
-
-
 def test_read_domain_list(top_picks: TopPicksBackend) -> None:
     """Test that the JSON file containing the domain list can be processed"""
     domain_list = top_picks.read_domain_list(
@@ -62,14 +55,14 @@ def test_read_domain_list(top_picks: TopPicksBackend) -> None:
     assert len(domain_list["domains"][1]["similars"]) == 5
 
 
-def test_read_domain_list_exception(top_picks: TopPicksBackend) -> None:
-    """Test that the JSON file containing the domain list can be processed"""
+def test_read_domain_list_os_error(top_picks: TopPicksBackend) -> None:
+    """Test that read domain fails and raises exception with invalid file path."""
     with pytest.raises(TopPicksError):
         top_picks.read_domain_list("./wrongfile.json")
 
 
 @pytest.mark.asyncio
-async def test_fetch(top_picks: TopPicksBackend, top_picks_data: TopPicksData):
+async def test_fetch(top_picks: TopPicksBackend, top_picks_data: TopPicksData) -> None:
     """Test the fetch method returns TopPickData."""
     result = await top_picks.fetch()
     assert result == top_picks_data

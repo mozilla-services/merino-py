@@ -86,8 +86,8 @@ async def init_providers() -> None:
                         top_picks_file_path=setting.top_picks_file_path,
                         query_char_limit=setting.query_char_limit,
                         firefox_char_limit=setting.firefox_char_limit,
-                        score=setting.score,
                     ),
+                    score=setting.score,
                     name=provider_type,
                     enabled_by_default=setting.enabled_by_default,
                 )
