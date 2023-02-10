@@ -17,7 +17,7 @@ server = "http://kinto:8888"
 bucket = "main"
 collection = "quicksuggest"
 
-[ci.accuweather_be]
+[ci.accuweather]
 api_key = "test"
 url_base = "test://test"
 

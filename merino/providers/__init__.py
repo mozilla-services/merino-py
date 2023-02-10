@@ -51,13 +51,13 @@ async def init_providers() -> None:
                 providers["accuweather"] = WeatherProvider(
                     backend=(
                         AccuweatherBackend(
-                            api_key=settings.accuweather_be.api_key,
-                            url_base=settings.accuweather_be.url_base,
-                            url_param_api_key=settings.accuweather_be.url_param_api_key,
-                            url_postalcodes_path=settings.accuweather_be.url_postalcodes_path,
-                            url_postalcodes_param_query=settings.accuweather_be.url_postalcodes_param_query,  # noqa
-                            url_current_conditions_path=settings.accuweather_be.url_current_conditions_path,  # noqa
-                            url_forecasts_path=settings.accuweather_be.url_forecasts_path,
+                            api_key=settings.accuweather.api_key,
+                            url_base=settings.accuweather.url_base,
+                            url_param_api_key=settings.accuweather.url_param_api_key,
+                            url_postalcodes_path=settings.accuweather.url_postalcodes_path,
+                            url_postalcodes_param_query=settings.accuweather.url_postalcodes_param_query,  # noqa
+                            url_current_conditions_path=settings.accuweather.url_current_conditions_path,  # noqa
+                            url_forecasts_path=settings.accuweather.url_forecasts_path,
                         )  # type: ignore [arg-type]
                         if setting.backend == "accuweather"
                         else FakeWeatherBackend()

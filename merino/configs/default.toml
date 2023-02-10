@@ -82,7 +82,7 @@ enabled_by_default = false
 score = 0.3
 query_timeout_sec = 5.0
 
-[default.accuweather_be]
+[default.accuweather]
 # Our API key used to access the AccuWeather API.
 api_key = ""
 # The remainder of these variables are related to endpoint URLs.
