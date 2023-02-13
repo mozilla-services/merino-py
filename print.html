@@ -33,7 +33,6 @@
 
     </head>
     <body>
-    <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
             var path_to_root = "";
@@ -640,6 +639,24 @@ Remote Settings providers if not specified in the provider config. Example:
 <li><code>location.maxmind_database</code> (<code>MERINO_LOCATION__MAXMIND_DATABASE</code>) - Path to a
 MaxMind GeoIP database file.</li>
 </ul>
+<h3 id="accuweather"><a class="header" href="#accuweather">AccuWeather</a></h3>
+<p>Configuration for using AccuWeather as a weather backend</p>
+<ul>
+<li><code>api_key</code> (<code>MERINO_ACCUWEATHER__API_KEY</code>) - The API key to AccuWeather's API
+endpoint. In production, this should be set via environment variable as a secret.</li>
+<li><code>url_base</code> (<code>MERINO_ACCUWEATHER__URL_BASE</code>) - The base URL of AccuWeather's
+API endpoint.</li>
+<li><code>url_param_api_key</code> (<code>MERINO_ACCUWEATHER__URL_PARAM_API_KEY</code>) - The parameter
+of the API key for AccuWeather's API endpoint.</li>
+<li><code>url_current_conditions_path</code> (<code>MERINO_ACCUWEATHER__URL_CURRENT_CONDITIONS_PATH</code>) -
+The URL path for current conditions.</li>
+<li><code>url_forecasts_path</code> (<code>MERINO_ACCUWEATHER__URL_FORECASTS_PATH</code>) - The URL path
+for forecasts.</li>
+<li><code>url_postalcodes_path</code> (<code>MERINO_ACCUWEATHER__URL_POSTALCODES_PATH</code>) - The URL path
+for postal codes.</li>
+<li><code>url_postalcodes_param_query</code> (<code>MERINO_ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY</code>) -
+The query parameter for postal codes.</li>
+</ul>
 <h3 id="provider-configuration"><a class="header" href="#provider-configuration">Provider Configuration</a></h3>
 <p>The configuration for suggestion providers.</p>
 <h4 id="adm-provider"><a class="header" href="#adm-provider">Adm Provider</a></h4>
@@ -673,32 +690,19 @@ Defaults to 0.2.</li>
 </ul>
 </li>
 </ul>
-<h4 id="accuweather-provider"><a class="header" href="#accuweather-provider">Accuweather Provider</a></h4>
+<h4 id="accuweather-provider"><a class="header" href="#accuweather-provider">AccuWeather Provider</a></h4>
 <ul>
-<li>Accuweather - Providers weather suggestions &amp; forecasts from Accuweather.
+<li>AccuWeather - Provides weather suggestions &amp; forecasts.
 <ul>
+<li><code>backend</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__backend</code>) - The backend of the provider.
+Either <code>accuweather</code> or <code>test</code>.</li>
 <li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT</code>) - Whether
 or not this provider is enabled by default.</li>
 <li><code>score</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__SCORE</code>) - The ranking score for this provider
 as a floating point number. Defaults to 0.3.</li>
-<li><code>query_timeout_sec</code> (<code>MERINO_PROVIDERS_ACCUWEATHER__QUERY_TIMEOUT_SEC</code>) - A floating
-point (in seconds) indicating the maximum waiting period when Merino queries Accuweather
-for weather forecasts. This will override the default query timeout
-<code>merino.runtime.query_timeout_sec</code> for this provider.</li>
-<li><code>api_key</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__API_KEY</code>) - The API key to Accuweather's API
-endpoint. In production, this should be set via environment variable as a secret.</li>
-<li><code>url_base</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__URL_BASE</code>) - The base URL of Accuweather's
-API endpoint.</li>
-<li><code>url_param_api_key</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__URL_PARAM_API_KEY</code>) - The parameter
-of the API key for Accuweather's API endpoint.</li>
-<li><code>url_current_conditions_path</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__URL_CURRENT_CONDITIONS_PATH</code>) -
-The URL path for current conditions.</li>
-<li><code>url_forecasts_path</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__URL_FORECASTS_PATH</code>) - The URL path
-for forecasts.</li>
-<li><code>url_postalcodes_path</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__URL_POSTALCODES_PATH</code>) - The URL path
-for postal codes.</li>
-<li><code>url_postalcodes_param_query</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY</code>) -
-The query parameter for postal codes.</li>
+<li><code>query_timeout_sec</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC</code>) - A floating
+point (in seconds) indicating the maximum waiting period when Merino queries
+for weather forecasts. This will override the default query timeout.</li>
 </ul>
 </li>
 </ul>
@@ -1448,6 +1452,5 @@ or fix those issues, test or profile it again to verify if the fix is working.</
         });
         </script>
 
-    </div>
     </body>
 </html>
