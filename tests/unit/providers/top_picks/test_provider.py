@@ -50,14 +50,6 @@ async def test_initialize(top_picks: Provider, top_picks_data: TopPicksData) -> 
 
 
 @pytest.mark.asyncio
-async def test_initialize_exception(top_picks: Provider, mocker) -> None:
-    """Test that exception is thrown if initialization is unsuccessful."""
-    mocker.patch.object(top_picks, "initialize", side_effect=Exception)
-    with pytest.raises(Exception):
-        await top_picks.initialize()
-
-
-@pytest.mark.asyncio
 async def test_initialize_failure(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,

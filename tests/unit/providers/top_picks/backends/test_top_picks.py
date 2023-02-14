@@ -4,6 +4,7 @@
 
 """Unit tests for the Top Picks backend module."""
 import os
+from json import JSONDecodeError
 from typing import Any
 
 import pytest
@@ -59,6 +60,13 @@ def test_read_domain_list_os_error(top_picks: TopPicksBackend) -> None:
     """Test that read domain fails and raises exception with invalid file path."""
     with pytest.raises(TopPicksError):
         top_picks.read_domain_list("./wrongfile.json")
+
+
+def test_read_domain_list_json_decode_err(top_picks: TopPicksBackend, mocker) -> None:
+    """Test that the read function fails, raising TopPicksError when OSError captured."""
+    mocker.patch("json.load", side_effect=JSONDecodeError("test", "json", 1))
+    with pytest.raises(TopPicksError):
+        top_picks.read_domain_list(settings.providers.top_picks.top_picks_file_path)
 
 
 @pytest.mark.asyncio
