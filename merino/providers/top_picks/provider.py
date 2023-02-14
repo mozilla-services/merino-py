@@ -59,7 +59,7 @@ class Provider(BaseProvider):
             return []
 
         qlen: int = len(srequest.query)
-        query = srequest.query
+        query: str = srequest.query
         ids: Optional[list[int]]
 
         match qlen:
