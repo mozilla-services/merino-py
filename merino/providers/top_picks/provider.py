@@ -4,6 +4,7 @@
 
 """Top Pick Navigational Queries Provider"""
 import logging
+from typing import Optional
 
 from merino.exceptions import BackendError
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
@@ -57,27 +58,29 @@ class Provider(BaseProvider):
         if srequest.query.startswith("http"):
             return []
 
-        # Suggestions between Firefox char min of 2 and query limit - 1 for short domains
-        if (
-            self.top_picks_data.firefox_char_limit
-            <= len(srequest.query)
-            <= (self.top_picks_data.query_char_limit - 1)
-        ):
-            if ids := self.top_picks_data.short_domain_index.get(srequest.query):
-                result = self.top_picks_data.results[ids[0]]
-                return [Suggestion(**result, score=self.score)]
+        qlen: int = len(srequest.query)
+        query = srequest.query
+        ids: Optional[list[int]]
 
-        # Ignore requests below or above character min/max after checking short domains above
-        if (
-            len(srequest.query) < self.top_picks_data.firefox_char_limit
-            or len(srequest.query) > self.top_picks_data.query_max
-        ):
-            return []
-        if ids := self.top_picks_data.primary_index.get(srequest.query):
-            result = self.top_picks_data.results[ids[0]]
-            return [Suggestion(**result, score=self.score)]
-        elif ids := self.top_picks_data.secondary_index.get(srequest.query):
-            result = self.top_picks_data.results[ids[0]]
-            return [Suggestion(**result, score=self.score)]
-
-        return []
+        match qlen:
+            case qlen if (
+                self.top_picks_data.firefox_char_limit
+                <= qlen
+                < self.top_picks_data.query_char_limit
+            ):
+                ids = self.top_picks_data.short_domain_index.get(query)
+            case qlen if (
+                self.top_picks_data.query_char_limit
+                <= qlen
+                <= self.top_picks_data.query_max
+            ):
+                ids = self.top_picks_data.primary_index.get(
+                    query
+                ) or self.top_picks_data.secondary_index.get(query)
+            case _:
+                ids = None
+        return (
+            [Suggestion(**self.top_picks_data.results[ids[0]], score=self.score)]
+            if ids
+            else []
+        )
