@@ -370,6 +370,7 @@ async def test_get_weather_report_failed_current_conditions_query(
     accuweather: AccuweatherBackend,
     geolocation: Location,
     accuweather_location_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
 ) -> None:
     """Test that the get_weather_report method returns None if the AccuWeather
     current conditions query yields no result.
@@ -389,6 +390,14 @@ async def test_get_weather_report_failed_current_conditions_query(
             request=Request(
                 method="GET",
                 url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
+            ),
+        ),
+        Response(
+            status_code=200,
+            content=accuweather_forecast_response_fahrenheit,
+            request=Request(
+                method="GET",
+                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
             ),
         ),
     ]
