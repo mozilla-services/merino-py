@@ -29,9 +29,9 @@ def fixture_top_picks_backend_parameters() -> dict[str, Any]:
 @pytest.fixture(name="backend")
 def fixture_backend(
     top_picks_backend_parameters: dict[str, Any],
-) -> Any:
+) -> TopPicksBackend:
     """Create a Top Pick backend object for test."""
-    backend: Any = TopPicksBackend(**top_picks_backend_parameters)
+    backend = TopPicksBackend(**top_picks_backend_parameters)
     return backend
 
 
@@ -40,7 +40,7 @@ def fixture_top_picks_parameters() -> dict[str, Any]:
     """Define Top Pick provider parameters for test."""
     return {
         "name": "top_picks",
-        "enabled_by_default": True,
+        "enabled_by_default": settings.providers.top_picks.enabled_by_default,
         "score": settings.providers.top_picks.score,
     }
 

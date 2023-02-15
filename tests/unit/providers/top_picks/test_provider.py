@@ -3,7 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the top picks provider module."""
-from typing import Any
 
 import pytest
 from pytest import LogCaptureFixture
@@ -11,24 +10,12 @@ from pytest import LogCaptureFixture
 from merino.config import settings
 from merino.exceptions import BackendError
 from merino.providers.base import BaseSuggestion
-from merino.providers.top_picks.backends.protocol import TopPicksData
+from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider, Suggestion
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
 
 # NOTE: top_picks provider fixture in conftest.py.
-
-top_picks_example = {
-    "domains": [
-        {
-            "title": "Mozilla",
-            "url": "https://mozilla.org/en-US/",
-            "icon": "",
-            "categories": ["web-browser"],
-            "similars": ["mozzilla", "mozila"],
-        },
-    ]
-}
 
 
 def test_enabled_by_default(top_picks: Provider) -> None:
@@ -42,24 +29,26 @@ def test_hidden(top_picks: Provider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_initialize(top_picks: Provider, top_picks_data: TopPicksData) -> None:
+async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None:
     """Test initialization of top pick provider"""
     await top_picks.initialize()
+    backend = await backend.fetch()
 
-    assert top_picks.top_picks_data == top_picks_data
+    assert top_picks.top_picks_data == backend
 
 
 @pytest.mark.asyncio
 async def test_initialize_failure(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
-    backend_mock: Any,
+    backend: TopPicksBackend,
     top_picks: Provider,
+    mocker,
 ) -> None:
     """Test exception handling for the initialize() method."""
     error_message: str = "Failed to fetch data from Top Picks Backend."
-    # override default mocked behavior for fetch
-    backend_mock.fetch.side_effect = BackendError(error_message)
+    # override default behavior for fetch
+    mocker.patch.object(backend, "fetch", side_effect=BackendError(error_message))
 
     await top_picks.initialize()
 
@@ -136,8 +125,8 @@ async def test_short_domain_query(
     ]
     await top_picks.initialize()
 
-    res = await top_picks.query(srequest(query))
-    assert res == expected_suggestion
+    result = await top_picks.query(srequest(query))
+    assert result == expected_suggestion
 
 
 @pytest.mark.parametrize(
@@ -151,8 +140,8 @@ async def test_short_domain_query_fails(
     """Test invalid inputs for Top Pick Provider when providing short domain queries."""
     await top_picks.initialize()
 
-    res = await top_picks.query(srequest(query))
-    assert res == []
+    result = await top_picks.query(srequest(query))
+    assert result == []
 
 
 @pytest.mark.parametrize(
@@ -187,5 +176,5 @@ async def test_short_domain_query_similars_longer_than_domain(
     ]
     await top_picks.initialize()
 
-    res = await top_picks.query(srequest(query))
-    assert res == expected_suggestion
+    result = await top_picks.query(srequest(query))
+    assert result == expected_suggestion
