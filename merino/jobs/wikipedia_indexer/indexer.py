@@ -42,7 +42,7 @@ class Indexer:
         logger.info("Ensuring latest dump is on GCS")
         latest = self.file_manager.get_latest_gcs()
         if not latest.name:
-            raise RuntimeError("No exports available on gcs")
+            raise RuntimeError("No exports available on GCS")
 
         # parse the index name out of the latest file name
         index_name = self._get_index_name(latest.name)

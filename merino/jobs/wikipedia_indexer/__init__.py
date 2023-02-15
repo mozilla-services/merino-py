@@ -26,6 +26,12 @@ gcp_project_option = typer.Option(
     help="GCP project to use for GCS",
 )
 
+
+version_option = typer.Option(
+    job_settings.index_version, "--version", help="Version of the index"
+)
+
+
 indexer_cmd = typer.Typer(
     name="wikipedia-indexer",
     help="Commands for indexing Wikipedia exports into Elasticsearch",
@@ -37,7 +43,7 @@ def index(
     elasticsearch_cloud_id: str = job_settings.es_cloud_id,
     elasticsearch_api_key: str = job_settings.es_api_key,
     elasticsearch_alias: str = job_settings.es_alias,
-    index_version: str = job_settings.index_version,
+    index_version: str = version_option,
     total_docs: int = job_settings.total_docs,
     gcs_path: str = gcs_path_option,
     gcp_project: str = gcp_project_option,
