@@ -61,7 +61,9 @@ def test_read_domain_list_os_error(top_picks_backend: TopPicksBackend) -> None:
 def test_read_domain_list_json_decode_err(
     top_picks_backend: TopPicksBackend, mocker
 ) -> None:
-    """Test that the read function fails, raising TopPicksError when OSError captured."""
+    """Test that the read function fails, raising TopPicksError when a
+    JSONDecodeError is captured.
+    """
     mocker.patch("json.load", side_effect=JSONDecodeError("test", "json", 1))
     with pytest.raises(TopPicksError):
         top_picks_backend.read_domain_list(

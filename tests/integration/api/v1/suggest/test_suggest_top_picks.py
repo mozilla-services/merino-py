@@ -46,7 +46,9 @@ def fixture_top_picks_parameters() -> dict[str, Any]:
 
 
 @pytest.fixture(name="providers")
-def fixture_providers(backend: Any, top_picks_parameters: dict[str, Any]) -> Providers:
+def fixture_providers(
+    backend: TopPicksBackend, top_picks_parameters: dict[str, Any]
+) -> Providers:
     """Define providers for this module which are injected automatically."""
     return {"top_picks": Provider(backend=backend, **top_picks_parameters)}
 
