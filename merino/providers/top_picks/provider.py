@@ -42,15 +42,12 @@ class Provider(BaseProvider):
         try:
             # Fetch Top Picks suggestions from domain list.
             self.top_picks_data: TopPicksData = await self.backend.fetch()
-
         except BackendError as backend_error:
             logger.warning(
                 "Failed to fetch data from Top Picks Backend.",
                 extra={"error message": f"{backend_error}"},
             )
-            raise BackendError(
-                f"Failed to fetch data from Top Picks Backend. {backend_error}"
-            )
+            raise BackendError
 
     def hidden(self) -> bool:  # noqa: D102
         return False
