@@ -213,7 +213,7 @@ These are production providers that generate suggestions.
   Settings above.
   - `enabled_by_default` (`MERINO_PROVIDERS__ADM__ENABLED_BY_DEFAULT`) - Whether
     or not this provider is enabled by default.
-  - `backend` (`MERINO_PROVIDERS__ADM__backend`) - The backend of the provider.
+  - `backend` (`MERINO_PROVIDERS__ADM__BACKEND`) - The backend of the provider.
     Either `remote-settings` or `test`.
   - `resync_interval_sec` (`MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC`) - The time
     between re-syncs of Remote Settings data, in seconds. Defaults to 3 hours.
@@ -241,6 +241,22 @@ These are production providers that generate suggestions.
   - `query_timeout_sec` (`MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC`) - A floating
     point (in seconds) indicating the maximum waiting period when Merino queries
     for weather forecasts. This will override the default query timeout.
+
+#### Top Picks Provider
+- Top Picks - Provides suggestions from a static domain list of the 1000 most visited websites. 
+  - `enabled_by_default` (`MERINO_PROVIDERS__TOP_PICKS__ENABLED_BY_DEFAULT`) - Boolean that defines 
+  whether or not this provider is enabled by default.
+  - `score` (`MERINO_PROVIDERS__TOP_PICKS__SCORE`) - The ranking score for this provider as a floating 
+  point number with a default set to 0.25.
+  - `query_char_limit` (`MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT`) - The minimum character limit 
+  for a Top Picks suggestion to be indexed and query to be processed. Represented as an integer with a 
+  default set to 4.
+  - `firefox_char_limit` (`MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT`) - The minimum character 
+  limit set for short suggestion indexing and for Firefox to process a query on Merino. Represented 
+  as an integer. Default is set to 2.
+  - `top_picks_file_path` (`MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH`) - File path to the json 
+  file of domains, represented as a string. Either `dev/top_picks.json` in production 
+  or `tests/data/top_picks.json` for testing.
 
 #### Wiki Fruit Provider
 - Wiki Fruit - Provides suggestions from a test provider. Should not be used

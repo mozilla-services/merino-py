@@ -53,6 +53,7 @@ enabled_by_default = true
 enabled_by_default = true
 score = 0.25
 query_char_limit = 4
+firefox_char_limit = 2
 top_picks_file_path = "tests/data/top_picks.json"
 
 [testing.providers.wikipedia]
