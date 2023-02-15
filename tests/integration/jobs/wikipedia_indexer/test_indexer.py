@@ -49,6 +49,30 @@ def test_ensure_index(file_manager, es_client):
     assert es_client.indices.create.called
 
 
+def test_index_from_export_no_exports_available(file_manager, es_client):
+    """Test that RuntimeError is emitted"""
+    file_manager.get_latest_gcs.return_value = Blob("", "bucket")
+    indexer = Indexer("v1", file_manager, es_client)
+    with pytest.raises(RuntimeError) as exc_info:
+        indexer.index_from_export(100, "fake_alias")
+
+    assert exc_info.value.args[0] == "No exports available on gcs"
+
+
+def test_index_from_export_fail_on_existing_index(file_manager, es_client):
+    """Test that Exception is emitted"""
+    file_manager.get_latest_gcs.return_value = Blob(
+        "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
+    )
+    es_client.indices.exists.return_value = False
+    es_client.indices.create.return_value = {}
+    indexer = Indexer("v1", file_manager, es_client)
+    with pytest.raises(Exception) as exc_info:
+        indexer.index_from_export(100, "fake_alias")
+
+    assert exc_info.value.args[0] == "Could not create the index"
+
+
 @pytest.mark.parametrize(
     ["new_index_name", "alias_name", "existing_indices", "expected_actions"],
     [
