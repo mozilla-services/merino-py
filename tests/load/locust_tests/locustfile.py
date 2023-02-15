@@ -30,9 +30,6 @@ SUGGEST_API: str = "/api/v1/suggest"
 # affecting the client's Suggest experience
 CLIENT_VARIANTS: str = ""
 
-# Optional. A comma-separated list of providers to use for this request.
-PROVIDERS: str = ""
-
 # See RemoteSettingsGlobalSettings in
 # https://github.com/mozilla-services/merino/blob/main/merino-settings/src/lib.rs
 KINTO__SERVER_URL = os.environ["KINTO__SERVER_URL"]
@@ -85,15 +82,15 @@ def on_locust_init(environment, **kwargs):
         environment.runner.register_message("store_suggestions", store_suggestions)
 
 
-def request_suggestions(client: HttpSession, query: str) -> None:
+def request_suggestions(client: HttpSession, query: str, providers: str = None) -> None:
     """Request suggestions from Merino for the given query string."""
     params: dict[str, Any] = {"q": query}
 
     if CLIENT_VARIANTS:
         params = {**params, "client_variants": CLIENT_VARIANTS}
 
-    if PROVIDERS:
-        params = {**params, "providers": PROVIDERS}
+    if providers:
+        params = {**params, "providers": providers}
 
     headers: dict[str, str] = {  # nosec
         "Accept-Language": choice(LOCALES),
@@ -105,7 +102,7 @@ def request_suggestions(client: HttpSession, query: str) -> None:
         params=params,
         headers=headers,
         catch_response=True,
-        name=SUGGEST_API,  # group all requests under the 'name' entry
+        name=f"{SUGGEST_API}{(f'?providers={providers}' if providers else '')}",
     ) as response:
         # This contextmanager returns a response that provides the ability to
         # manually control if an HTTP request should be marked as successful or
@@ -137,14 +134,31 @@ class MerinoUser(HttpUser):
         return super().on_start()
 
     @task(weight=10)
-    def rs_suggestions(self) -> None:
+    def adm_suggestions(self) -> None:
+        """Send multiple requests for Remote Settings queries."""
+        providers: str = "adm"
+        self.rs_suggestions(providers)
+
+    @task(weight=10)
+    def wikipedia_suggestions(self) -> None:
+        """Send multiple requests for Remote Settings queries."""
+        providers: str = "wikipedia"
+        self.rs_suggestions(providers)
+
+    @task(weight=10)
+    def adm_and_wikipedia_suggestions(self) -> None:
+        """Send multiple requests for Remote Settings queries."""
+        providers: str = "adm,wikipedia"
+        self.rs_suggestions(providers)
+
+    def rs_suggestions(self, providers: str = None) -> None:
         """Send multiple requests for Remote Settings queries."""
         suggestion = choice(RS_SUGGESTIONS)  # nosec
 
         for query in suggestion["keywords"]:
-            request_suggestions(self.client, query)
+            request_suggestions(self.client, query, providers)
 
-    @task(weight=90)
+    @task(weight=70)
     def faker_suggestions(self) -> None:
         """Send multiple requests for random queries."""
         # This produces a query between 2 and 4 random words
@@ -157,7 +171,7 @@ class MerinoUser(HttpUser):
 
             request_suggestions(self.client, query)
 
-    @task(weight=1)
+    @task(weight=0)
     def wikifruit_suggestions(self) -> None:
         """Send multiple requests for random WikiFruit queries."""
         # These queries are supported by the WikiFruit provider
