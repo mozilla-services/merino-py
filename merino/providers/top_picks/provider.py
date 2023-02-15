@@ -48,6 +48,9 @@ class Provider(BaseProvider):
                 "Failed to fetch data from Top Picks Backend.",
                 extra={"error message": f"{backend_error}"},
             )
+            raise BackendError(
+                f"Failed to fetch data from Top Picks Backend. {backend_error}"
+            )
 
     def hidden(self) -> bool:  # noqa: D102
         return False
