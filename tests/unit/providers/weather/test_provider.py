@@ -9,7 +9,9 @@ from typing import Any
 import pytest
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
+from redis.asyncio import Redis
 
+from merino.cache.redis import RedisAdapter
 from merino.config import settings
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
@@ -43,14 +45,22 @@ def fixture_backend_mock(mocker: MockerFixture) -> Any:
     return mocker.AsyncMock(spec=WeatherBackend)
 
 
+@pytest.fixture(name="redis_mock")
+def fixture_redis_mock(mocker: MockerFixture) -> Any:
+    """Create a Redis client mock object for testing."""
+    return mocker.AsyncMock(spec=Redis)
+
+
 @pytest.fixture(name="provider")
-def fixture_provider(backend_mock: Any) -> Provider:
+def fixture_provider(backend_mock: Any, redis_mock: Any) -> Provider:
     """Create a weather Provider for test."""
     return Provider(
         backend=backend_mock,
+        cache=RedisAdapter(redis_mock),
         name="weather",
         score=0.3,
         query_timeout_sec=0.2,
+        cached_report_ttl_sec=10,
     )
 
 
@@ -106,6 +116,7 @@ async def test_query_weather_report_returned(
             forecast=report.forecast,
         )
     ]
+    backend_mock.cache_inputs_for_weather_report.return_value = None
     backend_mock.get_weather_report.return_value = report
 
     suggestions: list[BaseSuggestion] = await provider.query(
@@ -123,6 +134,7 @@ async def test_query_no_weather_report_returned(
     report.
     """
     expected_suggestions: list[Suggestion] = []
+    backend_mock.cache_inputs_for_weather_report.return_value = None
     backend_mock.get_weather_report.return_value = None
 
     suggestions: list[BaseSuggestion] = await provider.query(
@@ -147,6 +159,7 @@ async def test_query_error(
     expected_log_messages: list[dict[str, str]] = [
         {"levelname": "WARNING", "message": "Could not generate a weather report"}
     ]
+    backend_mock.cache_inputs_for_weather_report.return_value = None
     backend_mock.get_weather_report.side_effect = BackendError(
         expected_log_messages[0]["message"]
     )

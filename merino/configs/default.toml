@@ -79,9 +79,11 @@ traces_sample_rate = 0.1
 [default.providers.accuweather]
 type = "accuweather"
 backend = "accuweather"
+cache = "none"
 enabled_by_default = false
 score = 0.3
 query_timeout_sec = 5.0
+cached_report_ttl_sec = 7200 # 2 hours.
 
 [default.accuweather]
 # Our API key used to access the AccuWeather API.

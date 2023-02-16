@@ -77,6 +77,15 @@ class AccuweatherBackend:
         self.url_current_conditions_path = url_current_conditions_path
         self.url_forecasts_path = url_forecasts_path
 
+    def cache_inputs_for_weather_report(self, geolocation: Location) -> Optional[bytes]:
+        """Return the inputs used to form the cache key for looking up and storing the current
+        conditions and forecast for a location.
+        """
+        if geolocation.country is None or geolocation.postal_code is None:
+            return None
+
+        return (geolocation.country + geolocation.postal_code).encode("utf-8")
+
     async def get_weather_report(
         self, geolocation: Location
     ) -> Optional[WeatherReport]:

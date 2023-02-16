@@ -3,7 +3,10 @@
 from enum import Enum, unique
 
 from dynaconf.base import Settings
+from redis.asyncio import Redis
 
+from merino.cache.none import NoCacheAdapter
+from merino.cache.redis import RedisAdapter
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
 from merino.providers.adm.backends.fake_backends import FakeAdmBackend
@@ -52,9 +55,15 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 )  # type: ignore [arg-type]
                 if setting.backend == "accuweather"
                 else FakeWeatherBackend(),
+                cache=RedisAdapter(
+                    Redis.from_url(settings.redis.server)
+                )  # type: ignore [arg-type]
+                if setting.cache == "redis"
+                else NoCacheAdapter(),
                 score=setting.score,
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
+                cached_report_ttl_sec=setting.cached_report_ttl_sec,
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.ADM:

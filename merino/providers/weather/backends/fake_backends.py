@@ -8,6 +8,10 @@ from merino.providers.weather.backends.protocol import WeatherReport
 class FakeWeatherBackend:
     """A fake backend that always returns empty results."""
 
+    def cache_inputs_for_weather_report(self, geolocation: Location) -> Optional[bytes]:
+        """Doesn't return any cache key inputs."""
+        return None
+
     async def get_weather_report(
         self, geolocation: Location
     ) -> Optional[WeatherReport]:

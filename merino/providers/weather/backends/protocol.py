@@ -58,6 +58,14 @@ class WeatherBackend(Protocol):
     directly depend on.
     """
 
+    def cache_inputs_for_weather_report(
+        self, geolocation: Location
+    ) -> Optional[bytes]:  # pragma: no cover
+        """Return the inputs used to form the cache key for looking up and storing weather
+        information for a location.
+        """
+        ...
+
     async def get_weather_report(
         self, geolocation: Location
     ) -> Optional[WeatherReport]:  # pragma: no cover
