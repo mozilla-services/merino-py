@@ -109,6 +109,9 @@ $ make doc-preview
 
 # Profile Merino with Scalene
 $ make profile
+
+# Run the Wikipedia CLI job
+$ make wikipedia-indexer job=$JOB   
 ```
 
 ## Documentation

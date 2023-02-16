@@ -1,10 +1,17 @@
 """Indexer tests"""
+import datetime
 import json
 
+import freezegun
 import pytest
 from google.cloud.storage import Blob
 
 from merino.jobs.wikipedia_indexer.indexer import Indexer
+
+FROZEN_TIME = "2020-01-01"
+EPOCH_FROZEN_TIME = int(
+    datetime.datetime(2020, 1, 1).replace(tzinfo=datetime.timezone.utc).timestamp()
+)
 
 
 @pytest.fixture
@@ -24,12 +31,13 @@ def es_client(mocker):
 @pytest.mark.parametrize(
     ["file_name", "version", "expected"],
     [
-        ("enwiki-123-content.json", "v1", "enwiki-123-v1"),
-        ("foo/enwiki-123-content.json", "v1", "enwiki-123-v1"),
-        ("foo/bar/enwiki-123-content.json", "v1", "enwiki-123-v1"),
-        ("enwiki-123-content.json", "v2", "enwiki-123-v2"),
+        ("enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
+        ("foo/enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
+        ("foo/bar/enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
+        ("enwiki-123-content.json", "v2", f"enwiki-123-v2-{EPOCH_FROZEN_TIME}"),
     ],
 )
+@freezegun.freeze_time(FROZEN_TIME)
 def test_get_index_name(file_manager, es_client, file_name, version, expected):
     """Test filename to index name parsing"""
     indexer = Indexer(version, file_manager, es_client)
@@ -38,15 +46,57 @@ def test_get_index_name(file_manager, es_client, file_name, version, expected):
     assert index_name == expected
 
 
-def test_ensure_index(file_manager, es_client):
-    """Test ensure index logic"""
-    es_client.indices.exists.return_value = False
+@pytest.mark.parametrize(
+    ["index_exists", "create_return", "expected_return", "expected_create_called"],
+    [
+        (False, {"acknowledged": True}, True, True),
+        (False, {}, False, True),
+        (True, {"acknowledged": True}, False, False),
+    ],
+    ids=["create_successful", "create_unsuccessful", "index_already_exists"],
+)
+def test_create_index(
+    file_manager,
+    es_client,
+    index_exists,
+    create_return,
+    expected_return,
+    expected_create_called,
+):
+    """Test create index logic"""
+    es_client.indices.exists.return_value = index_exists
+    es_client.indices.create.return_value = create_return
 
     index_name = "enwiki-123-v1"
     indexer = Indexer("v1", file_manager, es_client)
-    indexer._ensure_index(index_name)
 
-    assert es_client.indices.create.called
+    assert expected_return == indexer._create_index(index_name)
+    assert expected_create_called == es_client.indices.create.called
+
+
+def test_index_from_export_no_exports_available(file_manager, es_client):
+    """Test that RuntimeError is emitted"""
+    file_manager.get_latest_gcs.return_value = Blob("", "bucket")
+    es_client.indices.exists.return_value = False
+    indexer = Indexer("v1", file_manager, es_client)
+    with pytest.raises(RuntimeError) as exc_info:
+        indexer.index_from_export(100, "fake_alias")
+
+    assert exc_info.value.args[0] == "No exports available on GCS"
+
+
+def test_index_from_export_fail_on_existing_index(file_manager, es_client):
+    """Test that Exception is emitted"""
+    file_manager.get_latest_gcs.return_value = Blob(
+        "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
+    )
+    es_client.indices.exists.return_value = False
+    es_client.indices.create.return_value = {}
+    indexer = Indexer("v1", file_manager, es_client)
+    with pytest.raises(Exception) as exc_info:
+        indexer.index_from_export(100, "fake_alias")
+
+    assert exc_info.value.args[0] == "Could not create the index"
 
 
 @pytest.mark.parametrize(
@@ -112,7 +162,8 @@ def test_index_from_export(file_manager, es_client):
         "errors": False,
         "items": [{"id": 1000}],
     }
-    es_client.indices.exists.return_value = True
+    es_client.indices.exists.return_value = False
+    es_client.indices.create.return_value = {"acknowledged": True}
 
     operation = {"index": {"_type": "doc", "_id": "1000"}}
     document = {
