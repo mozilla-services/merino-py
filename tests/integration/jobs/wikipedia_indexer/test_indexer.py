@@ -46,25 +46,43 @@ def test_get_index_name(file_manager, es_client, file_name, version, expected):
     assert index_name == expected
 
 
-def test_ensure_index(file_manager, es_client):
-    """Test ensure index logic"""
-    es_client.indices.exists.return_value = False
+@pytest.mark.parametrize(
+    ["index_exists", "create_return", "expected_return", "expected_create_called"],
+    [
+        (False, {"acknowledged": True}, True, True),
+        (False, {}, False, True),
+        (True, {"acknowledged": True}, False, False),
+    ],
+    ids=["create_successful", "create_unsuccessful", "index_already_exists"],
+)
+def test_create_index(
+    file_manager,
+    es_client,
+    index_exists,
+    create_return,
+    expected_return,
+    expected_create_called,
+):
+    """Test create index logic"""
+    es_client.indices.exists.return_value = index_exists
+    es_client.indices.create.return_value = create_return
 
     index_name = "enwiki-123-v1"
     indexer = Indexer("v1", file_manager, es_client)
-    indexer._ensure_index(index_name)
 
-    assert es_client.indices.create.called
+    assert expected_return == indexer._create_index(index_name)
+    assert expected_create_called == es_client.indices.create.called
 
 
 def test_index_from_export_no_exports_available(file_manager, es_client):
     """Test that RuntimeError is emitted"""
     file_manager.get_latest_gcs.return_value = Blob("", "bucket")
+    es_client.indices.exists.return_value = False
     indexer = Indexer("v1", file_manager, es_client)
     with pytest.raises(RuntimeError) as exc_info:
         indexer.index_from_export(100, "fake_alias")
 
-    assert exc_info.value.args[0] == "No exports available on gcs"
+    assert exc_info.value.args[0] == "No exports available on GCS"
 
 
 def test_index_from_export_fail_on_existing_index(file_manager, es_client):
@@ -144,7 +162,8 @@ def test_index_from_export(file_manager, es_client):
         "errors": False,
         "items": [{"id": 1000}],
     }
-    es_client.indices.exists.return_value = True
+    es_client.indices.exists.return_value = False
+    es_client.indices.create.return_value = {"acknowledged": True}
 
     operation = {"index": {"_type": "doc", "_id": "1000"}}
     document = {

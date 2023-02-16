@@ -48,7 +48,7 @@ class Indexer:
         index_name = self._get_index_name(latest.name)
         logger.info("Ensuring index exists", extra={"index": index_name})
 
-        if self._ensure_index(index_name):
+        if self._create_index(index_name):
             prior: Optional[Mapping[str, Any]] = None
             logger.info("Start indexing", extra={"index": index_name})
             indexed, perc_done = 0, 0.0
@@ -150,7 +150,7 @@ class Indexer:
         base_name = "-".join(file_name.split("-")[:2])
         return f"{base_name}-{self.index_version}-{timestamp}"
 
-    def _ensure_index(self, index_name: str) -> bool:
+    def _create_index(self, index_name: str) -> bool:
         indices_client = self.es_client.indices
         exists = indices_client.exists(index=index_name)
         settings = get_settings_for_version(self.index_version)
@@ -162,7 +162,7 @@ class Indexer:
             )
             return bool(res.get("acknowledged", False))
 
-        return bool(exists)
+        return False
 
     def _flip_alias_to_latest(self, current_index: str, alias: str):
         alias = alias.format(version=self.index_version)
