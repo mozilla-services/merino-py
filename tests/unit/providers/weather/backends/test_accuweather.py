@@ -429,26 +429,21 @@ async def test_get_weather_report_handles_exception_group_properly(
                 url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
             ),
         ),
-        BaseExceptionGroup(
-            "unhandled errors in a TaskGroup",
-            [AccuweatherError("oops"), AccuweatherError("nope")],
-        ),
-        Response(
-            status_code=200,
-            content=accuweather_forecast_response_fahrenheit,
-            request=Request(
-                method="GET",
-                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
-            ),
-        ),
+        HTTPError("Invalid Request - Current Conditions"),
+        HTTPError("Invalid Request - Forecast"),
     ]
     mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
-    expected_error_value: str = "unhandled errors in a TaskGroup'"
+    expected_error_value: str = (
+        "err:("
+        "AccuweatherError('Unexpected current conditions response'), "
+        "AccuweatherError('Unexpected forecast response')"
+        ")"
+    )
 
     with pytest.raises(AccuweatherError) as accuweather_error:
         await accuweather.get_weather_report(geolocation)
 
-    assert expected_error_value in str(accuweather_error.value)
+    assert str(accuweather_error.value) == expected_error_value
 
 
 @pytest.mark.asyncio
