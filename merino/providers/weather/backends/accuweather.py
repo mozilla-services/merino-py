@@ -103,7 +103,7 @@ class AccuweatherBackend:
                         self.get_forecast(client, location.key)
                     )
             except ExceptionGroup as e:
-                raise AccuweatherError(f"err:{e.exceptions}")
+                raise AccuweatherError(f"Failed to fetch weather report: {e.exceptions}")
 
             current = await task_current
             forecast = await task_forecast
