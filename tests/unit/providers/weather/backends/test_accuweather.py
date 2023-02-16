@@ -8,7 +8,7 @@ import json
 from typing import Any, Optional
 
 import pytest
-from httpx import AsyncClient, Request, Response
+from httpx import AsyncClient, HTTPError, Request, Response
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 
@@ -370,6 +370,7 @@ async def test_get_weather_report_failed_current_conditions_query(
     accuweather: AccuweatherBackend,
     geolocation: Location,
     accuweather_location_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
 ) -> None:
     """Test that the get_weather_report method returns None if the AccuWeather
     current conditions query yields no result.
@@ -391,12 +392,57 @@ async def test_get_weather_report_failed_current_conditions_query(
                 url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
             ),
         ),
+        Response(
+            status_code=200,
+            content=accuweather_forecast_response_fahrenheit,
+            request=Request(
+                method="GET",
+                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+            ),
+        ),
     ]
     mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
 
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
 
     assert report is None
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_handles_exception_group_properly(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    geolocation: Location,
+    accuweather_location_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
+) -> None:
+    """Test that the get_weather_report method raises an error if current condition call throws
+    an error
+    """
+    side_effects: list[Response | HTTPError] = [
+        Response(
+            status_code=200,
+            content=accuweather_location_response,
+            request=Request(
+                method="GET",
+                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+            ),
+        ),
+        HTTPError("Invalid Request - Current Conditions"),
+        HTTPError("Invalid Request - Forecast"),
+    ]
+    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
+    expected_error_value: str = (
+        "Failed to fetch weather report: ("
+        "AccuweatherError('Unexpected current conditions response'), "
+        "AccuweatherError('Unexpected forecast response')"
+        ")"
+    )
+
+    with pytest.raises(AccuweatherError) as accuweather_error:
+        await accuweather.get_weather_report(geolocation)
+
+    assert str(accuweather_error.value) == expected_error_value
 
 
 @pytest.mark.asyncio

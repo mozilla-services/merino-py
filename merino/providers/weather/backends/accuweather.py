@@ -1,4 +1,5 @@
 """A wrapper for AccuWeather API interactions."""
+import asyncio
 from typing import Optional
 
 from httpx import AsyncClient, HTTPError, Response
@@ -92,18 +93,28 @@ class AccuweatherBackend:
         async with AsyncClient(base_url=self.url_base) as client:
             if not (location := await self.get_location(client, country, postal_code)):
                 return None
+            try:
+                async with asyncio.TaskGroup() as tg:
+                    task_current = tg.create_task(
+                        self.get_current_conditions(client, location.key)
+                    )
+                    task_forecast = tg.create_task(
+                        self.get_forecast(client, location.key)
+                    )
+            except ExceptionGroup as e:
+                raise AccuweatherError(
+                    f"Failed to fetch weather report: {e.exceptions}"
+                )
 
-            if not (current := await self.get_current_conditions(client, location.key)):
-                return None
-
-            if not (forecast := await self.get_forecast(client, location.key)):
-                return None
-
-        return WeatherReport(
-            city_name=location.localized_name,
-            current_conditions=current,
-            forecast=forecast,
-        )
+            return (
+                WeatherReport(
+                    city_name=location.localized_name,
+                    current_conditions=current,
+                    forecast=forecast,
+                )
+                if (current := await task_current) and (forecast := await task_forecast)
+                else None
+            )
 
     async def get_location(
         self, client: AsyncClient, country: str, postal_code: str
