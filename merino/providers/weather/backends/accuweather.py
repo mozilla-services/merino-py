@@ -102,7 +102,7 @@ class AccuweatherBackend:
                     task_forecast = tg.create_task(
                         self.get_forecast(client, location.key)
                     )
-            except BaseExceptionGroup as e:
+            except ExceptionGroup as e:
                 raise AccuweatherError(f"err:{e.exceptions}")
 
             current = await task_current
