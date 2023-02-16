@@ -5,11 +5,10 @@
 """Unit tests for the AccuWeather backend module."""
 
 import json
-from builtins import BaseExceptionGroup
 from typing import Any, Optional
 
 import pytest
-from httpx import AsyncClient, Request, Response
+from httpx import AsyncClient, HTTPError, Request, Response
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 
@@ -420,7 +419,7 @@ async def test_get_weather_report_handles_exception_group_properly(
     """Test that the get_weather_report method raises an error if current condition call throws
     an error
     """
-    side_effects: list[Response | BaseExceptionGroup] = [
+    side_effects: list[Response | HTTPError] = [
         Response(
             status_code=200,
             content=accuweather_location_response,
@@ -434,7 +433,7 @@ async def test_get_weather_report_handles_exception_group_properly(
     ]
     mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
     expected_error_value: str = (
-        "err:("
+        "Failed to fetch weather report: ("
         "AccuweatherError('Unexpected current conditions response'), "
         "AccuweatherError('Unexpected forecast response')"
         ")"
