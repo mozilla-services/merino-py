@@ -1,10 +1,17 @@
 """Indexer tests"""
+import datetime
 import json
 
+import freezegun
 import pytest
 from google.cloud.storage import Blob
 
 from merino.jobs.wikipedia_indexer.indexer import Indexer
+
+FROZEN_TIME = "2020-01-01"
+EPOCH_FROZEN_TIME = int(
+    datetime.datetime(2020, 1, 1).replace(tzinfo=datetime.timezone.utc).timestamp()
+)
 
 
 @pytest.fixture
@@ -24,12 +31,13 @@ def es_client(mocker):
 @pytest.mark.parametrize(
     ["file_name", "version", "expected"],
     [
-        ("enwiki-123-content.json", "v1", "enwiki-123-v1"),
-        ("foo/enwiki-123-content.json", "v1", "enwiki-123-v1"),
-        ("foo/bar/enwiki-123-content.json", "v1", "enwiki-123-v1"),
-        ("enwiki-123-content.json", "v2", "enwiki-123-v2"),
+        ("enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
+        ("foo/enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
+        ("foo/bar/enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
+        ("enwiki-123-content.json", "v2", f"enwiki-123-v2-{EPOCH_FROZEN_TIME}"),
     ],
 )
+@freezegun.freeze_time(FROZEN_TIME)
 def test_get_index_name(file_manager, es_client, file_name, version, expected):
     """Test filename to index name parsing"""
     indexer = Indexer(version, file_manager, es_client)

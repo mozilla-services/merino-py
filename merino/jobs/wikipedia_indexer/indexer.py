@@ -1,6 +1,7 @@
 """Builds the elasticsearch index from the export file"""
 import json
 import logging
+import time
 from typing import Any, Mapping, Optional
 
 from elasticsearch import Elasticsearch
@@ -143,10 +144,11 @@ class Indexer:
         return op, suggestion
 
     def _get_index_name(self, file_name) -> str:
+        timestamp = int(time.time())
         if "/" in file_name:
             _, file_name = file_name.rsplit("/", 1)
         base_name = "-".join(file_name.split("-")[:2])
-        return f"{base_name}-{self.index_version}"
+        return f"{base_name}-{self.index_version}-{timestamp}"
 
     def _ensure_index(self, index_name: str) -> bool:
         indices_client = self.es_client.indices
