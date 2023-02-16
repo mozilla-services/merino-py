@@ -5,6 +5,7 @@
 """Unit tests for the AccuWeather backend module."""
 
 import json
+from builtins import BaseExceptionGroup
 from typing import Any, Optional
 
 import pytest
@@ -406,6 +407,48 @@ async def test_get_weather_report_failed_current_conditions_query(
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
 
     assert report is None
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_handles_exception_group_properly(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    geolocation: Location,
+    accuweather_location_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
+) -> None:
+    """Test that the get_weather_report method raises an error if current condition call throws
+    an error
+    """
+    side_effects: list[Response | BaseExceptionGroup] = [
+        Response(
+            status_code=200,
+            content=accuweather_location_response,
+            request=Request(
+                method="GET",
+                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+            ),
+        ),
+        BaseExceptionGroup(
+            "unhandled errors in a TaskGroup",
+            [AccuweatherError("oops"), AccuweatherError("nope")],
+        ),
+        Response(
+            status_code=200,
+            content=accuweather_forecast_response_fahrenheit,
+            request=Request(
+                method="GET",
+                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+            ),
+        ),
+    ]
+    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
+    expected_error_value: str = "unhandled errors in a TaskGroup'"
+
+    with pytest.raises(AccuweatherError) as accuweather_error:
+        await accuweather.get_weather_report(geolocation)
+
+    assert expected_error_value in str(accuweather_error.value)
 
 
 @pytest.mark.asyncio
