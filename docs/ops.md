@@ -212,7 +212,7 @@ These are production providers that generate suggestions.
   suggestions provided by adM. See also the top level configuration for Remote
   Settings above.
   - `enabled_by_default` (`MERINO_PROVIDERS__ADM__ENABLED_BY_DEFAULT`) - Whether
-    or not this provider is enabled by default.
+    this provider is enabled by default.
   - `backend` (`MERINO_PROVIDERS__ADM__BACKEND`) - The backend of the provider.
     Either `remote-settings` or `test`.
   - `resync_interval_sec` (`MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC`) - The time
@@ -235,7 +235,7 @@ These are production providers that generate suggestions.
   - `backend` (`MERINO_PROVIDERS__ACCUWEATHER__backend`) - The backend of the provider.
     Either `accuweather` or `test`.
   - `enabled_by_default` (`MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT`) - Whether
-    or not this provider is enabled by default.
+    this provider is enabled by default.
   - `score` (`MERINO_PROVIDERS__ACCUWEATHER__SCORE`) - The ranking score for this provider
     as a floating point number. Defaults to 0.3.
   - `query_timeout_sec` (`MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC`) - A floating
@@ -245,7 +245,7 @@ These are production providers that generate suggestions.
 #### Top Picks Provider
 - Top Picks - Provides suggestions from a static domain list of the 1000 most visited websites. 
   - `enabled_by_default` (`MERINO_PROVIDERS__TOP_PICKS__ENABLED_BY_DEFAULT`) - Boolean that defines 
-  whether or not this provider is enabled by default.
+  whether this provider is enabled by default.
   - `score` (`MERINO_PROVIDERS__TOP_PICKS__SCORE`) - The ranking score for this provider as a floating 
   point number with a default set to 0.25.
   - `query_char_limit` (`MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT`) - The minimum character limit 
@@ -262,22 +262,20 @@ These are production providers that generate suggestions.
 - Wiki Fruit - Provides suggestions from a test provider. Should not be used
   in production.
   - `enabled_by_default` (`MERINO_PROVIDERS__WIKI_FRUIT__ENABLED_BY_DEFAULT`) - Whether
-    or not this provider is enabled by default.
+    this provider is enabled by default.
 
 #### Wikipedia Dynamic Match Provider
 
 The provider that is backed by the locally indexed Wikipedia through Elasticsearch.
 
 - `enabled_by_default` (`MERINO_PROVIDERS__WIKIPEDIA__ENABLED_BY_DEFAULT`) - Whether
-  or not this provider is enabled by default.
+  this provider is enabled by default.
   - `backend` (`MERINO_PROVIDERS__WIKIPEDIA__backend`) - The backend of the provider.
     Either `elasticsearch` or `test`.
 - `es_cloud_id` (`MERINO_PROVIDERS__WIKIPEDIA__ES_CLOUD_ID`) - The Cloud ID of the
   Elasticsearch cluster.
-- `es_user` (`MERINO_PROVIDERS__WIKIPEDIA__ES_USER`) - The user name of the Elasticsearch
-  cluster.
-- `es_password` (`MERINO_PROVIDERS__WIKIPEDIA__ES_PASSWORD`) - The password for
-  accessing the Elasticsearch cluster.
+- `es_api_key` (`MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY`) - The base64 key used to 
+  authenticate on the Elasticsearch cluster specified by `es_cloud_id`.
 - `es_index` (`MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX`) - The index identifier
   of Wikipedia in Elasticsearch.
 - `es_max_suggestions` (`MERINO_PROVIDERS__WIKIPEDIA__ES_MAX_SUGGESTIONS`) - The
