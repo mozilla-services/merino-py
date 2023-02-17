@@ -66,7 +66,7 @@ test integration currently underway (see [DISCO-2113][6]).
 #### Cons
 
 * Locust is 100% community driven (no commercial business), which means its 
-  contribution level can wane, as was the case between 2015 and 2018
+  contribution level can wane
 * Preliminary research indicates that reporting metrics from Locust to [Grafana][4] 
   requires the creation of custom code, a plugin or a third party integration
 
