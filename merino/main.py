@@ -11,6 +11,7 @@ from merino.config_logging import configure_logging
 from merino.config_sentry import configure_sentry
 from merino.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging, metrics, user_agent
+from merino.utils.version import check_version
 from merino.web import api_v1, dockerflow
 
 app = FastAPI()
@@ -19,6 +20,7 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup_configuration() -> None:
     """Set up various configurations such as logging."""
+    check_version()
     configure_logging()
     configure_sentry()
     await configure_metrics()

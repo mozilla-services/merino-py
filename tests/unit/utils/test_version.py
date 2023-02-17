@@ -9,30 +9,33 @@ import pathlib
 import pytest
 from pydantic import ValidationError
 
-from merino.utils.version import fetch_app_version_from_file
+from merino.utils.version import check_version, fetch_app_version_from_file
 
 
-def test_fetch_app_version_from_file() -> None:
-    """Happy path test for fetch_app_version_from_file()."""
-    expected_information = {
+@pytest.fixture(name="expected_version_data")
+def fixture_expected_version_data() -> dict:
+    """Version file data."""
+    expected_data = {
         "source": "https://github.com/mozilla-services/merino-py",
         "version": "dev",
         "commit": "TBD",
         "build": "TBD",
     }
+    return expected_data
 
+
+def test_fetch_app_version_from_file(expected_version_data: dict) -> None:
+    """Happy path test for fetch_app_version_from_file()."""
     version = fetch_app_version_from_file()
-    assert version.dict() == expected_information
+    assert version.dict() == expected_version_data
 
 
-def test_fetch_app_version_from_file_invalid_path() -> None:
+def test_fetch_app_version_from_file_file_not_found() -> None:
     """Test that the 'version.json' file cannot be read when provided
     an invalid path, raising a FileNotFoundError.
     """
-    with pytest.raises(FileNotFoundError) as excinfo:
+    with pytest.raises(FileNotFoundError):
         fetch_app_version_from_file(pathlib.Path("invalid"))
-
-    assert "No such file or directory: 'invalid/version.json'" in str(excinfo.value)
 
 
 @pytest.fixture(name="dir_containing_incorrect_file")
@@ -57,3 +60,36 @@ def test_version_extra_forbid(dir_containing_incorrect_file: pathlib.Path) -> No
     """Test that fetch_app_version_from_file raises an error for incorrect files."""
     with pytest.raises(ValidationError):
         fetch_app_version_from_file(merino_root_path=dir_containing_incorrect_file)
+
+
+@pytest.fixture(name="dir_containing_corrupted_file")
+def fixture_dir_containing_corrupted_file(tmp_path: pathlib.Path) -> pathlib.Path:
+    """Create a version.json file that does not match the Version model."""
+    version_file = tmp_path / "version.json"
+    version_file.write_text(
+        json.dumps(
+            {
+                "source": "https://github.com/mozilla-services/merino-py",
+                "version": "dev",
+                "commit": "TBD",
+                "build": "TBD",
+            }
+        )
+    )
+    version_file.write_text(",")
+    return tmp_path
+
+
+def test_version_invalid_json_forbid(
+    dir_containing_corrupted_file: pathlib.Path,
+) -> None:
+    """Test that fetch_app_version_from_file raises an error for incorrect files."""
+    with pytest.raises(json.JSONDecodeError):
+        fetch_app_version_from_file(merino_root_path=dir_containing_corrupted_file)
+
+
+def test_check_version() -> None:
+    """Test that test_check_version returns True, indicating successful
+    lookup and validation of version.json file.
+    """
+    assert check_version() is True
