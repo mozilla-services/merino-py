@@ -91,7 +91,7 @@ to pause and evaluate if it is a more suitable framework going forward.
 
 #### Cons
 
-* The k6 development stack is in Javascript/Typescript. This means:
+* The k6 development stack is in JavaScript/TypeScript. This means:
   * Modeling and backend layer code would need to be duplicated and maintained
   * Linting, formatting and dependency infrastructure would need to be added and 
     maintained
