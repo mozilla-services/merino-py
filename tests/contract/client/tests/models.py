@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Any, Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, Extra, Field, HttpUrl
 
 
 class Service(Enum):
@@ -76,6 +76,15 @@ class ResponseContent(BaseModel):
     client_variants: list[str] = Field(default_factory=list)
     server_variants: list[str] = Field(default_factory=list)
     request_id: Optional[UUID] = Field(...)
+
+
+class VersionResponseContent(BaseModel):
+    """Model for __version__ endpoint populated by version.json data."""
+
+    source: HttpUrl
+    version: str
+    commit: str
+    build: str
 
 
 class Response(BaseModel):

@@ -24,6 +24,7 @@ from models import (
     Service,
     Step,
     Suggestion,
+    VersionResponseContent,
 )
 from requests import Response as RequestsResponse
 
@@ -114,6 +115,13 @@ def fixture_merino_step(
             # instance for checking the field types and comparing a dict
             # representation of the model instance with the expected response
             # content for this step in the test scenario.
+            if step.request.path == "/__version__":
+                assert_200_response_version_endpoint(
+                    step_content=step.response.content,
+                    merino_version_content=VersionResponseContent(**response.json()),
+                )
+                return
+
             assert_200_response(
                 step_content=step.response.content,
                 merino_content=ResponseContent(**response.json()),
@@ -192,6 +200,15 @@ def assert_200_response(
             expected_suggestion = expected_suggestions_by_id[suggestion_id(suggestion)]
             assert suggestion.icon == expected_suggestion.icon
             continue
+
+
+def assert_200_response_version_endpoint(
+    step_content: ResponseContent | Any, merino_version_content: VersionResponseContent
+) -> None:
+    """Check that the content for a 200 OK response querying the __version__
+    endpoint is what we expect.
+    """
+    assert step_content == merino_version_content
 
 
 @pytest.fixture(scope="function", autouse=True)
