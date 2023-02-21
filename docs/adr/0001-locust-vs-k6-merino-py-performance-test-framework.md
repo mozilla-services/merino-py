@@ -1,8 +1,8 @@
 # Locust vs k6; Merino-py Performance Test Framework
 
-* **Status:** Proposed
+* **Status:** Accepted
 * **Deciders:** Nan Jiang, Raphael Pierzina & Katrina Anderson
-* **Date:** 2023-02-17
+* **Date:** 2023-02-21
 
 ## Context and Problem Statement
 
@@ -17,7 +17,8 @@ testing solution is preferred, should the test framework be Locust or k6?
 1. The test framework supports the current load test design, a 10-minute test run with 
    an average load of 1500RPS (see [Merino Load Test Plan][3])
 2. The test framework measures HTTP request failure and client-side latency metrics
-3. The test framework is compatible with the Rapid Release initiative, meaning:
+3. The test framework is compatible with the Rapid Release Model for Firefox Services 
+   initiative, meaning:
    * It can execute through command line
    * It can signal failures given check or threshold criteria
    * It can be integrated into a CD pipeline
@@ -37,9 +38,10 @@ Chosen option:
 * **A. Locust**
 
 Both k6 and Locust are able to execute the current load test design, report required 
-metrics and fulfill the Rapid Release initiative; However, Locust's Python tech stack 
-ultimately makes it the better fit for the Merino-py project. In-line with the team's 
-single repository direction (see [PR][5]), using Locust will:
+metrics and fulfill the Rapid Release Model for Firefox Services initiative; However, 
+Locust's Python tech stack ultimately makes it the better fit for the Merino-py 
+project. In-line with the team's single repository direction (see [PR][5]), using 
+Locust will:
 
   * Leverage existing testing, linting and formatting infrastructure
   * Promote dependency sharing and code re-use (models & backends)
@@ -65,7 +67,8 @@ test integration currently underway (see [DISCO-2113][6]).
 
 #### Cons
 
-* Locust is 100% community driven (no commercial business), which means its 
+* Locust is 100% community driven (no 
+* commercial business), which means its 
   contribution level can wane
 * Preliminary research indicates that reporting metrics from Locust to [Grafana][4] 
   requires the creation of custom code, a plugin or a third party integration
