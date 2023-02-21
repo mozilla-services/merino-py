@@ -712,20 +712,20 @@ for weather forecasts. This will override the default query timeout.</li>
 </ul>
 <h4 id="top-picks-provider"><a class="header" href="#top-picks-provider">Top Picks Provider</a></h4>
 <ul>
-<li>Top Picks - Provides suggestions from a static domain list of the 1000 most visited websites. 
+<li>Top Picks - Provides suggestions from a static domain list of the 1000 most visited websites.
 <ul>
-<li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__TOP_PICKS__ENABLED_BY_DEFAULT</code>) - Boolean that defines 
+<li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__TOP_PICKS__ENABLED_BY_DEFAULT</code>) - Boolean that defines
 whether this provider is enabled by default.</li>
-<li><code>score</code> (<code>MERINO_PROVIDERS__TOP_PICKS__SCORE</code>) - The ranking score for this provider as a floating 
+<li><code>score</code> (<code>MERINO_PROVIDERS__TOP_PICKS__SCORE</code>) - The ranking score for this provider as a floating
 point number with a default set to 0.25.</li>
-<li><code>query_char_limit</code> (<code>MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT</code>) - The minimum character limit 
-for a Top Picks suggestion to be indexed and query to be processed. Represented as an integer with a 
+<li><code>query_char_limit</code> (<code>MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT</code>) - The minimum character limit
+for a Top Picks suggestion to be indexed and query to be processed. Represented as an integer with a
 default set to 4.</li>
-<li><code>firefox_char_limit</code> (<code>MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT</code>) - The minimum character 
-limit set for short suggestion indexing and for Firefox to process a query on Merino. Represented 
+<li><code>firefox_char_limit</code> (<code>MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT</code>) - The minimum character
+limit set for short suggestion indexing and for Firefox to process a query on Merino. Represented
 as an integer. Default is set to 2.</li>
-<li><code>top_picks_file_path</code> (<code>MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH</code>) - File path to the json 
-file of domains, represented as a string. Either <code>dev/top_picks.json</code> in production 
+<li><code>top_picks_file_path</code> (<code>MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH</code>) - File path to the json
+file of domains, represented as a string. Either <code>dev/top_picks.json</code> in production
 or <code>tests/data/top_picks.json</code> for testing.</li>
 </ul>
 </li>
@@ -743,7 +743,6 @@ this provider is enabled by default.</li>
 </li>
 </ul>
 <h4 id="wikipedia-dynamic-match-provider"><a class="header" href="#wikipedia-dynamic-match-provider">Wikipedia Dynamic Match Provider</a></h4>
-<p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</p>
 <ul>
 <li>Wikipedia - Provider backed by the locally indexed Wikipedia through Elasticsearch.
 <ul>
@@ -755,7 +754,7 @@ this provider is enabled by default.</li>
 Either <code>elasticsearch</code> or <code>test</code>.</li>
 <li><code>es_cloud_id</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_CLOUD_ID</code>) - The Cloud ID of the
 Elasticsearch cluster.</li>
-<li><code>es_api_key</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY</code>) - The base64 key used to 
+<li><code>es_api_key</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY</code>) - The base64 key used to
 authenticate on the Elasticsearch cluster specified by <code>es_cloud_id</code>.</li>
 <li><code>es_index</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX</code>) - The index identifier
 of Wikipedia in Elasticsearch.</li>
