@@ -242,7 +242,7 @@ value.</li>
 <p><code>default.web.api.v1.client_variant_max</code> (<code>MERINO_WEB__API__V1__CLIENT_VARIANT_MAX</code>)</p>
 </li>
 <li>
-<p>A non-negative integer to contol the limit of optional client variants passed 
+<p>A non-negative integer to contol the limit of optional client variants passed
 to suggest endpoint as part of experiments or rollouts.  Additional validators
 can/will be implemented to ensure a limitation on the number of variants passed
 to the request. See: https://mozilla-services.github.io/merino/api.html#suggest.</p>
@@ -251,7 +251,7 @@ to the request. See: https://mozilla-services.github.io/merino/api.html#suggest.
 <p><code>default.web.api.v1.query_character_max</code> (<code>MERINO_WEB__API__V1__QUERY_CHARACTER_MAX</code>)</p>
 </li>
 <li>
-<p>A non-negative integer value that is passed into the <code>max_length</code> parameter 
+<p>A non-negative integer value that is passed into the <code>max_length</code> parameter
 of the FastAPI Query object constructor.  This limits the string character length
 of a given query string, in this case the total string length count for the suggestion query.</p>
 </li>
@@ -259,7 +259,7 @@ of a given query string, in this case the total string length count for the sugg
 <p><code>default.web.api.v1.client_variant_character_max</code> (<code>MERINO_WEB__API__V1__CLIENT_VARIANT_CHARACTER_MAX</code>)</p>
 </li>
 <li>
-<p>A non-negative integer value that is passed into the <code>max_length</code> parameter 
+<p>A non-negative integer value that is passed into the <code>max_length</code> parameter
 of the FastAPI Query object constructor.  This limits the string character length
 of a given query string, in this case the total string length count for client variants.</p>
 </li>
@@ -370,6 +370,7 @@ The query parameter for postal codes.</li>
 suggestions provided by adM. See also the top level configuration for Remote
 Settings above.
 <ul>
+<li><code>type</code> (<code>MERINO_PROVIDERS__ADM__TYPE</code>) - The type of this provider, should be <code>adm</code>.</li>
 <li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__ADM__ENABLED_BY_DEFAULT</code>) - Whether
 this provider is enabled by default.</li>
 <li><code>backend</code> (<code>MERINO_PROVIDERS__ADM__BACKEND</code>) - The backend of the provider.
@@ -398,6 +399,8 @@ Defaults to 0.2.</li>
 <ul>
 <li>AccuWeather - Provides weather suggestions &amp; forecasts.
 <ul>
+<li><code>type</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__TYPE</code>) - The type of this provider, should be
+<code>accuweather</code>.</li>
 <li><code>backend</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__backend</code>) - The backend of the provider.
 Either <code>accuweather</code> or <code>test</code>.</li>
 <li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT</code>) - Whether
@@ -435,21 +438,24 @@ or <code>tests/data/top_picks.json</code> for testing.</li>
 <li>Wiki Fruit - Provides suggestions from a test provider. Should not be used
 in production.
 <ul>
+<li><code>type</code> (<code>MERINO_PROVIDERS__WIKI_FRUIT__TYPE</code>) - The type of this provider, should be
+<code>wiki_fruit</code>.</li>
 <li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__WIKI_FRUIT__ENABLED_BY_DEFAULT</code>) - Whether
 this provider is enabled by default.</li>
 </ul>
 </li>
 </ul>
 <h4 id="wikipedia-dynamic-match-provider"><a class="header" href="#wikipedia-dynamic-match-provider">Wikipedia Dynamic Match Provider</a></h4>
-<p>The provider that is backed by the locally indexed Wikipedia through Elasticsearch.</p>
+<p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</p>
 <ul>
+<li>Wikipedia - Provider backed by the locally indexed Wikipedia through Elasticsearch.
+<ul>
+<li><code>type</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__TYPE</code>) - The type of this provider, should be
+<code>wikipedia</code>.</li>
 <li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ENABLED_BY_DEFAULT</code>) - Whether
-this provider is enabled by default.
-<ul>
+this provider is enabled by default.</li>
 <li><code>backend</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__backend</code>) - The backend of the provider.
 Either <code>elasticsearch</code> or <code>test</code>.</li>
-</ul>
-</li>
 <li><code>es_cloud_id</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_CLOUD_ID</code>) - The Cloud ID of the
 Elasticsearch cluster.</li>
 <li><code>es_api_key</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY</code>) - The base64 key used to 
@@ -462,6 +468,8 @@ maximum suggestions for each search request to Elasticsearch.</li>
 timeout in milliseconds for each search request to Elasticsearch.</li>
 <li><code>score</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__SCORE</code>) - The ranking score for this provider
 as a floating point number. Defaults to 0.23.</li>
+</ul>
+</li>
 </ul>
 
                     </main>
