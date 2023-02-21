@@ -11,6 +11,8 @@ import requests
 from google.cloud.storage import Blob, Client
 from google.cloud.storage.fileio import BlobReader, BlobWriter
 
+from merino.jobs.wikipedia_indexer.util import ProgressReporter
+
 logger = logging.getLogger(__name__)
 
 
@@ -115,21 +117,13 @@ class FileManager:
             resp.raise_for_status()
             logger.info("Writing to GCS: gs://{}/{}".format(self.gcs_bucket, blob.name))
             logger.info("Total File Size: {}".format(content_len))
+            completed = 0
+            reporter = ProgressReporter(logger, "Copy", dump_url, name, content_len)
             writer: BlobWriter
             with blob.open("wb") as writer:
-                for chunk in resp.iter_content(chunk_size=8129):
-                    writer.write(chunk)
-                    perc_done = round(len(chunk) / content_len * 100, 5)
-                    if perc_done > 1 and perc_done % 2 == 0:
-                        logger.info(
-                            "Download progress: {}%".format(perc_done),
-                            extra={
-                                "url": dump_url,
-                                "destination": blob.name,
-                                "percent_complete": perc_done,
-                                "total_size": content_len,
-                            },
-                        )
+                for chunk in resp.iter_content(chunk_size=(4 * 1024 * 1024)):
+                    completed += writer.write(chunk)
+                    reporter.report(completed)
 
     def _stream_from_gcs(self, blob: Blob) -> Generator:
         """Streaming reader from GCS"""

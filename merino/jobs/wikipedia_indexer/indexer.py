@@ -10,6 +10,7 @@ from google.cloud.storage import Blob
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.settings import get_settings_for_version
 from merino.jobs.wikipedia_indexer.suggestion import Builder
+from merino.jobs.wikipedia_indexer.util import ProgressReporter
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,10 @@ class Indexer:
         if self._create_index(index_name):
             prior: Optional[Mapping[str, Any]] = None
             logger.info("Start indexing", extra={"index": index_name})
-            indexed, perc_done = 0, 0.0
+            reporter = ProgressReporter(
+                logger, "Indexing", latest.name, index_name, total_docs
+            )
+            indexed = 0
             for i, line in enumerate(self.file_manager._stream_from_gcs(latest)):
                 doc = json.loads(line)
                 if prior and (i + 1) % 2 == 0:
@@ -62,9 +66,7 @@ class Indexer:
                     prior = doc
 
                 # report percent completed
-                perc_done = self._report_completed(
-                    perc_done, latest.name, index_name, indexed, total_docs
-                )
+                reporter.report(indexed)
 
             # Flush queue after enumerating the export to clear the queue
             self._index_docs(True)
@@ -85,29 +87,6 @@ class Indexer:
             )
         else:
             raise Exception("Could not create the index")
-
-    def _report_completed(
-        self,
-        last_perc: float,
-        source: str,
-        dest: str,
-        completed: int,
-        total: int,
-    ) -> float:
-        perc_done = round(completed / total * 100, 5)
-        if last_perc != perc_done and perc_done > 1 and perc_done % 1 == 0:
-            logger.info(
-                f"Indexing progress: {perc_done}%",
-                extra={
-                    "source": source,
-                    "destination": dest,
-                    "percent_complete": perc_done,
-                    "completed": completed,
-                    "total_size": total,
-                },
-            )
-            return perc_done
-        return last_perc
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)
