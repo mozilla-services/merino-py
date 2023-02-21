@@ -15,12 +15,14 @@ _validators = [
     Validator(
         "providers.accuweather.query_timeout_sec", is_type_of=float, gte=0, lte=5.0
     ),
+    Validator("providers.accuweather.type", is_type_of=str, must_exist=True),
     Validator("providers.adm.backend", is_in=["remote-settings", "test"]),
     Validator("providers.adm.cron_interval_sec", gt=0),
     Validator("providers.adm.enabled_by_default", is_type_of=bool),
     Validator("providers.adm.resync_interval_sec", gt=0),
     Validator("providers.adm.score", gte=0, lte=1),
     Validator("providers.adm.score_wikipedia", gte=0, lte=1),
+    Validator("providers.adm.type", is_type_of=str, must_exist=True),
     Validator("providers.top_picks.enabled_by_default", is_type_of=bool),
     Validator("providers.top_picks.score", is_type_of=float, gte=0, lte=1),
     Validator("providers.top_picks.query_char_limit", is_type_of=int, gte=1),
@@ -34,7 +36,7 @@ _validators = [
             "dev/top_picks_for_ci.json",
         ],
     ),
-    Validator("providers.wikifruit.enabled_by_default", is_type_of=bool),
+    Validator("providers.wiki_fruit.enabled_by_default", is_type_of=bool),
     Validator("providers.wikipedia.backend", is_in=["elasticsearch", "test"]),
     Validator("providers.wikipedia.enabled_by_default", is_type_of=bool),
     Validator("providers.wikipedia.es_cloud_id", is_type_of=str),
@@ -44,6 +46,7 @@ _validators = [
     Validator("providers.wikipedia.es_request_timeout_ms", is_type_of=int, gte=1),
     Validator("providers.wikipedia.es_user", is_type_of=str),
     Validator("providers.wikipedia.score", gte=0, lte=1),
+    Validator("providers.wikipedia.type", is_type_of=str, must_exist=True),
     # Since Firefox will time out the request to Merino if it takes longer than 200ms,
     # the default query timeout of Merino should not be greater than that 200ms.
     Validator(

@@ -195,7 +195,7 @@ scenarios:
 
   - name: top_picks__keyword_match
     description: >
-      Test that Merino successfully returns suggestion for Top Pick Navigational Queries / 
+      Test that Merino successfully returns suggestion for Top Pick Navigational Queries /
       with exact keyword matches.
     steps:
       - request:

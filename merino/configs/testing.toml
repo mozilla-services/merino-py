@@ -45,6 +45,7 @@ enabled_by_default = true
 backend= "test"
 
 [testing.providers.wiki_fruit]
+type = "wiki_fruit"
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
 
