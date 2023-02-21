@@ -31,6 +31,7 @@ SUGGEST_SETTINGS = {
     "number_of_replicas": "1",
     "refresh_interval": "-1",
     "number_of_shards": "2",
+    "index.lifecycle.name": "enwiki_policy",
     "analysis": {
         "filter": {
             "stop_filter": {
