@@ -182,7 +182,7 @@ Configuration for determining the location of users.
 - `location.maxmind_database` (`MERINO_LOCATION__MAXMIND_DATABASE`) - Path to a
   MaxMind GeoIP database file.
 
-### AccuWeather 
+### AccuWeather
 
 Configuration for using AccuWeather as a weather backend
   - `api_key` (`MERINO_ACCUWEATHER__API_KEY`) - The API key to AccuWeather's API
@@ -246,19 +246,19 @@ These are production providers that generate suggestions.
     for weather forecasts. This will override the default query timeout.
 
 #### Top Picks Provider
-- Top Picks - Provides suggestions from a static domain list of the 1000 most visited websites. 
-  - `enabled_by_default` (`MERINO_PROVIDERS__TOP_PICKS__ENABLED_BY_DEFAULT`) - Boolean that defines 
+- Top Picks - Provides suggestions from a static domain list of the 1000 most visited websites.
+  - `enabled_by_default` (`MERINO_PROVIDERS__TOP_PICKS__ENABLED_BY_DEFAULT`) - Boolean that defines
   whether this provider is enabled by default.
-  - `score` (`MERINO_PROVIDERS__TOP_PICKS__SCORE`) - The ranking score for this provider as a floating 
+  - `score` (`MERINO_PROVIDERS__TOP_PICKS__SCORE`) - The ranking score for this provider as a floating
   point number with a default set to 0.25.
-  - `query_char_limit` (`MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT`) - The minimum character limit 
-  for a Top Picks suggestion to be indexed and query to be processed. Represented as an integer with a 
+  - `query_char_limit` (`MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT`) - The minimum character limit
+  for a Top Picks suggestion to be indexed and query to be processed. Represented as an integer with a
   default set to 4.
-  - `firefox_char_limit` (`MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT`) - The minimum character 
-  limit set for short suggestion indexing and for Firefox to process a query on Merino. Represented 
+  - `firefox_char_limit` (`MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT`) - The minimum character
+  limit set for short suggestion indexing and for Firefox to process a query on Merino. Represented
   as an integer. Default is set to 2.
-  - `top_picks_file_path` (`MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH`) - File path to the json 
-  file of domains, represented as a string. Either `dev/top_picks.json` in production 
+  - `top_picks_file_path` (`MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH`) - File path to the json
+  file of domains, represented as a string. Either `dev/top_picks.json` in production
   or `tests/data/top_picks.json` for testing.
 
 #### Wiki Fruit Provider
@@ -270,8 +270,6 @@ These are production providers that generate suggestions.
     this provider is enabled by default.
 
 #### Wikipedia Dynamic Match Provider
-
-<<<<<<< HEAD
 - Wikipedia - Provider backed by the locally indexed Wikipedia through Elasticsearch.
   - `type` (`MERINO_PROVIDERS__WIKIPEDIA__TYPE`) - The type of this provider, should be
     `wikipedia`.
@@ -281,7 +279,7 @@ These are production providers that generate suggestions.
     Either `elasticsearch` or `test`.
   - `es_cloud_id` (`MERINO_PROVIDERS__WIKIPEDIA__ES_CLOUD_ID`) - The Cloud ID of the
     Elasticsearch cluster.
-  - `es_api_key` (`MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY`) - The base64 key used to 
+  - `es_api_key` (`MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY`) - The base64 key used to
     authenticate on the Elasticsearch cluster specified by `es_cloud_id`.
   - `es_index` (`MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX`) - The index identifier
     of Wikipedia in Elasticsearch.
