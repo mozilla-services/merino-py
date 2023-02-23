@@ -116,18 +116,18 @@ def fixture_merino_step(
             # representation of the model instance with the expected response
             # content for this step in the test scenario.
             if step.request.path == "/__version__":
-                assert_200_version_endpoint(
+                assert_200_version_endpoint_response(
                     step_content=step.response.content,
                     merino_version_content=VersionResponseContent(**response.json()),
                 )
                 return
-
-            assert_200_response(
-                step_content=step.response.content,
-                merino_content=ResponseContent(**response.json()),
-                fetch_kinto_icon_url=fetch_kinto_icon_url,
-            )
-            return
+            else:
+                assert_200_response(
+                    step_content=step.response.content,
+                    merino_content=ResponseContent(**response.json()),
+                    fetch_kinto_icon_url=fetch_kinto_icon_url,
+                )
+                return
 
         if response.status_code == 204:
             # If the response status code is 204 No Content, load the response content
@@ -202,13 +202,17 @@ def assert_200_response(
             continue
 
 
-def assert_200_version_endpoint(
-    step_content: ResponseContent | Any, merino_version_content: VersionResponseContent
+def assert_200_version_endpoint_response(
+    *,
+    step_content: VersionResponseContent | Any,
+    merino_version_content: VersionResponseContent,
 ) -> None:
     """Check that the content for a 200 OK response querying the __version__
     endpoint is what we expect.
     """
-    assert step_content == merino_version_content
+    expected_content_dict = step_content.dict(exclude=CONTENT_EXCLUDE)
+    merino_content_dict = merino_version_content.dict(exclude=CONTENT_EXCLUDE)
+    assert expected_content_dict == merino_content_dict
 
 
 @pytest.fixture(scope="function", autouse=True)

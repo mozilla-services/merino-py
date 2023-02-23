@@ -79,7 +79,7 @@ class ResponseContent(BaseModel):
 
 
 class VersionResponseContent(BaseModel):
-    """Model for __version__ endpoint populated by version.json data."""
+    """Class that contains __version__ endpoint data populated by version.json file."""
 
     source: HttpUrl
     version: str
