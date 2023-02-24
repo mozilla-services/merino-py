@@ -10,12 +10,21 @@ _validators = [
     Validator("metrics.host", is_type_of=str),
     Validator("metrics.port", gte=0, is_type_of=int),
     Validator("providers.accuweather.enabled_by_default", is_type_of=bool),
+    # The Redis server URL is required when at least one provider wants to use Redis for caching.
+    Validator(
+        "redis.server",
+        is_type_of=str,
+        must_exist=True,
+        when=Validator("providers.accuweather.cache", must_exist=True, eq="redis"),
+    ),
     # Set the upper bound of query timeout to 5 seconds as we don't want Merino
     # to wait for responses from Accuweather indefinitely.
     Validator(
         "providers.accuweather.query_timeout_sec", is_type_of=float, gte=0, lte=5.0
     ),
     Validator("providers.accuweather.type", is_type_of=str, must_exist=True),
+    Validator("providers.accuweather.cache", is_in=["redis", "none"]),
+    Validator("providers.accuweather.cached_report_ttl_sec", is_type_of=int, gte=0),
     Validator("providers.adm.backend", is_in=["remote-settings", "test"]),
     Validator("providers.adm.cron_interval_sec", gt=0),
     Validator("providers.adm.enabled_by_default", is_type_of=bool),

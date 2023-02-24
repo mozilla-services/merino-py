@@ -182,6 +182,13 @@ Configuration for determining the location of users.
 - `location.maxmind_database` (`MERINO_LOCATION__MAXMIND_DATABASE`) - Path to a
   MaxMind GeoIP database file.
 
+### [Redis](#redis)
+
+Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
+
+- `redis.server` (`MERINO_REDIS__SERVER`) - The Redis server URL, in the form of
+  `redis://localhost:6379`.
+
 ### AccuWeather
 
 Configuration for using AccuWeather as a weather backend
@@ -237,6 +244,9 @@ These are production providers that generate suggestions.
     `accuweather`.
   - `backend` (`MERINO_PROVIDERS__ACCUWEATHER__backend`) - The backend of the provider.
     Either `accuweather` or `test`.
+  - `cache` (`MERINO_PROVIDERS__ACCUWEATHER__CACHE`) - The store used to cache weather reports.
+    Either `redis` or `none`. If `redis`, the [global Redis settings](#redis) must be set.
+    Defaults to `none`.
   - `enabled_by_default` (`MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT`) - Whether
     this provider is enabled by default.
   - `score` (`MERINO_PROVIDERS__ACCUWEATHER__SCORE`) - The ranking score for this provider
@@ -244,6 +254,10 @@ These are production providers that generate suggestions.
   - `query_timeout_sec` (`MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC`) - A floating
     point (in seconds) indicating the maximum waiting period when Merino queries
     for weather forecasts. This will override the default query timeout.
+  - `cached_report_ttl_sec` (`MERINO_PROVIDERS__ACCUWEATHER__CACHED_REPORT_TTL_SEC`) - The
+    number of whole seconds (as an integer) indicating the time-to-live for a cached weather
+    report (current conditions and forecast) for a location. After the TTL expires, the provider
+    will fetch and cache the report again on the next suggestion request for that location.
 
 #### Top Picks Provider
 - Top Picks - Provides suggestions from a static domain list of the 1000 most visited websites.

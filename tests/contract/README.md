@@ -5,8 +5,8 @@ This directory contains source code for automated contract tests for Merino.
 ## Overview
 
 The contract test suite is designed to be set up as a docker-compose CI workflow.
-To simulate common use cases, the suite utilizes 5 docker containers: `client`,
-`merino`, `kinto-setup`, `kinto` & `kinto-attachments`.
+To simulate common use cases, the suite utilizes 6 docker containers: `client`,
+`merino`, `kinto-setup`, `kinto`, `kinto-attachments`, and `redis`.
 
 The following sequence diagram depicts container interactions during the
 `remote_settings__coffee` test scenario.

@@ -4,12 +4,14 @@
 
 """Unit tests for the weather provider module."""
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
+from redis.asyncio import Redis, RedisError
 
+from merino.cache.redis import RedisAdapter
 from merino.config import settings
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
@@ -43,14 +45,22 @@ def fixture_backend_mock(mocker: MockerFixture) -> Any:
     return mocker.AsyncMock(spec=WeatherBackend)
 
 
+@pytest.fixture(name="redis_mock")
+def fixture_redis_mock(mocker: MockerFixture) -> Any:
+    """Create a Redis client mock object for testing."""
+    return mocker.AsyncMock(spec=Redis)
+
+
 @pytest.fixture(name="provider")
-def fixture_provider(backend_mock: Any) -> Provider:
+def fixture_provider(backend_mock: Any, redis_mock: Any) -> Provider:
     """Create a weather Provider for test."""
     return Provider(
         backend=backend_mock,
+        cache=RedisAdapter(redis_mock),
         name="weather",
         score=0.3,
         query_timeout_sec=0.2,
+        cached_report_ttl_sec=10,
     )
 
 
@@ -106,6 +116,7 @@ async def test_query_weather_report_returned(
             forecast=report.forecast,
         )
     ]
+    backend_mock.cache_inputs_for_weather_report.return_value = None
     backend_mock.get_weather_report.return_value = report
 
     suggestions: list[BaseSuggestion] = await provider.query(
@@ -123,6 +134,7 @@ async def test_query_no_weather_report_returned(
     report.
     """
     expected_suggestions: list[Suggestion] = []
+    backend_mock.cache_inputs_for_weather_report.return_value = None
     backend_mock.get_weather_report.return_value = None
 
     suggestions: list[BaseSuggestion] = await provider.query(
@@ -147,6 +159,7 @@ async def test_query_error(
     expected_log_messages: list[dict[str, str]] = [
         {"levelname": "WARNING", "message": "Could not generate a weather report"}
     ]
+    backend_mock.cache_inputs_for_weather_report.return_value = None
     backend_mock.get_weather_report.side_effect = BackendError(
         expected_log_messages[0]["message"]
     )
@@ -161,3 +174,289 @@ async def test_query_error(
         for record in filter_caplog(caplog.records, "merino.providers.weather.provider")
     ]
     assert actual_log_messages == expected_log_messages
+
+
+@pytest.mark.asyncio
+async def test_query_cached_weather_report(
+    redis_mock: Any,
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that weather reports are cached in Redis after the first request to the backend."""
+    cache_keys: dict[str, bytes] = {}
+
+    async def mock_redis_get(key) -> Any:
+        return cache_keys.get(key, None)
+
+    redis_mock.get.side_effect = mock_redis_get
+
+    async def mock_redis_set(key, value, **kwargs):
+        cache_keys[key] = value
+
+    redis_mock.set.side_effect = mock_redis_set
+
+    report: WeatherReport = WeatherReport(
+        city_name="San Francisco",
+        current_conditions=CurrentConditions(
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/current-weather/39376_pc?lang=en-us"
+            ),
+            summary="Mostly cloudy",
+            icon_id=6,
+            temperature=Temperature(c=15.5, f=60.0),
+        ),
+        forecast=Forecast(
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/daily-weather-forecast/39376_pc?lang=en-us"
+            ),
+            summary="Pleasant Saturday",
+            high=Temperature(c=21.1, f=70.0),
+            low=Temperature(c=13.9, f=57.0),
+        ),
+    )
+    backend_mock.cache_inputs_for_weather_report.return_value = cast(
+        str, geolocation.city
+    ).encode("utf-8") + cast(str, geolocation.postal_code).encode("utf-8")
+    backend_mock.get_weather_report.return_value = report
+
+    expected_suggestions: list[Suggestion] = [
+        Suggestion(
+            title="Weather for San Francisco",
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/current-weather/39376_pc?lang=en-us"
+            ),
+            provider="weather",
+            is_sponsored=False,
+            score=settings.providers.accuweather.score,
+            icon=None,
+            city_name=report.city_name,
+            current_conditions=report.current_conditions,
+            forecast=report.forecast,
+        )
+    ]
+
+    uncached_suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation)
+    )
+    assert uncached_suggestions == expected_suggestions
+
+    cache_key = provider.cache_key_for_weather_report(geolocation)
+    assert cache_key is not None
+    redis_mock.get.assert_called_once_with(cache_key)
+    backend_mock.get_weather_report.assert_called_once()
+    redis_mock.set.assert_called_once_with(
+        cache_key, report.json().encode("utf-8"), ex=10
+    )
+    assert cache_keys[cache_key] is not None
+
+    redis_mock.reset_mock()
+    backend_mock.reset_mock()
+
+    cached_suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation)
+    )
+    assert cached_suggestions == expected_suggestions
+
+    redis_mock.get.assert_called_once_with(cache_key)
+    backend_mock.get_weather_report.assert_not_called()
+    redis_mock.set.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_query_cached_no_weather_report(
+    redis_mock: Any,
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that the absence of a weather report for a location is cached in Redis, avoiding
+    multiple requests to the backend.
+    """
+    cache_keys: dict[str, bytes] = {}
+
+    async def mock_redis_get(key) -> Any:
+        return cache_keys.get(key, None)
+
+    redis_mock.get.side_effect = mock_redis_get
+
+    async def mock_redis_set(key, value, **kwargs):
+        cache_keys[key] = value
+
+    redis_mock.set.side_effect = mock_redis_set
+
+    backend_mock.cache_inputs_for_weather_report.return_value = cast(
+        str, geolocation.city
+    ).encode("utf-8") + cast(str, geolocation.postal_code).encode("utf-8")
+    backend_mock.get_weather_report.return_value = None
+
+    uncached_suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation)
+    )
+    assert uncached_suggestions == []
+
+    cache_key = provider.cache_key_for_weather_report(geolocation)
+    assert cache_key is not None
+    redis_mock.get.assert_called_once_with(cache_key)
+    backend_mock.get_weather_report.assert_called_once()
+    redis_mock.set.assert_called_once_with(cache_key, b"{}", ex=10)
+    assert cache_keys[cache_key] is not None
+
+    redis_mock.reset_mock()
+    backend_mock.reset_mock()
+
+    cached_suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation)
+    )
+    assert cached_suggestions == []
+
+    redis_mock.get.assert_called_once_with(cache_key)
+    backend_mock.get_weather_report.assert_not_called()
+    redis_mock.set.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_query_with_bad_cache_entry(
+    redis_mock: Any,
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that a bad cache entry causes the provider to make a request to the backend."""
+    backend_mock.cache_inputs_for_weather_report.return_value = cast(
+        str, geolocation.city
+    ).encode("utf-8") + cast(str, geolocation.postal_code).encode("utf-8")
+    cache_key = provider.cache_key_for_weather_report(geolocation)
+    assert cache_key is not None
+
+    cache_keys: dict[str, bytes] = {
+        cache_key: b"badjson!",
+    }
+
+    async def mock_redis_get(key) -> Any:
+        return cache_keys.get(key, None)
+
+    redis_mock.get.side_effect = mock_redis_get
+
+    async def mock_redis_set(key, value, **kwargs):
+        cache_keys[key] = value
+
+    redis_mock.set.side_effect = mock_redis_set
+
+    report: WeatherReport = WeatherReport(
+        city_name="San Francisco",
+        current_conditions=CurrentConditions(
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/current-weather/39376_pc?lang=en-us"
+            ),
+            summary="Mostly cloudy",
+            icon_id=6,
+            temperature=Temperature(c=15.5, f=60.0),
+        ),
+        forecast=Forecast(
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/daily-weather-forecast/39376_pc?lang=en-us"
+            ),
+            summary="Pleasant Saturday",
+            high=Temperature(c=21.1, f=70.0),
+            low=Temperature(c=13.9, f=57.0),
+        ),
+    )
+    backend_mock.get_weather_report.return_value = report
+
+    expected_suggestions: list[Suggestion] = [
+        Suggestion(
+            title="Weather for San Francisco",
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/current-weather/39376_pc?lang=en-us"
+            ),
+            provider="weather",
+            is_sponsored=False,
+            score=settings.providers.accuweather.score,
+            icon=None,
+            city_name=report.city_name,
+            current_conditions=report.current_conditions,
+            forecast=report.forecast,
+        )
+    ]
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation)
+    )
+    assert suggestions == expected_suggestions
+
+    redis_mock.get.assert_called_once_with(cache_key)
+    backend_mock.get_weather_report.assert_called_once()
+    redis_mock.set.assert_called_once_with(
+        cache_key, report.json().encode("utf-8"), ex=10
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_redis_unavailable(
+    redis_mock: Any,
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that Redis errors don't prevent requests to the backend."""
+    redis_mock.get.side_effect = RedisError("mercury in retrograde")
+    redis_mock.set.side_effect = RedisError("synergies not aligned")
+
+    report: WeatherReport = WeatherReport(
+        city_name="San Francisco",
+        current_conditions=CurrentConditions(
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/current-weather/39376_pc?lang=en-us"
+            ),
+            summary="Mostly cloudy",
+            icon_id=6,
+            temperature=Temperature(c=15.5, f=60.0),
+        ),
+        forecast=Forecast(
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/daily-weather-forecast/39376_pc?lang=en-us"
+            ),
+            summary="Pleasant Saturday",
+            high=Temperature(c=21.1, f=70.0),
+            low=Temperature(c=13.9, f=57.0),
+        ),
+    )
+    backend_mock.cache_inputs_for_weather_report.return_value = cast(
+        str, geolocation.city
+    ).encode("utf-8") + cast(str, geolocation.postal_code).encode("utf-8")
+    backend_mock.get_weather_report.return_value = report
+
+    expected_suggestions: list[Suggestion] = [
+        Suggestion(
+            title="Weather for San Francisco",
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/current-weather/39376_pc?lang=en-us"
+            ),
+            provider="weather",
+            is_sponsored=False,
+            score=settings.providers.accuweather.score,
+            icon=None,
+            city_name=report.city_name,
+            current_conditions=report.current_conditions,
+            forecast=report.forecast,
+        )
+    ]
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation)
+    )
+    assert suggestions == expected_suggestions
+
+    redis_mock.get.assert_called_once()
+    backend_mock.get_weather_report.assert_called_once()
+    redis_mock.set.assert_called_once()

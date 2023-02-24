@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
+from merino.cache.none import NoCacheAdapter
 from merino.exceptions import BackendError
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -29,7 +30,9 @@ from tests.types import FilterCaplogFixture
 @pytest.fixture(name="backend_mock")
 def fixture_backend_mock(mocker: MockerFixture) -> Any:
     """Create a WeatherBackend mock object for test."""
-    return mocker.AsyncMock(spec=WeatherBackend)
+    backend_mock = mocker.AsyncMock(spec=WeatherBackend)
+    backend_mock.cache_inputs_for_weather_report.return_value = None
+    yield backend_mock
 
 
 @pytest.fixture(name="providers")
@@ -38,9 +41,11 @@ def fixture_providers(backend_mock: Any) -> Providers:
     return {
         "weather": Provider(
             backend=backend_mock,
+            cache=NoCacheAdapter(),
             score=0.3,
             name="weather",
             query_timeout_sec=0.2,
+            cached_report_ttl_sec=10,
             enabled_by_default=True,
         )
     }
