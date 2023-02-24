@@ -640,6 +640,12 @@ Remote Settings providers if not specified in the provider config. Example:
 <li><code>location.maxmind_database</code> (<code>MERINO_LOCATION__MAXMIND_DATABASE</code>) - Path to a
 MaxMind GeoIP database file.</li>
 </ul>
+<h3 id="redis"><a class="header" href="#redis"><a href="ops.html#redis">Redis</a></a></h3>
+<p>Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.</p>
+<ul>
+<li><code>redis.server</code> (<code>MERINO_REDIS__SERVER</code>) - The Redis server URL, in the form of
+<code>redis://localhost:6379</code>.</li>
+</ul>
 <h3 id="accuweather"><a class="header" href="#accuweather">AccuWeather</a></h3>
 <p>Configuration for using AccuWeather as a weather backend</p>
 <ul>
@@ -700,6 +706,9 @@ Defaults to 0.2.</li>
 <code>accuweather</code>.</li>
 <li><code>backend</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__backend</code>) - The backend of the provider.
 Either <code>accuweather</code> or <code>test</code>.</li>
+<li><code>cache</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__CACHE</code>) - The store used to cache weather reports.
+Either <code>redis</code> or <code>none</code>. If <code>redis</code>, the <a href="ops.html#redis">global Redis settings</a> must be set.
+Defaults to <code>none</code>.</li>
 <li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT</code>) - Whether
 this provider is enabled by default.</li>
 <li><code>score</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__SCORE</code>) - The ranking score for this provider
@@ -707,6 +716,10 @@ as a floating point number. Defaults to 0.3.</li>
 <li><code>query_timeout_sec</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC</code>) - A floating
 point (in seconds) indicating the maximum waiting period when Merino queries
 for weather forecasts. This will override the default query timeout.</li>
+<li><code>cached_report_ttl_sec</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__CACHED_REPORT_TTL_SEC</code>) - The
+number of whole seconds (as an integer) indicating the time-to-live for a cached weather
+report (current conditions and forecast) for a location. After the TTL expires, the provider
+will fetch and cache the report again on the next suggestion request for that location.</li>
 </ul>
 </li>
 </ul>
