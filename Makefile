@@ -168,3 +168,11 @@ help:
 .PHONY: wikipedia-indexer
 wikipedia-indexer:
 	$(POETRY) run merino-jobs $@ ${job}
+
+.PHONY: health-check-prod
+health-check-prod:  ##  Check the production suggest endpoint with some test queries
+	./scripts/quic.sh prod
+
+.PHONY: health-check-staging
+health-check-staging:  ##  Check the staging suggest endpoint with some test queries
+	./scripts/quic.sh staging
