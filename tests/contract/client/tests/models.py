@@ -81,17 +81,17 @@ class ResponseContent(BaseModel):
 class VersionResponseContent(BaseModel):
     """Class that contains __version__ endpoint data populated by version.json file."""
 
-    source: HttpUrl
-    version: str
-    commit: str
-    build: str
+    source: HttpUrl = Field(...)
+    version: str = Field(...)
+    commit: str = Field(...)
+    build: str = Field(...)
 
 
 class Response(BaseModel):
     """Class that holds information about an HTTP response from Merino."""
 
     status_code: int
-    content: ResponseContent | Any
+    content: Any
 
 
 class Step(BaseModel):

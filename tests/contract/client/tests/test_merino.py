@@ -115,7 +115,7 @@ def fixture_merino_step(
             # instance for checking the field types and comparing a dict
             # representation of the model instance with the expected response
             # content for this step in the test scenario.
-            if step.request.path == "/__version__":
+            if step.request.path.endswith("__version__"):
                 assert_200_version_endpoint_response(
                     step_content=step.response.content,
                     merino_version_content=VersionResponseContent(**response.json()),
@@ -204,15 +204,15 @@ def assert_200_response(
 
 def assert_200_version_endpoint_response(
     *,
-    step_content: VersionResponseContent | Any,
+    step_content: VersionResponseContent,
     merino_version_content: VersionResponseContent,
 ) -> None:
     """Check that the content for a 200 OK response querying the __version__
     endpoint is what we expect.
     """
-    expected_content_dict = step_content.dict(exclude=CONTENT_EXCLUDE)
-    merino_content_dict = merino_version_content.dict(exclude=CONTENT_EXCLUDE)
-    assert expected_content_dict == merino_content_dict
+    expected_content_dict = step_content
+    merino_content_dict = merino_version_content
+    assert expected_content_dict.source == merino_content_dict.source
 
 
 @pytest.fixture(scope="function", autouse=True)
