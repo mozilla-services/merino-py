@@ -5,8 +5,11 @@
 """Module for test configurations for the tests directory."""
 
 from logging import LogRecord
+from typing import Any
 
+import aiodogstatsd
 import pytest
+from pytest_mock import MockerFixture
 
 from tests.types import FilterCaplogFixture
 
@@ -22,3 +25,9 @@ def fixture_filter_caplog() -> FilterCaplogFixture:
         return [record for record in records if record.name == logger_name]
 
     return filter_caplog
+
+
+@pytest.fixture(name="statsd_mock")
+def fixture_statsd_mock(mocker: MockerFixture) -> Any:
+    """Create a StatsD client mock object for testing."""
+    return mocker.MagicMock(spec=aiodogstatsd.Client)

@@ -9,6 +9,7 @@ from merino.cache.none import NoCacheAdapter
 from merino.cache.redis import RedisAdapter
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
+from merino.metrics import get_metrics_client
 from merino.providers.adm.backends.fake_backends import FakeAdmBackend
 from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
 from merino.providers.adm.provider import Provider as AdmProvider
@@ -60,6 +61,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 )  # type: ignore [arg-type]
                 if setting.cache == "redis"
                 else NoCacheAdapter(),
+                metrics_client=get_metrics_client(),
                 score=setting.score,
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,

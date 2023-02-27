@@ -119,3 +119,22 @@ log inspection interfaces.
 
   **Example**:
   `merino.suggestions-per.provider.wikipedia`
+
+### AccuWeather
+
+The weather provider records additional metrics.
+
+- `merino.providers.accuweather.query.cache.fetch` - A timer to measure the duration (in ms) of
+  looking up a weather report in the cache.
+- `merino.providers.accuweather.query.cache.hit` - A counter to measure the number of times a
+  cached weather report is available.
+- `merino.providers.accuweather.query.cache.miss` - A counter to measure the number of times a
+  weather report isn't in the cache.
+- `merino.providers.accuweather.query.backend.get` - A timer to measure the duration (in ms) of a
+  request for a weather report from the backend. This metric isn't recorded for cache hits.
+- `merino.providers.accuweather.query.cache.store` - A timer to measure the duration (in ms) of
+  saving a weather report from the backend to the cache. This metric isn't recorded for cache hits.
+- `merino.providers.accuweather.query.cache.error` - A counter to measure the number of times the
+  cache store returned an error when fetching or storing a weather report. This should be 0 in
+  normal operation. In case of an error, the logs will include a `WARNING` with the full error
+  message.

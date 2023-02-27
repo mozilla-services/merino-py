@@ -4,18 +4,10 @@
 
 """Unit tests for the metrics.py module."""
 
-import aiodogstatsd
 import pytest
-from pytest_mock import MockerFixture
 
 from merino.featureflags import FeatureFlags
 from merino.metrics import Client
-
-
-@pytest.fixture(name="statsd_mock")
-def fixture_statsd_mock(mocker: MockerFixture):
-    """Return mock for the StatsD client."""
-    return mocker.MagicMock(spec_set=aiodogstatsd.Client)
 
 
 @pytest.fixture(name="metrics_client")
