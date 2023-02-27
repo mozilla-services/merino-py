@@ -19,13 +19,16 @@ Follow the steps bellow to execute the load tests locally:
 
 The following variables can be set in `tests\load\docker-compose.yml`:
 
-| Environment Variable      | Node(s)         | Description                                                                               |
-|---------------------------|-----------------|-------------------------------------------------------------------------------------------|
-| LOAD_TESTS__LOGGING_LEVEL | master & worker | Level for the logger in the load tests as an int (`10` for `DEBUG`, `20` for `INFO` etc.) |
-| KINTO__SERVER_URL         | master & worker | Server URL of the Kinto instance containing suggestions                                   |
-| KINTO__BUCKET             | master & worker | Kinto bucket with the suggestions                                                         |
-| KINTO__COLLECTION         | master & worker | Kinto collection with the suggestions                                                     |
-| (*OPTIONAL*) LOCUST_CSV   | master          | Store current request stats to files in CSV format with given prefix (Example: `merino`)  |
+| Environment Variable                             | Node(s)         | Description                                                                               |
+|--------------------------------------------------|-----------------|-------------------------------------------------------------------------------------------|
+| LOAD_TESTS__LOGGING_LEVEL                        | master & worker | Level for the logger in the load tests as an int (`10` for `DEBUG`, `20` for `INFO` etc.) |
+| KINTO__SERVER_URL                                | master & worker | Server URL of the Kinto instance containing suggestions                                   |
+| KINTO__BUCKET                                    | master & worker | Kinto bucket with the suggestions                                                         |
+| KINTO__COLLECTION                                | master & worker | Kinto collection with the suggestions                                                     |
+| MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH | master & worker | The minimum character limit set for long domain suggestion indexing                       |
+| MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT    | master & worker | The minimum character limit set for short domain suggestion indexing                      |
+| MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT  | master & worker | File path to the json file of domains                                                     |
+| (*OPTIONAL*) LOCUST_CSV                          | master          | Store current request stats to files in CSV format with given prefix (Example: `merino`)  |
 
 #### 2. Host Locust via Docker
 
