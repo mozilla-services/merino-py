@@ -75,7 +75,7 @@ async def test_query_success(
             full_keyword="firefox accounts",
             title="Mozilla Firefox Accounts",
             url="https://example.org/target/mozfirefoxaccounts",
-            impression_url=None,
+            impression_url="https://example.org/impression/mozilla",
             click_url="https://example.org/click/mozilla",
             provider="adm",
             advertiser="Example.org",
