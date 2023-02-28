@@ -115,15 +115,16 @@ def fixture_merino_step(
             # instance for checking the field types and comparing a dict
             # representation of the model instance with the expected response
             # content for this step in the test scenario.
-            if step.request.path.endswith("__version__"):
+
+            if step.request.path == "/__version__":
                 assert_200_version_endpoint_response(
-                    step_content=step.response.content,
+                    step_content=step.response.content,  # type: ignore
                     merino_version_content=VersionResponseContent(**response.json()),
                 )
                 return
             else:
                 assert_200_response(
-                    step_content=step.response.content,
+                    step_content=step.response.content,  # type: ignore
                     merino_content=ResponseContent(**response.json()),
                     fetch_kinto_icon_url=fetch_kinto_icon_url,
                 )
@@ -137,7 +138,7 @@ def fixture_merino_step(
 
         # If the request to Merino was not successful, load the response
         # content into a Python dict and compare against the value in the
-        # response model
+        # response model.
         assert response.json() == step.response.content
 
     return merino_step

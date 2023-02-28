@@ -5,7 +5,7 @@
 """Contract tests client models."""
 
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Extra, Field, HttpUrl
@@ -91,7 +91,7 @@ class Response(BaseModel):
     """Class that holds information about an HTTP response from Merino."""
 
     status_code: int
-    content: Any
+    content: ResponseContent | VersionResponseContent
 
 
 class Step(BaseModel):
