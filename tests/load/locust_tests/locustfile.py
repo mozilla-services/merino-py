@@ -167,7 +167,7 @@ class MerinoUser(HttpUser):
     @task(weight=10)
     def adm_suggestions(self) -> None:
         """Send multiple requests for AdM queries."""
-        queries: list[str] = choice(ADM_QUERIES)  # nosec
+        queries: list[str] = choice(ADM_QUERIES + WIKIPEDIA_QUERIES)  # nosec
         providers: str = "adm"
 
         for query in queries:
@@ -178,21 +178,12 @@ class MerinoUser(HttpUser):
         """Send multiple requests for Dynamic Wikipedia queries."""
         # TODO Replace query source with ElasticSearch Source, not RemoteSettings
         queries: list[str] = choice(WIKIPEDIA_QUERIES)  # nosec
-        providers: str = "wikipedia"  # TODO double check providers name
+        providers: str = "wikipedia"
 
         for query in queries:
             request_suggestions(self.client, query, providers)
 
-    @task(weight=10)
-    def wikipedia_suggestions(self) -> None:
-        """Send multiple requests for Wikipedia queries."""
-        queries: list[str] = choice(WIKIPEDIA_QUERIES)  # nosec
-        providers: str = "adm"
-
-        for query in queries:
-            request_suggestions(self.client, query, providers)
-
-    @task(weight=70)
+    @task(weight=80)
     def faker_suggestions(self) -> None:
         """Send multiple requests for random queries."""
         # This produces a query between 2 and 4 random words

@@ -81,10 +81,9 @@ The load tests can be executed from the [contextual-services-test-eng cloud shel
 * The `setup_k8s.sh` file, located in the `tests\load` directory, contains shell 
 commands to **create** a GKE cluster, **setup** an existing GKE cluster or **delete** 
 a GKE cluster
-  * Execute the following from the `tests\load` directory, to make the file 
-    executable:
+  * Execute the following from the root directory, to make the file executable:
     ```shell
-    chmod +x setup_k8s.sh
+    chmod +x tests/load/setup_k8s.sh
     ```
 
 #### 3. Create the GCP Cluster
@@ -93,7 +92,7 @@ a GKE cluster
   initiate the process of creating a cluster, setting up the env variables and 
   building the docker image
   ```shell
-  ./setup_k8s.sh
+  ./tests/load/setup_k8s.sh
   ```
 * The cluster creation process will take some time. It is considered complete, once 
   an external IP is assigned to the `locust_master` node. Monitor the assignment via
@@ -183,7 +182,7 @@ will stop automatically.
 
 Execute the `setup_k8s.sh` file and select the **delete** option
 ```shell
-./setup_k8s.sh
+./tests/load/setup_k8s.sh
 ```
 
 [cloud]: https://console.cloud.google.com/home/dashboard?q=search&referrer=search&project=spheric-keel-331521&cloudshell=false
