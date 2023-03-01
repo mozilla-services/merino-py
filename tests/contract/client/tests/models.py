@@ -5,10 +5,10 @@
 """Contract tests client models."""
 
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Literal, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, Extra, Field, HttpUrl
 
 
 class Service(Enum):
@@ -78,11 +78,20 @@ class ResponseContent(BaseModel):
     request_id: Optional[UUID] = Field(...)
 
 
+class VersionResponseContent(BaseModel):
+    """Class that contains __version__ endpoint data populated by version.json file."""
+
+    source: HttpUrl = Field(...)
+    version: str = Field(...)
+    commit: str = Field(...)
+    build: str = Field(...)
+
+
 class Response(BaseModel):
     """Class that holds information about an HTTP response from Merino."""
 
     status_code: int
-    content: ResponseContent | Any
+    content: ResponseContent | VersionResponseContent
 
 
 class Step(BaseModel):

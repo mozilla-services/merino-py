@@ -24,6 +24,7 @@ from models import (
     Service,
     Step,
     Suggestion,
+    VersionResponseContent,
 )
 from requests import Response as RequestsResponse
 
@@ -114,12 +115,22 @@ def fixture_merino_step(
             # instance for checking the field types and comparing a dict
             # representation of the model instance with the expected response
             # content for this step in the test scenario.
-            assert_200_response(
-                step_content=step.response.content,
-                merino_content=ResponseContent(**response.json()),
-                fetch_kinto_icon_url=fetch_kinto_icon_url,
-            )
-            return
+
+            if step.request.path == "/__version__":
+                assert_200_version_endpoint_response(
+                    # type ignored to appease mypy, does not infer 2 possible types.
+                    step_content=step.response.content,  # type: ignore
+                    merino_version_content=VersionResponseContent(**response.json()),
+                )
+                return
+            else:
+                assert_200_response(
+                    # type ignored to appease mypy, does not infer 2 possible types.
+                    step_content=step.response.content,  # type: ignore
+                    merino_content=ResponseContent(**response.json()),
+                    fetch_kinto_icon_url=fetch_kinto_icon_url,
+                )
+                return
 
         if response.status_code == 204:
             # If the response status code is 204 No Content, load the response content
@@ -192,6 +203,19 @@ def assert_200_response(
             expected_suggestion = expected_suggestions_by_id[suggestion_id(suggestion)]
             assert suggestion.icon == expected_suggestion.icon
             continue
+
+
+def assert_200_version_endpoint_response(
+    *,
+    step_content: VersionResponseContent,
+    merino_version_content: VersionResponseContent,
+) -> None:
+    """Check that the content for a 200 OK response querying the __version__
+    endpoint is what we expect.
+    """
+    expected_content_dict = step_content
+    merino_content_dict = merino_version_content
+    assert expected_content_dict.source == merino_content_dict.source
 
 
 @pytest.fixture(scope="function", autouse=True)
