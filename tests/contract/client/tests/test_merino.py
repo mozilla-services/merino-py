@@ -118,12 +118,14 @@ def fixture_merino_step(
 
             if step.request.path == "/__version__":
                 assert_200_version_endpoint_response(
+                    # type ignored to appease mypy, does not infer 2 possible ResponseContent types.
                     step_content=step.response.content,  # type: ignore
                     merino_version_content=VersionResponseContent(**response.json()),
                 )
                 return
             else:
                 assert_200_response(
+                    # type ignored to appease mypy, does not infer 2 possible ResponseContent types.
                     step_content=step.response.content,  # type: ignore
                     merino_content=ResponseContent(**response.json()),
                     fetch_kinto_icon_url=fetch_kinto_icon_url,
