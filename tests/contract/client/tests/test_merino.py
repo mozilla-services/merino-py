@@ -228,6 +228,7 @@ def assert_200_version_endpoint_response(
         sha_pattern = re.compile(r"\b[0-9a-f]{40}\b")
         assert re.match(sha_pattern, merino_content_dict.commit)
         assert HttpUrl(merino_content_dict.build)
+        raise Exception("CIRCLECI TEST")
 
 
 @pytest.fixture(scope="function", autouse=True)
