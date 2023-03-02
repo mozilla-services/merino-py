@@ -118,6 +118,16 @@ virtual environment, set environment variables, expose the Merino and Kinto API 
 in the `docker-compose.yml` and use a pytest command. It is recommended to execute the
 tests within a Python virtual environment to prevent dependency cross contamination.
 
+Local execution can be expedited by simply running `make contract-tests`, which essentially
+creates the Docker containers with kinto, merino and the test client and runs the test
+scenarios against them.
+
+Be aware that when making changes to the client code, you should stop and remove the contract
+test containers and networks and delete the client before running the tests again. Otherwise,
+you may not see your changes reflected. This can be done by running the following two commands:
+1. `make-contract-tests-clean` see [Makefile][makefile]
+2. `docker rmi client`
+
 1. Create a Virtual Environment
 
     The [Developer documentation for working on Merino][merino_dev_docs], provides
@@ -189,3 +199,4 @@ tests within a Python virtual environment to prevent dependency cross contaminat
 [contract_tests_readme]: ../README.md
 [merino_dev_docs]: ../../../docs/dev/index.md
 [pytest-k]: https://docs.pytest.org/en/latest/example/markers.html#using-k-expr-to-select-tests-based-on-their-name
+[makefile]: ../../../Makefile
