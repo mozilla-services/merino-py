@@ -265,6 +265,24 @@ suggestions returned per provider (per request).</p>
 <code>merino.suggestions-per.provider.wikipedia</code></p>
 </li>
 </ul>
+<h3 id="accuweather"><a class="header" href="#accuweather">AccuWeather</a></h3>
+<p>The weather provider records additional metrics.</p>
+<ul>
+<li><code>merino.providers.accuweather.query.cache.fetch</code> - A timer to measure the duration (in ms) of
+looking up a weather report in the cache.</li>
+<li><code>merino.providers.accuweather.query.cache.hit</code> - A counter to measure the number of times a
+cached weather report is available.</li>
+<li><code>merino.providers.accuweather.query.cache.miss</code> - A counter to measure the number of times a
+weather report isn't in the cache.</li>
+<li><code>merino.providers.accuweather.query.backend.get</code> - A timer to measure the duration (in ms) of a
+request for a weather report from the backend. This metric isn't recorded for cache hits.</li>
+<li><code>merino.providers.accuweather.query.cache.store</code> - A timer to measure the duration (in ms) of
+saving a weather report from the backend to the cache. This metric isn't recorded for cache hits.</li>
+<li><code>merino.providers.accuweather.query.cache.error</code> - A counter to measure the number of times the
+cache store returned an error when fetching or storing a weather report. This should be 0 in
+normal operation. In case of an error, the logs will include a <code>WARNING</code> with the full error
+message.</li>
+</ul>
 
                     </main>
 
