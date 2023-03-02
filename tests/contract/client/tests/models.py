@@ -81,10 +81,10 @@ class ResponseContent(BaseModel):
 class VersionResponseContent(BaseModel):
     """Class that contains __version__ endpoint data populated by version.json file."""
 
-    source: HttpUrl = Field(...)
-    version: str = Field(...)
-    commit: str = Field(...)
-    build: str = Field(...)
+    source: HttpUrl
+    version: str
+    commit: str
+    build: HttpUrl | str
 
 
 class Response(BaseModel):
