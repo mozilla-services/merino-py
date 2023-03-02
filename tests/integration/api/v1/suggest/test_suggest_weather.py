@@ -36,12 +36,13 @@ def fixture_backend_mock(mocker: MockerFixture) -> Any:
 
 
 @pytest.fixture(name="providers")
-def fixture_providers(backend_mock: Any) -> Providers:
+def fixture_providers(backend_mock: Any, statsd_mock: Any) -> Providers:
     """Define providers for this module which are injected automatically."""
     return {
         "weather": Provider(
             backend=backend_mock,
             cache=NoCacheAdapter(),
+            metrics_client=statsd_mock,
             score=0.3,
             name="weather",
             query_timeout_sec=0.2,

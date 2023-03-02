@@ -52,11 +52,12 @@ def fixture_redis_mock(mocker: MockerFixture) -> Any:
 
 
 @pytest.fixture(name="provider")
-def fixture_provider(backend_mock: Any, redis_mock: Any) -> Provider:
+def fixture_provider(backend_mock: Any, redis_mock: Any, statsd_mock: Any) -> Provider:
     """Create a weather Provider for test."""
     return Provider(
         backend=backend_mock,
         cache=RedisAdapter(redis_mock),
+        metrics_client=statsd_mock,
         name="weather",
         score=0.3,
         query_timeout_sec=0.2,
@@ -178,7 +179,9 @@ async def test_query_error(
 
 @pytest.mark.asyncio
 async def test_query_cached_weather_report(
+    mocker: MockerFixture,
     redis_mock: Any,
+    statsd_mock: Any,
     backend_mock: Any,
     provider: Provider,
     geolocation: Location,
@@ -247,6 +250,7 @@ async def test_query_cached_weather_report(
     cache_key = provider.cache_key_for_weather_report(geolocation)
     assert cache_key is not None
     redis_mock.get.assert_called_once_with(cache_key)
+    statsd_mock.increment.assert_called_once_with("providers.weather.query.cache.miss")
     backend_mock.get_weather_report.assert_called_once()
     redis_mock.set.assert_called_once_with(
         cache_key, report.json().encode("utf-8"), ex=10
@@ -254,6 +258,7 @@ async def test_query_cached_weather_report(
     assert cache_keys[cache_key] is not None
 
     redis_mock.reset_mock()
+    statsd_mock.reset_mock()
     backend_mock.reset_mock()
 
     cached_suggestions: list[BaseSuggestion] = await provider.query(
@@ -262,13 +267,16 @@ async def test_query_cached_weather_report(
     assert cached_suggestions == expected_suggestions
 
     redis_mock.get.assert_called_once_with(cache_key)
+    statsd_mock.increment.assert_called_once_with("providers.weather.query.cache.hit")
     backend_mock.get_weather_report.assert_not_called()
     redis_mock.set.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_query_cached_no_weather_report(
+    mocker: MockerFixture,
     redis_mock: Any,
+    statsd_mock: Any,
     backend_mock: Any,
     provider: Provider,
     geolocation: Location,
@@ -301,11 +309,13 @@ async def test_query_cached_no_weather_report(
     cache_key = provider.cache_key_for_weather_report(geolocation)
     assert cache_key is not None
     redis_mock.get.assert_called_once_with(cache_key)
+    statsd_mock.increment.assert_called_once_with("providers.weather.query.cache.miss")
     backend_mock.get_weather_report.assert_called_once()
     redis_mock.set.assert_called_once_with(cache_key, b"{}", ex=10)
     assert cache_keys[cache_key] is not None
 
     redis_mock.reset_mock()
+    statsd_mock.reset_mock()
     backend_mock.reset_mock()
 
     cached_suggestions: list[BaseSuggestion] = await provider.query(
@@ -314,13 +324,16 @@ async def test_query_cached_no_weather_report(
     assert cached_suggestions == []
 
     redis_mock.get.assert_called_once_with(cache_key)
+    statsd_mock.increment.assert_called_once_with("providers.weather.query.cache.hit")
     backend_mock.get_weather_report.assert_not_called()
     redis_mock.set.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_query_with_bad_cache_entry(
+    mocker: MockerFixture,
     redis_mock: Any,
+    statsd_mock: Any,
     backend_mock: Any,
     provider: Provider,
     geolocation: Location,
@@ -392,6 +405,7 @@ async def test_query_with_bad_cache_entry(
     assert suggestions == expected_suggestions
 
     redis_mock.get.assert_called_once_with(cache_key)
+    statsd_mock.increment.assert_called_once_with("providers.weather.query.cache.error")
     backend_mock.get_weather_report.assert_called_once()
     redis_mock.set.assert_called_once_with(
         cache_key, report.json().encode("utf-8"), ex=10
@@ -400,7 +414,9 @@ async def test_query_with_bad_cache_entry(
 
 @pytest.mark.asyncio
 async def test_query_redis_unavailable(
+    mocker: MockerFixture,
     redis_mock: Any,
+    statsd_mock: Any,
     backend_mock: Any,
     provider: Provider,
     geolocation: Location,
@@ -460,3 +476,9 @@ async def test_query_redis_unavailable(
     redis_mock.get.assert_called_once()
     backend_mock.get_weather_report.assert_called_once()
     redis_mock.set.assert_called_once()
+    statsd_mock.increment.assert_has_calls(
+        [
+            mocker.call("providers.weather.query.cache.error"),
+            mocker.call("providers.weather.query.cache.error"),
+        ]
+    )

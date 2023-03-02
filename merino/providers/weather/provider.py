@@ -5,6 +5,8 @@ import logging
 from datetime import timedelta
 from typing import Any, Optional
 
+import aiodogstatsd
+
 from merino.cache.protocol import CacheAdapter
 from merino.exceptions import (
     BackendError,
@@ -37,6 +39,7 @@ class Provider(BaseProvider):
 
     backend: WeatherBackend
     cache: CacheAdapter
+    metrics_client: aiodogstatsd.Client
     score: float
     cached_report_ttl_sec: int
 
@@ -44,6 +47,7 @@ class Provider(BaseProvider):
         self,
         backend: WeatherBackend,
         cache: CacheAdapter,
+        metrics_client: aiodogstatsd.Client,
         score: float,
         name: str,
         query_timeout_sec: float,
@@ -53,6 +57,7 @@ class Provider(BaseProvider):
     ) -> None:
         self.backend = backend
         self.cache = cache
+        self.metrics_client = metrics_client
         self.score = score
         self._name = name
         self._query_timeout_sec = query_timeout_sec
@@ -86,40 +91,46 @@ class Provider(BaseProvider):
             - `CacheMissError` if there's no entry in the cache for this location.
             - `CacheEntryError` if the cached weather report can't be deserialized.
         """
-        cache_key: Optional[str] = self.cache_key_for_weather_report(geolocation)
-        if not cache_key:
-            raise CacheMissError
+        with self.metrics_client.timeit(f"providers.{self.name}.query.cache.fetch"):
+            cache_key: Optional[str] = self.cache_key_for_weather_report(geolocation)
+            if not cache_key:
+                raise CacheMissError
 
-        cache_value: Optional[bytes] = await self.cache.get(cache_key)
-        if not cache_value:
-            raise CacheMissError
+            cache_value: Optional[bytes] = await self.cache.get(cache_key)
+            if not cache_value:
+                raise CacheMissError
 
-        try:
-            weather_report_dict = json.loads(cache_value)
-            if not weather_report_dict:
-                return None
-            return WeatherReport.parse_obj(weather_report_dict)
-        except ValueError as exc:
-            # `ValueError` is the common superclass of `json.JSONDecodeError` and
-            # `pydantic.ValidationError`.
-            raise CacheEntryError("Failed to parse cache entry") from exc
+            try:
+                weather_report_dict = json.loads(cache_value)
+                if not weather_report_dict:
+                    return None
+                return WeatherReport.parse_obj(weather_report_dict)
+            except ValueError as exc:
+                # `ValueError` is the common superclass of `json.JSONDecodeError` and
+                # `pydantic.ValidationError`.
+                raise CacheEntryError("Failed to parse cache entry") from exc
 
     async def store_cached_weather_report(
         self, geolocation: Location, weather_report: Optional[WeatherReport]
     ):
         """Store a cached weather report, or the absence of one, for a location."""
-        cache_key: Optional[str] = self.cache_key_for_weather_report(geolocation)
-        if not cache_key:
-            return
+        with self.metrics_client.timeit(f"providers.{self.name}.query.cache.store"):
+            cache_key: Optional[str] = self.cache_key_for_weather_report(geolocation)
+            if not cache_key:
+                return
 
-        # If the request to the backend succeeded, but didn't return a report, we want to
-        # negatively cache an empty value, so that subsequent requests for that location won't make
-        # additional backend calls every time. This case is separate from a transient backend
-        # error, which isn't negatively cached.
-        cache_value = weather_report.json().encode("utf-8") if weather_report else b"{}"
-        await self.cache.set(
-            cache_key, cache_value, ttl=timedelta(seconds=self.cached_report_ttl_sec)
-        )
+            # If the request to the backend succeeded, but didn't return a report, we want to
+            # negatively cache an empty value, so that subsequent requests for that location won't
+            # make additional backend calls every time. This case is separate from a transient
+            # backend error, which isn't negatively cached.
+            cache_value = (
+                weather_report.json().encode("utf-8") if weather_report else b"{}"
+            )
+            await self.cache.set(
+                cache_key,
+                cache_value,
+                ttl=timedelta(seconds=self.cached_report_ttl_sec),
+            )
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide weather suggestions."""
@@ -128,14 +139,26 @@ class Provider(BaseProvider):
 
         try:
             weather_report = await self.fetch_cached_weather_report(geolocation)
+            self.metrics_client.increment(f"providers.{self.name}.query.cache.hit")
         except (CacheAdapterError, CacheEntryError, CacheMissError) as exc:
-            if not isinstance(exc, CacheMissError):
+            if isinstance(exc, CacheMissError):
+                self.metrics_client.increment(f"providers.{self.name}.query.cache.miss")
+            else:
+                self.metrics_client.increment(
+                    f"providers.{self.name}.query.cache.error"
+                )
                 logger.warning(f"Failed to load cached weather report: {exc}")
             try:
-                weather_report = await self.backend.get_weather_report(geolocation)
+                with self.metrics_client.timeit(
+                    f"providers.{self.name}.query.backend.get"
+                ):
+                    weather_report = await self.backend.get_weather_report(geolocation)
                 try:
                     await self.store_cached_weather_report(geolocation, weather_report)
                 except CacheAdapterError as exc:
+                    self.metrics_client.increment(
+                        f"providers.{self.name}.query.cache.error"
+                    )
                     logger.warning(f"Failed to store cached weather report: {exc}")
             except BackendError as backend_error:
                 logger.warning(backend_error)
