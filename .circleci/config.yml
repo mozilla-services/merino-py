@@ -153,13 +153,13 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker:
-            docker_layer_caching: true
+          docker_layer_caching: true
       - write-version
       - store_artifacts:
-            path: version.json
+          path: version.json
       - run:
-            name: Build image
-            command: make docker-build
+          name: Build image
+          command: make docker-build
       - run:
           name: Save image into workspace
           command: |
@@ -178,10 +178,15 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-            at: /tmp/workspace
+          at: /tmp/workspace
       - run:
-            name: Load Docker image from workspace
-            command: docker load -i /tmp/workspace/merinopy.tar.gz
+          name: Load Docker image from workspace
+          command: docker load -i /tmp/workspace/merinopy.tar.gz
+      - run:
+          name: Contract tests pre-clean
+          command: |
+            make contract-tests-clean
+            docker rmi client
       - run:
           name: Contract tests
           command: |
@@ -194,7 +199,7 @@ jobs:
       - checkout
       - skip-if-do-not-deploy
       - attach_workspace:
-            at: /tmp/workspace
+          at: /tmp/workspace
       - setup_remote_docker
       - run:
           name: Load Docker image from workspace
@@ -222,11 +227,11 @@ jobs:
       - checkout
       - skip-if-do-not-deploy
       - attach_workspace:
-            at: /tmp/workspace
+          at: /tmp/workspace
       - setup_remote_docker
       - run:
-            name: Load Docker image from workspace
-            command: docker load -i /tmp/workspace/merinopy.tar.gz
+          name: Load Docker image from workspace
+          command: docker load -i /tmp/workspace/merinopy.tar.gz
       - dockerhub-login
       - run:
           name: Push to Docker Hub (prod)
