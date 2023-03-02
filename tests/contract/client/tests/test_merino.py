@@ -4,7 +4,6 @@
 
 """Contract tests client."""
 
-import logging
 import os
 import re
 import time
@@ -44,8 +43,6 @@ SUGGESTION_EXCLUDE: set[str] = {"icon"}
 
 
 StepFunction = Callable[[Step], None]
-
-logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session", name="merino_url")
@@ -123,7 +120,6 @@ def fixture_merino_step(
             # content for this step in the test scenario.
 
             if step.request.path == "/__version__":
-                logger.warning("PATH")
                 assert_200_version_endpoint_response(
                     # type ignored to appease mypy, does not infer 2 possible types.
                     step_content=step.response.content,  # type: ignore
@@ -223,10 +219,8 @@ def assert_200_version_endpoint_response(
     expected_content_dict = step_content
     merino_content_dict = merino_version_content
     assert expected_content_dict.source == merino_content_dict.source
-    logger.warning("NO CI")
-    logger.warning(merino_content_dict)
+
     if os.environ.get("CIRCLECI"):
-        logger.warning("IN CI")
         # The version data is constructed from the build of merino, including
         # the commit hash, a build url to circleci and then an empty value for version.
         # Source is identitical between local and production.

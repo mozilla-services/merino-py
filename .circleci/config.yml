@@ -183,11 +183,6 @@ jobs:
           name: Load Docker image from workspace
           command: docker load -i /tmp/workspace/merinopy.tar.gz
       - run:
-          name: var check
-          command: |
-            echo "testing CI variable exposure"
-            echo ${CIRCLECI}
-      - run:
           name: Contract tests
           command: |
             sudo chown 1000:1000 tests/contract/kinto-attachments
