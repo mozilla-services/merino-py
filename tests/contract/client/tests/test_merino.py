@@ -10,7 +10,6 @@ import time
 from typing import Any, Callable
 
 import pytest
-from pydantic import HttpUrl
 import requests
 from kinto import (
     KintoEnvironment,
@@ -29,6 +28,7 @@ from models import (
     Suggestion,
     VersionResponseContent,
 )
+from pydantic import HttpUrl
 from requests import Response as RequestsResponse
 
 # We need to exclude the following fields on the response level:
