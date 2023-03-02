@@ -1,5 +1,9 @@
 """Utilities for wikipedia indexer job"""
+import csv
+from io import StringIO
 from logging import Logger
+
+import requests
 
 
 class ProgressReporter:
@@ -37,3 +41,15 @@ class ProgressReporter:
                     "total_size": self.total,
                 },
             )
+
+
+def create_blocklist(blocklist_file_url: str) -> set[str]:
+    """Create blocklist from a file url."""
+    categories = set()
+    block_list = requests.get(blocklist_file_url).text
+    file_like_io = StringIO(block_list)
+    csv_reader = csv.DictReader(file_like_io, delimiter=",")
+    for row in csv_reader:
+        categories.add(row["name"])
+
+    return categories

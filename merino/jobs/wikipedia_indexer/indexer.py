@@ -26,15 +26,21 @@ class Indexer:
     index_version: str
     file_manager: FileManager
     client: Elasticsearch
+    blocklist: set[str]
 
     def __init__(
-        self, index_version: str, file_manager: FileManager, client: Elasticsearch
+        self,
+        index_version: str,
+        blocklist: set[str],
+        file_manager: FileManager,
+        client: Elasticsearch,
     ):
         self.queue = []
         self.index_version = index_version
         self.file_manager = file_manager
         self.es_client = client
         self.suggestion_builder = Builder(index_version)
+        self.blocklist = blocklist
 
     def index_from_export(self, total_docs: int, elasticsearch_alias: str):
         """Primary indexer method.
@@ -50,7 +56,7 @@ class Indexer:
         logger.info("Ensuring index exists", extra={"index": index_name})
 
         if self._create_index(index_name):
-            prior: Optional[Mapping[str, Any]] = None
+            index_line: Optional[Mapping[str, Any]] = None
             logger.info("Start indexing", extra={"index": index_name})
             reporter = ProgressReporter(
                 logger, "Indexing", latest.name, index_name, total_docs
@@ -58,12 +64,20 @@ class Indexer:
             indexed = 0
             for i, line in enumerate(self.file_manager._stream_from_gcs(latest)):
                 doc = json.loads(line)
-                if prior and (i + 1) % 2 == 0:
-                    self._enqueue(index_name, (prior, doc))
+                categories: set[str] = set(doc.get("category", []))
+
+                if index_line and categories & self.blocklist:
+                    # Takes the intersection of the categories and blocklist.
+                    # If there exists some shared categories with the blocklist,
+                    # then skip processing this document.
+                    index_line = None
+
+                elif index_line and (i + 1) % 2 == 0:
+                    self._enqueue(index_name, (index_line, doc))
                     indexed += self._index_docs(False)
-                    prior = None
+                    index_line = None
                 else:
-                    prior = doc
+                    index_line = doc
 
                 # report percent completed
                 reporter.report(indexed)

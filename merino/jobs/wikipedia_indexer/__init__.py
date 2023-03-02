@@ -7,6 +7,7 @@ from elasticsearch import Elasticsearch
 from merino.config import settings as config
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.indexer import Indexer
+from merino.jobs.wikipedia_indexer.util import create_blocklist
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +44,13 @@ def index(
     elasticsearch_cloud_id: str = job_settings.es_cloud_id,
     elasticsearch_api_key: str = job_settings.es_api_key,
     elasticsearch_alias: str = job_settings.es_alias,
+    blocklist_file_url: str = job_settings.blocklist_file_url,
     index_version: str = version_option,
     total_docs: int = job_settings.total_docs,
     gcs_path: str = gcs_path_option,
     gcp_project: str = gcp_project_option,
 ):
-    """Index file from gcs to elasticsearch"""
+    """Index file from GCS to Elasticsearch"""
     es_client = Elasticsearch(
         cloud_id=elasticsearch_cloud_id,
         api_key=elasticsearch_api_key,
@@ -57,7 +59,14 @@ def index(
 
     file_manager = FileManager(gcs_path, gcp_project, "")
 
-    indexer = Indexer(index_version, file_manager, es_client)
+    blocklist = create_blocklist(blocklist_file_url)
+
+    indexer = Indexer(
+        index_version,
+        blocklist,
+        file_manager,
+        es_client,
+    )
     indexer.index_from_export(total_docs, elasticsearch_alias)
 
 
@@ -67,7 +76,7 @@ def copy_export(
     gcs_path: str = gcs_path_option,
     gcp_project: str = gcp_project_option,
 ):
-    """Copy file from wikimedia to gcs"""
+    """Copy file from Wikimedia to GCS"""
     file_manager = FileManager(gcs_path, gcp_project, export_base_url)
 
     logger.info(

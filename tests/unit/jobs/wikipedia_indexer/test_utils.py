@@ -6,7 +6,23 @@ import logging
 import pytest
 from pytest import LogCaptureFixture
 
-from merino.jobs.wikipedia_indexer.util import ProgressReporter
+from merino.jobs.wikipedia_indexer.util import ProgressReporter, create_blocklist
+
+
+@pytest.fixture()
+def blocklist_csv_text():
+    """Fixture for CSV contents for the blocklist."""
+    with open("tests/data/blocklist.csv") as f:
+        return f.read()
+
+
+def test_create_blocklist(requests_mock, blocklist_csv_text: str):
+    """Test that the blocklist is created from CSV file."""
+    url = "https://localhost"
+    requests_mock.get(url, text=blocklist_csv_text)
+
+    categories = create_blocklist(url)
+    assert {"Child abuse", "Orgasm", "Paraphilias"} == categories
 
 
 @pytest.mark.parametrize(
