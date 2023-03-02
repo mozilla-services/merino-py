@@ -188,11 +188,6 @@ jobs:
             echo "testing CI variable exposure"
             echo ${CIRCLECI}
       - run:
-          name: Contract tests pre-clean
-          command: |
-            make contract-tests-clean
-            docker rmi client
-      - run:
           name: Contract tests
           command: |
             sudo chown 1000:1000 tests/contract/kinto-attachments
