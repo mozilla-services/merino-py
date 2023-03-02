@@ -172,7 +172,7 @@ jobs:
             - merinopy.tar.gz
   contract-tests:
     machine:
-      docker_layer_caching: true
+      docker_layer_caching: false
       image: ubuntu-2004:202101-01 # Ubuntu 20.04, Docker v20.10.2, Docker Compose v1.28.2
     working_directory: ~/merino
     steps:
@@ -182,6 +182,11 @@ jobs:
       - run:
           name: Load Docker image from workspace
           command: docker load -i /tmp/workspace/merinopy.tar.gz
+      - run:
+          name: var check
+          command: |
+            echo "testing CI variable exposure"
+            echo ${CIRCLECI}
       - run:
           name: Contract tests pre-clean
           command: |
