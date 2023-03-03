@@ -24,7 +24,7 @@ RUN python -m pip install --upgrade pip
 # Setup poetry and extract requirements
 RUN python -m pip install --no-cache-dir --quiet poetry
 WORKDIR /tmp
-COPY ./pyproject.toml ./poetry.lock /tmp/
+COPY ./tests/load/pyproject.toml ./tests/load/poetry.lock /tmp/
 RUN poetry export --no-interaction --with dev --output requirements.txt --without-hashes
 
 WORKDIR /
@@ -33,10 +33,12 @@ RUN python -m pip install -r /tmp/requirements.txt
 RUN useradd --create-home locust
 WORKDIR /home/locust
 
-COPY locust_tests ./
+COPY ./dev ./dev
+COPY ./merino ./merino
+COPY ./tests/load/locust_tests ./tests/load/locust_tests
 
 # Expose ports for the web UI and the locust master
 EXPOSE 8089 5557
 
 USER locust
-ENTRYPOINT ["locust"]
+ENTRYPOINT ["locust", "-f", "tests/load/locust_tests/locustfile.py"]

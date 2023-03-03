@@ -4,19 +4,29 @@
 
 """Load test."""
 
+import asyncio
 import logging
 import os
 from random import choice, randint
-from typing import Any
+from typing import Any, Tuple
 
 import faker
-import kinto_http
-from client_info import DESKTOP_FIREFOX, LOCALES
-from kinto_client import download_suggestions
 from locust import HttpUser, events, task
 from locust.clients import HttpSession
 from locust.runners import MasterRunner
-from suggest_models import ResponseContent
+from pydantic import BaseModel
+
+from merino.providers.adm.backends.protocol import SuggestionContent
+from merino.providers.adm.backends.remotesettings import (
+    RemoteSettingsBackend,
+    RemoteSettingsError,
+)
+from tests.load.locust_tests.client_info import DESKTOP_FIREFOX, LOCALES
+from tests.load.locust_tests.suggest_models import ResponseContent
+
+# Type definitions
+KintoRecords = list[dict[str, Any]]
+QueriesList = list[list[str]]
 
 LOGGING_LEVEL = os.environ["LOAD_TESTS__LOGGING_LEVEL"]
 
@@ -30,9 +40,6 @@ SUGGEST_API: str = "/api/v1/suggest"
 # affecting the client's Suggest experience
 CLIENT_VARIANTS: str = ""
 
-# Optional. A comma-separated list of providers to use for this request.
-PROVIDERS: str = ""
-
 # See RemoteSettingsGlobalSettings in
 # https://github.com/mozilla-services/merino/blob/main/merino-settings/src/lib.rs
 KINTO__SERVER_URL = os.environ["KINTO__SERVER_URL"]
@@ -42,8 +49,9 @@ KINTO__SERVER_URL = os.environ["KINTO__SERVER_URL"]
 KINTO__BUCKET = os.environ["KINTO__BUCKET"]
 KINTO__COLLECTION = os.environ["KINTO__COLLECTION"]
 
-# This will be populated on each worker and
-RS_SUGGESTIONS: list[dict] = []
+# This will be populated on each worker
+ADM_QUERIES: QueriesList = []
+WIKIPEDIA_QUERIES: QueriesList = []
 
 
 @events.test_start.add_listener
@@ -52,30 +60,63 @@ def on_locust_test_start(environment, **kwargs):
     if not isinstance(environment.runner, MasterRunner):
         return
 
-    kinto_client = kinto_http.Client(
-        server_url=KINTO__SERVER_URL,
-        bucket=KINTO__BUCKET,
-        collection=KINTO__COLLECTION,
-    )
+    try:
+        adm_queries, wikipedia_queries = get_adm_queries(
+            server=KINTO__SERVER_URL, collection=KINTO__COLLECTION, bucket=KINTO__BUCKET
+        )
 
-    kinto_suggestions = download_suggestions(kinto_client)
+        logger.info(f"Download {len(adm_queries+wikipedia_queries)} queries for AdM")
 
-    suggestions = [suggestion.dict() for suggestion in kinto_suggestions.values()]
+    except (RemoteSettingsError, ValueError):
+        logger.error("Failed to gather query data. Stopping Test!")
+        quit(1)
 
-    logger.info("download_suggestions: Downloaded %d suggestions", len(suggestions))
-
+    query_data: QueryData = QueryData(adm=adm_queries, wikipedia=wikipedia_queries)
     for worker in environment.runner.clients:
         environment.runner.send_message(
-            "store_suggestions",
-            data=suggestions,
-            client_id=worker,
+            "store_suggestions", dict(query_data), client_id=worker
         )
+
+
+def get_adm_queries(
+    server: str, collection: str, bucket: str
+) -> Tuple[QueriesList, QueriesList]:
+    """Get query strings for use in testing the AdM Provider.
+
+    Args:
+        server: Server URL of the Kinto instance containing suggestions
+        collection: Kinto bucket with the suggestions
+        bucket: Kinto collection with the suggestions
+    Returns:
+        Tuple[QueriesList, QueriesList]: Lists of queries to use with the ADM provider
+    Raises:
+        ValueError: If 'server', 'collection' or 'bucket' parameters are None or
+                    empty.
+        BackendError: Failed request to Remote Settings.
+    """
+    backend: RemoteSettingsBackend = RemoteSettingsBackend(server, collection, bucket)
+    content: SuggestionContent = asyncio.run(backend.fetch())
+
+    adm_query_dict: dict[int, list[str]] = {}
+    wikipedia_query_dict: dict[int, list[str]] = {}
+    for query, (result_id, fkw_index) in content.suggestions.items():
+        result: dict[str, Any] = content.results[result_id]
+        if result["advertiser"] == "Wikipedia":
+            wikipedia_query_dict.setdefault(result_id, []).append(query)
+        else:
+            adm_query_dict.setdefault(result_id, []).append(query)
+
+    return list(adm_query_dict.values()), list(wikipedia_query_dict.values())
 
 
 def store_suggestions(environment, msg, **kwargs):
     """Modify the module scoped list with suggestions in-place."""
     logger.info("store_suggestions: Storing %d suggestions", len(msg.data))
-    RS_SUGGESTIONS[:] = msg.data
+
+    query_data: QueryData = QueryData(**msg.data)
+
+    ADM_QUERIES[:] = query_data.adm
+    WIKIPEDIA_QUERIES[:] = query_data.wikipedia
 
 
 @events.init.add_listener
@@ -85,15 +126,23 @@ def on_locust_init(environment, **kwargs):
         environment.runner.register_message("store_suggestions", store_suggestions)
 
 
-def request_suggestions(client: HttpSession, query: str) -> None:
-    """Request suggestions from Merino for the given query string."""
+def request_suggestions(
+    client: HttpSession, query: str, providers: str | None = None
+) -> None:
+    """Request suggestions from Merino for the given query string.
+
+    Args:
+        client: An HTTP session client
+        query: Query string
+        providers: Optional. A comma-separated list of providers to use for this request
+    """
     params: dict[str, Any] = {"q": query}
 
     if CLIENT_VARIANTS:
         params = {**params, "client_variants": CLIENT_VARIANTS}
 
-    if PROVIDERS:
-        params = {**params, "providers": PROVIDERS}
+    if providers:
+        params = {**params, "providers": providers}
 
     headers: dict[str, str] = {  # nosec
         "Accept-Language": choice(LOCALES),
@@ -105,7 +154,8 @@ def request_suggestions(client: HttpSession, query: str) -> None:
         params=params,
         headers=headers,
         catch_response=True,
-        name=SUGGEST_API,  # group all requests under the 'name' entry
+        # group all requests under the 'name' entry
+        name=f"{SUGGEST_API}{(f'?providers={providers}' if providers else '')}",
     ) as response:
         # This contextmanager returns a response that provides the ability to
         # manually control if an HTTP request should be marked as successful or
@@ -120,6 +170,13 @@ def request_suggestions(client: HttpSession, query: str) -> None:
         ResponseContent(**response.json())
 
 
+class QueryData(BaseModel):
+    """Class that holds query data for targeting Merino providers"""
+
+    adm: QueriesList
+    wikipedia: QueriesList
+
+
 class MerinoUser(HttpUser):
     """User that sends requests to the Merino API."""
 
@@ -130,21 +187,34 @@ class MerinoUser(HttpUser):
 
         # By this time suggestions are expected to be stored on the worker
         logger.debug(
-            "user will be sending queries based on the %d stored suggestions",
-            len(RS_SUGGESTIONS),
+            f"user will be sending queries based on the following number of "
+            f"stored suggestions: "
+            f"adm: {len(ADM_QUERIES)}, "
+            f"wikipedia: {len(WIKIPEDIA_QUERIES)}"
         )
 
         return super().on_start()
 
     @task(weight=10)
-    def rs_suggestions(self) -> None:
-        """Send multiple requests for Remote Settings queries."""
-        suggestion = choice(RS_SUGGESTIONS)  # nosec
+    def adm_suggestions(self) -> None:
+        """Send multiple requests for AdM queries."""
+        queries: list[str] = choice(ADM_QUERIES + WIKIPEDIA_QUERIES)  # nosec
+        providers: str = "adm"
 
-        for query in suggestion["keywords"]:
-            request_suggestions(self.client, query)
+        for query in queries:
+            request_suggestions(self.client, query, providers)
 
-    @task(weight=90)
+    @task(weight=10)
+    def dynamic_wikipedia_suggestions(self) -> None:
+        """Send multiple requests for Dynamic Wikipedia queries."""
+        # TODO Replace query source with ElasticSearch Source, not RemoteSettings
+        queries: list[str] = choice(WIKIPEDIA_QUERIES)  # nosec
+        providers: str = "wikipedia"
+
+        for query in queries:
+            request_suggestions(self.client, query, providers)
+
+    @task(weight=80)
     def faker_suggestions(self) -> None:
         """Send multiple requests for random queries."""
         # This produces a query between 2 and 4 random words
@@ -157,7 +227,7 @@ class MerinoUser(HttpUser):
 
             request_suggestions(self.client, query)
 
-    @task(weight=1)
+    @task(weight=0)
     def wikifruit_suggestions(self) -> None:
         """Send multiple requests for random WikiFruit queries."""
         # These queries are supported by the WikiFruit provider

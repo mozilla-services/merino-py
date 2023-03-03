@@ -31,6 +31,7 @@ def fixture_adm_suggestion_content() -> SuggestionContent:
                 "id": 2,
                 "url": "https://example.org/target/mozfirefoxaccounts",
                 "click_url": "https://example.org/click/mozilla",
+                "impression_url": "https://example.org/impression/mozilla",
                 "iab_category": "5 - Education",
                 "icon": "01",
                 "advertiser": "Example.org",

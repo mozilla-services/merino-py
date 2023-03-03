@@ -24,7 +24,7 @@ The following variables can be set in `tests\load\docker-compose.yml`:
 | LOAD_TESTS__LOGGING_LEVEL | master & worker | Level for the logger in the load tests as an int (`10` for `DEBUG`, `20` for `INFO` etc.) |
 | KINTO__SERVER_URL         | master & worker | Server URL of the Kinto instance containing suggestions                                   |
 | KINTO__BUCKET             | master & worker | Kinto bucket with the suggestions                                                         |
-| KINTO__COLLECTION         | master & worker | collection with the suggestions                                                           |
+| KINTO__COLLECTION         | master & worker | Kinto collection with the suggestions                                                     |
 | (*OPTIONAL*) LOCUST_CSV   | master          | Store current request stats to files in CSV format with given prefix (Example: `merino`)  |
 
 #### 2. Host Locust via Docker
@@ -81,10 +81,9 @@ The load tests can be executed from the [contextual-services-test-eng cloud shel
 * The `setup_k8s.sh` file, located in the `tests\load` directory, contains shell 
 commands to **create** a GKE cluster, **setup** an existing GKE cluster or **delete** 
 a GKE cluster
-  * Execute the following from the `tests\load` directory, to make the file 
-    executable:
+  * Execute the following from the root directory, to make the file executable:
     ```shell
-    chmod +x setup_k8s.sh
+    chmod +x tests/load/setup_k8s.sh
     ```
 
 #### 3. Create the GCP Cluster
@@ -93,7 +92,7 @@ a GKE cluster
   initiate the process of creating a cluster, setting up the env variables and 
   building the docker image
   ```shell
-  ./setup_k8s.sh
+  ./tests/load/setup_k8s.sh
   ```
 * The cluster creation process will take some time. It is considered complete, once 
   an external IP is assigned to the `locust_master` node. Monitor the assignment via
@@ -183,7 +182,7 @@ will stop automatically.
 
 Execute the `setup_k8s.sh` file and select the **delete** option
 ```shell
-./setup_k8s.sh
+./tests/load/setup_k8s.sh
 ```
 
 [cloud]: https://console.cloud.google.com/home/dashboard?q=search&referrer=search&project=spheric-keel-331521&cloudshell=false

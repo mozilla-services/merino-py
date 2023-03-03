@@ -10,7 +10,9 @@ services:
 
   locust_master:
     image: locust
-    build: .
+    build:
+      context: ../../
+      dockerfile: ./tests/load/Dockerfile
     container_name: locust_master
     depends_on:
       - merino
@@ -24,7 +26,9 @@ services:
 
   locust_worker:
     image: locust
-    build: .
+    build:
+      context: ../../
+      dockerfile: ./tests/load/Dockerfile
     depends_on:
       - merino
     environment:
