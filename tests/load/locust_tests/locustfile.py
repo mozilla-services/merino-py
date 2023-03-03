@@ -65,8 +65,8 @@ MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT: int = int(
 
 # This will be populated on each worker
 ADM_QUERIES: QueriesList = []
-WIKIPEDIA_QUERIES: QueriesList = []
 TOP_PICKS_QUERIES: QueriesList = []
+WIKIPEDIA_QUERIES: QueriesList = []
 
 
 @events.test_start.add_listener
@@ -84,7 +84,7 @@ def on_locust_test_start(environment, **kwargs):
         logger.info(f"Download {len(query_data.adm)} queries for AdM")
         logger.info(f"Download {len(query_data.wikipedia)} queries for Wikipedia")
 
-        query_data.top_picks = get_top_pick_queries(
+        query_data.top_picks = get_top_picks_queries(
             top_picks_file_path=MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH,
             query_char_limit=MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT,
             firefox_char_limit=MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT,
@@ -133,7 +133,7 @@ def get_adm_queries(
     return list(adm_query_dict.values()), list(wikipedia_query_dict.values())
 
 
-def get_top_pick_queries(
+def get_top_picks_queries(
     top_picks_file_path: str, query_char_limit: int, firefox_char_limit: int
 ) -> QueriesList:
     """Get query strings for use in testing the Top Picks Provider.
