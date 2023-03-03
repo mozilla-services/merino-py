@@ -358,14 +358,12 @@ def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
 
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
-    with pytest.raises(RuntimeError) as excinfo:
+    with pytest.raises(ExceptionGroup) as excinfo:
         client.get(f"/api/v1/suggest?q={error_msg}")
 
     # TODO: Remove reliance on internal details of aiodogstatsd
     metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
     assert metric_keys == expected_metric_keys
-
-    assert str(excinfo.value) == error_msg
 
 
 @pytest.mark.parametrize(

@@ -3,6 +3,8 @@ import asyncio
 import logging
 from timeit import default_timer as timer
 
+import aiodogstatsd
+
 from merino import metrics
 from merino.providers.base import BaseProvider
 from merino.providers.manager import load_providers
@@ -27,11 +29,9 @@ async def init_providers() -> None:
     init_metric = "providers.initialize"
     client = metrics.get_metrics_client()
     with client.timeit(init_metric):
-        wrapped_tasks = [
-            client.timeit_task(p.initialize(), f"{init_metric}.{provider_name}")
-            for provider_name, p in providers.items()
-        ]
-        await asyncio.gather(*wrapped_tasks)
+        async with asyncio.TaskGroup() as tg:
+            for provider_name, p in providers.items():
+                tg.create_task(init_provider(client, f"{init_metric}.{p.name}", p))
         default_providers.extend(
             [p for p in providers.values() if p.enabled_by_default]
         )
@@ -39,6 +39,14 @@ async def init_providers() -> None:
             "Provider initialization completed",
             extra={"providers": [*providers.keys()], "elapsed": timer() - start},
         )
+
+
+async def init_provider(
+    metrics_client: aiodogstatsd.Client, metric: str, p: BaseProvider
+) -> None:
+    """..."""
+    with metrics_client.timeit(metric):
+        await p.initialize()
 
 
 async def shutdown_providers() -> None:

@@ -39,6 +39,7 @@ SUPPORTED_METHODS: Final[list[str]] = [
     "histogram",
     "distribution",
     "timing",
+    "timeit",
     "timeit_task",
 ]
 

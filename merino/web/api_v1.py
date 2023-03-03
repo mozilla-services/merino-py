@@ -1,8 +1,8 @@
 """Merino V1 API"""
+import asyncio
 import logging
 from asyncio import Task
 from collections import Counter
-from functools import partial
 from itertools import chain
 
 from asgi_correlation_id.context import correlation_id
@@ -16,7 +16,6 @@ from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.utils import task_runner
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 logger = logging.getLogger(__name__)
@@ -90,22 +89,22 @@ async def suggest(
     )
 
     lookups: list[Task] = []
-    for p in search_from:
-        task = metrics_client.timeit_task(
-            p.query(srequest), f"providers.{p.name}.query"
-        )
-        # `timeit_task()` doesn't support task naming, need to set the task name manually
-        task.set_name(p.name)
-        lookups.append(task)
+    try:
+        async with asyncio.timeout(
+            max(
+                (provider.query_timeout_sec for provider in search_from),
+                default=QUERY_TIMEOUT_SEC,
+            )
+        ):
+            async with asyncio.TaskGroup() as tg:
+                for p in search_from:
+                    lookups.append(
+                        tg.create_task(query_with_metrics(metrics_client, p, srequest))
+                    )
+    except asyncio.TimeoutError:
+        logger.warning("Timeout triggered in the task runner")
+        pass
 
-    completed_tasks, _ = await task_runner.gather(
-        lookups,
-        timeout=max(
-            (provider.query_timeout_sec for provider in search_from),
-            default=QUERY_TIMEOUT_SEC,
-        ),
-        timeout_cb=partial(task_runner.metrics_timeout_handler, metrics_client),
-    )
     suggestions = list(
         chain.from_iterable(
             # TODO: handle exceptions. `task.result()` will throw if the task was
@@ -113,7 +112,7 @@ async def suggest(
             # an HTTP 500 response for unhandled exceptions, but we will want better
             # exception handling for query tasks in the future.
             task.result()
-            for task in completed_tasks
+            for task in lookups
         )
     )
 
@@ -130,6 +129,19 @@ async def suggest(
         else [],
     )
     return JSONResponse(content=jsonable_encoder(response))
+
+
+async def query_with_metrics(
+    metrics_client: Client, provider: BaseProvider, srequest: SuggestionRequest
+) -> list[BaseSuggestion]:
+    """..."""
+    try:
+        with metrics_client.timeit(f"providers.{provider.name}.query"):
+            return await provider.query(srequest)
+    except asyncio.CancelledError:
+        logger.warning(f"Cancelling the task: {provider.name} due to timeout")
+        metrics_client.increment(f"providers.{provider.name}.query.timeout")
+        return []
 
 
 def emit_suggestions_per_metrics(

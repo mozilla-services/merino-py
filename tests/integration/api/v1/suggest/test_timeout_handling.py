@@ -176,7 +176,7 @@ def test_timedout_providers(
     assert len(result["suggestions"]) == expected_suggestion_count
 
     # Check logs for the timed out query(-ies)
-    records = filter_caplog(caplog.records, "merino.utils.task_runner")
+    records = filter_caplog(caplog.records, "merino.web.api_v1")
 
     assert {
         record.__dict__["msg"] for record in records
