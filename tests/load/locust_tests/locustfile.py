@@ -49,7 +49,7 @@ KINTO__SERVER_URL = os.environ["KINTO__SERVER_URL"]
 KINTO__BUCKET = os.environ["KINTO__BUCKET"]
 KINTO__COLLECTION = os.environ["KINTO__COLLECTION"]
 
-# This will be populated on each worker and
+# This will be populated on each worker
 ADM_QUERIES: QueriesList = []
 WIKIPEDIA_QUERIES: QueriesList = []
 

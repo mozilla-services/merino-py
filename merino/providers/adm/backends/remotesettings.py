@@ -1,5 +1,6 @@
 """A thin wrapper around the Remote Settings client."""
 import asyncio
+from asyncio import Task
 from typing import Any, Literal, cast
 from urllib.parse import urljoin
 
@@ -152,24 +153,27 @@ class RemoteSettingsBackend:
             "offline-expansion-data", records
         ) or self.filter_records("data", records)
 
-        async def extend_suggestions_lst(url: str, lst: list[KintoSuggestion]):
-            lst.extend(await self.get_attachment(url))
-
-        suggestions: list[KintoSuggestion] = []
+        tasks: list[Task] = []
         try:
             async with asyncio.TaskGroup() as task_group:
                 for record in data_records:
-                    task_group.create_task(
-                        extend_suggestions_lst(
-                            url=urljoin(
-                                base=attachment_host,
-                                url=record["attachment"]["location"],
-                            ),
-                            lst=suggestions,
+                    tasks.append(
+                        task_group.create_task(
+                            self.get_attachment(
+                                url=urljoin(
+                                    base=attachment_host,
+                                    url=record["attachment"]["location"],
+                                )
+                            )
                         )
                     )
         except ExceptionGroup as error_group:
             raise RemoteSettingsError(error_group.exceptions)
+
+        suggestions: list[KintoSuggestion] = []
+        for task in tasks:
+            suggestions.extend(await task)
+
         return suggestions
 
     async def get_attachment(self, url: str) -> list[KintoSuggestion]:
