@@ -188,7 +188,7 @@ jobs:
             sudo chown 1000:1000 tests/contract/kinto-attachments
             make run-contract-tests
           environment:
-            MERINO_ENV: "ci"
+            TEST_ENV: "ci"
   docker-image-publish-stage:
     docker:
       - image: cimg/base:2022.08
