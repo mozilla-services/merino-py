@@ -218,7 +218,7 @@ def assert_200_version_endpoint_response(
     """
     expected_content_dict = step_content
     merino_content_dict = merino_version_content
-    assert expected_content_dict.source != merino_content_dict.source
+    assert expected_content_dict.source == merino_content_dict.source
 
     if os.environ.get("TEST_ENV") == "ci":
         # The version data is constructed from the build of merino, including
