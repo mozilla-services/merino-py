@@ -483,6 +483,24 @@ as a floating point number. Defaults to 0.23.</li>
 </ul>
 </li>
 </ul>
+<h3 id="elasticsearch-index-policy"><a class="header" href="#elasticsearch-index-policy">Elasticsearch Index Policy</a></h3>
+<p>We want to ensure that the index expire after 3 months,
+so we need to add a lifecycle policy for this deletion to happen.</p>
+<p>The command to run in Kibana to add this policy:</p>
+<pre><code>PUT _ilm/policy/enwiki_policy
+{
+  &quot;policy&quot;: {
+    &quot;phases&quot;: {
+      &quot;delete&quot;: {
+        &quot;min_age&quot;: &quot;90d&quot;,
+        &quot;actions&quot;: {
+          &quot;delete&quot;: {}
+        }
+      }
+    }
+  }
+}
+</code></pre>
 
                     </main>
 
