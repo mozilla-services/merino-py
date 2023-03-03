@@ -185,7 +185,7 @@ def test_index_from_export(file_manager, es_client, blocklist):
         "page_id": 1000,
     }
 
-    file_manager._stream_from_gcs.return_value = [
+    file_manager.stream_from_gcs.return_value = [
         json.dumps(operation),
         json.dumps(document),
     ]
@@ -243,7 +243,7 @@ def test_index_from_export_with_content_filter(file_manager, es_client, blocklis
         "category": ["meme"],
     }
 
-    file_manager._stream_from_gcs.return_value = [
+    file_manager.stream_from_gcs.return_value = [
         json.dumps(operation0),
         json.dumps(document0),
         json.dumps(operation_filtered_out),

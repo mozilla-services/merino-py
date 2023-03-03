@@ -104,10 +104,6 @@ class FileManager:
 
         return latest_gcs
 
-    def stream_latest_from_gcs(self) -> Generator:
-        """Stream latest file from GCS"""
-        yield from self._stream_from_gcs(self.get_latest_gcs())
-
     def _stream_dump_to_gcs(self, dump_url: str):
         """Write latest to GCS without storing locally"""
         # 40 MB chunk_size. This is the default Blob chunk size.
@@ -127,7 +123,7 @@ class FileManager:
                     completed = writer.write(chunk)
                     reporter.report(completed)
 
-    def _stream_from_gcs(self, blob: Blob) -> Generator:
+    def stream_from_gcs(self, blob: Blob) -> Generator:
         """Streaming reader from GCS"""
         reader: BlobReader
         with blob.open("rb") as reader:

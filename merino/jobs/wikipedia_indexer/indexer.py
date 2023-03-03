@@ -2,7 +2,7 @@
 import json
 import logging
 import time
-from typing import Any, Mapping, Optional
+from typing import Any, Generator, Mapping
 
 from elasticsearch import Elasticsearch
 from google.cloud.storage import Blob
@@ -13,6 +13,26 @@ from merino.jobs.wikipedia_indexer.suggestion import Builder
 from merino.jobs.wikipedia_indexer.util import ProgressReporter
 
 logger = logging.getLogger(__name__)
+
+
+def stream_bulk(
+    stream: Generator[str, None, None]
+) -> Generator[tuple[str, str], None, None]:
+    """Aggregate each bulk component into a single yield. Each bulk component consists of:
+    1. First line as the operator (ie. `index`)
+    2. Second line as the document data for the operator.
+
+    Since we're only expecting index lines, each bulk component will always consist of 2 lines.
+    """
+    operation = None
+    for row in stream:
+        if operation is None:
+            operation = row
+        else:
+            # NOTE: Mypy thinks that the following line is unreachable,
+            # even though they actually are reachable.
+            yield operation, row  # type: ignore
+            operation = None
 
 
 class Indexer:
@@ -56,28 +76,20 @@ class Indexer:
         logger.info("Ensuring index exists", extra={"index": index_name})
 
         if self._create_index(index_name):
-            index_line: Optional[Mapping[str, Any]] = None
             logger.info("Start indexing", extra={"index": index_name})
             reporter = ProgressReporter(
                 logger, "Indexing", latest.name, index_name, total_docs
             )
             indexed = 0
-            for i, line in enumerate(self.file_manager._stream_from_gcs(latest)):
-                doc = json.loads(line)
+            gcs_stream = self.file_manager.stream_from_gcs(latest)
+            for (operator, document) in stream_bulk(gcs_stream):
+                op = json.loads(operator)
+                doc = json.loads(document)
                 categories: set[str] = set(doc.get("category", []))
 
-                if index_line and categories & self.blocklist:
-                    # Takes the intersection of the categories and blocklist.
-                    # If there exists some shared categories with the blocklist,
-                    # then skip processing this document.
-                    index_line = None
-
-                elif index_line and (i + 1) % 2 == 0:
-                    self._enqueue(index_name, (index_line, doc))
+                if not self._should_filter(categories):
+                    self._enqueue(index_name, (op, doc))
                     indexed += self._index_docs(False)
-                    index_line = None
-                else:
-                    index_line = doc
 
                 # report percent completed
                 reporter.report(indexed)
@@ -101,6 +113,14 @@ class Indexer:
             )
         else:
             raise Exception("Could not create the index")
+
+    def _should_filter(self, categories: set[str]) -> bool:
+        """Return True if we do not want to index this document."""
+        # Takes the intersection of the categories and blocklist.
+        # If there exists some shared categories with the blocklist,
+        # then skip processing this document.
+        overlapping_categories = categories & self.blocklist
+        return overlapping_categories != set()
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)
