@@ -220,7 +220,7 @@ def assert_200_version_endpoint_response(
     merino_content_dict = merino_version_content
     assert expected_content_dict.source == merino_content_dict.source
 
-    if os.environ.get("CIRCLECI"):
+    if os.environ.get("MERINO_ENV") == "ci":
         # The version data is constructed from the build of merino, including
         # the commit hash, a build url to circleci and then an empty value for version.
         # Source is identitical between local and production.
