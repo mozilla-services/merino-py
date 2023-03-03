@@ -218,17 +218,18 @@ def assert_200_version_endpoint_response(
     """
     expected_content_dict = step_content
     merino_content_dict = merino_version_content
+    # Source is identitical between local dev, stage and production.
     assert expected_content_dict.source == merino_content_dict.source
 
     if os.environ.get("MERINO_ENV"):
-        # The version data is constructed from the build of merino, including
-        # the commit hash, a build url to circleci and then an empty value for version.
-        # Source is identitical between local and production.
+        # The data in the version file is built during the CIRCLECI stage. The local dev
+        # version contains placeholders. Therefore, we cannot specify the expected output
+        # in scenarios, so checks made here to verify that a sha has been written, version
+        # is empty and the validator worked as expected to parse build as HttpUrl.
         assert merino_content_dict.version == ""
         sha_pattern = re.compile(r"\b[0-9a-f]{40}\b")
         assert re.match(sha_pattern, merino_content_dict.commit)
         assert type(merino_content_dict.build) is HttpUrl
-        raise Exception("CIRCLECI TEST")
 
 
 @pytest.fixture(scope="function", autouse=True)
