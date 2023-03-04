@@ -201,10 +201,29 @@ jobs:
           command: docker load -i /tmp/workspace/merinopy.tar.gz
       - dockerhub-login
       - run:
-          name: Push to Docker Hub
+          name: Push to Docker Hub & check for Load Test flag
+          # The Load Tests are triggered though [load test: (abort|warn)] text being
+          # included in the merge commit when merging the PR to 'main'. Examples:
+          # feat: Add feature ABC [load test: warn]
+          # feat: Add feature XYZ [load test: abort]
           command: |
             if [ "${CIRCLE_BRANCH}" == "main" ]; then
               DOCKER_TAG="${CIRCLE_SHA1}"
+            fi
+
+            if git log -1 "$CIRCLE_SHA1" | grep -q '\[load test: warn\]'; then
+                echo "Load test requested. Slack warning will be output if test fails. Stage deploy will proceed."
+                DOCKER_TAG="stage-loadtest-warn-"${CIRCLE_SHA1}"
+            fi
+
+            if git log -1 "$CIRCLE_SHA1" | grep -q '\[load test: abort\]'; then
+                echo "Load test requested. Stage deploy will halt if load test fails."
+                DOCKER_TAG="stage-loadtest-abort-"${CIRCLE_SHA1}"
+
+                circleci-agent step halt
+
+                # Will not deploy, just cancel the rest of jobs of the workflow.
+                # See API detail: https://circleci.com/docs/api/v2/index.html#operation/cancelWorkflow
             fi
 
             if [ -n "${DOCKER_TAG}" ]; then
