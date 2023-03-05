@@ -22,6 +22,9 @@ Before submitting a PR:
   pass and the code has been reviewed.
 - Ideally, your patch should include new tests that cover your changes. It is your and
   your reviewer's responsibility to ensure your patch includes adequate tests.
+- If making documentation changes or minor revisions, you may wish to avoid deployment. Please see the [Preventing deployment via [do not deploy]][release-process] documentation.
+- If running load testing, please see the [load testing documentation][load-testing-docs] documentation on local execution or adding the opt-in annotations to your commit. Ex. [load test: abort|warn]
+- For more information on understanding the release process, please see relevant documentation contained in the [release-process.md][release-process] documentation.
 
 When submitting a PR:
 - You agree to license your code under the project's open source license
@@ -101,3 +104,5 @@ BREAKING CHANGE: This patch requires developer to lower expectations about
 
 Closes #314, #975
 ```
+[release-process]: /docs/dev/release-process.md
+[load-testing-docs]: /tests/load/README.md

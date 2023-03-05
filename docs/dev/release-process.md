@@ -31,6 +31,10 @@ While the `[do not deploy]` can be anywhere in the title, it is recommended to p
 
 The deployment pipeline will analyze the message of the merge commit (which will contain the PR title) and make a decision based on it.
 
+
+## Load Testing Opt-In [load test: (abort|warn)]
+Load testing can be run as a part of the deployment process. In order to initiate, you have to add tagging to your commit messages in the form of `[load test: (abort|warn)]`. Abort will prevent deployment should the load testing fail while warn will simply warn via Slack and continue deployment. For detailed specifics on load testing and this convention, please see the relevant documentation: [load-testing-docs]: /tests/load/README.md].
+
 ## Releasing to production
 Developers with write access to the Merino repository can initiate a deployment to production after a Pull-Request on the Merino GitHub repository is merged to the `main` branch.
 While any developer with write access can trigger the deployment to production, the _expectation_ is that individual(s) who authored and merged the Pull-Request should do so, as they are the ones most familiar with their changes and who can tell, by looking at the data, if anything looks anomalous.
@@ -59,3 +63,4 @@ don't panic and follow the instructions below:
 
 [incident_docs]: https://mozilla-hub.atlassian.net/wiki/spaces/MIR/overview
 [contributing]: ../../CONTRIBUTING.md
+[load-testing-docs]: /tests/load/README.md
