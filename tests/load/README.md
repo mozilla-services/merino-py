@@ -21,7 +21,7 @@ The warn flag will output a Slack warning should the load test fail, but still a
 Ex. `feat: Add feature XYZ [load test: abort]`.
 
 The commit tag signals load test instructions to Jenkins by modifying the Docker image tag name. The convention looks as follows:
-`^(?P<environment>stage|prod)(?:-(?P<task>\w+)-(?P<onfailure>warn|abort))?-(?P<commit>[a-z0-9]+)$`
+`^(?P<environment>stage|prod)(?:-(?P<task>\w+)-(?P<onfailure>warn|abort))?-(?P<commit>[a-z0-9]+)$`.
 
 ## Local Execution
 

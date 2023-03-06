@@ -33,7 +33,8 @@ The deployment pipeline will analyze the message of the merge commit (which will
 
 
 ## Load Testing Opt-In [load test: (abort|warn)]
-Load testing can be run as a part of the deployment process. In order to initiate, you have to add tagging to your commit messages in the form of `[load test: (abort|warn)]`. Abort will prevent deployment should the load testing fail while warn will simply warn via Slack and continue deployment. For detailed specifics on load testing and this convention, please see the relevant documentation: [load-testing-docs]: /tests/load/README.md].
+Load testing can be run locally or as a part of the deployment process. In order to initiate, you have to add tagging to your commit messages in the form of
+`[load test: (abort|warn)]`. Abort will prevent deployment should the load testing fail while warn will simply warn via Slack and continue deployment. For detailed specifics on load testing and this convention, please see the relevant documentation: [load-testing-docs]: /tests/load/README.md].
 
 ## Releasing to production
 Developers with write access to the Merino repository can initiate a deployment to production after a Pull-Request on the Merino GitHub repository is merged to the `main` branch.

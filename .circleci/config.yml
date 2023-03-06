@@ -202,10 +202,7 @@ jobs:
       - dockerhub-login
       - run:
           name: Push to Docker Hub & check for Load Test flag
-          # The Load Tests are triggered though [load test: (abort|warn)] text being
-          # included in the merge commit when merging the PR to 'main'. Examples:
-          # feat: Add feature ABC [load test: warn]
-          # feat: Add feature XYZ [load test: abort]
+          # The Load Tests are triggered though [load test: (abort|warn)] text in git comment.
           command: |
             if [ "${CIRCLE_BRANCH}" == "main" ]; then
               DOCKER_TAG="${CIRCLE_SHA1}"
