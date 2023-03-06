@@ -124,8 +124,7 @@ def fixture_merino_step(
                 and type(step.response.content) == VersionResponseContent
             ):
                 assert_200_version_endpoint_response(
-                    # type ignored to appease mypy, does not infer 2 possible types.
-                    step_content=step.response.content,  # type: ignore
+                    step_content=step.response.content,
                     merino_version_content=VersionResponseContent(**response.json()),
                 )
 
