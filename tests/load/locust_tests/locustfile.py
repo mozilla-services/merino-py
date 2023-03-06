@@ -21,6 +21,8 @@ from merino.providers.adm.backends.remotesettings import (
     RemoteSettingsBackend,
     RemoteSettingsError,
 )
+from merino.providers.top_picks.backends.protocol import TopPicksData
+from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
 from tests.load.locust_tests.client_info import DESKTOP_FIREFOX, LOCALES
 from tests.load.locust_tests.suggest_models import ResponseContent
 
@@ -49,8 +51,21 @@ KINTO__SERVER_URL = os.environ["KINTO__SERVER_URL"]
 KINTO__BUCKET = os.environ["KINTO__BUCKET"]
 KINTO__COLLECTION = os.environ["KINTO__COLLECTION"]
 
+# See Ops - TOP PICKS
+# https://github.com/mozilla-services/merino-py/blob/main/docs/ops.md#top-picks-provider
+MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH: str = os.environ[
+    "MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH"
+]
+MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT: int = int(
+    int(os.environ["MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT"])
+)
+MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT: int = int(
+    int(os.environ["MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT"])
+)
+
 # This will be populated on each worker
 ADM_QUERIES: QueriesList = []
+TOP_PICKS_QUERIES: QueriesList = []
 WIKIPEDIA_QUERIES: QueriesList = []
 
 
@@ -60,18 +75,27 @@ def on_locust_test_start(environment, **kwargs):
     if not isinstance(environment.runner, MasterRunner):
         return
 
+    query_data: QueryData = QueryData()
     try:
-        adm_queries, wikipedia_queries = get_adm_queries(
+        query_data.adm, query_data.wikipedia = get_adm_queries(
             server=KINTO__SERVER_URL, collection=KINTO__COLLECTION, bucket=KINTO__BUCKET
         )
 
-        logger.info(f"Download {len(adm_queries+wikipedia_queries)} queries for AdM")
+        logger.info(f"Download {len(query_data.adm)} queries for AdM")
+        logger.info(f"Download {len(query_data.wikipedia)} queries for Wikipedia")
 
-    except (RemoteSettingsError, ValueError):
+        query_data.top_picks = get_top_picks_queries(
+            top_picks_file_path=MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH,
+            query_char_limit=MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT,
+            firefox_char_limit=MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT,
+        )
+
+        logger.info(f"Download {len(query_data.top_picks)} queries for Top Picks")
+
+    except (TopPicksError, RemoteSettingsError, ValueError):
         logger.error("Failed to gather query data. Stopping Test!")
         quit(1)
 
-    query_data: QueryData = QueryData(adm=adm_queries, wikipedia=wikipedia_queries)
     for worker in environment.runner.clients:
         environment.runner.send_message(
             "store_suggestions", dict(query_data), client_id=worker
@@ -109,6 +133,41 @@ def get_adm_queries(
     return list(adm_query_dict.values()), list(wikipedia_query_dict.values())
 
 
+def get_top_picks_queries(
+    top_picks_file_path: str, query_char_limit: int, firefox_char_limit: int
+) -> QueriesList:
+    """Get query strings for use in testing the Top Picks Provider.
+
+    Args:
+        top_picks_file_path: File path to the json file of domains
+        query_char_limit: The minimum character limit set for long domain suggestion
+                          indexing
+        firefox_char_limit: The minimum character limit set for short domain suggestion
+                            indexing
+    Returns:
+        QueriesList: List of queries to use with the Top Picks provider
+    Raises:
+        ValueError: If the top picks file path is not specified
+        TopPicksError: If the top picks file path cannot be opened or decoded
+    """
+    backend: TopPicksBackend = TopPicksBackend(
+        top_picks_file_path, query_char_limit, firefox_char_limit
+    )
+    data: TopPicksData = asyncio.run(backend.fetch())
+
+    def add_queries(index: dict[str, list[int]], queries: dict[int, list[str]]):
+        for query, result_ids in index.items():
+            for result_id in result_ids:
+                queries.setdefault(result_id, []).append(query)
+
+    query_dict: dict[int, list[str]] = {}
+    add_queries(data.short_domain_index, query_dict)
+    add_queries(data.primary_index, query_dict)
+    add_queries(data.secondary_index, query_dict)
+
+    return list(query_dict.values())
+
+
 def store_suggestions(environment, msg, **kwargs):
     """Modify the module scoped list with suggestions in-place."""
     logger.info("store_suggestions: Storing %d suggestions", len(msg.data))
@@ -116,6 +175,7 @@ def store_suggestions(environment, msg, **kwargs):
     query_data: QueryData = QueryData(**msg.data)
 
     ADM_QUERIES[:] = query_data.adm
+    TOP_PICKS_QUERIES[:] = query_data.top_picks
     WIKIPEDIA_QUERIES[:] = query_data.wikipedia
 
 
@@ -173,8 +233,9 @@ def request_suggestions(
 class QueryData(BaseModel):
     """Class that holds query data for targeting Merino providers"""
 
-    adm: QueriesList
-    wikipedia: QueriesList
+    adm: QueriesList = []
+    top_picks: QueriesList = []
+    wikipedia: QueriesList = []
 
 
 class MerinoUser(HttpUser):
@@ -190,6 +251,7 @@ class MerinoUser(HttpUser):
             f"user will be sending queries based on the following number of "
             f"stored suggestions: "
             f"adm: {len(ADM_QUERIES)}, "
+            f"top picks: {len(TOP_PICKS_QUERIES)},"
             f"wikipedia: {len(WIKIPEDIA_QUERIES)}"
         )
 
@@ -214,7 +276,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             request_suggestions(self.client, query, providers)
 
-    @task(weight=80)
+    @task(weight=70)
     def faker_suggestions(self) -> None:
         """Send multiple requests for random queries."""
         # This produces a query between 2 and 4 random words
@@ -226,6 +288,15 @@ class MerinoUser(HttpUser):
                 continue
 
             request_suggestions(self.client, query)
+
+    @task(weight=10)
+    def top_picks_suggestions(self) -> None:
+        """Send multiple requests for Top Picks queries."""
+        queries: list[str] = choice(TOP_PICKS_QUERIES)  # nosec
+        providers: str = "top_picks"
+
+        for query in queries:
+            request_suggestions(self.client, query, providers)
 
     @task(weight=0)
     def wikifruit_suggestions(self) -> None:

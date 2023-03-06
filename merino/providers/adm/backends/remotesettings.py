@@ -173,7 +173,6 @@ class RemoteSettingsBackend:
         suggestions: list[KintoSuggestion] = []
         for task in tasks:
             suggestions.extend(await task)
-
         return suggestions
 
     async def get_attachment(self, url: str) -> list[KintoSuggestion]:
