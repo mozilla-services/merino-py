@@ -119,13 +119,16 @@ def fixture_merino_step(
             # representation of the model instance with the expected response
             # content for this step in the test scenario.
 
-            if step.request.path == "/__version__":
+            if (
+                step.request.path == "/__version__"
+                and type(step.response.content) == VersionResponseContent
+            ):
                 assert_200_version_endpoint_response(
                     # type ignored to appease mypy, does not infer 2 possible types.
                     step_content=step.response.content,  # type: ignore
                     merino_version_content=VersionResponseContent(**response.json()),
                 )
-                return
+
             else:
                 assert_200_response(
                     # type ignored to appease mypy, does not infer 2 possible types.
@@ -133,7 +136,7 @@ def fixture_merino_step(
                     merino_content=ResponseContent(**response.json()),
                     fetch_kinto_icon_url=fetch_kinto_icon_url,
                 )
-                return
+            return
 
         if response.status_code == 204:
             # If the response status code is 204 No Content, load the response content
