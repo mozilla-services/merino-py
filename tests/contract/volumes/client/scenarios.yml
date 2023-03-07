@@ -546,3 +546,23 @@ scenarios:
                 is_sponsored: true
                 icon: null
                 score: 0.3
+
+  - name: version_endpoint
+    description: Test that returns correct json response from __version__ endpoint.
+    steps:
+      - request:
+          service: merino
+          method: GET
+          path: "/__version__"
+          headers:
+            - name: User-Agent
+              value: "Mozilla/5.0 (Windows NT 10.0; rv:10.0) Gecko/20100101 Firefox/91.0"
+            - name: Accept-Language
+              value: "en-US"
+        response:
+          status_code: 200
+          content:
+            source: "https://github.com/mozilla-services/merino-py"
+            version: "dev"
+            commit: "TBD"
+            build: "TBD"

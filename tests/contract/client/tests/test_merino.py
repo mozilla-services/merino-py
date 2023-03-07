@@ -4,6 +4,8 @@
 
 """Contract tests client."""
 
+import os
+import re
 import time
 from typing import Any, Callable
 
@@ -24,7 +26,9 @@ from models import (
     Service,
     Step,
     Suggestion,
+    VersionResponseContent,
 )
+from pydantic import HttpUrl
 from requests import Response as RequestsResponse
 
 # We need to exclude the following fields on the response level:
@@ -114,11 +118,23 @@ def fixture_merino_step(
             # instance for checking the field types and comparing a dict
             # representation of the model instance with the expected response
             # content for this step in the test scenario.
-            assert_200_response(
-                step_content=step.response.content,
-                merino_content=ResponseContent(**response.json()),
-                fetch_kinto_icon_url=fetch_kinto_icon_url,
-            )
+
+            if (
+                step.request.path == "/__version__"
+                and type(step.response.content) == VersionResponseContent
+            ):
+                assert_200_version_endpoint_response(
+                    step_content=step.response.content,
+                    merino_version_content=VersionResponseContent(**response.json()),
+                )
+
+            else:
+                assert_200_response(
+                    # type ignored to appease mypy, does not infer 2 possible types.
+                    step_content=step.response.content,  # type: ignore
+                    merino_content=ResponseContent(**response.json()),
+                    fetch_kinto_icon_url=fetch_kinto_icon_url,
+                )
             return
 
         if response.status_code == 204:
@@ -192,6 +208,30 @@ def assert_200_response(
             expected_suggestion = expected_suggestions_by_id[suggestion_id(suggestion)]
             assert suggestion.icon == expected_suggestion.icon
             continue
+
+
+def assert_200_version_endpoint_response(
+    *,
+    step_content: VersionResponseContent,
+    merino_version_content: VersionResponseContent,
+) -> None:
+    """Check that the content for a 200 OK response querying the __version__
+    endpoint is what we expect.
+    """
+    expected_content_dict = step_content
+    merino_content_dict = merino_version_content
+    # Source is identitical between local dev, stage and production.
+    assert expected_content_dict.source == merino_content_dict.source
+
+    if os.environ.get("MERINO_ENV"):
+        # The data in the version file is built during the CIRCLECI stage. The local dev
+        # version contains placeholders. Therefore, we cannot specify the expected output
+        # in scenarios, so checks made here to verify that a sha has been written, version
+        # is empty and the validator worked as expected to parse build as HttpUrl.
+        assert merino_content_dict.version == ""
+        sha_pattern = re.compile(r"\b[0-9a-f]{40}\b")
+        assert re.match(sha_pattern, merino_content_dict.commit)
+        assert type(merino_content_dict.build) is HttpUrl
 
 
 @pytest.fixture(scope="function", autouse=True)

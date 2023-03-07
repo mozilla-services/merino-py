@@ -50,7 +50,9 @@ For more details see the Remote Settings [documentation][kinto_docs]
 
 ## Local Execution
 
-To run the contract tests locally, execute the following from the repository root:
+Local execution can be expedited by simply running `make contract-tests`, from the repository
+root. This creates the Docker containers with kinto, merino and the test client and runs the test
+scenarios against them.
 
 ```shell
 make contract-tests
@@ -62,6 +64,10 @@ the repository root:
 ```shell
 make contract-tests-clean
 ```
+Failing to run this clean command between code changes may result in your changes not being
+reflected.
+
+See [Makefile][makefile] for details.
 
 [client_readme]: ./client/README.md
 [kinto_docs]: https://remote-settings.readthedocs.io/en/latest/
@@ -70,3 +76,4 @@ make contract-tests-clean
 [merino_readme]: ../../README.md
 [sequence_diagram]: sequence_diagram.jpg
 [sequence_diagram_miro]: https://miro.com/app/board/uXjVOje8DN4=/
+[makefile]: ../../../Makefile

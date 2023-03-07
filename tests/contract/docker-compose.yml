@@ -31,6 +31,7 @@ services:
       - ../../dev/wait-for-it.sh:/wait-for-it.sh
     environment:
       MERINO_URL: http://merino:8000
+      MERINO_ENV: "$CIRCLECI"
       SCENARIOS_FILE: /tmp/client/scenarios.yml
       KINTO_URL: http://kinto:8888
       KINTO_BUCKET: main

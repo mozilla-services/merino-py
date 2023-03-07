@@ -113,11 +113,12 @@ run-contract-tests:  ##  Run contract tests using docker compose
 contract-tests: docker-build run-contract-tests  ## Run contract tests, with build step
 
 .PHONY: contract-tests-clean
-contract-tests-clean:  ##  Stop and remove containers and networks for contract tests
+contract-tests-clean:  ##  Stop and remove containers and networks for contract tests, delete client
 	docker-compose \
       -f $(CONTRACT_TEST_DIR)/docker-compose.yml \
       -p merino-py-contract-tests \
       down
+	  docker rmi client kinto-setup
 
 .PHONY: run-load-tests
 run-load-tests:  ##  Run local execution of (Locust) load tests using existing merino-py docker image
