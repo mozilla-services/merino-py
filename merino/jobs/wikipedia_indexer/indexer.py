@@ -2,7 +2,7 @@
 import json
 import logging
 import time
-from typing import Any, Generator, Mapping
+from typing import Any, Dict, Generator, Mapping
 
 from elasticsearch import Elasticsearch
 from google.cloud.storage import Blob
@@ -15,11 +15,11 @@ from merino.jobs.wikipedia_indexer.util import ProgressReporter
 logger = logging.getLogger(__name__)
 
 
-def stream_bulk(
+def chunk_bulk_stream(
     stream: Generator[str, None, None]
 ) -> Generator[tuple[str, str], None, None]:
     """Aggregate each bulk component into a single yield. Each bulk component consists of:
-    1. First line as the operator (ie. `index`)
+    1. First line as the operator (i.e. `index`)
     2. Second line as the document data for the operator.
 
     Since we're only expecting index lines, each bulk component will always consist of 2 lines.
@@ -82,12 +82,11 @@ class Indexer:
             )
             indexed = 0
             gcs_stream = self.file_manager.stream_from_gcs(latest)
-            for (operator, document) in stream_bulk(gcs_stream):
+            for (operator, document) in chunk_bulk_stream(gcs_stream):
                 op = json.loads(operator)
                 doc = json.loads(document)
-                categories: set[str] = set(doc.get("category", []))
 
-                if not self._should_filter(categories):
+                if self._should_index(doc):
                     self._enqueue(index_name, (op, doc))
                     indexed += self._index_docs(False)
 
@@ -114,13 +113,10 @@ class Indexer:
         else:
             raise Exception("Could not create the index")
 
-    def _should_filter(self, categories: set[str]) -> bool:
-        """Return True if we do not want to index this document."""
-        # Takes the intersection of the categories and blocklist.
-        # If there exists some shared categories with the blocklist,
-        # then skip processing this document.
-        overlapping_categories = categories & self.blocklist
-        return overlapping_categories != set()
+    def _should_index(self, doc: Dict[str, Any]) -> bool:
+        """Return True if we want to index this document."""
+        categories: set[str] = set(doc.get("category", []))
+        return self.blocklist.isdisjoint(categories)
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)
