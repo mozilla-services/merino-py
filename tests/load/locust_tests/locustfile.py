@@ -23,8 +23,8 @@ from merino.providers.adm.backends.remotesettings import (
 )
 from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
+from merino.web.models_v1 import SuggestResponse
 from tests.load.locust_tests.client_info import DESKTOP_FIREFOX, LOCALES
-from tests.load.locust_tests.suggest_models import ResponseContent
 
 # Type definitions
 KintoRecords = list[dict[str, Any]]
@@ -195,6 +195,8 @@ def request_suggestions(
         client: An HTTP session client
         query: Query string
         providers: Optional. A comma-separated list of providers to use for this request
+    Raises:
+        ValidationError: Response data is not as expected.
     """
     params: dict[str, Any] = {"q": query}
 
@@ -225,9 +227,9 @@ def request_suggestions(
             return
 
         # Create a pydantic model instance for validating the response content
-        # from Merino. This will raise an Exception if the response is missing
+        # from Merino. This will raise a ValidationError if the response is missing
         # fields which will be reported as a failure in Locust's statistics.
-        ResponseContent(**response.json())
+        SuggestResponse(**response.json())
 
 
 class QueryData(BaseModel):
