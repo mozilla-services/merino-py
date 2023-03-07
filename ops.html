@@ -472,6 +472,9 @@ this provider is enabled by default.</li>
 Either <code>elasticsearch</code> or <code>test</code>.</li>
 <li><code>es_cloud_id</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_CLOUD_ID</code>) - The Cloud ID of the
 Elasticsearch cluster.</li>
+<li><code>es_url</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_URL</code>) - The URL of the cluster that we
+want to connect to. This takes precedent over the Cloud ID (i.e. if you pass both,
+we will choose the URL over the Cloud ID.).</li>
 <li><code>es_api_key</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY</code>) - The base64 key used to
 authenticate on the Elasticsearch cluster specified by <code>es_cloud_id</code>.</li>
 <li><code>es_index</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX</code>) - The index identifier
