@@ -129,6 +129,9 @@ es_cloud_id = """
   testing:dXMtZWFzdC0xLmF3cy5mb3VuZC5pbyRjZWM2ZjI2MWE3NGJmMjRjZ
   TMzYmI4ODExYjg0Mjk0ZiRjNmMyY2E2ZDA0MjI0OWFmMGNjN2Q3YTllOTYyNTc0Mw==
 """
+# The URL of the cluster that we want to connect to
+es_url = ""
+# The base64 key used to authenticate on the Elasticsearch cluster
 es_api_key = ""
 # Elasticsearch index
 es_index = "enwiki-v1"
