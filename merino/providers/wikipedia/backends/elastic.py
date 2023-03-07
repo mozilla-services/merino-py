@@ -1,5 +1,6 @@
 """The Elasticsearch backend for Dynamic Wikipedia."""
-from typing import Any, Final
+import logging
+from typing import Any, Final, Optional
 from urllib.parse import quote
 
 from elasticsearch import AsyncElasticsearch
@@ -14,14 +15,29 @@ TIMEOUT_MS: Final[str] = f"{settings.providers.wikipedia.es_request_timeout_ms}m
 MAX_SUGGESTIONS: Final[int] = settings.providers.wikipedia.es_max_suggestions
 
 
+class ElasticBackendError(BackendError):
+    """Error with Elastic Backend"""
+
+
 class ElasticBackend:
     """The client that works with the Elasticsearch backend."""
 
     client: AsyncElasticsearch
 
-    def __init__(self, *, api_key: str, cloud_id: str) -> None:
+    def __init__(
+        self, *, api_key: str, url: Optional[str] = None, cloud_id: Optional[str] = None
+    ) -> None:
         """Initialize."""
-        self.client = AsyncElasticsearch(cloud_id=cloud_id, api_key=api_key)
+        if url:
+            self.client = AsyncElasticsearch(url, api_key=api_key)
+            logging.info("Initialized Elasticsearch with URL")
+        elif cloud_id:
+            self.client = AsyncElasticsearch(cloud_id=cloud_id, api_key=api_key)
+            logging.info("Initialized Elasticsearch with Cloud ID")
+        else:
+            raise ElasticBackendError(
+                "Require one of {url, cloud_id} to initialize Elasticsearch client."
+            )
 
     async def shutdown(self) -> None:
         """Shut down the connection to the ES cluster."""

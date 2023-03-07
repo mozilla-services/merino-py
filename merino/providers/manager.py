@@ -106,6 +106,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     ElasticBackend(
                         api_key=setting.es_api_key,
                         cloud_id=setting.es_cloud_id,
+                        url=setting.es_url,
                     )
                 )  # type: ignore [arg-type]
                 if setting.backend == "elasticsearch"
