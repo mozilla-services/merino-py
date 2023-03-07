@@ -216,6 +216,7 @@ jobs:
               fi
             fi
 
+
             if [ -n "${DOCKER_TAG}" ]; then
               echo ${DOCKERHUB_REPO}:${DOCKER_TAG}
               docker tag app:build ${DOCKERHUB_REPO}:${DOCKER_TAG}
