@@ -201,19 +201,17 @@ jobs:
           command: docker load -i /tmp/workspace/merinopy.tar.gz
       - dockerhub-login
       - run:
-          name: Push to Docker Hub & check for Load Test flag
-          # The Load Tests are triggered though [load test: (abort|warn)] text in git comment.
+          name: Push to Docker Hub # Load tests are triggered though [load test: (abort|warn)] label.
           command: |
             if [ "${CIRCLE_BRANCH}" == "main" ]; then
               DOCKER_TAG="${CIRCLE_SHA1}"
-
               if git log -1 "$CIRCLE_SHA1" | grep -q '\[load test: warn\]'; then
-                  echo "Load test requested. Slack warning will be output if test fails. Stage deploy will proceed."
+                  echo "Load test requested. Slack warning will be output if test fails and deployment workflow for prod will proceed."
                   DOCKER_TAG="stage-loadtest-warn-"${CIRCLE_SHA1}"
               fi
 
               if git log -1 "$CIRCLE_SHA1" | grep -q '\[load test: abort\]'; then
-                  echo "Load test requested. Stage deploy will abort if load test fails."
+                  echo "Load test requested. Deployment workflow for prod will abort if load test fails."
                   DOCKER_TAG="stage-loadtest-abort-"${CIRCLE_SHA1}"
               fi
             fi
