@@ -57,7 +57,7 @@ _validators = [
     Validator("providers.wikipedia.score", gte=0, lte=1),
     Validator("providers.wikipedia.type", is_type_of=str, must_exist=True),
     Validator(
-        "providers.wikipedia.block_list",
+        "providers.wikipedia.block_list_path",
         is_type_of=str,
         is_in=[
             "dev/wiki_provider_block_list.txt",

@@ -53,7 +53,7 @@ def test_read_block_list(
     wikipedia: Provider,
 ) -> None:
     """Test that read_block_list method returns a block list"""
-    block_list = wikipedia.read_block_list(settings.providers.wikipedia.block_list)
+    block_list = wikipedia.read_block_list(settings.providers.wikipedia.block_list_path)
 
     assert block_list == TITLE_BLOCK_LIST
 
@@ -65,7 +65,7 @@ async def test_query_title_block_list(
     srequest: SuggestionRequestFixture,
     query: str,
 ) -> None:
-    """Test that query method TITLE_BLOCK_LIST filters out blocked suggestion titles."""
+    """Test that query method filters out blocked suggestion titles."""
     suggestions = await wikipedia.query(srequest(query))
 
     assert suggestions == []

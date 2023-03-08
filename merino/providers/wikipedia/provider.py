@@ -59,7 +59,10 @@ class Provider(BaseProvider):
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
-        """Nothing to initialize."""
+        """Initialize Wikipedia provider."""
+        self.title_block_list = self.read_block_list(
+            settings.providers.wikipedia.block_list_path
+        )
         return
 
     def hidden(self) -> bool:

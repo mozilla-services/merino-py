@@ -143,7 +143,7 @@ query_timeout_sec = 5.0
 # Suggestion score
 score = 0.23
 # Manual content moderation block list
-block_list = "dev/wiki_provider_block_list.txt"
+block_list_path = "dev/wiki_provider_block_list.txt"
 
 
 [default.jobs.wikipedia_indexer]
