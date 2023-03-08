@@ -44,19 +44,19 @@ CLIENT_VARIANTS: str = ""
 
 # See Ops - Remote Settings
 # https://github.com/mozilla-services/merino-py/blob/main/docs/ops.md#remote_settings
-MERINO_REMOTE_SETTINGS__SERVER: str = os.getenv(
+MERINO_REMOTE_SETTINGS__SERVER: str | None = os.getenv(
     "MERINO_REMOTE_SETTINGS__SERVER", os.getenv("KINTO__SERVER_URL")
 )
-MERINO_REMOTE_SETTINGS__BUCKET: str = os.getenv(
+MERINO_REMOTE_SETTINGS__BUCKET: str | None = os.getenv(
     "MERINO_REMOTE_SETTINGS__BUCKET", os.getenv("KINTO__BUCKET")
 )
-MERINO_REMOTE_SETTINGS__COLLECTION: str = os.getenv(
+MERINO_REMOTE_SETTINGS__COLLECTION: str | None = os.getenv(
     "MERINO_REMOTE_SETTINGS__COLLECTION", os.getenv("KINTO__COLLECTION")
 )
 
 # See Ops - TOP PICKS
 # https://github.com/mozilla-services/merino-py/blob/main/docs/ops.md#top-picks-provider
-MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH: str = os.getenv(
+MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH: str | None = os.getenv(
     "MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH"
 )
 MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT: int = int(
