@@ -12,7 +12,10 @@ from merino.providers.wikipedia.provider import (
 )
 from tests.unit.types import SuggestionRequestFixture
 
-TITLE_BLOCK_LIST: list[str] = ["unsafe", "blocked"]
+TITLE_BLOCK_LIST: list[str] = [
+    "unsafe",
+    "blocked",
+]
 
 
 @pytest.fixture(name="wikipedia")
@@ -44,6 +47,19 @@ async def test_shutdown(wikipedia: Provider, mocker: MockerFixture) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("query", TITLE_BLOCK_LIST)
+async def test_query_title_block_list(
+    wikipedia: Provider,
+    srequest: SuggestionRequestFixture,
+    query: str,
+) -> None:
+    """Test that query method TITLE_BLOCK_LIST filters out blocked suggestion titles."""
+    suggestions = await wikipedia.query(srequest(query))
+
+    assert suggestions == []
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ["query", "expected_title"],
     [("foo", "foo"), ("foo bar", "foo_bar"), ("foØ bÅr", "fo%C3%98_b%C3%85r")],
@@ -72,16 +88,3 @@ async def test_query(
             click_url=None,
         )
     ]
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("query", TITLE_BLOCK_LIST)
-async def test_query_title_block_list(
-    wikipedia: Provider,
-    srequest: SuggestionRequestFixture,
-    query: str,
-) -> None:
-    """Test that query method TITLE_BLOCK_LIST filters out blocked suggestion titles."""
-    suggestions = await wikipedia.query(srequest(query))
-
-    assert suggestions == []
