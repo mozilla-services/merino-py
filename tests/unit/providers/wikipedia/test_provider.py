@@ -17,7 +17,7 @@ TITLE_BLOCK_LIST: list[str] = ["unsafe", "blocked"]
 
 @pytest.fixture(name="expected_block_list")
 def fixture_expected_block_list() -> list[str]:
-    "Return an expected block list."
+    """Return an expected block list."""
     return ["unsafe", "blocked"]
 
 
