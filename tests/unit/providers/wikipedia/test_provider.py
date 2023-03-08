@@ -12,10 +12,13 @@ from merino.providers.wikipedia.provider import (
 )
 from tests.unit.types import SuggestionRequestFixture
 
-TITLE_BLOCK_LIST: list[str] = [
-    "unsafe",
-    "blocked",
-]
+TITLE_BLOCK_LIST: list[str] = ["unsafe", "blocked"]
+
+
+@pytest.fixture(name="expected_block_list")
+def fixture_expected_block_list() -> list[str]:
+    "Return an expected block list."
+    return ["unsafe", "blocked"]
 
 
 @pytest.fixture(name="wikipedia")
@@ -44,6 +47,15 @@ async def test_shutdown(wikipedia: Provider, mocker: MockerFixture) -> None:
     spy = mocker.spy(FakeEchoWikipediaBackend, "shutdown")
     await wikipedia.shutdown()
     spy.assert_called_once()
+
+
+def test_read_block_list(
+    wikipedia: Provider,
+) -> None:
+    """Test that read_block_list method returns a block list"""
+    block_list = wikipedia.read_block_list(settings.providers.wikipedia.block_list)
+
+    assert block_list == TITLE_BLOCK_LIST
 
 
 @pytest.mark.asyncio

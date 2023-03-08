@@ -95,3 +95,8 @@ class Provider(BaseProvider):
     async def shutdown(self) -> None:
         """Override the shutdown handler."""
         return await self.backend.shutdown()
+
+    def read_block_list(self, file_path: str) -> list[str]:
+        """Read manual block list of blocked titles for manual content moderation."""
+        with open(file_path, mode="r") as block_list:
+            return [title.strip().lower() for title in block_list.readlines()]
