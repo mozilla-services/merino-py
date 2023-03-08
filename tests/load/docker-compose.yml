@@ -21,6 +21,13 @@ services:
     environment:
       # Set environment variables, see https://docs.locust.io/en/stable/configuration.html#environment-variables
       LOCUST_HOST: http://merino:8000
+      LOAD_TESTS__LOGGING_LEVEL: 10
+      MERINO_REMOTE_SETTINGS__SERVER: "https://firefox.settings.services.mozilla.com"
+      MERINO_REMOTE_SETTINGS__BUCKET: "main"
+      MERINO_REMOTE_SETTINGS__COLLECTION: "quicksuggest"
+      MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH: "dev/top_picks.json"
+      MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT: "4"
+      MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT: "2"
     command: >
       --master
 
@@ -35,6 +42,13 @@ services:
       # Set environment variables, see https://docs.locust.io/en/stable/configuration.html#environment-variables
       LOCUST_MASTER_NODE_HOST: locust_master
       RS_QUERIES_FILE: /tmp/rs_queries.json
+      LOAD_TESTS__LOGGING_LEVEL: 10
+      MERINO_REMOTE_SETTINGS__SERVER: "https://firefox.settings.services.mozilla.com"
+      MERINO_REMOTE_SETTINGS__BUCKET: "main"
+      MERINO_REMOTE_SETTINGS__COLLECTION: "quicksuggest"
+      MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH: "dev/top_picks.json"
+      MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT: "4"
+      MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT: "2"
     volumes:
       - ./rs_queries.json:/tmp/rs_queries.json
     command: >

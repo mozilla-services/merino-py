@@ -25,12 +25,12 @@ spec:
             - name: LOAD_TESTS__LOGGING_LEVEL
               # The logging level value 20 defines the 'info' level
               value: "20"
-            - name: KINTO__COLLECTION
-              value: [KINTO__COLLECTION]
-            - name: KINTO__BUCKET
-              value: [KINTO__BUCKET]
-            - name: KINTO__SERVER_URL
-              value: [KINTO__SERVER_URL]
+            - name: MERINO_REMOTE_SETTINGS__COLLECTION
+              value: [MERINO_REMOTE_SETTINGS__COLLECTION]
+            - name: MERINO_REMOTE_SETTINGS__BUCKET
+              value: [MERINO_REMOTE_SETTINGS__BUCKET]
+            - name: MERINO_REMOTE_SETTINGS__SERVER
+              value: [MERINO_REMOTE_SETTINGS__SERVER]
             - name: LOCUST_CSV
               value: merino
             - name: MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH
