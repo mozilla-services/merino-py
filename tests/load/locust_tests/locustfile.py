@@ -42,25 +42,28 @@ SUGGEST_API: str = "/api/v1/suggest"
 # affecting the client's Suggest experience
 CLIENT_VARIANTS: str = ""
 
-# See RemoteSettingsGlobalSettings in
-# https://github.com/mozilla-services/merino/blob/main/merino-settings/src/lib.rs
-KINTO__SERVER_URL = os.environ["KINTO__SERVER_URL"]
-
-# See default values in RemoteSettingsConfig in
-# https://github.com/mozilla-services/merino/blob/main/merino-settings/src/providers.rs
-KINTO__BUCKET = os.environ["KINTO__BUCKET"]
-KINTO__COLLECTION = os.environ["KINTO__COLLECTION"]
+# See Ops - Remote Settings
+# https://github.com/mozilla-services/merino-py/blob/main/docs/ops.md#remote_settings
+MERINO_REMOTE_SETTINGS__SERVER: str = os.getenv(
+    "MERINO_REMOTE_SETTINGS__SERVER", os.getenv("KINTO__SERVER_URL")
+)
+MERINO_REMOTE_SETTINGS__BUCKET: str = os.getenv(
+    "MERINO_REMOTE_SETTINGS__BUCKET", os.getenv("KINTO__BUCKET")
+)
+MERINO_REMOTE_SETTINGS__COLLECTION: str = os.getenv(
+    "MERINO_REMOTE_SETTINGS__COLLECTION", os.getenv("KINTO__COLLECTION")
+)
 
 # See Ops - TOP PICKS
 # https://github.com/mozilla-services/merino-py/blob/main/docs/ops.md#top-picks-provider
-MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH: str = os.environ[
+MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH: str = os.getenv(
     "MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH"
-]
+)
 MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT: int = int(
-    int(os.environ["MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT"])
+    os.getenv("MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT", 0)
 )
 MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT: int = int(
-    int(os.environ["MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT"])
+    os.getenv("MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT", 0)
 )
 
 # This will be populated on each worker
@@ -78,7 +81,9 @@ def on_locust_test_start(environment, **kwargs):
     query_data: QueryData = QueryData()
     try:
         query_data.adm, query_data.wikipedia = get_adm_queries(
-            server=KINTO__SERVER_URL, collection=KINTO__COLLECTION, bucket=KINTO__BUCKET
+            server=MERINO_REMOTE_SETTINGS__SERVER,
+            collection=MERINO_REMOTE_SETTINGS__COLLECTION,
+            bucket=MERINO_REMOTE_SETTINGS__BUCKET,
         )
 
         logger.info(f"Download {len(query_data.adm)} queries for AdM")
