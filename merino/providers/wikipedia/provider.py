@@ -14,6 +14,7 @@ ICON: Final[
     str
 ] = "chrome://activity-stream/content/data/content/tippytop/favicons/wikipedia-org.ico"
 ADVERTISER: Final[str] = "dynamic-wikipedia"
+TITLE_BLOCK_LIST: list[str] = []
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,12 @@ class Provider(BaseProvider):
             logger.warning(f"{e}")
             return []
 
+        filtered_suggestions = [
+            suggestion
+            for suggestion in suggestions
+            if suggestion["title"] not in TITLE_BLOCK_LIST
+        ]
+
         return [
             WikipediaSuggestion(
                 advertiser=ADVERTISER,
@@ -80,7 +87,7 @@ class Provider(BaseProvider):
                 provider=self.name,
                 **suggestion,
             )
-            for suggestion in suggestions
+            for suggestion in filtered_suggestions
         ]
 
     async def shutdown(self) -> None:
