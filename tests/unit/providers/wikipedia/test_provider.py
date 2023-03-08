@@ -12,12 +12,15 @@ from merino.providers.wikipedia.provider import (
 )
 from tests.unit.types import SuggestionRequestFixture
 
+TITLE_BLOCK_LIST: list[str] = ["unsafe", "blocked"]
+
 
 @pytest.fixture(name="wikipedia")
 def fixture_wikipedia() -> Provider:
     """Return a Wikipedia provider that uses a test backend."""
     return Provider(
         backend=FakeEchoWikipediaBackend(),
+        title_block_list=TITLE_BLOCK_LIST,
         query_timeout_sec=0.2,
     )
 
@@ -69,3 +72,16 @@ async def test_query(
             click_url=None,
         )
     ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("query", TITLE_BLOCK_LIST)
+async def test_query_title_block_list(
+    wikipedia: Provider,
+    srequest: SuggestionRequestFixture,
+    query: str,
+) -> None:
+    """Test that query method TITLE_BLOCK_LIST filters out blocked suggestion titles."""
+    suggestions = await wikipedia.query(srequest(query))
+
+    assert suggestions == []

@@ -14,7 +14,6 @@ ICON: Final[
     str
 ] = "chrome://activity-stream/content/data/content/tippytop/favicons/wikipedia-org.ico"
 ADVERTISER: Final[str] = "dynamic-wikipedia"
-TITLE_BLOCK_LIST: list[str] = []
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +37,12 @@ class Provider(BaseProvider):
 
     backend: WikipediaBackend
     score: float
+    title_block_list: list[str]
 
     def __init__(
         self,
         backend: WikipediaBackend,
+        title_block_list: list[str] = [],
         name: str = "wikipedia",
         enabled_by_default: bool = True,
         query_timeout_sec: float = settings.providers.wikipedia.query_timeout_sec,
@@ -50,6 +51,7 @@ class Provider(BaseProvider):
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
         self.backend = backend
+        self.title_block_list = title_block_list
         self._name = name
         self._enabled_by_default = enabled_by_default
         self._query_timeout_sec = query_timeout_sec
@@ -75,7 +77,7 @@ class Provider(BaseProvider):
         filtered_suggestions = [
             suggestion
             for suggestion in suggestions
-            if suggestion["title"] not in TITLE_BLOCK_LIST
+            if suggestion["title"] not in self.title_block_list
         ]
 
         return [
