@@ -65,7 +65,7 @@ class Provider(BaseProvider):
         )
         return
 
-    def hidden(self) -> bool:
+    def hidden(self) -> bool:  # noqa: D102
         """Whether this provider is hidden or not."""
         return False
 

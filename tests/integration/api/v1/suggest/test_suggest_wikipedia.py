@@ -41,6 +41,13 @@ SCENARIOS: dict[str, Scenario] = {
         expected_title=None,
         expected_logs={"A backend failure"},
     ),
+    "Case-III: Block list filter": Scenario(
+        providers={"wikipedia": Provider(backend=FakeEchoWikipediaBackend())},
+        query="unsafe",
+        expected_suggestion_count=0,
+        expected_title=None,
+        expected_logs=set(),
+    ),
 }
 
 

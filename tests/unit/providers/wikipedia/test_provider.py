@@ -3,6 +3,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from merino.config import settings
+from merino.exceptions import BackendError
 from merino.providers.wikipedia.backends.fake_backends import FakeEchoWikipediaBackend
 from merino.providers.wikipedia.provider import (
     ADVERTISER,
@@ -33,12 +34,25 @@ def fixture_wikipedia() -> Provider:
 
 def test_enabled_by_default(wikipedia: Provider) -> None:
     """Test for the enabled_by_default method."""
-    assert wikipedia.enabled_by_default
+    assert wikipedia.enabled_by_default is True
 
 
 def test_hidden(wikipedia: Provider) -> None:
     """Test for the hidden method."""
-    assert not wikipedia.hidden()
+    assert wikipedia.hidden() is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("query", ["test_fail"])
+async def test_query_failure(
+    wikipedia: Provider, srequest: SuggestionRequestFixture, mocker, query: str
+) -> None:
+    """Test exception handling for the query method."""
+    # Override default behavior for query
+    mocker.patch.object(wikipedia, "query", side_effect=BackendError)
+    with pytest.raises(BackendError):
+        result = await wikipedia.query(srequest(query))
+        assert result == []
 
 
 @pytest.mark.asyncio
