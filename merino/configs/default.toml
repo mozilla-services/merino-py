@@ -129,7 +129,9 @@ es_cloud_id = """
   testing:dXMtZWFzdC0xLmF3cy5mb3VuZC5pbyRjZWM2ZjI2MWE3NGJmMjRjZ
   TMzYmI4ODExYjg0Mjk0ZiRjNmMyY2E2ZDA0MjI0OWFmMGNjN2Q3YTllOTYyNTc0Mw==
 """
-# The URL of the cluster that we want to connect to
+# The URL of the cluster that we want to connect to.
+# This takes precedent over the Cloud ID (i.e. if you pass both,
+# we will choose the URL over the Cloud ID).
 es_url = ""
 # The base64 key used to authenticate on the Elasticsearch cluster
 es_api_key = ""
@@ -145,6 +147,10 @@ score = 0.23
 
 
 [default.jobs.wikipedia_indexer]
+# The URL of the Elasticsearch cluster for indexing job.
+# This takes precedent over the Cloud ID (i.e. if you pass both,
+# we will choose the URL over the Cloud ID).
+es_url = ""
 # Elasticsearch cloud ID for indexing job
 es_cloud_id = ""
 # Elasticsearch API key for indexing job

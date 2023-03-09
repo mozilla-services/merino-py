@@ -2,12 +2,14 @@
 import logging
 
 import typer
-from elasticsearch import Elasticsearch
 
 from merino.config import settings as config
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.indexer import Indexer
-from merino.jobs.wikipedia_indexer.util import create_blocklist
+from merino.jobs.wikipedia_indexer.util import (
+    create_blocklist,
+    create_elasticsearch_client,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,7 @@ indexer_cmd = typer.Typer(
 
 @indexer_cmd.command()
 def index(
+    elasticsearch_url: str = job_settings.es_url,
     elasticsearch_cloud_id: str = job_settings.es_cloud_id,
     elasticsearch_api_key: str = job_settings.es_api_key,
     elasticsearch_alias: str = job_settings.es_alias,
@@ -51,10 +54,8 @@ def index(
     gcp_project: str = gcp_project_option,
 ):
     """Index file from GCS to Elasticsearch"""
-    es_client = Elasticsearch(
-        cloud_id=elasticsearch_cloud_id,
-        api_key=elasticsearch_api_key,
-        request_timeout=60,
+    es_client = create_elasticsearch_client(
+        elasticsearch_url, elasticsearch_cloud_id, elasticsearch_api_key
     )
 
     file_manager = FileManager(gcs_path, gcp_project, "")
