@@ -2,7 +2,7 @@
 import json
 import logging
 import time
-from typing import Any, Mapping, Optional
+from typing import Any, Dict, Generator, Mapping
 
 from elasticsearch import Elasticsearch
 from google.cloud.storage import Blob
@@ -13,6 +13,25 @@ from merino.jobs.wikipedia_indexer.suggestion import Builder
 from merino.jobs.wikipedia_indexer.util import ProgressReporter
 
 logger = logging.getLogger(__name__)
+
+
+def chunk_bulk_stream(
+    stream: Generator[str, None, None]
+) -> Generator[tuple[str, str], None, None]:
+    """Aggregate each bulk component into a single yield. Each bulk component consists of:
+    1. First line as the operator (i.e. `index`)
+    2. Second line as the document data for the operator.
+    Since we're only expecting index lines, each bulk component will always consist of 2 lines.
+    """
+    operation = None
+    for row in stream:
+        if operation is None:
+            operation = row
+        else:
+            # NOTE: Mypy thinks that the following line is unreachable,
+            # even though they actually are reachable.
+            yield operation, row  # type: ignore
+            operation = None
 
 
 class Indexer:
@@ -26,15 +45,21 @@ class Indexer:
     index_version: str
     file_manager: FileManager
     client: Elasticsearch
+    blocklist: set[str]
 
     def __init__(
-        self, index_version: str, file_manager: FileManager, client: Elasticsearch
+        self,
+        index_version: str,
+        blocklist: set[str],
+        file_manager: FileManager,
+        client: Elasticsearch,
     ):
         self.queue = []
         self.index_version = index_version
         self.file_manager = file_manager
         self.es_client = client
         self.suggestion_builder = Builder(index_version)
+        self.blocklist = blocklist
 
     def index_from_export(self, total_docs: int, elasticsearch_alias: str):
         """Primary indexer method.
@@ -50,23 +75,25 @@ class Indexer:
         logger.info("Ensuring index exists", extra={"index": index_name})
 
         if self._create_index(index_name):
-            prior: Optional[Mapping[str, Any]] = None
             logger.info("Start indexing", extra={"index": index_name})
             reporter = ProgressReporter(
                 logger, "Indexing", latest.name, index_name, total_docs
             )
             indexed = 0
-            for i, line in enumerate(self.file_manager._stream_from_gcs(latest)):
-                doc = json.loads(line)
-                if prior and (i + 1) % 2 == 0:
-                    self._enqueue(index_name, (prior, doc))
+            blocked = 0
+            gcs_stream = self.file_manager.stream_from_gcs(latest)
+            for (operator, document) in chunk_bulk_stream(gcs_stream):
+                op = json.loads(operator)
+                doc = json.loads(document)
+
+                if self._should_index(doc):
+                    self._enqueue(index_name, (op, doc))
                     indexed += self._index_docs(False)
-                    prior = None
                 else:
-                    prior = doc
+                    blocked += 1
 
                 # report percent completed
-                reporter.report(indexed)
+                reporter.report(indexed, blocked)
 
             # Flush queue after enumerating the export to clear the queue
             self._index_docs(True)
@@ -87,6 +114,11 @@ class Indexer:
             )
         else:
             raise Exception("Could not create the index")
+
+    def _should_index(self, doc: Dict[str, Any]) -> bool:
+        """Return True if we want to index this document."""
+        categories: set[str] = set(doc.get("category", []))
+        return self.blocklist.isdisjoint(categories)
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)

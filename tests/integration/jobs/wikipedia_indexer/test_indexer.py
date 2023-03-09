@@ -15,6 +15,12 @@ EPOCH_FROZEN_TIME = int(
 
 
 @pytest.fixture
+def blocklist():
+    """Return a blocklist"""
+    return {"meme", "nsfw", "anger"}
+
+
+@pytest.fixture
 def file_manager(mocker):
     """Return a mock FileManager instance"""
     fm_mock = mocker.patch("merino.jobs.wikipedia_indexer.filemanager.FileManager")
@@ -38,9 +44,11 @@ def es_client(mocker):
     ],
 )
 @freezegun.freeze_time(FROZEN_TIME)
-def test_get_index_name(file_manager, es_client, file_name, version, expected):
+def test_get_index_name(
+    file_manager, es_client, blocklist, file_name, version, expected
+):
     """Test filename to index name parsing"""
-    indexer = Indexer(version, file_manager, es_client)
+    indexer = Indexer(version, blocklist, file_manager, es_client)
 
     index_name = indexer._get_index_name(file_name)
     assert index_name == expected
@@ -58,6 +66,7 @@ def test_get_index_name(file_manager, es_client, file_name, version, expected):
 def test_create_index(
     file_manager,
     es_client,
+    blocklist,
     index_exists,
     create_return,
     expected_return,
@@ -68,31 +77,31 @@ def test_create_index(
     es_client.indices.create.return_value = create_return
 
     index_name = "enwiki-123-v1"
-    indexer = Indexer("v1", file_manager, es_client)
+    indexer = Indexer("v1", blocklist, file_manager, es_client)
 
     assert expected_return == indexer._create_index(index_name)
     assert expected_create_called == es_client.indices.create.called
 
 
-def test_index_from_export_no_exports_available(file_manager, es_client):
+def test_index_from_export_no_exports_available(file_manager, es_client, blocklist):
     """Test that RuntimeError is emitted"""
     file_manager.get_latest_gcs.return_value = Blob("", "bucket")
     es_client.indices.exists.return_value = False
-    indexer = Indexer("v1", file_manager, es_client)
+    indexer = Indexer("v1", blocklist, file_manager, es_client)
     with pytest.raises(RuntimeError) as exc_info:
         indexer.index_from_export(100, "fake_alias")
 
     assert exc_info.value.args[0] == "No exports available on GCS"
 
 
-def test_index_from_export_fail_on_existing_index(file_manager, es_client):
+def test_index_from_export_fail_on_existing_index(file_manager, es_client, blocklist):
     """Test that Exception is emitted"""
     file_manager.get_latest_gcs.return_value = Blob(
         "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
     )
     es_client.indices.exists.return_value = False
     es_client.indices.create.return_value = {}
-    indexer = Indexer("v1", file_manager, es_client)
+    indexer = Indexer("v1", blocklist, file_manager, es_client)
     with pytest.raises(Exception) as exc_info:
         indexer.index_from_export(100, "fake_alias")
 
@@ -134,6 +143,7 @@ def test_index_from_export_fail_on_existing_index(file_manager, es_client):
 def test_flip_alias(
     file_manager,
     es_client,
+    blocklist,
     new_index_name,
     alias_name,
     existing_indices,
@@ -143,7 +153,7 @@ def test_flip_alias(
     es_client.indices.exists_alias.return_value = len(existing_indices) > 0
     es_client.indices.get_alias.return_value = existing_indices
 
-    indexer = Indexer("v1", file_manager, es_client)
+    indexer = Indexer("v1", blocklist, file_manager, es_client)
     indexer._flip_alias_to_latest(new_index_name, alias_name)
 
     assert es_client.indices.update_aliases.called
@@ -151,7 +161,7 @@ def test_flip_alias(
     es_client.indices.update_aliases.assert_called_with(actions=expected_actions)
 
 
-def test_index_from_export(file_manager, es_client):
+def test_index_from_export(file_manager, es_client, blocklist):
     """Test full index from export flow"""
     file_manager.get_latest_gcs.return_value = Blob(
         "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
@@ -175,15 +185,73 @@ def test_index_from_export(file_manager, es_client):
         "page_id": 1000,
     }
 
-    file_manager._stream_from_gcs.return_value = [
+    file_manager.stream_from_gcs.return_value = [
         json.dumps(operation),
         json.dumps(document),
     ]
 
-    indexer = Indexer("v1", file_manager, es_client)
+    indexer = Indexer("v1", blocklist, file_manager, es_client)
 
     indexer.index_from_export(1, "enwiki")
 
     es_client.bulk.assert_called_once()
     es_client.indices.refresh.assert_called_once()
     es_client.indices.update_aliases.assert_called_once()
+
+
+def test_index_from_export_with_content_filter(file_manager, es_client, blocklist):
+    """Test content moderation removes blocked categories."""
+    file_manager.get_latest_gcs.return_value = Blob(
+        "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
+    )
+
+    def check_bulk_side_effect(operations):
+        """Use a side effect to test that we send exactly 2 lines to bulk operation
+        (ie. one index line, one document line).
+        The operations list is mutable, so we need to check that the contents
+        are in place at the time of call.
+        """
+        assert len(operations) == 2
+        return {
+            "acknowledged": True,
+            "errors": False,
+            "items": [{"id": 1000}],
+        }
+
+    es_client.bulk.side_effect = check_bulk_side_effect
+    es_client.indices.exists.return_value = False
+    es_client.indices.create.return_value = {"acknowledged": True}
+
+    operation0 = {"index": {"_type": "doc", "_id": "1000"}}
+    document0 = {
+        "title": "Hercule Poirot",
+        "text_bytes": 1000,
+        "incoming_links": 10,
+        "popularity_score": 0.0003,
+        "create_timestamp": "2001-06-10T22:29:58Z",
+        "page_id": 1000,
+        "category": ["fiction"],
+    }
+    operation_filtered_out = {"index": {"_type": "doc", "_id": "1001"}}
+    document_filtered_out = {
+        "title": "Nyan-cat",
+        "text_bytes": 1000,
+        "incoming_links": 10,
+        "popularity_score": 0.0003,
+        "create_timestamp": "2001-06-10T22:29:58Z",
+        "page_id": 1000,
+        "category": ["meme"],
+    }
+
+    file_manager.stream_from_gcs.return_value = [
+        json.dumps(operation0),
+        json.dumps(document0),
+        json.dumps(operation_filtered_out),
+        json.dumps(document_filtered_out),
+    ]
+
+    indexer = Indexer("v1", blocklist, file_manager, es_client)
+
+    indexer.index_from_export(1, "enwiki")
+
+    es_client.bulk.assert_called_once()

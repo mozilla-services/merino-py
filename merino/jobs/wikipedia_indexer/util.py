@@ -1,5 +1,9 @@
 """Utilities for wikipedia indexer job"""
+import csv
+from io import StringIO
 from logging import Logger
+
+import requests
 
 
 class ProgressReporter:
@@ -22,9 +26,9 @@ class ProgressReporter:
         self.total = total
         self.progress = 0
 
-    def report(self, completed: int):
+    def report(self, completed: int, blocked: int = 0):
         """Log the completed progress as it advances"""
-        next_progress = round(completed / self.total * 100)
+        next_progress = round((completed + blocked) / self.total * 100)
         if next_progress != self.progress:
             self.progress = next_progress
             self.logger.info(
@@ -35,5 +39,14 @@ class ProgressReporter:
                     "percent_complete": self.progress,
                     "completed": completed,
                     "total_size": self.total,
+                    "blocked": blocked,
                 },
             )
+
+
+def create_blocklist(blocklist_file_url: str) -> set[str]:
+    """Create blocklist from a file url."""
+    block_list = requests.get(blocklist_file_url).text
+    file_like_io = StringIO(block_list)
+    csv_reader = csv.DictReader(file_like_io, delimiter=",")
+    return set(row["name"] for row in csv_reader)
