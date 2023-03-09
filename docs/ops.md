@@ -289,6 +289,7 @@ These are production providers that generate suggestions.
     `wikipedia`.
   - `enabled_by_default` (`MERINO_PROVIDERS__WIKIPEDIA__ENABLED_BY_DEFAULT`) - Whether
     this provider is enabled by default.
+  - `block_list_path` (`MERINO_PROVIDERS__WIKIPEDIA__BLOCK_LIST_PATH`) - Path to the local manual block list for the provider. Prevents suggestions with given titles from being returned to client.
   - `backend` (`MERINO_PROVIDERS__WIKIPEDIA__backend`) - The backend of the provider.
     Either `elasticsearch` or `test`.
   - `es_cloud_id` (`MERINO_PROVIDERS__WIKIPEDIA__ES_CLOUD_ID`) - The Cloud ID of the
