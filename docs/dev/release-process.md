@@ -32,7 +32,8 @@ While the `[do not deploy]` can be anywhere in the title, it is recommended to p
 The deployment pipeline will analyze the message of the merge commit (which will contain the PR title) and make a decision based on it.
 
 ## Load Testing
-Load testing can be run locally or as a part of the deployment process. Local execution does not require any labeling in commit messages. For deployment, you have to add a label to your commit messages in the form of: `[load test: (abort|warn)]`.
+Load testing can be run locally or as a part of the deployment process. Local execution does not require any labeling in commit messages. For deployment, you have to add a label to the message of the commit that you wish to deploy in the form of: `[load test: (abort|warn)]`. In most cases this will be the merge commit created by merging a GitHub pull request.
+
 Abort will prevent deployment should the load testing fail while warn will simply warn via Slack and continue deployment. For detailed specifics on load testing and this convention, please see the relevant documentation: [load-testing-docs]: /tests/load/README.md].
 
 ## Releasing to production
