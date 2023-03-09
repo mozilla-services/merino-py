@@ -212,6 +212,7 @@ jobs:
                 DOCKER_TAG="stage-loadtest-abort-${CIRCLE_SHA1}"
               else
                 DOCKER_TAG="stage-${CIRCLE_SHA1}"
+              fi
             fi
 
             if [ -n "${DOCKER_TAG}" ]; then
