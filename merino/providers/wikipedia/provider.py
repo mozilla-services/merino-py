@@ -87,6 +87,7 @@ class Provider(BaseProvider):
                 **suggestion,
             )
             for suggestion in suggestions
+            # Ensures titles that are in the block list are not returned as suggestions.
             if suggestion["title"] not in self.title_block_list
         ]
 
