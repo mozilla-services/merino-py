@@ -26,9 +26,9 @@ class ProgressReporter:
         self.total = total
         self.progress = 0
 
-    def report(self, completed: int):
+    def report(self, completed: int, blocked: int = 0):
         """Log the completed progress as it advances"""
-        next_progress = round(completed / self.total * 100)
+        next_progress = round((completed + blocked) / self.total * 100)
         if next_progress != self.progress:
             self.progress = next_progress
             self.logger.info(
@@ -39,6 +39,7 @@ class ProgressReporter:
                     "percent_complete": self.progress,
                     "completed": completed,
                     "total_size": self.total,
+                    "blocked": blocked,
                 },
             )
 

@@ -21,7 +21,6 @@ def chunk_bulk_stream(
     """Aggregate each bulk component into a single yield. Each bulk component consists of:
     1. First line as the operator (i.e. `index`)
     2. Second line as the document data for the operator.
-
     Since we're only expecting index lines, each bulk component will always consist of 2 lines.
     """
     operation = None
@@ -81,6 +80,7 @@ class Indexer:
                 logger, "Indexing", latest.name, index_name, total_docs
             )
             indexed = 0
+            blocked = 0
             gcs_stream = self.file_manager.stream_from_gcs(latest)
             for (operator, document) in chunk_bulk_stream(gcs_stream):
                 op = json.loads(operator)
@@ -89,9 +89,11 @@ class Indexer:
                 if self._should_index(doc):
                     self._enqueue(index_name, (op, doc))
                     indexed += self._index_docs(False)
+                else:
+                    blocked += 1
 
                 # report percent completed
-                reporter.report(indexed)
+                reporter.report(indexed, blocked)
 
             # Flush queue after enumerating the export to clear the queue
             self._index_docs(True)
