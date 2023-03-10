@@ -13,13 +13,13 @@ from merino.providers.wikipedia.provider import (
 )
 from tests.unit.types import SuggestionRequestFixture
 
-TITLE_BLOCK_LIST: list[str] = ["unsafe", "blocked"]
+TITLE_BLOCK_LIST: list[str] = ["Unsafe_Content", "Blocked"]
 
 
 @pytest.fixture(name="expected_block_list")
 def fixture_expected_block_list() -> list[str]:
     """Return an expected block list."""
-    return ["unsafe", "blocked"]
+    return ["Unsafe_Content", "Blocked"]
 
 
 @pytest.fixture(name="wikipedia")

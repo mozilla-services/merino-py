@@ -43,7 +43,7 @@ SCENARIOS: dict[str, Scenario] = {
     ),
     "Case-III: Block list filter": Scenario(
         providers={"wikipedia": Provider(backend=FakeEchoWikipediaBackend())},
-        query="unsafe",
+        query="Unsafe_Content",
         expected_suggestion_count=0,
         expected_title=None,
         expected_logs=set(),
