@@ -61,4 +61,4 @@ top_picks_file_path = "tests/data/top_picks.json"
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "test"
 # Manual content moderation block list
-block_list_path = "tests/data/wiki_provider_block_list.txt"
+block_list_path = "tests/data/wiki_provider_block_list.json"

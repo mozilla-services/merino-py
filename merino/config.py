@@ -60,9 +60,9 @@ _validators = [
         "providers.wikipedia.block_list_path",
         is_type_of=str,
         is_in=[
-            "dev/wiki_provider_block_list.txt",
-            "tests/data/wiki_provider_block_list.txt",
-            "dev/wiki_provider_block_list_ci.txt",
+            "dev/wiki_provider_block_list.json",
+            "tests/data/wiki_provider_block_list.json",
+            "dev/wiki_provider_block_list_ci.json",
         ],
     ),
     # Since Firefox will time out the request to Merino if it takes longer than 200ms,
