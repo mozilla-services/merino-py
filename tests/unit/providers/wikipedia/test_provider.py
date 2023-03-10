@@ -13,8 +13,6 @@ from merino.providers.wikipedia.provider import (
 )
 from tests.unit.types import SuggestionRequestFixture
 
-TITLE_BLOCK_LIST: list[str] = ["Unsafe_Content", "Blocked"]
-
 
 @pytest.fixture(name="expected_block_list")
 def fixture_expected_block_list() -> list[str]:
@@ -23,11 +21,11 @@ def fixture_expected_block_list() -> list[str]:
 
 
 @pytest.fixture(name="wikipedia")
-def fixture_wikipedia() -> Provider:
+def fixture_wikipedia(expected_block_list: list[str]) -> Provider:
     """Return a Wikipedia provider that uses a test backend."""
     return Provider(
         backend=FakeEchoWikipediaBackend(),
-        title_block_list=TITLE_BLOCK_LIST,
+        title_block_list=expected_block_list,
         query_timeout_sec=0.2,
     )
 
@@ -43,15 +41,15 @@ def test_hidden(wikipedia: Provider) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("query", ["test_fail"])
+@pytest.mark.parametrize("query_keyword", ["test_fail"])
 async def test_query_failure(
-    wikipedia: Provider, srequest: SuggestionRequestFixture, mocker, query: str
+    wikipedia: Provider, srequest: SuggestionRequestFixture, mocker, query_keyword: str
 ) -> None:
     """Test exception handling for the query method."""
     # Override default behavior for query
     mocker.patch.object(wikipedia, "query", side_effect=BackendError)
     with pytest.raises(BackendError):
-        result = await wikipedia.query(srequest(query))
+        result = await wikipedia.query(srequest(query_keyword))
         assert result == []
 
 
@@ -63,17 +61,15 @@ async def test_shutdown(wikipedia: Provider, mocker: MockerFixture) -> None:
     spy.assert_called_once()
 
 
-def test_read_block_list(
-    wikipedia: Provider,
-) -> None:
+def test_read_block_list(wikipedia: Provider, expected_block_list: list[str]) -> None:
     """Test that read_block_list method returns a block list"""
     block_list = wikipedia.read_block_list(settings.providers.wikipedia.block_list_path)
 
-    assert block_list == TITLE_BLOCK_LIST
+    assert block_list == expected_block_list
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("query", TITLE_BLOCK_LIST)
+@pytest.mark.parametrize("query", ["Unsafe_Content", "Blocked"])
 async def test_query_title_block_list(
     wikipedia: Provider,
     srequest: SuggestionRequestFixture,
