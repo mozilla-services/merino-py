@@ -9,6 +9,7 @@
 - [Configuring Merino (Operations)](./ops.md)
 - [Data collection](./data.md)
 - [Working on the code](./dev/index.md)
+  - [Content Moderation](./dev/content-moderation.md)
   - [Dependencies](./dev/dependencies.md)
   - [Logging and Metrics](./dev/logging-and-metrics.md)
   - [Middlewares](./dev/middlewares.md)
