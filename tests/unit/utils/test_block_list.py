@@ -10,12 +10,12 @@ from merino.utils.block_list import read_block_list
 
 
 @pytest.fixture(name="expected_block_list")
-def fixture_expected_block_list() -> list[str]:
+def fixture_expected_block_list() -> set[str]:
     """Return an expected block list."""
-    return ["Unsafe_Content", "Blocked"]
+    return {"Unsafe_Content", "Blocked"}
 
 
-def test_read_block_list(expected_block_list: list[str]) -> None:
+def test_read_block_list(expected_block_list: set[str]) -> None:
     """Test that read_block_list method returns a block list"""
     block_list = read_block_list(settings.providers.wikipedia.block_list_path)
 

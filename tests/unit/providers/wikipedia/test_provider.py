@@ -15,13 +15,13 @@ from tests.unit.types import SuggestionRequestFixture
 
 
 @pytest.fixture(name="expected_block_list")
-def fixture_expected_block_list() -> list[str]:
+def fixture_expected_block_list() -> set[str]:
     """Return an expected block list."""
-    return ["Unsafe_Content", "Blocked"]
+    return {"Unsafe_Content", "Blocked"}
 
 
 @pytest.fixture(name="wikipedia")
-def fixture_wikipedia(expected_block_list: list[str]) -> Provider:
+def fixture_wikipedia(expected_block_list: set[str]) -> Provider:
     """Return a Wikipedia provider that uses a test backend."""
     return Provider(
         backend=FakeEchoWikipediaBackend(),

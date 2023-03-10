@@ -37,12 +37,12 @@ class Provider(BaseProvider):
 
     backend: WikipediaBackend
     score: float
-    title_block_list: list[str]
+    title_block_list: set[str]
 
     def __init__(
         self,
         backend: WikipediaBackend,
-        title_block_list: list[str],
+        title_block_list: set[str],
         name: str = "wikipedia",
         enabled_by_default: bool = True,
         query_timeout_sec: float = settings.providers.wikipedia.query_timeout_sec,
