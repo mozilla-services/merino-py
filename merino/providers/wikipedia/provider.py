@@ -42,7 +42,7 @@ class Provider(BaseProvider):
     def __init__(
         self,
         backend: WikipediaBackend,
-        title_block_list: list[str] = [],
+        title_block_list: list[str],
         name: str = "wikipedia",
         enabled_by_default: bool = True,
         query_timeout_sec: float = settings.providers.wikipedia.query_timeout_sec,
@@ -60,9 +60,6 @@ class Provider(BaseProvider):
 
     async def initialize(self) -> None:
         """Initialize Wikipedia provider."""
-        self.title_block_list = self.read_block_list(
-            settings.providers.wikipedia.block_list_path
-        )
         return
 
     def hidden(self) -> bool:  # noqa: D102
@@ -94,8 +91,3 @@ class Provider(BaseProvider):
     async def shutdown(self) -> None:
         """Override the shutdown handler."""
         return await self.backend.shutdown()
-
-    def read_block_list(self, file_path: str) -> list[str]:
-        """Read manual block list of blocked titles for manual content moderation."""
-        with open(file_path, mode="r") as block_list:
-            return [title.strip() for title in block_list.readlines()]

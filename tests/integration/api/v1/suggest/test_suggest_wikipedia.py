@@ -13,6 +13,7 @@ from merino.providers.wikipedia.backends.fake_backends import (
     FakeExceptionWikipediaBackend,
 )
 from merino.providers.wikipedia.provider import ADVERTISER, ICON, Provider
+from merino.utils import block_list
 from tests.types import FilterCaplogFixture
 
 Scenario = namedtuple(
@@ -28,21 +29,42 @@ Scenario = namedtuple(
 
 SCENARIOS: dict[str, Scenario] = {
     "Case-I: Backend returns": Scenario(
-        providers={"wikipedia": Provider(backend=FakeEchoWikipediaBackend())},
+        providers={
+            "wikipedia": Provider(
+                backend=FakeEchoWikipediaBackend(),
+                title_block_list=block_list.read_block_list(
+                    settings.providers.wikipedia.block_list_path
+                ),
+            )
+        },
         query="foo bar",
         expected_suggestion_count=1,
         expected_title="foo_bar",
         expected_logs=set(),
     ),
     "Case-II: Backend raises": Scenario(
-        providers={"wikipedia": Provider(backend=FakeExceptionWikipediaBackend())},
+        providers={
+            "wikipedia": Provider(
+                backend=FakeExceptionWikipediaBackend(),
+                title_block_list=block_list.read_block_list(
+                    settings.providers.wikipedia.block_list_path
+                ),
+            )
+        },
         query="foo bar",
         expected_suggestion_count=0,
         expected_title=None,
         expected_logs={"A backend failure"},
     ),
     "Case-III: Block list filter": Scenario(
-        providers={"wikipedia": Provider(backend=FakeEchoWikipediaBackend())},
+        providers={
+            "wikipedia": Provider(
+                backend=FakeEchoWikipediaBackend(),
+                title_block_list=block_list.read_block_list(
+                    settings.providers.wikipedia.block_list_path
+                ),
+            )
+        },
         query="Unsafe_Content",
         expected_suggestion_count=0,
         expected_title=None,

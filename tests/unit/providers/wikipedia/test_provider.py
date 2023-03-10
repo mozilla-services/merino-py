@@ -61,13 +61,6 @@ async def test_shutdown(wikipedia: Provider, mocker: MockerFixture) -> None:
     spy.assert_called_once()
 
 
-def test_read_block_list(wikipedia: Provider, expected_block_list: list[str]) -> None:
-    """Test that read_block_list method returns a block list"""
-    block_list = wikipedia.read_block_list(settings.providers.wikipedia.block_list_path)
-
-    assert block_list == expected_block_list
-
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize("query", ["Unsafe_Content", "Blocked"])
 async def test_query_title_block_list(
