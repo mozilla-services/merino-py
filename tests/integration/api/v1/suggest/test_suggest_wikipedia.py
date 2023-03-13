@@ -13,7 +13,6 @@ from merino.providers.wikipedia.backends.fake_backends import (
     FakeExceptionWikipediaBackend,
 )
 from merino.providers.wikipedia.provider import ADVERTISER, ICON, Provider
-
 from tests.types import FilterCaplogFixture
 
 block_list: set[str] = {"Unsafe Content", "Blocked"}
