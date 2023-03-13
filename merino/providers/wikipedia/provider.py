@@ -51,7 +51,8 @@ class Provider(BaseProvider):
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
         self.backend = backend
-        self.title_block_list = title_block_list
+        # Ensures block list checks are case insensitive.
+        self.title_block_list = {entry.lower() for entry in title_block_list}
         self._name = name
         self._enabled_by_default = enabled_by_default
         self._query_timeout_sec = query_timeout_sec
@@ -73,8 +74,6 @@ class Provider(BaseProvider):
         except BackendError as e:
             logger.warning(f"{e}")
             return []
-
-        self.title_block_list = {entry.lower() for entry in self.title_block_list}
 
         return [
             WikipediaSuggestion(
