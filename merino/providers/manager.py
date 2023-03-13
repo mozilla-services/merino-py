@@ -23,6 +23,7 @@ from merino.providers.wiki_fruit import WikiFruitProvider
 from merino.providers.wikipedia.backends.elastic import ElasticBackend
 from merino.providers.wikipedia.backends.fake_backends import FakeWikipediaBackend
 from merino.providers.wikipedia.provider import Provider as WikipediaProvider
+from merino.utils.block_list import BLOCK_LIST
 
 
 @unique
@@ -111,6 +112,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 )  # type: ignore [arg-type]
                 if setting.backend == "elasticsearch"
                 else FakeWikipediaBackend(),
+                title_block_list=BLOCK_LIST,
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,

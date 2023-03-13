@@ -37,10 +37,12 @@ class Provider(BaseProvider):
 
     backend: WikipediaBackend
     score: float
+    title_block_list: set[str]
 
     def __init__(
         self,
         backend: WikipediaBackend,
+        title_block_list: set[str],
         name: str = "wikipedia",
         enabled_by_default: bool = True,
         query_timeout_sec: float = settings.providers.wikipedia.query_timeout_sec,
@@ -49,6 +51,8 @@ class Provider(BaseProvider):
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
         self.backend = backend
+        # Ensures block list checks are case insensitive.
+        self.title_block_list = {entry.lower() for entry in title_block_list}
         self._name = name
         self._enabled_by_default = enabled_by_default
         self._query_timeout_sec = query_timeout_sec
@@ -56,10 +60,10 @@ class Provider(BaseProvider):
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
-        """Nothing to initialize."""
+        """Initialize Wikipedia provider."""
         return
 
-    def hidden(self) -> bool:
+    def hidden(self) -> bool:  # noqa: D102
         """Whether this provider is hidden or not."""
         return False
 
@@ -81,6 +85,8 @@ class Provider(BaseProvider):
                 **suggestion,
             )
             for suggestion in suggestions
+            # Ensures titles that are in the block list are not returned as suggestions.
+            if suggestion["title"].lower() not in self.title_block_list
         ]
 
     async def shutdown(self) -> None:
