@@ -13,8 +13,10 @@ from merino.providers.wikipedia.backends.fake_backends import (
     FakeExceptionWikipediaBackend,
 )
 from merino.providers.wikipedia.provider import ADVERTISER, ICON, Provider
-from merino.utils import block_list
+
 from tests.types import FilterCaplogFixture
+
+block_list: set[str] = {"Unsafe Content", "Blocked"}
 
 Scenario = namedtuple(
     "Scenario",
@@ -31,10 +33,7 @@ SCENARIOS: dict[str, Scenario] = {
     "Case-I: Backend returns": Scenario(
         providers={
             "wikipedia": Provider(
-                backend=FakeEchoWikipediaBackend(),
-                title_block_list=block_list.read_block_list(
-                    settings.providers.wikipedia.block_list_path
-                ),
+                backend=FakeEchoWikipediaBackend(), title_block_list=block_list
             )
         },
         query="foo bar",
@@ -45,10 +44,7 @@ SCENARIOS: dict[str, Scenario] = {
     "Case-II: Backend raises": Scenario(
         providers={
             "wikipedia": Provider(
-                backend=FakeExceptionWikipediaBackend(),
-                title_block_list=block_list.read_block_list(
-                    settings.providers.wikipedia.block_list_path
-                ),
+                backend=FakeExceptionWikipediaBackend(), title_block_list=block_list
             )
         },
         query="foo bar",
@@ -59,13 +55,10 @@ SCENARIOS: dict[str, Scenario] = {
     "Case-III: Block list filter": Scenario(
         providers={
             "wikipedia": Provider(
-                backend=FakeEchoWikipediaBackend(),
-                title_block_list=block_list.read_block_list(
-                    settings.providers.wikipedia.block_list_path
-                ),
+                backend=FakeEchoWikipediaBackend(), title_block_list=block_list
             )
         },
-        query="Unsafe_Content",
+        query="unsafe content",
         expected_suggestion_count=0,
         expected_title=None,
         expected_logs=set(),

@@ -74,6 +74,8 @@ class Provider(BaseProvider):
             logger.warning(f"{e}")
             return []
 
+        self.title_block_list = {entry.lower() for entry in self.title_block_list}
+
         return [
             WikipediaSuggestion(
                 advertiser=ADVERTISER,
@@ -85,7 +87,7 @@ class Provider(BaseProvider):
             )
             for suggestion in suggestions
             # Ensures titles that are in the block list are not returned as suggestions.
-            if suggestion["title"] not in self.title_block_list
+            if suggestion["title"].lower() not in self.title_block_list
         ]
 
     async def shutdown(self) -> None:

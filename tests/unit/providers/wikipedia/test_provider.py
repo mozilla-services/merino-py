@@ -17,7 +17,7 @@ from tests.unit.types import SuggestionRequestFixture
 @pytest.fixture(name="expected_block_list")
 def fixture_expected_block_list() -> set[str]:
     """Return an expected block list."""
-    return {"Unsafe_Content", "Blocked"}
+    return {"Unsafe Content", "Blocked"}
 
 
 @pytest.fixture(name="wikipedia")
@@ -62,13 +62,23 @@ async def test_shutdown(wikipedia: Provider, mocker: MockerFixture) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("query", ["Unsafe_Content", "Blocked"])
+@pytest.mark.parametrize(
+    "query",
+    [
+        "Unsafe Content",
+        "unsafe content",
+        "Blocked",
+        "blocked",
+    ],
+)
 async def test_query_title_block_list(
     wikipedia: Provider,
     srequest: SuggestionRequestFixture,
     query: str,
 ) -> None:
-    """Test that query method filters out blocked suggestion titles."""
+    """Test that query method filters out blocked suggestion titles.
+    Also verifies check is not case-sensitive.
+    """
     suggestions = await wikipedia.query(srequest(query))
 
     assert suggestions == []

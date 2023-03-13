@@ -56,15 +56,6 @@ _validators = [
     Validator("providers.wikipedia.es_user", is_type_of=str),
     Validator("providers.wikipedia.score", gte=0, lte=1),
     Validator("providers.wikipedia.type", is_type_of=str, must_exist=True),
-    Validator(
-        "providers.wikipedia.block_list_path",
-        is_type_of=str,
-        is_in=[
-            "dev/wiki_provider_block_list.json",
-            "tests/data/wiki_provider_block_list.json",
-            "dev/wiki_provider_block_list_ci.json",
-        ],
-    ),
     # Since Firefox will time out the request to Merino if it takes longer than 200ms,
     # the default query timeout of Merino should not be greater than that 200ms.
     Validator(
