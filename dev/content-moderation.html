@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Dependencies - Merino Book</title>
+        <title>Content Moderation - Merino Book</title>
 
 
         <!-- Custom HTML head -->
@@ -83,7 +83,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="../api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="../firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="../ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="../data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="../dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/content-moderation.html"><strong aria-hidden="true">5.1.</strong> Content Moderation</a></li><li class="chapter-item expanded "><a href="../dev/dependencies.html" class="active"><strong aria-hidden="true">5.2.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="../dev/logging-and-metrics.html"><strong aria-hidden="true">5.3.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="../dev/middlewares.html"><strong aria-hidden="true">5.4.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="../dev/feature_flags.html"><strong aria-hidden="true">5.5.</strong> Feature Flags</a></li><li class="chapter-item expanded "><a href="../dev/testing.html"><strong aria-hidden="true">5.6.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="../dev/release-process.html"><strong aria-hidden="true">5.7.</strong> Release Process</a></li><li class="chapter-item expanded "><a href="../dev/profiling.html"><strong aria-hidden="true">5.8.</strong> Profiling</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="../api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="../firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="../ops.html"><strong aria-hidden="true">3.</strong> Configuring Merino (Operations)</a></li><li class="chapter-item expanded "><a href="../data.html"><strong aria-hidden="true">4.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="../dev/index.html"><strong aria-hidden="true">5.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/content-moderation.html" class="active"><strong aria-hidden="true">5.1.</strong> Content Moderation</a></li><li class="chapter-item expanded "><a href="../dev/dependencies.html"><strong aria-hidden="true">5.2.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="../dev/logging-and-metrics.html"><strong aria-hidden="true">5.3.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="../dev/middlewares.html"><strong aria-hidden="true">5.4.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="../dev/feature_flags.html"><strong aria-hidden="true">5.5.</strong> Feature Flags</a></li><li class="chapter-item expanded "><a href="../dev/testing.html"><strong aria-hidden="true">5.6.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="../dev/release-process.html"><strong aria-hidden="true">5.7.</strong> Release Process</a></li><li class="chapter-item expanded "><a href="../dev/profiling.html"><strong aria-hidden="true">5.8.</strong> Profiling</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -144,70 +144,28 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="development-dependencies"><a class="header" href="#development-dependencies">Development Dependencies</a></h1>
-<h2 id="package-dependencies"><a class="header" href="#package-dependencies">Package Dependencies</a></h2>
-<p>This project uses <a href="https://python-poetry.org/">Poetry</a> for dependency management. While you can use the
-vanilla virtualenv to set up the dev environment, we highly recommend to check
-out <a href="https://github.com/pyenv/pyenv">pyenv</a> and <a href="https://github.com/pyenv/pyenv-virtualenv">pyenv-virtualenv</a>, as they work nicely with Poetry.
-Follow the instructions to install <a href="https://github.com/pyenv/pyenv#installation">pyenv</a>, <a href="https://github.com/pyenv/pyenv-virtualenv#installation">pyenv-virtualenv</a>, and
-<a href="https://python-poetry.org/docs/#installation">poetry</a>.</p>
-<p>Feel free to browse the <a href="/pyproject.toml">pyproject.toml</a> file for a listing of dependencies
-and their versions.</p>
-<p>Once Poetry is installed, install all the dependencies:</p>
-<pre><code>$ poetry install
-</code></pre>
-<p>Add packages to project via poetry</p>
-<pre><code>$ poetry add &lt;package_name&gt;
-</code></pre>
-<p>After that you should be to run Merino as follows:</p>
-<pre><code>$ poetry run uvicorn merino.main:app --reload
-
-# Or you can fire up a poetry shell to make it shorter
-$ poetry shell
-$ uvicorn merino.main:app --reload
-</code></pre>
-<h2 id="service-dependencies"><a class="header" href="#service-dependencies">Service Dependencies</a></h2>
-<p>Merino uses a Redis-based caching system, and so requires a Redis instance to
-connect to.</p>
-<p>To make things simple, Redis (and any future service dependencies) can be
-started with Docker Compose, using the <code>docker-compose.yaml</code> file in the <code>dev/</code>
-directory. Notably, this does not run any Merino components that have source
-code in this repository.</p>
-<pre><code class="language-shell">$ cd dev
-$ docker-compose up
-
-# Or run services in deamon mode
-$ docker-compose up -d
-
-# Stop it
-$ docker-compose down
-
-
-# Shortcuts are also provided
-$ make docker-compose-up
-$ make docker-compose-up-daemon
-$ make docker-compose-down
-</code></pre>
-<p>Redis is listening on port 6397 and can be connected via <code>redis://localhost:6397</code>.</p>
-<p>This Dockerized set up is optional. Feel free to run the dependent services by
-any other means as well.</p>
-<h3 id="dev-helpers"><a class="header" href="#dev-helpers">Dev Helpers</a></h3>
-<p>The docker-compose setup also includes some services that can help during
-development.</p>
-<ul>
-<li>Redis Commander, http://localhost:8081 - Explore the Redis database started
-above.</li>
-</ul>
+                        <h1 id="content-moderation"><a class="header" href="#content-moderation">Content Moderation</a></h1>
+<p>Merino is capable of filtering and blocking of sensitive content.</p>
+<h2 id="dynamic-wikipedia-provider"><a class="header" href="#dynamic-wikipedia-provider">Dynamic Wikipedia Provider</a></h2>
+<h3 id="wikipedia-title-block-list"><a class="header" href="#wikipedia-title-block-list">Wikipedia Title Block List</a></h3>
+<p>Located in <code>/merino/utils/block_list.py</code></p>
+<p>This block list is used during the indexing job for Dynamic Wikipedia as well as at the
+provider level for ensuring suggestions of a given title are not returned to the client.
+This allows for granular control or ad-hoc updates of titles we wish to ignore.</p>
+<p><em>NOTE:</em> In adding to the block list, ensure the title field is added as it appears
+with correct spacing between the words. Membership checks of the block list are not
+case sensitive and any underscores in the titles should instead be spaces.
+In adding to the list, one should attempt to add the title as it appears in Wikipedia.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../dev/content-moderation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../dev/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="../dev/logging-and-metrics.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../dev/dependencies.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -217,11 +175,11 @@ above.</li>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../dev/content-moderation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../dev/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="../dev/logging-and-metrics.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../dev/dependencies.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
