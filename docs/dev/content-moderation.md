@@ -4,7 +4,7 @@ Merino is capable of filtering and blocking of sensitive content.
 ## Dynamic Wikipedia Provider
 
 ### Manual Block List
-Located in `/dev/wiki_provider_block_list.txt`
+Located in `/merino/utils/block_list.py`
 
 This block list is used during the indexing job for Dynamic Wikipedia as well as at the
 provider level for ensuring suggestions of a given title are not returned to the client.
