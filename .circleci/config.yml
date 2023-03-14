@@ -1,6 +1,7 @@
 # These environment variables must be set in CircleCI UI
 #
 # DOCKERHUB_REPO - docker hub repo, format: <username>/<repo>
+# DOCKERHUB_MERINO_LOCUST_REPO - docker hub repo for performance test, format: <username>/<repo>
 # DOCKER_USER    - login info for docker hub
 # DOCKER_PASS
 
@@ -69,6 +70,13 @@ workflows:
             - test-coverage-check
             - contract-tests
             - docker-image-build
+      - docker-image-publish-merino-locust:
+          <<: *main-filters
+          requires:
+            - checks
+            - unit-tests
+            - integration-tests
+            - test-coverage-check
       # The following job will require manual approval in the CircleCI web application.
       # Once provided, and when all the requirements are fullfilled (e.g. tests)
       - unhold-to-deploy-to-prod:
@@ -212,6 +220,32 @@ jobs:
               docker tag app:build ${DOCKERHUB_REPO}:${DOCKER_TAG}
               docker images
               docker push "${DOCKERHUB_REPO}:${DOCKER_TAG}"
+            else
+              echo "Not pushing to dockerhub for tag=${CIRCLE_TAG} branch=${CIRCLE_BRANCH}"
+            fi
+  docker-image-publish-merino-locust:
+    docker:
+      - image: cimg/base:2022.08
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build image
+          command: docker build -t merino-locust -f ./tests/load/Dockerfile .
+      - dockerhub-login
+      - run:
+          name: Push to Docker Hub
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "main" ]; then
+              DOCKER_TAG="${CIRCLE_SHA1}"
+            fi
+
+            if [ -n "${DOCKER_TAG}" ]; then
+              echo ${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}
+              docker tag merino-locust ${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}
+              docker images
+              docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}"
             else
               echo "Not pushing to dockerhub for tag=${CIRCLE_TAG} branch=${CIRCLE_BRANCH}"
             fi
