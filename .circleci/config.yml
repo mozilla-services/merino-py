@@ -77,9 +77,6 @@ workflows:
             - unit-tests
             - integration-tests
             - test-coverage-check
-            - contract-tests
-            - docker-image-build
-            - docker-image-publish-stage
       # The following job will require manual approval in the CircleCI web application.
       # Once provided, and when all the requirements are fullfilled (e.g. tests)
       - unhold-to-deploy-to-prod:
