@@ -10,7 +10,7 @@ from google.cloud.storage import Blob
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.settings import get_settings_for_version
 from merino.jobs.wikipedia_indexer.suggestion import Builder
-from merino.jobs.wikipedia_indexer.util import ProgressReporter
+from merino.jobs.wikipedia_indexer.utils import ProgressReporter
 
 logger = logging.getLogger(__name__)
 

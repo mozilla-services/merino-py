@@ -11,7 +11,7 @@ import requests
 from google.cloud.storage import Blob, Client
 from google.cloud.storage.fileio import BlobReader, BlobWriter
 
-from merino.jobs.wikipedia_indexer.util import ProgressReporter
+from merino.jobs.wikipedia_indexer.utils import ProgressReporter
 
 logger = logging.getLogger(__name__)
 

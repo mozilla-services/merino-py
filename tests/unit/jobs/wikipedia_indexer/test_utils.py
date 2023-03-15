@@ -9,7 +9,7 @@ from elasticsearch import Elasticsearch
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.jobs.wikipedia_indexer.util import (
+from merino.jobs.wikipedia_indexer.utils import (
     ProgressReporter,
     create_blocklist,
     create_elasticsearch_client,
@@ -23,13 +23,34 @@ def blocklist_csv_text():
         return f.read()
 
 
-def test_create_blocklist(requests_mock, blocklist_csv_text: str):
+@pytest.fixture(name="title_block_list")
+def fixture_title_block_list():
+    """Fixture holding title block list set."""
+    return {"Unsafe Content", "Blocked"}
+
+
+def test_create_blocklist(
+    requests_mock,
+    blocklist_csv_text: str,
+    title_block_list: set[str],
+):
     """Test that the blocklist is created from CSV file."""
     url = "https://localhost"
     requests_mock.get(url, text=blocklist_csv_text)
 
-    categories = create_blocklist(url)
-    assert {"Child abuse", "Orgasm", "Paraphilias"} == categories
+    categories = create_blocklist(
+        blocklist_file_url=url, title_block_list=title_block_list
+    )
+
+    # Ensures logic that combines (via union) the externally read block list and
+    # title block list module.
+    assert {
+        "Child abuse",
+        "Orgasm",
+        "Paraphilias",
+        "Unsafe Content",
+        "Blocked",
+    } == categories
 
 
 @pytest.mark.parametrize(

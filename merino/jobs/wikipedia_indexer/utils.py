@@ -1,12 +1,10 @@
-"""Utilities for wikipedia indexer job"""
+"""Utilities for Dynamic Wikipedia indexer job"""
 import csv
 from io import StringIO
 from logging import Logger
 
 import requests
 from elasticsearch import Elasticsearch
-
-from merino.utils.block_list import BLOCK_LIST
 
 
 class ProgressReporter:
@@ -47,13 +45,13 @@ class ProgressReporter:
             )
 
 
-def create_blocklist(blocklist_file_url: str) -> set[str]:
-    """Create blocklist from a file url."""
+def create_blocklist(blocklist_file_url: str, title_block_list: set[str]) -> set[str]:
+    """Create blocklist from an external file url and the title block list in util module."""
     block_list = requests.get(blocklist_file_url).text
     file_like_io = StringIO(block_list)
     csv_reader = csv.DictReader(file_like_io, delimiter=",")
-    # Create block list set and add contents of manual block list to it.
-    return set(row["name"] for row in csv_reader).union(BLOCK_LIST)
+    # Create block list set and add contents of title block list to it.
+    return set(row["name"] for row in csv_reader).union(title_block_list)
 
 
 def create_elasticsearch_client(
