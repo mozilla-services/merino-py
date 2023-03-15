@@ -129,7 +129,7 @@ pretty-print logging and debugging enabled. For settings that you wish to change
 development configuration, you have two options, listed below.
 
 > For full details, make sure to check out the documentation for
-> [Merino's setting system (ops.md)](../ops.md).
+> [Merino's setting system (operations/configs.md)](../operations/configs.md).
 
 ### Update the defaults
 
