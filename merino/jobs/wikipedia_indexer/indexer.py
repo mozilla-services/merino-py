@@ -64,6 +64,10 @@ class Indexer:
             indexed = 0
             blocked = 0
             gcs_stream = self.file_manager.stream_from_gcs(latest)
+            # The following will chunk `gcs_stream` into a sequence of pairs of
+            # (`operator`, `document`), where the first element as the operator
+            # (i.e. `index`), the second element as the document data for the
+            # operator
             while pair := tuple(islice(gcs_stream, 2)):
                 operator, document = pair
                 op = json.loads(operator)
