@@ -2,7 +2,8 @@
 import json
 import logging
 import time
-from typing import Any, Dict, Generator, Mapping
+from itertools import islice
+from typing import Any, Dict, Mapping
 
 from elasticsearch import Elasticsearch
 from google.cloud.storage import Blob
@@ -13,25 +14,6 @@ from merino.jobs.wikipedia_indexer.suggestion import Builder
 from merino.jobs.wikipedia_indexer.util import ProgressReporter
 
 logger = logging.getLogger(__name__)
-
-
-def chunk_bulk_stream(
-    stream: Generator[str, None, None]
-) -> Generator[tuple[str, str], None, None]:
-    """Aggregate each bulk component into a single yield. Each bulk component consists of:
-    1. First line as the operator (i.e. `index`)
-    2. Second line as the document data for the operator.
-    Since we're only expecting index lines, each bulk component will always consist of 2 lines.
-    """
-    operation = None
-    for row in stream:
-        if operation is None:
-            operation = row
-        else:
-            # NOTE: Mypy thinks that the following line is unreachable,
-            # even though they actually are reachable.
-            yield operation, row  # type: ignore
-            operation = None
 
 
 class Indexer:
@@ -82,7 +64,12 @@ class Indexer:
             indexed = 0
             blocked = 0
             gcs_stream = self.file_manager.stream_from_gcs(latest)
-            for (operator, document) in chunk_bulk_stream(gcs_stream):
+            # The following will chunk `gcs_stream` into a sequence of pairs of
+            # (`operator`, `document`), where the first element as the operator
+            # (i.e. `index`), the second element as the document data for the
+            # operator
+            while pair := tuple(islice(gcs_stream, 2)):
+                operator, document = pair
                 op = json.loads(operator)
                 doc = json.loads(document)
 

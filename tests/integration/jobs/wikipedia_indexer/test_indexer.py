@@ -185,11 +185,12 @@ def test_index_from_export(file_manager, es_client, blocklist):
         "page_id": 1000,
     }
 
-    file_manager.stream_from_gcs.return_value = [
+    inputs = [
         json.dumps(operation),
         json.dumps(document),
     ]
 
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
     indexer = Indexer("v1", blocklist, file_manager, es_client)
 
     indexer.index_from_export(1, "enwiki")
@@ -243,13 +244,14 @@ def test_index_from_export_with_content_filter(file_manager, es_client, blocklis
         "category": ["meme"],
     }
 
-    file_manager.stream_from_gcs.return_value = [
+    inputs = [
         json.dumps(operation0),
         json.dumps(document0),
         json.dumps(operation_filtered_out),
         json.dumps(document_filtered_out),
     ]
 
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
     indexer = Indexer("v1", blocklist, file_manager, es_client)
 
     indexer.index_from_export(1, "enwiki")
