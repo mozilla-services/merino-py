@@ -52,11 +52,8 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
-    def normalize_query(self, query: str) -> str:
-        """Normalize the query string when passed to the provider.
-        For Top Picks, queries should be case-insensitive and trailing space should
-        be removed.
-        """
+    def _normalize_query(self, query: str) -> str:
+        """Convert a query string to lowercase and remove trailing spaces."""
         return query.rstrip().lower()
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
@@ -66,7 +63,7 @@ class Provider(BaseProvider):
             return []
 
         qlen: int = len(srequest.query)
-        query: str = self.normalize_query(srequest.query)
+        query: str = self._normalize_query(srequest.query)
         ids: Optional[list[int]]
 
         match qlen:

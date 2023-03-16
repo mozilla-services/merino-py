@@ -57,16 +57,16 @@ class BaseProvider(ABC):
         """
         ...
 
-    def normalize_query(self, query: str) -> str:  # pragma: no cover
+    def _normalize_query(self, query: str) -> str:  # pragma: no cover
         """Normalize the query string when passed to the provider.
         Each provider can extend this class given its requirements. Can be used to
-        strip whitespace, handle case sensitivity, etc. Default is no-op.
+        strip whitespace, handle case sensitivity, etc. Default is to return query unchanged.
 
         Trailing spaces are not stripped in Firefox, so stripping trailing spaces
         is advised. Each provider will have its specific use cases, and others
         will not require any logic for query normalization.
         """
-        ...
+        return query
 
     @property
     def enabled_by_default(self) -> bool:

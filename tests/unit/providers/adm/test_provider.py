@@ -25,21 +25,6 @@ def test_hidden(adm: Provider) -> None:
     assert adm.hidden() is False
 
 
-@pytest.mark.parametrize(
-    ["query", "expected"],
-    [
-        ("FIREFOX    ", "firefox"),
-        ("ExAmPlE", "example"),
-        ("MozILLA  ", "mozilla"),
-    ],
-)
-def test_normalize_query(adm: Provider, query: str, expected: str) -> None:
-    """Test for the query normalization method to strip trailing space and
-    convert to lowercase.
-    """
-    assert adm.normalize_query(query) == expected
-
-
 @pytest.mark.asyncio
 async def test_initialize(
     adm: Provider, adm_suggestion_content: SuggestionContent
@@ -49,6 +34,30 @@ async def test_initialize(
 
     assert adm.suggestion_content == adm_suggestion_content
     assert adm.last_fetch_at > 0
+
+
+@pytest.mark.parametrize(
+    ["query", "expected"],
+    [
+        ("example", "example"),
+        ("EXAMPLE", "example"),
+        ("ExAmPlE", "example"),
+        ("example ", "example"),
+        ("example   ", "example"),
+    ],
+    ids={
+        "normalized",
+        "uppercase",
+        "mixed-case",
+        "tail space",
+        "multi-tail space",
+    },
+)
+def test_normalize_query(adm: Provider, query: str, expected: str) -> None:
+    """Test for the query normalization method to strip trailing space and
+    convert to lowercase.
+    """
+    assert adm._normalize_query(query) == expected
 
 
 @pytest.mark.asyncio
@@ -76,14 +85,20 @@ async def test_initialize_remote_settings_failure(
     assert adm.last_fetch_at == 0
 
 
+@pytest.mark.parametrize("query", ["firefox", "FIREFOX", "FiREFox  "])
 @pytest.mark.asyncio
 async def test_query_success(
-    srequest: SuggestionRequestFixture, adm: Provider, adm_parameters: dict[str, Any]
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+    adm_parameters: dict[str, Any],
+    query: str,
 ) -> None:
-    """Test for the query() method of the adM provider."""
+    """Test for the query() method of the adM provider.  Includes testing for query
+    normalization, when uppercase or trailing whitespace in query string.
+    """
     await adm.initialize()
 
-    res = await adm.query(srequest("firefox"))
+    res = await adm.query(srequest(query))
     assert res == [
         NonsponsoredSuggestion(
             block_id=2,

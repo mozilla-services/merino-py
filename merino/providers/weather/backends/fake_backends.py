@@ -5,7 +5,7 @@ from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.protocol import WeatherReport
 
 
-class FakeWeatherBackend:
+class FakeWeatherBackend:  # pragma: no cover
     """A fake backend that always returns empty results."""
 
     def cache_inputs_for_weather_report(self, geolocation: Location) -> Optional[bytes]:

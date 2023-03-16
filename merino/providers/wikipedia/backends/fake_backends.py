@@ -35,7 +35,7 @@ class FakeEchoWikipediaBackend:
         ]
 
 
-class FakeExceptionWikipediaBackend:
+class FakeExceptionWikipediaBackend:  # pragma: no cover
     """A fake backend that raises a `BackendError` for any given query."""
 
     async def shutdown(self) -> None:

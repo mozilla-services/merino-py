@@ -28,21 +28,6 @@ def test_hidden(top_picks: Provider) -> None:
     assert top_picks.hidden() is False
 
 
-@pytest.mark.parametrize(
-    ["query", "expected"],
-    [
-        ("FIREFOX    ", "firefox"),
-        ("ExAmPlE", "example"),
-        ("MozILLA  ", "mozilla"),
-    ],
-)
-def test_normalize_query(top_picks: Provider, query: str, expected: str) -> None:
-    """Test for the query normalization method to strip trailing space and
-    convert to lowercase.
-    """
-    assert top_picks.normalize_query(query) == expected
-
-
 @pytest.mark.asyncio
 async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None:
     """Test initialization of top pick provider"""
@@ -50,6 +35,30 @@ async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None
     backend = await backend.fetch()
 
     assert top_picks.top_picks_data == backend
+
+
+@pytest.mark.parametrize(
+    ["query", "expected"],
+    [
+        ("example", "example"),
+        ("EXAMPLE", "example"),
+        ("ExAmPlE", "example"),
+        ("example ", "example"),
+        ("example   ", "example"),
+    ],
+    ids={
+        "normalized",
+        "uppercase",
+        "mixed-case",
+        "tail space",
+        "multi-tail space",
+    },
+)
+def test_normalize_query(top_picks: Provider, query: str, expected: str) -> None:
+    """Test for the query normalization method to strip trailing space and
+    convert to lowercase.
+    """
+    assert top_picks._normalize_query(query) == expected
 
 
 @pytest.mark.asyncio
@@ -78,6 +87,9 @@ async def test_initialize_failure(
         ("exam", "Example", "https://example.com"),
         ("exxamp", "Example", "https://example.com"),
         ("example", "Example", "https://example.com"),
+        ("Exam", "Example", "https://example.com"),
+        ("EXAm", "Example", "https://example.com"),
+        ("ExAmPlE", "Example", "https://example.com"),
     ],
 )
 @pytest.mark.asyncio
@@ -88,7 +100,9 @@ async def test_query(
     title: str,
     url: str,
 ) -> None:
-    """Test for the query method of the Top Pick provider."""
+    """Test for the query method of the Top Pick provider. Includes testing for query
+    normalization, when uppercase or trailing whitespace in query string.
+    """
     await top_picks.initialize()
 
     result: list[BaseSuggestion] = await top_picks.query(srequest(query))
@@ -126,42 +140,6 @@ async def test_query_filtered_input(
     await top_picks.initialize()
 
     assert await top_picks.query(srequest(query)) == []
-
-
-@pytest.mark.parametrize(
-    ["query", "title", "url"],
-    [
-        ("Exam", "Example", "https://example.com"),
-        ("EXAm", "Example", "https://example.com"),
-        ("ExAmPlE", "Example", "https://example.com"),
-    ],
-)
-@pytest.mark.asyncio
-async def test_query_case_insensitive(
-    srequest: SuggestionRequestFixture,
-    top_picks: Provider,
-    query: str,
-    title: str,
-    url: str,
-) -> None:
-    """Test for the query method of the Top Pick provider to return a matched
-    suggestion to a query, irrespective of case.
-    """
-    await top_picks.initialize()
-
-    result: list[BaseSuggestion] = await top_picks.query(srequest(query))
-    assert result == [
-        Suggestion(
-            block_id=0,
-            title=title,
-            url=url,
-            provider="top_picks",
-            is_top_pick=True,
-            is_sponsored=False,
-            icon="",
-            score=settings.providers.top_picks.score,
-        )
-    ]
 
 
 @pytest.mark.parametrize(
