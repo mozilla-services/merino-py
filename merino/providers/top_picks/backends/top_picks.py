@@ -77,7 +77,7 @@ class TopPicksBackend:
 
         for record in domain_list["domains"]:
             index_key: int = len(results)
-            domain = record["domain"]
+            domain = record["domain"].strip().lower()
 
             if len(domain) > query_max:
                 query_max = len(domain)

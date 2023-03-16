@@ -57,21 +57,31 @@ async def test_initialize_failure(
     assert records[0].__dict__["error message"] == error_message
 
 
+@pytest.mark.parametrize(
+    ["query", "title", "url"],
+    [
+        ("exam", "Example", "https://example.com"),
+        ("exxamp", "Example", "https://example.com"),
+        ("example", "Example", "https://example.com"),
+    ],
+)
 @pytest.mark.asyncio
-async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) -> None:
+async def test_query(
+    srequest: SuggestionRequestFixture,
+    top_picks: Provider,
+    query: str,
+    title: str,
+    url: str,
+) -> None:
     """Test for the query method of the Top Pick provider."""
     await top_picks.initialize()
 
-    assert await top_picks.query(srequest("am")) == []
-    assert await top_picks.query(srequest("https://")) == []
-    assert await top_picks.query(srequest("supercalifragilisticexpialidocious")) == []
-
-    result: list[BaseSuggestion] = await top_picks.query(srequest("example"))
+    result: list[BaseSuggestion] = await top_picks.query(srequest(query))
     assert result == [
         Suggestion(
             block_id=0,
-            title="Example",
-            url="https://example.com",
+            title=title,
+            url=url,
             provider="top_picks",
             is_top_pick=True,
             is_sponsored=False,
@@ -80,12 +90,56 @@ async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) ->
         )
     ]
 
-    result = await top_picks.query(srequest("exxamp"))
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "am",
+        "https://",
+        "supercalifragilisticexpialidocious",
+    ],
+)
+@pytest.mark.asyncio
+async def test_query_filtered_input(
+    srequest: SuggestionRequestFixture,
+    top_picks: Provider,
+    query: str,
+) -> None:
+    """Test for filtering logic of the query method in the Top Pick provider
+    to not return results when given a query string that is invalid.
+    """
+    await top_picks.initialize()
+
+    assert await top_picks.query(srequest(query)) == []
+
+
+@pytest.mark.parametrize(
+    ["query", "title", "url"],
+    [
+        ("Exam", "Example", "https://example.com"),
+        ("EXAm", "Example", "https://example.com"),
+        ("ExAmPlE", "Example", "https://example.com"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_query_case_insensitive(
+    srequest: SuggestionRequestFixture,
+    top_picks: Provider,
+    query: str,
+    title: str,
+    url: str,
+) -> None:
+    """Test for the query method of the Top Pick provider to return a matched
+    suggestion to a query, irrespective of case.
+    """
+    await top_picks.initialize()
+
+    result: list[BaseSuggestion] = await top_picks.query(srequest(query))
     assert result == [
         Suggestion(
             block_id=0,
-            title="Example",
-            url="https://example.com",
+            title=title,
+            url=url,
             provider="top_picks",
             is_top_pick=True,
             is_sponsored=False,
