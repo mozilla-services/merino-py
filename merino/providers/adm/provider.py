@@ -123,9 +123,16 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
+    def normalize_query(self, query: str) -> str:
+        """Normalize the query string when passed to the provider.
+        For AdM, queries should be case-insensitive and tailing space should
+        be removed.
+        """
+        return query.rstrip().lower()
+
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
-        q = srequest.query
+        q: str = self.normalize_query(srequest.query)
         if (suggest_look_ups := self.suggestion_content.suggestions.get(q)) is not None:
             results_id, fkw_id = suggest_look_ups
             res = self.suggestion_content.results[results_id]

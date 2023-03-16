@@ -28,6 +28,21 @@ def test_hidden(top_picks: Provider) -> None:
     assert top_picks.hidden() is False
 
 
+@pytest.mark.parametrize(
+    ["query", "expected"],
+    [
+        ("FIREFOX    ", "firefox"),
+        ("ExAmPlE", "example"),
+        ("MozILLA  ", "mozilla"),
+    ],
+)
+def test_normalize_query(top_picks: Provider, query: str, expected: str) -> None:
+    """Test for the query normalization method to strip trailing space and
+    convert to lowercase.
+    """
+    assert top_picks.normalize_query(query) == expected
+
+
 @pytest.mark.asyncio
 async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None:
     """Test initialization of top pick provider"""

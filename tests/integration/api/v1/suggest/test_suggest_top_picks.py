@@ -126,3 +126,21 @@ def test_top_picks_short_domains(
 
     result = response.json()
     assert Suggestion(**result["suggestions"][0]) == expected_suggestion[0]
+
+
+@pytest.mark.parametrize(
+    ["query", "expected_title"], [("example  ", "Example"), ("EXAMPLE ", "Example")]
+)
+def test_query_normalization(
+    client: TestClient, query: str, expected_title: str
+) -> None:
+    """Test that the provider request is normalized, given a query term
+    that has space and uppercase characters, and returns a valid matching suggestion.
+    """
+    response = client.get(f"/api/v1/suggest?q={query}")
+    assert response.status_code == 200
+
+    result = response.json()
+    assert len(result["suggestions"]) == 1
+    assert result["suggestions"][0]["title"] == expected_title
+    assert result["request_id"] is not None

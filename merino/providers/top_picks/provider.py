@@ -52,6 +52,13 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
+    def normalize_query(self, query: str) -> str:
+        """Normalize the query string when passed to the provider.
+        For Top Picks, queries should be case-insensitive and tailing space should
+        be removed.
+        """
+        return query.rstrip().lower()
+
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Query Top Pick data and return suggestions."""
         # Ignore https:// and http://
@@ -59,7 +66,7 @@ class Provider(BaseProvider):
             return []
 
         qlen: int = len(srequest.query)
-        query: str = srequest.query.lower()
+        query: str = self.normalize_query(srequest.query)
         ids: Optional[list[int]]
 
         match qlen:

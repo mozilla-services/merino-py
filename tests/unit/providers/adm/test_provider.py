@@ -25,6 +25,21 @@ def test_hidden(adm: Provider) -> None:
     assert adm.hidden() is False
 
 
+@pytest.mark.parametrize(
+    ["query", "expected"],
+    [
+        ("FIREFOX    ", "firefox"),
+        ("ExAmPlE", "example"),
+        ("MozILLA  ", "mozilla"),
+    ],
+)
+def test_normalize_query(adm: Provider, query: str, expected: str) -> None:
+    """Test for the query normalization method to strip trailing space and
+    convert to lowercase.
+    """
+    assert adm.normalize_query(query) == expected
+
+
 @pytest.mark.asyncio
 async def test_initialize(
     adm: Provider, adm_suggestion_content: SuggestionContent
