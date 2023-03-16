@@ -135,7 +135,7 @@ def test_query_normalization(
     client: TestClient, query: str, expected_title: str
 ) -> None:
     """Test that the provider request is normalized, given a query term
-    that has space and uppercase characters, and returns a valid matching suggestion.
+    that has trailing space and uppercase characters, and returns a valid matching suggestion.
     """
     response = client.get(f"/api/v1/suggest?q={query}")
     assert response.status_code == 200

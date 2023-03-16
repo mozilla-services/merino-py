@@ -54,7 +54,7 @@ class Provider(BaseProvider):
 
     def normalize_query(self, query: str) -> str:
         """Normalize the query string when passed to the provider.
-        For Top Picks, queries should be case-insensitive and tailing space should
+        For Top Picks, queries should be case-insensitive and trailing space should
         be removed.
         """
         return query.rstrip().lower()
