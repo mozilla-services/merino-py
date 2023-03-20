@@ -10,7 +10,7 @@ from merino.jobs.wikipedia_indexer.utils import (
     create_blocklist,
     create_elasticsearch_client,
 )
-from merino.utils.block_list import BLOCK_LIST
+from merino.utils.block_list import TITLE_BLOCKLIST
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def index(
     indexer = Indexer(
         index_version,
         blocklist,
-        BLOCK_LIST,
+        TITLE_BLOCKLIST,
         file_manager,
         es_client,
     )

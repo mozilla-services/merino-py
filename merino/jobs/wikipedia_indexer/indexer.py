@@ -45,13 +45,13 @@ class Indexer:
     index_version: str
     file_manager: FileManager
     client: Elasticsearch
-    blocklist: set[str]
+    category_blocklist: set[str]
     title_blocklist: set[str]
 
     def __init__(
         self,
         index_version: str,
-        blocklist: set[str],
+        category_blocklist: set[str],
         title_blocklist: set[str],
         file_manager: FileManager,
         client: Elasticsearch,
@@ -61,8 +61,8 @@ class Indexer:
         self.file_manager = file_manager
         self.es_client = client
         self.suggestion_builder = Builder(index_version)
-        self.blocklist = blocklist
-        self.title_blocklist = title_blocklist
+        self.category_blocklist = {entry.lower() for entry in category_blocklist}
+        self.title_blocklist = {entry.lower() for entry in title_blocklist}
 
     def index_from_export(self, total_docs: int, elasticsearch_alias: str):
         """Primary indexer method.
@@ -119,12 +119,14 @@ class Indexer:
             raise Exception("Could not create the index")
 
     def _should_index(self, doc: Dict[str, Any]) -> bool:
-        """Return True if we want to index this document."""
+        """Return True if we want to index this document.
+        Checks for existence of matching categories or title in both title and category blocklists.
+        """
         categories: set[str] = set(doc.get("category", []))
-        titles: set[str] = set(doc.get("title", []))
-        return self.blocklist.isdisjoint(categories) or self.title_blocklist.isdisjoint(
-            titles
-        )
+        title: str | None = doc.get("title").lower() if doc.get("title") else None  # type: ignore
+        should_filter_category = not self.category_blocklist.isdisjoint(categories)
+        should_filter_title = title in self.title_blocklist
+        return should_filter_category or should_filter_title
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)
