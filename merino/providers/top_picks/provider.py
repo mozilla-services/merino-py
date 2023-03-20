@@ -52,7 +52,7 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
-    def _normalize_query(self, query: str) -> str:
+    def normalize_query(self, query: str) -> str:
         """Convert a query string to lowercase and remove trailing spaces."""
         return query.strip().lower()
 
@@ -63,7 +63,7 @@ class Provider(BaseProvider):
             return []
 
         qlen: int = len(srequest.query)
-        query: str = self._normalize_query(srequest.query)
+        query: str = self.normalize_query(srequest.query)
         ids: Optional[list[int]]
 
         match qlen:

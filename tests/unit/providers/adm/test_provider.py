@@ -63,7 +63,7 @@ def test_normalize_query(adm: Provider, query: str, expected: str) -> None:
     """Test for the query normalization method to strip trailing space and
     convert to lowercase.
     """
-    assert adm._normalize_query(query) == expected
+    assert adm.normalize_query(query) == expected
 
 
 @pytest.mark.asyncio

@@ -57,7 +57,7 @@ class BaseProvider(ABC):
         """
         ...
 
-    def _normalize_query(self, query: str) -> str:  # pragma: no cover
+    def normalize_query(self, query: str) -> str:  # pragma: no cover
         """Normalize the query string when passed to the provider.
         Each provider can extend this class given its requirements. Can be used to
         strip whitespace, handle case sensitivity, etc. Default is to return query unchanged.
