@@ -15,27 +15,27 @@ EPOCH_FROZEN_TIME = int(
 
 
 @pytest.fixture
-def category_blocklist():
-    """Return category blocklist"""
-    return {"meme", "nsfw", "anger"}
+def category_blocklist() -> set:
+    """Return category blocklist."""
+    return {"meme", "nsfw", "Anger"}
 
 
 @pytest.fixture
-def title_blocklist():
-    """Return title blocklist"""
+def title_blocklist() -> set:
+    """Return title blocklist."""
     return {"Bad Things"}
 
 
 @pytest.fixture
 def file_manager(mocker):
-    """Return a mock FileManager instance"""
+    """Return a mock FileManager instance."""
     fm_mock = mocker.patch("merino.jobs.wikipedia_indexer.filemanager.FileManager")
     return fm_mock.return_value
 
 
 @pytest.fixture
 def es_client(mocker):
-    """Return a mock Elasticsearch client"""
+    """Return a mock Elasticsearch client."""
     es_mock = mocker.patch("elasticsearch.Elasticsearch")
     return es_mock.return_value
 
@@ -59,7 +59,7 @@ def test_get_index_name(
     version,
     expected,
 ):
-    """Test filename to index name parsing"""
+    """Test filename to index name parsing."""
     indexer = Indexer(
         version, category_blocklist, title_blocklist, file_manager, es_client
     )
@@ -87,7 +87,7 @@ def test_create_index(
     expected_return,
     expected_create_called,
 ):
-    """Test create index logic"""
+    """Test create index logic."""
     es_client.indices.exists.return_value = index_exists
     es_client.indices.create.return_value = create_return
 
@@ -103,7 +103,7 @@ def test_create_index(
 def test_index_from_export_no_exports_available(
     file_manager, es_client, category_blocklist, title_blocklist
 ):
-    """Test that RuntimeError is emitted"""
+    """Test that RuntimeError is emitted."""
     file_manager.get_latest_gcs.return_value = Blob("", "bucket")
     es_client.indices.exists.return_value = False
     indexer = Indexer(
@@ -121,7 +121,7 @@ def test_index_from_export_fail_on_existing_index(
     category_blocklist,
     title_blocklist,
 ):
-    """Test that Exception is emitted"""
+    """Test that Exception is emitted."""
     file_manager.get_latest_gcs.return_value = Blob(
         "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
     )
@@ -178,7 +178,7 @@ def test_flip_alias(
     existing_indices,
     expected_actions,
 ):
-    """Test alias flipping logic"""
+    """Test alias flipping logic."""
     es_client.indices.exists_alias.return_value = len(existing_indices) > 0
     es_client.indices.get_alias.return_value = existing_indices
 
@@ -198,7 +198,7 @@ def test_index_from_export(
     category_blocklist,
     title_blocklist,
 ):
-    """Test full index from export flow"""
+    """Test full index from export flow."""
     file_manager.get_latest_gcs.return_value = Blob(
         "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
     )
