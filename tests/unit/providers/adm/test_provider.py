@@ -43,14 +43,20 @@ async def test_initialize(
         ("EXAMPLE", "example"),
         ("ExAmPlE", "example"),
         ("example ", "example"),
+        (" example ", "example"),
+        ("  example", "example"),
         ("example   ", "example"),
+        ("   example   ", "example"),
     ],
     ids={
         "normalized",
         "uppercase",
         "mixed-case",
         "tail space",
+        "leading space",
+        "multi-leading space",
         "multi-tail space",
+        "leading and trailing space",
     },
 )
 def test_normalize_query(adm: Provider, query: str, expected: str) -> None:

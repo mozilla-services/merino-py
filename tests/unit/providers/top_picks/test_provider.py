@@ -44,14 +44,20 @@ async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None
         ("EXAMPLE", "example"),
         ("ExAmPlE", "example"),
         ("example ", "example"),
+        (" example ", "example"),
+        ("  example", "example"),
         ("example   ", "example"),
+        ("   example   ", "example"),
     ],
     ids={
         "normalized",
         "uppercase",
         "mixed-case",
         "tail space",
+        "leading space",
+        "multi-leading space",
         "multi-tail space",
+        "leading and trailing space",
     },
 )
 def test_normalize_query(top_picks: Provider, query: str, expected: str) -> None:

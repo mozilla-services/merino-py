@@ -125,7 +125,7 @@ class Provider(BaseProvider):
 
     def _normalize_query(self, query: str) -> str:
         """Convert a query string to lowercase and remove trailing spaces."""
-        return query.rstrip().lower()
+        return query.strip().lower()
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
