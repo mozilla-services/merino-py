@@ -221,11 +221,12 @@ def test_index_from_export(
         "page_id": 1000,
     }
 
-    file_manager.stream_from_gcs.return_value = [
+    inputs = [
         json.dumps(operation),
         json.dumps(document),
     ]
 
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
     indexer = Indexer(
         "v1", category_blocklist, title_blocklist, file_manager, es_client
     )
@@ -237,13 +238,13 @@ def test_index_from_export(
     es_client.indices.update_aliases.assert_called_once()
 
 
-def test_index_from_export_with_content_filter(
+def test_index_from_export_with_category_blocklist_content_filter(
     file_manager,
     es_client,
     category_blocklist,
     title_blocklist,
 ):
-    """Test content moderation removes blocked categories."""
+    """Test content moderation removes blocked categories from category blocklist."""
     file_manager.get_latest_gcs.return_value = Blob(
         "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
     )
@@ -284,6 +285,73 @@ def test_index_from_export_with_content_filter(
         "create_timestamp": "2001-06-10T22:29:58Z",
         "page_id": 1000,
         "category": ["meme"],
+    }
+
+    file_manager.stream_from_gcs.return_value = [
+        json.dumps(operation0),
+        json.dumps(document0),
+        json.dumps(operation_filtered_out),
+        json.dumps(document_filtered_out),
+    ]
+
+    indexer = Indexer(
+        "v1", category_blocklist, title_blocklist, file_manager, es_client
+    )
+
+    indexer.index_from_export(1, "enwiki")
+
+    es_client.bulk.assert_called_once()
+
+
+def test_index_from_export_with_title_blocklist_content_filter(
+    file_manager,
+    es_client,
+    category_blocklist,
+    title_blocklist,
+):
+    """Test content moderation removes blocked categories from title blocklist.
+    Also verifies that matching results are not case sensitive, given a title.
+    """
+    file_manager.get_latest_gcs.return_value = Blob(
+        "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
+    )
+
+    def check_bulk_side_effect(operations):
+        """Use a side effect to test that we send exactly 2 lines to bulk operation
+        (ie. one index line, one document line).
+        The operations list is mutable, so we need to check that the contents
+        are in place at the time of call.
+        """
+        assert len(operations) == 2
+        return {
+            "acknowledged": True,
+            "errors": False,
+            "items": [{"id": 1000}],
+        }
+
+    es_client.bulk.side_effect = check_bulk_side_effect
+    es_client.indices.exists.return_value = False
+    es_client.indices.create.return_value = {"acknowledged": True}
+
+    operation0 = {"index": {"_type": "doc", "_id": "1000"}}
+    document0 = {
+        "title": "Hercule Poirot",
+        "text_bytes": 1000,
+        "incoming_links": 10,
+        "popularity_score": 0.0003,
+        "create_timestamp": "2001-06-10T22:29:58Z",
+        "page_id": 1000,
+        "category": ["fiction"],
+    }
+    operation_filtered_out = {"index": {"_type": "doc", "_id": "1001"}}
+    document_filtered_out = {
+        "title": "Bad Things",
+        "text_bytes": 1000,
+        "incoming_links": 10,
+        "popularity_score": 0.0003,
+        "create_timestamp": "2001-06-10T22:29:58Z",
+        "page_id": 1000,
+        "category": ["bad"],
     }
 
     file_manager.stream_from_gcs.return_value = [
