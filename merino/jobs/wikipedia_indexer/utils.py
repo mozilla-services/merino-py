@@ -45,13 +45,12 @@ class ProgressReporter:
             )
 
 
-def create_blocklist(blocklist_file_url: str, title_block_list: set[str]) -> set[str]:
-    """Create blocklist from an external file url and the title block list in util module."""
+def create_blocklist(blocklist_file_url: str) -> set[str]:
+    """Create blocklist from an external file url."""
     block_list = requests.get(blocklist_file_url).text
     file_like_io = StringIO(block_list)
     csv_reader = csv.DictReader(file_like_io, delimiter=",")
-    # Create block list set and add contents of title block list to it.
-    return set(row["name"] for row in csv_reader).union(title_block_list)
+    return set(row["name"] for row in csv_reader)
 
 
 def create_elasticsearch_client(

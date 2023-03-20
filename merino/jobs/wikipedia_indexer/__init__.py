@@ -61,13 +61,12 @@ def index(
 
     file_manager = FileManager(gcs_path, gcp_project, "")
 
-    blocklist = create_blocklist(
-        blocklist_file_url=blocklist_file_url, title_block_list=BLOCK_LIST
-    )
+    blocklist = create_blocklist(blocklist_file_url)
 
     indexer = Indexer(
         index_version,
         blocklist,
+        BLOCK_LIST,
         file_manager,
         es_client,
     )

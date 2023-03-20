@@ -46,11 +46,13 @@ class Indexer:
     file_manager: FileManager
     client: Elasticsearch
     blocklist: set[str]
+    title_blocklist: set[str]
 
     def __init__(
         self,
         index_version: str,
         blocklist: set[str],
+        title_blocklist: set[str],
         file_manager: FileManager,
         client: Elasticsearch,
     ):
@@ -60,6 +62,7 @@ class Indexer:
         self.es_client = client
         self.suggestion_builder = Builder(index_version)
         self.blocklist = blocklist
+        self.title_blocklist = title_blocklist
 
     def index_from_export(self, total_docs: int, elasticsearch_alias: str):
         """Primary indexer method.
@@ -118,7 +121,10 @@ class Indexer:
     def _should_index(self, doc: Dict[str, Any]) -> bool:
         """Return True if we want to index this document."""
         categories: set[str] = set(doc.get("category", []))
-        return self.blocklist.isdisjoint(categories)
+        titles: set[str] = set(doc.get("title", []))
+        return self.blocklist.isdisjoint(categories) or self.title_blocklist.isdisjoint(
+            titles
+        )
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)

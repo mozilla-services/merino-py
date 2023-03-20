@@ -23,33 +23,20 @@ def blocklist_csv_text():
         return f.read()
 
 
-@pytest.fixture(name="title_block_list")
-def fixture_title_block_list():
-    """Fixture holding title block list set."""
-    return {"Unsafe Content", "Blocked"}
-
-
 def test_create_blocklist(
     requests_mock,
     blocklist_csv_text: str,
-    title_block_list: set[str],
 ):
     """Test that the blocklist is created from CSV file."""
     url = "https://localhost"
     requests_mock.get(url, text=blocklist_csv_text)
 
-    categories = create_blocklist(
-        blocklist_file_url=url, title_block_list=title_block_list
-    )
+    categories = create_blocklist(blocklist_file_url=url)
 
-    # Ensures logic that combines (via union) the externally read block list and
-    # title block list module.
     assert {
         "Child abuse",
         "Orgasm",
         "Paraphilias",
-        "Unsafe Content",
-        "Blocked",
     } == categories
 
 
