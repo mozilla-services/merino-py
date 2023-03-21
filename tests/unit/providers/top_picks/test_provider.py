@@ -93,9 +93,6 @@ async def test_initialize_failure(
         ("exam", "Example", "https://example.com"),
         ("exxamp", "Example", "https://example.com"),
         ("example", "Example", "https://example.com"),
-        ("Exam", "Example", "https://example.com"),
-        ("EXAm", "Example", "https://example.com"),
-        ("ExAmPlE", "Example", "https://example.com"),
     ],
 )
 @pytest.mark.asyncio

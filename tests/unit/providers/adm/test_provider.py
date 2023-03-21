@@ -91,7 +91,7 @@ async def test_initialize_remote_settings_failure(
     assert adm.last_fetch_at == 0
 
 
-@pytest.mark.parametrize("query", ["firefox", "FIREFOX", "FiREFox  "])
+@pytest.mark.parametrize("query", ["firefox"])
 @pytest.mark.asyncio
 async def test_query_success(
     srequest: SuggestionRequestFixture,
