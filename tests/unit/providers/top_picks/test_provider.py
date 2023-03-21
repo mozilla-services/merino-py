@@ -37,6 +37,36 @@ async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None
     assert top_picks.top_picks_data == backend
 
 
+@pytest.mark.parametrize(
+    ["query", "expected"],
+    [
+        ("example", "example"),
+        ("EXAMPLE", "example"),
+        ("ExAmPlE", "example"),
+        ("example ", "example"),
+        (" example ", "example"),
+        ("  example", "example"),
+        ("example   ", "example"),
+        ("   example   ", "example"),
+    ],
+    ids={
+        "normalized",
+        "uppercase",
+        "mixed-case",
+        "tail space",
+        "leading space",
+        "multi-leading space",
+        "multi-tail space",
+        "leading and trailing space",
+    },
+)
+def test_normalize_query(top_picks: Provider, query: str, expected: str) -> None:
+    """Test for the query normalization method to strip trailing space and
+    convert to lowercase.
+    """
+    assert top_picks.normalize_query(query) == expected
+
+
 @pytest.mark.asyncio
 async def test_initialize_failure(
     caplog: LogCaptureFixture,
@@ -57,21 +87,33 @@ async def test_initialize_failure(
     assert records[0].__dict__["error message"] == error_message
 
 
+@pytest.mark.parametrize(
+    ["query", "title", "url"],
+    [
+        ("exam", "Example", "https://example.com"),
+        ("exxamp", "Example", "https://example.com"),
+        ("example", "Example", "https://example.com"),
+    ],
+)
 @pytest.mark.asyncio
-async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) -> None:
-    """Test for the query method of the Top Pick provider."""
+async def test_query(
+    srequest: SuggestionRequestFixture,
+    top_picks: Provider,
+    query: str,
+    title: str,
+    url: str,
+) -> None:
+    """Test for the query method of the Top Pick provider. Includes testing for query
+    normalization, when uppercase or trailing whitespace in query string.
+    """
     await top_picks.initialize()
 
-    assert await top_picks.query(srequest("am")) == []
-    assert await top_picks.query(srequest("https://")) == []
-    assert await top_picks.query(srequest("supercalifragilisticexpialidocious")) == []
-
-    result: list[BaseSuggestion] = await top_picks.query(srequest("example"))
+    result: list[BaseSuggestion] = await top_picks.query(srequest(query))
     assert result == [
         Suggestion(
             block_id=0,
-            title="Example",
-            url="https://example.com",
+            title=title,
+            url=url,
             provider="top_picks",
             is_top_pick=True,
             is_sponsored=False,
@@ -80,19 +122,27 @@ async def test_query(srequest: SuggestionRequestFixture, top_picks: Provider) ->
         )
     ]
 
-    result = await top_picks.query(srequest("exxamp"))
-    assert result == [
-        Suggestion(
-            block_id=0,
-            title="Example",
-            url="https://example.com",
-            provider="top_picks",
-            is_top_pick=True,
-            is_sponsored=False,
-            icon="",
-            score=settings.providers.top_picks.score,
-        )
-    ]
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "am",
+        "https://",
+        "supercalifragilisticexpialidocious",
+    ],
+)
+@pytest.mark.asyncio
+async def test_query_filtered_input(
+    srequest: SuggestionRequestFixture,
+    top_picks: Provider,
+    query: str,
+) -> None:
+    """Test for filtering logic of the query method in the Top Pick provider
+    to not return results when given a query string that is invalid.
+    """
+    await top_picks.initialize()
+
+    assert await top_picks.query(srequest(query)) == []
 
 
 @pytest.mark.parametrize(

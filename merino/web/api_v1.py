@@ -85,12 +85,11 @@ async def suggest(
     else:
         search_from = default_providers
 
-    srequest = SuggestionRequest(
-        query=q, geolocation=request.scope[ScopeKey.GEOLOCATION]
-    )
-
     lookups: list[Task] = []
     for p in search_from:
+        srequest = SuggestionRequest(
+            query=p.normalize_query(q), geolocation=request.scope[ScopeKey.GEOLOCATION]
+        )
         task = metrics_client.timeit_task(
             p.query(srequest), f"providers.{p.name}.query"
         )

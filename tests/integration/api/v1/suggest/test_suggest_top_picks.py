@@ -53,9 +53,11 @@ def fixture_providers(
     return {"top_picks": Provider(backend=backend, **top_picks_parameters)}
 
 
-@pytest.mark.parametrize("query", ["exam", "exxa", "example"])
+@pytest.mark.parametrize("query", ["exam", "exxa", "example", "Exam", "EXAM", "EXXa"])
 def test_top_picks_query(client: TestClient, query: str) -> None:
-    """Test if Top Picks provider returns result for indexed Top Pick"""
+    """Test if Top Picks provider returns result for indexed Top Pick.
+    Also checks case insensitivity.
+    """
     expected_suggestion: list[Suggestion] = [
         Suggestion(
             block_id=0,
