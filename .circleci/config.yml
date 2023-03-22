@@ -249,8 +249,10 @@ jobs:
             if [ -n "${DOCKER_TAG}" ]; then
               echo ${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}
               docker tag merino-locust ${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}
+              docker tag merino-locust ${DOCKERHUB_MERINO_LOCUST_REPO}:latest
               docker images
               docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}"
+              docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:latest"
             else
               echo "Not pushing to dockerhub for tag=${CIRCLE_TAG} branch=${CIRCLE_BRANCH}"
             fi
