@@ -6,6 +6,7 @@
 
 from fastapi.testclient import TestClient
 
+
 def test_home__redirects_to_docs(client: TestClient) -> None:
     """Test that the home endpoint redirects to the interactive documentation"""
     home_response = client.get("/")
