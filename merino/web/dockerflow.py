@@ -2,13 +2,17 @@
 import logging
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response
+from fastapi.responses import Response, RedirectResponse
 
 from merino.utils.version import Version, fetch_app_version_from_file
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+@router.get("/")
+async def redirect_home_to_docs():
+    response = RedirectResponse(url='/docs')
+    return response
 
 @router.get(
     "/__version__",
