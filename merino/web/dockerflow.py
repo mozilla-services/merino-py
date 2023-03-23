@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 @router.get("/")
 async def redirect_home_to_docs():
+    """Redirects home endpoint to the interactive documentation provided by FastAPI."""
     response = RedirectResponse(url='/docs')
     return response
 
