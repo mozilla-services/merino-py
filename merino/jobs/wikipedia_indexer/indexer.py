@@ -61,7 +61,7 @@ class Indexer:
         self.file_manager = file_manager
         self.es_client = client
         self.suggestion_builder = Builder(index_version)
-        self.category_blocklist = {entry.lower() for entry in category_blocklist}
+        self.category_blocklist = category_blocklist
         self.title_blocklist = {entry.lower() for entry in title_blocklist}
 
     def index_from_export(self, total_docs: int, elasticsearch_alias: str):
