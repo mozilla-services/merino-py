@@ -23,7 +23,7 @@ from merino.providers.wiki_fruit import WikiFruitProvider
 from merino.providers.wikipedia.backends.elastic import ElasticBackend
 from merino.providers.wikipedia.backends.fake_backends import FakeWikipediaBackend
 from merino.providers.wikipedia.provider import Provider as WikipediaProvider
-from merino.utils.block_list import TITLE_BLOCKLIST
+from merino.utils.blocklist import TITLE_BLOCKLIST
 
 
 @unique

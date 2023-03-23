@@ -10,7 +10,7 @@ from merino.jobs.wikipedia_indexer.utils import (
     create_blocklist,
     create_elasticsearch_client,
 )
-from merino.utils.block_list import TITLE_BLOCKLIST
+from merino.utils.blocklist import TITLE_BLOCKLIST
 
 logger = logging.getLogger(__name__)
 
