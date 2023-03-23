@@ -2,7 +2,7 @@
 import logging
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import Response, RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 
 from merino.utils.version import Version, fetch_app_version_from_file
 
