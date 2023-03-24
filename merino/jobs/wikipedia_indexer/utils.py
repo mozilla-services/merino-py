@@ -1,4 +1,4 @@
-"""Utilities for wikipedia indexer job"""
+"""Utilities for Dynamic Wikipedia indexer job"""
 import csv
 from io import StringIO
 from logging import Logger
@@ -46,7 +46,7 @@ class ProgressReporter:
 
 
 def create_blocklist(blocklist_file_url: str) -> set[str]:
-    """Create blocklist from a file url."""
+    """Create blocklist from an external file url."""
     block_list = requests.get(blocklist_file_url).text
     file_like_io = StringIO(block_list)
     csv_reader = csv.DictReader(file_like_io, delimiter=",")

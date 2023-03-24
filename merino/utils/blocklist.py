@@ -1,3 +1,3 @@
 """Util module containing block list for Dynamic Wikipedia provider."""
 
-BLOCK_LIST: set[str] = set()
+TITLE_BLOCKLIST: set[str] = set()

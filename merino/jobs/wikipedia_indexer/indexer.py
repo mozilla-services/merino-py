@@ -11,7 +11,7 @@ from google.cloud.storage import Blob
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.settings import get_settings_for_version
 from merino.jobs.wikipedia_indexer.suggestion import Builder
-from merino.jobs.wikipedia_indexer.util import ProgressReporter
+from merino.jobs.wikipedia_indexer.utils import ProgressReporter
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +27,14 @@ class Indexer:
     index_version: str
     file_manager: FileManager
     client: Elasticsearch
-    blocklist: set[str]
+    category_blocklist: set[str]
+    title_blocklist: set[str]
 
     def __init__(
         self,
         index_version: str,
-        blocklist: set[str],
+        category_blocklist: set[str],
+        title_blocklist: set[str],
         file_manager: FileManager,
         client: Elasticsearch,
     ):
@@ -41,7 +43,8 @@ class Indexer:
         self.file_manager = file_manager
         self.es_client = client
         self.suggestion_builder = Builder(index_version)
-        self.blocklist = blocklist
+        self.category_blocklist = category_blocklist
+        self.title_blocklist = {entry.lower() for entry in title_blocklist}
 
     def index_from_export(self, total_docs: int, elasticsearch_alias: str):
         """Primary indexer method.
@@ -73,11 +76,11 @@ class Indexer:
                 op = json.loads(operator)
                 doc = json.loads(document)
 
-                if self._should_index(doc):
+                if self._should_filter(doc):
+                    blocked += 1
+                else:
                     self._enqueue(index_name, (op, doc))
                     indexed += self._index_docs(False)
-                else:
-                    blocked += 1
 
                 # report percent completed
                 reporter.report(indexed, blocked)
@@ -102,10 +105,20 @@ class Indexer:
         else:
             raise Exception("Could not create the index")
 
-    def _should_index(self, doc: Dict[str, Any]) -> bool:
-        """Return True if we want to index this document."""
+    def _should_filter(self, doc: Dict[str, Any]) -> bool:
+        """Return True if we want to filter out this document and not index it.
+        Checks for existence of matching categories or title in both title and category blocklists.
+        """
         categories: set[str] = set(doc.get("category", []))
-        return self.blocklist.isdisjoint(categories)
+        title: str = doc.get("title", "")
+        should_filter_category: bool = not self.category_blocklist.isdisjoint(
+            categories
+        )
+        should_filter_title: bool = (
+            title.lower() in self.title_blocklist if title != "" else True
+        )
+        should_filter_title = title in self.title_blocklist
+        return should_filter_category or should_filter_title
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)

@@ -6,10 +6,11 @@ import typer
 from merino.config import settings as config
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.indexer import Indexer
-from merino.jobs.wikipedia_indexer.util import (
+from merino.jobs.wikipedia_indexer.utils import (
     create_blocklist,
     create_elasticsearch_client,
 )
+from merino.utils.blocklist import TITLE_BLOCKLIST
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ def index(
     indexer = Indexer(
         index_version,
         blocklist,
+        TITLE_BLOCKLIST,
         file_manager,
         es_client,
     )
