@@ -307,28 +307,4 @@ These are production providers that generate suggestions.
   - `score` (`MERINO_PROVIDERS__WIKIPEDIA__SCORE`) - The ranking score for this provider
     as a floating point number. Defaults to 0.23.
 
-[log]:../merino/config_logging.py
-
-
-### Elasticsearch Index Policy
-
-We want to ensure that the index expire after 3 months,
-so we need to add a lifecycle policy for this deletion to happen.
-
-The command to run in Kibana to add this policy:
-
-```
-PUT _ilm/policy/enwiki_policy
-{
-  "policy": {
-    "phases": {
-      "delete": {
-        "min_age": "90d",
-        "actions": {
-          "delete": {}
-        }
-      }
-    }
-  }
-}
-```
+[log]:../../merino/config_logging.py

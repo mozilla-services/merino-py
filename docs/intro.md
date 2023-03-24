@@ -14,9 +14,6 @@ for more details.
 Merino in Firefox and lists the endpoints for the service in Production,
 State and Dev.
 
-[ops.md - Configuring Merino - Operations][3] describes configuration management
-of the project, Dynaconf setup, and the configuration of the HTTP server, logging, metrics, Remote Settings, and Sentry.
-
 [data.md - Data, Metrics, Logging][4] describes all metrics and logs.
 
 [dev/index.md - Basic Developer Docs][5] describes basics of working on Merino.
@@ -32,9 +29,18 @@ dependencies required for Merino.
 
 [dev/profiling.md - Profiling][10] describes how to profile Merino to address performance issues.
 
+[operations/configs.md - Configuring Merino][3] describes configuration management
+of the project, Dynaconf setup, and the configuration of the HTTP server, logging, metrics, Remote Settings, and Sentry.
+
+[operations/elasticsearch.md - Elasticsearch Operations][11] describes some functionality and operations that
+we do on the Elasticsearch cluster.
+
+[operations/jobs.md - Merino Jobs][12] describes the jobs that are configured in Merino. Indicate where the jobs
+exist and link to the details for how the jobs are run.
+
 [1]: ./api.md
 [2]: ./firefox.md
-[3]: ./ops.md
+[3]: ./operations/configs.md
 [4]: ./data.md
 [5]: ./dev/index.md
 [6]: ./dev/dependencies.md
@@ -42,6 +48,8 @@ dependencies required for Merino.
 [8]: ./dev/release-process.md
 [9]: ./dev/testing.md
 [10]: ./dev/profiling.md
+[11]: ./operations/elasticsearch.md
+[12]: ./operations/jobs.md
 
 ## Architecture
 
