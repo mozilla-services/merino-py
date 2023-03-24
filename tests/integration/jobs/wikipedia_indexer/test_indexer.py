@@ -233,7 +233,7 @@ def test_index_from_export(
 
     indexer.index_from_export(1, "enwiki")
 
-    # es_client.bulk.assert_called_once()
+    es_client.bulk.assert_called_once()
     es_client.indices.refresh.assert_called_once()
     es_client.indices.update_aliases.assert_called_once()
 

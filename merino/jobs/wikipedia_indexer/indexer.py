@@ -85,15 +85,16 @@ class Indexer:
             indexed = 0
             blocked = 0
             gcs_stream = self.file_manager.stream_from_gcs(latest)
+
             for (operator, document) in chunk_bulk_stream(gcs_stream):
                 op = json.loads(operator)
                 doc = json.loads(document)
 
-                if self._should_index(doc):
+                if self._should_filter(doc):
+                    blocked += 1
+                else:
                     self._enqueue(index_name, (op, doc))
                     indexed += self._index_docs(False)
-                else:
-                    blocked += 1
 
                 # report percent completed
                 reporter.report(indexed, blocked)
@@ -118,13 +119,18 @@ class Indexer:
         else:
             raise Exception("Could not create the index")
 
-    def _should_index(self, doc: Dict[str, Any]) -> bool:
-        """Return True if we want to index this document.
+    def _should_filter(self, doc: Dict[str, Any]) -> bool:
+        """Return True if we want to filter out this document and not index it.
         Checks for existence of matching categories or title in both title and category blocklists.
         """
         categories: set[str] = set(doc.get("category", []))
-        title: str | None = doc.get("title").lower() if doc.get("title") else None  # type: ignore
-        should_filter_category = not self.category_blocklist.isdisjoint(categories)
+        title: str = doc.get("title", "")
+        should_filter_category: bool = not self.category_blocklist.isdisjoint(
+            categories
+        )
+        should_filter_title: bool = (
+            title.lower() in self.title_blocklist if title != "" else True
+        )
         should_filter_title = title in self.title_blocklist
         return should_filter_category or should_filter_title
 
