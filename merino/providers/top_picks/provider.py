@@ -52,6 +52,10 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         return False
 
+    def normalize_query(self, query: str) -> str:
+        """Convert a query string to lowercase and remove trailing spaces."""
+        return query.strip().lower()
+
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Query Top Pick data and return suggestions."""
         # Ignore https:// and http://

@@ -206,10 +206,18 @@ jobs:
           command: docker load -i /tmp/workspace/merinopy.tar.gz
       - dockerhub-login
       - run:
-          name: Push to Docker Hub
+          name: Push to Docker Hub # Load tests are triggered though [load test: (abort|warn)] label.
           command: |
             if [ "${CIRCLE_BRANCH}" == "main" ]; then
-              DOCKER_TAG="${CIRCLE_SHA1}"
+              if git log -1 "$CIRCLE_SHA1" | grep -q '\[load test: warn\]'; then
+                echo "Load test requested. Slack warning will be output if test fails and deployment workflow for prod will proceed."
+                DOCKER_TAG="stage-loadtest-warn-${CIRCLE_SHA1}"
+              elif git log -1 "$CIRCLE_SHA1" | grep -q '\[load test: abort\]'; then
+                echo "Load test requested. Deployment workflow for prod will abort if load test fails."
+                DOCKER_TAG="stage-loadtest-abort-${CIRCLE_SHA1}"
+              else
+                DOCKER_TAG="stage-${CIRCLE_SHA1}"
+              fi
             fi
 
             if [ -n "${DOCKER_TAG}" ]; then
@@ -241,8 +249,10 @@ jobs:
             if [ -n "${DOCKER_TAG}" ]; then
               echo ${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}
               docker tag merino-locust ${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}
+              docker tag merino-locust ${DOCKERHUB_MERINO_LOCUST_REPO}:latest
               docker images
               docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}"
+              docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:latest"
             else
               echo "Not pushing to dockerhub for tag=${CIRCLE_TAG} branch=${CIRCLE_BRANCH}"
             fi

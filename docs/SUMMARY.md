@@ -6,7 +6,6 @@
 
 - [Using the HTTP API](./api.md)
 - [Configuring Firefox and Merino Environments](./firefox.md)
-- [Configuring Merino (Operations)](./ops.md)
 - [Data collection](./data.md)
 - [Working on the code](./dev/index.md)
   - [Content Moderation](./dev/content-moderation.md)
@@ -17,3 +16,7 @@
   - [Testing Strategies](./dev/testing.md)
   - [Release Process](./dev/release-process.md)
   - [Profiling](./dev/profiling.md)
+- [Operations](./operations/index.md)
+  - [Configs](./operations/configs.md)
+  - [Elasticsearch](./operations/elasticsearch.md)
+  - [Jobs](./operations/jobs.md)

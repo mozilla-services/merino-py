@@ -2,6 +2,10 @@
 
 This page describes the API endpoints available on Merino.
 
+You can also run the app and visit the /docs endpoint 
+(the home endpoint should also redirect here) for a labeled,
+interactive list of the endpoints and their inputs.
+
 ## Suggest
 
 Endpoint: `/api/v1/suggest`

@@ -3,7 +3,7 @@
 from merino.providers.adm.backends.protocol import SuggestionContent
 
 
-class FakeAdmBackend:
+class FakeAdmBackend:  # pragma: no cover
     """A fake backend that always returns empty results."""
 
     async def fetch(self) -> SuggestionContent:

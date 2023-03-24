@@ -8,6 +8,20 @@ This directory contains source code for the load tests for Merino.
 * [Merino Load Test History][merino_history_doc]
 * [Merino Load Test Spreadsheet][merino_spreadsheet]
 
+## Opt-In Execution in Staging
+
+To automatically kick off load testing in staging along with your pull request commit, you have to include
+a label in your git commit. This must be the merge commit on the `main` branch, since only the most recent commit is checked for the label. This label is in the form of: `[load test: (abort|warn)]`. Take careful note
+of correct syntax and spacing within the label. There are two options for load tests, being `abort` and `warn`.
+
+The `abort` label will prevent a `prod` deployment should the load test fail.
+Ex. `feat: Add feature ABC [load test: abort]`.
+
+The `warn` label will output a Slack warning should the load test fail, but still allow for `prod` deployment.
+Ex. `feat: Add feature XYZ [load test: warn]`.
+
+The commit tag signals load test instructions to Jenkins by modifying the Docker image tag. The Jenkins deployment workflow first deploys to `stage` and then runs load tests if requested. The Docker image tag passed to Jenkins appears as follows:
+`^(?P<environment>stage|prod)(?:-(?P<task>\w+)-(?P<onfailure>warn|abort))?-(?P<commit>[a-z0-9]+)$`.
 
 ## Local Execution
 
