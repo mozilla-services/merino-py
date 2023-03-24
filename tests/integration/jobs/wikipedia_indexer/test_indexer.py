@@ -231,7 +231,6 @@ def test_index_from_export(
         "v1", category_blocklist, title_blocklist, file_manager, es_client
     )
 
-
     indexer.index_from_export(1, "enwiki")
 
     es_client.bulk.assert_called_once()
@@ -287,7 +286,7 @@ def test_index_from_export_with_category_blocklist_content_filter(
         "page_id": 1000,
         "category": ["meme"],
     }
-    
+
     inputs = [
         json.dumps(operation0),
         json.dumps(document0),
@@ -299,9 +298,9 @@ def test_index_from_export_with_category_blocklist_content_filter(
     indexer = Indexer(
         "v1", category_blocklist, title_blocklist, file_manager, es_client
     )
-    
+
     indexer.index_from_export(1, "enwiki")
-    
+
     es_client.bulk.assert_called_once()
 
 
@@ -362,13 +361,12 @@ def test_index_from_export_with_title_blocklist_content_filter(
         json.dumps(operation_filtered_out),
         json.dumps(document_filtered_out),
     ]
-    
+
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
     indexer = Indexer(
         "v1", category_blocklist, title_blocklist, file_manager, es_client
     )
-    
+
     indexer.index_from_export(1, "enwiki")
-    
+
     es_client.bulk.assert_called_once()
-    
