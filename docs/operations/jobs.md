@@ -13,6 +13,8 @@ The reasons to keep the job code close to the application code are:
 
 ### Where to find and modify the jobs
 
+The code for the job lives in jobs/wikipedia_indexer/__init__.py in the merino-py repository.
+
 The job is configured in [`telemetry-airflow`](https://github.com/mozilla/telemetry-airflow).
 
 You can access the job in the 
