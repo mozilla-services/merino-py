@@ -1,6 +1,8 @@
 # Merino Load (Locust) Tests
 
 This directory contains source code for the load tests for Merino.
+This test framework uses IP2Location LITE data available from 
+https://lite.ip2location.com
 
 ## Related Documentation
 
