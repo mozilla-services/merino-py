@@ -81,6 +81,7 @@ async def test_initialize_remote_settings_failure(
     filter_caplog: FilterCaplogFixture,
     backend_mock: Any,
     adm: Provider,
+    adm_uninitialized_suggestion_content: SuggestionContent,
 ) -> None:
     """Test exception handling for the initialize() method."""
     error_message: str = "The remote server was unreachable"
@@ -98,6 +99,8 @@ async def test_initialize_remote_settings_failure(
     assert len(records) == 1
     assert records[0].__dict__["error message"] == error_message
     assert adm.last_fetch_at == 0
+    # SuggestionContent should be empty as initialize was unsuccessful.
+    assert adm.suggestion_content == adm_uninitialized_suggestion_content
 
 
 @pytest.mark.parametrize("query", ["firefox"])
