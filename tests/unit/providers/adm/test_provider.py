@@ -25,6 +25,15 @@ def test_hidden(adm: Provider) -> None:
     assert adm.hidden() is False
 
 
+def test_init_uninitialized(
+    adm: Provider, adm_uninitialized_suggestion_content: SuggestionContent
+) -> None:
+    """Test provider creation prior to initialize _fetch calls.
+    Ensure empty SuggestionContent object created but is empty.
+    """
+    assert adm.suggestion_content == adm_uninitialized_suggestion_content
+
+
 @pytest.mark.asyncio
 async def test_initialize(
     adm: Provider, adm_suggestion_content: SuggestionContent

@@ -12,6 +12,17 @@ from merino.providers.adm.backends.protocol import AdmBackend, SuggestionContent
 from merino.providers.adm.provider import Provider
 
 
+@pytest.fixture(name="adm_uninitialized_suggestion_content")
+def fixture_adm_uninitialized_suggestion_content() -> SuggestionContent:
+    """Define empty suggestion content prior to provider initialization call."""
+    return SuggestionContent(
+        suggestions={},
+        full_keywords=[],
+        results=[],
+        icons={},
+    )
+
+
 @pytest.fixture(name="adm_suggestion_content")
 def fixture_adm_suggestion_content() -> SuggestionContent:
     """Define backend suggestion content for test."""
