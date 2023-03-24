@@ -28,7 +28,7 @@ PUT _ilm/policy/enwiki_policy
 
 ## Closed Index Recovery
 
-The indexing job currently [closes the index ](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-close.html)
+The indexing job currently [closes the index](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-close.html)
 after it migrates the alias to point to the new index.
 Closing the index removes the ability to query from the index
 but also reduces the heap memory usage when the index is not actively being queried.
