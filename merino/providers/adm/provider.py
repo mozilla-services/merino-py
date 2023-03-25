@@ -82,6 +82,9 @@ class Provider(BaseProvider):
         self.score = score
         self.score_wikipedia = score_wikipedia
         self.resync_interval_sec = resync_interval_sec
+        self.suggestion_content = SuggestionContent(
+            suggestions={}, full_keywords=[], results=[], icons={}
+        )
         self._name = name
         self._enabled_by_default = enabled_by_default
         super().__init__(**kwargs)

@@ -66,14 +66,19 @@ def test_normalize_query(adm: Provider, query: str, expected: str) -> None:
     assert adm.normalize_query(query) == expected
 
 
+@pytest.mark.parametrize("query", ["firefox"])
 @pytest.mark.asyncio
 async def test_initialize_remote_settings_failure(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     backend_mock: Any,
     adm: Provider,
+    srequest: SuggestionRequestFixture,
+    query,
 ) -> None:
-    """Test exception handling for the initialize() method."""
+    """Test exception handling for the initialize() method and querying
+    of provider to return an empty suggestion.
+    """
     error_message: str = "The remote server was unreachable"
     # override default mocked behavior for fetch
     backend_mock.fetch.side_effect = Exception(error_message)
@@ -89,6 +94,14 @@ async def test_initialize_remote_settings_failure(
     assert len(records) == 1
     assert records[0].__dict__["error message"] == error_message
     assert adm.last_fetch_at == 0
+    # SuggestionContent should be empty as initialize was unsuccessful.
+    assert adm.suggestion_content == SuggestionContent(
+        suggestions={},
+        full_keywords=[],
+        results=[],
+        icons={},
+    )
+    assert await adm.query(srequest(query)) == []
 
 
 @pytest.mark.parametrize("query", ["firefox"])
