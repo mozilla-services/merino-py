@@ -5,6 +5,7 @@ This project currently follows a [Continuous Deployment][continuous_deployment] 
 [continuous_deployment]: https://en.wikipedia.org/wiki/Continuous_deployment
 
 Whenever a commit is pushed to this repository's `main` branch, the deployment pipeline kicks in, deploying the changeset to the [`stage` environment](../firefox.md#stage) and subsequently the [`production` environment](../firefox.md#production)
+Pushing a new Docker image to the Docker Hub registry triggers a webhook that starts the Jenkins deployment workflow (the Docker image tag determines the target environment)
 After the deployment is complete, accessing the [`__version__` endpoint][stage_version] will show the commit hash of the deployed version, which will eventually match to the one of the latest commit on the `main` branch (a node with an older version might still serve the request before it is shut down).
 
 [stage_version]: https://stage.merino.nonprod.cloudops.mozgcp.net/__version__

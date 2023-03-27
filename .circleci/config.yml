@@ -243,6 +243,8 @@ jobs:
               echo "Not pushing to dockerhub for tag=${CIRCLE_TAG} branch=${CIRCLE_BRANCH}"
             fi
   docker-image-publish-prod:
+    # Pushing a new production Docker image to the Docker Hub registry triggers a
+    # webhook that starts the Jenkins deployment workflow
     docker:
       - image: cimg/base:2022.08
     steps:
