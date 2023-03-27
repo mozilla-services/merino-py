@@ -137,7 +137,13 @@ def test_index_from_export_fail_on_existing_index(
 
 
 @pytest.mark.parametrize(
-    ["new_index_name", "alias_name", "existing_indices", "expected_actions"],
+    [
+        "new_index_name",
+        "alias_name",
+        "existing_indices",
+        "expected_actions",
+        "expected_close_indices",
+    ],
     [
         (
             "enwiki-123",
@@ -147,6 +153,7 @@ def test_index_from_export_fail_on_existing_index(
                 {"add": {"index": "enwiki-123", "alias": "enwiki"}},
                 {"remove": {"index": "enwiki-345", "alias": "enwiki"}},
             ],
+            ["enwiki-345"],
         ),
         (
             "enwiki-123",
@@ -157,6 +164,7 @@ def test_index_from_export_fail_on_existing_index(
                 {"remove": {"index": "enwiki-345", "alias": "enwiki-v1"}},
                 {"remove": {"index": "enwiki-678", "alias": "enwiki-v1"}},
             ],
+            ["enwiki-345", "enwiki-678"],
         ),
         (
             "enwiki-123",
@@ -165,6 +173,7 @@ def test_index_from_export_fail_on_existing_index(
             [
                 {"add": {"index": "enwiki-123", "alias": "enwiki-v1"}},
             ],
+            [],
         ),
     ],
 )
@@ -177,6 +186,7 @@ def test_flip_alias(
     alias_name,
     existing_indices,
     expected_actions,
+    expected_close_indices,
 ):
     """Test alias flipping logic."""
     es_client.indices.exists_alias.return_value = len(existing_indices) > 0
@@ -190,6 +200,10 @@ def test_flip_alias(
     assert es_client.indices.update_aliases.called
 
     es_client.indices.update_aliases.assert_called_with(actions=expected_actions)
+    if expected_close_indices:
+        es_client.indices.close.assert_called_once_with(index=expected_close_indices)
+    else:
+        assert not es_client.indices.close.called
 
 
 def test_index_from_export(
