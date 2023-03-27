@@ -16,7 +16,7 @@ httpx = "^0.23.3"
 kinto-http = "^11.0.0"
 locust = "^2.14.2"
 pydantic = "^1.10.4"
-redis = "^4.5.1"
+redis = "^4.5.3"
 starlette = "^0.25.0"
 wrapt = "^1.14.1"
 
