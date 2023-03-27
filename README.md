@@ -1,4 +1,4 @@
-# Merino
+# Merino [![CircleCI](https://dl.circleci.com/status-badge/img/gh/mozilla-services/merino-py/tree/main.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/mozilla-services/merino-py/tree/main)
 
 A service to provide address bar suggestions to Firefox. For more details, see
 the [service docs](https://mozilla-services.github.io/merino-py/).
