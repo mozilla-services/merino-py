@@ -1500,7 +1500,7 @@ as a floating point number. Defaults to 0.23.</li>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="elasticsearch-operations"><a class="header" href="#elasticsearch-operations">Elasticsearch Operations</a></h1>
 <p>We use Elasticsearch as a source of data for one of our providers.
 This page documents some of the commands that we want to run on the cluster.</p>
-<h3 id="elasticsearch-index-policy"><a class="header" href="#elasticsearch-index-policy">Elasticsearch Index Policy</a></h3>
+<h2 id="elasticsearch-index-policy"><a class="header" href="#elasticsearch-index-policy">Elasticsearch Index Policy</a></h2>
 <p>We want to ensure that the index expire after 30 days,
 so we need to add a lifecycle policy for this deletion to happen.</p>
 <p>The command to run in Kibana to add this policy:</p>
@@ -1518,6 +1518,17 @@ so we need to add a lifecycle policy for this deletion to happen.</p>
   }
 }
 </code></pre>
+<h2 id="closed-index-recovery"><a class="header" href="#closed-index-recovery">Closed Index Recovery</a></h2>
+<p>The indexing job currently <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-close.html">closes the index</a>
+after it migrates the alias to point to the new index.
+Closing the index removes the ability to query from the index
+but also reduces the heap memory usage when the index is not actively being queried.</p>
+<p>If there is a situation where we need to recover a closed index to be the main index,
+we will need to do the following:</p>
+<ol>
+<li><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-open-close.html">Re-open the index</a></li>
+<li>Point the <a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html">index alias</a> to the recovered index</li>
+</ol>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="merino-jobs-operations"><a class="header" href="#merino-jobs-operations">Merino Jobs Operations</a></h1>
 <h2 id="dynamic-wikipedia"><a class="header" href="#dynamic-wikipedia">Dynamic Wikipedia</a></h2>
 <p>Merino currently builds the Elasticsearch indexing job that runs in Airflow.
