@@ -4,8 +4,12 @@ This project currently follows a [Continuous Deployment][continuous_deployment] 
 
 [continuous_deployment]: https://en.wikipedia.org/wiki/Continuous_deployment
 
-Whenever a commit is pushed to this repository's `main` branch, a CircleCI workflow is triggered which performs code checks and runs automated tests. The workflow additionally builds a new Docker image of the service and pushes that Docker image to the Docker Hub registry (this requires all previous jobs to pass). 
-Pushing a new Docker image to the Docker Hub registry triggers a webhook that starts the Jenkins deployment pipeline (the Docker image tag determines the target environment). The deployment pipeline first deploys to the [`stage` environment](../firefox.md#stage) and subsequently to the [`production` environment](../firefox.md#production)
+Whenever a commit is pushed to this repository's `main` branch, a CircleCI workflow is triggered which performs code checks and runs automated tests. The workflow additionally builds a new Docker image of the service and pushes that Docker image to the Docker Hub registry (this requires all previous jobs to pass).
+
+Pushing a new Docker image to the Docker Hub registry triggers a webhook that starts the Jenkins deployment pipeline (the Docker image tag determines the target environment). The deployment pipeline first deploys to the [`stage` environment](../firefox.md#stage) and subsequently to the [`production` environment](../firefox.md#production).
+
+![Activity diagram of CircleCI main-workflow][activity_circleci_main_workflow]
+
 After the deployment is complete, accessing the [`__version__` endpoint][stage_version] will show the commit hash of the deployed version, which will eventually match to the one of the latest commit on the `main` branch (a node with an older version might still serve the request before it is shut down).
 
 [stage_version]: https://stage.merino.nonprod.cloudops.mozgcp.net/__version__
@@ -37,7 +41,7 @@ Load testing can be run locally or as a part of the deployment process. Local ex
 Abort will prevent deployment should the load testing fail while warn will simply warn via Slack and continue deployment. For detailed specifics on load testing and this convention, please see the relevant documentation: [load-testing-docs]: /tests/load/README.md].
 
 ## Releasing to production
-Developers with write access to the Merino repository will initiate a deployment to production when a Pull-Request on the Merino GitHub repository is merged to the `main` branch. 
+Developers with write access to the Merino repository will initiate a deployment to production when a Pull-Request on the Merino GitHub repository is merged to the `main` branch.
 Developers **must** monitor the [Merino Application & Infrastructure][merino_app_info] dashboard for any anomaly, for example significant changes in HTTP response codes, increase in latency, cpu/memory usage (most things under the infrastructure heading).
 
 While any developer with write access can trigger the deployment to production, the _expectation_ is that individual(s) who authored and merged the Pull-Request should do so, as they are the ones most familiar with their changes and who can tell, by looking at the data, if anything looks anomalous.
@@ -59,3 +63,4 @@ don't panic and follow the instructions below:
 [incident_docs]: https://mozilla-hub.atlassian.net/wiki/spaces/MIR/overview
 [contributing]: ../../CONTRIBUTING.md
 [load-testing-docs]: /tests/load/README.md
+[activity_circleci_main_workflow]: ./circleci_main_workflow.jpg
