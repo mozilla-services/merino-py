@@ -59,12 +59,16 @@ workflows:
           <<: *main-filters
           requires:
             - docs-build
-      - docker-image-publish-merino-locust:
+      - check-for-deployment:
           <<: *main-filters
           requires:
             - checks
             - test-coverage-check
             - contract-tests
+      - docker-image-publish-merino-locust:
+          <<: *main-filters
+          requires:
+            - check-for-deployment
       - docker-image-publish:
           <<: *main-filters
           requires:
@@ -169,6 +173,12 @@ jobs:
           command: |
             sudo chown 1000:1000 tests/contract/kinto-attachments
             make run-contract-tests
+  check-for-deployment:
+    docker:
+      - image: cimg/base:2022.08
+    steps:
+      - checkout
+      - skip-if-do-not-deploy
   docker-image-publish:
     # Pushing a new production Docker image to the Docker Hub registry triggers a
     # webhook that starts the Jenkins deployment workflow
@@ -176,7 +186,6 @@ jobs:
       - image: cimg/base:2022.08
     steps:
       - checkout
-      - skip-if-do-not-deploy
       - attach_workspace:
           at: /tmp/workspace
       - setup_remote_docker
@@ -220,7 +229,6 @@ jobs:
       - image: cimg/base:2022.08
     steps:
       - checkout
-      - skip-if-do-not-deploy
       - setup_remote_docker:
           docker_layer_caching: true
       - run:
