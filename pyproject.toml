@@ -78,7 +78,7 @@ wrapt = "^1.14.1"
 elasticsearch = {extras = ["async"], version = "^8.5.0"}
 google-cloud-storage = "^2.6.0"
 typer = "^0.7.0"
-redis = "^4.5.3"
+redis = "^4.5.4"
 
 [tool.poetry.dev-dependencies]
 black = "^22.6.0"
