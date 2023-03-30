@@ -39,6 +39,12 @@ spec:
               value: "[MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT]"
             - name: MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT
               value: "[MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT]"
+            - name: MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY
+              value: [MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY]
+            - name: MERINO_PROVIDERS__WIKIPEDIA__ES_URL
+              value: [MERINO_PROVIDERS__WIKIPEDIA__ES_URL]
+            - name: MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX
+              value: [MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX]
           ports:
             - name: loc-master-web
               containerPort: 8089

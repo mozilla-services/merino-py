@@ -42,6 +42,9 @@ The following variables can be set in `tests\load\docker-compose.yml`:
 | MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH | master & worker | The minimum character limit set for long domain suggestion indexing                       |
 | MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT    | master & worker | The minimum character limit set for short domain suggestion indexing                      |
 | MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT  | master & worker | File path to the json file of domains                                                     |
+| MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY          | master & worker | The base64 key used to authenticate on the Elasticsearch cluster specified by es_cloud_id |
+| MERINO_PROVIDERS__WIKIPEDIA__ES_URL              | master & worker | The Cloud ID of the Elasticsearch cluster                                                 |
+| MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX            | master & worker | The index identifier of Wikipedia in Elasticsearch                                        |                                                                                          |
 | (*OPTIONAL*) LOCUST_CSV                          | master          | Store current request stats to files in CSV format with given prefix (Example: `merino`)  |
 
 #### 2. Host Locust via Docker
@@ -98,6 +101,8 @@ The load tests can be executed from the [contextual-services-test-eng cloud shel
 * The `setup_k8s.sh` file, located in the `tests\load` directory, contains shell 
 commands to **create** a GKE cluster, **setup** an existing GKE cluster or **delete** 
 a GKE cluster
+  * Modify the script to include the MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY 
+    environment variables
   * Execute the following from the root directory, to make the file executable:
     ```shell
     chmod +x tests/load/setup_k8s.sh
