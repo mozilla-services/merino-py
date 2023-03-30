@@ -213,8 +213,8 @@ jobs:
             fi
 
             if [ -n "${STAGE_DOCKER_TAG}" ]; then
-              echo ${DOCKERHUB_REPO}:${STAGE_DOCKER_TAG}
-              docker tag app:build ${DOCKERHUB_REPO}:${STAGE_DOCKER_TAG}
+              echo "${DOCKERHUB_REPO}:${STAGE_DOCKER_TAG}"
+              docker tag app:build "${DOCKERHUB_REPO}:${STAGE_DOCKER_TAG}"
               docker images
               docker push "${DOCKERHUB_REPO}:${STAGE_DOCKER_TAG}"
             else
@@ -222,9 +222,9 @@ jobs:
             fi
 
             if [ -n "${PROD_DOCKER_TAG}" ]; then
-              echo ${DOCKERHUB_REPO}:${PROD_DOCKER_TAG}
-              docker tag app:build ${DOCKERHUB_REPO}:${PROD_DOCKER_TAG}
-              docker tag app:build ${DOCKERHUB_REPO}:latest
+              echo "${DOCKERHUB_REPO}:${PROD_DOCKER_TAG}"
+              docker tag app:build "${DOCKERHUB_REPO}:${PROD_DOCKER_TAG}"
+              docker tag app:build "${DOCKERHUB_REPO}:latest"
               docker images
               docker push "${DOCKERHUB_REPO}:${PROD_DOCKER_TAG}"
               docker push "${DOCKERHUB_REPO}:latest"
@@ -238,7 +238,7 @@ jobs:
       - checkout
       - run:
           name: Check for load test directive
-          command: | 
+          command: |
             if ! git log -1 "$CIRCLE_SHA1" | grep -q '\[load test: abort\|warn\]'; then
               echo "Skipping remaining steps in this job: load test not required."
               circleci-agent step halt
