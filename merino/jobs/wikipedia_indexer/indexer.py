@@ -200,3 +200,4 @@ class Indexer:
         # This will improve the memory usage of the cluster.
         if indices_to_close:
             self.es_client.indices.close(index=indices_to_close)
+            logger.info("closed some indices", extra={"indices": indices_to_close})
