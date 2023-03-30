@@ -291,11 +291,8 @@ These are production providers that generate suggestions.
     this provider is enabled by default.
   - `backend` (`MERINO_PROVIDERS__WIKIPEDIA__backend`) - The backend of the provider.
     Either `elasticsearch` or `test`.
-  - `es_cloud_id` (`MERINO_PROVIDERS__WIKIPEDIA__ES_CLOUD_ID`) - The Cloud ID of the
-    Elasticsearch cluster.
   - `es_url` (`MERINO_PROVIDERS__WIKIPEDIA__ES_URL`) - The URL of the cluster that we
-    want to connect to. This takes precedent over the Cloud ID (i.e. if you pass both,
-    we will choose the URL over the Cloud ID.).
+    want to connect to.
   - `es_api_key` (`MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY`) - The base64 key used to
     authenticate on the Elasticsearch cluster specified by `es_cloud_id`.
   - `es_index` (`MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX`) - The index identifier

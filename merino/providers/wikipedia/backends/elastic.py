@@ -1,6 +1,6 @@
 """The Elasticsearch backend for Dynamic Wikipedia."""
 import logging
-from typing import Any, Final, Optional
+from typing import Any, Final
 from urllib.parse import quote
 
 from elasticsearch import AsyncElasticsearch
@@ -24,20 +24,12 @@ class ElasticBackend:
 
     client: AsyncElasticsearch
 
-    def __init__(
-        self, *, api_key: str, url: Optional[str] = None, cloud_id: Optional[str] = None
-    ) -> None:
-        """Initialize."""
-        if url:
-            self.client = AsyncElasticsearch(url, api_key=api_key)
-            logging.info("Initialized Elasticsearch with URL")
-        elif cloud_id:
-            self.client = AsyncElasticsearch(cloud_id=cloud_id, api_key=api_key)
-            logging.info("Initialized Elasticsearch with Cloud ID")
-        else:
-            raise ElasticBackendError(
-                "Require one of {url, cloud_id} to initialize Elasticsearch client."
-            )
+    def __init__(self, *, api_key: str, url: str) -> None:
+        """Initialize the ElasticBackend.
+        Raises a ValueError if URL is incorrectly formatted.
+        """
+        self.client = AsyncElasticsearch(url, api_key=api_key)
+        logging.info("Initialized Elasticsearch with URL")
 
     async def shutdown(self) -> None:
         """Shut down the connection to the ES cluster."""

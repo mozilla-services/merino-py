@@ -7,18 +7,14 @@ from pytest_mock import MockerFixture
 
 from merino.config import settings
 from merino.exceptions import BackendError
-from merino.providers.wikipedia.backends.elastic import (
-    SUGGEST_ID,
-    ElasticBackend,
-    ElasticBackendError,
-)
+from merino.providers.wikipedia.backends.elastic import SUGGEST_ID, ElasticBackend
 
 
 @pytest.fixture(name="es_backend")
 def fixture_es_backend() -> ElasticBackend:
     """Return an ES backend instance."""
     return ElasticBackend(
-        cloud_id=settings.providers.wikipedia.es_cloud_id,
+        url="https://localhost:9200",
         api_key=settings.providers.wikipedia.es_api_key,
     )
 
@@ -30,16 +26,6 @@ def test_es_backend_initialize_with_url():
         api_key=settings.providers.wikipedia.es_api_key,
     )
     assert backend
-
-
-def test_es_backend_initialize_error():
-    """Test that the backend errors out when we initialize it without URL or cloud id."""
-    with pytest.raises(ElasticBackendError) as eb_error:
-        ElasticBackend(api_key=settings.providers.wikipedia.es_api_key)
-    assert (
-        "Require one of {url, cloud_id} to initialize Elasticsearch client."
-        == eb_error.value.args[0]
-    )
 
 
 @pytest.mark.asyncio
