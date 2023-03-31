@@ -43,20 +43,8 @@ SUGGEST_API: str = "/api/v1/suggest"
 # affecting the client's Suggest experience
 CLIENT_VARIANTS: str = ""
 
-# See Ops - Remote Settings
-# https://github.com/mozilla-services/merino-py/blob/main/docs/ops.md#remote_settings
-MERINO_REMOTE_SETTINGS__SERVER: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__SERVER", os.getenv("KINTO__SERVER_URL")
-)
-MERINO_REMOTE_SETTINGS__BUCKET: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__BUCKET", os.getenv("KINTO__BUCKET")
-)
-MERINO_REMOTE_SETTINGS__COLLECTION: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__COLLECTION", os.getenv("KINTO__COLLECTION")
-)
-
-# See Ops - TOP PICKS
-# https://github.com/mozilla-services/merino-py/blob/main/docs/ops.md#top-picks-provider
+# Configurations
+# See Configuring Merino (https://mozilla-services.github.io/merino/ops.html)
 MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH: str | None = os.getenv(
     "MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH"
 )
@@ -66,9 +54,6 @@ MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT: int = int(
 MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT: int = int(
     os.getenv("MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT", 0)
 )
-
-# See Ops - Wikipedia Dynamic Match Provider
-# https://github.com/mozilla-services/merino-py/blob/main/docs/ops.md#wikipedia-dynamic-match-provider
 MERINO_PROVIDERS__WIKIPEDIA__ES_URL: str | None = os.getenv(
     "MERINO_PROVIDERS__WIKIPEDIA__ES_URL"
 )
@@ -77,6 +62,15 @@ MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY: str | None = os.getenv(
 )
 MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX: str | None = os.getenv(
     "MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX"
+)
+MERINO_REMOTE_SETTINGS__SERVER: str | None = os.getenv(
+    "MERINO_REMOTE_SETTINGS__SERVER", os.getenv("KINTO__SERVER_URL")
+)
+MERINO_REMOTE_SETTINGS__BUCKET: str | None = os.getenv(
+    "MERINO_REMOTE_SETTINGS__BUCKET", os.getenv("KINTO__BUCKET")
+)
+MERINO_REMOTE_SETTINGS__COLLECTION: str | None = os.getenv(
+    "MERINO_REMOTE_SETTINGS__COLLECTION", os.getenv("KINTO__COLLECTION")
 )
 
 
