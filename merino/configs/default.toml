@@ -123,16 +123,8 @@ type = "wikipedia"
 enabled_by_default = false
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "elasticsearch"
-# Elasticsearch Cloud ID. The following one is *fake* and will be
-# overridden in production.
-es_cloud_id = """
-  testing:dXMtZWFzdC0xLmF3cy5mb3VuZC5pbyRjZWM2ZjI2MWE3NGJmMjRjZ
-  TMzYmI4ODExYjg0Mjk0ZiRjNmMyY2E2ZDA0MjI0OWFmMGNjN2Q3YTllOTYyNTc0Mw==
-"""
 # The URL of the cluster that we want to connect to.
-# This takes precedent over the Cloud ID (i.e. if you pass both,
-# we will choose the URL over the Cloud ID).
-es_url = ""
+es_url = "http://localhost:9200"
 # The base64 key used to authenticate on the Elasticsearch cluster
 es_api_key = ""
 # Elasticsearch index
@@ -151,8 +143,6 @@ score = 0.23
 # This takes precedent over the Cloud ID (i.e. if you pass both,
 # we will choose the URL over the Cloud ID).
 es_url = ""
-# Elasticsearch cloud ID for indexing job
-es_cloud_id = ""
 # Elasticsearch API key for indexing job
 es_api_key = ""
 # Elasticsearch API key for indexing job

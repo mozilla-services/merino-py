@@ -45,7 +45,6 @@ indexer_cmd = typer.Typer(
 @indexer_cmd.command()
 def index(
     elasticsearch_url: str = job_settings.es_url,
-    elasticsearch_cloud_id: str = job_settings.es_cloud_id,
     elasticsearch_api_key: str = job_settings.es_api_key,
     elasticsearch_alias: str = job_settings.es_alias,
     blocklist_file_url: str = job_settings.blocklist_file_url,
@@ -55,9 +54,7 @@ def index(
     gcp_project: str = gcp_project_option,
 ):
     """Index file from GCS to Elasticsearch"""
-    es_client = create_elasticsearch_client(
-        elasticsearch_url, elasticsearch_cloud_id, elasticsearch_api_key
-    )
+    es_client = create_elasticsearch_client(elasticsearch_url, elasticsearch_api_key)
 
     file_manager = FileManager(gcs_path, gcp_project, "")
 
