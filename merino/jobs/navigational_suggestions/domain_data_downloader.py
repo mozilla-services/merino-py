@@ -67,7 +67,7 @@ inner join
   domains_with_categories
 using (domain)
 order by rank
-limit 4
+limit 1000
 """
 
   client: Client
