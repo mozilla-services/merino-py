@@ -30,6 +30,6 @@ gcp_project = "contextual-services-dev"
 # GCP project name that contains domain data tables
 source_gcp_project = "mozdata"
 # GCP project name where the GCS bucket lives
-destination_gcp_project = "wstuckey-sandbox"
+destination_gcp_project = "moz-fx-merino-nonprod-ee93"
 # GCS bucket name where domain metadata will be uploaded
-destination_gcs_bucket = "merino-images-sandbox"
+destination_gcs_bucket = "merino-images-stagepy"
