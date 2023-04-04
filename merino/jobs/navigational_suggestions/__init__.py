@@ -36,12 +36,12 @@ navigational_suggestions_cmd = typer.Typer(
     help="Command for preparing top domain metadata for navigational suggestions",
 )
 
-def _construct_top_picks(domain_data: list[dict], favicons: list[str], urls_and_titles: list[dict]):
+def _construct_top_picks(domain_data: list[dict], favicons: list[str], urls_and_titles: list[dict], second_level_domains: list[str]):
     result = []
     for index in range(len(domain_data)):
         result.append({
             'rank': domain_data[index]['rank'],
-            'domain': domain_data[index]['domain'],
+            'domain': second_level_domains[index],
             'categories': domain_data[index]['categories'],
             **urls_and_titles[index],
             'icon': favicons[index],
@@ -62,22 +62,19 @@ def prepare_domain_metadata(
     domain_data = domain_data_downloader.download_data();
     logger.info(f'domain data download complete')
 
-    # extract favicons and titles of top domains
+    # extract domain metadata of top domains
     domain_metadata_extractor = DomainMetadataExtractor()
     favicons = domain_metadata_extractor.get_favicons(domain_data)
-    logger.info(f'domain favicons extraction complete')
-
     urls_and_titles = domain_metadata_extractor.get_urls_and_titles(domain_data)
-    logger.info(f'domain titles and url extraction complete')
+    second_level_domains = domain_metadata_extractor.get_second_level_domains(domain_data)
+    logger.info(f'domain metadata extraction complete')
 
     # upload favicons and get their public urls
-    #domain_metadata_uploader = DomainMetadataUploader(destination_gcp_project, destination_gcs_bucket)
-    #uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
-    #logger.info(f'domain favicons uploaded to gcs')
+    domain_metadata_uploader = DomainMetadataUploader(destination_gcp_project, destination_gcs_bucket)
+    uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
+    logger.info(f'domain favicons uploaded to gcs')
 
     # construct top pick contents and upload it to gcs
-    #top_picks = _construct_top_picks(domain_data, uploaded_favicons, urls_and_titles)
-    top_picks = _construct_top_picks(domain_data, favicons, urls_and_titles)
-    #domain_metadata_uploader.upload_top_picks(top_picks)
-    #logger.info(f'top pick contents uploaded to gcs')
-    print(top_picks)
+    top_picks = _construct_top_picks(domain_data, uploaded_favicons, urls_and_titles, second_level_domains)
+    domain_metadata_uploader.upload_top_picks(top_picks)
+    logger.info(f'top pick contents uploaded to gcs')

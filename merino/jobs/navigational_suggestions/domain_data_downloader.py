@@ -13,8 +13,9 @@ with apex_names as (
     origin,
     suffix
   FROM `moz-fx-data-shared-prod.domain_metadata_derived.top_domains_v1`
+  -- ToDo: replace the fixed date for submission_date with date_trunc(current_date(), MONTH)
+  -- as this table is updated every month but the airflow job is currently not running
   WHERE submission_date >= "2022-10-23"
-  -- WHERE submission_date >= date_trunc(current_date(), MONTH)
   and country_code in ('us', 'ca')
 ), ranked_apex_names as (
     select
@@ -66,7 +67,7 @@ inner join
   domains_with_categories
 using (domain)
 order by rank
-limit 1000
+limit 4
 """
 
   client: Client

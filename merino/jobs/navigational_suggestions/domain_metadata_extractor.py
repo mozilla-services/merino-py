@@ -124,7 +124,6 @@ class DomainMetadataExtractor:
 
             best_favicon = self._get_best_favicon(favicons)
             result.append(best_favicon)
-        #logger.info('Done extracting favicons')
         return result
 
     def _extract_title(self, url: str) -> str:
@@ -133,7 +132,6 @@ class DomainMetadataExtractor:
         try:
             self.browser.open(url, timeout=self.TIMEOUT)
             for title in self.browser.select('title'):
-                #logger.info(f'Title is: {title.text}')
                 titles.append(title.text)
         except Exception as e:
             logger.info(f'Exception: {str(e)} while extracting titles from document')
@@ -152,9 +150,20 @@ class DomainMetadataExtractor:
                 url = f"https://www.{domain}"
                 titles = self._extract_title(url)
 
+            title = titles[0] if len(titles) == 0 else self._get_second_level_domain(domain_data)
             result.append({
                 'url': url,
-                'title': titles
+                'title': title
             })
 
         return result
+
+    def _get_second_level_domain(self, domain_data: dict) -> str:
+        domain = domain_data['domain']
+        top_level_domain = domain_data['suffix']
+        second_level_domain = domain.replace("." + top_level_domain, "")
+        return second_level_domain
+
+    def get_second_level_domains(self, domains_data: list[dict]) -> list[str]:
+        """Extract the second level domain"""
+        return [self._get_second_level_domain(domain_data) for domain_data in domains_data]
