@@ -1,23 +1,27 @@
-from google.cloud.storage import Client
-import logging
-import requests
-import hashlib
 import datetime
+import hashlib
+import logging
 import time
 
+import requests
+from google.cloud.storage import Client
+
 logger = logging.getLogger(__name__)
+
 
 class DomainMetadataUploader:
     """Upload the domain metadata to GCS"""
 
-    FIREFOX_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:58.0) Gecko/20100101 Firefox/58.0'
+    FIREFOX_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:58.0) Gecko/20100101 Firefox/58.0"
     DESTINATION_FAVICONS_ROOT = "favicons"
     DESTINATION_TOP_PICK_FILE_NAME_SUFFIX = "top_picks.json"
 
     bucket_name: str
     storage_client: Client
 
-    def __init__(self, destination_gcp_project: str, destination_bucket_name: str) -> None:
+    def __init__(
+        self, destination_gcp_project: str, destination_bucket_name: str
+    ) -> None:
         self.storage_client = Client(destination_gcp_project)
         self.bucket_name = destination_bucket_name
 
@@ -31,7 +35,11 @@ class DomainMetadataUploader:
 
     def _destination_top_pick_name(self) -> str:
         current = datetime.datetime.now()
-        return str(time.mktime(current.timetuple()) * 1000) + "_" + self.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
+        return (
+            str(time.mktime(current.timetuple()) * 1000)
+            + "_"
+            + self.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
+        )
 
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload the domain favicons to gcs using their source url and
@@ -60,35 +68,37 @@ class DomainMetadataUploader:
         return dst_favicons
 
     def _download_favicon(self, favicon: str) -> tuple[bytes, str]:
-        response = requests.get(favicon, headers={'User-agent': self.FIREFOX_UA}, timeout=60)
-        return response.content, response.headers['Content-Type']
+        response = requests.get(
+            favicon, headers={"User-agent": self.FIREFOX_UA}, timeout=60
+        )
+        return response.content, response.headers["Content-Type"]
 
     def _destination_favicon_name(self, content: bytes, content_type: str) -> str:
         hex_digest = hashlib.sha256(content).hexdigest()
-        extension = ''
+        extension = ""
         match content_type:
-            case 'image/apng':
-                extension = '.apng'
-            case 'image/avif':
-                extension = '.avif'
-            case 'image/gif':
-                extension = '.gif'
-            case 'image/jpeg' | 'image/jpg':
-                extension = '.jpeg'
-            case 'image/png':
-                extension = '.png'
-            case 'image/svg+xml':
-                extension = '.svg'
-            case 'image/webp':
-                extension = '.webp'
-            case 'image/bmp':
-                extension = '.bmp'
-            case 'image/x-icon':
-                extension = '.ico'
-            case 'image/tiff':
-                extension = '.tiff'
+            case "image/apng":
+                extension = ".apng"
+            case "image/avif":
+                extension = ".avif"
+            case "image/gif":
+                extension = ".gif"
+            case "image/jpeg" | "image/jpg":
+                extension = ".jpeg"
+            case "image/png":
+                extension = ".png"
+            case "image/svg+xml":
+                extension = ".svg"
+            case "image/webp":
+                extension = ".webp"
+            case "image/bmp":
+                extension = ".bmp"
+            case "image/x-icon":
+                extension = ".ico"
+            case "image/tiff":
+                extension = ".tiff"
             case _:
                 logger.info(f"Couldn't find a match for {content_type}")
-                extension = '.oct'
+                extension = ".oct"
 
         return f"{self.DESTINATION_FAVICONS_ROOT}/{hex_digest}_{str(len(content))}{extension}"
