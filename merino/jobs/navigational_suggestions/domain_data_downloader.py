@@ -1,6 +1,9 @@
-from google.cloud import bigquery
+from google.cloud.bigquery import Client
 
-DOMAIN_DATA_QUERY = f"""
+class DomainDataDownloader:
+  """Download domain data from BigQuery tables"""
+
+  DOMAIN_DATA_QUERY = f"""
 with apex_names as (
   select
     coalesce(tranco_host_rank, tranco_domain_rank) as rank,
@@ -66,9 +69,15 @@ order by rank
 limit 1000
 """
 
-def download_domain_data() -> list[dict]:
-  client = bigquery.Client("mozdata")
-  query_job = client.query(DOMAIN_DATA_QUERY)
-  results = query_job.result()
-  domains = [dict(result) for result in results]
-  return domains
+  client: Client
+
+  def __init__(self, source_gcp_project: str) -> None:
+    self.client = Client(source_gcp_project)
+
+  def download_data(self) -> list[dict]:
+    """Download domain data from bigquery tables"""
+
+    query_job = client.query(self.DOMAIN_DATA_QUERY)
+    results = query_job.result()
+    domains = [dict(result) for result in results]
+    return domains

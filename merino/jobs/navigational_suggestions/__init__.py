@@ -4,7 +4,7 @@ import typer
 import json
 from merino.config import settings as config
 
-from merino.jobs.navigational_suggestions.domain_data_downloader import download_domain_data
+from merino.jobs.navigational_suggestions.domain_data_downloader import DomainDataDownloader
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import DomainMetadataExtractor
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import DomainMetadataUploader
 
@@ -13,6 +13,12 @@ logger = logging.getLogger(__name__)
 job_settings = config.jobs.navigational_suggestions
 
 # Options
+source_gcp_project_option = typer.Option(
+    job_settings.source_gcp_project,
+    "--src-gcp-project",
+    help="GCP project to use for downloading the domain data",
+)
+
 destination_gcp_project_option = typer.Option(
     job_settings.destination_gcp_project,
     "--dst-gcp-project",
@@ -45,13 +51,15 @@ def _construct_top_picks(domain_data: list[dict], favicons: list[str], urls_and_
 
 @navigational_suggestions_cmd.command()
 def prepare_domain_metadata(
+    source_gcp_project: str = source_gcp_project_option,
     destination_gcp_project: str = destination_gcp_project_option,
     destination_gcs_bucket: str = destination_gcs_bucket_option
 ):
     """Prepare domain metadata for navigational suggestions"""
 
     # download top domains data
-    domain_data = download_domain_data();
+    domain_data_downloader = DomainDataDownloader(source_gcp_project)
+    domain_data = domain_data_downloader.download_data();
     logger.info(f'domain data download complete')
 
     # extract favicons and titles of top domains
