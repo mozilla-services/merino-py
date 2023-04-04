@@ -25,3 +25,7 @@ api_key = "test"
 gcs_path = "merino-jobs-dev/wikipedia-exports"
 # GCP project name where the GCS bucket lives.
 gcp_project = "contextual-services-dev"
+
+[development.jobs.navigational_suggestions]
+destination_gcp_project = "wstuckey-sandbox"
+destination_gcs_bucket = "merino-images-sandbox"
