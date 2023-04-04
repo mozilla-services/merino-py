@@ -77,7 +77,7 @@ limit 1000
   def download_data(self) -> list[dict]:
     """Download domain data from bigquery tables"""
 
-    query_job = client.query(self.DOMAIN_DATA_QUERY)
+    query_job = self.client.query(self.DOMAIN_DATA_QUERY)
     results = query_job.result()
     domains = [dict(result) for result in results]
     return domains
