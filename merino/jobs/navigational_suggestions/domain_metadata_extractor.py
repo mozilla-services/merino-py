@@ -15,6 +15,15 @@ class DomainMetadataExtractor:
     META_SELECTOR = 'meta[name=apple-touch-icon]'
     FIREFOX_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:58.0) Gecko/20100101 Firefox/58.0'
     TIMEOUT = 60
+    # A non-exhaustive list of substrings of invalid titles
+    INVALID_TITLES = [
+        "Attention Required",
+        "Access denied",
+        "Access Denied",
+        "Access to this page has been denied",
+        "Loading…",
+        "Page loading"
+    ]
 
     browser: RoboBrowser
 
@@ -126,17 +135,17 @@ class DomainMetadataExtractor:
             result.append(best_favicon)
         return result
 
-    def _extract_title(self, url: str) -> str:
+    def _extract_title(self, url: str) -> Optional[str]:
         logger.info(f'Extracting titles for {url}')
         titles = []
         try:
             self.browser.open(url, timeout=self.TIMEOUT)
-            for title in self.browser.select('title'):
-                titles.append(title.text)
+            titles = [title.text for title in self.browser.select('title')]
         except Exception as e:
             logger.info(f'Exception: {str(e)} while extracting titles from document')
             pass
-        return titles
+
+        return titles[0] if len(titles) > 0 and not any(map(titles[0].__contains__, self.INVALID_TITLES)) else None
 
     def get_urls_and_titles(self, domains_data: list[dict]) -> list[dict]:
         """Extract title of each domain"""
@@ -144,13 +153,16 @@ class DomainMetadataExtractor:
         for domain_data in domains_data:
             domain = domain_data['domain']
             url = f"https://{domain}"
-            titles = self._extract_title(url)
-            if len(titles) == 0 and 'www.' not in domain:
+            title = self._extract_title(url)
+            if title is None and 'www.' not in domain:
                 # Retry with www. in the domain as some domains require it explicitly.
                 url = f"https://www.{domain}"
-                titles = self._extract_title(url)
+                title = self._extract_title(url)
 
-            title = titles[0] if len(titles) == 0 else self._get_second_level_domain(domain_data)
+            # if no valid title is present then fallback to use the second level domain as title
+            if title is None:
+                title = self._get_second_level_domain(domain_data)
+
             result.append({
                 'url': url,
                 'title': title
