@@ -71,11 +71,13 @@ def prepare_domain_metadata(
     logger.info(f'domain titles and url extraction complete')
 
     # upload favicons and get their public urls
-    domain_metadata_uploader = DomainMetadataUploader(destination_gcp_project, destination_gcs_bucket)
-    uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
-    logger.info(f'domain favicons uploaded to gcs')
+    #domain_metadata_uploader = DomainMetadataUploader(destination_gcp_project, destination_gcs_bucket)
+    #uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
+    #logger.info(f'domain favicons uploaded to gcs')
 
     # construct top pick contents and upload it to gcs
-    top_picks = _construct_top_picks(domain_data, uploaded_favicons, urls_and_titles)
-    domain_metadata_uploader.upload_top_picks(top_picks)
-    logger.info(f'top pick contents uploaded to gcs')
+    #top_picks = _construct_top_picks(domain_data, uploaded_favicons, urls_and_titles)
+    top_picks = _construct_top_picks(domain_data, favicons, urls_and_titles)
+    #domain_metadata_uploader.upload_top_picks(top_picks)
+    #logger.info(f'top pick contents uploaded to gcs')
+    print(top_picks)
