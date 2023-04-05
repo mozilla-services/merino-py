@@ -1,3 +1,4 @@
+"""Upload the domain metadata to GCS"""
 import datetime
 import hashlib
 import logging
@@ -12,7 +13,10 @@ logger = logging.getLogger(__name__)
 class DomainMetadataUploader:
     """Upload the domain metadata to GCS"""
 
-    FIREFOX_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:58.0) Gecko/20100101 Firefox/58.0"
+    FIREFOX_UA = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:58.0)"
+        " Gecko/20100101 Firefox/58.0"
+    )
     DESTINATION_FAVICONS_ROOT = "favicons"
     DESTINATION_TOP_PICK_FILE_NAME_SUFFIX = "top_picks.json"
 
@@ -27,7 +31,6 @@ class DomainMetadataUploader:
 
     def upload_top_picks(self, top_picks: dict):
         """Upload the top pick contents to gcs."""
-
         bucket = self.storage_client.bucket(self.bucket_name)
         dst_top_pick_name = self._destination_top_pick_name()
         dst_blob = bucket.blob(dst_top_pick_name)
@@ -45,7 +48,6 @@ class DomainMetadataUploader:
         """Upload the domain favicons to gcs using their source url and
         return the public urls of the uploaded ones.
         """
-
         dst_favicons = []
         bucket = self.storage_client.bucket(self.bucket_name)
         for src_favicon in src_favicons:
@@ -54,7 +56,8 @@ class DomainMetadataUploader:
                 dst_favicon_name = self._destination_favicon_name(content, content_type)
                 dst_blob = bucket.blob(dst_favicon_name)
 
-                # upload favicon to gcs if it doesn't already exist there and make it publicly accessible
+                # upload favicon to gcs if it doesn't already exist there an
+                # make it publicly accessible
                 if not dst_blob.exists():
                     logger.info(f"blob {dst_favicon_name} doesn't exist. creating it..")
                     dst_blob.upload_from_string(str(content))

@@ -72,11 +72,10 @@ def prepare_domain_metadata(
     destination_gcs_bucket: str = destination_gcs_bucket_option,
 ):
     """Prepare domain metadata for navigational suggestions"""
-
     # download top domains data
     domain_data_downloader = DomainDataDownloader(source_gcp_project)
     domain_data = domain_data_downloader.download_data()
-    logger.info(f"domain data download complete")
+    logger.info("domain data download complete")
 
     # extract domain metadata of top domains
     domain_metadata_extractor = DomainMetadataExtractor()
@@ -85,18 +84,18 @@ def prepare_domain_metadata(
     second_level_domains = domain_metadata_extractor.get_second_level_domains(
         domain_data
     )
-    logger.info(f"domain metadata extraction complete")
+    logger.info("domain metadata extraction complete")
 
     # upload favicons and get their public urls
     domain_metadata_uploader = DomainMetadataUploader(
         destination_gcp_project, destination_gcs_bucket
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
-    logger.info(f"domain favicons uploaded to gcs")
+    logger.info("domain favicons uploaded to gcs")
 
     # construct top pick contents and upload it to gcs
     top_picks = _construct_top_picks(
         domain_data, uploaded_favicons, urls_and_titles, second_level_domains
     )
     domain_metadata_uploader.upload_top_picks(top_picks)
-    logger.info(f"top pick contents uploaded to gcs")
+    logger.info("top pick contents uploaded to gcs")

@@ -1,3 +1,4 @@
+"""Extract domain metadata from domain data"""
 import logging
 from io import BytesIO
 from typing import Optional
@@ -11,11 +12,18 @@ logger = logging.getLogger(__name__)
 
 
 class DomainMetadataExtractor:
-    """Extract domain metadata from the domain data"""
+    """Extract domain metadata from domain data"""
 
-    LINK_SELECTOR = 'link[rel=apple-touch-icon], link[rel=apple-touch-icon-precomposed], link[rel="icon shortcut"], link[rel="shortcut icon"], link[rel="icon"], link[rel="SHORTCUT ICON"], link[rel="fluid-icon"]'
+    LINK_SELECTOR = (
+        "link[rel=apple-touch-icon], link[rel=apple-touch-icon-precomposed],"
+        'link[rel="icon shortcut"], link[rel="shortcut icon"], link[rel="icon"],'
+        'link[rel="SHORTCUT ICON"], link[rel="fluid-icon"]'
+    )
     META_SELECTOR = "meta[name=apple-touch-icon]"
-    FIREFOX_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:58.0) Gecko/20100101 Firefox/58.0"
+    FIREFOX_UA = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:58.0)"
+        " Gecko/20100101 Firefox/58.0"
+    )
     TIMEOUT = 60
     # A non-exhaustive list of substrings of invalid titles
     INVALID_TITLES = [
@@ -45,7 +53,7 @@ class DomainMetadataExtractor:
         )
         return default_favicon_url if response.status_code == 200 else None
 
-    def _extract_favicons(self, url: str) -> list[str]:
+    def _extract_favicons(self, url: str) -> list[dict]:
         logger.info(f"Extracting favicons for {url}")
         favicons = []
         try:
@@ -87,17 +95,20 @@ class DomainMetadataExtractor:
 
         return favicons
 
-    def _get_best_favicon(self, favicons: list[str]) -> str:
-        best_favicon_url = None
+    def _get_best_favicon(self, favicons: list[dict]) -> str:
+        best_favicon_url = ""
         best_favicon_width = 0
         for favicon in favicons:
-            url = self._fix_url(favicon.get("href"))
+            url = self._fix_url(favicon["href"])
             width = None
             sizes = favicon.get("sizes")
             if sizes:
                 try:
                     width = int(sizes.split("x")[0])
-                except:
+                except Exception as e:
+                    logger.info(
+                        f"{str(e)}: Could not detect size from sizes attribute of favicon {url}"
+                    )
                     pass
             if width is None:
                 try:
@@ -137,7 +148,9 @@ class DomainMetadataExtractor:
         return best_favicon_url
 
     def get_favicons(self, domains_data: list[dict]) -> list[str]:
-        """Extract favicons for domains and return the one with highest resolution for each domain"""
+        """Extract favicons for each domain and return the one with the highest resolution
+        for each.
+        """
         result = []
         for domain_data in domains_data:
             domain = domain_data["domain"]
@@ -170,7 +183,7 @@ class DomainMetadataExtractor:
         )
 
     def get_urls_and_titles(self, domains_data: list[dict]) -> list[dict]:
-        """Extract title of each domain"""
+        """Extract title and url of each domain"""
         result = []
         for domain_data in domains_data:
             domain = domain_data["domain"]
@@ -192,7 +205,7 @@ class DomainMetadataExtractor:
     def _get_second_level_domain(self, domain_data: dict) -> str:
         domain = domain_data["domain"]
         top_level_domain = domain_data["suffix"]
-        second_level_domain = domain.replace("." + top_level_domain, "")
+        second_level_domain = str(domain.replace("." + top_level_domain, ""))
         return second_level_domain
 
     def get_second_level_domains(self, domains_data: list[dict]) -> list[str]:

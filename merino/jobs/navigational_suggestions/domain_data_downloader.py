@@ -1,10 +1,11 @@
+"""Download domain data from BigQuery tables"""
 from google.cloud.bigquery import Client
 
 
 class DomainDataDownloader:
     """Download domain data from BigQuery tables"""
 
-    DOMAIN_DATA_QUERY = f"""
+    DOMAIN_DATA_QUERY = """
 with apex_names as (
   select
     coalesce(tranco_host_rank, tranco_domain_rank) as rank,
@@ -30,17 +31,17 @@ with apex_names as (
     from apex_names
     order by 2
 ), domains_with_categories AS (
-    SELECT 
+    SELECT
       domain,
       categories
-    FROM 
+    FROM
       `moz-fx-data-shared-prod.domain_metadata_derived.domain_categories_v1`
-    WHERE 
+    WHERE
       DATE(_PARTITIONTIME) = "2022-11-01"
       -- Filter out the categories of domains we don't want to recommend people
       AND NOT EXISTS(
-        SELECT * FROM UNNEST(categories) AS c 
-        WHERE 
+        SELECT * FROM UNNEST(categories) AS c
+        WHERE
           c.parent_id in (
             2, -- Adult Theme
             17, -- Questionable Content
@@ -55,16 +56,16 @@ with apex_names as (
       -- Also, filter domains without classifications
       AND array_length(categories) > 0
 )
-select 
+select
   rank() over (order by rank) as rank,
   domain,
   host,
   origin,
   suffix,
   array(select c.name from unnest(categories) c) as categories,
-from 
+from
   ranked_apex_names
-inner join 
+inner join
   domains_with_categories
 using (domain)
 order by rank
@@ -78,7 +79,6 @@ limit 1000
 
     def download_data(self) -> list[dict]:
         """Download domain data from bigquery tables"""
-
         query_job = self.client.query(self.DOMAIN_DATA_QUERY)
         results = query_job.result()
         domains = [dict(result) for result in results]
