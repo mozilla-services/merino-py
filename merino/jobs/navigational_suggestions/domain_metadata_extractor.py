@@ -25,6 +25,7 @@ class DomainMetadataExtractor:
         "Access to this page has been denied",
         "Loading…",
         "Page loading",
+        "Just a moment...",
     ]
 
     browser: RoboBrowser
