@@ -54,9 +54,9 @@ def _construct_top_picks(
     for index, domain in enumerate(domain_data):
         result.append(
             {
-                "rank": domain[index]["rank"],
+                "rank": domain["rank"],
                 "domain": second_level_domains[index],
-                "categories": domain[index]["categories"],
+                "categories": domain["categories"],
                 **urls_and_titles[index],
                 "icon": favicons[index],
             }
