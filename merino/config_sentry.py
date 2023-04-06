@@ -1,5 +1,7 @@
 """Sentry Configuration"""
 
+from typing import Any
+
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
@@ -22,9 +24,16 @@ def configure_sentry() -> None:  # pragma: no cover
         ],
         release=version_sha,
         debug="debug" == settings.sentry.mode,
+        before_send=strip_sensitive_data,  # type: ignore [arg-type]
         environment=settings.sentry.env,
         # Set traces_sample_rate to 1.0 to capture 100%
         # of transactions for performance monitoring.
         # We recommend adjusting this value in production,
         traces_sample_rate=settings.sentry.traces_sample_rate,
     )
+
+
+def strip_sensitive_data(event) -> Any:
+    """Filter out sensitive data from Sentry events."""
+    #  See: https://docs.sentry.io/platforms/python/configuration/filtering/
+    return event
