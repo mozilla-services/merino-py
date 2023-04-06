@@ -21,8 +21,8 @@ class DomainMetadataExtractor:
     )
     META_SELECTOR = "meta[name=apple-touch-icon]"
     FIREFOX_UA = (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:58.0)"
-        " Gecko/20100101 Firefox/58.0"
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 13.3; rv:111.0) Gecko/20100101 "
+        "Firefox/111.0"
     )
     TIMEOUT = 60
     # A non-exhaustive list of substrings of invalid titles

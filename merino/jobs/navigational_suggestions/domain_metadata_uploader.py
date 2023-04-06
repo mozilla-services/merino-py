@@ -14,8 +14,8 @@ class DomainMetadataUploader:
     """Upload the domain metadata to GCS"""
 
     FIREFOX_UA = (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:58.0)"
-        " Gecko/20100101 Firefox/58.0"
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 13.3; rv:111.0) Gecko/20100101 "
+        "Firefox/111.0"
     )
     DESTINATION_FAVICONS_ROOT = "favicons"
     DESTINATION_TOP_PICK_FILE_NAME_SUFFIX = "top_picks.json"
@@ -29,12 +29,12 @@ class DomainMetadataUploader:
         self.storage_client = Client(destination_gcp_project)
         self.bucket_name = destination_bucket_name
 
-    def upload_top_picks(self, top_picks: dict):
+    def upload_top_picks(self, top_picks: str) -> None:
         """Upload the top pick contents to gcs."""
         bucket = self.storage_client.bucket(self.bucket_name)
         dst_top_pick_name = self._destination_top_pick_name()
         dst_blob = bucket.blob(dst_top_pick_name)
-        dst_blob.upload_from_string(str(top_picks))
+        dst_blob.upload_from_string(top_picks)
 
     def _destination_top_pick_name(self) -> str:
         current = datetime.datetime.now()

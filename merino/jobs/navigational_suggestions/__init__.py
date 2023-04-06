@@ -49,14 +49,14 @@ def _construct_top_picks(
     favicons: list[str],
     urls_and_titles: list[dict],
     second_level_domains: list[str],
-):
+) -> str:
     result = []
-    for index in range(len(domain_data)):
+    for index, domain in enumerate(domain_data):
         result.append(
             {
-                "rank": domain_data[index]["rank"],
+                "rank": domain[index]["rank"],
                 "domain": second_level_domains[index],
-                "categories": domain_data[index]["categories"],
+                "categories": domain[index]["categories"],
                 **urls_and_titles[index],
                 "icon": favicons[index],
             }
