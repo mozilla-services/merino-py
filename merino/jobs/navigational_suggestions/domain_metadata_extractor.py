@@ -107,7 +107,7 @@ class DomainMetadataExtractor:
                     width = int(sizes.split("x")[0])
                 except Exception as e:
                     logger.info(
-                        f"{str(e)}: Could not detect size from sizes attribute of favicon {favicon}"
+                        f"{str(e)} while deducing size from sizes attribute of favicon {favicon}"
                     )
                     pass
             if width is None:
@@ -126,7 +126,9 @@ class DomainMetadataExtractor:
                         if "mask" not in favicon:
                             return url
                         else:
-                            logger.info(f"Masked SVG favicon {favicon} found; skipping it")
+                            logger.info(
+                                f"Masked SVG favicon {favicon} found; skipping it"
+                            )
                             continue
 
                     with Image.open(BytesIO(response.content)) as img:
@@ -137,9 +139,7 @@ class DomainMetadataExtractor:
                             )
                             width = min(width, height)
                 except Exception as e:
-                    logger.info(
-                        f'Exception "{str(e)}" for favicon {favicon}'
-                    )
+                    logger.info(f'Exception "{str(e)}" for favicon {favicon}')
                     pass
             if width and width > best_favicon_width:
                 best_favicon_url = url
@@ -161,7 +161,9 @@ class DomainMetadataExtractor:
                 url = f"https://www.{domain}"
                 favicons = self._extract_favicons(url)
 
-            logger.info(f"{len(favicons)} favicons extracted for {url}. Favicons are: {favicons}")
+            logger.info(
+                f"{len(favicons)} favicons extracted for {url}. Favicons are: {favicons}"
+            )
             best_favicon = self._get_best_favicon(favicons)
             result.append(best_favicon)
         return result
