@@ -5,8 +5,12 @@
 """Load test."""
 
 import asyncio
+import csv
+import gzip
 import logging
 import os
+import socket
+import struct
 from random import choice, randint
 from typing import Any
 
@@ -30,6 +34,7 @@ from tests.load.locust_tests.client_info import DESKTOP_FIREFOX, LOCALES
 # Type definitions
 KintoRecords = list[dict[str, Any]]
 QueriesList = list[list[str]]
+IpRangeList = list[tuple[str, str]]
 
 LOGGING_LEVEL = os.environ["LOAD_TESTS__LOGGING_LEVEL"]
 
@@ -42,6 +47,16 @@ SUGGEST_API: str = "/api/v1/suggest"
 # Optional. A comma-separated list of any experiments or rollouts that are
 # affecting the client's Suggest experience
 CLIENT_VARIANTS: str = ""
+
+# IP RANGE CSV FILES (GZIP)
+# This test framework uses IP2Location LITE data available from
+# https://lite.ip2location.com
+CANADA_IP_ADDRESS_RANGES_GZIP: str = (
+    "tests/load/data/ip2location_canada_ip_address_ranges.gz"
+)
+US_IP_ADDRESS_RANGES_GZIP: str = (
+    "tests/load/data/ip2location_united_states_of_america_ip_address_ranges.gz"
+)
 
 # Configurations
 # See Configuring Merino (https://mozilla-services.github.io/merino/ops.html)
@@ -76,6 +91,7 @@ MERINO_REMOTE_SETTINGS__COLLECTION: str | None = os.getenv(
 
 # This will be populated on each worker
 ADM_QUERIES: QueriesList = []
+IP_RANGES: IpRangeList = []
 TOP_PICKS_QUERIES: QueriesList = []
 WIKIPEDIA_QUERIES: list[str] = []
 
@@ -112,9 +128,17 @@ def on_locust_test_start(environment, **kwargs):
 
         logger.info(f"Download {len(query_data.wikipedia)} queries for Wikipedia")
 
+        query_data.ip_ranges = get_ip_ranges(
+            ip_range_files=[CANADA_IP_ADDRESS_RANGES_GZIP, US_IP_ADDRESS_RANGES_GZIP]
+        )
+
+        logger.info(
+            f"Download {len(query_data.ip_ranges)} IP ranges for X-Forward-For headers"
+        )
     except (
         ApiError,
         ElasticsearchWarning,
+        OSError,
         RemoteSettingsError,
         TopPicksError,
         TransportError,
@@ -218,6 +242,27 @@ def get_wikipedia_queries(
     return query_list
 
 
+def get_ip_ranges(ip_range_files: list[str]) -> IpRangeList:
+    """Get IP address ranges for use when testing with the 'X-Forwarded-For' headers.
+
+    Args:
+        ip_range_files: List of gzip CSV files containing IP address ranges
+    Returns:
+        IpRangeList: List of IP string tuples indicating the beginning and end of IP
+                     address ranges
+    Raises:
+        OSError: If an IP range file cannot be opened or read
+    """
+    ip_ranges: list[tuple[str, str]] = []
+    for ip_range_file in ip_range_files:
+        with gzip.open(ip_range_file, mode="rt") as csv_file:
+            for row in csv.DictReader(csv_file, delimiter=","):
+                begin_ip_address: str = row["Begin IP Address"]
+                end_ip_address: str = row["End IP Address"]
+                ip_ranges.append((begin_ip_address, end_ip_address))
+    return ip_ranges
+
+
 def store_suggestions(environment, msg, **kwargs):
     """Modify the module scoped list with suggestions in-place."""
     logger.info("store_suggestions: Storing %d suggestions", len(msg.data))
@@ -225,6 +270,7 @@ def store_suggestions(environment, msg, **kwargs):
     query_data: QueryData = QueryData(**msg.data)
 
     ADM_QUERIES[:] = query_data.adm
+    IP_RANGES[:] = query_data.ip_ranges
     TOP_PICKS_QUERIES[:] = query_data.top_picks
     WIKIPEDIA_QUERIES[:] = query_data.wikipedia
 
@@ -237,7 +283,10 @@ def on_locust_init(environment, **kwargs):
 
 
 def request_suggestions(
-    client: HttpSession, query: str, providers: str | None = None
+    client: HttpSession,
+    query: str,
+    providers: str | None = None,
+    headers: dict[str, str] | None = None,
 ) -> None:
     """Request suggestions from Merino for the given query string.
 
@@ -245,6 +294,7 @@ def request_suggestions(
         client: An HTTP session client
         query: Query string
         providers: Optional. A comma-separated list of providers to use for this request
+        headers: Optional. A dictionary of header key value pairs
     Raises:
         ValidationError: Response data is not as expected.
     """
@@ -256,7 +306,7 @@ def request_suggestions(
     if providers:
         params = {**params, "providers": providers}
 
-    headers: dict[str, str] = {  # nosec
+    default_headers: dict[str, str] = {  # nosec
         "Accept-Language": choice(LOCALES),
         "User-Agent": choice(DESKTOP_FIREFOX),
     }
@@ -264,7 +314,7 @@ def request_suggestions(
     with client.get(
         url=SUGGEST_API,
         params=params,
-        headers=headers,
+        headers=((default_headers | headers) if headers else default_headers),
         catch_response=True,
         # group all requests under the 'name' entry
         name=f"{SUGGEST_API}{(f'?providers={providers}' if providers else '')}",
@@ -286,6 +336,7 @@ class QueryData(BaseModel):
     """Class that holds query data for targeting Merino providers"""
 
     adm: QueriesList = []
+    ip_ranges: IpRangeList = []
     top_picks: QueriesList = []
     wikipedia: list[str] = []
 
@@ -328,7 +379,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             request_suggestions(self.client, query, providers)
 
-    @task(weight=70)
+    @task(weight=69)
     def faker_suggestions(self) -> None:
         """Send multiple requests for random queries."""
         # This produces a query between 2 and 4 random words
@@ -349,6 +400,27 @@ class MerinoUser(HttpUser):
 
         for query in queries:
             request_suggestions(self.client, query, providers)
+
+    @task(weight=1)
+    def weather_suggestions(self) -> None:
+        """Send multiple requests for Weather queries."""
+        # Firefox will do local keyword matching to trigger weather suggestions
+        # sending an empty query to Merino.
+        query: str = ""
+        providers: str = "accuweather"
+        headers: dict[str, str] = {
+            "X-Forwarded-For": self._get_ip_from_range(*choice(IP_RANGES))  # nosec
+        }
+
+        request_suggestions(self.client, query, providers, headers)
+
+    @staticmethod
+    def _get_ip_from_range(begin_ip_address: str, end_ip_address: str) -> str:
+        # Convert the begin and end IP address values to integers. Randomly chose an
+        # integer within the range and convert the integer back to an IP string.
+        start: int = struct.unpack(">I", socket.inet_aton(begin_ip_address))[0]
+        stop: int = struct.unpack(">I", socket.inet_aton(end_ip_address))[0]
+        return socket.inet_ntoa(struct.pack(">I", randint(start, stop)))  # nosec
 
     @task(weight=0)
     def wikifruit_suggestions(self) -> None:

@@ -36,6 +36,7 @@ WORKDIR /home/locust
 COPY ./dev ./dev
 COPY ./merino ./merino
 COPY ./tests/load/locust_tests ./tests/load/locust_tests
+COPY ./tests/load/data ./tests/load/data
 
 # Expose ports for the web UI and the locust master
 EXPOSE 8089 5557
