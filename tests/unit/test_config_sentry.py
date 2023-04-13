@@ -5,6 +5,7 @@
 """Unit tests for the config_sentry.py module."""
 
 import pytest
+import sentry_sdk
 
 from merino.config_sentry import configure_sentry
 
@@ -13,3 +14,12 @@ from merino.config_sentry import configure_sentry
 def sentry_init() -> None:
     """Initialize sentry instance fixture."""
     configure_sentry()
+
+
+def test_strip_sensitive_data(monkeypatch, mocker, sentry_init) -> None:
+    """Test that strip_sensitive_data will remove sensitive data."""
+    sentry_client = sentry_sdk.Hub.current.client
+    # transport used by sentry to send events. Mocking allows
+    # testing of any processing.
+    transport = mocker.MagicMock()
+    monkeypatch.setattr(sentry_client, "transport", transport)
