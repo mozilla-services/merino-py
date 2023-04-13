@@ -119,16 +119,18 @@ FAVICON_SCENARIOS: list[Scenario] = [
     (
         [
             {
-                "rank": 200,
-                "domain": "quizlet.com",
-                "host": "quizlet.com",
-                "origin": "https://quizlet.com",
+                "rank": 396,
+                "domain": "xbox.com",
+                "host": "www.xbox.com",
+                "origin": "https://www.xbox.com",
                 "suffix": "com",
-                "categories": ["Education"],
+                "categories": [
+                    "Gaming"
+                ]
             }
         ],
         [
-            "https://assets.quizlet.com/a/j/dist/app/i/logo/2021/q-twilight.389092a385cb51d.png"
+            "https://xbox.com/favicon.ico"
         ],
     ),
 ]
