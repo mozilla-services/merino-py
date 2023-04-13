@@ -34,6 +34,12 @@ class DomainMetadataExtractor:
         "Loading…",
         "Page loading",
         "Just a moment...",
+        "Site Maintenance",
+        "502 Bad Gateway",
+        "503 Service Temporarily Unavailable",
+        "Your request has been blocked",
+        "This page is either unavailable or restricted",
+        "Let's Get Your Identity Verified",
     ]
 
     browser: RoboBrowser
