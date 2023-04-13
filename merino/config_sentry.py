@@ -36,4 +36,8 @@ def configure_sentry() -> None:  # pragma: no cover
 def strip_sensitive_data(event) -> Any:
     """Filter out sensitive data from Sentry events."""
     #  See: https://docs.sentry.io/platforms/python/configuration/filtering/
+    if event.q:
+        delattr(event, "q")
+    if event.query:
+        delattr(event, "query")
     return event
