@@ -124,14 +124,10 @@ FAVICON_SCENARIOS: list[Scenario] = [
                 "host": "www.xbox.com",
                 "origin": "https://www.xbox.com",
                 "suffix": "com",
-                "categories": [
-                    "Gaming"
-                ]
+                "categories": ["Gaming"],
             }
         ],
-        [
-            "https://xbox.com/favicon.ico"
-        ],
+        ["https://xbox.com/favicon.ico"],
     ),
 ]
 
