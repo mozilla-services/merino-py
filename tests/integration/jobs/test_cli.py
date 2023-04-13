@@ -17,7 +17,7 @@ def test_cli_no_args():
     argnames=[
         "command_name",
     ],
-    argvalues=[["wikipedia-indexer"]],
+    argvalues=[["wikipedia-indexer"], ["navigational-suggestions"]],
 )
 def test_cli_help_shows_commands(command_name):
     """Test that the commands we expect to see are listed in the help output"""
@@ -28,7 +28,10 @@ def test_cli_help_shows_commands(command_name):
 
 @pytest.mark.parametrize(
     argnames=["command_name", "subcommand_names"],
-    argvalues=[["wikipedia-indexer", ["index", "copy-export"]]],
+    argvalues=[
+        ["wikipedia-indexer", ["index", "copy-export"]],
+        ["navigational-suggestions", ["prepare-domain-metadata"]],
+    ],
 )
 def test_cli_help_shows_sub_commands(command_name, subcommand_names):
     """Test that the commands we expect to see are listed in the help output"""
