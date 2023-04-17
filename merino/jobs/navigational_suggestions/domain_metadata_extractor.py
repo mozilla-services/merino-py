@@ -191,7 +191,8 @@ class DomainMetadataExtractor:
 
         return (
             title
-            if title and not any(map(title.__contains__, self.INVALID_TITLES))
+            if title
+            and not [t for t in self.INVALID_TITLES if t.casefold() in title.casefold()]
             else None
         )
 
