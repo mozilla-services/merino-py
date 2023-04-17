@@ -96,7 +96,7 @@ class DomainMetadataExtractor:
                 favicons.append({"href": default_favicon_url})
 
         except Exception as e:
-            logger.info(f"Exception {str(e)} while extracting favicons for {url}")
+            logger.info(f"Exception {e} while extracting favicons for {url}")
             pass
 
         return favicons
@@ -113,7 +113,7 @@ class DomainMetadataExtractor:
                     width = int(sizes.split("x")[0])
                 except Exception as e:
                     logger.info(
-                        f"{str(e)} while deducing size from sizes attribute of favicon {favicon}"
+                        f"{e} while deducing size from sizes attribute of favicon {favicon}"
                     )
                     pass
             if width is None:
@@ -145,7 +145,7 @@ class DomainMetadataExtractor:
                             )
                             width = min(width, height)
                 except Exception as e:
-                    logger.info(f'Exception "{str(e)}" for favicon {favicon}')
+                    logger.info(f"Exception {e} for favicon {favicon}")
                     pass
             if width and width > best_favicon_width:
                 best_favicon_url = url
@@ -175,19 +175,18 @@ class DomainMetadataExtractor:
         return result
 
     def _extract_title(self, url: str) -> Optional[str]:
-        logger.info(f"Extracting titles for {url}")
-        titles = []
+        logger.info(f"Extracting title for {url}")
+        title = None
         try:
             self.browser.open(url, timeout=self.TIMEOUT)
-            titles = [title.text for title in self.browser.select("title")]
+            title = self.browser.find("head").find("title").string
         except Exception as e:
-            logger.info(f"Exception: {str(e)} while extracting titles from document")
+            logger.info(f"Exception: {e} while extracting title from document")
             pass
 
         return (
-            titles[0]
-            if len(titles) > 0
-            and not any(map(titles[0].__contains__, self.INVALID_TITLES))
+            title
+            if title and not any(map(title.__contains__, self.INVALID_TITLES))
             else None
         )
 
