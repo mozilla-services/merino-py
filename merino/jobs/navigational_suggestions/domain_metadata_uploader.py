@@ -37,6 +37,7 @@ class DomainMetadataUploader:
         dst_blob.upload_from_string(top_picks)
 
     def _destination_top_pick_name(self) -> str:
+        """Return the name of the top pick file to be used for uploading to GCS"""
         current = datetime.datetime.now()
         return (
             str(time.mktime(current.timetuple()) * 1000)
@@ -71,12 +72,14 @@ class DomainMetadataUploader:
         return dst_favicons
 
     def _download_favicon(self, favicon: str) -> tuple[bytes, str]:
+        """Download favicon image from a given url"""
         response = requests.get(
             favicon, headers={"User-agent": self.FIREFOX_UA}, timeout=60
         )
         return response.content, response.headers["Content-Type"]
 
     def _destination_favicon_name(self, content: bytes, content_type: str) -> str:
+        """Return the name of the favicon to be used for uploading to GCS"""
         hex_digest = hashlib.sha256(content).hexdigest()
         extension = ""
         match content_type:

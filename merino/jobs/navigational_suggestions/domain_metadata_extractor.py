@@ -48,11 +48,13 @@ class DomainMetadataExtractor:
         self.browser = RoboBrowser(user_agent=self.FIREFOX_UA, parser="html.parser")
 
     def _fix_url(self, url: str) -> str:
+        """Return a url with https scheme if the scheme is originally missing from it"""
         if not url.startswith("http"):
             return f"https:{url}"
         return url
 
     def _get_default_favicon(self, url: str) -> Optional[str]:
+        """Return the default favicon for a url if it exists"""
         default_favicon_url = f"{url}/favicon.ico"
         response = requests.get(
             url, headers={"User-agent": self.FIREFOX_UA}, timeout=self.TIMEOUT
@@ -60,6 +62,7 @@ class DomainMetadataExtractor:
         return default_favicon_url if response.status_code == 200 else None
 
     def _extract_favicons(self, url: str) -> list[dict]:
+        """Extract all favicons for a given url"""
         logger.info(f"Extracting favicons for {url}")
         favicons = []
         try:
@@ -102,6 +105,7 @@ class DomainMetadataExtractor:
         return favicons
 
     def _get_best_favicon(self, favicons: list[dict]) -> str:
+        """Return the favicon with the highest resolution from a list of favicons"""
         best_favicon_url = ""
         best_favicon_width = 0
         for favicon in favicons:
@@ -175,6 +179,7 @@ class DomainMetadataExtractor:
         return result
 
     def _extract_title(self, url: str) -> Optional[str]:
+        """Extract title for a url"""
         logger.info(f"Extracting title for {url}")
         title = None
         try:
@@ -211,13 +216,14 @@ class DomainMetadataExtractor:
         return result
 
     def _get_second_level_domain(self, domain_data: dict) -> str:
+        """Extract the second level domain for a given domain"""
         domain = domain_data["domain"]
         top_level_domain = domain_data["suffix"]
         second_level_domain = str(domain.replace("." + top_level_domain, ""))
         return second_level_domain
 
     def get_second_level_domains(self, domains_data: list[dict]) -> list[str]:
-        """Extract the second level domain"""
+        """Extract the second level domain for each domain in the list"""
         return [
             self._get_second_level_domain(domain_data) for domain_data in domains_data
         ]
