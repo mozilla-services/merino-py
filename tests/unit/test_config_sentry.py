@@ -20,32 +20,6 @@ mock_sentry_event_data: dict = {
                 "stacktrace": {
                     "frames": [
                         {
-                            "request": {
-                                "method": "'GET'",
-                                "path": "'/api/v1/suggest'",
-                            },
-                            "solved_result": [
-                                {
-                                    "sources": [
-                                        {
-                                            "accuweather": "<merino.providers.weather>",
-                                            "adm": "<merino.providers.adm>",
-                                            "top_picks": "<merino.providers.top_picks>",
-                                            "wikipedia": "<merino.providers.wikipedia>",
-                                        },
-                                        ["<merino.providers.adm.provider>"],
-                                    ],
-                                    "q": "solved_foo",
-                                    "providers": "'top_picks,adm'",
-                                    "client_variants": "None",
-                                    "request": {
-                                        "method": "'GET'",
-                                        "path": "'/api/v1/suggest'",
-                                    },
-                                },
-                            ],
-                        },
-                        {
                             "filename": "merino/web/api_v1.py",
                             "module": "merino.web.api_v1",
                             "vars": {
@@ -97,30 +71,25 @@ mock_sentry_event_data: dict = {
 
 def test_strip_sensitive_data() -> None:
     """Test that strip_sensitive_data will remove sensitive data."""
-    sentry_event = strip_sensitive_data(mock_sentry_event_data, mock_sentry_hint)
+    sanitized_event = strip_sensitive_data(mock_sentry_event_data, mock_sentry_hint)
     # Asserts that the 'query_string' key was removed from the dictionary.
-    assert sentry_event["request"].get("query_string") == "query_str_foo"
+    assert sanitized_event["request"].get("query_string") == ""
     assert isinstance(mock_sentry_hint["exc_info"][1], RuntimeError)
     assert (
-        sentry_event["exception"]["values"][0]["stacktrace"]["frames"][0][
-            "solved_result"
-        ][0]["q"]
-        == "solved_foo"
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][0]["vars"][
+            "q"
+        ]
+        == ""
     )
     assert (
-        sentry_event["exception"]["values"][0]["stacktrace"]["frames"][1]["vars"]["q"]
-        == "vars_foo"
-    )
-
-    assert (
-        sentry_event["exception"]["values"][0]["stacktrace"]["frames"][2]["vars"][
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][1]["vars"][
             "values"
         ]["q"]
-        == "vars_values_foo"
+        == ""
     )
     assert (
-        sentry_event["exception"]["values"][0]["stacktrace"]["frames"][3]["vars"][
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][2]["vars"][
             "srequest"
         ]
-        == "sreq_repl"
+        == ""
     )

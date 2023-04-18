@@ -41,7 +41,7 @@ def strip_sensitive_data(event: dict, hint: dict) -> Any:
     """Filter out sensitive data from Sentry events."""
     #  See: https://docs.sentry.io/platforms/python/configuration/filtering/
     if event["request"]["query_string"]:
-        event["request"]["query_string"] = "query_str_foo"
+        event["request"]["query_string"] = ""
 
     if "exc_info" in hint:
         exc_type, exc_value, tb = hint["exc_info"]
@@ -49,20 +49,15 @@ def strip_sensitive_data(event: dict, hint: dict) -> Any:
             for entry in event["exception"]["values"][0]["stacktrace"]["frames"]:
                 try:
                     if entry["vars"].get("q"):
-                        entry["vars"]["q"] = "vars_foo"
+                        entry["vars"]["q"] = ""
                     if entry["vars"].get("query"):
-                        entry["vars"]["query"] = "picked_repl"
+                        entry["vars"]["query"] = ""
                     if entry["vars"].get("srequest"):
-                        entry["vars"]["srequest"] = "sreq_repl"
+                        entry["vars"]["srequest"] = ""
                     if entry["vars"]["values"].get("q"):
-                        entry["vars"]["values"]["q"] = "vars_values_foo"
+                        entry["vars"]["values"]["q"] = ""
                     if entry["vars"]["solved_result"][0].get("q"):
-                        entry["vars"]["solved_result"][0]["q"] = "solved_foo"
-
-                except KeyError as e:
-                    logger.debug(
-                        f"Sentry filtering RuntimeError query value not found: {e}"
-                    )
+                        entry["vars"]["solved_result"][0]["q"] = ""
+                except KeyError:
                     continue
-
     return event
