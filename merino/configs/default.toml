@@ -159,3 +159,11 @@ gcp_project = ""
 export_base_url = "https://dumps.wikimedia.org/other/cirrussearch/current/"
 # Blocklist file as CSV. Contains a list of the categories for articles that we want to block.
 blocklist_file_url = "https://raw.githubusercontent.com/mozilla/search-terms-sanitization/a021d80defb40f3afb98b86e46e86b3e3017ec73/non_sensitive/wikipedia-content-moderation/blocklist_cats.csv"
+
+[default.jobs.navigational_suggestions]
+# GCP project name that contains domain data tables
+source_gcp_project = ""
+# GCP project name where the GCS bucket lives
+destination_gcp_project = ""
+# GCS bucket name where domain metadata will be uploaded
+destination_gcs_bucket = ""

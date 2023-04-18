@@ -25,3 +25,7 @@ api_key = "test"
 gcs_path = "merino-jobs-dev/wikipedia-exports"
 # GCP project name where the GCS bucket lives.
 gcp_project = "contextual-services-dev"
+
+[development.jobs.navigational_suggestions]
+# GCP project name that contains domain data tables
+source_gcp_project = "mozdata"
