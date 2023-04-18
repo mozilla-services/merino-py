@@ -8,6 +8,7 @@ from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 from merino.config import settings
+from merino.exceptions import BackendError
 from merino.utils.version import fetch_app_version_from_file
 
 logger = logging.getLogger(__name__)
@@ -44,15 +45,20 @@ def strip_sensitive_data(event: dict, hint: dict) -> Any:
 
     if "exc_info" in hint:
         exc_type, exc_value, tb = hint["exc_info"]
-        if isinstance(exc_value, RuntimeError):
+        if isinstance(exc_value, RuntimeError) or isinstance(exc_value, BackendError):
             for entry in event["exception"]["values"][0]["stacktrace"]["frames"]:
                 try:
                     if entry["vars"].get("q"):
                         entry["vars"]["q"] = "vars_foo"
+                    if entry["vars"].get("query"):
+                        entry["vars"]["query"] = "picked_repl"
+                    if entry["vars"].get("srequest"):
+                        entry["vars"]["srequest"] = "sreq_repl"
                     if entry["vars"]["values"].get("q"):
                         entry["vars"]["values"]["q"] = "vars_values_foo"
                     if entry["vars"]["solved_result"][0].get("q"):
                         entry["vars"]["solved_result"][0]["q"] = "solved_foo"
+
                 except KeyError as e:
                     logger.debug(
                         f"Sentry filtering RuntimeError query value not found: {e}"

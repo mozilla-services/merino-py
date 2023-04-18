@@ -75,6 +75,18 @@ mock_sentry_event_data: dict = {
                                 }
                             },
                         },
+                        {
+                            "filename": "merino/providers/top_picks/provider.py",
+                            "function": "query",
+                            "context_line": "raise BackendError()",
+                            "vars": {
+                                "self": "<merino.providers.top_picks.provider>",
+                                "srequest": "SuggestionRequest(query='foobar')",
+                                "qlen": "6",
+                                "query": "foobar",
+                                "ids": "None",
+                            },
+                        },
                     ]
                 },
             }
@@ -105,4 +117,10 @@ def test_strip_sensitive_data() -> None:
             "values"
         ]["q"]
         == "vars_values_foo"
+    )
+    assert (
+        sentry_event["exception"]["values"][0]["stacktrace"]["frames"][3]["vars"][
+            "srequest"
+        ]
+        == "sreq_repl"
     )
