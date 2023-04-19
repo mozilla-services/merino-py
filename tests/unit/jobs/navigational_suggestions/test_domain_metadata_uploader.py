@@ -57,7 +57,9 @@ def test_upload_favicons_upload_if_not_present(mock_gcs_client, mocker):
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(dummy_src_favicons)
 
-    mock_dst_blob.upload_from_string.assert_called_once_with(str(bytes(255)))
+    mock_dst_blob.upload_from_string.assert_called_once_with(
+        bytes(255), content_type="image/png"
+    )
     mock_dst_blob.make_public.assert_called_once()
 
     assert len(uploaded_favicons) == len(dummy_src_favicons)

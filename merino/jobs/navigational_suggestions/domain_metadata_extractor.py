@@ -40,6 +40,7 @@ class DomainMetadataExtractor:
         "Your request has been blocked",
         "This page is either unavailable or restricted",
         "Let's Get Your Identity Verified",
+        "Your Access To This Website Has Been Blocked",
     ]
 
     browser: RoboBrowser
@@ -190,7 +191,7 @@ class DomainMetadataExtractor:
             pass
 
         return (
-            title
+            title.strip()
             if title
             and not [t for t in self.INVALID_TITLES if t.casefold() in title.casefold()]
             else None
