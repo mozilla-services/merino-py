@@ -61,7 +61,7 @@ class DomainMetadataUploader:
                 # make it publicly accessible
                 if not dst_blob.exists():
                     logger.info(f"blob {dst_favicon_name} doesn't exist. creating it..")
-                    dst_blob.upload_from_string(str(content))
+                    dst_blob.upload_from_string(content, content_type=content_type)
                     dst_blob.make_public()
 
                 dst_favicons.append(dst_blob.public_url)
