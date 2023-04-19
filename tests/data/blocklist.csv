@@ -1,4 +1,4 @@
-name,seed,parent,level,max_level
-Child abuse,Child abuse,,0,
-Orgasm,Orgasm,,0,
-Paraphilias,Paraphilias,,0,
+name,seed,parent,level,topic
+Child abuse,Child abuse,,0,child_abuse
+Orgasm,Orgasm,,0,sexually_explicit
+Paraphilias,Paraphilias,,0,sexually_explicit
