@@ -117,7 +117,6 @@ class Indexer:
         should_filter_title: bool = (
             title.lower() in self.title_blocklist if title != "" else True
         )
-        should_filter_title = title in self.title_blocklist
         return should_filter_category or should_filter_title
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):

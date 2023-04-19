@@ -360,7 +360,7 @@ def test_index_from_export_with_title_blocklist_content_filter(
     }
     operation_filtered_out = {"index": {"_type": "doc", "_id": "1001"}}
     document_filtered_out = {
-        "title": "bad things",
+        "title": "Bad things",
         "text_bytes": 1000,
         "incoming_links": 10,
         "popularity_score": 0.0003,
