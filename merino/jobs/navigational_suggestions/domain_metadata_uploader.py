@@ -5,7 +5,7 @@ import logging
 import time
 
 import requests
-from google.cloud.storage import Client
+from google.cloud.storage import Blob, Client
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +22,17 @@ class DomainMetadataUploader:
 
     bucket_name: str
     storage_client: Client
+    cdn_hostname: str
 
     def __init__(
-        self, destination_gcp_project: str, destination_bucket_name: str
+        self,
+        destination_gcp_project: str,
+        destination_bucket_name: str,
+        destination_cdn_hostname: str,
     ) -> None:
         self.storage_client = Client(destination_gcp_project)
         self.bucket_name = destination_bucket_name
+        self.cdn_hostname = destination_cdn_hostname
 
     def upload_top_picks(self, top_picks: str) -> None:
         """Upload the top pick contents to gcs."""
@@ -57,19 +62,30 @@ class DomainMetadataUploader:
                 dst_favicon_name = self._destination_favicon_name(content, content_type)
                 dst_blob = bucket.blob(dst_favicon_name)
 
-                # upload favicon to gcs if it doesn't already exist there an
+                # upload favicon to gcs if it doesn't already exist there and
                 # make it publicly accessible
                 if not dst_blob.exists():
                     logger.info(f"blob {dst_favicon_name} doesn't exist. creating it..")
                     dst_blob.upload_from_string(content, content_type=content_type)
                     dst_blob.make_public()
 
-                dst_favicons.append(dst_blob.public_url)
+                dst_favicon_public_url = self._get_favicon_public_url(
+                    dst_blob, dst_favicon_name
+                )
+                logger.info(f"favicon public url: {dst_favicon_public_url}")
+                dst_favicons.append(dst_favicon_public_url)
             except Exception as e:
                 logger.info(f"Exception {e} occured while uploading {src_favicon}")
                 dst_favicons.append("")
 
         return dst_favicons
+
+    def _get_favicon_public_url(self, blob: Blob, favicon_name: str) -> str:
+        """Get public url for the uploaded favicon"""
+        if self.cdn_hostname:
+            return "https://" + self.cdn_hostname + "/" + favicon_name
+        else:
+            return str(blob.public_url)
 
     def _download_favicon(self, favicon: str) -> tuple[bytes, str]:
         """Download favicon image from a given url"""

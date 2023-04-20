@@ -38,6 +38,12 @@ destination_gcs_bucket_option = typer.Option(
     help="GCS bucket where the domain metadata for navigational suggestions will be stored",
 )
 
+destination_gcs_cdn_hostname_option = typer.Option(
+    job_settings.destination_cdn_hostname,
+    "--dst-cdn-hostname",
+    help="GCS cdn hostname where the domain metadata for navigational suggestions will be stored",
+)
+
 navigational_suggestions_cmd = typer.Typer(
     name="navigational-suggestions",
     help="Command for preparing top domain metadata for navigational suggestions",
@@ -70,6 +76,7 @@ def prepare_domain_metadata(
     source_gcp_project: str = source_gcp_project_option,
     destination_gcp_project: str = destination_gcp_project_option,
     destination_gcs_bucket: str = destination_gcs_bucket_option,
+    destination_cdn_hostname: str = destination_gcs_cdn_hostname_option,
 ):
     """Prepare domain metadata for navigational suggestions"""
     # download top domains data
@@ -88,7 +95,7 @@ def prepare_domain_metadata(
 
     # upload favicons and get their public urls
     domain_metadata_uploader = DomainMetadataUploader(
-        destination_gcp_project, destination_gcs_bucket
+        destination_gcp_project, destination_gcs_bucket, destination_cdn_hostname
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
     logger.info("domain favicons uploaded to gcs")
