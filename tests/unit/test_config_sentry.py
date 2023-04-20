@@ -3,7 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the config_sentry.py module."""
-
 from merino.config_sentry import strip_sensitive_data
 
 mock_sentry_hint: dict[str, list] = {"exc_info": [RuntimeError, RuntimeError(), None]}
@@ -61,6 +60,42 @@ mock_sentry_event_data: dict = {
                                 "ids": "None",
                             },
                         },
+                        {
+                            "filename": "fastapi/routing.py",
+                            "function": "app",
+                            "module": "fastapi.routing",
+                            "lineno": 227,
+                            "vars": {
+                                "request": {
+                                    "type": "'http'",
+                                },
+                                "body": "None",
+                                "solved_result": [
+                                    {
+                                        "q": "foobar",
+                                        "providers": "'top_picks,adm'",
+                                        "client_variants": "None",
+                                        "request": {
+                                            "method": "'GET'",
+                                            "path": "'/api/v1/suggest'",
+                                        },
+                                    },
+                                ],
+                                "values": {
+                                    "sources": [
+                                        {
+                                            "accuweather": "<merino.providers.weather.provider>",
+                                            "adm": "<merino.providers.adm.provider.",
+                                            "top_picks": "<merino.providers.top_picks.provider>",
+                                            "wikipedia": "<merino.providers.wikipedia.provider>",
+                                        },
+                                    ],
+                                    "q": "'foobar'",
+                                    "providers": "'top_picks,adm'",
+                                    "client_variants": "None",
+                                },
+                            },
+                        },
                     ]
                 },
             }
@@ -91,5 +126,12 @@ def test_strip_sensitive_data() -> None:
         sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][2]["vars"][
             "srequest"
         ]
+        == ""
+    )
+
+    assert (
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][3]["vars"][
+            "solved_result"
+        ][0]["q"]
         == ""
     )
