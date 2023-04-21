@@ -167,3 +167,5 @@ source_gcp_project = ""
 destination_gcp_project = ""
 # GCS bucket name where domain metadata will be uploaded
 destination_gcs_bucket = ""
+# CDN hostname of the GCS bucket where domain metadata will be uploaded
+destination_cdn_hostname = ""
