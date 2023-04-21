@@ -148,7 +148,8 @@ def test_strip_sensitive_data_key_error(
     filter_caplog: FilterCaplogFixture,
 ) -> None:
     """Test that KeyError is emitted through logger when invalid key
-    detected."""
+    detected.
+    """
     caplog.set_level(logging.WARNING)
     strip_sensitive_data(
         event={"bad_request": {}, "exception": {"invalid_values": [{}]}},
