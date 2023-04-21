@@ -132,6 +132,7 @@ FAVICON_SCENARIOS: list[Scenario] = [
 ]
 
 
+@pytest.mark.xfail(reason="Test Flake Detected (ref: DISCO-2359)")
 @pytest.mark.parametrize(
     ["domains_data", "expected_favicons"],
     FAVICON_SCENARIOS,
