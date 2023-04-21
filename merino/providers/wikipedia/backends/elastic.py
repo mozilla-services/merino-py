@@ -19,6 +19,23 @@ class ElasticBackendError(BackendError):
     """Error with Elastic Backend"""
 
 
+def get_best_keyword(q: str, title: str):
+    """Try to get the best autocomplete keyword match from the title. If there are no matches,
+    then return the full title as a match. Lowercase everything.
+    """
+    title = title.lower()
+    q = q.strip().lower()
+    start_index = title.find(q)
+    if start_index < 0:
+        return title
+
+    end_index = title.find(" ", start_index + len(q) - 1)
+    if end_index < start_index:
+        return title[start_index:]
+
+    return title[start_index:end_index]
+
+
 class ElasticBackend:
     """The client that works with the Elasticsearch backend."""
 
@@ -59,19 +76,19 @@ class ElasticBackend:
 
         if "suggest" in res:
             return [
-                self.build_article(doc)
+                self.build_article(q, doc)
                 for doc in res["suggest"][SUGGEST_ID][0]["options"]
             ]
         else:
             return []
 
     @staticmethod
-    def build_article(doc: dict[str, Any]) -> dict[str, Any]:
+    def build_article(q: str, doc: dict[str, Any]) -> dict[str, Any]:
         """Build a Wikipedia article based on the ES result."""
         title = str(doc["_source"]["title"])
         quoted_title = quote(title.replace(" ", "_"))
         return {
-            "full_keyword": title,
-            "title": title,
+            "full_keyword": get_best_keyword(q, title),
+            "title": f"Wikipedia - {title}",
             "url": f"https://en.wikipedia.org/wiki/{quoted_title}",
         }
