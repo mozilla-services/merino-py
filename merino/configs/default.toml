@@ -169,3 +169,5 @@ destination_gcp_project = ""
 destination_gcs_bucket = ""
 # CDN hostname of the GCS bucket where domain metadata will be uploaded
 destination_cdn_hostname = ""
+# Flag to enable uploading the domain metadata to GCS bucket even if it aleady exists there
+force_upload = false

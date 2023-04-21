@@ -26,7 +26,7 @@ def test_upload_top_picks(mock_gcs_client):
     mock_dst_blob = mock_gcs_bucket.blob.return_value
 
     domain_metadata_uploader = DomainMetadataUploader(
-        "dummy_gcp_project", "dummy_gcs_bucket", None
+        "dummy_gcp_project", "dummy_gcs_bucket", None, False
     )
     domain_metadata_uploader.upload_top_picks(dummy_top_picks)
 
@@ -53,7 +53,7 @@ def test_upload_favicons_upload_if_not_present(mock_gcs_client, mocker):
     mock___download_favicon.return_value = (bytes(255), "image/png")
 
     domain_metadata_uploader = DomainMetadataUploader(
-        "dummy_gcp_project", "dummy_gcs_bucket", None
+        "dummy_gcp_project", "dummy_gcs_bucket", None, False
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(dummy_src_favicons)
 
@@ -64,6 +64,30 @@ def test_upload_favicons_upload_if_not_present(mock_gcs_client, mocker):
 
     assert len(uploaded_favicons) == len(dummy_src_favicons)
     assert uploaded_favicons[0] == "uploaded_favicon1.png"
+
+
+def test_upload_favicons_upload_if_force_upload_set(mock_gcs_client, mocker):
+    """Test if favicons are uploaded only if not already present in GCS"""
+    dummy_src_favicons = ["favicon1.png"]
+    mock_dst_blob = mock_gcs_client.bucket.return_value.blob.return_value
+
+    mock_dst_blob.exists.return_value = True
+    mocker.patch(
+        (
+            "merino.jobs.navigational_suggestions.domain_metadata_uploader."
+            "DomainMetadataUploader._download_favicon"
+        )
+    ).return_value = (bytes(255), "image/png")
+
+    domain_metadata_uploader = DomainMetadataUploader(
+        "dummy_gcp_project", "dummy_gcs_bucket", None, True
+    )
+    domain_metadata_uploader.upload_favicons(dummy_src_favicons)
+
+    mock_dst_blob.upload_from_string.assert_called_once_with(
+        bytes(255), content_type="image/png"
+    )
+    mock_dst_blob.make_public.assert_called_once()
 
 
 def test_upload_favicons_return_favicon_with_cdnhostname_when_provided(
@@ -95,7 +119,7 @@ def test_upload_favicons_return_favicon_with_cdnhostname_when_provided(
     ).return_value = dummy_destination_favicon_name
 
     domain_metadata_uploader = DomainMetadataUploader(
-        "dummy_gcp_project", "dummy_gcs_bucket", dummy_cdn_hostname
+        "dummy_gcp_project", "dummy_gcs_bucket", dummy_cdn_hostname, False
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(dummy_src_favicons)
 
@@ -109,7 +133,7 @@ def test_upload_favicons_exception_returns_empty_urls(mock_gcs_client, mocker):
     dummy_src_favicons = ["invalid_favicon.png"]
 
     domain_metadata_uploader = DomainMetadataUploader(
-        "dummy_gcp_project", "dummy_gcs_bucket", None
+        "dummy_gcp_project", "dummy_gcs_bucket", None, False
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(dummy_src_favicons)
 

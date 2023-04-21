@@ -30,10 +30,12 @@ class DomainMetadataUploader:
         destination_gcp_project: str,
         destination_bucket_name: str,
         destination_cdn_hostname: str,
+        force_upload: bool,
     ) -> None:
         self.storage_client = Client(destination_gcp_project)
         self.bucket_name = destination_bucket_name
         self.cdn_hostname = destination_cdn_hostname
+        self.force_upload = force_upload
 
     def upload_top_picks(self, top_picks: str) -> None:
         """Upload the top pick contents to gcs."""
@@ -63,10 +65,12 @@ class DomainMetadataUploader:
                 dst_favicon_name = self._destination_favicon_name(content, content_type)
                 dst_blob = bucket.blob(dst_favicon_name)
 
-                # upload favicon to gcs if it doesn't already exist there and
+                # upload favicon to gcs if force upload is set or if it doesn't exist there and
                 # make it publicly accessible
-                if not dst_blob.exists():
-                    logger.info(f"blob {dst_favicon_name} doesn't exist. creating it..")
+                if self.force_upload or not dst_blob.exists():
+                    logger.info(
+                        f"Uploading favicon {src_favicon} to blob {dst_favicon_name}"
+                    )
                     dst_blob.upload_from_string(content, content_type=content_type)
                     dst_blob.make_public()
 
