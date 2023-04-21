@@ -40,29 +40,25 @@ def strip_sensitive_data(event: dict, hint: dict) -> dict:
     if event.get("request", {}).get("query_string", {}):
         event["request"]["query_string"] = ""
 
-    if "exc_info" in hint:
-        exc_type, exc_value, tb = hint["exc_info"]
-        if isinstance(exc_value, Exception):
-            try:
-                for entry in event["exception"]["values"][0]["stacktrace"]["frames"]:
-                    if entry["vars"].get("q"):
-                        entry["vars"]["q"] = ""
-                    if entry["vars"].get("query"):
-                        entry["vars"]["query"] = ""
-                    if entry["vars"].get("srequest"):
-                        entry["vars"]["srequest"] = ""
-                    if entry["vars"].get("values", {}).get("q"):
-                        entry["vars"]["values"]["q"] = ""
-                    if (
-                        entry["vars"].get("solved_result", [])
-                        and len(entry["vars"].get("solved_result", [])) > 0
-                    ):
-                        if entry["vars"]["solved_result"][0].get("q"):
-                            entry["vars"]["solved_result"][0]["q"] = ""
-            except KeyError as e:
-                logger.warning(
-                    f"Encountered KeyError for key {e} while filtering Sentry data."
-                )
-                pass
+    try:
+        for entry in event["exception"]["values"][0]["stacktrace"]["frames"]:
+
+            if entry["vars"].get("q"):
+                entry["vars"]["q"] = ""
+            if entry["vars"].get("query"):
+                entry["vars"]["query"] = ""
+            if entry["vars"].get("srequest"):
+                entry["vars"]["srequest"] = ""
+            if entry["vars"].get("values", {}).get("q"):
+                entry["vars"]["values"]["q"] = ""
+            if (
+                entry["vars"].get("solved_result", [])
+                and len(entry["vars"].get("solved_result", [])) > 0
+            ):
+                if entry["vars"]["solved_result"][0].get("q"):
+                    entry["vars"]["solved_result"][0]["q"] = ""
+
+    except KeyError as e:
+        logger.warning(f"Encountered KeyError for key {e} while filtering Sentry data.")
 
     return event
