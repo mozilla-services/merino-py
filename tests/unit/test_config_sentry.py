@@ -112,7 +112,6 @@ mock_sentry_event_data: dict = {
 def test_strip_sensitive_data() -> None:
     """Test that strip_sensitive_data will remove sensitive data."""
     sanitized_event = strip_sensitive_data(mock_sentry_event_data, mock_sentry_hint)
-    # Asserts that the 'query_string' key was removed from the dictionary.
     assert sanitized_event["request"].get("query_string") == ""
     assert "exc_info" in mock_sentry_hint
     assert isinstance(mock_sentry_hint["exc_info"][1], RuntimeError)
