@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import logging
 import time
+from urllib.parse import urljoin
 
 import requests
 from google.cloud.storage import Blob, Client
@@ -83,7 +84,12 @@ class DomainMetadataUploader:
     def _get_favicon_public_url(self, blob: Blob, favicon_name: str) -> str:
         """Get public url for the uploaded favicon"""
         if self.cdn_hostname:
-            return "https://" + self.cdn_hostname + "/" + favicon_name
+            base_url = (
+                f"https://{self.cdn_hostname}"
+                if "https" not in self.cdn_hostname
+                else self.cdn_hostname
+            )
+            return urljoin(base_url, favicon_name)
         else:
             return str(blob.public_url)
 
