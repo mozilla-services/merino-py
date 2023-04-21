@@ -39,8 +39,10 @@ async def test_es_backend_search_success(
                 SUGGEST_ID: [
                     {
                         "options": [
-                            {"_source": {"title": "foo"}},
-                            {"_source": {"title": "foo bar"}},
+                            {"_source": {"title": "Food"}},
+                            {"_source": {"title": "Dog food"}},
+                            {"_source": {"title": "Food for Thought"}},
+                            {"_source": {"title": "Returned by ES but missing value"}},
                         ]
                     }
                 ]
@@ -49,18 +51,71 @@ async def test_es_backend_search_success(
     )
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
 
-    suggestions = await es_backend.search("foo")
+    suggestions = await es_backend.search("foO")
 
     assert suggestions == [
         {
-            "full_keyword": "foo",
-            "title": "foo",
-            "url": "https://en.wikipedia.org/wiki/foo",
+            "full_keyword": "food",
+            "title": "Wikipedia - Food",
+            "url": "https://en.wikipedia.org/wiki/Food",
         },
         {
-            "full_keyword": "foo bar",
-            "title": "foo bar",
-            "url": "https://en.wikipedia.org/wiki/foo_bar",
+            "full_keyword": "food",
+            "title": "Wikipedia - Dog food",
+            "url": "https://en.wikipedia.org/wiki/Dog_food",
+        },
+        {
+            "full_keyword": "food",
+            "title": "Wikipedia - Food for Thought",
+            "url": "https://en.wikipedia.org/wiki/Food_for_Thought",
+        },
+        {
+            "full_keyword": "returned by es but missing value",
+            "title": "Wikipedia - Returned by ES but missing value",
+            "url": "https://en.wikipedia.org/wiki/Returned_by_ES_but_missing_value",
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_es_backend_search_multiword_query(
+    mocker: MockerFixture, es_backend: ElasticBackend
+) -> None:
+    """Test the search method of the ES backend."""
+    async_mock = AsyncMock(
+        return_value={
+            "suggest": {
+                SUGGEST_ID: [
+                    {
+                        "options": [
+                            {"_source": {"title": "Food for Thought"}},
+                            {"_source": {"title": "Food Fortune"}},
+                            {"_source": {"title": "No Food Forgiveness"}},
+                        ]
+                    }
+                ]
+            }
+        }
+    )
+    mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
+
+    suggestions = await es_backend.search("food f")
+
+    assert suggestions == [
+        {
+            "full_keyword": "food for",
+            "title": "Wikipedia - Food for Thought",
+            "url": "https://en.wikipedia.org/wiki/Food_for_Thought",
+        },
+        {
+            "full_keyword": "food fortune",
+            "title": "Wikipedia - Food Fortune",
+            "url": "https://en.wikipedia.org/wiki/Food_Fortune",
+        },
+        {
+            "full_keyword": "food forgiveness",
+            "title": "Wikipedia - No Food Forgiveness",
+            "url": "https://en.wikipedia.org/wiki/No_Food_Forgiveness",
         },
     ]
 
