@@ -159,5 +159,5 @@ def test_strip_sensitive_data_key_error(
     records = filter_caplog(caplog.records, "merino.config_sentry")
     assert (
         records[0].__dict__["msg"]
-        == "Encountered KeyError for key 'values' while filtering Sentry data."
+        == "Encountered KeyError or IndexError for value 'values' while filtering Sentry data."
     )

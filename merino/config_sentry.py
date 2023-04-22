@@ -58,7 +58,9 @@ def strip_sensitive_data(event: dict, hint: dict) -> dict:
                 if entry["vars"]["solved_result"][0].get("q"):
                     entry["vars"]["solved_result"][0]["q"] = ""
 
-    except KeyError as e:
-        logger.warning(f"Encountered KeyError for key {e} while filtering Sentry data.")
+    except (KeyError, IndexError) as e:
+        logger.warning(
+            f"Encountered KeyError or IndexError for value {e} while filtering Sentry data."
+        )
 
     return event
