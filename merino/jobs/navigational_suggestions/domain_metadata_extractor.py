@@ -1,30 +1,76 @@
 """Extract domain metadata from domain data"""
 import logging
 from io import BytesIO
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urljoin
 
 import requests
 from PIL import Image
+from pydantic import BaseModel
 from robobrowser import RoboBrowser
 
+FIREFOX_UA: str = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 13.3; rv:111.0) Gecko/20100101 "
+    "Firefox/111.0"
+)
+TIMEOUT: int = 60
+
 logger = logging.getLogger(__name__)
+
+
+class FaviconData(BaseModel):
+    """Data model for favicon information."""
+
+    links: list[dict[str, Any]]
+    metas: list[dict[str, Any]]
+    url: str
+
+
+class Scraper:
+    """Website data extractor."""
+
+    LINK_SELECTOR: str = (
+        "link[rel=apple-touch-icon], link[rel=apple-touch-icon-precomposed],"
+        'link[rel="icon shortcut"], link[rel="shortcut icon"], link[rel="icon"],'
+        'link[rel="SHORTCUT ICON"], link[rel="fluid-icon"]'
+    )
+    META_SELECTOR: str = "meta[name=apple-touch-icon]"
+
+    browser: RoboBrowser
+
+    def __init__(self) -> None:
+        self.browser = RoboBrowser(user_agent=FIREFOX_UA, parser="html.parser")
+
+    def scrape_favicon_data(self, url: str) -> FaviconData:
+        """Scrape the favicon data from the given url.
+
+        Args:
+            url: URL to open and scrape
+        Returns:
+            str: Favicon data from the given URL
+        """
+        self.browser.open(url, timeout=TIMEOUT)
+        return FaviconData(
+            links=[link.attrs for link in self.browser.select(self.LINK_SELECTOR)],
+            metas=[meta.attrs for meta in self.browser.select(self.META_SELECTOR)],
+            url=self.browser.url,
+        )
+
+    def scrape_title(self, url: str) -> str:
+        """Scrape the title from the header of the given url.
+
+        Args:
+            url: URL to open and scrape
+        Returns:
+            str: Title from header of the given URL
+        """
+        self.browser.open(url, timeout=TIMEOUT)
+        return str(self.browser.find("head").find("title").string)
 
 
 class DomainMetadataExtractor:
     """Extract domain metadata from domain data"""
 
-    LINK_SELECTOR = (
-        "link[rel=apple-touch-icon], link[rel=apple-touch-icon-precomposed],"
-        'link[rel="icon shortcut"], link[rel="shortcut icon"], link[rel="icon"],'
-        'link[rel="SHORTCUT ICON"], link[rel="fluid-icon"]'
-    )
-    META_SELECTOR = "meta[name=apple-touch-icon]"
-    FIREFOX_UA = (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 13.3; rv:111.0) Gecko/20100101 "
-        "Firefox/111.0"
-    )
-    TIMEOUT = 60
     # A non-exhaustive list of substrings of invalid titles
     INVALID_TITLES = [
         "Attention Required",
@@ -45,10 +91,10 @@ class DomainMetadataExtractor:
         "This page is not allowed",
     ]
 
-    browser: RoboBrowser
+    scraper: Scraper
 
-    def __init__(self) -> None:
-        self.browser = RoboBrowser(user_agent=self.FIREFOX_UA, parser="html.parser")
+    def __init__(self, scraper=None) -> None:
+        self.scraper = scraper if scraper else Scraper()
 
     def _fix_url(self, url: str) -> str:
         """Return a url with https scheme if the scheme is originally missing from it"""
@@ -59,10 +105,10 @@ class DomainMetadataExtractor:
     def _get_default_favicon(self, url: str) -> Optional[str]:
         """Return the default favicon for a url if it exists"""
         default_favicon_url = urljoin(url, "favicon.ico")
-        response = requests.get(
+        response = requests.get(  # TODO DISCO-2359 Move request to Scraper?
             default_favicon_url,
-            headers={"User-agent": self.FIREFOX_UA},
-            timeout=self.TIMEOUT,
+            headers={"User-agent": FIREFOX_UA},
+            timeout=TIMEOUT,
         )
         return default_favicon_url if response.status_code == 200 else None
 
@@ -71,28 +117,26 @@ class DomainMetadataExtractor:
         logger.info(f"Extracting favicons for {url}")
         favicons = []
         try:
-            self.browser.open(url, timeout=self.TIMEOUT)
+            favicon_data: FaviconData = self.scraper.scrape_favicon_data(url)
 
-            for link in self.browser.select(self.LINK_SELECTOR):
-                favicon = link.attrs
+            for favicon in favicon_data.links:
                 favicon_url = favicon["href"]
                 if favicon_url.startswith("data:"):
                     continue
                 if not favicon_url.startswith("http") and not favicon_url.startswith(
                     "//"
                 ):
-                    favicon["href"] = urljoin(self.browser.url, favicon_url)
+                    favicon["href"] = urljoin(favicon_data.url, favicon_url)
                 favicons.append(favicon)
 
-            for meta in self.browser.select(self.META_SELECTOR):
-                favicon = meta.attrs
+            for favicon in favicon_data.metas:
                 favicon_url = favicon["content"]
                 if favicon_url.startswith("data:"):
                     continue
                 if not favicon_url.startswith("http") and not favicon_url.startswith(
                     "//"
                 ):
-                    favicon["href"] = urljoin(self.browser.url, favicon_url)
+                    favicon["href"] = urljoin(favicon_data.url, favicon_url)
                 else:
                     favicon["href"] = favicon_url
                 favicons.append(favicon)
@@ -129,10 +173,10 @@ class DomainMetadataExtractor:
                     pass
             if width is None:
                 try:
-                    response = requests.get(
+                    response = requests.get(  # TODO DISCO-2359 Move request to Scraper?
                         url,
-                        headers={"User-agent": self.FIREFOX_UA},
-                        timeout=self.TIMEOUT,
+                        headers={"User-agent": FIREFOX_UA},
+                        timeout=TIMEOUT,
                     )
 
                     # If it is an SVG, then return this as the best favicon because SVG favicons
@@ -193,8 +237,7 @@ class DomainMetadataExtractor:
         logger.info(f"Extracting title for {url}")
         title = None
         try:
-            self.browser.open(url, timeout=self.TIMEOUT)
-            title = self.browser.find("head").find("title").string
+            title = self.scraper.scrape_title(url)
             title = " ".join(title.split())
         except Exception as e:
             logger.info(f"Exception: {e} while extracting title from document")
