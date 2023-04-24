@@ -110,6 +110,16 @@ resync_interval_sec = 10800
 score = 0.3
 score_wikipedia = 0.2
 
+[default.providers.addons]
+type = "addons"
+enabled_by_default = false
+score = 0.3
+online_mode=true
+# The minimum number of characters to be considered for matching.
+min_chars = 4
+# This is the URL for the Addons API to get more information for particular addons
+api_url = "https://addons.mozilla.org/api/v5/addons/addon/"
+
 [default.providers.top_picks]
 type = "top_picks"
 enabled_by_default = false

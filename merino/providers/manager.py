@@ -10,6 +10,10 @@ from merino.cache.redis import RedisAdapter
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
 from merino.metrics import get_metrics_client
+from merino.providers.addons.addons_data import KEYWORDS as ADDON_KEYWORDS
+from merino.providers.addons.backends.api import AddonAPIBackend
+from merino.providers.addons.backends.static import StaticAddonsBackend
+from merino.providers.addons.provider import Provider as AddonsProvider
 from merino.providers.adm.backends.fake_backends import FakeAdmBackend
 from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
 from merino.providers.adm.provider import Provider as AdmProvider
@@ -31,6 +35,7 @@ class ProviderType(str, Enum):
     """Enum for provider type."""
 
     ACCUWEATHER = "accuweather"
+    ADDONS = "addons"
     ADM = "adm"
     TOP_PICKS = "top_picks"
     WIKI_FRUIT = "wiki_fruit"
@@ -67,6 +72,17 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 cached_report_ttl_sec=setting.cached_report_ttl_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.ADDONS:
+            return AddonsProvider(
+                backend=AddonAPIBackend(api_url=setting.api_url)  # type: ignore [arg-type]
+                if setting.online_mode
+                else StaticAddonsBackend(),
+                score=setting.score,
+                name=provider_id,
+                min_chars=settings.providers.addons.min_chars,
+                keywords=ADDON_KEYWORDS,
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.ADM:
