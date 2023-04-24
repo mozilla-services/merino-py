@@ -41,6 +41,8 @@ class DomainMetadataExtractor:
         "This page is either unavailable or restricted",
         "Let's Get Your Identity Verified",
         "Your Access To This Website Has Been Blocked",
+        "Error",
+        "This page is not allowed",
     ]
 
     browser: RoboBrowser
