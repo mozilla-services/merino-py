@@ -143,12 +143,12 @@ def test_strip_sensitive_data() -> None:
     )
 
 
-def test_strip_sensitive_data_key_error(
+def test_strip_sensitive_data_lookup_error(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
 ) -> None:
-    """Test that KeyError is emitted through logger when invalid key
-    detected.
+    """Test that KeyError or IndexError message is emitted through logger when invalid key
+    or index is detected.
     """
     caplog.set_level(logging.WARNING)
     strip_sensitive_data(
