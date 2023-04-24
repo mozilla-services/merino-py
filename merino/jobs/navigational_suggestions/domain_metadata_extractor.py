@@ -186,12 +186,13 @@ class DomainMetadataExtractor:
         try:
             self.browser.open(url, timeout=self.TIMEOUT)
             title = self.browser.find("head").find("title").string
+            title = " ".join(title.split())
         except Exception as e:
             logger.info(f"Exception: {e} while extracting title from document")
             pass
 
         return (
-            title.strip()
+            title
             if title
             and not [t for t in self.INVALID_TITLES if t.casefold() in title.casefold()]
             else None
@@ -212,7 +213,7 @@ class DomainMetadataExtractor:
             # if no valid title is present then fallback to use the second level domain as title
             if title is None:
                 title = self._get_second_level_domain(domain_data)
-
+            logger.info(f"url {url} and title {title}")
             result.append({"url": url, "title": title})
 
         return result
