@@ -16,36 +16,27 @@ def fixture_static_backend() -> StaticAddonsBackend:
 
 
 @pytest.mark.asyncio
-async def test_get_addons_success(static_backend: StaticAddonsBackend):
+async def test_get_addon_success(static_backend: StaticAddonsBackend):
     """Test that we can get Addon information statically."""
-    addons = await static_backend.get_addons(["video-downloadhelper", "languagetool"])
-    assert len(addons) == 2
+    addons = await static_backend.get_addon("video-downloadhelper")
     video_downloader = STATIC_DATA["video-downloadhelper"]
-    languagetool = STATIC_DATA["languagetool"]
     vd_icon_rating = STATIC_RATING_AND_ICONS["video-downloadhelper"]
-    lt_icon_rating = STATIC_RATING_AND_ICONS["languagetool"]
-    assert [
+    assert (
         Addon(
             name=video_downloader["name"],
             description=video_downloader["description"],
             url=video_downloader["url"],
             icon=vd_icon_rating["icon"],
             rating=vd_icon_rating["rating"],
-        ),
-        Addon(
-            name=languagetool["name"],
-            description=languagetool["description"],
-            url=languagetool["url"],
-            icon=lt_icon_rating["icon"],
-            rating=lt_icon_rating["rating"],
-        ),
-    ] == addons
+        )
+        == addons
+    )
 
 
 @pytest.mark.asyncio
-async def test_get_addons_bad_addon_key(static_backend: StaticAddonsBackend):
+async def test_get_addon_bad_addon_key(static_backend: StaticAddonsBackend):
     """Test that an error is raised when passed a bad addon key."""
     with pytest.raises(KeyError) as ex:
-        await static_backend.get_addons(["bad_key"])
+        await static_backend.get_addon("bad_key")
 
     assert str(ex.value) == "'bad_key'"
