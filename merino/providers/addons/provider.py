@@ -1,6 +1,7 @@
 """Addons Provider"""
 from typing import Any
 
+from merino.config import settings
 from merino.providers.addons.backends.protocol import Addon, AddonsBackend
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import AddonsDetails, CustomDetails
@@ -24,12 +25,12 @@ class Provider(BaseProvider):
 
     def __init__(
         self,
-        name: str,
-        score: float,
         backend: AddonsBackend,
-        min_chars: int,
         keywords: dict[str, set[str]],
+        name: str = "addons",
         enabled_by_default: bool = True,
+        min_chars=settings.providers.addons.min_chars,
+        score=settings.providers.addons.score,
         **kwargs: Any
     ):
         """Initialize Addon Provider"""
