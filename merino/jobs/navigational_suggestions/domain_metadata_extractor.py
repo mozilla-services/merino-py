@@ -60,7 +60,9 @@ class DomainMetadataExtractor:
         """Return the default favicon for a url if it exists"""
         default_favicon_url = f"{url}/favicon.ico"
         response = requests.get(
-            url, headers={"User-agent": self.FIREFOX_UA}, timeout=self.TIMEOUT
+            default_favicon_url,
+            headers={"User-agent": self.FIREFOX_UA},
+            timeout=self.TIMEOUT,
         )
         return default_favicon_url if response.status_code == 200 else None
 
