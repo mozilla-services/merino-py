@@ -215,6 +215,8 @@ class DomainMetadataExtractor:
             # if no valid title is present then fallback to use the second level domain as title
             if title is None:
                 title = self._get_second_level_domain(domain_data)
+
+            title = title.capitalize()
             logger.info(f"url {url} and title {title}")
             result.append({"url": url, "title": title})
 

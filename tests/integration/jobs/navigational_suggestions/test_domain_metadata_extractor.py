@@ -173,7 +173,7 @@ TITLE_SCENARIOS: list[Scenario] = [
                 "categories": ["Economy & Finance"],
             },
         ],
-        ["investing"],
+        ["Investing"],
     ),
     # title as second level domain name because domain unreachable
     (
@@ -187,7 +187,7 @@ TITLE_SCENARIOS: list[Scenario] = [
                 "categories": ["Technology"],
             },
         ],
-        ["amazonaws"],
+        ["Amazonaws"],
     ),
 ]
 
