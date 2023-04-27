@@ -10,8 +10,8 @@ from merino.cache.redis import RedisAdapter
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
 from merino.metrics import get_metrics_client
-from merino.providers.addons.addons_data import KEYWORDS as ADDON_KEYWORDS
-from merino.providers.addons.backends.api import AddonAPIBackend
+from merino.providers.addons.addons_data import ADDON_KEYWORDS as ADDON_KEYWORDS
+from merino.providers.addons.backends.dynamic import DynamicAddonsBackend
 from merino.providers.addons.backends.static import StaticAddonsBackend
 from merino.providers.addons.provider import Provider as AddonsProvider
 from merino.providers.adm.backends.fake_backends import FakeAdmBackend
@@ -76,7 +76,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             )
         case ProviderType.ADDONS:
             return AddonsProvider(
-                backend=AddonAPIBackend(api_url=setting.api_url)  # type: ignore [arg-type]
+                backend=DynamicAddonsBackend(api_url=setting.api_url)  # type: ignore [arg-type]
                 if setting.online_mode
                 else StaticAddonsBackend(),
                 score=setting.score,

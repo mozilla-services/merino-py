@@ -1,5 +1,5 @@
 """Static Addon Endpoint"""
-from merino.providers.addons.addons_data import STATIC_DATA
+from merino.providers.addons.addons_data import ADDON_DATA
 from merino.providers.addons.backends.protocol import Addon
 
 STATIC_RATING_AND_ICONS = {
@@ -43,9 +43,13 @@ class StaticAddonsBackend:
     tests and potentially a fallback if the API is broken.
     """
 
+    async def initialize_addons(self):
+        """Initialize Addons. Pass for static Addons because we don't need to load it from anywhere."""
+        pass
+
     async def get_addon(self, addon_key: str) -> Addon:
-        """Get the addons information based on a list of matched addon keys."""
-        static_info: dict[str, str] = STATIC_DATA[addon_key]
+        """Get an Addon based on the addon_key"""
+        static_info: dict[str, str] = ADDON_DATA[addon_key]
         icon_and_rating: dict[str, str] = STATIC_RATING_AND_ICONS[addon_key]
 
         return Addon(

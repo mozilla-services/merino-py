@@ -2,7 +2,21 @@
 to do the query string matching.
 """
 
-STATIC_DATA = {
+SUPPORTED_ADDONS_KEYS = [
+    "video-downloadhelper",
+    "languagetool",
+    "private-relay",
+    "search_by_image",
+    "darkreader",
+    "privacy-badger17",
+    "ublock-origin",
+    "read-aloud",
+]
+
+# This object contains all the Product specified details to display to users.
+# In particular, we want the name and description to be specified for Search and Suggest
+# specific suggestions.
+ADDON_DATA = {
     "video-downloadhelper": {
         "name": "Video DownloadHelper",
         "description": (
@@ -70,7 +84,7 @@ STATIC_DATA = {
     },
 }
 
-KEYWORDS = {
+ADDON_KEYWORDS = {
     "video-downloadhelper": {
         "Video download",
         "Video DownloadHelper",
@@ -148,10 +162,14 @@ KEYWORDS = {
     },
     "ublock-origin": {
         "Adblock",
-        "ad block",
-        "ad blocker",
+        "Ad block",
+        "Ad blocker",
         "Ads",
-        "Ad tracking",
+        "Advertisement",
+        "Content block",
+        "How to block ads",
+        "uBlock",
+        "uBlock Origin",
     },
     "read-aloud": {
         "TTS",

@@ -2,12 +2,15 @@
 import pytest
 
 from merino.middleware.geolocation import Location
-from merino.providers.addons.addons_data import STATIC_DATA
+from merino.providers.addons.addons_data import ADDON_DATA
 from merino.providers.addons.backends.static import (
     STATIC_RATING_AND_ICONS,
     StaticAddonsBackend,
 )
-from merino.providers.addons.provider import Provider as AddonsProvider
+from merino.providers.addons.provider import (
+    Provider as AddonsProvider,
+    invert_and_expand_index_keywords,
+)
 from merino.providers.addons.provider import TemporaryAddonSuggestion
 from merino.providers.base import SuggestionRequest
 from merino.providers.custom_details import AddonsDetails, CustomDetails
@@ -35,23 +38,18 @@ def fixture_addon_provider(
     keywords: dict[str, set[str]], static_backend: StaticAddonsBackend
 ) -> AddonsProvider:
     """Fixture for Addon Provider."""
-    return AddonsProvider(
+    provider = AddonsProvider(
         backend=static_backend,
         keywords=keywords,
         name="addons",
         score=0.3,
         min_chars=4,
     )
+    return provider
 
 
-def test_reverse_and_expand_keywords(
-    static_backend: StaticAddonsBackend, keywords: dict[str, set[str]]
-):
+def test_reverse_and_expand_keywords(keywords: dict[str, set[str]]):
     """Test that we expand the keywords properly for the lookup table."""
-    provider = AddonsProvider(
-        backend=static_backend, keywords=keywords, name="addons", score=0.3, min_chars=4
-    )
-
     assert {
         "addo": "video-downloadhelper",
         "addon": "video-downloadhelper",
@@ -74,7 +72,7 @@ def test_reverse_and_expand_keywords(
         "dictiona": "languagetool",
         "dictionar": "languagetool",
         "dictionary": "languagetool",
-    } == provider.addon_keywords
+    } == invert_and_expand_index_keywords(keywords, 4)
 
 
 @pytest.mark.asyncio
@@ -82,6 +80,7 @@ async def test_query_string_too_short(
     addons_provider: AddonsProvider,
 ):
     """Test that we return no suggestion for a query that is too short."""
+    await addons_provider.initialize()
     req = SuggestionRequest(query="a", geolocation=Location())
     assert [] == await addons_provider.query(req)
 
@@ -91,6 +90,7 @@ async def test_query_no_keyword_matches(
     addons_provider: AddonsProvider,
 ):
     """Test that a keyword that doesn't match any current keywords returns no results."""
+    await addons_provider.initialize()
     req = SuggestionRequest(query="amazing", geolocation=Location())
     assert [] == await addons_provider.query(req)
 
@@ -100,8 +100,10 @@ async def test_query_return_match(
     addons_provider: AddonsProvider,
 ):
     """Test that we match one provider."""
+    await addons_provider.initialize()
+
     req = SuggestionRequest(query="dictionary", geolocation=Location())
-    expected_info = STATIC_DATA["languagetool"]
+    expected_info = ADDON_DATA["languagetool"]
     expected_icon_rating = STATIC_RATING_AND_ICONS["languagetool"]
     assert [
         TemporaryAddonSuggestion(

@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from merino.providers.addons.addons_data import KEYWORDS
+from merino.providers.addons.addons_data import ADDON_KEYWORDS
 from merino.providers.addons.backends.static import StaticAddonsBackend
 from merino.providers.addons.provider import Provider
 
@@ -21,14 +21,14 @@ Scenario = namedtuple(
 SCENARIOS: dict[str, Scenario] = {
     "Case-I: Returns Matched Addon": Scenario(
         providers={
-            "addons": Provider(backend=StaticAddonsBackend(), keywords=KEYWORDS)
+            "addons": Provider(backend=StaticAddonsBackend(), keywords=ADDON_KEYWORDS)
         },
         query="nigh",
         expected_title="Dark Reader",
     ),
     "Case-II: No Addon Matches": Scenario(
         providers={
-            "addons": Provider(backend=StaticAddonsBackend(), keywords=KEYWORDS)
+            "addons": Provider(backend=StaticAddonsBackend(), keywords=ADDON_KEYWORDS)
         },
         query="asdf",
         expected_title=None,

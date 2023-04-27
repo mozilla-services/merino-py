@@ -1,7 +1,7 @@
 """Test StaticAddonsBackend."""
 import pytest
 
-from merino.providers.addons.addons_data import STATIC_DATA
+from merino.providers.addons.addons_data import ADDON_DATA
 from merino.providers.addons.backends.protocol import Addon
 from merino.providers.addons.backends.static import (
     STATIC_RATING_AND_ICONS,
@@ -19,7 +19,7 @@ def fixture_static_backend() -> StaticAddonsBackend:
 async def test_get_addon_success(static_backend: StaticAddonsBackend):
     """Test that we can get Addon information statically."""
     addons = await static_backend.get_addon("video-downloadhelper")
-    video_downloader = STATIC_DATA["video-downloadhelper"]
+    video_downloader = ADDON_DATA["video-downloadhelper"]
     vd_icon_rating = STATIC_RATING_AND_ICONS["video-downloadhelper"]
     assert (
         Addon(

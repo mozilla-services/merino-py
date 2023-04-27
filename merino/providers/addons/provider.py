@@ -15,12 +15,31 @@ class TemporaryAddonSuggestion(BaseSuggestion):
     is_top_pick: bool = True
 
 
+def invert_and_expand_index_keywords(
+    keywords: dict[str, set[str]],
+    min_chars: int,
+) -> dict[str, str]:
+    """Invert the keywords index.
+    param keywords: mapping of addon key -> keywords
+    returns: mapping of keyword -> addon key
+    """
+    inverted_index = {}
+    for addon_name, kws in keywords.items():
+        for word in kws:
+            word = word.lower()
+            # do the keyword expansion
+            for i in range(min_chars, len(word) + 1):
+                inverted_index[word[:i]] = addon_name
+    return inverted_index
+
+
 class Provider(BaseProvider):
     """Provider for Addons"""
 
     score: float
     backend: AddonsBackend
     addon_keywords: dict[str, str]
+    keywords: dict[str, set[str]]
     min_chars: int
 
     def __init__(
@@ -38,13 +57,16 @@ class Provider(BaseProvider):
         self.score = score
         self.backend = backend
         self.min_chars = min_chars
-        self.addon_keywords = self._reverse_and_expand_index_keywords(keywords)
+        self.keywords = keywords
         self._enabled_by_default = enabled_by_default
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
         """Initialize"""
-        pass
+        await self.backend.initialize_addons()
+        self.addon_keywords = invert_and_expand_index_keywords(
+            self.keywords, self.min_chars
+        )
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Given the query string, get the Addon that matches the keyword."""
@@ -71,19 +93,3 @@ class Provider(BaseProvider):
                 custom_details=CustomDetails(addons=AddonsDetails(rating=addon.rating)),
             )
         ]
-
-    def _reverse_and_expand_index_keywords(
-        self, keywords: dict[str, set[str]]
-    ) -> dict[str, str]:
-        """Reverse the keywords index.
-        param keywords: mapping of addon key -> keywords
-        returns: mapping of keyword -> addon key
-        """
-        reverse_index = {}
-        for (addon_name, kws) in keywords.items():
-            for word in list(kws):
-                word = word.lower()
-                # do the keyword expansion
-                for i in range(self.min_chars, len(word) + 1):
-                    reverse_index[word[:i]] = addon_name
-        return reverse_index
