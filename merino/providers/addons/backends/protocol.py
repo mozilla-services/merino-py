@@ -3,6 +3,8 @@ from typing import Protocol
 
 from pydantic import BaseModel
 
+from merino.providers.addons.addons_data import SupportedAddons
+
 
 class Addon(BaseModel):
     """Interface object between Backend and Provider."""
@@ -17,8 +19,8 @@ class Addon(BaseModel):
 class AddonsBackend(Protocol):
     """Addon Protocol."""
 
-    async def get_addon(self, addon_key: str) -> Addon:  # pragma: no cover
+    async def get_addon(self, addon_key: SupportedAddons) -> Addon:  # pragma: no cover
         """Get an Addon based on the addon_key"""
 
-    async def initialize_addons(self):
+    async def initialize_addons(self) -> None:
         """Initialize addons to be stored."""

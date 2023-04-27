@@ -1,24 +1,30 @@
 """Addons Provider"""
 from typing import Any
 
+import pydantic
+
 from merino.config import settings
+from merino.providers.addons.addons_data import SupportedAddons
 from merino.providers.addons.backends.protocol import Addon, AddonsBackend
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import AddonsDetails, CustomDetails
 
 
-class TemporaryAddonSuggestion(BaseSuggestion):
-    """Temporarily returning this is_top_pick flag so that it renders as top pick.
-    Will remove this once the UX is released so that it can pick just the addon provider.
-    """
+class AddonSuggestion(BaseSuggestion):
+    """The Addon Suggestion"""
 
-    is_top_pick: bool = True
+    # Temporarily returning this is_top_pick flag so that it renders as top pick.
+    # Will remove this once the UX is released so that it can pick just the addon provider.
+    is_top_pick: bool = pydantic.Field(True, const=True)
+
+    # Addon Suggestions will always be Non-Sponsored
+    is_sponsored: bool = pydantic.Field(False, const=True)
 
 
 def invert_and_expand_index_keywords(
-    keywords: dict[str, set[str]],
+    keywords: dict[SupportedAddons, set[str]],
     min_chars: int,
-) -> dict[str, str]:
+) -> dict[str, SupportedAddons]:
     """Invert the keywords index.
     param keywords: mapping of addon key -> keywords
     returns: mapping of keyword -> addon key
@@ -38,14 +44,14 @@ class Provider(BaseProvider):
 
     score: float
     backend: AddonsBackend
-    addon_keywords: dict[str, str]
-    keywords: dict[str, set[str]]
+    addon_keywords: dict[str, SupportedAddons]
+    keywords: dict[SupportedAddons, set[str]]
     min_chars: int
 
     def __init__(
         self,
         backend: AddonsBackend,
-        keywords: dict[str, set[str]],
+        keywords: dict[SupportedAddons, set[str]],
         name: str = "addons",
         enabled_by_default: bool = True,
         min_chars=settings.providers.addons.min_chars,
@@ -82,12 +88,11 @@ class Provider(BaseProvider):
         addon: Addon = await self.backend.get_addon(matched_addon)
 
         return [
-            TemporaryAddonSuggestion(
+            AddonSuggestion(
                 title=addon.name,
                 description=addon.description,
                 url=addon.url,
                 score=self.score,
-                is_sponsored=True,
                 provider=self.name,
                 icon=addon.icon,
                 custom_details=CustomDetails(addons=AddonsDetails(rating=addon.rating)),

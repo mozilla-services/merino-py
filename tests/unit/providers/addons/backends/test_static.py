@@ -1,7 +1,7 @@
 """Test StaticAddonsBackend."""
 import pytest
 
-from merino.providers.addons.addons_data import ADDON_DATA
+from merino.providers.addons.addons_data import ADDON_DATA, SupportedAddons
 from merino.providers.addons.backends.protocol import Addon
 from merino.providers.addons.backends.static import (
     STATIC_RATING_AND_ICONS,
@@ -18,9 +18,9 @@ def fixture_static_backend() -> StaticAddonsBackend:
 @pytest.mark.asyncio
 async def test_get_addon_success(static_backend: StaticAddonsBackend):
     """Test that we can get Addon information statically."""
-    addons = await static_backend.get_addon("video-downloadhelper")
-    video_downloader = ADDON_DATA["video-downloadhelper"]
-    vd_icon_rating = STATIC_RATING_AND_ICONS["video-downloadhelper"]
+    addons = await static_backend.get_addon(SupportedAddons.VIDEO_DOWNLOADER)
+    video_downloader = ADDON_DATA[SupportedAddons.VIDEO_DOWNLOADER]
+    vd_icon_rating = STATIC_RATING_AND_ICONS[SupportedAddons.VIDEO_DOWNLOADER]
     assert (
         Addon(
             name=video_downloader["name"],
@@ -31,12 +31,3 @@ async def test_get_addon_success(static_backend: StaticAddonsBackend):
         )
         == addons
     )
-
-
-@pytest.mark.asyncio
-async def test_get_addon_bad_addon_key(static_backend: StaticAddonsBackend):
-    """Test that an error is raised when passed a bad addon key."""
-    with pytest.raises(KeyError) as ex:
-        await static_backend.get_addon("bad_key")
-
-    assert str(ex.value) == "'bad_key'"

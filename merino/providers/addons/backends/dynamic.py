@@ -1,9 +1,8 @@
 """Dynamic Addons API"""
-import requests
 from httpx import AsyncClient
 
 from merino.exceptions import BackendError
-from merino.providers.addons.addons_data import ADDON_DATA, SUPPORTED_ADDONS_KEYS
+from merino.providers.addons.addons_data import ADDON_DATA, SupportedAddons
 from merino.providers.addons.backends.protocol import Addon
 
 
@@ -26,16 +25,17 @@ class DynamicAddonsBackend:
     """
 
     api_url: str
+    dynamic_data: dict[SupportedAddons, dict[str, str]]
 
     def __init__(self, api_url: str):
         """Initialize Backend"""
         self.api_url = api_url
         self.dynamic_data = {}
 
-    async def initialize_addons(self) -> Addon:
+    async def initialize_addons(self) -> None:
         """Initialize the dynamic Addon information via the Addons API."""
         self.dynamic_data = {}  # ensure that it's empty
-        for addon_key in SUPPORTED_ADDONS_KEYS:
+        for addon_key in SupportedAddons:
             async with AsyncClient() as client:
                 res = await client.get(
                     f"{self.api_url}/{addon_key}", follow_redirects=True
@@ -52,7 +52,7 @@ class DynamicAddonsBackend:
 
             self.dynamic_data[addon_key] = {"icon": icon, "rating": rating}
 
-    async def get_addon(self, addon_key: str) -> Addon:
+    async def get_addon(self, addon_key: SupportedAddons) -> Addon:
         """Get an Addon based on the addon_key"""
         static_info: dict[str, str] = ADDON_DATA[addon_key]
         icon_and_rating: dict[str, str] = self.dynamic_data[addon_key]

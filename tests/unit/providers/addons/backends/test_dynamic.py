@@ -2,11 +2,10 @@
 import json
 
 import pytest
-from httpx import AsyncClient, Response, Request
-
+from httpx import AsyncClient, Request, Response
 from pytest_mock import MockerFixture
 
-from merino.providers.addons.addons_data import ADDON_DATA, SUPPORTED_ADDONS_KEYS
+from merino.providers.addons.addons_data import ADDON_DATA, SupportedAddons
 from merino.providers.addons.backends.dynamic import (
     DynamicAddonsBackend,
     DynamicAddonsBackendException,
@@ -22,7 +21,8 @@ def fixture_dynamic_backend() -> DynamicAddonsBackend:
     )
 
 
-def _patch_addons_api_calls(mocker: MockerFixture):
+def _patch_addons_api_calls(mocker: MockerFixture) -> None:
+    """Set up the return request for the Mocked Addon API call."""
     sample_addon_resp = json.dumps(
         {
             "icon_url": "https://this.is.image",
@@ -40,7 +40,7 @@ def _patch_addons_api_calls(mocker: MockerFixture):
                 url=f"https://addons.mozilla.org/api/v5/addons/addon/{addon_key}",
             ),
         )
-        for addon_key in SUPPORTED_ADDONS_KEYS
+        for addon_key in SupportedAddons
     ]
     mocker.patch.object(AsyncClient, "get", side_effect=return_values)
 
@@ -49,17 +49,19 @@ def _patch_addons_api_calls(mocker: MockerFixture):
 async def test_initialize_addons_succeed(
     mocker: MockerFixture, dynamic_backend: DynamicAddonsBackend
 ):
+    """Test that initialize populates the Addons."""
     _patch_addons_api_calls(mocker)
 
     assert dynamic_backend.dynamic_data == {}
     await dynamic_backend.initialize_addons()
-    assert len(dynamic_backend.dynamic_data) == len(SUPPORTED_ADDONS_KEYS)
+    assert len(dynamic_backend.dynamic_data) == len(SupportedAddons)
 
 
 @pytest.mark.asyncio
 async def test_initialize_addons_failed(
     mocker: MockerFixture, dynamic_backend: DynamicAddonsBackend
 ):
+    """Test that initialize fails raises error when Addon request fails."""
     return_values: list[Response] = [
         Response(
             status_code=400,
@@ -75,6 +77,8 @@ async def test_initialize_addons_failed(
     with pytest.raises(DynamicAddonsBackendException) as ex:
         await dynamic_backend.initialize_addons()
 
+    assert str(ex.value).startswith("Addons API could not find key: ")
+
 
 @pytest.mark.asyncio
 async def test_get_addon_request(
@@ -84,9 +88,9 @@ async def test_get_addon_request(
     _patch_addons_api_calls(mocker)
     await dynamic_backend.initialize_addons()
 
-    addons = await dynamic_backend.get_addon("video-downloadhelper")
+    addons = await dynamic_backend.get_addon(SupportedAddons.VIDEO_DOWNLOADER)
 
-    video_downloader = ADDON_DATA["video-downloadhelper"]
+    video_downloader = ADDON_DATA[SupportedAddons.VIDEO_DOWNLOADER]
     assert (
         Addon(
             name=video_downloader["name"],
@@ -97,12 +101,3 @@ async def test_get_addon_request(
         )
         == addons
     )
-
-
-@pytest.mark.asyncio
-async def test_get_addon_bad_addon_key(dynamic_backend: DynamicAddonsBackend):
-    """Test that a bad key raises and error."""
-    with pytest.raises(KeyError) as ex:
-        await dynamic_backend.get_addon("bad_key")
-
-    assert str(ex.value) == "'bad_key'"

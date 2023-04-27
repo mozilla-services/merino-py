@@ -1,23 +1,27 @@
 """Static Mapping for the Addon data, along with the associated keywords
 to do the query string matching.
 """
+import enum
 
-SUPPORTED_ADDONS_KEYS = [
-    "video-downloadhelper",
-    "languagetool",
-    "private-relay",
-    "search_by_image",
-    "darkreader",
-    "privacy-badger17",
-    "ublock-origin",
-    "read-aloud",
-]
+
+class SupportedAddons(enum.StrEnum):
+    """Enum for the Supported Addons for the Addons Provider."""
+
+    VIDEO_DOWNLOADER = "video-downloadhelper"
+    LANGAUGE_TOOL = "languagetool"
+    PRIVATE_RELAY = "private-relay"
+    SEARCH_BY_IMAGE = "search_by_image"
+    DARKREADER = "darkreader"
+    PRIVACY_BADGER = "privacy-badger17"
+    UBLOCK_ORIGIN = "ublock-origin"
+    READ_ALOUD = "read-aloud"
+
 
 # This object contains all the Product specified details to display to users.
 # In particular, we want the name and description to be specified for Search and Suggest
 # specific suggestions.
-ADDON_DATA = {
-    "video-downloadhelper": {
+ADDON_DATA: dict[SupportedAddons, dict[str, str]] = {
+    SupportedAddons.VIDEO_DOWNLOADER: {
         "name": "Video DownloadHelper",
         "description": (
             "Easily download videos from most popular video sites — "
@@ -25,7 +29,7 @@ ADDON_DATA = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/video-downloadhelper/",
     },
-    "languagetool": {
+    SupportedAddons.LANGAUGE_TOOL: {
         "name": "LanguageTool",
         "description": (
             "Get grammar, spelling, and style help anywhere you write online — "
@@ -33,7 +37,7 @@ ADDON_DATA = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/languagetool/",
     },
-    "private-relay": {
+    SupportedAddons.PRIVATE_RELAY: {
         "name": "Firefox Relay",
         "description": (
             "Email masking to protect your inbox and identity "
@@ -41,7 +45,7 @@ ADDON_DATA = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/private-relay/",
     },
-    "search_by_image": {
+    SupportedAddons.SEARCH_BY_IMAGE: {
         "name": "Search by Image",
         "description": (
             "Search images easily with 30+ search engines. "
@@ -49,7 +53,7 @@ ADDON_DATA = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/search_by_image/",
     },
-    "darkreader": {
+    SupportedAddons.DARKREADER: {
         "name": "Dark Reader",
         "description": (
             "Get night mode for the entire internet. "
@@ -57,7 +61,7 @@ ADDON_DATA = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/darkreader/",
     },
-    "privacy-badger17": {
+    SupportedAddons.PRIVACY_BADGER: {
         "name": "Privacy Badger",
         "description": (
             "Block invisible trackers and spying ads that follow you around the web. "
@@ -65,7 +69,7 @@ ADDON_DATA = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/privacy-badger17/",
     },
-    "ublock-origin": {
+    SupportedAddons.UBLOCK_ORIGIN: {
         "name": "uBlock Origin",
         "description": (
             "Block ads and enjoy a faster internet with "
@@ -73,7 +77,7 @@ ADDON_DATA = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/",
     },
-    "read-aloud": {
+    SupportedAddons.READ_ALOUD: {
         "name": "Read Aloud: A Text to Speech Reader",
         "description": (
             "Listen to web pages read aloud in 40+ languages "
@@ -84,8 +88,8 @@ ADDON_DATA = {
     },
 }
 
-ADDON_KEYWORDS = {
-    "video-downloadhelper": {
+ADDON_KEYWORDS: dict[SupportedAddons, set[str]] = {
+    SupportedAddons.VIDEO_DOWNLOADER: {
         "Video download",
         "Video DownloadHelper",
         "Download helper",
@@ -100,7 +104,7 @@ ADDON_KEYWORDS = {
         "Online movies",
         "Helper",
     },
-    "languagetool": {
+    SupportedAddons.LANGAUGE_TOOL: {
         "Grammar",
         "Spell check",
         "Spelling",
@@ -114,7 +118,7 @@ ADDON_KEYWORDS = {
         "LanguageTool",
         "Language Tool",
     },
-    "private-relay": {
+    SupportedAddons.PRIVATE_RELAY: {
         "Temp mail",
         "Email Mask",
         "Masking",
@@ -122,7 +126,7 @@ ADDON_KEYWORDS = {
         "Spam",
         "Relay",
     },
-    "search_by_image": {
+    SupportedAddons.SEARCH_BY_IMAGE: {
         "Reverse image search",
         "Reverse search",
         "Pics search",
@@ -136,7 +140,7 @@ ADDON_KEYWORDS = {
         "Search by Image",
         "Tineye",
     },
-    "darkreader": {
+    SupportedAddons.DARKREADER: {
         "Dark mode",
         "Dark theme",
         "Dark reader",
@@ -147,7 +151,7 @@ ADDON_KEYWORDS = {
         "Purple theme",
         "Eye strain",
     },
-    "privacy-badger17": {
+    SupportedAddons.PRIVACY_BADGER: {
         "Privacy",
         "Privacy Badger",
         "Anti Tracking",
@@ -160,7 +164,7 @@ ADDON_KEYWORDS = {
         "Invisible trackers",
         "Security",
     },
-    "ublock-origin": {
+    SupportedAddons.UBLOCK_ORIGIN: {
         "Adblock",
         "Ad block",
         "Ad blocker",
@@ -171,7 +175,7 @@ ADDON_KEYWORDS = {
         "uBlock",
         "uBlock Origin",
     },
-    "read-aloud": {
+    SupportedAddons.READ_ALOUD: {
         "TTS",
         "Text to speech",
         "Reader",

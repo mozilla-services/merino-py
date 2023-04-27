@@ -45,6 +45,7 @@ CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
     tags=["suggest"],
     summary="Merino suggest endpoint",
     response_model=SuggestResponse,
+    response_model_exclude_unset=True,
 )
 async def suggest(
     request: Request,
