@@ -36,6 +36,7 @@ In rough order of importance:
 
 * A. Continue to add to Top Level with Optional Fields
 * B. Custom Details Field for Bespoke Provider Fields
+* B.5 Custom Details Field without the Provider Nesting
 * C. Custom Details Field for a "Type"
 * D. Component Driven `custom_details`
 
@@ -51,19 +52,20 @@ Chosen option: ???
 
 * ???
 
-## Pros and Cons of the Options <!-- optional -->
+## Pros and Cons of the Options 
 
 ### A. Continue to add to Top Level with Optional Fields
 
 This is the status quo option.
 We will continue to append bespoke values to the top level suggestion,
 and ensure that they're optional.
-Resolving type differences will just require us to be more specific
-with the fieldnames, as we continue to grow.
+We can continue to use the `provider` to signal what fields exists
+and how they should be parsed.
+For example, we can specify 2 different types of `rating`,
+and hence 2 validation strategy for it,
+based off of which provider is specified.
 
-Example, to differentiate Addons rating and Pocket Collections rating,
-we will call one `addons_rating` and the other `pocket_collection_rating`.
-This will look like:
+Example:
 
 ```json
 {
@@ -71,13 +73,13 @@ This will look like:
     {
       ...
       "provider": "addons",
-      "addons_rating": "4.123",
+      "rating": "4.123",
       ...
     },
     {
       ...
-      "provider": "pocket_collections",
-      "pocket_collection_rating": 0.123,
+      "provider": "movies",
+      "rating": 0.123,
       ...
     },
     ...
@@ -86,8 +88,63 @@ This will look like:
 }
 ```
 
+The partial JSON Schema validation will look something like:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "provider": {
+      "type": "string"
+    }
+  },
+  "required": ["provider"],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "provider": {
+            "const": "addons"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rating": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rating"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "provider": {
+            "const": "movies"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rating": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "rating"
+        ]
+      }
+    }
+  ]
+}
+```
+
 #### Pros
 
+* Can specify specific validation per provider.
 * Merino is still kind of immature, so it still might be too early to think about design.
 * Less nesting in the models (resulting in less complexity).
 * Currently, backwards compatible as we don't have to do anything 
@@ -95,13 +152,12 @@ This will look like:
 
 #### Cons
 
-* Can't effectively do schema validation because 
-  we don't truly know what is or isn't required. i.e. `rating` might not be _optional_ for `addons` type suggestions,
-  but it has to remain _optional_ for the schema to work for other providers.
+* Lack of isolation for bespoke fields; `ratings` is coupled with 2 specific providers,
+  and by just looking at the response, it's not clear that they are related.
 * Not clear what is shared between _all_ suggestions, vs. what is bespoke to specific provider.
-* Lack of isolation for bespoke fields; poorly named fields will cause chaos across multiple providers
-  i.e. using `rating` as a field for `addons` suggestions, then needing a `movie_rating` field for `movie` suggestions
- then wonder why the client is confused about why they are missing a `rating` for their `movie` suggestion.
+* It is not obvious that the `provider` field should signal how you should perform validation.
+  In other words, there is a contextual dependency on the JSON structure of suggestion based on `provider`.
+
 
 ### B. Custom Details Field for Bespoke Provider Fields
 
@@ -179,9 +235,93 @@ A partial schema specification for the above might look like[^jsonschema]:
 
 #### Cons
 
-* No guarantee that `provider` field will match the `custom_detail` object.
 * We'll likely need to migrate existing providers at some point. But in the meantime,
   some fields will not follow convention to maintain backwards compatibility.
+* Extra nesting inside of `custom_details`.
+
+### B.5 Custom Details Field without the Provider Nesting
+
+This is exactly like B, except that we remove the extra nesting.
+
+So, in the example above, we can remove the extra `addons` object to get:
+
+```json
+{
+  "suggestions": [
+    {
+      ...
+      "provider": "addons",
+      "custom_details": {
+        "rating": "4.7459"
+      }
+    },
+    ...
+  ],
+  ...
+}
+```
+
+The validation of the contents of `custom_details` will look more like A.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Suggest API Response v1",
+  "description": "Response for /api/v1/suggest",
+  "type": "object",
+  "properties": {
+    "provider": {
+      "description": "id for the provider type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "provider"
+  ],
+  "if": {
+    "properties": {
+      "provider": {
+        "const": "addons"
+      }
+    }
+  },
+  "then": {
+    "properties": {
+      "custom_details": {
+        "description": "Custom Details Specific for Addons",
+        "type": "object",
+        "properties": {
+          "rating": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rating"
+        ]
+      }
+    },
+    "required": ["custom_details"]
+  }
+}
+```
+
+#### Pros
+
+* Can specify specific validation per provider.
+* Fields outside of `custom_details` can be fields that are more universal across suggestions.
+  These fields can potentially be correlated directly to the Fx Suggest Design Framework
+  (i.e. `context_label`, `url`, `title`, `description`, etc.).
+* Having a clear distinction for Fx Suggest Design Framework fields vs. bespoke fields makes this more
+  backwards compatible, as the fields in the Design Framework can render the _default_ suggestion case
+  for clients who haven't upgraded their clients.
+* Less nesting in the response than B
+
+#### Cons
+
+* We'll likely need to migrate existing providers at some point. But in the meantime,
+  some fields will not follow convention to maintain backwards compatibility.
+* The relationship between `provider` and `custom_details` is more implicit, than explicit.
+* This has a lot of the same _cons_ as Option A because validation is done similarly.
 
 ### C. Custom Details Field for a "Type"
 
