@@ -238,6 +238,19 @@ These are production providers that generate suggestions.
     of Wikipedia suggestions for this provider as a floating point number.
     Defaults to 0.2.
 
+#### Addons Provider
+
+- `type` (`MERINO_PROVIDERS__ADDONS__TYPE`) - The type of this provider, should be `addons`.
+- `enabled_by_default` (`MERINO_PROVIDERS__ADDONS__ENABLED_BY_DEFAULT`) - Whether
+  this provider is enabled by default. Defaults to false.
+- `backend` (`MERINO_PROVIDERS__ADDONS__BACKEND`) - The backend of the provider.
+  Either `static` or `dynamic`.
+- `score` (`MERINO_PROVIDERS__ADDONS__SCORE`) - The ranking score for this provider
+  as a floating point number. Defaults to 0.3.
+- `min_chars` (`MERINO_PROVIDERS__ADDONS__MIN_CHARS`) - The minimum number of characters
+  to process a querystring.
+- `api_url` (`MERINO_ADDONS__DYNAMIC__API_URL`) - the base URL of the Addons API.gi
+
 #### AccuWeather Provider
 - AccuWeather - Provides weather suggestions & forecasts.
   - `type` (`MERINO_PROVIDERS__ACCUWEATHER__TYPE`) - The type of this provider, should be

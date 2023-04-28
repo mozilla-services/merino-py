@@ -9,6 +9,7 @@ _validators = [
     Validator("metrics.dev_logger", is_type_of=bool),
     Validator("metrics.host", is_type_of=str),
     Validator("metrics.port", gte=0, is_type_of=int),
+    Validator("addons.dynamic.api_url", is_type_of=str),
     Validator("providers.accuweather.enabled_by_default", is_type_of=bool),
     # The Redis server URL is required when at least one provider wants to use Redis for caching.
     Validator(
@@ -32,6 +33,10 @@ _validators = [
     Validator("providers.adm.score", gte=0, lte=1),
     Validator("providers.adm.score_wikipedia", gte=0, lte=1),
     Validator("providers.adm.type", is_type_of=str, must_exist=True),
+    Validator("providers.addons.type", is_type_of=str, must_exist=True),
+    Validator("providers.addons.score", gte=0, lte=1),
+    Validator("providers.addons.backend", is_in=["dynamic", "static"]),
+    Validator("providers.addons.min_chars", is_type_of=int, gte=1, lte=10),
     Validator("providers.top_picks.enabled_by_default", is_type_of=bool),
     Validator("providers.top_picks.score", is_type_of=float, gte=0, lte=1),
     Validator("providers.top_picks.query_char_limit", is_type_of=int, gte=1),

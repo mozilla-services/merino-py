@@ -76,8 +76,10 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             )
         case ProviderType.ADDONS:
             return AddonsProvider(
-                backend=DynamicAddonsBackend(api_url=setting.api_url)  # type: ignore [arg-type]
-                if setting.online_mode
+                backend=DynamicAddonsBackend(
+                    api_url=settings.addons.dynamic.api_url
+                )  # type: ignore [arg-type]
+                if setting.backend == "dynamic"
                 else StaticAddonsBackend(),
                 score=setting.score,
                 name=provider_id,
