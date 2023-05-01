@@ -1,7 +1,8 @@
 # Merino Suggest API Response Structure
 
-* Status: proposed
-* Deciders: [list everyone involved in the decision] <!-- optional -->
+* Status: accepted
+* Deciders: Michelle Tran, Lina Butler, Nan Jiang, Wil Stuckey,
+  Drew Willcoxon, Taddes Korris, Tiffany Tran
 * Date: 2023-04-20
 
 ## Context and Problem Statement
@@ -42,15 +43,49 @@ In rough order of importance:
 
 ## Decision Outcome
 
-Chosen option: ???
+Chosen option: B
 
-### Positive Consequences <!-- optional -->
+We will also *not* increase the version number of the API for this ADR.
+So, going forward, we will encode option B into the response design
+without changing the existing providers.
+This means that the following providers will *not* have
+their bespoke fields removed from top level:
+* AdM Provider
+* Top Picks Provider
+* Weather Provider
+* Wikipedia Provider
+* WikiFruit Provider
 
-* ???
+However, this does not preclude these providers from duplicating the fields
+to `custom_details` in the v1 API.
 
-### Negative Consequences <!-- optional -->
+### Positive Consequences of Option B
 
-* ???
+* Clear isolation of fields that belong together (i.e. grouped by provider).
+* Clear ownership of fields through the structure.
+* Simpler validation logic than other options due to less need for conditionals.
+
+### Negative Consequences of Option B
+
+* Potentially some redundancy caused by extra nesting.
+* Might not be as flexible with a provider that returns different fields based on
+  what type of suggestion it is.
+
+### Positive Consequences of not Increasing API Version
+
+* We do not have to worry about migrating Firefox (and other clients) into the new format.
+  The migration is going to be quite a lot of extra work that adds little benefits
+  (other than consistency of design, it doesn't add more features nor improve
+  any known time sinks with development).
+* Do not have to support 2 versions of the API.
+
+### Negative Consequences of not Increasing API Version
+
+* Some inconsistencies with how providers add fields to the response.
+  We will likely want to resolve this as we migrate to v2,
+  but it's a known issue at the moment.
+* Might be missing an opportune time to migrate, as features are currently not out yet
+  which means the flexibility for change is higher.
 
 ## Pros and Cons of the Options 
 
