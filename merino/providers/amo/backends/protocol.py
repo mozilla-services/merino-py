@@ -14,6 +14,7 @@ class Addon(BaseModel):
     url: str
     icon: str
     rating: str
+    number_of_ratings: int
 
 
 class AddonsBackend(Protocol):

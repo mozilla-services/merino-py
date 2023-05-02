@@ -10,6 +10,9 @@ from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon
 from merino.providers.amo.backends.protocol import Addon
 
 
+logger = logging.getLogger(__name__)
+
+
 class DynamicAmoBackendException(BackendError):
     """Dynamic Amo Exception"""
 
@@ -54,17 +57,22 @@ class DynamicAmoBackend:
                     json_res = res.json()
                     icon = json_res["icon_url"]
                     rating = str(json_res["ratings"]["average"])
+                    number_of_ratings = json_res["ratings"]["count"]
+
+                    self.dynamic_data[addon_key] = {
+                        "icon": icon,
+                        "rating": rating,
+                        "number_of_ratings": number_of_ratings,
+                    }
 
                 except httpx.HTTPError:
-                    logging.error(f"Addons API could not find key: {addon_key}")
+                    logger.error(f"Addons API could not find key: {addon_key}")
 
                 except (KeyError, JSONDecodeError):
-                    logging.error(
+                    logger.error(
                         "Problem with Addons API formatting. "
                         "Check that the API response structure hasn't changed."
                     )
-
-            self.dynamic_data[addon_key] = {"icon": icon, "rating": rating}
 
     async def get_addon(self, addon_key: SupportedAddon) -> Addon:
         """Get an Addon based on the addon_key"""
@@ -82,4 +90,5 @@ class DynamicAmoBackend:
             url=static_info["url"],
             icon=icon_and_rating["icon"],
             rating=icon_and_rating["rating"],
+            number_of_ratings=icon_and_rating["number_of_ratings"],
         )

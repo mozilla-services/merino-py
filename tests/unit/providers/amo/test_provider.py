@@ -112,7 +112,10 @@ async def test_query_return_match(
             provider="addons",
             icon=expected_icon_rating["icon"],
             custom_details=CustomDetails(
-                addons=AddonsDetails(rating=expected_icon_rating["rating"])
+                addons=AddonsDetails(
+                    rating=expected_icon_rating["rating"],
+                    number_of_ratings=expected_icon_rating["number_of_ratings"],
+                )
             ),
         )
     ] == await addons_provider.query(req)

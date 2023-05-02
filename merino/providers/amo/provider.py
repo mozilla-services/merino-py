@@ -95,6 +95,10 @@ class Provider(BaseProvider):
                 score=self.score,
                 provider=self.name,
                 icon=addon.icon,
-                custom_details=CustomDetails(addons=AddonsDetails(rating=addon.rating)),
+                custom_details=CustomDetails(
+                    addons=AddonsDetails(
+                        rating=addon.rating, number_of_ratings=addon.number_of_ratings
+                    )
+                ),
             )
         ]
