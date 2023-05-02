@@ -207,6 +207,10 @@ Configuration for using AccuWeather as a weather backend
   - `url_postalcodes_param_query` (`MERINO_ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY`) -
     The query parameter for postal codes.
 
+### Addons API 
+
+- `api_url` (`MERINO_AMO__DYNAMIC__API_URL`) - the base URL of the Addons API.
+
 ### Provider Configuration
 
 The configuration for suggestion providers.
@@ -238,18 +242,17 @@ These are production providers that generate suggestions.
     of Wikipedia suggestions for this provider as a floating point number.
     Defaults to 0.2.
 
-#### Addons Provider
+#### AMO Provider
 
-- `type` (`MERINO_PROVIDERS__ADDONS__TYPE`) - The type of this provider, should be `addons`.
+- `type` (`MERINO_PROVIDERS__AMO__TYPE`) - The type of this provider, should be `addons`.
 - `enabled_by_default` (`MERINO_PROVIDERS__ADDONS__ENABLED_BY_DEFAULT`) - Whether
   this provider is enabled by default. Defaults to false.
-- `backend` (`MERINO_PROVIDERS__ADDONS__BACKEND`) - The backend of the provider.
+- `backend` (`MERINO_PROVIDERS__AMO__BACKEND`) - The backend of the provider.
   Either `static` or `dynamic`.
-- `score` (`MERINO_PROVIDERS__ADDONS__SCORE`) - The ranking score for this provider
+- `score` (`MERINO_PROVIDERS__AMO__SCORE`) - The ranking score for this provider
   as a floating point number. Defaults to 0.3.
-- `min_chars` (`MERINO_PROVIDERS__ADDONS__MIN_CHARS`) - The minimum number of characters
+- `min_chars` (`MERINO_PROVIDERS__AMO__MIN_CHARS`) - The minimum number of characters
   to process a querystring.
-- `api_url` (`MERINO_ADDONS__DYNAMIC__API_URL`) - the base URL of the Addons API.gi
 
 #### AccuWeather Provider
 - AccuWeather - Provides weather suggestions & forecasts.

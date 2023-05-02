@@ -1,26 +1,26 @@
 """Test StaticAddonsBackend."""
 import pytest
 
-from merino.providers.addons.addons_data import ADDON_DATA, SupportedAddons
-from merino.providers.addons.backends.protocol import Addon
-from merino.providers.addons.backends.static import (
+from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon
+from merino.providers.amo.backends.protocol import Addon
+from merino.providers.amo.backends.static import (
     STATIC_RATING_AND_ICONS,
-    StaticAddonsBackend,
+    StaticAmoBackend,
 )
 
 
 @pytest.fixture(name="static_backend")
-def fixture_static_backend() -> StaticAddonsBackend:
+def fixture_static_backend() -> StaticAmoBackend:
     """Create a RemoteSettingsBackend object for test."""
-    return StaticAddonsBackend()
+    return StaticAmoBackend()
 
 
 @pytest.mark.asyncio
-async def test_get_addon_success(static_backend: StaticAddonsBackend):
+async def test_get_addon_success(static_backend: StaticAmoBackend):
     """Test that we can get Addon information statically."""
-    addons = await static_backend.get_addon(SupportedAddons.VIDEO_DOWNLOADER)
-    video_downloader = ADDON_DATA[SupportedAddons.VIDEO_DOWNLOADER]
-    vd_icon_rating = STATIC_RATING_AND_ICONS[SupportedAddons.VIDEO_DOWNLOADER]
+    addons = await static_backend.get_addon(SupportedAddon.VIDEO_DOWNLOADER)
+    video_downloader = ADDON_DATA[SupportedAddon.VIDEO_DOWNLOADER]
+    vd_icon_rating = STATIC_RATING_AND_ICONS[SupportedAddon.VIDEO_DOWNLOADER]
     assert (
         Addon(
             name=video_downloader["name"],

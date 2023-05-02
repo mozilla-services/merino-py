@@ -4,7 +4,7 @@ to do the query string matching.
 import enum
 
 
-class SupportedAddons(enum.StrEnum):
+class SupportedAddon(enum.StrEnum):
     """Enum for the Supported Addons for the Addons Provider."""
 
     VIDEO_DOWNLOADER = "video-downloadhelper"
@@ -20,8 +20,8 @@ class SupportedAddons(enum.StrEnum):
 # This object contains all the Product specified details to display to users.
 # In particular, we want the name and description to be specified for Search and Suggest
 # specific suggestions.
-ADDON_DATA: dict[SupportedAddons, dict[str, str]] = {
-    SupportedAddons.VIDEO_DOWNLOADER: {
+ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
+    SupportedAddon.VIDEO_DOWNLOADER: {
         "name": "Video DownloadHelper",
         "description": (
             "Easily download videos from most popular video sites — "
@@ -29,7 +29,7 @@ ADDON_DATA: dict[SupportedAddons, dict[str, str]] = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/video-downloadhelper/",
     },
-    SupportedAddons.LANGAUGE_TOOL: {
+    SupportedAddon.LANGAUGE_TOOL: {
         "name": "LanguageTool",
         "description": (
             "Get grammar, spelling, and style help anywhere you write online — "
@@ -37,7 +37,7 @@ ADDON_DATA: dict[SupportedAddons, dict[str, str]] = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/languagetool/",
     },
-    SupportedAddons.PRIVATE_RELAY: {
+    SupportedAddon.PRIVATE_RELAY: {
         "name": "Firefox Relay",
         "description": (
             "Email masking to protect your inbox and identity "
@@ -45,7 +45,7 @@ ADDON_DATA: dict[SupportedAddons, dict[str, str]] = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/private-relay/",
     },
-    SupportedAddons.SEARCH_BY_IMAGE: {
+    SupportedAddon.SEARCH_BY_IMAGE: {
         "name": "Search by Image",
         "description": (
             "Search images easily with 30+ search engines. "
@@ -53,7 +53,7 @@ ADDON_DATA: dict[SupportedAddons, dict[str, str]] = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/search_by_image/",
     },
-    SupportedAddons.DARKREADER: {
+    SupportedAddon.DARKREADER: {
         "name": "Dark Reader",
         "description": (
             "Get night mode for the entire internet. "
@@ -61,7 +61,7 @@ ADDON_DATA: dict[SupportedAddons, dict[str, str]] = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/darkreader/",
     },
-    SupportedAddons.PRIVACY_BADGER: {
+    SupportedAddon.PRIVACY_BADGER: {
         "name": "Privacy Badger",
         "description": (
             "Block invisible trackers and spying ads that follow you around the web. "
@@ -69,7 +69,7 @@ ADDON_DATA: dict[SupportedAddons, dict[str, str]] = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/privacy-badger17/",
     },
-    SupportedAddons.UBLOCK_ORIGIN: {
+    SupportedAddon.UBLOCK_ORIGIN: {
         "name": "uBlock Origin",
         "description": (
             "Block ads and enjoy a faster internet with "
@@ -77,7 +77,7 @@ ADDON_DATA: dict[SupportedAddons, dict[str, str]] = {
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/",
     },
-    SupportedAddons.READ_ALOUD: {
+    SupportedAddon.READ_ALOUD: {
         "name": "Read Aloud: A Text to Speech Reader",
         "description": (
             "Listen to web pages read aloud in 40+ languages "
@@ -88,8 +88,8 @@ ADDON_DATA: dict[SupportedAddons, dict[str, str]] = {
     },
 }
 
-ADDON_KEYWORDS: dict[SupportedAddons, set[str]] = {
-    SupportedAddons.VIDEO_DOWNLOADER: {
+ADDON_KEYWORDS: dict[SupportedAddon, set[str]] = {
+    SupportedAddon.VIDEO_DOWNLOADER: {
         "Video download",
         "Video DownloadHelper",
         "Download helper",
@@ -104,7 +104,7 @@ ADDON_KEYWORDS: dict[SupportedAddons, set[str]] = {
         "Online movies",
         "Helper",
     },
-    SupportedAddons.LANGAUGE_TOOL: {
+    SupportedAddon.LANGAUGE_TOOL: {
         "Grammar",
         "Spell check",
         "Spelling",
@@ -118,7 +118,7 @@ ADDON_KEYWORDS: dict[SupportedAddons, set[str]] = {
         "LanguageTool",
         "Language Tool",
     },
-    SupportedAddons.PRIVATE_RELAY: {
+    SupportedAddon.PRIVATE_RELAY: {
         "Temp mail",
         "Email Mask",
         "Masking",
@@ -126,7 +126,7 @@ ADDON_KEYWORDS: dict[SupportedAddons, set[str]] = {
         "Spam",
         "Relay",
     },
-    SupportedAddons.SEARCH_BY_IMAGE: {
+    SupportedAddon.SEARCH_BY_IMAGE: {
         "Reverse image search",
         "Reverse search",
         "Pics search",
@@ -140,7 +140,7 @@ ADDON_KEYWORDS: dict[SupportedAddons, set[str]] = {
         "Search by Image",
         "Tineye",
     },
-    SupportedAddons.DARKREADER: {
+    SupportedAddon.DARKREADER: {
         "Dark mode",
         "Dark theme",
         "Dark reader",
@@ -151,7 +151,7 @@ ADDON_KEYWORDS: dict[SupportedAddons, set[str]] = {
         "Purple theme",
         "Eye strain",
     },
-    SupportedAddons.PRIVACY_BADGER: {
+    SupportedAddon.PRIVACY_BADGER: {
         "Privacy",
         "Privacy Badger",
         "Anti Tracking",
@@ -164,7 +164,7 @@ ADDON_KEYWORDS: dict[SupportedAddons, set[str]] = {
         "Invisible trackers",
         "Security",
     },
-    SupportedAddons.UBLOCK_ORIGIN: {
+    SupportedAddon.UBLOCK_ORIGIN: {
         "Adblock",
         "Ad block",
         "Ad blocker",
@@ -175,7 +175,7 @@ ADDON_KEYWORDS: dict[SupportedAddons, set[str]] = {
         "uBlock",
         "uBlock Origin",
     },
-    SupportedAddons.READ_ALOUD: {
+    SupportedAddon.READ_ALOUD: {
         "TTS",
         "Text to speech",
         "Reader",

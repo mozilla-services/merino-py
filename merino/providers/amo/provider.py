@@ -4,8 +4,8 @@ from typing import Any
 import pydantic
 
 from merino.config import settings
-from merino.providers.addons.addons_data import SupportedAddons
-from merino.providers.addons.backends.protocol import Addon, AddonsBackend
+from merino.providers.amo.addons_data import SupportedAddon
+from merino.providers.amo.backends.protocol import Addon, AddonsBackend
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import AddonsDetails, CustomDetails
 
@@ -22,9 +22,9 @@ class AddonSuggestion(BaseSuggestion):
 
 
 def invert_and_expand_index_keywords(
-    keywords: dict[SupportedAddons, set[str]],
+    keywords: dict[SupportedAddon, set[str]],
     min_chars: int,
-) -> dict[str, SupportedAddons]:
+) -> dict[str, SupportedAddon]:
     """Invert the keywords index.
     param keywords: mapping of addon key -> keywords
     returns: mapping of keyword -> addon key
@@ -40,22 +40,22 @@ def invert_and_expand_index_keywords(
 
 
 class Provider(BaseProvider):
-    """Provider for Addons"""
+    """Provider for Amo"""
 
     score: float
     backend: AddonsBackend
-    addon_keywords: dict[str, SupportedAddons]
-    keywords: dict[SupportedAddons, set[str]]
+    addon_keywords: dict[str, SupportedAddon]
+    keywords: dict[SupportedAddon, set[str]]
     min_chars: int
 
     def __init__(
         self,
         backend: AddonsBackend,
-        keywords: dict[SupportedAddons, set[str]],
-        name: str = "addons",
+        keywords: dict[SupportedAddon, set[str]],
+        name: str = "amo",
         enabled_by_default: bool = True,
-        min_chars=settings.providers.addons.min_chars,
-        score=settings.providers.addons.score,
+        min_chars=settings.providers.amo.min_chars,
+        score=settings.providers.amo.score,
         **kwargs: Any
     ):
         """Initialize Addon Provider"""

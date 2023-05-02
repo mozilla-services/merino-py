@@ -2,38 +2,38 @@
 import pytest
 
 from merino.middleware.geolocation import Location
-from merino.providers.addons.addons_data import ADDON_DATA, SupportedAddons
-from merino.providers.addons.backends.static import (
+from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon
+from merino.providers.amo.backends.static import (
     STATIC_RATING_AND_ICONS,
-    StaticAddonsBackend,
+    StaticAmoBackend,
 )
-from merino.providers.addons.provider import AddonSuggestion
-from merino.providers.addons.provider import Provider as AddonsProvider
-from merino.providers.addons.provider import invert_and_expand_index_keywords
+from merino.providers.amo.provider import AddonSuggestion
+from merino.providers.amo.provider import Provider as AddonsProvider
+from merino.providers.amo.provider import invert_and_expand_index_keywords
 from merino.providers.base import SuggestionRequest
 from merino.providers.custom_details import AddonsDetails, CustomDetails
 
 
 @pytest.fixture(name="keywords")
-def fixture_keywords() -> dict[SupportedAddons, set[str]]:
+def fixture_keywords() -> dict[SupportedAddon, set[str]]:
     """Fixture for the keywords."""
     return {
-        SupportedAddons.VIDEO_DOWNLOADER: {"addon", "download helper"},
-        SupportedAddons.LANGAUGE_TOOL: {
+        SupportedAddon.VIDEO_DOWNLOADER: {"addon", "download helper"},
+        SupportedAddon.LANGAUGE_TOOL: {
             "dictionary",
         },
     }
 
 
 @pytest.fixture(name="static_backend")
-def fixture_static_backend() -> StaticAddonsBackend:
+def fixture_static_backend() -> StaticAmoBackend:
     """Fixture for static backend."""
-    return StaticAddonsBackend()
+    return StaticAmoBackend()
 
 
 @pytest.fixture(name="addons_provider")
 def fixture_addon_provider(
-    keywords: dict[SupportedAddons, set[str]], static_backend: StaticAddonsBackend
+    keywords: dict[SupportedAddon, set[str]], static_backend: StaticAmoBackend
 ) -> AddonsProvider:
     """Fixture for Addon Provider."""
     provider = AddonsProvider(
@@ -46,30 +46,30 @@ def fixture_addon_provider(
     return provider
 
 
-def test_reverse_and_expand_keywords(keywords: dict[SupportedAddons, set[str]]):
+def test_reverse_and_expand_keywords(keywords: dict[SupportedAddon, set[str]]):
     """Test that we expand the keywords properly for the lookup table."""
     assert {
-        "addo": SupportedAddons.VIDEO_DOWNLOADER,
-        "addon": SupportedAddons.VIDEO_DOWNLOADER,
-        "down": SupportedAddons.VIDEO_DOWNLOADER,
-        "downl": SupportedAddons.VIDEO_DOWNLOADER,
-        "downlo": SupportedAddons.VIDEO_DOWNLOADER,
-        "downloa": SupportedAddons.VIDEO_DOWNLOADER,
-        "download": SupportedAddons.VIDEO_DOWNLOADER,
-        "download ": SupportedAddons.VIDEO_DOWNLOADER,
-        "download h": SupportedAddons.VIDEO_DOWNLOADER,
-        "download he": SupportedAddons.VIDEO_DOWNLOADER,
-        "download hel": SupportedAddons.VIDEO_DOWNLOADER,
-        "download help": SupportedAddons.VIDEO_DOWNLOADER,
-        "download helpe": SupportedAddons.VIDEO_DOWNLOADER,
-        "download helper": SupportedAddons.VIDEO_DOWNLOADER,
-        "dict": SupportedAddons.LANGAUGE_TOOL,
-        "dicti": SupportedAddons.LANGAUGE_TOOL,
-        "dictio": SupportedAddons.LANGAUGE_TOOL,
-        "diction": SupportedAddons.LANGAUGE_TOOL,
-        "dictiona": SupportedAddons.LANGAUGE_TOOL,
-        "dictionar": SupportedAddons.LANGAUGE_TOOL,
-        "dictionary": SupportedAddons.LANGAUGE_TOOL,
+        "addo": SupportedAddon.VIDEO_DOWNLOADER,
+        "addon": SupportedAddon.VIDEO_DOWNLOADER,
+        "down": SupportedAddon.VIDEO_DOWNLOADER,
+        "downl": SupportedAddon.VIDEO_DOWNLOADER,
+        "downlo": SupportedAddon.VIDEO_DOWNLOADER,
+        "downloa": SupportedAddon.VIDEO_DOWNLOADER,
+        "download": SupportedAddon.VIDEO_DOWNLOADER,
+        "download ": SupportedAddon.VIDEO_DOWNLOADER,
+        "download h": SupportedAddon.VIDEO_DOWNLOADER,
+        "download he": SupportedAddon.VIDEO_DOWNLOADER,
+        "download hel": SupportedAddon.VIDEO_DOWNLOADER,
+        "download help": SupportedAddon.VIDEO_DOWNLOADER,
+        "download helpe": SupportedAddon.VIDEO_DOWNLOADER,
+        "download helper": SupportedAddon.VIDEO_DOWNLOADER,
+        "dict": SupportedAddon.LANGAUGE_TOOL,
+        "dicti": SupportedAddon.LANGAUGE_TOOL,
+        "dictio": SupportedAddon.LANGAUGE_TOOL,
+        "diction": SupportedAddon.LANGAUGE_TOOL,
+        "dictiona": SupportedAddon.LANGAUGE_TOOL,
+        "dictionar": SupportedAddon.LANGAUGE_TOOL,
+        "dictionary": SupportedAddon.LANGAUGE_TOOL,
     } == invert_and_expand_index_keywords(keywords, 4)
 
 
@@ -101,8 +101,8 @@ async def test_query_return_match(
     await addons_provider.initialize()
 
     req = SuggestionRequest(query="dictionary", geolocation=Location())
-    expected_info = ADDON_DATA[SupportedAddons.LANGAUGE_TOOL]
-    expected_icon_rating = STATIC_RATING_AND_ICONS[SupportedAddons.LANGAUGE_TOOL]
+    expected_info = ADDON_DATA[SupportedAddon.LANGAUGE_TOOL]
+    expected_icon_rating = STATIC_RATING_AND_ICONS[SupportedAddon.LANGAUGE_TOOL]
     assert [
         AddonSuggestion(
             title=expected_info["name"],
