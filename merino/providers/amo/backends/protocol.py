@@ -3,7 +3,14 @@ from typing import Protocol
 
 from pydantic import BaseModel
 
+from merino.exceptions import BackendError
 from merino.providers.amo.addons_data import SupportedAddon
+
+
+class AmoBackendError(BackendError):
+    """AMO Specific Errors"""
+
+    pass
 
 
 class Addon(BaseModel):
@@ -17,11 +24,13 @@ class Addon(BaseModel):
     number_of_ratings: int
 
 
-class AddonsBackend(Protocol):
+class AmoBackend(Protocol):
     """Addon Protocol."""
 
     async def get_addon(self, addon_key: SupportedAddon) -> Addon:  # pragma: no cover
-        """Get an Addon based on the addon_key"""
+        """Get an Addon based on the addon_key.
+        Raise a `BackendError` if the addon key is missing.
+        """
 
     async def initialize_addons(self) -> None:
         """Initialize addons to be stored."""

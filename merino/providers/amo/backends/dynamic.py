@@ -5,14 +5,13 @@ from json import JSONDecodeError
 import httpx
 from httpx import AsyncClient
 
-from merino.exceptions import BackendError
 from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon
-from merino.providers.amo.backends.protocol import Addon
+from merino.providers.amo.backends.protocol import Addon, AmoBackendError
 
 logger = logging.getLogger(__name__)
 
 
-class DynamicAmoBackendException(BackendError):
+class DynamicAmoBackendException(AmoBackendError):
     """Dynamic Amo Exception"""
 
     pass
@@ -55,7 +54,7 @@ class DynamicAmoBackend:
 
                     json_res = res.json()
                     icon = json_res["icon_url"]
-                    rating = str(json_res["ratings"]["average"])
+                    rating = f"{(json_res['ratings']['average']):.1f}"
                     number_of_ratings = json_res["ratings"]["count"]
 
                     self.dynamic_data[addon_key] = {

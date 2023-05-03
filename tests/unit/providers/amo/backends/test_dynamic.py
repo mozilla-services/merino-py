@@ -156,7 +156,7 @@ async def test_get_addon_request(
             description=video_downloader["description"],
             url=video_downloader["url"],
             icon="https://this.is.image",
-            rating=4.123,
+            rating="4.1",
             number_of_ratings=1234,
         )
         == addons

@@ -1,8 +1,10 @@
 """Test Addon Provider"""
 import pytest
+from _pytest.logging import LogCaptureFixture
 
 from merino.middleware.geolocation import Location
 from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon
+from merino.providers.amo.backends.protocol import Addon, AmoBackendError
 from merino.providers.amo.backends.static import (
     STATIC_RATING_AND_ICONS,
     StaticAmoBackend,
@@ -12,6 +14,20 @@ from merino.providers.amo.provider import Provider as AddonsProvider
 from merino.providers.amo.provider import invert_and_expand_index_keywords
 from merino.providers.base import SuggestionRequest
 from merino.providers.custom_details import AddonsDetails, CustomDetails
+
+
+class AmoErrorBackend:
+    """AmoBackend that raises an error for testing."""
+
+    async def get_addon(self, addon_key: SupportedAddon) -> Addon:  # pragma: no cover
+        """Get an Addon based on the addon_key.
+        Raise a `BackendError` if the addon key is missing.
+        """
+        raise AmoBackendError("Error!!!")
+
+    async def initialize_addons(self) -> None:
+        """Initialize addons to be stored."""
+        pass
 
 
 @pytest.fixture(name="keywords")
@@ -119,3 +135,25 @@ async def test_query_return_match(
             ),
         )
     ] == await addons_provider.query(req)
+
+
+@pytest.mark.asyncio
+async def test_query_error(
+    caplog: LogCaptureFixture, keywords: dict[SupportedAddon, set[str]]
+):
+    """Test that provider can handle query error."""
+    provider = AddonsProvider(
+        backend=AmoErrorBackend(),
+        keywords=keywords,
+        name="addons",
+        score=0.3,
+        min_chars=4,
+    )
+    await provider.initialize()
+
+    req = SuggestionRequest(query="dictionary", geolocation=Location())
+    suggestions = await provider.query(req)
+    assert suggestions == []
+
+    assert len(caplog.messages) == 1
+    assert caplog.messages[0].startswith("Error getting AMO suggestion:")

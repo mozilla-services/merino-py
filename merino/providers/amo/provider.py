@@ -1,13 +1,16 @@
 """Addons Provider"""
+import logging
 from typing import Any
 
 import pydantic
 
 from merino.config import settings
 from merino.providers.amo.addons_data import SupportedAddon
-from merino.providers.amo.backends.protocol import Addon, AddonsBackend
+from merino.providers.amo.backends.protocol import Addon, AmoBackend, AmoBackendError
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import AddonsDetails, CustomDetails
+
+logger = logging.getLogger(__name__)
 
 
 class AddonSuggestion(BaseSuggestion):
@@ -43,20 +46,20 @@ class Provider(BaseProvider):
     """Provider for Amo"""
 
     score: float
-    backend: AddonsBackend
+    backend: AmoBackend
     addon_keywords: dict[str, SupportedAddon]
     keywords: dict[SupportedAddon, set[str]]
     min_chars: int
 
     def __init__(
         self,
-        backend: AddonsBackend,
+        backend: AmoBackend,
         keywords: dict[SupportedAddon, set[str]],
         name: str = "amo",
         enabled_by_default: bool = True,
         min_chars=settings.providers.amo.min_chars,
         score=settings.providers.amo.score,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         """Initialize Addon Provider"""
         self._name = name
@@ -85,7 +88,11 @@ class Provider(BaseProvider):
         if matched_addon is None:
             return []
 
-        addon: Addon = await self.backend.get_addon(matched_addon)
+        try:
+            addon: Addon = await self.backend.get_addon(matched_addon)
+        except AmoBackendError as ex:
+            logger.error(f"Error getting AMO suggestion: {ex}")
+            return []
 
         return [
             AddonSuggestion(

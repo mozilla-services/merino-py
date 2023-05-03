@@ -207,7 +207,7 @@ Configuration for using AccuWeather as a weather backend
   - `url_postalcodes_param_query` (`MERINO_ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY`) -
     The query parameter for postal codes.
 
-### Addons API 
+### AMO API 
 
 - `api_url` (`MERINO_AMO__DYNAMIC__API_URL`) - the base URL of the Addons API.
 
@@ -242,18 +242,6 @@ These are production providers that generate suggestions.
     of Wikipedia suggestions for this provider as a floating point number.
     Defaults to 0.2.
 
-#### AMO Provider
-
-- `type` (`MERINO_PROVIDERS__AMO__TYPE`) - The type of this provider, should be `addons`.
-- `enabled_by_default` (`MERINO_PROVIDERS__ADDONS__ENABLED_BY_DEFAULT`) - Whether
-  this provider is enabled by default. Defaults to false.
-- `backend` (`MERINO_PROVIDERS__AMO__BACKEND`) - The backend of the provider.
-  Either `static` or `dynamic`.
-- `score` (`MERINO_PROVIDERS__AMO__SCORE`) - The ranking score for this provider
-  as a floating point number. Defaults to 0.3.
-- `min_chars` (`MERINO_PROVIDERS__AMO__MIN_CHARS`) - The minimum number of characters
-  to process a querystring.
-
 #### AccuWeather Provider
 - AccuWeather - Provides weather suggestions & forecasts.
   - `type` (`MERINO_PROVIDERS__ACCUWEATHER__TYPE`) - The type of this provider, should be
@@ -274,6 +262,18 @@ These are production providers that generate suggestions.
     number of whole seconds (as an integer) indicating the time-to-live for a cached weather
     report (current conditions and forecast) for a location. After the TTL expires, the provider
     will fetch and cache the report again on the next suggestion request for that location.
+
+#### AMO Provider
+
+- `type` (`MERINO_PROVIDERS__AMO__TYPE`) - The type of this provider, should be `amo`.
+- `enabled_by_default` (`MERINO_PROVIDERS__AMO__ENABLED_BY_DEFAULT`) - Whether
+  this provider is enabled by default. Defaults to false.
+- `backend` (`MERINO_PROVIDERS__AMO__BACKEND`) - The backend of the provider.
+  Either `static` or `dynamic`.
+- `score` (`MERINO_PROVIDERS__AMO__SCORE`) - The ranking score for this provider
+  as a floating point number. Defaults to 0.3.
+- `min_chars` (`MERINO_PROVIDERS__AMO__MIN_CHARS`) - The minimum number of characters
+  to process a querystring.
 
 #### Top Picks Provider
 - Top Picks - Provides suggestions from a static domain list of the 1000 most visited websites.
