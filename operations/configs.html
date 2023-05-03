@@ -369,6 +369,10 @@ for postal codes.</li>
 <li><code>url_postalcodes_param_query</code> (<code>MERINO_ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY</code>) -
 The query parameter for postal codes.</li>
 </ul>
+<h3 id="amo-api"><a class="header" href="#amo-api">AMO API</a></h3>
+<ul>
+<li><code>api_url</code> (<code>MERINO_AMO__DYNAMIC__API_URL</code>) - the base URL of the Addons API.</li>
+</ul>
 <h3 id="provider-configuration"><a class="header" href="#provider-configuration">Provider Configuration</a></h3>
 <p>The configuration for suggestion providers.</p>
 <h4 id="adm-provider"><a class="header" href="#adm-provider">Adm Provider</a></h4>
@@ -427,6 +431,18 @@ report (current conditions and forecast) for a location. After the TTL expires, 
 will fetch and cache the report again on the next suggestion request for that location.</li>
 </ul>
 </li>
+</ul>
+<h4 id="amo-provider"><a class="header" href="#amo-provider">AMO Provider</a></h4>
+<ul>
+<li><code>type</code> (<code>MERINO_PROVIDERS__AMO__TYPE</code>) - The type of this provider, should be <code>amo</code>.</li>
+<li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__AMO__ENABLED_BY_DEFAULT</code>) - Whether
+this provider is enabled by default. Defaults to false.</li>
+<li><code>backend</code> (<code>MERINO_PROVIDERS__AMO__BACKEND</code>) - The backend of the provider.
+Either <code>static</code> or <code>dynamic</code>.</li>
+<li><code>score</code> (<code>MERINO_PROVIDERS__AMO__SCORE</code>) - The ranking score for this provider
+as a floating point number. Defaults to 0.3.</li>
+<li><code>min_chars</code> (<code>MERINO_PROVIDERS__AMO__MIN_CHARS</code>) - The minimum number of characters
+to process a querystring.</li>
 </ul>
 <h4 id="top-picks-provider"><a class="header" href="#top-picks-provider">Top Picks Provider</a></h4>
 <ul>
