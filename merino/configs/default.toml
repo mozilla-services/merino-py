@@ -110,6 +110,20 @@ resync_interval_sec = 10800
 score = 0.3
 score_wikipedia = 0.2
 
+[default.amo.dynamic]
+# This is the URL for the Addons API to get more information for particular addons
+api_url = "https://addons.mozilla.org/api/v5/addons/addon/"
+
+[default.providers.amo]
+type = "amo"
+enabled_by_default = false
+score = 0.3
+# Specifies which backend to use. Currently defaulting to dynamic backend.
+backend = "dynamic"
+# The minimum number of characters to be considered for matching.
+min_chars = 4
+
+
 [default.providers.top_picks]
 type = "top_picks"
 enabled_by_default = false

@@ -5,6 +5,7 @@ from pydantic import BaseModel, HttpUrl
 
 from merino.config import settings
 from merino.middleware.geolocation import Location
+from merino.providers.custom_details import CustomDetails
 
 
 class SuggestionRequest(BaseModel):
@@ -24,7 +25,9 @@ class BaseSuggestion(BaseModel):
     provider: str
     is_sponsored: bool
     score: float
+    description: str | None = None
     icon: str | None = None
+    custom_details: CustomDetails | None = None
 
 
 class BaseProvider(ABC):

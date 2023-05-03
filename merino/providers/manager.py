@@ -13,6 +13,10 @@ from merino.metrics import get_metrics_client
 from merino.providers.adm.backends.fake_backends import FakeAdmBackend
 from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
 from merino.providers.adm.provider import Provider as AdmProvider
+from merino.providers.amo.addons_data import ADDON_KEYWORDS as ADDON_KEYWORDS
+from merino.providers.amo.backends.dynamic import DynamicAmoBackend
+from merino.providers.amo.backends.static import StaticAmoBackend
+from merino.providers.amo.provider import Provider as AmoProvider
 from merino.providers.base import BaseProvider
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider as TopPicksProvider
@@ -31,6 +35,7 @@ class ProviderType(str, Enum):
     """Enum for provider type."""
 
     ACCUWEATHER = "accuweather"
+    AMO = "amo"
     ADM = "adm"
     TOP_PICKS = "top_picks"
     WIKI_FRUIT = "wiki_fruit"
@@ -67,6 +72,19 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 cached_report_ttl_sec=setting.cached_report_ttl_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.AMO:
+            return AmoProvider(
+                backend=DynamicAmoBackend(
+                    api_url=settings.amo.dynamic.api_url
+                )  # type: ignore [arg-type]
+                if setting.backend == "dynamic"
+                else StaticAmoBackend(),
+                score=setting.score,
+                name=provider_id,
+                min_chars=settings.providers.amo.min_chars,
+                keywords=ADDON_KEYWORDS,
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.ADM:

@@ -32,6 +32,8 @@ scenarios:
                 is_sponsored: false
                 icon: "https://en.wikipedia.org/favicon.ico"
                 score: 0.0
+                custom_details: null
+                description: null
 
   - name: wiki_fruit__apple_with_client_variants
     description: Test that Merino successfully returns client variants
@@ -65,6 +67,8 @@ scenarios:
                 is_sponsored: false
                 icon: "https://en.wikipedia.org/favicon.ico"
                 score: 0.0
+                custom_details: null
+                description: null
 
   - name: wiki_fruit__cherry
     description: Test that Merino successfully returns a WikiFruit suggestion
@@ -96,6 +100,8 @@ scenarios:
                 is_sponsored: false
                 icon: "https://en.wikipedia.org/favicon.ico"
                 score: 0.0
+                custom_details: null
+                description: null
 
   - name: remote_settings__coffee
     description: Test that Merino successfully returns a Remote Settings suggestion
@@ -139,6 +145,8 @@ scenarios:
                 # The client test framework knows how to interpret a value of `null` for this field.
                 icon: null
                 score: 0.3
+                custom_details: null
+                description: null
 
   - name: multiple_providers__banana
     description: Test that Merino successfully returns suggestions from multiple providers
@@ -181,6 +189,8 @@ scenarios:
                 is_sponsored: false
                 icon: https://en.wikipedia.org/favicon.ico
                 score: 0.0
+                custom_details: null
+                description: null
               - block_id: 2
                 full_keyword: "banana"
                 title: "Banana"
@@ -192,6 +202,8 @@ scenarios:
                 is_sponsored: false
                 icon: null
                 score: 0.3
+                custom_details: null
+                description: null
 
   - name: top_picks__keyword_match
     description: >
@@ -222,6 +234,8 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                custom_details: null
+                description: null
 
   - name: top_picks__characters
     description: >
@@ -252,6 +266,8 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                custom_details: null
+                description: null
       - request:
           service: merino
           method: GET
@@ -276,6 +292,8 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                custom_details: null
+                description: null
 
   - name: top_picks__secondary_similars_match
     description: >
@@ -306,6 +324,8 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                custom_details: null
+                description: null
       - request:
           service: merino
           method: GET
@@ -330,6 +350,8 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                custom_details: null
+                description: null
 
   - name: top_picks__short_domain_match
     description: >
@@ -361,6 +383,8 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                custom_details: null
+                description: null
       - request:
           service: merino
           method: GET
@@ -385,6 +409,8 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                custom_details: null
+                description: null
 
   - name: remote_settings__offline_expansion_orange
     description: Test that Merino successfully returns a Remote Settings suggestion for Offline Expansion
@@ -431,6 +457,8 @@ scenarios:
                 # The client test framework knows how to interpret a value of `null` for this field.
                 icon: null
                 score: 0.3
+                custom_details: null
+                description: null
 
   - name: remote_settings__refresh
     description: >
@@ -470,6 +498,8 @@ scenarios:
                 is_sponsored: true
                 icon: null
                 score: 0.3
+                custom_details: null
+                description: null
       - request:
           service: merino
           method: GET
@@ -519,6 +549,8 @@ scenarios:
                 is_sponsored: true
                 icon: null
                 score: 0.3
+                custom_details: null
+                description: null
       - request:
           service: merino
           method: GET
@@ -546,6 +578,9 @@ scenarios:
                 is_sponsored: true
                 icon: null
                 score: 0.3
+                custom_details: null
+                description: null
+
 
   - name: version_endpoint
     description: Test that returns correct json response from __version__ endpoint.

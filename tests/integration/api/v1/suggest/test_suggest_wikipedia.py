@@ -110,6 +110,8 @@ def test_suggest_wikipedia(
             "block_id": 0,
             "impression_url": None,
             "click_url": None,
+            "custom_details": None,
+            "description": None,
         }
 
     # Check logs for the timed out query(-ies)
