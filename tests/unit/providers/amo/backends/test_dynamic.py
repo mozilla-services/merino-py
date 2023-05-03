@@ -124,7 +124,7 @@ async def test_initialize_addons_skipped_bad_response(
         content="bad response!! Not JSON",
         request=Request(
             method="GET",
-            url=f"https://addons.mozilla.org/api/v5/addons/addon/video-downloadhelper",
+            url="https://addons.mozilla.org/api/v5/addons/addon/video-downloadhelper",
         ),
     )
     mocker.patch.object(AsyncClient, "get", side_effect=return_values)
@@ -134,8 +134,8 @@ async def test_initialize_addons_skipped_bad_response(
     assert len(dynamic_backend.dynamic_data) == len(SupportedAddon) - 1
     assert len(caplog.messages) == 1
     assert (
-        caplog.messages[0]
-        == "Problem with Addons API formatting. Check that the API response structure hasn't changed."
+        caplog.messages[0] == "Problem with Addons API formatting. "
+        "Check that the API response structure hasn't changed."
     )
 
 

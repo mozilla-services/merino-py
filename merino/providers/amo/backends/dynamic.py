@@ -9,7 +9,6 @@ from merino.exceptions import BackendError
 from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon
 from merino.providers.amo.backends.protocol import Addon
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -46,8 +45,8 @@ class DynamicAmoBackend:
         provider for some missing information.
         """
         self.dynamic_data = {}  # ensure that it's empty
-        for addon_key in SupportedAddon:
-            async with AsyncClient() as client:
+        async with AsyncClient() as client:
+            for addon_key in SupportedAddon:
                 try:
                     res = await client.get(
                         f"{self.api_url}/{addon_key}", follow_redirects=True

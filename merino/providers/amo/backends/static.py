@@ -1,4 +1,6 @@
 """Static Addon Endpoint"""
+from typing import Any
+
 from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon
 from merino.providers.amo.backends.protocol import Addon
 
@@ -58,7 +60,7 @@ class StaticAmoBackend:
     async def get_addon(self, addon_key: SupportedAddon) -> Addon:
         """Get an Addon based on the addon_key"""
         static_info: dict[str, str] = ADDON_DATA[addon_key]
-        icon_and_rating: dict[str, str] = STATIC_RATING_AND_ICONS[addon_key]
+        icon_and_rating: dict[str, Any] = STATIC_RATING_AND_ICONS[addon_key]
 
         return Addon(
             name=static_info["name"],
