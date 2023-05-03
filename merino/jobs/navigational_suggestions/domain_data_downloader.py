@@ -1,4 +1,6 @@
 """Download domain data from BigQuery tables"""
+from typing import Any
+
 from google.cloud.bigquery import Client
 
 
@@ -77,7 +79,7 @@ limit 1000
     def __init__(self, source_gcp_project: str) -> None:
         self.client = Client(source_gcp_project)
 
-    def download_data(self) -> list[dict]:
+    def download_data(self) -> list[dict[str, Any]]:
         """Download domain data from bigquery tables"""
         query_job = self.client.query(self.DOMAIN_DATA_QUERY)
         results = query_job.result()
