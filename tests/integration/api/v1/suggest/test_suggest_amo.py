@@ -50,6 +50,8 @@ def test_suggest_addons(client: TestClient, query: str, expected_title: dict[str
 
     if expected_title:
         assert len(result["suggestions"]) == 1
-        assert result["suggestions"][0]["title"] == expected_title
+        addon_suggestion = result["suggestions"][0]
+        assert addon_suggestion["title"] == expected_title
+        assert "amo" in addon_suggestion["custom_details"]
     else:
         assert len(result["suggestions"]) == 0

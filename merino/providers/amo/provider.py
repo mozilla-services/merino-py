@@ -8,7 +8,7 @@ from merino.config import settings
 from merino.providers.amo.addons_data import SupportedAddon
 from merino.providers.amo.backends.protocol import Addon, AmoBackend, AmoBackendError
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.custom_details import AddonsDetails, CustomDetails
+from merino.providers.custom_details import AmoDetails, CustomDetails
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ class Provider(BaseProvider):
                 provider=self.name,
                 icon=addon.icon,
                 custom_details=CustomDetails(
-                    addons=AddonsDetails(
+                    addons=AmoDetails(
                         rating=addon.rating, number_of_ratings=addon.number_of_ratings
                     )
                 ),
