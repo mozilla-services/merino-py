@@ -37,12 +37,13 @@ class DomainMetadataUploader:
         self.cdn_hostname = destination_cdn_hostname
         self.force_upload = force_upload
 
-    def upload_top_picks(self, top_picks: str) -> None:
+    def upload_top_picks(self, top_picks: str) -> Blob:
         """Upload the top pick contents to gcs."""
         bucket = self.storage_client.bucket(self.bucket_name)
         dst_top_pick_name = self._destination_top_pick_name()
         dst_blob = bucket.blob(dst_top_pick_name)
         dst_blob.upload_from_string(top_picks)
+        return dst_blob
 
     def _destination_top_pick_name(self) -> str:
         """Return the name of the top pick file to be used for uploading to GCS"""
