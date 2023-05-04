@@ -103,7 +103,7 @@ class Provider(BaseProvider):
                 provider=self.name,
                 icon=addon.icon,
                 custom_details=CustomDetails(
-                    addons=AmoDetails(
+                    amo=AmoDetails(
                         rating=addon.rating, number_of_ratings=addon.number_of_ratings
                     )
                 ),
