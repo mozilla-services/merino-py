@@ -190,26 +190,30 @@ exist and link to the details for how the jobs are run.</p>
 
         subgraph providers [fa:fa-truck Providers]
             adm(adm)
+            amo(amo)
             toppicks(top-picks)
             weather(weather)
             wikipedia(wikipedia)
         end
 
         srh --&gt; adm
+        srh --&gt; amo
         srh --&gt; toppicks
         srh --&gt; weather
         srh --&gt; wikipedia
 
-        subgraph backends [fa:fa-server Beckends]
+        subgraph backends [fa:fa-server Backends]
             rsb(remote settings)
             accuweather(accuweather)
             elastic(elastic)
             r_json(local JSON)
+            dynamic_amo(dynamic addons)
 
             style r_json stroke-dasharray: 5 5
         end
 
         adm --&gt; rsb
+        amo --&gt; dynamic_amo
         toppicks ..-&gt; |local JSON  &lt;br/&gt; not actually a backend| r_json
         weather --&gt; accuweather
         wikipedia --&gt; elastic
@@ -218,8 +222,14 @@ exist and link to the details for how the jobs are run.</p>
     elastico[(Elasticsearch)]
     elastic --&gt; elastico
 
+    addons_api(Addons API)
+    dynamic_amo --&gt; addons_api
+
     accuweather_api(Accuweather API)
-    accuweather --&gt; accuweather_api
+    accuweather ..-&gt; accuweather_api
+
+    redis[(Redis Cache)]
+    accuweather ..-&gt; |tries to query cache first| redis
 
     kinto[(Remote Settings)]
     offline ..-&gt; |fetches adMarketplace and  &lt;br/&gt; static Wikipedia suggestions only.  &lt;br/&gt; Offline mode is fallback if Merino times out.| kinto
