@@ -72,26 +72,30 @@ graph TD
 
         subgraph providers [fa:fa-truck Providers]
             adm(adm)
+            amo(amo)
             toppicks(top-picks)
             weather(weather)
             wikipedia(wikipedia)
         end
 
         srh --> adm
+        srh --> amo
         srh --> toppicks
         srh --> weather
         srh --> wikipedia
 
-        subgraph backends [fa:fa-server Beckends]
+        subgraph backends [fa:fa-server Backends]
             rsb(remote settings)
             accuweather(accuweather)
             elastic(elastic)
             r_json(local JSON)
+            dynamic_amo(dynamic addons)
 
             style r_json stroke-dasharray: 5 5
         end
 
         adm --> rsb
+        amo --> dynamic_amo
         toppicks ..-> |local JSON  <br/> not actually a backend| r_json
         weather --> accuweather
         wikipedia --> elastic
@@ -100,8 +104,14 @@ graph TD
     elastico[(Elasticsearch)]
     elastic --> elastico
 
+    addons_api(Addons API)
+    dynamic_amo --> addons_api
+
     accuweather_api(Accuweather API)
-    accuweather --> accuweather_api
+    accuweather ..-> accuweather_api
+
+    redis[(Redis Cache)]
+    accuweather ..-> |tries to query cache first| redis
 
     kinto[(Remote Settings)]
     offline ..-> |fetches adMarketplace and  <br/> static Wikipedia suggestions only.  <br/> Offline mode is fallback if Merino times out.| kinto
