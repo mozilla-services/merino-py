@@ -13,7 +13,7 @@ from merino.providers.amo.provider import AddonSuggestion
 from merino.providers.amo.provider import Provider as AddonsProvider
 from merino.providers.amo.provider import invert_and_expand_index_keywords
 from merino.providers.base import SuggestionRequest
-from merino.providers.custom_details import AddonsDetails, CustomDetails
+from merino.providers.custom_details import AmoDetails, CustomDetails
 
 
 class AmoErrorBackend:
@@ -128,7 +128,7 @@ async def test_query_return_match(
             provider="addons",
             icon=expected_icon_rating["icon"],
             custom_details=CustomDetails(
-                addons=AddonsDetails(
+                addons=AmoDetails(
                     rating=expected_icon_rating["rating"],
                     number_of_ratings=expected_icon_rating["number_of_ratings"],
                 )

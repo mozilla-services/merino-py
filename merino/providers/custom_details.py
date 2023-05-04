@@ -2,7 +2,7 @@
 from pydantic import BaseModel
 
 
-class AddonsDetails(BaseModel):
+class AmoDetails(BaseModel):
     """Addon specific data to be used in Custom Details"""
 
     rating: str
@@ -12,4 +12,4 @@ class AddonsDetails(BaseModel):
 class CustomDetails(BaseModel):
     """Base Model for Custom Details."""
 
-    addons: AddonsDetails | None = None
+    amo: AmoDetails | None = None
