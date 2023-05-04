@@ -15,31 +15,29 @@ with apex_names as (
     origin,
     suffix
   FROM `moz-fx-data-shared-prod.domain_metadata_derived.top_domains_v1`
-  -- ToDo: replace the fixed date for submission_date with date_trunc(current_date(), MONTH)
-  -- as this table is updated every month but the airflow job is currently not running
-  WHERE submission_date >= "2022-10-23"
+  WHERE submission_date >= date_trunc(current_date(), month)
   and country_code in ('us', 'ca')
 ), ranked_apex_names as (
     select
-      distinct first_value(domain) over (
-          partition by apex_names.apex order by rank asc
-      ) as domain,
-      first_value(rank) over (partition by apex_names.apex order by rank asc) as rank,
-      first_value(host) over (partition by apex_names.apex order by rank asc) as host,
-      first_value(origin) over (partition by apex_names.apex order by rank asc) as origin,
-      first_value(suffix) over (partition by apex_names.apex order by rank asc) as suffix,
+      distinct first_value(domain) over apex_rank as domain,
+      first_value(rank) over apex_rank as rank,
+      first_value(host) over apex_rank as host,
+      first_value(origin) over apex_rank as origin,
+      first_value(suffix) over apex_rank as suffix,
     from apex_names
+    window apex_rank as (
+      partition by apex_names.apex order by rank asc
+    )
     order by 2
 ), domains_with_categories AS (
     SELECT
       domain,
       categories
     FROM
-      `moz-fx-data-shared-prod.domain_metadata_derived.domain_categories_v1`
+      `moz-fx-data-shared-prod.domain_metadata_derived.domain_categories_v2`
     WHERE
-      DATE(_PARTITIONTIME) = "2022-11-01"
       -- Filter out the categories of domains we don't want to recommend people
-      AND NOT EXISTS(
+      NOT EXISTS(
         SELECT * FROM UNNEST(categories) AS c
         WHERE
           c.parent_id in (
