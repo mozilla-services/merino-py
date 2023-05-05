@@ -206,6 +206,11 @@ Configuration for using AccuWeather as a weather backend
     for postal codes.
   - `url_postalcodes_param_query` (`MERINO_ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY`) -
     The query parameter for postal codes.
+  - `url_param_partner_code` (`MERINO_ACCUWEATHER__URL_PARAM_PARTNER_CODE`) -
+    The query parameter for the [partner code](https://apidev.accuweather.com/developers/partner-code)
+    to append to URLs in the current conditions and forecast responses.
+  - `partner_code` (`MERINO_ACCUWEATHER__PARTNER_CODE`) -
+    The partner code to append to URLs in the current conditions and forecast responses.
 
 ### AMO API 
 

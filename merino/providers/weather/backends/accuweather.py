@@ -2,7 +2,7 @@
 import asyncio
 from typing import Optional
 
-from httpx import AsyncClient, HTTPError, Response
+from httpx import URL, AsyncClient, HTTPError, InvalidURL, Response
 from pydantic import BaseModel
 
 from merino.exceptions import BackendError
@@ -40,6 +40,8 @@ class AccuweatherBackend:
     url_postalcodes_param_query: str
     url_current_conditions_path: str
     url_forecasts_path: str
+    url_param_partner_code: Optional[str]
+    partner_code: Optional[str]
 
     def __init__(
         self,
@@ -50,6 +52,8 @@ class AccuweatherBackend:
         url_postalcodes_param_query: str,
         url_current_conditions_path: str,
         url_forecasts_path: str,
+        url_param_partner_code: Optional[str] = None,
+        partner_code: Optional[str] = None,
     ) -> None:
         """Initialize the AccuWeather backend.
 
@@ -76,6 +80,8 @@ class AccuweatherBackend:
         self.url_postalcodes_param_query = url_postalcodes_param_query
         self.url_current_conditions_path = url_current_conditions_path
         self.url_forecasts_path = url_forecasts_path
+        self.url_param_partner_code = url_param_partner_code
+        self.partner_code = partner_code
 
     def cache_inputs_for_weather_report(self, geolocation: Location) -> Optional[bytes]:
         """Return the inputs used to form the cache key for looking up and storing the current
@@ -203,9 +209,16 @@ class AccuweatherBackend:
             ]:
                 # `type: ignore` is necessary because mypy gets confused when
                 # matching structures of type `Any` and reports the following
-                # line as unreachable. See
+                # lines as unreachable. See
                 # https://github.com/python/mypy/issues/12770
-                return CurrentConditions(  # type: ignore
+                try:  # type: ignore
+                    url = self._add_partner_code(url)
+                except InvalidURL as error:  # pragma: no cover
+                    raise AccuweatherError(
+                        "Invalid URL in current conditions response"
+                    ) from error
+
+                return CurrentConditions(
                     url=url,
                     summary=summary,
                     icon_id=icon_id,
@@ -259,9 +272,16 @@ class AccuweatherBackend:
             }:
                 # `type: ignore` is necessary because mypy gets confused when
                 # matching structures of type `Any` and reports the following
-                # line as unreachable. See
+                # lines as unreachable. See
                 # https://github.com/python/mypy/issues/12770
-                return Forecast(  # type: ignore
+                try:  # type: ignore
+                    url = self._add_partner_code(url)
+                except InvalidURL as error:  # pragma: no cover
+                    raise AccuweatherError(
+                        "Invalid URL in forecast response"
+                    ) from error
+
+                return Forecast(
                     url=url,
                     summary=summary,
                     high=Temperature(**{high_unit.lower(): high_value}),
@@ -269,3 +289,12 @@ class AccuweatherBackend:
                 )
             case _:
                 return None
+
+    def _add_partner_code(self, url: str) -> str:
+        if not self.url_param_partner_code or not self.partner_code:
+            return url
+
+        parsed_url = URL(url)
+        return str(
+            parsed_url.copy_add_param(self.url_param_partner_code, self.partner_code)
+        )
