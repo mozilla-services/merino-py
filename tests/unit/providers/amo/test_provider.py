@@ -55,7 +55,7 @@ def fixture_addon_provider(
     provider = AddonsProvider(
         backend=static_backend,
         keywords=keywords,
-        name="addons",
+        name="amo",
         score=0.3,
         min_chars=4,
     )
@@ -125,10 +125,10 @@ async def test_query_return_match(
             description=expected_info["description"],
             url=expected_info["url"],
             score=0.3,
-            provider="addons",
+            provider="amo",
             icon=expected_icon_rating["icon"],
             custom_details=CustomDetails(
-                addons=AmoDetails(
+                amo=AmoDetails(
                     rating=expected_icon_rating["rating"],
                     number_of_ratings=expected_icon_rating["number_of_ratings"],
                 )
