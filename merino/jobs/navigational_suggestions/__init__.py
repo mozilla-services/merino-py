@@ -50,6 +50,12 @@ force_upload_option = typer.Option(
     help="Upload the domain metadata to GCS bucket even if it aleady exists there",
 )
 
+min_favicon_width_option = typer.Option(
+    job_settings.min_favicon_width,
+    "--min-favicon-width",
+    help="Minimum width of the domain favicon required for it to be a part of domain metadata",
+)
+
 navigational_suggestions_cmd = typer.Typer(
     name="navigational-suggestions",
     help="Command for preparing top domain metadata for navigational suggestions",
@@ -84,6 +90,7 @@ def prepare_domain_metadata(
     destination_gcs_bucket: str = destination_gcs_bucket_option,
     destination_cdn_hostname: str = destination_gcs_cdn_hostname_option,
     force_upload: bool = force_upload_option,
+    min_favicon_width: int = min_favicon_width_option,
 ):
     """Prepare domain metadata for navigational suggestions"""
     # download top domains data
@@ -93,7 +100,7 @@ def prepare_domain_metadata(
 
     # extract domain metadata of top domains
     domain_metadata_extractor = DomainMetadataExtractor()
-    favicons = domain_metadata_extractor.get_favicons(domain_data)
+    favicons = domain_metadata_extractor.get_favicons(domain_data, min_favicon_width)
     urls_and_titles = domain_metadata_extractor.get_urls_and_titles(domain_data)
     second_level_domains = domain_metadata_extractor.get_second_level_domains(
         domain_data

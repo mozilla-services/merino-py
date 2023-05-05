@@ -140,7 +140,7 @@ FAVICON_SCENARIOS: list[Scenario] = [
 def test_get_favicons(domains_data: list[dict], expected_favicons: list[str]):
     """Test that DomainMetadataExtractor returns favicons as expected"""
     metadata_extractor = DomainMetadataExtractor()
-    favicons = metadata_extractor.get_favicons(domains_data)
+    favicons = metadata_extractor.get_favicons(domains_data, min_width=8)
     assert len(favicons) == len(domains_data)
     for idx, favicon in enumerate(favicons):
         assert favicon == expected_favicons[idx]
