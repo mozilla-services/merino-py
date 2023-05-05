@@ -185,3 +185,5 @@ destination_gcs_bucket = ""
 destination_cdn_hostname = ""
 # Flag to enable uploading the domain metadata to GCS bucket even if it aleady exists there
 force_upload = false
+# Minimum width of the domain favicon required for it to be a part of domain metadata
+min_favicon_width = 52
