@@ -167,7 +167,7 @@ class DomainMetadataExtractor:
         return best_favicon_url if best_favicon_width >= min_width else ""
 
     def get_favicons(self, domains_data: list[dict], min_width: int) -> list[str]:
-        """Extract favicons for each domain and return the one that satisfies the minimum width"
+        """Extract favicons for each domain and return the one that satisfies the minimum width
         criteria for each domain. If multiple favicons satisfy the criteria then return the one
         with the highest resolution.
         """
