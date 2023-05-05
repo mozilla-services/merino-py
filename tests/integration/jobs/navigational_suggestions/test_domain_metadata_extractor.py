@@ -115,7 +115,7 @@ FAVICON_SCENARIOS: list[Scenario] = [
         ],
         ["https://assets.nflxext.com/en_us/layout/ecweb/netflix-app-icon_152.jpg"],
     ),
-    # domain with non-square favicon
+    # domain not satisfying min width criteria of favicon
     (
         [
             {
@@ -127,7 +127,7 @@ FAVICON_SCENARIOS: list[Scenario] = [
                 "categories": ["Gaming"],
             }
         ],
-        ["https://xbox.com/favicon.ico"],
+        [""],
     ),
 ]
 
@@ -140,7 +140,7 @@ FAVICON_SCENARIOS: list[Scenario] = [
 def test_get_favicons(domains_data: list[dict], expected_favicons: list[str]):
     """Test that DomainMetadataExtractor returns favicons as expected"""
     metadata_extractor = DomainMetadataExtractor()
-    favicons = metadata_extractor.get_favicons(domains_data, min_width=8)
+    favicons = metadata_extractor.get_favicons(domains_data, min_width=16)
     assert len(favicons) == len(domains_data)
     for idx, favicon in enumerate(favicons):
         assert favicon == expected_favicons[idx]
