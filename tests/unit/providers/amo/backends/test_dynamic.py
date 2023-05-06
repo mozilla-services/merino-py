@@ -11,7 +11,7 @@ from merino.providers.amo.backends.dynamic import (
     DynamicAmoBackend,
     DynamicAmoBackendException,
 )
-from merino.providers.amo.backends.protocol import Addon
+from merino.providers.amo.backends.protocol import Addon, AmoBackendError
 
 
 @pytest.fixture(name="dynamic_backend")
@@ -137,6 +137,19 @@ async def test_initialize_addons_skipped_bad_response(
         caplog.messages[0] == "Problem with Addons API formatting. "
         "Check that the API response structure hasn't changed."
     )
+
+
+@pytest.mark.asyncio
+async def test_initialize_addons_handled_task_group_exceptions(
+    mocker: MockerFixture, dynamic_backend: DynamicAmoBackend
+):
+    """Test that `TaskGroup` exceptions are captured and propagated as `AmoBackendError`."""
+    mocker.patch.object(
+        dynamic_backend, "_fetch_addon", side_effect=Exception("mocked error")
+    )
+
+    with pytest.raises(AmoBackendError):
+        await dynamic_backend.initialize_addons()
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,8 @@
 """Dynamic AMO Backend"""
 import logging
+from asyncio import Task, TaskGroup
 from json import JSONDecodeError
+from typing import Any
 
 import httpx
 from httpx import AsyncClient
@@ -37,40 +39,60 @@ class DynamicAmoBackend:
         self.api_url = api_url
         self.dynamic_data = {}
 
+    async def _fetch_addon(
+        self, client: AsyncClient, addon_key: SupportedAddon
+    ) -> dict[str, Any] | None:
+        """Fetch addon metadata via AMO. Return `None` on errors."""
+        try:
+            res = await client.get(f"{self.api_url}/{addon_key}", follow_redirects=True)
+            res.raise_for_status()
+
+            json_res = res.json()
+            icon = json_res["icon_url"]
+            rating = f"{(json_res['ratings']['average']):.1f}"
+            number_of_ratings = json_res["ratings"]["count"]
+        except httpx.HTTPError:
+            logger.error(f"Addons API could not find key: {addon_key}")
+            return None
+        except (KeyError, JSONDecodeError):
+            logger.error(
+                "Problem with Addons API formatting. "
+                "Check that the API response structure hasn't changed."
+            )
+            return None
+
+        return {
+            "icon": icon,
+            "rating": rating,
+            "number_of_ratings": number_of_ratings,
+        }
+
     async def initialize_addons(self) -> None:
         """Initialize the dynamic AMO information via the Addons API.
         Allow for partial initialization if the response object is not available
         at the moment. We do not want to block initialization or take down the
         provider for some missing information.
         """
-        self.dynamic_data = {}  # ensure that it's empty
-        async with AsyncClient() as client:
-            for addon_key in SupportedAddon:
-                try:
-                    res = await client.get(
-                        f"{self.api_url}/{addon_key}", follow_redirects=True
+        tasks: list[Task] = []
+
+        try:
+            async with (AsyncClient() as client, TaskGroup() as group):
+                for addon_key in SupportedAddon:
+                    tasks.append(
+                        group.create_task(
+                            self._fetch_addon(client, addon_key), name=addon_key
+                        )
                     )
-                    res.raise_for_status()
 
-                    json_res = res.json()
-                    icon = json_res["icon_url"]
-                    rating = f"{(json_res['ratings']['average']):.1f}"
-                    number_of_ratings = json_res["ratings"]["count"]
-
-                    self.dynamic_data[addon_key] = {
-                        "icon": icon,
-                        "rating": rating,
-                        "number_of_ratings": number_of_ratings,
-                    }
-
-                except httpx.HTTPError:
-                    logger.error(f"Addons API could not find key: {addon_key}")
-
-                except (KeyError, JSONDecodeError):
-                    logger.error(
-                        "Problem with Addons API formatting. "
-                        "Check that the API response structure hasn't changed."
-                    )
+            # Update in place without clearing out the map so that fetch failures
+            # will not overwrite the old values.
+            self.dynamic_data |= [
+                (SupportedAddon(task.get_name()), await task)
+                for task in tasks
+                if await task is not None
+            ]
+        except ExceptionGroup as e:
+            raise AmoBackendError(e.exceptions)
 
     async def get_addon(self, addon_key: SupportedAddon) -> Addon:
         """Get an Addon based on the addon_key"""
