@@ -58,4 +58,10 @@ repos:
           --warn-return-any,
           --warn-unused-ignores
         ]
-        additional_dependencies: ["pydantic", "types-geoip2", "types-PyYAML", "types-requests"]
+        additional_dependencies: [
+          "pydantic",
+          "types-geoip2",
+          "types-PyYAML",
+          "types-requests",
+          "types-redis"
+        ]

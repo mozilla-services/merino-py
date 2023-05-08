@@ -30,6 +30,20 @@ class AmoErrorBackend:
         pass
 
 
+class AmoInitErrorBackend:
+    """AmoBackend that raises an error during initialization."""
+
+    async def get_addon(self, addon_key: SupportedAddon) -> Addon:  # pragma: no cover
+        """Get an Addon based on the addon_key.
+        Raise a `BackendError` if the addon key is missing.
+        """
+        raise AmoBackendError("Addon key missing!")
+
+    async def initialize_addons(self) -> None:
+        """Initialize addons to be stored."""
+        raise AmoBackendError("Error!!!")
+
+
 @pytest.fixture(name="keywords")
 def fixture_keywords() -> dict[SupportedAddon, set[str]]:
     """Fixture for the keywords."""
@@ -55,7 +69,7 @@ def fixture_addon_provider(
     provider = AddonsProvider(
         backend=static_backend,
         keywords=keywords,
-        name="addons",
+        name="amo",
         score=0.3,
         min_chars=4,
     )
@@ -125,10 +139,10 @@ async def test_query_return_match(
             description=expected_info["description"],
             url=expected_info["url"],
             score=0.3,
-            provider="addons",
+            provider="amo",
             icon=expected_icon_rating["icon"],
             custom_details=CustomDetails(
-                addons=AmoDetails(
+                amo=AmoDetails(
                     rating=expected_icon_rating["rating"],
                     number_of_ratings=expected_icon_rating["number_of_ratings"],
                 )
@@ -157,3 +171,21 @@ async def test_query_error(
 
     assert len(caplog.messages) == 1
     assert caplog.messages[0].startswith("Error getting AMO suggestion:")
+
+
+@pytest.mark.asyncio
+async def test_initialize_addons_error(
+    caplog: LogCaptureFixture, keywords: dict[SupportedAddon, set[str]]
+):
+    """Test that provider can handle initialization errors."""
+    provider = AddonsProvider(
+        backend=AmoInitErrorBackend(),
+        keywords=keywords,
+        name="addons",
+        score=0.3,
+        min_chars=4,
+    )
+    await provider.initialize()
+
+    assert len(caplog.messages) == 1
+    assert caplog.messages[0].startswith("Failed to initialize addon backend:")

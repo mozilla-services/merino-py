@@ -9,7 +9,7 @@ class AmoDetails(BaseModel):
     number_of_ratings: int
 
 
-class CustomDetails(BaseModel):
+class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     """Base Model for Custom Details."""
 
     amo: AmoDetails | None = None

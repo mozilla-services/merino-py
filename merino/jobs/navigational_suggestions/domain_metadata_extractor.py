@@ -109,8 +109,10 @@ class DomainMetadataExtractor:
 
         return favicons
 
-    def _get_best_favicon(self, favicons: list[dict]) -> str:
-        """Return the favicon with the highest resolution from a list of favicons"""
+    def _get_best_favicon(self, favicons: list[dict], min_width: int) -> str:
+        """Return the favicon with the highest resolution that satisfies the minimum width
+        criteria from a list of favicons.
+        """
         best_favicon_url = ""
         best_favicon_width = 0
         for favicon in favicons:
@@ -160,11 +162,14 @@ class DomainMetadataExtractor:
                 best_favicon_url = url
                 best_favicon_width = width
 
-        return best_favicon_url
+        logger.debug(f"best favicon url:{best_favicon_url}, width:{best_favicon_width}")
 
-    def get_favicons(self, domains_data: list[dict]) -> list[str]:
-        """Extract favicons for each domain and return the one with the highest resolution
-        for each.
+        return best_favicon_url if best_favicon_width >= min_width else ""
+
+    def get_favicons(self, domains_data: list[dict], min_width: int) -> list[str]:
+        """Extract favicons for each domain and return the one that satisfies the minimum width
+        criteria for each domain. If multiple favicons satisfy the criteria then return the one
+        with the highest resolution.
         """
         result = []
         for domain_data in domains_data:
@@ -179,7 +184,7 @@ class DomainMetadataExtractor:
             logger.info(
                 f"{len(favicons)} favicons extracted for {url}. Favicons are: {favicons}"
             )
-            best_favicon = self._get_best_favicon(favicons)
+            best_favicon = self._get_best_favicon(favicons, min_width)
             result.append(best_favicon)
         return result
 
