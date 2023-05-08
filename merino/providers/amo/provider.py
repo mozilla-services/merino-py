@@ -72,7 +72,11 @@ class Provider(BaseProvider):
 
     async def initialize(self) -> None:
         """Initialize"""
-        await self.backend.initialize_addons()
+        try:
+            await self.backend.initialize_addons()
+        except AmoBackendError as e:
+            # Do not propagate the error as it can be recovered later by retrying.
+            logger.warning(f"Failed to initialize addon backend: {e}")
         self.addon_keywords = invert_and_expand_index_keywords(
             self.keywords, self.min_chars
         )
