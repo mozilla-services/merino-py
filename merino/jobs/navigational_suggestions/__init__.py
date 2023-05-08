@@ -47,7 +47,13 @@ destination_gcs_cdn_hostname_option = typer.Option(
 force_upload_option = typer.Option(
     job_settings.force_upload,
     "--force-upload",
-    help="Upload the domain metadata to GCS bucket even if it aleady exists there",
+    help="Upload the domain metadata to GCS bucket even if it already exists there",
+)
+
+write_xcom_option = typer.Option(
+    False,
+    "--write-xcom",
+    help="Write job results to Airflow XCom File",
 )
 
 min_favicon_width_option = typer.Option(
@@ -83,6 +89,11 @@ def _construct_top_picks(
     return json.dumps(top_picks, indent=4)
 
 
+def _write_xcom_file(xcom_data: dict):
+    with open("/airflow/xcom/return.json", "w") as file:
+        json.dump(xcom_data, file)
+
+
 @navigational_suggestions_cmd.command()
 def prepare_domain_metadata(
     source_gcp_project: str = source_gcp_project_option,
@@ -90,6 +101,7 @@ def prepare_domain_metadata(
     destination_gcs_bucket: str = destination_gcs_bucket_option,
     destination_cdn_hostname: str = destination_gcs_cdn_hostname_option,
     force_upload: bool = force_upload_option,
+    write_xcom: bool = write_xcom_option,
     min_favicon_width: int = min_favicon_width_option,
 ):
     """Prepare domain metadata for navigational suggestions"""
@@ -121,5 +133,10 @@ def prepare_domain_metadata(
     top_picks = _construct_top_picks(
         domain_data, uploaded_favicons, urls_and_titles, second_level_domains
     )
-    domain_metadata_uploader.upload_top_picks(top_picks)
-    logger.info("top pick contents uploaded to gcs")
+    top_pick_blob = domain_metadata_uploader.upload_top_picks(top_picks)
+    logger.info(
+        "top pick contents uploaded to gcs",
+        extra={"public_url": top_pick_blob.public_url},
+    )
+    if write_xcom is True:
+        _write_xcom_file({"top_pick_url": top_pick_blob.public_url})
