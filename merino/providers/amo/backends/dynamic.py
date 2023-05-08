@@ -48,24 +48,20 @@ class DynamicAmoBackend:
             res.raise_for_status()
 
             json_res = res.json()
-            icon = json_res["icon_url"]
-            rating = f"{(json_res['ratings']['average']):.1f}"
-            number_of_ratings = json_res["ratings"]["count"]
+            return {
+                "icon": json_res["icon_url"],
+                "rating": f"{(json_res['ratings']['average']):.1f}",
+                "number_of_ratings": json_res["ratings"]["count"],
+            }
         except httpx.HTTPError:
             logger.error(f"Addons API could not find key: {addon_key}")
-            return None
         except (KeyError, JSONDecodeError):
             logger.error(
                 "Problem with Addons API formatting. "
                 "Check that the API response structure hasn't changed."
             )
-            return None
 
-        return {
-            "icon": icon,
-            "rating": rating,
-            "number_of_ratings": number_of_ratings,
-        }
+        return None
 
     async def initialize_addons(self) -> None:
         """Initialize the dynamic AMO information via the Addons API.
