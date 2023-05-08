@@ -37,7 +37,7 @@ class AmoInitErrorBackend:
         """Get an Addon based on the addon_key.
         Raise a `BackendError` if the addon key is missing.
         """
-        pass
+        raise AmoBackendError("Addon key missing!")
 
     async def initialize_addons(self) -> None:
         """Initialize addons to be stored."""
@@ -177,7 +177,7 @@ async def test_query_error(
 async def test_initialize_addons_error(
     caplog: LogCaptureFixture, keywords: dict[SupportedAddon, set[str]]
 ):
-    """Test that provider can handle query error."""
+    """Test that provider can handle initialization errors."""
     provider = AddonsProvider(
         backend=AmoInitErrorBackend(),
         keywords=keywords,
