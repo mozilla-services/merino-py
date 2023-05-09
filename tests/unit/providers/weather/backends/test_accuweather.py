@@ -46,6 +46,18 @@ def fixture_accuweather(accuweather_parameters: dict[str, str]) -> AccuweatherBa
     return AccuweatherBackend(**accuweather_parameters)
 
 
+@pytest.fixture(name="accuweather_with_partner_code")
+def fixture_accuweather_with_partner_code(
+    accuweather_parameters: dict[str, str]
+) -> AccuweatherBackend:
+    """Create an Accuweather object with a partner code for test."""
+    return AccuweatherBackend(
+        url_param_partner_code="partner",
+        partner_code="acme",
+        **accuweather_parameters,
+    )
+
+
 @pytest.fixture(name="geolocation")
 def fixture_geolocation() -> Location:
     """Create a Location object for test."""
@@ -599,18 +611,33 @@ async def test_get_location_error(
     assert str(accuweather_error.value) == expected_error_value
 
 
+@pytest.mark.parametrize(
+    ["accuweather_fixture", "expected_current_conditions_url"],
+    [
+        (
+            "accuweather",
+            "http://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/"
+            "39376_pc?lang=en-us",
+        ),
+        (
+            "accuweather_with_partner_code",
+            "http://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/"
+            "39376_pc?lang=en-us&partner=acme",
+        ),
+    ],
+    ids=["without_partner_code", "with_partner_code"],
+)
 @pytest.mark.asyncio
 async def test_get_current_conditions(
+    request: FixtureRequest,
     mocker: MockerFixture,
-    accuweather: AccuweatherBackend,
+    accuweather_fixture: str,
     accuweather_current_conditions_response: bytes,
+    expected_current_conditions_url: str,
 ) -> None:
     """Test that the get_current_conditions method returns CurrentConditions."""
     expected_conditions: CurrentConditions = CurrentConditions(
-        url=(
-            "http://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/"
-            "39376_pc?lang=en-us"
-        ),
+        url=expected_current_conditions_url,
         summary="Mostly cloudy",
         icon_id=6,
         temperature=Temperature(c=15.5, f=60),
@@ -626,6 +653,7 @@ async def test_get_current_conditions(
         ),
     )
 
+    accuweather: AccuweatherBackend = request.getfixturevalue(accuweather_fixture)
     conditions: Optional[CurrentConditions] = await accuweather.get_current_conditions(
         mock_client, location_key
     )
@@ -690,6 +718,22 @@ async def test_get_current_conditions_error(
 
 
 @pytest.mark.parametrize(
+    ["accuweather_fixture", "expected_forecast_url"],
+    [
+        (
+            "accuweather",
+            "http://www.accuweather.com/en/us/san-francisco-ca/94103/daily-weather-forecast/"
+            "39376_pc?lang=en-us",
+        ),
+        (
+            "accuweather_with_partner_code",
+            "http://www.accuweather.com/en/us/san-francisco-ca/94103/daily-weather-forecast/"
+            "39376_pc?lang=en-us&partner=acme",
+        ),
+    ],
+    ids=["without_partner_code", "with_partner_code"],
+)
+@pytest.mark.parametrize(
     "forecast_response_fixture",
     [
         "accuweather_forecast_response_celsius",
@@ -701,15 +745,13 @@ async def test_get_current_conditions_error(
 async def test_get_forecast(
     request: FixtureRequest,
     mocker: MockerFixture,
-    accuweather: AccuweatherBackend,
+    accuweather_fixture: str,
     forecast_response_fixture: str,
+    expected_forecast_url: str,
 ) -> None:
     """Test that the get_forecast method returns a Forecast."""
     expected_forecast: Forecast = Forecast(
-        url=(
-            "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
-            "daily-weather-forecast/39376_pc?lang=en-us"
-        ),
+        url=expected_forecast_url,
         summary="Pleasant Saturday",
         high=Temperature(f=70),
         low=Temperature(f=57),
@@ -726,6 +768,7 @@ async def test_get_forecast(
         ),
     )
 
+    accuweather: AccuweatherBackend = request.getfixturevalue(accuweather_fixture)
     forecast: Optional[Forecast] = await accuweather.get_forecast(
         mock_client, location_key
     )

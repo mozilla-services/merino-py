@@ -9,6 +9,13 @@ _validators = [
     Validator("metrics.dev_logger", is_type_of=bool),
     Validator("metrics.host", is_type_of=str),
     Validator("metrics.port", gte=0, is_type_of=int),
+    Validator(
+        "accuweather.url_param_partner_code",
+        is_type_of=str,
+        must_exist=True,
+        when=Validator("accuweather.partner_code", must_exist=True),
+    ),
+    Validator("accuweather.partner_code", is_type_of=str),
     Validator("amo.dynamic.api_url", is_type_of=str),
     Validator("providers.accuweather.enabled_by_default", is_type_of=bool),
     # The Redis server URL is required when at least one provider wants to use Redis for caching.
