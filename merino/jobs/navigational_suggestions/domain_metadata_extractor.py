@@ -187,6 +187,19 @@ class DomainMetadataExtractor:
         for favicon in favicons:
             url = self._fix_url(favicon["href"])
             width = None
+            favicon_image: FaviconImage = FaviconImage(
+                content_type="", content=bytes(0)
+            )
+            try:
+                favicon_image = self.favicon_downloader.download_favicon(url)
+            except Exception as e:
+                logger.info(f"Exception {e} for favicon {favicon}")
+                continue
+
+            if "image/" not in favicon_image.content_type:
+                # If favicon mime type is not "image" then skip it
+                continue
+
             sizes = favicon.get("sizes")
             if sizes:
                 try:
@@ -196,29 +209,24 @@ class DomainMetadataExtractor:
                         f"{e} while deducing size from sizes attribute of favicon {favicon}"
                     )
                     pass
+
             if width is None:
+                # If favicon is an SVG, then return this as the best favicon because SVG favicons
+                # are scalable, can be printed with high quality at any resolution and SVG
+                # graphics do NOT lose any quality if they are zoomed or resized.
+                if favicon_image.content_type == "image/svg+xml":
+                    # Firefox doesn't support masked favicons yet. Return if not masked.
+                    if "mask" not in favicon:
+                        return url
+                    else:
+                        logger.info(f"Masked SVG favicon {favicon} found; skipping it")
+                        continue
                 try:
-                    favicon_image: FaviconImage = (
-                        self.favicon_downloader.download_favicon(url)
-                    )
-
-                    # If it is an SVG, then return this as the best favicon because SVG favicons
-                    # are scalable, can be printed with high quality at any resolution and SVG
-                    # graphics do NOT lose any quality if they are zoomed or resized.
-                    if favicon_image.content_type == "image/svg+xml":
-                        # Firefox doesn't support masked favicons yet. Return if not masked.
-                        if "mask" not in favicon:
-                            return url
-                        else:
-                            logger.info(
-                                f"Masked SVG favicon {favicon} found; skipping it"
-                            )
-                            continue
-
                     width = self._get_favicon_smallest_dimension(favicon_image.content)
                 except Exception as e:
                     logger.info(f"Exception {e} for favicon {favicon}")
                     pass
+
             if width and width > best_favicon_width:
                 best_favicon_url = url
                 best_favicon_width = width

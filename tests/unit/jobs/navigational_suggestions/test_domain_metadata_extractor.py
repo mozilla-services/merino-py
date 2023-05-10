@@ -315,6 +315,36 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
         ],
         [""],
     ),
+    (
+        FaviconData(
+            links=[
+                {
+                    "rel": ["icon"],
+                    "type": "image/png",
+                    "href": "https://www.researchgate.net/favicon-96x96.png",
+                    "sizes": "96x96",
+                },
+            ],
+            metas=[],
+            url="https://www.researchgate.net/",
+        ),
+        [
+            FaviconImage(content=b"\\x00", content_type="text/html"),
+        ],
+        [(96, 96)],
+        None,
+        [
+            {
+                "rank": 84,
+                "domain": "researchgate.net",
+                "host": "www.researchgate.net",
+                "origin": "https://www.researchgate.net",
+                "suffix": "net",
+                "categories": ["Education"],
+            }
+        ],
+        [""],
+    ),
 ]
 
 
@@ -339,6 +369,7 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
         "favicon_url_starting_with_data_skipped",
         "favicon_url_missing_scheme_handled",
         "low_resolution_favicon_skipped",
+        "favicon_with_non_image_mime_type_skipped",
     ],
 )
 def test_get_favicons(
