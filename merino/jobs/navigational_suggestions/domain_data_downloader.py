@@ -41,12 +41,14 @@ with apex_names as (
         SELECT * FROM UNNEST(categories) AS c
         WHERE
           c.parent_id in (
-            2, -- Adult Theme
+            2,  -- Adult Theme
+            8,  -- Gambling
             17, -- Questionable Content
             21, -- Security Threats
-            28, -- Violence
+            29, -- Violence
             31, -- Blocked
-            32  -- Security Risks
+            32, -- Security Risks
+            33  -- Military & Weapons
           )
         OR
           c.id IN (81) -- Content Servers
