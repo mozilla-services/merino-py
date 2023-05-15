@@ -250,7 +250,7 @@ jobs:
             docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:latest"
   docs-build:
     docker:
-      - image: cimg/rust:1.64
+      - image: cimg/rust:1.69
     steps:
       - checkout
       - run:
