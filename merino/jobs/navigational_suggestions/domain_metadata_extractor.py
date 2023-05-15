@@ -9,6 +9,13 @@ from PIL import Image
 from pydantic import BaseModel
 from robobrowser import RoboBrowser
 
+from merino.jobs.navigational_suggestions.utils import (
+    FIREFOX_UA,
+    TIMEOUT,
+    FaviconDownloader,
+    FaviconImage,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,22 +27,8 @@ class FaviconData(BaseModel):
     url: str
 
 
-class FaviconImage(BaseModel):
-    """Data model for favicon image contents and associated metadata."""
-
-    content: bytes
-    content_type: str
-
-
 class Scraper:
     """Website data extractor."""
-
-    FIREFOX_UA: str = (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 13.3; rv:111.0) Gecko/20100101 "
-        "Firefox/111.0"
-    )
-
-    TIMEOUT: int = 60
 
     LINK_SELECTOR: str = (
         "link[rel=apple-touch-icon], link[rel=apple-touch-icon-precomposed],"
@@ -47,7 +40,7 @@ class Scraper:
     browser: RoboBrowser
 
     def __init__(self) -> None:
-        self.browser = RoboBrowser(user_agent=self.FIREFOX_UA, parser="html.parser")
+        self.browser = RoboBrowser(user_agent=FIREFOX_UA, parser="html.parser")
 
     def scrape_favicon_data(self, url: str) -> FaviconData:
         """Scrape the favicon data from the given url.
@@ -57,7 +50,7 @@ class Scraper:
         Returns:
             str: Favicon data from the given URL
         """
-        self.browser.open(url, timeout=self.TIMEOUT)
+        self.browser.open(url, timeout=TIMEOUT)
         return FaviconData(
             links=[link.attrs for link in self.browser.select(self.LINK_SELECTOR)],
             metas=[meta.attrs for meta in self.browser.select(self.META_SELECTOR)],
@@ -75,8 +68,8 @@ class Scraper:
         default_favicon_url = urljoin(url, "favicon.ico")
         response = requests.get(
             default_favicon_url,
-            headers={"User-agent": self.FIREFOX_UA},
-            timeout=self.TIMEOUT,
+            headers={"User-agent": FIREFOX_UA},
+            timeout=TIMEOUT,
         )
         return default_favicon_url if response.status_code == 200 else None
 
@@ -88,26 +81,8 @@ class Scraper:
         Returns:
             str: Title from header of the given URL
         """
-        self.browser.open(url, timeout=self.TIMEOUT)
+        self.browser.open(url, timeout=TIMEOUT)
         return str(self.browser.find("head").find("title").string)
-
-    def download_favicon(self, url: str) -> FaviconImage:
-        """Download the favicon from the given url.
-
-        Args:
-            url: favicon URL
-        Returns:
-            FaviconImage: favicon image content and associated metadata
-        """
-        response = requests.get(
-            url,
-            headers={"User-agent": self.FIREFOX_UA},
-            timeout=self.TIMEOUT,
-        )
-        return FaviconImage(
-            content=response.content,
-            content_type=str(response.headers.get("Content-Type")),
-        )
 
 
 class DomainMetadataExtractor:
@@ -135,8 +110,11 @@ class DomainMetadataExtractor:
 
     scraper: Scraper
 
-    def __init__(self, scraper=None) -> None:
+    def __init__(self, scraper=None, favicon_downloader=None) -> None:
         self.scraper = scraper if scraper else Scraper()
+        self.favicon_downloader = (
+            favicon_downloader if favicon_downloader else FaviconDownloader()
+        )
 
     def _fix_url(self, url: str) -> str:
         """Return a url with https scheme if the scheme is originally missing from it"""
@@ -211,7 +189,9 @@ class DomainMetadataExtractor:
                     pass
             if width is None:
                 try:
-                    favicon_image: FaviconImage = self.scraper.download_favicon(url)
+                    favicon_image: FaviconImage = (
+                        self.favicon_downloader.download_favicon(url)
+                    )
 
                     # If it is an SVG, then return this as the best favicon because SVG favicons
                     # are scalable, can be printed with high quality at any resolution and SVG

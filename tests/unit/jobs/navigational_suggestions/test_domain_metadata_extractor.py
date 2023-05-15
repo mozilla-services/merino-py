@@ -11,9 +11,9 @@ from pytest_mock import MockerFixture
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
     FaviconData,
-    FaviconImage,
     Scraper,
 )
+from merino.jobs.navigational_suggestions.utils import FaviconDownloader, FaviconImage
 
 FaviconScenario = tuple[
     FaviconData | None,
@@ -350,7 +350,9 @@ def test_get_favicons(
     scraper_mock: Any = mocker.Mock(spec=Scraper)
     scraper_mock.scrape_favicon_data.return_value = favicon_data
     scraper_mock.get_default_favicon.return_value = default_favicon
-    scraper_mock.download_favicon.side_effect = favicon_images
+
+    favicon_downloader_mock: Any = mocker.Mock(spec=FaviconDownloader)
+    favicon_downloader_mock.download_favicon.side_effect = favicon_images
 
     images_mock = []
     for image_size in favicon_image_sizes or []:
@@ -363,7 +365,7 @@ def test_get_favicons(
     ).open.return_value.__enter__.side_effect = images_mock
 
     metadata_extractor: DomainMetadataExtractor = DomainMetadataExtractor(
-        scraper=scraper_mock
+        scraper=scraper_mock, favicon_downloader=favicon_downloader_mock
     )
 
     favicons: list[str] = metadata_extractor.get_favicons(domains_data, min_width=32)
