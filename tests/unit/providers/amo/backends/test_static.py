@@ -29,6 +29,7 @@ async def test_get_addon_success(static_backend: StaticAmoBackend):
             icon=vd_icon_rating["icon"],
             rating=vd_icon_rating["rating"],
             number_of_ratings=vd_icon_rating["number_of_ratings"],
+            guid=video_downloader["guid"],
         )
         == addons
     )

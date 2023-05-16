@@ -22,6 +22,7 @@ class Addon(BaseModel):
     icon: str
     rating: str
     number_of_ratings: int
+    guid: str
 
 
 class AmoBackend(Protocol):

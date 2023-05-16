@@ -28,6 +28,7 @@ ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
             "YouTube, Facebook, Vimeo, Twitch, and more."
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/video-downloadhelper/",
+        "guid": "{b9db16a4-6edc-47ec-a1f4-b86292ed211d}",
     },
     SupportedAddon.LANGAUGE_TOOL: {
         "name": "LanguageTool",
@@ -36,6 +37,7 @@ ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
             "social media, email, docs, and more."
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/languagetool/",
+        "guid": "languagetool-webextension@languagetool.org",
     },
     SupportedAddon.PRIVATE_RELAY: {
         "name": "Firefox Relay",
@@ -44,6 +46,7 @@ ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
             "from hackers and junk mail."
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/private-relay/",
+        "guid": "private-relay@firefox.com",
     },
     SupportedAddon.SEARCH_BY_IMAGE: {
         "name": "Search by Image",
@@ -52,6 +55,7 @@ ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
             "Find similar images, identify sources and more."
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/search_by_image/",
+        "guid": "{2e5ff8c8-32fe-46d0-9fc8-6b8986621f3c}",
     },
     SupportedAddon.DARKREADER: {
         "name": "Dark Reader",
@@ -60,6 +64,7 @@ ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
             "Adjust colors and reduce eye strain."
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/darkreader/",
+        "guid": "addon@darkreader.org",
     },
     SupportedAddon.PRIVACY_BADGER: {
         "name": "Privacy Badger",
@@ -68,6 +73,7 @@ ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
             "Protect your privacy online."
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/privacy-badger17/",
+        "guid": "jid1-MnnxcxisBPnSXQ@jetpack",
     },
     SupportedAddon.UBLOCK_ORIGIN: {
         "name": "uBlock Origin",
@@ -76,6 +82,7 @@ ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
             "this efficient content blocker."
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/",
+        "guid": "uBlock0@raymondhill.net",
     },
     SupportedAddon.READ_ALOUD: {
         "name": "Read Aloud: A Text to Speech Reader",
@@ -85,6 +92,7 @@ ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
             "Supports PDF and EPUB."
         ),
         "url": "https://addons.mozilla.org/firefox/addon/read-aloud/",
+        "guid": "{ddc62400-f22d-4dd3-8b4a-05837de53c2e}",
     },
 }
 
