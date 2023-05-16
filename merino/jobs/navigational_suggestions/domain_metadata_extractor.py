@@ -1,30 +1,93 @@
 """Extract domain metadata from domain data"""
 import logging
 from io import BytesIO
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urljoin
 
 import requests
 from PIL import Image
+from pydantic import BaseModel
 from robobrowser import RoboBrowser
 
+from merino.jobs.navigational_suggestions.utils import (
+    FIREFOX_UA,
+    TIMEOUT,
+    FaviconDownloader,
+    FaviconImage,
+)
+
 logger = logging.getLogger(__name__)
+
+
+class FaviconData(BaseModel):
+    """Data model for favicon information extracted from a website."""
+
+    links: list[dict[str, Any]]
+    metas: list[dict[str, Any]]
+    url: str
+
+
+class Scraper:
+    """Website data extractor."""
+
+    LINK_SELECTOR: str = (
+        "link[rel=apple-touch-icon], link[rel=apple-touch-icon-precomposed],"
+        'link[rel="icon shortcut"], link[rel="shortcut icon"], link[rel="icon"],'
+        'link[rel="SHORTCUT ICON"], link[rel="fluid-icon"]'
+    )
+    META_SELECTOR: str = "meta[name=apple-touch-icon]"
+
+    browser: RoboBrowser
+
+    def __init__(self) -> None:
+        self.browser = RoboBrowser(user_agent=FIREFOX_UA, parser="html.parser")
+
+    def scrape_favicon_data(self, url: str) -> FaviconData:
+        """Scrape the favicon data from the given url.
+
+        Args:
+            url: URL to open and scrape
+        Returns:
+            str: Favicon data from the given URL
+        """
+        self.browser.open(url, timeout=TIMEOUT)
+        return FaviconData(
+            links=[link.attrs for link in self.browser.select(self.LINK_SELECTOR)],
+            metas=[meta.attrs for meta in self.browser.select(self.META_SELECTOR)],
+            url=self.browser.url,
+        )
+
+    def get_default_favicon(self, url: str) -> Optional[str]:
+        """Return the default favicon for the given url.
+
+        Args:
+            url: URL to scrape for favicon at default location
+        Returns:
+            Optional[str]: Default favicon url if it exists
+        """
+        default_favicon_url = urljoin(url, "favicon.ico")
+        response = requests.get(
+            default_favicon_url,
+            headers={"User-agent": FIREFOX_UA},
+            timeout=TIMEOUT,
+        )
+        return default_favicon_url if response.status_code == 200 else None
+
+    def scrape_title(self, url: str) -> str:
+        """Scrape the title from the header of the given url.
+
+        Args:
+            url: URL to open and scrape
+        Returns:
+            str: Title from header of the given URL
+        """
+        self.browser.open(url, timeout=TIMEOUT)
+        return str(self.browser.find("head").find("title").string)
 
 
 class DomainMetadataExtractor:
     """Extract domain metadata from domain data"""
 
-    LINK_SELECTOR = (
-        "link[rel=apple-touch-icon], link[rel=apple-touch-icon-precomposed],"
-        'link[rel="icon shortcut"], link[rel="shortcut icon"], link[rel="icon"],'
-        'link[rel="SHORTCUT ICON"], link[rel="fluid-icon"]'
-    )
-    META_SELECTOR = "meta[name=apple-touch-icon]"
-    FIREFOX_UA = (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 13.3; rv:111.0) Gecko/20100101 "
-        "Firefox/111.0"
-    )
-    TIMEOUT = 60
     # A non-exhaustive list of substrings of invalid titles
     INVALID_TITLES = [
         "Attention Required",
@@ -45,10 +108,16 @@ class DomainMetadataExtractor:
         "This page is not allowed",
     ]
 
-    browser: RoboBrowser
+    scraper: Scraper
+    favicon_downloader: FaviconDownloader
 
-    def __init__(self) -> None:
-        self.browser = RoboBrowser(user_agent=self.FIREFOX_UA, parser="html.parser")
+    def __init__(
+        self,
+        scraper: Scraper = Scraper(),
+        favicon_downloader: FaviconDownloader = FaviconDownloader(),
+    ) -> None:
+        self.scraper = scraper
+        self.favicon_downloader = favicon_downloader
 
     def _fix_url(self, url: str) -> str:
         """Return a url with https scheme if the scheme is originally missing from it"""
@@ -56,50 +125,44 @@ class DomainMetadataExtractor:
             return f"https:{url}"
         return url
 
-    def _get_default_favicon(self, url: str) -> Optional[str]:
-        """Return the default favicon for a url if it exists"""
-        default_favicon_url = urljoin(url, "favicon.ico")
-        response = requests.get(
-            default_favicon_url,
-            headers={"User-agent": self.FIREFOX_UA},
-            timeout=self.TIMEOUT,
-        )
-        return default_favicon_url if response.status_code == 200 else None
+    def _get_favicon_smallest_dimension(self, content: bytes) -> int:
+        """Return the smallest of the favicon image width and height"""
+        with Image.open(BytesIO(content)) as img:
+            width, height = img.size
+            return int(min(width, height))
 
-    def _extract_favicons(self, url: str) -> list[dict]:
+    def _extract_favicons(self, url: str) -> list[dict[str, Any]]:
         """Extract all favicons for a given url"""
         logger.info(f"Extracting favicons for {url}")
         favicons = []
         try:
-            self.browser.open(url, timeout=self.TIMEOUT)
+            favicon_data: FaviconData = self.scraper.scrape_favicon_data(url)
 
-            for link in self.browser.select(self.LINK_SELECTOR):
-                favicon = link.attrs
+            for favicon in favicon_data.links:
                 favicon_url = favicon["href"]
                 if favicon_url.startswith("data:"):
                     continue
                 if not favicon_url.startswith("http") and not favicon_url.startswith(
                     "//"
                 ):
-                    favicon["href"] = urljoin(self.browser.url, favicon_url)
+                    favicon["href"] = urljoin(favicon_data.url, favicon_url)
                 favicons.append(favicon)
 
-            for meta in self.browser.select(self.META_SELECTOR):
-                favicon = meta.attrs
+            for favicon in favicon_data.metas:
                 favicon_url = favicon["content"]
                 if favicon_url.startswith("data:"):
                     continue
                 if not favicon_url.startswith("http") and not favicon_url.startswith(
                     "//"
                 ):
-                    favicon["href"] = urljoin(self.browser.url, favicon_url)
+                    favicon["href"] = urljoin(favicon_data.url, favicon_url)
                 else:
                     favicon["href"] = favicon_url
                 favicons.append(favicon)
 
             # Some domains have a default "favicon.ico" in their root without explicitly
             # specifying them via rel attribute of link tag.
-            default_favicon_url = self._get_default_favicon(url)
+            default_favicon_url = self.scraper.get_default_favicon(url)
             if default_favicon_url is not None:
                 favicons.append({"href": default_favicon_url})
 
@@ -109,7 +172,7 @@ class DomainMetadataExtractor:
 
         return favicons
 
-    def _get_best_favicon(self, favicons: list[dict], min_width: int) -> str:
+    def _get_best_favicon(self, favicons: list[dict[str, Any]], min_width: int) -> str:
         """Return the favicon with the highest resolution that satisfies the minimum width
         criteria from a list of favicons.
         """
@@ -129,16 +192,14 @@ class DomainMetadataExtractor:
                     pass
             if width is None:
                 try:
-                    response = requests.get(
-                        url,
-                        headers={"User-agent": self.FIREFOX_UA},
-                        timeout=self.TIMEOUT,
+                    favicon_image: FaviconImage = (
+                        self.favicon_downloader.download_favicon(url)
                     )
 
                     # If it is an SVG, then return this as the best favicon because SVG favicons
                     # are scalable, can be printed with high quality at any resolution and SVG
                     # graphics do NOT lose any quality if they are zoomed or resized.
-                    if response.headers.get("Content-Type") == "image/svg+xml":
+                    if favicon_image.content_type == "image/svg+xml":
                         # Firefox doesn't support masked favicons yet. Return if not masked.
                         if "mask" not in favicon:
                             return url
@@ -148,13 +209,7 @@ class DomainMetadataExtractor:
                             )
                             continue
 
-                    with Image.open(BytesIO(response.content)) as img:
-                        width, height = img.size
-                        if width != height:
-                            logger.info(
-                                f'favicon {favicon} shape "{width}*{height}" is not square'
-                            )
-                            width = min(width, height)
+                    width = self._get_favicon_smallest_dimension(favicon_image.content)
                 except Exception as e:
                     logger.info(f"Exception {e} for favicon {favicon}")
                     pass
@@ -166,7 +221,9 @@ class DomainMetadataExtractor:
 
         return best_favicon_url if best_favicon_width >= min_width else ""
 
-    def get_favicons(self, domains_data: list[dict], min_width: int) -> list[str]:
+    def get_favicons(
+        self, domains_data: list[dict[str, Any]], min_width: int
+    ) -> list[str]:
         """Extract favicons for each domain and return the one that satisfies the minimum width
         criteria for each domain. If multiple favicons satisfy the criteria then return the one
         with the highest resolution.
@@ -193,8 +250,7 @@ class DomainMetadataExtractor:
         logger.info(f"Extracting title for {url}")
         title = None
         try:
-            self.browser.open(url, timeout=self.TIMEOUT)
-            title = self.browser.find("head").find("title").string
+            title = self.scraper.scrape_title(url)
             title = " ".join(title.split())
         except Exception as e:
             logger.info(f"Exception: {e} while extracting title from document")
@@ -207,7 +263,9 @@ class DomainMetadataExtractor:
             else None
         )
 
-    def get_urls_and_titles(self, domains_data: list[dict]) -> list[dict]:
+    def get_urls_and_titles(
+        self, domains_data: list[dict[str, Any]]
+    ) -> list[dict[str, str]]:
         """Extract title and url of each domain"""
         result = []
         for domain_data in domains_data:
@@ -229,14 +287,14 @@ class DomainMetadataExtractor:
 
         return result
 
-    def _get_second_level_domain(self, domain_data: dict) -> str:
+    def _get_second_level_domain(self, domain_data: dict[str, Any]) -> str:
         """Extract the second level domain for a given domain"""
         domain = domain_data["domain"]
         top_level_domain = domain_data["suffix"]
         second_level_domain = str(domain.replace("." + top_level_domain, ""))
         return second_level_domain
 
-    def get_second_level_domains(self, domains_data: list[dict]) -> list[str]:
+    def get_second_level_domains(self, domains_data: list[dict[str, Any]]) -> list[str]:
         """Extract the second level domain for each domain in the list"""
         return [
             self._get_second_level_domain(domain_data) for domain_data in domains_data
