@@ -76,15 +76,16 @@ def _construct_top_picks(
 ) -> str:
     result = []
     for index, domain in enumerate(domain_data):
-        result.append(
-            {
-                "rank": domain["rank"],
-                "domain": second_level_domains[index],
-                "categories": domain["categories"],
-                **urls_and_titles[index],
-                "icon": favicons[index],
-            }
-        )
+        if urls_and_titles[index]["url"]:
+            result.append(
+                {
+                    "rank": domain["rank"],
+                    "domain": second_level_domains[index],
+                    "categories": domain["categories"],
+                    **urls_and_titles[index],
+                    "icon": favicons[index],
+                }
+            )
     top_picks = {"domains": result}
     return json.dumps(top_picks, indent=4)
 

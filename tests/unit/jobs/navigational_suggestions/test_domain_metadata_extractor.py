@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for domain_metadata_extractor.py module."""
-from typing import Any
+from typing import Any, Optional
 
 import pytest
 from pytest_mock import MockerFixture
@@ -23,7 +23,9 @@ FaviconScenario = tuple[
     list[dict[str, Any]],
     list[str],
 ]
-TitleScenario = tuple[str | None, list[dict[str, Any]], list[dict[str, str]]]
+TitleScenario = tuple[
+    tuple[Optional[str], Optional[str]], list[dict[str, Any]], list[dict[str, str]]
+]
 
 FAVICON_SCENARIOS: list[FaviconScenario] = [
     (
@@ -375,7 +377,7 @@ def test_get_favicons(
 
 TITLE_SCENARIOS: list[TitleScenario] = [
     (
-        "Google",
+        ("https://google.com", "Google"),
         [
             {
                 "rank": 1,
@@ -389,7 +391,7 @@ TITLE_SCENARIOS: list[TitleScenario] = [
         [{"url": "https://google.com", "title": "Google"}],
     ),
     (
-        None,
+        ("https://www.investing.com", None),
         [
             {
                 "rank": 291,
@@ -402,30 +404,44 @@ TITLE_SCENARIOS: list[TitleScenario] = [
         ],
         [{"url": "https://www.investing.com", "title": "Investing"}],
     ),
+    (
+        ("https://www.minecraft.net/en-us", "Minecraft"),
+        [
+            {
+                "rank": 642,
+                "domain": "minecraft.net",
+                "host": "www.minecraft.net",
+                "origin": "https://www.minecraft.net",
+                "suffix": "net",
+                "categories": ["Gaming", "Hobbies & Interests"],
+            },
+        ],
+        [{"url": "https://www.minecraft.net", "title": "Minecraft"}],
+    ),
 ]
 
 
 @pytest.mark.parametrize(
-    ["title", "domains_data", "expected_urls_and_titles"],
+    ["url_and_title", "domains_data", "expected_urls_and_titles"],
     TITLE_SCENARIOS,
-    ids=["title_from_document", "title_not_from_document"],
+    ids=["title_from_document", "title_not_from_document", "redirected_base_url"],
 )
 def test_get_urls_and_titles(
     mocker: MockerFixture,
-    title: str,
+    url_and_title: tuple[str, str],
     domains_data: list[dict[str, Any]],
-    expected_urls_and_titles: list[dict[str, str]],
+    expected_urls_and_titles: list[dict[str, Optional[str]]],
 ):
     """Test that DomainMetadataExtractor returns titles as expected"""
     scraper_mock: Any = mocker.Mock(spec=Scraper)
-    scraper_mock.scrape_title.return_value = title
+    scraper_mock.scrape_url_and_title.return_value = url_and_title
     metadata_extractor: DomainMetadataExtractor = DomainMetadataExtractor(
         scraper=scraper_mock
     )
 
-    urls_and_titles: list[dict[str, str]] = metadata_extractor.get_urls_and_titles(
-        domains_data
-    )
+    urls_and_titles: list[
+        dict[str, Optional[str]]
+    ] = metadata_extractor.get_urls_and_titles(domains_data)
 
     assert urls_and_titles == expected_urls_and_titles
 

@@ -2,7 +2,7 @@
 import logging
 from io import BytesIO
 from typing import Any, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from PIL import Image
@@ -40,7 +40,9 @@ class Scraper:
     browser: RoboBrowser
 
     def __init__(self) -> None:
-        self.browser = RoboBrowser(user_agent=FIREFOX_UA, parser="html.parser")
+        self.browser = RoboBrowser(
+            user_agent=FIREFOX_UA, parser="html.parser", allow_redirects=True
+        )
 
     def scrape_favicon_data(self, url: str) -> FaviconData:
         """Scrape the favicon data from the given url.
@@ -73,16 +75,20 @@ class Scraper:
         )
         return default_favicon_url if response.status_code == 200 else None
 
-    def scrape_title(self, url: str) -> str:
-        """Scrape the title from the header of the given url.
+    def scrape_url_and_title(self, url: str) -> tuple[str, str]:
+        """Scrape the title from the header of the given url and return it along with the
+        final redirected url.
 
         Args:
             url: URL to open and scrape
         Returns:
-            str: Title from header of the given URL
+            tuple[str,str]: The final url and the title extracted from header of the given url
         """
         self.browser.open(url, timeout=TIMEOUT)
-        return str(self.browser.find("head").find("title").string)
+        return (
+            str(self.browser.url),
+            str(self.browser.find("head").find("title").string),
+        )
 
 
 class DomainMetadataExtractor:
@@ -245,45 +251,49 @@ class DomainMetadataExtractor:
             result.append(best_favicon)
         return result
 
-    def _extract_title(self, url: str) -> Optional[str]:
-        """Extract title for a url"""
+    def _extract_url_and_title(self, url: str) -> tuple[Optional[str], Optional[str]]:
+        """Extract title and the final redirected base url for a given url"""
         logger.info(f"Extracting title for {url}")
         title = None
+        final_redirected_base_url = None
         try:
-            title = self.scraper.scrape_title(url)
+            final_redirected_url, title = self.scraper.scrape_url_and_title(url)
+            parsed_url = urlparse(final_redirected_url)
+            final_redirected_base_url = f"{parsed_url.scheme}://{parsed_url.hostname}"
             title = " ".join(title.split())
         except Exception as e:
             logger.info(f"Exception: {e} while extracting title from document")
             pass
 
-        return (
+        title = (
             title
             if title
             and not [t for t in self.INVALID_TITLES if t.casefold() in title.casefold()]
             else None
         )
+        return (final_redirected_base_url, title)
 
     def get_urls_and_titles(
         self, domains_data: list[dict[str, Any]]
-    ) -> list[dict[str, str]]:
-        """Extract title and url of each domain"""
+    ) -> list[dict[str, Optional[str]]]:
+        """Extract title and final redirected base url of each domain"""
         result = []
         for domain_data in domains_data:
             domain = domain_data["domain"]
             url = f"https://{domain}"
-            title = self._extract_title(url)
+            final_redirected_base_url, title = self._extract_url_and_title(url)
             if title is None and "www." not in domain:
                 # Retry with www. in the domain as some domains require it explicitly.
                 url = f"https://www.{domain}"
-                title = self._extract_title(url)
+                final_redirected_base_url, title = self._extract_url_and_title(url)
 
             # if no valid title is present then fallback to use the second level domain as title
             if title is None:
                 title = self._get_second_level_domain(domain_data)
                 title = title.capitalize()
 
-            logger.info(f"url {url} and title {title}")
-            result.append({"url": url, "title": title})
+            logger.info(f"url {final_redirected_base_url} and title {title}")
+            result.append({"url": final_redirected_base_url, "title": title})
 
         return result
 
