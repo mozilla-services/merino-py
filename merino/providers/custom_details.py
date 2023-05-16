@@ -7,6 +7,7 @@ class AmoDetails(BaseModel):
 
     rating: str
     number_of_ratings: int
+    guid: str
 
 
 class CustomDetails(BaseModel, arbitrary_types_allowed=False):

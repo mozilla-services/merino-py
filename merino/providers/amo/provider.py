@@ -108,7 +108,9 @@ class Provider(BaseProvider):
                 icon=addon.icon,
                 custom_details=CustomDetails(
                     amo=AmoDetails(
-                        rating=addon.rating, number_of_ratings=addon.number_of_ratings
+                        rating=addon.rating,
+                        number_of_ratings=addon.number_of_ratings,
+                        guid=addon.guid,
                     )
                 ),
             )

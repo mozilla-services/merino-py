@@ -145,6 +145,7 @@ async def test_query_return_match(
                 amo=AmoDetails(
                     rating=expected_icon_rating["rating"],
                     number_of_ratings=expected_icon_rating["number_of_ratings"],
+                    guid=expected_info["guid"],
                 )
             ),
         )
