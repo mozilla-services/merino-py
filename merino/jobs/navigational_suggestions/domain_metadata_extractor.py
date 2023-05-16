@@ -109,12 +109,15 @@ class DomainMetadataExtractor:
     ]
 
     scraper: Scraper
+    favicon_downloader: FaviconDownloader
 
-    def __init__(self, scraper=None, favicon_downloader=None) -> None:
-        self.scraper = scraper if scraper else Scraper()
-        self.favicon_downloader = (
-            favicon_downloader if favicon_downloader else FaviconDownloader()
-        )
+    def __init__(
+        self,
+        scraper: Scraper = Scraper(),
+        favicon_downloader: FaviconDownloader = FaviconDownloader(),
+    ) -> None:
+        self.scraper = scraper
+        self.favicon_downloader = favicon_downloader
 
     def _fix_url(self, url: str) -> str:
         """Return a url with https scheme if the scheme is originally missing from it"""

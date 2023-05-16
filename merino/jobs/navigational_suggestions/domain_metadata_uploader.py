@@ -21,6 +21,7 @@ class DomainMetadataUploader:
     bucket_name: str
     storage_client: Client
     cdn_hostname: str
+    favicon_downloader: FaviconDownloader
 
     def __init__(
         self,
@@ -28,15 +29,13 @@ class DomainMetadataUploader:
         destination_bucket_name: str,
         destination_cdn_hostname: str,
         force_upload: bool,
-        favicon_downloader: FaviconDownloader = None,
+        favicon_downloader: FaviconDownloader = FaviconDownloader(),
     ) -> None:
         self.storage_client = Client(destination_gcp_project)
         self.bucket_name = destination_bucket_name
         self.cdn_hostname = destination_cdn_hostname
         self.force_upload = force_upload
-        self.favicon_downloader = (
-            favicon_downloader if favicon_downloader else FaviconDownloader()
-        )
+        self.favicon_downloader = favicon_downloader
 
     def upload_top_picks(self, top_picks: str) -> Blob:
         """Upload the top pick contents to gcs."""
