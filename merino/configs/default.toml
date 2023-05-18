@@ -191,3 +191,15 @@ destination_cdn_hostname = ""
 force_upload = false
 # Minimum width of the domain favicon required for it to be a part of domain metadata
 min_favicon_width = 52
+
+[default.jobs.amo_rs_uploader]
+# Remote settings authorization token
+auth = ""
+# Remote settings collection ID
+cid = "quicksuggest"
+# Log the records that would be uploaded but don't upload them
+dry_run = false
+# Remote settings server
+server = "https://remote-settings.mozilla.org/v1"
+# Remote settings workspace
+workspace = "main-workspace"
