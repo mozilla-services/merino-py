@@ -84,10 +84,7 @@ async def _upload(
         suggestion: dict[str, Any] = ADDON_DATA[addon] | dynamic_data
 
         # Add keywords.
-        keywords: list[str] = []
-        for kw in ADDON_KEYWORDS[addon]:
-            keywords.append(kw.lower())
-        suggestion["keywords"] = keywords
+        suggestion["keywords"] = [kw.lower() for kw in ADDON_KEYWORDS[addon]]
 
         # Compute the record ID. We can't use addon guids directly because they
         # can contain characters that are invalid in record IDs, so use the hex
