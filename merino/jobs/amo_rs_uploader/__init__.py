@@ -1,49 +1,69 @@
 """CLI commands for the amo_rs_uploader module"""
 import asyncio
-import hashlib
 import logging
 from typing import Any
 
 import typer
 
 from merino.config import settings as config
-from merino.jobs.amo_rs_uploader.remote_settings import RemoteSettings
+from merino.jobs.amo_rs_uploader.chunked_rs_uploader import (
+    ChunkedRemoteSettingsUploader,
+)
 from merino.providers.amo.addons_data import ADDON_DATA, ADDON_KEYWORDS
 from merino.providers.amo.backends.dynamic import DynamicAmoBackend
 
 logger = logging.getLogger(__name__)
 
 job_settings = config.jobs.amo_rs_uploader
+rs_settings = config.remote_settings
 
 # Options
 auth_option = typer.Option(
-    job_settings.auth,
+    rs_settings.auth,
     "--auth",
     help="Remote settings authorization token",
 )
 
-cid_option = typer.Option(
-    job_settings.cid,
-    "--cid",
+bucket_option = typer.Option(
+    rs_settings.bucket,
+    "--bucket",
+    help="Remote settings bucket",
+)
+
+chunk_size_option = typer.Option(
+    rs_settings.chunk_size,
+    "--chunk-size",
+    help="The number of suggestions to store in each attachment",
+)
+
+collection_option = typer.Option(
+    rs_settings.collection,
+    "--collection",
     help="Remote settings collection ID",
 )
 
+delete_existing_records_option = typer.Option(
+    rs_settings.delete_existing_records,
+    "--delete-existing-records",
+    help="Delete existing records before uploading new records",
+)
+
 dry_run_option = typer.Option(
-    job_settings.dry_run,
+    rs_settings.dry_run,
     "--dry-run",
     help="Log the records that would be uploaded but don't upload them",
 )
 
 server_option = typer.Option(
-    job_settings.server,
+    rs_settings.server,
     "--server",
     help="Remote settings server",
 )
 
-workspace_option = typer.Option(
-    job_settings.workspace,
-    "--workspace",
-    help="Remote settings workspace",
+record_type_option = typer.Option(
+    job_settings.record_type,
+    "--record-type",
+    help="The `type` of each remote settings record",
 )
 
 amo_rs_uploader_cmd = typer.Typer(
@@ -55,63 +75,65 @@ amo_rs_uploader_cmd = typer.Typer(
 @amo_rs_uploader_cmd.command()
 def upload(
     auth: str = auth_option,
+    bucket: str = bucket_option,
+    chunk_size: int = chunk_size_option,
+    collection: str = collection_option,
+    delete_existing_records: bool = delete_existing_records_option,
     dry_run: bool = dry_run_option,
-    cid: str = cid_option,
+    record_type: str = record_type_option,
     server: str = server_option,
-    workspace: str = workspace_option,
 ):
-    """Upload AMO suggestions to remote settings"""
-    asyncio.run(_upload(auth, dry_run, cid, server, workspace))
+    """Upload AMO suggestions to remote settings."""
+    asyncio.run(
+        _upload(
+            auth=auth,
+            bucket=bucket,
+            chunk_size=chunk_size,
+            collection=collection,
+            delete_existing_records=delete_existing_records,
+            dry_run=dry_run,
+            record_type=record_type,
+            server=server,
+        )
+    )
 
 
 async def _upload(
     auth: str,
+    bucket: str,
+    chunk_size: int,
+    collection: str,
+    delete_existing_records: bool,
     dry_run: bool,
-    cid: str,
+    record_type: str,
     server: str,
-    workspace: str,
 ):
-    # Fetch the dynamic addons data from AMO.
     logger.info("Fetching addons data from AMO")
     backend = DynamicAmoBackend(config.amo.dynamic.api_url)
     await backend.initialize_addons()
 
-    # Create suggestion record data for each addon.
-    logger.info("Creating data for remote settings")
-    records = []
-    for addon, dynamic_data in backend.dynamic_data.items():
-        # Merge static and dynamic addon data.
-        suggestion: dict[str, Any] = ADDON_DATA[addon] | dynamic_data
-
-        # Add keywords.
-        suggestion["keywords"] = [kw.lower() for kw in ADDON_KEYWORDS[addon]]
-
-        # Compute the record ID. We can't use addon guids directly because they
-        # can contain characters that are invalid in record IDs, so use the hex
-        # digest instead.
-        m = hashlib.md5(usedforsecurity=False)
-        m.update(suggestion["guid"].encode("utf-8"))
-        hex_id = m.hexdigest()
-        record_id = f"amo_suggestion_{hex_id}"
-
-        records.append(
-            {
-                "id": record_id,
-                "type": "amo_suggestion",
-                "amo_suggestion": suggestion,
-            }
-        )
-
-    if dry_run:
-        logger.info(records)
-        return
-
-    # Upload the records.
-    logger.info(f"Uploading to {server}")
-    rs = RemoteSettings(
+    with ChunkedRemoteSettingsUploader(
         auth=auth,
-        cid=cid,
+        bucket=bucket,
+        chunk_size=chunk_size,
+        collection=collection,
+        dry_run=dry_run,
+        record_type=record_type,
         server=server,
-        workspace=workspace,
-    )
-    await rs.upload_records(records)
+    ) as uploader:
+        if delete_existing_records:
+            uploader.delete_records()
+
+        for addon, dynamic_data in backend.dynamic_data.items():
+            # Merge static and dynamic addon data.
+            suggestion: dict[str, Any] = ADDON_DATA[addon] | dynamic_data
+
+            # Use "title" instead of "name" to be consistent with Merino's
+            # `AddonSuggestion` schema.
+            suggestion["title"] = suggestion["name"]
+            del suggestion["name"]
+
+            # Add keywords.
+            suggestion["keywords"] = [kw.lower() for kw in ADDON_KEYWORDS[addon]]
+
+            uploader.add_suggestion(suggestion)

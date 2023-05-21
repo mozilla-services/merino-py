@@ -64,6 +64,15 @@ client_ip_override = ""
 server = "https://firefox.settings.services.mozilla.com"
 bucket = "main"
 collection = "quicksuggest"
+# Authorization token when uploading suggestions
+auth = ""
+# The maximum number of suggestions to store in each attachment when uploading
+# suggestions
+chunk_size = 200
+# Delete existing records before uploading new records
+delete_existing_records = true
+# Log changes but don't actually make them when uploading suggestions
+dry_run = false
 
 [default.sentry]
 # Any of "release", "debug", or "disabled".
@@ -193,13 +202,5 @@ force_upload = false
 min_favicon_width = 52
 
 [default.jobs.amo_rs_uploader]
-# Remote settings authorization token
-auth = ""
-# Remote settings collection ID
-cid = "quicksuggest"
-# Log the records that would be uploaded but don't upload them
-dry_run = false
-# Remote settings server
-server = "https://remote-settings.mozilla.org/v1"
-# Remote settings workspace
-workspace = "main-workspace"
+# The "type" of each remote settings record
+record_type = "amo-suggestions"
