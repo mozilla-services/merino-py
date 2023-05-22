@@ -24,7 +24,9 @@ FaviconScenario = tuple[
     list[str],
 ]
 TitleScenario = tuple[
-    tuple[Optional[str], Optional[str]], list[dict[str, Any]], list[dict[str, str]]
+    tuple[Optional[str], Optional[str]],
+    list[dict[str, Any]],
+    list[dict[str, Optional[str]]],
 ]
 
 FAVICON_SCENARIOS: list[FaviconScenario] = [
@@ -418,13 +420,47 @@ TITLE_SCENARIOS: list[TitleScenario] = [
         ],
         [{"url": "https://www.minecraft.net", "title": "Minecraft"}],
     ),
+    (
+        ("https://aws.amazon.com", "Amazon AWS"),
+        [
+            {
+                "rank": 4,
+                "domain": "amazonaws.com",
+                "host": "lsrelay-config-production.s3.amazonaws.com",
+                "origin": "http://lsrelay-config-production.s3.amazonaws.com",
+                "suffix": "com",
+                "categories": ["Technology"],
+            },
+        ],
+        [{"url": None, "title": None}],
+    ),
+    (
+        (None, None),
+        [
+            {
+                "rank": 41,
+                "domain": "unreachable.com",
+                "host": "www.unreachable.com",
+                "origin": "http://www.unreachable.com",
+                "suffix": "com",
+                "categories": ["Technology"],
+            },
+        ],
+        [{"url": None, "title": None}],
+    ),
 ]
 
 
 @pytest.mark.parametrize(
     ["url_and_title", "domains_data", "expected_urls_and_titles"],
     TITLE_SCENARIOS,
-    ids=["title_from_document", "title_not_from_document", "redirected_base_url"],
+    ids=[
+        "title_from_document",
+        "title_not_from_document",
+        "url_containing_domain_accepted",
+        "url_not_containing_domain_skipped",
+        "unreachable_url_skipped",
+    ],
 )
 def test_get_urls_and_titles(
     mocker: MockerFixture,

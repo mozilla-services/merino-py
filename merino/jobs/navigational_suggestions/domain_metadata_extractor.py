@@ -287,10 +287,15 @@ class DomainMetadataExtractor:
                 url = f"https://www.{domain}"
                 final_redirected_base_url, title = self._extract_url_and_title(url)
 
-            # if no valid title is present then fallback to use the second level domain as title
-            if title is None:
-                title = self._get_second_level_domain(domain_data)
-                title = title.capitalize()
+            # final redirected base url should contain domain as a substring
+            if final_redirected_base_url and domain in final_redirected_base_url:
+                # if no valid title is present then fallback to use second level domain as title
+                if title is None:
+                    title = self._get_second_level_domain(domain_data)
+                    title = title.capitalize()
+            else:
+                final_redirected_base_url = None
+                title = None
 
             logger.info(f"url {final_redirected_base_url} and title {title}")
             result.append({"url": final_redirected_base_url, "title": title})
