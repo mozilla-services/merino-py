@@ -64,6 +64,15 @@ client_ip_override = ""
 server = "https://firefox.settings.services.mozilla.com"
 bucket = "main"
 collection = "quicksuggest"
+# Authorization token when uploading suggestions
+auth = ""
+# The maximum number of suggestions to store in each attachment when uploading
+# suggestions
+chunk_size = 200
+# Delete existing records before uploading new records
+delete_existing_records = true
+# Log changes but don't actually make them when uploading suggestions
+dry_run = false
 
 [default.sentry]
 # Any of "release", "debug", or "disabled".
@@ -191,3 +200,7 @@ destination_cdn_hostname = ""
 force_upload = false
 # Minimum width of the domain favicon required for it to be a part of domain metadata
 min_favicon_width = 52
+
+[default.jobs.amo_rs_uploader]
+# The "type" of each remote settings record
+record_type = "amo-suggestions"

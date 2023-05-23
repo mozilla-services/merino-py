@@ -154,3 +154,6 @@ workspace/
 # VS Code configuration files
 .vscode/*
 !.vscode/launch.json
+
+# Emacs autosave files
+*~
