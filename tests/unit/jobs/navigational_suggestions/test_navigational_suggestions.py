@@ -29,17 +29,28 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
             "origin": "https://www.dummy_domain.com",
             "suffix": "com",
             "categories": ["Search Engines"],
-        }
+        },
+        {
+            "rank": 2,
+            "domain": "dummy_unreachable_domain.com",
+            "host": "www.dummy_unreachable_domain.com",
+            "origin": "https://www.dummy_unreachable_domain.com",
+            "suffix": "com",
+            "categories": ["Search Engines"],
+        },
     ]
 
     mock_domain_metadata_extractor.get_urls_and_titles.return_value = [
-        {"url": "dummy_url", "title": "dummy_title"}
+        {"url": "dummy_url", "title": "dummy_title"},
+        {"url": None, "title": None},
     ]
     mock_domain_metadata_extractor.get_second_level_domains.return_value = [
-        "second_level_domain"
+        "dummy_domain",
+        "dummy_unreachable_domain",
     ]
     mock_domain_metadata_uploader.upload_favicons.return_value = [
-        "dummy_uploaded_favicon_url"
+        "dummy_uploaded_favicon_url",
+        "",
     ]
 
     prepare_domain_metadata(
@@ -50,7 +61,7 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
         "domains": [
             {
                 "rank": 1,
-                "domain": "second_level_domain",
+                "domain": "dummy_domain",
                 "categories": ["Search Engines"],
                 "url": "dummy_url",
                 "title": "dummy_title",
