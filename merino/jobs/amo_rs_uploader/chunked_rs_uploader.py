@@ -29,38 +29,44 @@ class _Chunk:
 
 class ChunkedRemoteSettingsUploader:
     """A class that uploads suggestions to remote settings. Suggestions are
-    uploaded in chunks. Chunking is handled automatically and all the caller
-    needs to do is specify a chunk size and call `add_suggestion()` until all
-    suggestions have been added:
+    uploaded and stored in chunks. Chunking is handled automatically, and the
+    caller only needs to specify a chunk size and call `add_suggestion()` until
+    all suggestions have been added:
 
         with ChunkedRemoteSettingsUploader(
             chunk_size=200,
             record_type="my-record-type",
-            **my_other_kwargs
+            auth="my-auth",
+            bucket="my-bucket",
+            collection="my-collection",
+            server="http://example.com/"
         ) as uploader:
             for s in my_suggestions:
                 uploader.add_suggestion(s)
 
     This class can be used with any type of suggestion regardless of schema. The
-    values passed to `add_suggestion()` are simply dictionaries and can contain
+    values passed to `add_suggestion()` are simply dictionaries that can contain
     anything.
 
-    For each chunk, a record with an attachment is created. The record
-    represents the chunk and the attachment contains the chunk's suggestions.
-    All chunks will contain the number of suggestions specified by `chunk_size`
-    except possibly the final chunk, which may contain fewer suggestions.
+    For each chunk, the uploader will create a record with an attachment. The
+    record represents the chunk and the attachment contains the chunk's
+    suggestions as JSON. All chunks will contain the number of suggestions
+    specified by the uploader's `chunk_size` except possibly the final chunk,
+    which may contain fewer suggestions.
 
-    Each record's "id" and "type" will look like this:
+    Each record's "id" will encode the uploader's `record_type` and the range of
+    suggestions contained in the record's chunk, and its "type" will be the
+    uploader's `record_type`, like this:
 
         {
-            "id": "{record_type}-{chunk_start_index}-{chunk_size}",
-            "type": record_type,
+            "id": f"{uploader.record_type}-{chunk.start_index}-{chunk.start_index + chunk.size}",
+            "type": uploader.record_type
         }
 
-    For example, if `record_type` is "my-record-type" and the chunk's start
-    index is 0 and its size is 200:
+    For example, if the uploader's `record_type` is "my-record-type", then the
+    record for a chunk with start index 400 and size 200 will look like this:
 
-        { "id": "my-record-type-0-200", type: "my-record-type" }
+        { "id": "my-record-type-400-600", "type": "my-record-type" }
 
     The record's attachment will be the list of suggestions in the chunk as JSON
     (MIME type "application/json").
@@ -74,7 +80,7 @@ class ChunkedRemoteSettingsUploader:
     chunk_size: int
     current_chunk: _Chunk
     dry_run: bool
-    kinto: kinto_http.AsyncClient
+    kinto: kinto_http.Client
     record_type: str
 
     def __init__(
