@@ -24,7 +24,6 @@ class FaviconData(BaseModel):
 
     links: list[dict[str, Any]]
     metas: list[dict[str, Any]]
-    url: str
 
 
 class Scraper:
@@ -44,15 +43,27 @@ class Scraper:
             user_agent=FIREFOX_UA, parser="html.parser", allow_redirects=True
         )
 
-    def scrape_favicon_data(self, url: str) -> FaviconData:
-        """Scrape the favicon data from the given url.
+    def open(self, url: str) -> Optional[str]:
+        """Open the given url for scraping.
 
         Args:
-            url: URL to open and scrape
+            url: URL to open
         Returns:
-            str: Favicon data from the given URL
+            Optional[str]: Full URL that was opened
         """
-        self.browser.open(url, timeout=TIMEOUT)
+        try:
+            self.browser.open(url, timeout=TIMEOUT)
+            return str(self.browser.url)
+        except Exception as e:
+            logger.info(f"Exception: {e} while opening url {url}")
+            return None
+
+    def scrape_favicon_data(self) -> FaviconData:
+        """Scrape the favicon data for an already opened URL.
+
+        Returns:
+            FaviconData: Favicon data for a URL
+        """
         return FaviconData(
             links=[link.attrs for link in self.browser.select(self.LINK_SELECTOR)],
             metas=[meta.attrs for meta in self.browser.select(self.META_SELECTOR)],
@@ -68,27 +79,28 @@ class Scraper:
             Optional[str]: Default favicon url if it exists
         """
         default_favicon_url = urljoin(url, "favicon.ico")
-        response = requests.get(
-            default_favicon_url,
-            headers={"User-agent": FIREFOX_UA},
-            timeout=TIMEOUT,
-        )
-        return default_favicon_url if response.status_code == 200 else None
+        try:
+            response = requests.get(
+                default_favicon_url,
+                headers={"User-agent": FIREFOX_UA},
+                timeout=TIMEOUT,
+            )
+            return response.url if response.status_code == 200 else None
+        except Exception as e:
+            logger.info(f"Exception: {e} while getting default favicon for url {url}")
+            return None
 
-    def scrape_url_and_title(self, url: str) -> tuple[str, str]:
-        """Scrape the title from the header of the given url and return it along with the
-        final redirected url.
+    def scrape_title(self) -> Optional[str]:
+        """Scrape the title from the header of an already opened url.
 
-        Args:
-            url: URL to open and scrape
         Returns:
-            tuple[str,str]: The final url and the title extracted from header of the given url
+            Optional[str]: The title extracted from header of a url
         """
-        self.browser.open(url, timeout=TIMEOUT)
-        return (
-            str(self.browser.url),
-            str(self.browser.find("head").find("title").string),
-        )
+        try:
+            return str(self.browser.find("head").find("title").string)
+        except Exception as e:
+            logger.info(f"Exception: {e} while scraping title")
+            return None
 
 
 class DomainMetadataExtractor:
@@ -125,6 +137,11 @@ class DomainMetadataExtractor:
         self.scraper = scraper
         self.favicon_downloader = favicon_downloader
 
+    def _get_base_url(self, url: str) -> str:
+        """Return base url from a given full url"""
+        parsed_url = urlparse(url)
+        return f"{parsed_url.scheme}://{parsed_url.hostname}"
+
     def _fix_url(self, url: str) -> str:
         """Return a url with https scheme if the scheme is originally missing from it"""
         if not url.startswith("http"):
@@ -137,12 +154,12 @@ class DomainMetadataExtractor:
             width, height = img.size
             return int(min(width, height))
 
-    def _extract_favicons(self, url: str) -> list[dict[str, Any]]:
-        """Extract all favicons for a given url"""
-        logger.info(f"Extracting favicons for {url}")
-        favicons = []
+    def _extract_favicons(self, scraped_url: str) -> list[dict[str, Any]]:
+        """Extract all favicons for an already opened url"""
+        logger.info(f"Extracting all favicons for {scraped_url}")
+        favicons: list[dict[str, Any]] = []
         try:
-            favicon_data: FaviconData = self.scraper.scrape_favicon_data(url)
+            favicon_data: FaviconData = self.scraper.scrape_favicon_data()
 
             for favicon in favicon_data.links:
                 favicon_url = favicon["href"]
@@ -151,7 +168,7 @@ class DomainMetadataExtractor:
                 if not favicon_url.startswith("http") and not favicon_url.startswith(
                     "//"
                 ):
-                    favicon["href"] = urljoin(favicon_data.url, favicon_url)
+                    favicon["href"] = urljoin(scraped_url, favicon_url)
                 favicons.append(favicon)
 
             for favicon in favicon_data.metas:
@@ -161,19 +178,21 @@ class DomainMetadataExtractor:
                 if not favicon_url.startswith("http") and not favicon_url.startswith(
                     "//"
                 ):
-                    favicon["href"] = urljoin(favicon_data.url, favicon_url)
+                    favicon["href"] = urljoin(scraped_url, favicon_url)
                 else:
                     favicon["href"] = favicon_url
                 favicons.append(favicon)
 
-            # Some domains have a default "favicon.ico" in their root without explicitly
-            # specifying them via rel attribute of link tag.
-            default_favicon_url = self.scraper.get_default_favicon(url)
-            if default_favicon_url is not None:
-                favicons.append({"href": default_favicon_url})
+            # If we couldn't scrape any favicon data from link/meta tags for a domain then look
+            # for a default "favicon.ico" in domain root as some domains don't explicitly
+            # specify favicons via link/meta tags.
+            if len(favicons) == 0:
+                default_favicon_url = self.scraper.get_default_favicon(scraped_url)
+                if default_favicon_url is not None:
+                    favicons.append({"href": default_favicon_url})
 
         except Exception as e:
-            logger.info(f"Exception {e} while extracting favicons for {url}")
+            logger.info(f"Exception {e} while extracting favicons for {scraped_url}")
             pass
 
         return favicons
@@ -235,90 +254,79 @@ class DomainMetadataExtractor:
 
         return best_favicon_url if best_favicon_width >= min_width else ""
 
-    def get_favicons(
-        self, domains_data: list[dict[str, Any]], min_width: int
-    ) -> list[str]:
-        """Extract favicons for each domain and return the one that satisfies the minimum width
-        criteria for each domain. If multiple favicons satisfy the criteria then return the one
+    def _get_favicon(self, scraped_url: str, min_width: int) -> str:
+        """Extract all favicons for an already opened URL and return the one that satisfies the
+        minimum width criteria. If multiple favicons satisfy the criteria then return the one
         with the highest resolution.
         """
-        result = []
-        for domain_data in domains_data:
-            domain = domain_data["domain"]
-            url = f"https://{domain}"
-            favicons = self._extract_favicons(url)
-            if len(favicons) == 0 and "www." not in domain:
-                # Retry with www. in the domain as some domains require it explicitly.
-                url = f"https://www.{domain}"
-                favicons = self._extract_favicons(url)
-
-            logger.info(
-                f"{len(favicons)} favicons extracted for {url}. Favicons are: {favicons}"
-            )
-            best_favicon = self._get_best_favicon(favicons, min_width)
-            result.append(best_favicon)
-        return result
-
-    def _extract_url_and_title(self, url: str) -> tuple[Optional[str], Optional[str]]:
-        """Extract title and the final redirected base url for a given url"""
-        logger.info(f"Extracting title for {url}")
-        title = None
-        final_redirected_base_url = None
-        try:
-            final_redirected_url, title = self.scraper.scrape_url_and_title(url)
-            parsed_url = urlparse(final_redirected_url)
-            final_redirected_base_url = f"{parsed_url.scheme}://{parsed_url.hostname}"
-            title = " ".join(title.split())
-        except Exception as e:
-            logger.info(f"Exception: {e} while extracting title from document")
-            pass
-
-        title = (
-            title
-            if title
-            and not [t for t in self.INVALID_TITLES if t.casefold() in title.casefold()]
-            else None
+        favicons: list[dict[str, Any]] = self._extract_favicons(scraped_url)
+        logger.info(
+            f"{len(favicons)} favicons extracted for {scraped_url}. Favicons are: {favicons}"
         )
-        return (final_redirected_base_url, title)
+        return self._get_best_favicon(favicons, min_width)
 
-    def get_urls_and_titles(
-        self, domains_data: list[dict[str, Any]]
+    def _extract_title(self) -> Optional[str]:
+        """Extract title for a url"""
+        title: Optional[str] = self.scraper.scrape_title()
+        if title:
+            title = " ".join(title.split())
+            title = (
+                title
+                if title
+                and not [
+                    t for t in self.INVALID_TITLES if t.casefold() in title.casefold()
+                ]
+                else None
+            )
+        return title
+
+    def _get_title(self, fallback_title: str) -> str:
+        """Extract title for a url. If not present then return the fallback title"""
+        title: Optional[str] = self._extract_title()
+        if title is None:
+            # if no valid title is present then return the fallback title
+            title = fallback_title.capitalize()
+
+        return str(title)
+
+    def _get_second_level_domain(self, domain: str, top_level_domain: str) -> str:
+        """Extract the second level domain from domain name and suffix"""
+        return str(domain.replace("." + top_level_domain, ""))
+
+    def get_domain_metadata(
+        self, domains_data: list[dict[str, Any]], favicon_min_width: int
     ) -> list[dict[str, Optional[str]]]:
-        """Extract title and final redirected base url of each domain"""
-        result = []
+        """Extract domain metadata for each domain"""
+        result: list[dict[str, Optional[str]]] = []
         for domain_data in domains_data:
-            domain = domain_data["domain"]
-            url = f"https://{domain}"
-            final_redirected_base_url, title = self._extract_url_and_title(url)
-            if title is None and "www." not in domain:
-                # Retry with www. in the domain as some domains require it explicitly.
+            scraped_base_url: Optional[str] = None
+            favicon: str = ""
+            title: str = ""
+            second_level_domain: str = ""
+
+            domain: str = domain_data["domain"]
+            url: str = f"https://{domain}"
+            full_url: Optional[str] = self.scraper.open(url)
+
+            if full_url is None:
+                # Retry with www. in the url as some domains require it explicitly
                 url = f"https://www.{domain}"
-                final_redirected_base_url, title = self._extract_url_and_title(url)
+                full_url = self.scraper.open(url)
 
-            # final redirected base url should contain domain as a substring
-            if final_redirected_base_url and domain in final_redirected_base_url:
-                # if no valid title is present then fallback to use second level domain as title
-                if title is None:
-                    title = self._get_second_level_domain(domain_data)
-                    title = title.capitalize()
-            else:
-                final_redirected_base_url = None
-                title = None
+            if full_url and domain in full_url:
+                scraped_base_url = self._get_base_url(full_url)
+                favicon = self._get_favicon(scraped_base_url, favicon_min_width)
+                second_level_domain = self._get_second_level_domain(
+                    domain, domain_data["suffix"]
+                )
+                title = self._get_title(second_level_domain)
 
-            logger.info(f"url {final_redirected_base_url} and title {title}")
-            result.append({"url": final_redirected_base_url, "title": title})
-
+            result.append(
+                {
+                    "url": scraped_base_url,
+                    "title": title,
+                    "icon": favicon,
+                    "domain": second_level_domain,
+                }
+            )
         return result
-
-    def _get_second_level_domain(self, domain_data: dict[str, Any]) -> str:
-        """Extract the second level domain for a given domain"""
-        domain = domain_data["domain"]
-        top_level_domain = domain_data["suffix"]
-        second_level_domain = str(domain.replace("." + top_level_domain, ""))
-        return second_level_domain
-
-    def get_second_level_domains(self, domains_data: list[dict[str, Any]]) -> list[str]:
-        """Extract the second level domain for each domain in the list"""
-        return [
-            self._get_second_level_domain(domain_data) for domain_data in domains_data
-        ]
