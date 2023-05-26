@@ -33,5 +33,5 @@ class AmoBackend(Protocol):
         Raise a `BackendError` if the addon key is missing.
         """
 
-    async def initialize_addons(self) -> None:
+    async def fetch_and_cache_addons_info(self) -> None:
         """Initialize addons to be stored."""

@@ -25,8 +25,8 @@ class AmoErrorBackend:
         """
         raise AmoBackendError("Error!!!")
 
-    async def initialize_addons(self) -> None:
-        """Initialize addons to be stored."""
+    async def fetch_and_cache_addons_info(self) -> None:
+        """Fetch addons to be stored."""
         pass
 
 
@@ -39,7 +39,7 @@ class AmoInitErrorBackend:
         """
         raise AmoBackendError("Addon key missing!")
 
-    async def initialize_addons(self) -> None:
+    async def fetch_and_cache_addons_info(self) -> None:
         """Initialize addons to be stored."""
         raise AmoBackendError("Error!!!")
 
@@ -175,10 +175,10 @@ async def test_query_error(
 
 
 @pytest.mark.asyncio
-async def test_initialize_addons_error(
+async def test_fetch_addon_info_error(
     caplog: LogCaptureFixture, keywords: dict[SupportedAddon, set[str]]
 ):
-    """Test that provider can handle initialization errors."""
+    """Test that provider can handle fetch errors."""
     provider = AddonsProvider(
         backend=AmoInitErrorBackend(),
         keywords=keywords,
@@ -186,7 +186,7 @@ async def test_initialize_addons_error(
         score=0.3,
         min_chars=4,
     )
-    await provider.initialize()
+    await provider._fetch_addon_info()
 
     assert len(caplog.messages) == 1
-    assert caplog.messages[0].startswith("Failed to initialize addon backend:")
+    assert caplog.messages[0].startswith("Failed to fetch addon information:")

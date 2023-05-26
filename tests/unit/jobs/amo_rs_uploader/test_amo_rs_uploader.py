@@ -84,7 +84,7 @@ def do_upload_test(mocker, delete_existing_records: bool) -> None:
     # Mock `DynamicAmoBackend`.
     mock_backend_ctor = mocker.patch("merino.jobs.amo_rs_uploader.DynamicAmoBackend")
     mock_backend = mock_backend_ctor.return_value
-    type(mock_backend).initialize_addons = mocker.AsyncMock()
+    type(mock_backend).fetch_and_cache_addons_info = mocker.AsyncMock()
 
     # Mock the addons data.
     mock_addons_data(mocker, mock_backend)
@@ -109,7 +109,7 @@ def do_upload_test(mocker, delete_existing_records: bool) -> None:
 
     # Check calls.
     mock_backend_ctor.assert_called_once()
-    mock_backend.initialize_addons.assert_called_once()
+    mock_backend.fetch_and_cache_addons_info.assert_called_once()
 
     mock_uploader_ctor.assert_called_once_with(**uploader_kwargs)
 

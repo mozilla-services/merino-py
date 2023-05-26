@@ -279,6 +279,8 @@ These are production providers that generate suggestions.
   as a floating point number. Defaults to 0.3.
 - `min_chars` (`MERINO_PROVIDERS__AMO__MIN_CHARS`) - The minimum number of characters
   to process a querystring.
+- `resync_interval_sec` (`MERINO_PROVIDERS__AMO__RESYNC_INTERVAL_SEC`) - The re-syncing frequency 
+  for the AMO data. Defaults to daily.
 
 #### Top Picks Provider
 - Top Picks - Provides suggestions from a static domain list of the 1000 most visited websites.

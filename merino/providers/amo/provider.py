@@ -1,9 +1,11 @@
 """Addons Provider"""
+import asyncio
 import logging
 from typing import Any
 
 import pydantic
 
+from merino import cron
 from merino.config import settings
 from merino.providers.amo.addons_data import SupportedAddon
 from merino.providers.amo.backends.protocol import Addon, AmoBackend, AmoBackendError
@@ -50,6 +52,8 @@ class Provider(BaseProvider):
     addon_keywords: dict[str, SupportedAddon]
     keywords: dict[SupportedAddon, set[str]]
     min_chars: int
+    cron_task: asyncio.Task
+    resync_interval_sec: int
 
     def __init__(
         self,
@@ -59,6 +63,7 @@ class Provider(BaseProvider):
         enabled_by_default: bool = True,
         min_chars=settings.providers.amo.min_chars,
         score=settings.providers.amo.score,
+        resync_interval_sec=settings.providers.amo.resync_interval_sec,
         **kwargs: Any,
     ):
         """Initialize Addon Provider"""
@@ -68,18 +73,33 @@ class Provider(BaseProvider):
         self.min_chars = min_chars
         self.keywords = keywords
         self._enabled_by_default = enabled_by_default
+        self.resync_interval_sec = resync_interval_sec
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
-        """Initialize"""
-        try:
-            await self.backend.initialize_addons()
-        except AmoBackendError as e:
-            # Do not propagate the error as it can be recovered later by retrying.
-            logger.warning(f"Failed to initialize addon backend: {e}")
+        """Initialize by initially fetching addon info.
+        Then set up a cron to fetch it every 24 hours.
+        """
+        cron_job = cron.Job(
+            name="addon_sync",
+            interval=self.resync_interval_sec,
+            # We don't have any strict conditions for not updating AMO.
+            # So, always return True so that the fetch is run.
+            condition=lambda: True,
+            task=self._fetch_addon_info,
+        )
+        self.cron_task = asyncio.create_task(cron_job())
+
         self.addon_keywords = invert_and_expand_index_keywords(
             self.keywords, self.min_chars
         )
+
+    async def _fetch_addon_info(self) -> None:
+        try:
+            await self.backend.fetch_and_cache_addons_info()
+        except AmoBackendError as e:
+            # Do not propagate the error as it can be recovered later by retrying.
+            logger.warning(f"Failed to fetch addon information: {e}")
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Given the query string, get the Addon that matches the keyword."""

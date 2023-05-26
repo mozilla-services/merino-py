@@ -63,8 +63,8 @@ class DynamicAmoBackend:
 
         return None
 
-    async def initialize_addons(self) -> None:
-        """Initialize the dynamic AMO information via the Addons API.
+    async def fetch_and_cache_addons_info(self) -> None:
+        """Get the dynamic AMO information via the Addons API.
         Allow for partial initialization if the response object is not available
         at the moment. We do not want to block initialization or take down the
         provider for some missing information.

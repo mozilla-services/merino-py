@@ -135,6 +135,8 @@ score = 0.3
 backend = "dynamic"
 # The minimum number of characters to be considered for matching.
 min_chars = 4
+# The re-syncing frequency for the AMO data. Defaults to daily.
+resync_interval_sec = 86400
 
 
 [default.providers.top_picks]

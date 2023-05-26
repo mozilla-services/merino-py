@@ -43,22 +43,22 @@ def _patch_addons_api_calls(mocker: MockerFixture) -> None:
 
 
 @pytest.mark.asyncio
-async def test_initialize_addons_succeed(
+async def test_fetch_addons_succeed(
     mocker: MockerFixture, dynamic_backend: DynamicAmoBackend
 ):
-    """Test that initialize populates the Addons."""
+    """Test that fetch populates the Addons."""
     _patch_addons_api_calls(mocker)
 
     assert dynamic_backend.dynamic_data == {}
-    await dynamic_backend.initialize_addons()
+    await dynamic_backend.fetch_and_cache_addons_info()
     assert len(dynamic_backend.dynamic_data) == len(SupportedAddon)
 
 
 @pytest.mark.asyncio
-async def test_initialize_addons_skipped_api_failure(
+async def test_fetch_addons_skipped_api_failure(
     mocker: MockerFixture, caplog: LogCaptureFixture, dynamic_backend: DynamicAmoBackend
 ):
-    """Test that initialize fails raises error when Addon request fails."""
+    """Test that fetch fails raises error when Addon request fails."""
     sample_addon_resp = json.dumps(
         {
             "icon_url": "https://this.is.image",
@@ -88,7 +88,7 @@ async def test_initialize_addons_skipped_api_failure(
 
     mocker.patch.object(AsyncClient, "get", side_effect=return_values)
 
-    await dynamic_backend.initialize_addons()
+    await dynamic_backend.fetch_and_cache_addons_info()
 
     assert len(dynamic_backend.dynamic_data) == len(SupportedAddon) - 1
     assert len(caplog.messages) == 1
@@ -98,10 +98,10 @@ async def test_initialize_addons_skipped_api_failure(
 
 
 @pytest.mark.asyncio
-async def test_initialize_addons_skipped_bad_response(
+async def test_fetch_addons_skipped_bad_response(
     mocker: MockerFixture, caplog: LogCaptureFixture, dynamic_backend: DynamicAmoBackend
 ):
-    """Test that initialize fails raises error when Addon request fails."""
+    """Test that fetch fails raises error when Addon request fails."""
     sample_addon_resp = json.dumps(
         {
             "icon_url": "https://this.is.image",
@@ -129,7 +129,7 @@ async def test_initialize_addons_skipped_bad_response(
     )
     mocker.patch.object(AsyncClient, "get", side_effect=return_values)
 
-    await dynamic_backend.initialize_addons()
+    await dynamic_backend.fetch_and_cache_addons_info()
 
     assert len(dynamic_backend.dynamic_data) == len(SupportedAddon) - 1
     assert len(caplog.messages) == 1
@@ -140,7 +140,7 @@ async def test_initialize_addons_skipped_bad_response(
 
 
 @pytest.mark.asyncio
-async def test_initialize_addons_handled_task_group_exceptions(
+async def test_fetch_addons_handled_task_group_exceptions(
     mocker: MockerFixture, dynamic_backend: DynamicAmoBackend
 ):
     """Test that `TaskGroup` exceptions are captured and propagated as `AmoBackendError`."""
@@ -149,7 +149,7 @@ async def test_initialize_addons_handled_task_group_exceptions(
     )
 
     with pytest.raises(AmoBackendError):
-        await dynamic_backend.initialize_addons()
+        await dynamic_backend.fetch_and_cache_addons_info()
 
 
 @pytest.mark.asyncio
@@ -158,7 +158,7 @@ async def test_get_addon_request(
 ):
     """Test that we can get the Addons details."""
     _patch_addons_api_calls(mocker)
-    await dynamic_backend.initialize_addons()
+    await dynamic_backend.fetch_and_cache_addons_info()
 
     addons = await dynamic_backend.get_addon(SupportedAddon.VIDEO_DOWNLOADER)
 
@@ -183,7 +183,7 @@ async def test_get_addon_key_error(
 ):
     """Test that we raise the right error for Key Error."""
     _patch_addons_api_calls(mocker)
-    await dynamic_backend.initialize_addons()
+    await dynamic_backend.fetch_and_cache_addons_info()
     del dynamic_backend.dynamic_data[SupportedAddon.VIDEO_DOWNLOADER]
 
     with pytest.raises(DynamicAmoBackendException) as ex:

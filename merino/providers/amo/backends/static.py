@@ -53,8 +53,8 @@ class StaticAmoBackend:
     tests and potentially a fallback if the API is broken.
     """
 
-    async def initialize_addons(self) -> None:
-        """Initialize Addons. Pass for static Addons."""
+    async def fetch_and_cache_addons_info(self) -> None:
+        """Get extra addons information. Pass for static Addons."""
         pass
 
     async def get_addon(self, addon_key: SupportedAddon) -> Addon:
