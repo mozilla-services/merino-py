@@ -281,6 +281,9 @@ These are production providers that generate suggestions.
   to process a querystring.
 - `resync_interval_sec` (`MERINO_PROVIDERS__AMO__RESYNC_INTERVAL_SEC`) - The re-syncing frequency 
   for the AMO data. Defaults to daily.
+- `cron_interval_sec` (`MERINO_PROVIDERS__AMO__CRON_INTERVAL_SEC`) - The frequency that the cron checks
+  to see if re-syncing is required. This should be more frequent than the `resync_interval_sec` to retry 
+  on errors. Defaults to every minute.
 
 #### Top Picks Provider
 - Top Picks - Provides suggestions from a static domain list of the 1000 most visited websites.

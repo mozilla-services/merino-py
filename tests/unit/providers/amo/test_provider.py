@@ -1,4 +1,7 @@
 """Test Addon Provider"""
+import datetime
+
+import freezegun
 import pytest
 from _pytest.logging import LogCaptureFixture
 
@@ -190,3 +193,22 @@ async def test_fetch_addon_info_error(
 
     assert len(caplog.messages) == 1
     assert caplog.messages[0].startswith("Failed to fetch addon information:")
+
+    # The last_fetch_at time has not been initialized
+    assert provider.last_fetch_at is None
+
+
+@freezegun.freeze_time("2012-01-14 03:21:34")
+@pytest.mark.asyncio
+async def test_fetch_addon(
+    addons_provider: AddonsProvider,
+    keywords: dict[SupportedAddon, set[str]],
+):
+    """Test that provider can handle fetch errors."""
+    await addons_provider._fetch_addon_info()
+    assert (
+        addons_provider.last_fetch_at
+        == datetime.datetime(
+            year=2012, month=1, day=14, hour=3, minute=21, second=34
+        ).timestamp()
+    )

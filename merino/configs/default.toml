@@ -137,6 +137,10 @@ backend = "dynamic"
 min_chars = 4
 # The re-syncing frequency for the AMO data. Defaults to daily.
 resync_interval_sec = 86400
+# The frequency that the cron checks to see if re-syncing is required.
+# This should be more frequent than the `resync_interval_sec` to retry
+# on errors. Defaults to every minute.
+cron_interval_sec = 60
 
 
 [default.providers.top_picks]
