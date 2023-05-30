@@ -99,6 +99,7 @@ def test_suggest_wikipedia(
         suggestion = result["suggestions"][0]
 
         assert suggestion == {
+            "block_id": 0,
             "title": query,
             "full_keyword": query,
             "url": f"https://en.wikipedia.org/wiki/{expected_title}",
