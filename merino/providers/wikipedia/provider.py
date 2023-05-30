@@ -14,6 +14,7 @@ ICON: Final[
     str
 ] = "chrome://activity-stream/content/data/content/tippytop/favicons/wikipedia-org.ico"
 ADVERTISER: Final[str] = "dynamic-wikipedia"
+BLOCK_ID: Final[int] = 0
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class WikipediaSuggestion(BaseSuggestion):
 
     full_keyword: str
     advertiser: str
-    block_id: int = 0
+    block_id: int
     impression_url: Optional[HttpUrl] = None
     click_url: Optional[HttpUrl] = None
 
@@ -77,6 +78,7 @@ class Provider(BaseProvider):
 
         return [
             WikipediaSuggestion(
+                block_id=BLOCK_ID,
                 advertiser=ADVERTISER,
                 is_sponsored=False,
                 icon=ICON,
