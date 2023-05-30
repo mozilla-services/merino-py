@@ -50,6 +50,7 @@ def fixture_adm_parameters() -> dict[str, Any]:
         "score_wikipedia": 0.2,
         "name": "adm",
         "resync_interval_sec": 10800,
+        "cron_interval_sec": 60,
     }
 
 
