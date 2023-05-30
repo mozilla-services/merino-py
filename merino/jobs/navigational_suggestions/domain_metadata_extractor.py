@@ -67,7 +67,6 @@ class Scraper:
         return FaviconData(
             links=[link.attrs for link in self.browser.select(self.LINK_SELECTOR)],
             metas=[meta.attrs for meta in self.browser.select(self.META_SELECTOR)],
-            url=self.browser.url,
         )
 
     def get_default_favicon(self, url: str) -> Optional[str]:
@@ -282,16 +281,11 @@ class DomainMetadataExtractor:
 
     def _get_title(self, fallback_title: str) -> str:
         """Extract title for a url. If not present then return the fallback title"""
-        title: Optional[str] = self._extract_title()
-        if title is None:
-            # if no valid title is present then return the fallback title
-            title = fallback_title.capitalize()
-
-        return str(title)
+        return self._extract_title() or fallback_title.capitalize()
 
     def _get_second_level_domain(self, domain: str, top_level_domain: str) -> str:
         """Extract the second level domain from domain name and suffix"""
-        return str(domain.replace("." + top_level_domain, ""))
+        return domain.replace("." + top_level_domain, "")
 
     def get_domain_metadata(
         self, domains_data: list[dict[str, Any]], favicon_min_width: int
