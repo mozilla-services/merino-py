@@ -448,6 +448,11 @@ Either <code>static</code> or <code>dynamic</code>.</li>
 as a floating point number. Defaults to 0.3.</li>
 <li><code>min_chars</code> (<code>MERINO_PROVIDERS__AMO__MIN_CHARS</code>) - The minimum number of characters
 to process a querystring.</li>
+<li><code>resync_interval_sec</code> (<code>MERINO_PROVIDERS__AMO__RESYNC_INTERVAL_SEC</code>) - The re-syncing frequency 
+for the AMO data. Defaults to daily.</li>
+<li><code>cron_interval_sec</code> (<code>MERINO_PROVIDERS__AMO__CRON_INTERVAL_SEC</code>) - The frequency that the cron checks
+to see if re-syncing is required. This should be more frequent than the <code>resync_interval_sec</code> to retry 
+on errors. Defaults to every minute.</li>
 </ul>
 <h4 id="top-picks-provider"><a class="header" href="#top-picks-provider">Top Picks Provider</a></h4>
 <ul>
