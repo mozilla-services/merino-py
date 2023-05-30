@@ -1,9 +1,12 @@
 """Addons Provider"""
+import asyncio
 import logging
+import time
 from typing import Any
 
 import pydantic
 
+from merino import cron
 from merino.config import settings
 from merino.providers.amo.addons_data import SupportedAddon
 from merino.providers.amo.backends.protocol import Addon, AmoBackend, AmoBackendError
@@ -50,6 +53,10 @@ class Provider(BaseProvider):
     addon_keywords: dict[str, SupportedAddon]
     keywords: dict[SupportedAddon, set[str]]
     min_chars: int
+    cron_task: asyncio.Task
+    resync_interval_sec: int
+    cron_interval_sec: int
+    last_fetch_at: float | None
 
     def __init__(
         self,
@@ -59,6 +66,8 @@ class Provider(BaseProvider):
         enabled_by_default: bool = True,
         min_chars=settings.providers.amo.min_chars,
         score=settings.providers.amo.score,
+        resync_interval_sec=settings.providers.amo.resync_interval_sec,
+        cron_interval_sec=settings.providers.amo.cron_interval_sec,
         **kwargs: Any,
     ):
         """Initialize Addon Provider"""
@@ -68,18 +77,39 @@ class Provider(BaseProvider):
         self.min_chars = min_chars
         self.keywords = keywords
         self._enabled_by_default = enabled_by_default
+        self.resync_interval_sec = resync_interval_sec
+        self.cron_interval_sec = cron_interval_sec
+        self.last_fetch_at = None
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
-        """Initialize"""
-        try:
-            await self.backend.initialize_addons()
-        except AmoBackendError as e:
-            # Do not propagate the error as it can be recovered later by retrying.
-            logger.warning(f"Failed to initialize addon backend: {e}")
+        """Initialize by setting up a cron to fetch it every 24 hours."""
+        cron_job = cron.Job(
+            name="addon_sync",
+            interval=self.cron_interval_sec,
+            # We don't have any strict conditions for not updating AMO.
+            # So, always return True so that the fetch is run.
+            condition=self._should_fetch,
+            task=self._fetch_addon_info,
+        )
+        self.cron_task = asyncio.create_task(cron_job())
+
         self.addon_keywords = invert_and_expand_index_keywords(
             self.keywords, self.min_chars
         )
+
+    async def _fetch_addon_info(self) -> None:
+        try:
+            await self.backend.fetch_and_cache_addons_info()
+            self.last_fetch_at = time.time()
+        except AmoBackendError as e:
+            # Do not propagate the error as it can be recovered later by retrying.
+            logger.warning(f"Failed to fetch addon information: {e}")
+
+    def _should_fetch(self) -> bool:
+        if self.last_fetch_at:
+            return (time.time() - self.last_fetch_at) >= self.resync_interval_sec
+        return True  # Fetch AMO data if it's unclear if it's been synced yet.
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Given the query string, get the Addon that matches the keyword."""

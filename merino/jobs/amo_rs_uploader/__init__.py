@@ -110,7 +110,7 @@ async def _upload(
 ):
     logger.info("Fetching addons data from AMO")
     backend = DynamicAmoBackend(config.amo.dynamic.api_url)
-    await backend.initialize_addons()
+    await backend.fetch_and_cache_addons_info()
 
     with ChunkedRemoteSettingsUploader(
         auth=auth,
