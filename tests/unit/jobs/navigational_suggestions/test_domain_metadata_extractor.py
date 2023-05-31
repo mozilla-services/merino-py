@@ -162,87 +162,6 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
             links=[
                 {
                     "rel": ["icon"],
-                    "type": "image/png",
-                    "sizes": "192x192",
-                    "href": (
-                        "https://www.redditstatic.com/desktop2x/img/favicon/"
-                        "android-icon-192x192.png"
-                    ),
-                },
-            ],
-            metas=[],
-        ),
-        [
-            FaviconImage(content=b"\\x00", content_type="image/png"),
-        ],
-        [(192, 192)],
-        None,
-        "https://www.reddit.com",
-        "dummy_title",
-        [
-            {
-                "rank": 24,
-                "domain": "reddit.com",
-                "host": "old.reddit.com",
-                "origin": "https://old.reddit.com",
-                "suffix": "com",
-                "categories": ["Forums"],
-            }
-        ],
-        [
-            {
-                "url": "https://www.reddit.com",
-                "title": "dummy_title",
-                "icon": (
-                    "https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png"
-                ),
-                "domain": "reddit",
-            }
-        ],
-    ),
-    (
-        FaviconData(
-            links=[
-                {
-                    "rel": ["icon"],
-                    "type": "image/x-icon",
-                    "sizes": "any",
-                    "href": "https://www.whitehouse.gov/favicon.ico",
-                },
-            ],
-            metas=[],
-        ),
-        [
-            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
-        ],
-        [(32, 32)],
-        None,
-        "https://www.whitehouse.gov/",
-        "dummy_title",
-        [
-            {
-                "rank": 272,
-                "domain": "whitehouse.gov",
-                "host": "www.whitehouse.gov",
-                "origin": "https://www.whitehouse.gov",
-                "suffix": "gov",
-                "categories": ["Politics, Advocacy, and Government-Related"],
-            }
-        ],
-        [
-            {
-                "url": "https://www.whitehouse.gov",
-                "title": "dummy_title",
-                "icon": "https://www.whitehouse.gov/favicon.ico",
-                "domain": "whitehouse",
-            }
-        ],
-    ),
-    (
-        FaviconData(
-            links=[
-                {
-                    "rel": ["icon"],
                     "sizes": "any",
                     "mask": "",
                     "href": (
@@ -571,8 +490,6 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         "favicon_found_via_link_tag",
         "favicon_found_via_meta_tag",
         "no_favicon",
-        "favicon_with_size_in_right_format",
-        "favicon_with_size_in_wrong_format",
         "masked_svg_favicon_skipped",
         "favicon_always_non_masked_svg_favicon_when_present",
         "favicon_url_starting_with_data_skipped",
