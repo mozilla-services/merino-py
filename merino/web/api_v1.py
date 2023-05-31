@@ -128,9 +128,7 @@ async def suggest(
         if client_variants
         else [],
     )
-    return JSONResponse(
-        content=jsonable_encoder(response, exclude_unset=True, exclude_none=True)
-    )
+    return JSONResponse(content=jsonable_encoder(response, exclude_none=True))
 
 
 def emit_suggestions_per_metrics(
