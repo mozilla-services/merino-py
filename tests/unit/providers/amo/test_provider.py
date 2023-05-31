@@ -1,5 +1,6 @@
 """Test Addon Provider"""
 import datetime
+import time
 
 import freezegun
 import pytest
@@ -212,3 +213,17 @@ async def test_fetch_addon(
             year=2012, month=1, day=14, hour=3, minute=21, second=34
         ).timestamp()
     )
+
+
+def test_should_fetch_false(addons_provider: AddonsProvider):
+    """Test that provider should fetch is false."""
+    addons_provider.last_fetch_at = time.time()
+    assert addons_provider._should_fetch() is False
+
+
+def test_should_fetch_true(addons_provider: AddonsProvider):
+    """Test that provider should fetch is true."""
+    addons_provider.last_fetch_at = (
+        time.time() - addons_provider.resync_interval_sec - 100
+    )
+    assert addons_provider._should_fetch()

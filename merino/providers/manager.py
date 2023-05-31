@@ -106,6 +106,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 score_wikipedia=setting.score_wikipedia,
                 name=provider_id,
                 resync_interval_sec=setting.resync_interval_sec,
+                cron_interval_sec=setting.cron_interval_sec,
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.TOP_PICKS:

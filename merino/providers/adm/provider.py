@@ -74,6 +74,7 @@ class Provider(BaseProvider):
         score_wikipedia: float,
         name: str,
         resync_interval_sec: float,
+        cron_interval_sec: float,
         enabled_by_default: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -82,6 +83,7 @@ class Provider(BaseProvider):
         self.score = score
         self.score_wikipedia = score_wikipedia
         self.resync_interval_sec = resync_interval_sec
+        self.cron_interval_sec = cron_interval_sec
         self.suggestion_content = SuggestionContent(
             suggestions={}, full_keywords=[], results=[], icons={}
         )
@@ -105,7 +107,7 @@ class Provider(BaseProvider):
         # Run a cron job that resyncs data from Remote Settings in the background.
         cron_job = cron.Job(
             name="resync_rs_data",
-            interval=self.resync_interval_sec,
+            interval=self.cron_interval_sec,
             condition=self._should_fetch,
             task=self._fetch,
         )
