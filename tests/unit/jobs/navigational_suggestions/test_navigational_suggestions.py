@@ -40,14 +40,16 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
         },
     ]
 
-    mock_domain_metadata_extractor.get_urls_and_titles.return_value = [
-        {"url": "dummy_url", "title": "dummy_title"},
-        {"url": None, "title": None},
+    mock_domain_metadata_extractor.get_domain_metadata.return_value = [
+        {
+            "url": "dummy_url",
+            "title": "dummy_title",
+            "icon": "dummy_icon",
+            "domain": "dummy_domain",
+        },
+        {"url": None, "title": "", "icon": "", "domain": ""},
     ]
-    mock_domain_metadata_extractor.get_second_level_domains.return_value = [
-        "dummy_domain",
-        "dummy_unreachable_domain",
-    ]
+
     mock_domain_metadata_uploader.upload_favicons.return_value = [
         "dummy_uploaded_favicon_url",
         "",

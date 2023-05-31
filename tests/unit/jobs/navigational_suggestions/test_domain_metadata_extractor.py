@@ -15,28 +15,27 @@ from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
 )
 from merino.jobs.navigational_suggestions.utils import FaviconDownloader, FaviconImage
 
-FaviconScenario = tuple[
+DomainMetadataScenario = tuple[
     FaviconData | None,
     list[FaviconImage] | None,
     list[tuple[int, int]] | None,
     str | None,
-    list[dict[str, Any]],
-    list[str],
-]
-TitleScenario = tuple[
-    tuple[Optional[str], Optional[str]],
+    str | None,
+    str | None,
     list[dict[str, Any]],
     list[dict[str, Optional[str]]],
 ]
 
-FAVICON_SCENARIOS: list[FaviconScenario] = [
+DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
     (
-        FaviconData(links=[], metas=[], url="https://www.google.com/"),
+        FaviconData(links=[], metas=[]),
         [
             FaviconImage(content=b"\\x00", content_type="image/x-icon"),
         ],
         [(32, 32)],
         "https://google.com/favicon.ico",
+        "https://www.google.com",
+        "dummy_title",
         [
             {
                 "rank": 1,
@@ -47,7 +46,238 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
                 "categories": ["Search Engines"],
             },
         ],
-        ["https://google.com/favicon.ico"],
+        [
+            {
+                "url": "https://www.google.com",
+                "title": "dummy_title",
+                "icon": "https://google.com/favicon.ico",
+                "domain": "google",
+            }
+        ],
+    ),
+    (
+        FaviconData(
+            links=[
+                {
+                    "rel": ["fluid-icon"],
+                    "href": "https://github.com/fluidicon.png",
+                    "title": "GitHub",
+                },
+            ],
+            metas=[],
+        ),
+        [
+            FaviconImage(content=b"\\x00", content_type="image/png"),
+        ],
+        [(32, 32)],
+        None,
+        "https://github.com/",
+        "dummy_title",
+        [
+            {
+                "rank": 23,
+                "domain": "github.com",
+                "host": "github.com",
+                "origin": "https://github.com",
+                "suffix": "com",
+                "categories": ["Technology"],
+            },
+        ],
+        [
+            {
+                "url": "https://github.com",
+                "title": "dummy_title",
+                "icon": "https://github.com/fluidicon.png",
+                "domain": "github",
+            }
+        ],
+    ),
+    (
+        FaviconData(
+            links=[],
+            metas=[
+                {
+                    "name": "apple-touch-icon",
+                    "content": (
+                        "https://assets.nflxext.com/en_us/layout/ecweb/"
+                        "netflix-app-icon_152.jpg"
+                    ),
+                }
+            ],
+        ),
+        [
+            FaviconImage(content=b"\\x00", content_type="image/jpg"),
+        ],
+        [(32, 32)],
+        None,
+        "https://www.netflix.com/",
+        "dummy_title",
+        [
+            {
+                "rank": 6,
+                "domain": "netflix.com",
+                "host": "www.netflix.com",
+                "origin": "https://www.netflix.com",
+                "suffix": "com",
+                "categories": ["Television", "Video Streaming", "Movies"],
+            }
+        ],
+        [
+            {
+                "url": "https://www.netflix.com",
+                "title": "dummy_title",
+                "icon": "https://assets.nflxext.com/en_us/layout/ecweb/netflix-app-icon_152.jpg",
+                "domain": "netflix",
+            }
+        ],
+    ),
+    (
+        None,
+        None,
+        None,
+        None,
+        "https://www.amazonaws.com",
+        "dummy_title",
+        [
+            {
+                "rank": 4,
+                "domain": "amazonaws.com",
+                "host": "lsrelay-config-production.s3.amazonaws.com",
+                "origin": "http://lsrelay-config-production.s3.amazonaws.com",
+                "suffix": "com",
+                "categories": ["Technology"],
+            },
+        ],
+        [
+            {
+                "url": "https://www.amazonaws.com",
+                "title": "dummy_title",
+                "icon": "",
+                "domain": "amazonaws",
+            }
+        ],
+    ),
+    (
+        FaviconData(
+            links=[
+                {
+                    "rel": ["icon"],
+                    "type": "image/png",
+                    "sizes": "192x192",
+                    "href": (
+                        "https://www.redditstatic.com/desktop2x/img/favicon/"
+                        "android-icon-192x192.png"
+                    ),
+                },
+            ],
+            metas=[],
+        ),
+        [
+            FaviconImage(content=b"\\x00", content_type="image/png"),
+        ],
+        [(192, 192)],
+        None,
+        "https://www.reddit.com",
+        "dummy_title",
+        [
+            {
+                "rank": 24,
+                "domain": "reddit.com",
+                "host": "old.reddit.com",
+                "origin": "https://old.reddit.com",
+                "suffix": "com",
+                "categories": ["Forums"],
+            }
+        ],
+        [
+            {
+                "url": "https://www.reddit.com",
+                "title": "dummy_title",
+                "icon": (
+                    "https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png"
+                ),
+                "domain": "reddit",
+            }
+        ],
+    ),
+    (
+        FaviconData(
+            links=[
+                {
+                    "rel": ["icon"],
+                    "type": "image/x-icon",
+                    "sizes": "any",
+                    "href": "https://www.whitehouse.gov/favicon.ico",
+                },
+            ],
+            metas=[],
+        ),
+        [
+            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
+        ],
+        [(32, 32)],
+        None,
+        "https://www.whitehouse.gov/",
+        "dummy_title",
+        [
+            {
+                "rank": 272,
+                "domain": "whitehouse.gov",
+                "host": "www.whitehouse.gov",
+                "origin": "https://www.whitehouse.gov",
+                "suffix": "gov",
+                "categories": ["Politics, Advocacy, and Government-Related"],
+            }
+        ],
+        [
+            {
+                "url": "https://www.whitehouse.gov",
+                "title": "dummy_title",
+                "icon": "https://www.whitehouse.gov/favicon.ico",
+                "domain": "whitehouse",
+            }
+        ],
+    ),
+    (
+        FaviconData(
+            links=[
+                {
+                    "rel": ["icon"],
+                    "sizes": "any",
+                    "mask": "",
+                    "href": (
+                        "//www.baidu.com/img/baidu_85beaf5496f291521eb75ba38eacbd87.svg"
+                    ),
+                },
+            ],
+            metas=[],
+            url="",
+        ),
+        [
+            FaviconImage(content=b"\\x00", content_type="image/svg+xml"),
+        ],
+        None,
+        None,
+        "https://www.baidu.com/",
+        "dummy_title",
+        [
+            {
+                "rank": 8,
+                "domain": "baidu.com",
+                "host": "www.baidu.com",
+                "origin": "https://www.baidu.com",
+                "suffix": "com",
+                "categories": ["Search Engines"],
+            }
+        ],
+        [
+            {
+                "url": "https://www.baidu.com",
+                "title": "dummy_title",
+                "icon": "",
+                "domain": "baidu",
+            }
+        ],
     ),
     (
         FaviconData(
@@ -65,7 +295,6 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
                 },
             ],
             metas=[],
-            url="https://github.com/",
         ),
         [
             FaviconImage(content=b"\\x00", content_type="image/png"),
@@ -73,6 +302,8 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
         ],
         [(32, 32)],
         None,
+        "https://github.com/",
+        "dummy_title",
         [
             {
                 "rank": 23,
@@ -83,150 +314,14 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
                 "categories": ["Technology"],
             },
         ],
-        ["https://github.githubassets.com/favicons/favicon.svg"],
-    ),
-    (
-        FaviconData(
-            links=[],
-            metas=[
-                {
-                    "name": "apple-touch-icon",
-                    "content": (
-                        "https://assets.nflxext.com/en_us/layout/ecweb/"
-                        "netflix-app-icon_152.jpg"
-                    ),
-                }
-            ],
-            url="https://www.netflix.com/",
-        ),
-        [
-            FaviconImage(content=b"\\x00", content_type="image/jpg"),
-        ],
-        [(32, 32)],
-        None,
         [
             {
-                "rank": 6,
-                "domain": "netflix.com",
-                "host": "www.netflix.com",
-                "origin": "https://www.netflix.com",
-                "suffix": "com",
-                "categories": ["Television", "Video Streaming", "Movies"],
+                "url": "https://github.com",
+                "title": "dummy_title",
+                "icon": "https://github.githubassets.com/favicons/favicon.svg",
+                "domain": "github",
             }
         ],
-        ["https://assets.nflxext.com/en_us/layout/ecweb/netflix-app-icon_152.jpg"],
-    ),
-    (
-        None,
-        None,
-        None,
-        None,
-        [
-            {
-                "rank": 4,
-                "domain": "amazonaws.com",
-                "host": "lsrelay-config-production.s3.amazonaws.com",
-                "origin": "http://lsrelay-config-production.s3.amazonaws.com",
-                "suffix": "com",
-                "categories": ["Technology"],
-            },
-        ],
-        [""],
-    ),
-    (
-        FaviconData(
-            links=[
-                {
-                    "rel": ["icon"],
-                    "type": "image/png",
-                    "sizes": "192x192",
-                    "href": (
-                        "https://www.redditstatic.com/desktop2x/img/favicon/"
-                        "android-icon-192x192.png"
-                    ),
-                },
-            ],
-            metas=[],
-            url="https://www.reddit.com/",
-        ),
-        [
-            FaviconImage(content=b"\\x00", content_type="image/png"),
-        ],
-        [(192, 192)],
-        None,
-        [
-            {
-                "rank": 24,
-                "domain": "reddit.com",
-                "host": "old.reddit.com",
-                "origin": "https://old.reddit.com",
-                "suffix": "com",
-                "categories": ["Forums"],
-            }
-        ],
-        ["https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png"],
-    ),
-    (
-        FaviconData(
-            links=[
-                {
-                    "rel": ["icon"],
-                    "type": "image/x-icon",
-                    "sizes": "any",
-                    "href": "https://www.whitehouse.gov/favicon.ico",
-                },
-            ],
-            metas=[],
-            url="https://www.whitehouse.gov/",
-        ),
-        [
-            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
-        ],
-        [(32, 32)],
-        None,
-        [
-            {
-                "rank": 272,
-                "domain": "whitehouse.gov",
-                "host": "www.whitehouse.gov",
-                "origin": "https://www.whitehouse.gov",
-                "suffix": "gov",
-                "categories": ["Politics, Advocacy, and Government-Related"],
-            }
-        ],
-        ["https://www.whitehouse.gov/favicon.ico"],
-    ),
-    (
-        FaviconData(
-            links=[
-                {
-                    "rel": ["icon"],
-                    "sizes": "any",
-                    "mask": "",
-                    "href": (
-                        "//www.baidu.com/img/baidu_85beaf5496f291521eb75ba38eacbd87.svg"
-                    ),
-                },
-            ],
-            metas=[],
-            url="https://www.baidu.com/",
-        ),
-        [
-            FaviconImage(content=b"\\x00", content_type="image/svg+xml"),
-        ],
-        None,
-        None,
-        [
-            {
-                "rank": 8,
-                "domain": "baidu.com",
-                "host": "www.baidu.com",
-                "origin": "https://www.baidu.com",
-                "suffix": "com",
-                "categories": ["Search Engines"],
-            }
-        ],
-        [""],
     ),
     (
         FaviconData(
@@ -244,6 +339,8 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
         None,
         None,
         None,
+        "https://www.fakedomain.gov/",
+        "dummy_title",
         [
             {
                 "rank": 272,
@@ -254,7 +351,14 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
                 "categories": ["Politics, Advocacy, and Government-Related"],
             }
         ],
-        [""],
+        [
+            {
+                "url": "https://www.fakedomain.gov",
+                "title": "dummy_title",
+                "icon": "",
+                "domain": "fakedomain",
+            }
+        ],
     ),
     (
         FaviconData(
@@ -267,13 +371,14 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
                 },
             ],
             metas=[{"name": "apple-touch-icon", "content": "favicon2.ico"}],
-            url="https://www.fakedomain.gov/",
         ),
         [
             FaviconImage(content=b"\\x00", content_type="image/x-icon"),
         ],
         [(64, 64), (32, 32)],
         None,
+        "https://www.fakedomain.gov/",
+        "dummy_title",
         [
             {
                 "rank": 272,
@@ -284,7 +389,14 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
                 "categories": ["Politics, Advocacy, and Government-Related"],
             }
         ],
-        ["https://www.fakedomain.gov/favicon1.ico"],
+        [
+            {
+                "url": "https://www.fakedomain.gov",
+                "title": "dummy_title",
+                "icon": "https://www.fakedomain.gov/favicon1.ico",
+                "domain": "fakedomain",
+            }
+        ],
     ),
     (
         FaviconData(
@@ -296,13 +408,14 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
                 },
             ],
             metas=[],
-            url="https://www.fakedomain.gov/",
         ),
         [
             FaviconImage(content=b"\\x00", content_type="image/x-icon"),
         ],
         [(16, 16)],
         None,
+        "https://www.fakedomain.gov/",
+        "dummy_title",
         [
             {
                 "rank": 272,
@@ -313,7 +426,14 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
                 "categories": ["Politics, Advocacy, and Government-Related"],
             }
         ],
-        [""],
+        [
+            {
+                "url": "https://www.fakedomain.gov",
+                "title": "dummy_title",
+                "icon": "",
+                "domain": "fakedomain",
+            }
+        ],
     ),
     (
         FaviconData(
@@ -326,13 +446,14 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
                 },
             ],
             metas=[],
-            url="https://www.researchgate.net/",
         ),
         [
             FaviconImage(content=b"\\x00", content_type="text/html"),
         ],
         [(96, 96)],
         None,
+        "https://www.researchgate.net/",
+        "dummy_title",
         [
             {
                 "rank": 84,
@@ -343,7 +464,92 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
                 "categories": ["Education"],
             }
         ],
-        [""],
+        [
+            {
+                "url": "https://www.researchgate.net",
+                "title": "dummy_title",
+                "icon": "",
+                "domain": "researchgate",
+            }
+        ],
+    ),
+    (
+        None,
+        None,
+        None,
+        None,
+        "https://www.investing.com",
+        None,
+        [
+            {
+                "rank": 291,
+                "domain": "investing.com",
+                "host": "www.investing.com",
+                "origin": "https://www.investing.com",
+                "suffix": "com",
+                "categories": ["Economy & Finance"],
+            }
+        ],
+        [
+            {
+                "url": "https://www.investing.com",
+                "title": "Investing",
+                "icon": "",
+                "domain": "investing",
+            }
+        ],
+    ),
+    (
+        None,
+        None,
+        None,
+        None,
+        "https://aws.amazon.com/",
+        "dummy_title",
+        [
+            {
+                "rank": 4,
+                "domain": "amazonaws.com",
+                "host": "lsrelay-config-production.s3.amazonaws.com",
+                "origin": "http://lsrelay-config-production.s3.amazonaws.com",
+                "suffix": "com",
+                "categories": ["Technology"],
+            }
+        ],
+        [
+            {
+                "url": None,
+                "title": "",
+                "icon": "",
+                "domain": "",
+            }
+        ],
+    ),
+    (
+        None,
+        None,
+        None,
+        None,
+        None,
+        "dummy_title",
+        [
+            {
+                "rank": 4,
+                "domain": "amazonaws.com",
+                "host": "lsrelay-config-production.s3.amazonaws.com",
+                "origin": "http://lsrelay-config-production.s3.amazonaws.com",
+                "suffix": "com",
+                "categories": ["Technology"],
+            }
+        ],
+        [
+            {
+                "url": None,
+                "title": "",
+                "icon": "",
+                "domain": "",
+            }
+        ],
     ),
 ]
 
@@ -354,10 +560,12 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
         "favicon_images",
         "favicon_image_sizes",
         "default_favicon",
+        "scraped_url",
+        "scraped_title",
         "domains_data",
-        "expected_favicons",
+        "expected_domain_metadata",
     ],
-    FAVICON_SCENARIOS,
+    DOMAIN_METADATA_SCENARIOS,
     ids=[
         "favicon_found_in_default_path",
         "favicon_found_via_link_tag",
@@ -366,25 +574,33 @@ FAVICON_SCENARIOS: list[FaviconScenario] = [
         "favicon_with_size_in_right_format",
         "favicon_with_size_in_wrong_format",
         "masked_svg_favicon_skipped",
+        "favicon_always_non_masked_svg_favicon_when_present",
         "favicon_url_starting_with_data_skipped",
         "favicon_url_missing_scheme_handled",
         "low_resolution_favicon_skipped",
         "favicon_with_non_image_mime_type_skipped",
+        "title_not_from_document",
+        "url_not_containing_domain_skipped",
+        "unreachable_url_skipped",
     ],
 )
-def test_get_favicons(
+def test_get_domain_metadata(
     mocker: MockerFixture,
     favicon_data: FaviconData | None,
     favicon_images: list[FaviconImage] | None,
     favicon_image_sizes: list[tuple[int, int]] | None,
     default_favicon: str | None,
+    scraped_url: str | None,
+    scraped_title: str | None,
     domains_data: list[dict[str, Any]],
-    expected_favicons: list[str],
+    expected_domain_metadata: list[str],
 ) -> None:
     """Test that DomainMetadataExtractor returns favicons as expected"""
     scraper_mock: Any = mocker.Mock(spec=Scraper)
     scraper_mock.scrape_favicon_data.return_value = favicon_data
     scraper_mock.get_default_favicon.return_value = default_favicon
+    scraper_mock.open.return_value = scraped_url
+    scraper_mock.scrape_title.return_value = scraped_title
 
     favicon_downloader_mock: Any = mocker.Mock(spec=FaviconDownloader)
     favicon_downloader_mock.download_favicon.side_effect = favicon_images
@@ -403,141 +619,8 @@ def test_get_favicons(
         scraper=scraper_mock, favicon_downloader=favicon_downloader_mock
     )
 
-    favicons: list[str] = metadata_extractor.get_favicons(domains_data, min_width=32)
-
-    assert favicons == expected_favicons
-
-
-TITLE_SCENARIOS: list[TitleScenario] = [
-    (
-        ("https://google.com", "Google"),
-        [
-            {
-                "rank": 1,
-                "domain": "google.com",
-                "host": "one.google.com",
-                "origin": "https://one.google.com",
-                "suffix": "com",
-                "categories": ["Search Engines"],
-            },
-        ],
-        [{"url": "https://google.com", "title": "Google"}],
-    ),
-    (
-        ("https://www.investing.com", None),
-        [
-            {
-                "rank": 291,
-                "domain": "investing.com",
-                "host": "www.investing.com",
-                "origin": "https://www.investing.com",
-                "suffix": "com",
-                "categories": ["Economy & Finance"],
-            },
-        ],
-        [{"url": "https://www.investing.com", "title": "Investing"}],
-    ),
-    (
-        ("https://www.minecraft.net/en-us", "Minecraft"),
-        [
-            {
-                "rank": 642,
-                "domain": "minecraft.net",
-                "host": "www.minecraft.net",
-                "origin": "https://www.minecraft.net",
-                "suffix": "net",
-                "categories": ["Gaming", "Hobbies & Interests"],
-            },
-        ],
-        [{"url": "https://www.minecraft.net", "title": "Minecraft"}],
-    ),
-    (
-        ("https://aws.amazon.com", "Amazon AWS"),
-        [
-            {
-                "rank": 4,
-                "domain": "amazonaws.com",
-                "host": "lsrelay-config-production.s3.amazonaws.com",
-                "origin": "http://lsrelay-config-production.s3.amazonaws.com",
-                "suffix": "com",
-                "categories": ["Technology"],
-            },
-        ],
-        [{"url": None, "title": None}],
-    ),
-    (
-        (None, None),
-        [
-            {
-                "rank": 41,
-                "domain": "unreachable.com",
-                "host": "www.unreachable.com",
-                "origin": "http://www.unreachable.com",
-                "suffix": "com",
-                "categories": ["Technology"],
-            },
-        ],
-        [{"url": None, "title": None}],
-    ),
-]
-
-
-@pytest.mark.parametrize(
-    ["url_and_title", "domains_data", "expected_urls_and_titles"],
-    TITLE_SCENARIOS,
-    ids=[
-        "title_from_document",
-        "title_not_from_document",
-        "url_containing_domain_accepted",
-        "url_not_containing_domain_skipped",
-        "unreachable_url_skipped",
-    ],
-)
-def test_get_urls_and_titles(
-    mocker: MockerFixture,
-    url_and_title: tuple[str, str],
-    domains_data: list[dict[str, Any]],
-    expected_urls_and_titles: list[dict[str, Optional[str]]],
-):
-    """Test that DomainMetadataExtractor returns titles as expected"""
-    scraper_mock: Any = mocker.Mock(spec=Scraper)
-    scraper_mock.scrape_url_and_title.return_value = url_and_title
-    metadata_extractor: DomainMetadataExtractor = DomainMetadataExtractor(
-        scraper=scraper_mock
-    )
-
-    urls_and_titles: list[
+    domain_metadata: list[
         dict[str, Optional[str]]
-    ] = metadata_extractor.get_urls_and_titles(domains_data)
+    ] = metadata_extractor.get_domain_metadata(domains_data, favicon_min_width=32)
 
-    assert urls_and_titles == expected_urls_and_titles
-
-
-def test_get_second_level_domains():
-    """Test that DomainMetadataExtractor returns second level domain as expected"""
-    domains_data = [
-        {
-            "rank": 1,
-            "domain": "google.com",
-            "host": "one.google.com",
-            "origin": "https://one.google.com",
-            "suffix": "com",
-            "categories": ["Search Engines"],
-        },
-        {
-            "rank": 23,
-            "domain": "github.com",
-            "host": "github.com",
-            "origin": "https://github.com",
-            "suffix": "com",
-            "categories": ["Technology"],
-        },
-    ]
-    expected_second_level_domains = ["google", "github"]
-
-    metadata_extractor: DomainMetadataExtractor = DomainMetadataExtractor()
-    second_level_domains: list[str] = metadata_extractor.get_second_level_domains(
-        domains_data
-    )
-
-    assert second_level_domains == expected_second_level_domains
+    assert domain_metadata == expected_domain_metadata

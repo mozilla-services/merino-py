@@ -1,6 +1,7 @@
 """CLI commands for the navigational_suggestions module"""
 import json
 import logging
+from typing import Optional
 
 import typer
 
@@ -71,18 +72,18 @@ navigational_suggestions_cmd = typer.Typer(
 def _construct_top_picks(
     domain_data: list[dict],
     favicons: list[str],
-    urls_and_titles: list[dict],
-    second_level_domains: list[str],
+    domain_metadata: list[dict[str, Optional[str]]],
 ) -> str:
     result = []
     for index, domain in enumerate(domain_data):
-        if urls_and_titles[index]["url"]:
+        if domain_metadata[index]["url"]:
             result.append(
                 {
                     "rank": domain["rank"],
-                    "domain": second_level_domains[index],
+                    "domain": domain_metadata[index]["domain"],
                     "categories": domain["categories"],
-                    **urls_and_titles[index],
+                    "url": domain_metadata[index]["url"],
+                    "title": domain_metadata[index]["title"],
                     "icon": favicons[index],
                 }
             )
@@ -113,11 +114,9 @@ def prepare_domain_metadata(
 
     # extract domain metadata of top domains
     domain_metadata_extractor = DomainMetadataExtractor()
-    favicons = domain_metadata_extractor.get_favicons(domain_data, min_favicon_width)
-    urls_and_titles = domain_metadata_extractor.get_urls_and_titles(domain_data)
-    second_level_domains = domain_metadata_extractor.get_second_level_domains(
-        domain_data
-    )
+    domain_metadata: list[
+        dict[str, Optional[str]]
+    ] = domain_metadata_extractor.get_domain_metadata(domain_data, min_favicon_width)
     logger.info("domain metadata extraction complete")
 
     # upload favicons and get their public urls
@@ -127,13 +126,12 @@ def prepare_domain_metadata(
         destination_cdn_hostname,
         force_upload,
     )
+    favicons = [str(metadata["icon"]) for metadata in domain_metadata]
     uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
     logger.info("domain favicons uploaded to gcs")
 
     # construct top pick contents and upload it to gcs
-    top_picks = _construct_top_picks(
-        domain_data, uploaded_favicons, urls_and_titles, second_level_domains
-    )
+    top_picks = _construct_top_picks(domain_data, uploaded_favicons, domain_metadata)
     top_pick_blob = domain_metadata_uploader.upload_top_picks(top_picks)
     logger.info(
         "top pick contents uploaded to gcs",
