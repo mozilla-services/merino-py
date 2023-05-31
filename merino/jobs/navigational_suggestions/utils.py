@@ -8,7 +8,7 @@ FIREFOX_UA: str = (
     "Firefox/111.0"
 )
 
-TIMEOUT: int = 60
+TIMEOUT: int = 10
 
 
 class FaviconImage(BaseModel):
