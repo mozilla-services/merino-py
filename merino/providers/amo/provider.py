@@ -98,6 +98,10 @@ class Provider(BaseProvider):
             self.keywords, self.min_chars
         )
 
+    def normalize_query(self, query: str) -> str:
+        """Ensure query string is case insensitive."""
+        return query.strip().lower()
+
     async def _fetch_addon_info(self) -> None:
         try:
             await self.backend.fetch_and_cache_addons_info()

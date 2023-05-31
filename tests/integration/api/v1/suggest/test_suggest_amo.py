@@ -33,6 +33,13 @@ SCENARIOS: dict[str, Scenario] = {
         query="asdf",
         expected_title=None,
     ),
+    "Case-III: Case Insensitive Match": Scenario(
+        providers={
+            "addons": Provider(backend=StaticAmoBackend(), keywords=ADDON_KEYWORDS)
+        },
+        query="NIgh",
+        expected_title="Dark Reader",
+    ),
 }
 
 
