@@ -96,7 +96,7 @@ class Scraper:
             Optional[str]: The title extracted from header of a url
         """
         try:
-            return str(self.browser.find("head").find("title").string)
+            return str(self.browser.find("head").find("title").get_text())
         except Exception as e:
             logger.info(f"Exception: {e} while scraping title")
             return None
