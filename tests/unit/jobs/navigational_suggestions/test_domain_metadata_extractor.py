@@ -470,6 +470,34 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
             }
         ],
     ),
+    (
+        FaviconData(links=[], metas=[]),
+        [
+            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
+        ],
+        [(32, 32)],
+        "https://megapersonals.eu/favicon.ico",
+        "https://megapersonals.eu",
+        "dummy_title",
+        [
+            {
+                "rank": 821,
+                "domain": "megapersonals.eu",
+                "host": "megapersonals.eu",
+                "origin": "https://megapersonals.eu",
+                "suffix": "eu",
+                "categories": ["Food & Drink"],
+            },
+        ],
+        [
+            {
+                "url": None,
+                "title": "",
+                "icon": "",
+                "domain": "",
+            }
+        ],
+    ),
 ]
 
 
@@ -499,6 +527,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         "title_not_from_document",
         "url_not_containing_domain_skipped",
         "unreachable_url_skipped",
+        "blocked_domain_skipped",
     ],
 )
 def test_get_domain_metadata(

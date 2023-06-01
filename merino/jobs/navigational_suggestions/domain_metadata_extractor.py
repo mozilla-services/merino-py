@@ -125,6 +125,9 @@ class DomainMetadataExtractor:
         "This page is not allowed",
     ]
 
+    # List of blocked (second level) domains
+    BLOCKED_DOMAINS: set[str] = {"megapersonals"}
+
     scraper: Scraper
     favicon_downloader: FaviconDownloader
 
@@ -275,6 +278,11 @@ class DomainMetadataExtractor:
         """Extract the second level domain from domain name and suffix"""
         return domain.replace("." + top_level_domain, "")
 
+    def _is_domain_blocked(self, domain: str, suffix: str) -> bool:
+        """Check if a domain is in the blocked list"""
+        second_level_domain: str = self._get_second_level_domain(domain, suffix)
+        return second_level_domain in self.BLOCKED_DOMAINS
+
     def get_domain_metadata(
         self, domains_data: list[dict[str, Any]], favicon_min_width: int
     ) -> list[dict[str, Optional[str]]]:
@@ -287,21 +295,21 @@ class DomainMetadataExtractor:
             second_level_domain: str = ""
 
             domain: str = domain_data["domain"]
-            url: str = f"https://{domain}"
-            full_url: Optional[str] = self.scraper.open(url)
+            suffix: str = domain_data["suffix"]
+            if not self._is_domain_blocked(domain, suffix):
+                url: str = f"https://{domain}"
+                full_url: Optional[str] = self.scraper.open(url)
 
-            if full_url is None:
-                # Retry with www. in the url as some domains require it explicitly
-                url = f"https://www.{domain}"
-                full_url = self.scraper.open(url)
+                if full_url is None:
+                    # Retry with www. in the url as some domains require it explicitly
+                    url = f"https://www.{domain}"
+                    full_url = self.scraper.open(url)
 
-            if full_url and domain in full_url:
-                scraped_base_url = self._get_base_url(full_url)
-                favicon = self._get_favicon(scraped_base_url, favicon_min_width)
-                second_level_domain = self._get_second_level_domain(
-                    domain, domain_data["suffix"]
-                )
-                title = self._get_title(second_level_domain)
+                if full_url and domain in full_url:
+                    scraped_base_url = self._get_base_url(full_url)
+                    favicon = self._get_favicon(scraped_base_url, favicon_min_width)
+                    second_level_domain = self._get_second_level_domain(domain, suffix)
+                    title = self._get_title(second_level_domain)
 
             result.append(
                 {
