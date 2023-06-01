@@ -22,7 +22,6 @@ Before submitting a PR:
   pass and the code has been reviewed.
 - Ideally, your patch should include new tests that cover your changes. It is your and
   your reviewer's responsibility to ensure your patch includes adequate tests.
-- If you're solely updating documentation, you may wish to avoid deployment. Please see the [Preventing deployment via [do not deploy]][release-process] documentation.
 - If making changes that may impact performance, it is recommended to execute a load test. Please see [Load Testing Opt-In [load test: (abort|warn)]][release-process] documentation for more information.
 - For more information on understanding the release process, please see relevant information contained in the [release-process.md][release-process] 
 documentation.

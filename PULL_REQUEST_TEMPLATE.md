@@ -14,6 +14,6 @@ _Put an `x` in the boxes that apply_
 
 - [ ] This PR conforms to the [Contribution Guidelines](https://github.com/mozilla-services/merino-py/blob/main/CONTRIBUTING.md)
 - [ ] The PR title starts with the JIRA issue reference, format `[DISCO-####]`, and has the same title (if applicable)
-- [ ] `[do not deploy]` and `[load test: (abort|warn)]` keywords are applied (if applicable)
+- [ ] `[load test: (abort|warn)]` keywords are applied (if applicable)
 - [ ] [Documentation](https://github.com/mozilla-services/merino-py/tree/main/docs) has been updated (if applicable)
 - [ ] [Functional and performance test](https://github.com/mozilla-services/merino-py/blob/main/docs/dev/testing.md) coverage has been expanded and maintained (if applicable)
