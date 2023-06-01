@@ -154,15 +154,6 @@
 <p>Please see the <a href="../../CONTRIBUTING.html">CONTRIBUTING.md</a> docs on commit guidelines and pull request best practices.</p>
 <h2 id="versioning"><a class="header" href="#versioning">Versioning</a></h2>
 <p>The commit hash of the deployed code is considered its version identifier. The commit hash can be retrieved locally via <code>git rev-parse HEAD</code>.</p>
-<h2 id="preventing-deployment-via-do-not-deploy"><a class="header" href="#preventing-deployment-via-do-not-deploy">Preventing deployment via [do not deploy]</a></h2>
-<p>Occasionally developers might want to prevent a commit from triggering the deployment pipeline. While this should be discouraged, there are some legitimate cases for doing so (e.g. docs only changes).
-In order to prevent the deployment of the code from a PR when merging to <code>main</code>, the <strong>title of that PR</strong> must contain the <code>[do not deploy]</code> text. When generating the merge commit for a branch within the GitHub UI, ensure that <code>[do not deploy]</code> is still present in the description, especially if you change or rename the PR later on.</p>
-<p>For example:</p>
-<pre><code># PR title (NOT the commit message)
-doc: Add documentation for the release process [do not deploy]
-</code></pre>
-<p>While the <code>[do not deploy]</code> can be anywhere in the title, it is recommended to place it at its end in order to better integrate with the current PR title practices and improve readability.</p>
-<p>The deployment pipeline will analyze the message of the merge commit (which will contain the PR title) and make a decision based on it.</p>
 <h2 id="load-testing"><a class="header" href="#load-testing">Load Testing</a></h2>
 <p>Load testing can be run locally or as a part of the deployment process. Local execution does not require any labeling in commit messages. For deployment, you have to add a label to the message of the commit that you wish to deploy in the form of: <code>[load test: (abort|warn)]</code>. In most cases this will be the merge commit created by merging a GitHub pull request.</p>
 <p>Abort will prevent deployment should the load testing fail while warn will simply warn via Slack and continue deployment. For detailed specifics on load testing and this convention, please see the relevant documentation: <a href="/tests/load/README.html">load-testing-docs</a>: /tests/load/README.md].</p>
