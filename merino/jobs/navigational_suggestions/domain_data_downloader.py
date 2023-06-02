@@ -17,7 +17,7 @@ with apex_names as (
     origin,
     suffix
   FROM `moz-fx-data-shared-prod.domain_metadata_derived.top_domains_v1`
-  WHERE submission_date >= date_trunc(current_date(), month)
+  WHERE submission_date >= date_trunc(date_sub(current_date(), interval 1 month), month)
   and country_code in ('us', 'ca')
 ), ranked_apex_names as (
     select
