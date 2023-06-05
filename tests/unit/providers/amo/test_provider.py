@@ -83,12 +83,7 @@ def fixture_addon_provider(
 def test_reverse_and_expand_keywords(keywords: dict[SupportedAddon, set[str]]):
     """Test that we expand the keywords properly for the lookup table."""
     assert {
-        "addo": SupportedAddon.VIDEO_DOWNLOADER,
         "addon": SupportedAddon.VIDEO_DOWNLOADER,
-        "down": SupportedAddon.VIDEO_DOWNLOADER,
-        "downl": SupportedAddon.VIDEO_DOWNLOADER,
-        "downlo": SupportedAddon.VIDEO_DOWNLOADER,
-        "downloa": SupportedAddon.VIDEO_DOWNLOADER,
         "download": SupportedAddon.VIDEO_DOWNLOADER,
         "download ": SupportedAddon.VIDEO_DOWNLOADER,
         "download h": SupportedAddon.VIDEO_DOWNLOADER,
@@ -97,12 +92,6 @@ def test_reverse_and_expand_keywords(keywords: dict[SupportedAddon, set[str]]):
         "download help": SupportedAddon.VIDEO_DOWNLOADER,
         "download helpe": SupportedAddon.VIDEO_DOWNLOADER,
         "download helper": SupportedAddon.VIDEO_DOWNLOADER,
-        "dict": SupportedAddon.LANGAUGE_TOOL,
-        "dicti": SupportedAddon.LANGAUGE_TOOL,
-        "dictio": SupportedAddon.LANGAUGE_TOOL,
-        "diction": SupportedAddon.LANGAUGE_TOOL,
-        "dictiona": SupportedAddon.LANGAUGE_TOOL,
-        "dictionar": SupportedAddon.LANGAUGE_TOOL,
         "dictionary": SupportedAddon.LANGAUGE_TOOL,
     } == invert_and_expand_index_keywords(keywords, 4)
 

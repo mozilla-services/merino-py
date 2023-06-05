@@ -37,11 +37,13 @@ def invert_and_expand_index_keywords(
     """
     inverted_index = {}
     for addon_name, kws in keywords.items():
-        for word in kws:
-            word = word.lower()
+        for phrase in kws:
+            phrase = phrase.lower()
+            first_word = phrase.split()[0]
+            inverted_index[first_word] = addon_name
             # do the keyword expansion
-            for i in range(min_chars, len(word) + 1):
-                inverted_index[word[:i]] = addon_name
+            for i in range(len(first_word), len(phrase) + 1):
+                inverted_index[phrase[:i]] = addon_name
     return inverted_index
 
 
