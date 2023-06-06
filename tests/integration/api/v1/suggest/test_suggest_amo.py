@@ -23,21 +23,21 @@ SCENARIOS: dict[str, Scenario] = {
         providers={
             "addons": Provider(backend=StaticAmoBackend(), keywords=ADDON_KEYWORDS)
         },
-        query="nigh",
+        query="night mo",
         expected_title="Dark Reader",
     ),
     "Case-II: No Addon Matches": Scenario(
         providers={
             "addons": Provider(backend=StaticAmoBackend(), keywords=ADDON_KEYWORDS)
         },
-        query="asdf",
+        query="nigh",
         expected_title=None,
     ),
     "Case-III: Case Insensitive Match": Scenario(
         providers={
             "addons": Provider(backend=StaticAmoBackend(), keywords=ADDON_KEYWORDS)
         },
-        query="NIgh",
+        query="NIghT",
         expected_title="Dark Reader",
     ),
 }
