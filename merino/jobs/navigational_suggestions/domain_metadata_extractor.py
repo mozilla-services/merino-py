@@ -32,9 +32,12 @@ class Scraper:
     LINK_SELECTOR: str = (
         "link[rel=apple-touch-icon], link[rel=apple-touch-icon-precomposed],"
         'link[rel="icon shortcut"], link[rel="shortcut icon"], link[rel="icon"],'
-        'link[rel="SHORTCUT ICON"], link[rel="fluid-icon"]'
+        'link[rel="SHORTCUT ICON"], link[rel="fluid-icon"], link[rel="mask-icon"],'
+        'link[rel="apple-touch-startup-image"]'
     )
-    META_SELECTOR: str = "meta[name=apple-touch-icon]"
+    META_SELECTOR: str = (
+        "meta[name=apple-touch-icon], meta[name=msapplication-TileImage]"
+    )
 
     browser: RoboBrowser
 
