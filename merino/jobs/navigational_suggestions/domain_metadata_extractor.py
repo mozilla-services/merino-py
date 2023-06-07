@@ -32,9 +32,12 @@ class Scraper:
     LINK_SELECTOR: str = (
         "link[rel=apple-touch-icon], link[rel=apple-touch-icon-precomposed],"
         'link[rel="icon shortcut"], link[rel="shortcut icon"], link[rel="icon"],'
-        'link[rel="SHORTCUT ICON"], link[rel="fluid-icon"]'
+        'link[rel="SHORTCUT ICON"], link[rel="fluid-icon"], link[rel="mask-icon"],'
+        'link[rel="apple-touch-startup-image"]'
     )
-    META_SELECTOR: str = "meta[name=apple-touch-icon]"
+    META_SELECTOR: str = (
+        "meta[name=apple-touch-icon], meta[name=msapplication-TileImage]"
+    )
 
     browser: RoboBrowser
 
@@ -185,13 +188,10 @@ class DomainMetadataExtractor:
                     favicon["href"] = favicon_url
                 favicons.append(favicon)
 
-            # If we couldn't scrape any favicon data from link/meta tags for a domain then look
-            # for a default "favicon.ico" in domain root as some domains don't explicitly
-            # specify favicons via link/meta tags.
-            if len(favicons) == 0:
-                default_favicon_url = self.scraper.get_default_favicon(scraped_url)
-                if default_favicon_url is not None:
-                    favicons.append({"href": default_favicon_url})
+            # Include the default "favicon.ico" if it exists in domain root
+            default_favicon_url = self.scraper.get_default_favicon(scraped_url)
+            if default_favicon_url is not None:
+                favicons.append({"href": default_favicon_url})
 
         except Exception as e:
             logger.info(f"Exception {e} while extracting favicons for {scraped_url}")
