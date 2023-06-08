@@ -1,8 +1,10 @@
 # Contribution Guidelines
 
 Anyone is welcome to contribute to this project. Feel free to get in touch with
-other community members on [Matrix](https://chat.mozilla.org), the mailing list or through issues here on
+other community members on [Matrix][matrix], the mailing list or through issues here on
 GitHub.
+
+[matrix]: https://chat.mozilla.org
 
 ## Bug Reports
 
@@ -14,41 +16,55 @@ you can and under what conditions you saw the issue.
 Patches should be submitted as pull requests (PR).
 
 Before submitting a PR:
-- Ensure you are pulling from the most recent `main` branch and install dependencies with Poetry. See
-  [See the README](/README.md) for more details.
+
+- Ensure you are pulling from the most recent `main` branch and install dependencies with Poetry.
+  See the [README][readme] for more details.
 - Your code must run and pass all the automated tests before you submit your PR
-  for review. [See the README](/README.md) for information on linting, formatting and testing. "Work in progress" or "Draft" pull requests are allowed to be submitted, but
+  for review. See the [README][readme] for information on linting, formatting and testing.
+  "Work in progress" or "Draft" pull requests are allowed to be submitted, but
   should be clearly labeled as such and should not be merged until all tests
   pass and the code has been reviewed.
 - Ideally, your patch should include new tests that cover your changes. It is your and
   your reviewer's responsibility to ensure your patch includes adequate tests.
-- If making changes that may impact performance, it is recommended to execute a load test. Please see [Load Testing Opt-In [load test: (abort|warn)]][release-process] documentation for more information.
-- For more information on understanding the release process, please see relevant information contained in the [release-process.md][release-process] 
-documentation.
+- If making changes that may impact performance, it is recommended to execute a load test. Please
+  see the [Load Testing README][load_testing_readme] for more information.
+- For more information on understanding the release process, please see relevant information
+  contained in the [release-process.md][release_process] documentation.
+
+[readme]: /README.md
+[load_testing_readme]: /tests/load/README.md
+[release_process]: /docs/dev/release-process.md
 
 When submitting a PR:
-- You agree to license your code under the project's open source license
-  ([MPL 2.0](/LICENSE)).
+
+- You agree to license your code under the project's open source license ([MPL 2.0][license]).
 - Base your branch off the current `main`.
 - Add both your code and new tests if relevant.
-- [Sign](https://docs.github.com/en/github/authenticating-to-github/managing-commit-signature-verification/signing-commits) your git commit.
+- [Sign][sign] your git commit.
 - Run tests, linting and formatting checks to make sure your code complies with established standards.
 (e.g. No warnings are returned for python: "`make lint`", "`make test`", "`make format`")
 - Ensure your changes do not reduce code coverage of the test suite.
 - Please do not include merge commits in pull requests; include only commits
   with the new relevant code.
 
-WIP: See the main
-[documentation](https://github.com/mozilla-services/merino-py)
-for information on prerequisites, installing, running and testing.
+WIP: See the [merino book][merino_book] for information on prerequisites, installing, running and
+testing.
+
+[license]: /LICENSE
+[sign]: https://docs.github.com/en/github/authenticating-to-github/managing-commit-signature-verification/signing-commits
+[merino_book]: https://mozilla-services.github.io/merino-py/
 
 ## Code Review
 
-This project is production Mozilla code and subject to our [engineering practices and quality standards](https://developer.mozilla.org/en-US/docs/Mozilla/Developer_guide/Committing_Rules_and_Responsibilities). Every patch must be peer reviewed.
+This project is production Mozilla code and subject to our
+[committing rules and responsibilities][committing_rules_and_responsibilities]. 
+Every patch must be peer reviewed.
+
+[committing_rules_and_responsibilities]: https://firefox-source-docs.mozilla.org/contributing/committing_rules_and_responsibilities.html
 
 ## Git Commit Guidelines & Branch Naming
 
-We loosely follow the [Angular commit guidelines](https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md#type)
+We loosely follow the [Angular commit guidelines][angular_commit_guidelines]
 of `<type>: <subject>` where `type` must be one of:
 
 * **feat**: A new feature
@@ -62,7 +78,15 @@ of `<type>: <subject>` where `type` must be one of:
 * **chore**: Changes to the build process or auxiliary tools and libraries such as documentation
   generation
 
-Name the branch using this nomenclature with the `<type>` followed by a forward slash, followed by a dash-seperated description of the task. Ex. `feat/add-sentry-sdk-MOZ-1234`. Note, if associated with a Jira ticket, synchronization with Jira and GitHub is possible by appending the suffix of the Jira ticket to the branch name (`-MOZ-1234` in the example above). This can be added anywhere in the branch name, but adding to the end is ideal. You can also include the Jira issue at the end of ccommit messages to keep the task up to date. See Jira Docs for referencing issues [here](https://support.atlassian.com/jira-software-cloud/docs/reference-issues-in-your-development-work/)
+Name the branch using this nomenclature with the `<type>` followed by a forward slash, followed by a
+dash-seperated description of the task. Ex. `feat/add-sentry-sdk-MOZ-1234`. Note, if associated with
+a Jira ticket, synchronization with Jira and GitHub is possible by appending the suffix of the Jira
+ticket to the branch name (`-MOZ-1234` in the example above). This can be added anywhere in the
+branch name, but adding to the end is ideal. You can also include the Jira issue at the end of
+commit messages to keep the task up to date. See Jira Docs for referencing issues [here][jira]
+
+[angular_commit_guidelines]: https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md
+[jira]: https://support.atlassian.com/jira-software-cloud/docs/reference-issues-in-your-development-work/
 
 ### Subject
 
@@ -104,5 +128,3 @@ BREAKING CHANGE: This patch requires developer to lower expectations about
 
 Closes #314, #975
 ```
-[release-process]: /docs/dev/release-process.md
-[load-testing-docs]: /tests/load/README.md
