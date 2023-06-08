@@ -3,17 +3,23 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the AccuWeather backend module."""
-
+import datetime
+import hashlib
 import json
 from typing import Any, Optional
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient, HTTPError, Request, Response
+from pydantic.datetime_parse import datetime as datetime_type
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture
+from redis.asyncio import Redis
 
+from merino.exceptions import CacheEntryError, CacheMissError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.accuweather import (
+    ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT,
     AccuweatherBackend,
     AccuweatherError,
     AccuweatherLocation,
@@ -26,11 +32,28 @@ from merino.providers.weather.backends.protocol import (
 )
 
 
+@pytest.fixture(name="redis_mock_cache_miss")
+def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
+    """Create a Redis client mock object for testing."""
+
+    async def mock_get(key) -> Any:
+        return None
+
+    async def mock_set(key, value, **kwargs) -> Any:
+        return None
+
+    mock = mocker.AsyncMock(spec=Redis)
+    mock.get.side_effect = mock_get
+    mock.set.side_effect = mock_set
+    return mock
+
+
 @pytest.fixture(name="accuweather_parameters")
-def fixture_accuweather_parameters() -> dict[str, str]:
+def fixture_accuweather_parameters() -> dict[str, Any]:
     """Create an Accuweather object for test."""
     return {
         "api_key": "test",
+        "cached_report_ttl_sec": 1800,
         "url_base": "test://test",
         "url_param_api_key": "apikey",
         "url_postalcodes_path": "/locations/v1/postalcodes/{country_code}/search.json",
@@ -40,20 +63,32 @@ def fixture_accuweather_parameters() -> dict[str, str]:
     }
 
 
+@pytest.fixture(name="response_header")
+def fixture_response_header() -> dict[str, str]:
+    """Create a response header with a reasonable expiry."""
+    time_delta: datetime_type = datetime.datetime.now(
+        tz=datetime.timezone.utc
+    ) + datetime.timedelta(days=2)
+    return {"Expires": time_delta.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)}
+
+
 @pytest.fixture(name="accuweather")
-def fixture_accuweather(accuweather_parameters: dict[str, str]) -> AccuweatherBackend:
-    """Create an Accuweather object for test."""
-    return AccuweatherBackend(**accuweather_parameters)
+def fixture_accuweather(
+    redis_mock_cache_miss: AsyncMock, accuweather_parameters: dict[str, Any]
+) -> AccuweatherBackend:
+    """Create an Accuweather object for test. This object always have cache miss."""
+    return AccuweatherBackend(cache=redis_mock_cache_miss, **accuweather_parameters)
 
 
 @pytest.fixture(name="accuweather_with_partner_code")
 def fixture_accuweather_with_partner_code(
-    accuweather_parameters: dict[str, str]
+    redis_mock_cache_miss: AsyncMock, accuweather_parameters: dict[str, Any]
 ) -> AccuweatherBackend:
     """Create an Accuweather object with a partner code for test."""
     return AccuweatherBackend(
         url_param_partner_code="partner",
         partner_code="acme",
+        cache=redis_mock_cache_miss,
         **accuweather_parameters,
     )
 
@@ -251,13 +286,15 @@ def fixture_accuweather_forecast_response_fahrenheit(
     return json.dumps(accuweather_forecast_response).encode("utf-8")
 
 
-def test_init_api_key_value_error(accuweather_parameters: dict[str, str]) -> None:
+def test_init_api_key_value_error(
+    mocker: MockerFixture, accuweather_parameters: dict[str, Any]
+) -> None:
     """Test that a ValueError is raised if initializing with an empty API key."""
     expected_error_value: str = "AccuWeather API key not specified"
     accuweather_parameters["api_key"] = ""
 
     with pytest.raises(ValueError) as accuweather_error:
-        AccuweatherBackend(**accuweather_parameters)
+        AccuweatherBackend(cache=mocker.AsyncMock(spec=Redis), **accuweather_parameters)
 
     assert str(accuweather_error.value) == expected_error_value
 
@@ -274,7 +311,7 @@ def test_init_api_key_value_error(accuweather_parameters: dict[str, str]) -> Non
     ],
 )
 def test_init_url_value_error(
-    accuweather_parameters: dict[str, str], url_value: str
+    mocker: MockerFixture, accuweather_parameters: dict[str, Any], url_value: str
 ) -> None:
     """Test that a ValueError is raised if initializing with empty URL values."""
     expected_error_value: str = (
@@ -283,7 +320,7 @@ def test_init_url_value_error(
     accuweather_parameters[url_value] = ""
 
     with pytest.raises(ValueError) as accuweather_error:
-        AccuweatherBackend(**accuweather_parameters)
+        AccuweatherBackend(cache=mocker.AsyncMock(spec=Redis), **accuweather_parameters)
 
     assert str(accuweather_error.value) == expected_error_value
 
@@ -296,6 +333,7 @@ async def test_get_weather_report(
     accuweather_location_response: bytes,
     accuweather_current_conditions_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
+    response_header: dict[str, str],
 ) -> None:
     """Test that the get_weather_report method returns a WeatherReport."""
     expected_report: WeatherReport = WeatherReport(
@@ -322,6 +360,7 @@ async def test_get_weather_report(
     return_values: list[Response] = [
         Response(
             status_code=200,
+            headers=response_header,
             content=accuweather_location_response,
             request=Request(
                 method="GET",
@@ -330,6 +369,7 @@ async def test_get_weather_report(
         ),
         Response(
             status_code=200,
+            headers=response_header,
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
@@ -338,6 +378,7 @@ async def test_get_weather_report(
         ),
         Response(
             status_code=200,
+            headers=response_header,
             content=accuweather_forecast_response_fahrenheit,
             request=Request(
                 method="GET",
@@ -357,12 +398,14 @@ async def test_get_weather_report_failed_location_query(
     mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     geolocation: Location,
+    response_header: dict[str, str],
 ) -> None:
     """Test that the get_weather_report method returns None if the AccuWeather
     postal code search query yields no result.
     """
     return_value: Response = Response(
         status_code=200,
+        headers=response_header,
         content=b"[]",
         request=Request(
             method="GET",
@@ -383,6 +426,7 @@ async def test_get_weather_report_failed_current_conditions_query(
     geolocation: Location,
     accuweather_location_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
+    response_header: dict[str, str],
 ) -> None:
     """Test that the get_weather_report method returns None if the AccuWeather
     current conditions query yields no result.
@@ -390,6 +434,7 @@ async def test_get_weather_report_failed_current_conditions_query(
     side_effects: list[Response] = [
         Response(
             status_code=200,
+            headers=response_header,
             content=accuweather_location_response,
             request=Request(
                 method="GET",
@@ -398,6 +443,7 @@ async def test_get_weather_report_failed_current_conditions_query(
         ),
         Response(
             status_code=200,
+            headers=response_header,
             content=b"[]",
             request=Request(
                 method="GET",
@@ -406,6 +452,7 @@ async def test_get_weather_report_failed_current_conditions_query(
         ),
         Response(
             status_code=200,
+            headers=response_header,
             content=accuweather_forecast_response_fahrenheit,
             request=Request(
                 method="GET",
@@ -427,6 +474,7 @@ async def test_get_weather_report_handles_exception_group_properly(
     geolocation: Location,
     accuweather_location_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
+    response_header: dict[str, str],
 ) -> None:
     """Test that the get_weather_report method raises an error if current condition call throws
     an error
@@ -434,6 +482,7 @@ async def test_get_weather_report_handles_exception_group_properly(
     side_effects: list[Response | HTTPError] = [
         Response(
             status_code=200,
+            headers=response_header,
             content=accuweather_location_response,
             request=Request(
                 method="GET",
@@ -464,6 +513,7 @@ async def test_get_weather_report_failed_forecast_query(
     geolocation: Location,
     accuweather_location_response: bytes,
     accuweather_current_conditions_response: bytes,
+    response_header: dict[str, str],
 ) -> None:
     """Test that the get_weather_report method returns None if the AccuWeather
     forecast query yields no result.
@@ -471,6 +521,7 @@ async def test_get_weather_report_failed_forecast_query(
     side_effects: list[Response] = [
         Response(
             status_code=200,
+            headers=response_header,
             content=accuweather_location_response,
             request=Request(
                 method="GET",
@@ -479,6 +530,7 @@ async def test_get_weather_report_failed_forecast_query(
         ),
         Response(
             status_code=200,
+            headers=response_header,
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
@@ -487,6 +539,7 @@ async def test_get_weather_report_failed_forecast_query(
         ),
         Response(
             status_code=200,
+            headers=response_header,
             content=b"{}",
             request=Request(
                 method="GET",
@@ -529,6 +582,7 @@ async def test_get_location(
     mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     accuweather_location_response: bytes,
+    response_header,
 ) -> None:
     """Test that the get_location method returns an AccuweatherLocation."""
     expected_location: AccuweatherLocation = AccuweatherLocation(
@@ -539,6 +593,7 @@ async def test_get_location(
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
     mock_client.get.return_value = Response(
         status_code=200,
+        headers=response_header,
         content=accuweather_location_response,
         request=Request(
             method="GET",
@@ -554,8 +609,45 @@ async def test_get_location(
 
 
 @pytest.mark.asyncio
+async def test_get_location_from_cache(
+    mocker: MockerFixture,
+    accuweather_parameters: dict[str, Any],
+    accuweather_location_response: bytes,
+    response_header,
+) -> None:
+    """Test that we can get the location from cache."""
+    redis_mock = mocker.AsyncMock(spec=Redis)
+
+    async def mock_get(key) -> Any:
+        return accuweather_location_response
+
+    redis_mock.get.side_effect = mock_get
+
+    expected_location: AccuweatherLocation = AccuweatherLocation(
+        key="39376_PC", localized_name="San Francisco"
+    )
+    country: str = "US"
+    postal_code: str = "94105"
+    mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
+
+    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+    location: Optional[AccuweatherLocation] = await accuweather.get_location(
+        mock_client, country, postal_code
+    )
+
+    assert location == expected_location
+    redis_mock.get.assert_called_once_with(
+        f"AccuweatherBackend:v1:/locations/v1/postalcodes/{country}/search.json:"
+        f"{hashlib.blake2s(str({'q': postal_code}).encode('utf-8')).hexdigest()}"
+    )
+    assert not mock_client.get.called
+
+
+@pytest.mark.asyncio
 async def test_get_location_no_location_returned(
-    mocker: MockerFixture, accuweather: AccuweatherBackend
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    response_header: dict[str, str],
 ) -> None:
     """Test that the get_location method returns None if the response content is not as
     expected.
@@ -565,6 +657,7 @@ async def test_get_location_no_location_returned(
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
     mock_client.get.return_value = Response(
         status_code=200,
+        headers=response_header,
         content=b"[]",
         request=Request(
             method="GET",
@@ -634,6 +727,7 @@ async def test_get_current_conditions(
     accuweather_fixture: str,
     accuweather_current_conditions_response: bytes,
     expected_current_conditions_url: str,
+    response_header: dict[str, str],
 ) -> None:
     """Test that the get_current_conditions method returns CurrentConditions."""
     expected_conditions: CurrentConditions = CurrentConditions(
@@ -646,6 +740,7 @@ async def test_get_current_conditions(
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
     mock_client.get.return_value = Response(
         status_code=200,
+        headers=response_header,
         content=accuweather_current_conditions_response,
         request=Request(
             method="GET",
@@ -662,8 +757,48 @@ async def test_get_current_conditions(
 
 
 @pytest.mark.asyncio
+async def test_get_current_conditions_from_cache(
+    mocker: MockerFixture,
+    accuweather_parameters: dict[str, Any],
+    accuweather_current_conditions_response: bytes,
+):
+    """Get the current condition from cache. Do not make an API call."""
+    redis_mock = mocker.AsyncMock(spec=Redis)
+
+    async def mock_get(key):
+        return accuweather_current_conditions_response
+
+    redis_mock.get.side_effect = mock_get
+    current_conditions_url = (
+        "http://www.accuweather.com/en/us/san-francisco-ca/"
+        "94103/current-weather/39376_pc?lang=en-us"
+    )
+
+    expected_conditions: CurrentConditions = CurrentConditions(
+        url=current_conditions_url,
+        summary="Mostly cloudy",
+        icon_id=6,
+        temperature=Temperature(c=15.5, f=60),
+    )
+    location_key: str = "39376_PC"
+    mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
+
+    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+    conditions: Optional[CurrentConditions] = await accuweather.get_current_conditions(
+        mock_client, location_key
+    )
+    assert conditions == expected_conditions
+    redis_mock.get.assert_called_once_with(
+        "AccuweatherBackend:v1:/currentconditions/v1/39376_PC.json"
+    )
+    assert not mock_client.get.called
+
+
+@pytest.mark.asyncio
 async def test_get_current_conditions_no_current_conditions_returned(
-    mocker: MockerFixture, accuweather: AccuweatherBackend
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    response_header: dict[str, str],
 ) -> None:
     """Test that the get_current_conditions method returns None if the response content
     is not as expected.
@@ -672,6 +807,7 @@ async def test_get_current_conditions_no_current_conditions_returned(
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
     mock_client.get.return_value = Response(
         status_code=200,
+        headers=response_header,
         content=b"[]",
         request=Request(
             method="GET",
@@ -688,7 +824,9 @@ async def test_get_current_conditions_no_current_conditions_returned(
 
 @pytest.mark.asyncio
 async def test_get_current_conditions_error(
-    mocker: MockerFixture, accuweather: AccuweatherBackend
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    response_header: dict[str, str],
 ) -> None:
     """Test that the get_current_conditions method raises an appropriate exception in
     the event of an AccuWeather API error.
@@ -698,6 +836,7 @@ async def test_get_current_conditions_error(
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
     mock_client.get.return_value = Response(
         status_code=400,
+        headers=response_header,
         content=(
             b"{"
             b"'Code':'400',"
@@ -748,6 +887,7 @@ async def test_get_forecast(
     accuweather_fixture: str,
     forecast_response_fixture: str,
     expected_forecast_url: str,
+    response_header: dict[str, str],
 ) -> None:
     """Test that the get_forecast method returns a Forecast."""
     expected_forecast: Forecast = Forecast(
@@ -761,6 +901,7 @@ async def test_get_forecast(
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
     mock_client.get.return_value = Response(
         status_code=200,
+        headers=response_header,
         content=content,
         request=Request(
             method="GET",
@@ -777,8 +918,50 @@ async def test_get_forecast(
 
 
 @pytest.mark.asyncio
+async def test_get_forecast_from_cache(
+    mocker: MockerFixture,
+    accuweather_parameters: dict[str, Any],
+    accuweather_forecast_response_fahrenheit: bytes,
+):
+    """Get the forecast from cache. Do not make an API call."""
+    redis_mock = mocker.AsyncMock(spec=Redis)
+
+    async def mock_get(key):
+        return accuweather_forecast_response_fahrenheit
+
+    redis_mock.get.side_effect = mock_get
+
+    expected_forecast_url = (
+        "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+        "daily-weather-forecast/39376_pc?lang=en-us"
+    )
+
+    expected_forecast: Forecast = Forecast(
+        url=expected_forecast_url,
+        summary="Pleasant Saturday",
+        high=Temperature(f=70),
+        low=Temperature(f=57),
+    )
+
+    location_key: str = "39376_PC"
+    mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
+
+    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+    forecast: Optional[Forecast] = await accuweather.get_forecast(
+        mock_client, location_key
+    )
+    assert forecast == expected_forecast
+    redis_mock.get.assert_called_once_with(
+        "AccuweatherBackend:v1:/forecasts/v1/daily/1day/39376_PC.json"
+    )
+    assert not mock_client.get.called
+
+
+@pytest.mark.asyncio
 async def test_get_forecast_no_forecast_returned(
-    mocker: MockerFixture, accuweather: AccuweatherBackend
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    response_header: dict[str, str],
 ) -> None:
     """Test that the get_forecast method returns None if the response content is not as
     expected.
@@ -787,6 +970,7 @@ async def test_get_forecast_no_forecast_returned(
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
     mock_client.get.return_value = Response(
         status_code=200,
+        headers=response_header,
         content=b"{}",
         request=Request(
             method="GET",
@@ -864,3 +1048,72 @@ async def test_cache_inputs_for_weather_report(
         cache_inputs_by_location[0]
     )
     assert cache_inputs == cache_inputs_by_location[1]
+
+
+@pytest.mark.parametrize(
+    ("query_params", "expected_cache_key"),
+    [
+        (
+            {"q": "asdfg", "apikey": "filter_me_out"},
+            f"AccuweatherBackend:v1:localhost:"
+            f"{hashlib.blake2s(str({'q':'asdfg'}).encode('utf-8')).hexdigest()}",
+        ),
+        (
+            {},
+            "AccuweatherBackend:v1:localhost",
+        ),
+        (
+            {"q": "asdfg"},
+            f"AccuweatherBackend:v1:localhost:"
+            f"{hashlib.blake2s(str({'q': 'asdfg'},).encode('utf-8')).hexdigest()}",
+        ),
+    ],
+    ids=["filter_out_apikey", "none", "pass_through_query"],
+)
+def test_cache_key_for_accuweather_request(
+    accuweather: AccuweatherBackend,
+    query_params: dict[str, str],
+    expected_cache_key: str,
+):
+    """Test that the cache key is created properly."""
+    url = "localhost"
+    cache_key = accuweather.cache_key_for_accuweather_request(
+        url, query_params=query_params
+    )
+    assert cache_key == expected_cache_key
+
+
+@pytest.mark.asyncio
+async def test_get_request_from_cache_error_cache_miss(
+    mocker: MockerFixture, accuweather_parameters: dict[str, Any]
+):
+    """Test that an error is raised for cache miss."""
+    redis_mock = mocker.AsyncMock(spec=Redis)
+
+    async def mock_get(key):
+        return b""
+
+    redis_mock.get.side_effect = mock_get
+
+    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+
+    with pytest.raises(CacheMissError):
+        await accuweather.get_request_from_cache("random_key")
+
+
+@pytest.mark.asyncio
+async def test_get_request_from_cache_error_json_decode(
+    mocker: MockerFixture, accuweather_parameters: dict[str, Any]
+):
+    """Test that an error is raised for error decoding JSON."""
+    redis_mock = mocker.AsyncMock(spec=Redis)
+
+    async def mock_get(key):
+        return "can't serialize this"
+
+    redis_mock.get.side_effect = mock_get
+
+    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+
+    with pytest.raises(CacheEntryError):
+        await accuweather.get_request_from_cache("random_key")

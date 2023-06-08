@@ -53,6 +53,12 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             return WeatherProvider(
                 backend=AccuweatherBackend(
                     api_key=settings.accuweather.api_key,
+                    cache=RedisAdapter(
+                        Redis.from_url(settings.redis.server)
+                    )  # type: ignore [arg-type]
+                    if setting.cache == "redis"
+                    else NoCacheAdapter(),
+                    cached_report_ttl_sec=setting.cached_report_ttl_sec,
                     url_base=settings.accuweather.url_base,
                     url_param_api_key=settings.accuweather.url_param_api_key,
                     url_postalcodes_path=settings.accuweather.url_postalcodes_path,
@@ -63,7 +69,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         "url_param_partner_code"
                     ),
                     partner_code=settings.accuweather.get("partner_code"),
-                )  # type: ignore [arg-type]
+                )
                 if setting.backend == "accuweather"
                 else FakeWeatherBackend(),
                 cache=RedisAdapter(
