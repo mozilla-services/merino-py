@@ -59,6 +59,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     if setting.cache == "redis"
                     else NoCacheAdapter(),
                     cached_report_ttl_sec=setting.cached_report_ttl_sec,
+                    metrics_client=get_metrics_client(),
                     url_base=settings.accuweather.url_base,
                     url_param_api_key=settings.accuweather.url_param_api_key,
                     url_postalcodes_path=settings.accuweather.url_postalcodes_path,

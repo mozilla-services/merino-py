@@ -6,6 +6,7 @@ import json
 from json import JSONDecodeError
 from typing import Any, Optional
 
+import aiodogstatsd
 from httpx import URL, AsyncClient, HTTPError, InvalidURL, Response
 from pydantic import BaseModel
 from pydantic.datetime_parse import timedelta
@@ -44,6 +45,7 @@ class AccuweatherBackend:
     api_key: str
     cache: CacheAdapter
     cached_report_ttl_sec: int
+    metrics_client: aiodogstatsd.Client
     url_base: str
     url_param_api_key: str
     url_postalcodes_path: str
@@ -58,6 +60,7 @@ class AccuweatherBackend:
         api_key: str,
         cache: CacheAdapter,
         cached_report_ttl_sec: int,
+        metrics_client: aiodogstatsd.Client,
         url_base: str,
         url_param_api_key: str,
         url_postalcodes_path: str,
@@ -88,6 +91,7 @@ class AccuweatherBackend:
         self.api_key = api_key
         self.cache = cache
         self.cached_report_ttl_sec = cached_report_ttl_sec
+        self.metrics_client = metrics_client
         self.url_base = url_base
         self.url_param_api_key = url_param_api_key
         self.url_postalcodes_path = url_postalcodes_path
@@ -121,26 +125,47 @@ class AccuweatherBackend:
             return f"{self.__class__.__name__}:v1:{url}:{extra_identifiers}"
         return f"{self.__class__.__name__}:v1:{url}"
 
-    async def _get_request(
+    async def get_request(
         self, client: AsyncClient, url: str, params: dict[str, str] = {}
-    ):
+    ) -> dict[str, Any]:
         """Get API response. Attempt to get it from cache first,
         then actually make the call if there's a cache miss.
         """
         cache_key = self.cache_key_for_accuweather_request(url, params)
         response_dict: dict[str, str]
+
+        # The top level path in the URL gives us a good enough idea of what type of request
+        # we are calling from here.
+        request_type: str = url.strip("/").split("/")[0]
         try:
-            response_dict = await self.get_request_from_cache(cache_key)
-        except (CacheMissError, CacheEntryError):
-            response: Response = await client.get(
-                url,
-                params=params,
+            response_dict = await self.fetch_request_from_cache(cache_key)
+            self.metrics_client.increment(f"accuweather.cache.hit.{request_type}")
+        except (CacheMissError, CacheEntryError) as exc:
+            error_type = "miss" if isinstance(exc, CacheMissError) else "error"
+            self.metrics_client.increment(
+                f"accuweather.cache.{error_type}.{request_type}"
             )
-            response.raise_for_status()
+
+            with self.metrics_client.timeit(f"accuweather.request.{request_type}.get"):
+                response: Response = await client.get(url, params=params)
+                response.raise_for_status()
 
             response_expiry: str = response.headers.get("Expires")
             response_dict = response.json()
 
+            await self.store_request_into_cache(
+                cache_key, response_dict, response_expiry
+            )
+
+        return response_dict
+
+    async def store_request_into_cache(
+        self, cache_key: str, response_dict: dict[str, Any], response_expiry: str
+    ):
+        """Store the request into cache. Also ensures that the cache ttl is
+        at least `cached_report_ttl_sec`.
+        """
+        with self.metrics_client.timeit("accuweather.cache.store"):
             expiry_delta: timedelta = (
                 datetime.datetime.strptime(
                     response_expiry, ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT
@@ -148,24 +173,23 @@ class AccuweatherBackend:
                 - datetime.datetime.now()
             )
             cache_ttl: timedelta = max(
-                expiry_delta, timedelta(self.cached_report_ttl_sec)
+                expiry_delta, timedelta(seconds=self.cached_report_ttl_sec)
             )
             cache_value = json.dumps(response_dict).encode("utf-8")
             await self.cache.set(cache_key, cache_value, ttl=cache_ttl)
 
-        return response_dict
-
-    async def get_request_from_cache(self, cache_key: str) -> dict[str, Any]:
+    async def fetch_request_from_cache(self, cache_key: str) -> dict[str, Any]:
         """Get the request from the cache."""
-        response: Optional[bytes] = await self.cache.get(cache_key)
-        if not response:
-            raise CacheMissError
+        with self.metrics_client.timeit("accuweather.cache.fetch"):
+            response: Optional[bytes] = await self.cache.get(cache_key)
+            if not response:
+                raise CacheMissError
 
-        try:
-            response_dict: dict[str, Any] = json.loads(response)
-            return response_dict
-        except JSONDecodeError as e:
-            raise CacheEntryError("Failed to parse cache entry") from e
+            try:
+                response_dict: dict[str, Any] = json.loads(response)
+                return response_dict
+            except JSONDecodeError as e:
+                raise CacheEntryError("Failed to parse cache entry") from e
 
     async def get_weather_report(
         self, geolocation: Location
@@ -218,7 +242,7 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-locations-api/apis/get/locations/v1/postalcodes/{countryCode}/search
         """
         try:
-            response_json: dict[str, str] = await self._get_request(
+            response_json: dict[str, str] = await self.get_request(
                 client,
                 self.url_postalcodes_path.format(country_code=country),
                 params={
@@ -256,7 +280,7 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-current-conditions-api/apis/get/currentconditions/v1/{locationKey}
         """
         try:
-            response_json: dict[str, str] = await self._get_request(
+            response_json: dict[str, str] = await self.get_request(
                 client,
                 self.url_current_conditions_path.format(location_key=location_key),
                 params={
@@ -314,7 +338,7 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-forecast-api/apis/get/forecasts/v1/daily/1day/{locationKey}
         """
         try:
-            response_json: dict[str, Any] = await self._get_request(
+            response_json: dict[str, Any] = await self.get_request(
                 client,
                 self.url_forecasts_path.format(location_key=location_key),
                 params={

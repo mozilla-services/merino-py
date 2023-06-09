@@ -9,6 +9,7 @@ import json
 from typing import Any, Optional
 from unittest.mock import AsyncMock
 
+import freezegun
 import pytest
 from httpx import AsyncClient, HTTPError, Request, Response
 from pydantic.datetime_parse import datetime as datetime_type
@@ -49,11 +50,12 @@ def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
 
 
 @pytest.fixture(name="accuweather_parameters")
-def fixture_accuweather_parameters() -> dict[str, Any]:
+def fixture_accuweather_parameter(statsd_mock: Any) -> dict[str, Any]:
     """Create an Accuweather object for test."""
     return {
         "api_key": "test",
         "cached_report_ttl_sec": 1800,
+        "metrics_client": statsd_mock,
         "url_base": "test://test",
         "url_param_api_key": "apikey",
         "url_postalcodes_path": "/locations/v1/postalcodes/{country_code}/search.json",
@@ -74,10 +76,15 @@ def fixture_response_header() -> dict[str, str]:
 
 @pytest.fixture(name="accuweather")
 def fixture_accuweather(
-    redis_mock_cache_miss: AsyncMock, accuweather_parameters: dict[str, Any]
+    redis_mock_cache_miss: AsyncMock,
+    accuweather_parameters: dict[str, Any],
+    statsd_mock: Any,
 ) -> AccuweatherBackend:
     """Create an Accuweather object for test. This object always have cache miss."""
-    return AccuweatherBackend(cache=redis_mock_cache_miss, **accuweather_parameters)
+    return AccuweatherBackend(
+        cache=redis_mock_cache_miss,
+        **accuweather_parameters,
+    )
 
 
 @pytest.fixture(name="accuweather_with_partner_code")
@@ -1084,36 +1091,133 @@ def test_cache_key_for_accuweather_request(
 
 
 @pytest.mark.asyncio
-async def test_get_request_from_cache_error_cache_miss(
-    mocker: MockerFixture, accuweather_parameters: dict[str, Any]
+async def test_get_request_cache_hit(
+    mocker: MockerFixture, accuweather_parameters: dict[str, Any], statsd_mock: Any
+):
+    """Test that request can get value from cache"""
+    redis_mock = mocker.AsyncMock(spec=Redis)
+    url = "/forecasts/v1/daily/1day/39376_PC.json"
+
+    async def mock_get(key):
+        return json.dumps({"key": key}).encode("utf-8")
+
+    redis_mock.get.side_effect = mock_get
+
+    mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
+
+    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+
+    results: dict[str, Any] = await accuweather.get_request(mock_client, url)
+    assert results == {
+        "key": "AccuweatherBackend:v1:/forecasts/v1/daily/1day/39376_PC.json"
+    }
+
+    statsd_mock.timeit.assert_called_once_with("accuweather.cache.fetch")
+    statsd_mock.increment.assert_called_once_with("accuweather.cache.hit.forecasts")
+    assert not mock_client.get.called
+
+
+@pytest.mark.parametrize(
+    ("mock_cache_entry", "expected_cache_error_type", "url", "expected_url_type"),
+    [
+        (b"", "miss", "/forecasts/v1/daily/1day/39376_PC.json", "forecasts"),
+        (
+            b"can't serialize this",
+            "error",
+            "/currentconditions/v1/39376_PC.json",
+            "currentconditions",
+        ),
+    ],
+    ids=["cache_miss", "deserialization_error"],
+)
+@freezegun.freeze_time("2023-04-09")
+@pytest.mark.asyncio
+async def test_get_request_cache_errors(
+    mocker: MockerFixture,
+    accuweather_parameters: dict[str, Any],
+    mock_cache_entry: bytes,
+    expected_cache_error_type: str,
+    response_header: dict[str, str],
+    url: str,
+    expected_url_type: str,
+    statsd_mock: Any,
+):
+    """Test for cache errors/misses. Ensures that the right metrics are
+    called and that the API request is actually made.
+    """
+    redis_mock = mocker.AsyncMock(spec=Redis)
+
+    cache = {}
+
+    async def mock_get(key):
+        return mock_cache_entry
+
+    async def mock_store(key, value, ttl=None):
+        assert ttl == datetime.timedelta(days=2)
+        cache[key] = value
+
+    redis_mock.get.side_effect = mock_get
+    redis_mock.set.side_effect = mock_store
+
+    expiry_date = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(
+        days=2
+    )
+    expected_client_response = {"hello": "world"}
+    mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
+    mock_client.get.return_value = Response(
+        status_code=200,
+        headers={"Expires": expiry_date.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)},
+        content=json.dumps(expected_client_response).encode("utf-8"),
+        request=Request(
+            method="GET",
+            url=f"test://test/{url}?apikey=test",
+        ),
+    )
+
+    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+    results: dict[str, Any] = await accuweather.get_request(
+        mock_client, url, params={"apikey": "test"}
+    )
+    assert expected_client_response == results
+
+    timeit_metrics_called = [
+        call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list
+    ]
+    assert [
+        "accuweather.cache.fetch",
+        f"accuweather.request.{expected_url_type}.get",
+        "accuweather.cache.store",
+    ] == timeit_metrics_called
+
+    statsd_mock.increment.assert_called_once_with(
+        f"accuweather.cache.{expected_cache_error_type}.{expected_url_type}"
+    )
+
+    cache_key = f"AccuweatherBackend:v1:{url}"
+    assert cache[cache_key] == json.dumps(expected_client_response).encode("utf-8")
+
+
+@pytest.mark.parametrize(
+    ("mock_cache_entry", "error"),
+    [(b"", CacheMissError), (b"can't serialize this", CacheEntryError)],
+    ids=["cache_miss", "deserialization_error"],
+)
+@pytest.mark.asyncio
+async def test_fetch_request_from_cache_error(
+    mocker: MockerFixture,
+    accuweather_parameters: dict[str, Any],
+    mock_cache_entry: bytes,
+    error: Any,
 ):
     """Test that an error is raised for cache miss."""
     redis_mock = mocker.AsyncMock(spec=Redis)
 
     async def mock_get(key):
-        return b""
+        return mock_cache_entry
 
     redis_mock.get.side_effect = mock_get
 
     accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
 
-    with pytest.raises(CacheMissError):
-        await accuweather.get_request_from_cache("random_key")
-
-
-@pytest.mark.asyncio
-async def test_get_request_from_cache_error_json_decode(
-    mocker: MockerFixture, accuweather_parameters: dict[str, Any]
-):
-    """Test that an error is raised for error decoding JSON."""
-    redis_mock = mocker.AsyncMock(spec=Redis)
-
-    async def mock_get(key):
-        return "can't serialize this"
-
-    redis_mock.get.side_effect = mock_get
-
-    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
-
-    with pytest.raises(CacheEntryError):
-        await accuweather.get_request_from_cache("random_key")
+    with pytest.raises(error):
+        await accuweather.fetch_request_from_cache("random_key")
