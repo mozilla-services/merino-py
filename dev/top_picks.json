@@ -49,7 +49,7 @@
             ],
             "url": "https://twitter.com",
             "title": "Twitter",
-            "icon": "https://merino-images.services.mozilla.com/favicons/453b46da497d344121f50bd9b9bc4eb0664c1120d36377703fdbe23cb4515985_8582.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/9c32820eaa517e6e348879a861bc01c1f84c0690d48576cc6064a05ff4c31d8c_1111.svg"
         },
         {
             "rank": 7,
@@ -90,7 +90,7 @@
                 "Professional Networking"
             ],
             "url": "https://www.linkedin.com",
-            "title": "LinkedIn: Log In or Sign Up",
+            "title": "Linkedin",
             "icon": "https://merino-images.services.mozilla.com/favicons/19b079c09197fba68d021fa3ba394ec91703909ffd237efa3eb9a2bca13148ec_24838.ico"
         },
         {
@@ -124,6 +124,17 @@
             "url": "https://www.wikipedia.org",
             "title": "Wikipedia",
             "icon": "https://merino-images.services.mozilla.com/favicons/4c8bf96d667fa2e9f072bdd8e9f25c8ba6ba2ad55df1af7d9ea0dd575c12abee_1313.png"
+        },
+        {
+            "rank": 14,
+            "domain": "live",
+            "categories": [
+                "Technology",
+                "Webmail"
+            ],
+            "url": "https://outlook.live.com",
+            "title": "Outlook \u2013 free personal email and calendar from Microsoft",
+            "icon": ""
         },
         {
             "rank": 15,
@@ -183,7 +194,7 @@
             ],
             "url": "https://github.com",
             "title": "GitHub: Let\u2019s build from here \u00b7 GitHub",
-            "icon": "https://merino-images.services.mozilla.com/favicons/6a9577cd4f7fa6b75bde1025af85b944e9dd1388373b55ccba6e9f80ac2eae60_959.svg"
+            "icon": "https://merino-images.services.mozilla.com/favicons/e2c39927d004078983910c9017066f4257a1d80a7e2456753d1285938dd858e7_1009.svg"
         },
         {
             "rank": 21,
@@ -205,7 +216,7 @@
             ],
             "url": "https://www.pinterest.com",
             "title": "Pinterest",
-            "icon": "https://merino-images.services.mozilla.com/favicons/47ee705fb56b5bca8c3c2ef438381141c1bb43db03b9844eaa3ce6a5e3148b40_2624.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/285cc222ddfbcb4caa56433128db0c0cf7cdd66b71b25e700308140e9f491730_1200.svg"
         },
         {
             "rank": 23,
@@ -306,7 +317,7 @@
             ],
             "url": "https://www.icloud.com",
             "title": "iCloud",
-            "icon": "https://merino-images.services.mozilla.com/favicons/43c66a021c12afd753c6d4b75ac9af9d9549003c2da49f6375e831fa56cdfb4f_3084.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/c52efdac0aebf3b4b85aec6c9c1f2f03516131ae4fe39275d45c4dd6a6f84e9f_1733.svg"
         },
         {
             "rank": 33,
@@ -390,7 +401,7 @@
             ],
             "url": "https://medium.com",
             "title": "Medium \u2013 Where good ideas find you.",
-            "icon": "https://merino-images.services.mozilla.com/favicons/ed9f0a65ac54e9a7eef4d939591879eb7d1ad35c2f2e144dee089aa5c14032b4_3489.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/2fdf43bd13621c2ff6f6e1f95718d19ff16f14d7660bb282d576ab29977343f3_1205.svg"
         },
         {
             "rank": 42,
@@ -517,7 +528,7 @@
             ],
             "url": "https://www.etsy.com",
             "title": "Etsy - Shop for handmade, vintage, custom, and unique gifts for everyone",
-            "icon": "https://merino-images.services.mozilla.com/favicons/f0c49996a0668550032c8959565101633613018924c7ed27dd4134cfcf2ff7f6_368.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/f3a9c80ab5800cdc25f2b7a526f5e2ea3761c16b9e5b61e88c6c0c0a72187486_1143.svg"
         },
         {
             "rank": 54,
@@ -674,7 +685,7 @@
                 "Educational Institutions"
             ],
             "url": "https://web.mit.edu",
-            "title": "MIT - Massachusetts Institute of Technology",
+            "title": "Boomerang universe | MIT - Massachusetts Institute of Technology",
             "icon": "https://merino-images.services.mozilla.com/favicons/5c09380516c88ad59f4de4fbce51d3d6128eb0c486e7d7619d6fa979edc20820_100546.ico"
         },
         {
@@ -771,7 +782,7 @@
             ],
             "url": "https://www.businessinsider.com",
             "title": "Insider",
-            "icon": "https://merino-images.services.mozilla.com/favicons/ae4643df33f6d8ff57a608d45d51620b5521f0d2c1060a09a9cb3462b828949a_4581.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/93c8e2f1e03f10f30c9a8a676704abb048c5df786090f1d70259b70efe12a5e7_3869.svg"
         },
         {
             "rank": 79,
@@ -816,7 +827,7 @@
             ],
             "url": "https://www.espn.com",
             "title": "ESPN - Serving Sports Fans. Anytime. Anywhere.",
-            "icon": "https://merino-images.services.mozilla.com/favicons/5ebac32c751939ad3686330a8783ca28fcec395d9cf7d9adfc9bc8c1a38e1272_1944.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/ee50b67a0752309d9c541d51dc6934970842c6bb9e48ece70394127bb61bc975_736.svg"
         },
         {
             "rank": 83,
@@ -836,7 +847,7 @@
             ],
             "url": "https://www.grammarly.com",
             "title": "Grammarly: Free Writing AI Assistance",
-            "icon": "https://merino-images.services.mozilla.com/favicons/a9f9741c66b99e35063b9c5dd76eab71b7f924c5a9936afa510b6c47358ce835_2772.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/a2e455515a4f5e12bfeb395e24afabacd47bf5f69db8cdfad799b38c74ae1222_1307.svg"
         },
         {
             "rank": 85,
@@ -854,8 +865,8 @@
             "categories": [
                 "Search Engines"
             ],
-            "url": "https://www.fiverr.com",
-            "title": "Fiverr - Freelance Services Marketplace",
+            "url": "https://block.fiverr.com",
+            "title": "Fiverr",
             "icon": ""
         },
         {
@@ -867,7 +878,7 @@
             ],
             "url": "https://www.eventbrite.com",
             "title": "Eventbrite - Discover Great Events or Create Your Own & Sell Tickets",
-            "icon": "https://merino-images.services.mozilla.com/favicons/28021383450d0ba0029c09e766899d7019bc373f44f3c011b412de4e8b0bf2f3_7874.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/61b73e7fefea891dad2153404ff95cd913394058e8d26bfc479fa4e62538297a_1577.svg"
         },
         {
             "rank": 88,
@@ -971,7 +982,7 @@
                 "Education"
             ],
             "url": "https://www.udemy.com",
-            "title": "Online Courses - Learn Anything, On Your Schedule | Udemy",
+            "title": "Udemy",
             "icon": ""
         },
         {
@@ -993,7 +1004,7 @@
             ],
             "url": "https://www.yelp.com",
             "title": "Restaurants, Dentists, Bars, Beauty Salons, Doctors - Yelp",
-            "icon": ""
+            "icon": "https://merino-images.services.mozilla.com/favicons/8c8e7b563a6fb12d81962610e9ea86d3f78d8ef050d0f718dc19693651133b59_6832.svg"
         },
         {
             "rank": 100,
@@ -1024,7 +1035,7 @@
             ],
             "url": "https://www.tripadvisor.com",
             "title": "Tripadvisor: Over a billion reviews & contributions for Hotels, Attractions, Restaurants, and more",
-            "icon": ""
+            "icon": "https://merino-images.services.mozilla.com/favicons/72d8b77c228c8fe25e12f7a9aaf93ac1308f42e9036d0b3077c3ee21907ad18c_1870.svg"
         },
         {
             "rank": 103,
@@ -1045,7 +1056,7 @@
             ],
             "url": "https://www.marriott.com",
             "title": "Marriott Bonvoy Hotels | Book Directly & Get Exclusive Rates",
-            "icon": "https://merino-images.services.mozilla.com/favicons/f3b282abf4ba9fbe638cf624ac3a033f6d386c13eaa86a26d80b02d82dd56a63_562.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/4ba31a26c59c35640e24591084c505f2c00c30bc8a82a7aa7d0ab74f3f5ba61d_60936.jpeg"
         },
         {
             "rank": 105,
@@ -1095,8 +1106,8 @@
                 "Real Estate"
             ],
             "url": "https://www.zillow.com",
-            "title": "Zillow",
-            "icon": ""
+            "title": "Zillow: Real Estate, Apartments, Mortgages & Home Values",
+            "icon": "https://merino-images.services.mozilla.com/favicons/b021a6fb2facb5d8edacc886dcc88fabc7dca7a53db58cd208091d329caa63e1_1039.png"
         },
         {
             "rank": 110,
@@ -1126,7 +1137,7 @@
             ],
             "url": "https://www.latimes.com",
             "title": "News from California, the nation and world - Los Angeles Times",
-            "icon": "https://merino-images.services.mozilla.com/favicons/ed5893e3f7c2ba2706345c2ec3fd8d8b0e239dda5f5b6da86e5d61843d8c0ea2_3497.oct"
+            "icon": "https://merino-images.services.mozilla.com/favicons/980360cb5a20d8d0d43c2422951e971a429ee78dba15231fdb12368ac6772f84_20497.oct"
         },
         {
             "rank": 113,
@@ -1137,7 +1148,7 @@
             ],
             "url": "https://www.cbsnews.com",
             "title": "CBS News - Breaking news, 24/7 live streaming news & top stories",
-            "icon": "https://merino-images.services.mozilla.com/favicons/27511f86d806a498a9707910c48055c1254a5bb05b9f1f10770a1285270a8913_4225.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/8b0ecb290ba9c0d8b86b5fbdea1b8eba2f52fd30b07d3307d99d39384fb81c05_12061.png"
         },
         {
             "rank": 114,
@@ -1187,7 +1198,7 @@
             ],
             "url": "https://www.patreon.com",
             "title": "Creativity powered by membership | Patreon",
-            "icon": "https://merino-images.services.mozilla.com/favicons/67b80833569f9e0432d771d34c6f9723cf7b37e1df3db683f2d7d895b3334c51_1399.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/7ea5f7091fc9863d8f77781f169085a32694204b62ccf42c6bf46e68c5788964_961.svg"
         },
         {
             "rank": 119,
@@ -1288,7 +1299,7 @@
             ],
             "url": "https://www.state.gov",
             "title": "U.S. Department of State - United States Department of State",
-            "icon": "https://merino-images.services.mozilla.com/favicons/a6420bf7fa0b8d7f97ff0c908c16884071a699c17d6e80adce5cbd28ce8d696d_55208.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/3268de565899aa2594ef6adbf2726193bb7f47ac8b2fb2c7869cb171a9bffef2_91464.png"
         },
         {
             "rank": 129,
@@ -1309,7 +1320,7 @@
             ],
             "url": "https://www.bankofamerica.com",
             "title": "Bank of America - Banking, Credit Cards, Loans and Merrill Investing",
-            "icon": "https://merino-images.services.mozilla.com/favicons/b47bfe9d7333188f5b2f8690785ccd966d882c2364a5e4e5ae293e02554ad8d8_8354.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/b5230fa1fb95ab3f2de3d991db59fba31e914854c7eb33b928c3aa6c10ea9630_1595.svg"
         },
         {
             "rank": 131,
@@ -1330,7 +1341,7 @@
             ],
             "url": "https://www.buzzfeed.com",
             "title": "BuzzFeed",
-            "icon": "https://merino-images.services.mozilla.com/favicons/d8db15fefc593e206a9b91fe74cd4e8d027a977448da4b984b3bda116a59bcca_6060.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/7a5046f18f267fc1ea7768e0e1db8f11fb118e4059f1c01f28b5d31d6e55cf5d_64086.png"
         },
         {
             "rank": 133,
@@ -1435,7 +1446,7 @@
             ],
             "url": "https://www.nba.com",
             "title": "The official site of the NBA for the latest NBA Scores, Stats & News. | NBA.com",
-            "icon": "https://merino-images.services.mozilla.com/favicons/3663c7dbafbf499aeab32439f0a1519753af430b4d3df750fe9925ece093ccd3_7949.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/cf60a13378fe34a45ad1489b42aed5fb0e97c2769524ebcbc9020d9cc11df1cb_2236.svg"
         },
         {
             "rank": 143,
@@ -1445,7 +1456,7 @@
             ],
             "url": "https://www.pbs.org",
             "title": "PBS: Public Broadcasting Service",
-            "icon": "https://merino-images.services.mozilla.com/favicons/8a613d104d16a7ae7fe6f9dc3ef4da4e0069d9936d0057f69229e6e486c0d915_6366.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/3c4ea48db81474ebddd1c05fbfc16d9496081ac1b2e82392f7ce071d58e6be38_1116.svg"
         },
         {
             "rank": 144,
@@ -1477,7 +1488,7 @@
             ],
             "url": "https://www.chess.com",
             "title": "Chess.com - Play Chess Online - Free Games",
-            "icon": "https://merino-images.services.mozilla.com/favicons/bb3d73e82ea4b6aecedf4e6492cf7682fa6a51fd85379006a7de5b18f515075d_2148.svg"
+            "icon": "https://merino-images.services.mozilla.com/favicons/38534fc2b4d19ca489afeed76a04931487a7af299354bf514f1372791a378edd_401.svg"
         },
         {
             "rank": 147,
@@ -1497,7 +1508,7 @@
             ],
             "url": "https://www.target.com",
             "title": "Target : Expect More. Pay Less.",
-            "icon": "https://merino-images.services.mozilla.com/favicons/7bf47db489b5da339d7bdfc5c97ed0c8227b7ec5f89f48d91a625a5f7853bc48_3393.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/3956db3baaaeee3aa6ed8c791448a77d91c381460924a654aef836cc7f0d254e_3934.png"
         },
         {
             "rank": 149,
@@ -1636,7 +1647,7 @@
             ],
             "url": "https://www.airbnb.com",
             "title": "Airbnb",
-            "icon": "https://merino-images.services.mozilla.com/favicons/c88f6b661daca0190f2cd09d23cd304aaf50960c7687f7698a19189a8b28d9c9_7384.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/a89291eb798183ff3fe865984b80399b4947df2be0278ab9e3f2bf0cef0e2161_5036.svg"
         },
         {
             "rank": 162,
@@ -1741,7 +1752,7 @@
             ],
             "url": "https://www.xfinity.com",
             "title": "Xfinity - Home of the 10G Network",
-            "icon": "https://merino-images.services.mozilla.com/favicons/aa050de8862f7eaa8ea290eb9612bf949d6a2c8a6ea60ce60df5af3697c89a7d_11078.ico"
+            "icon": "https://merino-images.services.mozilla.com/favicons/b71b1bf9c4b52a609cdaa1db2a4dc73ab5f1f91ae7627b62a50f4057c5fda9a5_790.svg"
         },
         {
             "rank": 173,
@@ -1751,7 +1762,7 @@
             ],
             "url": "https://zoro.to",
             "title": "Watch Anime Online, Free Anime Streaming Online on Zoro.to Anime Website",
-            "icon": "https://merino-images.services.mozilla.com/favicons/c6b78484fe80bc73a2c53a209807a73023a6e8f876eccaa229a453d28278a843_26102.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/5e76297e1b9d6485394d076c04bd83095c47b4f2d10038b541e7da8165c8e3db_5681.svg"
         },
         {
             "rank": 174,
@@ -1782,7 +1793,7 @@
             ],
             "url": "https://www.newsweek.com",
             "title": "Newsweek - News, Analysis, Politics, Business, Technology",
-            "icon": "https://merino-images.services.mozilla.com/favicons/6769bf1df09e8d22bd6721a70f124462b1bbdf3af9cf52b17087583ce1287a41_2207.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/045dc3e197098fb59203b66e989309948cd61b80f06c0d7e2760f76305476043_986.svg"
         },
         {
             "rank": 177,
@@ -2033,7 +2044,7 @@
             ],
             "url": "https://www.instacart.com",
             "title": "Instacart | Grocery Delivery or Pickup from Local Stores Near You",
-            "icon": ""
+            "icon": "https://merino-images.services.mozilla.com/favicons/fa78b2b7711c226c008dee2b9281e0a04f6bdab366b11436b594af3fe3723980_1398.oct"
         },
         {
             "rank": 202,
@@ -2044,7 +2055,7 @@
             ],
             "url": "https://www.sfgate.com",
             "title": "SFGATE: San Francisco Bay Area News, Sports, Culture, Travel, Food and Drink - SFGATE",
-            "icon": "https://merino-images.services.mozilla.com/favicons/96be086cb50832e0ba4ddc542db67beba8b874bb36ceee8a6e476a09dfb98a80_8604.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/01c906828698fa0fe5d613e74e4d08b05146a119559ddfa8c870715c7e57b58c_2606.svg"
         },
         {
             "rank": 203,
@@ -2268,7 +2279,7 @@
             ],
             "url": "https://thehill.com",
             "title": "The Hill - covering Congress, Politics, Political Campaigns and Capitol Hill",
-            "icon": "https://merino-images.services.mozilla.com/favicons/a7f41d73d1ef98377a217fbb2af7c7833f49595dc40cd6cf451a18483b666548_1045.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/8b53d1f8db09b4c310ad2bd6e2dd160a19cdeb23f67ab91046b8523cc6ea0f0e_2007.png"
         },
         {
             "rank": 225,
@@ -2322,8 +2333,8 @@
                 "Education"
             ],
             "url": "https://www.urbandictionary.com",
-            "title": "Urban Dictionary, June 2: corporate month",
-            "icon": "https://merino-images.services.mozilla.com/favicons/050e1b5c9a89b281030647aa316814292aaf3bb23914ac660e39f5ab473051e5_6756.png"
+            "title": "Urban Dictionary, June 7: Inyeon",
+            "icon": "https://merino-images.services.mozilla.com/favicons/45d09c7b70061692017314a2d69c393458954b42cd7a279616dc1f93d536de64_3419.svg"
         },
         {
             "rank": 230,
@@ -2331,9 +2342,9 @@
             "categories": [
                 "Real Estate"
             ],
-            "url": "https://redfin.com",
-            "title": "Redfin",
-            "icon": ""
+            "url": "https://www.redfin.com",
+            "title": "Real Estate, Homes for Sale, MLS Listings, Agents | Redfin",
+            "icon": "https://merino-images.services.mozilla.com/favicons/4c87835218666170f45defc8801144c0cfca0351b1beb7deb1bd8a619d41ff48_2898.png"
         },
         {
             "rank": 231,
@@ -2356,7 +2367,7 @@
             ],
             "url": "https://www.disneyplus.com",
             "title": "Stream Disney, Pixar, Marvel, Star Wars, Nat Geo | Disney+",
-            "icon": "https://merino-images.services.mozilla.com/favicons/b93121764789857750ed879e61638fa5a9b3562ac34e95dd6f6c2d78ac2ac2c7_2615.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/31855a4853fa486e30cd2b26d459b7bd40d19fd8ff07f5bf6cdff863c2ebf1fd_2909.svg"
         },
         {
             "rank": 233,
@@ -2406,7 +2417,7 @@
             ],
             "url": "https://www.samsclub.com",
             "title": "Let us know you're not a robot - Sam's Club",
-            "icon": "https://merino-images.services.mozilla.com/favicons/4ab1512313b80ddade6294ac267f41a1ecc42204020949e441141d8ac2c73910_5363.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/66e4a6934dc13359717a2caf7c25f4f052af213bfc97639381151610458fcc48_2457.svg"
         },
         {
             "rank": 239,
@@ -2449,7 +2460,7 @@
             ],
             "url": "https://www.theglobeandmail.com",
             "title": "The Globe and Mail: Canadian, World, Politics and Business News & Analysis",
-            "icon": "https://merino-images.services.mozilla.com/favicons/b803df76793abb0e09034f99c9722f5ffb18aa0a21aba8c2ccf2a7080012379e_3679.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/1f88da1e29fa2f6e43b3f0d762172219f32040ca56db4fe42fc451ac64ef928d_2606.svg"
         },
         {
             "rank": 243,
@@ -2459,7 +2470,7 @@
             ],
             "url": "https://www.cuny.edu",
             "title": "The City University of New York",
-            "icon": "https://merino-images.services.mozilla.com/favicons/d7f75be82c7fc18c3dce42392802600bc971c70b070d0bd410f7a703d3af79a3_8999.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/48bd42fd8da7f544327d5ac54a6858e7081b33e118869b8a0646a246448e4d1f_34181.png"
         },
         {
             "rank": 244,
@@ -2482,7 +2493,7 @@
             ],
             "url": "https://www.espncricinfo.com",
             "title": "Today's Cricket Match | Cricket Update | Cricket News | ESPNcricinfo",
-            "icon": "https://merino-images.services.mozilla.com/favicons/24ed2d2fada7e497086d97490a13c950e7cb04d92d2b7daf3b9e08db6e7a68dd_1424.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/7ec403bbdbbdf7556f949aa9943a2f7db95e79c9bf61389042c3ec757cce42fc_11812.png"
         },
         {
             "rank": 246,
@@ -2594,8 +2605,8 @@
                 "Economy & Finance"
             ],
             "url": "https://www.creditkarma.com",
-            "title": "Get your free score and more - Credit Karma",
-            "icon": "https://merino-images.services.mozilla.com/favicons/164327f0b61d332b9b49d95a90e04c798a8952671f9c09203a9fa2228e460512_5771.png"
+            "title": "Get your free score and more - Intuit Credit Karma",
+            "icon": "https://merino-images.services.mozilla.com/favicons/50fa44151920b3bbebf9da0b8717db589f01413eab7599dfe81c7e4e1b891c9a_1184.svg"
         },
         {
             "rank": 257,
@@ -2606,7 +2617,7 @@
             ],
             "url": "https://www.asos.com",
             "title": "ASOS | Online Shopping for the Latest Clothes & Fashion",
-            "icon": "https://merino-images.services.mozilla.com/favicons/1f53f708c99aa4512fc3c9a7b29b12cf7738ee2d9b54633215b2cec5ef4d0995_2142.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/d8294f47bc9f8d4fb404b26e54487635e4ce5a465ee3ee6f59d6d366ce259475_2384.svg"
         },
         {
             "rank": 258,
@@ -2668,7 +2679,7 @@
                 "Ecommerce"
             ],
             "url": "https://www.newegg.com",
-            "title": "Are you a human?",
+            "title": "Top gaming PC & laptop savings. PC parts, & more! | Newegg.com",
             "icon": ""
         },
         {
@@ -2689,7 +2700,7 @@
             ],
             "url": "https://slickdeals.net",
             "title": "Slickdeals: The Best Deals, Coupons, Promo Codes & Discounts",
-            "icon": ""
+            "icon": "https://merino-images.services.mozilla.com/favicons/dc8ed941ae0eec6edfdbb325d68b701207ae6a1ce4ed12a2e2f3b785bb979037_1621.svg"
         },
         {
             "rank": 266,
@@ -2720,7 +2731,7 @@
             ],
             "url": "https://www.asurascans.com",
             "title": "Asura Scans \u2013 Read Comics",
-            "icon": "https://merino-images.services.mozilla.com/favicons/c6b3c1a02c36d5499dffa3f13f819aeb54d855f368bb2eefc616abee891211aa_10333.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/51587044d24c112218c9b3e76e9bfd456885dd927747785eeb7b4e1aa4849225_27121.png"
         },
         {
             "rank": 269,
@@ -2731,7 +2742,7 @@
             ],
             "url": "https://www.tmz.com",
             "title": "TMZ",
-            "icon": "https://merino-images.services.mozilla.com/favicons/2fce0540ceaf1da1eaf26dd7da56ec0f583bfed47d55bb275a4dfe68614aaf7b_4184.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/15436c004ad77b76a38a74ce8de1ac167553b7fae0c9f9b65a5cfbebf47c364d_2059.svg"
         },
         {
             "rank": 270,
@@ -2739,9 +2750,9 @@
             "categories": [
                 "Search Engines"
             ],
-            "url": "https://ask.com",
-            "title": "Ask",
-            "icon": "https://merino-images.services.mozilla.com/favicons/a5adae7134ac78cf55605e2e2181dcc02792164730a3e5cff3b3c50c6999a2a5_32988.ico"
+            "url": "https://www.ask.com",
+            "title": "Ask.com - What's Your Question?",
+            "icon": "https://merino-images.services.mozilla.com/favicons/2b654d5456f085932a6619e41c5c48c8809b6d0c760daba2a7214b8aeea86508_10728.png"
         },
         {
             "rank": 271,
@@ -2762,7 +2773,7 @@
             ],
             "url": "https://www.discogs.com",
             "title": "Discogs - Music Database and Marketplace",
-            "icon": "https://merino-images.services.mozilla.com/favicons/d164b6ef4da28750c6d72e118e436b7f4e89d7f0cfccb7cb715596032c417adc_13033.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/c4696a709da97032e6ffb9f79e02d434d1e58bb723a2479ce65e4084e524bd87_2967.svg"
         },
         {
             "rank": 273,
@@ -2773,7 +2784,7 @@
             ],
             "url": "https://www.myfitnesspal.com",
             "title": "MyFitnessPal | MyFitnessPal",
-            "icon": "https://merino-images.services.mozilla.com/favicons/9dad43b93ba52ff7d8defc6e738a14ab594fdab9ade84a26c8c03e2915a47af4_5097.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/238b08653b3cd5c11fb13985a1a343972693bb95c60c655c9332c12930cf3ed2_4259.svg"
         },
         {
             "rank": 274,
@@ -2795,7 +2806,7 @@
             ],
             "url": "https://www.cbssports.com",
             "title": "CBS Sports - News, Live Scores, Schedules, Fantasy Games, Video and more. - CBSSports.com",
-            "icon": "https://merino-images.services.mozilla.com/favicons/423be759b3500f133d361f7780cb91f5dc9a1084223e0df540650b5e7ef164a9_2009.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/2546b38d388b5cae65caba3ddbe10b3c6086053c8b4de927f95d4d8bc9958136_823.svg"
         },
         {
             "rank": 276,
@@ -2878,7 +2889,7 @@
             ],
             "url": "https://www.boredpanda.com",
             "title": "Bored Panda - The Only Magazine For Pandas",
-            "icon": "https://merino-images.services.mozilla.com/favicons/bd891cb0071863a233e73aeb776faf3d719c3950f815a1e4a1bf8dfe99d44da9_2870.svg"
+            "icon": "https://merino-images.services.mozilla.com/favicons/7e6831f633afe100c814d534e3c0296a63e11c87f421ae657b6f3c0f6c47a9fc_2689.svg"
         },
         {
             "rank": 284,
@@ -3005,7 +3016,7 @@
             ],
             "url": "https://globalnews.ca",
             "title": "Global News | Latest & Current News - Weather, Sports & Health News",
-            "icon": "https://merino-images.services.mozilla.com/favicons/fcaa5294adb3b255d087beb72eff221d7a6224fcc0182cdee5017ed51fb18942_3794.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/a9352d13d7d4964d739f8ea0e8ba04e79b87de7972a340a5f8851f07ab83a3c7_52448.png"
         },
         {
             "rank": 296,
@@ -3057,7 +3068,7 @@
             ],
             "url": "https://lectortmo.com",
             "title": "TuMangaOnline",
-            "icon": "https://merino-images.services.mozilla.com/favicons/31c8800b2253bd56787e24d428b268ce845b8615a3a4b461ae356c1efb9c1a5a_13734.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/e0c61cd889179e87b56e6a506f346d9028e041dddfa21d16ea9e92eca5a6d655_5571.svg"
         },
         {
             "rank": 301,
@@ -3255,7 +3266,7 @@
             ],
             "url": "https://lichess.org",
             "title": "lichess.org \u2022 Free Online Chess",
-            "icon": "https://merino-images.services.mozilla.com/favicons/98dda283c2132ba637ee67629341751735eed6aa27097609da0b1a922e0267e8_12304.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/0a52b1d8e3dda3d9f2b596e878d3676e268513d180074b50503fb443fb07cbd1_646.svg"
         },
         {
             "rank": 320,
@@ -3319,7 +3330,7 @@
             ],
             "url": "https://www.crazygames.com",
             "title": "CrazyGames - Free Online Games on CrazyGames.com",
-            "icon": "https://merino-images.services.mozilla.com/favicons/32213c317e03260998195924e12a927d45ce14c3aef9d493a240315e5af4ee04_4858.jpeg"
+            "icon": "https://merino-images.services.mozilla.com/favicons/58984d2df8f0305d07dc992485ec40b05c36292cb2f8d326df351ec8b1a7c8d0_2378.svg"
         },
         {
             "rank": 326,
@@ -3327,9 +3338,9 @@
             "categories": [
                 "Education"
             ],
-            "url": "https://www.studocu.com",
-            "title": "Studocu - Free summaries, lecture notes & exam prep",
-            "icon": "https://merino-images.services.mozilla.com/favicons/4b1224bfa4d6fd766412189fda4d363e8e6995132e968aabe8717cd99e7e4b09_855.svg"
+            "url": "https://studocu.com",
+            "title": "Studocu",
+            "icon": ""
         },
         {
             "rank": 327,
@@ -3379,7 +3390,7 @@
             ],
             "url": "https://www.ziprecruiter.com",
             "title": "Job Search - Millions of Jobs Hiring Near You | ZipRecruiter",
-            "icon": "https://merino-images.services.mozilla.com/favicons/a24d595cbed3c8468df4f2055168ab53f79fd2dc72f29389fda487a120c40e7e_4497.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/853524560afb10578597405be9aa9d855a74b003f0fa543789dab961f7899581_1152.svg"
         },
         {
             "rank": 333,
@@ -3390,7 +3401,7 @@
             ],
             "url": "https://studentaid.gov",
             "title": "Federal Student Aid",
-            "icon": "https://merino-images.services.mozilla.com/favicons/b47f54fe2b0f04e4713dcd0dad202c48c55bff96e277f5e858013b39dd0bae18_28707.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/db8ad3bc09c7ff5191aebb0d4ad8ed1da9d939369d7a68d5e6a8f816e27b2dca_2610.svg"
         },
         {
             "rank": 334,
@@ -3484,7 +3495,7 @@
             ],
             "url": "https://www.trulia.com",
             "title": "Trulia: Real Estate Listings, Homes For Sale, Housing Data",
-            "icon": "https://merino-images.services.mozilla.com/favicons/b05ff3545cc351f725b44f205d7a3e24ae691c1659a2abdd0003d14325e40597_20215.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/4f561e16a31a3cdeca1269b78d99dc51b6e1546d634c1ae30773a0c14f8e1ffb_144.svg"
         },
         {
             "rank": 343,
@@ -3526,8 +3537,8 @@
                 "Pets"
             ],
             "url": "https://www.chewy.com",
-            "title": "Pet Food, Products, Supplies at Low Prices - Free Shipping | Chewy.com",
-            "icon": "https://merino-images.services.mozilla.com/favicons/7ede8bdfef0eaa436bb35a7556f36ec833b300342fe20f9c9f525d0907736787_6891.png"
+            "title": "Chewy",
+            "icon": "https://merino-images.services.mozilla.com/favicons/6dd63acb39b594d5c09059ccb879432f5535ca74c243bb1982a617d78dbe6788_1782.png"
         },
         {
             "rank": 347,
@@ -3547,7 +3558,7 @@
             ],
             "url": "https://zerohedge.com",
             "title": "Zerohedge",
-            "icon": "https://merino-images.services.mozilla.com/favicons/433f5c9354593d5e2b6c643b77d7ce49953f8eadcfee2e168cd299c45f627e41_2785.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/47c4c86e417cffe8a3216e59d710fded0f8f3d73fe768b13fe020157369b8ddf_1258.svg"
         },
         {
             "rank": 349,
@@ -3581,7 +3592,7 @@
             ],
             "url": "https://www.rei.com",
             "title": "REI: A Life Outdoors is a Life Well Lived | REI Co-op",
-            "icon": "https://merino-images.services.mozilla.com/favicons/f79c1c8fd14feb962c6c0d0f9b1a44ad613cec9419ad85bba9d9d2f8790824c3_2822.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/1b54dcdd6baec346c50bccb731c2220ccea2683344fd40019b5cb5bd35e77360_1307.svg"
         },
         {
             "rank": 352,
@@ -3663,7 +3674,7 @@
             ],
             "url": "https://theathletic.com",
             "title": "The Athletic - Sports news, stories, scores, schedules, podcasts, and more",
-            "icon": "https://merino-images.services.mozilla.com/favicons/54601260989bfc5bc2ae9147a344181210010f3097e75796dba6600324aa4257_1932.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/728016766940e8074415ec0d1ad8d5f7e2830bd8daa92380ca60897fced256a4_2950.png"
         },
         {
             "rank": 360,
@@ -3693,7 +3704,7 @@
             ],
             "url": "https://www.pnc.com",
             "title": "PNC Personal Banking",
-            "icon": "https://merino-images.services.mozilla.com/favicons/ddcf1203d794a4ae95e96d0530328622bec508711fdc0bf933965ac370919125_64920.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/50e95e29c551269c69b7209dd6cb099380fbc8585bd69a0af0ce26243715d1f2_3744.svg"
         },
         {
             "rank": 363,
@@ -3714,7 +3725,7 @@
             ],
             "url": "https://www.groupon.com",
             "title": "Groupon\u00ae Official Site - Find Local Deals Near You",
-            "icon": "https://merino-images.services.mozilla.com/favicons/a82d97a706dd017b778e6e906b9d64d7ef3f654a88039da869c0fba20ab011f6_1154.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/57ef743b2cc3e3d5ad45f8d5345301aa2f2b675c2a66863e6e35ec892ff7d122_582.svg"
         },
         {
             "rank": 365,
@@ -3748,7 +3759,7 @@
             ],
             "url": "https://www.the-sun.com",
             "title": "News, sport, celebrities and gossip | The US Sun",
-            "icon": "https://merino-images.services.mozilla.com/favicons/11e76d8c3bc2f6b56e37b8e21b57ad53fd57e4a5626af389ca6de18c4b815e09_4394.webp"
+            "icon": "https://merino-images.services.mozilla.com/favicons/7dce633df1508335baa08fa7fff5ddc9c13062db6acbde2f8d5f7c1364dff556_11715.png"
         },
         {
             "rank": 368,
@@ -3769,7 +3780,7 @@
             ],
             "url": "https://reverb.com",
             "title": "Musical Instruments For Sale - New & Used Music Gear | Reverb",
-            "icon": "https://merino-images.services.mozilla.com/favicons/c3d124ab7ae33378e1b7b251b6e90021ba8968e52ad0641b2258b23b93e9fca4_2367.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/ffac89273f7ce4fca77681bb9f79546791537fbc12e7416aa17cd118f6a49c45_943.svg"
         },
         {
             "rank": 370,
@@ -3810,7 +3821,7 @@
             ],
             "url": "https://us.etrade.com",
             "title": "E*TRADE | Investing, Trading & Retirement",
-            "icon": "https://merino-images.services.mozilla.com/favicons/4dc61997399d079aefe518e3c84f2ed4daafb8783ad8026f483d6752d09f07ac_3375.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/dd46f6e241fb61d0444666b1d62a474745b266a27703071cc0953ac6364d53d0_2498.svg"
         },
         {
             "rank": 374,
@@ -3885,7 +3896,7 @@
             ],
             "url": "https://www.overstock.com",
             "title": "Overstock.com | The Best Deals Online: Furniture, Bedding, Rugs, Kitchen Essentials & More",
-            "icon": "https://merino-images.services.mozilla.com/favicons/677bae3a948fc7f66374a35deae5292694e7a91587741d49a35a2862242a230c_551.svg"
+            "icon": "https://merino-images.services.mozilla.com/favicons/d5fb36532301233e4bb6be84d5b89221f06ff0b58277a894d664dc98b2c4b389_299.svg"
         },
         {
             "rank": 381,
@@ -3986,7 +3997,7 @@
             ],
             "url": "https://fextralife.com",
             "title": "Fextralife | For Gamers by Gamers",
-            "icon": "https://merino-images.services.mozilla.com/favicons/2f265491af47416e5b1fa678b3ee6e9e835515c473fec4e46f4e9cdd2c86059f_11961.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/a3f4aa94011fd3c09994fcba8f2047008e33d99bd757d16927d13184f01ce07b_23450.png"
         },
         {
             "rank": 392,
@@ -4007,7 +4018,7 @@
             ],
             "url": "https://www.sciencealert.com",
             "title": "ScienceAlert : The Best in Science News And Amazing Breakthroughs",
-            "icon": "https://merino-images.services.mozilla.com/favicons/fc991fdae76d6988c25e9f627f6f4d463105dd4a07c5de683ad63552292bc479_11901.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/0639c8faaa04742a415a2dc9546643ba260000ae253197eb740e963621881de6_18943.png"
         },
         {
             "rank": 394,
@@ -4081,7 +4092,7 @@
             ],
             "url": "https://www.paylocity.com",
             "title": "Online HR & Payroll Software Built for Employees | Paylocity",
-            "icon": "https://merino-images.services.mozilla.com/favicons/d2c3009d00bf0babd9331904d027c2dcb579290f70f2ad1991440784361f302d_2908.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/bc1328ee4aeec6663e0ba48abca2e8fe680c9bd18375b38afd37d29d12dd4bf4_1290.svg"
         },
         {
             "rank": 401,
@@ -4091,7 +4102,7 @@
             ],
             "url": "https://www.pathofexile.com",
             "title": "News - Path of Exile - A Free Online Action RPG",
-            "icon": "https://merino-images.services.mozilla.com/favicons/1bccdd99d7965c8a05c249e7bcd189018ccfdde95cc16013504c3baec925972b_30820.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/dd0962fd44b34ddb9c1ecba975dee3752714691b1252cc9f3d96db873fe27f8e_225898.svg"
         },
         {
             "rank": 402,
@@ -4102,7 +4113,7 @@
             ],
             "url": "https://www.yorku.ca",
             "title": "York University | Right the Future",
-            "icon": "https://merino-images.services.mozilla.com/favicons/4bc4f08c510c4dcfa6a2485e48170e39404857f9e15f38d19e3670f9ed4a6698_3236.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/a69c3f393d7f8a4f2105bd0536362423c6d06cb02eb71d6b63cb29d6d1f30a1e_931.svg"
         },
         {
             "rank": 403,
@@ -4153,7 +4164,7 @@
             ],
             "url": "https://www.aircanada.com",
             "title": "Air Canada",
-            "icon": "https://merino-images.services.mozilla.com/favicons/ad8d46a285ded77db4afdf144f5d5044ab90a21e93019142a1f52d9b28b9ba8c_9000.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/75888e8e383215d4bc39a82b846083fdeb1eaab9e89d05051db039d36fbbf4a0_3467.svg"
         },
         {
             "rank": 408,
@@ -4197,7 +4208,7 @@
             ],
             "url": "https://slidesgo.com",
             "title": "Free Google Slides themes and Powerpoint templates | Slidesgo",
-            "icon": "https://merino-images.services.mozilla.com/favicons/edc972358ddb1b50a1b86a7790ee2c2830cfabf1c9250b99131258a4d667d2e2_6720.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/d2ad83648fed942d9ed9f39a9ac85f573ef5894da14723662a0fc115deee3ead_7766.svg"
         },
         {
             "rank": 412,
@@ -4248,7 +4259,7 @@
             ],
             "url": "https://letterboxd.com",
             "title": "Letterboxd \u2022 Social film discovery.",
-            "icon": "https://merino-images.services.mozilla.com/favicons/344619d5ba2f91cc9e27db3ee7ffcff45ac41f165118d29a354c047fa54c1d81_4650.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/cb55765c3d1f80dc07bc0f9fd47322ebca770e813b76d4305fcb5c32589d80a8_717.svg"
         },
         {
             "rank": 417,
@@ -4269,7 +4280,7 @@
             ],
             "url": "https://www.findagrave.com",
             "title": "Find a Grave - Millions of Cemetery Records",
-            "icon": "https://merino-images.services.mozilla.com/favicons/8c845920372ca187d3b7344833ecdd9be2b01e80a9d50710c5ae8435d57d983f_12176.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/caf647bd482d651c19b2ee3f4983174ca05457a1281a6e9034639f8cd9043a79_1841.svg"
         },
         {
             "rank": 419,
@@ -4331,7 +4342,7 @@
                 "Fashion"
             ],
             "url": "https://www.ulta.com",
-            "title": "Ulta",
+            "title": "Ulta Beauty | Official Site - Makeup, Hair Care, Skin Care, Fragrance, Bath & Gifts",
             "icon": ""
         },
         {
@@ -4374,7 +4385,7 @@
             ],
             "url": "https://login.gov",
             "title": "The public\u2019s one account for government. | Login.gov",
-            "icon": "https://merino-images.services.mozilla.com/favicons/760d2a4d7ce19a48c16bfbc8bc6661a34d627adea07f18b03ee2ee7a88bd9fd7_3902.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/6deaa6ba83fb155968a114958d637e40dc68a6a07404a6c30c9e883b9158d2d3_1138.svg"
         },
         {
             "rank": 429,
@@ -4394,7 +4405,7 @@
             ],
             "url": "https://www.cargurus.com",
             "title": "Buy & Sell Cars: Reviews, Prices, and Financing - CarGurus",
-            "icon": "https://merino-images.services.mozilla.com/favicons/7493c143516e84e6d359d14f46c14cfb05a287e2be8fe49898c5e11305a0e8cc_6342.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/7dc4b7441862b81a3772193f67beb3036b2d4e70c9d8238b4d1cc0a3b13a2925_31616.png"
         },
         {
             "rank": 431,
@@ -4424,7 +4435,7 @@
             ],
             "url": "https://www.michaels.com",
             "title": "Michaels Stores \u2013 Art Supplies, Crafts & Framing | Michaels",
-            "icon": ""
+            "icon": "https://merino-images.services.mozilla.com/favicons/21a36049cab865d0a71b9a2cea498ac0c177756d6b37d44e42c58f5bb60e3ddb_95398.ico"
         },
         {
             "rank": 434,
@@ -4434,7 +4445,7 @@
             ],
             "url": "https://www.amtrak.com",
             "title": "Amtrak Tickets, Schedules and Train Routes",
-            "icon": ""
+            "icon": "https://merino-images.services.mozilla.com/favicons/6278ac58edc34ba2443003b4a8b1fb258001456ce57ec742b851b7e59b53e278_1261.svg"
         },
         {
             "rank": 435,
@@ -4466,7 +4477,7 @@
             ],
             "url": "https://www.dailydot.com",
             "title": "The Daily Dot | Your Internet. Your Internet news.",
-            "icon": "https://merino-images.services.mozilla.com/favicons/e78106b7a9bed14ddf629408bc404d0a9cb9c453af0f85ecf010f4cbc596d4d3_5674.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/42786bd828694706ba0f713163832b7ffb473721161c3f00fc9b8173ed38e1f7_7085.png"
         },
         {
             "rank": 438,
@@ -4548,7 +4559,7 @@
             ],
             "url": "https://www.officedepot.com",
             "title": "Office Depot OfficeMax | Official Online Store",
-            "icon": "https://merino-images.services.mozilla.com/favicons/f20cdf10edbc5c3f2450eee102d94dfadbaf4dc292e88ba813c3788a108ce1db_1633.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/1863645046f200a6ea7768cf9400ff6d8a44e0cfc59c4c9595b22c3a6ce44cfb_686.png"
         },
         {
             "rank": 446,
@@ -4601,7 +4612,7 @@
             ],
             "url": "https://www.sheknows.com",
             "title": "SheKnows \u2013 All Things Parenting",
-            "icon": "https://merino-images.services.mozilla.com/favicons/c471c1c04774c27ca828d9b365b68054cf9c75a02790e574a9b49f7f532c562e_8575.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/7e35750b5576102dd1b15bf14085ebcee5a8bf05c12a5134ec4d795b7bd556c3_13517.png"
         },
         {
             "rank": 451,
@@ -4623,16 +4634,6 @@
             "url": "https://www.jcpenney.com",
             "title": "JCPenney: Clothing, Bed & Bath, Home Decor, Jewelry & Beauty",
             "icon": "https://merino-images.services.mozilla.com/favicons/390d35a58680adae6bce03533a3496541d058a1f5a558186902c4d1eddf792fd_5312.ico"
-        },
-        {
-            "rank": 453,
-            "domain": "wcostream",
-            "categories": [
-                "Cartoons & Anime"
-            ],
-            "url": "https://www.wcostream.net",
-            "title": "Watch cartoons online, Watch anime online, English dub anime",
-            "icon": ""
         },
         {
             "rank": 455,
@@ -4673,7 +4674,7 @@
             ],
             "url": "https://www.umontreal.ca",
             "title": "Universit\u00e9 de Montr\u00e9al",
-            "icon": "https://merino-images.services.mozilla.com/favicons/6aadcae6fdad226a560dd14ac4e027b491325845ce36d2792c0d9b41672bb542_2247.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/e51148f087bf359c8b25cfa982c1d2d071fa3e8f4c70ee580bb17a44523df549_739.svg"
         },
         {
             "rank": 459,
@@ -4830,7 +4831,7 @@
             ],
             "url": "https://www.hellomagazine.com",
             "title": "HELLO! US Edition - Latest news and Photos",
-            "icon": "https://merino-images.services.mozilla.com/favicons/839147ab3531e101f0ae5d316c55849ba882c8f0fe652b23def3d604eb2bff6f_1216.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/1bd9f2d22f7b98edbb2e6fc26560cb02ea36874c35338cc075a9b9f4b61c5275_881.svg"
         },
         {
             "rank": 475,
@@ -4871,7 +4872,7 @@
             ],
             "url": "https://www.qvc.com",
             "title": "QVC | Shop QVC\u00ae For Today\u2019s Special Value & Top Brands At The Official Site",
-            "icon": "https://merino-images.services.mozilla.com/favicons/651e929a6c93cd7ca7580650043ccb01f8f14e350c4d0fddee855e07a53d55c1_1332.webp"
+            "icon": "https://merino-images.services.mozilla.com/favicons/eb327eeb6ff8bc943a3625f0ac054ad3d823ca21c545174427e1ab9a146beb00_1320.webp"
         },
         {
             "rank": 480,
@@ -4944,7 +4945,7 @@
             ],
             "url": "https://www.overleaf.com",
             "title": "Overleaf, Online LaTeX Editor",
-            "icon": "https://merino-images.services.mozilla.com/favicons/7e6190e84a820f0430f684c2775f4cde023d74b58d776d1b760f5d131e917946_3426.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/e7d542c9f42d5a8c4b1e87266c6f1d7c74eb0123a4a183b15191fea1a65ea540_453.svg"
         },
         {
             "rank": 488,
@@ -4998,7 +4999,7 @@
             ],
             "url": "https://www.sweetwater.com",
             "title": "Sweetwater: Musical Instruments, Pro Audio, Accessories & More",
-            "icon": "https://merino-images.services.mozilla.com/favicons/70998052c458e4e32c62fe2148e39a2e3bf45b1ec9f1ebe336fa6f45ed013736_7247.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/964d165963ecd37809410879467796f40a0025a94a14e0cfdef8c3cfd10253ec_4600.svg"
         },
         {
             "rank": 494,
@@ -5060,7 +5061,7 @@
             ],
             "url": "https://carleton.ca",
             "title": "Carleton University - Ottawa, Canada",
-            "icon": "https://merino-images.services.mozilla.com/favicons/1256a653596da20786673dbcb9a8fffbc9de2444edffe00cae1b6d9116a8844e_17186.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/04877fd0a5767615b22228991872d59fe835d72f67bece5dca022d3265016105_1669.svg"
         },
         {
             "rank": 501,
@@ -5123,7 +5124,7 @@
             ],
             "url": "https://www.lapresse.ca",
             "title": "LaPresse.ca | Actualit\u00e9s et Infos au Qu\u00e9bec et dans le monde",
-            "icon": "https://merino-images.services.mozilla.com/favicons/804910d7323c532e07fb8b6c1f4ce9643ae9f788743980dc2c62efebc2634187_12311.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/406d5fd53130def11f66d647ea56cafb5b7e322700e1d6d594a9c08a9c5bed3f_3206.svg"
         },
         {
             "rank": 507,
@@ -5145,7 +5146,7 @@
             ],
             "url": "https://umanitoba.ca",
             "title": "University of Manitoba",
-            "icon": "https://merino-images.services.mozilla.com/favicons/3dc9e458b6acc87dce484217b708e7b9e2770b70b37850434d2e233a1b004626_16560.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/8ad4641958232f3dee439f70f8720e76b75c56786d618c8869b364b8db546fb4_1168.svg"
         },
         {
             "rank": 509,
@@ -5227,7 +5228,7 @@
             ],
             "url": "https://www.toronto.ca",
             "title": "City of Toronto",
-            "icon": "https://merino-images.services.mozilla.com/favicons/fcc25205ecb29ce2d88ac11dec8827beee7dbf56ecb892e1165e3af18d361624_2193.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/a2883b592782ec2dcd87e361ba4dedea14be9e5fe2a1b368d1228345948963b9_2054.svg"
         },
         {
             "rank": 517,
@@ -5299,7 +5300,7 @@
             ],
             "url": "https://www.hltv.org",
             "title": "CS:GO News & Coverage | HLTV.org",
-            "icon": "https://merino-images.services.mozilla.com/favicons/ac5d42d057532e822084fd00e8b5c18eb235151b32f50c32756d9ca2e93c07b6_2215.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/85d32729e2d34dbed32f4497de84e9e2c5e70d636f768627a9d806a1f69ed530_1630.svg"
         },
         {
             "rank": 524,
@@ -5340,7 +5341,7 @@
             ],
             "url": "https://www.gocomics.com",
             "title": "Today's Comics Online | Read Comic Strips at GoComics",
-            "icon": "https://merino-images.services.mozilla.com/favicons/92f1ac367fd0f34bc17956ef33d79433ddbec62144ee17b40add7a6a2ae6e61a_3801.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/5a7d4892325d4c929dc8b809c95d36ed2bfde766956e33f4afb73074bf6edfdb_6135.png"
         },
         {
             "rank": 528,
@@ -5351,7 +5352,7 @@
                 "News & Media"
             ],
             "url": "https://www.bnnbloomberg.ca",
-            "title": "BNN Bloomberg - Canadian Business News, TSX Today, and Blackberry",
+            "title": "BNN Bloomberg - Canadian Business News, TSX Today, interest rates and Bank of Canada coverage",
             "icon": "https://merino-images.services.mozilla.com/favicons/24204a6ca71fc5cfefb7d5285efe08239f72900e71d1ffcb63760391db61c265_10475.png"
         },
         {
@@ -5372,7 +5373,7 @@
             ],
             "url": "https://www.acehardware.com",
             "title": "Ace Hardware | The Helpful Place - Ace Hardware",
-            "icon": ""
+            "icon": "https://merino-images.services.mozilla.com/favicons/62548634c76e14630986919c74838752477d78d57f757ba634cdef91f6f61cbf_32988.ico"
         },
         {
             "rank": 531,
@@ -5415,7 +5416,7 @@
             ],
             "url": "https://www.uoguelph.ca",
             "title": "University of Guelph - Improve Life",
-            "icon": "https://merino-images.services.mozilla.com/favicons/98d51e826de44620ef916031e11bf3a2e2053c9115d5557fcc349018c436d885_2394.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/1b3e6d50e9d07fdb17aea7aae113661c38a81c52d0b36509914b9d03656c51b2_1659.svg"
         },
         {
             "rank": 535,
@@ -5446,7 +5447,7 @@
             ],
             "url": "https://www.concordia.ca",
             "title": "Concordia University",
-            "icon": "https://merino-images.services.mozilla.com/favicons/bd58872d048e821d5646b7b4f2fb6f2787784f557d8e1003a089b6a90757ab85_7852.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/7677f9856cb4710855de6c944bd4f2f25f711546b7e006fed77e5feb5b7f299e_1119.svg"
         },
         {
             "rank": 538,
@@ -5497,7 +5498,7 @@
             ],
             "url": "https://www.webstaurantstore.com",
             "title": "WebstaurantStore: Restaurant Supplies & Foodservice Equipment",
-            "icon": "https://merino-images.services.mozilla.com/favicons/a6a16801b84b069170ba756478ea2d49e8d987781ed53fe98b321e792d434801_5900.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/866435205f615c7525f637cdad7f9035efe322ff09500a5924a0bc45ac54aef5_693.svg"
         },
         {
             "rank": 543,
@@ -5518,7 +5519,7 @@
             ],
             "url": "https://www.typing.com",
             "title": "Learn to Type | Type Better | Type Faster - Typing.com - Typing.com",
-            "icon": "https://merino-images.services.mozilla.com/favicons/b08e541e4ab26e00ad39c6960cb0d4ea39a6a67ee3a97ae99cab0d08476aa038_826.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/7b2687062483c4389a9247793ca5fa75b267caa3b0f569548ae7e6af72a0e002_1386.svg"
         },
         {
             "rank": 545,
@@ -5538,7 +5539,7 @@
             ],
             "url": "https://www.deltamath.com",
             "title": "DeltaMath",
-            "icon": "https://merino-images.services.mozilla.com/favicons/47e6bf50d31d6aa129aec3016bacecab082b758debf7ffc9c6fc794903270909_6775.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/192de0fae1f3359c1e80f313359e9566a54091307bba27c0f0638cee83fc6d8b_2912.svg"
         },
         {
             "rank": 547,
@@ -5568,7 +5569,7 @@
             ],
             "url": "https://www.justjared.com",
             "title": "Just Jared: Celebrity News and Gossip | Entertainment",
-            "icon": "https://merino-images.services.mozilla.com/favicons/b5b0db4afd10e55ae7a8668e2e34b8bfa1c9ed03add03439603e6446084bb350_3451.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/533722bdf657936a28376bbe4f76d736e67b98572e86271296e23f7480458fea_1011.svg"
         },
         {
             "rank": 550,
@@ -5661,7 +5662,7 @@
             ],
             "url": "https://www.flyfrontier.com",
             "title": "Low Fares Done Right | Frontier Airlines",
-            "icon": "https://merino-images.services.mozilla.com/favicons/e4f9b49d7c5574493f14ce819867cac14aec53a88a6713efbffee518d897640b_4976.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/fdc340de00f36e78384e692194fe694606752e95880b505a36590fce259d7260_11666.png"
         },
         {
             "rank": 560,
@@ -5725,7 +5726,7 @@
             ],
             "url": "https://www.resetera.com",
             "title": "ResetEra",
-            "icon": "https://merino-images.services.mozilla.com/favicons/a41b4061f23f72f26c295a74ce441d77316f0b7504001640ebe00cade66cb783_87558.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/698eabdbe1b9ec41c0a89f1e85bb9e1c1de524ec108d956e2e4369367388fc4b_841.svg"
         },
         {
             "rank": 566,
@@ -5798,7 +5799,7 @@
             ],
             "url": "https://www.amctheatres.com",
             "title": "AMC Theatres - movie times, movie trailers, buy tickets and gift cards.",
-            "icon": "https://merino-images.services.mozilla.com/favicons/5657e87135384e745cadea0919050933d4634c2a66de8bdf1c8fd4adb73119ba_55020.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/8d81da6398f4375265fdeaf72e8e84663bfc792d19c43e50e7a444703e8f1109_4260.svg"
         },
         {
             "rank": 574,
@@ -5860,7 +5861,7 @@
             ],
             "url": "https://en.boardgamearena.com",
             "title": "Play board games online from your browser \u2022 Board Game Arena",
-            "icon": "https://merino-images.services.mozilla.com/favicons/607169320b407047f002336a17dafeb164ddc8836a8af9584a5c72ca9c6dfa2f_23593.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/ce23b1a0d1356e4b2d4900f884da10e55c65988a0e0ca869031f4aebc0a98d2a_2476.svg"
         },
         {
             "rank": 580,
@@ -5912,7 +5913,7 @@
             ],
             "url": "https://u.gg",
             "title": "U GG: The Best League of Legends Builds LoL Build Champion Probuilds LoL Runes Tier List Counters Guides",
-            "icon": "https://merino-images.services.mozilla.com/favicons/06e06dfd1af1e24fcf8ddbbb11dae833de55c0c0a2d112464d7255e088ccb9b0_2582.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/ef8e4ca23434c32fa89ad93d908f930bcd8edb0949b0dc63a8c64b7ca62035a8_1138.svg"
         },
         {
             "rank": 585,
@@ -5924,7 +5925,7 @@
             ],
             "url": "https://www.abcya.com",
             "title": "ABCya! \u2022 Educational Computer Games and Apps for Kids",
-            "icon": "https://merino-images.services.mozilla.com/favicons/18c49f66d2ad385dd63f871c2baca77bf705d473dcc061ab1fced35343a370bb_17765.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/1ae0e54dd225b1c68ee7026401dd32f5262cc09dd7d8d805da818b90cea3d50e_4831.svg"
         },
         {
             "rank": 586,
@@ -6107,6 +6108,17 @@
             "icon": "https://merino-images.services.mozilla.com/favicons/af3c144b403a415ebde3ab369604f821005fe96e63b1acd18c08f4693eb0c75c_3023.jpeg"
         },
         {
+            "rank": 604,
+            "domain": "mangaclash",
+            "categories": [
+                "Personal Blogs",
+                "Comic Books"
+            ],
+            "url": "https://mangaclash.com",
+            "title": "Mangaclash - Read Manga Online Updated Daily Everyday - Mangaclash",
+            "icon": "https://merino-images.services.mozilla.com/favicons/8d75ee624d19f83fb98cffdb4b99e33d581157a63e8fe3a15dc1b7a075634dfe_17617.jpeg"
+        },
+        {
             "rank": 605,
             "domain": "wenxuecity",
             "categories": [
@@ -6187,7 +6199,7 @@
                 "Music"
             ],
             "url": "https://rateyourmusic.com",
-            "title": "IP blocked",
+            "title": "Welcome! - Rate Your Music",
             "icon": "https://merino-images.services.mozilla.com/favicons/91c7e5f4ba26a58667712a086c0f8ac1e409096b91fa899918e2b0cead3a6451_34303.png"
         },
         {
@@ -6208,7 +6220,7 @@
             ],
             "url": "https://www.movoto.com",
             "title": "Real Estate, Homes for Sale, MLS Listings | Movoto",
-            "icon": "https://merino-images.services.mozilla.com/favicons/e8ad90d5467337d7f599dc1210d4752b62c90a9faac2ee8783075a899666d671_3570.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/5a57f61ed7276413dd795b07dfe54af4001e56c2602db839d6823d95e389dd54_1396.svg"
         },
         {
             "rank": 615,
@@ -6248,7 +6260,7 @@
             ],
             "url": "https://greatergood.com",
             "title": "GreaterGood.com | Home",
-            "icon": "https://merino-images.services.mozilla.com/favicons/d3814efb8043efa9d9c1555ce247ddd9984ea8e2211e07c175b38fee202b1e92_3392.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/a2bad1c58d065f9e196bfedbf69b5fda824a750c57fe5d13284583438859dadd_1339.svg"
         },
         {
             "rank": 619,
@@ -6269,7 +6281,7 @@
             ],
             "url": "https://www.uline.com",
             "title": "ULINE - Shipping Boxes, Shipping Supplies, Packaging Materials, Packing Supplies",
-            "icon": "https://merino-images.services.mozilla.com/favicons/1452c1d659cbc8d55ad57904228d55944127ae0e7cf58a52a806f1a65a2e6dc5_10703.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/089b3a54fc2c42c6aa7fbbe000df5dfea4412d900c1bc3b75073f5dedecd3174_855.svg"
         },
         {
             "rank": 621,
@@ -6302,7 +6314,7 @@
             ],
             "url": "https://www.bricklink.com",
             "title": "BrickLink - Buy and sell LEGO Parts, Sets and Minifigures",
-            "icon": "https://merino-images.services.mozilla.com/favicons/2b44033050d539b7fb4898d1e4bbd63ba207abcaa678d27618de61d139bcdec9_9759.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/ff74b92f2747a19e2e2043c1c86cb9759c34c0cafbca76feb3c5ea71595e25a0_1642.svg"
         },
         {
             "rank": 624,
@@ -6322,7 +6334,7 @@
             ],
             "url": "https://www.wealthsimple.com",
             "title": "Wealthsimple: Investing, Regulated Crypto, Stocks & ETFs",
-            "icon": "https://merino-images.services.mozilla.com/favicons/5f18bc723881009ea6ce91a1f95e9e8709e18474caa41074e5e8e4a4a3b75424_2186.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/b51dcf696d79be66c02966bd3af1192c64dcdf7a2613caba31f48f75ebe479f0_8131.oct"
         },
         {
             "rank": 626,
@@ -6332,7 +6344,7 @@
             ],
             "url": "https://www.pizzahut.com",
             "title": "Pizza Hut | Delivery & Carryout - No One OutPizzas The Hut!",
-            "icon": "https://merino-images.services.mozilla.com/favicons/1fc7cf493ec4e4a522520946dd9254807afc14993ba95bbf545b70d3600dd824_19627.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/383ce802892c86c63b02a1010259f0cba4149822e7e99449211c9ddaa410316c_410598.ico"
         },
         {
             "rank": 627,
@@ -6342,8 +6354,8 @@
                 "Sports"
             ],
             "url": "https://www.vividseats.com",
-            "title": "Buy and Sell Tickets: Concerts, Sports & Theater | Vivid Seats",
-            "icon": "https://merino-images.services.mozilla.com/favicons/a53783c75981558ef776d19806a7155ed69255633e67bc0686834d3b4e8b265c_18509.png"
+            "title": "Vividseats",
+            "icon": ""
         },
         {
             "rank": 628,
@@ -6353,7 +6365,7 @@
             ],
             "url": "https://www.iscorp.com",
             "title": "Home - ISCorp",
-            "icon": "https://merino-images.services.mozilla.com/favicons/dc7c449bb54b5a8485cfd206154e1811b0f5577feb88dc521a6995232ea8addb_16130.jpeg"
+            "icon": "https://merino-images.services.mozilla.com/favicons/2f3a8ff91f90ee996e112d2c17a939979956da06a7af3188664b7d1535401c0f_22923.jpeg"
         },
         {
             "rank": 629,
@@ -6395,7 +6407,7 @@
             ],
             "url": "https://www.orientaltrading.com",
             "title": "Oriental Trading | Party Supplies, Toys, Crafts & More",
-            "icon": "https://merino-images.services.mozilla.com/favicons/a07c3bf3b76d515f77d203dd0c1aef1b0888be8e0c09dd3b085e909782c4e1a8_9065.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/6b60cf819af7d787f5310b96986a0ec2e25724cafd26bd67b4957121cb02b490_2095.svg"
         },
         {
             "rank": 633,
@@ -6405,7 +6417,7 @@
             ],
             "url": "https://www.quebec.ca",
             "title": "Bienvenue sur Qu\u00e9bec.ca | Gouvernement du Qu\u00e9bec",
-            "icon": "https://merino-images.services.mozilla.com/favicons/966742185376a575ed0675c8706943e2579e11ba2e019deea6e7ffd905ffed14_3671.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/900066383d9bada7a42f5a459293b293e129131967c18a9afd10996ef68e8935_2180.svg"
         },
         {
             "rank": 634,
@@ -6425,7 +6437,7 @@
             ],
             "url": "https://www.shopdisney.com",
             "title": "shopDisney | Official Disney Merchandise",
-            "icon": "https://merino-images.services.mozilla.com/favicons/f1659d9a13e16f2bc367a3c34b71057dac2c1fa6e4052a09030de994bf5a8600_29797.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/44ef884c22bc55dc50c0477171403b392386e3c7d19f1229abac811a92900db0_4377.svg"
         },
         {
             "rank": 636,
@@ -6436,7 +6448,7 @@
             ],
             "url": "https://solitaired.com",
             "title": "Solitaire - Online & 100% Free",
-            "icon": "https://merino-images.services.mozilla.com/favicons/5517f2289c516a76adbb6b6201d158eeaf5f5da9442011f79be62a0eabde8824_9410.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/7786a39ca62bdc5f190fac53115b175a903e2f84ffa98b446406050dac6d8897_3118.svg"
         },
         {
             "rank": 637,
@@ -6638,7 +6650,7 @@
             ],
             "url": "https://dailyhive.com",
             "title": "Daily Hive Portland: Latest Stories in Portland OR",
-            "icon": "https://merino-images.services.mozilla.com/favicons/f5648eb857b7f5e84d2916b5522c2b2b35fa115805ba701dc2ff2de729e7838a_4645.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/8a4d9d6d5929c0a9eb3764c7004392a4119c5f0ead22838cb5c7a47cd82f77d5_1148.svg"
         },
         {
             "rank": 656,
@@ -6857,7 +6869,7 @@
             ],
             "url": "https://ebird.org",
             "title": "eBird - Discover a new world of birding...",
-            "icon": "https://merino-images.services.mozilla.com/favicons/b7e2f662f64f7d5f77cc51b2c7fbf56b5396d209625cc8f855305c516e1015ef_1337.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/d91e6ef3f789d1d951b92ce3f60612df2b07d4f7da007fdb2d024afdfa945a28_1063.svg"
         },
         {
             "rank": 677,
@@ -6929,7 +6941,7 @@
             ],
             "url": "https://brocku.ca",
             "title": "Brock University \u2013 Welcome to Brock",
-            "icon": "https://merino-images.services.mozilla.com/favicons/28b6e7b3acb06e50b730580d8369bd82cf2f3321a50b2a8504f5a7a010489aaf_2245.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/0be5a3230f62ff7cca46c8150c5eae4edc529b47d40bd9278c2fce1d6c07a999_1147.svg"
         },
         {
             "rank": 684,
@@ -7058,7 +7070,7 @@
             ],
             "url": "https://www.webpt.com",
             "title": "The Leading Physical Therapy Software & PT EMR | WebPT",
-            "icon": "https://merino-images.services.mozilla.com/favicons/56a75143f945a36e86d1499e969e730420cfbf4fb1e8e8ab9c7028efc5bcd7a5_9845.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/8e9e2a9222111574be7cad8285681ba90aa92fcd725ee55dcb73ebaf2ab53786_21748.png"
         },
         {
             "rank": 696,
@@ -7172,7 +7184,7 @@
             ],
             "url": "https://www.outkick.com",
             "title": "OutKick - Fearless Sports Media Company Founded by Clay Travis",
-            "icon": "https://merino-images.services.mozilla.com/favicons/3989d0749a6f9c368453f949b66a80d82c3637a8bb7523ec676452d31ebf3518_3205.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/e8b8f3011886937e85a03b63040fb62f076798a5b75ca297171af5d2433989f1_4788.png"
         },
         {
             "rank": 708,
@@ -7182,7 +7194,7 @@
             ],
             "url": "https://www.heraldweekly.com",
             "title": "Herald Weekly \u2013 Breaking Entertainment News and Gossips",
-            "icon": "https://merino-images.services.mozilla.com/favicons/b1dcdb099a47639c0e7da01b39c564d37ceee6dd0e6cf280dde908cbf53d8041_30284.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/aaed83711ac5bfc883e9d2d507df0fed26c2a4287a3adfa3c143ea6fd7e00c6f_69523.png"
         },
         {
             "rank": 709,
@@ -7234,7 +7246,7 @@
             ],
             "url": "https://www.commonlit.org",
             "title": "Free Online Reading Passages and Literacy Resources",
-            "icon": "https://merino-images.services.mozilla.com/favicons/aed8e6140b13754c96f95d2c242b5551dd12cd67757990a5796d04b751771632_970.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/60789534383098aeab88620081b55a50bfc45a84fbfdd123cc136361007c30c1_8187.svg"
         },
         {
             "rank": 714,
@@ -7276,7 +7288,7 @@
                 "Gaming"
             ],
             "url": "https://neopets.com",
-            "title": "Site verification",
+            "title": "Neopets - Loading site...",
             "icon": ""
         },
         {
@@ -7308,7 +7320,7 @@
                 "Politics, Advocacy, and Government-Related"
             ],
             "url": "https://www.canlii.org",
-            "title": "Captcha | CanLII",
+            "title": "Canadian Legal Information Institute | CanLII",
             "icon": ""
         },
         {
@@ -7362,7 +7374,7 @@
             ],
             "url": "https://activebeat.com",
             "title": "ActiveBeat - Your Daily Dose of Health Headlines - Just another WordPress site",
-            "icon": "https://merino-images.services.mozilla.com/favicons/c60d3ba75c944aea40f5b2eabb0265397fb42bbca1893f757a1509ab2d300367_5292.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/afc8bf06a37ce3559bba8d0e9f465ec10be07c67ffc40af0d9276c66d7daf681_1563.svg"
         },
         {
             "rank": 728,
@@ -7445,7 +7457,7 @@
             ],
             "url": "https://sniffies.com",
             "title": "Sniffies App | Official",
-            "icon": "https://merino-images.services.mozilla.com/favicons/9bcdc58bbdab5393224449c90bf6f69cf5ff83a46dabfa0dab731f6670a9b02e_3420.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/a3510ddd4d7d9f4d8f39293871426c560add93aae990170f02c8cd611c0e192d_13084.svg"
         },
         {
             "rank": 736,
@@ -7495,7 +7507,7 @@
             ],
             "url": "https://www.teachtci.com",
             "title": "TCI: Curriculum Resources and Programs That Brings Learning Alive!",
-            "icon": "https://merino-images.services.mozilla.com/favicons/5921b8fc69c06dc2b8bc0c998f1b21921d996082298b9ff2a03e32a9d285548c_1482.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/4785f82d78e465433fef6bd203f6880856eba95a1b78491e94a2a69a307e4431_1824.png"
         },
         {
             "rank": 741,
@@ -7537,7 +7549,7 @@
             ],
             "url": "https://chilis.com",
             "title": "Family Restaurant & Casual Dining | Chili's Grill & Bar",
-            "icon": "https://merino-images.services.mozilla.com/favicons/9dcfa1d026f79897f197939b6bf10e91f61099e2bb39f4ad44c8b83d6c74c77e_5803.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/1e3d66942c5b5eb8cfd6e35f07d03fd7dfd8769145f2ebe9331f34cd43413e0f_1465.svg"
         },
         {
             "rank": 745,
@@ -7646,7 +7658,7 @@
             ],
             "url": "https://theblast.com",
             "title": "The Blast - Breaking Celebrity News - Entertainment Celebrity Gossip",
-            "icon": "https://merino-images.services.mozilla.com/favicons/3f8ac4324df7ccd813f6229abbfce84a7cc852201deead85788d1e8e6016f3ae_11820.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/f1fce05a2ee4ce77b0fa9c0a672fe73a097255e0f6e3c7343c3d8969867867e7_17819.png"
         },
         {
             "rank": 755,
@@ -7727,7 +7739,7 @@
             ],
             "url": "https://www.apartmenthomeliving.com",
             "title": "Apartments and Homes For Rent - ApartmentHomeLiving.com",
-            "icon": "https://merino-images.services.mozilla.com/favicons/b03208dee987ce2a14c938369cf98e0ef5e1d781051a6d480421742bddc7d3a5_7085.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/0a2980d063d2327bbe78e4faa1e001ab3081df2697d1bffec899ef3b4db69569_2323.svg"
         },
         {
             "rank": 763,
@@ -7735,7 +7747,7 @@
             "categories": [
                 "Video Streaming"
             ],
-            "url": "https://lad.tubidy.mobi",
+            "url": "https://pad.tubidy.mobi",
             "title": "Tubidy MP3, MP4 and Mobile Video Search Engine",
             "icon": "https://merino-images.services.mozilla.com/favicons/e462cf445a327ed77e0075b9a8b755d328db262ee7b32d3ade84908070275a48_46803.png"
         },
@@ -7747,7 +7759,7 @@
             ],
             "url": "https://www.illuminateed.com",
             "title": "Illuminate Education - Addressing the Whole Child",
-            "icon": "https://merino-images.services.mozilla.com/favicons/ea74ed2e138fa23eeab1440896e5d69f3194f0d7f09d58be89da1514a2d69b92_9891.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/e8af809b2ed87e9387967bfa618bb4736b8f7df0e51efb62925386402af88038_14344.png"
         },
         {
             "rank": 765,
@@ -7840,7 +7852,7 @@
             ],
             "url": "https://conjuguemos.com",
             "title": "Home Page || Conjuguemos",
-            "icon": "https://merino-images.services.mozilla.com/favicons/3fbf706c0baaf2da43d366daef836e2fcc69dea79cd8d7820714df0673ee1c3b_19072.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/608453bd8073b43ec9e8ed16128ef03116a80940cbb23de6edd7d6973ca4317d_2552.svg"
         },
         {
             "rank": 775,
@@ -7901,7 +7913,7 @@
             ],
             "url": "https://cccs.edu",
             "title": "Home - Colorado Community College System",
-            "icon": "https://merino-images.services.mozilla.com/favicons/1b153e4012656aaf43277680745be6f1cdc277827cde6e7b57f7bba05ac85c17_29586.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/dfd8f8e06b73139618ebe5a8e0d50cb297f0362f149efb67d43d033442969b25_48191.png"
         },
         {
             "rank": 781,
@@ -7911,7 +7923,7 @@
             ],
             "url": "https://corporate.redtailtechnology.com",
             "title": "Home - Redtail Technology",
-            "icon": "https://merino-images.services.mozilla.com/favicons/107270bbbb9c40036cafea298d3c19f1ebf4a0608015fd253a75d5e3b3692da7_2639.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/8c8f76e0f5284cb2af5a307b97c4c11c032aec97ae197fceb26f0560b5bcedcd_11002.png"
         },
         {
             "rank": 782,
@@ -7933,7 +7945,7 @@
             ],
             "url": "https://sumosear.ch",
             "title": "SumoSearch",
-            "icon": "https://merino-images.services.mozilla.com/favicons/2a71b759ac73ff2d168d6d3cf01ae12b212397923bb80d27eecb6e71674ad1c5_5016.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/499ff1eb3d6f67d08c8d362eec76d2940228d0a23db80776fce57f3d647d81c4_5043.svg"
         },
         {
             "rank": 784,
@@ -8004,7 +8016,7 @@
             ],
             "url": "https://toytheater.com",
             "title": "Toy Theater | Fun Online Educational Games for Kids",
-            "icon": "https://merino-images.services.mozilla.com/favicons/71c5bc165fdca2b07adb39acc59d58e9ee4fa9046bab034daa8ec586470b4b6d_12635.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/4c8af4eb1b3393a284d1b021c9a1c5f326e2ae7d00be73305e2bc4d802570e5b_30633.png"
         },
         {
             "rank": 791,
@@ -8025,7 +8037,7 @@
             ],
             "url": "https://www.whiskeyriff.com",
             "title": "Whiskey Riff - A RIFF on what country is really about.",
-            "icon": "https://merino-images.services.mozilla.com/favicons/e174f02031b563641e2e69ffbb6d5ec511da77b66c456b1bb7efc84cad2217e5_3973.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/7c2461095603c97310384b3551b01e586f5ba579dc2018f1cad47bd4f2ba4d46_6197.png"
         },
         {
             "rank": 793,
@@ -8076,7 +8088,7 @@
             ],
             "url": "https://definition.org",
             "title": "Definition.org | Best Online Dictionary and Reference Site",
-            "icon": "https://merino-images.services.mozilla.com/favicons/7dfd376fd9e5a86c0530dc7029d5faee3716151da590bde8b2381c2bb524948c_5894.jpeg"
+            "icon": "https://merino-images.services.mozilla.com/favicons/914ce3f55ecee5f89404572dc77c7a55eb507d1b3505558f24a7b349daaa8cd3_8833.jpeg"
         },
         {
             "rank": 799,
@@ -8107,7 +8119,7 @@
             ],
             "url": "https://itsthevibe.com",
             "title": "Its The Vibe",
-            "icon": "https://merino-images.services.mozilla.com/favicons/9d85b0e35d70f23de1da0f5441d5753f4799f5ff42ba346d0ae9fbaddbc20869_4307.jpeg"
+            "icon": "https://merino-images.services.mozilla.com/favicons/bf5b8e54c03f1c098073b4a9181442c9ec45afa7b8a272f31a474f96dc768635_6531.jpeg"
         },
         {
             "rank": 802,
@@ -8209,7 +8221,7 @@
             ],
             "url": "https://celebwell.com",
             "title": "Celebwell: Health, Nutrition, Weight Loss & Recipes",
-            "icon": "https://merino-images.services.mozilla.com/favicons/b4984e1e41200d933b65d16c80b2b057c6dc58140406588899b19ed8e5331d5a_7546.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/1d15e533bed2c544b8f62a38b708ff57762a6475631c004e0341832145dc7702_11574.png"
         },
         {
             "rank": 813,
@@ -8240,7 +8252,7 @@
             ],
             "url": "https://yourbump.com",
             "title": "YourBump.com",
-            "icon": "https://merino-images.services.mozilla.com/favicons/1cf15dbc45a7929bcbb58c91e5b299a05e46afdc42a0dffdc29fd7c2084a25bc_10108.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/2fc07f147c16de2a4e9d78a5024576d414d97c58fb20c285d149ab37fefc0b2b_15881.png"
         }
     ]
 }
