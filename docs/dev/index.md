@@ -121,8 +121,7 @@ all related crates by running `./dev/make-all-docs.sh`. You'll need [mdbook][]
 and [mdbook-mermaid][], which you can install via:
 
 ```sh
-cargo install mdbook
-cargo install mdbook-mermaid
+make doc-install-deps
 ```
 
 If you haven't installed Rust and Cargo, you can reference the official Rust
