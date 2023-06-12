@@ -255,8 +255,7 @@ jobs:
       - run:
           name: Setup Build docs
           command: |
-            cargo install mdbook
-            cargo install mdbook-mermaid
+            make doc-install-deps
             mdbook-mermaid install ./
       - run:
           name: Build docs

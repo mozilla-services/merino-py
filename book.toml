@@ -11,3 +11,6 @@ command = "mdbook-mermaid"
 [output.html]
 site-url = "/merino/"
 additional-js = ["mermaid.min.js", "mermaid-init.js"]
+
+[output.html.fold]
+enable = true

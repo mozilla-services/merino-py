@@ -137,6 +137,10 @@ load-tests-clean:  ##  Stop and remove containers and networks for load tests
       -p merino-py-load-tests \
       down
 
+.PHONY: doc-install-deps
+doc-install-deps:  ## Install the dependencies for doc generation
+	cargo install mdbook && cargo install mdbook-mermaid
+
 .PHONY: doc
 doc:  ##  Generate Merino docs via mdBook
 	./dev/make-all-docs.sh
