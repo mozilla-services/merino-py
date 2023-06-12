@@ -111,16 +111,26 @@ $ make doc-preview
 $ make profile
 
 # Run the Wikipedia CLI job
-$ make wikipedia-indexer job=$JOB   
+$ make wikipedia-indexer job=$JOB
 ```
 
 ## Documentation
 
 You can generate documentation, both code level and book level, for Merino and
-all related crates by running `./dev/make-all-docs.sh`. You'll need [mdBook][],
-which you can get with `cargo install mdbook`.
+all related crates by running `./dev/make-all-docs.sh`. You'll need [mdbook][]
+and [mdbook-mermaid][], which you can install via:
+
+```sh
+cargo install mdbook
+cargo install mdbook-mermaid
+```
+
+If you haven't installed Rust and Cargo, you can reference the official Rust
+[document][].
 
 [mdbook]: https://rust-lang.github.io/mdBook/
+[mdbook-mermaid]: https://github.com/badboy/mdbook-mermaid
+[document]: https://doc.rust-lang.org/cargo/getting-started/installation.html
 
 ## Local configuration
 
