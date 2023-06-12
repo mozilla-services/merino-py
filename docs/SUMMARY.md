@@ -20,3 +20,8 @@
   - [Configs](./operations/configs.md)
   - [Elasticsearch](./operations/elasticsearch.md)
   - [Jobs](./operations/jobs.md)
+
+# ADR
+- [Archive](./adr/index.md)
+  - [Load Test Framework: Locust VS K6](./adr/0001-locust-vs-k6-merino-py-performance-test-framework.md)
+  - [General API Response](./adr/0002-merino-general-response.md)
