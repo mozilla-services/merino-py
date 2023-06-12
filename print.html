@@ -84,7 +84,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">General Documentation</li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item expanded "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item expanded "><a href="data.html"><strong aria-hidden="true">3.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="dev/index.html"><strong aria-hidden="true">4.</strong> Working on the code</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="dev/content-moderation.html"><strong aria-hidden="true">4.1.</strong> Content Moderation</a></li><li class="chapter-item expanded "><a href="dev/dependencies.html"><strong aria-hidden="true">4.2.</strong> Dependencies</a></li><li class="chapter-item expanded "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">4.3.</strong> Logging and Metrics</a></li><li class="chapter-item expanded "><a href="dev/middlewares.html"><strong aria-hidden="true">4.4.</strong> Middlewares</a></li><li class="chapter-item expanded "><a href="dev/feature_flags.html"><strong aria-hidden="true">4.5.</strong> Feature Flags</a></li><li class="chapter-item expanded "><a href="dev/testing.html"><strong aria-hidden="true">4.6.</strong> Testing Strategies</a></li><li class="chapter-item expanded "><a href="dev/release-process.html"><strong aria-hidden="true">4.7.</strong> Release Process</a></li><li class="chapter-item expanded "><a href="dev/profiling.html"><strong aria-hidden="true">4.8.</strong> Profiling</a></li></ol></li><li class="chapter-item expanded "><a href="operations/index.html"><strong aria-hidden="true">5.</strong> Operations</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="operations/configs.html"><strong aria-hidden="true">5.1.</strong> Configs</a></li><li class="chapter-item expanded "><a href="operations/elasticsearch.html"><strong aria-hidden="true">5.2.</strong> Elasticsearch</a></li><li class="chapter-item expanded "><a href="operations/jobs.html"><strong aria-hidden="true">5.3.</strong> Jobs</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item affix "><a href="intro.html">Intro</a></li><li class="chapter-item affix "><li class="part-title">General Documentation</li><li class="chapter-item "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item "><a href="data.html"><strong aria-hidden="true">3.</strong> Data collection</a></li><li class="chapter-item "><a href="dev/index.html"><strong aria-hidden="true">4.</strong> Working on the code</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="dev/content-moderation.html"><strong aria-hidden="true">4.1.</strong> Content Moderation</a></li><li class="chapter-item "><a href="dev/dependencies.html"><strong aria-hidden="true">4.2.</strong> Dependencies</a></li><li class="chapter-item "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">4.3.</strong> Logging and Metrics</a></li><li class="chapter-item "><a href="dev/middlewares.html"><strong aria-hidden="true">4.4.</strong> Middlewares</a></li><li class="chapter-item "><a href="dev/feature_flags.html"><strong aria-hidden="true">4.5.</strong> Feature Flags</a></li><li class="chapter-item "><a href="dev/testing.html"><strong aria-hidden="true">4.6.</strong> Testing Strategies</a></li><li class="chapter-item "><a href="dev/release-process.html"><strong aria-hidden="true">4.7.</strong> Release Process</a></li><li class="chapter-item "><a href="dev/profiling.html"><strong aria-hidden="true">4.8.</strong> Profiling</a></li></ol></li><li class="chapter-item "><a href="operations/index.html"><strong aria-hidden="true">5.</strong> Operations</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="operations/configs.html"><strong aria-hidden="true">5.1.</strong> Configs</a></li><li class="chapter-item "><a href="operations/elasticsearch.html"><strong aria-hidden="true">5.2.</strong> Elasticsearch</a></li><li class="chapter-item "><a href="operations/jobs.html"><strong aria-hidden="true">5.3.</strong> Jobs</a></li></ol></li><li class="chapter-item "><li class="part-title">ADR</li><li class="chapter-item "><a href="adr/index.html"><strong aria-hidden="true">6.</strong> Archive</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="adr/0001-locust-vs-k6-merino-py-performance-test-framework.html"><strong aria-hidden="true">6.1.</strong> Load Test Framework: Locust VS K6</a></li><li class="chapter-item "><a href="adr/0002-merino-general-response.html"><strong aria-hidden="true">6.2.</strong> General API Response</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -700,12 +700,16 @@ $ make doc-preview
 $ make profile
 
 # Run the Wikipedia CLI job
-$ make wikipedia-indexer job=$JOB   
+$ make wikipedia-indexer job=$JOB
 </code></pre>
 <h2 id="documentation"><a class="header" href="#documentation">Documentation</a></h2>
 <p>You can generate documentation, both code level and book level, for Merino and
-all related crates by running <code>./dev/make-all-docs.sh</code>. You'll need <a href="https://rust-lang.github.io/mdBook/">mdBook</a>,
-which you can get with <code>cargo install mdbook</code>.</p>
+all related crates by running <code>./dev/make-all-docs.sh</code>. You'll need <a href="https://rust-lang.github.io/mdBook/">mdbook</a>
+and <a href="https://github.com/badboy/mdbook-mermaid">mdbook-mermaid</a>, which you can install via:</p>
+<pre><code class="language-sh">make doc-install-deps
+</code></pre>
+<p>If you haven't installed Rust and Cargo, you can reference the official Rust
+<a href="https://doc.rust-lang.org/cargo/getting-started/installation.html">document</a>.</p>
 <h2 id="local-configuration"><a class="header" href="#local-configuration">Local configuration</a></h2>
 <p>The default configuration of Merino is <code>development</code>, which has human-oriented
 pretty-print logging and debugging enabled. For settings that you wish to change in the
@@ -1564,6 +1568,528 @@ This means that data migrations will be simpler.</li>
 <p>The job is configured in <a href="https://github.com/mozilla/telemetry-airflow"><code>telemetry-airflow</code></a>.</p>
 <p>You can access the job in the 
 <a href="https://workflow.telemetry.mozilla.org/dags/merino_jobs/grid?search=merino_jobs">Airflow Console</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="merino-adrs"><a class="header" href="#merino-adrs">Merino ADRs</a></h1>
+<p>This directory archives all the Architectural Decision Records (ADRs) for Merino.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="locust-vs-k6-merino-py-performance-test-framework"><a class="header" href="#locust-vs-k6-merino-py-performance-test-framework">Locust vs k6; Merino-py Performance Test Framework</a></h1>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Deciders:</strong> Nan Jiang, Raphael Pierzina &amp; Katrina Anderson</li>
+<li><strong>Date:</strong> 2023-02-21</li>
+</ul>
+<h2 id="context-and-problem-statement"><a class="header" href="#context-and-problem-statement">Context and Problem Statement</a></h2>
+<p>Performance testing for the Rust version of Merino was conducted with the <a href="https://locust.io/">Locust</a> 
+test framework and focused on the detection of HTTP request failures. During the 
+migration of Merino from Rust to Python, performance testing was conducted with <a href="https://k6.io/">k6</a> 
+and focused on the evaluation of request latency. Going forward a unified performance 
+testing solution is preferred, should the test framework be Locust or k6?</p>
+<h2 id="decision-drivers"><a class="header" href="#decision-drivers">Decision Drivers</a></h2>
+<ol>
+<li>The test framework supports the current load test design, a 10-minute test run with 
+an average load of 1500RPS (see <a href="https://docs.google.com/document/d/1v7LDXENPZg37KXeNcznEZKNZ8rQlOhNbsHprFyMXHhs/edit?usp=sharing">Merino Load Test Plan</a>)</li>
+<li>The test framework measures HTTP request failure and client-side latency metrics</li>
+<li>The test framework is compatible with the Rapid Release Model for Firefox Services 
+initiative, meaning:
+<ul>
+<li>It can execute through command line</li>
+<li>It can signal failures given check or threshold criteria</li>
+<li>It can be integrated into a CD pipeline</li>
+<li>It can report metrics to <a href="https://earthangel-b40313e5.influxcloud.net/?orgId=1%5D">Grafana</a></li>
+</ul>
+</li>
+<li>The members of the DISCO and ETE teams are able to contribute to and maintain load 
+tests written with the test framework</li>
+</ol>
+<h2 id="considered-options"><a class="header" href="#considered-options">Considered Options</a></h2>
+<ul>
+<li>A. Locust</li>
+<li>B. k6</li>
+</ul>
+<h2 id="decision-outcome"><a class="header" href="#decision-outcome">Decision Outcome</a></h2>
+<p>Chosen option:</p>
+<ul>
+<li><strong>A. Locust</strong></li>
+</ul>
+<p>Both k6 and Locust are able to execute the current load test design, report required 
+metrics and fulfill the Rapid Release Model for Firefox Services initiative; However, 
+Locust's Python tech stack ultimately makes it the better fit for the Merino-py 
+project. In-line with the team's single repository direction (see <a href="https://github.com/mozilla-services/merino-py/pull/186">PR</a>), using 
+Locust will:</p>
+<ul>
+<li>Leverage existing testing, linting and formatting infrastructure</li>
+<li>Promote dependency sharing and code re-use (models &amp; backends)</li>
+</ul>
+<h2 id="pros-and-cons-of-the-options"><a class="header" href="#pros-and-cons-of-the-options">Pros and Cons of the Options</a></h2>
+<h3 id="a-locust"><a class="header" href="#a-locust">A. Locust</a></h3>
+<p><a href="https://locust.io/">Locust</a> can be viewed as the status quo option, since it is the framework that is 
+currently integrated into the Merino-py repository and is the basis for the CD load 
+test integration currently underway (see <a href="https://mozilla-hub.atlassian.net/browse/DISCO-2113">DISCO-2113</a>). </p>
+<h4 id="pros"><a class="header" href="#pros">Pros</a></h4>
+<ul>
+<li>Locust has a mature distributed load generation feature and can easily support a 1500 
+RPS load</li>
+<li>Locust has built-in RPS, HTTP request failure and time metrics with customizable URL 
+break-down</li>
+<li>Locust scripting is in Python</li>
+<li>Locust supports direct command line usage</li>
+<li>Locust is used for load testing in other Mozilla projects and is recommended by the
+ETE team</li>
+</ul>
+<h4 id="cons"><a class="header" href="#cons">Cons</a></h4>
+<ul>
+<li>Locust is 100% community driven (no </li>
+<li>commercial business), which means its 
+contribution level can wane</li>
+<li>Preliminary research indicates that reporting metrics from Locust to <a href="https://earthangel-b40313e5.influxcloud.net/?orgId=1%5D">Grafana</a> 
+requires the creation of custom code, a plugin or a third party integration</li>
+</ul>
+<h3 id="b-k6"><a class="header" href="#b-k6">B. k6</a></h3>
+<p>For the launch of Merino-py, performance bench-marking was conducted using a <a href="https://k6.io/">k6</a> 
+load test script (see <a href="https://github.com/quiiver/merino-explorations">Merino Explorations</a>). This script was reused from the Merino 
+rewrite exploration effort and has proven successful in assessing if Merino-py 
+performance achieves the target p95 latency threshold, effecting preventative change 
+(See <a href="https://github.com/mozilla-services/merino-py/pull/67#issuecomment-1266031853">PR</a>). k6's effectiveness and popularity amongst team members is an incentive 
+to pause and evaluate if it is a more suitable framework going forward.</p>
+<h4 id="pros-1"><a class="header" href="#pros-1">Pros</a></h4>
+<ul>
+<li>k6 is an open-source commercially backed framework with a high contribution rate</li>
+<li>k6 is built by Grafana Labs, inferring easy integration with dashboards</li>
+<li>k6 has built-in RPS, HTTP request failure and time metrics with customizable URL 
+break-down</li>
+<li>k6 supports direct command line usage</li>
+<li>k6 is feature rich, including built-in functions to generate pass/fail results and 
+create custom metrics</li>
+</ul>
+<h4 id="cons-1"><a class="header" href="#cons-1">Cons</a></h4>
+<ul>
+<li>The k6 development stack is in JavaScript/TypeScript. This means:
+<ul>
+<li>Modeling and backend layer code would need to be duplicated and maintained</li>
+<li>Linting, formatting and dependency infrastructure would need to be added and 
+maintained</li>
+</ul>
+</li>
+<li>k6 has an immature distributed load generation feature, with <a href="https://k6.io/docs/testing-guides/running-large-tests/#distributed-execution">documented</a> 
+limitations
+<ul>
+<li>k6 runs more efficiently than other frameworks, so it may be possible to achieve
+1500 RPS without distribution </li>
+</ul>
+</li>
+</ul>
+<h2 id="links"><a class="header" href="#links">Links</a></h2>
+<ul>
+<li><a href="https://mozilla-hub.atlassian.net/browse/DISCO-2045">DISCO-2045 - Investigate K6 load testing in Merino-py CD</a></li>
+</ul>
+<!-- References -->
+<div style="break-before: page; page-break-before: always;"></div><h1 id="merino-suggest-api-response-structure"><a class="header" href="#merino-suggest-api-response-structure">Merino Suggest API Response Structure</a></h1>
+<ul>
+<li>Status: accepted</li>
+<li>Deciders: Michelle Tran, Lina Butler, Nan Jiang, Wil Stuckey,
+Drew Willcoxon, Taddes Korris, Tiffany Tran</li>
+<li>Date: 2023-04-20</li>
+</ul>
+<h2 id="context-and-problem-statement-1"><a class="header" href="#context-and-problem-statement-1">Context and Problem Statement</a></h2>
+<p>As Merino continues to add more suggestions, 
+suggestion providers are going to have to return all sorts of
+data to the clients that are bespoke to the particular suggestion.
+For instance, weather suggestion returns a <code>temperature</code>.
+Currently, we do not have a strategy to manage these bespoke pieces of data
+which results in them returned at the top level of the suggestion object.
+However, this will pose a problem when</p>
+<ol>
+<li>names of fields are shared between providers, but have different semantics 
+(i.e. <code>rating</code> may be a decimal value between 0-1 in one type, 
+and a &quot;star&quot; integer rating between 1-5 in another)</li>
+<li>the API is unclear about what will <em>necessarily</em> exist, and what is <em>optional</em>,
+which leads to client confusion about the contract</li>
+</ol>
+<p>So, this ADR is to make a decision on how we want to handle provider specific fields
+going forward.</p>
+<h2 id="decision-drivers-1"><a class="header" href="#decision-drivers-1">Decision Drivers</a></h2>
+<p>In rough order of importance:</p>
+<ol>
+<li>Explicitness of Ownership - i.e. the <code>rating</code> field belongs to the <code>addons</code> provider</li>
+<li>Compatibility with [JSON] Schema Validation</li>
+<li>Adherence to the Fx Suggest Design Framework</li>
+<li>Backwards Compatibility with Current Schema</li>
+</ol>
+<h2 id="considered-options-1"><a class="header" href="#considered-options-1">Considered Options</a></h2>
+<ul>
+<li>A. Continue to add to Top Level with Optional Fields</li>
+<li>B. Custom Details Field for Bespoke Provider Fields</li>
+<li>B.5 Custom Details Field without the Provider Nesting</li>
+<li>C. Custom Details Field for a &quot;Type&quot;</li>
+<li>D. Component Driven <code>custom_details</code></li>
+</ul>
+<h2 id="decision-outcome-1"><a class="header" href="#decision-outcome-1">Decision Outcome</a></h2>
+<p>Chosen option: B</p>
+<p>We will also <em>not</em> increase the version number of the API for this ADR.
+So, going forward, we will encode option B into the response design
+without changing the existing providers.
+This means that the following providers will <em>not</em> have
+their bespoke fields removed from top level:</p>
+<ul>
+<li>AdM Provider</li>
+<li>Top Picks Provider</li>
+<li>Weather Provider</li>
+<li>Wikipedia Provider</li>
+<li>WikiFruit Provider</li>
+</ul>
+<p>However, this does not preclude these providers from duplicating the fields
+to <code>custom_details</code> in the v1 API.</p>
+<h3 id="positive-consequences-of-option-b"><a class="header" href="#positive-consequences-of-option-b">Positive Consequences of Option B</a></h3>
+<ul>
+<li>Clear isolation of fields that belong together (i.e. grouped by provider).</li>
+<li>Clear ownership of fields through the structure.</li>
+<li>Simpler validation logic than other options due to less need for conditionals.</li>
+</ul>
+<h3 id="negative-consequences-of-option-b"><a class="header" href="#negative-consequences-of-option-b">Negative Consequences of Option B</a></h3>
+<ul>
+<li>Potentially some redundancy caused by extra nesting.</li>
+<li>Might not be as flexible with a provider that returns different fields based on
+what type of suggestion it is.</li>
+</ul>
+<h3 id="positive-consequences-of-not-increasing-api-version"><a class="header" href="#positive-consequences-of-not-increasing-api-version">Positive Consequences of not Increasing API Version</a></h3>
+<ul>
+<li>We do not have to worry about migrating Firefox (and other clients) into the new format.
+The migration is going to be quite a lot of extra work that adds little benefits
+(other than consistency of design, it doesn't add more features nor improve
+any known time sinks with development).</li>
+<li>Do not have to support 2 versions of the API.</li>
+</ul>
+<h3 id="negative-consequences-of-not-increasing-api-version"><a class="header" href="#negative-consequences-of-not-increasing-api-version">Negative Consequences of not Increasing API Version</a></h3>
+<ul>
+<li>Some inconsistencies with how providers add fields to the response.
+We will likely want to resolve this as we migrate to v2,
+but it's a known issue at the moment.</li>
+<li>Might be missing an opportune time to migrate, as features are currently not out yet
+which means the flexibility for change is higher.</li>
+</ul>
+<h2 id="pros-and-cons-of-the-options-1"><a class="header" href="#pros-and-cons-of-the-options-1">Pros and Cons of the Options</a></h2>
+<h3 id="a-continue-to-add-to-top-level-with-optional-fields"><a class="header" href="#a-continue-to-add-to-top-level-with-optional-fields">A. Continue to add to Top Level with Optional Fields</a></h3>
+<p>This is the status quo option.
+We will continue to append bespoke values to the top level suggestion,
+and ensure that they're optional.
+We can continue to use the <code>provider</code> to signal what fields exists
+and how they should be parsed.
+For example, we can specify 2 different types of <code>rating</code>,
+and hence 2 validation strategy for it,
+based off of which provider is specified.</p>
+<p>Example:</p>
+<pre><code class="language-json">{
+  &quot;suggestions&quot;: [
+    {
+      ...
+      &quot;provider&quot;: &quot;addons&quot;,
+      &quot;rating&quot;: &quot;4.123&quot;,
+      ...
+    },
+    {
+      ...
+      &quot;provider&quot;: &quot;movies&quot;,
+      &quot;rating&quot;: 0.123,
+      ...
+    },
+    ...
+  ],
+  ...
+}
+</code></pre>
+<p>The partial JSON Schema validation will look something like:</p>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;object&quot;,
+  &quot;properties&quot;: {
+    &quot;provider&quot;: {
+      &quot;type&quot;: &quot;string&quot;
+    }
+  },
+  &quot;required&quot;: [&quot;provider&quot;],
+  &quot;allOf&quot;: [
+    {
+      &quot;if&quot;: {
+        &quot;properties&quot;: {
+          &quot;provider&quot;: {
+            &quot;const&quot;: &quot;addons&quot;
+          }
+        }
+      },
+      &quot;then&quot;: {
+        &quot;properties&quot;: {
+          &quot;rating&quot;: {
+            &quot;type&quot;: &quot;string&quot;
+          }
+        },
+        &quot;required&quot;: [
+          &quot;rating&quot;
+        ]
+      }
+    },
+    {
+      &quot;if&quot;: {
+        &quot;properties&quot;: {
+          &quot;provider&quot;: {
+            &quot;const&quot;: &quot;movies&quot;
+          }
+        }
+      },
+      &quot;then&quot;: {
+        &quot;properties&quot;: {
+          &quot;rating&quot;: {
+            &quot;type&quot;: &quot;number&quot;
+          }
+        },
+        &quot;required&quot;: [
+          &quot;rating&quot;
+        ]
+      }
+    }
+  ]
+}
+</code></pre>
+<h4 id="pros-2"><a class="header" href="#pros-2">Pros</a></h4>
+<ul>
+<li>Can specify specific validation per provider.</li>
+<li>Merino is still kind of immature, so it still might be too early to think about design.</li>
+<li>Less nesting in the models (resulting in less complexity).</li>
+<li>Currently, backwards compatible as we don't have to do anything 
+to existing providers, as this follows the existing patterns.</li>
+</ul>
+<h4 id="cons-2"><a class="header" href="#cons-2">Cons</a></h4>
+<ul>
+<li>Lack of isolation for bespoke fields; <code>ratings</code> is coupled with 2 specific providers,
+and by just looking at the response, it's not clear that they are related.</li>
+<li>Not clear what is shared between <em>all</em> suggestions, vs. what is bespoke to specific provider.</li>
+<li>It is not obvious that the <code>provider</code> field should signal how you should perform validation.
+In other words, there is a contextual dependency on the JSON structure of suggestion based on <code>provider</code>.</li>
+</ul>
+<h3 id="b-custom-details-field-for-bespoke-provider-fields"><a class="header" href="#b-custom-details-field-for-bespoke-provider-fields">B. Custom Details Field for Bespoke Provider Fields</a></h3>
+<p>We introduce a <code>custom_details</code> field that uses a provider name as key
+to an object with the bespoke values to that provider.</p>
+<p>Example:</p>
+<pre><code class="language-json">{
+  &quot;suggestions&quot;: [
+    {
+      ...
+      &quot;provider&quot;: &quot;addons&quot;,
+      &quot;custom_details&quot;: {
+        &quot;addons&quot;: {
+          &quot;rating&quot;: &quot;4.7459&quot;
+        }
+      }
+    },
+    ...
+  ],
+  ...
+}
+</code></pre>
+<p>The specific fields in <code>custom_details</code> will all be optional (i.e. <code>addons</code> will be an optional key)
+but the <em>shape</em> of what goes in <code>addons</code> can be more strict (i.e. <code>addons</code> require a <code>rating</code> field).</p>
+<p>A partial schema specification for the above might look like<sup class="footnote-reference"><a href="#jsonschema">1</a></sup>:</p>
+<pre><code class="language-json">{
+  &quot;$schema&quot;: &quot;https://json-schema.org/draft/2020-12/schema&quot;,
+  &quot;title&quot;: &quot;Suggest API Response v1&quot;,
+  &quot;description&quot;: &quot;Response for /api/v1/suggest&quot;,
+  &quot;type&quot;: &quot;object&quot;,
+  &quot;properties&quot;: {
+    &quot;provider&quot;: {
+      &quot;description&quot;: &quot;id for the provider type&quot;,
+      &quot;type&quot;: &quot;string&quot;
+    },
+    &quot;custom_details&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;properties&quot;: {
+        &quot;addons&quot;: {
+          &quot;type&quot;: &quot;object&quot;,
+          &quot;description&quot;: &quot;Custom Addon Fields&quot;,
+          &quot;properties&quot;: {
+            &quot;rating&quot;: {
+              &quot;type&quot;: &quot;number&quot;
+            }
+          },
+          &quot;required&quot;: [&quot;rating&quot;]
+        }
+      }
+    }
+  },
+  &quot;required&quot;: [&quot;provider&quot;]
+}
+</code></pre>
+<div class="footnote-definition" id="jsonschema"><sup class="footnote-definition-label">1</sup>
+<p>Can play with JSON schema in https://www.jsonschemavalidator.net/</p>
+</div>
+<h4 id="pros-3"><a class="header" href="#pros-3">Pros</a></h4>
+<ul>
+<li>Can specify specific validation per provider.</li>
+<li>Clear ownership of <code>rating</code> to <code>addons</code> via structure.</li>
+<li>Fields outside of <code>custom_details</code> can be fields that are more universal across suggestions.
+These fields can potentially be correlated directly to the Fx Suggest Design Framework
+(i.e. <code>context_label</code>, <code>url</code>, <code>title</code>, <code>description</code>, etc.).</li>
+<li>Having a clear distinction for Fx Suggest Design Framework fields vs. bespoke fields makes this more
+backwards compatible, as the fields in the Design Framework can render the <em>default</em> suggestion case
+for clients who haven't upgraded their clients.</li>
+</ul>
+<h4 id="cons-3"><a class="header" href="#cons-3">Cons</a></h4>
+<ul>
+<li>We'll likely need to migrate existing providers at some point. But in the meantime,
+some fields will not follow convention to maintain backwards compatibility.</li>
+<li>Extra nesting inside of <code>custom_details</code>.</li>
+</ul>
+<h3 id="b5-custom-details-field-without-the-provider-nesting"><a class="header" href="#b5-custom-details-field-without-the-provider-nesting">B.5 Custom Details Field without the Provider Nesting</a></h3>
+<p>This is exactly like B, except that we remove the extra nesting.</p>
+<p>So, in the example above, we can remove the extra <code>addons</code> object to get:</p>
+<pre><code class="language-json">{
+  &quot;suggestions&quot;: [
+    {
+      ...
+      &quot;provider&quot;: &quot;addons&quot;,
+      &quot;custom_details&quot;: {
+        &quot;rating&quot;: &quot;4.7459&quot;
+      }
+    },
+    ...
+  ],
+  ...
+}
+</code></pre>
+<p>The validation of the contents of <code>custom_details</code> will look more like A.</p>
+<pre><code class="language-json">{
+  &quot;$schema&quot;: &quot;https://json-schema.org/draft/2020-12/schema&quot;,
+  &quot;title&quot;: &quot;Suggest API Response v1&quot;,
+  &quot;description&quot;: &quot;Response for /api/v1/suggest&quot;,
+  &quot;type&quot;: &quot;object&quot;,
+  &quot;properties&quot;: {
+    &quot;provider&quot;: {
+      &quot;description&quot;: &quot;id for the provider type&quot;,
+      &quot;type&quot;: &quot;string&quot;
+    }
+  },
+  &quot;required&quot;: [
+    &quot;provider&quot;
+  ],
+  &quot;if&quot;: {
+    &quot;properties&quot;: {
+      &quot;provider&quot;: {
+        &quot;const&quot;: &quot;addons&quot;
+      }
+    }
+  },
+  &quot;then&quot;: {
+    &quot;properties&quot;: {
+      &quot;custom_details&quot;: {
+        &quot;description&quot;: &quot;Custom Details Specific for Addons&quot;,
+        &quot;type&quot;: &quot;object&quot;,
+        &quot;properties&quot;: {
+          &quot;rating&quot;: {
+            &quot;type&quot;: &quot;string&quot;
+          }
+        },
+        &quot;required&quot;: [
+          &quot;rating&quot;
+        ]
+      }
+    },
+    &quot;required&quot;: [&quot;custom_details&quot;]
+  }
+}
+</code></pre>
+<h4 id="pros-4"><a class="header" href="#pros-4">Pros</a></h4>
+<ul>
+<li>Can specify specific validation per provider.</li>
+<li>Fields outside of <code>custom_details</code> can be fields that are more universal across suggestions.
+These fields can potentially be correlated directly to the Fx Suggest Design Framework
+(i.e. <code>context_label</code>, <code>url</code>, <code>title</code>, <code>description</code>, etc.).</li>
+<li>Having a clear distinction for Fx Suggest Design Framework fields vs. bespoke fields makes this more
+backwards compatible, as the fields in the Design Framework can render the <em>default</em> suggestion case
+for clients who haven't upgraded their clients.</li>
+<li>Less nesting in the response than B</li>
+</ul>
+<h4 id="cons-4"><a class="header" href="#cons-4">Cons</a></h4>
+<ul>
+<li>We'll likely need to migrate existing providers at some point. But in the meantime,
+some fields will not follow convention to maintain backwards compatibility.</li>
+<li>The relationship between <code>provider</code> and <code>custom_details</code> is more implicit, than explicit.</li>
+<li>This has a lot of the same <em>cons</em> as Option A because validation is done similarly.</li>
+</ul>
+<h3 id="c-custom-details-field-for-a-type"><a class="header" href="#c-custom-details-field-for-a-type">C. Custom Details Field for a &quot;Type&quot;</a></h3>
+<p>This is similar to option B, except that we want to introduce a new <code>type</code> field
+to differentiate it from the provider.
+The <code>custom_details</code> will be keyed by this type, rather than the <code>provider</code> name.
+These <code>types</code> are kind of analogous to a <em>rendering component</em>,
+as they will likely be used to specify a specific rendering path in the client.</p>
+<p>Example:</p>
+<pre><code class="language-json">{
+  &quot;suggestions&quot;: [
+    {
+      ...
+      &quot;provider&quot;: &quot;addons&quot;,
+      &quot;type&quot;: &quot;addons_type&quot;,
+      &quot;custom_details&quot;: {
+        &quot;addons_type&quot;: {
+          &quot;rating&quot;: &quot;4.7459&quot;
+        }
+      }
+    },
+    ...
+  ],
+  ...
+}
+</code></pre>
+<h4 id="pros-5"><a class="header" href="#pros-5">Pros</a></h4>
+<ul>
+<li>All the pros for B applies here</li>
+<li>Can decouple the <code>custom_details</code> from <code>provider</code>. This will be helpful for potentially 
+sharing the <code>type</code> with other suggestions produced by different providers. For instance,
+we may want this to specify different <em>rendering</em> paths in the client 
+(i.e. a &quot;top picks&quot; type to be shared between <code>addons</code> and <code>top_picks</code> providers,
+as there's many shared fields because they're rendered similarly). </li>
+</ul>
+<h4 id="cons-5"><a class="header" href="#cons-5">Cons</a></h4>
+<ul>
+<li>All the cons for B applies here</li>
+<li>Potentially over-engineering for <code>type</code>, as it's use is currently hypothetical.</li>
+</ul>
+<h3 id="d-component-driven-custom_details"><a class="header" href="#d-component-driven-custom_details">D. Component Driven <code>custom_details</code></a></h3>
+<p>This solution will model distinct UI components in the <code>custom_details</code> section.
+For example, if the <code>addons</code> provider have specific UI components to render a <code>ratings</code> component and
+a <code>highlight_context_label</code>, then we can specify these directly in the <code>custom_details</code> section.
+This will assume that the client side have these specific rendering types.</p>
+<p>Example:</p>
+<pre><code class="language-json">{
+  &quot;suggestions&quot;: [
+    {
+      ...
+      &quot;provider&quot;: &quot;addons&quot;,
+      &quot;custom_details&quot;: {
+        &quot;ratings&quot;: {
+          &quot;value&quot;: &quot;4.7459&quot;,
+          &quot;unit&quot;: &quot;stars&quot;
+        },
+        &quot;highlight_context_label&quot;: {
+          &quot;text&quot;: &quot;Special Limited Time Offer!&quot;
+        }
+      }
+    },
+    ...
+  ],
+  ...
+}
+</code></pre>
+<h4 id="pros-6"><a class="header" href="#pros-6">Pros</a></h4>
+<ul>
+<li>Can share custom components with schema validation.</li>
+<li>Backwards compatible with clients who don't have the necessary components to render. 
+It will just use the default renderer via the Fx Suggest Design Framework</li>
+</ul>
+<h4 id="cons-6"><a class="header" href="#cons-6">Cons</a></h4>
+<ul>
+<li>We currently don't have a sophisticated Component Design Framework, so this is probably overengineering.</li>
+<li>This tightly couples the API to the design framework of Desktop Firefox, which makes the fields potentially
+less relevant to other clients.</li>
+</ul>
+<h2 id="links-1"><a class="header" href="#links-1">Links</a></h2>
+<ul>
+<li><a href="https://json-schema.org/">JSON Schema Specification</a></li>
+</ul>
 
                     </main>
 
