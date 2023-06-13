@@ -29,7 +29,6 @@ class AddonSuggestion(BaseSuggestion):
 
 def invert_and_expand_index_keywords(
     keywords: dict[SupportedAddon, set[str]],
-    min_chars: int,
 ) -> dict[str, SupportedAddon]:
     """Invert the keywords index.
     param keywords: mapping of addon key -> keywords
@@ -96,9 +95,7 @@ class Provider(BaseProvider):
         )
         self.cron_task = asyncio.create_task(cron_job())
 
-        self.addon_keywords = invert_and_expand_index_keywords(
-            self.keywords, self.min_chars
-        )
+        self.addon_keywords = invert_and_expand_index_keywords(self.keywords)
 
     def normalize_query(self, query: str) -> str:
         """Ensure query string is case insensitive."""
