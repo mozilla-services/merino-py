@@ -17,6 +17,7 @@ from merino.jobs.navigational_suggestions.utils import FaviconDownloader, Favico
 
 DomainMetadataScenario = tuple[
     FaviconData | None,
+    list[dict[str, Any]],
     list[FaviconImage] | None,
     list[tuple[int, int]] | None,
     str | None,
@@ -28,7 +29,8 @@ DomainMetadataScenario = tuple[
 
 DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
     (
-        FaviconData(links=[], metas=[]),
+        FaviconData(links=[], metas=[], manifests=[]),
+        [],
         [
             FaviconImage(content=b"\\x00", content_type="image/x-icon"),
         ],
@@ -65,7 +67,9 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
                 },
             ],
             metas=[],
+            manifests=[],
         ),
+        [],
         [
             FaviconImage(content=b"\\x00", content_type="image/png"),
         ],
@@ -104,7 +108,9 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
                     ),
                 }
             ],
+            manifests=[],
         ),
+        [],
         [
             FaviconImage(content=b"\\x00", content_type="image/jpg"),
         ],
@@ -132,7 +138,53 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ],
     ),
     (
+        FaviconData(
+            links=[],
+            metas=[],
+            manifests=[
+                {
+                    "rel": ["manifest"],
+                    "href": "/data/manifest/",
+                    "crossorigin": "use-credentials",
+                }
+            ],
+        ),
+        [
+            {
+                "src": "https://static.xx.fbcdn.net/rsrc.php/v3/ya/r/hsAgIHTE80C.png",
+                "sizes": "192x192",
+                "type": "image/png",
+            }
+        ],
+        [
+            FaviconImage(content=b"\\x00", content_type="image/jpg"),
+        ],
+        [(32, 32)],
         None,
+        "https://www.facebook.com/",
+        "dummy_title",
+        [
+            {
+                "rank": 2,
+                "domain": "facebook.com",
+                "host": "m.facebook.com",
+                "origin": "https://m.facebook.com",
+                "suffix": "com",
+                "categories": ["Social Networks"],
+            },
+        ],
+        [
+            {
+                "url": "https://www.facebook.com",
+                "title": "dummy_title",
+                "icon": "https://static.xx.fbcdn.net/rsrc.php/v3/ya/r/hsAgIHTE80C.png",
+                "domain": "facebook",
+            }
+        ],
+    ),
+    (
+        None,
+        [],
         None,
         None,
         None,
@@ -170,8 +222,9 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
                 },
             ],
             metas=[],
-            url="",
+            manifests=[],
         ),
+        [],
         [
             FaviconImage(content=b"\\x00", content_type="image/svg+xml"),
         ],
@@ -214,7 +267,9 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
                 },
             ],
             metas=[],
+            manifests=[],
         ),
+        [],
         [
             FaviconImage(content=b"\\x00", content_type="image/png"),
             FaviconImage(content=b"\\x01", content_type="image/svg+xml"),
@@ -253,8 +308,9 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
                 },
             ],
             metas=[{"name": "apple-touch-icon", "content": "data:favicon2.ico"}],
-            url="https://www.fakedomain.gov/",
+            manifests=[],
         ),
+        [],
         None,
         None,
         None,
@@ -290,9 +346,12 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
                 },
             ],
             metas=[{"name": "apple-touch-icon", "content": "favicon2.ico"}],
+            manifests=[],
         ),
+        [],
         [
             FaviconImage(content=b"\\x00", content_type="image/x-icon"),
+            FaviconImage(content=b"\\x01", content_type="image/x-icon"),
         ],
         [(64, 64), (32, 32)],
         None,
@@ -327,7 +386,9 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
                 },
             ],
             metas=[],
+            manifests=[],
         ),
+        [],
         [
             FaviconImage(content=b"\\x00", content_type="image/x-icon"),
         ],
@@ -365,7 +426,9 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
                 },
             ],
             metas=[],
+            manifests=[],
         ),
+        [],
         [
             FaviconImage(content=b"\\x00", content_type="text/html"),
         ],
@@ -394,6 +457,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
     ),
     (
         None,
+        [],
         None,
         None,
         None,
@@ -420,6 +484,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
     ),
     (
         None,
+        [],
         None,
         None,
         None,
@@ -446,6 +511,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
     ),
     (
         None,
+        [],
         None,
         None,
         None,
@@ -471,7 +537,8 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ],
     ),
     (
-        FaviconData(links=[], metas=[]),
+        FaviconData(links=[], metas=[], manifests=[]),
+        [],
         [
             FaviconImage(content=b"\\x00", content_type="image/x-icon"),
         ],
@@ -504,6 +571,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
 @pytest.mark.parametrize(
     [
         "favicon_data",
+        "scraped_favicons_from_manifest",
         "favicon_images",
         "favicon_image_sizes",
         "default_favicon",
@@ -517,6 +585,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         "favicon_found_in_default_path",
         "favicon_found_via_link_tag",
         "favicon_found_via_meta_tag",
+        "favicon_found_via_manifest",
         "no_favicon",
         "masked_svg_favicon_skipped",
         "favicon_always_non_masked_svg_favicon_when_present",
@@ -533,6 +602,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
 def test_get_domain_metadata(
     mocker: MockerFixture,
     favicon_data: FaviconData | None,
+    scraped_favicons_from_manifest: list[dict[str, Any]],
     favicon_images: list[FaviconImage] | None,
     favicon_image_sizes: list[tuple[int, int]] | None,
     default_favicon: str | None,
@@ -544,6 +614,9 @@ def test_get_domain_metadata(
     """Test that DomainMetadataExtractor returns favicons as expected"""
     scraper_mock: Any = mocker.Mock(spec=Scraper)
     scraper_mock.scrape_favicon_data.return_value = favicon_data
+    scraper_mock.scrape_favicons_from_manifest.return_value = (
+        scraped_favicons_from_manifest
+    )
     scraper_mock.get_default_favicon.return_value = default_favicon
     scraper_mock.open.return_value = scraped_url
     scraper_mock.scrape_title.return_value = scraped_title
