@@ -1,6 +1,7 @@
 """A wrapper for AccuWeather API interactions."""
 import asyncio
 import datetime
+import email
 import hashlib
 import json
 from json import JSONDecodeError
@@ -20,8 +21,6 @@ from merino.providers.weather.backends.protocol import (
     Temperature,
     WeatherReport,
 )
-
-ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 
 
 class AccuweatherLocation(BaseModel):
@@ -116,27 +115,30 @@ class AccuweatherBackend:
         """Get the cache key for the accuweather request.
         Also ensure that the API key is stripped out.
         """
-        params = query_params.copy()
-        if "apikey" in params:
-            del params["apikey"]
+        min_params_for_cache_key = 1 if query_params.get(self.url_param_api_key) else 0
+        if len(query_params) > min_params_for_cache_key:
+            hasher = hashlib.blake2s()
+            for key, value in sorted(query_params.items()):
+                if key != self.url_param_api_key:
+                    hasher.update(key.encode("utf-8") + value.encode("utf-8"))
+            extra_identifiers = hasher.hexdigest()
 
-        if params:
-            extra_identifiers = hashlib.blake2s(str(params).encode("utf-8")).hexdigest()
             return f"{self.__class__.__name__}:v1:{url}:{extra_identifiers}"
+
         return f"{self.__class__.__name__}:v1:{url}"
 
     async def get_request(
-        self, client: AsyncClient, url: str, params: dict[str, str] = {}
+        self, client: AsyncClient, url_path: str, params: dict[str, str] = {}
     ) -> dict[str, Any]:
         """Get API response. Attempt to get it from cache first,
         then actually make the call if there's a cache miss.
         """
-        cache_key = self.cache_key_for_accuweather_request(url, params)
+        cache_key = self.cache_key_for_accuweather_request(url_path, params)
         response_dict: dict[str, str]
 
         # The top level path in the URL gives us a good enough idea of what type of request
         # we are calling from here.
-        request_type: str = url.strip("/").split("/")[0]
+        request_type: str = url_path.strip("/").split("/", 1)[0]
         try:
             response_dict = await self.fetch_request_from_cache(cache_key)
             self.metrics_client.increment(f"accuweather.cache.hit.{request_type}")
@@ -147,7 +149,7 @@ class AccuweatherBackend:
             )
 
             with self.metrics_client.timeit(f"accuweather.request.{request_type}.get"):
-                response: Response = await client.get(url, params=params)
+                response: Response = await client.get(url_path, params=params)
                 response.raise_for_status()
 
             response_expiry: str = response.headers.get("Expires")
@@ -166,12 +168,9 @@ class AccuweatherBackend:
         at least `cached_report_ttl_sec`.
         """
         with self.metrics_client.timeit("accuweather.cache.store"):
-            expiry_delta: timedelta = (
-                datetime.datetime.strptime(
-                    response_expiry, ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT
-                )
-                - datetime.datetime.now()
-            )
+            expiry_delta: timedelta = email.utils.parsedate_to_datetime(
+                response_expiry
+            ) - datetime.datetime.now(datetime.timezone.utc)
             cache_ttl: timedelta = max(
                 expiry_delta, timedelta(seconds=self.cached_report_ttl_sec)
             )

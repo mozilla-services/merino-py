@@ -4,6 +4,7 @@
 
 """Unit tests for the AccuWeather backend module."""
 import datetime
+import email.utils
 import hashlib
 import json
 from typing import Any, Optional
@@ -17,10 +18,10 @@ from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 from redis.asyncio import Redis
 
+from merino.cache.redis import RedisAdapter
 from merino.exceptions import CacheEntryError, CacheMissError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.accuweather import (
-    ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT,
     AccuweatherBackend,
     AccuweatherError,
     AccuweatherLocation,
@@ -50,7 +51,7 @@ def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
 
 
 @pytest.fixture(name="accuweather_parameters")
-def fixture_accuweather_parameter(statsd_mock: Any) -> dict[str, Any]:
+def fixture_accuweather_parameters(statsd_mock: Any) -> dict[str, Any]:
     """Create an Accuweather object for test."""
     return {
         "api_key": "test",
@@ -68,10 +69,10 @@ def fixture_accuweather_parameter(statsd_mock: Any) -> dict[str, Any]:
 @pytest.fixture(name="response_header")
 def fixture_response_header() -> dict[str, str]:
     """Create a response header with a reasonable expiry."""
-    time_delta: datetime_type = datetime.datetime.now(
+    expiry_time: datetime_type = datetime.datetime.now(
         tz=datetime.timezone.utc
     ) + datetime.timedelta(days=2)
-    return {"Expires": time_delta.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)}
+    return {"Expires": email.utils.format_datetime(expiry_time)}
 
 
 @pytest.fixture(name="accuweather")
@@ -82,7 +83,7 @@ def fixture_accuweather(
 ) -> AccuweatherBackend:
     """Create an Accuweather object for test. This object always have cache miss."""
     return AccuweatherBackend(
-        cache=redis_mock_cache_miss,
+        cache=RedisAdapter(redis_mock_cache_miss),
         **accuweather_parameters,
     )
 
@@ -95,7 +96,7 @@ def fixture_accuweather_with_partner_code(
     return AccuweatherBackend(
         url_param_partner_code="partner",
         partner_code="acme",
-        cache=redis_mock_cache_miss,
+        cache=RedisAdapter(redis_mock_cache_miss),
         **accuweather_parameters,
     )
 
@@ -301,7 +302,9 @@ def test_init_api_key_value_error(
     accuweather_parameters["api_key"] = ""
 
     with pytest.raises(ValueError) as accuweather_error:
-        AccuweatherBackend(cache=mocker.AsyncMock(spec=Redis), **accuweather_parameters)
+        AccuweatherBackend(
+            cache=RedisAdapter(mocker.AsyncMock(spec=Redis)), **accuweather_parameters
+        )
 
     assert str(accuweather_error.value) == expected_error_value
 
@@ -327,7 +330,9 @@ def test_init_url_value_error(
     accuweather_parameters[url_value] = ""
 
     with pytest.raises(ValueError) as accuweather_error:
-        AccuweatherBackend(cache=mocker.AsyncMock(spec=Redis), **accuweather_parameters)
+        AccuweatherBackend(
+            cache=mocker.AsyncMock(spec=RedisAdapter), **accuweather_parameters
+        )
 
     assert str(accuweather_error.value) == expected_error_value
 
@@ -637,17 +642,20 @@ async def test_get_location_from_cache(
     postal_code: str = "94105"
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
 
-    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+    accuweather = AccuweatherBackend(
+        cache=RedisAdapter(redis_mock), **accuweather_parameters
+    )
     location: Optional[AccuweatherLocation] = await accuweather.get_location(
         mock_client, country, postal_code
     )
 
     assert location == expected_location
+    expected_query_string = "q".encode("utf-8") + postal_code.encode("utf-8")
     redis_mock.get.assert_called_once_with(
         f"AccuweatherBackend:v1:/locations/v1/postalcodes/{country}/search.json:"
-        f"{hashlib.blake2s(str({'q': postal_code}).encode('utf-8')).hexdigest()}"
+        f"{hashlib.blake2s(expected_query_string).hexdigest()}"
     )
-    assert not mock_client.get.called
+    mock_client.get.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -790,7 +798,9 @@ async def test_get_current_conditions_from_cache(
     location_key: str = "39376_PC"
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
 
-    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+    accuweather = AccuweatherBackend(
+        cache=RedisAdapter(redis_mock), **accuweather_parameters
+    )
     conditions: Optional[CurrentConditions] = await accuweather.get_current_conditions(
         mock_client, location_key
     )
@@ -798,7 +808,7 @@ async def test_get_current_conditions_from_cache(
     redis_mock.get.assert_called_once_with(
         "AccuweatherBackend:v1:/currentconditions/v1/39376_PC.json"
     )
-    assert not mock_client.get.called
+    mock_client.get.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -953,7 +963,9 @@ async def test_get_forecast_from_cache(
     location_key: str = "39376_PC"
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
 
-    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+    accuweather = AccuweatherBackend(
+        cache=RedisAdapter(redis_mock), **accuweather_parameters
+    )
     forecast: Optional[Forecast] = await accuweather.get_forecast(
         mock_client, location_key
     )
@@ -961,7 +973,7 @@ async def test_get_forecast_from_cache(
     redis_mock.get.assert_called_once_with(
         "AccuweatherBackend:v1:/forecasts/v1/daily/1day/39376_PC.json"
     )
-    assert not mock_client.get.called
+    mock_client.get.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -1063,7 +1075,7 @@ async def test_cache_inputs_for_weather_report(
         (
             {"q": "asdfg", "apikey": "filter_me_out"},
             f"AccuweatherBackend:v1:localhost:"
-            f"{hashlib.blake2s(str({'q':'asdfg'}).encode('utf-8')).hexdigest()}",
+            f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
         (
             {},
@@ -1072,7 +1084,7 @@ async def test_cache_inputs_for_weather_report(
         (
             {"q": "asdfg"},
             f"AccuweatherBackend:v1:localhost:"
-            f"{hashlib.blake2s(str({'q': 'asdfg'},).encode('utf-8')).hexdigest()}",
+            f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
     ],
     ids=["filter_out_apikey", "none", "pass_through_query"],
@@ -1095,7 +1107,7 @@ async def test_get_request_cache_hit(
     mocker: MockerFixture, accuweather_parameters: dict[str, Any], statsd_mock: Any
 ):
     """Test that request can get value from cache"""
-    redis_mock = mocker.AsyncMock(spec=Redis)
+    redis_mock = mocker.AsyncMock(spec=RedisAdapter)
     url = "/forecasts/v1/daily/1day/39376_PC.json"
 
     async def mock_get(key):
@@ -1114,7 +1126,7 @@ async def test_get_request_cache_hit(
 
     statsd_mock.timeit.assert_called_once_with("accuweather.cache.fetch")
     statsd_mock.increment.assert_called_once_with("accuweather.cache.hit.forecasts")
-    assert not mock_client.get.called
+    mock_client.get.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -1145,7 +1157,7 @@ async def test_get_request_cache_errors(
     """Test for cache errors/misses. Ensures that the right metrics are
     called and that the API request is actually made.
     """
-    redis_mock = mocker.AsyncMock(spec=Redis)
+    redis_mock = mocker.AsyncMock(spec=RedisAdapter)
 
     cache = {}
 
@@ -1166,7 +1178,7 @@ async def test_get_request_cache_errors(
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
     mock_client.get.return_value = Response(
         status_code=200,
-        headers={"Expires": expiry_date.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)},
+        headers={"Expires": email.utils.format_datetime(expiry_date)},
         content=json.dumps(expected_client_response).encode("utf-8"),
         request=Request(
             method="GET",
@@ -1210,7 +1222,7 @@ async def test_fetch_request_from_cache_error(
     error: Any,
 ):
     """Test that an error is raised for cache miss."""
-    redis_mock = mocker.AsyncMock(spec=Redis)
+    redis_mock = mocker.AsyncMock(spec=RedisAdapter)
 
     async def mock_get(key):
         return mock_cache_entry
