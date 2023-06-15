@@ -142,7 +142,7 @@ class AccuweatherBackend:
         try:
             response_dict = await self.fetch_request_from_cache(cache_key)
             self.metrics_client.increment(f"accuweather.cache.hit.{request_type}")
-        except (CacheMissError, CacheEntryError) as exc:
+        except (CacheMissError, CacheEntryError, CacheAdapterError) as exc:
             error_type = "miss" if isinstance(exc, CacheMissError) else "error"
             self.metrics_client.increment(
                 f"accuweather.cache.{error_type}.{request_type}"
