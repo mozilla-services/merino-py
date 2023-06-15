@@ -5,6 +5,10 @@
 #
 # MERINO_ENV=production /path/to/your/command
 
+[production]
+# For `list` or `table` settings, `dynaconf_merge` allows you to merge settings with the default
+# settings. This enables merge for the entire `production` environment.
+dynaconf_merge = true
 
-# Uncomment to define production configurations
-#[production]
+[production.accuweather]
+url_base = "https://api.accuweather.com"
