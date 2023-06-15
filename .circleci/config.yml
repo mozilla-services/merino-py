@@ -159,7 +159,7 @@ jobs:
   contract-tests:
     machine:
       docker_layer_caching: false
-      image: ubuntu-2004:202101-01 # Ubuntu 20.04, Docker v20.10.2, Docker Compose v1.28.2
+      image: cimg/base:2022.08
     working_directory: ~/merino
     steps:
       - checkout
