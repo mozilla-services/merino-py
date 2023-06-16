@@ -136,7 +136,6 @@ class Provider(BaseProvider):
             results_id, fkw_id = suggest_look_ups
             res = self.suggestion_content.results[results_id]
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
-            advertiser = res.get("advertiser")
 
             suggestion_dict = {
                 "block_id": res.get("id"),
@@ -146,7 +145,7 @@ class Provider(BaseProvider):
                 "impression_url": res.get("impression_url"),
                 "click_url": res.get("click_url"),
                 "provider": self.name,
-                "advertiser": advertiser,
+                "advertiser": res.get("advertiser"),
                 "is_sponsored": is_sponsored,
                 "icon": self.suggestion_content.icons.get(
                     int(res.get("icon", MISSING_ICON_ID))
