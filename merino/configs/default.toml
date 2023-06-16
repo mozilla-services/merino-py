@@ -121,7 +121,6 @@ backend = "remote-settings"
 cron_interval_sec = 60
 resync_interval_sec = 10800
 score = 0.3
-score_wikipedia = 0.2
 
 [default.amo.dynamic]
 # This is the URL for the Addons API to get more information for particular addons

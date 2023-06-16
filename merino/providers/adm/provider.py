@@ -135,8 +135,6 @@ class Provider(BaseProvider):
         if (suggest_look_ups := self.suggestion_content.suggestions.get(q)) is not None:
             results_id, fkw_id = suggest_look_ups
             res = self.suggestion_content.results[results_id]
-            if res.get("advertiser") == "Wikipedia":
-                return []
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
             advertiser = res.get("advertiser")
 
