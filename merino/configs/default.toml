@@ -121,7 +121,6 @@ backend = "remote-settings"
 cron_interval_sec = 60
 resync_interval_sec = 10800
 score = 0.3
-score_wikipedia = 0.2
 
 [default.amo.dynamic]
 # This is the URL for the Addons API to get more information for particular addons
@@ -153,7 +152,7 @@ top_picks_file_path = "dev/top_picks.json"
 
 [default.providers.wikipedia]
 type = "wikipedia"
-enabled_by_default = false
+enabled_by_default = true
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "elasticsearch"
 # The URL of the cluster that we want to connect to.

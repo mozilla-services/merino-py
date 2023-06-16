@@ -173,6 +173,48 @@ def fixture_rs_attachment_response(rs_attachment: KintoSuggestion) -> httpx.Resp
     )
 
 
+@pytest.fixture(name="rs_wiki_attachment")
+def fixture_rs_wiki_attachment() -> KintoSuggestion:
+    """Return fake attachment data containing Wiki-adm suggestion as generated
+    by the Remote Settings endpoint.
+    """
+    return KintoSuggestion(
+        id=2,
+        advertiser="Wikipedia",
+        impression_url="https://wikipedia.org/impression/mozilla",
+        click_url="https://wikipedia.org/en/Mozilla",
+        full_keywords=[["firefox accounts", 3], ["mozilla firefox accounts", 4]],
+        iab_category="5 - Education",
+        icon="01",
+        keywords=[
+            "firefox",
+            "firefox account",
+            "firefox accounts",
+            "mozilla",
+            "mozilla firefox",
+            "mozilla firefox account",
+            "mozilla firefox accounts",
+        ],
+        title="Mozilla Wikipedia Accounts",
+        url="https://wikipedia.org/en/Mozilla",
+    )
+
+
+@pytest.fixture(name="rs_wiki_attachment_response")
+def fixture_rs_wiki_attachment_response(
+    rs_wiki_attachment: KintoSuggestion,
+) -> httpx.Response:
+    """Return response content for a Remote Settings attachment."""
+    return httpx.Response(
+        status_code=200,
+        json=[dict(rs_wiki_attachment)],
+        request=httpx.Request(
+            method="GET",
+            url="",
+        ),
+    )
+
+
 @pytest.mark.parametrize(
     "parameter",
     ["server", "collection", "bucket"],
@@ -214,6 +256,30 @@ async def test_fetch(
     suggestion_content: SuggestionContent = await rs_backend.fetch()
 
     assert suggestion_content == adm_suggestion_content
+
+
+@pytest.mark.asyncio
+async def test_fetch_no_adm_wikipedia_result(
+    mocker: MockerFixture,
+    rs_backend: RemoteSettingsBackend,
+    rs_records: list[dict[str, Any]],
+    rs_server_info: dict[str, Any],
+    rs_wiki_attachment_response: httpx.Response,
+) -> None:
+    """Test that the fetch method returns no suggestions as a result of filtering out
+    records with Wikipedia defined as advertiser.
+    """
+    mocker.patch.object(kinto_http.AsyncClient, "get_records", return_value=rs_records)
+    mocker.patch.object(
+        kinto_http.AsyncClient, "server_info", return_value=rs_server_info
+    )
+    mocker.patch.object(
+        httpx.AsyncClient, "get", return_value=rs_wiki_attachment_response
+    )
+
+    suggestion_content: SuggestionContent = await rs_backend.fetch()
+
+    assert suggestion_content.results == []
 
 
 @pytest.mark.asyncio
