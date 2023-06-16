@@ -83,7 +83,7 @@ dsn = ""
 # Any of "prod", "stage", or "dev".
 env = "dev"
 # A setting for the tracing sample rate. Should be a float in range [0, 1.0].
-traces_sample_rate = 0.1
+traces_sample_rate = 0
 
 [default.providers.accuweather]
 type = "accuweather"
