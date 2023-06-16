@@ -80,14 +80,6 @@ class RemoteSettingsBackend:
 
         fkw_index = 0
 
-        # Dynamic Wikipedia provider supplies Wikipedia suggestions.
-        # To prevent possible indexing of adM Wikipedia suggestions.
-        rs_suggestions = [
-            suggestion
-            for suggestion in rs_suggestions
-            if suggestion.advertiser != "Wikipedia"
-        ]
-
         for suggestion in rs_suggestions:
             result_id = len(results)
             keywords = suggestion.keywords
@@ -200,7 +192,13 @@ class RemoteSettingsBackend:
                 response.raise_for_status()
             except httpx.HTTPError as error:
                 raise RemoteSettingsError("Failed to get attachment") from error
-            return [KintoSuggestion(**data) for data in response.json()]
+            # Dynamic Wikipedia provider supplies Wikipedia suggestions.
+            # Excludes possible indexing of adM Wikipedia suggestions.
+            return [
+                KintoSuggestion(**data)
+                for data in response.json()
+                if data.get("advertiser", "") != "Wikipedia"
+            ]
 
     def filter_records(
         self, record_type: RecordType, records: list[dict[str, Any]]
