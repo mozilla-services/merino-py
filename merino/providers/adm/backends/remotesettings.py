@@ -79,6 +79,15 @@ class RemoteSettingsBackend:
         )
 
         fkw_index = 0
+
+        # Dynamic Wikipedia provider supplies Wikipedia suggestions.
+        # To prevent possible indexing of adM Wikipedia suggestions.
+        rs_suggestions = [
+            suggestion
+            for suggestion in rs_suggestions
+            if suggestion.advertiser != "Wikipedia"
+        ]
+
         for suggestion in rs_suggestions:
             result_id = len(results)
             keywords = suggestion.keywords
