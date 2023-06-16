@@ -103,7 +103,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     else FakeAdmBackend()
                 ),
                 score=setting.score,
-                score_wikipedia=setting.score_wikipedia,
                 name=provider_id,
                 resync_interval_sec=setting.resync_interval_sec,
                 cron_interval_sec=setting.cron_interval_sec,

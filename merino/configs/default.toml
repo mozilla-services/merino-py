@@ -153,7 +153,7 @@ top_picks_file_path = "dev/top_picks.json"
 
 [default.providers.wikipedia]
 type = "wikipedia"
-enabled_by_default = false
+enabled_by_default = true
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "elasticsearch"
 # The URL of the cluster that we want to connect to.

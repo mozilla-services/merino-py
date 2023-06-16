@@ -38,7 +38,6 @@ _validators = [
     Validator("providers.adm.enabled_by_default", is_type_of=bool),
     Validator("providers.adm.resync_interval_sec", gt=0),
     Validator("providers.adm.score", gte=0, lte=1),
-    Validator("providers.adm.score_wikipedia", gte=0, lte=1),
     Validator("providers.adm.type", is_type_of=str, must_exist=True),
     Validator("providers.amo.backend", is_in=["dynamic", "static"]),
     Validator("providers.amo.score", gte=0, lte=1),

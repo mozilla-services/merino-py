@@ -61,7 +61,6 @@ class Provider(BaseProvider):
     # Store the value to avoid fetching it from settings every time as that'd
     # require a three-way dict lookup.
     score: float
-    score_wikipedia: float
     last_fetch_at: float
     cron_task: asyncio.Task
     backend: AdmBackend
@@ -71,7 +70,6 @@ class Provider(BaseProvider):
         self,
         backend: AdmBackend,
         score: float,
-        score_wikipedia: float,
         name: str,
         resync_interval_sec: float,
         cron_interval_sec: float,
@@ -81,7 +79,6 @@ class Provider(BaseProvider):
         """Store the given Remote Settings backend on the provider."""
         self.backend = backend
         self.score = score
-        self.score_wikipedia = score_wikipedia
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
         self.suggestion_content = SuggestionContent(
@@ -141,11 +138,8 @@ class Provider(BaseProvider):
             if res.get("advertiser") == "Wikipedia":
                 return []
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
-            score = (
-                self.score_wikipedia
-                if (advertiser := res.get("advertiser")) == "Wikipedia"
-                else self.score
-            )
+            advertiser = res.get("advertiser")
+
             suggestion_dict = {
                 "block_id": res.get("id"),
                 "full_keyword": self.suggestion_content.full_keywords[fkw_id],
@@ -159,7 +153,7 @@ class Provider(BaseProvider):
                 "icon": self.suggestion_content.icons.get(
                     int(res.get("icon", MISSING_ICON_ID))
                 ),
-                "score": score,
+                "score": self.score,
             }
             return [
                 SponsoredSuggestion(**suggestion_dict)

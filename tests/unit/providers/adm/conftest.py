@@ -47,7 +47,6 @@ def fixture_adm_parameters() -> dict[str, Any]:
     """Define provider parameters for test."""
     return {
         "score": 0.3,
-        "score_wikipedia": 0.2,
         "name": "adm",
         "resync_interval_sec": 10800,
         "cron_interval_sec": 60,
