@@ -80,5 +80,5 @@ services:
       /wait-for-it.sh kinto:8888 --strict -- python main.py
 
   redis:
-    image: redis:7.0.8
+    image: redis:6.2
     container_name: redis
