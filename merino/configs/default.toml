@@ -209,3 +209,6 @@ min_favicon_width = 52
 [default.jobs.amo_rs_uploader]
 # The "type" of each remote settings record
 record_type = "amo-suggestions"
+# While the addon experiment is active, addon suggestions should be preferred
+# over all other types.
+score = 1.0

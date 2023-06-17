@@ -66,6 +66,12 @@ record_type_option = typer.Option(
     help="The `type` of each remote settings record",
 )
 
+score_option = typer.Option(
+    job_settings.score,
+    "--score",
+    help="The score of each suggestion",
+)
+
 amo_rs_uploader_cmd = typer.Typer(
     name="amo-rs-uploader",
     help="Command for uploading AMO add-on suggestions to remote settings",
@@ -81,6 +87,7 @@ def upload(
     delete_existing_records: bool = delete_existing_records_option,
     dry_run: bool = dry_run_option,
     record_type: str = record_type_option,
+    score: float = score_option,
     server: str = server_option,
 ):
     """Upload AMO suggestions to remote settings."""
@@ -93,6 +100,7 @@ def upload(
             delete_existing_records=delete_existing_records,
             dry_run=dry_run,
             record_type=record_type,
+            score=score,
             server=server,
         )
     )
@@ -106,6 +114,7 @@ async def _upload(
     delete_existing_records: bool,
     dry_run: bool,
     record_type: str,
+    score: float,
     server: str,
 ):
     logger.info("Fetching addons data from AMO")
@@ -120,6 +129,7 @@ async def _upload(
         dry_run=dry_run,
         record_type=record_type,
         server=server,
+        suggestion_score_fallback=score,
     ) as uploader:
         if delete_existing_records:
             uploader.delete_records()

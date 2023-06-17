@@ -32,6 +32,7 @@ class Record:
     type: str
     start_index: int
     size: int
+    suggestion_score: float | None
     url: str
 
     def __init__(
@@ -42,10 +43,12 @@ class Record:
         collection: str = TEST_UPLOADER_KWARGS["collection"],
         server: str = TEST_UPLOADER_KWARGS["server"],
         type: str = TEST_UPLOADER_KWARGS["record_type"],
+        suggestion_score: float | None = None,
     ):
         self.start_index = start_index
         self.size = size
         self.type = type
+        self.suggestion_score = suggestion_score
         self.id = f"{type}-{start_index}-{size}"
         self.url = (
             f"{server}/buckets/{bucket}/collections/{collection}/records/{self.id}"
@@ -71,10 +74,16 @@ class Record:
         """A dict that describes the request that Kinto should receive when the
         uploader uploads an attachment.
         """
+        attachment: list[dict[str, Any]] = [
+            {"i": i} for i in range(self.start_index, self.size)
+        ]
+        if self.suggestion_score:
+            for suggestion in attachment:
+                suggestion["score"] = self.suggestion_score
         return {
             "method": "POST",
             "url": self.attachment_url,
-            "attachment": [{"i": i} for i in range(self.start_index, self.size)],
+            "attachment": attachment,
             "headers": {
                 "Content-Disposition": f'form-data; name="attachment"; filename="{self.id}.json"',
                 "Content-Type": "application/json",
@@ -141,6 +150,7 @@ def do_upload_test(
     suggestion_count: int,
     expected_records: list[Record],
     uploader_kwargs: dict[str, Any] = {},
+    suggestion_score: float | None = None,
 ) -> None:
     """Perform an upload test."""
     for record in expected_records:
@@ -153,7 +163,10 @@ def do_upload_test(
         **uploader_kwargs,
     ) as uploader:
         for i in range(suggestion_count):
-            uploader.add_suggestion({"i": i})
+            suggestion: dict[str, Any] = {"i": i}
+            if suggestion_score:
+                suggestion["score"] = suggestion_score
+            uploader.add_suggestion(suggestion)
 
     check_upload_requests(requests_mock.request_history, expected_records)
 
@@ -260,6 +273,41 @@ def test_dry_run(requests_mock):
             "dry_run": True,
         },
         expected_records=[],
+    )
+
+
+def test_suggestion_score_fallback(requests_mock):
+    """Tests suggestion_score_fallback when scores are not present inside the
+    suggestions themselves.
+    """
+    do_upload_test(
+        requests_mock,
+        chunk_size=10,
+        suggestion_count=10,
+        uploader_kwargs={
+            "suggestion_score_fallback": 0.12,
+        },
+        expected_records=[
+            Record(0, 10, suggestion_score=0.12),
+        ],
+    )
+
+
+def test_suggestion_score_fallback_overridden(requests_mock):
+    """Tests suggestion_score_fallback that is overridden by scores inside the
+    suggestions.
+    """
+    do_upload_test(
+        requests_mock,
+        chunk_size=10,
+        suggestion_count=10,
+        suggestion_score=0.34,
+        uploader_kwargs={
+            "suggestion_score_fallback": 0.12,
+        },
+        expected_records=[
+            Record(0, 10, suggestion_score=0.34),
+        ],
     )
 
 

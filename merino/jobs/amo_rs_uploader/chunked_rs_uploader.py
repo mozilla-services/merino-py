@@ -82,6 +82,7 @@ class ChunkedRemoteSettingsUploader:
     dry_run: bool
     kinto: kinto_http.Client
     record_type: str
+    suggestion_score_fallback: float | None
 
     def __init__(
         self,
@@ -92,12 +93,14 @@ class ChunkedRemoteSettingsUploader:
         record_type: str,
         server: str,
         dry_run: bool = False,
+        suggestion_score_fallback: float | None = None,
     ):
         """Initialize the uploader."""
         self.chunk_size = chunk_size
         self.current_chunk = _Chunk(0)
         self.dry_run = dry_run
         self.record_type = record_type
+        self.suggestion_score_fallback = suggestion_score_fallback
         self.kinto = kinto_http.Client(
             server_url=server, bucket=bucket, collection=collection, auth=auth
         )
@@ -106,6 +109,8 @@ class ChunkedRemoteSettingsUploader:
         """Add a suggestion. If the current chunk becomes full as a result, it
         will be uploaded before this method returns.
         """
+        if self.suggestion_score_fallback and "score" not in suggestion:
+            suggestion = suggestion | {"score": self.suggestion_score_fallback}
         self.current_chunk.add_suggestion(suggestion)
         if self.current_chunk.size == self.chunk_size:
             self._finish_current_chunk()
