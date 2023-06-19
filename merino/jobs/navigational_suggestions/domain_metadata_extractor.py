@@ -10,10 +10,11 @@ from pydantic import BaseModel
 from robobrowser import RoboBrowser
 
 from merino.jobs.navigational_suggestions.utils import (
-    FIREFOX_UA,
+    REQUEST_HEADERS,
     TIMEOUT,
     FaviconDownloader,
     FaviconImage,
+    requests_get,
 )
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ class FaviconData(BaseModel):
 
     links: list[dict[str, Any]]
     metas: list[dict[str, Any]]
+    manifests: list[dict[str, Any]]
 
 
 class Scraper:
@@ -38,12 +40,15 @@ class Scraper:
     META_SELECTOR: str = (
         "meta[name=apple-touch-icon], meta[name=msapplication-TileImage]"
     )
+    MANIFEST_SELECTOR: str = 'link[rel="manifest"]'
 
     browser: RoboBrowser
 
     def __init__(self) -> None:
+        session: requests.Session = requests.Session()
+        session.headers.update(REQUEST_HEADERS)
         self.browser = RoboBrowser(
-            user_agent=FIREFOX_UA, parser="html.parser", allow_redirects=True
+            session=session, parser="html.parser", allow_redirects=True
         )
 
     def open(self, url: str) -> Optional[str]:
@@ -61,16 +66,41 @@ class Scraper:
             logger.info(f"Exception: {e} while opening url {url}")
             return None
 
-    def scrape_favicon_data(self) -> FaviconData:
+    def scrape_favicon_data(self, url: str) -> FaviconData:
         """Scrape the favicon data for an already opened URL.
 
+        Args:
+            url: URL to scrape for favicon data
         Returns:
             FaviconData: Favicon data for a URL
         """
         return FaviconData(
             links=[link.attrs for link in self.browser.select(self.LINK_SELECTOR)],
             metas=[meta.attrs for meta in self.browser.select(self.META_SELECTOR)],
+            manifests=[
+                manifest.attrs
+                for manifest in self.browser.select(f"head {self.MANIFEST_SELECTOR}")
+            ],
         )
+
+    def scrape_favicons_from_manifest(self, manifest_url: str) -> list[dict[str, Any]]:
+        """Scrape favicons from manifest of an already opened URL.
+
+        Args:
+            manifest_url: URL of the manifest file
+        Returns:
+            list[str]: URLs of the scraped favicons
+        """
+        result = []
+        try:
+            response: Optional[requests.Response] = requests_get(manifest_url)
+            if response:
+                result = response.json().get("icons")
+        except Exception as e:
+            logger.info(
+                f"Exception: {e} while parsing icons from manifest {manifest_url}"
+            )
+        return result
 
     def get_default_favicon(self, url: str) -> Optional[str]:
         """Return the default favicon for the given url.
@@ -80,16 +110,14 @@ class Scraper:
         Returns:
             Optional[str]: Default favicon url if it exists
         """
-        default_favicon_url = urljoin(url, "favicon.ico")
         try:
-            response = requests.get(
-                default_favicon_url,
-                headers={"User-agent": FIREFOX_UA},
-                timeout=TIMEOUT,
-            )
-            return response.url if response.status_code == 200 else None
+            default_favicon_url: str = urljoin(url, "favicon.ico")
+            response: Optional[requests.Response] = requests_get(default_favicon_url)
+            return response.url if response else None
         except Exception as e:
-            logger.info(f"Exception: {e} while getting default favicon for url {url}")
+            logger.info(
+                f"Exception: {e} while getting default favicon {default_favicon_url}"
+            )
             return None
 
     def scrape_title(self) -> Optional[str]:
@@ -164,7 +192,7 @@ class DomainMetadataExtractor:
         logger.info(f"Extracting all favicons for {scraped_url}")
         favicons: list[dict[str, Any]] = []
         try:
-            favicon_data: FaviconData = self.scraper.scrape_favicon_data()
+            favicon_data: FaviconData = self.scraper.scrape_favicon_data(scraped_url)
 
             for favicon in favicon_data.links:
                 favicon_url = favicon["href"]
@@ -188,6 +216,18 @@ class DomainMetadataExtractor:
                     favicon["href"] = favicon_url
                 favicons.append(favicon)
 
+            for manifest in favicon_data.manifests:
+                manifest_url: str = str(manifest.get("href"))
+                manifest_absolute_url: str = urljoin(scraped_url, manifest_url)
+                scraped_favicons: list[
+                    dict[str, Any]
+                ] = self.scraper.scrape_favicons_from_manifest(manifest_absolute_url)
+                for scraped_favicon in scraped_favicons:
+                    favicon_url = urljoin(
+                        manifest_absolute_url, scraped_favicon.get("src")
+                    )
+                    favicons.append({"href": favicon_url})
+
             # Include the default "favicon.ico" if it exists in domain root
             default_favicon_url = self.scraper.get_default_favicon(scraped_url)
             if default_favicon_url is not None:
@@ -208,13 +248,10 @@ class DomainMetadataExtractor:
         for favicon in favicons:
             url = self._fix_url(favicon["href"])
             width = None
-            favicon_image: FaviconImage = FaviconImage(
-                content_type="", content=bytes(0)
-            )
-            try:
-                favicon_image = self.favicon_downloader.download_favicon(url)
-            except Exception as e:
-                logger.info(f"Exception {e} for favicon {favicon}")
+            favicon_image: Optional[
+                FaviconImage
+            ] = self.favicon_downloader.download_favicon(url)
+            if favicon_image is None:
                 continue
 
             if "image/" not in favicon_image.content_type:

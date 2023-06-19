@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import logging
 import time
+from typing import Optional
 from urllib.parse import urljoin
 
 from google.cloud.storage import Blob, Client
@@ -61,32 +62,35 @@ class DomainMetadataUploader:
         dst_favicons = []
         bucket = self.storage_client.bucket(self.bucket_name)
         for src_favicon in src_favicons:
-            try:
-                favicon_image: FaviconImage = self.favicon_downloader.download_favicon(
-                    src_favicon
-                )
-                dst_favicon_name = self._destination_favicon_name(favicon_image)
-                dst_blob = bucket.blob(dst_favicon_name)
+            dst_favicon_public_url: str = ""
+            favicon_image: Optional[
+                FaviconImage
+            ] = self.favicon_downloader.download_favicon(src_favicon)
+            if favicon_image:
+                try:
+                    dst_favicon_name = self._destination_favicon_name(favicon_image)
+                    dst_blob = bucket.blob(dst_favicon_name)
 
-                # upload favicon to gcs if force upload is set or if it doesn't exist there and
-                # make it publicly accessible
-                if self.force_upload or not dst_blob.exists():
-                    logger.info(
-                        f"Uploading favicon {src_favicon} to blob {dst_favicon_name}"
-                    )
-                    dst_blob.upload_from_string(
-                        favicon_image.content, content_type=favicon_image.content_type
-                    )
-                    dst_blob.make_public()
+                    # upload favicon to gcs if force upload is set or if it doesn't exist there and
+                    # make it publicly accessible
+                    if self.force_upload or not dst_blob.exists():
+                        logger.info(
+                            f"Uploading favicon {src_favicon} to blob {dst_favicon_name}"
+                        )
+                        dst_blob.upload_from_string(
+                            favicon_image.content,
+                            content_type=favicon_image.content_type,
+                        )
+                        dst_blob.make_public()
 
-                dst_favicon_public_url = self._get_favicon_public_url(
-                    dst_blob, dst_favicon_name
-                )
-                logger.info(f"favicon public url: {dst_favicon_public_url}")
-                dst_favicons.append(dst_favicon_public_url)
-            except Exception as e:
-                logger.info(f"Exception {e} occured while uploading {src_favicon}")
-                dst_favicons.append("")
+                    dst_favicon_public_url = self._get_favicon_public_url(
+                        dst_blob, dst_favicon_name
+                    )
+                    logger.info(f"favicon public url: {dst_favicon_public_url}")
+                except Exception as e:
+                    logger.info(f"Exception {e} occured while uploading {src_favicon}")
+
+            dst_favicons.append(dst_favicon_public_url)
 
         return dst_favicons
 
@@ -108,26 +112,14 @@ class DomainMetadataUploader:
         content_len = str(len(favicon_image.content))
         extension = ""
         match favicon_image.content_type:
-            case "image/apng":
-                extension = ".apng"
-            case "image/avif":
-                extension = ".avif"
-            case "image/gif":
-                extension = ".gif"
             case "image/jpeg" | "image/jpg":
                 extension = ".jpeg"
             case "image/png":
                 extension = ".png"
             case "image/svg+xml":
                 extension = ".svg"
-            case "image/webp":
-                extension = ".webp"
-            case "image/bmp":
-                extension = ".bmp"
             case "image/x-icon":
                 extension = ".ico"
-            case "image/tiff":
-                extension = ".tiff"
             case _:
                 logger.info(f"Couldn't find a match for {favicon_image.content_type}")
                 extension = ".oct"

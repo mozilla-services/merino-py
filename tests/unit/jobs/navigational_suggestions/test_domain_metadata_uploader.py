@@ -122,11 +122,13 @@ def test_upload_favicons_return_favicon_with_cdnhostname_when_provided(
         assert CDN_HOSTNAME in uploaded_favicon
 
 
-def test_upload_favicons_exception_returns_empty_urls(
+def test_upload_favicons_return_empty_url_for_failed_favicon_download(
     mock_gcs_client, mock_favicon_downloader
 ):
-    """Test if an exception results into returning an empty url"""
-    mock_favicon_downloader.download_favicon.side_effect = Exception("Error")
+    """Test if a failure in downloading favicon from the scraped url returns an empty
+    uploaded favicon url
+    """
+    mock_favicon_downloader.download_favicon.return_value = None
 
     domain_metadata_uploader = DomainMetadataUploader(
         "dummy_gcp_project", "dummy_gcs_bucket", None, False, mock_favicon_downloader
