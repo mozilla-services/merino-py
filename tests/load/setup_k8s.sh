@@ -25,6 +25,11 @@ LOCUST_IMAGE_TAG=$(git log -1 --pretty=format:%h)
 echo "Docker image tag for locust is set to: ${LOCUST_IMAGE_TAG}"
 
 ##Declare variables to be replaced later in the YAML file using the sed commands
+LOCUST_CSV='merino'
+LOCUST_HOST='https://stagepy.merino.nonprod.cloudops.mozgcp.net'
+LOCUST_USERS='75'
+LOCUST_SPAWN_RATE='2'
+LOCUST_RUN_TIME='600' # 10 minutes
 MERINO_REMOTE_SETTINGS__SERVER='https://firefox.settings.services.mozilla.com'
 MERINO_REMOTE_SETTINGS__COLLECTION=quicksuggest
 MERINO_REMOTE_SETTINGS__BUCKET=main
@@ -66,6 +71,11 @@ SetupGksCluster()
         $SED -i -e "s|\[TARGET_HOST\]|$TARGET|g" $MERINO_DIRECTORY/$file
         $SED -i -e "s|\[PROJECT_ID\]|$GOOGLE_CLOUD_PROJECT|g" $MERINO_DIRECTORY/$file
         $SED -i -e "s|\[LOCUST_IMAGE_TAG\]|$LOCUST_IMAGE_TAG|g" $MERINO_DIRECTORY/$file
+        $SED -i -e "s|\[LOCUST_CSV\]|$LOCUST_CSV|g" $MERINO_DIRECTORY/$file
+        $SED -i -e "s|\[LOCUST_HOST\]|$LOCUST_HOST|g" $MERINO_DIRECTORY/$file
+        $SED -i -e "s|\[LOCUST_USERS\]|$LOCUST_USERS|g" $MERINO_DIRECTORY/$file
+        $SED -i -e "s|\[LOCUST_SPAWN_RATE\]|$LOCUST_SPAWN_RATE|g" $MERINO_DIRECTORY/$file
+        $SED -i -e "s|\[LOCUST_RUN_TIME\]|$LOCUST_RUN_TIME|g" $MERINO_DIRECTORY/$file
         $SED -i -e "s|\[MERINO_REMOTE_SETTINGS__BUCKET\]|$MERINO_REMOTE_SETTINGS__BUCKET|g" $MERINO_DIRECTORY/$file
         $SED -i -e "s|\[MERINO_REMOTE_SETTINGS__COLLECTION\]|$MERINO_REMOTE_SETTINGS__COLLECTION|g" $MERINO_DIRECTORY/$file
         $SED -i -e "s|\[MERINO_REMOTE_SETTINGS__SERVER\]|$MERINO_REMOTE_SETTINGS__SERVER|g" $MERINO_DIRECTORY/$file

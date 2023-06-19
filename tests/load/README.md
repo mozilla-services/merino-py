@@ -33,7 +33,9 @@ Follow the steps bellow to execute the load tests locally:
 
 #### 1. Configure Environment Variables
 
-The following variables can be set in `tests\load\docker-compose.yml`:
+The following environment variables as well as 
+[Locust environment variables][locust_environment_variables] can be set in 
+`tests\load\docker-compose.yml`:
 
 | Environment Variable                             | Node(s)         | Description                                                                               |
 |--------------------------------------------------|-----------------|-------------------------------------------------------------------------------------------|
@@ -47,7 +49,6 @@ The following variables can be set in `tests\load\docker-compose.yml`:
 | MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY          | master & worker | The base64 key used to authenticate on the Elasticsearch cluster specified by es_cloud_id |
 | MERINO_PROVIDERS__WIKIPEDIA__ES_URL              | master & worker | The Cloud ID of the Elasticsearch cluster                                                 |
 | MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX            | master & worker | The index identifier of Wikipedia in Elasticsearch                                        |                                                                                          |
-| (*OPTIONAL*) LOCUST_CSV                          | master          | Store current request stats to files in CSV format with given prefix (Example: `merino`)  |
 
 #### 2. Host Locust via Docker
 
@@ -219,3 +220,4 @@ Execute the `setup_k8s.sh` file and select the **delete** option
 [merino_test_plan]: https://docs.google.com/document/d/1v7LDXENPZg37KXeNcznEZKNZ8rQlOhNbsHprFyMXHhs/edit?usp=sharing
 [merino_history_doc]: https://docs.google.com/document/d/1BGNhKuclUH40Bit9KxYWLiv_N_VnE66uxi9pBFbRWbg/edit
 [merino_spreadsheet]: https://docs.google.com/spreadsheets/d/1SAO3QYIrbxDRxzmYIab-ebZXA1dF06W1lT4I1h2R3a8/edit?usp=sharing
+[locust_environment_variables]: https://docs.locust.io/en/stable/configuration.html#environment-variables
