@@ -1,19 +1,25 @@
 """A wrapper for AccuWeather API interactions."""
 import asyncio
 import datetime
-import email
 import hashlib
 import json
+import logging
 from json import JSONDecodeError
 from typing import Any, Optional
 
 import aiodogstatsd
+from dateutil import parser
 from httpx import URL, AsyncClient, HTTPError, InvalidURL, Response
 from pydantic import BaseModel
 from pydantic.datetime_parse import timedelta
 
 from merino.cache.protocol import CacheAdapter
-from merino.exceptions import BackendError, CacheEntryError, CacheMissError
+from merino.exceptions import (
+    BackendError,
+    CacheAdapterError,
+    CacheEntryError,
+    CacheMissError,
+)
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -21,6 +27,8 @@ from merino.providers.weather.backends.protocol import (
     Temperature,
     WeatherReport,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AccuweatherLocation(BaseModel):
@@ -145,7 +153,7 @@ class AccuweatherBackend:
         except (CacheMissError, CacheEntryError, CacheAdapterError) as exc:
             error_type = "miss" if isinstance(exc, CacheMissError) else "error"
             self.metrics_client.increment(
-                f"accuweather.cache.{error_type}.{request_type}"
+                f"accuweather.cache.fetch.{error_type}.{request_type}"
             )
 
             with self.metrics_client.timeit(f"accuweather.request.{request_type}.get"):
@@ -155,9 +163,21 @@ class AccuweatherBackend:
             response_expiry: str = response.headers.get("Expires")
             response_dict = response.json()
 
-            await self.store_request_into_cache(
-                cache_key, response_dict, response_expiry
-            )
+            try:
+                await self.store_request_into_cache(
+                    cache_key, response_dict, response_expiry
+                )
+            except (CacheAdapterError, ValueError) as exc:
+                logger.error(f"Error with storing Accuweather to cache: {exc}")
+                error_type = (
+                    "set_error"
+                    if isinstance(exc, CacheAdapterError)
+                    else "ttl_date_error"
+                )
+                self.metrics_client.increment(f"accuweather.cache.store.{error_type}")
+                raise AccuweatherError(
+                    "Something went wrong with storing to cache. Did not update cache."
+                )
 
         return response_dict
 
@@ -168,7 +188,7 @@ class AccuweatherBackend:
         at least `cached_report_ttl_sec`.
         """
         with self.metrics_client.timeit("accuweather.cache.store"):
-            expiry_delta: timedelta = email.utils.parsedate_to_datetime(
+            expiry_delta: timedelta = parser.parse(
                 response_expiry
             ) - datetime.datetime.now(datetime.timezone.utc)
             cache_ttl: timedelta = max(
