@@ -129,6 +129,9 @@ a GKE cluster
   ```bash
   kubectl scale deployment/locust-worker --replicas=10
   ```
+* To apply new changes to an existing GCP Cluster, execute the `setup_k8s.sh` file and select the
+  **setup** option. This option will consider the local commit history, creating new containers and
+  deploying them (see [Container Registry][container_registry])
 
 ### Run Test Session
 
@@ -210,6 +213,7 @@ Execute the `setup_k8s.sh` file and select the **delete** option
 ```
 
 [cloud]: https://console.cloud.google.com/home/dashboard?q=search&referrer=search&project=spheric-keel-331521&cloudshell=false
+[container_registry]: https://console.cloud.google.com/gcr/images/spheric-keel-331521/global/locust-merino?project=spheric-keel-331521
 [gist]: https://gist.github.com/new
 [grafana]: https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/merino-py-application-and-infrastructure?orgId=1&refresh=1m&var-environment=stagepy
 [merino_test_plan]: https://docs.google.com/document/d/1v7LDXENPZg37KXeNcznEZKNZ8rQlOhNbsHprFyMXHhs/edit?usp=sharing
