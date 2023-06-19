@@ -93,7 +93,7 @@ def test_reverse_and_expand_keywords(keywords: dict[SupportedAddon, set[str]]):
         "download helpe": SupportedAddon.VIDEO_DOWNLOADER,
         "download helper": SupportedAddon.VIDEO_DOWNLOADER,
         "dictionary": SupportedAddon.LANGAUGE_TOOL,
-    } == invert_and_expand_index_keywords(keywords, 4)
+    } == invert_and_expand_index_keywords(keywords)
 
 
 @pytest.mark.asyncio

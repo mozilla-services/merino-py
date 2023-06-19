@@ -11,6 +11,7 @@ import logging
 import os
 import socket
 import struct
+from itertools import chain
 from random import choice, randint
 from typing import Any
 
@@ -26,6 +27,7 @@ from merino.providers.adm.backends.remotesettings import (
     RemoteSettingsBackend,
     RemoteSettingsError,
 )
+from merino.providers.amo.addons_data import ADDON_KEYWORDS
 from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
 from merino.web.models_v1 import SuggestResponse
@@ -91,6 +93,7 @@ MERINO_REMOTE_SETTINGS__COLLECTION: str | None = os.getenv(
 
 # This will be populated on each worker
 ADM_QUERIES: QueriesList = []
+AMO_QUERIES: list[str] = []
 IP_RANGES: IpRangeList = []
 TOP_PICKS_QUERIES: QueriesList = []
 WIKIPEDIA_QUERIES: list[str] = []
@@ -111,6 +114,10 @@ def on_locust_test_start(environment, **kwargs):
         )
 
         logger.info(f"Download {len(query_data.adm)} queries for AdM")
+
+        query_data.amo = get_amo_queries()
+
+        logger.info(f"Download {len(query_data.amo)} queries for AMO")
 
         query_data.top_picks = get_top_picks_queries(
             top_picks_file_path=MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH,
@@ -175,6 +182,17 @@ def get_adm_queries(server: str, collection: str, bucket: str) -> QueriesList:
         adm_query_dict.setdefault(result_id, []).append(query)
 
     return list(adm_query_dict.values())
+
+
+def get_amo_queries() -> list[str]:
+    """Get query strings for use in testing the AMO provider.
+
+    Returns:
+        List[str]: List of full query strings to use with the AMO provider
+    """
+    return list(
+        set(map(lambda x: x.lower(), chain.from_iterable(ADDON_KEYWORDS.values())))
+    )
 
 
 def get_top_picks_queries(
@@ -270,6 +288,7 @@ def store_suggestions(environment, msg, **kwargs):
     query_data: QueryData = QueryData(**msg.data)
 
     ADM_QUERIES[:] = query_data.adm
+    AMO_QUERIES[:] = query_data.amo
     IP_RANGES[:] = query_data.ip_ranges
     TOP_PICKS_QUERIES[:] = query_data.top_picks
     WIKIPEDIA_QUERIES[:] = query_data.wikipedia
@@ -336,6 +355,7 @@ class QueryData(BaseModel):
     """Class that holds query data for targeting Merino providers"""
 
     adm: QueriesList = []
+    amo: list[str] = []
     ip_ranges: IpRangeList = []
     top_picks: QueriesList = []
     wikipedia: list[str] = []
@@ -354,6 +374,7 @@ class MerinoUser(HttpUser):
             f"user will be sending queries based on the following number of "
             f"stored suggestions: "
             f"adm: {len(ADM_QUERIES)}, "
+            f"amo: {len(AMO_QUERIES)}, "
             f"top picks: {len(TOP_PICKS_QUERIES)},"
             f"wikipedia: {len(WIKIPEDIA_QUERIES)}"
         )
@@ -369,6 +390,19 @@ class MerinoUser(HttpUser):
         for query in queries:
             request_suggestions(self.client, query, providers)
 
+    @task(weight=5)
+    def amo_suggestions(self) -> None:
+        """Send a request for AMO. AMO matches work with matching the first keyword
+        and then prefix on subsequent words.
+        """
+        phrase: str = choice(AMO_QUERIES)  # nosec
+        providers: str = "amo"
+
+        first_word: str = phrase.split()[0]
+        request_suggestions(self.client, first_word, providers)
+        for i in range(len(first_word), len(phrase) + 1):
+            request_suggestions(self.client, phrase[:i], providers)
+
     @task(weight=10)
     def dynamic_wikipedia_suggestions(self) -> None:
         """Send multiple requests for Dynamic Wikipedia queries."""
@@ -379,7 +413,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             request_suggestions(self.client, query, providers)
 
-    @task(weight=69)
+    @task(weight=64)
     def faker_suggestions(self) -> None:
         """Send multiple requests for random queries."""
         # This produces a query between 2 and 4 random words
