@@ -25,7 +25,7 @@ RUN python -m pip install --upgrade pip
 RUN python -m pip install --no-cache-dir --quiet poetry
 WORKDIR /tmp
 COPY ./tests/load/pyproject.toml ./tests/load/poetry.lock /tmp/
-RUN poetry export --no-interaction --with dev --output requirements.txt --without-hashes
+RUN poetry export --no-interaction --output requirements.txt --without-hashes
 
 WORKDIR /
 RUN python -m pip install -r /tmp/requirements.txt
