@@ -79,7 +79,11 @@ def expected_add_suggestion_calls(
     return calls
 
 
-def do_upload_test(mocker, delete_existing_records: bool) -> None:
+def do_upload_test(
+    mocker,
+    delete_existing_records: bool = False,
+    score: float = 0.99,
+) -> None:
     """Perform an upload test."""
     # Mock `DynamicAmoBackend`.
     mock_backend_ctor = mocker.patch("merino.jobs.amo_rs_uploader.DynamicAmoBackend")
@@ -90,13 +94,15 @@ def do_upload_test(mocker, delete_existing_records: bool) -> None:
     mock_addons_data(mocker, mock_backend)
 
     # Mock the chunked uploader.
-    mock_uploader_ctor = mocker.patch(
+    mock_chunked_uploader_ctor = mocker.patch(
         "merino.jobs.amo_rs_uploader.ChunkedRemoteSettingsUploader"
     )
-    mock_uploader = mock_uploader_ctor.return_value.__enter__.return_value
+    mock_chunked_uploader = (
+        mock_chunked_uploader_ctor.return_value.__enter__.return_value
+    )
 
     # Do the upload.
-    uploader_kwargs: dict[str, Any] = {
+    common_kwargs: dict[str, Any] = {
         "auth": "auth",
         "bucket": "bucket",
         "chunk_size": 99,
@@ -105,20 +111,29 @@ def do_upload_test(mocker, delete_existing_records: bool) -> None:
         "record_type": "record_type",
         "server": "server",
     }
-    upload(**uploader_kwargs, delete_existing_records=delete_existing_records)
+    upload(
+        **common_kwargs,
+        delete_existing_records=delete_existing_records,
+        score=score,
+    )
 
     # Check calls.
     mock_backend_ctor.assert_called_once()
     mock_backend.fetch_and_cache_addons_info.assert_called_once()
 
-    mock_uploader_ctor.assert_called_once_with(**uploader_kwargs)
+    mock_chunked_uploader_ctor.assert_called_once_with(
+        **common_kwargs,
+        suggestion_score_fallback=score,
+    )
 
     if delete_existing_records:
-        mock_uploader.delete_records.assert_called_once()
+        mock_chunked_uploader.delete_records.assert_called_once()
     else:
-        mock_uploader.delete_records.assert_not_called()
+        mock_chunked_uploader.delete_records.assert_not_called()
 
-    mock_uploader.add_suggestion.assert_has_calls(expected_add_suggestion_calls(mocker))
+    mock_chunked_uploader.add_suggestion.assert_has_calls(
+        expected_add_suggestion_calls(mocker)
+    )
 
 
 def test_upload_without_deleting(mocker):
@@ -129,3 +144,8 @@ def test_upload_without_deleting(mocker):
 def test_delete_and_upload(mocker):
     """Tests `upload(delete_existing_records=True)`"""
     do_upload_test(mocker, delete_existing_records=True)
+
+
+def test_upload_with_score(mocker):
+    """Tests `upload(score=float)`"""
+    do_upload_test(mocker, score=0.12)
