@@ -154,6 +154,9 @@ class DomainMetadataExtractor:
         "Your Access To This Website Has Been Blocked",
         "Error",
         "This page is not allowed",
+        "Robot or human",
+        "Captcha Challenge",
+        "Let us know you're not a robot",
     ]
 
     # List of blocked (second level) domains
