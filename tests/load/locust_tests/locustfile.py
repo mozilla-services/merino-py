@@ -338,6 +338,17 @@ def request_suggestions(
         # group all requests under the 'name' entry
         name=f"{SUGGEST_API}{(f'?providers={providers}' if providers else '')}",
     ) as response:
+
+        if response.status_code == 0:
+            # Do not classify as failure
+            #
+            # 0: The HttpSession catches any requests.RequestException thrown by
+            #    Session (caused by connection errors, timeouts or similar), instead
+            #    returning a dummy Response object with status_code set to 0 and
+            #    content set to None.
+            response.success()
+            return
+
         # This contextmanager returns a response that provides the ability to
         # manually control if an HTTP request should be marked as successful or
         # a failure in Locust's statistics
