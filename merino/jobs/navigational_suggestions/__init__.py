@@ -15,6 +15,9 @@ from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
+from merino.jobs.navigational_suggestions.utils import (
+    update_top_picks_with_firefox_favicons,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +76,7 @@ def _construct_top_picks(
     domain_data: list[dict],
     favicons: list[str],
     domain_metadata: list[dict[str, Optional[str]]],
-) -> str:
+) -> dict[str, list[dict[str, str]]]:
     result = []
     for index, domain in enumerate(domain_data):
         if domain_metadata[index]["url"]:
@@ -87,8 +90,7 @@ def _construct_top_picks(
                     "icon": favicons[index],
                 }
             )
-    top_picks = {"domains": result}
-    return json.dumps(top_picks, indent=4)
+    return {"domains": result}
 
 
 def _write_xcom_file(xcom_data: dict):
@@ -130,9 +132,12 @@ def prepare_domain_metadata(
     uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
     logger.info("domain favicons uploaded to gcs")
 
-    # construct top pick contents and upload it to gcs
+    # construct top pick contents, update them with firefox packaged favicons and upload to gcs
     top_picks = _construct_top_picks(domain_data, uploaded_favicons, domain_metadata)
-    top_pick_blob = domain_metadata_uploader.upload_top_picks(top_picks)
+    update_top_picks_with_firefox_favicons(top_picks)
+    top_pick_blob = domain_metadata_uploader.upload_top_picks(
+        json.dumps(top_picks, indent=4)
+    )
     logger.info(
         "top pick contents uploaded to gcs",
         extra={"public_url": top_pick_blob.public_url},
