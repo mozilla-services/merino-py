@@ -110,7 +110,7 @@ class ChunkedRemoteSettingsUploader:
         will be uploaded before this method returns.
         """
         if self.suggestion_score_fallback and "score" not in suggestion:
-            suggestion = suggestion | {"score": self.suggestion_score_fallback}
+            suggestion |= {"score": self.suggestion_score_fallback}
         self.current_chunk.add_suggestion(suggestion)
         if self.current_chunk.size == self.chunk_size:
             self._finish_current_chunk()
