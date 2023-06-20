@@ -8,7 +8,7 @@
             ],
             "url": "https://www.google.com",
             "title": "Google",
-            "icon": ""
+            "icon": "chrome://activity-stream/content/data/content/tippytop/images/google-com@2x.png"
         },
         {
             "rank": 2,
@@ -28,7 +28,7 @@
             ],
             "url": "https://www.youtube.com",
             "title": "YouTube",
-            "icon": "https://merino-images.services.mozilla.com/favicons/70660cd5e4b36800f22f179cfbc6b2e45c67ec9c7531571497170c614512cd28_2646.png"
+            "icon": "chrome://activity-stream/content/data/content/tippytop/images/youtube-com@2x.png"
         },
         {
             "rank": 4,
@@ -49,7 +49,7 @@
             ],
             "url": "https://twitter.com",
             "title": "Twitter",
-            "icon": "https://merino-images.services.mozilla.com/favicons/9c32820eaa517e6e348879a861bc01c1f84c0690d48576cc6064a05ff4c31d8c_1111.svg"
+            "icon": "chrome://activity-stream/content/data/content/tippytop/images/twitter-com@2x.png"
         },
         {
             "rank": 7,
@@ -79,7 +79,7 @@
                 "Professional Networking"
             ],
             "url": "https://www.linkedin.com",
-            "title": "Linkedin",
+            "title": "LinkedIn: Log In or Sign Up",
             "icon": "https://merino-images.services.mozilla.com/favicons/19b079c09197fba68d021fa3ba394ec91703909ffd237efa3eb9a2bca13148ec_24838.ico"
         },
         {
@@ -174,7 +174,7 @@
             ],
             "url": "https://www.bing.com",
             "title": "Bing",
-            "icon": ""
+            "icon": "chrome://activity-stream/content/data/content/tippytop/images/bing-com@2x.svg"
         },
         {
             "rank": 19,
@@ -696,7 +696,7 @@
                 "Educational Institutions"
             ],
             "url": "https://web.mit.edu",
-            "title": "A poem to mark Juneteenth - Monday | MIT - Massachusetts Institute of Technology",
+            "title": "Music tech | MIT - Massachusetts Institute of Technology",
             "icon": "https://merino-images.services.mozilla.com/favicons/5c09380516c88ad59f4de4fbce51d3d6128eb0c486e7d7619d6fa979edc20820_100546.ico"
         },
         {
@@ -750,7 +750,7 @@
                 "Ecommerce"
             ],
             "url": "https://www.walmart.com",
-            "title": "Robot or human?",
+            "title": "Walmart",
             "icon": ""
         },
         {
@@ -1086,7 +1086,7 @@
                 "Education"
             ],
             "url": "https://quizlet.com",
-            "title": "Captcha Challenge\u2026",
+            "title": "Quizlet",
             "icon": ""
         },
         {
@@ -2364,7 +2364,7 @@
                 "Ecommerce"
             ],
             "url": "https://www.samsclub.com",
-            "title": "Let us know you're not a robot - Sam's Club",
+            "title": "Samsclub",
             "icon": "https://merino-images.services.mozilla.com/favicons/66e4a6934dc13359717a2caf7c25f4f052af213bfc97639381151610458fcc48_2457.svg"
         },
         {
@@ -2374,7 +2374,7 @@
                 "Education"
             ],
             "url": "https://www.urbandictionary.com",
-            "title": "Urban Dictionary, June 19: loleth",
+            "title": "Urban Dictionary, June 20: Baobei",
             "icon": "https://merino-images.services.mozilla.com/favicons/45d09c7b70061692017314a2d69c393458954b42cd7a279616dc1f93d536de64_3419.svg"
         },
         {
@@ -2667,9 +2667,9 @@
                 "Education",
                 "Information Technology"
             ],
-            "url": "http://www.wikidot.com",
-            "title": "Wikidot - Free and Pro Wiki Hosting",
-            "icon": "https://merino-images.services.mozilla.com/favicons/0a47dabd021d9afce542e744be169048215e386559396ff60220a6e112f99d65_5455.png"
+            "url": "https://wikidot.com",
+            "title": "Please try again",
+            "icon": ""
         },
         {
             "rank": 264,
@@ -4301,7 +4301,7 @@
                 "Fashion"
             ],
             "url": "https://www.ulta.com",
-            "title": "Ulta",
+            "title": "Ulta Beauty | Official Site - Makeup, Hair Care, Skin Care, Fragrance, Bath & Gifts",
             "icon": ""
         },
         {
@@ -4581,7 +4581,7 @@
                 "Information Technology"
             ],
             "url": "https://www.bell.ca",
-            "title": "Mobile phones, TV, Internet and Home phone service | Bell Canada",
+            "title": "Bell | Wireless, Internet and TV Service Provider in Canada",
             "icon": "https://merino-images.services.mozilla.com/favicons/aa8e33f2d864cc8e3825f164c0524fb26ebee04a36bfe81d66a570b2088f4c99_73758.ico"
         },
         {
@@ -4840,7 +4840,7 @@
             ],
             "url": "https://www.qvc.com",
             "title": "QVC | Shop QVC\u00ae For Today\u2019s Special Value & Top Brands At The Official Site",
-            "icon": "https://merino-images.services.mozilla.com/favicons/651e929a6c93cd7ca7580650043ccb01f8f14e350c4d0fddee855e07a53d55c1_1332.oct"
+            "icon": "https://merino-images.services.mozilla.com/favicons/eb327eeb6ff8bc943a3625f0ac054ad3d823ca21c545174427e1ab9a146beb00_1320.oct"
         },
         {
             "rank": 478,
@@ -4945,7 +4945,7 @@
             ],
             "url": "https://ici.radio-canada.ca",
             "title": "Radio-Canada.ca | Information, radio, t\u00e9l\u00e9, sports, art",
-            "icon": ""
+            "icon": "https://merino-images.services.mozilla.com/favicons/106eb71bc3d2db88ce4365fba653c8ed99fd048c5947d90184f5f3200c7c4658_47856.png"
         },
         {
             "rank": 490,
@@ -5164,6 +5164,17 @@
             "url": "https://www.yourtango.com",
             "title": "YourTango | Opening Hearts, Building Relationships, Spreading Love",
             "icon": "https://merino-images.services.mozilla.com/favicons/22851bb65d2db5979d455413c8b73a7a8acc7faedccfa5fc4a3df569e647f0a1_14480.oct"
+        },
+        {
+            "rank": 512,
+            "domain": "petsmart",
+            "categories": [
+                "Pets",
+                "Ecommerce"
+            ],
+            "url": "https://www.petsmart.com",
+            "title": "Pet Supplies, Accessories, and Pet Food - Pet Stores | PetSmart",
+            "icon": ""
         },
         {
             "rank": 513,
@@ -6018,7 +6029,7 @@
                 "Ecommerce"
             ],
             "url": "https://www.joann.com",
-            "title": "Are You A Bot?",
+            "title": "404 URL Not Found",
             "icon": ""
         },
         {
@@ -6513,7 +6524,7 @@
             ],
             "url": "https://www.iscorp.com",
             "title": "Home - ISCorp",
-            "icon": "https://merino-images.services.mozilla.com/favicons/a12379c081fe3b81cc35b93da15a94052cb34ac69955b1eb54ce1b6685f5a278_46878.jpeg"
+            "icon": "https://merino-images.services.mozilla.com/favicons/2f3a8ff91f90ee996e112d2c17a939979956da06a7af3188664b7d1535401c0f_22923.jpeg"
         },
         {
             "rank": 645,
@@ -7068,7 +7079,7 @@
             ],
             "url": "https://www.zennioptical.com",
             "title": "Glasses Online | Eyewear for Everyone\u2122 | Zenni Optical",
-            "icon": "https://merino-images.services.mozilla.com/favicons/4b985b023fb6fcabffd8ea690a94b6e360774fbff5eede93a09ec5e7b86f750c_25370.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/e83e13f89aabc779d72a02ede6c336950114a150fd38b94ec2d8f311335de0c7_85458.png"
         },
         {
             "rank": 698,
@@ -7111,7 +7122,7 @@
             ],
             "url": "https://www.webpt.com",
             "title": "The Leading Physical Therapy Software & PT EMR | WebPT",
-            "icon": "https://merino-images.services.mozilla.com/favicons/8e9e2a9222111574be7cad8285681ba90aa92fcd725ee55dcb73ebaf2ab53786_21748.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/daf2b7a3675588e73a42fa5ba8ffb2a3e5a63db7bcebb1ee174027d47ec5dbf5_17588.oct"
         },
         {
             "rank": 704,
@@ -7182,7 +7193,7 @@
             ],
             "url": "https://flvs.net",
             "title": "FLVS - Florida Virtual School | Grades K-12 Online",
-            "icon": "https://merino-images.services.mozilla.com/favicons/5a75a908672adbf339ff609641c307b7b0fa87d0e2297dc0707a60e350bbd37b_23016.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/8cee1ae2b893608f3d359343104c5bf18746c3009685f91107abe8f75e5233fe_6868.oct"
         },
         {
             "rank": 711,
@@ -7496,7 +7507,7 @@
             ],
             "url": "https://www.teachtci.com",
             "title": "TCI: Curriculum Resources and Programs That Brings Learning Alive!",
-            "icon": "https://merino-images.services.mozilla.com/favicons/4785f82d78e465433fef6bd203f6880856eba95a1b78491e94a2a69a307e4431_1824.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/bde9179172b0758bbcdb7c3bdd7f2babadcc4dc4e9e37c250178e40737dcb8db_1790.oct"
         },
         {
             "rank": 742,
@@ -7759,7 +7770,7 @@
             ],
             "url": "https://www.illuminateed.com",
             "title": "Illuminate Education - Addressing the Whole Child",
-            "icon": "https://merino-images.services.mozilla.com/favicons/e8af809b2ed87e9387967bfa618bb4736b8f7df0e51efb62925386402af88038_14344.png"
+            "icon": "https://merino-images.services.mozilla.com/favicons/3eb9a0cf408547de4a58e95638065faaeba1820d7d390215309d40df81dc29b1_10158.oct"
         },
         {
             "rank": 768,
