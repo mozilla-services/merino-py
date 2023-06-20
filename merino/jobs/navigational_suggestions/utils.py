@@ -23,6 +23,14 @@ REQUEST_HEADERS: dict[str, str] = {
 
 TIMEOUT: int = 10
 
+# Some high resolution domain favicons that are internally packaged in Firefox
+FIREFOX_PACKAGED_FAVICONS: dict[str, str] = {
+    "google": "chrome://activity-stream/content/data/content/tippytop/images/google-com@2x.png",
+    "bing": "chrome://activity-stream/content/data/content/tippytop/images/bing-com@2x.svg",
+    "youtube": "chrome://activity-stream/content/data/content/tippytop/images/youtube-com@2x.png",
+    "twitter": "chrome://activity-stream/content/data/content/tippytop/images/twitter-com@2x.png",
+}
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,3 +81,17 @@ def requests_get(url: str) -> Optional[requests.Response]:
         timeout=TIMEOUT,
     )
     return response if response.status_code == 200 else None
+
+
+def update_top_picks_with_firefox_favicons(
+    top_picks: dict[str, list[dict[str, str]]]
+) -> None:
+    """Update top picks with high resolution favicons that are internally packaged in firefox
+    for some of the selected domains for which favicon scraping didn't return anything
+    """
+    domains_metadata: list[dict[str, str]] = top_picks["domains"]
+    for domain_metadata in domains_metadata:
+        domain = domain_metadata["domain"]
+        firefox_favicon: Optional[str] = FIREFOX_PACKAGED_FAVICONS.get(domain)
+        if firefox_favicon:
+            domain_metadata["icon"] = firefox_favicon
