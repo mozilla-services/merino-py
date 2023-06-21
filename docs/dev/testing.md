@@ -1,4 +1,4 @@
-# Testing strategies
+# Test Strategy
 
 Merino is tested using a combination of functional and performance tests.
 
