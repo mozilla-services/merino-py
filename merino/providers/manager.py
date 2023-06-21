@@ -74,12 +74,10 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 )
                 if setting.backend == "accuweather"
                 else FakeWeatherBackend(),
-                cache=cache,  # type: ignore [arg-type]
                 metrics_client=get_metrics_client(),
                 score=setting.score,
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
-                cached_report_ttl_sec=setting.cached_report_ttl_sec,
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.AMO:

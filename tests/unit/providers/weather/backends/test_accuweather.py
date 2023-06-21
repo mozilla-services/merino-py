@@ -1037,40 +1037,6 @@ async def test_get_forecast_error(
 
 
 @pytest.mark.parametrize(
-    "cache_inputs_by_location",
-    [
-        (Location(country="US", region="CA", city="San Francisco", dma=807), None),
-        (
-            Location(region="CA", city="San Francisco", dma=807, postal_code="94105"),
-            None,
-        ),
-        (
-            Location(
-                country="US",
-                region="CA",
-                city="San Francisco",
-                dma=807,
-                postal_code="94105",
-            ),
-            b"US94105",
-        ),
-    ],
-)
-@pytest.mark.asyncio
-async def test_cache_inputs_for_weather_report(
-    accuweather: AccuweatherBackend,
-    cache_inputs_by_location: tuple[Location, Optional[bytes]],
-) -> None:
-    """Test that `cache_inputs_for_weather_report` computes the correct cache inputs when
-    given locations with various missing fields.
-    """
-    cache_inputs: Optional[bytes] = accuweather.cache_inputs_for_weather_report(
-        cache_inputs_by_location[0]
-    )
-    assert cache_inputs == cache_inputs_by_location[1]
-
-
-@pytest.mark.parametrize(
     ("query_params", "expected_cache_key"),
     [
         (

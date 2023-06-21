@@ -58,14 +58,6 @@ class WeatherBackend(Protocol):
     directly depend on.
     """
 
-    def cache_inputs_for_weather_report(
-        self, geolocation: Location
-    ) -> Optional[bytes]:  # pragma: no cover
-        """Return the inputs used to form the cache key for looking up and storing weather
-        information for a location.
-        """
-        ...
-
     async def get_weather_report(
         self, geolocation: Location
     ) -> Optional[WeatherReport]:  # pragma: no cover
@@ -74,4 +66,8 @@ class WeatherBackend(Protocol):
         Raises:
             BackendError: Category of error specific to provider backends.
         """
+        ...
+
+    async def shutdown(self) -> None:  # pragma: no cover
+        """Close down any open connections."""
         ...
