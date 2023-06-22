@@ -46,14 +46,14 @@ don't panic and follow the instructions below:
      then you may submit a fix, rather than reverting the problematic commit.
 
 ### Locate problematic commit via "git bisect"
-If you are not sure about which commit breaks production, you can use `git bisect` to locate the problematic commit as follows:
+If you are not sure about which commit broke production, you can use `git bisect` to locate the problematic commit as follows:
 
 ```sh
-# Start the bisect session
+# Start the bisect session.
 $ git bisect start
 
 # Flag a bad commit, usually you can set it to the latest commit as it's broken
-# in production
+# in production.
 $ git bisect bad <commit-hash-for-a-bad-commit>
 
 # Flag a good commit, this can be set to the last known good commit.
@@ -67,7 +67,7 @@ $ git bisect good <commit-hash-for-a-good-commit>
 # problematic commit.
 $ git bisect [bad|good]
 
-# End the bisect session when you're done
+# End the bisect session when you're done.
 $ git bisect reset
 ```
 
