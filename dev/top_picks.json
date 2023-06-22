@@ -1549,7 +1549,7 @@
                 "News, Portal & Search"
             ],
             "url": "https://istockphoto.com",
-            "title": "Human Verification",
+            "title": "iStockPhoto",
             "icon": ""
         },
         {
@@ -2368,16 +2368,6 @@
             "icon": "https://merino-images.services.mozilla.com/favicons/66e4a6934dc13359717a2caf7c25f4f052af213bfc97639381151610458fcc48_2457.svg"
         },
         {
-            "rank": 235,
-            "domain": "urbandictionary",
-            "categories": [
-                "Education"
-            ],
-            "url": "https://www.urbandictionary.com",
-            "title": "Urban Dictionary, June 20: Baobei",
-            "icon": "https://merino-images.services.mozilla.com/favicons/45d09c7b70061692017314a2d69c393458954b42cd7a279616dc1f93d536de64_3419.svg"
-        },
-        {
             "rank": 236,
             "domain": "redfin",
             "categories": [
@@ -2668,7 +2658,7 @@
                 "Information Technology"
             ],
             "url": "https://wikidot.com",
-            "title": "Please try again",
+            "title": "Wikidot",
             "icon": ""
         },
         {
@@ -3423,16 +3413,6 @@
             "url": "https://manganato.com",
             "title": "Manganato - Read Manga Online Free",
             "icon": "https://merino-images.services.mozilla.com/favicons/d91e96c5a3f90198fa3e2db8333afd5e853dfdd2f296c62e86c28a8e243fda80_4833.png"
-        },
-        {
-            "rank": 336,
-            "domain": "4channel",
-            "categories": [
-                "Forums"
-            ],
-            "url": "https://4channel.org",
-            "title": "4channel",
-            "icon": ""
         },
         {
             "rank": 338,
@@ -4565,16 +4545,6 @@
             "icon": "https://merino-images.services.mozilla.com/favicons/d5941ae1d692af9cab26bfe0fd7487172762cc8b8f9bc65473825c03c7dc4f36_42959.png"
         },
         {
-            "rank": 448,
-            "domain": "myvidster",
-            "categories": [
-                "Video Streaming"
-            ],
-            "url": "https://www.myvidster.com",
-            "title": "MyVidster - collect the videos you love",
-            "icon": "https://merino-images.services.mozilla.com/favicons/04533c6d45d3f9db8b51813fcc5f14b3f0643596c55d57d7b774a61be311c984_31805.png"
-        },
-        {
             "rank": 450,
             "domain": "bell",
             "categories": [
@@ -4583,17 +4553,6 @@
             "url": "https://www.bell.ca",
             "title": "Bell | Wireless, Internet and TV Service Provider in Canada",
             "icon": "https://merino-images.services.mozilla.com/favicons/aa8e33f2d864cc8e3825f164c0524fb26ebee04a36bfe81d66a570b2088f4c99_73758.ico"
-        },
-        {
-            "rank": 451,
-            "domain": "furaffinity",
-            "categories": [
-                "Photography",
-                "Forums"
-            ],
-            "url": "https://www.furaffinity.net",
-            "title": "Index -- Fur Affinity [dot] net",
-            "icon": ""
         },
         {
             "rank": 452,
@@ -4676,16 +4635,6 @@
             "url": "https://www.vocabulary.com",
             "title": "Vocabulary.com - Learn Words - English Dictionary",
             "icon": "https://merino-images.services.mozilla.com/favicons/1d1ebdea8b0d96d2e3e2d5acdc44671bc311d2cd96fb726b68ed56abd3f338d7_5279.png"
-        },
-        {
-            "rank": 460,
-            "domain": "worldstarhiphop",
-            "categories": [
-                "Video Streaming"
-            ],
-            "url": "https://worldstarhiphop.com",
-            "title": "Worldstarhiphop: Breaking News | Music Videos | Entertainment News | Hip Hop News",
-            "icon": ""
         },
         {
             "rank": 461,
@@ -4790,17 +4739,6 @@
             "url": "https://bulbagarden.net",
             "title": "Bulbagarden : The original Pok\u00e9mon community",
             "icon": "https://merino-images.services.mozilla.com/favicons/ce7bc8156e33642117e4dffa651cc5c9d73706f0d796c071fd03f43e5a3fadb0_11586.png"
-        },
-        {
-            "rank": 472,
-            "domain": "thegatewaypundit",
-            "categories": [
-                "Politics, Advocacy, and Government-Related",
-                "News & Media"
-            ],
-            "url": "https://www.thegatewaypundit.com",
-            "title": "The Gateway Pundit",
-            "icon": "https://merino-images.services.mozilla.com/favicons/9f6b4459d4e05cdfa059c2f536db0e6c3f2a265b15c9d4cc4c866072c512bdb5_2538.oct"
         },
         {
             "rank": 474,
@@ -5530,7 +5468,7 @@
                 "Fashion"
             ],
             "url": "https://www.therealreal.com",
-            "title": "Access to This Page Has Been Blocked",
+            "title": "Therealreal",
             "icon": "https://merino-images.services.mozilla.com/favicons/46eaf45505fb60fe699587ee1fe7fb7aaa83ca21d6cba8db1a930c8e63a3bc6e_7406.oct"
         },
         {
@@ -6029,7 +5967,7 @@
                 "Ecommerce"
             ],
             "url": "https://www.joann.com",
-            "title": "404 URL Not Found",
+            "title": "Joann",
             "icon": ""
         },
         {
@@ -7110,7 +7048,7 @@
                 "Ecommerce"
             ],
             "url": "https://www.crocs.com",
-            "title": "We'll be right back - Crocs",
+            "title": "Crocs",
             "icon": ""
         },
         {
@@ -7245,7 +7183,7 @@
                 "Gaming"
             ],
             "url": "https://neopets.com",
-            "title": "Site verification",
+            "title": "Neopets",
             "icon": ""
         },
         {
