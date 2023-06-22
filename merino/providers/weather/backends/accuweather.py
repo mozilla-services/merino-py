@@ -108,15 +108,6 @@ class AccuweatherBackend:
         self.url_param_partner_code = url_param_partner_code
         self.partner_code = partner_code
 
-    def cache_inputs_for_weather_report(self, geolocation: Location) -> Optional[bytes]:
-        """Return the inputs used to form the cache key for looking up and storing the current
-        conditions and forecast for a location.
-        """
-        if geolocation.country is None or geolocation.postal_code is None:
-            return None
-
-        return (geolocation.country + geolocation.postal_code).encode("utf-8")
-
     def cache_key_for_accuweather_request(
         self, url: str, query_params: dict[str, str] = {}
     ) -> str:
@@ -416,3 +407,7 @@ class AccuweatherBackend:
         return str(
             parsed_url.copy_add_param(self.url_param_partner_code, self.partner_code)
         )
+
+    async def shutdown(self) -> None:
+        """Close out the cache during shutdown."""
+        await self.cache.close()

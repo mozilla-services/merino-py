@@ -14,7 +14,6 @@ from pydantic import parse_obj_as
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.cache.none import NoCacheAdapter
 from merino.exceptions import BackendError
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -32,7 +31,6 @@ from tests.types import FilterCaplogFixture
 def fixture_backend_mock(mocker: MockerFixture) -> Any:
     """Create a WeatherBackend mock object for test."""
     backend_mock = mocker.AsyncMock(spec=WeatherBackend)
-    backend_mock.cache_inputs_for_weather_report.return_value = None
     yield backend_mock
 
 
@@ -42,12 +40,10 @@ def fixture_providers(backend_mock: Any, statsd_mock: Any) -> Providers:
     return {
         "weather": Provider(
             backend=backend_mock,
-            cache=NoCacheAdapter(),
             metrics_client=statsd_mock,
             score=0.3,
             name="weather",
             query_timeout_sec=0.2,
-            cached_report_ttl_sec=10,
             enabled_by_default=True,
         )
     }
