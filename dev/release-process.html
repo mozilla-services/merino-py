@@ -164,7 +164,7 @@ In general authors should feel <em>responsible</em> for the changes they make an
 don't panic and follow the instructions below:</p>
 <ol>
 <li>Depending on the severity of the problem, decide if this warrants <a href="https://mozilla-hub.atlassian.net/wiki/spaces/MIR/overview">kicking off an incident</a>;</li>
-<li>Identify the problematic commit, as it may not necessarily be the latest one!</li>
+<li>Identify the problematic commit (see instructions below), as it may not necessarily be the latest one!</li>
 <li>Revert the problematic commit, merge that into GitHub,
 then <a href="#releasing-to-production">deploy the revert commit to production</a>.
 <ul>
@@ -173,6 +173,29 @@ then you may submit a fix, rather than reverting the problematic commit.</li>
 </ul>
 </li>
 </ol>
+<h3 id="locate-problematic-commit-via-git-bisect"><a class="header" href="#locate-problematic-commit-via-git-bisect">Locate problematic commit via &quot;git bisect&quot;</a></h3>
+<p>If you are not sure about which commit broke production, you can use <code>git bisect</code> to locate the problematic commit as follows:</p>
+<pre><code class="language-sh"># Start the bisect session.
+$ git bisect start
+
+# Flag a bad commit, usually you can set it to the latest commit as it's broken
+# in production.
+$ git bisect bad &lt;commit-hash-for-a-bad-commit&gt;
+
+# Flag a good commit, this can be set to the last known good commit.
+# You can use an old commit if you're still unsure, bisect will perform binary
+# searches anyway.
+$ git bisect good &lt;commit-hash-for-a-good-commit&gt;
+
+# Git will check out a commit in the middle and then you can test it to see if
+# the issue is still reproducible. If yes, flag it &quot;bad&quot;, otherwise flag it
+# &quot;good&quot;. Git will use that as input to make the next move until it locates the
+# problematic commit.
+$ git bisect [bad|good]
+
+# End the bisect session when you're done.
+$ git bisect reset
+</code></pre>
 
                     </main>
 
