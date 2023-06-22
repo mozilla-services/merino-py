@@ -1,9 +1,12 @@
 """CLI commands for the navigational_suggestions module"""
 import json
 import logging
+from ctypes import ArgumentError
+from enum import Enum
 from typing import Optional
 
 import typer
+from typing_extensions import Annotated
 
 from merino.config import settings as config
 from merino.jobs.navigational_suggestions.domain_data_downloader import (
@@ -16,7 +19,9 @@ from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
 from merino.jobs.navigational_suggestions.utils import (
+    load_blocklist,
     update_top_picks_with_firefox_favicons,
+    write_blocklist,
 )
 
 logger = logging.getLogger(__name__)
@@ -144,3 +149,48 @@ def prepare_domain_metadata(
     )
     if write_xcom is True:
         _write_xcom_file({"top_pick_url": top_pick_blob.public_url})
+
+
+class BlocklistActions(str, Enum):
+    """Actions available for the blocklist management command."""
+
+    add = "add"
+    remove = "remove"
+    apply = "apply"
+
+
+@navigational_suggestions_cmd.command()
+def blocklist(
+    action: BlocklistActions,
+    domain: Annotated[Optional[str], typer.Argument()] = None,
+):
+    """CLI command for managing blocklist.
+    Use `add` and `remove` to managed domains in the blocklist.
+    Use `apply` to apply the blocklist locally.
+    """
+    match action:
+        case BlocklistActions.add:
+            if domain is None:
+                raise ArgumentError("Must supply a domain argument. None given.")
+            block_list = load_blocklist()
+            block_list.add(domain)
+            write_blocklist(block_list)
+        case BlocklistActions.remove:
+            if domain is None:
+                raise ArgumentError("Must supply a domain argument. None given.")
+            block_list = load_blocklist()
+            block_list.discard(domain)
+            write_blocklist(block_list)
+        case BlocklistActions.apply:
+            top_picks_file = "dev/top_picks.json"
+            block_list = load_blocklist()
+            with open(top_picks_file, "r") as fp:
+                top_picks = json.load(fp)
+                top_picks["domains"] = [
+                    domain
+                    for domain in top_picks["domains"]
+                    if domain["domain"] not in block_list
+                ]
+
+                with open(top_picks_file, "w") as fw:
+                    json.dump(top_picks, fw, indent=4)
