@@ -39,11 +39,37 @@ If your latest release causes problems and needs to be rolled back:
 don't panic and follow the instructions below:
 
 1. Depending on the severity of the problem, decide if this warrants [kicking off an incident][incident_docs];
-2. Identify the problematic commit, as it may not necessarily be the latest one!
+2. Identify the problematic commit (see instructions below), as it may not necessarily be the latest one!
 3. Revert the problematic commit, merge that into GitHub,
    then [deploy the revert commit to production](#releasing-to-production).
    - If a fix can be identified in a relatively short time,
      then you may submit a fix, rather than reverting the problematic commit.
+
+### Locate problematic commit via "git bisect"
+If you are not sure about which commit broke production, you can use `git bisect` to locate the problematic commit as follows:
+
+```sh
+# Start the bisect session.
+$ git bisect start
+
+# Flag a bad commit, usually you can set it to the latest commit as it's broken
+# in production.
+$ git bisect bad <commit-hash-for-a-bad-commit>
+
+# Flag a good commit, this can be set to the last known good commit.
+# You can use an old commit if you're still unsure, bisect will perform binary
+# searches anyway.
+$ git bisect good <commit-hash-for-a-good-commit>
+
+# Git will check out a commit in the middle and then you can test it to see if
+# the issue is still reproducible. If yes, flag it "bad", otherwise flag it
+# "good". Git will use that as input to make the next move until it locates the
+# problematic commit.
+$ git bisect [bad|good]
+
+# End the bisect session when you're done.
+$ git bisect reset
+```
 
 [incident_docs]: https://mozilla-hub.atlassian.net/wiki/spaces/MIR/overview
 [contributing]: ../../CONTRIBUTING.md
