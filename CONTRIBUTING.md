@@ -73,11 +73,9 @@ of `<type>: <subject>` where `type` must be one of:
 * **chore**: Changes to the build process or auxiliary tools and libraries such as documentation
   generation
 
-Name the branch using this nomenclature with the `<type>` followed by a forward slash, followed by a
-dash-separated description of the task. Ex. `feat/add-sentry-sdk-MOZ-1234`. Note, if associated with
-a Jira ticket, synchronization with Jira and GitHub is possible by appending the suffix of the Jira
-ticket to the branch name (`-MOZ-1234` in the example above). This can be added anywhere in the
-branch name, but adding to the end is ideal. You can also include the Jira issue at the end of
+If associated with a Jira ticket, synchronization with Jira and GitHub is possible by appending the suffix of the Jiraticket to the branch name (`MOZ-1234` in the example below). Name the branch using this nomenclature with the optional `<type>` followed by a forward slash, followed by the Jira ticket and then a 
+dash-separated description of the task. Ex. `feat/MOZ-1234-add-sentry-sdk` or `MOZ-1234-add-sentry-sdk` Note, the Jira ticket project and number can be added anywhere in the
+branch name, but adding to the beginning is ideal. You can also include the Jira issue at the end of
 commit messages to keep the task up to date. See Jira Docs for referencing issues [here][jira]
 
 [angular_commit_guidelines]: https://github.com/angular/angular/blob/main/CONTRIBUTING.md
