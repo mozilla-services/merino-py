@@ -57,7 +57,7 @@ $ git bisect start
 $ git bisect bad <commit-hash-for-a-bad-commit>
 
 # Flag a good commit, this can be set to the last known good commit.
-# You can use an old commit If you're still unsure, bisect will perform binary
+# You can use an old commit if you're still unsure, bisect will perform binary
 # searches anyway.
 $ git bisect good <commit-hash-for-a-good-commit>
 
