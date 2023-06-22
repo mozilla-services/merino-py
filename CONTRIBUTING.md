@@ -80,7 +80,7 @@ ticket to the branch name (`-MOZ-1234` in the example above). This can be added 
 branch name, but adding to the end is ideal. You can also include the Jira issue at the end of
 commit messages to keep the task up to date. See Jira Docs for referencing issues [here][jira]
 
-[angular_commit_guidelines]: https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md
+[angular_commit_guidelines]: https://github.com/angular/angular/blob/main/CONTRIBUTING.md
 [jira]: https://support.atlassian.com/jira-software-cloud/docs/reference-issues-in-your-development-work/
 
 ### Subject
