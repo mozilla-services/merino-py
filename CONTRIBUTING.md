@@ -1,8 +1,10 @@
 # Contribution Guidelines
 
 Anyone is welcome to contribute to this project. Feel free to get in touch with
-other community members on [Matrix](https://chat.mozilla.org), the mailing list or through issues here on
+other community members on [Matrix][matrix], the mailing list or through issues here on
 GitHub.
+
+[matrix]: https://chat.mozilla.org
 
 ## Bug Reports
 
@@ -14,41 +16,50 @@ you can and under what conditions you saw the issue.
 Patches should be submitted as pull requests (PR).
 
 Before submitting a PR:
-- Ensure you are pulling from the most recent `main` branch and install dependencies with Poetry. See
-  [See the README](/README.md) for more details.
+
+- Ensure you are pulling from the most recent `main` branch and install dependencies with Poetry.
+  See the [developer documentation][developer documentation] for more details.
 - Your code must run and pass all the automated tests before you submit your PR
-  for review. [See the README](/README.md) for information on linting, formatting and testing. "Work in progress" or "Draft" pull requests are allowed to be submitted, but
-  should be clearly labeled as such and should not be merged until all tests
-  pass and the code has been reviewed.
+  for review. See the [developer documentation][developer documentation] for information on linting,
+  formatting and testing. "Work in progress" or "Draft" pull requests are allowed to be submitted,
+  but should be clearly labeled as such and should not be merged until all tests pass and the code
+  has been reviewed.
 - Ideally, your patch should include new tests that cover your changes. It is your and
   your reviewer's responsibility to ensure your patch includes adequate tests.
-- If making changes that may impact performance, it is recommended to execute a load test. Please see [Load Testing Opt-In [load test: (abort|warn)]][release-process] documentation for more information.
-- For more information on understanding the release process, please see relevant information contained in the [release-process.md][release-process] 
-documentation.
+- If making changes that may impact performance, it is recommended to execute a load test. Please
+  see the [Load Testing README][load_testing_readme] for more information.
+- For more information on understanding the release process, please see relevant information
+  contained in the [release-process.md][release_process] documentation.
 
 When submitting a PR:
-- You agree to license your code under the project's open source license
-  ([MPL 2.0](/LICENSE)).
+
+- You agree to license your code under the project's open source license ([MPL 2.0][license]).
 - Base your branch off the current `main`.
 - Add both your code and new tests if relevant.
-- [Sign](https://docs.github.com/en/github/authenticating-to-github/managing-commit-signature-verification/signing-commits) your git commit.
+- [Sign][sign] your git commit.
 - Run tests, linting and formatting checks to make sure your code complies with established standards.
 (e.g. No warnings are returned for python: "`make lint`", "`make test`", "`make format`")
 - Ensure your changes do not reduce code coverage of the test suite.
 - Please do not include merge commits in pull requests; include only commits
   with the new relevant code.
 
-WIP: See the main
-[documentation](https://github.com/mozilla-services/merino-py)
-for information on prerequisites, installing, running and testing.
+[developer documentation]: /docs/dev/index.md
+[load_testing_readme]: /tests/load/README.md
+[release_process]: /docs/dev/release-process.md
+[license]: /LICENSE
+[sign]: https://docs.github.com/en/github/authenticating-to-github/managing-commit-signature-verification/signing-commits
 
 ## Code Review
 
-This project is production Mozilla code and subject to our [engineering practices and quality standards](https://developer.mozilla.org/en-US/docs/Mozilla/Developer_guide/Committing_Rules_and_Responsibilities). Every patch must be peer reviewed.
+This project is production Mozilla code and subject to our
+[committing rules and responsibilities][committing_rules_and_responsibilities]. 
+Every patch must be peer reviewed.
+
+[committing_rules_and_responsibilities]: https://firefox-source-docs.mozilla.org/contributing/committing_rules_and_responsibilities.html
 
 ## Git Commit Guidelines & Branch Naming
 
-We loosely follow the [Angular commit guidelines](https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md#type)
+We loosely follow the [Angular commit guidelines][angular_commit_guidelines]
 of `<type>: <subject>` where `type` must be one of:
 
 * **feat**: A new feature
@@ -62,7 +73,13 @@ of `<type>: <subject>` where `type` must be one of:
 * **chore**: Changes to the build process or auxiliary tools and libraries such as documentation
   generation
 
-Name the branch using this nomenclature with the `<type>` followed by a forward slash, followed by a dash-seperated description of the task. Ex. `feat/add-sentry-sdk-MOZ-1234`. Note, if associated with a Jira ticket, synchronization with Jira and GitHub is possible by appending the suffix of the Jira ticket to the branch name (`-MOZ-1234` in the example above). This can be added anywhere in the branch name, but adding to the end is ideal. You can also include the Jira issue at the end of ccommit messages to keep the task up to date. See Jira Docs for referencing issues [here](https://support.atlassian.com/jira-software-cloud/docs/reference-issues-in-your-development-work/)
+If associated with a Jira ticket, synchronization with Jira and GitHub is possible by appending the suffix of the Jiraticket to the branch name (`MOZ-1234` in the example below). Name the branch using this nomenclature with the optional `<type>` followed by a forward slash, followed by the Jira ticket and then a 
+dash-separated description of the task. Ex. `feat/MOZ-1234-add-sentry-sdk` or `MOZ-1234-add-sentry-sdk` Note, the Jira ticket project and number can be added anywhere in the
+branch name, but adding to the beginning is ideal. You can also include the Jira issue at the end of
+commit messages to keep the task up to date. See Jira Docs for referencing issues [here][jira]
+
+[angular_commit_guidelines]: https://github.com/angular/angular/blob/main/CONTRIBUTING.md
+[jira]: https://support.atlassian.com/jira-software-cloud/docs/reference-issues-in-your-development-work/
 
 ### Subject
 
@@ -102,7 +119,67 @@ passed and the commit message is properly formatted.
 BREAKING CHANGE: This patch requires developer to lower expectations about
     what "delicious" and "cookie" may mean. Some sadness may result.
 
-Closes #314, #975
+Closes #314, Closes #975
 ```
-[release-process]: /docs/dev/release-process.md
-[load-testing-docs]: /tests/load/README.md
+
+## Testing Guidelines & Best Practices
+
+All test contributions should conform to the documented [Test Strategy][test_strategy] and have the
+following qualities (also known as the F.I.R.S.T. principles):
+
+**Fast**
+
+* Test suites should be optimized to execute quickly, which encourages use by contributors and is
+  essential for rapid pipelines.
+* If tests are taking too long, consider breaking them up into multiple smaller tests and executing
+  them with a parallel test runner.
+* For reference, unit tests should take milliseconds to run.
+
+**Isolated**
+
+* Tests should be independently executable or standalone, not relying on an execution order with
+  other tests.
+* Tests should clean up after themselves
+    * Tests may perform actions that have persistent effects, like setting a program state. If not
+      cleaned up properly, this can impact the execution of subsequent tests causing intermittent
+      failures.
+    * Helper methods or fixtures are a preferable architectural design when compared to setup and
+      teardown methods. As test suites scale, setup and teardown methods become a common source of
+      state issues and bloat. Tests will grow to have increasingly specific requirements that don't
+      have common relevancy or compatibility.
+* Tests should not rely on resources from sites whose content Mozilla doesn't control or where
+  Mozilla has no SLA. This is a security concern as well as a source of intermittent failures.
+* Tests should avoid file system or database dependencies, their changes or outages can be a source
+  of intermittent failures.
+
+**Repeatable**
+
+* Tests should have consistent results when no code changes are made between test runs.
+* Tests should not contain time bombs. Meaning they should not be susceptible to failure given
+  execution during a given datetime or due to time comparisons.
+* Tests should avoid using _magical_ time delays when waiting for operations to finish executing.
+* Tests should not assume an execution order for asynchronous methods, this may lead to intermittent
+  failures.
+* Tests should not depend on objects through weak references, which may be garbage collected during
+  test execution causing intermittent failures.
+* Tests should avoid using logical operations, such as `if`, `while`, `for`, and `switch`.
+    * Decision points are a nexus for introducing bugs. Bugs found in test code erodes trust and
+      diminishes value.
+    * Consider splitting up a test or using a data driven test framework before using logical
+      operations.
+* Test CI/CD jobs should avoid pulling the latest language or tooling dependencies. New dependency
+  versions can cause unintuitive failures.
+
+**Self-Deterministic**
+
+* No human intervention should be required to conclude if a test has passed or failed.
+
+**Timely**
+
+* Production code should be crafted to be testable, so that writing and maintaining tests doesn't
+  take an unreasonable amount of time.
+* Test code should be written with the same quality standard as production code and subject to the
+  same linters and formatters.
+* Consider using a test-first approach when developing production code.
+
+[test_strategy]: /docs/dev/testing.md
