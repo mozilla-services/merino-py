@@ -116,6 +116,22 @@ def test_suggest_from_missing_providers(client: TestClient, query: str) -> None:
     assert len(response.json()["suggestions"]) == 0
 
 
+@pytest.mark.parametrize(
+    "query",
+    [
+        "sponsored",
+        "nonsponsored",
+    ],
+)
+def test_suggest_default_wildcard_providers(client: TestClient, query: str) -> None:
+    """Test that `default` wildcard provider parameter returns suggestions from default
+    enabled providers.
+    """
+    response = client.get(f"/api/v1/suggest?q={query}&providers=default")
+    assert response.status_code == 200
+    assert len(response.json()["suggestions"]) == 1
+
+
 def test_no_query_string(client: TestClient) -> None:
     """Test that a status code of 400 is returned for suggest endpoint calls without
     a query string.
