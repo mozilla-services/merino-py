@@ -29,6 +29,9 @@ SUGGEST_RESPONSE = {
     "request_id": "",
 }
 
+# Param to capture all enabled_by_default=True providers.
+DEFAULT_PROVIDERS_PARAM_NAME: str = "default"
+
 # Timeout for query tasks.
 QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
 
@@ -76,12 +79,14 @@ async def suggest(
 
     active_providers, default_providers = sources
     if providers is not None:
-        search_from = [
-            active_providers[p]
-            # Set used to filter out possible duplicate providers passed in.
-            for p in set(providers.split(","))
-            if p in active_providers
+        # Set used to filter out possible duplicate providers passed in.
+        provider_names: set[str] = set(providers.split(","))
+        search_from: list[BaseProvider] = [
+            active_providers[p] for p in provider_names if p in active_providers
         ]
+        if DEFAULT_PROVIDERS_PARAM_NAME in provider_names:
+            # Search the default providers if `default` wildcard parameter passed in `providers`.
+            search_from.extend(p for p in default_providers if p not in search_from)
     else:
         search_from = default_providers
 
