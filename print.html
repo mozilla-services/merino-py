@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item affix "><a href="intro.html">Intro</a></li><li class="chapter-item affix "><li class="part-title">General Documentation</li><li class="chapter-item "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item "><a href="data.html"><strong aria-hidden="true">3.</strong> Data collection</a></li><li class="chapter-item "><a href="dev/index.html"><strong aria-hidden="true">4.</strong> Working on the code</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="dev/content-moderation.html"><strong aria-hidden="true">4.1.</strong> Content Moderation</a></li><li class="chapter-item "><a href="dev/dependencies.html"><strong aria-hidden="true">4.2.</strong> Dependencies</a></li><li class="chapter-item "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">4.3.</strong> Logging and Metrics</a></li><li class="chapter-item "><a href="dev/middlewares.html"><strong aria-hidden="true">4.4.</strong> Middlewares</a></li><li class="chapter-item "><a href="dev/feature_flags.html"><strong aria-hidden="true">4.5.</strong> Feature Flags</a></li><li class="chapter-item "><a href="dev/testing.html"><strong aria-hidden="true">4.6.</strong> Testing Strategies</a></li><li class="chapter-item "><a href="dev/release-process.html"><strong aria-hidden="true">4.7.</strong> Release Process</a></li><li class="chapter-item "><a href="dev/profiling.html"><strong aria-hidden="true">4.8.</strong> Profiling</a></li></ol></li><li class="chapter-item "><a href="operations/index.html"><strong aria-hidden="true">5.</strong> Operations</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="operations/configs.html"><strong aria-hidden="true">5.1.</strong> Configs</a></li><li class="chapter-item "><a href="operations/elasticsearch.html"><strong aria-hidden="true">5.2.</strong> Elasticsearch</a></li><li class="chapter-item "><a href="operations/jobs.html"><strong aria-hidden="true">5.3.</strong> Jobs</a></li></ol></li><li class="chapter-item "><li class="part-title">ADR</li><li class="chapter-item "><a href="adr/index.html"><strong aria-hidden="true">6.</strong> Archive</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="adr/0001-locust-vs-k6-merino-py-performance-test-framework.html"><strong aria-hidden="true">6.1.</strong> Load Test Framework: Locust VS K6</a></li><li class="chapter-item "><a href="adr/0002-merino-general-response.html"><strong aria-hidden="true">6.2.</strong> General API Response</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item affix "><a href="intro.html">Intro</a></li><li class="chapter-item affix "><li class="part-title">General Documentation</li><li class="chapter-item "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item "><a href="data.html"><strong aria-hidden="true">3.</strong> Data collection</a></li><li class="chapter-item "><a href="dev/index.html"><strong aria-hidden="true">4.</strong> Working on the code</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="dev/content-moderation.html"><strong aria-hidden="true">4.1.</strong> Content Moderation</a></li><li class="chapter-item "><a href="dev/dependencies.html"><strong aria-hidden="true">4.2.</strong> Dependencies</a></li><li class="chapter-item "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">4.3.</strong> Logging and Metrics</a></li><li class="chapter-item "><a href="dev/middlewares.html"><strong aria-hidden="true">4.4.</strong> Middlewares</a></li><li class="chapter-item "><a href="dev/feature_flags.html"><strong aria-hidden="true">4.5.</strong> Feature Flags</a></li><li class="chapter-item "><a href="dev/testing.html"><strong aria-hidden="true">4.6.</strong> Test Strategy</a></li><li class="chapter-item "><a href="dev/release-process.html"><strong aria-hidden="true">4.7.</strong> Release Process</a></li><li class="chapter-item "><a href="dev/profiling.html"><strong aria-hidden="true">4.8.</strong> Profiling</a></li></ol></li><li class="chapter-item "><a href="operations/index.html"><strong aria-hidden="true">5.</strong> Operations</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="operations/configs.html"><strong aria-hidden="true">5.1.</strong> Configs</a></li><li class="chapter-item "><a href="operations/elasticsearch.html"><strong aria-hidden="true">5.2.</strong> Elasticsearch</a></li><li class="chapter-item "><a href="operations/jobs.html"><strong aria-hidden="true">5.3.</strong> Jobs</a></li></ol></li><li class="chapter-item "><li class="part-title">ADR</li><li class="chapter-item "><a href="adr/index.html"><strong aria-hidden="true">6.</strong> Archive</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="adr/0001-locust-vs-k6-merino-py-performance-test-framework.html"><strong aria-hidden="true">6.1.</strong> Load Test Framework: Locust VS K6</a></li><li class="chapter-item "><a href="adr/0002-merino-general-response.html"><strong aria-hidden="true">6.2.</strong> General API Response</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -951,7 +951,7 @@ metrics, you can use them in your queries in Grafana. 📈</p>
 <code>hello_world</code>, you can use <code>tag(feature_flag.hello_world)</code> in <code>GROUP BY</code> in
 Grafana. You can also use <code>[[tag_feature_flag.hello_world]]</code> in the <code>ALIAS</code> for
 panel legends.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="testing-strategies"><a class="header" href="#testing-strategies">Testing strategies</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="test-strategy"><a class="header" href="#test-strategy">Test Strategy</a></h1>
 <p>Merino is tested using a combination of functional and performance tests.</p>
 <p>Test code resides in the <code>tests</code> directory.</p>
 <h2 id="functional"><a class="header" href="#functional">Functional</a></h2>
@@ -1085,27 +1085,80 @@ discretion of the Merino Engineering Team.</p>
 <p>For more details see the README.md file in the <code>test/load</code> directory.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-release-process"><a class="header" href="#the-release-process">The Release Process</a></h1>
 <p>This project currently follows a <a href="https://en.wikipedia.org/wiki/Continuous_deployment">Continuous Deployment</a> process.</p>
-<p>Whenever a commit is pushed to this repository's <code>main</code> branch, a CircleCI workflow is triggered which performs code checks and runs automated tests. The workflow additionally builds a new Docker image of the service and pushes that Docker image to the Docker Hub registry (this requires all previous jobs to pass).</p>
-<p>Pushing a new Docker image to the Docker Hub registry triggers a webhook that starts the Jenkins deployment pipeline (the Docker image tag determines the target environment). The deployment pipeline first deploys to the <a href="dev/../firefox.html#stage"><code>stage</code> environment</a> and subsequently to the <a href="dev/../firefox.html#production"><code>production</code> environment</a>.</p>
+<p>Whenever a commit is pushed to this repository's <code>main</code> branch, a CircleCI workflow is triggered
+which performs code checks and runs automated tests. The workflow additionally builds a new Docker
+image of the service and pushes that Docker image to the Docker Hub registry (this requires all
+previous jobs to pass).</p>
+<p>Pushing a new Docker image to the Docker Hub registry triggers a webhook that starts the Jenkins
+deployment pipeline (the Docker image tag determines the target environment). The deployment
+pipeline first deploys to the <a href="dev/../firefox.html#stage"><code>stage</code> environment</a> and subsequently to the
+<a href="dev/../firefox.html#production"><code>production</code> environment</a>.</p>
 <p><img src="dev/./circleci_main_workflow.jpg" alt="Activity diagram of CircleCI main-workflow" /></p>
-<p>After the deployment is complete, accessing the <a href="https://stage.merino.nonprod.cloudops.mozgcp.net/__version__"><code>__version__</code> endpoint</a> will show the commit hash of the deployed version, which will eventually match to the one of the latest commit on the <code>main</code> branch (a node with an older version might still serve the request before it is shut down).</p>
+<p>After the deployment is complete, accessing the <a href="https://stage.merino.nonprod.cloudops.mozgcp.net/__version__"><code>__version__</code> endpoint</a> will show
+the commit hash of the deployed version, which will eventually match to the one of the latest commit
+on the <code>main</code> branch (a node with an older version might still serve the request before it is shut
+down).</p>
 <h2 id="development-guidelines"><a class="header" href="#development-guidelines">Development Guidelines</a></h2>
-<p>Please see the <a href="dev/../../CONTRIBUTING.html">CONTRIBUTING.md</a> docs on commit guidelines and pull request best practices.</p>
+<p>Please see the <a href="https://github.com/mozilla-services/merino-py/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> docs on commit guidelines and pull request best
+practices.</p>
 <h2 id="versioning"><a class="header" href="#versioning">Versioning</a></h2>
-<p>The commit hash of the deployed code is considered its version identifier. The commit hash can be retrieved locally via <code>git rev-parse HEAD</code>.</p>
+<p>The commit hash of the deployed code is considered its version identifier. The commit hash can be
+retrieved locally via <code>git rev-parse HEAD</code>.</p>
 <h2 id="load-testing"><a class="header" href="#load-testing">Load Testing</a></h2>
-<p>Load testing can be run locally or as a part of the deployment process. Local execution does not require any labeling in commit messages. For deployment, you have to add a label to the message of the commit that you wish to deploy in the form of: <code>[load test: (abort|warn)]</code>. In most cases this will be the merge commit created by merging a GitHub pull request.</p>
-<p>Abort will prevent deployment should the load testing fail while warn will simply warn via Slack and continue deployment. For detailed specifics on load testing and this convention, please see the relevant documentation: <a href="dev//tests/load/README.html">load-testing-docs</a>: /tests/load/README.md].</p>
+<p>Load testing can be run locally or as a part of the deployment process. Local execution does not
+require any labeling in commit messages. For deployment, you have to add a label to the message of
+the commit that you wish to deploy in the form of: <code>[load test: (abort|warn)]</code>. In most cases this
+will be the merge commit created by merging a GitHub pull request.</p>
+<p><code>abort</code> will prevent deployment should the load testing fail while <code>warn</code> will warn via Slack and
+continue deployment. For detailed specifics on load testing and this convention, please see the
+<a href="https://github.com/mozilla-services/merino-py/blob/main/tests/load/README.md">Load Test README</a>.</p>
+<p>Logs from load tests executed in continuous deployment are available in the <code>/data</code> volume of the
+Locust master kubernetes pod.</p>
 <h2 id="releasing-to-production"><a class="header" href="#releasing-to-production">Releasing to production</a></h2>
-<p>Developers with write access to the Merino repository will initiate a deployment to production when a Pull-Request on the Merino GitHub repository is merged to the <code>main</code> branch.
-Developers <strong>must</strong> monitor the <a href="https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&amp;from=now-24h&amp;to=now&amp;var-environment=prodpy&amp;refresh=1m">Merino Application &amp; Infrastructure</a> dashboard for any anomaly, for example significant changes in HTTP response codes, increase in latency, cpu/memory usage (most things under the infrastructure heading).</p>
-<p>While any developer with write access can trigger the deployment to production, the <em>expectation</em> is that individual(s) who authored and merged the Pull-Request should do so, as they are the ones most familiar with their changes and who can tell, by looking at the data, if anything looks anomalous.
-In general authors should feel <em>responsible</em> for the changes they make and shepherd these changes through to deployment.</p>
-<h2 id="what-to-do-if-production-breaks"><a class="header" href="#what-to-do-if-production-breaks">What to do if production breaks?</a></h2>
+<p>Developers with write access to the Merino repository will initiate a deployment to production when
+a Pull-Request on the Merino GitHub repository is merged to the <code>main</code> branch. It is recommended to
+merge pull requests during hours when the majority of Contile contributors are online.</p>
+<p>While any developer with write access can trigger the deployment to production, the <em>expectation</em> is
+that the individual(s) who authored and merged the Pull-Request should do so, as they are the ones
+most familiar with their changes and who can tell, by looking at the data, if anything looks
+anomalous. Developers <strong>must</strong> monitor the <a href="https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&amp;from=now-24h&amp;to=now&amp;var-environment=prodpy&amp;refresh=1m">Merino Application &amp; Infrastructure</a>
+dashboard for any anomaly, for example significant changes in HTTP response codes, increase in
+latency, cpu/memory usage (most things under the 'Infrastructure' heading).</p>
+<h3 id="what-to-do-if-tests-fail-during-deployment"><a class="header" href="#what-to-do-if-tests-fail-during-deployment">What to do if tests fail during deployment?</a></h3>
+<ol>
+<li>Investigate the cause of the test failure
+<ul>
+<li>For functional tests (unit, integration or contract), logs can be found on
+<a href="https://app.circleci.com/pipelines/github/mozilla-services/merino-py">CircleCI</a></li>
+<li>For performance tests (load), insights can be found in the Locust logs or
+<a href="https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&amp;from=now-24h&amp;to=now&amp;var-environment=prodpy&amp;refresh=1m">Grafana</a></li>
+</ul>
+</li>
+<li>Fix or mitigate the failure
+<ul>
+<li>If a fix can be identified in a relatively short time, then submit a fix</li>
+<li>If the failure is caused by a flaky or intermittent functional test and the risk to the
+end-user experience is low, then the test can be &quot;skipped&quot;, using the pytest<code>xfail</code>
+<a href="https://docs.pytest.org/en/latest/how-to/skipping.html">decorator</a> during continued investigation. Example:
+<pre><code class="language-python">@pytest.mark.xfail(reason=&quot;Test Flake Detected (ref: DISCO-####)&quot;)
+</code></pre>
+</li>
+</ul>
+</li>
+<li>Re-Deploy
+<ul>
+<li>A fix or mitigation will most likely require a PR merge to the <code>main</code> branch that will
+automatically trigger the deployment process. If this is not possible, a re-deployment can be
+initiated manually by triggering the CI pipeline in <a href="https://app.circleci.com/pipelines/github/mozilla-services/merino-py">CircleCI</a>.</li>
+</ul>
+</li>
+</ol>
+<h3 id="what-to-do-if-production-breaks"><a class="header" href="#what-to-do-if-production-breaks">What to do if production breaks?</a></h3>
 <p>If your latest release causes problems and needs to be rolled back:
 don't panic and follow the instructions below:</p>
 <ol>
-<li>Depending on the severity of the problem, decide if this warrants <a href="https://mozilla-hub.atlassian.net/wiki/spaces/MIR/overview">kicking off an incident</a>;</li>
+<li>Depending on the severity of the problem, decide if this warrants
+<a href="https://mozilla-hub.atlassian.net/wiki/spaces/MIR/overview">kicking off an incident</a>;</li>
 <li>Identify the problematic commit (see instructions below), as it may not necessarily be the latest one!</li>
 <li>Revert the problematic commit, merge that into GitHub,
 then <a href="dev/release-process.html#releasing-to-production">deploy the revert commit to production</a>.
@@ -1115,7 +1168,7 @@ then you may submit a fix, rather than reverting the problematic commit.</li>
 </ul>
 </li>
 </ol>
-<h3 id="locate-problematic-commit-via-git-bisect"><a class="header" href="#locate-problematic-commit-via-git-bisect">Locate problematic commit via &quot;git bisect&quot;</a></h3>
+<h4 id="locate-problematic-commit-via-git-bisect"><a class="header" href="#locate-problematic-commit-via-git-bisect">Locate problematic commit via &quot;git bisect&quot;</a></h4>
 <p>If you are not sure about which commit broke production, you can use <code>git bisect</code> to locate the problematic commit as follows:</p>
 <pre><code class="language-sh"># Start the bisect session.
 $ git bisect start
