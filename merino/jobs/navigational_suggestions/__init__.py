@@ -163,6 +163,12 @@ class BlocklistActions(str, Enum):
 def blocklist(
     action: BlocklistActions,
     domain: Annotated[Optional[str], typer.Argument()] = None,
+    blocklist_path: Annotated[
+        Optional[str], typer.Option(help="Override the blocklist path.")
+    ] = None,
+    top_picks_path: Annotated[
+        Optional[str], typer.Option(help="Override the top pick path.")
+    ] = None,
 ):
     """CLI command for managing blocklist.
     Use `add` and `remove` to managed domains in the blocklist.
@@ -172,19 +178,20 @@ def blocklist(
         case BlocklistActions.add:
             if domain is None:
                 raise ArgumentError("Must supply a domain argument. None given.")
-            block_list = load_blocklist()
+            block_list = load_blocklist(blocklist_path)
             block_list.add(domain)
-            write_blocklist(block_list)
+            write_blocklist(block_list, blocklist_path)
         case BlocklistActions.remove:
             if domain is None:
                 raise ArgumentError("Must supply a domain argument. None given.")
-            block_list = load_blocklist()
+            block_list = load_blocklist(blocklist_path)
             block_list.discard(domain)
-            write_blocklist(block_list)
+            write_blocklist(block_list, blocklist_path)
         case BlocklistActions.apply:
-            top_picks_file = "dev/top_picks.json"
-            block_list = load_blocklist()
-            with open(top_picks_file, "r") as fp:
+            if top_picks_path is None:
+                top_picks_path = "dev/top_picks.json"
+            block_list = load_blocklist(blocklist_path)
+            with open(top_picks_path, "r") as fp:
                 top_picks = json.load(fp)
                 top_picks["domains"] = [
                     domain
@@ -192,5 +199,5 @@ def blocklist(
                     if domain["domain"] not in block_list
                 ]
 
-                with open(top_picks_file, "w") as fw:
+                with open(top_picks_path, "w") as fw:
                     json.dump(top_picks, fw, indent=4)

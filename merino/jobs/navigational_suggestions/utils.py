@@ -106,14 +106,18 @@ def _blocklist_path() -> str:
     )
 
 
-def load_blocklist() -> set[str]:
+def load_blocklist(path: Optional[str] = None) -> set[str]:
     """Load the blocklist into a set."""
-    with open(_blocklist_path(), "r") as fp:
+    if path is None:
+        path = _blocklist_path()
+    with open(path, "r") as fp:
         domains = json.load(fp)
         return {domain for domain in domains}
 
 
-def write_blocklist(blocklist: set[str]):
+def write_blocklist(blocklist: set[str], path: Optional[str] = None):
     """Write the blocklist set to a file."""
-    with open(_blocklist_path(), "w") as fp:
+    if path is None:
+        path = _blocklist_path()
+    with open(path, "w") as fp:
         json.dump([domain for domain in blocklist], fp, indent=2)
