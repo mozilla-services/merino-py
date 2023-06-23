@@ -35,6 +35,7 @@ def fixture_providers() -> Providers:
     return {
         "sponsored": FakeProviderFactory.sponsored(enabled_by_default=True),
         "non-sponsored": FakeProviderFactory.nonsponsored(enabled_by_default=True),
+        "top_picks": FakeProviderFactory.sponsored(enabled_by_default=False),
     }
 
 
@@ -130,6 +131,23 @@ def test_suggest_default_wildcard_providers(client: TestClient, query: str) -> N
     response = client.get(f"/api/v1/suggest?q={query}&providers=default")
     assert response.status_code == 200
     assert len(response.json()["suggestions"]) == 1
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "sponsored",
+    ],
+)
+def test_suggest_default_wildcard_providers_and_additional_provider(
+    client: TestClient, query: str
+) -> None:
+    """Test that `default` wildcard provider parameter plus an added parameter for disabled provider
+    returns suggestions from all passed in providers.
+    """
+    response = client.get(f"/api/v1/suggest?q={query}&providers=default,top_picks")
+    assert response.status_code == 200
+    assert len(response.json()["suggestions"]) == 2
 
 
 def test_no_query_string(client: TestClient) -> None:
