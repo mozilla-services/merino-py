@@ -34,7 +34,7 @@ and headers.
   request. See the `/providers` endpoint below for valid options. If provided,
   only suggestions from the listed providers will be returned. If not provided,
   Merino will use a built-in default set of providers. The default set of
-  providers can be seen in the `/providers` endpoint.
+  providers can be seen in the `/providers` endpoint. Supplying the `default` value to the `providers` parameter will return suggestions from the default providers. 
 
 ### Headers
 
