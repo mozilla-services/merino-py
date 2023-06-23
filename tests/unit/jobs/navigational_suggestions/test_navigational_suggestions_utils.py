@@ -5,6 +5,9 @@
 """Unit tests for utils.py module."""
 
 from merino.jobs.navigational_suggestions.utils import (
+    REQUEST_HEADERS,
+    FaviconDownloader,
+    load_blocklist,
     update_top_picks_with_firefox_favicons,
 )
 
@@ -76,3 +79,27 @@ def test_update_top_picks_with_firefox_favicons_favicon_not_added_for_non_specia
 
     update_top_picks_with_firefox_favicons(input_top_picks)
     assert input_top_picks == updated_top_picks
+
+
+def test_favicon_downloader(requests_mock):
+    """Test FaviconDownloader using requests_mock"""
+    requests_mock.register_uri(
+        "GET",
+        "http://icon",
+        request_headers=REQUEST_HEADERS,
+        headers={"Content-Type": "image/x-icon"},
+        content=b"1",
+    )
+    downloader = FaviconDownloader()
+    favicon = downloader.download_favicon("http://icon")
+
+    assert favicon is not None
+    assert favicon.content == b"1"
+    assert favicon.content_type == "image/x-icon"
+
+
+def test_load_blocklist():
+    """Test load blocklist functionality"""
+    blocklist_path = "tests/data/domain_blocklist.json"
+    blocklist = load_blocklist(blocklist_path)
+    assert {"foo", "bar"} == blocklist

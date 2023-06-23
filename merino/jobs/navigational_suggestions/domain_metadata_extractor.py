@@ -14,6 +14,7 @@ from merino.jobs.navigational_suggestions.utils import (
     TIMEOUT,
     FaviconDownloader,
     FaviconImage,
+    load_blocklist,
     requests_get,
 )
 
@@ -157,11 +158,15 @@ class DomainMetadataExtractor:
         "Robot or human",
         "Captcha Challenge",
         "Let us know you're not a robot",
+        "Verification",
+        "404",
+        "Please try again",
+        "Access to this page",
+        "We'll be right back",
     ]
 
     # List of blocked (second level) domains
-    BLOCKED_DOMAINS: set[str] = {"megapersonals"}
-
+    blocked_domains: set[str]
     scraper: Scraper
     favicon_downloader: FaviconDownloader
 
@@ -172,6 +177,7 @@ class DomainMetadataExtractor:
     ) -> None:
         self.scraper = scraper
         self.favicon_downloader = favicon_downloader
+        self.blocked_domains = load_blocklist()
 
     def _get_base_url(self, url: str) -> str:
         """Return base url from a given full url"""
@@ -321,7 +327,7 @@ class DomainMetadataExtractor:
     def _is_domain_blocked(self, domain: str, suffix: str) -> bool:
         """Check if a domain is in the blocked list"""
         second_level_domain: str = self._get_second_level_domain(domain, suffix)
-        return second_level_domain in self.BLOCKED_DOMAINS
+        return second_level_domain in self.blocked_domains
 
     def get_domain_metadata(
         self, domains_data: list[dict[str, Any]], favicon_min_width: int
