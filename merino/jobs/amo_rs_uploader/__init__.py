@@ -14,6 +14,7 @@ from merino.providers.amo.backends.dynamic import DynamicAmoBackend
 
 logger = logging.getLogger(__name__)
 
+amo_settings = config.providers.amo
 job_settings = config.jobs.amo_rs_uploader
 rs_settings = config.remote_settings
 
@@ -67,7 +68,7 @@ record_type_option = typer.Option(
 )
 
 score_option = typer.Option(
-    job_settings.score,
+    amo_settings.score,
     "--score",
     help="The score of each suggestion",
 )
