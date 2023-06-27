@@ -158,7 +158,6 @@ jobs:
             - merinopy.tar.gz
   contract-tests:
     machine:
-      docker_layer_caching: false
       image: ubuntu-2004:2023.04.2
     working_directory: ~/merino
     steps:
@@ -170,9 +169,13 @@ jobs:
           command: docker load -i /tmp/workspace/merinopy.tar.gz
       - run:
           name: Contract tests
+          environment:
+            TEST_RESULTS_DIR: workspace/test-results
           command: |
             sudo chown 1000:1000 tests/contract/kinto-attachments
             make run-contract-tests
+      - store_test_results:
+          path: workspace/test-results
   check-for-deployment:
     docker:
       - image: cimg/base:2022.08

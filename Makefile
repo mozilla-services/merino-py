@@ -104,7 +104,7 @@ docker-build-jobs:  ## Build the docker image for Merino job runner named "merin
 
 .PHONY: run-contract-tests
 run-contract-tests:  ##  Run contract tests using docker compose
-	docker-compose \
+	TEST_RESULTS_DIR=$(TEST_RESULTS_DIR) docker-compose \
       -f $(CONTRACT_TEST_DIR)/docker-compose.yml \
       -p merino-py-contract-tests \
       up --abort-on-container-exit
@@ -114,7 +114,7 @@ contract-tests: docker-build run-contract-tests  ## Run contract tests, with bui
 
 .PHONY: contract-tests-clean
 contract-tests-clean:  ##  Stop and remove containers and networks for contract tests, delete client
-	docker-compose \
+	TEST_RESULTS_DIR=$(TEST_RESULTS_DIR) docker-compose \
       -f $(CONTRACT_TEST_DIR)/docker-compose.yml \
       -p merino-py-contract-tests \
       down
