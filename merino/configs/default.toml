@@ -209,3 +209,10 @@ min_favicon_width = 48
 [default.jobs.amo_rs_uploader]
 # The "type" of each remote settings record
 record_type = "amo-suggestions"
+
+[default.jobs.pocket_rs_uploader]
+# Path to the CSV file that contains the source data
+csv_path = ""
+# The "type" of each remote settings record
+record_type = "pocket-suggestions"
+score = 0.25

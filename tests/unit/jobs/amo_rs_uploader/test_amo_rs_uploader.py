@@ -124,6 +124,7 @@ def do_upload_test(
     mock_chunked_uploader_ctor.assert_called_once_with(
         **common_kwargs,
         suggestion_score_fallback=score,
+        total_suggestion_count=TEST_ADDON_COUNT,
     )
 
     if delete_existing_records:
