@@ -59,16 +59,12 @@ workflows:
           <<: *main-filters
           requires:
             - docs-build
-      - check-for-deployment:
+      - docker-image-publish-locust:
           <<: *main-filters
           requires:
             - checks
             - test-coverage-check
             - contract-tests
-      - docker-image-publish-locust:
-          <<: *main-filters
-          requires:
-            - check-for-deployment
       - docker-image-publish:
           <<: *main-filters
           requires:
@@ -176,11 +172,6 @@ jobs:
             make run-contract-tests
       - store_test_results:
           path: workspace/test-results
-  check-for-deployment:
-    docker:
-      - image: cimg/base:2022.08
-    steps:
-      - checkout
   docker-image-publish:
     # Pushing a new production Docker image to the Docker Hub registry triggers a
     # webhook that starts the Jenkins deployment workflow
