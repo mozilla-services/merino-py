@@ -18,6 +18,7 @@ class Suggestion(BaseSuggestion):
 
     block_id: int
     is_top_pick: bool
+    interests: str
 
 
 class Provider(BaseProvider):
@@ -84,7 +85,10 @@ class Provider(BaseProvider):
             case _:
                 ids = None
         return (
-            [Suggestion(**self.top_picks_data.results[ids[0]], score=self.score)]
+            [
+                Suggestion(**self.top_picks_data.results[id], score=self.score)
+                for id in ids
+            ]
             if ids
             else []
         )

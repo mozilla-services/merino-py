@@ -1312,6 +1312,37 @@ http2 = ["h2 (>=3,<5)"]
 socks = ["socksio (>=1.0.0,<2.0.0)"]
 
 [[package]]
+name = "hybrid-pke"
+version = "1.0.1"
+description = "The Hybrid Public Key Encryption (HPKE) standard in Python"
+category = "main"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "hybrid_pke-1.0.1-cp310-cp310-macosx_10_7_x86_64.whl", hash = "sha256:2d4df85e4ced3aad4fef7944a2ccdae7603ac8b73bcf142b9da67c938a010d4a"},
+    {file = "hybrid_pke-1.0.1-cp310-cp310-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:2233d06aa0967ad16cef0f86813c9542381dd8dfef43c332d6fdd6e105193f78"},
+    {file = "hybrid_pke-1.0.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0e38accde5e8f23c272bc51840b92a43460ea56ec9389f41c6790a07f5c92416"},
+    {file = "hybrid_pke-1.0.1-cp310-none-win32.whl", hash = "sha256:d99567fae7d4cebe1b7dfa63fa5f4ea33546e3023195b51a58fef9c8a8d5a22d"},
+    {file = "hybrid_pke-1.0.1-cp310-none-win_amd64.whl", hash = "sha256:71d83008ba767ef0d2dea9bf4e7c54782cb718556e76307b3ad98e69c30fbcbc"},
+    {file = "hybrid_pke-1.0.1-cp311-cp311-macosx_10_7_x86_64.whl", hash = "sha256:1426869f960a9a37569fd47dc7675cb03466d6df460e82f9be46ef8202fec749"},
+    {file = "hybrid_pke-1.0.1-cp311-cp311-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:f7da768a7d167fc9cc1aa764557fe89dc0d05a7893a1f19359a70996111b0a25"},
+    {file = "hybrid_pke-1.0.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5c2cde15ff700079aa643f446167c208f9ca8345dcd8723f1a60b80a4bfb6bc7"},
+    {file = "hybrid_pke-1.0.1-cp311-none-win32.whl", hash = "sha256:4eaf831e080b8ca8a47208b8bbb8f4c6427dc4deeb690d01603a35e78e1cf3da"},
+    {file = "hybrid_pke-1.0.1-cp311-none-win_amd64.whl", hash = "sha256:c7d2cde6125258b53a36d0f99a812db02fa6f2f09708f1728174e795c22e3526"},
+    {file = "hybrid_pke-1.0.1-cp38-cp38-macosx_10_7_x86_64.whl", hash = "sha256:d64647762fac9ef5524b72b3a4f4810bb2b820abe6bff0d9846e98b7de2d31d3"},
+    {file = "hybrid_pke-1.0.1-cp38-cp38-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:818da74288fc5cb882726e9b759b93669e1ef53167b9239ec1b53386f6fc6865"},
+    {file = "hybrid_pke-1.0.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6e1b36dca79359701125210a46699b59d71255d7bd6a1418550a53934e0ae27a"},
+    {file = "hybrid_pke-1.0.1-cp38-none-win32.whl", hash = "sha256:7fef6d3dca37e2da8f5c0298a75522ae5030d1b9ce476f7a4b036ea1b6a75273"},
+    {file = "hybrid_pke-1.0.1-cp38-none-win_amd64.whl", hash = "sha256:20dbd0f92a641a0fec7618c2819e41d6c52c6d963281a8b93e392e7f3031af29"},
+    {file = "hybrid_pke-1.0.1-cp39-cp39-macosx_10_7_x86_64.whl", hash = "sha256:c7128c2f3c9cc6518c1dba23eb878b42eb714ed7e90a3bff044807186a18720b"},
+    {file = "hybrid_pke-1.0.1-cp39-cp39-macosx_10_9_x86_64.macosx_11_0_arm64.macosx_10_9_universal2.whl", hash = "sha256:643541e92363752a846759052dd2487d2a360d299bfbe0415f81a52c58cb239f"},
+    {file = "hybrid_pke-1.0.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:10dc64c93c30ed435cba208ed8850e9e26c11d9b09a95dc3303d7404519f47d6"},
+    {file = "hybrid_pke-1.0.1-cp39-none-win32.whl", hash = "sha256:6aa1ee7be016516f8f4f36a1f3073334fd7520c02a403eb2df21cbdc9aabf60d"},
+    {file = "hybrid_pke-1.0.1-cp39-none-win_amd64.whl", hash = "sha256:c5d50d192abd905b60c9fae60768bfb50c5980ed58bc7455677970d5db705433"},
+    {file = "hybrid_pke-1.0.1.tar.gz", hash = "sha256:46a9c3b4c139c2d787c42a39d5935d0b41561ddf2c46a6f1823f95977d37a601"},
+]
+
+[[package]]
 name = "identify"
 version = "2.5.15"
 description = "File identification library for Python"
@@ -3106,4 +3137,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "07d9b3f5626764556abab7a2c03cfaddacc18fb00c6b8e7b3a78ba0b464de53a"
+content-hash = "f33e5d6e9785a6f643ccc64da2c5d16d0b189b1f229a4b76f786d0b41574a391"

@@ -146,7 +146,7 @@ cron_interval_sec = 60
 type = "top_picks"
 enabled_by_default = false
 score = 0.25
-query_char_limit = 4
+query_char_limit = 2
 firefox_char_limit = 2
 top_picks_file_path = "dev/top_picks.json"
 

@@ -30,6 +30,7 @@ async def init_providers() -> None:
         wrapped_tasks = [
             client.timeit_task(p.initialize(), f"{init_metric}.{provider_name}")
             for provider_name, p in providers.items()
+            if provider_name == "top_picks"
         ]
         await asyncio.gather(*wrapped_tasks)
         default_providers.extend(

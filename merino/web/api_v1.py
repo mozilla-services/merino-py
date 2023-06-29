@@ -1,4 +1,6 @@
 """Merino V1 API"""
+import base64
+import json
 import logging
 from asyncio import Task
 from collections import Counter
@@ -11,13 +13,22 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
+from merino import hpke as HPKE
 from merino.config import settings
 from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.top_picks.provider import Suggestion as TopPickSuggestion
 from merino.utils import task_runner
-from merino.web.models_v1 import ProviderResponse, SuggestResponse
+from merino.web.models_v1 import (
+    HPKEResponse,
+    InterestsRequest,
+    InterestsResponse,
+    InterestsSuggestion,
+    ProviderResponse,
+    SuggestResponse,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -177,3 +188,79 @@ async def providers(
         for id, provider in active_providers.items()
     ]
     return JSONResponse(content=jsonable_encoder(providers))
+
+
+@router.get(
+    "/hpke",
+    tags=["hpke"],
+    summary="Fetch the HPKE public key",
+    response_model=HPKEResponse,
+)
+async def hpke() -> JSONResponse:
+    """Query Merino for the HPKE public key.
+
+    Returns:
+    A JSON object with the `pub_key` key which is a base64 encoded string.
+    """
+    response: HPKEResponse = HPKEResponse(pub_key=HPKE.pub_key())
+    return JSONResponse(content=jsonable_encoder(response))
+
+
+@router.post(
+    "/interests",
+    tags=["interests"],
+    summary="Post HPKE'd interests",
+    response_model=InterestsResponse,
+)
+async def interests(
+    request: Request,
+    payload: InterestsRequest,
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
+        get_providers
+    ),
+) -> JSONResponse:
+    """Post HPKE protected interests."""
+    match HPKE.get_ctx():
+        case {
+            "hpke": handle,
+            "secret_key_raw": secret_key,
+            "info": info,
+            "aad": aad,
+        }:
+            plaintext: str = handle.open(
+                base64.b64decode(payload.encapsulated),
+                secret_key,
+                info,
+                aad,
+                base64.b64decode(payload.ciphertext),
+            ).decode("utf-8")
+            params = json.loads(plaintext)
+        case _:
+            raise RuntimeError("The HPKE context is not initialized")
+
+    search_from: BaseProvider = sources[0]["top_picks"]
+
+    srequest = SuggestionRequest(
+        query=search_from.normalize_query(params["q"]),
+        geolocation=request.scope[ScopeKey.GEOLOCATION],
+    )
+    suggestions = await search_from.query(srequest)
+    suggestions.sort(
+        key=partial(rank, interests=params["interests"].split(",")), reverse=True
+    )
+    resp: list[InterestsSuggestion] = [
+        InterestsSuggestion(url=suggestion.url, categories=suggestion.interests)  # type: ignore
+        for suggestion in suggestions
+    ]
+
+    return JSONResponse(content=jsonable_encoder(resp))
+
+
+def rank(suggestion: TopPickSuggestion, interests: list[str]) -> int:
+    """Ranking function for Top Picks."""
+    score: int = 0
+    for interest in interests:
+        if interest in suggestion.interests:
+            score += 1
+    suggestion.score += score / 10
+    return score

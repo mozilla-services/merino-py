@@ -18,7 +18,7 @@ from merino.providers.amo.backends.dynamic import DynamicAmoBackend
 from merino.providers.amo.backends.static import StaticAmoBackend
 from merino.providers.amo.provider import Provider as AmoProvider
 from merino.providers.base import BaseProvider
-from merino.providers.top_picks.backends.top_picks import TopPicksBackend
+from merino.providers.top_picks.backends.top_picks_ex import TopPicksBackend
 from merino.providers.top_picks.provider import Provider as TopPicksProvider
 from merino.providers.weather.backends.accuweather import AccuweatherBackend
 from merino.providers.weather.backends.fake_backends import FakeWeatherBackend

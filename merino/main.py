@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from merino import providers
 from merino.config_logging import configure_logging
 from merino.config_sentry import configure_sentry
+from merino.hpke import configure_hpke
 from merino.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging, metrics, user_agent
 from merino.web import api_v1, dockerflow
@@ -20,6 +21,7 @@ app = FastAPI()
 async def startup_configuration() -> None:
     """Set up various configurations such as logging."""
     configure_logging()
+    configure_hpke()
     configure_sentry()
     await configure_metrics()
 
@@ -58,7 +60,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["GET", "OPTIONS", "HEAD"],
+    allow_methods=["GET", "POST", "OPTIONS", "HEAD"],
 )
 app.add_middleware(metrics.MetricsMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
