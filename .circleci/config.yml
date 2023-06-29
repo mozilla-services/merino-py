@@ -59,16 +59,12 @@ workflows:
           <<: *main-filters
           requires:
             - docs-build
-      - check-for-deployment:
+      - docker-image-publish-locust:
           <<: *main-filters
           requires:
             - checks
             - test-coverage-check
             - contract-tests
-      - docker-image-publish-locust:
-          <<: *main-filters
-          requires:
-            - check-for-deployment
       - docker-image-publish:
           <<: *main-filters
           requires:
@@ -158,7 +154,6 @@ jobs:
             - merinopy.tar.gz
   contract-tests:
     machine:
-      docker_layer_caching: false
       image: ubuntu-2004:2023.04.2
     working_directory: ~/merino
     steps:
@@ -170,14 +165,13 @@ jobs:
           command: docker load -i /tmp/workspace/merinopy.tar.gz
       - run:
           name: Contract tests
+          environment:
+            TEST_RESULTS_DIR: workspace/test-results
           command: |
             sudo chown 1000:1000 tests/contract/kinto-attachments
             make run-contract-tests
-  check-for-deployment:
-    docker:
-      - image: cimg/base:2022.08
-    steps:
-      - checkout
+      - store_test_results:
+          path: workspace/test-results
   docker-image-publish:
     # Pushing a new production Docker image to the Docker Hub registry triggers a
     # webhook that starts the Jenkins deployment workflow

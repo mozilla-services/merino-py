@@ -28,6 +28,7 @@ services:
     volumes:
       - ./volumes/client:/tmp/client
       - ./volumes/kinto:/tmp/kinto
+      - ../../${TEST_RESULTS_DIR:-workspace/test-results}:/tmp/test-results
       - ../../dev/wait-for-it.sh:/wait-for-it.sh
     environment:
       MERINO_URL: http://merino:8000
@@ -39,7 +40,7 @@ services:
       KINTO_DATA_DIR: /tmp/kinto
       KINTO_ATTACHMENTS_URL: http://kinto-attachments:80
     command: >
-      /wait-for-it.sh merino:8000 --strict -- pytest -vv
+      /wait-for-it.sh merino:8000 --strict -- pytest --junit-xml=/tmp/test-results/contract_results.xml -vv
 
   kinto:
     image: mozilla/kinto-dist:25.0.0
