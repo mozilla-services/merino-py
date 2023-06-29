@@ -39,7 +39,8 @@ class ChunkedRemoteSettingsUploader:
             auth="my-auth",
             bucket="my-bucket",
             collection="my-collection",
-            server="http://example.com/"
+            server="http://example.com/",
+            total_suggestion_count=1234
         ) as uploader:
             for s in my_suggestions:
                 uploader.add_suggestion(s)
@@ -83,6 +84,7 @@ class ChunkedRemoteSettingsUploader:
     kinto: kinto_http.Client
     record_type: str
     suggestion_score_fallback: float | None
+    total_suggestion_count: int | None
 
     def __init__(
         self,
@@ -94,6 +96,7 @@ class ChunkedRemoteSettingsUploader:
         server: str,
         dry_run: bool = False,
         suggestion_score_fallback: float | None = None,
+        total_suggestion_count: int | None = None,
     ):
         """Initialize the uploader."""
         self.chunk_size = chunk_size
@@ -101,6 +104,7 @@ class ChunkedRemoteSettingsUploader:
         self.dry_run = dry_run
         self.record_type = record_type
         self.suggestion_score_fallback = suggestion_score_fallback
+        self.total_suggestion_count = total_suggestion_count
         self.kinto = kinto_http.Client(
             server_url=server, bucket=bucket, collection=collection, auth=auth
         )
@@ -149,13 +153,16 @@ class ChunkedRemoteSettingsUploader:
 
     def _upload_chunk(self, chunk: _Chunk) -> None:
         """Create a record and attachment for a chunk."""
-        record_id = "-".join(
-            [
-                self.record_type,
-                str(chunk.start_index),
-                str(chunk.start_index + chunk.size),
-            ]
+        # The record ID will be "{record_type}-{start}-{end}", where `start` and
+        # `end` are zero-padded based on the total suggestion count.
+        places = (
+            0
+            if not self.total_suggestion_count
+            else len(str(self.total_suggestion_count))
         )
+        start = f"{chunk.start_index:0{places}}"
+        end = f"{chunk.start_index + chunk.size:0{places}}"
+        record_id = "-".join([self.record_type, start, end])
         record = {
             "id": record_id,
             "type": self.record_type,

@@ -9,9 +9,7 @@ from typing import Any
 
 from requests_toolbelt.multipart.decoder import MultipartDecoder
 
-from merino.jobs.amo_rs_uploader.chunked_rs_uploader import (
-    ChunkedRemoteSettingsUploader,
-)
+from merino.jobs.utils.chunked_rs_uploader import ChunkedRemoteSettingsUploader
 
 TEST_UPLOADER_KWARGS: dict[str, Any] = {
     "auth": "Bearer auth",
@@ -44,12 +42,13 @@ class Record:
         server: str = TEST_UPLOADER_KWARGS["server"],
         type: str = TEST_UPLOADER_KWARGS["record_type"],
         suggestion_score: float | None = None,
+        id: str | None = None,
     ):
         self.start_index = start_index
         self.size = size
         self.type = type
         self.suggestion_score = suggestion_score
-        self.id = f"{type}-{start_index}-{size}"
+        self.id = id or f"{type}-{start_index}-{size}"
         self.url = (
             f"{server}/buckets/{bucket}/collections/{collection}/records/{self.id}"
         )
@@ -307,6 +306,27 @@ def test_suggestion_score_fallback_overridden(requests_mock):
         },
         expected_records=[
             Record(0, 10, suggestion_score=0.34),
+        ],
+    )
+
+
+def test_total_suggestion_count(requests_mock):
+    """Tests passing a total suggestion count so record IDs contain zero-padded
+    start and end indexes.
+    """
+    record_type = TEST_UPLOADER_KWARGS["record_type"]
+    do_upload_test(
+        requests_mock,
+        chunk_size=500,
+        suggestion_count=1999,
+        uploader_kwargs={
+            "total_suggestion_count": 1999,
+        },
+        expected_records=[
+            Record(0, 500, id=f"{record_type}-0000-0500"),
+            Record(500, 1000, id=f"{record_type}-0500-1000"),
+            Record(1000, 1500, id=f"{record_type}-1000-1500"),
+            Record(1500, 1999, id=f"{record_type}-1500-1999"),
         ],
     )
 

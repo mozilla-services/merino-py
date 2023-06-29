@@ -6,9 +6,7 @@ from typing import Any
 import typer
 
 from merino.config import settings as config
-from merino.jobs.amo_rs_uploader.chunked_rs_uploader import (
-    ChunkedRemoteSettingsUploader,
-)
+from merino.jobs.utils.chunked_rs_uploader import ChunkedRemoteSettingsUploader
 from merino.providers.amo.addons_data import ADDON_DATA, ADDON_KEYWORDS
 from merino.providers.amo.backends.dynamic import DynamicAmoBackend
 
@@ -131,6 +129,7 @@ async def _upload(
         record_type=record_type,
         server=server,
         suggestion_score_fallback=score,
+        total_suggestion_count=len(backend.dynamic_data),
     ) as uploader:
         if delete_existing_records:
             uploader.delete_records()
