@@ -235,10 +235,19 @@ async def _upload_file_object(
             if field not in row:
                 raise MissingFieldError(f"Missing field {field}")
 
-        # The keywords fields are comma-delimited strings. Split them into lists.
+        # The keywords fields are comma-delimited strings. Split them into lists
+        # and transform each individual keyword string as follows:
+        # - Lowercase
+        # - Remove leading and trailing space
+        # - Filter out empty keywords
         keywords = {}
         for field in KEYWORDS_FIELDS:
-            keywords[field] = [*map(str.strip, row[field].lower().split(","))]
+            keywords[field] = [
+                *filter(
+                    lambda kw: len(kw) > 0,
+                    map(str.strip, row[field].lower().split(",")),
+                )
+            ]
 
         suggestions.append(
             Suggestion(
@@ -265,4 +274,4 @@ async def _upload_file_object(
             uploader.delete_records()
 
         for suggestion in suggestions:
-            uploader.add_suggestion(suggestion)
+            uploader.add_suggestion(vars(suggestion))
