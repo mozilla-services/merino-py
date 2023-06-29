@@ -131,8 +131,10 @@ a GKE cluster
   kubectl scale deployment/locust-worker --replicas=10
   ```
 * To apply new changes to an existing GCP Cluster, execute the `setup_k8s.sh` file and select the
-  **setup** option. This option will consider the local commit history, creating new containers and
-  deploying them (see [Container Registry][container_registry])
+  **setup** option.
+    * This option will consider the local commit history, creating new containers and
+      deploying them (see [Container Registry][container_registry])
+    * **Reset the files in the `kubernetes-config` directory between executions of the script**
 
 ### Run Test Session
 
