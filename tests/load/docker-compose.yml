@@ -1,26 +1,16 @@
 version: "3"
 services:
-  merino:
-    image: app:build
-    container_name: merino
-    environment:
-      MERINO__ENV: "ci"
-    volumes:
-      - ../../dev:/tmp/dev
-
   locust_master:
     image: locust
     build:
       context: ../../
       dockerfile: ./tests/load/Dockerfile
     container_name: locust_master
-    depends_on:
-      - merino
     ports:
       - "8089:8089"
     environment:
       # Set environment variables, see https://docs.locust.io/en/stable/configuration.html#environment-variables
-      LOCUST_HOST: http://merino:8000
+      LOCUST_HOST: http://localhost:8000
       LOAD_TESTS__LOGGING_LEVEL: 10
       MERINO_REMOTE_SETTINGS__SERVER: "https://firefox.settings.services.mozilla.com"
       MERINO_REMOTE_SETTINGS__BUCKET: "main"
