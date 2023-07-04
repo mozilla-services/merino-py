@@ -61,6 +61,7 @@ class AccuweatherBackend:
     url_forecasts_path: str
     url_param_partner_code: Optional[str]
     partner_code: Optional[str]
+    http_client: AsyncClient
 
     def __init__(
         self,
@@ -107,6 +108,7 @@ class AccuweatherBackend:
         self.url_forecasts_path = url_forecasts_path
         self.url_param_partner_code = url_param_partner_code
         self.partner_code = partner_code
+        self.http_client = AsyncClient(base_url=self.url_base)
 
     def cache_key_for_accuweather_request(
         self, url: str, query_params: dict[str, str] = {}
@@ -127,7 +129,7 @@ class AccuweatherBackend:
         return f"{self.__class__.__name__}:v1:{url}"
 
     async def get_request(
-        self, client: AsyncClient, url_path: str, params: dict[str, str] = {}
+        self, url_path: str, params: dict[str, str] = {}
     ) -> dict[str, Any]:
         """Get API response. Attempt to get it from cache first,
         then actually make the call if there's a cache miss.
@@ -148,7 +150,7 @@ class AccuweatherBackend:
             )
 
             with self.metrics_client.timeit(f"accuweather.request.{request_type}.get"):
-                response: Response = await client.get(url_path, params=params)
+                response: Response = await self.http_client.get(url_path, params=params)
                 response.raise_for_status()
 
             response_expiry: str = response.headers.get("Expires")
@@ -214,34 +216,27 @@ class AccuweatherBackend:
         if not country or not postal_code:
             raise AccuweatherError("Country and/or postal code unknown")
 
-        async with AsyncClient(base_url=self.url_base) as client:
-            if not (location := await self.get_location(client, country, postal_code)):
-                return None
-            try:
-                async with asyncio.TaskGroup() as tg:
-                    task_current = tg.create_task(
-                        self.get_current_conditions(client, location.key)
-                    )
-                    task_forecast = tg.create_task(
-                        self.get_forecast(client, location.key)
-                    )
-            except ExceptionGroup as e:
-                raise AccuweatherError(
-                    f"Failed to fetch weather report: {e.exceptions}"
-                )
+        if not (location := await self.get_location(country, postal_code)):
+            return None
+        try:
+            async with asyncio.TaskGroup() as tg:
+                task_current = tg.create_task(self.get_current_conditions(location.key))
+                task_forecast = tg.create_task(self.get_forecast(location.key))
+        except ExceptionGroup as e:
+            raise AccuweatherError(f"Failed to fetch weather report: {e.exceptions}")
 
-            return (
-                WeatherReport(
-                    city_name=location.localized_name,
-                    current_conditions=current,
-                    forecast=forecast,
-                )
-                if (current := await task_current) and (forecast := await task_forecast)
-                else None
+        return (
+            WeatherReport(
+                city_name=location.localized_name,
+                current_conditions=current,
+                forecast=forecast,
             )
+            if (current := await task_current) and (forecast := await task_forecast)
+            else None
+        )
 
     async def get_location(
-        self, client: AsyncClient, country: str, postal_code: str
+        self, country: str, postal_code: str
     ) -> Optional[AccuweatherLocation]:
         """Return location data for a specific country and postal code or None if
         location data is not found.
@@ -253,7 +248,6 @@ class AccuweatherBackend:
         """
         try:
             response_json: dict[str, str] = await self.get_request(
-                client,
                 self.url_postalcodes_path.format(country_code=country),
                 params={
                     self.url_param_api_key: self.api_key,
@@ -279,7 +273,7 @@ class AccuweatherBackend:
                 return None
 
     async def get_current_conditions(
-        self, client: AsyncClient, location_key: str
+        self, location_key: str
     ) -> Optional[CurrentConditions]:
         """Return current conditions data for a specific location or None if current
         conditions data is not found.
@@ -291,7 +285,6 @@ class AccuweatherBackend:
         """
         try:
             response_json: dict[str, str] = await self.get_request(
-                client,
                 self.url_current_conditions_path.format(location_key=location_key),
                 params={
                     self.url_param_api_key: self.api_key,
@@ -336,9 +329,7 @@ class AccuweatherBackend:
             case _:
                 return None
 
-    async def get_forecast(
-        self, client: AsyncClient, location_key: str
-    ) -> Optional[Forecast]:
+    async def get_forecast(self, location_key: str) -> Optional[Forecast]:
         """Return daily forecast data for a specific location or None if daily
         forecast data is not found.
 
@@ -349,7 +340,6 @@ class AccuweatherBackend:
         """
         try:
             response_json: dict[str, Any] = await self.get_request(
-                client,
                 self.url_forecasts_path.format(location_key=location_key),
                 params={
                     self.url_param_api_key: self.api_key,
@@ -410,4 +400,5 @@ class AccuweatherBackend:
 
     async def shutdown(self) -> None:
         """Close out the cache during shutdown."""
+        await self.http_client.aclose()
         await self.cache.close()
