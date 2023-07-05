@@ -181,18 +181,33 @@ that the individual(s) who authored and merged the Pull-Request should do so, as
 most familiar with their changes and who can tell, by looking at the data, if anything looks
 anomalous. Developers <strong>must</strong> monitor the <a href="https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&amp;from=now-24h&amp;to=now&amp;var-environment=prodpy&amp;refresh=1m">Merino Application &amp; Infrastructure</a>
 dashboard for any anomaly, for example significant changes in HTTP response codes, increase in
-latency, cpu/memory usage (most things under the 'Infrastructure' heading).</p>
+latency, container/cpu/memory usage (most things under the 'Infrastructure' heading).</p>
 <h3 id="what-to-do-if-tests-fail-during-deployment"><a class="header" href="#what-to-do-if-tests-fail-during-deployment">What to do if tests fail during deployment?</a></h3>
 <ol>
-<li>Investigate the cause of the test failure
+<li>
+<p>Investigate the cause of the test failure</p>
 <ul>
 <li>For functional tests (unit, integration or contract), logs can be found on
 <a href="https://app.circleci.com/pipelines/github/mozilla-services/merino-py">CircleCI</a></li>
-<li>For performance tests (load), insights can be found in the Locust logs or
-<a href="https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&amp;from=now-24h&amp;to=now&amp;var-environment=prodpy&amp;refresh=1m">Grafana</a></li>
+<li>For performance tests (load), insights can be found on <a href="https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&amp;from=now-24h&amp;to=now&amp;var-environment=prodpy&amp;refresh=1m">Grafana</a> and in the
+Locust logs. To access the Locust logs:
+<ol>
+<li>Open a cloud shell in the <a href="https://console.cloud.google.com/kubernetes/list/overview?project=moz-fx-merino-nonprod-ee93">Merino stage environment</a></li>
+<li>Authenticate by executing the following command:</li>
+</ol>
+<pre><code class="language-shell">gcloud container clusters get-credentials merino-nonprod-v1 \
+  --region us-west1 --project moz-fx-merino-nonprod-ee93
+</code></pre>
+<ol start="3">
+<li>Access the data in the Kubernetes pod by executing the following command:</li>
+</ol>
+<pre><code class="language-shell">  kubectl exec -it -n locust-merino locust-master-0 -- bash -c &quot;cd /data &amp;&amp; /bin/bash&quot;
+</code></pre>
+</li>
 </ul>
 </li>
-<li>Fix or mitigate the failure
+<li>
+<p>Fix or mitigate the failure</p>
 <ul>
 <li>If a fix can be identified in a relatively short time, then submit a fix</li>
 <li>If the failure is caused by a flaky or intermittent functional test and the risk to the
@@ -203,7 +218,8 @@ end-user experience is low, then the test can be &quot;skipped&quot;, using the 
 </li>
 </ul>
 </li>
-<li>Re-Deploy
+<li>
+<p>Re-Deploy</p>
 <ul>
 <li>A fix or mitigation will most likely require a PR merge to the <code>main</code> branch that will
 automatically trigger the deployment process. If this is not possible, a re-deployment can be
