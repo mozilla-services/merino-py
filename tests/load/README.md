@@ -65,7 +65,8 @@ make load-tests
 * Setup parameters:
   * Number of users: 75
   * Spawn rate: 2
-  * Host: http://merino:8000 
+  * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net' (Alternatively, such as when
+    profiling, point the host to a local instance of merino)
   * Run time (optional): 10m
 * Select "Start Swarming"
 
@@ -78,7 +79,8 @@ will stop automatically.
 #### 3. Analyse Results
 
 * See [Distributed GCP Execution - Analyse Results](#3-analyse-results-1)
-* Only client-side measures, provided by Locust, are available for local execution
+* Only client-side measures, provided by Locust, are available when executing against a
+  local instance of Merino.
 
 ### Clean-up Environment
 
@@ -164,31 +166,38 @@ will stop automatically.
 
 **RPS**
 * The request-per-second load target for Merino is `1500`
-* Locust reports client-side RPS via the "merino_stats.csv" file and the UI 
+* Locust reports client-side RPS via the "merino_stats.csv" file and the UI
   (under the "Statistics" tab or the "Charts" tab)
-* [Grafana][grafana] reports the server-side RPS via the 
+* [Grafana][grafana] reports the server-side RPS via the
   "HTTP requests per second per country" chart
 
-**HTTP Request Failures** 
+**HTTP Request Failures**
 * The number of responses with errors (5xx response codes) should be `0`
-* Locust reports Failures via the "merino_failures.csv" file and the UI 
+* Locust reports Failures via the "merino_failures.csv" file and the UI
   (under the "Failures" tab or the "Charts" tab)
 * [Grafana][grafana] reports Failures via the "HTTP Response codes" chart and the
   "HTTP 5xx error rate" chart
 
 **Exceptions**
 * The number of exceptions raised by the test framework should be `0`
-* Locust reports Exceptions via the "merino_exceptions.csv" file and the UI 
+* Locust reports Exceptions via the "merino_exceptions.csv" file and the UI
   (under the "Exceptions" tab)
 
 **Latency**
-* The HTTP client-side response time (aka request duration) for 95 percent of users 
-  is required to be 200ms or less (`p95 <= 200ms`)
-* Locust reports client-side latency via the "merino_stats.csv" file and the UI 
+* The HTTP client-side response time (aka request duration) for 95 percent of users
+  is required to be 200ms or less (`p95 <= 200ms`), excluding weather requests
+* Locust reports client-side latency via the "merino_stats.csv" file and the UI
   (under the "Statistics" tab or the "Charts" tab)
-  * _Warning!_ A Locust worker with too many users will bottleneck RPS and inflate 
-    client-side latency measures
-* [Grafana][grafana] reports server-side latency via the "p95 latency" chart 
+  * _Warning!_ A Locust worker with too many users will bottleneck RPS and inflate
+    client-side latency measures. Locust reports worker CPU and memory usage metrics via
+    the UI (under the "Workers" tab)
+* [Grafana][grafana] reports server-side latency via the "p95 latency" chart
+
+**Resource Consumption**
+* To conserve costs, resource allocation must be kept to a minimum. It is expected that
+  container, CPU and memory usage should trend consistently between load test runs.
+* [Grafana][grafana] reports metrics on resources via the "Container Count",
+  "CPU usage time sum" and "Memory usage sum" charts
 
 #### 4. Report Results
 
