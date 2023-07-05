@@ -6,7 +6,7 @@
 import datetime
 import hashlib
 import json
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from unittest.mock import AsyncMock
 
 import freezegun
@@ -371,7 +371,8 @@ async def test_get_weather_report(
             low=Temperature(c=13.9, f=57.0),
         ),
     )
-    accuweather.http_client.get.side_effect = [
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
         Response(
             status_code=200,
             headers=response_header,
@@ -415,7 +416,8 @@ async def test_get_weather_report_failed_location_query(
     """Test that the get_weather_report method returns None if the AccuWeather
     postal code search query yields no result.
     """
-    accuweather.http_client.get.return_value = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=200,
         headers=response_header,
         content=b"[]",
@@ -441,7 +443,8 @@ async def test_get_weather_report_failed_current_conditions_query(
     """Test that the get_weather_report method returns None if the AccuWeather
     current conditions query yields no result.
     """
-    accuweather.http_client.get.side_effect = [
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
         Response(
             status_code=200,
             headers=response_header,
@@ -487,7 +490,8 @@ async def test_get_weather_report_handles_exception_group_properly(
     """Test that the get_weather_report method raises an error if current condition call throws
     an error
     """
-    accuweather.http_client.get.side_effect = [
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
         Response(
             status_code=200,
             headers=response_header,
@@ -524,7 +528,8 @@ async def test_get_weather_report_failed_forecast_query(
     """Test that the get_weather_report method returns None if the AccuWeather
     forecast query yields no result.
     """
-    accuweather.http_client.get.side_effect = [
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
         Response(
             status_code=200,
             headers=response_header,
@@ -594,7 +599,8 @@ async def test_get_location(
     )
     country: str = "US"
     postal_code: str = "94105"
-    accuweather.http_client.get.return_value = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=200,
         headers=response_header,
         content=accuweather_location_response,
@@ -631,9 +637,11 @@ async def test_get_location_from_cache(
     country: str = "US"
     postal_code: str = "94105"
 
-    accuweather = AccuweatherBackend(
+    accuweather: AccuweatherBackend = AccuweatherBackend(
         cache=RedisAdapter(redis_mock), **accuweather_parameters
     )
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
     location: Optional[AccuweatherLocation] = await accuweather.get_location(
         country, postal_code
     )
@@ -644,7 +652,7 @@ async def test_get_location_from_cache(
         f"AccuweatherBackend:v1:/locations/v1/postalcodes/{country}/search.json:"
         f"{hashlib.blake2s(expected_query_string).hexdigest()}"
     )
-    accuweather.http_client.get.assert_not_called()
+    client_mock.get.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -656,7 +664,8 @@ async def test_get_location_no_location_returned(
     """
     country: str = "US"
     postal_code: str = "94105"
-    accuweather.http_client.get.return_value = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=200,
         headers=response_header,
         content=b"[]",
@@ -683,22 +692,8 @@ async def test_get_location_error(
     expected_error_value: str = "Unexpected location response"
     country: str = "US"
     postal_code: str = "94105"
-    mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
-    mock_client.get.return_value = Response(
-        status_code=403,
-        content=(
-            b"{"
-            b'"Code":"Unauthorized",'
-            b'"Message":"Api Authorization failed",'
-            b'"Reference":"/locations/v1/postalcodes/US/search.json?apikey=&details=true"'
-            b"}"
-        ),
-        request=Request(
-            method="GET",
-            url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
-        ),
-    )
-    accuweather.http_client.get.return_value = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=403,
         content=(
             b"{"
@@ -752,7 +747,8 @@ async def test_get_current_conditions(
     )
     location_key: str = "39376_PC"
     accuweather: AccuweatherBackend = request.getfixturevalue(accuweather_fixture)
-    accuweather.http_client.get.return_value = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=200,
         headers=response_header,
         content=accuweather_current_conditions_response,
@@ -807,7 +803,8 @@ async def test_get_current_conditions_from_cache(
     redis_mock.get.assert_called_once_with(
         "AccuweatherBackend:v1:/currentconditions/v1/39376_PC.json"
     )
-    accuweather.http_client.get.assert_not_called()
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -818,7 +815,8 @@ async def test_get_current_conditions_no_current_conditions_returned(
     is not as expected.
     """
     location_key: str = "39376_PC"
-    accuweather.http_client.get.return_value = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=200,
         headers=response_header,
         content=b"[]",
@@ -844,7 +842,8 @@ async def test_get_current_conditions_error(
     """
     expected_error_value: str = "Unexpected current conditions response"
     location_key: str = "INVALID"
-    accuweather.http_client.get.return_value = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=400,
         headers=response_header,
         content=(
@@ -908,7 +907,8 @@ async def test_get_forecast(
     location_key: str = "39376_PC"
     content: bytes = request.getfixturevalue(forecast_response_fixture)
     accuweather: AccuweatherBackend = request.getfixturevalue(accuweather_fixture)
-    accuweather.http_client.get.return_value = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=200,
         headers=response_header,
         content=content,
@@ -954,6 +954,7 @@ async def test_get_forecast_from_cache(
     accuweather: AccuweatherBackend = AccuweatherBackend(
         cache=RedisAdapter(redis_mock), **accuweather_parameters
     )
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
     forecast: Optional[Forecast] = await accuweather.get_forecast(location_key)
 
@@ -961,7 +962,7 @@ async def test_get_forecast_from_cache(
     redis_mock.get.assert_called_once_with(
         "AccuweatherBackend:v1:/forecasts/v1/daily/1day/39376_PC.json"
     )
-    accuweather.http_client.get.assert_not_called()
+    client_mock.get.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -973,7 +974,8 @@ async def test_get_forecast_no_forecast_returned(
     expected.
     """
     location_key: str = "39376_PC"
-    accuweather.http_client.get.return_value = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=200,
         headers=response_header,
         content=b"{}",
@@ -995,7 +997,8 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend) -> None:
     """
     expected_error_value: str = "Unexpected forecast response"
     location_key: str = "INVALID"
-    accuweather.http_client.get.return_value = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=400,
         content=(
             b"{"
@@ -1126,7 +1129,9 @@ async def test_get_request_cache_get_errors(
     expected_client_response = {"hello": "world"}
 
     accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
-    accuweather.http_client.get.return_value = Response(
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=200,
         headers={"Expires": expiry_date.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)},
         content=json.dumps(expected_client_response).encode("utf-8"),
@@ -1186,7 +1191,9 @@ async def test_get_request_cache_store_errors(
     accuweather: AccuweatherBackend = AccuweatherBackend(
         cache=redis_mock, **accuweather_parameters
     )
-    accuweather.http_client.get.return_value = Response(
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=200,
         headers={"Expires": expiry_date.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)},
         content=json.dumps(expected_client_response).encode("utf-8"),
