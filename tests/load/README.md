@@ -65,7 +65,8 @@ make load-tests
 * Setup parameters:
   * Number of users: 75
   * Spawn rate: 2
-  * Host: http://merino:8000 
+  * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net' (Alternatively, such as when
+    profiling, point the host to a local instance of merino)
   * Run time (optional): 10m
 * Select "Start Swarming"
 
@@ -78,7 +79,8 @@ will stop automatically.
 #### 3. Analyse Results
 
 * See [Distributed GCP Execution - Analyse Results](#3-analyse-results-1)
-* Only client-side measures, provided by Locust, are available for local execution
+* Only client-side measures, provided by Locust, are available when executing against a
+  local instance of Merino.
 
 ### Clean-up Environment
 
