@@ -466,10 +466,3 @@ class MerinoUser(HttpUser):
         start: int = struct.unpack(">I", socket.inet_aton(begin_ip_address))[0]
         stop: int = struct.unpack(">I", socket.inet_aton(end_ip_address))[0]
         return socket.inet_ntoa(struct.pack(">I", randint(start, stop)))  # nosec
-
-    @task(weight=0)
-    def wikifruit_suggestions(self) -> None:
-        """Send multiple requests for random WikiFruit queries."""
-        # These queries are supported by the WikiFruit provider
-        for fruit in ("apple", "banana", "cherry"):
-            request_suggestions(self.client, fruit)

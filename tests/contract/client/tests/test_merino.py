@@ -190,24 +190,11 @@ def assert_200_response(
     ]
     assert sorted_merino_suggestions == sorted_expected_suggestions
 
-    # This is for selecting the right expected suggestion for a given Merino
-    # suggestion based on the ('provider', 'block_id') fields.
-    expected_suggestions_by_id = {
-        suggestion_id(suggestion): suggestion for suggestion in step_content.suggestions
-    }
-
     for suggestion in merino_content.suggestions:
         if "remote_settings" in suggestion.provider:
             # The icon URL is not static for RS suggestions
             expected_suggestion_icon: str = fetch_kinto_icon_url(suggestion.title)
             assert suggestion.icon == expected_suggestion_icon
-            continue
-
-        if "wiki_fruit" in suggestion.provider:
-            # The icon URL is static for WikiFruit suggestions
-            expected_suggestion = expected_suggestions_by_id[suggestion_id(suggestion)]
-            assert suggestion.icon == expected_suggestion.icon
-            continue
 
 
 def assert_200_version_endpoint_response(

@@ -56,7 +56,6 @@ _validators = [
             "dev/top_picks_for_ci.json",
         ],
     ),
-    Validator("providers.wiki_fruit.enabled_by_default", is_type_of=bool),
     Validator("providers.wikipedia.backend", is_in=["elasticsearch", "test"]),
     Validator("providers.wikipedia.enabled_by_default", is_type_of=bool),
     Validator("providers.wikipedia.es_url", is_type_of=str),
