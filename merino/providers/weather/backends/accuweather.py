@@ -53,7 +53,6 @@ class AccuweatherBackend:
     cache: CacheAdapter
     cached_report_ttl_sec: int
     metrics_client: aiodogstatsd.Client
-    url_base: str
     url_param_api_key: str
     url_postalcodes_path: str
     url_postalcodes_param_query: str
@@ -69,7 +68,7 @@ class AccuweatherBackend:
         cache: CacheAdapter,
         cached_report_ttl_sec: int,
         metrics_client: aiodogstatsd.Client,
-        url_base: str,
+        http_client: AsyncClient,
         url_param_api_key: str,
         url_postalcodes_path: str,
         url_postalcodes_param_query: str,
@@ -77,7 +76,6 @@ class AccuweatherBackend:
         url_forecasts_path: str,
         url_param_partner_code: Optional[str] = None,
         partner_code: Optional[str] = None,
-        http_client: AsyncClient = None,
     ) -> None:
         """Initialize the AccuWeather backend.
 
@@ -88,8 +86,7 @@ class AccuweatherBackend:
             raise ValueError("AccuWeather API key not specified")
 
         if (
-            not url_base
-            or not url_param_api_key
+            not url_param_api_key
             or not url_postalcodes_path
             or not url_postalcodes_param_query
             or not url_current_conditions_path
@@ -101,7 +98,7 @@ class AccuweatherBackend:
         self.cache = cache
         self.cached_report_ttl_sec = cached_report_ttl_sec
         self.metrics_client = metrics_client
-        self.url_base = url_base
+        self.http_client = http_client
         self.url_param_api_key = url_param_api_key
         self.url_postalcodes_path = url_postalcodes_path
         self.url_postalcodes_param_query = url_postalcodes_param_query
@@ -109,9 +106,6 @@ class AccuweatherBackend:
         self.url_forecasts_path = url_forecasts_path
         self.url_param_partner_code = url_param_partner_code
         self.partner_code = partner_code
-        self.http_client = (
-            AsyncClient(base_url=self.url_base) if http_client is None else http_client
-        )
 
     def cache_key_for_accuweather_request(
         self, url: str, query_params: dict[str, str] = {}

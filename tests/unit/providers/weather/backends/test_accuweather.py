@@ -60,13 +60,12 @@ def fixture_accuweather_parameters(
         "api_key": "test",
         "cached_report_ttl_sec": 1800,
         "metrics_client": statsd_mock,
-        "url_base": "test://test",
+        "http_client": mocker.AsyncMock(spec=AsyncClient),
         "url_param_api_key": "apikey",
         "url_postalcodes_path": "/locations/v1/postalcodes/{country_code}/search.json",
         "url_postalcodes_param_query": "q",
         "url_current_conditions_path": "/currentconditions/v1/{location_key}.json",
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
-        "http_client": mocker.AsyncMock(spec=AsyncClient),
     }
 
 
@@ -315,7 +314,6 @@ def test_init_api_key_value_error(
 @pytest.mark.parametrize(
     "url_value",
     [
-        "url_base",
         "url_param_api_key",
         "url_postalcodes_path",
         "url_postalcodes_param_query",
