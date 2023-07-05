@@ -65,7 +65,7 @@ that the individual(s) who authored and merged the Pull-Request should do so, as
 most familiar with their changes and who can tell, by looking at the data, if anything looks
 anomalous. Developers **must** monitor the [Merino Application & Infrastructure][merino_app_info]
 dashboard for any anomaly, for example significant changes in HTTP response codes, increase in
-latency, increased container/cpu/memory usage (most things under the 'Infrastructure' heading).
+latency, container/cpu/memory usage (most things under the 'Infrastructure' heading).
 
 ### What to do if tests fail during deployment?
 
