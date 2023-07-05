@@ -6,8 +6,8 @@
 import datetime
 import hashlib
 import json
-from typing import Any, Optional
-from unittest.mock import AsyncMock, MagicMock
+from typing import Any, Optional, cast
+from unittest.mock import AsyncMock
 
 import freezegun
 import pytest
@@ -52,13 +52,15 @@ def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
 
 
 @pytest.fixture(name="accuweather_parameters")
-def fixture_accuweather_parameters(statsd_mock: Any) -> dict[str, Any]:
+def fixture_accuweather_parameters(
+    mocker: MockerFixture, statsd_mock: Any
+) -> dict[str, Any]:
     """Create an Accuweather object for test."""
     return {
         "api_key": "test",
         "cached_report_ttl_sec": 1800,
         "metrics_client": statsd_mock,
-        "url_base": "test://test",
+        "http_client": mocker.AsyncMock(spec=AsyncClient),
         "url_param_api_key": "apikey",
         "url_postalcodes_path": "/locations/v1/postalcodes/{country_code}/search.json",
         "url_postalcodes_param_query": "q",
@@ -80,7 +82,6 @@ def fixture_response_header() -> dict[str, str]:
 def fixture_accuweather(
     redis_mock_cache_miss: AsyncMock,
     accuweather_parameters: dict[str, Any],
-    statsd_mock: Any,
 ) -> AccuweatherBackend:
     """Create an Accuweather object for test. This object always have cache miss."""
     return AccuweatherBackend(
@@ -313,7 +314,6 @@ def test_init_api_key_value_error(
 @pytest.mark.parametrize(
     "url_value",
     [
-        "url_base",
         "url_param_api_key",
         "url_postalcodes_path",
         "url_postalcodes_param_query",
@@ -340,7 +340,6 @@ def test_init_url_value_error(
 
 @pytest.mark.asyncio
 async def test_get_weather_report(
-    mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     geolocation: Location,
     accuweather_location_response: bytes,
@@ -370,14 +369,18 @@ async def test_get_weather_report(
             low=Temperature(c=13.9, f=57.0),
         ),
     )
-    return_values: list[Response] = [
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
         Response(
             status_code=200,
             headers=response_header,
             content=accuweather_location_response,
             request=Request(
                 method="GET",
-                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+                url=(
+                    "http://www.accuweather.com/locations/v1/postalcodes/US/search.json?"
+                    "apikey=test&q=94105"
+                ),
             ),
         ),
         Response(
@@ -386,7 +389,10 @@ async def test_get_weather_report(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
+                url=(
+                    "http://www.accuweather.com/currentconditions/v1/39376_PC.json?"
+                    "apikey=test"
+                ),
             ),
         ),
         Response(
@@ -395,11 +401,13 @@ async def test_get_weather_report(
             content=accuweather_forecast_response_fahrenheit,
             request=Request(
                 method="GET",
-                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+                url=(
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376_PC.json?"
+                    "apikey=test"
+                ),
             ),
         ),
     ]
-    mocker.patch.object(AsyncClient, "get", side_effect=return_values)
 
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
 
@@ -408,7 +416,6 @@ async def test_get_weather_report(
 
 @pytest.mark.asyncio
 async def test_get_weather_report_failed_location_query(
-    mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     geolocation: Location,
     response_header: dict[str, str],
@@ -416,16 +423,19 @@ async def test_get_weather_report_failed_location_query(
     """Test that the get_weather_report method returns None if the AccuWeather
     postal code search query yields no result.
     """
-    return_value: Response = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=200,
         headers=response_header,
         content=b"[]",
         request=Request(
             method="GET",
-            url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+            url=(
+                "http://www.accuweather.com/locations/v1/postalcodes/US/search.json?"
+                "apikey=test&q=94105"
+            ),
         ),
     )
-    mocker.patch.object(AsyncClient, "get", return_value=return_value)
 
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
 
@@ -434,7 +444,6 @@ async def test_get_weather_report_failed_location_query(
 
 @pytest.mark.asyncio
 async def test_get_weather_report_failed_current_conditions_query(
-    mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     geolocation: Location,
     accuweather_location_response: bytes,
@@ -444,14 +453,18 @@ async def test_get_weather_report_failed_current_conditions_query(
     """Test that the get_weather_report method returns None if the AccuWeather
     current conditions query yields no result.
     """
-    side_effects: list[Response] = [
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
         Response(
             status_code=200,
             headers=response_header,
             content=accuweather_location_response,
             request=Request(
                 method="GET",
-                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+                url=(
+                    "http://www.accuweather.com/locations/v1/postalcodes/US/search.json?"
+                    "apikey=test&q=94105"
+                ),
             ),
         ),
         Response(
@@ -460,7 +473,10 @@ async def test_get_weather_report_failed_current_conditions_query(
             content=b"[]",
             request=Request(
                 method="GET",
-                url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
+                url=(
+                    "http://www.accuweather.com/currentconditions/v1/39376_PC.json?"
+                    "apikey=test"
+                ),
             ),
         ),
         Response(
@@ -469,11 +485,13 @@ async def test_get_weather_report_failed_current_conditions_query(
             content=accuweather_forecast_response_fahrenheit,
             request=Request(
                 method="GET",
-                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+                url=(
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376_PC.json?"
+                    "apikey=test"
+                ),
             ),
         ),
     ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
 
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
 
@@ -482,7 +500,6 @@ async def test_get_weather_report_failed_current_conditions_query(
 
 @pytest.mark.asyncio
 async def test_get_weather_report_handles_exception_group_properly(
-    mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     geolocation: Location,
     accuweather_location_response: bytes,
@@ -492,20 +509,23 @@ async def test_get_weather_report_handles_exception_group_properly(
     """Test that the get_weather_report method raises an error if current condition call throws
     an error
     """
-    side_effects: list[Response | HTTPError] = [
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
         Response(
             status_code=200,
             headers=response_header,
             content=accuweather_location_response,
             request=Request(
                 method="GET",
-                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+                url=(
+                    "http://www.accuweather.com/locations/v1/postalcodes/US/search.json?"
+                    "apikey=test&q=94105"
+                ),
             ),
         ),
         HTTPError("Invalid Request - Current Conditions"),
         HTTPError("Invalid Request - Forecast"),
     ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
     expected_error_value: str = (
         "Failed to fetch weather report: ("
         "AccuweatherError('Unexpected current conditions response'), "
@@ -521,7 +541,6 @@ async def test_get_weather_report_handles_exception_group_properly(
 
 @pytest.mark.asyncio
 async def test_get_weather_report_failed_forecast_query(
-    mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     geolocation: Location,
     accuweather_location_response: bytes,
@@ -531,14 +550,18 @@ async def test_get_weather_report_failed_forecast_query(
     """Test that the get_weather_report method returns None if the AccuWeather
     forecast query yields no result.
     """
-    side_effects: list[Response] = [
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
         Response(
             status_code=200,
             headers=response_header,
             content=accuweather_location_response,
             request=Request(
                 method="GET",
-                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+                url=(
+                    "http://www.accuweather.com/locations/v1/postalcodes/US/search.json?"
+                    "apikey=test&q=94105"
+                ),
             ),
         ),
         Response(
@@ -547,7 +570,10 @@ async def test_get_weather_report_failed_forecast_query(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
+                url=(
+                    "http://www.accuweather.com/currentconditions/v1/39376_PC.json?"
+                    "apikey=test"
+                ),
             ),
         ),
         Response(
@@ -556,11 +582,13 @@ async def test_get_weather_report_failed_forecast_query(
             content=b"{}",
             request=Request(
                 method="GET",
-                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+                url=(
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376_PC.json?"
+                    "apikey=test"
+                ),
             ),
         ),
     ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
 
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
 
@@ -592,7 +620,6 @@ async def test_get_weather_report_invalid_location(
 
 @pytest.mark.asyncio
 async def test_get_location(
-    mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     accuweather_location_response: bytes,
     response_header,
@@ -603,19 +630,20 @@ async def test_get_location(
     )
     country: str = "US"
     postal_code: str = "94105"
-
-    side_effects: list[Response] = [
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=accuweather_location_response,
-            request=Request(
-                method="GET",
-                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        headers=response_header,
+        content=accuweather_location_response,
+        request=Request(
+            method="GET",
+            url=(
+                "http://www.accuweather.com/locations/v1/postalcodes/US/search.json?"
+                "apikey=test&q=94105"
             ),
         ),
-    ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
+    )
+
     location: Optional[AccuweatherLocation] = await accuweather.get_location(
         country, postal_code
     )
@@ -643,11 +671,11 @@ async def test_get_location_from_cache(
     country: str = "US"
     postal_code: str = "94105"
 
-    mock_client: MagicMock = mocker.patch.object(AsyncClient, "get")
-
-    accuweather = AccuweatherBackend(
+    accuweather: AccuweatherBackend = AccuweatherBackend(
         cache=RedisAdapter(redis_mock), **accuweather_parameters
     )
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
     location: Optional[AccuweatherLocation] = await accuweather.get_location(
         country, postal_code
     )
@@ -658,33 +686,31 @@ async def test_get_location_from_cache(
         f"AccuweatherBackend:v1:/locations/v1/postalcodes/{country}/search.json:"
         f"{hashlib.blake2s(expected_query_string).hexdigest()}"
     )
-    mock_client.get.assert_not_called()
+    client_mock.get.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_get_location_no_location_returned(
-    mocker: MockerFixture,
-    accuweather: AccuweatherBackend,
-    response_header: dict[str, str],
+    accuweather: AccuweatherBackend, response_header: dict[str, str]
 ) -> None:
     """Test that the get_location method returns None if the response content is not as
     expected.
     """
     country: str = "US"
     postal_code: str = "94105"
-
-    side_effects: list[Response] = [
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=b"[]",
-            request=Request(
-                method="GET",
-                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        headers=response_header,
+        content=b"[]",
+        request=Request(
+            method="GET",
+            url=(
+                "http://www.accuweather.com/locations/v1/postalcodes/US/search.json?"
+                "apikey=test&q=94105"
             ),
         ),
-    ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
+    )
 
     location: Optional[AccuweatherLocation] = await accuweather.get_location(
         country, postal_code
@@ -694,17 +720,15 @@ async def test_get_location_no_location_returned(
 
 
 @pytest.mark.asyncio
-async def test_get_location_error(
-    mocker: MockerFixture, accuweather: AccuweatherBackend
-) -> None:
+async def test_get_location_error(accuweather: AccuweatherBackend) -> None:
     """Test that the get_location method raises an appropriate exception in the event
     of an AccuWeather API error.
     """
     expected_error_value: str = "Unexpected location response"
     country: str = "US"
     postal_code: str = "94105"
-    mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
-    mock_client.get.return_value = Response(
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=403,
         content=(
             b"{"
@@ -715,27 +739,12 @@ async def test_get_location_error(
         ),
         request=Request(
             method="GET",
-            url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+            url=(
+                "http://www.accuweather.com/locations/v1/postalcodes/US/search.json?"
+                "apikey=test&q=94105"
+            ),
         ),
     )
-
-    side_effects: list[Response] = [
-        Response(
-            status_code=403,
-            content=(
-                b"{"
-                b'"Code":"Unauthorized",'
-                b'"Message":"Api Authorization failed",'
-                b'"Reference":"/locations/v1/postalcodes/US/search.json?apikey=&details=true"'
-                b"}"
-            ),
-            request=Request(
-                method="GET",
-                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
-            ),
-        ),
-    ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
 
     with pytest.raises(AccuweatherError) as accuweather_error:
         await accuweather.get_location(country, postal_code)
@@ -762,7 +771,6 @@ async def test_get_location_error(
 @pytest.mark.asyncio
 async def test_get_current_conditions(
     request: FixtureRequest,
-    mocker: MockerFixture,
     accuweather_fixture: str,
     accuweather_current_conditions_response: bytes,
     expected_current_conditions_url: str,
@@ -776,21 +784,21 @@ async def test_get_current_conditions(
         temperature=Temperature(c=15.5, f=60),
     )
     location_key: str = "39376_PC"
-
-    side_effects: list[Response] = [
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=accuweather_current_conditions_response,
-            request=Request(
-                method="GET",
-                url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
+    accuweather: AccuweatherBackend = request.getfixturevalue(accuweather_fixture)
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        headers=response_header,
+        content=accuweather_current_conditions_response,
+        request=Request(
+            method="GET",
+            url=(
+                "http://www.accuweather.com/currentconditions/v1/39376_PC.json?"
+                "apikey=test"
             ),
         ),
-    ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
+    )
 
-    accuweather: AccuweatherBackend = request.getfixturevalue(accuweather_fixture)
     conditions: Optional[CurrentConditions] = await accuweather.get_current_conditions(
         location_key
     )
@@ -823,44 +831,44 @@ async def test_get_current_conditions_from_cache(
         temperature=Temperature(c=15.5, f=60),
     )
     location_key: str = "39376_PC"
-    mock_client: MagicMock = mocker.patch.object(AsyncClient, "get")
 
-    accuweather = AccuweatherBackend(
+    accuweather: AccuweatherBackend = AccuweatherBackend(
         cache=RedisAdapter(redis_mock), **accuweather_parameters
     )
+
     conditions: Optional[CurrentConditions] = await accuweather.get_current_conditions(
         location_key
     )
+
     assert conditions == expected_conditions
     redis_mock.get.assert_called_once_with(
         "AccuweatherBackend:v1:/currentconditions/v1/39376_PC.json"
     )
-    mock_client.get.assert_not_called()
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_get_current_conditions_no_current_conditions_returned(
-    mocker: MockerFixture,
-    accuweather: AccuweatherBackend,
-    response_header: dict[str, str],
+    accuweather: AccuweatherBackend, response_header: dict[str, str]
 ) -> None:
     """Test that the get_current_conditions method returns None if the response content
     is not as expected.
     """
     location_key: str = "39376_PC"
-
-    side_effects: list[Response] = [
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=b"[]",
-            request=Request(
-                method="GET",
-                url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        headers=response_header,
+        content=b"[]",
+        request=Request(
+            method="GET",
+            url=(
+                "http://www.accuweather.com/currentconditions/v1/39376_PC.json?"
+                "apikey=test"
             ),
         ),
-    ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
+    )
 
     conditions: Optional[CurrentConditions] = await accuweather.get_current_conditions(
         location_key
@@ -871,34 +879,32 @@ async def test_get_current_conditions_no_current_conditions_returned(
 
 @pytest.mark.asyncio
 async def test_get_current_conditions_error(
-    mocker: MockerFixture,
-    accuweather: AccuweatherBackend,
-    response_header: dict[str, str],
+    accuweather: AccuweatherBackend, response_header: dict[str, str]
 ) -> None:
     """Test that the get_current_conditions method raises an appropriate exception in
     the event of an AccuWeather API error.
     """
     expected_error_value: str = "Unexpected current conditions response"
     location_key: str = "INVALID"
-
-    side_effects: list[Response] = [
-        Response(
-            status_code=400,
-            headers=response_header,
-            content=(
-                b"{"
-                b"'Code':'400',"
-                b"'Message':'Invalid location key: INVALID',"
-                b"'Reference':'/currentconditions/v1/INVALID'"
-                b"}"
-            ),
-            request=Request(
-                method="GET",
-                url="test://test/currentconditions/v1/INVALID.json?apikey=test",
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=400,
+        headers=response_header,
+        content=(
+            b"{"
+            b"'Code':'400',"
+            b"'Message':'Invalid location key: INVALID',"
+            b"'Reference':'/currentconditions/v1/INVALID'"
+            b"}"
+        ),
+        request=Request(
+            method="GET",
+            url=(
+                "http://www.accuweather.com/currentconditions/v1/INVALID.json?"
+                "apikey=test"
             ),
         ),
-    ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
+    )
 
     with pytest.raises(AccuweatherError) as accuweather_error:
         await accuweather.get_current_conditions(location_key)
@@ -933,7 +939,6 @@ async def test_get_current_conditions_error(
 @pytest.mark.asyncio
 async def test_get_forecast(
     request: FixtureRequest,
-    mocker: MockerFixture,
     accuweather_fixture: str,
     forecast_response_fixture: str,
     expected_forecast_url: str,
@@ -948,21 +953,21 @@ async def test_get_forecast(
     )
     location_key: str = "39376_PC"
     content: bytes = request.getfixturevalue(forecast_response_fixture)
-
-    side_effects: list[Response] = [
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=content,
-            request=Request(
-                method="GET",
-                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+    accuweather: AccuweatherBackend = request.getfixturevalue(accuweather_fixture)
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        headers=response_header,
+        content=content,
+        request=Request(
+            method="GET",
+            url=(
+                "http://www.accuweather.com/forecasts/v1/daily/1day/39376_PC.json?"
+                "apikey=test"
             ),
         ),
-    ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
+    )
 
-    accuweather: AccuweatherBackend = request.getfixturevalue(accuweather_fixture)
     forecast: Optional[Forecast] = await accuweather.get_forecast(location_key)
 
     assert forecast == expected_forecast
@@ -996,22 +1001,22 @@ async def test_get_forecast_from_cache(
 
     location_key: str = "39376_PC"
 
-    mock_client: MagicMock = mocker.patch.object(AsyncClient, "get")
-
-    accuweather = AccuweatherBackend(
+    accuweather: AccuweatherBackend = AccuweatherBackend(
         cache=RedisAdapter(redis_mock), **accuweather_parameters
     )
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
     forecast: Optional[Forecast] = await accuweather.get_forecast(location_key)
+
     assert forecast == expected_forecast
     redis_mock.get.assert_called_once_with(
         "AccuweatherBackend:v1:/forecasts/v1/daily/1day/39376_PC.json"
     )
-    mock_client.get.assert_not_called()
+    client_mock.get.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_get_forecast_no_forecast_returned(
-    mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     response_header: dict[str, str],
 ) -> None:
@@ -1019,19 +1024,19 @@ async def test_get_forecast_no_forecast_returned(
     expected.
     """
     location_key: str = "39376_PC"
-
-    side_effects: list[Response] = [
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=b"{}",
-            request=Request(
-                method="GET",
-                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        headers=response_header,
+        content=b"{}",
+        request=Request(
+            method="GET",
+            url=(
+                "http://www.accuweather.com/forecasts/v1/daily/1day/39376_PC.json?"
+                "apikey=test"
             ),
         ),
-    ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
+    )
 
     forecast: Optional[Forecast] = await accuweather.get_forecast(location_key)
 
@@ -1039,32 +1044,30 @@ async def test_get_forecast_no_forecast_returned(
 
 
 @pytest.mark.asyncio
-async def test_get_forecast_error(
-    mocker: MockerFixture, accuweather: AccuweatherBackend
-) -> None:
+async def test_get_forecast_error(accuweather: AccuweatherBackend) -> None:
     """Test that the get_forecast method raises an appropriate exception in the event
     of an AccuWeather API error.
     """
     expected_error_value: str = "Unexpected forecast response"
     location_key: str = "INVALID"
-
-    side_effects: list[Response] = [
-        Response(
-            status_code=400,
-            content=(
-                b"{"
-                b"'Code':'400',"
-                b"'Message':'Invalid location key: INVALID',"
-                b"'Reference':'/forecasts/v1/daily/1day/INVALID.json'"
-                b"}"
-            ),
-            request=Request(
-                method="GET",
-                url="test://test/forecasts/v1/daily/1day/INVALID.json?apikey=test",
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=400,
+        content=(
+            b"{"
+            b"'Code':'400',"
+            b"'Message':'Invalid location key: INVALID',"
+            b"'Reference':'/forecasts/v1/daily/1day/INVALID.json'"
+            b"}"
+        ),
+        request=Request(
+            method="GET",
+            url=(
+                "http://www.accuweather.com/forecasts/v1/daily/1day/INVALID.json?"
+                "apikey=test"
             ),
         ),
-    ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
+    )
 
     with pytest.raises(AccuweatherError) as accuweather_error:
         await accuweather.get_forecast(location_key)
@@ -1120,7 +1123,9 @@ async def test_get_request_cache_hit(
 
     mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
 
-    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+    accuweather: AccuweatherBackend = AccuweatherBackend(
+        cache=redis_mock, **accuweather_parameters
+    )
 
     results: dict[str, Any] = await accuweather.get_request(url)
     assert results == {
@@ -1178,36 +1183,24 @@ async def test_get_request_cache_get_errors(
         days=2
     )
     expected_client_response = {"hello": "world"}
-    mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
-    mock_client.get.return_value = Response(
+
+    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
         status_code=200,
         headers={"Expires": expiry_date.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)},
         content=json.dumps(expected_client_response).encode("utf-8"),
         request=Request(
             method="GET",
-            url=f"test://test/{url}?apikey=test",
+            url=f"http://www.accuweather.com/{url}?apikey=test",
         ),
     )
 
-    side_effects: list[Response] = [
-        Response(
-            status_code=200,
-            headers={
-                "Expires": expiry_date.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)
-            },
-            content=json.dumps(expected_client_response).encode("utf-8"),
-            request=Request(
-                method="GET",
-                url=f"test://test/{url}?apikey=test",
-            ),
-        ),
-    ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
-
-    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
     results: dict[str, Any] = await accuweather.get_request(
         url, params={"apikey": "test"}
     )
+
     assert expected_client_response == results
 
     timeit_metrics_called = [
@@ -1251,23 +1244,22 @@ async def test_get_request_cache_store_errors(
     )
     expected_client_response = {"hello": "world"}
 
-    side_effects: list[Response] = [
-        Response(
-            status_code=200,
-            headers={
-                "Expires": expiry_date.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)
-            },
-            content=json.dumps(expected_client_response).encode("utf-8"),
-            request=Request(
-                method="GET",
-                url=f"test://test/{url}?apikey=test",
-            ),
+    accuweather: AccuweatherBackend = AccuweatherBackend(
+        cache=redis_mock, **accuweather_parameters
+    )
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        headers={"Expires": expiry_date.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)},
+        content=json.dumps(expected_client_response).encode("utf-8"),
+        request=Request(
+            method="GET",
+            url=f"http://www.accuweather.com/{url}?apikey=test",
         ),
-    ]
-    mocker.patch.object(AsyncClient, "get", side_effect=side_effects)
+    )
 
     with pytest.raises(AccuweatherError):
-        accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
         await accuweather.get_request(url, params={"apikey": "test"})
 
     timeit_metrics_called = [
