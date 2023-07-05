@@ -77,6 +77,7 @@ class AccuweatherBackend:
         url_forecasts_path: str,
         url_param_partner_code: Optional[str] = None,
         partner_code: Optional[str] = None,
+        http_client: AsyncClient = None,
     ) -> None:
         """Initialize the AccuWeather backend.
 
@@ -108,7 +109,9 @@ class AccuweatherBackend:
         self.url_forecasts_path = url_forecasts_path
         self.url_param_partner_code = url_param_partner_code
         self.partner_code = partner_code
-        self.http_client = AsyncClient(base_url=self.url_base)
+        self.http_client = (
+            AsyncClient(base_url=self.url_base) if http_client is None else http_client
+        )
 
     def cache_key_for_accuweather_request(
         self, url: str, query_params: dict[str, str] = {}
