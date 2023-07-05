@@ -73,7 +73,7 @@ latency, container/cpu/memory usage (most things under the 'Infrastructure' head
     - For functional tests (unit, integration or contract), logs can be found on
       [CircleCI][circleci]
     - For performance tests (load), insights can be found on [Grafana][merino_app_info] and in the
-      Locust logs or. To access the Locust logs:
+      Locust logs. To access the Locust logs:
       1. Open a cloud shell in the [Merino stage environment][merino_gcp_stage]
       2. Authenticate by executing the following command:
       ```shell
