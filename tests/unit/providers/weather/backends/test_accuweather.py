@@ -377,7 +377,7 @@ async def test_get_weather_report(
             content=accuweather_location_response,
             request=Request(
                 method="GET",
-                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+                url="[url_base]/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
             ),
         ),
         Response(
@@ -386,7 +386,7 @@ async def test_get_weather_report(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
+                url="[url_base]/currentconditions/v1/39376_PC.json?apikey=test",
             ),
         ),
         Response(
@@ -395,7 +395,7 @@ async def test_get_weather_report(
             content=accuweather_forecast_response_fahrenheit,
             request=Request(
                 method="GET",
-                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+                url="[url_base]/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
             ),
         ),
     ]
@@ -421,7 +421,7 @@ async def test_get_weather_report_failed_location_query(
         content=b"[]",
         request=Request(
             method="GET",
-            url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+            url="[url_base]/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
         ),
     )
 
@@ -449,7 +449,7 @@ async def test_get_weather_report_failed_current_conditions_query(
             content=accuweather_location_response,
             request=Request(
                 method="GET",
-                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+                url="[url_base]/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
             ),
         ),
         Response(
@@ -458,7 +458,7 @@ async def test_get_weather_report_failed_current_conditions_query(
             content=b"[]",
             request=Request(
                 method="GET",
-                url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
+                url="[url_base]/currentconditions/v1/39376_PC.json?apikey=test",
             ),
         ),
         Response(
@@ -467,7 +467,7 @@ async def test_get_weather_report_failed_current_conditions_query(
             content=accuweather_forecast_response_fahrenheit,
             request=Request(
                 method="GET",
-                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+                url="[url_base]/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
             ),
         ),
     ]
@@ -496,7 +496,7 @@ async def test_get_weather_report_handles_exception_group_properly(
             content=accuweather_location_response,
             request=Request(
                 method="GET",
-                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+                url="[url_base]/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
             ),
         ),
         HTTPError("Invalid Request - Current Conditions"),
@@ -534,7 +534,7 @@ async def test_get_weather_report_failed_forecast_query(
             content=accuweather_location_response,
             request=Request(
                 method="GET",
-                url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+                url="[url_base]/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
             ),
         ),
         Response(
@@ -543,7 +543,7 @@ async def test_get_weather_report_failed_forecast_query(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
+                url="[url_base]/currentconditions/v1/39376_PC.json?apikey=test",
             ),
         ),
         Response(
@@ -552,7 +552,7 @@ async def test_get_weather_report_failed_forecast_query(
             content=b"{}",
             request=Request(
                 method="GET",
-                url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+                url="[url_base]/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
             ),
         ),
     ]
@@ -604,7 +604,7 @@ async def test_get_location(
         content=accuweather_location_response,
         request=Request(
             method="GET",
-            url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+            url="[url_base]/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
         ),
     )
 
@@ -669,7 +669,7 @@ async def test_get_location_no_location_returned(
         content=b"[]",
         request=Request(
             method="GET",
-            url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+            url="[url_base]/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
         ),
     )
 
@@ -702,7 +702,7 @@ async def test_get_location_error(
         ),
         request=Request(
             method="GET",
-            url="test://test/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
+            url="[url_base]/locations/v1/postalcodes/US/search.json?apikey=test&q=94105",
         ),
     )
 
@@ -752,7 +752,7 @@ async def test_get_current_conditions(
         content=accuweather_current_conditions_response,
         request=Request(
             method="GET",
-            url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
+            url="[url_base]/currentconditions/v1/39376_PC.json?apikey=test",
         ),
     )
 
@@ -820,7 +820,7 @@ async def test_get_current_conditions_no_current_conditions_returned(
         content=b"[]",
         request=Request(
             method="GET",
-            url="test://test/currentconditions/v1/39376_PC.json?apikey=test",
+            url="[url_base]/currentconditions/v1/39376_PC.json?apikey=test",
         ),
     )
 
@@ -853,7 +853,7 @@ async def test_get_current_conditions_error(
         ),
         request=Request(
             method="GET",
-            url="test://test/currentconditions/v1/INVALID.json?apikey=test",
+            url="[url_base]/currentconditions/v1/INVALID.json?apikey=test",
         ),
     )
 
@@ -912,7 +912,7 @@ async def test_get_forecast(
         content=content,
         request=Request(
             method="GET",
-            url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+            url="[url_base]/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
         ),
     )
 
@@ -979,7 +979,7 @@ async def test_get_forecast_no_forecast_returned(
         content=b"{}",
         request=Request(
             method="GET",
-            url="test://test/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
+            url="[url_base]/forecasts/v1/daily/1day/39376_PC.json?apikey=test",
         ),
     )
 
@@ -1007,7 +1007,7 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend) -> None:
         ),
         request=Request(
             method="GET",
-            url="test://test/forecasts/v1/daily/1day/INVALID.json?apikey=test",
+            url="[url_base]/forecasts/v1/daily/1day/INVALID.json?apikey=test",
         ),
     )
 
@@ -1135,7 +1135,7 @@ async def test_get_request_cache_get_errors(
         content=json.dumps(expected_client_response).encode("utf-8"),
         request=Request(
             method="GET",
-            url=f"test://test/{url}?apikey=test",
+            url=f"[url_base]/{url}?apikey=test",
         ),
     )
 
@@ -1197,7 +1197,7 @@ async def test_get_request_cache_store_errors(
         content=json.dumps(expected_client_response).encode("utf-8"),
         request=Request(
             method="GET",
-            url=f"test://test/{url}?apikey=test",
+            url=f"[url_base]/{url}?apikey=test",
         ),
     )
 
