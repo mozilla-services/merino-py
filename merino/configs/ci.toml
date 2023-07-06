@@ -35,11 +35,6 @@ cron_interval_sec = 1
 resync_interval_sec = 2
 score = 0.3
 
-[ci.providers.wiki_fruit]
-# Whether or not this provider is enabled by default.
-type = "wiki_fruit"
-enabled_by_default = true
-
 [ci.providers.top_picks]
 # Whether or not this provider is enabled by default.
 enabled_by_default = true

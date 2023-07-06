@@ -60,6 +60,21 @@
                 "ab",
                 "acb"
             ]
+        },
+        {
+            "rank": 5,
+            "title": "Banana",
+            "domain": "banana",
+            "url": "https://banana.test",
+            "icon": "",
+            "categories": [
+                "web-browser"
+            ],
+            "similars": [
+                "banan",
+                "bannana",
+                "banana"
+            ]
         }
     ]
 }

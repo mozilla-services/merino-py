@@ -24,7 +24,6 @@ from merino.providers.top_picks.provider import Provider as TopPicksProvider
 from merino.providers.weather.backends.accuweather import AccuweatherBackend
 from merino.providers.weather.backends.fake_backends import FakeWeatherBackend
 from merino.providers.weather.provider import Provider as WeatherProvider
-from merino.providers.wiki_fruit import WikiFruitProvider
 from merino.providers.wikipedia.backends.elastic import ElasticBackend
 from merino.providers.wikipedia.backends.fake_backends import FakeWikipediaBackend
 from merino.providers.wikipedia.provider import Provider as WikipediaProvider
@@ -39,7 +38,6 @@ class ProviderType(str, Enum):
     AMO = "amo"
     ADM = "adm"
     TOP_PICKS = "top_picks"
-    WIKI_FRUIT = "wiki_fruit"
     WIKIPEDIA = "wikipedia"
 
 
@@ -121,10 +119,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 score=setting.score,
                 name=provider_id,
                 enabled_by_default=setting.enabled_by_default,
-            )
-        case ProviderType.WIKI_FRUIT:
-            return WikiFruitProvider(
-                name=provider_id, enabled_by_default=setting.enabled_by_default
             )
         case ProviderType.WIKIPEDIA:
             return WikipediaProvider(

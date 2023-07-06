@@ -79,8 +79,8 @@ Example:
 
 Example:
 ```yaml
-- name: wiki_fruit__apple
-  description: Test that Merino successfully returns a WikiFruit suggestion
+- name: suggest__apple
+  description: Test that Merino successfully returns a suggestion
   steps:
     - request:
         service: merino
@@ -104,7 +104,7 @@ Example:
               url: 'https://en.wikipedia.org/wiki/Apple'
               impression_url: 'https://127.0.0.1/'
               click_url: 'https://127.0.0.1/'
-              provider: 'test_wiki_fruit'
+              provider: 'test_provider'
               advertiser: 'test_advertiser'
               is_sponsored: false
               icon: 'https://en.wikipedia.org/favicon.ico'
