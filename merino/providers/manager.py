@@ -66,10 +66,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     url_postalcodes_param_query=settings.accuweather.url_postalcodes_param_query,
                     url_current_conditions_path=settings.accuweather.url_current_conditions_path,
                     url_forecasts_path=settings.accuweather.url_forecasts_path,
-                    url_param_partner_code=settings.accuweather.get(
-                        "url_param_partner_code"
-                    ),
-                    partner_code=settings.accuweather.get("partner_code"),
                 )
                 if setting.backend == "accuweather"
                 else FakeWeatherBackend(),

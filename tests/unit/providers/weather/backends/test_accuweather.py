@@ -24,6 +24,7 @@ from merino.providers.weather.backends.accuweather import (
     AccuweatherBackend,
     AccuweatherError,
     AccuweatherLocation,
+    add_partner_code,
 )
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -85,19 +86,6 @@ def fixture_accuweather(
 ) -> AccuweatherBackend:
     """Create an Accuweather object for test. This object always have cache miss."""
     return AccuweatherBackend(
-        cache=RedisAdapter(redis_mock_cache_miss),
-        **accuweather_parameters,
-    )
-
-
-@pytest.fixture(name="accuweather_with_partner_code")
-def fixture_accuweather_with_partner_code(
-    redis_mock_cache_miss: AsyncMock, accuweather_parameters: dict[str, Any]
-) -> AccuweatherBackend:
-    """Create an Accuweather object with a partner code for test."""
-    return AccuweatherBackend(
-        url_param_partner_code="partner",
-        partner_code="acme",
         cache=RedisAdapter(redis_mock_cache_miss),
         **accuweather_parameters,
     )
@@ -186,6 +174,16 @@ def fixture_accuweather_location_response() -> bytes:
     return json.dumps(response).encode("utf-8")
 
 
+@pytest.fixture(name="accuweather_cached_location_key")
+def fixture_accuweather_cached_location_key() -> bytes:
+    """Return response content for AccuWeather postal code endpoint."""
+    location: dict[str, Any] = {
+        "key": "39376_PC",
+        "localized_name": "San Francisco",
+    }
+    return json.dumps(location).encode("utf-8")
+
+
 @pytest.fixture(name="accuweather_current_conditions_response")
 def fixture_accuweather_current_conditions_response() -> bytes:
     """Return response content for AccuWeather current conditions endpoint."""
@@ -221,6 +219,22 @@ def fixture_accuweather_current_conditions_response() -> bytes:
         },
     ]
     return json.dumps(response).encode("utf-8")
+
+
+@pytest.fixture(name="accuweather_cached_current_conditions")
+def fixture_accuweather_cached_current_conditions() -> bytes:
+    """Return the cached content for AccuWeather current conditions."""
+    return json.dumps(
+        {
+            "url": (
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/current-weather/39376_pc?lang=en-us"
+            ),
+            "summary": "Mostly cloudy",
+            "icon_id": 6,
+            "temperature": [15.5, 60.0],
+        }
+    ).encode("utf-8")
 
 
 @pytest.fixture(name="accuweather_forecast_response")
@@ -294,6 +308,22 @@ def fixture_accuweather_forecast_response_fahrenheit(
         "Maximum": {"Value": 70.0, "Unit": "F", "UnitType": 18},
     }
     return json.dumps(accuweather_forecast_response).encode("utf-8")
+
+
+@pytest.fixture(name="accuweather_cached_forecast_fahrenheit")
+def fixture_accuweather_cached_forecast_fahrenheit() -> bytes:
+    """Return the cached AccuWeather forecast in fahrenheit."""
+    return json.dumps(
+        {
+            "url": (
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/daily-weather-forecast/39376_pc?lang=en-us"
+            ),
+            "summary": "Pleasant Saturday",
+            "high": {"f": 70.0},
+            "low": {"f": 57.0},
+        }
+    ).encode("utf-8")
 
 
 def test_init_api_key_value_error(
@@ -655,13 +685,13 @@ async def test_get_location(
 async def test_get_location_from_cache(
     mocker: MockerFixture,
     accuweather_parameters: dict[str, Any],
-    accuweather_location_response: bytes,
+    accuweather_cached_location_key: bytes,
 ) -> None:
     """Test that we can get the location from cache."""
     redis_mock = mocker.AsyncMock(spec=Redis)
 
     async def mock_get(key) -> Any:
-        return accuweather_location_response
+        return accuweather_cached_location_key
 
     redis_mock.get.side_effect = mock_get
 
@@ -683,7 +713,7 @@ async def test_get_location_from_cache(
     assert location == expected_location
     expected_query_string = "q".encode("utf-8") + postal_code.encode("utf-8")
     redis_mock.get.assert_called_once_with(
-        f"AccuweatherBackend:v1:/locations/v1/postalcodes/{country}/search.json:"
+        f"AccuweatherBackend:v2:/locations/v1/postalcodes/{country}/search.json:"
         f"{hashlib.blake2s(expected_query_string).hexdigest()}"
     )
     client_mock.get.assert_not_called()
@@ -760,13 +790,8 @@ async def test_get_location_error(accuweather: AccuweatherBackend) -> None:
             "http://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/"
             "39376_pc?lang=en-us",
         ),
-        (
-            "accuweather_with_partner_code",
-            "http://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/"
-            "39376_pc?lang=en-us&partner=acme",
-        ),
     ],
-    ids=["without_partner_code", "with_partner_code"],
+    ids=["without_partner_code"],
 )
 @pytest.mark.asyncio
 async def test_get_current_conditions(
@@ -810,13 +835,13 @@ async def test_get_current_conditions(
 async def test_get_current_conditions_from_cache(
     mocker: MockerFixture,
     accuweather_parameters: dict[str, Any],
-    accuweather_current_conditions_response: bytes,
+    accuweather_cached_current_conditions: bytes,
 ):
     """Get the current condition from cache. Do not make an API call."""
     redis_mock = mocker.AsyncMock(spec=Redis)
 
     async def mock_get(key):
-        return accuweather_current_conditions_response
+        return accuweather_cached_current_conditions
 
     redis_mock.get.side_effect = mock_get
     current_conditions_url = (
@@ -842,7 +867,7 @@ async def test_get_current_conditions_from_cache(
 
     assert conditions == expected_conditions
     redis_mock.get.assert_called_once_with(
-        "AccuweatherBackend:v1:/currentconditions/v1/39376_PC.json"
+        "AccuweatherBackend:v2:/currentconditions/v1/39376_PC.json"
     )
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.assert_not_called()
@@ -920,13 +945,8 @@ async def test_get_current_conditions_error(
             "http://www.accuweather.com/en/us/san-francisco-ca/94103/daily-weather-forecast/"
             "39376_pc?lang=en-us",
         ),
-        (
-            "accuweather_with_partner_code",
-            "http://www.accuweather.com/en/us/san-francisco-ca/94103/daily-weather-forecast/"
-            "39376_pc?lang=en-us&partner=acme",
-        ),
     ],
-    ids=["without_partner_code", "with_partner_code"],
+    ids=["without_partner_code"],
 )
 @pytest.mark.parametrize(
     "forecast_response_fixture",
@@ -977,13 +997,13 @@ async def test_get_forecast(
 async def test_get_forecast_from_cache(
     mocker: MockerFixture,
     accuweather_parameters: dict[str, Any],
-    accuweather_forecast_response_fahrenheit: bytes,
+    accuweather_cached_forecast_fahrenheit: bytes,
 ):
     """Get the forecast from cache. Do not make an API call."""
     redis_mock = mocker.AsyncMock(spec=Redis)
 
     async def mock_get(key):
-        return accuweather_forecast_response_fahrenheit
+        return accuweather_cached_forecast_fahrenheit
 
     redis_mock.get.side_effect = mock_get
 
@@ -1010,7 +1030,7 @@ async def test_get_forecast_from_cache(
 
     assert forecast == expected_forecast
     redis_mock.get.assert_called_once_with(
-        "AccuweatherBackend:v1:/forecasts/v1/daily/1day/39376_PC.json"
+        "AccuweatherBackend:v2:/forecasts/v1/daily/1day/39376_PC.json"
     )
     client_mock.get.assert_not_called()
 
@@ -1080,16 +1100,16 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend) -> None:
     [
         (
             {"q": "asdfg", "apikey": "filter_me_out"},
-            f"AccuweatherBackend:v1:localhost:"
+            f"AccuweatherBackend:v2:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
         (
             {},
-            "AccuweatherBackend:v1:localhost",
+            "AccuweatherBackend:v2:localhost",
         ),
         (
             {"q": "asdfg"},
-            f"AccuweatherBackend:v1:localhost:"
+            f"AccuweatherBackend:v2:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
     ],
@@ -1127,9 +1147,11 @@ async def test_get_request_cache_hit(
         cache=redis_mock, **accuweather_parameters
     )
 
-    results: dict[str, Any] = await accuweather.get_request(url)
+    results: Optional[dict[str, Any]] = await accuweather.get_request(
+        url, {}, lambda a: cast(Optional[dict[str, Any]], a)
+    )
     assert results == {
-        "key": "AccuweatherBackend:v1:/forecasts/v1/daily/1day/39376_PC.json"
+        "key": "AccuweatherBackend:v2:/forecasts/v1/daily/1day/39376_PC.json"
     }
 
     statsd_mock.timeit.assert_called_once_with("accuweather.cache.fetch")
@@ -1197,8 +1219,8 @@ async def test_get_request_cache_get_errors(
         ),
     )
 
-    results: dict[str, Any] = await accuweather.get_request(
-        url, params={"apikey": "test"}
+    results: Optional[dict[str, Any]] = await accuweather.get_request(
+        url, {"apikey": "test"}, lambda a: cast(Optional[dict[str, Any]], a)
     )
 
     assert expected_client_response == results
@@ -1216,7 +1238,7 @@ async def test_get_request_cache_get_errors(
         f"accuweather.cache.fetch.{expected_cache_error_type}.{expected_url_type}"
     )
 
-    cache_key = f"AccuweatherBackend:v1:{url}"
+    cache_key = f"AccuweatherBackend:v2:{url}"
     assert cache[cache_key] == json.dumps(expected_client_response).encode("utf-8")
 
 
@@ -1260,7 +1282,11 @@ async def test_get_request_cache_store_errors(
     )
 
     with pytest.raises(AccuweatherError):
-        await accuweather.get_request(url, params={"apikey": "test"})
+        await accuweather.get_request(
+            url,
+            params={"apikey": "test"},
+            process_api_response=lambda a: cast(Optional[dict[str, Any]], a),
+        )
 
     timeit_metrics_called = [
         call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list
@@ -1319,3 +1345,27 @@ async def test_store_request_in_cache_error_invalid_expiry(
         await accuweather.store_request_into_cache(
             "key", {"hello": "cache"}, "invalid_date_format"
         )
+
+
+@pytest.mark.parametrize(
+    ("url", "partner_param_id", "partner_code", "expected_url"),
+    [
+        (
+            "https://test.com",
+            "partner",
+            "test-partner",
+            "https://test.com?partner=test-partner",
+        ),
+        ("https://test.com", None, None, "https://test.com"),
+    ],
+    ids=["", "missing_params"],
+)
+def test_add_partner_code(
+    url: str,
+    partner_param_id: Optional[str],
+    partner_code: Optional[str],
+    expected_url: str,
+):
+    """Test add_partner_code."""
+    updated_url: str = add_partner_code(url, partner_param_id, partner_code)
+    assert updated_url == expected_url
