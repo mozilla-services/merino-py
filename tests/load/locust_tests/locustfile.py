@@ -392,7 +392,7 @@ class MerinoUser(HttpUser):
 
         return super().on_start()
 
-    @task(weight=10)
+    @task(weight=2)
     def adm_suggestions(self) -> None:
         """Send multiple requests for AdM queries."""
         queries: list[str] = choice(ADM_QUERIES)  # nosec
@@ -401,7 +401,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             request_suggestions(self.client, query, providers)
 
-    @task(weight=5)
+    @task(weight=2)
     def amo_suggestions(self) -> None:
         """Send a request for AMO. AMO matches work with matching the first keyword
         and then prefix on subsequent words.
@@ -414,7 +414,7 @@ class MerinoUser(HttpUser):
         for i in range(len(first_word), len(phrase) + 1):
             request_suggestions(self.client, phrase[:i], providers)
 
-    @task(weight=10)
+    @task(weight=2)
     def dynamic_wikipedia_suggestions(self) -> None:
         """Send multiple requests for Dynamic Wikipedia queries."""
         full_query: str = choice(WIKIPEDIA_QUERIES)  # nosec
@@ -424,7 +424,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             request_suggestions(self.client, query, providers)
 
-    @task(weight=64)
+    @task(weight=2)
     def faker_suggestions(self) -> None:
         """Send multiple requests for random queries."""
         # This produces a query between 2 and 4 random words
@@ -437,7 +437,7 @@ class MerinoUser(HttpUser):
 
             request_suggestions(self.client, query)
 
-    @task(weight=10)
+    @task(weight=2)
     def top_picks_suggestions(self) -> None:
         """Send multiple requests for Top Picks queries."""
         queries: list[str] = choice(TOP_PICKS_QUERIES)  # nosec
@@ -446,7 +446,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             request_suggestions(self.client, query, providers)
 
-    @task(weight=1)
+    @task(weight=90)
     def weather_suggestions(self) -> None:
         """Send multiple requests for Weather queries."""
         # Firefox will do local keyword matching to trigger weather suggestions
