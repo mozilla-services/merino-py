@@ -5,7 +5,7 @@ import hashlib
 import json
 import logging
 from json import JSONDecodeError
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import aiodogstatsd
 from dateutil import parser
@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from pydantic.datetime_parse import timedelta
 
 from merino.cache.protocol import CacheAdapter
+from merino.config import settings
 from merino.exceptions import (
     BackendError,
     CacheAdapterError,
@@ -29,6 +30,9 @@ from merino.providers.weather.backends.protocol import (
 )
 
 logger = logging.getLogger(__name__)
+
+PARTNER_PARAM_ID: Optional[str] = settings.accuweather.get("url_param_partner_code")
+PARTNER_CODE: Optional[str] = settings.accuweather.get("partner_code")
 
 
 class AccuweatherLocation(BaseModel):
@@ -58,8 +62,6 @@ class AccuweatherBackend:
     url_postalcodes_param_query: str
     url_current_conditions_path: str
     url_forecasts_path: str
-    url_param_partner_code: Optional[str]
-    partner_code: Optional[str]
     http_client: AsyncClient
 
     def __init__(
@@ -74,8 +76,6 @@ class AccuweatherBackend:
         url_postalcodes_param_query: str,
         url_current_conditions_path: str,
         url_forecasts_path: str,
-        url_param_partner_code: Optional[str] = None,
-        partner_code: Optional[str] = None,
     ) -> None:
         """Initialize the AccuWeather backend.
 
@@ -104,8 +104,6 @@ class AccuweatherBackend:
         self.url_postalcodes_param_query = url_postalcodes_param_query
         self.url_current_conditions_path = url_current_conditions_path
         self.url_forecasts_path = url_forecasts_path
-        self.url_param_partner_code = url_param_partner_code
-        self.partner_code = partner_code
 
     def cache_key_for_accuweather_request(
         self, url: str, query_params: dict[str, str] = {}
@@ -121,18 +119,21 @@ class AccuweatherBackend:
                     hasher.update(key.encode("utf-8") + value.encode("utf-8"))
             extra_identifiers = hasher.hexdigest()
 
-            return f"{self.__class__.__name__}:v1:{url}:{extra_identifiers}"
+            return f"{self.__class__.__name__}:v2:{url}:{extra_identifiers}"
 
-        return f"{self.__class__.__name__}:v1:{url}"
+        return f"{self.__class__.__name__}:v2:{url}"
 
     async def get_request(
-        self, url_path: str, params: dict[str, str] = {}
-    ) -> dict[str, Any]:
+        self,
+        url_path: str,
+        params: dict[str, str],
+        process_api_response: Callable[[Any], Optional[dict[str, Any]]],
+    ) -> Optional[dict[str, Any]]:
         """Get API response. Attempt to get it from cache first,
         then actually make the call if there's a cache miss.
         """
         cache_key = self.cache_key_for_accuweather_request(url_path, params)
-        response_dict: dict[str, str]
+        response_dict: Optional[dict[str, str]]
 
         # The top level path in the URL gives us a good enough idea of what type of request
         # we are calling from here.
@@ -150,9 +151,13 @@ class AccuweatherBackend:
                 response: Response = await self.http_client.get(url_path, params=params)
                 response.raise_for_status()
 
-            response_expiry: str = response.headers.get("Expires")
-            response_dict = response.json()
+            if (response_dict := process_api_response(response.json())) is None:
+                self.metrics_client.increment(
+                    f"accuweather.request.{request_type}.processor.error"
+                )
+                return None
 
+            response_expiry: str = response.headers.get("Expires")
             try:
                 await self.store_request_into_cache(
                     cache_key, response_dict, response_expiry
@@ -244,30 +249,18 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-locations-api/apis/get/locations/v1/postalcodes/{countryCode}/search
         """
         try:
-            response_json: dict[str, str] = await self.get_request(
+            response: Optional[dict[str, Any]] = await self.get_request(
                 self.url_postalcodes_path.format(country_code=country),
                 params={
                     self.url_param_api_key: self.api_key,
                     self.url_postalcodes_param_query: postal_code,
                 },
+                process_api_response=process_location_response,
             )
         except HTTPError as error:
             raise AccuweatherError("Unexpected location response") from error
 
-        match response_json:
-            case [
-                {
-                    "Key": key,
-                    "LocalizedName": localized_name,
-                },
-            ]:
-                # `type: ignore` is necessary because mypy gets confused when
-                # matching structures of type `Any` and reports the following
-                # line as unreachable. See
-                # https://github.com/python/mypy/issues/12770
-                return AccuweatherLocation(key=key, localized_name=localized_name)  # type: ignore
-            case _:
-                return None
+        return AccuweatherLocation(**response) if response else None
 
     async def get_current_conditions(
         self, location_key: str
@@ -281,50 +274,26 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-current-conditions-api/apis/get/currentconditions/v1/{locationKey}
         """
         try:
-            response_json: dict[str, str] = await self.get_request(
+            response: Optional[dict[str, Any]] = await self.get_request(
                 self.url_current_conditions_path.format(location_key=location_key),
                 params={
                     self.url_param_api_key: self.api_key,
                 },
+                process_api_response=process_current_condition_response,
             )
         except HTTPError as error:
             raise AccuweatherError("Unexpected current conditions response") from error
 
-        match response_json:
-            case [
-                {
-                    "Link": url,
-                    "WeatherText": summary,
-                    "WeatherIcon": icon_id,
-                    "Temperature": {
-                        "Metric": {
-                            "Value": c,
-                        },
-                        "Imperial": {
-                            "Value": f,
-                        },
-                    },
-                }
-            ]:
-                # `type: ignore` is necessary because mypy gets confused when
-                # matching structures of type `Any` and reports the following
-                # lines as unreachable. See
-                # https://github.com/python/mypy/issues/12770
-                try:  # type: ignore
-                    url = self._add_partner_code(url)
-                except InvalidURL as error:  # pragma: no cover
-                    raise AccuweatherError(
-                        "Invalid URL in current conditions response"
-                    ) from error
-
-                return CurrentConditions(
-                    url=url,
-                    summary=summary,
-                    icon_id=icon_id,
-                    temperature=Temperature(c=c, f=f),
-                )
-            case _:
-                return None
+        return (
+            CurrentConditions(
+                url=response["url"],
+                summary=response["summary"],
+                icon_id=response["icon_id"],
+                temperature=Temperature(*response["temperature"]),
+            )
+            if response
+            else None
+        )
 
     async def get_forecast(self, location_key: str) -> Optional[Forecast]:
         """Return daily forecast data for a specific location or None if daily
@@ -336,66 +305,136 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-forecast-api/apis/get/forecasts/v1/daily/1day/{locationKey}
         """
         try:
-            response_json: dict[str, Any] = await self.get_request(
+            response: Optional[dict[str, Any]] = await self.get_request(
                 self.url_forecasts_path.format(location_key=location_key),
                 params={
                     self.url_param_api_key: self.api_key,
                 },
+                process_api_response=process_forecast_response,
             )
         except HTTPError as error:
             raise AccuweatherError("Unexpected forecast response") from error
 
-        match response_json:
-            case {
-                "Headline": {
-                    "Text": summary,
-                    "Link": url,
-                },
-                "DailyForecasts": [
-                    {
-                        "Temperature": {
-                            "Maximum": {
-                                "Value": high_value,
-                                "Unit": ("C" | "F") as high_unit,
-                            },
-                            "Minimum": {
-                                "Value": low_value,
-                                "Unit": ("C" | "F") as low_unit,
-                            },
-                        },
-                    }
-                ],
-            }:
-                # `type: ignore` is necessary because mypy gets confused when
-                # matching structures of type `Any` and reports the following
-                # lines as unreachable. See
-                # https://github.com/python/mypy/issues/12770
-                try:  # type: ignore
-                    url = self._add_partner_code(url)
-                except InvalidURL as error:  # pragma: no cover
-                    raise AccuweatherError(
-                        "Invalid URL in forecast response"
-                    ) from error
-
-                return Forecast(
-                    url=url,
-                    summary=summary,
-                    high=Temperature(**{high_unit.lower(): high_value}),
-                    low=Temperature(**{low_unit.lower(): low_value}),
-                )
-            case _:
-                return None
-
-    def _add_partner_code(self, url: str) -> str:
-        if not self.url_param_partner_code or not self.partner_code:
-            return url
-
-        parsed_url = URL(url)
-        return str(
-            parsed_url.copy_add_param(self.url_param_partner_code, self.partner_code)
+        return (
+            Forecast(
+                url=response["url"],
+                summary=response["summary"],
+                high=Temperature(**response["high"]),
+                low=Temperature(**response["low"]),
+            )
+            if response
+            else None
         )
 
     async def shutdown(self) -> None:
         """Close out the cache during shutdown."""
         await self.http_client.aclose()
         await self.cache.close()
+
+
+def add_partner_code(
+    url: str, url_param_id: Optional[str], partner_code: Optional[str]
+) -> str:
+    """Add the partner code to the given URL."""
+    if not url_param_id or not partner_code:
+        return url
+
+    try:
+        parsed_url = URL(url)
+        return str(parsed_url.copy_add_param(url_param_id, partner_code))
+    except InvalidURL:  # pragma: no cover
+        return url
+
+
+def process_location_response(response: Any) -> Optional[dict[str, Any]]:
+    """Process the API response for location keys."""
+    match response:
+        case [
+            {
+                "Key": key,
+                "LocalizedName": localized_name,
+            },
+        ]:
+            # `type: ignore` is necessary because mypy gets confused when
+            # matching structures of type `Any` and reports the following
+            # line as unreachable. See
+            # https://github.com/python/mypy/issues/12770
+            return {  # type: ignore
+                "key": key,
+                "localized_name": localized_name,
+            }
+        case _:
+            return None
+
+
+def process_current_condition_response(response: Any) -> Optional[dict[str, Any]]:
+    """Process the API response for current conditions."""
+    match response:
+        case [
+            {
+                "Link": url,
+                "WeatherText": summary,
+                "WeatherIcon": icon_id,
+                "Temperature": {
+                    "Metric": {
+                        "Value": c,
+                    },
+                    "Imperial": {
+                        "Value": f,
+                    },
+                },
+            }
+        ]:
+            # `type: ignore` is necessary because mypy gets confused when
+            # matching structures of type `Any` and reports the following
+            # lines as unreachable. See
+            # https://github.com/python/mypy/issues/12770
+            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)  # type: ignore
+
+            return {
+                "url": url,
+                "summary": summary,
+                "icon_id": icon_id,
+                "temperature": [c, f],
+            }
+        case _:
+            return None
+
+
+def process_forecast_response(response: Any) -> Optional[dict[str, Any]]:
+    """Process the API response for forecasts."""
+    match response:
+        case {
+            "Headline": {
+                "Text": summary,
+                "Link": url,
+            },
+            "DailyForecasts": [
+                {
+                    "Temperature": {
+                        "Maximum": {
+                            "Value": high_value,
+                            "Unit": ("C" | "F") as high_unit,
+                        },
+                        "Minimum": {
+                            "Value": low_value,
+                            "Unit": ("C" | "F") as low_unit,
+                        },
+                    },
+                }
+            ],
+        }:
+            # `type: ignore` is necessary because mypy gets confused when
+            # matching structures of type `Any` and reports the following
+            # lines as unreachable. See
+            # https://github.com/python/mypy/issues/12770
+            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)  # type: ignore
+
+            return {
+                "url": url,
+                "summary": summary,
+                "high": {high_unit.lower(): high_value},
+                "low": {low_unit.lower(): low_value},
+            }
+        case _:
+            return None
