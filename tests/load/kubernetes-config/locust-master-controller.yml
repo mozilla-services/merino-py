@@ -21,38 +21,38 @@ spec:
             - name: LOCUST_MODE_MASTER
               value: "true"
             - name: TARGET_HOST
-              value: [TARGET_HOST]
+              value:
             - name: LOCUST_CSV
-              value: [LOCUST_CSV]
+              value:
             - name: LOCUST_HOST
-              value: [LOCUST_HOST]
+              value:
             - name: LOCUST_USERS
-              value: "[LOCUST_USERS]"
+              value:
             - name: LOCUST_SPAWN_RATE
-              value: "[LOCUST_SPAWN_RATE]"
+              value:
             - name: LOCUST_RUN_TIME
-              value: "[LOCUST_RUN_TIME]"
+              value:
             - name: LOAD_TESTS__LOGGING_LEVEL
               # The logging level value 20 defines the 'info' level
               value: "20"
             - name: MERINO_REMOTE_SETTINGS__COLLECTION
-              value: [MERINO_REMOTE_SETTINGS__COLLECTION]
+              value:
             - name: MERINO_REMOTE_SETTINGS__BUCKET
-              value: [MERINO_REMOTE_SETTINGS__BUCKET]
+              value:
             - name: MERINO_REMOTE_SETTINGS__SERVER
-              value: [MERINO_REMOTE_SETTINGS__SERVER]
+              value:
             - name: MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH
-              value: [MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH]
+              value:
             - name: MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT
-              value: "[MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT]"
+              value:
             - name: MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT
-              value: "[MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT]"
+              value:
             - name: MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY
-              value: [MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY]
+              value:
             - name: MERINO_PROVIDERS__WIKIPEDIA__ES_URL
-              value: [MERINO_PROVIDERS__WIKIPEDIA__ES_URL]
+              value:
             - name: MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX
-              value: [MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX]
+              value:
           ports:
             - name: loc-master-web
               containerPort: 8089
