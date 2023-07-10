@@ -136,7 +136,6 @@ a GKE cluster
   **setup** option.
     * This option will consider the local commit history, creating new containers and
       deploying them (see [Container Registry][container_registry])
-    * **Reset the files in the `kubernetes-config` directory between executions of the script**
 
 ### Run Test Session
 
