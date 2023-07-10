@@ -41,7 +41,9 @@ class LoggingMiddleware:
             if message["type"] == "http.response.start":
                 request = Request(scope=scope)
                 dt: datetime = datetime.fromtimestamp(time.time())
-                if PATTERN.match(request.url.path):
+                if PATTERN.match(request.url.path) and [
+                    "accuweather"
+                ] != request.query_params.get("providers", "").split(","):
                     suggest_log_data: SuggestLogDataModel = create_suggest_log_data(
                         request, message, dt
                     )
