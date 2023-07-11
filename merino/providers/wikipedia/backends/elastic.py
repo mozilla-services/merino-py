@@ -24,7 +24,7 @@ def get_best_keyword(q: str, title: str):
     """Try to get the best autocomplete keyword match from the title. If there are no matches,
     then return the full title as a match. Lowercase everything.
     """
-    title = title.lower().translate(str.maketrans("", "", string.punctuation))
+    title = title.lower()
     q = q.strip().lower()
     start_index = title.find(q)
     if start_index < 0:
@@ -34,7 +34,7 @@ def get_best_keyword(q: str, title: str):
     if end_index < start_index:
         return title[start_index:]
 
-    return title[start_index:end_index]
+    return title[start_index:end_index].rstrip(string.punctuation)
 
 
 class ElasticBackend:
