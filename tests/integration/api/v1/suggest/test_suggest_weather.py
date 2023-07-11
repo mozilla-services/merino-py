@@ -157,7 +157,7 @@ def test_providers_request_log_data_weather(
     extract_request_summary_log_data: RequestSummaryLogDataFixture,
     client: TestClient,
 ) -> None:
-    """Test that the request log for the 'accuweather' endpoint logs using request.summary"""
+    """Test that the request log for the "accuweather" provider logs using "request.summary" instead of "web.request.request""""
     caplog.set_level(logging.INFO)
 
     expected_log_data: RequestSummaryLogDataModel = RequestSummaryLogDataModel(
