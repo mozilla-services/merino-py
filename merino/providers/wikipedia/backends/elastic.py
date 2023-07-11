@@ -1,5 +1,6 @@
 """The Elasticsearch backend for Dynamic Wikipedia."""
 import logging
+import string
 from typing import Any, Final
 from urllib.parse import quote
 
@@ -33,7 +34,7 @@ def get_best_keyword(q: str, title: str):
     if end_index < start_index:
         return title[start_index:]
 
-    return title[start_index:end_index]
+    return title[start_index:end_index].rstrip(string.punctuation)
 
 
 class ElasticBackend:
