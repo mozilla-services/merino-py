@@ -5,11 +5,13 @@
 """Integration tests for the Merino v1 suggest API endpoint configured with a weather
 provider.
 """
-
+import logging
+from logging import LogRecord
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from freezegun import freeze_time
 from pydantic import parse_obj_as
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
@@ -23,6 +25,8 @@ from merino.providers.weather.backends.protocol import (
     WeatherReport,
 )
 from merino.providers.weather.provider import Provider, Suggestion
+from merino.utils.log_data_creators import RequestSummaryLogDataModel
+from tests.integration.api.types import RequestSummaryLogDataFixture
 from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
 
@@ -144,3 +148,38 @@ def test_suggest_weather_backend_error(
         for record in filter_caplog(caplog.records, "merino.providers.weather.provider")
     ]
     assert actual_log_messages == expected_log_messages
+
+
+@freeze_time("1998-03-31")
+def test_providers_request_log_data_weather(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    extract_request_summary_log_data: RequestSummaryLogDataFixture,
+    client: TestClient,
+) -> None:
+    """Test that accuweather" provider logs using "request.summary"."""
+    caplog.set_level(logging.INFO)
+
+    expected_log_data: RequestSummaryLogDataModel = RequestSummaryLogDataModel(
+        agent="testclient",
+        path="/api/v1/suggest",
+        method="GET",
+        querystring={"providers": "accuweather", "q": ""},
+        errno=0,
+        code=200,
+        time="1998-03-31T00:00:00",
+    )
+
+    client.get("/api/v1/suggest?providers=accuweather&q=")
+
+    records: list[LogRecord] = filter_caplog(caplog.records, "request.summary")
+    assert len(records) == 1
+
+    suggest_records: list[LogRecord] = filter_caplog(
+        caplog.records, "web.suggest.request"
+    )
+    assert len(suggest_records) == 0
+
+    record: LogRecord = records[0]
+    log_data: RequestSummaryLogDataModel = extract_request_summary_log_data(record)
+    assert log_data == expected_log_data

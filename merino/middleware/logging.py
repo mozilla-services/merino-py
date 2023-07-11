@@ -41,7 +41,12 @@ class LoggingMiddleware:
             if message["type"] == "http.response.start":
                 request = Request(scope=scope)
                 dt: datetime = datetime.fromtimestamp(time.time())
-                if PATTERN.match(request.url.path):
+                # https://mozilla-hub.atlassian.net/browse/DISCO-2489
+                if (
+                    PATTERN.match(request.url.path)
+                    and request.query_params.get("providers", "").strip().lower()
+                    != "accuweather"
+                ):
                     suggest_log_data: SuggestLogDataModel = create_suggest_log_data(
                         request, message, dt
                     )
