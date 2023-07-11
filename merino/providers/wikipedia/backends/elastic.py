@@ -23,7 +23,7 @@ def get_best_keyword(q: str, title: str):
     """Try to get the best autocomplete keyword match from the title. If there are no matches,
     then return the full title as a match. Lowercase everything.
     """
-    title = title.lower()
+    title = title.lower().replace(",", "")
     q = q.strip().lower()
     start_index = title.find(q)
     if start_index < 0:
