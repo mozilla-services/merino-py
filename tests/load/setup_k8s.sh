@@ -25,20 +25,37 @@ LOCUST_IMAGE_TAG=$(git log -1 --pretty=format:%h)
 echo "Docker image tag for locust is set to: ${LOCUST_IMAGE_TAG}"
 
 ##Declare variables to be replaced later in the YAML file using the sed commands
-LOCUST_CSV='merino'
-LOCUST_HOST='https://stagepy.merino.nonprod.cloudops.mozgcp.net'
-LOCUST_USERS='75'
-LOCUST_SPAWN_RATE='2'
-LOCUST_RUN_TIME='600' # 10 minutes
-MERINO_REMOTE_SETTINGS__SERVER='https://firefox.settings.services.mozilla.com'
-MERINO_REMOTE_SETTINGS__COLLECTION=quicksuggest
-MERINO_REMOTE_SETTINGS__BUCKET=main
-MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH='dev/top_picks.json'
-MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT='4'
-MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT='2'
-MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY=''
-MERINO_PROVIDERS__WIKIPEDIA__ES_URL='https://merino-nonprod.es.us-west1.gcp.cloud.es.io:9243'
-MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX='enwiki-v1'
+ENVIRONMENT_VARIABLES=(
+  "TARGET_HOST,$TARGET"
+  'LOCUST_CSV,merino'
+  "LOCUST_HOST,$TARGET"
+  'LOCUST_USERS,"75"'
+  'LOCUST_SPAWN_RATE,"2"'
+  'LOCUST_RUN_TIME,"600"' # 10 minutes
+  'MERINO_REMOTE_SETTINGS__SERVER,https://firefox.settings.services.mozilla.com'
+  'MERINO_REMOTE_SETTINGS__COLLECTION,quicksuggest'
+  'MERINO_REMOTE_SETTINGS__BUCKET,main'
+  'MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH,dev/top_picks.json'
+  'MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT,"4"'
+  'MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT,"2"'
+  'MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY,'
+  'MERINO_PROVIDERS__WIKIPEDIA__ES_URL,https://merino-nonprod.es.us-west1.gcp.cloud.es.io:9243'
+  'MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX,enwiki-v1'
+)
+
+SetEnvironmentVariables()
+{
+  filePath=$1
+  for e in "${ENVIRONMENT_VARIABLES[@]}"
+  do
+      IFS="," read name value <<< "$e"
+      if [ -z "$value" ]; then
+        echo -e "\033[33mWARNING! The $name environment variable is undefined\033[0m"
+        continue
+      fi
+      $SED -i -e "/name: $name/{n; s|value:.*|value: $value|}" $filePath
+  done
+}
 
 SetupGksCluster()
 {
@@ -65,28 +82,11 @@ SetupGksCluster()
     echo -e "==================== Update Kubernetes Manifests "
     echo -e "==================== Replace the target host and project ID with the deployed endpoint and project ID in the locust-master-controller.yml and locust-worker-controller.yml files"
 
-    FILES=($MASTER_FILE $WORKER_FILE)
-    for file in "${FILES[@]}"
+    $SED -i -e "s|replicas:.*|replicas: $WORKER_COUNT|" $MERINO_DIRECTORY/$WORKER_FILE
+    for file in $MASTER_FILE $WORKER_FILE
     do
-        $SED -i -e "s|\[TARGET_HOST\]|$TARGET|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[PROJECT_ID\]|$GOOGLE_CLOUD_PROJECT|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[LOCUST_IMAGE_TAG\]|$LOCUST_IMAGE_TAG|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[LOCUST_CSV\]|$LOCUST_CSV|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[LOCUST_HOST\]|$LOCUST_HOST|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[LOCUST_USERS\]|$LOCUST_USERS|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[LOCUST_SPAWN_RATE\]|$LOCUST_SPAWN_RATE|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[LOCUST_RUN_TIME\]|$LOCUST_RUN_TIME|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[MERINO_REMOTE_SETTINGS__BUCKET\]|$MERINO_REMOTE_SETTINGS__BUCKET|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[MERINO_REMOTE_SETTINGS__COLLECTION\]|$MERINO_REMOTE_SETTINGS__COLLECTION|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[MERINO_REMOTE_SETTINGS__SERVER\]|$MERINO_REMOTE_SETTINGS__SERVER|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[WORKER_COUNT\]|$WORKER_COUNT|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH\]|$MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT\]|$MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT\]|$MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY\]|$MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[MERINO_PROVIDERS__WIKIPEDIA__ES_URL\]|$MERINO_PROVIDERS__WIKIPEDIA__ES_URL|g" $MERINO_DIRECTORY/$file
-        $SED -i -e "s|\[MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX\]|$MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX|g" $MERINO_DIRECTORY/$file
-
+        $SED -i -e "s|image:.*|image: gcr.io/$GOOGLE_CLOUD_PROJECT/locust-merino:$LOCUST_IMAGE_TAG|" $MERINO_DIRECTORY/$file
+        SetEnvironmentVariables $MERINO_DIRECTORY/$file
     done
 
     ##Deploy the Locust master and worker nodes using Kubernetes Manifests

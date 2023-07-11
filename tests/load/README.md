@@ -136,7 +136,6 @@ a GKE cluster
   **setup** option.
     * This option will consider the local commit history, creating new containers and
       deploying them (see [Container Registry][container_registry])
-    * **Reset the files in the `kubernetes-config` directory between executions of the script**
 
 ### Run Test Session
 
@@ -203,7 +202,7 @@ will stop automatically.
 
 * Results should be recorded in the [Merino Load Test Spreadsheet][merino_spreadsheet]
 * Optionally, the Locust reports can be saved and linked in the spreadsheet:
-  * Download the results via command:
+  * Download the results via the Locust UI or via command:
       ```bash
       kubectl cp <master-pod-name>:/home/locust/merino_stats.csv merino_stats.csv
       kubectl cp <master-pod-name>:/home/locust/merino_exceptions.csv merino_exceptions.csv
@@ -213,7 +212,8 @@ will stop automatically.
       ```bash 
       kubectl get pods -o wide
       ```
-  * Upload the files to [gist][gist] and record the links
+  * Upload the files to the [ConServ][conserv] drive and record the links in the 
+    spreadsheet
 
 ### Clean-up Environment
 
@@ -225,8 +225,8 @@ Execute the `setup_k8s.sh` file and select the **delete** option
 ```
 
 [cloud]: https://console.cloud.google.com/home/dashboard?q=search&referrer=search&project=spheric-keel-331521&cloudshell=false
+[conserv]: https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux:
 [container_registry]: https://console.cloud.google.com/gcr/images/spheric-keel-331521/global/locust-merino?project=spheric-keel-331521
-[gist]: https://gist.github.com/new
 [grafana]: https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/merino-py-application-and-infrastructure?orgId=1&refresh=1m&var-environment=stagepy
 [merino_test_plan]: https://docs.google.com/document/d/1v7LDXENPZg37KXeNcznEZKNZ8rQlOhNbsHprFyMXHhs/edit?usp=sharing
 [merino_history_doc]: https://docs.google.com/document/d/1BGNhKuclUH40Bit9KxYWLiv_N_VnE66uxi9pBFbRWbg/edit
