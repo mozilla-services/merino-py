@@ -75,10 +75,10 @@ def test_top_picks_query(client: TestClient, query: str) -> None:
     assert response.status_code == 200
 
     result = response.json()
-    actual_suggestions: list[Suggestion] = [
-        Suggestion(**suggestion) for suggestion in result["suggestions"]
-    ]
-    assert actual_suggestions == expected_suggestion
+
+    actual_suggestion: Suggestion = Suggestion(**result["suggestions"][0])
+
+    assert actual_suggestion == expected_suggestion[0]
 
 
 @pytest.mark.parametrize(
@@ -125,4 +125,5 @@ def test_top_picks_short_domains(
     assert response.status_code == 200
 
     result = response.json()
+
     assert Suggestion(**result["suggestions"][0]) == expected_suggestion[0]

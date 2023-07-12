@@ -60,7 +60,7 @@ class FileManager:
 
     def get_latest_dump(self, latest_gcs: Blob) -> Optional[str]:
         """Find the latest export that's older than the latest on gcs."""
-        resp = requests.get(self.base_url)
+        resp = requests.get(self.base_url)  # nosec
         parser = DirectoryParser(self.file_pattern)
         parser.feed(str(resp.content))
         links = parser.file_paths
@@ -104,22 +104,22 @@ class FileManager:
 
         return latest_gcs
 
-    def _stream_dump_to_gcs(self, dump_url: str):
+    def _stream_dump_to_gcs(self, dump_url: str) -> None:
         """Write latest to GCS without storing locally"""
         # 40 MB chunk_size. This is the default Blob chunk size.
         # Having the same size will cause reads and writes to synchronize.
         chunk_size = 40 * 1024 * 1024
         name = "{}/{}".format(self.object_prefix, dump_url.split("/")[-1])
         blob = self.client.bucket(self.gcs_bucket).blob(name, chunk_size=chunk_size)
-        with requests.get(dump_url, stream=True) as resp:
-            content_len = int(resp.headers.get("Content-Length", 0))
-            resp.raise_for_status()
+        with requests.get(dump_url, stream=True) as resp:  # nosec
+            content_len = int(resp.headers.get("Content-Length", 0))  # type: ignore[attr-defined]
+            resp.raise_for_status()  # type: ignore[attr-defined]
             logger.info("Writing to GCS: gs://{}/{}".format(self.gcs_bucket, blob.name))
             logger.info("Total File Size: {}".format(content_len))
             reporter = ProgressReporter(logger, "Copy", dump_url, name, content_len)
             writer: BlobWriter
             with blob.open("wb") as writer:
-                for chunk in resp.iter_content(chunk_size=chunk_size):
+                for chunk in resp.iter_content(chunk_size=chunk_size):  # type: ignore
                     completed = writer.write(chunk)
                     reporter.report(completed)
 

@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, parse_obj_as, validator
+from pydantic import BaseModel, TypeAdapter, field_validator
 from starlette.datastructures import Headers
 from starlette.requests import Request
 from starlette.types import Message
@@ -22,14 +22,15 @@ class LogDataModel(BaseModel):
     path: str
     method: str
 
-    @validator("time", pre=True)
+    @field_validator("time", mode="before")
+    @classmethod
     def validate_time(cls, v, values, **kwargs):
         """Attempt to parse the provided value for `time` into a datetime
         model which will check that the value is a valid datetime representation.
         Then ensure that we output the datetime in a consistent isoformat,
         if it wasn't already in that format.
         """
-        dt: datetime = parse_obj_as(datetime, v)
+        dt: datetime = TypeAdapter(datetime).validate_python(v)
         return dt.isoformat()
 
 

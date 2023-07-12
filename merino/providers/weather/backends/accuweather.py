@@ -12,7 +12,6 @@ import aiodogstatsd
 from dateutil import parser
 from httpx import URL, AsyncClient, HTTPError, InvalidURL, Response
 from pydantic import BaseModel, ValidationError
-from pydantic.datetime_parse import timedelta
 
 from merino.cache.protocol import CacheAdapter
 from merino.config import settings
@@ -252,10 +251,12 @@ class AccuweatherBackend:
         at least `cached_ttl_sec`.
         """
         with self.metrics_client.timeit("accuweather.cache.store"):
-            expiry_delta: timedelta = parser.parse(
+            expiry_delta: datetime.timedelta = parser.parse(
                 response_expiry
             ) - datetime.datetime.now(datetime.timezone.utc)
-            cache_ttl: timedelta = max(expiry_delta, timedelta(seconds=cache_ttl_sec))
+            cache_ttl: datetime.timedelta = max(
+                expiry_delta, datetime.timedelta(seconds=cache_ttl_sec)
+            )
             cache_value = json.dumps(response_dict).encode("utf-8")
             await self.cache.set(cache_key, cache_value, ttl=cache_ttl)
 
@@ -315,11 +316,13 @@ class AccuweatherBackend:
 
         try:
             if location_cached is not None:
-                location = AccuweatherLocation.parse_raw(location_cached)
+                location = AccuweatherLocation.model_validate_json(location_cached)
             if current_cached is not None:
-                current_conditions = CurrentConditions.parse_raw(current_cached)
+                current_conditions = CurrentConditions.model_validate_json(
+                    current_cached
+                )
             if forecast_cached is not None:
-                forecast = Forecast.parse_raw(forecast_cached)
+                forecast = Forecast.model_validate_json(forecast_cached)
         except ValidationError as exc:
             logger.error(f"Failed to load weather report data from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.data.error")

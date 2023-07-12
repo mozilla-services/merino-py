@@ -1,7 +1,7 @@
 """Pydantic model for MDN suggestions as they should be serialized in the
 output JSON.
 """
-from pydantic import HttpUrl, validator
+from pydantic import HttpUrl, field_validator
 
 from merino.jobs.csv_rs_uploader.base import BaseSuggestion
 
@@ -33,17 +33,20 @@ class Suggestion(BaseSuggestion):
             FIELD_KEYWORDS: "keywords",
         }
 
-    @validator("title", pre=True, always=True)
+    @field_validator("title", mode="before")
+    @classmethod
     def validate_title(cls, value):
         """Validate title"""
         return cls._validate_str(cls, value, "title")
 
-    @validator("description", pre=True, always=True)
+    @field_validator("description", mode="before")
+    @classmethod
     def validate_description(cls, value):
         """Validate description"""
         return cls._validate_str(cls, value, "description")
 
-    @validator("keywords", pre=True, always=True)
+    @field_validator("keywords", mode="before")
+    @classmethod
     def validate_keywords(cls, value):
         """Validate keywords"""
         return cls._validate_keywords(cls, value, "keywords")

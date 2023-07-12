@@ -4,7 +4,7 @@
 
 """Unit tests for the mdn.py model."""
 
-from pydantic import ValidationError
+from pydantic import HttpUrl, ValidationError
 
 from merino.jobs.csv_rs_uploader import MissingFieldError
 from merino.jobs.csv_rs_uploader.mdn import (
@@ -46,13 +46,13 @@ def test_upload(mocker):
         ],
         expected_suggestions=[
             {
-                "url": "http://example.com/mdn/0",
+                "url": HttpUrl("http://example.com/mdn/0"),
                 "title": "Title 0",
                 "description": "Description 0",
                 "keywords": ["aaa", "bbb", "ccc"],
             },
             {
-                "url": "http://example.com/mdn/1",
+                "url": HttpUrl("http://example.com/mdn/1"),
                 "title": "Title 1",
                 "description": "Description 1",
                 "keywords": ["xxx", "yyy", "zzz"],

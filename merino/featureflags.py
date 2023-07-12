@@ -4,11 +4,10 @@ import logging
 from contextvars import ContextVar
 from enum import Enum
 from random import randbytes
-from typing import Any, Callable
+from typing import Annotated, Any, Callable
 
 from dynaconf import Dynaconf
-from pydantic import BaseModel, ConstrainedFloat, parse_obj_as
-from pydantic.types import OptionalIntFloat
+from pydantic import BaseModel, Field, TypeAdapter
 from wrapt import decorator
 
 logger = logging.getLogger(__name__)
@@ -28,13 +27,6 @@ def _dynaconf_loader() -> Any:
     ).get("flags", {})
 
 
-class Enabled(ConstrainedFloat):
-    """Constrained float for the enabled state of a feature flag."""
-
-    ge: OptionalIntFloat = 0.0
-    le: OptionalIntFloat = 1.0
-
-
 class BucketingScheme(str, Enum):
     """Enum for accepted feature flag bucketing schemes."""
 
@@ -45,7 +37,7 @@ class BucketingScheme(str, Enum):
 class FeatureFlag(BaseModel):
     """Model representing a feature flag."""
 
-    enabled: Enabled
+    enabled: Annotated[float, Field(ge=0.0, le=1.0)]
     scheme: BucketingScheme = BucketingScheme.session
 
 
@@ -53,9 +45,12 @@ class FeatureFlag(BaseModel):
 FeatureFlagsConfigurations = dict[str, FeatureFlag]
 FeatureFlagsDecisions = dict[str, bool]
 
-# Load the dynaconf configuration and parse it into pydantic models once and
+# Load the dynaconf configuration and parse it into Pydantic models once and
 # then use it as the default value for `flags` in `FeatureFlags`.
-_DYNACONF_FLAGS = parse_obj_as(FeatureFlagsConfigurations, _dynaconf_loader())
+# See https://docs.pydantic.dev/latest/usage/type_adapter/#parsing-data-into-a-specified-type
+_DYNACONF_FLAGS = TypeAdapter(FeatureFlagsConfigurations).validate_python(
+    _dynaconf_loader()
+)
 
 
 @decorator
@@ -125,7 +120,7 @@ class FeatureFlags:
         if flags is None:
             self.flags = _DYNACONF_FLAGS
         else:
-            self.flags = parse_obj_as(FeatureFlagsConfigurations, flags)
+            self.flags = TypeAdapter(FeatureFlagsConfigurations).validate_python(flags)
 
         # This dict is populated by @record_decision when is_enabled() is called
         self.decisions = {}

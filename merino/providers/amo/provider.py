@@ -2,9 +2,7 @@
 import asyncio
 import logging
 import time
-from typing import Any
-
-import pydantic
+from typing import Any, Literal
 
 from merino import cron
 from merino.config import settings
@@ -21,10 +19,10 @@ class AddonSuggestion(BaseSuggestion):
 
     # Temporarily returning this is_top_pick flag so that it renders as top pick.
     # Will remove this once the UX is released so that it can pick just the addon provider.
-    is_top_pick: bool = pydantic.Field(True, const=True)
+    is_top_pick: Literal[True] = True
 
     # Addon Suggestions will always be Non-Sponsored
-    is_sponsored: bool = pydantic.Field(False, const=True)
+    is_sponsored: Literal[False] = False
 
 
 def invert_and_expand_index_keywords(

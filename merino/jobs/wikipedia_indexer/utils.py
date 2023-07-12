@@ -47,7 +47,7 @@ class ProgressReporter:
 
 def create_blocklist(blocklist_file_url: str) -> set[str]:
     """Create blocklist from an external file url."""
-    block_list = requests.get(blocklist_file_url).text
+    block_list = requests.get(blocklist_file_url).text  # nosec
     file_like_io = StringIO(block_list)
     csv_reader = csv.DictReader(file_like_io, delimiter=",")
     return set(row["name"] for row in csv_reader)

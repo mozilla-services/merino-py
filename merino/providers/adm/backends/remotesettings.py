@@ -94,7 +94,7 @@ class RemoteSettingsBackend:
                 begin += n
                 full_keywords.append(full_keyword)
                 fkw_index = len(full_keywords)
-            results.append(suggestion.dict(exclude={"keywords", "full_keywords"}))
+            results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
         icon_record = self.filter_records(record_type="icon", records=records)
         for icon in icon_record:
             id = int(icon["id"].replace("icon-", ""))

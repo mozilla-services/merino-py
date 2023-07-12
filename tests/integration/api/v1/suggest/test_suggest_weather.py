@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from freezegun import freeze_time
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
@@ -103,7 +103,9 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
 
     assert response.status_code == 200
     result = response.json()
-    assert expected_suggestion == parse_obj_as(list[Suggestion], result["suggestions"])
+    assert expected_suggestion == TypeAdapter(list[Suggestion]).validate_python(
+        result["suggestions"]
+    )
 
 
 def test_suggest_without_weather_report(client: TestClient, backend_mock: Any) -> None:

@@ -13,7 +13,6 @@ from unittest.mock import AsyncMock
 import freezegun
 import pytest
 from httpx import AsyncClient, HTTPError, Request, Response
-from pydantic.datetime_parse import datetime as datetime_type
 from pytest import FixtureRequest, LogCaptureFixture
 from pytest_mock import MockerFixture
 from redis import RedisError
@@ -113,7 +112,7 @@ def fixture_expected_weather_report() -> WeatherReport:
 @pytest.fixture(name="response_header")
 def fixture_response_header() -> dict[str, str]:
     """Create a response header with a reasonable expiry."""
-    expiry_time: datetime_type = datetime.datetime.now(
+    expiry_time: datetime.datetime = datetime.datetime.now(
         tz=datetime.timezone.utc
     ) + datetime.timedelta(days=2)
     return {"Expires": expiry_time.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)}
@@ -390,9 +389,9 @@ def fixture_accuweather_parsed_data_hits(
 ]:
     """Return the cached AccuWeather triplet for a cache hit."""
     return (
-        AccuweatherLocation.parse_raw(accuweather_cached_location_key),
-        CurrentConditions.parse_raw(accuweather_cached_current_conditions),
-        Forecast.parse_raw(accuweather_cached_forecast_fahrenheit),
+        AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
+        CurrentConditions.model_validate_json(accuweather_cached_current_conditions),
+        Forecast.model_validate_json(accuweather_cached_forecast_fahrenheit),
     )
 
 
@@ -416,7 +415,7 @@ def fixture_accuweather_parsed_data_partial_hits(
 ]:
     """Return the partial parsed AccuWeather triplet for a cache hit."""
     return (
-        AccuweatherLocation.parse_raw(accuweather_cached_location_key),
+        AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
         None,
         None,
     )
@@ -444,8 +443,8 @@ def fixture_accuweather_parsed_data_partial_hits_left(
 ]:
     """Return the partial parsed AccuWeather triplet for a cache hit."""
     return (
-        AccuweatherLocation.parse_raw(accuweather_cached_location_key),
-        CurrentConditions.parse_raw(accuweather_cached_current_conditions),
+        AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
+        CurrentConditions.model_validate_json(accuweather_cached_current_conditions),
         None,
     )
 
@@ -472,9 +471,9 @@ def fixture_accuweather_parsed_data_partial_hits_right(
 ]:
     """Return the partial parsed AccuWeather triplet for a cache hit."""
     return (
-        AccuweatherLocation.parse_raw(accuweather_cached_location_key),
+        AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
         None,
-        Forecast.parse_raw(accuweather_cached_forecast_fahrenheit),
+        Forecast.model_validate_json(accuweather_cached_forecast_fahrenheit),
     )
 
 
@@ -1632,7 +1631,9 @@ def test_parse_cached_data_error(
         ]
     )
 
-    assert location == AccuweatherLocation.parse_raw(accuweather_cached_location_key)
+    assert location == AccuweatherLocation.model_validate_json(
+        accuweather_cached_location_key
+    )
     assert current_conditions is None
     assert forecast is None
 
