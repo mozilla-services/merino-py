@@ -148,6 +148,7 @@ class AccuweatherBackend:
             )
 
             with self.metrics_client.timeit(f"accuweather.request.{request_type}.get"):
+                logger.info(f"===Request: {url_path}, {params}")
                 response: Response = await self.http_client.get(url_path, params=params)
                 response.raise_for_status()
 

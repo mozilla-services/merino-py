@@ -92,7 +92,7 @@ cache = "none"
 enabled_by_default = false
 score = 0.3
 query_timeout_sec = 5.0
-cached_report_ttl_sec = 1800 # 30 mins.
+cached_report_ttl_sec = 2700 # 45 mins.
 
 [default.accuweather]
 # Our API key used to access the AccuWeather API.
