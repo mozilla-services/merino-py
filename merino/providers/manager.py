@@ -3,7 +3,6 @@
 from enum import Enum, unique
 
 from dynaconf.base import Settings
-from httpx import AsyncClient
 from redis.asyncio import Redis
 
 from merino.cache.none import NoCacheAdapter
@@ -28,6 +27,7 @@ from merino.providers.wikipedia.backends.elastic import ElasticBackend
 from merino.providers.wikipedia.backends.fake_backends import FakeWikipediaBackend
 from merino.providers.wikipedia.provider import Provider as WikipediaProvider
 from merino.utils.blocklist import TITLE_BLOCKLIST
+from merino.utils.http_client import create_http_client
 
 
 @unique
@@ -60,7 +60,9 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     cache=cache,  # type: ignore [arg-type]
                     cached_report_ttl_sec=setting.cached_report_ttl_sec,
                     metrics_client=get_metrics_client(),
-                    http_client=AsyncClient(base_url=settings.accuweather.url_base),
+                    http_client=create_http_client(
+                        base_url=settings.accuweather.url_base
+                    ),
                     url_param_api_key=settings.accuweather.url_param_api_key,
                     url_postalcodes_path=settings.accuweather.url_postalcodes_path,
                     url_postalcodes_param_query=settings.accuweather.url_postalcodes_param_query,
