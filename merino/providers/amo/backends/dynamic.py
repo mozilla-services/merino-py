@@ -9,6 +9,7 @@ from httpx import AsyncClient
 
 from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon
 from merino.providers.amo.backends.protocol import Addon, AmoBackendError
+from merino.utils.http_client import create_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ class DynamicAmoBackend:
         tasks: list[Task] = []
 
         try:
-            async with (AsyncClient() as client, TaskGroup() as group):
+            async with (create_http_client() as client, TaskGroup() as group):
                 for addon_key in SupportedAddon:
                     tasks.append(
                         group.create_task(
