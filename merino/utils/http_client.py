@@ -7,7 +7,7 @@ from httpx import AsyncClient, Limits, Timeout
 
 def create_http_client(
     base_url: str = "",
-    max_connection: int = 1024,
+    max_connections: int = 1024,
     connect_timeout: float = 1.0,
     request_timeout: float = 5.0,
     pool_timeout: float = 1.0,
@@ -25,6 +25,6 @@ def create_http_client(
     """
     return AsyncClient(
         base_url=base_url,
-        limits=Limits(max_connections=max_connection),
+        limits=Limits(max_connections=max_connections),
         timeout=Timeout(request_timeout, connect=connect_timeout, pool=pool_timeout),
     )
