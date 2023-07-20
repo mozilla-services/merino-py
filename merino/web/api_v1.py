@@ -61,14 +61,80 @@ async def suggest(
 ) -> JSONResponse:
     """Query Merino for suggestions.
 
-    Args:
-    - `q`: The query string
-    - `client_variants`: [Optional] A comma separated string indicating the client variants
-    - `providers`: [Optional] A comma separated string indicating the suggestion providers for
-      this query
+    This is the primary endpoint that consumes user input and suggests
+    pages the user may want to visit. The expectation is that
+    this is shown alongside other content the browser suggests
+    to the user, such as bookmarks and history.
 
-    Returns:
-    A list of suggestions or an empty list if nothing was found.
+    This endpoint accepts GET requests and takes parameters as query string values
+    and headers.
+
+    **Args:**
+
+    - `q`: The query that the user has typed. This is expected to be a partial
+        input, sent as fast as once per keystroke, though a slower period may be
+        appropriate for the user agent.
+    - `client_variants`: [Optional] A comma-separated list of any experiments or
+        rollouts that are affecting the client's Suggest experience. If Merino
+        recognizes any of them it will modify its behavior accordingly.
+    - `providers`: [Optional] A comma-separated list of providers to use for this
+        request. See the `/providers` endpoint below for valid options. If provided,
+        only suggestions from the listed providers will be returned. If not provided,
+        Merino will use a built-in default set of providers. The default set of
+        providers can be seen in the `/providers` endpoint. Supplying the `default`
+        value to the `providers` parameter will return suggestions from the default providers.
+        You can then pass other providers that are not enabled after `default`,
+        allowing for customization of the suggestion request.
+
+    **Headers:**
+
+    - `Accept-Language` - The locale preferences expressed in this header in
+      accordance with [RFC 2616 section 14.4][rfc-2616-14-4] will be used to
+      determine suggestions. Merino maintains a list of supported locales. Merino
+      will choose the locale from it's list that has the highest `q` (quality) value
+      in the user's `Accept-Language` header. Locales with `q=0` will not be used.
+
+      If no locales match, Merino will not return any suggestions. If the header is
+      not included or empty, Merino will default to the `en-US` locale.
+
+      If the highest quality, compatible language produces no suggestion results,
+      Merino will return an empty list instead of attempting to query other
+      languages.
+
+    - `User-Agent` - A user's device form factor, operating system, and
+      browser/Firefox version are detected from the `User-Agent` header included in
+      the request.
+
+    [rfc-2616-14-4]: https://datatracker.ietf.org/doc/html/rfc2616/#section-14.4
+
+    **Other derived inputs:**
+
+    - Location - The IP address of the user or nearest proxy will be used to
+      determine location. This location may be as granular as city level, depending
+      on server configuration.
+
+      Users that use VPN services will be identified according to the VPN exit node
+      they use, allowing them to change Merino's understanding of their location.
+      VPN exit nodes are often mis-identified in geolocation databases, and may
+      produce unreliable results.
+
+
+    **Returns:**
+
+    The response will be a JSON object containing the following keys:
+    - `client_variants` - A list of strings specified from the `client_variants`
+        parameter in the request.
+    - `server_variants` - A list of strings indicating the server variants.
+    - `request_id` - A string identifier identifying every API request sent from Firefox.
+    - `suggestions` - A list of suggestions or an empty list if nothing was found.
+        Please look at the documentation for `BaseSuggestion` model for information
+        about what the model contains.
+
+    **Response Headers:**
+
+    Responses will carry standard HTTP caching headers that indicate the validity of
+    the suggestions. User agents should prefer to provide the user with cached
+    results as indicated by these headers.
     """
     # Do you plan to release code behind a feature flag? Uncomment the following
     # line to get access to feature flags and then check if your feature flag is
@@ -168,8 +234,27 @@ async def providers(
 ) -> JSONResponse:
     """Query Merino for suggestion providers.
 
-    Returns:
-    A list of search providers.
+    This endpoint gives a list of available providers, along with their
+    _availability_. It accepts GET requests and takes no parameters.
+
+    **Returns:**
+    The response will be a JSON object containing the key `providers`, which is a
+    map where the keys to this map are the IDs of the provider, and the values are
+    provider metadata object. Each provider metadata object will have the following
+    format:
+
+    - `id` - A string that can be used to identify this provider. This ID can be
+        used for the `providers` field of the suggest API.
+    - `availability` - A string describing how this provider is used in Merino. It
+        will be one of:
+        - `"enabled_by_default"` - This provider will be used for requests that don't
+            specify providers, and it should be provided to the user as a selection that
+            can be turned off.
+        - `"disabled_by_default"` - This provider is not used automatically. It should
+            be provided to the user as a selection that could be turned on.
+        - `"hidden"` - This provider is not used automatically. It should not be
+            provided to the user as an option to turn on. It may be used for debugging
+            or other internal uses.
     """
     active_providers, _ = sources
     providers = [

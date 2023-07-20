@@ -51,22 +51,39 @@ exist and link to the details for how the jobs are run.
 [11]: ./operations/elasticsearch.md
 [12]: ./operations/jobs.md
 
+## About the Name
+
+This project drives an important part of Firefox's "felt experience". That is,
+the feeling of using Firefox, hopefully in a delightful way. The word "felt" in
+this phrase refers to feeling, but it can be punned to refer to the
+[textile](https://en.wikipedia.org/wiki/Felt). Felt is often made of wool, and
+Merino wool (from Merino sheep) produces exceptionally smooth felt.
+
 ## Architecture
 
 ```mermaid
-graph TD
+flowchart TD
     User[\fa:fa-user User/]
 
     subgraph Firefox [fa:fa-firefox Firefox]
-        online(online)
-        offline(offline)
+        online(Online Search and Suggest)
+        offline(Offline Search and Suggest<br/>fetches adMarketplace, static Wikipedia, <br/>and other suggestions.<br/> Offline mode is fallback if Merino times out.)
     end
 
     User --> |Accessing the Firefox URL bar| Firefox
 
     subgraph Merino [fa:fa-leaf Merino]
         srh(fa:fa-gears Suggest Request Handler)
-        middleware(fa:fa-paperclip Middleware:<br/>- Geolocation<br/>- Logging<br/>- Metrics<br/>- User Agent)
+
+        subgraph middleware [fa:fa-paperclip Middleware]
+            Geolocation
+            Logging
+            UserAgent
+            Metrics
+        end
+
+        maxmind[(MaxmindDB)]
+        Geolocation --> maxmind
 
         srh -..- middleware
 
@@ -88,24 +105,31 @@ graph TD
             rsb(remote settings)
             accuweather(accuweather)
             elastic(elastic)
-            r_json(local JSON)
+            toppicks_back(top picks)
             dynamic_amo(dynamic addons)
 
-            style r_json stroke-dasharray: 5 5
         end
 
         adm --> rsb
         amo --> dynamic_amo
-        toppicks ..-> |local JSON  <br/> not actually a backend| r_json
+        toppicks --> toppicks_back
         weather --> accuweather
         wikipedia --> elastic
     end
 
-    elastico[(Elasticsearch)]
-    elastic --> elastico
+
+    subgraph "Airflow (Merino Jobs)"
+        wikipedia_sync(Wikipedia Sync)
+        toppicks_sync(Top Picks Sync)
+        addons_sync(Addons Remote Settings Upload)
+    end
 
     addons_api(Addons API)
     dynamic_amo --> addons_api
+
+    elastico[(Elasticsearch)]
+    elastic --> elastico
+    wikipedia_sync ..- |Syncs Wikipedia entries weekly| elastico
 
     accuweather_api(Accuweather API)
     accuweather ..-> accuweather_api
@@ -114,17 +138,14 @@ graph TD
     accuweather ..-> |tries to query cache first| redis
 
     kinto[(Remote Settings)]
-    offline ..-> |fetches adMarketplace and  <br/> static Wikipedia suggestions only.  <br/> Offline mode is fallback if Merino times out.| kinto
-    rsb --> kinto
+    rsb --- kinto
+    addons_sync ..- |Add Addons Suggestions to Remote Settings| kinto
 
+    toppicks_data[(GCS Top Picks Data,<br/>a list of Mozilla curated popular sites and metadata to be <br/>displayed on browser)]
+    toppicks_sync ..-> toppicks_data
 
     online --> |/api/v1/suggest| srh
+    offline ..- kinto
 ```
 
-## About the Name
 
-This project drives an important part of Firefox's "felt experience". That is,
-the feeling of using Firefox, hopefully in a delightful way. The word "felt" in
-this phrase refers to feeling, but it can be punned to refer to the
-[textile](https://en.wikipedia.org/wiki/Felt). Felt is often made of wool, and
-Merino wool (from Merino sheep) produces exceptionally smooth felt.

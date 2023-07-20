@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 
 class AmoDetails(BaseModel):
-    """Addon specific data to be used in Custom Details"""
+    """Addon specific fields."""
 
     rating: str
     number_of_ratings: int
@@ -11,6 +11,9 @@ class AmoDetails(BaseModel):
 
 
 class CustomDetails(BaseModel, arbitrary_types_allowed=False):
-    """Base Model for Custom Details."""
+    """Contain references to custom fields for each provider.
+    This object uses the provider name as the key, and references custom schema models.
+    Please consult the custom details object for more information.
+    """
 
     amo: AmoDetails | None = None
