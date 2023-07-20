@@ -141,7 +141,7 @@ flowchart TD
     rsb --- kinto
     addons_sync ..- |Add Addons Suggestions to Remote Settings| kinto
 
-    toppicks_data[(GCS Top Picks Data,<br/>metadata and icons to be <br/>displayed on browser)]
+    toppicks_data[(GCS Top Picks Data,<br/>a list of Mozilla curated popular sites and metadata to be <br/>displayed on browser)]
     toppicks_sync ..-> toppicks_data
 
     online --> |/api/v1/suggest| srh
