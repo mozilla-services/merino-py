@@ -13,7 +13,18 @@ from merino.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging, metrics, user_agent
 from merino.web import api_v1, dockerflow
 
-app = FastAPI()
+tags_metadata = [
+    {
+        "name": "suggest",
+        "description": "Main search API to query Firefox Suggest.",
+    },
+    {
+        "name": "providers",
+        "description": "Get a list of Firefox Suggest providers and their availability.",
+    },
+]
+
+app = FastAPI(openapi_tags=tags_metadata)
 
 
 @app.on_event("startup")

@@ -1,7 +1,7 @@
 """Abstract class for Providers"""
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 from merino.config import settings
 from merino.middleware.geolocation import Location
@@ -29,29 +29,9 @@ class BaseSuggestion(BaseModel):
     For more context and list of providers affected, please consult
     [this ADR](https://mozilla-services.github.io/merino-py/adr/0002-merino-general-response.html).
 
-    Fields:
-    - `title` - The full title of the suggestion resulting from the query. Using the
-        example of apples above, this might be "Types of Apples in the Pacific
-        Northwest". This field should be treated as plain text.
-    - `url` - The URL of the page that should be navigated to if the user selects
-        this suggestion. This will be a resource with the title specified in the
-        `title` field.
-    - `provider` - A string that identifies the provider of this suggestion, such as
-        "adM". In general, this field is not intended to be directly displayed to the user.
-    - `is_sponsored` - A boolean indicating if this suggestion is sponsored content.
-        If this is true, the UI must indicate to the user that the suggestion is
-        sponsored.
-    - `score` - A value between 0.0 and 1.0 used to compare suggestions. When
-        choosing a suggestion to show the user, higher scored suggestions are
-        preferred.
-    - `description` - [Optional] Text description of the suggestion.
-    - `icon` - [Optional] A URL of an image to display alongside the suggestion. This will be a
-        small square image, suitable to be included inline with the text, such as a
-        site's favicon.
-    - `custom_details` - [Optional] Object that contains provider specific fields.
-        `custom_details` is keyed by the provider name and references custom schemas.
-
     Extra Provider Specific Fields:
+    -------------------------------
+
     - `block_id` - A number that can be used, along with the `provider` field below,
       to uniquely identify this suggestion. Two suggestions with the same `provider`
       and `block_id` should be treated as the same suggestion, even if other fields,
@@ -64,14 +44,12 @@ class BaseSuggestion(BaseModel):
       the user's input. This field should be treated as plain text.
     - `impression_url` - A provider specified telemetry URL that should be notified
       if the browser shows this suggestion to the user. This is used along with
-      `click_url` to monitor the relevancy of suggestions. For more details see
-      [Interaction Pings](#interaction-pings), below. This field may be null, in
+      `click_url` to monitor the relevancy of suggestions. This field may be null, in
       which case no impression ping is required for this suggestion provider.
     - `click_url` - A provider specified telemetry URL that should be notified if
       the user selects this suggestion. This should only be notified as the result
       of positive user action, and only if the user has navigated to the page
-      specified in the `url` field. For more details see
-      [Interaction Pings](#interaction-pings), below. This field may be null, in
+      specified in the `url` field. This field may be null, in
       which case no click ping is required for this suggestion provider.
     - `advertiser` - The name of the advertiser, such as "Nike". Note that a `provider`
       could have multiple `advertiser`s.
@@ -88,14 +66,42 @@ class BaseSuggestion(BaseModel):
       To be used with weather suggestions. Please reference `Forecast` model for more information.
     """
 
-    title: str
-    url: HttpUrl
-    provider: str
-    is_sponsored: bool
-    score: float
-    description: str | None = None
-    icon: str | None = None
-    custom_details: CustomDetails | None = None
+    title: str = Field(
+        description="The full title of the suggestion resulting from the query. "
+        "Using the example of apples above, 'this might be \"Types of Apples "
+        'in the Pacific Northwest". This field should be treated as plain text.'
+    )
+    url: HttpUrl = Field(
+        description=" The URL of the page that should be navigated to if the user "
+        "selects this suggestion. This will be a resource with the title specified in the "
+        "`title` field."
+    )
+    provider: str = Field(
+        description="A string that identifies the provider of this suggestion, such as "
+        '"adM". In general, this field is not intended to be directly displayed to the user.'
+    )
+    is_sponsored: bool = Field(
+        description="A boolean indicating if this suggestion is sponsored content. "
+        "If this is true, the UI must indicate to the user that the suggestion is sponsored."
+    )
+    score: float = Field(
+        description="A value between 0.0 and 1.0 used to compare suggestions. "
+        "When choosing a suggestion to show the user, higher scored suggestions are preferred."
+    )
+    description: str | None = Field(
+        default=None, description="[Optional] Text description of the suggestion."
+    )
+    icon: str | None = Field(
+        default=None,
+        description="[Optional] A URL of an image to display alongside the suggestion."
+        "This will be a small square image, suitable to be included inline with the text, "
+        "such as a site's favicon.",
+    )
+    custom_details: CustomDetails | None = Field(
+        default=None,
+        description="[Optional] Object that contains provider specific fields.`custom_details` "
+        "is keyed by the provider name and references custom schemas.",
+    )
 
 
 class BaseProvider(ABC):
