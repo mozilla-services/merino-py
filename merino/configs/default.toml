@@ -130,8 +130,9 @@ api_url = "https://addons.mozilla.org/api/v5/addons/addon/"
 type = "amo"
 enabled_by_default = false
 score = 0.25
-# Specifies which backend to use. Currently defaulting to dynamic backend.
-backend = "dynamic"
+# Specifies which backend to use. Should default to dynamic backend.
+# Currently turned off so that we don't make repeated calls to Addon API if it doesn't work.
+backend = "static"
 # The minimum number of characters to be considered for matching.
 min_chars = 4
 # The re-syncing frequency for the AMO data. Defaults to daily.
