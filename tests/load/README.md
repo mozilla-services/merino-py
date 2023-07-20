@@ -224,11 +224,45 @@ Execute the `setup_k8s.sh` file and select the **delete** option
 ./tests/load/setup_k8s.sh
 ```
 
+## Maintenance
+
+The load test maintenance schedule cadence is once a quarter and should include
+updating the following:
+
+1. [poetry][poetry] version and python dependencies
+    * [ ] [pyproject.toml][pyproject_toml]
+    * [ ] [poetry.lock][poetry_lock]
+2. [Docker][docker] artifacts
+    * [ ] [Dockerfile][dockerfile]
+    * [ ] [docker-compose.yml][docker_compose]
+3. Distributed GCP execution scripts and Kubernetes configurations
+    * [ ] [setup_k8s.sh][setup_k8s]
+    * [ ] [locust-master-controller.yml][locust_master_controller]
+    * [ ] [locust-master-service.yml][locust_master_service]
+    * [ ] [locust-worker-controller.yml][locust_worker_controller]
+4. [CircleCI][circle_ci] contract test jobs
+    * [ ] [config.yml][circle_config_yml]
+5. Documentation
+    * [ ] [README][readme]
+
+[circle_ci]: https://circleci.com/docs/
+[circle_config_yml]: /.circleci/config.yml
 [cloud]: https://console.cloud.google.com/home/dashboard?q=search&referrer=search&project=spheric-keel-331521&cloudshell=false
 [conserv]: https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux:
 [container_registry]: https://console.cloud.google.com/gcr/images/spheric-keel-331521/global/locust-merino?project=spheric-keel-331521
+[docker]: https://docs.docker.com/
+[docker_compose]: ./docker-compose.yml
+[dockerfile]: ./Dockerfile
 [grafana]: https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/merino-py-application-and-infrastructure?orgId=1&refresh=1m&var-environment=stagepy
+[locust_environment_variables]: https://docs.locust.io/en/stable/configuration.html#environment-variables
+[locust_master_controller]: ./kubernetes-config/locust-master-controller.yml
+[locust_master_service]: ./kubernetes-config/locust-master-service.yml
+[locust_worker_controller]: ./kubernetes-config/locust-worker-controller.yml
 [merino_test_plan]: https://docs.google.com/document/d/1v7LDXENPZg37KXeNcznEZKNZ8rQlOhNbsHprFyMXHhs/edit?usp=sharing
 [merino_history_doc]: https://docs.google.com/document/d/1BGNhKuclUH40Bit9KxYWLiv_N_VnE66uxi9pBFbRWbg/edit
 [merino_spreadsheet]: https://docs.google.com/spreadsheets/d/1SAO3QYIrbxDRxzmYIab-ebZXA1dF06W1lT4I1h2R3a8/edit?usp=sharing
-[locust_environment_variables]: https://docs.locust.io/en/stable/configuration.html#environment-variables
+[poetry]: https://python-poetry.org/docs/
+[poetry_lock]: ./poetry.lock
+[pyproject_toml]: ./pyproject.toml
+[readme]: ./README.md
+[setup_k8s]: ./setup_k8s.sh
