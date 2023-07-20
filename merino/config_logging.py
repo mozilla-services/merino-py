@@ -1,6 +1,9 @@
 """Logging configuration"""
+import logging
 import sys
 from logging.config import dictConfig
+
+from dockerflow import logging as dockerflow_logging
 
 from merino.config import settings
 
@@ -29,7 +32,7 @@ def configure_logging() -> None:
                     "format": "%(message)s",
                 },
                 "json": {
-                    "()": "dockerflow.logging.JsonLogFormatter",
+                    "()": GCPCompatibleJSONFormatter,
                     "logger_name": "merino",
                 },
             },
@@ -73,3 +76,17 @@ def configure_logging() -> None:
             },
         }
     )
+
+
+class GCPCompatibleJSONFormatter(dockerflow_logging.JsonLogFormatter):
+    """Override the dockerflow log formatter with GCP compatible levels."""
+
+    SYSLOG_LEVEL_MAP = {
+        logging.CRITICAL: 600,
+        logging.ERROR: 500,
+        logging.WARNING: 400,
+        logging.INFO: 200,
+        logging.DEBUG: 100,
+    }
+
+    DEFAULT_SYSLOG_LEVEL = 200
