@@ -163,7 +163,7 @@ tests within a Python virtual environment to prevent dependency cross contaminat
       - "80:80"
     ```
 
-4. Run `merino`, `kinto-setup`, `kinto` and `kinto-attachment` docker containers.
+4. Run `merino`, `kinto-setup`, `kinto` and `kinto-attachment` docker containers
 
    Execute the following from the project root:
    ```shell
