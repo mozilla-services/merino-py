@@ -18,6 +18,7 @@ def create_bucket(*, api: str, bucket: str) -> None:
             "data": {"id": bucket},
             "permissions": {"read": ["system.Everyone"]},
         },
+        timeout=10,
     )
     response.raise_for_status()
 
@@ -32,5 +33,6 @@ def create_collection(*, api: str, bucket: str, collection: str) -> None:
             "data": {"id": collection},
             "permissions": {"read": ["system.Everyone"]},
         },
+        timeout=10,
     )
     response.raise_for_status()

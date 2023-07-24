@@ -5,7 +5,7 @@
 """Contract tests client models."""
 
 from enum import Enum
-from typing import Literal, Optional
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Extra, Field, HttpUrl
@@ -30,7 +30,7 @@ class Request(BaseModel):
 
     service: Service
     # Delay is optional, providing time for data refresh in seconds
-    delay: Optional[float] = None
+    delay: float | None = None
 
 
 class KintoRequest(Request):
@@ -53,20 +53,20 @@ class Suggestion(BaseModel, extra=Extra.allow):
     """Class that holds information about a Suggestion returned by Merino."""
 
     block_id: int
-    full_keyword: Optional[str]
+    full_keyword: str | None = None
     title: str
     url: str
     provider: str
-    advertiser: Optional[str]
+    advertiser: str | None = None
     is_sponsored: bool
     score: float
-    icon: Optional[str] = Field(...)
+    icon: str | None = Field(...)
     # Both impression_url and click_url are optional. They're absent for
     # Mozilla-provided Wikipedia suggestions.
-    impression_url: Optional[str]
-    click_url: Optional[str]
+    impression_url: str | None = None
+    click_url: str | None = None
     # Field for Top Picks Nav Queries that are absent for other providers.
-    is_top_pick: Optional[bool]
+    is_top_pick: bool | None = None
 
 
 class ResponseContent(BaseModel):
@@ -75,7 +75,7 @@ class ResponseContent(BaseModel):
     suggestions: list[Suggestion] = Field(default_factory=list)
     client_variants: list[str] = Field(default_factory=list)
     server_variants: list[str] = Field(default_factory=list)
-    request_id: Optional[UUID] = Field(...)
+    request_id: UUID | None = Field(...)
 
 
 class VersionResponseContent(BaseModel):
@@ -98,7 +98,7 @@ class Step(BaseModel):
     """Class that holds information about a step in a test scenario."""
 
     request: KintoRequest | MerinoRequest
-    response: Optional[Response]
+    response: Response | None = None
 
 
 class Scenario(BaseModel):

@@ -4,8 +4,6 @@
 
 """Module for communication with Kinto (Remote Settings)."""
 
-from typing import Optional
-
 import requests
 from pydantic import BaseModel, Field
 from requests import Response as RequestsResponse
@@ -31,8 +29,8 @@ class KintoSuggestion(BaseModel):
     keywords: list[str] = Field(default_factory=list)
     # Both impression_url and click_url are optional. They're absent for
     # Mozilla-provided Wikipedia suggestions.
-    click_url: Optional[str]
-    impression_url: Optional[str]
+    click_url: str | None = None
+    impression_url: str | None = None
 
 
 class KintoAttachment(BaseModel):
@@ -76,7 +74,7 @@ def delete_records(environment: KintoEnvironment) -> None:
         f"collections/{environment.collection}/"
         f"records"
     )
-    response: RequestsResponse = requests.delete(url)
+    response: RequestsResponse = requests.delete(url, timeout=10)
     response.raise_for_status()
 
 
@@ -88,7 +86,7 @@ def get_record(environment: KintoEnvironment, record_id: str) -> KintoResponseRe
         f"collections/{environment.collection}/"
         f"records/{record_id}"
     )
-    response: RequestsResponse = requests.get(url)
+    response: RequestsResponse = requests.get(url, timeout=10)
     response.raise_for_status()
 
     kinto_response: KintoResponse = KintoResponse(**response.json())
@@ -119,6 +117,7 @@ def upload_attachment(
             ),
         },
         data={"data": f'{{"type": "{data_type}"}}'},
+        timeout=10,
     )
     response.raise_for_status()
 
@@ -143,5 +142,6 @@ def upload_icons(environment: KintoEnvironment, icon_ids: set[str]) -> None:
                 ),
             },
             data={"data": '{"type": "icon"}'},
+            timeout=10,
         )
         response.raise_for_status()

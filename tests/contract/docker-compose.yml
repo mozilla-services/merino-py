@@ -21,7 +21,9 @@ services:
 
   client:
     image: client
-    build: client
+    build:
+      context: .
+      dockerfile: ./client/Dockerfile
     container_name: merino_client
     depends_on:
       - merino
@@ -43,7 +45,7 @@ services:
       /wait-for-it.sh merino:8000 --strict -- pytest --junit-xml=/tmp/test-results/contract_results.xml -vv
 
   kinto:
-    image: mozilla/kinto-dist:25.0.0
+    image: mozilla/remote-settings:31.0.3
     container_name: merino_kinto
     stop_signal: SIGKILL
     user: "1000:1000"
@@ -65,7 +67,9 @@ services:
 
   kinto-setup:
     image: kinto-setup
-    build: kinto-setup
+    build:
+      context: .
+      dockerfile: ./kinto-setup/Dockerfile
     container_name: merino_kinto_setup
     depends_on:
       - kinto

@@ -39,7 +39,7 @@ def main(
         # We do this so that docker-compose does not terminate when the CLI
         # exits if running with --abort-on-container-exit as is the case on CI.
 
-        response = requests.get(f"{kinto_api}/")
+        response = requests.get(f"{kinto_api}/", timeout=10)
 
         try:
             response.raise_for_status()
