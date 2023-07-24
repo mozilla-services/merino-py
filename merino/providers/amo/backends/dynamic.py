@@ -54,8 +54,8 @@ class DynamicAmoBackend:
                 "rating": f"{(json_res['ratings']['average']):.1f}",
                 "number_of_ratings": json_res["ratings"]["count"],
             }
-        except httpx.HTTPError:
-            logger.error(f"Addons API could not find key: {addon_key}")
+        except httpx.HTTPError as e:
+            logger.error(f"Addons API could not find key: {addon_key}, {e}")
         except (KeyError, JSONDecodeError):
             logger.error(
                 "Problem with Addons API formatting. "
