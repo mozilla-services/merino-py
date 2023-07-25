@@ -35,6 +35,7 @@ query_timeout_sec = 0.2
 level = "INFO"
 # Any of "mozlog" (i.e. JSON) or "pretty"
 format = "mozlog"
+can_propagate = false
 
 [default.web.api.v1]
 # Setting to contol the limit of optional client variants passed

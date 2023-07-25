@@ -59,14 +59,17 @@ def configure_logging() -> None:
                 "merino": {
                     "handlers": handler,
                     "level": settings.logging.level,
+                    "propagate": settings.logging.can_propagate,
                 },
                 "request.summary": {
                     "handlers": handler,
                     "level": settings.logging.level,
+                    "propagate": settings.logging.can_propagate,
                 },
                 "web.suggest.request": {
                     "handlers": handler,
                     "level": settings.logging.level,
+                    "propagate": settings.logging.can_propagate,
                 },
                 "uvicorn.error": {
                     "handlers": ["uvicorn-error-handler"],

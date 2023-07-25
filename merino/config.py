@@ -6,6 +6,7 @@ _validators = [
     Validator("deployment.canary", is_type_of=bool),
     Validator("logging.format", is_in=["mozlog", "pretty"]),
     Validator("logging.level", is_in=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    Validator("logging.can_propagate", is_type_of=bool),
     Validator("metrics.dev_logger", is_type_of=bool),
     Validator("metrics.host", is_type_of=str),
     Validator("metrics.port", gte=0, is_type_of=int),

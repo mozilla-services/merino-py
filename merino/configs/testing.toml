@@ -19,6 +19,7 @@ dev_logger = true
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 level = "DEBUG"
 format = "pretty"
+can_propagate = true
 
 [testing.web.api.v1]
 # Setting to contol the limit on optional client variants passed
