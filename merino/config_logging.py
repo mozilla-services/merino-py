@@ -81,12 +81,18 @@ def configure_logging() -> None:
 class GCPCompatibleJSONFormatter(dockerflow_logging.JsonLogFormatter):
     """Override the dockerflow log formatter with GCP compatible levels."""
 
-    SYSLOG_LEVEL_MAP = {
+    STACKDRIVER_LEVEL_MAP = {
         logging.CRITICAL: 600,
         logging.ERROR: 500,
         logging.WARNING: 400,
         logging.INFO: 200,
         logging.DEBUG: 100,
+        logging.NOTSET: 0,
     }
 
-    DEFAULT_SYSLOG_LEVEL = 200
+    def convert_record(self, record):
+        """Overwrite this method to write to the `severity` that is picked up by GCP."""
+        out = super().convert_record(record)
+        # GCP uses "severity", not "Severity", which is outputted by Mozlog.
+        out["severity"] = self.STACKDRIVER_LEVEL_MAP.get(record.levelno, 0)
+        return out
