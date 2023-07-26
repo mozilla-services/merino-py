@@ -31,7 +31,7 @@ from merino.providers.amo.addons_data import ADDON_KEYWORDS
 from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
 from merino.web.models_v1 import SuggestResponse
-from tests.load.locust_tests.client_info import DESKTOP_FIREFOX, LOCALES
+from tests.load.common.client_info import DESKTOP_FIREFOX, LOCALES
 
 # Type definitions
 KintoRecords = list[dict[str, Any]]
