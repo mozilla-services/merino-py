@@ -298,14 +298,6 @@ These are production providers that generate suggestions.
   file of domains, represented as a string. Either `dev/top_picks.json` in production
   or `tests/data/top_picks.json` for testing.
 
-#### Wiki Fruit Provider
-- Wiki Fruit - Provides suggestions from a test provider. Should not be used
-  in production.
-  - `type` (`MERINO_PROVIDERS__WIKI_FRUIT__TYPE`) - The type of this provider, should be
-    `wiki_fruit`.
-  - `enabled_by_default` (`MERINO_PROVIDERS__WIKI_FRUIT__ENABLED_BY_DEFAULT`) - Whether
-    this provider is enabled by default.
-
 #### Wikipedia Dynamic Match Provider
 - Wikipedia - Provider backed by the locally indexed Wikipedia through Elasticsearch.
   - `type` (`MERINO_PROVIDERS__WIKIPEDIA__TYPE`) - The type of this provider, should be
