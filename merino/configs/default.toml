@@ -146,7 +146,7 @@ cron_interval_sec = 60
 
 [default.providers.top_picks]
 type = "top_picks"
-enabled_by_default = false
+enabled_by_default = true
 score = 0.25
 query_char_limit = 4
 firefox_char_limit = 2
