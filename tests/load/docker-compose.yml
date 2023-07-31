@@ -22,7 +22,7 @@ services:
       MERINO_PROVIDERS__WIKIPEDIA__ES_URL: "https://merino-nonprod.es.us-west1.gcp.cloud.es.io:9243"
       MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX: "enwiki-v1"
     command: >
-      --master
+      --master --class-picker
 
   locust_worker:
     image: locust

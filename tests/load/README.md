@@ -62,12 +62,15 @@ make load-tests
 #### 1. Start Load Test
 
 * In a browser navigate to `http://localhost:8089/`
-* Setup parameters:
-  * Number of users: 75
-  * Spawn rate: 2
-  * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net' (Alternatively, such as when
-    profiling, point the host to a local instance of merino)
-  * Run time (optional): 10m
+* Set up the load test parameters:
+    * Option 1: Select the `MerinoLoadTestShape`
+      * This option has pre-defined settings and will last 10 minutes
+    * Option 2: Select the `Default` load test shape with the following recommended settings:
+      * Number of users: 35
+      * Spawn rate: 1
+      * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net' (Alternatively, such as when
+        profiling, point the host to a local instance of merino)
+      * Duration (Optional): 10m
 * Select "Start Swarming"
 
 #### 2. Stop Load Test
@@ -148,11 +151,7 @@ a GKE cluster
   EXTERNAL_IP=$(kubectl get svc locust-master -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
   echo http://$EXTERNAL_IP:8089
   ```
-* Setup parameters:
-  * Number of users: 75
-  * Spawn rate: 2
-  * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net' 
-  * Duration (Optional): 10m
+* Select the `MerinoLoadTestShape`, this option has pre-defined settings and will last 10 minutes
 * Select "Start Swarming"
 
 #### 2. Stop Load Test
