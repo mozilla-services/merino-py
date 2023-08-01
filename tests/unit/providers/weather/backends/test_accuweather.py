@@ -18,7 +18,7 @@ from pytest_mock import MockerFixture
 from redis.asyncio import Redis
 
 from merino.cache.redis import RedisAdapter
-from merino.exceptions import CacheAdapterError, CacheEntryError, CacheMissError
+from merino.exceptions import CacheAdapterError, CacheMissError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.accuweather import (
     AccuweatherBackend,
@@ -713,7 +713,7 @@ async def test_get_location_from_cache(
     assert location == expected_location
     expected_query_string = "q".encode("utf-8") + postal_code.encode("utf-8")
     redis_mock.get.assert_called_once_with(
-        f"AccuweatherBackend:v2:/locations/v1/postalcodes/{country}/search.json:"
+        f"AccuweatherBackend:v3:/locations/v1/postalcodes/{country}/search.json:"
         f"{hashlib.blake2s(expected_query_string).hexdigest()}"
     )
     client_mock.get.assert_not_called()
@@ -867,7 +867,7 @@ async def test_get_current_conditions_from_cache(
 
     assert conditions == expected_conditions
     redis_mock.get.assert_called_once_with(
-        "AccuweatherBackend:v2:/currentconditions/v1/39376_PC.json"
+        "AccuweatherBackend:v3:/currentconditions/v1/39376_PC.json"
     )
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.assert_not_called()
@@ -1030,7 +1030,7 @@ async def test_get_forecast_from_cache(
 
     assert forecast == expected_forecast
     redis_mock.get.assert_called_once_with(
-        "AccuweatherBackend:v2:/forecasts/v1/daily/1day/39376_PC.json"
+        "AccuweatherBackend:v3:/forecasts/v1/daily/1day/39376_PC.json"
     )
     client_mock.get.assert_not_called()
 
@@ -1100,16 +1100,16 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend) -> None:
     [
         (
             {"q": "asdfg", "apikey": "filter_me_out"},
-            f"AccuweatherBackend:v2:localhost:"
+            f"AccuweatherBackend:v3:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
         (
             {},
-            "AccuweatherBackend:v2:localhost",
+            "AccuweatherBackend:v3:localhost",
         ),
         (
             {"q": "asdfg"},
-            f"AccuweatherBackend:v2:localhost:"
+            f"AccuweatherBackend:v3:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
     ],
@@ -1151,7 +1151,7 @@ async def test_get_request_cache_hit(
         url, {}, lambda a: cast(Optional[dict[str, Any]], a)
     )
     assert results == {
-        "key": "AccuweatherBackend:v2:/forecasts/v1/daily/1day/39376_PC.json"
+        "key": "AccuweatherBackend:v3:/forecasts/v1/daily/1day/39376_PC.json"
     }
 
     statsd_mock.timeit.assert_called_once_with("accuweather.cache.fetch")
@@ -1238,7 +1238,7 @@ async def test_get_request_cache_get_errors(
         f"accuweather.cache.fetch.{expected_cache_error_type}.{expected_url_type}"
     )
 
-    cache_key = f"AccuweatherBackend:v2:{url}"
+    cache_key = f"AccuweatherBackend:v3:{url}"
     assert cache[cache_key] == json.dumps(expected_client_response).encode("utf-8")
 
 
@@ -1304,32 +1304,6 @@ async def test_get_request_cache_store_errors(
         "accuweather.cache.fetch.miss.forecasts",
         "accuweather.cache.store.set_error",
     ] == increment_called
-
-
-@pytest.mark.parametrize(
-    ("mock_cache_entry", "error"),
-    [(b"", CacheMissError), (b"can't serialize this", CacheEntryError)],
-    ids=["cache_miss", "deserialization_error"],
-)
-@pytest.mark.asyncio
-async def test_fetch_request_from_cache_error(
-    mocker: MockerFixture,
-    accuweather_parameters: dict[str, Any],
-    mock_cache_entry: bytes,
-    error: Any,
-):
-    """Test that an error is raised for cache miss."""
-    redis_mock = mocker.AsyncMock(spec=RedisAdapter)
-
-    async def mock_get(key):
-        return mock_cache_entry
-
-    redis_mock.get.side_effect = mock_get
-
-    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
-
-    with pytest.raises(error):
-        await accuweather.fetch_request_from_cache("random_key")
 
 
 @pytest.mark.asyncio

@@ -1,7 +1,7 @@
 """Protocol for cache adapters."""
 
 from datetime import timedelta
-from typing import Optional, Protocol
+from typing import Any, Optional, Protocol
 
 
 class CacheAdapter(Protocol):
@@ -30,4 +30,28 @@ class CacheAdapter(Protocol):
 
     async def close(self) -> None:  # pragma: no cover
         """Close the adapter and release any underlying resources."""
+        ...
+
+    def register_script(self, sid: str, script: str) -> None:
+        """Register a Lua script in Redis. Regist multiple scripts using the same `sid`
+        will overwrite the previous ones.
+
+        Params:
+            - `sid` {str}, a script identifier
+            - `script` {str}, a Redis supported Lua script
+        """
+        ...
+
+    async def run_script(self, sid: str, keys: list, args: list) -> Any:
+        """Run a given script with keys and arguments.
+
+        Params:
+            - `sid` {str}, a script identifier
+            - `keys` list[str], a list of keys used as the global `KEYS` in Redis scripting
+            - `args` list[str], a list of arguments used as the global `ARGV` in Redis scripting
+        Returns:
+            A Reids value based on the return value of the specified script
+        Raises:
+            - `CacheAdapterError` if Redis returns an error.
+        """
         ...
