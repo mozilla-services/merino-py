@@ -6,15 +6,17 @@
 import datetime
 import hashlib
 import json
-from typing import Any, Optional, cast
+import logging
+from typing import Any, Awaitable, Callable, Optional, cast
 from unittest.mock import AsyncMock
 
 import freezegun
 import pytest
 from httpx import AsyncClient, HTTPError, Request, Response
 from pydantic.datetime_parse import datetime as datetime_type
-from pytest import FixtureRequest
+from pytest import FixtureRequest, LogCaptureFixture
 from pytest_mock import MockerFixture
+from redis import RedisError
 from redis.asyncio import Redis
 
 from merino.cache.redis import RedisAdapter
@@ -32,6 +34,7 @@ from merino.providers.weather.backends.protocol import (
     Temperature,
     WeatherReport,
 )
+from tests.types import FilterCaplogFixture
 
 ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 
@@ -46,9 +49,16 @@ def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
     async def mock_set(key, value, **kwargs) -> Any:
         return None
 
+    async def script_callable(keys, args) -> list:
+        return []
+
+    def mock_register_script(script) -> Callable[[list, list], Awaitable[list]]:
+        return script_callable
+
     mock = mocker.AsyncMock(spec=Redis)
     mock.get.side_effect = mock_get
     mock.set.side_effect = mock_set
+    mock.register_script.side_effect = mock_register_script
     return mock
 
 
@@ -68,6 +78,32 @@ def fixture_accuweather_parameters(
         "url_current_conditions_path": "/currentconditions/v1/{location_key}.json",
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
     }
+
+
+@pytest.fixture(name="expected_weather_report")
+def fixture_expected_weather_report() -> WeatherReport:
+    """Create an `AccuWeatherReport` for assertions"""
+    return WeatherReport(
+        city_name="San Francisco",
+        current_conditions=CurrentConditions(
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "current-weather/39376_pc?lang=en-us"
+            ),
+            summary="Mostly cloudy",
+            icon_id=6,
+            temperature=Temperature(c=15.5, f=60.0),
+        ),
+        forecast=Forecast(
+            url=(
+                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "daily-weather-forecast/39376_pc?lang=en-us"
+            ),
+            summary="Pleasant Saturday",
+            high=Temperature(c=21.1, f=70.0),
+            low=Temperature(c=13.9, f=57.0),
+        ),
+    )
 
 
 @pytest.fixture(name="response_header")
@@ -232,7 +268,7 @@ def fixture_accuweather_cached_current_conditions() -> bytes:
             ),
             "summary": "Mostly cloudy",
             "icon_id": 6,
-            "temperature": [15.5, 60.0],
+            "temperature": {"c": 15.5, "f": 60.0},
         }
     ).encode("utf-8")
 
@@ -326,6 +362,84 @@ def fixture_accuweather_cached_forecast_fahrenheit() -> bytes:
     ).encode("utf-8")
 
 
+@pytest.fixture(name="accuweather_cached_data_hits")
+def fixture_accuweather_cached_data_hits(
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_current_conditions: bytes,
+    accuweather_cached_forecast_fahrenheit: bytes,
+) -> list[Optional[bytes]]:
+    """Return the cached AccuWeather triplet for a cache hit."""
+    return [
+        accuweather_cached_location_key,
+        accuweather_cached_current_conditions,
+        accuweather_cached_forecast_fahrenheit,
+    ]
+
+
+@pytest.fixture(name="accuweather_parsed_data_hits")
+def fixture_accuweather_parsed_data_hits(
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_current_conditions: bytes,
+    accuweather_cached_forecast_fahrenheit: bytes,
+) -> tuple[
+    Optional[AccuweatherLocation], Optional[CurrentConditions], Optional[Forecast]
+]:
+    """Return the cached AccuWeather triplet for a cache hit."""
+    return (
+        AccuweatherLocation.parse_raw(accuweather_cached_location_key),
+        CurrentConditions.parse_raw(accuweather_cached_current_conditions),
+        Forecast.parse_raw(accuweather_cached_forecast_fahrenheit),
+    )
+
+
+@pytest.fixture(name="accuweather_cached_data_partial_hits")
+def Fixture_accuweather_cached_data_partial_hits(
+    accuweather_cached_location_key: bytes,
+) -> list[Optional[bytes]]:
+    """Return the parsed AccuWeather triplet for a partial cache miss."""
+    return [
+        accuweather_cached_location_key,
+        None,
+        None,
+    ]
+
+
+@pytest.fixture(name="accuweather_parsed_data_partial_hits")
+def fixture_accuweather_parsed_data_partial_hits(
+    accuweather_cached_location_key: bytes,
+) -> tuple[
+    Optional[AccuweatherLocation], Optional[CurrentConditions], Optional[Forecast]
+]:
+    """Return the partial parsed AccuWeather triplet for a cache hit."""
+    return (
+        AccuweatherLocation.parse_raw(accuweather_cached_location_key),
+        None,
+        None,
+    )
+
+
+@pytest.fixture(name="accuweather_cached_data_misses")
+def fixture_accuweather_cached_data_misses() -> list[Optional[bytes]]:
+    """Return the cached AccuWeather triplet for a cache miss."""
+    return [
+        None,
+        None,
+        None,
+    ]
+
+
+@pytest.fixture(name="accuweather_parsed_data_misses")
+def fixture_accuweather_parsed_data_misses() -> tuple[
+    Optional[AccuweatherLocation], Optional[CurrentConditions], Optional[Forecast]
+]:
+    """Return the partial parsed AccuWeather triplet for a cache hit."""
+    return (
+        None,
+        None,
+        None,
+    )
+
+
 def test_init_api_key_value_error(
     mocker: MockerFixture, accuweather_parameters: dict[str, Any]
 ) -> None:
@@ -371,6 +485,7 @@ def test_init_url_value_error(
 @pytest.mark.asyncio
 async def test_get_weather_report(
     accuweather: AccuweatherBackend,
+    expected_weather_report: WeatherReport,
     geolocation: Location,
     accuweather_location_response: bytes,
     accuweather_current_conditions_response: bytes,
@@ -378,27 +493,6 @@ async def test_get_weather_report(
     response_header: dict[str, str],
 ) -> None:
     """Test that the get_weather_report method returns a WeatherReport."""
-    expected_report: WeatherReport = WeatherReport(
-        city_name="San Francisco",
-        current_conditions=CurrentConditions(
-            url=(
-                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
-                "current-weather/39376_pc?lang=en-us"
-            ),
-            summary="Mostly cloudy",
-            icon_id=6,
-            temperature=Temperature(c=15.5, f=60.0),
-        ),
-        forecast=Forecast(
-            url=(
-                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
-                "daily-weather-forecast/39376_pc?lang=en-us"
-            ),
-            summary="Pleasant Saturday",
-            high=Temperature(c=21.1, f=70.0),
-            low=Temperature(c=13.9, f=57.0),
-        ),
-    )
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.side_effect = [
         Response(
@@ -441,7 +535,166 @@ async def test_get_weather_report(
 
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
 
-    assert report == expected_report
+    assert report == expected_weather_report
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_from_cache(
+    mocker: MockerFixture,
+    geolocation: Location,
+    expected_weather_report: WeatherReport,
+    accuweather_parameters: dict[str, Any],
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_current_conditions: bytes,
+    accuweather_cached_forecast_fahrenheit: bytes,
+) -> None:
+    """Test that we can get the weather report from cache."""
+    redis_mock = mocker.AsyncMock(spec=Redis)
+
+    async def script_callable(keys, args) -> list:
+        return [
+            accuweather_cached_location_key,
+            accuweather_cached_current_conditions,
+            accuweather_cached_forecast_fahrenheit,
+        ]
+
+    def mock_register_script(script) -> Callable[[list, list], Awaitable[list]]:
+        return script_callable
+
+    redis_mock.register_script.side_effect = mock_register_script
+
+    accuweather: AccuweatherBackend = AccuweatherBackend(
+        cache=RedisAdapter(redis_mock), **accuweather_parameters
+    )
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
+
+    assert report == expected_weather_report
+    client_mock.get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_with_cache_fetch_error(
+    mocker: MockerFixture,
+    geolocation: Location,
+    accuweather_parameters: dict[str, Any],
+    statsd_mock: Any,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Test that it should return None on the cache bulk fetch error."""
+    caplog.set_level(logging.ERROR)
+
+    redis_mock = mocker.AsyncMock(spec=Redis)
+
+    async def script_callable(keys, args) -> list:
+        raise RedisError("Failed to fetch")
+
+    def mock_register_script(script) -> Callable[[list, list], Awaitable[list]]:
+        return script_callable
+
+    redis_mock.register_script.side_effect = mock_register_script
+
+    accuweather: AccuweatherBackend = AccuweatherBackend(
+        cache=RedisAdapter(redis_mock), **accuweather_parameters
+    )
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
+
+    assert report is None
+    client_mock.get.assert_not_called()
+
+    metrics_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_called == ["accuweather.cache.fetch.error"]
+
+    records = filter_caplog(
+        caplog.records, "merino.providers.weather.backends.accuweather"
+    )
+
+    assert len(caplog.records) == 1
+    assert records[0].message.startswith("Failed to fetch weather report from Redis:")
+
+
+@pytest.mark.parametrize(
+    "cached_current_conditions,cached_forecast",
+    [
+        (b"accuweather_cached_current_conditions", None),
+        (None, b"accuweather_cached_forecast_fahrenheit"),
+    ],
+    ids=["missing-forecast", "missing-current-conditions"],
+)
+@pytest.mark.asyncio
+async def test_get_weather_report_with_partial_cache_hits(
+    mocker: MockerFixture,
+    geolocation: Location,
+    expected_weather_report: WeatherReport,
+    accuweather_parameters: dict[str, Any],
+    accuweather_cached_location_key: bytes,
+    cached_current_conditions: Optional[bytes],
+    cached_forecast: Optional[bytes],
+    accuweather_current_conditions_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
+    response_header: dict[str, str],
+) -> None:
+    """Test that we can get the weather report with paritial cache hits."""
+    redis_mock = mocker.AsyncMock(spec=Redis)
+
+    async def mock_set(key, value, **kwargs) -> Any:
+        return None
+
+    async def script_callable(keys, args) -> list:
+        return [
+            accuweather_cached_location_key,
+            cached_current_conditions,
+            cached_forecast,
+        ]
+
+    def mock_register_script(script) -> Callable[[list, list], Awaitable[list]]:
+        return script_callable
+
+    redis_mock.register_script.side_effect = mock_register_script
+    redis_mock.set.side_effect = mock_set
+
+    accuweather: AccuweatherBackend = AccuweatherBackend(
+        cache=RedisAdapter(redis_mock), **accuweather_parameters
+    )
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_current_conditions_response,
+            request=Request(
+                method="GET",
+                url=(
+                    "http://www.accuweather.com/currentconditions/v1/39376_PC.json?"
+                    "apikey=test"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_forecast_response_fahrenheit,
+            request=Request(
+                method="GET",
+                url=(
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376_PC.json?"
+                    "apikey=test"
+                ),
+            ),
+        ),
+    ]
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
+
+    assert report == expected_weather_report
+    assert client_mock.get.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -682,44 +935,6 @@ async def test_get_location(
 
 
 @pytest.mark.asyncio
-async def test_get_location_from_cache(
-    mocker: MockerFixture,
-    accuweather_parameters: dict[str, Any],
-    accuweather_cached_location_key: bytes,
-) -> None:
-    """Test that we can get the location from cache."""
-    redis_mock = mocker.AsyncMock(spec=Redis)
-
-    async def mock_get(key) -> Any:
-        return accuweather_cached_location_key
-
-    redis_mock.get.side_effect = mock_get
-
-    expected_location: AccuweatherLocation = AccuweatherLocation(
-        key="39376_PC", localized_name="San Francisco"
-    )
-    country: str = "US"
-    postal_code: str = "94105"
-
-    accuweather: AccuweatherBackend = AccuweatherBackend(
-        cache=RedisAdapter(redis_mock), **accuweather_parameters
-    )
-    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
-
-    location: Optional[AccuweatherLocation] = await accuweather.get_location(
-        country, postal_code
-    )
-
-    assert location == expected_location
-    expected_query_string = "q".encode("utf-8") + postal_code.encode("utf-8")
-    redis_mock.get.assert_called_once_with(
-        f"AccuweatherBackend:v3:/locations/v1/postalcodes/{country}/search.json:"
-        f"{hashlib.blake2s(expected_query_string).hexdigest()}"
-    )
-    client_mock.get.assert_not_called()
-
-
-@pytest.mark.asyncio
 async def test_get_location_no_location_returned(
     accuweather: AccuweatherBackend, response_header: dict[str, str]
 ) -> None:
@@ -829,48 +1044,6 @@ async def test_get_current_conditions(
     )
 
     assert conditions == expected_conditions
-
-
-@pytest.mark.asyncio
-async def test_get_current_conditions_from_cache(
-    mocker: MockerFixture,
-    accuweather_parameters: dict[str, Any],
-    accuweather_cached_current_conditions: bytes,
-):
-    """Get the current condition from cache. Do not make an API call."""
-    redis_mock = mocker.AsyncMock(spec=Redis)
-
-    async def mock_get(key):
-        return accuweather_cached_current_conditions
-
-    redis_mock.get.side_effect = mock_get
-    current_conditions_url = (
-        "http://www.accuweather.com/en/us/san-francisco-ca/"
-        "94103/current-weather/39376_pc?lang=en-us"
-    )
-
-    expected_conditions: CurrentConditions = CurrentConditions(
-        url=current_conditions_url,
-        summary="Mostly cloudy",
-        icon_id=6,
-        temperature=Temperature(c=15.5, f=60),
-    )
-    location_key: str = "39376_PC"
-
-    accuweather: AccuweatherBackend = AccuweatherBackend(
-        cache=RedisAdapter(redis_mock), **accuweather_parameters
-    )
-
-    conditions: Optional[CurrentConditions] = await accuweather.get_current_conditions(
-        location_key
-    )
-
-    assert conditions == expected_conditions
-    redis_mock.get.assert_called_once_with(
-        "AccuweatherBackend:v3:/currentconditions/v1/39376_PC.json"
-    )
-    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
-    client_mock.get.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -994,48 +1167,6 @@ async def test_get_forecast(
 
 
 @pytest.mark.asyncio
-async def test_get_forecast_from_cache(
-    mocker: MockerFixture,
-    accuweather_parameters: dict[str, Any],
-    accuweather_cached_forecast_fahrenheit: bytes,
-):
-    """Get the forecast from cache. Do not make an API call."""
-    redis_mock = mocker.AsyncMock(spec=Redis)
-
-    async def mock_get(key):
-        return accuweather_cached_forecast_fahrenheit
-
-    redis_mock.get.side_effect = mock_get
-
-    expected_forecast_url = (
-        "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
-        "daily-weather-forecast/39376_pc?lang=en-us"
-    )
-
-    expected_forecast: Forecast = Forecast(
-        url=expected_forecast_url,
-        summary="Pleasant Saturday",
-        high=Temperature(f=70),
-        low=Temperature(f=57),
-    )
-
-    location_key: str = "39376_PC"
-
-    accuweather: AccuweatherBackend = AccuweatherBackend(
-        cache=RedisAdapter(redis_mock), **accuweather_parameters
-    )
-    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
-
-    forecast: Optional[Forecast] = await accuweather.get_forecast(location_key)
-
-    assert forecast == expected_forecast
-    redis_mock.get.assert_called_once_with(
-        "AccuweatherBackend:v3:/forecasts/v1/daily/1day/39376_PC.json"
-    )
-    client_mock.get.assert_not_called()
-
-
-@pytest.mark.asyncio
 async def test_get_forecast_no_forecast_returned(
     accuweather: AccuweatherBackend,
     response_header: dict[str, str],
@@ -1128,44 +1259,11 @@ def test_cache_key_for_accuweather_request(
     assert cache_key == expected_cache_key
 
 
-@pytest.mark.asyncio
-async def test_get_request_cache_hit(
-    mocker: MockerFixture, accuweather_parameters: dict[str, Any], statsd_mock: Any
-):
-    """Test that request can get value from cache"""
-    redis_mock = mocker.AsyncMock(spec=RedisAdapter)
-    url = "/forecasts/v1/daily/1day/39376_PC.json"
-
-    async def mock_get(key):
-        return json.dumps({"key": key}).encode("utf-8")
-
-    redis_mock.get.side_effect = mock_get
-
-    mock_client: Any = mocker.AsyncMock(spec=AsyncClient)
-
-    accuweather: AccuweatherBackend = AccuweatherBackend(
-        cache=redis_mock, **accuweather_parameters
-    )
-
-    results: Optional[dict[str, Any]] = await accuweather.get_request(
-        url, {}, lambda a: cast(Optional[dict[str, Any]], a)
-    )
-    assert results == {
-        "key": "AccuweatherBackend:v3:/forecasts/v1/daily/1day/39376_PC.json"
-    }
-
-    statsd_mock.timeit.assert_called_once_with("accuweather.cache.fetch")
-    statsd_mock.increment.assert_called_once_with("accuweather.cache.hit.forecasts")
-    mock_client.get.assert_not_called()
-
-
 @pytest.mark.parametrize(
-    ("mock_cache_entry", "expected_cache_error_type", "url", "expected_url_type"),
+    ("url", "expected_url_type"),
     [
-        (b"", "miss", "/forecasts/v1/daily/1day/39376_PC.json", "forecasts"),
+        ("/forecasts/v1/daily/1day/39376_PC.json", "forecasts"),
         (
-            b"can't serialize this",
-            "error",
             "/currentconditions/v1/39376_PC.json",
             "currentconditions",
         ),
@@ -1176,10 +1274,7 @@ async def test_get_request_cache_hit(
 @pytest.mark.asyncio
 async def test_get_request_cache_get_errors(
     mocker: MockerFixture,
-    accuweather_parameters: dict[str, Any],
-    mock_cache_entry: bytes,
-    expected_cache_error_type: str,
-    response_header: dict[str, str],
+    accuweather: AccuweatherBackend,
     url: str,
     expected_url_type: str,
     statsd_mock: Any,
@@ -1187,26 +1282,10 @@ async def test_get_request_cache_get_errors(
     """Test for cache errors/misses. Ensures that the right metrics are
     called and that the API request is actually made.
     """
-    redis_mock = mocker.AsyncMock(spec=RedisAdapter)
-
-    cache = {}
-
-    async def mock_get(key):
-        return mock_cache_entry
-
-    async def mock_store(key, value, ttl=None):
-        assert ttl == datetime.timedelta(days=2)
-        cache[key] = value
-
-    redis_mock.get.side_effect = mock_get
-    redis_mock.set.side_effect = mock_store
-
     expiry_date = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(
         days=2
     )
     expected_client_response = {"hello": "world"}
-
-    accuweather = AccuweatherBackend(cache=redis_mock, **accuweather_parameters)
 
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.return_value = Response(
@@ -1229,17 +1308,9 @@ async def test_get_request_cache_get_errors(
         call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list
     ]
     assert [
-        "accuweather.cache.fetch",
         f"accuweather.request.{expected_url_type}.get",
         "accuweather.cache.store",
     ] == timeit_metrics_called
-
-    statsd_mock.increment.assert_called_once_with(
-        f"accuweather.cache.fetch.{expected_cache_error_type}.{expected_url_type}"
-    )
-
-    cache_key = f"AccuweatherBackend:v3:{url}"
-    assert cache[cache_key] == json.dumps(expected_client_response).encode("utf-8")
 
 
 @freezegun.freeze_time("2023-04-09")
@@ -1292,7 +1363,6 @@ async def test_get_request_cache_store_errors(
         call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list
     ]
     assert [
-        "accuweather.cache.fetch",
         "accuweather.request.forecasts.get",
         "accuweather.cache.store",
     ] == timeit_metrics_called
@@ -1301,7 +1371,6 @@ async def test_get_request_cache_store_errors(
         call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
     ]
     assert [
-        "accuweather.cache.fetch.miss.forecasts",
         "accuweather.cache.store.set_error",
     ] == increment_called
 
@@ -1343,3 +1412,128 @@ def test_add_partner_code(
     """Test add_partner_code."""
     updated_url: str = add_partner_code(url, partner_param_id, partner_code)
     assert updated_url == expected_url
+
+
+@pytest.mark.parametrize(
+    ("cached_data", "expected_metrics"),
+    [
+        (
+            ["location", "current", "forecast"],
+            ("hit.locations", "hit.currentconditions", "hit.forecasts"),
+        ),
+        (
+            ["location", None, "forecast"],
+            ("hit.locations", "fetch.miss.currentconditions", "hit.forecasts"),
+        ),
+        (
+            ["location", "current", None],
+            ("hit.locations", "hit.currentconditions", "fetch.miss.forecasts"),
+        ),
+        (
+            ["location", None, None],
+            ("hit.locations", "fetch.miss.currentconditions", "fetch.miss.forecasts"),
+        ),
+        (
+            [None, None, None],
+            (
+                "fetch.miss.locations",
+                "fetch.miss.currentconditions",
+                "fetch.miss.forecasts",
+            ),
+        ),
+    ],
+    ids=[
+        "cache-hits",
+        "partial-hits-left",
+        "partial-hits-right",
+        "partial-hits-one",
+        "cache-misses",
+    ],
+)
+def test_metrics_for_cache_fetch(
+    accuweather: AccuweatherBackend,
+    cached_data: list,
+    expected_metrics: tuple,
+    statsd_mock: Any,
+):
+    """Test metrics for cache fetches."""
+    accuweather.emit_cache_fetch_metrics(cached_data)
+
+    metrics_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert [f"accuweather.cache.{val}" for val in expected_metrics] == metrics_called
+
+
+@pytest.mark.parametrize(
+    ("fixture_cached_data", "fixture_parsed_data"),
+    [
+        (
+            "accuweather_cached_data_hits",
+            "accuweather_parsed_data_hits",
+        ),
+        (
+            "accuweather_cached_data_partial_hits",
+            "accuweather_parsed_data_partial_hits",
+        ),
+        (
+            "accuweather_cached_data_misses",
+            "accuweather_parsed_data_misses",
+        ),
+    ],
+    ids=[
+        "cache-hits",
+        "partial-hits",
+        "cache-misses",
+    ],
+)
+def test_parse_cached_data(
+    request: FixtureRequest,
+    accuweather: AccuweatherBackend,
+    fixture_cached_data: str,
+    fixture_parsed_data: str,
+):
+    """Test cached data parsing."""
+    cached_data = request.getfixturevalue(fixture_cached_data)
+    expected_parsed_data = request.getfixturevalue(fixture_parsed_data)
+
+    res = accuweather.parse_cached_data(cached_data)
+
+    assert res == expected_parsed_data
+
+
+def test_parse_cached_data_error(
+    accuweather: AccuweatherBackend,
+    accuweather_cached_location_key: bytes,
+    statsd_mock: Any,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+):
+    """Test cached data parsing with errors."""
+    caplog.set_level(logging.ERROR)
+
+    location, current_conditions, forecast = accuweather.parse_cached_data(
+        [
+            accuweather_cached_location_key,
+            b"invalid_current_condition",
+            b"invalid_forecast",
+        ]
+    )
+
+    assert location == AccuweatherLocation.parse_raw(accuweather_cached_location_key)
+    assert current_conditions is None
+    assert forecast is None
+
+    metrics_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_called == ["accuweather.cache.data.error"]
+
+    records = filter_caplog(
+        caplog.records, "merino.providers.weather.backends.accuweather"
+    )
+
+    assert len(caplog.records) == 1
+    assert records[0].message.startswith(
+        "Failed to load weather report data from Redis:"
+    )

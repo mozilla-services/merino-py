@@ -167,7 +167,7 @@ class AccuweatherBackend:
                     self.url_current_conditions_path,
                     query_params={self.url_param_api_key: self.api_key},
                 )
-            case WeatherDataType.FORECAST:
+            case WeatherDataType.FORECAST:  # pragma: no cover
                 return self.cache_key_for_accuweather_request(
                     self.url_forecasts_path,
                     query_params={self.url_param_api_key: self.api_key},
@@ -232,7 +232,7 @@ class AccuweatherBackend:
             cache_value = json.dumps(response_dict).encode("utf-8")
             await self.cache.set(cache_key, cache_value, ttl=cache_ttl)
 
-    def emit_cache_fetch_metrics(self, cached_data: list[bytes]) -> None:
+    def emit_cache_fetch_metrics(self, cached_data: list[Optional[bytes]]) -> None:
         """Emit cache fetch metrics.
 
         Params:
@@ -243,13 +243,13 @@ class AccuweatherBackend:
         match cached_data:
             case []:
                 pass
-            case [_, current_cached, forecast_cached]:
+            case [location_cached, current_cached, forecast_cached]:
                 location, current, forecast = (
-                    True,
+                    location_cached is not None,
                     current_cached is not None,
                     forecast_cached is not None,
                 )
-            case _:  # noqa: D102
+            case _:  # pragma: no cover
                 pass
 
         self.metrics_client.increment(
@@ -272,7 +272,7 @@ class AccuweatherBackend:
     # TODO(nanj): re-enable type checking once we upgrade mypy to the lastest.
     @no_type_check
     def parse_cached_data(
-        self, cached_data: list[bytes]
+        self, cached_data: list[Optional[bytes]]
     ) -> tuple[
         Optional[AccuweatherLocation],
         Optional[CurrentConditions],
@@ -343,7 +343,7 @@ class AccuweatherBackend:
         )
         # Look up for all the weather data from the cache.
         try:
-            cached_data: list[bytes] = await self.cache.run_script(
+            cached_data: list[Optional[bytes]] = await self.cache.run_script(
                 sid=SCRIPT_ID,
                 keys=[cache_key],
                 args=[

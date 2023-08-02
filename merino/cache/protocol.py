@@ -32,7 +32,7 @@ class CacheAdapter(Protocol):
         """Close the adapter and release any underlying resources."""
         ...
 
-    def register_script(self, sid: str, script: str) -> None:
+    def register_script(self, sid: str, script: str) -> None:  # pragma: no cover
         """Register a Lua script in Redis. Regist multiple scripts using the same `sid`
         will overwrite the previous ones.
 
@@ -42,7 +42,9 @@ class CacheAdapter(Protocol):
         """
         ...
 
-    async def run_script(self, sid: str, keys: list, args: list) -> Any:
+    async def run_script(
+        self, sid: str, keys: list, args: list
+    ) -> Any:  # pragma: no cover
         """Run a given script with keys and arguments.
 
         Params:
