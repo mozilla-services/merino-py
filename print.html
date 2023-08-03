@@ -1470,6 +1470,112 @@ This means that data migrations will be simpler.</li>
 <p>The job is configured in <a href="https://github.com/mozilla/telemetry-airflow"><code>telemetry-airflow</code></a>.</p>
 <p>You can access the job in the 
 <a href="https://workflow.telemetry.mozilla.org/dags/merino_jobs/grid?search=merino_jobs">Airflow Console</a>.</p>
+<h2 id="csv-remote-settings-uploader"><a class="header" href="#csv-remote-settings-uploader">CSV remote settings uploader</a></h2>
+<p>The CSV remote settings uploader is a job that uploads suggestions data in a CSV
+file to remote settings. It takes two inputs:</p>
+<ul>
+<li>A CSV file. The first row in the file is assumed to be a header that names
+the fields (columns) in the data.</li>
+<li>A Python module that validates the CSV contents and describes how to convert
+it into suggestions JSON.</li>
+</ul>
+<p>If you're uploading suggestions from a Google sheet, you can export a CSV file
+from File &gt; Download &gt; Comma Separated Values (.csv).</p>
+<h3 id="uploading-a-new-type-of-suggestion"><a class="header" href="#uploading-a-new-type-of-suggestion">Uploading a new type of suggestion</a></h3>
+<p>To upload a new type of suggestion, follow these steps:</p>
+<h4 id="1-create-a-python-model-module"><a class="header" href="#1-create-a-python-model-module">1. Create a Python model module</a></h4>
+<p>Add a Python module to <code>merino/jobs/csv_rs_uploader/</code>. It's probably easiest to
+copy an existing model module like <code>mdn.py</code>, follow along with the steps here,
+and modify it for the new suggestion type. Name the file according to the
+suggestion type.</p>
+<p>This file will define the model of the new suggestion type as it will be
+serialized in the output JSON, perform validation and conversion of the input
+data in the CSV, and define how the input data should map to the output JSON.</p>
+<h4 id="2-add-the-suggestion-class"><a class="header" href="#2-add-the-suggestion-class">2. Add the <code>Suggestion</code> class</a></h4>
+<p>In the module, implement a class called <code>Suggestion</code> that derives from
+<code>BaseSuggestion</code> in <code>merino.jobs.csv_rs_uploader.base</code>. This class will be the
+model of the new suggestion type. <code>BaseSuggestion</code> itself derives from
+Pydantic's <code>BaseModel</code>, so the validation the class will perform will be based
+on <a href="operations/">Pydantic</a>, which is used throughout Merino. (<code>BaseSuggestion</code> is
+implemented in <code>base.py</code>.)</p>
+<h4 id="3-add-suggestion-fields-to-the-class"><a class="header" href="#3-add-suggestion-fields-to-the-class">3. Add suggestion fields to the class</a></h4>
+<p>Add a field to the class for each property that should appear in the output JSON
+(except <code>score</code>, which the uploader will add automatically). Name each field as
+you would like it to be named in the JSON. Give each field a type so that
+Pydantic can validate it. For URL fields, use <code>HttpUrl</code> from the <code>pydantic</code>
+module.</p>
+<h4 id="4-add-validator-methods-to-the-class"><a class="header" href="#4-add-validator-methods-to-the-class">4. Add validator methods to the class</a></h4>
+<p>Add a method annotated with <code>@validator</code> for each field. Each validator method
+should transform its field's input value into an appropriate output value and
+raise a <code>ValueError</code> if the input value is invalid. Pydantic will call these
+methods automatically as it performs validation. Their return values will be
+used as the values in the output JSON.</p>
+<p><code>BaseSuggestion</code> implements two helpers you should use:</p>
+<ul>
+<li><code>_validate_str()</code> - Validates a string value and returns the validated value.
+Leading and trailing whitespace is stripped, and all whitespace is replaced with
+spaces and collapsed. Returns the validated value.</li>
+<li><code>_validate_keywords()</code> - The uploader assumes that lists of keywords are
+serialized in the input data as comma-delimited strings. This helper method
+takes a comma-delimited string and splits it into individual keyword strings.
+Each keyword is converted to lowercase, some non-ASCII characters are replaced
+with ASCII equivalents that users are more likely to type, leading and trailing
+whitespace is stripped, and all whitespace is replaced with spaces and
+collapsed. Returns the list of keyword strings.</li>
+</ul>
+<h4 id="5-implement-the-csv_to_json-class-method"><a class="header" href="#5-implement-the-csv_to_json-class-method">5. Implement the <code>csv_to_json()</code> class method</a></h4>
+<p>Add a <code>@classmethod</code> to <code>Suggestion</code> called <code>csv_to_json()</code>. It should return a
+<code>dict</code> that maps from field (column) names in the input CSV to property names in
+the output JSON.</p>
+<h4 id="6-add-a-test"><a class="header" href="#6-add-a-test">6. Add a test</a></h4>
+<p>Add a test file to <code>tests/unit/jobs/csv_rs_uploader/</code>. See <code>test_mdn.py</code> as an
+example. The test should perform a successful upload as well as uploads that
+fail due to validation errors and missing fields (columns) in the input CSV.</p>
+<p><code>utils.py</code> in the same directory implements helpers that your test should use:</p>
+<ul>
+<li><code>do_csv_test()</code> - Makes sure the uploader works correctly during a successful
+upload. It takes either a path to a CSV file or a <code>list[dict]</code> that will be used
+to create a file object (<code>StringIO</code>) for an in-memory CSV file. Prefer passing
+in a <code>list[dict]</code> instead of creating a file and passing a path, since it's
+simpler.</li>
+<li><code>do_error_test()</code> - Makes sure a given error is raised when expected. Use
+<code>ValidationError</code> from <code>pydantic</code> to check validation errors and
+<code>MissingFieldError</code> from <code>merino.jobs.csv_rs_uploader</code> to check input CSV that
+is missing an expected field (column).</li>
+</ul>
+<p>For information on running the test, see below.</p>
+<h3 id="running-the-uploader"><a class="header" href="#running-the-uploader">Running the uploader</a></h3>
+<pre><code>$ poetry run merino-jobs csv-rs-uploader upload --server &quot;https://remote-settings-dev.allizom.org/v1&quot; --bucket main-workspace --csv-path foo.csv --model-name foo --record-type foo-suggestions --auth &quot;Bearer ...&quot;
+</code></pre>
+<p>Let's break down each command-line option in the example above:</p>
+<ul>
+<li><code>--server</code> - Suggestions will be uploaded to the remote settings dev server</li>
+<li><code>--bucket</code> - The <code>main-workspace</code> bucket will be used</li>
+<li><code>--csv-path</code> - The CSV input file is <code>foo.csv</code></li>
+<li><code>--model-basename</code> - The model module is named <code>foo</code>. Its path within the repo
+would be <code>merino/jobs/csv_rs_uploader/foo.py</code></li>
+<li><code>--record-type</code> - The <code>type</code> in the remote settings records created for these
+suggestions will be set to <code>foo-suggestions</code>. This argument is optional and
+defaults to <code>&quot;{model_name}-suggestions&quot;</code></li>
+<li><code>--auth</code> - The user's authorization token from the server</li>
+</ul>
+<h4 id="setting-suggestion-scores"><a class="header" href="#setting-suggestion-scores">Setting suggestion scores</a></h4>
+<p>By default all uploaded suggestions will have a <code>score</code> property whose value is
+defined in the <code>remote_settings</code> section of the Merino config. This default can
+be overridden using <code>--score &lt;number&gt;</code>. The number should be a float between 0
+and 1 inclusive.</p>
+<h4 id="other-useful-options"><a class="header" href="#other-useful-options">Other useful options</a></h4>
+<p>Some other useful options are documented below. To see all options, run:
+<code>poetry run merino-jobs csv-rs-uploader upload --help</code></p>
+<ul>
+<li><code>--dry-run</code> - Log the generated output suggestions but don't upload them. The
+uploader will still authenticate with the server, so <code>--auth</code> must still be
+used.</li>
+</ul>
+<h3 id="running-an-uploader-test"><a class="header" href="#running-an-uploader-test">Running an uploader test</a></h3>
+<pre><code>$ MERINO_ENV=testing poetry run pytest tests/unit/jobs/csv_rs_uploader/test_foo.py
+</code></pre>
+<p>See also the main Merino documentation for running unit tests.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="merino-adrs"><a class="header" href="#merino-adrs">Merino ADRs</a></h1>
 <p>This directory archives all the Architectural Decision Records (ADRs) for Merino.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="locust-vs-k6-merino-py-performance-test-framework"><a class="header" href="#locust-vs-k6-merino-py-performance-test-framework">Locust vs k6; Merino-py Performance Test Framework</a></h1>
