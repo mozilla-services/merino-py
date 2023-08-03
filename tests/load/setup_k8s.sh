@@ -9,7 +9,7 @@ GOOGLE_CLOUD_PROJECT=$(gcloud config get-value project)
 CLUSTER='merino-locust-load-test'
 TARGET='https://stagepy.merino.nonprod.cloudops.mozgcp.net'
 SCOPE='https://www.googleapis.com/auth/cloud-platform'
-REGION='us-west1'
+REGION='us-central1'
 WORKER_COUNT=5
 MACHINE_TYPE='n1-standard-2'
 BOLD=$(tput bold)
@@ -29,8 +29,8 @@ ENVIRONMENT_VARIABLES=(
   "TARGET_HOST,$TARGET"
   'LOCUST_CSV,merino'
   "LOCUST_HOST,$TARGET"
-  'LOCUST_USERS,"35"'
-  'LOCUST_SPAWN_RATE,"1"'
+  'LOCUST_USERS,"75"'
+  'LOCUST_SPAWN_RATE,"2"'
   'LOCUST_RUN_TIME,"600"' # 10 minutes
   'MERINO_REMOTE_SETTINGS__SERVER,https://firefox.settings.services.mozilla.com'
   'MERINO_REMOTE_SETTINGS__COLLECTION,quicksuggest'

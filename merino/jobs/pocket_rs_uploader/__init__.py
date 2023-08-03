@@ -1,39 +1,14 @@
-"""CLI commands for the pocket_rs_uploader module"""
+"""CLI commands for the csv_rs_uploader module"""
 import asyncio
 import csv
+import importlib
 import io
-from typing import Any
 
 import typer
-from pydantic import BaseModel, HttpUrl, validator
 
 from merino.config import settings as config
 from merino.jobs.utils.chunked_rs_uploader import ChunkedRemoteSettingsUploader
 
-# The names of expected fields (columns) in the CSV input data.
-FIELD_DESC = "Collection Description"
-FIELD_KEYWORDS_LOW = "Low-Confidence Keywords"
-FIELD_KEYWORDS_HIGH = "High-Confidence Keywords"
-FIELD_TITLE = "Collection Title"
-FIELD_URL = "Collection URL"
-
-ALL_FIELDS = [
-    FIELD_DESC,
-    FIELD_KEYWORDS_LOW,
-    FIELD_KEYWORDS_HIGH,
-    FIELD_TITLE,
-    FIELD_URL,
-]
-
-# The names of fields whose values are suggestion keywords. In the input data,
-# the values of these fields are expected to be comma-delimited strings. The
-# uploader converts them to arrays in the output JSON.
-KEYWORDS_FIELDS = [
-    FIELD_KEYWORDS_LOW,
-    FIELD_KEYWORDS_HIGH,
-]
-
-job_settings = config.jobs.pocket_rs_uploader
 rs_settings = config.remote_settings
 
 # Options
@@ -80,73 +55,39 @@ server_option = typer.Option(
 )
 
 csv_path_option = typer.Option(
-    job_settings.csv_path,
+    "",
     "--csv-path",
     help="Path to CSV file containing the source data",
 )
 
+model_name_option = typer.Option(
+    "",
+    "--model-name",
+    help="Name of the suggestion model module",
+)
+
+model_package_option = typer.Option(
+    __name__,
+    "--model-package",
+    help="Name of the package containing the suggestion model module",
+)
+
 record_type_option = typer.Option(
-    job_settings.record_type,
+    "",
     "--record-type",
-    help="The `type` of each remote settings record",
+    help="The `type` of each remote settings record [default: '{model_name}-suggestions']",
 )
 
 score_option = typer.Option(
-    job_settings.score,
+    rs_settings.score,
     "--score",
     help="The score of each suggestion",
 )
 
-pocket_rs_uploader_cmd = typer.Typer(
-    name="pocket-rs-uploader",
-    help="Command for uploading Pocket suggestions to remote settings",
+csv_rs_uploader_cmd = typer.Typer(
+    name="csv-rs-uploader",
+    help="Command for uploading suggestions from a CSV file to remote settings",
 )
-
-
-class Suggestion(BaseModel):
-    """Model for Pocket suggestions as encoded in the output JSON."""
-
-    url: HttpUrl
-    title: str
-    description: str
-    lowConfidenceKeywords: list[str]
-    highConfidenceKeywords: list[str]
-
-    def _validate_str(cls, value: str, name: str) -> str:
-        if not value:
-            raise ValueError(f"{name} must not be empty")
-        return value
-
-    def _validate_keywords(cls, value: list[str], name: str) -> list[str]:
-        if not value or len(value) == 0:
-            raise ValueError(f"{name} must not be empty")
-        if any(map(lambda kw: not kw, value)):
-            raise ValueError(f"{name} must not contain any empty strings")
-        if any(map(lambda kw: kw.strip() != kw, value)):
-            raise ValueError(f"{name} must not contain leading or trailing spaces")
-        if any(map(lambda kw: kw.lower() != kw, value)):
-            raise ValueError(f"{name} must not contain uppercase chars")
-        return value
-
-    @validator("title", pre=True, always=True)
-    def validate_title(cls, value):
-        """Validate title"""
-        return cls._validate_str(cls, value, "title")
-
-    @validator("description", pre=True, always=True)
-    def validate_description(cls, value):
-        """Validate description"""
-        return cls._validate_str(cls, value, "description")
-
-    @validator("lowConfidenceKeywords", pre=True, always=True)
-    def validate_lowConfidenceKeywords(cls, value):
-        """Validate lowConfidenceKeywords"""
-        return cls._validate_keywords(cls, value, "lowConfidenceKeywords")
-
-    @validator("highConfidenceKeywords", pre=True, always=True)
-    def validate_highConfidenceKeywords(cls, value):
-        """Validate highConfidenceKeywords"""
-        return cls._validate_keywords(cls, value, "highConfidenceKeywords")
 
 
 class MissingFieldError(Exception):
@@ -155,7 +96,7 @@ class MissingFieldError(Exception):
     pass
 
 
-@pocket_rs_uploader_cmd.command()
+@csv_rs_uploader_cmd.command()
 def upload(
     auth: str = auth_option,
     bucket: str = bucket_option,
@@ -164,11 +105,18 @@ def upload(
     csv_path: str = csv_path_option,
     delete_existing_records: bool = delete_existing_records_option,
     dry_run: bool = dry_run_option,
+    model_name: str = model_name_option,
+    model_package: str = model_package_option,
     record_type: str = record_type_option,
     score: float = score_option,
     server: str = server_option,
 ):
-    """Upload Pocket suggestions to remote settings."""
+    """Upload suggestions from a CSV file to remote settings."""
+    if not csv_path:
+        raise typer.BadParameter("--csv-path must be given")
+    if not model_name:
+        raise typer.BadParameter("--model-name must be given")
+
     asyncio.run(
         _upload(
             auth=auth,
@@ -178,6 +126,8 @@ def upload(
             csv_path=csv_path,
             delete_existing_records=delete_existing_records,
             dry_run=dry_run,
+            model_name=model_name,
+            model_package=model_package,
             record_type=record_type,
             score=score,
             server=server,
@@ -193,6 +143,8 @@ async def _upload(
     csv_path: str,
     delete_existing_records: bool,
     dry_run: bool,
+    model_name: str,
+    model_package: str,
     record_type: str,
     score: float,
     server: str,
@@ -206,6 +158,8 @@ async def _upload(
             delete_existing_records=delete_existing_records,
             dry_run=dry_run,
             file_object=csv_file,
+            model_name=model_name,
+            model_package=model_package,
             record_type=record_type,
             score=score,
             server=server,
@@ -220,44 +174,54 @@ async def _upload_file_object(
     file_object: io.TextIOWrapper,
     delete_existing_records: bool,
     dry_run: bool,
+    model_name: str,
+    model_package: str,
     record_type: str,
     score: float,
     server: str,
 ):
+    if not record_type:
+        record_type = f"{model_name}-suggestions"
+
+    # Import the suggestion model module.
+    try:
+        model_module = importlib.import_module(f".{model_name}", package=model_package)
+    except ModuleNotFoundError:
+        raise ModuleNotFoundError(
+            f"Suggestion model module `{model_name}` not found (relative to "
+            f"package `{model_package}`)"
+        )
+
+    # Get the `Suggestion` class defined in the module.
+    try:
+        Suggestion = model_module.Suggestion
+    except AttributeError:
+        raise AttributeError(
+            f"`Suggestion` class not found in suggestion model module "
+            f"`{model_name}`. Please define a `Suggestion` class."
+        )
+
+    # Call `Suggestion.csv_to_json()`.
+    try:
+        csv_to_json = Suggestion.csv_to_json()
+    except AttributeError:
+        raise AttributeError(
+            "`csv_to_json()` method not found on `Suggestion` class. Please "
+            "implement it."
+        )
+
     csv_reader = csv.DictReader(file_object)
 
     # Generate the full list of suggestions before creating the chunked uploader
     # so we can validate the source data before deleting existing records and
     # starting the upload.
-    suggestions: list[Suggestion] = []
+    suggestions: list = []
     for row in csv_reader:
-        for field in ALL_FIELDS:
+        for field in csv_to_json.keys():
             if field not in row:
-                raise MissingFieldError(f"Missing field {field}")
-
-        # The keywords fields are comma-delimited strings. Split them into lists
-        # and transform each individual keyword string as follows:
-        # - Lowercase
-        # - Remove leading and trailing space
-        # - Filter out empty keywords
-        keywords = {}
-        for field in KEYWORDS_FIELDS:
-            keywords[field] = [
-                *filter(
-                    lambda kw: len(kw) > 0,
-                    map(str.strip, row[field].lower().split(",")),
-                )
-            ]
-
-        suggestions.append(
-            Suggestion(
-                url=row[FIELD_URL],
-                title=row[FIELD_TITLE],
-                description=row[FIELD_DESC],
-                lowConfidenceKeywords=keywords[FIELD_KEYWORDS_LOW],
-                highConfidenceKeywords=keywords[FIELD_KEYWORDS_HIGH],
-            )
-        )
+                raise MissingFieldError(f"Expected CSV field `{field}` is missing")
+        kwargs = {prop: row[field] for field, prop in csv_to_json.items()}
+        suggestions.append(Suggestion(**kwargs))
 
     with ChunkedRemoteSettingsUploader(
         auth=auth,

@@ -33,13 +33,11 @@ WORKDIR /home/locust
 
 COPY ./dev ./dev
 COPY ./merino ./merino
-COPY ./tests/load/common ./tests/load/common
+COPY ./tests/load/locust_tests ./tests/load/locust_tests
 COPY ./tests/load/data ./tests/load/data
-COPY ./tests/load/locustfiles ./tests/load/locustfiles
-
 
 # Expose ports for the web UI and the locust master
 EXPOSE 8089 5557
 
 USER locust
-ENTRYPOINT ["locust", "-f", "tests/load/locustfiles/locustfile.py,tests/load/locustfiles/load.py"]
+ENTRYPOINT ["locust", "-f", "tests/load/locust_tests/locustfile.py"]

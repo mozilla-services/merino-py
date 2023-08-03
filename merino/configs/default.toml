@@ -74,6 +74,8 @@ chunk_size = 200
 delete_existing_records = true
 # Log changes but don't actually make them when uploading suggestions
 dry_run = false
+# Default score to set in suggestions uploaded to remote settings
+score = 0.25
 
 [default.sentry]
 # Any of "release", "debug", or "disabled".
@@ -146,7 +148,7 @@ cron_interval_sec = 60
 
 [default.providers.top_picks]
 type = "top_picks"
-enabled_by_default = true
+enabled_by_default = false
 score = 0.25
 query_char_limit = 4
 firefox_char_limit = 2
@@ -211,10 +213,3 @@ min_favicon_width = 48
 [default.jobs.amo_rs_uploader]
 # The "type" of each remote settings record
 record_type = "amo-suggestions"
-
-[default.jobs.pocket_rs_uploader]
-# Path to the CSV file that contains the source data
-csv_path = ""
-# The "type" of each remote settings record
-record_type = "pocket-suggestions"
-score = 0.25
