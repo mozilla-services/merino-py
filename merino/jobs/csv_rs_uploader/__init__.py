@@ -201,15 +201,7 @@ async def _upload_file_object(
             f"`{model_name}`. Please define a `Suggestion` class."
         )
 
-    # Call `Suggestion.csv_to_json()`.
-    try:
-        csv_to_json = Suggestion.csv_to_json()
-    except AttributeError:
-        raise AttributeError(
-            "`csv_to_json()` method not found on `Suggestion` class. Please "
-            "implement it."
-        )
-
+    csv_to_json = Suggestion.csv_to_json()
     csv_reader = csv.DictReader(file_object)
 
     # Generate the full list of suggestions before creating the chunked uploader

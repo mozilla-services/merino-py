@@ -7,9 +7,11 @@
 import pathlib
 from typing import Any
 
+import pytest
+from click.exceptions import BadParameter
 from pydantic import ValidationError
 
-from merino.jobs.csv_rs_uploader import MissingFieldError
+from merino.jobs.csv_rs_uploader import MissingFieldError, upload
 from tests.unit.jobs.csv_rs_uploader.model import (
     FIELD_DESC,
     FIELD_KEYWORDS_HIGH,
@@ -368,3 +370,80 @@ def test_missing_high_keywords(mocker):
         csv_rows=[row],
         expected_error=MissingFieldError,
     )
+
+
+def test_missing_csv_path(mocker):
+    """An empty csv_path should raise BaseParameter"""
+    with pytest.raises(BadParameter):
+        upload(
+            csv_path="",
+            auth="auth",
+            bucket="bucket",
+            chunk_size=99,
+            collection="collection",
+            model_name="model_name",
+            server="server",
+        )
+
+
+def test_missing_model_name(mocker):
+    """An empty model_name should raise BaseParameter"""
+    with pytest.raises(BadParameter):
+        upload(
+            model_name="",
+            auth="auth",
+            bucket="bucket",
+            chunk_size=99,
+            collection="collection",
+            csv_path="test.csv",
+            server="server",
+        )
+
+
+def test_model_not_found(mocker):
+    """A model_name that's not found should raise an error"""
+    with pytest.raises(ModuleNotFoundError):
+        upload(
+            model_name="this_does_not_exist",
+            model_package=MODEL_PACKAGE,
+            csv_path=PRIMARY_CSV_PATH,
+            auth="auth",
+            bucket="bucket",
+            chunk_size=99,
+            collection="collection",
+            server="server",
+        )
+
+
+def test_model_without_suggestion(mocker):
+    """An model.py file without a Suggestion implementation should raise an
+    error
+    """
+    with pytest.raises(AttributeError):
+        upload(
+            model_name="model_without_suggestion",
+            model_package=MODEL_PACKAGE,
+            csv_path=PRIMARY_CSV_PATH,
+            auth="auth",
+            bucket="bucket",
+            chunk_size=99,
+            collection="collection",
+            server="server",
+        )
+
+
+def test_model_without_csv_to_json(mocker):
+    """An model.py file without a Suggestion.csv_to_json() implementation should
+    raise an error
+    """
+    with pytest.raises(Exception):
+        upload(
+            model_name="model_without_csv_to_json",
+            model_package=MODEL_PACKAGE,
+            csv_path=PRIMARY_CSV_PATH,
+            auth="auth",
+            bucket="bucket",
+            chunk_size=99,
+            collection="collection",
+            server="server",
+        )

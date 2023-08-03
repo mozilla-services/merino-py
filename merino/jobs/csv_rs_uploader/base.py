@@ -50,18 +50,4 @@ class BaseSuggestion(BaseModel):
         ]
         if not keywords or len(keywords) == 0:
             raise ValueError(f"{name} must not be empty")
-        if any(map(lambda kw: not kw, keywords)):
-            raise ValueError(f"{name} must not contain any empty strings")
-        kw = next((kw for kw in keywords if kw.strip() != kw), None)
-        if kw:
-            raise ValueError(
-                f"{name} must not contain strings with leading or trailing "
-                f"spaces. Found: '{kw}'"
-            )
-        kw = next((kw for kw in keywords if kw.lower() != kw), None)
-        if kw:
-            raise ValueError(
-                f"{name} must not contain strings with uppercase characters. "
-                f"Found: '{kw}'"
-            )
         return keywords
