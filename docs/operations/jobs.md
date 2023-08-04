@@ -29,13 +29,21 @@ file to remote settings. It takes two inputs:
   it into suggestions JSON.
 
 If you're uploading suggestions from a Google sheet, you can export a CSV file
-from File > Download > Comma Separated Values (.csv).
+from File > Download > Comma Separated Values (.csv). Make sure the first row in
+the sheet is a header that names the columns.
 
-### Uploading a new type of suggestion
+### Uploading suggestions
 
-To upload a new type of suggestion, follow these steps:
+If you're uploading a type of suggestion that the uploader already supports,
+skip to [Running the uploader](#running-the-uploader) below. If you're not sure
+whether it's supported, check in the `merino/jobs/csv_rs_uploader/` directory
+for a file named similarly to the type.
 
-#### 1. Create a Python model module
+To upload a new type of suggestion, follow the steps below. In summary, first
+you'll create a Python module that implements a model for the suggestion type,
+and then you'll run the uploader.
+
+#### 1. Create a Python model module for the new suggestion type
 
 Add a Python module to `merino/jobs/csv_rs_uploader/`. It's probably easiest to
 copy an existing model module like `mdn.py`, follow along with the steps here,
@@ -52,7 +60,7 @@ In the module, implement a class called `Suggestion` that derives from
 `BaseSuggestion` in `merino.jobs.csv_rs_uploader.base`. This class will be the
 model of the new suggestion type. `BaseSuggestion` itself derives from
 Pydantic's `BaseModel`, so the validation the class will perform will be based
-on [Pydantic](), which is used throughout Merino. (`BaseSuggestion` is
+on [Pydantic][], which is used throughout Merino. (`BaseSuggestion` is
 implemented in `base.py`.)
 
 [Pydantic]: https://docs.pydantic.dev/latest/usage/models/
@@ -76,15 +84,15 @@ used as the values in the output JSON.
 `BaseSuggestion` implements two helpers you should use:
 
 * `_validate_str()` - Validates a string value and returns the validated value.
-Leading and trailing whitespace is stripped, and all whitespace is replaced with
-spaces and collapsed. Returns the validated value.
+  Leading and trailing whitespace is stripped, and all whitespace is replaced
+  with spaces and collapsed. Returns the validated value.
 * `_validate_keywords()` - The uploader assumes that lists of keywords are
-serialized in the input data as comma-delimited strings. This helper method
-takes a comma-delimited string and splits it into individual keyword strings.
-Each keyword is converted to lowercase, some non-ASCII characters are replaced
-with ASCII equivalents that users are more likely to type, leading and trailing
-whitespace is stripped, and all whitespace is replaced with spaces and
-collapsed. Returns the list of keyword strings.
+  serialized in the input data as comma-delimited strings. This helper method
+  takes a comma-delimited string and splits it into individual keyword strings.
+  Each keyword is converted to lowercase, some non-ASCII characters are replaced
+  with ASCII equivalents that users are more likely to type, leading and
+  trailing whitespace is stripped, and all whitespace is replaced with spaces
+  and collapsed. Returns the list of keyword strings.
 
 #### 5. Implement the `csv_to_json()` class method
 
@@ -101,34 +109,74 @@ fail due to validation errors and missing fields (columns) in the input CSV.
 `utils.py` in the same directory implements helpers that your test should use:
 
 * `do_csv_test()` - Makes sure the uploader works correctly during a successful
-upload. It takes either a path to a CSV file or a `list[dict]` that will be used
-to create a file object (`StringIO`) for an in-memory CSV file. Prefer passing
-in a `list[dict]` instead of creating a file and passing a path, since it's
-simpler.
+  upload. It takes either a path to a CSV file or a `list[dict]` that will be
+  used to create a file object (`StringIO`) for an in-memory CSV file. Prefer
+  passing in a `list[dict]` instead of creating a file and passing a path, since
+  it's simpler.
 * `do_error_test()` - Makes sure a given error is raised when expected. Use
-`ValidationError` from `pydantic` to check validation errors and
-`MissingFieldError` from `merino.jobs.csv_rs_uploader` to check input CSV that
-is missing an expected field (column).
+  `ValidationError` from `pydantic` to check validation errors and
+  `MissingFieldError` from `merino.jobs.csv_rs_uploader` to check input CSV that
+  is missing an expected field (column).
 
-For information on running the test, see below.
+#### 7. Run the test
+
+```
+$ MERINO_ENV=testing poetry run pytest tests/unit/jobs/csv_rs_uploader/test_foo.py
+```
+
+See also the main Merino development documentation for running unit tests.
+
+#### 8. Submit a PR
+
+Once your test is passing, submit a PR with your changes so that the new
+suggestion type is committed to the repo. This step isn't necessary to run the
+uploader and upload your suggestions, so you can come back to it later.
+
+#### 9. Upload!
+
+See [Running the uploader](#running-the-uploader).
 
 ### Running the uploader
 
+Run the following from the repo's root directory to see documentation for all
+options and their defaults. Note that the `upload` command is the only command
+in the `csv-rs-uploader` job.
+
 ```
-$ poetry run merino-jobs csv-rs-uploader upload --server "https://remote-settings-dev.allizom.org/v1" --bucket main-workspace --csv-path foo.csv --model-name foo --record-type foo-suggestions --auth "Bearer ..."
+poetry run merino-jobs csv-rs-uploader upload --help`
 ```
 
-Let's break down each command-line option in the example above:
+The uploader takes a CSV file as input, so you'll need to download or create one
+first.
+
+Here's an example that uploads suggestions in `foo.csv` to the remote settings
+dev server:
+
+```
+poetry run merino-jobs csv-rs-uploader upload \
+  --server "https://remote-settings-dev.allizom.org/v1" \
+  --bucket main-workspace \
+  --csv-path foo.csv \
+  --model-name foo \
+  --record-type foo-suggestions \
+  --auth "Bearer ..."
+```
+
+Let's break down each command-line option in this example:
 
 * `--server` - Suggestions will be uploaded to the remote settings dev server
 * `--bucket` - The `main-workspace` bucket will be used
 * `--csv-path` - The CSV input file is `foo.csv`
-* `--model-basename` - The model module is named `foo`. Its path within the repo
+* `--model-name` - The model module is named `foo`. Its path within the repo
   would be `merino/jobs/csv_rs_uploader/foo.py`
 * `--record-type` - The `type` in the remote settings records created for these
   suggestions will be set to `foo-suggestions`. This argument is optional and
   defaults to `"{model_name}-suggestions"`
-* `--auth` - The user's authorization token from the server
+* `--auth` - Your authentication header string from the server. To get a header,
+  log in to the server dashboard (don't forget to log in to the Mozilla VPN
+  first) and click the small clipboard icon near the top-right of the page,
+  after the text that shows your username and server URL. The page will show a
+  "Header copied to clipboard" toast notification if successful.
 
 #### Setting suggestion scores
 
@@ -139,17 +187,14 @@ and 1 inclusive.
 
 #### Other useful options
 
-Some other useful options are documented below. To see all options, run:
-`poetry run merino-jobs csv-rs-uploader upload --help`
+* `--dry-run` - Log the output suggestions but don't upload them. The uploader
+  will still authenticate with the server, so `--auth` must still be given.
 
-* `--dry-run` - Log the generated output suggestions but don't upload them. The
-  uploader will still authenticate with the server, so `--auth` must still be
-  used.
+### Structure of the remote settings data
 
-### Running an uploader test
-
-```
-$ MERINO_ENV=testing poetry run pytest tests/unit/jobs/csv_rs_uploader/test_foo.py
-```
-
-See also the main Merino documentation for running unit tests.
+The uploader uses `merino/jobs/utils/chunked_rs_uploader.py` to upload the
+output suggestions. In short, suggestions will be chunked, and each chunk will
+have a corresponding remote settings record with an attachment. The record's ID
+will be generated from the `--record-type` option, and its type will be set to
+`--record-type` exactly. The attachment will contain a JSON array of suggestion
+objects in the chunk.
