@@ -1,7 +1,7 @@
 """No-operation adapter that disables caching."""
 
 from datetime import timedelta
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 
 class NoCacheAdapter:  # pragma: no cover
@@ -19,4 +19,10 @@ class NoCacheAdapter:  # pragma: no cover
         pass
 
     async def close(self) -> None:  # noqa: D102
+        pass
+
+    def register_script(self, sid: str, script: str) -> None:  # noqa: D102
+        pass
+
+    async def run_script(self, sid: str, keys: list, args: list) -> Any:  # noqa: D102
         pass

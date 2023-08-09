@@ -106,6 +106,8 @@ url_base = "https://apidev.accuweather.com"
 url_param_api_key = "apikey"
 url_current_conditions_path = "/currentconditions/v1/{location_key}.json"
 url_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
+# The placeholder for the location key used by the above two configurations.
+url_location_key_placeholder = "{location_key}"
 url_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"
 url_postalcodes_param_query = "q"
 # The name of the partner code query param appended to the current conditions and forecast links in
