@@ -11,6 +11,9 @@ _validators = [
     Validator("metrics.host", is_type_of=str),
     Validator("metrics.port", gte=0, is_type_of=int),
     Validator(
+        "accuweather.url_location_key_placeholder", is_type_of=str, must_exist=True
+    ),
+    Validator(
         "accuweather.url_param_partner_code",
         is_type_of=str,
         must_exist=True,

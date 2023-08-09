@@ -77,6 +77,7 @@ def fixture_accuweather_parameters(
         "url_postalcodes_param_query": "q",
         "url_current_conditions_path": "/currentconditions/v1/{location_key}.json",
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
+        "url_location_key_placeholder": "{location_key}",
     }
 
 
@@ -542,6 +543,7 @@ async def test_get_weather_report(
 async def test_get_weather_report_from_cache(
     mocker: MockerFixture,
     geolocation: Location,
+    statsd_mock: Any,
     expected_weather_report: WeatherReport,
     accuweather_parameters: dict[str, Any],
     accuweather_cached_location_key: bytes,
@@ -572,6 +574,20 @@ async def test_get_weather_report_from_cache(
 
     assert report == expected_weather_report
     client_mock.get.assert_not_called()
+
+    metrics_timeit_called = [
+        call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list
+    ]
+    assert metrics_timeit_called == ["accuweather.cache.fetch"]
+
+    metrics_increment_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_increment_called == [
+        "accuweather.cache.hit.locations",
+        "accuweather.cache.hit.currentconditions",
+        "accuweather.cache.hit.forecasts",
+    ]
 
 
 @pytest.mark.asyncio

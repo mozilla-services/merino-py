@@ -34,9 +34,14 @@ PARTNER_CODE: Optional[str] = settings.accuweather.get("partner_code")
 # a given country/postal code.
 #
 # Note:
+#   - The script expects a JSON serialized string as the value of the location key,
+#     the location key can be accessed via the `key` property.
+#     See `self.process_location_response()` for more details
 #   - The cache key for the country/postal code should be provided through `KEYS[1]`
 #   - The cache key templates for current conditions and forecast should be provided
 #     through `ARGV[1]` and `ARGV[2]`
+#   - The placeholder for location key (i.e. `self.url_location_key_placeholder`)
+#     is passed via `ARGV[3]`
 #   - If the location key is present in the cache, it uses the key to fetch the current
 #     conditions and forecast for that key in the cache. It returns a 3-element array
 #     `[location_key, current_condition, forecast]`. The last two element can be `nil`
@@ -50,8 +55,8 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
     end
 
     local key = cjson.decode(location_key)["key"]
-    local condition_key = string.gsub(ARGV[1], "{location_key}", key)
-    local forecast_key = string.gsub(ARGV[2], "{location_key}", key)
+    local condition_key = string.gsub(ARGV[1], ARGV[3], key)
+    local forecast_key = string.gsub(ARGV[2], ARGV[3], key)
 
     local current_conditions = redis.call("GET", condition_key)
     local forecast = redis.call("GET", forecast_key)
@@ -95,6 +100,7 @@ class AccuweatherBackend:
     url_postalcodes_param_query: str
     url_current_conditions_path: str
     url_forecasts_path: str
+    url_location_key_placeholder: str
     http_client: AsyncClient
 
     def __init__(
@@ -109,6 +115,7 @@ class AccuweatherBackend:
         url_postalcodes_param_query: str,
         url_current_conditions_path: str,
         url_forecasts_path: str,
+        url_location_key_placeholder: str,
     ) -> None:
         """Initialize the AccuWeather backend.
 
@@ -124,6 +131,7 @@ class AccuweatherBackend:
             or not url_postalcodes_param_query
             or not url_current_conditions_path
             or not url_forecasts_path
+            or not url_location_key_placeholder
         ):
             raise ValueError("One or more AccuWeather API URL parameters are undefined")
 
@@ -139,6 +147,7 @@ class AccuweatherBackend:
         self.url_postalcodes_param_query = url_postalcodes_param_query
         self.url_current_conditions_path = url_current_conditions_path
         self.url_forecasts_path = url_forecasts_path
+        self.url_location_key_placeholder = url_location_key_placeholder
 
     def cache_key_for_accuweather_request(
         self, url: str, query_params: dict[str, str] = {}
@@ -161,16 +170,17 @@ class AccuweatherBackend:
     @functools.cache
     def cache_key_template(self, dt: WeatherDataType) -> str:
         """Get the cache key template for weather data."""
+        query_params: dict[str, str] = {self.url_param_api_key: self.api_key}
         match dt:
             case WeatherDataType.CURRENT_CONDITIONS:
                 return self.cache_key_for_accuweather_request(
                     self.url_current_conditions_path,
-                    query_params={self.url_param_api_key: self.api_key},
+                    query_params=query_params,
                 )
             case WeatherDataType.FORECAST:  # pragma: no cover
                 return self.cache_key_for_accuweather_request(
                     self.url_forecasts_path,
-                    query_params={self.url_param_api_key: self.api_key},
+                    query_params=query_params,
                 )
 
     async def get_request(
@@ -307,6 +317,13 @@ class AccuweatherBackend:
 
         return location, current_conditions, forecast
 
+    def get_location_key_query_params(self, postal_code: str) -> dict[str, str]:
+        """Get the query parameters for the location key for a given postal code."""
+        return {
+            self.url_param_api_key: self.api_key,
+            self.url_postalcodes_param_query: postal_code,
+        }
+
     async def get_weather_report(
         self, geolocation: Location
     ) -> Optional[WeatherReport]:
@@ -336,21 +353,21 @@ class AccuweatherBackend:
 
         cache_key: str = self.cache_key_for_accuweather_request(
             self.url_postalcodes_path.format(country_code=country),
-            query_params={
-                self.url_param_api_key: self.api_key,
-                self.url_postalcodes_param_query: postal_code,
-            },
+            query_params=self.get_location_key_query_params(postal_code),
         )
         # Look up for all the weather data from the cache.
         try:
-            cached_data: list[Optional[bytes]] = await self.cache.run_script(
-                sid=SCRIPT_ID,
-                keys=[cache_key],
-                args=[
-                    self.cache_key_template(WeatherDataType.CURRENT_CONDITIONS),
-                    self.cache_key_template(WeatherDataType.FORECAST),
-                ],
-            )
+            with self.metrics_client.timeit("accuweather.cache.fetch"):
+                cached_data: list[Optional[bytes]] = await self.cache.run_script(
+                    sid=SCRIPT_ID,
+                    keys=[cache_key],
+                    # The order matters below. See `LUA_SCRIPT_CACHE_BULK_FETCH` for details.
+                    args=[
+                        self.cache_key_template(WeatherDataType.CURRENT_CONDITIONS),
+                        self.cache_key_template(WeatherDataType.FORECAST),
+                        self.url_location_key_placeholder,
+                    ],
+                )
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.fetch.error")
@@ -407,10 +424,7 @@ class AccuweatherBackend:
         try:
             response: Optional[dict[str, Any]] = await self.get_request(
                 self.url_postalcodes_path.format(country_code=country),
-                params={
-                    self.url_param_api_key: self.api_key,
-                    self.url_postalcodes_param_query: postal_code,
-                },
+                params=self.get_location_key_query_params(postal_code),
                 process_api_response=process_location_response,
             )
         except HTTPError as error:
@@ -503,7 +517,11 @@ def add_partner_code(
 
 
 def process_location_response(response: Any) -> Optional[dict[str, Any]]:
-    """Process the API response for location keys."""
+    """Process the API response for location keys.
+
+    Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
+    to reflect the change(s) here.
+    """
     match response:
         case [
             {
