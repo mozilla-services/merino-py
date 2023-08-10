@@ -101,7 +101,9 @@ class AccuweatherBackend:
 
     api_key: str
     cache: CacheAdapter
-    cached_report_ttl_sec: int
+    cached_location_key_ttl_sec: int
+    cached_current_condition_ttl_sec: int
+    cached_forecast_ttl_sec: int
     metrics_client: aiodogstatsd.Client
     url_param_api_key: str
     url_postalcodes_path: str
@@ -115,7 +117,9 @@ class AccuweatherBackend:
         self,
         api_key: str,
         cache: CacheAdapter,
-        cached_report_ttl_sec: int,
+        cached_location_key_ttl_sec: int,
+        cached_current_condition_ttl_sec: int,
+        cached_forecast_ttl_sec: int,
         metrics_client: aiodogstatsd.Client,
         http_client: AsyncClient,
         url_param_api_key: str,
@@ -147,7 +151,9 @@ class AccuweatherBackend:
         self.cache = cache
         # This registration is lazy (i.e. no interaction with Redis) and infallible.
         self.cache.register_script(SCRIPT_ID, LUA_SCRIPT_CACHE_BULK_FETCH)
-        self.cached_report_ttl_sec = cached_report_ttl_sec
+        self.cached_location_key_ttl_sec = cached_location_key_ttl_sec
+        self.cached_current_condition_ttl_sec = cached_current_condition_ttl_sec
+        self.cached_forecast_ttl_sec = cached_forecast_ttl_sec
         self.metrics_client = metrics_client
         self.http_client = http_client
         self.url_param_api_key = url_param_api_key
@@ -196,6 +202,7 @@ class AccuweatherBackend:
         url_path: str,
         params: dict[str, str],
         process_api_response: Callable[[Any], Optional[dict[str, Any]]],
+        cache_ttl_sec: int,
     ) -> Optional[dict[str, Any]]:
         """Get API response. Attempt to get it from cache first,
         then actually make the call if there's a cache miss.
@@ -220,7 +227,7 @@ class AccuweatherBackend:
         response_expiry: str = response.headers.get("Expires")
         try:
             await self.store_request_into_cache(
-                cache_key, response_dict, response_expiry
+                cache_key, response_dict, response_expiry, cache_ttl_sec
             )
         except (CacheAdapterError, ValueError) as exc:
             logger.error(f"Error with storing Accuweather to cache: {exc}")
@@ -235,18 +242,20 @@ class AccuweatherBackend:
         return response_dict
 
     async def store_request_into_cache(
-        self, cache_key: str, response_dict: dict[str, Any], response_expiry: str
+        self,
+        cache_key: str,
+        response_dict: dict[str, Any],
+        response_expiry: str,
+        cache_ttl_sec: int,
     ):
         """Store the request into cache. Also ensures that the cache ttl is
-        at least `cached_report_ttl_sec`.
+        at least `cached_ttl_sec`.
         """
         with self.metrics_client.timeit("accuweather.cache.store"):
             expiry_delta: timedelta = parser.parse(
                 response_expiry
             ) - datetime.datetime.now(datetime.timezone.utc)
-            cache_ttl: timedelta = max(
-                expiry_delta, timedelta(seconds=self.cached_report_ttl_sec)
-            )
+            cache_ttl: timedelta = max(expiry_delta, timedelta(seconds=cache_ttl_sec))
             cache_value = json.dumps(response_dict).encode("utf-8")
             await self.cache.set(cache_key, cache_value, ttl=cache_ttl)
 
@@ -445,6 +454,7 @@ class AccuweatherBackend:
                 self.url_postalcodes_path.format(country_code=country),
                 params=self.get_location_key_query_params(postal_code),
                 process_api_response=process_location_response,
+                cache_ttl_sec=self.cached_location_key_ttl_sec,
             )
         except HTTPError as error:
             raise AccuweatherError("Unexpected location response") from error
@@ -469,6 +479,7 @@ class AccuweatherBackend:
                     self.url_param_api_key: self.api_key,
                 },
                 process_api_response=process_current_condition_response,
+                cache_ttl_sec=self.cached_current_condition_ttl_sec,
             )
         except HTTPError as error:
             raise AccuweatherError("Unexpected current conditions response") from error
@@ -500,6 +511,7 @@ class AccuweatherBackend:
                     self.url_param_api_key: self.api_key,
                 },
                 process_api_response=process_forecast_response,
+                cache_ttl_sec=self.cached_forecast_ttl_sec,
             )
         except HTTPError as error:
             raise AccuweatherError("Unexpected forecast response") from error

@@ -212,7 +212,7 @@ Configuration for using AccuWeather as a weather backend
   - `partner_code` (`MERINO_ACCUWEATHER__PARTNER_CODE`) -
     The partner code to append to URLs in the current conditions and forecast responses.
 
-### AMO API 
+### AMO API
 
 - `api_url` (`MERINO_AMO__DYNAMIC__API_URL`) - the base URL of the Addons API.
 
@@ -260,10 +260,6 @@ These are production providers that generate suggestions.
   - `query_timeout_sec` (`MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC`) - A floating
     point (in seconds) indicating the maximum waiting period when Merino queries
     for weather forecasts. This will override the default query timeout.
-  - `cached_report_ttl_sec` (`MERINO_PROVIDERS__ACCUWEATHER__CACHED_REPORT_TTL_SEC`) - The
-    number of whole seconds (as an integer) indicating the time-to-live for a cached weather
-    report (current conditions and forecast) for a location. After the TTL expires, the provider
-    will fetch and cache the report again on the next suggestion request for that location.
 
 #### AMO Provider
 
@@ -276,10 +272,10 @@ These are production providers that generate suggestions.
   as a floating point number. Defaults to 0.3.
 - `min_chars` (`MERINO_PROVIDERS__AMO__MIN_CHARS`) - The minimum number of characters
   to process a querystring.
-- `resync_interval_sec` (`MERINO_PROVIDERS__AMO__RESYNC_INTERVAL_SEC`) - The re-syncing frequency 
+- `resync_interval_sec` (`MERINO_PROVIDERS__AMO__RESYNC_INTERVAL_SEC`) - The re-syncing frequency
   for the AMO data. Defaults to daily.
 - `cron_interval_sec` (`MERINO_PROVIDERS__AMO__CRON_INTERVAL_SEC`) - The frequency that the cron checks
-  to see if re-syncing is required. This should be more frequent than the `resync_interval_sec` to retry 
+  to see if re-syncing is required. This should be more frequent than the `resync_interval_sec` to retry
   on errors. Defaults to every minute.
 
 #### Top Picks Provider

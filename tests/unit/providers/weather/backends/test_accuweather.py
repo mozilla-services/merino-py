@@ -37,6 +37,7 @@ from merino.providers.weather.backends.protocol import (
 from tests.types import FilterCaplogFixture
 
 ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
+TEST_CACHE_TTL_SEC = 1800
 
 
 @pytest.fixture(name="redis_mock_cache_miss")
@@ -69,7 +70,9 @@ def fixture_accuweather_parameters(
     """Create an Accuweather object for test."""
     return {
         "api_key": "test",
-        "cached_report_ttl_sec": 1800,
+        "cached_location_key_ttl_sec": TEST_CACHE_TTL_SEC,
+        "cached_current_condition_ttl_sec": TEST_CACHE_TTL_SEC,
+        "cached_forecast_ttl_sec": TEST_CACHE_TTL_SEC,
         "metrics_client": statsd_mock,
         "http_client": mocker.AsyncMock(spec=AsyncClient),
         "url_param_api_key": "apikey",
@@ -1391,7 +1394,10 @@ async def test_get_request_cache_get_errors(
     )
 
     results: Optional[dict[str, Any]] = await accuweather.get_request(
-        url, {"apikey": "test"}, lambda a: cast(Optional[dict[str, Any]], a)
+        url,
+        {"apikey": "test"},
+        lambda a: cast(Optional[dict[str, Any]], a),
+        TEST_CACHE_TTL_SEC,
     )
 
     assert expected_client_response == results
@@ -1449,6 +1455,7 @@ async def test_get_request_cache_store_errors(
             url,
             params={"apikey": "test"},
             process_api_response=lambda a: cast(Optional[dict[str, Any]], a),
+            cache_ttl_sec=TEST_CACHE_TTL_SEC,
         )
 
     timeit_metrics_called = [
@@ -1478,7 +1485,10 @@ async def test_store_request_in_cache_error_invalid_expiry(
 
     with pytest.raises(ValueError):
         await accuweather.store_request_into_cache(
-            "key", {"hello": "cache"}, "invalid_date_format"
+            "key",
+            {"hello": "cache"},
+            "invalid_date_format",
+            TEST_CACHE_TTL_SEC,
         )
 
 

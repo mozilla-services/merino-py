@@ -95,7 +95,9 @@ cache = "none"
 enabled_by_default = false
 score = 0.3
 query_timeout_sec = 5.0
-cached_report_ttl_sec = 2700 # 45 mins.
+cached_location_key_ttl_sec = 604800 # 7 days
+cached_current_condition_ttl_sec = 1800 # 1/2 hr
+cached_forecast_ttl_sec = 3600 # 1 hr
 
 [default.accuweather]
 # Our API key used to access the AccuWeather API.
