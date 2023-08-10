@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 from enum import Enum
-from typing import Any, Callable, Optional, no_type_check
+from typing import Any, Callable, Optional
 
 import aiodogstatsd
 from dateutil import parser
@@ -75,6 +75,14 @@ class AccuweatherLocation(BaseModel):
     # Display name in local dialect set with language code in URL.
     # Default is US English (en-us).
     localized_name: str
+
+
+# Type alias for weather data
+WeatherDataTuple = tuple[
+    Optional[AccuweatherLocation],
+    Optional[CurrentConditions],
+    Optional[Forecast],
+]
 
 
 class AccuweatherError(BackendError):
@@ -278,16 +286,7 @@ class AccuweatherBackend:
             else "accuweather.cache.fetch.miss.forecasts"
         )
 
-    # Opt out the type check as mypy really struggles with the pattern match below.
-    # TODO(nanj): re-enable type checking once we upgrade mypy to the lastest.
-    @no_type_check
-    def parse_cached_data(
-        self, cached_data: list[Optional[bytes]]
-    ) -> tuple[
-        Optional[AccuweatherLocation],
-        Optional[CurrentConditions],
-        Optional[Forecast],
-    ]:
+    def parse_cached_data(self, cached_data: list[Optional[bytes]]) -> WeatherDataTuple:
         """Parse the weather data from cache.
 
         Upon parsing errors, it will return the successfully parsed data thus far.
@@ -299,18 +298,18 @@ class AccuweatherBackend:
         location: Optional[AccuweatherLocation] = None
         current_conditions: Optional[CurrentConditions] = None
         forecast: Optional[Forecast] = None
+        if len(cached_data) == 0:
+            return location, current_conditions, forecast
+
+        location_cached, current_cached, forecast_cached = cached_data
+
         try:
-            match cached_data:
-                case [location_cached, None, _] | [location_cached, _, None]:
-                    # A partial hit and at least one of the latter two is missing, just return
-                    # the location_key.
-                    location = AccuweatherLocation.parse_raw(location_cached)
-                case [location_cached, current_cached, forecast_cached]:
-                    location = AccuweatherLocation.parse_raw(location_cached)
-                    current_conditions = CurrentConditions.parse_raw(current_cached)
-                    forecast = Forecast.parse_raw(forecast_cached)
-                case _:
-                    pass
+            if location_cached is not None:
+                location = AccuweatherLocation.parse_raw(location_cached)
+            if current_cached is not None:
+                current_conditions = CurrentConditions.parse_raw(current_cached)
+            if forecast_cached is not None:
+                forecast = Forecast.parse_raw(forecast_cached)
         except ValidationError as exc:
             logger.error(f"Failed to load weather report data from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.data.error")
@@ -336,9 +335,6 @@ class AccuweatherBackend:
         cache for future uses.
 
         Note:
-            - To simplify the implementation, if either current conditions or the forecast
-              is missing in the cache, we will fetch both of them from AccuWeather as they
-              normally co-exist in the cache
             - To avoid making excessive API requests to Accuweather in the event of
               "Cache Avalanche", it will *not* call AccuWeather for weather reports upon any
               cache errors such as timeouts or connection issues to Redis
@@ -375,38 +371,61 @@ class AccuweatherBackend:
 
         self.emit_cache_fetch_metrics(cached_data)
 
-        location, current_conditions, forecast = self.parse_cached_data(cached_data)
+        cached_report = self.parse_cached_data(cached_data)
+        return await self.make_weather_report(cached_report, country, postal_code)
 
-        # Everything is ready, just return them.
+    async def make_weather_report(
+        self,
+        cached_report: WeatherDataTuple,
+        country: str,
+        postal_code: str,
+    ) -> Optional[WeatherReport]:
+        """Make a `WeatherReport` either using the cached data or fetching from AccuWeather.
+
+        Raises:
+            AccuWeatherError: Failed request or 4xx and 5xx response from AccuWeather.
+        """
+        location, current_conditions, forecast = cached_report
+
         if location and current_conditions and forecast:
+            # Everything is ready, just return them.
             return WeatherReport(
                 city_name=location.localized_name,
                 current_conditions=current_conditions,
                 forecast=forecast,
             )
 
-        # Fetch the location key from AccuWeather if it's missing in the cache.
+        # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
             if (location := await self.get_location(country, postal_code)) is None:
                 return None
 
-        # Fetch current conditions and forecast from AccuWeather.
-        # To simplify the implementation we always fetch both as they share the
-        # same cache TTL now.
-        try:
-            async with asyncio.TaskGroup() as tg:
-                task_current = tg.create_task(self.get_current_conditions(location.key))
-                task_forecast = tg.create_task(self.get_forecast(location.key))
-        except ExceptionGroup as e:
-            raise AccuweatherError(f"Failed to fetch weather report: {e.exceptions}")
+        if current_conditions is None and forecast is None:
+            try:
+                async with asyncio.TaskGroup() as tg:
+                    task_current = tg.create_task(
+                        self.get_current_conditions(location.key)
+                    )
+                    task_forecast = tg.create_task(self.get_forecast(location.key))
+            except ExceptionGroup as e:
+                raise AccuweatherError(
+                    f"Failed to fetch weather report: {e.exceptions}"
+                )
+
+            current_conditions = await task_current
+            forecast = await task_forecast
+        elif current_conditions is None:
+            current_conditions = await self.get_current_conditions(location.key)
+        else:
+            forecast = await self.get_forecast(location.key)
 
         return (
             WeatherReport(
                 city_name=location.localized_name,
-                current_conditions=current,
+                current_conditions=current_conditions,
                 forecast=forecast,
             )
-            if (current := await task_current) and (forecast := await task_forecast)
+            if current_conditions and forecast
             else None
         )
 

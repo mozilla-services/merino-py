@@ -419,6 +419,62 @@ def fixture_accuweather_parsed_data_partial_hits(
     )
 
 
+@pytest.fixture(name="accuweather_cached_data_partial_hits_left")
+def Fixture_accuweather_cached_data_partial_hits_left(
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_current_conditions: bytes,
+) -> list[Optional[bytes]]:
+    """Return the parsed AccuWeather triplet for a partial cache miss."""
+    return [
+        accuweather_cached_location_key,
+        accuweather_cached_current_conditions,
+        None,
+    ]
+
+
+@pytest.fixture(name="accuweather_parsed_data_partial_hits_left")
+def fixture_accuweather_parsed_data_partial_hits_left(
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_current_conditions: bytes,
+) -> tuple[
+    Optional[AccuweatherLocation], Optional[CurrentConditions], Optional[Forecast]
+]:
+    """Return the partial parsed AccuWeather triplet for a cache hit."""
+    return (
+        AccuweatherLocation.parse_raw(accuweather_cached_location_key),
+        CurrentConditions.parse_raw(accuweather_cached_current_conditions),
+        None,
+    )
+
+
+@pytest.fixture(name="accuweather_cached_data_partial_hits_right")
+def Fixture_accuweather_cached_data_partial_hits_right(
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_forecast_fahrenheit: bytes,
+) -> list[Optional[bytes]]:
+    """Return the parsed AccuWeather triplet for a partial cache miss."""
+    return [
+        accuweather_cached_location_key,
+        None,
+        accuweather_cached_forecast_fahrenheit,
+    ]
+
+
+@pytest.fixture(name="accuweather_parsed_data_partial_hits_right")
+def fixture_accuweather_parsed_data_partial_hits_right(
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_forecast_fahrenheit: bytes,
+) -> tuple[
+    Optional[AccuweatherLocation], Optional[CurrentConditions], Optional[Forecast]
+]:
+    """Return the partial parsed AccuWeather triplet for a cache hit."""
+    return (
+        AccuweatherLocation.parse_raw(accuweather_cached_location_key),
+        None,
+        Forecast.parse_raw(accuweather_cached_forecast_fahrenheit),
+    )
+
+
 @pytest.fixture(name="accuweather_cached_data_misses")
 def fixture_accuweather_cached_data_misses() -> list[Optional[bytes]]:
     """Return the cached AccuWeather triplet for a cache miss."""
@@ -636,27 +692,41 @@ async def test_get_weather_report_with_cache_fetch_error(
 
 
 @pytest.mark.parametrize(
-    "cached_current_conditions,cached_forecast",
+    "cached_current_fixture,cached_forecast_fixture,expected_http_call_count",
     [
-        (b"accuweather_cached_current_conditions", None),
-        (None, b"accuweather_cached_forecast_fahrenheit"),
+        (None, None, 2),
+        ("accuweather_cached_current_conditions", None, 1),
+        (None, "accuweather_cached_forecast_fahrenheit", 1),
     ],
-    ids=["missing-forecast", "missing-current-conditions"],
+    ids=["missing-both", "missing-forecast", "missing-current-conditions"],
 )
 @pytest.mark.asyncio
 async def test_get_weather_report_with_partial_cache_hits(
+    request: FixtureRequest,
     mocker: MockerFixture,
     geolocation: Location,
     expected_weather_report: WeatherReport,
     accuweather_parameters: dict[str, Any],
     accuweather_cached_location_key: bytes,
-    cached_current_conditions: Optional[bytes],
-    cached_forecast: Optional[bytes],
+    cached_current_fixture: Optional[str],
+    cached_forecast_fixture: Optional[str],
+    expected_http_call_count: int,
     accuweather_current_conditions_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
     response_header: dict[str, str],
 ) -> None:
     """Test that we can get the weather report with paritial cache hits."""
+    cached_current_condtions = (
+        request.getfixturevalue(cached_current_fixture)
+        if cached_current_fixture
+        else None
+    )
+    cached_forecast = (
+        request.getfixturevalue(cached_forecast_fixture)
+        if cached_forecast_fixture
+        else None
+    )
+
     redis_mock = mocker.AsyncMock(spec=Redis)
 
     async def mock_set(key, value, **kwargs) -> Any:
@@ -665,7 +735,7 @@ async def test_get_weather_report_with_partial_cache_hits(
     async def script_callable(keys, args) -> list:
         return [
             accuweather_cached_location_key,
-            cached_current_conditions,
+            cached_current_condtions,
             cached_forecast,
         ]
 
@@ -680,37 +750,43 @@ async def test_get_weather_report_with_partial_cache_hits(
     )
 
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
-    client_mock.get.side_effect = [
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=accuweather_current_conditions_response,
-            request=Request(
-                method="GET",
-                url=(
-                    "http://www.accuweather.com/currentconditions/v1/39376_PC.json?"
-                    "apikey=test"
+    responses: list = []
+    if cached_current_condtions is None:
+        responses.append(
+            Response(
+                status_code=200,
+                headers=response_header,
+                content=accuweather_current_conditions_response,
+                request=Request(
+                    method="GET",
+                    url=(
+                        "http://www.accuweather.com/currentconditions/v1/39376_PC.json?"
+                        "apikey=test"
+                    ),
                 ),
-            ),
-        ),
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=accuweather_forecast_response_fahrenheit,
-            request=Request(
-                method="GET",
-                url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376_PC.json?"
-                    "apikey=test"
+            )
+        )
+    if cached_forecast is None:
+        responses.append(
+            Response(
+                status_code=200,
+                headers=response_header,
+                content=accuweather_forecast_response_fahrenheit,
+                request=Request(
+                    method="GET",
+                    url=(
+                        "http://www.accuweather.com/forecasts/v1/daily/1day/39376_PC.json?"
+                        "apikey=test"
+                    ),
                 ),
-            ),
-        ),
-    ]
+            )
+        )
 
+    client_mock.get.side_effect = responses
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
 
     assert report == expected_weather_report
-    assert client_mock.get.call_count == 2
+    assert client_mock.get.call_count == expected_http_call_count
 
 
 @pytest.mark.asyncio
@@ -1493,6 +1569,14 @@ def test_metrics_for_cache_fetch(
             "accuweather_parsed_data_partial_hits",
         ),
         (
+            "accuweather_cached_data_partial_hits_left",
+            "accuweather_parsed_data_partial_hits_left",
+        ),
+        (
+            "accuweather_cached_data_partial_hits_right",
+            "accuweather_parsed_data_partial_hits_right",
+        ),
+        (
             "accuweather_cached_data_misses",
             "accuweather_parsed_data_misses",
         ),
@@ -1500,6 +1584,8 @@ def test_metrics_for_cache_fetch(
     ids=[
         "cache-hits",
         "partial-hits",
+        "partial-hits-left",
+        "partial-hits-right",
         "cache-misses",
     ],
 )
