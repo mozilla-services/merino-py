@@ -58,7 +58,9 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 backend=AccuweatherBackend(
                     api_key=settings.accuweather.api_key,
                     cache=cache,  # type: ignore [arg-type]
-                    cached_report_ttl_sec=setting.cached_report_ttl_sec,
+                    cached_location_key_ttl_sec=setting.cache_ttls.location_key_ttl_sec,
+                    cached_current_condition_ttl_sec=setting.cache_ttls.current_condition_ttl_sec,
+                    cached_forecast_ttl_sec=setting.cache_ttls.forecast_ttl_sec,
                     metrics_client=get_metrics_client(),
                     http_client=create_http_client(
                         base_url=settings.accuweather.url_base

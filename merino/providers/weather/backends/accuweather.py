@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 from enum import Enum
-from typing import Any, Callable, Optional, no_type_check
+from typing import Any, Callable, NamedTuple, Optional
 
 import aiodogstatsd
 from dateutil import parser
@@ -77,6 +77,14 @@ class AccuweatherLocation(BaseModel):
     localized_name: str
 
 
+class WeatherData(NamedTuple):
+    """The triplet for weather data used internally."""
+
+    location: Optional[AccuweatherLocation] = None
+    current_conditions: Optional[CurrentConditions] = None
+    forecast: Optional[Forecast] = None
+
+
 class AccuweatherError(BackendError):
     """Error during interaction with the AccuWeather API."""
 
@@ -93,7 +101,9 @@ class AccuweatherBackend:
 
     api_key: str
     cache: CacheAdapter
-    cached_report_ttl_sec: int
+    cached_location_key_ttl_sec: int
+    cached_current_condition_ttl_sec: int
+    cached_forecast_ttl_sec: int
     metrics_client: aiodogstatsd.Client
     url_param_api_key: str
     url_postalcodes_path: str
@@ -107,7 +117,9 @@ class AccuweatherBackend:
         self,
         api_key: str,
         cache: CacheAdapter,
-        cached_report_ttl_sec: int,
+        cached_location_key_ttl_sec: int,
+        cached_current_condition_ttl_sec: int,
+        cached_forecast_ttl_sec: int,
         metrics_client: aiodogstatsd.Client,
         http_client: AsyncClient,
         url_param_api_key: str,
@@ -139,7 +151,9 @@ class AccuweatherBackend:
         self.cache = cache
         # This registration is lazy (i.e. no interaction with Redis) and infallible.
         self.cache.register_script(SCRIPT_ID, LUA_SCRIPT_CACHE_BULK_FETCH)
-        self.cached_report_ttl_sec = cached_report_ttl_sec
+        self.cached_location_key_ttl_sec = cached_location_key_ttl_sec
+        self.cached_current_condition_ttl_sec = cached_current_condition_ttl_sec
+        self.cached_forecast_ttl_sec = cached_forecast_ttl_sec
         self.metrics_client = metrics_client
         self.http_client = http_client
         self.url_param_api_key = url_param_api_key
@@ -188,6 +202,7 @@ class AccuweatherBackend:
         url_path: str,
         params: dict[str, str],
         process_api_response: Callable[[Any], Optional[dict[str, Any]]],
+        cache_ttl_sec: int,
     ) -> Optional[dict[str, Any]]:
         """Get API response. Attempt to get it from cache first,
         then actually make the call if there's a cache miss.
@@ -212,7 +227,7 @@ class AccuweatherBackend:
         response_expiry: str = response.headers.get("Expires")
         try:
             await self.store_request_into_cache(
-                cache_key, response_dict, response_expiry
+                cache_key, response_dict, response_expiry, cache_ttl_sec
             )
         except (CacheAdapterError, ValueError) as exc:
             logger.error(f"Error with storing Accuweather to cache: {exc}")
@@ -227,18 +242,20 @@ class AccuweatherBackend:
         return response_dict
 
     async def store_request_into_cache(
-        self, cache_key: str, response_dict: dict[str, Any], response_expiry: str
+        self,
+        cache_key: str,
+        response_dict: dict[str, Any],
+        response_expiry: str,
+        cache_ttl_sec: int,
     ):
         """Store the request into cache. Also ensures that the cache ttl is
-        at least `cached_report_ttl_sec`.
+        at least `cached_ttl_sec`.
         """
         with self.metrics_client.timeit("accuweather.cache.store"):
             expiry_delta: timedelta = parser.parse(
                 response_expiry
             ) - datetime.datetime.now(datetime.timezone.utc)
-            cache_ttl: timedelta = max(
-                expiry_delta, timedelta(seconds=self.cached_report_ttl_sec)
-            )
+            cache_ttl: timedelta = max(expiry_delta, timedelta(seconds=cache_ttl_sec))
             cache_value = json.dumps(response_dict).encode("utf-8")
             await self.cache.set(cache_key, cache_value, ttl=cache_ttl)
 
@@ -278,16 +295,7 @@ class AccuweatherBackend:
             else "accuweather.cache.fetch.miss.forecasts"
         )
 
-    # Opt out the type check as mypy really struggles with the pattern match below.
-    # TODO(nanj): re-enable type checking once we upgrade mypy to the lastest.
-    @no_type_check
-    def parse_cached_data(
-        self, cached_data: list[Optional[bytes]]
-    ) -> tuple[
-        Optional[AccuweatherLocation],
-        Optional[CurrentConditions],
-        Optional[Forecast],
-    ]:
+    def parse_cached_data(self, cached_data: list[Optional[bytes]]) -> WeatherData:
         """Parse the weather data from cache.
 
         Upon parsing errors, it will return the successfully parsed data thus far.
@@ -296,26 +304,27 @@ class AccuweatherBackend:
             - `cached_data` {list[bytes]} A list of bytes for location_key,
               current_conditions, forecast
         """
+        if len(cached_data) == 0:
+            return WeatherData()
+
+        location_cached, current_cached, forecast_cached = cached_data
+
         location: Optional[AccuweatherLocation] = None
         current_conditions: Optional[CurrentConditions] = None
         forecast: Optional[Forecast] = None
+
         try:
-            match cached_data:
-                case [location_cached, None, _] | [location_cached, _, None]:
-                    # A partial hit and at least one of the latter two is missing, just return
-                    # the location_key.
-                    location = AccuweatherLocation.parse_raw(location_cached)
-                case [location_cached, current_cached, forecast_cached]:
-                    location = AccuweatherLocation.parse_raw(location_cached)
-                    current_conditions = CurrentConditions.parse_raw(current_cached)
-                    forecast = Forecast.parse_raw(forecast_cached)
-                case _:
-                    pass
+            if location_cached is not None:
+                location = AccuweatherLocation.parse_raw(location_cached)
+            if current_cached is not None:
+                current_conditions = CurrentConditions.parse_raw(current_cached)
+            if forecast_cached is not None:
+                forecast = Forecast.parse_raw(forecast_cached)
         except ValidationError as exc:
             logger.error(f"Failed to load weather report data from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.data.error")
 
-        return location, current_conditions, forecast
+        return WeatherData(location, current_conditions, forecast)
 
     def get_location_key_query_params(self, postal_code: str) -> dict[str, str]:
         """Get the query parameters for the location key for a given postal code."""
@@ -336,9 +345,6 @@ class AccuweatherBackend:
         cache for future uses.
 
         Note:
-            - To simplify the implementation, if either current conditions or the forecast
-              is missing in the cache, we will fetch both of them from AccuWeather as they
-              normally co-exist in the cache
             - To avoid making excessive API requests to Accuweather in the event of
               "Cache Avalanche", it will *not* call AccuWeather for weather reports upon any
               cache errors such as timeouts or connection issues to Redis
@@ -375,38 +381,65 @@ class AccuweatherBackend:
 
         self.emit_cache_fetch_metrics(cached_data)
 
-        location, current_conditions, forecast = self.parse_cached_data(cached_data)
+        cached_report = self.parse_cached_data(cached_data)
+        return await self.make_weather_report(cached_report, country, postal_code)
 
-        # Everything is ready, just return them.
+    async def make_weather_report(
+        self,
+        cached_report: WeatherData,
+        country: str,
+        postal_code: str,
+    ) -> Optional[WeatherReport]:
+        """Make a `WeatherReport` either using the cached data or fetching from AccuWeather.
+
+        Raises:
+            AccuWeatherError: Failed request or 4xx and 5xx response from AccuWeather.
+        """
+
+        async def as_awaitable(val: Any) -> Any:
+            """Wrap a non-awaitable value into a coroutine and resolve it right away."""
+            return val
+
+        location, current_conditions, forecast = cached_report
+
         if location and current_conditions and forecast:
+            # Everything is ready, just return them.
             return WeatherReport(
                 city_name=location.localized_name,
                 current_conditions=current_conditions,
                 forecast=forecast,
             )
 
-        # Fetch the location key from AccuWeather if it's missing in the cache.
+        # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
             if (location := await self.get_location(country, postal_code)) is None:
                 return None
 
-        # Fetch current conditions and forecast from AccuWeather.
-        # To simplify the implementation we always fetch both as they share the
-        # same cache TTL now.
         try:
             async with asyncio.TaskGroup() as tg:
-                task_current = tg.create_task(self.get_current_conditions(location.key))
-                task_forecast = tg.create_task(self.get_forecast(location.key))
+                task_current = (
+                    tg.create_task(self.get_current_conditions(location.key))
+                    if current_conditions is None
+                    else as_awaitable(current_conditions)
+                )
+                task_forecast = (
+                    tg.create_task(self.get_forecast(location.key))
+                    if forecast is None
+                    else as_awaitable(forecast)
+                )
         except ExceptionGroup as e:
             raise AccuweatherError(f"Failed to fetch weather report: {e.exceptions}")
+
+        current_conditions = await task_current
+        forecast = await task_forecast
 
         return (
             WeatherReport(
                 city_name=location.localized_name,
-                current_conditions=current,
+                current_conditions=current_conditions,
                 forecast=forecast,
             )
-            if (current := await task_current) and (forecast := await task_forecast)
+            if current_conditions and forecast
             else None
         )
 
@@ -426,6 +459,7 @@ class AccuweatherBackend:
                 self.url_postalcodes_path.format(country_code=country),
                 params=self.get_location_key_query_params(postal_code),
                 process_api_response=process_location_response,
+                cache_ttl_sec=self.cached_location_key_ttl_sec,
             )
         except HTTPError as error:
             raise AccuweatherError("Unexpected location response") from error
@@ -450,6 +484,7 @@ class AccuweatherBackend:
                     self.url_param_api_key: self.api_key,
                 },
                 process_api_response=process_current_condition_response,
+                cache_ttl_sec=self.cached_current_condition_ttl_sec,
             )
         except HTTPError as error:
             raise AccuweatherError("Unexpected current conditions response") from error
@@ -481,6 +516,7 @@ class AccuweatherBackend:
                     self.url_param_api_key: self.api_key,
                 },
                 process_api_response=process_forecast_response,
+                cache_ttl_sec=self.cached_forecast_ttl_sec,
             )
         except HTTPError as error:
             raise AccuweatherError("Unexpected forecast response") from error
