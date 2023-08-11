@@ -20,11 +20,11 @@ class KintoSuggestion(BaseModel):
 
     id: int
     advertiser: str
-    click_url: str | None
+    click_url: str | None = None
     full_keywords: list[list[Any]] = []
     iab_category: str
     icon: str
-    impression_url: str | None
+    impression_url: str | None = None
     keywords: list[str] = []
     title: str
     url: str

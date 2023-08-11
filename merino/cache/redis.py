@@ -1,7 +1,7 @@
 """Redis cache adapter."""
 
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Any
 
 from redis.asyncio import Redis, RedisError
 from redis.commands.core import AsyncScript
@@ -18,7 +18,7 @@ class RedisAdapter:
     def __init__(self, redis: Redis):
         self.redis = redis
 
-    async def get(self, key: str) -> Optional[bytes]:
+    async def get(self, key: str) -> bytes | None:
         """Get the value associated with the key from Redis. Returns `None` if the key isn't in
         Redis.
 
@@ -36,7 +36,7 @@ class RedisAdapter:
         self,
         key: str,
         value: bytes,
-        ttl: Optional[timedelta] = None,
+        ttl: timedelta | None = None,
     ) -> None:
         """Store a key-value pair in Redis, overwriting the previous value if set, and optionally
         expiring after the time-to-live.

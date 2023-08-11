@@ -1,5 +1,5 @@
 """Protocol for weather provider backends."""
-from typing import Optional, Protocol
+from typing import Protocol
 
 from pydantic import BaseModel, HttpUrl
 
@@ -9,19 +9,21 @@ from merino.middleware.geolocation import Location
 class Temperature(BaseModel):
     """Model for temperature with C and F values."""
 
-    c: Optional[float] = None
-    f: Optional[float] = None
+    c: int | None = None
+    f: int | None = None
 
-    def __init__(self, c: Optional[float] = None, f: Optional[float] = None):
-        super().__init__(c=c, f=f)
+    def __init__(self, c: float | None = None, f: float | None = None):
+        cc: int | None = None
+        ff: int | None = None
         if c is not None:
-            self.c = round(c)
+            cc = round(c)
             if f is None:
-                self.f = round(c * 9 / 5 + 32)
+                ff = round(c * 9 / 5 + 32)
         if f is not None:
-            self.f = round(f)
+            ff = round(f)
             if c is None:
-                self.c = round((f - 32) * 5 / 9)
+                cc = round((f - 32) * 5 / 9)
+        super().__init__(c=cc, f=ff)
 
 
 class CurrentConditions(BaseModel):
@@ -60,7 +62,7 @@ class WeatherBackend(Protocol):
 
     async def get_weather_report(
         self, geolocation: Location
-    ) -> Optional[WeatherReport]:  # pragma: no cover
+    ) -> WeatherReport | None:  # pragma: no cover
         """Get weather information from partner.
 
         Raises:

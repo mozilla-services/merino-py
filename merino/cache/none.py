@@ -1,20 +1,20 @@
 """No-operation adapter that disables caching."""
 
 from datetime import timedelta
-from typing import Any, Optional, Union
+from typing import Any
 
 
 class NoCacheAdapter:  # pragma: no cover
     """A cache adapter that doesn't store or return anything."""
 
-    async def get(self, key: str) -> Optional[bytes]:  # noqa: D102
+    async def get(self, key: str) -> bytes | None:  # noqa: D102
         return None
 
     async def set(
         self,
         key: str,
-        value: Union[bytes, str],
-        ttl: Optional[timedelta] = None,
+        value: bytes | str,
+        ttl: timedelta | None = None,
     ) -> None:  # noqa: D102
         pass
 

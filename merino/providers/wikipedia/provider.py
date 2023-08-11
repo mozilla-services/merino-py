@@ -1,6 +1,6 @@
 """The provider for the dynamic Wikipedia integration."""
 import logging
-from typing import Any, Final, Optional
+from typing import Any, Final
 
 from pydantic import HttpUrl
 
@@ -29,8 +29,8 @@ class WikipediaSuggestion(BaseSuggestion):
     full_keyword: str
     advertiser: str
     block_id: int
-    impression_url: Optional[HttpUrl] = None
-    click_url: Optional[HttpUrl] = None
+    impression_url: HttpUrl | None = None
+    click_url: HttpUrl | None = None
 
 
 class Provider(BaseProvider):

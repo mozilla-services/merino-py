@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for domain_metadata_extractor.py module."""
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from pytest_mock import MockerFixture
@@ -24,7 +24,7 @@ DomainMetadataScenario = tuple[
     str | None,
     str | None,
     list[dict[str, Any]],
-    list[dict[str, Optional[str]]],
+    list[dict[str, str | None]],
 ]
 
 DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
@@ -639,7 +639,7 @@ def test_get_domain_metadata(
     )
 
     domain_metadata: list[
-        dict[str, Optional[str]]
+        dict[str, str | None]
     ] = metadata_extractor.get_domain_metadata(domains_data, favicon_min_width=32)
 
     assert domain_metadata == expected_domain_metadata

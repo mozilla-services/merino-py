@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 from enum import Enum
-from typing import Any, Callable, NamedTuple, Optional
+from typing import Any, Callable, NamedTuple
 
 import aiodogstatsd
 from dateutil import parser
@@ -27,8 +27,8 @@ from merino.providers.weather.backends.protocol import (
 
 logger = logging.getLogger(__name__)
 
-PARTNER_PARAM_ID: Optional[str] = settings.accuweather.get("url_param_partner_code")
-PARTNER_CODE: Optional[str] = settings.accuweather.get("partner_code")
+PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
+PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
 
 # The Lua script to fetch the location key, current condition, and forecast for
 # a given country/postal code.
@@ -80,9 +80,9 @@ class AccuweatherLocation(BaseModel):
 class WeatherData(NamedTuple):
     """The triplet for weather data used internally."""
 
-    location: Optional[AccuweatherLocation] = None
-    current_conditions: Optional[CurrentConditions] = None
-    forecast: Optional[Forecast] = None
+    location: AccuweatherLocation | None = None
+    current_conditions: CurrentConditions | None = None
+    forecast: Forecast | None = None
 
 
 class AccuweatherError(BackendError):
@@ -201,14 +201,14 @@ class AccuweatherBackend:
         self,
         url_path: str,
         params: dict[str, str],
-        process_api_response: Callable[[Any], Optional[dict[str, Any]]],
+        process_api_response: Callable[[Any], dict[str, Any] | None],
         cache_ttl_sec: int,
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get API response. Attempt to get it from cache first,
         then actually make the call if there's a cache miss.
         """
         cache_key = self.cache_key_for_accuweather_request(url_path, params)
-        response_dict: Optional[dict[str, str]]
+        response_dict: dict[str, str] | None
 
         # The top level path in the URL gives us a good enough idea of what type of request
         # we are calling from here.
@@ -259,7 +259,7 @@ class AccuweatherBackend:
             cache_value = json.dumps(response_dict).encode("utf-8")
             await self.cache.set(cache_key, cache_value, ttl=cache_ttl)
 
-    def emit_cache_fetch_metrics(self, cached_data: list[Optional[bytes]]) -> None:
+    def emit_cache_fetch_metrics(self, cached_data: list[bytes | None]) -> None:
         """Emit cache fetch metrics.
 
         Params:
@@ -295,7 +295,7 @@ class AccuweatherBackend:
             else "accuweather.cache.fetch.miss.forecasts"
         )
 
-    def parse_cached_data(self, cached_data: list[Optional[bytes]]) -> WeatherData:
+    def parse_cached_data(self, cached_data: list[bytes | None]) -> WeatherData:
         """Parse the weather data from cache.
 
         Upon parsing errors, it will return the successfully parsed data thus far.
@@ -309,9 +309,9 @@ class AccuweatherBackend:
 
         location_cached, current_cached, forecast_cached = cached_data
 
-        location: Optional[AccuweatherLocation] = None
-        current_conditions: Optional[CurrentConditions] = None
-        forecast: Optional[Forecast] = None
+        location: AccuweatherLocation | None = None
+        current_conditions: CurrentConditions | None = None
+        forecast: Forecast | None = None
 
         try:
             if location_cached is not None:
@@ -333,9 +333,7 @@ class AccuweatherBackend:
             self.url_postalcodes_param_query: postal_code,
         }
 
-    async def get_weather_report(
-        self, geolocation: Location
-    ) -> Optional[WeatherReport]:
+    async def get_weather_report(self, geolocation: Location) -> WeatherReport | None:
         """Get weather information from AccuWeather.
 
         Firstly, it will look up the Redis cache for the location key, current condition,
@@ -352,8 +350,8 @@ class AccuweatherBackend:
         Raises:
             AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
         """
-        country: Optional[str] = geolocation.country
-        postal_code: Optional[str] = geolocation.postal_code
+        country: str | None = geolocation.country
+        postal_code: str | None = geolocation.postal_code
         if not country or not postal_code:
             raise AccuweatherError("Country and/or postal code unknown")
 
@@ -364,7 +362,7 @@ class AccuweatherBackend:
         # Look up for all the weather data from the cache.
         try:
             with self.metrics_client.timeit("accuweather.cache.fetch"):
-                cached_data: list[Optional[bytes]] = await self.cache.run_script(
+                cached_data: list[bytes | None] = await self.cache.run_script(
                     sid=SCRIPT_ID,
                     keys=[cache_key],
                     # The order matters below. See `LUA_SCRIPT_CACHE_BULK_FETCH` for details.
@@ -389,7 +387,7 @@ class AccuweatherBackend:
         cached_report: WeatherData,
         country: str,
         postal_code: str,
-    ) -> Optional[WeatherReport]:
+    ) -> WeatherReport | None:
         """Make a `WeatherReport` either using the cached data or fetching from AccuWeather.
 
         Raises:
@@ -445,7 +443,7 @@ class AccuweatherBackend:
 
     async def get_location(
         self, country: str, postal_code: str
-    ) -> Optional[AccuweatherLocation]:
+    ) -> AccuweatherLocation | None:
         """Return location data for a specific country and postal code or None if
         location data is not found.
 
@@ -455,7 +453,7 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-locations-api/apis/get/locations/v1/postalcodes/{countryCode}/search
         """
         try:
-            response: Optional[dict[str, Any]] = await self.get_request(
+            response: dict[str, Any] | None = await self.get_request(
                 self.url_postalcodes_path.format(country_code=country),
                 params=self.get_location_key_query_params(postal_code),
                 process_api_response=process_location_response,
@@ -468,7 +466,7 @@ class AccuweatherBackend:
 
     async def get_current_conditions(
         self, location_key: str
-    ) -> Optional[CurrentConditions]:
+    ) -> CurrentConditions | None:
         """Return current conditions data for a specific location or None if current
         conditions data is not found.
 
@@ -478,7 +476,7 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-current-conditions-api/apis/get/currentconditions/v1/{locationKey}
         """
         try:
-            response: Optional[dict[str, Any]] = await self.get_request(
+            response: dict[str, Any] | None = await self.get_request(
                 self.url_current_conditions_path.format(location_key=location_key),
                 params={
                     self.url_param_api_key: self.api_key,
@@ -500,7 +498,7 @@ class AccuweatherBackend:
             else None
         )
 
-    async def get_forecast(self, location_key: str) -> Optional[Forecast]:
+    async def get_forecast(self, location_key: str) -> Forecast | None:
         """Return daily forecast data for a specific location or None if daily
         forecast data is not found.
 
@@ -510,7 +508,7 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-forecast-api/apis/get/forecasts/v1/daily/1day/{locationKey}
         """
         try:
-            response: Optional[dict[str, Any]] = await self.get_request(
+            response: dict[str, Any] | None = await self.get_request(
                 self.url_forecasts_path.format(location_key=location_key),
                 params={
                     self.url_param_api_key: self.api_key,
@@ -539,7 +537,7 @@ class AccuweatherBackend:
 
 
 def add_partner_code(
-    url: str, url_param_id: Optional[str], partner_code: Optional[str]
+    url: str, url_param_id: str | None = None, partner_code: str | None = None
 ) -> str:
     """Add the partner code to the given URL."""
     if not url_param_id or not partner_code:
@@ -552,7 +550,7 @@ def add_partner_code(
         return url
 
 
-def process_location_response(response: Any) -> Optional[dict[str, Any]]:
+def process_location_response(response: Any) -> dict[str, Any] | None:
     """Process the API response for location keys.
 
     Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
@@ -577,7 +575,7 @@ def process_location_response(response: Any) -> Optional[dict[str, Any]]:
             return None
 
 
-def process_current_condition_response(response: Any) -> Optional[dict[str, Any]]:
+def process_current_condition_response(response: Any) -> dict[str, Any] | None:
     """Process the API response for current conditions."""
     match response:
         case [
@@ -611,7 +609,7 @@ def process_current_condition_response(response: Any) -> Optional[dict[str, Any]
             return None
 
 
-def process_forecast_response(response: Any) -> Optional[dict[str, Any]]:
+def process_forecast_response(response: Any) -> dict[str, Any] | None:
     """Process the API response for forecasts."""
     match response:
         case {
