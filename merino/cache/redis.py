@@ -45,7 +45,9 @@ class RedisAdapter:
             - `CacheAdapterError` if Redis returns an error.
         """
         try:
-            await self.redis.set(key, value, ex=ttl.seconds if ttl else None)
+            await self.redis.set(
+                key, value, ex=ttl.days * 86400 + ttl.seconds if ttl else None
+            )
         except RedisError as exc:
             raise CacheAdapterError(
                 f"Failed to set `{repr(key)}` with error: `{exc}`"

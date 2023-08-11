@@ -37,11 +37,15 @@ _validators = [
     Validator("providers.accuweather.type", is_type_of=str, must_exist=True),
     Validator("providers.accuweather.cache", is_in=["redis", "none"]),
     Validator(
-        "providers.accuweather.cached_current_condition_ttl_sec", is_type_of=int, gte=0
+        "providers.accuweather.cache_ttls.current_condition_ttl_sec",
+        is_type_of=int,
+        gte=0,
     ),
-    Validator("providers.accuweather.cached_forecast_ttl_sec", is_type_of=int, gte=0),
     Validator(
-        "providers.accuweather.cached_location_key_ttl_sec", is_type_of=int, gte=0
+        "providers.accuweather.cache_ttls.forecast_ttl_sec", is_type_of=int, gte=0
+    ),
+    Validator(
+        "providers.accuweather.cached_ttls.location_key_ttl_sec", is_type_of=int, gte=0
     ),
     Validator("providers.adm.backend", is_in=["remote-settings", "test"]),
     Validator("providers.adm.cron_interval_sec", gt=0),
