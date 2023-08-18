@@ -136,6 +136,7 @@ load-tests-clean:  ##  Stop and remove containers and networks for load tests
       -f $(LOAD_TEST_DIR)/docker-compose.yml \
       -p merino-py-load-tests \
       down
+	docker rmi locust
 
 .PHONY: doc-install-deps
 doc-install-deps:  ## Install the dependencies for doc generation
