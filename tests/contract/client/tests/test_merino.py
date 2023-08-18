@@ -174,18 +174,18 @@ def assert_200_response(
     fetch_kinto_icon_url: Callable[[str], str],
 ) -> None:
     """Check that the content for a 200 OK response is what we expect."""
-    expected_content_dict = step_content.dict(exclude=CONTENT_EXCLUDE)
-    merino_content_dict = merino_content.dict(exclude=CONTENT_EXCLUDE)
+    expected_content_dict = step_content.model_dump(exclude=CONTENT_EXCLUDE)
+    merino_content_dict = merino_content.model_dump(exclude=CONTENT_EXCLUDE)
     assert expected_content_dict == merino_content_dict
 
     # The order of suggestions in Merino's response is not guaranteed.
     # Sort them by ('provider', 'block_id') before validating them.
     sorted_merino_suggestions = [
-        suggestion.dict(exclude=SUGGESTION_EXCLUDE)
+        suggestion.model_dump(exclude=SUGGESTION_EXCLUDE)
         for suggestion in sorted(merino_content.suggestions, key=suggestion_id)
     ]
     sorted_expected_suggestions = [
-        suggestion.dict(exclude=SUGGESTION_EXCLUDE)
+        suggestion.model_dump(exclude=SUGGESTION_EXCLUDE)
         for suggestion in sorted(step_content.suggestions, key=suggestion_id)
     ]
     assert sorted_merino_suggestions == sorted_expected_suggestions
@@ -205,20 +205,23 @@ def assert_200_version_endpoint_response(
     """Check that the content for a 200 OK response querying the __version__
     endpoint is what we expect.
     """
-    expected_content_dict = step_content
-    merino_content_dict = merino_version_content
+    expected_content = step_content
+    merino_content = merino_version_content
     # Source is identitical between local dev, stage and production.
-    assert expected_content_dict.source == merino_content_dict.source
+    assert expected_content.source == merino_content.source
 
     if os.environ.get("MERINO_ENV"):
         # The data in the version file is built during the CIRCLECI stage. The local dev
         # version contains placeholders. Therefore, we cannot specify the expected output
         # in scenarios, so checks made here to verify that a sha has been written, version
         # is empty and the validator worked as expected to parse build as HttpUrl.
-        assert merino_content_dict.version == ""
+        assert merino_content.version == ""
         sha_pattern = re.compile(r"\b[0-9a-f]{40}\b")
-        assert re.match(sha_pattern, merino_content_dict.commit)
-        assert type(merino_content_dict.build) is HttpUrl
+        assert re.match(sha_pattern, merino_content.commit)
+        assert str(merino_content.build).startswith(
+            "https://circleci.com/gh/mozilla-services/merino-py/"
+        )
+        assert HttpUrl(str(merino_content.build))
 
 
 @pytest.fixture(scope="function", autouse=True)

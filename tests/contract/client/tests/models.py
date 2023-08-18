@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Extra, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 class Service(Enum):
@@ -49,8 +49,10 @@ class MerinoRequest(Request):
     headers: list[Header] = []
 
 
-class Suggestion(BaseModel, extra=Extra.allow):
+class Suggestion(BaseModel):
     """Class that holds information about a Suggestion returned by Merino."""
+
+    model_config = ConfigDict(extra="allow")
 
     block_id: int
     full_keyword: str | None = None
