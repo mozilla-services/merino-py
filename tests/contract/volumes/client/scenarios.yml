@@ -121,7 +121,7 @@ scenarios:
             suggestions:
               - block_id: 0
                 title: "Banana"
-                url: "https://banana.test"
+                url: "https://banana.test/"
                 provider: "top_picks"
                 is_sponsored: false
                 is_top_pick: true
@@ -270,7 +270,7 @@ scenarios:
             suggestions:
               - block_id: 0
                 title: "Firefox"
-                url: "https://firefox.com"
+                url: "https://firefox.com/"
                 provider: "top_picks"
                 is_sponsored: false
                 is_top_pick: true
@@ -301,7 +301,7 @@ scenarios:
             suggestions:
               - block_id: 0
                 title: "Abc"
-                url: "https://abc.test"
+                url: "https://abc.test/"
                 provider: "top_picks"
                 is_sponsored: false
                 is_top_pick: true
@@ -325,7 +325,7 @@ scenarios:
             suggestions:
               - block_id: 0
                 title: "Abc"
-                url: "https://abc.test"
+                url: "https://abc.test/"
                 provider: "top_picks"
                 is_sponsored: false
                 is_top_pick: true

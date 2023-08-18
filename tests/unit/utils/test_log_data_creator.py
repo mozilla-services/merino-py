@@ -208,4 +208,4 @@ def test_create_log_object_can_convert_time_to_isoformat(
         method="GET",
         errno=0,
     )
-    assert log_data.time == expected_time
+    assert log_data.model_dump()["time"] == expected_time

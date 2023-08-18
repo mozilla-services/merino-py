@@ -91,7 +91,7 @@ def test_get_latest_dump(requests_mock, file_date, gcs_date, expected):
     file_name = f"enwiki-{file_date}-cirrussearch-content.json.gz"
     latest_gcs = Blob(f"bar/enwiki-{gcs_date}-cirrussearch-content.json.gz", "foo")
     html_directory = f"<a href='{file_name}' />"
-    requests_mock.get(base_url, text=html_directory)
+    requests_mock.get(base_url, text=html_directory)  # nosec
 
     file_manager = FileManager("foo/bar", "a-project", base_url)
 

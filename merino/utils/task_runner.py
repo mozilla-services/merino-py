@@ -2,7 +2,7 @@
 
 import logging
 from asyncio import ALL_COMPLETED, Task, wait
-from typing import Callable, Optional
+from typing import Callable
 
 from merino.metrics import Client
 
@@ -15,8 +15,8 @@ TimeoutCallback = Callable[[list[Task]], None]
 async def gather(
     tasks: list[Task],
     *,
-    timeout: Optional[float] = None,
-    timeout_cb: Optional[TimeoutCallback] = None,
+    timeout: float | None = None,
+    timeout_cb: TimeoutCallback | None = None,
 ) -> tuple[list[Task], list[Task]]:
     """Run a list of tasks to their completion, gather all the completed tasks whenever
     they finish. If a timeout is specified, all the pending tasks will be cancelled

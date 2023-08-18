@@ -3,7 +3,6 @@
 import json
 import logging
 import os
-from typing import Optional
 
 import requests
 from pydantic import BaseModel
@@ -46,7 +45,7 @@ class FaviconImage(BaseModel):
 class FaviconDownloader:
     """Download favicon from the web"""
 
-    def download_favicon(self, url: str) -> Optional[FaviconImage]:
+    def download_favicon(self, url: str) -> FaviconImage | None:
         """Download the favicon from the given url.
 
         Args:
@@ -69,13 +68,13 @@ class FaviconDownloader:
             return None
 
 
-def requests_get(url: str) -> Optional[requests.Response]:
+def requests_get(url: str) -> requests.Response | None:
     """Open a given url and return the response.
 
     Args:
         url: URL to open
     Returns:
-        Optional[requests.Response]: Response object
+        requests.Response | None: Response object
     """
     response: requests.Response = requests.get(
         url,
@@ -94,7 +93,7 @@ def update_top_picks_with_firefox_favicons(
     domains_metadata: list[dict[str, str]] = top_picks["domains"]
     for domain_metadata in domains_metadata:
         domain = domain_metadata["domain"]
-        firefox_favicon: Optional[str] = FIREFOX_PACKAGED_FAVICONS.get(domain)
+        firefox_favicon: str | None = FIREFOX_PACKAGED_FAVICONS.get(domain)
         if firefox_favicon:
             domain_metadata["icon"] = firefox_favicon
 
@@ -106,7 +105,7 @@ def _blocklist_path() -> str:
     )
 
 
-def load_blocklist(path: Optional[str] = None) -> set[str]:
+def load_blocklist(path: str | None = None) -> set[str]:
     """Load the blocklist into a set."""
     if path is None:
         path = _blocklist_path()
@@ -115,7 +114,7 @@ def load_blocklist(path: Optional[str] = None) -> set[str]:
         return {domain for domain in domains}
 
 
-def write_blocklist(blocklist: set[str], path: Optional[str] = None):
+def write_blocklist(blocklist: set[str], path: str | None = None):
     """Write the blocklist set to a file."""
     if path is None:
         path = _blocklist_path()

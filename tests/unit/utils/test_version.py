@@ -7,22 +7,22 @@ import json
 import pathlib
 
 import pytest
-from pydantic import ValidationError
+from pydantic import HttpUrl, ValidationError
 
-from merino.utils.version import fetch_app_version_from_file
+from merino.utils.version import Version, fetch_app_version_from_file
 
 
 def test_fetch_app_version_from_file() -> None:
     """Happy path test for fetch_app_version_from_file()."""
-    expected_information = {
-        "source": "https://github.com/mozilla-services/merino-py",
+    expected_information: dict = {
+        "source": HttpUrl("https://github.com/mozilla-services/merino-py"),
         "version": "dev",
         "commit": "TBD",
         "build": "TBD",
     }
 
-    version = fetch_app_version_from_file()
-    assert version.dict() == expected_information
+    version: Version = fetch_app_version_from_file()
+    assert version.model_dump() == expected_information
 
 
 def test_fetch_app_version_from_file_invalid_path() -> None:

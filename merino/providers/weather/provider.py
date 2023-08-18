@@ -1,7 +1,7 @@
 """Weather integration."""
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import aiodogstatsd
 
@@ -61,7 +61,7 @@ class Provider(BaseProvider):
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide weather suggestions."""
         geolocation: Location = srequest.geolocation
-        weather_report: Optional[WeatherReport] = None
+        weather_report: WeatherReport | None = None
 
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):

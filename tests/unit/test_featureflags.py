@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from merino.featureflags import FeatureFlags, session_id_context
 
 
-def test__missing():
+def test_missing():
     """Test that is_enabled will return False if a flag is undefined."""
     flags = FeatureFlags()
     assert not flags.is_enabled("test-missing")

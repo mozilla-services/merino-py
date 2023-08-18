@@ -4,7 +4,6 @@
 
 """Top Pick Navigational Queries Provider"""
 import logging
-from typing import Optional
 
 from merino.exceptions import BackendError
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
@@ -64,7 +63,7 @@ class Provider(BaseProvider):
 
         qlen: int = len(srequest.query)
         query: str = srequest.query
-        ids: Optional[list[int]]
+        ids: list[int] | None = None
 
         match qlen:
             case qlen if (

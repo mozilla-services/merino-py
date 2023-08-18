@@ -52,4 +52,4 @@ def test_temperature(parameters: dict[str, float], expected: dict[str, float]) -
     """Test that Temperature values evaluate as expected given different parameters."""
     temperature: Temperature = Temperature(**parameters)
 
-    assert temperature == expected
+    assert temperature == Temperature(**expected)

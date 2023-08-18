@@ -1,13 +1,13 @@
 """Protocol for cache adapters."""
 
 from datetime import timedelta
-from typing import Any, Optional, Protocol
+from typing import Any, Protocol
 
 
 class CacheAdapter(Protocol):
     """A protocol describing a cache backend."""
 
-    async def get(self, key: str) -> Optional[bytes]:  # pragma: no cover
+    async def get(self, key: str) -> bytes | None:  # pragma: no cover
         """Get the value associated with the key. Returns `None` if the key isn't in the cache.
 
         Raises:
@@ -19,7 +19,7 @@ class CacheAdapter(Protocol):
         self,
         key: str,
         value: bytes,
-        ttl: Optional[timedelta] = None,
+        ttl: timedelta | None = None,
     ) -> None:  # pragma: no cover
         """Store a key-value pair in the cache, with an optional time-to-live.
 

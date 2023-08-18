@@ -153,8 +153,8 @@ def do_upload_test(
 ) -> None:
     """Perform an upload test."""
     for record in expected_records:
-        requests_mock.put(record.url, json={})
-        requests_mock.post(record.attachment_url, json={})
+        requests_mock.put(record.url, json={})  # nosec
+        requests_mock.post(record.attachment_url, json={})  # nosec
 
     with ChunkedRemoteSettingsUploader(
         chunk_size=chunk_size,
@@ -344,11 +344,11 @@ def test_delete_records(requests_mock):
     records_url = f"{server}/buckets/{bucket}/collections/{collection}/records"
     records_data = [r.data for r in records]
     records_data.append({"type": "some-other-type", "id": "some-other-id"})
-    requests_mock.get(records_url, json={"data": records_data})
+    requests_mock.get(records_url, json={"data": records_data})  # nosec
 
     # Mock the URL for each individual record so it can be deleted.
     for r in records:
-        requests_mock.delete(r.url, json={"data": {}})
+        requests_mock.delete(r.url, json={"data": {}})  # nosec
 
     with ChunkedRemoteSettingsUploader(
         chunk_size=10, **TEST_UPLOADER_KWARGS

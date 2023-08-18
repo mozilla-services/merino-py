@@ -325,9 +325,9 @@ def request_suggestions(
     if providers:
         params = {**params, "providers": providers}
 
-    default_headers: dict[str, str] = {  # nosec
-        "Accept-Language": choice(LOCALES),
-        "User-Agent": choice(DESKTOP_FIREFOX),
+    default_headers: dict[str, str] = {
+        "Accept-Language": choice(LOCALES),  # nosec
+        "User-Agent": choice(DESKTOP_FIREFOX),  # nosec
     }
 
     with client.get(

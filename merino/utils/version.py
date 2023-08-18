@@ -3,13 +3,15 @@ import json
 import logging
 import pathlib
 
-from pydantic import BaseModel, Extra, HttpUrl
+from pydantic import BaseModel, ConfigDict, HttpUrl
 
 logger = logging.getLogger(__name__)
 
 
-class Version(BaseModel, extra=Extra.forbid):
+class Version(BaseModel):
     """Model for version.json data"""
+
+    model_config = ConfigDict(extra="forbid")
 
     source: HttpUrl
     version: str

@@ -50,12 +50,12 @@ class LoggingMiddleware:
                     suggest_log_data: SuggestLogDataModel = create_suggest_log_data(
                         request, message, dt
                     )
-                    suggest_request_logger.info("", extra=suggest_log_data.dict())
+                    suggest_request_logger.info("", extra=suggest_log_data.model_dump())
                 else:
                     request_log_data: RequestSummaryLogDataModel = (
                         create_request_summary_log_data(request, message, dt)
                     )
-                    logger.info("", extra=request_log_data.dict())
+                    logger.info("", extra=request_log_data.model_dump())
 
             await send(message)
 

@@ -29,7 +29,7 @@ def test_create_blocklist(
 ):
     """Test that the blocklist is created from CSV file."""
     url = "https://localhost"
-    requests_mock.get(url, text=blocklist_csv_text)
+    requests_mock.get(url, text=blocklist_csv_text)  # nosec
 
     categories = create_blocklist(blocklist_file_url=url)
 

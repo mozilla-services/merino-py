@@ -3,7 +3,7 @@ import asyncio
 import logging
 import time
 from enum import Enum, unique
-from typing import Any, Final, Optional
+from typing import Any, Final
 
 from pydantic import HttpUrl
 
@@ -50,8 +50,8 @@ class NonsponsoredSuggestion(BaseSuggestion):
     block_id: int
     full_keyword: str
     advertiser: str
-    impression_url: Optional[HttpUrl] = None
-    click_url: Optional[HttpUrl] = None
+    impression_url: HttpUrl | None = None
+    click_url: HttpUrl | None = None
 
 
 class Provider(BaseProvider):
