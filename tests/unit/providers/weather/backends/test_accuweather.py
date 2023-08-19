@@ -488,9 +488,11 @@ def fixture_accuweather_cached_data_misses() -> list[Optional[bytes]]:
 
 
 @pytest.fixture(name="accuweather_parsed_data_misses")
-def fixture_accuweather_parsed_data_misses() -> tuple[
-    Optional[AccuweatherLocation], Optional[CurrentConditions], Optional[Forecast]
-]:
+def fixture_accuweather_parsed_data_misses() -> (
+    tuple[
+        Optional[AccuweatherLocation], Optional[CurrentConditions], Optional[Forecast]
+    ]
+):
     """Return the partial parsed AccuWeather triplet for a cache hit."""
     return (
         None,

@@ -121,7 +121,7 @@ def fixture_merino_step(
 
             if (
                 step.request.path == "/__version__"
-                and type(step.response.content) == VersionResponseContent
+                and type(step.response.content) is VersionResponseContent
             ):
                 assert_200_version_endpoint_response(
                     step_content=step.response.content,

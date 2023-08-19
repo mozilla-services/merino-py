@@ -142,8 +142,8 @@ def test_suggest_default_wildcard_providers(client: TestClient, query: str) -> N
 def test_suggest_default_wildcard_providers_and_additional_provider(
     client: TestClient, query: str
 ) -> None:
-    """Test that `default` wildcard provider parameter plus an added parameter for disabled provider
-    returns suggestions from all passed in providers.
+    """Test that `default` wildcard provider parameter plus an added parameter
+    for disabled provider returns suggestions from all passed in providers.
     """
     response = client.get(f"/api/v1/suggest?q={query}&providers=default,top_picks")
     assert response.status_code == 200

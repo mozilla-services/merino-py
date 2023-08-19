@@ -454,7 +454,6 @@ class MerinoUser(HttpUser):
             # group all requests under the 'name' entry
             name=f"{SUGGEST_API}{(f'?providers={providers}' if providers else '')}",
         ) as response:
-
             if response.status_code == 0:
                 # Do not classify as failure
                 #
