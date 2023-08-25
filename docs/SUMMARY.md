@@ -17,6 +17,8 @@
   - [Release Process](./dev/release-process.md)
   - [Profiling](./dev/profiling.md)
 - [Operations](./operations/index.md)
+  - [Rollback](./operations/rollback.md)
+  - [Test Failures in CI](./operations/testfailures.md)
   - [Configs](./operations/configs.md)
   - [Elasticsearch](./operations/elasticsearch.md)
   - [Jobs](./operations/jobs.md)
