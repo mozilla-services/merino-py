@@ -81,7 +81,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item affix "><a href="intro.html">Intro</a></li><li class="chapter-item affix "><li class="part-title">General Documentation</li><li class="chapter-item "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item "><a href="data.html"><strong aria-hidden="true">3.</strong> Data collection</a></li><li class="chapter-item "><a href="dev/index.html"><strong aria-hidden="true">4.</strong> Working on the code</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="dev/content-moderation.html"><strong aria-hidden="true">4.1.</strong> Content Moderation</a></li><li class="chapter-item "><a href="dev/dependencies.html"><strong aria-hidden="true">4.2.</strong> Dependencies</a></li><li class="chapter-item "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">4.3.</strong> Logging and Metrics</a></li><li class="chapter-item "><a href="dev/middlewares.html"><strong aria-hidden="true">4.4.</strong> Middlewares</a></li><li class="chapter-item "><a href="dev/feature_flags.html"><strong aria-hidden="true">4.5.</strong> Feature Flags</a></li><li class="chapter-item "><a href="dev/testing.html"><strong aria-hidden="true">4.6.</strong> Test Strategy</a></li><li class="chapter-item "><a href="dev/release-process.html"><strong aria-hidden="true">4.7.</strong> Release Process</a></li><li class="chapter-item "><a href="dev/profiling.html"><strong aria-hidden="true">4.8.</strong> Profiling</a></li></ol></li><li class="chapter-item "><a href="operations/index.html"><strong aria-hidden="true">5.</strong> Operations</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="operations/configs.html"><strong aria-hidden="true">5.1.</strong> Configs</a></li><li class="chapter-item "><a href="operations/elasticsearch.html"><strong aria-hidden="true">5.2.</strong> Elasticsearch</a></li><li class="chapter-item "><a href="operations/jobs.html"><strong aria-hidden="true">5.3.</strong> Jobs</a></li></ol></li><li class="chapter-item "><li class="part-title">ADR</li><li class="chapter-item "><a href="adr/index.html"><strong aria-hidden="true">6.</strong> Archive</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="adr/0001-locust-vs-k6-merino-py-performance-test-framework.html"><strong aria-hidden="true">6.1.</strong> Load Test Framework: Locust VS K6</a></li><li class="chapter-item "><a href="adr/0002-merino-general-response.html"><strong aria-hidden="true">6.2.</strong> General API Response</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item affix "><a href="intro.html">Intro</a></li><li class="chapter-item affix "><li class="part-title">General Documentation</li><li class="chapter-item "><a href="api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item "><a href="firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item "><a href="data.html"><strong aria-hidden="true">3.</strong> Data collection</a></li><li class="chapter-item "><a href="dev/index.html"><strong aria-hidden="true">4.</strong> Working on the code</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="dev/content-moderation.html"><strong aria-hidden="true">4.1.</strong> Content Moderation</a></li><li class="chapter-item "><a href="dev/dependencies.html"><strong aria-hidden="true">4.2.</strong> Dependencies</a></li><li class="chapter-item "><a href="dev/logging-and-metrics.html"><strong aria-hidden="true">4.3.</strong> Logging and Metrics</a></li><li class="chapter-item "><a href="dev/middlewares.html"><strong aria-hidden="true">4.4.</strong> Middlewares</a></li><li class="chapter-item "><a href="dev/feature_flags.html"><strong aria-hidden="true">4.5.</strong> Feature Flags</a></li><li class="chapter-item "><a href="dev/testing.html"><strong aria-hidden="true">4.6.</strong> Test Strategy</a></li><li class="chapter-item "><a href="dev/release-process.html"><strong aria-hidden="true">4.7.</strong> Release Process</a></li><li class="chapter-item "><a href="dev/profiling.html"><strong aria-hidden="true">4.8.</strong> Profiling</a></li></ol></li><li class="chapter-item "><a href="operations/index.html"><strong aria-hidden="true">5.</strong> Operations</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="operations/rollback.html"><strong aria-hidden="true">5.1.</strong> Rollback</a></li><li class="chapter-item "><a href="operations/testfailures.html"><strong aria-hidden="true">5.2.</strong> Test Failures in CI</a></li><li class="chapter-item "><a href="operations/configs.html"><strong aria-hidden="true">5.3.</strong> Configs</a></li><li class="chapter-item "><a href="operations/elasticsearch.html"><strong aria-hidden="true">5.4.</strong> Elasticsearch</a></li><li class="chapter-item "><a href="operations/jobs.html"><strong aria-hidden="true">5.5.</strong> Jobs</a></li></ol></li><li class="chapter-item "><li class="part-title">ADR</li><li class="chapter-item "><a href="adr/index.html"><strong aria-hidden="true">6.</strong> Archive</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="adr/0001-locust-vs-k6-merino-py-performance-test-framework.html"><strong aria-hidden="true">6.1.</strong> Load Test Framework: Locust VS K6</a></li><li class="chapter-item "><a href="adr/0002-merino-general-response.html"><strong aria-hidden="true">6.2.</strong> General API Response</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -926,9 +926,12 @@ pipeline first deploys to the <a href="dev/../firefox.html#stage"><code>stage</c
 the commit hash of the deployed version, which will eventually match to the one of the latest commit
 on the <code>main</code> branch (a node with an older version might still serve the request before it is shut
 down).</p>
-<h2 id="development-guidelines"><a class="header" href="#development-guidelines">Development Guidelines</a></h2>
-<p>Please see the <a href="https://github.com/mozilla-services/merino-py/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> docs on commit guidelines and pull request best
-practices.</p>
+<h2 id="release-best-practices"><a class="header" href="#release-best-practices">Release Best Practices</a></h2>
+<p>The <em>expectation</em> is that the author of the change will:</p>
+<ul>
+<li>merge pull requests during hours when the majority of contributors are online</li>
+<li>monitor the [Merino Application &amp; Infrastructure][merino_app_info] dashboard for any anomaly</li>
+</ul>
 <h2 id="versioning"><a class="header" href="#versioning">Versioning</a></h2>
 <p>The commit hash of the deployed code is considered its version identifier. The commit hash can be
 retrieved locally via <code>git rev-parse HEAD</code>.</p>
@@ -942,17 +945,61 @@ continue deployment. For detailed specifics on load testing and this convention,
 <a href="https://github.com/mozilla-services/merino-py/blob/main/tests/load/README.md">Load Test README</a>.</p>
 <p>Logs from load tests executed in continuous deployment are available in the <code>/data</code> volume of the
 Locust master kubernetes pod.</p>
-<h2 id="releasing-to-production"><a class="header" href="#releasing-to-production">Releasing to production</a></h2>
-<p>Developers with write access to the Merino repository will initiate a deployment to production when
-a Pull-Request on the Merino GitHub repository is merged to the <code>main</code> branch. It is recommended to
-merge pull requests during hours when the majority of Contile contributors are online.</p>
-<p>While any developer with write access can trigger the deployment to production, the <em>expectation</em> is
-that the individual(s) who authored and merged the Pull-Request should do so, as they are the ones
-most familiar with their changes and who can tell, by looking at the data, if anything looks
-anomalous. Developers <strong>must</strong> monitor the <a href="https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&amp;from=now-24h&amp;to=now&amp;var-environment=prodpy&amp;refresh=1m">Merino Application &amp; Infrastructure</a>
-dashboard for any anomaly, for example significant changes in HTTP response codes, increase in
-latency, container/cpu/memory usage (most things under the 'Infrastructure' heading).</p>
+<h3 id="what-to-do-if-production-breaks"><a class="header" href="#what-to-do-if-production-breaks">What to do if production breaks?</a></h3>
+<p>If your latest release causes problems and needs to be rolled back:
+don't panic and follow the instructions in the <a href="dev/../operations/rollback.html">Rollback Runbook</a>.</p>
 <h3 id="what-to-do-if-tests-fail-during-deployment"><a class="header" href="#what-to-do-if-tests-fail-during-deployment">What to do if tests fail during deployment?</a></h3>
+<p>Please refer to <a href="dev/../operations/testfailures.html">What to do with Test Failures in CI?</a></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="profiling"><a class="header" href="#profiling">Profiling</a></h1>
+<p>As Merino runs as a single-threaded application using the asyncio-based
+framework, it would be useful for engineers to get a good understanding
+about how Merino performs and where it spends time and memory doing what
+tasks to serve the requests. Local profiling offers us a way to look into
+those low-level details.</p>
+<p>We use <a href="https://github.com/plasma-umass/scalene">Scalene</a> as the profiler to conduct the profiling for Merino.
+It's very easy to use, offers extremely detailed (at the line level)
+insights with much lower overhead compared to other profilers.</p>
+<h2 id="usage-1"><a class="header" href="#usage-1">Usage</a></h2>
+<p>To start the profiling, you can run the following to start Merino with
+Scalene:</p>
+<pre><code class="language-sh">$ make profile
+
+# or you can run it directly
+
+$ python -m scalene merino/main.py
+</code></pre>
+<p>Then you can send requests to Merino manually or through using other
+load testing tools. Once that's done, you can terminate the Merino
+application. It will automatically collect profiling outputs (CPU &amp; Memory)
+and open it in your browser.</p>
+<h2 id="understand-the-outputs"><a class="header" href="#understand-the-outputs">Understand the outputs</a></h2>
+<p>Out of the box, Scalene provides a very intuitive web interface to display
+the profiling outputs. It's organized at the file (module) level. For each
+file, it shows the CPU time and average memory usage for both the line profile
+and the function profile of that module. You can also click on specific columns
+to sort the lines or functions accordingly.</p>
+<p>For more details of how to read the outputs, you can reference Scalene's
+<a href="https://github.com/plasma-umass/scalene#output">documents</a>.</p>
+<p>Equipped with those insights, you can have a good understanding about the
+application, identify hotspots, bottlenecks, or other findings that are
+not easy to uncover by only reading the source code. And then, you can tweak
+or fix those issues, test or profile it again to verify if the fix is working.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="operations"><a class="header" href="#operations">Operations</a></h1>
+<p>This is where we put operational documentation for Merino.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="how-to-rollback-changes"><a class="header" href="#how-to-rollback-changes">How to Rollback Changes</a></h1>
+<p>Note: We use &quot;roll-forward&quot; strategy for rolling back changes in production.</p>
+<ol>
+<li>Depending on the severity of the problem, decide if this warrants
+<a href="https://mozilla-hub.atlassian.net/wiki/spaces/MIR/overview">kicking off an incident</a>;</li>
+<li>Identify the problematic commit (it may not be the latest commit)
+and create a revert PR. 
+If it is the latest commit, you can revert the change with:
+<pre><code>git revert HEAD~1
+</code></pre>
+</li>
+<li>Create a revert PR and go through normal review process to merge PR.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="what-to-do-with-test-failures-in-ci"><a class="header" href="#what-to-do-with-test-failures-in-ci">What to do with test failures in CI?</a></h1>
 <ol>
 <li>
 <p>Investigate the cause of the test failure</p>
@@ -997,80 +1044,6 @@ initiated manually by triggering the CI pipeline in <a href="https://app.circlec
 </ul>
 </li>
 </ol>
-<h3 id="what-to-do-if-production-breaks"><a class="header" href="#what-to-do-if-production-breaks">What to do if production breaks?</a></h3>
-<p>If your latest release causes problems and needs to be rolled back:
-don't panic and follow the instructions below:</p>
-<ol>
-<li>Depending on the severity of the problem, decide if this warrants
-<a href="https://mozilla-hub.atlassian.net/wiki/spaces/MIR/overview">kicking off an incident</a>;</li>
-<li>Identify the problematic commit (see instructions below), as it may not necessarily be the latest one!</li>
-<li>Revert the problematic commit, merge that into GitHub,
-then <a href="dev/release-process.html#releasing-to-production">deploy the revert commit to production</a>.
-<ul>
-<li>If a fix can be identified in a relatively short time,
-then you may submit a fix, rather than reverting the problematic commit.</li>
-</ul>
-</li>
-</ol>
-<h4 id="locate-problematic-commit-via-git-bisect"><a class="header" href="#locate-problematic-commit-via-git-bisect">Locate problematic commit via &quot;git bisect&quot;</a></h4>
-<p>If you are not sure about which commit broke production, you can use <code>git bisect</code> to locate the problematic commit as follows:</p>
-<pre><code class="language-sh"># Start the bisect session.
-$ git bisect start
-
-# Flag a bad commit, usually you can set it to the latest commit as it's broken
-# in production.
-$ git bisect bad &lt;commit-hash-for-a-bad-commit&gt;
-
-# Flag a good commit, this can be set to the last known good commit.
-# You can use an old commit if you're still unsure, bisect will perform binary
-# searches anyway.
-$ git bisect good &lt;commit-hash-for-a-good-commit&gt;
-
-# Git will check out a commit in the middle and then you can test it to see if
-# the issue is still reproducible. If yes, flag it &quot;bad&quot;, otherwise flag it
-# &quot;good&quot;. Git will use that as input to make the next move until it locates the
-# problematic commit.
-$ git bisect [bad|good]
-
-# End the bisect session when you're done.
-$ git bisect reset
-</code></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="profiling"><a class="header" href="#profiling">Profiling</a></h1>
-<p>As Merino runs as a single-threaded application using the asyncio-based
-framework, it would be useful for engineers to get a good understanding
-about how Merino performs and where it spends time and memory doing what
-tasks to serve the requests. Local profiling offers us a way to look into
-those low-level details.</p>
-<p>We use <a href="https://github.com/plasma-umass/scalene">Scalene</a> as the profiler to conduct the profiling for Merino.
-It's very easy to use, offers extremely detailed (at the line level)
-insights with much lower overhead compared to other profilers.</p>
-<h2 id="usage-1"><a class="header" href="#usage-1">Usage</a></h2>
-<p>To start the profiling, you can run the following to start Merino with
-Scalene:</p>
-<pre><code class="language-sh">$ make profile
-
-# or you can run it directly
-
-$ python -m scalene merino/main.py
-</code></pre>
-<p>Then you can send requests to Merino manually or through using other
-load testing tools. Once that's done, you can terminate the Merino
-application. It will automatically collect profiling outputs (CPU &amp; Memory)
-and open it in your browser.</p>
-<h2 id="understand-the-outputs"><a class="header" href="#understand-the-outputs">Understand the outputs</a></h2>
-<p>Out of the box, Scalene provides a very intuitive web interface to display
-the profiling outputs. It's organized at the file (module) level. For each
-file, it shows the CPU time and average memory usage for both the line profile
-and the function profile of that module. You can also click on specific columns
-to sort the lines or functions accordingly.</p>
-<p>For more details of how to read the outputs, you can reference Scalene's
-<a href="https://github.com/plasma-umass/scalene#output">documents</a>.</p>
-<p>Equipped with those insights, you can have a good understanding about the
-application, identify hotspots, bottlenecks, or other findings that are
-not easy to uncover by only reading the source code. And then, you can tweak
-or fix those issues, test or profile it again to verify if the fix is working.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="operations"><a class="header" href="#operations">Operations</a></h1>
-<p>This is where we put operational documentation for Merino.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configuring-merino-operations"><a class="header" href="#configuring-merino-operations">Configuring Merino (Operations)</a></h1>
 <h2 id="settings"><a class="header" href="#settings">Settings</a></h2>
 <p>Merino's settings are managed via Dynaconf and can be specified in two ways: by a
