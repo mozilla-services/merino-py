@@ -18,6 +18,7 @@ from typing import Any
 import faker
 from elasticsearch import ApiError, Elasticsearch, ElasticsearchWarning, TransportError
 from locust import HttpUser, events, task
+from locust.exception import StopUser
 from locust.runners import MasterRunner
 from pydantic import BaseModel
 
@@ -29,6 +30,7 @@ from merino.providers.adm.backends.remotesettings import (
 from merino.providers.amo.addons_data import ADDON_KEYWORDS
 from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
+from merino.utils.version import Version
 from merino.web.models_v1 import SuggestResponse
 from tests.load.common.client_info import DESKTOP_FIREFOX, LOCALES
 
@@ -44,6 +46,7 @@ logger.setLevel(int(LOGGING_LEVEL))
 
 # See https://mozilla-services.github.io/merino/api.html#suggest
 SUGGEST_API: str = "/api/v1/suggest"
+VERSION_API: str = "/__version__"
 
 # Optional. A comma-separated list of any experiments or rollouts that are
 # affecting the client's Suggest experience
@@ -315,6 +318,16 @@ class MerinoUser(HttpUser):
 
     def on_start(self):
         """Instructions to execute for each simulated user when they start."""
+        # Check that the Merino 'Host' is available
+        version: Version = self._request_version()
+        if not version:
+            logger.error(
+                "The Merino version information was unavailable. Verify that "
+                "the Merino 'Host' is reachable."
+            )
+            raise StopUser()
+        logger.debug(f"User will execute queries against Merino: {version.commit}")
+
         # Create a Faker instance for generating random suggest queries
         self.faker = faker.Faker(locale="en-US", providers=["faker.providers.lorem"])
 
@@ -449,6 +462,7 @@ class MerinoUser(HttpUser):
                 #    Session (caused by connection errors, timeouts or similar), instead
                 #    returning a dummy Response object with status_code set to 0 and
                 #    content set to None.
+                logger.warning("Received a response with a status code of 0.")
                 response.success()
                 return
 
@@ -465,3 +479,25 @@ class MerinoUser(HttpUser):
             # from Merino. This will raise a ValidationError if the response is missing
             # fields which will be reported as a failure in Locust's statistics.
             SuggestResponse(**response.json())
+
+    def _request_version(self) -> Version | None:
+        """Request version information from Merino.
+
+        Returns:
+            Version | None: Merino version information or None
+        Raises:
+            ValidationError: Response data is not as expected.
+        """
+        headers: dict[str, str] = {
+            "Accept-Language": choice(LOCALES),  # nosec
+            "User-Agent": choice(DESKTOP_FIREFOX),  # nosec
+        }
+        with self.client.get(
+            url=VERSION_API, headers=headers, catch_response=True
+        ) as response:
+            if response.status_code != 200:
+                response.failure(
+                    f"{response.status_code=}, expected 200, {response.text=}"
+                )
+                return None
+            return Version(**response.json())
