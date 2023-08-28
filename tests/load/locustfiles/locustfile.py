@@ -18,7 +18,6 @@ from typing import Any
 import faker
 from elasticsearch import ApiError, Elasticsearch, ElasticsearchWarning, TransportError
 from locust import HttpUser, events, task
-from locust.clients import HttpSession
 from locust.runners import MasterRunner
 from pydantic import BaseModel
 
@@ -301,67 +300,6 @@ def on_locust_init(environment, **kwargs):
         environment.runner.register_message("store_suggestions", store_suggestions)
 
 
-def request_suggestions(
-    client: HttpSession,
-    query: str,
-    providers: str | None = None,
-    headers: dict[str, str] | None = None,
-) -> None:
-    """Request suggestions from Merino for the given query string.
-
-    Args:
-        client: An HTTP session client
-        query: Query string
-        providers: Optional. A comma-separated list of providers to use for this request
-        headers: Optional. A dictionary of header key value pairs
-    Raises:
-        ValidationError: Response data is not as expected.
-    """
-    params: dict[str, Any] = {"q": query}
-
-    if CLIENT_VARIANTS:
-        params = {**params, "client_variants": CLIENT_VARIANTS}
-
-    if providers:
-        params = {**params, "providers": providers}
-
-    default_headers: dict[str, str] = {
-        "Accept-Language": choice(LOCALES),  # nosec
-        "User-Agent": choice(DESKTOP_FIREFOX),  # nosec
-    }
-
-    with client.get(
-        url=SUGGEST_API,
-        params=params,
-        headers=((default_headers | headers) if headers else default_headers),
-        catch_response=True,
-        # group all requests under the 'name' entry
-        name=f"{SUGGEST_API}{(f'?providers={providers}' if providers else '')}",
-    ) as response:
-
-        if response.status_code == 0:
-            # Do not classify as failure
-            #
-            # 0: The HttpSession catches any requests.RequestException thrown by
-            #    Session (caused by connection errors, timeouts or similar), instead
-            #    returning a dummy Response object with status_code set to 0 and
-            #    content set to None.
-            response.success()
-            return
-
-        # This contextmanager returns a response that provides the ability to
-        # manually control if an HTTP request should be marked as successful or
-        # a failure in Locust's statistics
-        if response.status_code != 200:
-            response.failure(f"{response.status_code=}, expected 200, {response.text=}")
-            return
-
-        # Create a pydantic model instance for validating the response content
-        # from Merino. This will raise a ValidationError if the response is missing
-        # fields which will be reported as a failure in Locust's statistics.
-        SuggestResponse(**response.json())
-
-
 class QueryData(BaseModel):
     """Class that holds query data for targeting Merino providers"""
 
@@ -399,7 +337,7 @@ class MerinoUser(HttpUser):
         providers: str = "adm"
 
         for query in queries:
-            request_suggestions(self.client, query, providers)
+            self._request_suggestions(query, providers)
 
     @task(weight=2)
     def amo_suggestions(self) -> None:
@@ -410,9 +348,9 @@ class MerinoUser(HttpUser):
         providers: str = "amo"
 
         first_word: str = phrase.split()[0]
-        request_suggestions(self.client, first_word, providers)
+        self._request_suggestions(first_word, providers)
         for i in range(len(first_word), len(phrase) + 1):
-            request_suggestions(self.client, phrase[:i], providers)
+            self._request_suggestions(phrase[:i], providers)
 
     @task(weight=2)
     def dynamic_wikipedia_suggestions(self) -> None:
@@ -422,7 +360,7 @@ class MerinoUser(HttpUser):
 
         queries: list[str] = [full_query[:x] for x in range(2, (len(full_query) + 1))]
         for query in queries:
-            request_suggestions(self.client, query, providers)
+            self._request_suggestions(query, providers)
 
     @task(weight=2)
     def faker_suggestions(self) -> None:
@@ -435,7 +373,7 @@ class MerinoUser(HttpUser):
             if query.endswith(" "):
                 continue
 
-            request_suggestions(self.client, query)
+            self._request_suggestions(query)
 
     @task(weight=2)
     def top_picks_suggestions(self) -> None:
@@ -444,7 +382,7 @@ class MerinoUser(HttpUser):
         providers: str = "top_picks"
 
         for query in queries:
-            request_suggestions(self.client, query, providers)
+            self._request_suggestions(query, providers)
 
     @task(weight=90)
     def weather_suggestions(self) -> None:
@@ -457,7 +395,7 @@ class MerinoUser(HttpUser):
             "X-Forwarded-For": self._get_ip_from_range(*choice(IP_RANGES))  # nosec
         }
 
-        request_suggestions(self.client, query, providers, headers)
+        self._request_suggestions(query, providers, headers)
 
     @staticmethod
     def _get_ip_from_range(begin_ip_address: str, end_ip_address: str) -> str:
@@ -466,3 +404,64 @@ class MerinoUser(HttpUser):
         start: int = struct.unpack(">I", socket.inet_aton(begin_ip_address))[0]
         stop: int = struct.unpack(">I", socket.inet_aton(end_ip_address))[0]
         return socket.inet_ntoa(struct.pack(">I", randint(start, stop)))  # nosec
+
+    def _request_suggestions(
+        self,
+        query: str,
+        providers: str | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        """Request suggestions from Merino for the given query string.
+
+        Args:
+            query: Query string
+            providers: Optional. A comma-separated list of providers to use for this request
+            headers: Optional. A dictionary of header key value pairs
+        Raises:
+            ValidationError: Response data is not as expected.
+        """
+        params: dict[str, Any] = {"q": query}
+
+        if CLIENT_VARIANTS:
+            params = {**params, "client_variants": CLIENT_VARIANTS}
+
+        if providers:
+            params = {**params, "providers": providers}
+
+        default_headers: dict[str, str] = {
+            "Accept-Language": choice(LOCALES),  # nosec
+            "User-Agent": choice(DESKTOP_FIREFOX),  # nosec
+        }
+
+        with self.client.get(
+            url=SUGGEST_API,
+            params=params,
+            headers=((default_headers | headers) if headers else default_headers),
+            catch_response=True,
+            # group all requests under the 'name' entry
+            name=f"{SUGGEST_API}{(f'?providers={providers}' if providers else '')}",
+        ) as response:
+
+            if response.status_code == 0:
+                # Do not classify as failure
+                #
+                # 0: The HttpSession catches any requests.RequestException thrown by
+                #    Session (caused by connection errors, timeouts or similar), instead
+                #    returning a dummy Response object with status_code set to 0 and
+                #    content set to None.
+                response.success()
+                return
+
+            # This contextmanager returns a response that provides the ability to
+            # manually control if an HTTP request should be marked as successful or
+            # a failure in Locust's statistics
+            if response.status_code != 200:
+                response.failure(
+                    f"{response.status_code=}, expected 200, {response.text=}"
+                )
+                return
+
+            # Create a pydantic model instance for validating the response content
+            # from Merino. This will raise a ValidationError if the response is missing
+            # fields which will be reported as a failure in Locust's statistics.
+            SuggestResponse(**response.json())
