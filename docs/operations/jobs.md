@@ -60,7 +60,7 @@ In the module, implement a class called `Suggestion` that derives from
 `BaseSuggestion` in `merino.jobs.csv_rs_uploader.base`. This class will be the
 model of the new suggestion type. `BaseSuggestion` itself derives from
 Pydantic's `BaseModel`, so the validation the class will perform will be based
-on [Pydantic][], which is used throughout Merino. (`BaseSuggestion` is
+on [Pydantic][Pydantic], which is used throughout Merino. (`BaseSuggestion` is
 implemented in `base.py`.)
 
 [Pydantic]: https://docs.pydantic.dev/latest/usage/models/
@@ -75,11 +75,10 @@ module.
 
 #### 4. Add validator methods to the class
 
-Add a method annotated with `@validator` for each field. Each validator method
-should transform its field's input value into an appropriate output value and
-raise a `ValueError` if the input value is invalid. Pydantic will call these
-methods automatically as it performs validation. Their return values will be
-used as the values in the output JSON.
+Add a method annotated with Pydanyic's `@field_validator` decorator for each field.
+Each validator method should transform its field's input value into an appropriate output value and raise a `ValueError` if the input value is invalid.
+Pydantic will call these methods automatically as it performs validation.
+Their return values will be used as the values in the output JSON.
 
 `BaseSuggestion` implements two helpers you should use:
 
