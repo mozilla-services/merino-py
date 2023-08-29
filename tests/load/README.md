@@ -27,6 +27,9 @@ The commit tag signals load test instructions to Jenkins by modifying the Docker
 
 ## Local Execution
 
+Note that if you make changes to the load test code, you must stop and remove the Docker containers and networks for changes to reflect.
+Do this by running `make load-tests-clean`.
+
 Follow the steps bellow to execute the load tests locally:
 
 ### Setup Environment
@@ -35,7 +38,8 @@ Follow the steps bellow to execute the load tests locally:
 
 The following environment variables as well as 
 [Locust environment variables][locust_environment_variables] can be set in 
-`tests\load\docker-compose.yml`:
+`tests\load\docker-compose.yml`.
+Make sure any required API key is added but then not checked into source control (i.e. `WIKIPEDIA__ES_API_KEY`).
 
 | Environment Variable                             | Node(s)         | Description                                                                               |
 |--------------------------------------------------|-----------------|-------------------------------------------------------------------------------------------|
@@ -68,8 +72,7 @@ make load-tests
     * Option 2: Select the `Default` load test shape with the following recommended settings:
       * Number of users: 35
       * Spawn rate: 1
-      * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net' (Alternatively, such as when
-        profiling, point the host to a local instance of merino)
+      * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
       * Duration (Optional): 10m
 * Select "Start Swarming"
 
