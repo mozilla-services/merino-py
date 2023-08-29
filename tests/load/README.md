@@ -72,10 +72,7 @@ make load-tests
     * Option 2: Select the `Default` load test shape with the following recommended settings:
       * Number of users: 35
       * Spawn rate: 1
-      * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net' (Alternatively, such as when
-        profiling, point the host to a local instance of merino. To access your host machine's instance
-        of merino from the load tests, you must use the functioning alias for `localhost`: `host.docker.internal:[service_port]`.
-        If running on port 8000, this would be: `http://host.docker.internal:8000`)
+      * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
       * Duration (Optional): 10m
 * Select "Start Swarming"
 
