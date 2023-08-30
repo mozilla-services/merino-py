@@ -113,7 +113,7 @@ fail due to validation errors and missing fields (columns) in the input CSV.
   passing in a `list[dict]` instead of creating a file and passing a path, since
   it's simpler.
 * `do_error_test()` - Makes sure a given error is raised when expected. Use
-  `ValidationError` from `pydantic` to check validation errors and
+  `ValidationError` from the `pydantic` module to check validation errors and
   `MissingFieldError` from `merino.jobs.csv_rs_uploader` to check input CSV that
   is missing an expected field (column).
 
