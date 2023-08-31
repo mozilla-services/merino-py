@@ -30,7 +30,7 @@ class MerinoLoadTestShape(LoadTestShape):
 
     stages: list[ShapeStage]
 
-    def __init__(self):
+    def __init__(self) -> None:
         super(LoadTestShape, self).__init__()
 
         spawn_rate: float = round(self.USERS / 60, 2)
@@ -57,6 +57,6 @@ class MerinoLoadTestShape(LoadTestShape):
             None: Instruction to stop the load test
         """
         for stage in self.stages:
-            if self.get_run_time() < stage.run_time:  # type: ignore [no-untyped-call]
+            if self.get_run_time() < stage.run_time:
                 return stage.users, stage.spawn_rate, stage.user_classes
         return None

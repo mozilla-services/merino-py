@@ -110,9 +110,9 @@ def on_locust_test_start(environment, **kwargs) -> None:
     query_data: QueryData = QueryData()
     try:
         query_data.adm = get_adm_queries(
-            server=MERINO_REMOTE_SETTINGS__SERVER,
-            collection=MERINO_REMOTE_SETTINGS__COLLECTION,
-            bucket=MERINO_REMOTE_SETTINGS__BUCKET,
+            server=MERINO_REMOTE_SETTINGS__SERVER,  # type: ignore [arg-type]
+            collection=MERINO_REMOTE_SETTINGS__COLLECTION,  # type: ignore [arg-type]
+            bucket=MERINO_REMOTE_SETTINGS__BUCKET,  # type: ignore [arg-type]
         )
 
         logger.info(f"Download {len(query_data.adm)} queries for AdM")
@@ -122,7 +122,7 @@ def on_locust_test_start(environment, **kwargs) -> None:
         logger.info(f"Download {len(query_data.amo)} queries for AMO")
 
         query_data.top_picks = get_top_picks_queries(
-            top_picks_file_path=MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH,
+            top_picks_file_path=MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH,  # type: ignore
             query_char_limit=MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT,
             firefox_char_limit=MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT,
         )
@@ -162,9 +162,7 @@ def on_locust_test_start(environment, **kwargs) -> None:
         )
 
 
-def get_adm_queries(
-    server: str | None, collection: str | None, bucket: str | None
-) -> QueriesList:
+def get_adm_queries(server: str, collection: str, bucket: str) -> QueriesList:
     """Get query strings for use in testing the AdM Provider.
 
     Args:
@@ -200,7 +198,7 @@ def get_amo_queries() -> list[str]:
 
 
 def get_top_picks_queries(
-    top_picks_file_path: str | None, query_char_limit: int, firefox_char_limit: int
+    top_picks_file_path: str, query_char_limit: int, firefox_char_limit: int
 ) -> QueriesList:
     """Get query strings for use in testing the Top Picks Provider.
 
@@ -343,7 +341,7 @@ class MerinoUser(HttpUser):
             f"wikipedia: {len(WIKIPEDIA_QUERIES)}"
         )
 
-        return super().on_start()  # type: ignore [no-untyped-call]
+        return super().on_start()
 
     @task(weight=2)
     def adm_suggestions(self) -> None:
