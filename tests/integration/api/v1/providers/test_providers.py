@@ -3,8 +3,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Integration tests for the Merino v1 providers API endpoint."""
-
 import logging
+from datetime import datetime
 from logging import LogRecord
 
 import pytest
@@ -108,7 +108,7 @@ def test_providers_request_log_data(
         querystring={},
         errno=0,
         code=200,
-        time="1998-03-31T00:00:00",
+        time=datetime(1998, 3, 31),
     )
 
     client.get(

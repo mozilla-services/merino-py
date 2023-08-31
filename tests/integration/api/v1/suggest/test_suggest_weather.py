@@ -6,6 +6,7 @@
 provider.
 """
 import logging
+from datetime import datetime
 from logging import LogRecord
 from typing import Any
 
@@ -169,7 +170,7 @@ def test_providers_request_log_data_weather(
         querystring={"providers": "accuweather", "q": ""},
         errno=0,
         code=200,
-        time="1998-03-31T00:00:00",
+        time=datetime(1998, 3, 31),
     )
 
     client.get("/api/v1/suggest?providers=accuweather&q=")

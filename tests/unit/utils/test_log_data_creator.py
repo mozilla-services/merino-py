@@ -45,7 +45,7 @@ def test_create_request_summary_log_data(
 
     expected_log_data: RequestSummaryLogDataModel = RequestSummaryLogDataModel(
         errno=0,
-        time=dt.isoformat(),
+        time=dt,
         agent=expected_agent,
         path="/__heartbeat__",
         method="GET",
@@ -125,7 +125,7 @@ def test_create_suggest_log_data(
     expected_log_data: SuggestLogDataModel = SuggestLogDataModel(
         sensitive=True,
         errno=0,
-        time="1998-03-31T00:00:00",
+        time=datetime(1998, 3, 31),
         path="/api/v1/suggest",
         method="GET",
         query=expected_query,
@@ -181,10 +181,10 @@ def test_create_log_object_fails_on_invalid_time(time_input: Any):
     """Test that `time` fails validation on invalid time input."""
     with pytest.raises(ValidationError):
         LogDataModel(
+            errno=0,
             time=time_input,
             path="/",
             method="GET",
-            errno=0,
         )
 
 
@@ -192,20 +192,20 @@ def test_create_log_object_fails_on_invalid_time(time_input: Any):
 @pytest.mark.parametrize(
     "datetime_rep",
     [
-        1671379121,
         datetime(2022, 12, 18, hour=15, minute=58, second=41, tzinfo=timezone.utc),
-        "2022-12-18T15:58:41Z",
     ],
-    ids=["epoch_time", "datetime_obj", "str"],
+    ids=["datetime_obj"],
 )
 def test_create_log_object_can_convert_time_to_isoformat(
-    datetime_rep: str | int | datetime, expected_time: str
+    datetime_rep: datetime, expected_time: str
 ):
-    """Ensure that `time` field correctly validates datetime inputs and outputs as string."""
+    """Ensure that `time` field correctly validates datetime inputs
+    and outputs ISO format string.
+    """
     log_data = LogDataModel(
+        errno=0,
         time=datetime_rep,
         path="/",
         method="GET",
-        errno=0,
     )
-    assert log_data.model_dump()["time"] == expected_time
+    assert log_data.model_dump().get("time") == expected_time
