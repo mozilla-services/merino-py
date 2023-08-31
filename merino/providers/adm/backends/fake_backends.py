@@ -8,4 +8,4 @@ class FakeAdmBackend:  # pragma: no cover
 
     async def fetch(self) -> SuggestionContent:
         """Get fake Content from partner."""
-        return SuggestionContent()
+        return SuggestionContent()  # type: ignore [call-arg]

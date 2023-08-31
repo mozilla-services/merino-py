@@ -7,6 +7,7 @@
 from typing import Any
 
 import pytest
+from pydantic import HttpUrl
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
@@ -73,7 +74,7 @@ async def test_query_weather_report_returned(
     report: WeatherReport = WeatherReport(
         city_name="San Francisco",
         current_conditions=CurrentConditions(
-            url=(
+            url=HttpUrl(
                 "http://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/current-weather/39376_pc?lang=en-us"
             ),
@@ -82,7 +83,7 @@ async def test_query_weather_report_returned(
             temperature=Temperature(c=15.5, f=60.0),
         ),
         forecast=Forecast(
-            url=(
+            url=HttpUrl(
                 "http://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/daily-weather-forecast/39376_pc?lang=en-us"
             ),
@@ -94,7 +95,7 @@ async def test_query_weather_report_returned(
     expected_suggestions: list[Suggestion] = [
         Suggestion(
             title="Weather for San Francisco",
-            url=(
+            url=HttpUrl(
                 "http://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/current-weather/39376_pc?lang=en-us"
             ),

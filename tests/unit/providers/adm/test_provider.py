@@ -7,6 +7,7 @@
 from typing import Any
 
 import pytest
+from pydantic import HttpUrl
 from pytest import LogCaptureFixture
 
 from merino.providers.adm.backends.protocol import SuggestionContent
@@ -123,9 +124,9 @@ async def test_query_success(
             block_id=2,
             full_keyword="firefox accounts",
             title="Mozilla Firefox Accounts",
-            url="https://example.org/target/mozfirefoxaccounts",
-            impression_url="https://example.org/impression/mozilla",
-            click_url="https://example.org/click/mozilla",
+            url=HttpUrl("https://example.org/target/mozfirefoxaccounts"),
+            impression_url=HttpUrl("https://example.org/impression/mozilla"),
+            click_url=HttpUrl("https://example.org/click/mozilla"),
             provider="adm",
             advertiser="Example.org",
             is_sponsored=False,

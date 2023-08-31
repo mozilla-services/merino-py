@@ -137,7 +137,7 @@ class Provider(BaseProvider):
             res = self.suggestion_content.results[results_id]
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
 
-            suggestion_dict = {
+            suggestion_dict: dict[str, Any] = {
                 "block_id": res.get("id"),
                 "full_keyword": self.suggestion_content.full_keywords[fkw_id],
                 "title": res.get("title"),

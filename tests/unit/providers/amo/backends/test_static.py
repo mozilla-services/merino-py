@@ -1,4 +1,6 @@
 """Test StaticAddonsBackend."""
+from typing import Any
+
 import pytest
 
 from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon
@@ -19,8 +21,10 @@ def fixture_static_backend() -> StaticAmoBackend:
 async def test_get_addon_success(static_backend: StaticAmoBackend):
     """Test that we can get Addon information statically."""
     addons = await static_backend.get_addon(SupportedAddon.VIDEO_DOWNLOADER)
-    video_downloader = ADDON_DATA[SupportedAddon.VIDEO_DOWNLOADER]
-    vd_icon_rating = STATIC_RATING_AND_ICONS[SupportedAddon.VIDEO_DOWNLOADER]
+    video_downloader: dict[str, str] = ADDON_DATA[SupportedAddon.VIDEO_DOWNLOADER]
+    vd_icon_rating: dict[str, Any] = STATIC_RATING_AND_ICONS[
+        SupportedAddon.VIDEO_DOWNLOADER
+    ]
     assert (
         Addon(
             name=video_downloader["name"],
