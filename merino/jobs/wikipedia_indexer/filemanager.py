@@ -112,14 +112,14 @@ class FileManager:
         name = "{}/{}".format(self.object_prefix, dump_url.split("/")[-1])
         blob = self.client.bucket(self.gcs_bucket).blob(name, chunk_size=chunk_size)
         with requests.get(dump_url, stream=True) as resp:  # nosec
-            content_len = int(resp.headers.get("Content-Length", 0))  # type: ignore[attr-defined]
-            resp.raise_for_status()  # type: ignore[attr-defined]
+            content_len = int(resp.headers.get("Content-Length", 0))
+            resp.raise_for_status()
             logger.info("Writing to GCS: gs://{}/{}".format(self.gcs_bucket, blob.name))
             logger.info("Total File Size: {}".format(content_len))
             reporter = ProgressReporter(logger, "Copy", dump_url, name, content_len)
             writer: BlobWriter
             with blob.open("wb") as writer:
-                for chunk in resp.iter_content(chunk_size=chunk_size):  # type: ignore
+                for chunk in resp.iter_content(chunk_size=chunk_size):
                     completed = writer.write(chunk)
                     reporter.report(completed)
 

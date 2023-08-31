@@ -1,4 +1,4 @@
-"""A utility module for lag data creation"""
+"""A utility module for log data creation"""
 from datetime import datetime
 from typing import Any, Optional
 
