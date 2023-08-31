@@ -57,6 +57,6 @@ class MerinoLoadTestShape(LoadTestShape):
             None: Instruction to stop the load test
         """
         for stage in self.stages:
-            if self.get_run_time() < stage.run_time:
+            if self.get_run_time() < stage.run_time:  # type: ignore [no-untyped-call]
                 return stage.users, stage.spawn_rate, stage.user_classes
         return None
