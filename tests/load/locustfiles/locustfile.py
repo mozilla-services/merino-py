@@ -102,7 +102,7 @@ WIKIPEDIA_QUERIES: list[str] = []
 
 
 @events.test_start.add_listener
-def on_locust_test_start(environment, **kwargs):
+def on_locust_test_start(environment, **kwargs) -> None:
     """Download suggestions from Kinto and store suggestions on workers."""
     if not isinstance(environment.runner, MasterRunner):
         return
@@ -162,7 +162,9 @@ def on_locust_test_start(environment, **kwargs):
         )
 
 
-def get_adm_queries(server: str, collection: str, bucket: str) -> QueriesList:
+def get_adm_queries(
+    server: str | None, collection: str | None, bucket: str | None
+) -> QueriesList:
     """Get query strings for use in testing the AdM Provider.
 
     Args:
@@ -198,7 +200,7 @@ def get_amo_queries() -> list[str]:
 
 
 def get_top_picks_queries(
-    top_picks_file_path: str, query_char_limit: int, firefox_char_limit: int
+    top_picks_file_path: str | None, query_char_limit: int, firefox_char_limit: int
 ) -> QueriesList:
     """Get query strings for use in testing the Top Picks Provider.
 
@@ -283,7 +285,7 @@ def get_ip_ranges(ip_range_files: list[str]) -> IpRangeList:
     return ip_ranges
 
 
-def store_suggestions(environment, msg, **kwargs):
+def store_suggestions(environment, msg, **kwargs) -> None:
     """Modify the module scoped list with suggestions in-place."""
     logger.info("store_suggestions: Storing %d suggestions", len(msg.data))
 
@@ -316,10 +318,10 @@ class QueryData(BaseModel):
 class MerinoUser(HttpUser):
     """User that sends requests to the Merino API."""
 
-    def on_start(self):
+    def on_start(self) -> Any:
         """Instructions to execute for each simulated user when they start."""
         # Check that the Merino 'Host' is available
-        version: Version = self._request_version()
+        version: Version | None = self._request_version()
         if not version:
             logger.error(
                 "The Merino version information was unavailable. Verify that "
@@ -341,7 +343,7 @@ class MerinoUser(HttpUser):
             f"wikipedia: {len(WIKIPEDIA_QUERIES)}"
         )
 
-        return super().on_start()
+        return super().on_start()  # type: ignore [no-untyped-call]
 
     @task(weight=2)
     def adm_suggestions(self) -> None:
