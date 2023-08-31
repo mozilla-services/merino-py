@@ -11,6 +11,7 @@ services:
     environment:
       # Set environment variables, see https://docs.locust.io/en/stable/configuration.html#environment-variables
       LOCUST_HOST: https://stagepy.merino.nonprod.cloudops.mozgcp.net
+      LOCUST_USERCLASS_PICKER: true
       LOAD_TESTS__LOGGING_LEVEL: 10
       MERINO_REMOTE_SETTINGS__SERVER: "https://firefox.settings.services.mozilla.com"
       MERINO_REMOTE_SETTINGS__BUCKET: "main"
@@ -22,7 +23,7 @@ services:
       MERINO_PROVIDERS__WIKIPEDIA__ES_URL: "https://merino-nonprod.es.us-west1.gcp.cloud.es.io:9243"
       MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX: "enwiki-v1"
     command: >
-      --master --class-picker
+      --master
 
   locust_worker:
     image: locust

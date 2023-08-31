@@ -61,6 +61,24 @@ Execute the following from the repository root:
 make load-tests
 ```
 
+#### 3. (Optional) Host Merino Locally 
+
+Use one of the following commands to host Merino locally. Execute the following from the
+repository root:
+
+- Option 1: Use the local development instance
+  ```shell
+  make dev
+  ```
+- Option 2: Use the profiler instance
+  ```shell
+  make profile
+  ```
+- Option 3: Use the Docker instance
+  ```shell
+  make docker-build && docker run -p 8000:8000 app:build 
+  ```
+
 ### Run Test Session
 
 #### 1. Start Load Test
@@ -72,7 +90,8 @@ make load-tests
     * Option 2: Select the `Default` load test shape with the following recommended settings:
       * Number of users: 35
       * Spawn rate: 1
-      * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
+      * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net' 
+        * Set host to 'http://host.docker.internal:8000' to test against a local instance of Merino
       * Duration (Optional): 10m
 * Select "Start Swarming"
 
