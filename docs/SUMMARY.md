@@ -18,6 +18,7 @@
   - [Profiling](./dev/profiling.md)
 - [Operations](./operations/index.md)
   - [Rollback](./operations/rollback.md)
+  - [Blocklists](./operations/blocklists.md)
   - [Test Failures in CI](./operations/testfailures.md)
   - [Configs](./operations/configs.md)
   - [Elasticsearch](./operations/elasticsearch.md)
