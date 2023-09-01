@@ -171,7 +171,7 @@ def blocklist(
     ] = None,
 ):
     """CLI command for managing blocklist.
-    Use `add` and `remove` to managed domains in the blocklist.
+    Use `add` and `remove` to manage domains in the blocklist.
     Use `apply` to apply the blocklist locally.
     """
     match action:
