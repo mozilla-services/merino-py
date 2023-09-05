@@ -107,6 +107,6 @@ class DynamicAmoBackend:
             url=static_info["url"],
             icon=icon_and_rating["icon"],
             rating=icon_and_rating["rating"],
-            number_of_ratings=icon_and_rating["number_of_ratings"],
+            number_of_ratings=int(icon_and_rating["number_of_ratings"]),
             guid=static_info["guid"],
         )

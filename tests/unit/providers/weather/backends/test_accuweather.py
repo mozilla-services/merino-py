@@ -13,6 +13,7 @@ from unittest.mock import AsyncMock
 import freezegun
 import pytest
 from httpx import AsyncClient, HTTPError, Request, Response
+from pydantic import HttpUrl
 from pytest import FixtureRequest, LogCaptureFixture
 from pytest_mock import MockerFixture
 from redis import RedisError
@@ -89,7 +90,7 @@ def fixture_expected_weather_report() -> WeatherReport:
     return WeatherReport(
         city_name="San Francisco",
         current_conditions=CurrentConditions(
-            url=(
+            url=HttpUrl(
                 "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
                 "current-weather/39376_pc?lang=en-us"
             ),
@@ -98,7 +99,7 @@ def fixture_expected_weather_report() -> WeatherReport:
             temperature=Temperature(c=15.5, f=60.0),
         ),
         forecast=Forecast(
-            url=(
+            url=HttpUrl(
                 "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
                 "daily-weather-forecast/39376_pc?lang=en-us"
             ),
@@ -488,9 +489,11 @@ def fixture_accuweather_cached_data_misses() -> list[Optional[bytes]]:
 
 
 @pytest.fixture(name="accuweather_parsed_data_misses")
-def fixture_accuweather_parsed_data_misses() -> tuple[
-    Optional[AccuweatherLocation], Optional[CurrentConditions], Optional[Forecast]
-]:
+def fixture_accuweather_parsed_data_misses() -> (
+    tuple[
+        Optional[AccuweatherLocation], Optional[CurrentConditions], Optional[Forecast]
+    ]
+):
     """Return the partial parsed AccuWeather triplet for a cache hit."""
     return (
         None,
@@ -1112,7 +1115,7 @@ async def test_get_current_conditions(
 ) -> None:
     """Test that the get_current_conditions method returns CurrentConditions."""
     expected_conditions: CurrentConditions = CurrentConditions(
-        url=expected_current_conditions_url,
+        url=HttpUrl(expected_current_conditions_url),
         summary="Mostly cloudy",
         icon_id=6,
         temperature=Temperature(c=15.5, f=60),
@@ -1233,7 +1236,7 @@ async def test_get_forecast(
 ) -> None:
     """Test that the get_forecast method returns a Forecast."""
     expected_forecast: Forecast = Forecast(
-        url=expected_forecast_url,
+        url=HttpUrl(expected_forecast_url),
         summary="Pleasant Saturday",
         high=Temperature(f=70),
         low=Temperature(f=57),

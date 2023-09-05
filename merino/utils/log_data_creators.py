@@ -1,6 +1,6 @@
-"""A utility module for lag data creation"""
+"""A utility module for log data creation"""
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, field_serializer
 from starlette.datastructures import Headers
@@ -31,8 +31,8 @@ class LogDataModel(BaseModel):
 class RequestSummaryLogDataModel(LogDataModel):
     """Log metadata specific to Request Summary."""
 
-    agent: Optional[str] = None
-    lang: Optional[str] = None
+    agent: str | None = None
+    lang: str | None = None
     querystring: dict[str, Any]
     code: int
 
@@ -41,17 +41,17 @@ class SuggestLogDataModel(LogDataModel):
     """Log metadata specific to Suggest logs."""
 
     sensitive: bool
-    query: Optional[str] = None
+    query: str | None = None
     code: int
     rid: str  # Provided by the asgi-correlation-id middleware.
-    session_id: Optional[str] = None
-    sequence_no: Optional[int] = None
+    session_id: str | None = None
+    sequence_no: int | None = None
     client_variants: str
     requested_providers: str
-    country: Optional[str] = None
-    region: Optional[str] = None
-    city: Optional[str] = None
-    dma: Optional[int] = None
+    country: str | None = None
+    region: str | None = None
+    city: str | None = None
+    dma: int | None = None
     browser: str
     os_family: str
     form_factor: str

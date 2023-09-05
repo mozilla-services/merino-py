@@ -1,5 +1,6 @@
 """Unit tests for the Merino v1 suggest API endpoint for the Wikipedia provider."""
 import pytest
+from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 
 from merino.config import settings
@@ -102,7 +103,7 @@ async def test_query(
         WikipediaSuggestion(
             title=query,
             full_keyword=query,
-            url=f"https://en.wikipedia.org/wiki/{expected_title}",
+            url=HttpUrl(f"https://en.wikipedia.org/wiki/{expected_title}"),
             advertiser=ADVERTISER,
             is_sponsored=False,
             provider="wikipedia",

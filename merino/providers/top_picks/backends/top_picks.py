@@ -18,7 +18,7 @@ class TopPicksBackend:
 
     def __init__(
         self,
-        top_picks_file_path: str,
+        top_picks_file_path: str | None,
         query_char_limit: int,
         firefox_char_limit: int,
     ) -> None:

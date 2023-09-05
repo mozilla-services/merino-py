@@ -31,7 +31,7 @@ def fixture_top_picks(top_picks_backend_parameters: dict[str, Any]) -> TopPicksB
 
 def test_init_failure_no_domain_file(
     top_picks_backend_parameters: dict[str, Any]
-) -> TopPicksBackend:
+) -> None:
     """Test exception handling for the __init__() method when no domain file provided."""
     top_picks_backend_parameters["top_picks_file_path"] = None
     with pytest.raises(ValueError):

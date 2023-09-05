@@ -6,13 +6,14 @@
 provider.
 """
 import logging
+from datetime import datetime
 from logging import LogRecord
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from freezegun import freeze_time
-from pydantic import TypeAdapter
+from pydantic import HttpUrl, TypeAdapter
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
@@ -60,7 +61,7 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
     weather_report: WeatherReport = WeatherReport(
         city_name="Milton",
         current_conditions=CurrentConditions(
-            url=(
+            url=HttpUrl(
                 "http://www.accuweather.com/en/us/milton-wa/98354/current-weather/"
                 "41512_pc?lang=en-us"
             ),
@@ -69,7 +70,7 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
             temperature=Temperature(c=-3.0, f=27.0),
         ),
         forecast=Forecast(
-            url=(
+            url=HttpUrl(
                 "http://www.accuweather.com/en/us/milton-wa/98354/"
                 "daily-weather-forecast/41512_pc?lang=en-us"
             ),
@@ -84,7 +85,7 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
     expected_suggestion: list[Suggestion] = [
         Suggestion(
             title="Weather for Milton",
-            url=(
+            url=HttpUrl(
                 "http://www.accuweather.com/en/us/milton-wa/98354/current-weather/"
                 "41512_pc?lang=en-us"
             ),
@@ -169,7 +170,7 @@ def test_providers_request_log_data_weather(
         querystring={"providers": "accuweather", "q": ""},
         errno=0,
         code=200,
-        time="1998-03-31T00:00:00",
+        time=datetime(1998, 3, 31),
     )
 
     client.get("/api/v1/suggest?providers=accuweather&q=")

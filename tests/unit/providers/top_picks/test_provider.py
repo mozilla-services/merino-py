@@ -5,6 +5,7 @@
 """Unit tests for the top picks provider module."""
 
 import pytest
+from pydantic import HttpUrl
 from pytest import LogCaptureFixture
 
 from merino.config import settings
@@ -32,9 +33,9 @@ def test_hidden(top_picks: Provider) -> None:
 async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None:
     """Test initialization of top pick provider"""
     await top_picks.initialize()
-    backend = await backend.fetch()
+    backend_data = await backend.fetch()
 
-    assert top_picks.top_picks_data == backend
+    assert top_picks.top_picks_data == backend_data
 
 
 @pytest.mark.parametrize(
@@ -113,7 +114,7 @@ async def test_query(
         Suggestion(
             block_id=0,
             title=title,
-            url=url,
+            url=HttpUrl(url),
             provider="top_picks",
             is_top_pick=True,
             is_sponsored=False,
@@ -165,7 +166,7 @@ async def test_short_domain_query(
         Suggestion(
             block_id=0,
             title=title,
-            url=url,
+            url=HttpUrl(url),
             provider="top_picks",
             is_top_pick=True,
             is_sponsored=False,
@@ -216,7 +217,7 @@ async def test_short_domain_query_similars_longer_than_domain(
         Suggestion(
             block_id=0,
             title=title,
-            url=url,
+            url=HttpUrl(url),
             provider="top_picks",
             is_top_pick=True,
             is_sponsored=False,

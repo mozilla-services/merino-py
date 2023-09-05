@@ -7,6 +7,8 @@
 import asyncio
 from typing import Protocol
 
+from pydantic import HttpUrl
+
 from merino.config import settings
 from merino.providers import BaseProvider
 from merino.providers.base import BaseSuggestion, SuggestionRequest
@@ -34,8 +36,8 @@ class SponsoredSuggestion(BaseSuggestion):
     block_id: int
     full_keyword: str
     advertiser: str
-    impression_url: str
-    click_url: str
+    impression_url: HttpUrl | None = None
+    click_url: HttpUrl | None = None
 
 
 def query_nonsponsored(provider_name: str) -> QueryCallable:
@@ -49,7 +51,7 @@ def query_nonsponsored(provider_name: str) -> QueryCallable:
                     block_id=0,
                     full_keyword="nonsponsored",
                     title="nonsponsored title",
-                    url="https://www.nonsponsored.com",
+                    url=HttpUrl("https://www.nonsponsored.com"),
                     provider=provider_name,
                     advertiser="test nonadvertiser",
                     is_sponsored=False,
@@ -74,9 +76,9 @@ def query_sponsored(provider_name: str) -> QueryCallable:
                     block_id=0,
                     full_keyword="sponsored",
                     title="sponsored title",
-                    url="https://www.sponsored.com",
-                    impression_url="https://www.sponsoredimpression.com",
-                    click_url="https://www.sponsoredclick.com",
+                    url=HttpUrl("https://www.sponsored.com"),
+                    impression_url=HttpUrl("https://www.sponsoredimpression.com"),
+                    click_url=HttpUrl("https://www.sponsoredclick.com"),
                     provider=provider_name,
                     advertiser="test advertiser",
                     is_sponsored=True,

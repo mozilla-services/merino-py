@@ -3,8 +3,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Integration tests for the Merino v1 suggest API endpoint."""
-
 import logging
+from datetime import datetime
 
 import aiodogstatsd
 import pytest
@@ -142,8 +142,8 @@ def test_suggest_default_wildcard_providers(client: TestClient, query: str) -> N
 def test_suggest_default_wildcard_providers_and_additional_provider(
     client: TestClient, query: str
 ) -> None:
-    """Test that `default` wildcard provider parameter plus an added parameter for disabled provider
-    returns suggestions from all passed in providers.
+    """Test that `default` wildcard provider parameter plus an added parameter
+    for disabled provider returns suggestions from all passed in providers.
     """
     response = client.get(f"/api/v1/suggest?q={query}&providers=default,top_picks")
     assert response.status_code == 200
@@ -250,7 +250,7 @@ def test_suggest_request_log_data(
     expected_log_data: SuggestLogDataModel = SuggestLogDataModel(
         sensitive=True,
         errno=0,
-        time="1998-03-31T00:00:00",
+        time=datetime(1998, 3, 31),
         path="/api/v1/suggest",
         method="GET",
         query="nope",

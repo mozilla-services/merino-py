@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import HttpUrl
 
 from merino.config import settings
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend
@@ -62,7 +63,7 @@ def test_top_picks_query(client: TestClient, query: str) -> None:
         Suggestion(
             block_id=0,
             title="Example",
-            url="https://example.com",
+            url=HttpUrl("https://example.com"),
             provider="top_picks",
             is_top_pick=True,
             is_sponsored=False,
@@ -112,7 +113,7 @@ def test_top_picks_short_domains(
         Suggestion(
             block_id=0,
             title=title,
-            url=url,
+            url=HttpUrl(url),
             provider="top_picks",
             is_top_pick=True,
             is_sponsored=False,

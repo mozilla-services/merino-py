@@ -22,7 +22,7 @@ def mock_gcs_client(mocker):
 
 
 @pytest.fixture
-def mock_favicon_downloader(mocker):
+def mock_favicon_downloader(mocker) -> Any:
     """Return a mock FaviconDownloader instance"""
     favicon_downloader_mock: Any = mocker.Mock(spec=FaviconDownloader)
     favicon_downloader_mock.download_favicon.return_value = FaviconImage(
@@ -31,14 +31,18 @@ def mock_favicon_downloader(mocker):
     return favicon_downloader_mock
 
 
-def test_upload_top_picks(mock_gcs_client, mock_favicon_downloader):
+def test_upload_top_picks(mock_gcs_client, mock_favicon_downloader) -> None:
     """Test if upload top picks call relevant GCS api"""
     DUMMY_TOP_PICKS = "dummy top picks contents"
     mock_gcs_bucket = mock_gcs_client.bucket.return_value
     mock_dst_blob = mock_gcs_bucket.blob.return_value
 
     domain_metadata_uploader = DomainMetadataUploader(
-        "dummy_gcp_project", "dummy_gcs_bucket", None, False, mock_favicon_downloader
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname="",
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
     )
     domain_metadata_uploader.upload_top_picks(DUMMY_TOP_PICKS)
 
@@ -49,7 +53,7 @@ def test_upload_top_picks(mock_gcs_client, mock_favicon_downloader):
 
 def test_upload_favicons_upload_if_not_present(
     mock_gcs_client, mock_favicon_downloader
-):
+) -> None:
     """Test that favicons are uploaded only if not already present in GCS when
     force upload is not set
     """
@@ -61,11 +65,11 @@ def test_upload_favicons_upload_if_not_present(
     mock_dst_blob.public_url = UPLOADED_FAVICON_PUBLIC_URL
 
     domain_metadata_uploader = DomainMetadataUploader(
-        "dummy_gcp_project",
-        "dummy_gcs_bucket",
-        None,
-        FORCE_UPLOAD,
-        mock_favicon_downloader,
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname="",
+        force_upload=FORCE_UPLOAD,
+        favicon_downloader=mock_favicon_downloader,
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
 
@@ -78,18 +82,18 @@ def test_upload_favicons_upload_if_not_present(
 
 def test_upload_favicons_upload_if_force_upload_set(
     mock_gcs_client, mock_favicon_downloader
-):
+) -> None:
     """Test that favicons are uploaded always when force upload is set"""
     FORCE_UPLOAD: bool = True
     mock_dst_blob = mock_gcs_client.bucket.return_value.blob.return_value
     mock_dst_blob.exists.return_value = True
 
     domain_metadata_uploader = DomainMetadataUploader(
-        "dummy_gcp_project",
-        "dummy_gcs_bucket",
-        None,
-        FORCE_UPLOAD,
-        mock_favicon_downloader,
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname="",
+        force_upload=FORCE_UPLOAD,
+        favicon_downloader=mock_favicon_downloader,
     )
     domain_metadata_uploader.upload_favicons(["favicon1.png"])
 
@@ -101,7 +105,7 @@ def test_upload_favicons_upload_if_force_upload_set(
 
 def test_upload_favicons_return_favicon_with_cdnhostname_when_provided(
     mock_gcs_client, mock_favicon_downloader
-):
+) -> None:
     """Test if uploaded favicon url has cdn hostname when provided"""
     CDN_HOSTNAME = "dummy.cdn.hostname"
 
@@ -109,11 +113,11 @@ def test_upload_favicons_return_favicon_with_cdnhostname_when_provided(
     mock_dst_blob.exists.return_value = True
 
     domain_metadata_uploader = DomainMetadataUploader(
-        "dummy_gcp_project",
-        "dummy_gcs_bucket",
-        CDN_HOSTNAME,
-        False,
-        mock_favicon_downloader,
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname=CDN_HOSTNAME,
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
 
@@ -124,14 +128,18 @@ def test_upload_favicons_return_favicon_with_cdnhostname_when_provided(
 
 def test_upload_favicons_return_empty_url_for_failed_favicon_download(
     mock_gcs_client, mock_favicon_downloader
-):
+) -> None:
     """Test if a failure in downloading favicon from the scraped url returns an empty
     uploaded favicon url
     """
     mock_favicon_downloader.download_favicon.return_value = None
 
     domain_metadata_uploader = DomainMetadataUploader(
-        "dummy_gcp_project", "dummy_gcs_bucket", None, False, mock_favicon_downloader
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname="",
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
 

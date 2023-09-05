@@ -3,8 +3,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Integration tests for unsupported Merino v1 API endpoints."""
-
 import logging
+from datetime import datetime
 from logging import LogRecord
 
 import aiodogstatsd
@@ -43,7 +43,7 @@ def test_unsupported_endpoint_request_log_data(
         querystring={},
         errno=0,
         code=404,
-        time="1998-03-31T00:00:00",
+        time=datetime(1998, 3, 31),
     )
 
     client.get(

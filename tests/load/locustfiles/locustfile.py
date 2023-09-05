@@ -82,14 +82,14 @@ MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY: str | None = os.getenv(
 MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX: str | None = os.getenv(
     "MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX"
 )
-MERINO_REMOTE_SETTINGS__SERVER: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__SERVER", os.getenv("KINTO__SERVER_URL")
+MERINO_REMOTE_SETTINGS__SERVER: str = os.getenv(
+    "MERINO_REMOTE_SETTINGS__SERVER", default=os.environ["KINTO__SERVER_URL"]
 )
-MERINO_REMOTE_SETTINGS__BUCKET: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__BUCKET", os.getenv("KINTO__BUCKET")
+MERINO_REMOTE_SETTINGS__BUCKET: str = os.getenv(
+    "MERINO_REMOTE_SETTINGS__BUCKET", default=os.environ["KINTO__BUCKET"]
 )
-MERINO_REMOTE_SETTINGS__COLLECTION: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__COLLECTION", os.getenv("KINTO__COLLECTION")
+MERINO_REMOTE_SETTINGS__COLLECTION: str = os.getenv(
+    "MERINO_REMOTE_SETTINGS__COLLECTION", default=os.environ["KINTO__COLLECTION"]
 )
 
 
@@ -102,7 +102,7 @@ WIKIPEDIA_QUERIES: list[str] = []
 
 
 @events.test_start.add_listener
-def on_locust_test_start(environment, **kwargs):
+def on_locust_test_start(environment, **kwargs) -> None:
     """Download suggestions from Kinto and store suggestions on workers."""
     if not isinstance(environment.runner, MasterRunner):
         return
@@ -198,7 +198,7 @@ def get_amo_queries() -> list[str]:
 
 
 def get_top_picks_queries(
-    top_picks_file_path: str, query_char_limit: int, firefox_char_limit: int
+    top_picks_file_path: str | None, query_char_limit: int, firefox_char_limit: int
 ) -> QueriesList:
     """Get query strings for use in testing the Top Picks Provider.
 
@@ -283,7 +283,7 @@ def get_ip_ranges(ip_range_files: list[str]) -> IpRangeList:
     return ip_ranges
 
 
-def store_suggestions(environment, msg, **kwargs):
+def store_suggestions(environment, msg, **kwargs) -> None:
     """Modify the module scoped list with suggestions in-place."""
     logger.info("store_suggestions: Storing %d suggestions", len(msg.data))
 
@@ -316,10 +316,10 @@ class QueryData(BaseModel):
 class MerinoUser(HttpUser):
     """User that sends requests to the Merino API."""
 
-    def on_start(self):
+    def on_start(self) -> Any:
         """Instructions to execute for each simulated user when they start."""
         # Check that the Merino 'Host' is available
-        version: Version = self._request_version()
+        version: Version | None = self._request_version()
         if not version:
             logger.error(
                 "The Merino version information was unavailable. Verify that "
@@ -454,7 +454,6 @@ class MerinoUser(HttpUser):
             # group all requests under the 'name' entry
             name=f"{SUGGEST_API}{(f'?providers={providers}' if providers else '')}",
         ) as response:
-
             if response.status_code == 0:
                 # Do not classify as failure
                 #

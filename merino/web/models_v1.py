@@ -19,6 +19,6 @@ class SuggestResponse(BaseModel):
     # to a dictionary.  See Pydantic docs for context:
     # https://docs.pydantic.dev/latest/usage/serialization/#serializing-subclasses
     suggestions: list[SerializeAsAny[BaseSuggestion]]
-    request_id: str
+    request_id: str | None = None
     client_variants: list[str] = []
     server_variants: list[str] = []

@@ -4,6 +4,8 @@ import logging
 import time
 from typing import Any, Literal
 
+from pydantic import HttpUrl
+
 from merino import cron
 from merino.config import settings
 from merino.providers.amo.addons_data import SupportedAddon
@@ -133,7 +135,7 @@ class Provider(BaseProvider):
             AddonSuggestion(
                 title=addon.name,
                 description=addon.description,
-                url=addon.url,
+                url=HttpUrl(addon.url),
                 score=self.score,
                 provider=self.name,
                 icon=addon.icon,

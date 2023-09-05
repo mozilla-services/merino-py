@@ -1,10 +1,12 @@
 """Test Addon Provider"""
 import datetime
 import time
+from typing import Any
 
 import freezegun
 import pytest
 from _pytest.logging import LogCaptureFixture
+from pydantic import HttpUrl
 
 from merino.middleware.geolocation import Location
 from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon
@@ -124,13 +126,15 @@ async def test_query_return_match(
     await addons_provider.initialize()
 
     req = SuggestionRequest(query="dictionary", geolocation=Location())
-    expected_info = ADDON_DATA[SupportedAddon.LANGAUGE_TOOL]
-    expected_icon_rating = STATIC_RATING_AND_ICONS[SupportedAddon.LANGAUGE_TOOL]
+    expected_info: dict[str, str] = ADDON_DATA[SupportedAddon.LANGAUGE_TOOL]
+    expected_icon_rating: dict[str, Any] = STATIC_RATING_AND_ICONS[
+        SupportedAddon.LANGAUGE_TOOL
+    ]
     assert [
         AddonSuggestion(
             title=expected_info["name"],
             description=expected_info["description"],
-            url=expected_info["url"],
+            url=HttpUrl(expected_info["url"]),
             score=0.3,
             provider="amo",
             icon=expected_icon_rating["icon"],

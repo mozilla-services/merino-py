@@ -30,7 +30,7 @@ class MerinoLoadTestShape(LoadTestShape):
 
     stages: list[ShapeStage]
 
-    def __init__(self):
+    def __init__(self) -> None:
         super(LoadTestShape, self).__init__()
 
         spawn_rate: float = round(self.USERS / 60, 2)

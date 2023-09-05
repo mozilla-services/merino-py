@@ -42,7 +42,6 @@ def strip_sensitive_data(event: dict, hint: dict) -> dict:
 
     try:
         for entry in event["exception"]["values"][0]["stacktrace"]["frames"]:
-
             if entry["vars"].get("q"):
                 entry["vars"]["q"] = ""
             if entry["vars"].get("query"):
