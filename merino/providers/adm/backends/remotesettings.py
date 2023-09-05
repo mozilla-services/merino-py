@@ -39,7 +39,9 @@ class RemoteSettingsBackend:
 
     kinto_http_client: kinto_http.AsyncClient
 
-    def __init__(self, server: str, collection: str, bucket: str) -> None:
+    def __init__(
+        self, server: str | None, collection: str | None, bucket: str | None
+    ) -> None:
         """Init the Remote Settings backend and create a new client.
 
         Args:

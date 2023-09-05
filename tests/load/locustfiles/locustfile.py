@@ -82,14 +82,14 @@ MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY: str | None = os.getenv(
 MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX: str | None = os.getenv(
     "MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX"
 )
-MERINO_REMOTE_SETTINGS__SERVER: str = os.getenv(
-    "MERINO_REMOTE_SETTINGS__SERVER", default=os.environ["KINTO__SERVER_URL"]
+MERINO_REMOTE_SETTINGS__SERVER: str | None = os.getenv(
+    "MERINO_REMOTE_SETTINGS__SERVER", os.getenv("KINTO__SERVER_URL")
 )
-MERINO_REMOTE_SETTINGS__BUCKET: str = os.getenv(
-    "MERINO_REMOTE_SETTINGS__BUCKET", default=os.environ["KINTO__BUCKET"]
+MERINO_REMOTE_SETTINGS__BUCKET: str | None = os.getenv(
+    "MERINO_REMOTE_SETTINGS__BUCKET", os.getenv("KINTO__BUCKET")
 )
-MERINO_REMOTE_SETTINGS__COLLECTION: str = os.getenv(
-    "MERINO_REMOTE_SETTINGS__COLLECTION", default=os.environ["KINTO__COLLECTION"]
+MERINO_REMOTE_SETTINGS__COLLECTION: str | None = os.getenv(
+    "MERINO_REMOTE_SETTINGS__COLLECTION", os.getenv("KINTO__COLLECTION")
 )
 
 
@@ -162,7 +162,9 @@ def on_locust_test_start(environment, **kwargs) -> None:
         )
 
 
-def get_adm_queries(server: str, collection: str, bucket: str) -> QueriesList:
+def get_adm_queries(
+    server: str | None, collection: str | None, bucket: str | None
+) -> QueriesList:
     """Get query strings for use in testing the AdM Provider.
 
     Args:
