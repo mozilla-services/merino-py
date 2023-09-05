@@ -30,7 +30,6 @@
   - [Configs](./operations/configs.md)
   - [Elasticsearch](./operations/elasticsearch.md)
   - [Jobs](./operations/jobs.md)
-  - [Merino Jobs](./operations/jobs/)
     - [Navigational Suggestions](./operations/jobs/navigational_suggestions.md)
 
 
