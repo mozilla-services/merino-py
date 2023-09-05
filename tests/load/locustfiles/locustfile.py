@@ -82,14 +82,14 @@ MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY: str | None = os.getenv(
 MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX: str | None = os.getenv(
     "MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX"
 )
-MERINO_REMOTE_SETTINGS__SERVER: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__SERVER", os.getenv("KINTO__SERVER_URL")
+MERINO_REMOTE_SETTINGS__SERVER: str = os.getenv(
+    "MERINO_REMOTE_SETTINGS__SERVER", default=os.environ["KINTO__SERVER_URL"]
 )
-MERINO_REMOTE_SETTINGS__BUCKET: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__BUCKET", os.getenv("KINTO__BUCKET")
+MERINO_REMOTE_SETTINGS__BUCKET: str = os.getenv(
+    "MERINO_REMOTE_SETTINGS__BUCKET", default=os.environ["KINTO__BUCKET"]
 )
-MERINO_REMOTE_SETTINGS__COLLECTION: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__COLLECTION", os.getenv("KINTO__COLLECTION")
+MERINO_REMOTE_SETTINGS__COLLECTION: str = os.getenv(
+    "MERINO_REMOTE_SETTINGS__COLLECTION", default=os.environ["KINTO__COLLECTION"]
 )
 
 
@@ -110,9 +110,9 @@ def on_locust_test_start(environment, **kwargs) -> None:
     query_data: QueryData = QueryData()
     try:
         query_data.adm = get_adm_queries(
-            server=MERINO_REMOTE_SETTINGS__SERVER,  # type: ignore [arg-type]
-            collection=MERINO_REMOTE_SETTINGS__COLLECTION,  # type: ignore [arg-type]
-            bucket=MERINO_REMOTE_SETTINGS__BUCKET,  # type: ignore [arg-type]
+            server=MERINO_REMOTE_SETTINGS__SERVER,
+            collection=MERINO_REMOTE_SETTINGS__COLLECTION,
+            bucket=MERINO_REMOTE_SETTINGS__BUCKET,
         )
 
         logger.info(f"Download {len(query_data.adm)} queries for AdM")
@@ -122,7 +122,7 @@ def on_locust_test_start(environment, **kwargs) -> None:
         logger.info(f"Download {len(query_data.amo)} queries for AMO")
 
         query_data.top_picks = get_top_picks_queries(
-            top_picks_file_path=MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH,  # type: ignore
+            top_picks_file_path=MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH,
             query_char_limit=MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT,
             firefox_char_limit=MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT,
         )
@@ -198,7 +198,7 @@ def get_amo_queries() -> list[str]:
 
 
 def get_top_picks_queries(
-    top_picks_file_path: str, query_char_limit: int, firefox_char_limit: int
+    top_picks_file_path: str | None, query_char_limit: int, firefox_char_limit: int
 ) -> QueriesList:
     """Get query strings for use in testing the Top Picks Provider.
 
