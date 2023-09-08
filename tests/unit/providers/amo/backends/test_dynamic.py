@@ -1,6 +1,7 @@
 """Unit tests for the Addon API provider backend"""
 import json
 
+import httpx
 import pytest
 from _pytest.logging import LogCaptureFixture
 from httpx import AsyncClient, Request, Response
@@ -56,6 +57,23 @@ async def test_fetch_addons_succeed(
 
 @pytest.mark.asyncio
 async def test_fetch_addons_skipped_api_failure(
+    mocker: MockerFixture, caplog: LogCaptureFixture, dynamic_backend: DynamicAmoBackend
+):
+    """Test that fetch fails raises error when Addon requests fails before it
+    returns a response.
+    """
+    mocker.patch.object(
+        AsyncClient, "get", side_effect=httpx.TimeoutException("timedout!")
+    )
+    await dynamic_backend.fetch_and_cache_addons_info()
+
+    # Ensure that all the messages are errors due to the timeout.
+    for msg in caplog.messages:
+        assert msg.startswith("Addons API failed request to fetch addon")
+
+
+@pytest.mark.asyncio
+async def test_fetch_addons_skipped_api_request_failure(
     mocker: MockerFixture, caplog: LogCaptureFixture, dynamic_backend: DynamicAmoBackend
 ):
     """Test that fetch fails raises error when Addon request fails."""
