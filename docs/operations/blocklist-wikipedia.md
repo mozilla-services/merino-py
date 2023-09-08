@@ -1,30 +1,23 @@
-## How to Review/Add to Merino Blocklists
-`blocklist_file_url` is a key contained in the `merino/configs/default.toml` file that points to a remote block list which encapsulates blocked categories. At job runtime, the indexer creates the blocklist from this list.
-This contains common terms that are excluded from suggested results.
-You may view this file to see our blocked categories, however you do not modify this file.
+# How to Add to the Wikipedia Indexer and Provider Blocklist
 
-### Wikipedia Indexer and Provider Blocklist
-This block list is used during the indexing job when creating data for the Dynamic Wikipedia backend.
-It is also used at the provider level, ensuring suggestions of a given title are not returned to the client.
-This allows for granular control or ad-hoc updates of titles we wish to ignore.
+## Provider - Rapid Blocklist Addition
+These steps define how to rapidly add and therefore block a Wikipedia article by its title.
 
-#### Add to Blocklist
-Title blocklist code is located in `/merino/utils/blocklist.py`.
-The list is a set of strings bound to the constant `TITLE_BLOCK_LIST`.
-Simply add the matching title to this blocklist.
+1. In `/merino/utils/blocklist.py`, add the matching title to `TITLE_BLOCK_LIST`.
 
 *NOTE:* Ensure the title field is added as it appears with correct spacing between the words.
-In adding to the list, one should attempt to add the title as it appears in Wikipedia.
+In adding to the list, enter the title as it appears in Wikipedia.
 Membership checks of the block list are not case sensitive and any underscores in the titles should instead be spaces.
 
-### Wikipedia Title Block List
-Located in `/merino/utils/block_list.py`
+2. Check in the changes to source control, merge a pull request with the new block list and deploy merino.
 
-This block list is used during the indexing job for Dynamic Wikipedia as well as at the
-provider level for ensuring suggestions of a given title are not returned to the client.
-This allows for granular control or ad-hoc updates of titles we wish to ignore.
+The next time the Wikipedia indexer job runs, this title will be blocked at that phase as well (see below)
 
-*NOTE:* In adding to the block list, ensure the title field is added as it appears
-with correct spacing between the words. Membership checks of the block list are not
-case sensitive and any underscores in the titles should instead be spaces.
-In adding to the list, one should attempt to add the title as it appears in Wikipedia.
+## Indexer Job 
+1. In `/merino/utils/blocklist.py`, add the matching title to `TITLE_BLOCK_LIST`.
+2. Check in the changes to source control, merge a pull request with the new block list and deploy merino.
+3. Re-run the Airflow job to generate the new Wikipedia Index which will include the new blocked title(s).
+
+*NOTE:* There are two blocklists referenced by the Wikipedia Indexer Job:
+1. `blocklist_file_url`: a key contained in the `merino/configs/default.toml` file that points to a remote block list which encapsulates blocked categories. You cannot modify this file, but you may view it to verify or check if specific categories are excluded
+2. `title_blocklist`: an application-level list of titles found at `/merino/utils/blocklist.py` as explained above.

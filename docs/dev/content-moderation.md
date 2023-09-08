@@ -18,6 +18,8 @@ In the Navigational Suggestions provider, a blocklist is used during data creati
 
 The blocklist is referenced during data generation of the `top_picks.json` file which is ingested by the provider backend. This ensures specific domains are not indexed for suggestions. The blocklist is loaded and an exact string comparison is made between all second-level domains and the second-level domains defined in the blocklist.
 
+See [nav-suggestions blocklist runbook][1] for more information.
+
 ## Wikipedia
 The Wikipedia Provider does both title filtering and category filtering. There are also filtering phases at both the indexing job level and at the provider level. Because we may desire to rapidly block a given title of a Wikipedia article, the title blocklist is implemented by the indexer and provider. 
 
@@ -31,3 +33,8 @@ The indexer also blocks titles that are defined in the `title_blocklist` in the 
 When queried, the Wikipedia provider reads the `title_blocklist` when creating a `WikipediaSuggestion` and if the query matches a blocked title, the suggestion is not shown to the client. 
 
 We have this feature because the indexing job is not run daily. Therefore, we desire having an option to rapidly add to this list should we need to block a specific article. 
+
+See [wikipedia blocklist runbook][2] for more information.
+
+[1]: ../operations/blocklist-nav-suggestions.md
+[2]: ../operations/blocklist-wikipedia.md
