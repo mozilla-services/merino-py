@@ -16,16 +16,21 @@ Blocklists in Merino filter content at two distinct phases:
 ## Navigational Suggestions / Top Picks
 In the Navigational Suggestions provider, a blocklist is used during data creation to block specific domains of websites that we do not want to suggest.
 
-The blocklist is referenced during data generation of the `top_picks.json` file which is ingested by the provider backend. This ensures specific domains are not indexed for suggestions. The blocklist is loaded and an exact string comparison is made between all second-level domains and the second-level domains defined in the blocklist.
+The blocklist, [`domain_blocklist.json`][1],  is referenced during data generation of the [`top_picks.json`][2] file, which is ingested by the provider backend. This ensures specific domains are not indexed for suggestions. The blocklist is loaded and an exact string comparison is made between all second-level domains and the second-level domains defined in the blocklist.
 
-See [nav-suggestions blocklist runbook][1] for more information.
+See [nav-suggestions blocklist runbook][3] for more information.
 
 ## Wikipedia
-The Wikipedia Provider does both title filtering and category filtering. There are also filtering phases at both the indexing job level and at the provider level. Because we may desire to rapidly block a given title of a Wikipedia article, the title blocklist is implemented by the indexer and provider. 
+The Wikipedia Provider does both title filtering and category filtering at the data indexing level. 
+
+Since the indexing jobs run periodically, we also implemented title filtering in the provider to get the blocking out sooner.
 
 ### Indexer
 The Wikipedia Indexer Job references a remote blocklist which contains sensitive categories.
-At job runtime, the indexer reads the remote blocklist and creates a set which contains article categories that are be excluded from indexing. You may view this file to see common blocked categories, however you do not modify this file.
+At job runtime, the indexer reads the remote blocklist and creates a set of article categories that are be excluded from indexing. 
+
+The article categories in the blocklist are chosen based off of analysis and best guesses of what could be considered _objectionable_ content, based off of Mozilla's values and brand image.
+Any modifications to the file should be done with careful consideration.
 
 The indexer also blocks titles that are defined in the `title_blocklist` in the application, which is referenced below.  Any title that matches this blocklist is excluded from indexing. 
 
@@ -34,7 +39,9 @@ When queried, the Wikipedia provider reads the `title_blocklist` when creating a
 
 We have this feature because the indexing job is not run daily. Therefore, we desire having an option to rapidly add to this list should we need to block a specific article. 
 
-See [wikipedia blocklist runbook][2] for more information.
+See [wikipedia blocklist runbook][4] for more information.
 
-[1]: ../operations/blocklist-nav-suggestions.md
-[2]: ../operations/blocklist-wikipedia.md
+[1]: /merino/jobs/navigational_suggestions/data/domain_blocklist.json
+[2]: /dev/top_picks.json
+[3]: ../operations/blocklist-nav-suggestions.md
+[4]: ../operations/blocklist-wikipedia.md
