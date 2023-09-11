@@ -5,17 +5,21 @@ This static file is read and used when running the indexing job and prevents the
 ## Add to Blocklist
 The Jobs CLI commands manages the blocklist. Modifying the raw JSON file is possible, but not recommended.
 
-From the `merino-py` directory root, run `merino-jobs navigational-suggestions blocklist <add|remove|apply> <domain_name>`.
+All commands should be run from the `merino-py` root directory.
 
-Use `add` and `remove` to modify domains in the blocklist.
-Use `apply` to apply the blocklist locally.
-You can override the blocklist path using `--blocklist-path <path>`.
+1. Add domain: `merino-jobs navigational-suggestions blocklist add <domain_name>`.
+2. Apply changes: `merino-jobs navigational-suggestions blocklist apply`
+3. Ensure that [`domain_blocklist.json`](/merino/jobs/navigational_suggestions/data/domain_blocklist.json) has added the new blocked domain and open up a new PR with the changes.
+4. Merge PR and deploy. 
+5. After image has been built, re-run the Airflow job [here](https://workflow.telemetry.mozilla.org/dags/merino_jobs/graph). To rerun jobs, see [WIP: THIS OTHER RUNBOOK ON HOW TO RE-TRIGGER AIRFLOW]
+
+Notes: You can override the blocklist path using `--blocklist-path <path>`.
 You can also override the top picks file path using `--top-picks-path <path>`.
 
-The domains added to the blocklist will only be blocked if you run the Navigational Suggestions Domain List Job again. You then have to check the new blocklist and `top_picks.json` file generated from the job into source control.
+## Remove from Blocklist
+Instructions are all the same as [Add to Blocklist](#Add_to_Blocklist), except replace step 1 with:
+1.  Remove domain: `merino-jobs navigational-suggestions blocklist remove <domain_name>`.
 
-Once you've added and committed the new blocklist and `top_picks.json` file, merge in the branch with changes and deploy Merino.
+The [`merino/jobs/navigational_suggestions/__init__.py`](/merino/jobs/navigational_suggestions/__init__.py) file contains all logic for managing the blocklist.
 
-The `merino/jobs/navigational_suggestions/__init__.py` file contains all logic for managing the blocklist.
-
-For CLI directions, run `merino-jobs navigational-suggestions blocklist --help`.
+For CLI man page, run: `merino-jobs navigational-suggestions blocklist --help`.
