@@ -46,6 +46,13 @@ class DynamicAmoBackend:
         """Fetch addon metadata via AMO. Return `None` on errors."""
         try:
             res = await client.get(f"{self.api_url}/{addon_key}", follow_redirects=True)
+        except httpx.HTTPError as e:
+            logger.error(
+                f"Addons API failed request to fetch addon: {addon_key}, {e}, {e.__class__}"
+            )
+            return None
+
+        try:
             res.raise_for_status()
 
             json_res = res.json()
@@ -55,7 +62,9 @@ class DynamicAmoBackend:
                 "number_of_ratings": json_res["ratings"]["count"],
             }
         except httpx.HTTPError as e:
-            logger.error(f"Addons API could not find key: {addon_key}, {e}")
+            logger.error(
+                f"Addons API could not find key: {addon_key}, {e}, {e.__class__}"
+            )
         except (KeyError, JSONDecodeError):
             logger.error(
                 "Problem with Addons API formatting. "
