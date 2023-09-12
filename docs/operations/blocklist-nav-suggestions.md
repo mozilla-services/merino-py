@@ -11,7 +11,7 @@ All commands should be run from the `merino-py` root directory.
 2. Apply changes: `merino-jobs navigational-suggestions blocklist apply`
 3. Ensure that [`domain_blocklist.json`](/merino/jobs/navigational_suggestions/data/domain_blocklist.json) has the new added blocked blocked domain.
 4. Add the `domain_blocklist.json` to source control, open a PR and merge in the changes.
-5. After image has been built, re-run the Airflow job [here](https://workflow.telemetry.mozilla.org/dags/merino_jobs/graph). To rerun jobs, see [WIP: THIS OTHER RUNBOOK ON HOW TO RE-TRIGGER AIRFLOW]
+5. After image has been built, re-run the Airflow job [here](https://workflow.telemetry.mozilla.org/dags/merino_jobs/graph).
 6. Add the newly generated `top_picks.json` file to source control, open a PR, merge the branch, and deploy Merino. 
 
 Until Merino is deployed with the new `top_picks.json` file, the domain block will remain inactive.
