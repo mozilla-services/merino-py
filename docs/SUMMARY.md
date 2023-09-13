@@ -22,6 +22,7 @@
   - [Configs](./operations/configs.md)
   - [Elasticsearch](./operations/elasticsearch.md)
   - [Jobs](./operations/jobs.md)
+  - [Updating Remote Settings](./operations/update-remote-settings.md)
 
 # ADR
 - [Archive](./adr/index.md)
