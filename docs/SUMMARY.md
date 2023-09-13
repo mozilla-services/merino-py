@@ -18,6 +18,8 @@
   - [Profiling](./dev/profiling.md)
 - [Operations](./operations/index.md)
   - [Rollback](./operations/rollback.md)
+  - [Modify Navigational Suggestions Blocklist](./operations/blocklist-nav-suggestions.md)
+  - [Modify Wikipedia Suggestions Blocklist](./operations/blocklist-wikipedia.md)
   - [Test Failures in CI](./operations/testfailures.md)
   - [Configs](./operations/configs.md)
   - [Elasticsearch](./operations/elasticsearch.md)
