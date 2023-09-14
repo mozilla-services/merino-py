@@ -4,6 +4,11 @@ This documentation describes the automated contract tests for Merino.
 
 ## Overview
 
+The tests in the `tests/contract` directory consume Merino's APIs using more opaque techniques.
+These tests run against a Docker container of the service, specify settings via environment variables,
+and operate on the HTTP API layer only and as such are more concerned with external contracts and behavior.
+The contract tests cannot configure the server per-test.
+
 The contract test suite is designed to be set up as a docker-compose CI workflow.
 To simulate common use cases, the suite utilizes 6 docker containers: `client`,
 `merino`, `kinto-setup`, `kinto`, `kinto-attachments`, and `redis`.

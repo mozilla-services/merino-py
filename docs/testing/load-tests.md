@@ -1,8 +1,13 @@
 # Merino Load (Locust) Tests
 
 This documentation describes the load tests for Merino.
-This test framework uses IP2Location LITE data available from 
-https://lite.ip2location.com
+This test framework uses IP2Location LITE data available from https://lite.ip2location.com
+
+## Overview
+
+The tests in the `tests/load` directory spawn multiple HTTP clients that consume Merino's API,
+in order to simulate real-world load on the Merino infrastructure.
+These tests use the Locust framework and are triggered at the discretion of the Merino Engineering Team.
 
 ## Related Documentation
 
