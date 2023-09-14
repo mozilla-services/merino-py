@@ -23,6 +23,7 @@
   - [Elasticsearch](./operations/elasticsearch.md)
   - [Jobs](./operations/jobs.md)
 - [Testing](./testing/index.md)
+  - [Load Test Docs](./testing/load-tests.md)
   - [Contract Tests](./testing/contract-tests/index.md)
     - [Contract Tests Docs](./testing/contract-tests/contract-tests.md)
     - [Kinto Setup](./testing/contract-tests/kinto-setup.md)
