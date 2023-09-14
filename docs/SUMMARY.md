@@ -22,6 +22,11 @@
   - [Configs](./operations/configs.md)
   - [Elasticsearch](./operations/elasticsearch.md)
   - [Jobs](./operations/jobs.md)
+- [Testing](./testing/index.md)
+  - [Contract Tests](./testing/contract-tests/index.md)
+    - [Contract Tests Docs](./testing/contract-tests/contract-tests.md)
+    - [Kinto Setup](./testing/contract-tests/kinto-setup.md)
+    - [Client](./testing/contract-tests/client.md)
 
 # ADR
 - [Archive](./adr/index.md)
