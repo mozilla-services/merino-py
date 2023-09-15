@@ -23,16 +23,16 @@ You can access the job in the
 The CSV remote settings uploader is a job that uploads suggestions data in a CSV
 file to remote settings. It takes two inputs:
 
-* A CSV file. The first row in the file is assumed to be a header that names
+1. A CSV file. The first row in the file is assumed to be a header that names
   the fields (columns) in the data.
-* A Python module that validates the CSV contents and describes how to convert
+2. A Python module that validates the CSV contents and describes how to convert
   it into suggestions JSON.
 
 If you're uploading suggestions from a Google sheet, you can export a CSV file
 from File > Download > Comma Separated Values (.csv). Make sure the first row in
 the sheet is a header that names the columns.
 
-### Uploading suggestions
+### Uploading suggestions (Step by step)
 
 If you're uploading a type of suggestion that the uploader already supports,
 skip to [Running the uploader](#running-the-uploader) below. If you're not sure
@@ -60,8 +60,8 @@ In the module, implement a class called `Suggestion` that derives from
 `BaseSuggestion` in `merino.jobs.csv_rs_uploader.base`. This class will be the
 model of the new suggestion type. `BaseSuggestion` itself derives from
 Pydantic's `BaseModel`, so the validation the class will perform will be based
-on [Pydantic][Pydantic], which is used throughout Merino. (`BaseSuggestion` is
-implemented in `base.py`.)
+on [Pydantic][Pydantic], which is used throughout Merino. `BaseSuggestion` is
+implemented in `base.py`.
 
 [Pydantic]: https://docs.pydantic.dev/latest/usage/models/
 
