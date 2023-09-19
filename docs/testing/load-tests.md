@@ -272,23 +272,23 @@ updating the following:
     * [ ] [load test docs][load_test_docs]
 
 [circle_ci]: https://circleci.com/docs/
-[circle_config_yml]: /.circleci/config.yml
+[circle_config_yml]: https://github.com/mozilla-services/merino-py/blob/main/.circleci/config.yml
 [cloud]: https://console.cloud.google.com/home/dashboard?q=search&referrer=search&project=spheric-keel-331521&cloudshell=false
 [conserv]: https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux:
 [container_registry]: https://console.cloud.google.com/gcr/images/spheric-keel-331521/global/locust-merino?project=spheric-keel-331521
 [docker]: https://docs.docker.com/
-[docker_compose]: /tests/load/docker-compose.yml
-[dockerfile]: tests/load/Dockerfile
+[docker_compose]:https://github.com/mozilla-services/merino-py/blob/main/tests/load/docker-compose.yml
+[dockerfile]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/Dockerfile
 [grafana]: https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/merino-py-application-and-infrastructure?orgId=1&refresh=1m&var-environment=stagepy
 [locust_environment_variables]: https://docs.locust.io/en/stable/configuration.html#environment-variables
-[locust_master_controller]: ./kubernetes-config/locust-master-controller.yml
-[locust_master_service]: ./kubernetes-config/locust-master-service.yml
-[locust_worker_controller]: ./kubernetes-config/locust-worker-controller.yml
+[locust_master_controller]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/kubernetes-config/locust-master-controller.yml
+[locust_master_service]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/kubernetes-config/locust-master-service.yml
+[locust_worker_controller]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/kubernetes-config/locust-worker-controller.yml
 [merino_test_plan]: https://docs.google.com/document/d/1v7LDXENPZg37KXeNcznEZKNZ8rQlOhNbsHprFyMXHhs/edit?usp=sharing
 [merino_history_doc]: https://docs.google.com/document/d/1BGNhKuclUH40Bit9KxYWLiv_N_VnE66uxi9pBFbRWbg/edit
 [merino_spreadsheet]: https://docs.google.com/spreadsheets/d/1SAO3QYIrbxDRxzmYIab-ebZXA1dF06W1lT4I1h2R3a8/edit?usp=sharing
 [poetry]: https://python-poetry.org/docs/
-[poetry_lock]: /tests/load/poetry.lock
-[pyproject_toml]: /tests/load/pyproject.toml
-[load_test_docs]: ./load-tests.md
-[setup_k8s]: /tests/load/setup_k8s.sh
+[poetry_lock]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/poetry.lock
+[pyproject_toml]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/pyproject.toml
+[load_test_docs]: https://github.com/mozilla-services/merino-py/tree/main/docs/testing/load-tests.md
+[setup_k8s]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/setup_k8s.sh

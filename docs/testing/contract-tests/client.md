@@ -184,6 +184,6 @@ tests within a Python virtual environment to prevent dependency cross contaminat
       pytest tests/contract/client/tests/test_merino.py -vv -k remote_settings__refresh
       ```
 
-[contract_tests_docs]: ./contract-tests.md
+[contract_tests_docs]: ./index.md
 [dependencies]: ../../dev/dependencies.md
 [pytest-k]: https://docs.pytest.org/en/latest/example/markers.html#using-k-expr-to-select-tests-based-on-their-name
