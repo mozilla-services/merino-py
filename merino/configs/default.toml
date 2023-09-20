@@ -29,11 +29,9 @@ debug = false
 # MERINO_RUNTIME__QUERY_TIMEOUT_SEC
 # A float timeout (in seconds) for all queries issued in "web/api_v1.py".
 # Indicates the maximum waiting period for queries issued within handler of the `suggest` endpoint.
-# See `accuweather` as an example.
 # All the unfinished query tasks will be cancelled once the timeout gets triggered.
+# Each provider can override this timeout by specifying a provider-level `query_timeout_sec`.
 # The provider timeout takes precedence over this value.
-# Each provider can override this timeout by specifying a provider-level
-# timeout with the same name `query_timeout_sec`.
 query_timeout_sec = 0.2
 
 
@@ -130,23 +128,23 @@ bucket = "main"
 collection = "quicksuggest"
 
 # MERINO_REMOTE_SETTINGS__AUTH
-# Authorization token when uploading suggestions
+# Authorization token when uploading suggestions.
 auth = ""
 
 # MERINO_REMOTE_SETTINGS__CHUNK_SIZE
-# The maximum number of suggestions to store in each attachment when uploading suggestions
+# The maximum number of suggestions to store in each attachment when uploading suggestions.
 chunk_size = 200
 
 # MERINO_REMOTE_SETTINGS__DELETE_EXISTING_RECORDS
-# Delete existing records before uploading new records
+# Delete existing records before uploading new records.
 delete_existing_records = true
 
 # MERINO_REMOTE_SETTINGS__DRY_RUN
-# Log changes but don't actually make them when uploading suggestions
+# Log changes but don't actually make them when uploading suggestions.
 dry_run = false
 
 # MERINO_REMOTE_SETTINGS__SCORE
-# Default score to set in suggestions uploaded to remote settings
+# Default score to set in suggestions uploaded to remote settings.
 score = 0.25
 
 
@@ -177,12 +175,36 @@ env = "dev"
 
 
 [default.providers.accuweather]
+# MERINO_PROVIDERS__ACCUWEATHER__TYPE
+# The type of this provider, should be `accuweather`.
 type = "accuweather"
+
+# MERINO_PROVIDERS__ACCUWEATHER__BACKEND
+#  The backend of the provider. Either `accuweather` or `test`.
 backend = "accuweather"
+
+# MERINO_PROVIDERS__ACCUWEATHER__CACHE
+# The store used to cache weather reports. Either `redis` or `none`.
+# If `redis`, the global Redis settings must be set. See redis.server.
 cache = "none"
+
+# MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default.
 enabled_by_default = false
+
+# MERINO_PROVIDERS__ACCUWEATHER__SCORE
+#  The ranking score for this provider as a floating point number.
 score = 0.3
+
+# MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC
+# A floating  point (in seconds) indicating the maximum waiting period when Merino queries
+# for weather forecasts. This will override the default global query timeout.
 query_timeout_sec = 5.0
+
+
+# MERINO_REDIS__SERVER - redis.server (Currently not configured here)
+# Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
+# In the form of `redis://localhost:6379`.
 
 
 [default.providers.accuweather.cache_ttls]
@@ -193,38 +215,76 @@ forecast_ttl_sec = 3600 # 1 hr
 
 
 [default.accuweather]
-# Our API key used to access the AccuWeather API.
+# MERINO_ACCUWEATHER__API_KEY
+# The API key to AccuWeather's API endpoint.
+# In production, this should be set via environment variable as a secret.
 api_key = ""
+
 # The remainder of these variables are related to endpoint URLs.
+
+# MERINO_ACCUWEATHER__URL_BASE
+# The base URL of AccuWeather's API endpoint.
 url_base = "https://apidev.accuweather.com"
+
+# MERINO_ACCUWEATHER__URL_PARAM_API_KEY
 # The name of the query param whose value is the API key, not the key itself.
 url_param_api_key = "apikey"
-url_current_conditions_path = "/currentconditions/v1/{location_key}.json"
-url_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
-# The placeholder for the location key used by the above two configurations.
+
+# MERINO_ACCUWEATHER__URL_LOCATION_KEY_PLACEHOLDER
+# The placeholder for the location key used by the below two configurations.
 url_location_key_placeholder = "{location_key}"
+
+# MERINO_ACCUWEATHER__URL_CURRENT_CONDITIONS_PATH
+# The URL path for current conditions.
+url_current_conditions_path = "/currentconditions/v1/{location_key}.json"
+
+# MERINO_ACCUWEATHER__URL_FORECASTS_PATH
+# The URL path for forecasts.
+url_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
+
+# MERINO_ACCUWEATHER__URL_POSTALCODES_PATH
+# The URL path for postal codes.
 url_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"
+
+# MERINO_ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY 
+# The query parameter for postal codes.
 url_postalcodes_param_query = "q"
+
+# MERINO_ACCUWEATHER__URL_PARAM_PARTNER_CODE
 # The name of the partner code query param appended to the current conditions and forecast links in
 # AccuWeather responses, as described in https://apidev.accuweather.com/developers/partner-code.
 # Note that this is the name of the partner code parameter, not the partner code itself.
 url_param_partner_code = "partner"
 
-# MERINO_REDIS__SERVER - redis.server (Currently not configured here)
-# Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
-# In the form of `redis://localhost:6379`.
+# MERINO_ACCUWEATHER__PARTNER_CODE - partner_code (Not currently defined)
+# The partner code to append to URLs in the current conditions and forecast responses.
 
 
 [default.providers.adm]
+# MERINO_PROVIDERS__ADM__TYPE
+# The type of this provider, should be `adm`.
 type = "adm"
+
+# MERINO_PROVIDERS__ADM__ENABLED_BY_DEFAULT
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
+
+# MERINO_PROVIDERS__ADM__BACKEND
 # The backend of the provider. Either "remote-settings" or "test".
 backend = "remote-settings"
+
+# MERINO_PROVIDERS__ADM__CRON_INTERVAL_SEC
+# The interval of the RemoteSettings cron job (in seconds)
 # The cron job should tick more frequently than `resync_interval_sec` so that
 # the resync failure can be retried soon.
 cron_interval_sec = 60
+
+# MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC
+# Time between re-syncs of Remote Settings data, in seconds. Defaults to 3 hours.
 resync_interval_sec = 10800
+
+# MERINO_PROVIDERS__ADM__SCORE
+# Ranking score for this provider as a floating point number. Defaults to 0.3.
 score = 0.3
 
 
@@ -235,16 +295,32 @@ api_url = "https://addons.mozilla.org/api/v5/addons/addon/"
 
 
 [default.providers.amo]
+# MERINO_PROVIDERS__AMO__TYPE
+# The type of this provider, should be `amo`.
 type = "amo"
+
+# MERINO_PROVIDERS__AMO__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default. Defaults to false.
 enabled_by_default = false
+
+# MERINO_PROVIDERS__AMO__SCORE
+# The ranking score for this provider as a floating point number. Defaults to 0.25.
 score = 0.25
+
+# MERINO_PROVIDERS__AMO__BACKEND
 # Specifies which backend to use. Should default to dynamic backend.
 # Currently turned off so that we don't make repeated calls to Addon API if it doesn't work.
 backend = "dynamic"
+
+# MERINO_PROVIDERS__AMO__MIN_CHARS
 # The minimum number of characters to be considered for matching.
 min_chars = 4
+
+# MERINO_PROVIDERS__AMO__RESYNC_INTERVAL_SEC
 # The re-syncing frequency for the AMO data. Defaults to daily.
 resync_interval_sec = 86400
+
+# MERINO_PROVIDERS__AMO__CRON_INTERVAL_SEC
 # The frequency that the cron checks to see if re-syncing is required.
 # This should be more frequent than the `resync_interval_sec` to retry
 # on errors. Defaults to every minute.
@@ -252,31 +328,73 @@ cron_interval_sec = 60
 
 
 [default.providers.top_picks]
+# MERINO_PROVIDERS__TOP_PICKS__TYPE
+# The type of this provider, should be `top_picks`.
 type = "top_picks"
+
+# MERINO_PROVIDERS__TOP_PICKS__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default. Defaults to true.
 enabled_by_default = true
+
+# MERINO_PROVIDERS__TOP_PICKS__SCORE
+# Ranking score for this provider as a floating point number with a default of 0.25.
 score = 0.25
+
+# MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT
+# Min character limit for a suggestion to be indexed and query to be processed.
+# Represented as an integer with a default set to 4.
 query_char_limit = 4
+
+# MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT
+# Min character limit set for short suggestion indexing and for Firefox to process a query.
+# Represented as an integer with a default set to 2.
 firefox_char_limit = 2
+
+# MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH
+# File path to the json file of domains, represented as a string.
+# Either `dev/top_picks.json` in production or `tests/data/top_picks.json` for testing.
 top_picks_file_path = "dev/top_picks.json"
 
 
 [default.providers.wikipedia]
+# MERINO_PROVIDERS__WIKIPEDIA__TYPE
+# The type of this provider, should be `wikipedia`.
 type = "wikipedia"
+
+# MERINO_PROVIDERS__WIKIPEDIA__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default. Defaults to true.
 enabled_by_default = true
+
+# MERINO_PROVIDERS__WIKIPEDIA__BACKEND
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "elasticsearch"
-# The URL of the cluster that we want to connect to.
+
+# MERINO_PROVIDERS__WIKIPEDIA__ES_URL
+# The URL of the Elasticsearch cluster that we want to connect to.
 es_url = "http://localhost:9200"
-# The base64 key used to authenticate on the Elasticsearch cluster
+
+# MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY
+# The base64 key used to authenticate on the Elasticsearch cluster specified by `es_cloud_id`.
 es_api_key = ""
-# Elasticsearch index
+
+# MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX
+#  The index identifier of Wikipedia in Elasticsearch.
 es_index = "enwiki-v1"
-# The maximum suggestions for each search request.
+
+# MERINO_PROVIDERS__WIKIPEDIA__ES_MAX_SUGGESTIONS
+# The maximum suggestions for each search request to Elasticsearch.
 es_max_suggestions = 3
-# The timeout (in millisecond) for each request to ES
+
+# MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS
+# The timeout in milliseconds for each search request to Elasticsearch.
 es_request_timeout_ms = 5000
+
+# MERINO_PROVIDERS__WIKIPEDIA__QUERY_TIMEOUT_SEC
+# The timeout in seconds for each query request to the provider.
 query_timeout_sec = 5.0
-# Suggestion score
+
+# MERINO_PROVIDERS__WIKIPEDIA__SCORE
+# The ranking score for this provider as a floating point number. Defaults to 0.23.
 score = 0.23
 
 
