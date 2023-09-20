@@ -107,7 +107,7 @@ canary = false
 # Path to the MaxMindDB file. This should be overridden in production.
 maxmind_database = "./dev/GeoLite2-City-Test.mmdb"
 
-# # MERINO_LOCATION__CLIENT_IP_OVERRIDE
+# MERINO_LOCATION__CLIENT_IP_OVERRIDE
 # This can be set to facilitate manual testing during development.
 client_ip_override = ""
 
@@ -193,7 +193,7 @@ cache = "none"
 enabled_by_default = false
 
 # MERINO_PROVIDERS__ACCUWEATHER__SCORE
-#  The ranking score for this provider as a floating point number.
+# The ranking score for this provider as a floating point number.
 score = 0.3
 
 # MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC
@@ -208,9 +208,15 @@ query_timeout_sec = 5.0
 
 
 [default.providers.accuweather.cache_ttls]
-# Cache TTLs for weather data
+# Cache TTLs for weather data.
+
+# MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__LOCATION_KEY_TTL_SEC
 location_key_ttl_sec = 604800 # 7 days
+
+# MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__CURRENT_CONDITION_TTL_SEC
 current_condition_ttl_sec = 1800 # 1/2 hr
+
+# MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__FORECAST_TTL_SEC
 forecast_ttl_sec = 3600 # 1 hr
 
 
@@ -399,42 +405,71 @@ score = 0.23
 
 
 [default.jobs.wikipedia_indexer]
+# MERINO_JOBS__WIKIPEDIA_INDEXER__ES_URL
 # The URL of the Elasticsearch cluster for indexing job.
 # This takes precedent over the Cloud ID (i.e. if you pass both,
 # we will choose the URL over the Cloud ID).
 es_url = ""
-# Elasticsearch API key for indexing job
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__ES_API_KEY
+# Elasticsearch API key for indexing job.
 es_api_key = ""
-# Elasticsearch API key for indexing job
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__ES_ALIAS
+# Elasticsearch alias value for indexing job.
 es_alias = "enwiki-{version}"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__INDEX_VERSION
 # Index version that will be written.
 index_version = "v1"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__TOTAL_DOCS
 # Estimate of the total documents in the elasticsearch index.
 total_docs = 6_400_000
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__GCS_PATH
 # GCS path. Combined bucket and object prefix (folders).
 gcs_path = ""
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__GCP_PROJECT
 # GCP project name where the GCS bucket lives.
 gcp_project = ""
-# Wikipedia export base URL
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__EXPORT_BASE_URL
+# Wikipedia export base URL.
 export_base_url = "https://dumps.wikimedia.org/other/cirrussearch/current/"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__BLOCKLIST_FILE_URL
 # Blocklist file as CSV. Contains a list of the categories for articles that we want to block.
 blocklist_file_url = "https://raw.githubusercontent.com/mozilla/search-terms-sanitization/7ab819c7515c526e6a407b08ba8e78d3bdb7f4e9/non_sensitive/wikipedia-content-moderation/blocklist_cats.csv"
 
 [default.jobs.navigational_suggestions]
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__SOURCE_GCP_PROJECT
 # GCP project name that contains domain data tables
 source_gcp_project = ""
+
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__DESTINATION_GCP_PROJECT
 # GCP project name where the GCS bucket lives
 destination_gcp_project = ""
+
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__DESTINATION_GCS_BUCKET
 # GCS bucket name where domain metadata will be uploaded
 destination_gcs_bucket = ""
+
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__DESTINATION_CDN_HOSTNAME
 # CDN hostname of the GCS bucket where domain metadata will be uploaded
 destination_cdn_hostname = ""
+
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__FORCE_UPLOAD
 # Flag to enable uploading the domain metadata to GCS bucket even if it aleady exists there
 force_upload = false
+
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__MIN_FAVICON_WIDTH
 # Minimum width of the domain favicon required for it to be a part of domain metadata
 min_favicon_width = 48
 
 
 [default.jobs.amo_rs_uploader]
+# MERINO_JOBS__AMO_RS_UPLOADER__RECORD_TYPE
 # The "type" of each remote settings record
 record_type = "amo-suggestions"
