@@ -1,5 +1,6 @@
-# Default configurations that may be overridden by the counterparts defined in
-# `development.toml` or `production.toml` or environment variables.
+# Default configurations that may be overridden by the counterparts defined in:
+# `development.toml`, `default.local.toml`, `production.toml`, `testing.toml`,
+# `ci.toml` or environment variables.
 
 # Configurations can be defined by:
 #
@@ -23,70 +24,157 @@
 [default]
 debug = false
 
+
 [default.runtime]
+# MERINO_RUNTIME__QUERY_TIMEOUT_SEC
 # A float timeout (in seconds) for all queries issued in "web/api_v1.py".
+# Indicates the maximum waiting period for queries issued within handler of the `suggest` endpoint.
+# See `accuweather` as an example.
+# All the unfinished query tasks will be cancelled once the timeout gets triggered.
+# The provider timeout takes precedence over this value.
 # Each provider can override this timeout by specifying a provider-level
-# timeout with the same name `query_timeout_sec`. See `accuweather` as an
-# example.
+# timeout with the same name `query_timeout_sec`.
 query_timeout_sec = 0.2
 
+
 [default.logging]
-# Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+# MERINO_LOGGING__LEVEL
+# Minimum level of logs that should be reported.
+# "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL" (in increasing verbosity).
+# This should be a number of entries separated by commas (environment variables) 
+# or specified as list (TOML).
 level = "INFO"
-# Any of "mozlog" (i.e. JSON) or "pretty"
+
+# MERINO_LOGGING__FORMAT
+# pretty - default in development - Multiple lines per event, human-oriented formatting and color.
+# mozlog - default in production - A single line per event, formatted as JSON in 
+# MozLog format. See https://wiki.mozilla.org/Firefox/Services/Logging
 format = "mozlog"
+
+# MERINO_LOGGING__CAN_PROPAGATE
+# Boolean to allow log propagation.
 can_propagate = false
 
+
 [default.web.api.v1]
+# MERINO_WEB__API__V1__CLIENT_VARIANT_MAX
 # Setting to contol the limit of optional client variants passed
 # to suggest endpoint as part of experiments or rollouts.
+# See: https://mozilla-services.github.io/merino/api.html#suggest.
 client_variant_max = 10
-# Values passed into Query object for FastAPI query parameter validator.
+
+# The following values are passed into Query object (`max_length` parameter) for FastAPI query parameter validator.
 # Sets limitation on the maximum string length of a query.
+
+# MERINO_WEB__API__V1__CLIENT_VARIANT_CHARACTER_MAX
+# A non-negative integer that limits the string character length of a given query string,
+# in this case the total string length count for client variants.
 client_variant_character_max = 100
+
+# MERINO_WEB__API__V1__QUERY_CHARACTER_MAX
+# A non-negative integer that limits the string character length of a given query string,
+# in this case the total string length count for the suggestion query.
 query_character_max = 500
 
+
 [default.metrics]
+# Settings for Statsd/Datadog style metrics reporting.
+
+# MERINO_METRICS__DEV_LOGGER
+# Whether or not to send metrics over to the logger. 
+# Should only be used for non-production environments.
 dev_logger = false
+
+# MERINO_METRICS__HOST
+# The IP or hostname to send metrics over UDP. Defaults to localhost.
 host = "localhost"
+
+# MERINO_METRICS__PORT
+# The port to send metrics to over UDP. Defaults to 8092.
 port = 8092
 
+
 [default.deployment]
-# The deployment workflow is expected to set this to true for canary pods
+# MERINO_DEPLOYMENT__CANARY
+# The value is added as a constant tag `deployment.canary` with type `int` to emitted metrics.
+# The deployment workflow is expected to set this to true for canary pods.
+# Note that this setting is supposed to be controlled exclusively by deployment tooling.
 canary = false
 
+
 [default.location]
+# Configuration for determining the location of users.
+
+# MERINO_LOCATION__MAXMIND_DATABASE
 # Path to the MaxMindDB file. This should be overridden in production.
 maxmind_database = "./dev/GeoLite2-City-Test.mmdb"
+
+# # MERINO_LOCATION__CLIENT_IP_OVERRIDE
 # This can be set to facilitate manual testing during development.
 client_ip_override = ""
 
+
 [default.remote_settings]
+# MERINO_REMOTE_SETTINGS__SERVER
+# The server to sync from. Ex: `https://firefox.settings.services.mozilla.com`
 server = "https://firefox.settings.services.mozilla.com"
+
+# MERINO_REMOTE_SETTINGS__BUCKET
+# The bucket to use for Remote Settings providers if not specified in provider config. 
+# Ex: "main".
 bucket = "main"
+
+# MERINO_REMOTE_SETTINGS__COLLECTION
+# The collection to use for Remote Settings providers if not specified in provider config. 
+# Ex: "quicksuggest".
 collection = "quicksuggest"
+
+# MERINO_REMOTE_SETTINGS__AUTH
 # Authorization token when uploading suggestions
 auth = ""
-# The maximum number of suggestions to store in each attachment when uploading
-# suggestions
+
+# MERINO_REMOTE_SETTINGS__CHUNK_SIZE
+# The maximum number of suggestions to store in each attachment when uploading suggestions
 chunk_size = 200
+
+# MERINO_REMOTE_SETTINGS__DELETE_EXISTING_RECORDS
 # Delete existing records before uploading new records
 delete_existing_records = true
+
+# MERINO_REMOTE_SETTINGS__DRY_RUN
 # Log changes but don't actually make them when uploading suggestions
 dry_run = false
+
+# MERINO_REMOTE_SETTINGS__SCORE
 # Default score to set in suggestions uploaded to remote settings
 score = 0.25
 
+
 [default.sentry]
+# MERINO_SENTRY__MODE
 # Any of "release", "debug", or "disabled".
-# Using "debug" will enable logging for Sentry.
+# Using "debug" will enable logging for Sentry, only use for local development.
 mode = "disabled"
-# Sentry will not send events out when given an empty string `dsn`.
-dsn = ""
-# Any of "prod", "stage", or "dev".
-env = "dev"
+
+# MERINO_SENTRY__TRACES_SAMPLE_RATE
 # A setting for the tracing sample rate. Should be a float in range [0, 1.0].
 traces_sample_rate = 0
+
+# If mode is set to "release", then the following settings are required:
+
+# MERINO_SENTRY__DSN
+# Configuration string to connect to Sentry project.
+# Sentry will not send events out when given an empty string `dsn`.
+dsn = ""
+
+# MERINO_SENTRY__ENV
+# Environment to report, either "prod", "stage", or "dev".
+env = "dev"
+
+# If `sentry.mode` is set to `disabled`, no Sentry integration will be activated.
+# If set to `debug`, the DSN will be set to a testing value recommended by Sentry, 
+# and extra output will be included in the logs.
+
 
 [default.providers.accuweather]
 type = "accuweather"
@@ -96,11 +184,13 @@ enabled_by_default = false
 score = 0.3
 query_timeout_sec = 5.0
 
+
 [default.providers.accuweather.cache_ttls]
 # Cache TTLs for weather data
 location_key_ttl_sec = 604800 # 7 days
 current_condition_ttl_sec = 1800 # 1/2 hr
 forecast_ttl_sec = 3600 # 1 hr
+
 
 [default.accuweather]
 # Our API key used to access the AccuWeather API.
@@ -120,6 +210,11 @@ url_postalcodes_param_query = "q"
 # Note that this is the name of the partner code parameter, not the partner code itself.
 url_param_partner_code = "partner"
 
+# MERINO_REDIS__SERVER - redis.server (Currently not configured here)
+# Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
+# In the form of `redis://localhost:6379`.
+
+
 [default.providers.adm]
 type = "adm"
 # Whether or not this provider is enabled by default.
@@ -132,9 +227,12 @@ cron_interval_sec = 60
 resync_interval_sec = 10800
 score = 0.3
 
+
 [default.amo.dynamic]
-# This is the URL for the Addons API to get more information for particular addons
+# MERINO_AMO__DYNAMIC__API_URL
+# This is the URL for the Addons API to get more information for particular addons.
 api_url = "https://addons.mozilla.org/api/v5/addons/addon/"
+
 
 [default.providers.amo]
 type = "amo"
@@ -160,6 +258,7 @@ score = 0.25
 query_char_limit = 4
 firefox_char_limit = 2
 top_picks_file_path = "dev/top_picks.json"
+
 
 [default.providers.wikipedia]
 type = "wikipedia"
@@ -216,6 +315,7 @@ destination_cdn_hostname = ""
 force_upload = false
 # Minimum width of the domain favicon required for it to be a part of domain metadata
 min_favicon_width = 48
+
 
 [default.jobs.amo_rs_uploader]
 # The "type" of each remote settings record
