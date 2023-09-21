@@ -1,5 +1,6 @@
-# Default configurations that may be overridden by the counterparts defined in
-# `development.toml` or `production.toml` or environment variables.
+# Default configurations that may be overridden by the counterparts defined in:
+# `development.toml`, `default.local.toml`, `production.toml`, `testing.toml`,
+# `ci.toml` or environment variables.
 
 # Configurations can be defined by:
 #
@@ -23,130 +24,309 @@
 [default]
 debug = false
 
+
 [default.runtime]
+# MERINO_RUNTIME__QUERY_TIMEOUT_SEC
 # A float timeout (in seconds) for all queries issued in "web/api_v1.py".
-# Each provider can override this timeout by specifying a provider-level
-# timeout with the same name `query_timeout_sec`. See `accuweather` as an
-# example.
+# Indicates the maximum waiting period for queries issued within handler of the `suggest` endpoint.
+# All the unfinished query tasks will be cancelled once the timeout gets triggered.
+# Each provider can override this timeout by specifying a provider-level `query_timeout_sec`.
+# The provider timeout takes precedence over this value.
 query_timeout_sec = 0.2
 
+
 [default.logging]
-# Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+# MERINO_LOGGING__LEVEL
+# Minimum level of logs that should be reported.
+# "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL" (in increasing verbosity).
+# This should be a number of entries separated by commas (environment variables) 
+# or specified as list (TOML).
 level = "INFO"
-# Any of "mozlog" (i.e. JSON) or "pretty"
+
+# MERINO_LOGGING__FORMAT
+# pretty - default in development - Multiple lines per event, human-oriented formatting and color.
+# mozlog - default in production - A single line per event, formatted as JSON in 
+# MozLog format. See https://wiki.mozilla.org/Firefox/Services/Logging
 format = "mozlog"
+
+# MERINO_LOGGING__CAN_PROPAGATE
+# Boolean to allow log propagation.
 can_propagate = false
 
+
 [default.web.api.v1]
+# MERINO_WEB__API__V1__CLIENT_VARIANT_MAX
 # Setting to contol the limit of optional client variants passed
 # to suggest endpoint as part of experiments or rollouts.
+# See: https://mozilla-services.github.io/merino/api.html#suggest.
 client_variant_max = 10
-# Values passed into Query object for FastAPI query parameter validator.
+
+# The following values are passed into Query object (`max_length` parameter) for FastAPI query parameter validator.
 # Sets limitation on the maximum string length of a query.
+
+# MERINO_WEB__API__V1__CLIENT_VARIANT_CHARACTER_MAX
+# A non-negative integer that limits the string character length of a given query string,
+# in this case the total string length count for client variants.
 client_variant_character_max = 100
+
+# MERINO_WEB__API__V1__QUERY_CHARACTER_MAX
+# A non-negative integer that limits the string character length of a given query string,
+# in this case the total string length count for the suggestion query.
 query_character_max = 500
 
+
 [default.metrics]
+# Settings for Statsd/Datadog style metrics reporting.
+
+# MERINO_METRICS__DEV_LOGGER
+# Whether or not to send metrics over to the logger. 
+# Should only be used for non-production environments.
 dev_logger = false
+
+# MERINO_METRICS__HOST
+# The IP or hostname to send metrics over UDP. Defaults to localhost.
 host = "localhost"
+
+# MERINO_METRICS__PORT
+# The port to send metrics to over UDP. Defaults to 8092.
 port = 8092
 
+
 [default.deployment]
-# The deployment workflow is expected to set this to true for canary pods
+# MERINO_DEPLOYMENT__CANARY
+# The value is added as a constant tag `deployment.canary` with type `int` to emitted metrics.
+# The deployment workflow is expected to set this to true for canary pods.
+# Note that this setting is supposed to be controlled exclusively by deployment tooling.
 canary = false
 
+
 [default.location]
+# Configuration for determining the location of users.
+
+# MERINO_LOCATION__MAXMIND_DATABASE
 # Path to the MaxMindDB file. This should be overridden in production.
 maxmind_database = "./dev/GeoLite2-City-Test.mmdb"
+
+# MERINO_LOCATION__CLIENT_IP_OVERRIDE
 # This can be set to facilitate manual testing during development.
 client_ip_override = ""
 
+
 [default.remote_settings]
+# MERINO_REMOTE_SETTINGS__SERVER
+# The server to sync from. Ex: `https://firefox.settings.services.mozilla.com`
 server = "https://firefox.settings.services.mozilla.com"
+
+# MERINO_REMOTE_SETTINGS__BUCKET
+# The bucket to use for Remote Settings providers if not specified in provider config. 
+# Ex: "main".
 bucket = "main"
+
+# MERINO_REMOTE_SETTINGS__COLLECTION
+# The collection to use for Remote Settings providers if not specified in provider config. 
+# Ex: "quicksuggest".
 collection = "quicksuggest"
-# Authorization token when uploading suggestions
+
+# MERINO_REMOTE_SETTINGS__AUTH
+# Authorization token when uploading suggestions.
 auth = ""
-# The maximum number of suggestions to store in each attachment when uploading
-# suggestions
+
+# MERINO_REMOTE_SETTINGS__CHUNK_SIZE
+# The maximum number of suggestions to store in each attachment when uploading suggestions.
 chunk_size = 200
-# Delete existing records before uploading new records
+
+# MERINO_REMOTE_SETTINGS__DELETE_EXISTING_RECORDS
+# Delete existing records before uploading new records.
 delete_existing_records = true
-# Log changes but don't actually make them when uploading suggestions
+
+# MERINO_REMOTE_SETTINGS__DRY_RUN
+# Log changes but don't actually make them when uploading suggestions.
 dry_run = false
-# Default score to set in suggestions uploaded to remote settings
+
+# MERINO_REMOTE_SETTINGS__SCORE
+# Default score to set in suggestions uploaded to remote settings.
 score = 0.25
 
+
 [default.sentry]
+# MERINO_SENTRY__MODE
 # Any of "release", "debug", or "disabled".
-# Using "debug" will enable logging for Sentry.
+# Using "debug" will enable logging for Sentry, only use for local development.
 mode = "disabled"
-# Sentry will not send events out when given an empty string `dsn`.
-dsn = ""
-# Any of "prod", "stage", or "dev".
-env = "dev"
+
+# MERINO_SENTRY__TRACES_SAMPLE_RATE
 # A setting for the tracing sample rate. Should be a float in range [0, 1.0].
 traces_sample_rate = 0
 
+# If mode is set to "release", then the following settings are required:
+
+# MERINO_SENTRY__DSN
+# Configuration string to connect to Sentry project.
+# Sentry will not send events out when given an empty string `dsn`.
+dsn = ""
+
+# MERINO_SENTRY__ENV
+# Environment to report, either "prod", "stage", or "dev".
+env = "dev"
+
+# If `sentry.mode` is set to `disabled`, no Sentry integration will be activated.
+# If set to `debug`, the DSN will be set to a testing value recommended by Sentry, 
+# and extra output will be included in the logs.
+
+
 [default.providers.accuweather]
+# MERINO_PROVIDERS__ACCUWEATHER__TYPE
+# The type of this provider, should be `accuweather`.
 type = "accuweather"
+
+# MERINO_PROVIDERS__ACCUWEATHER__BACKEND
+#  The backend of the provider. Either `accuweather` or `test`.
 backend = "accuweather"
+
+# MERINO_PROVIDERS__ACCUWEATHER__CACHE
+# The store used to cache weather reports. Either `redis` or `none`.
+# If `redis`, the global Redis settings must be set. See redis.server.
 cache = "none"
+
+# MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default.
 enabled_by_default = false
+
+# MERINO_PROVIDERS__ACCUWEATHER__SCORE
+# The ranking score for this provider as a floating point number.
 score = 0.3
+
+# MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC
+# A floating  point (in seconds) indicating the maximum waiting period when Merino queries
+# for weather forecasts. This will override the default global query timeout.
 query_timeout_sec = 5.0
 
+
+# MERINO_REDIS__SERVER - redis.server (Currently not configured here)
+# Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
+# In the form of `redis://localhost:6379`.
+
+
 [default.providers.accuweather.cache_ttls]
-# Cache TTLs for weather data
+# Cache TTLs for weather data.
+
+# MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__LOCATION_KEY_TTL_SEC
 location_key_ttl_sec = 604800 # 7 days
+
+# MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__CURRENT_CONDITION_TTL_SEC
 current_condition_ttl_sec = 1800 # 1/2 hr
+
+# MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__FORECAST_TTL_SEC
 forecast_ttl_sec = 3600 # 1 hr
 
+
 [default.accuweather]
-# Our API key used to access the AccuWeather API.
+# MERINO_ACCUWEATHER__API_KEY
+# The API key to AccuWeather's API endpoint.
+# In production, this should be set via environment variable as a secret.
 api_key = ""
+
 # The remainder of these variables are related to endpoint URLs.
+
+# MERINO_ACCUWEATHER__URL_BASE
+# The base URL of AccuWeather's API endpoint.
 url_base = "https://apidev.accuweather.com"
+
+# MERINO_ACCUWEATHER__URL_PARAM_API_KEY
 # The name of the query param whose value is the API key, not the key itself.
 url_param_api_key = "apikey"
-url_current_conditions_path = "/currentconditions/v1/{location_key}.json"
-url_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
-# The placeholder for the location key used by the above two configurations.
+
+# MERINO_ACCUWEATHER__URL_LOCATION_KEY_PLACEHOLDER
+# The placeholder for the location key used by the below two configurations.
 url_location_key_placeholder = "{location_key}"
+
+# MERINO_ACCUWEATHER__URL_CURRENT_CONDITIONS_PATH
+# The URL path for current conditions.
+url_current_conditions_path = "/currentconditions/v1/{location_key}.json"
+
+# MERINO_ACCUWEATHER__URL_FORECASTS_PATH
+# The URL path for forecasts.
+url_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
+
+# MERINO_ACCUWEATHER__URL_POSTALCODES_PATH
+# The URL path for postal codes.
 url_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"
+
+# MERINO_ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY 
+# The query parameter for postal codes.
 url_postalcodes_param_query = "q"
+
+# MERINO_ACCUWEATHER__URL_PARAM_PARTNER_CODE
 # The name of the partner code query param appended to the current conditions and forecast links in
 # AccuWeather responses, as described in https://apidev.accuweather.com/developers/partner-code.
 # Note that this is the name of the partner code parameter, not the partner code itself.
 url_param_partner_code = "partner"
 
+# MERINO_ACCUWEATHER__PARTNER_CODE - partner_code (Not currently defined)
+# The partner code to append to URLs in the current conditions and forecast responses.
+
+
 [default.providers.adm]
+# MERINO_PROVIDERS__ADM__TYPE
+# The type of this provider, should be `adm`.
 type = "adm"
+
+# MERINO_PROVIDERS__ADM__ENABLED_BY_DEFAULT
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
+
+# MERINO_PROVIDERS__ADM__BACKEND
 # The backend of the provider. Either "remote-settings" or "test".
 backend = "remote-settings"
+
+# MERINO_PROVIDERS__ADM__CRON_INTERVAL_SEC
+# The interval of the RemoteSettings cron job (in seconds)
 # The cron job should tick more frequently than `resync_interval_sec` so that
 # the resync failure can be retried soon.
 cron_interval_sec = 60
+
+# MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC
+# Time between re-syncs of Remote Settings data, in seconds. Defaults to 3 hours.
 resync_interval_sec = 10800
+
+# MERINO_PROVIDERS__ADM__SCORE
+# Ranking score for this provider as a floating point number. Defaults to 0.3.
 score = 0.3
 
+
 [default.amo.dynamic]
-# This is the URL for the Addons API to get more information for particular addons
+# MERINO_AMO__DYNAMIC__API_URL
+# This is the URL for the Addons API to get more information for particular addons.
 api_url = "https://addons.mozilla.org/api/v5/addons/addon/"
 
+
 [default.providers.amo]
+# MERINO_PROVIDERS__AMO__TYPE
+# The type of this provider, should be `amo`.
 type = "amo"
+
+# MERINO_PROVIDERS__AMO__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default. Defaults to false.
 enabled_by_default = false
+
+# MERINO_PROVIDERS__AMO__SCORE
+# The ranking score for this provider as a floating point number. Defaults to 0.25.
 score = 0.25
+
+# MERINO_PROVIDERS__AMO__BACKEND
 # Specifies which backend to use. Should default to dynamic backend.
 # Currently turned off so that we don't make repeated calls to Addon API if it doesn't work.
 backend = "dynamic"
+
+# MERINO_PROVIDERS__AMO__MIN_CHARS
 # The minimum number of characters to be considered for matching.
 min_chars = 4
+
+# MERINO_PROVIDERS__AMO__RESYNC_INTERVAL_SEC
 # The re-syncing frequency for the AMO data. Defaults to daily.
 resync_interval_sec = 86400
+
+# MERINO_PROVIDERS__AMO__CRON_INTERVAL_SEC
 # The frequency that the cron checks to see if re-syncing is required.
 # This should be more frequent than the `resync_interval_sec` to retry
 # on errors. Defaults to every minute.
@@ -154,69 +334,142 @@ cron_interval_sec = 60
 
 
 [default.providers.top_picks]
+# MERINO_PROVIDERS__TOP_PICKS__TYPE
+# The type of this provider, should be `top_picks`.
 type = "top_picks"
+
+# MERINO_PROVIDERS__TOP_PICKS__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default. Defaults to true.
 enabled_by_default = true
+
+# MERINO_PROVIDERS__TOP_PICKS__SCORE
+# Ranking score for this provider as a floating point number with a default of 0.25.
 score = 0.25
+
+# MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT
+# Min character limit for a suggestion to be indexed and query to be processed.
+# Represented as an integer with a default set to 4.
 query_char_limit = 4
+
+# MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT
+# Min character limit set for short suggestion indexing and for Firefox to process a query.
+# Represented as an integer with a default set to 2.
 firefox_char_limit = 2
+
+# MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH
+# File path to the json file of domains, represented as a string.
+# Either `dev/top_picks.json` in production or `tests/data/top_picks.json` for testing.
 top_picks_file_path = "dev/top_picks.json"
 
+
 [default.providers.wikipedia]
+# MERINO_PROVIDERS__WIKIPEDIA__TYPE
+# The type of this provider, should be `wikipedia`.
 type = "wikipedia"
+
+# MERINO_PROVIDERS__WIKIPEDIA__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default. Defaults to true.
 enabled_by_default = true
+
+# MERINO_PROVIDERS__WIKIPEDIA__BACKEND
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "elasticsearch"
-# The URL of the cluster that we want to connect to.
+
+# MERINO_PROVIDERS__WIKIPEDIA__ES_URL
+# The URL of the Elasticsearch cluster that we want to connect to.
 es_url = "http://localhost:9200"
-# The base64 key used to authenticate on the Elasticsearch cluster
+
+# MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY
+# The base64 key used to authenticate on the Elasticsearch cluster specified by `es_cloud_id`.
 es_api_key = ""
-# Elasticsearch index
+
+# MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX
+#  The index identifier of Wikipedia in Elasticsearch.
 es_index = "enwiki-v1"
-# The maximum suggestions for each search request.
+
+# MERINO_PROVIDERS__WIKIPEDIA__ES_MAX_SUGGESTIONS
+# The maximum suggestions for each search request to Elasticsearch.
 es_max_suggestions = 3
-# The timeout (in millisecond) for each request to ES
+
+# MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS
+# The timeout in milliseconds for each search request to Elasticsearch.
 es_request_timeout_ms = 5000
+
+# MERINO_PROVIDERS__WIKIPEDIA__QUERY_TIMEOUT_SEC
+# The timeout in seconds for each query request to the provider.
 query_timeout_sec = 5.0
-# Suggestion score
+
+# MERINO_PROVIDERS__WIKIPEDIA__SCORE
+# The ranking score for this provider as a floating point number. Defaults to 0.23.
 score = 0.23
 
 
 [default.jobs.wikipedia_indexer]
+# MERINO_JOBS__WIKIPEDIA_INDEXER__ES_URL
 # The URL of the Elasticsearch cluster for indexing job.
 # This takes precedent over the Cloud ID (i.e. if you pass both,
 # we will choose the URL over the Cloud ID).
 es_url = ""
-# Elasticsearch API key for indexing job
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__ES_API_KEY
+# Elasticsearch API key for indexing job.
 es_api_key = ""
-# Elasticsearch API key for indexing job
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__ES_ALIAS
+# Elasticsearch alias value for indexing job.
 es_alias = "enwiki-{version}"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__INDEX_VERSION
 # Index version that will be written.
 index_version = "v1"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__TOTAL_DOCS
 # Estimate of the total documents in the elasticsearch index.
 total_docs = 6_400_000
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__GCS_PATH
 # GCS path. Combined bucket and object prefix (folders).
 gcs_path = ""
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__GCP_PROJECT
 # GCP project name where the GCS bucket lives.
 gcp_project = ""
-# Wikipedia export base URL
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__EXPORT_BASE_URL
+# Wikipedia export base URL.
 export_base_url = "https://dumps.wikimedia.org/other/cirrussearch/current/"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__BLOCKLIST_FILE_URL
 # Blocklist file as CSV. Contains a list of the categories for articles that we want to block.
 blocklist_file_url = "https://raw.githubusercontent.com/mozilla/search-terms-sanitization/7ab819c7515c526e6a407b08ba8e78d3bdb7f4e9/non_sensitive/wikipedia-content-moderation/blocklist_cats.csv"
 
 [default.jobs.navigational_suggestions]
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__SOURCE_GCP_PROJECT
 # GCP project name that contains domain data tables
 source_gcp_project = ""
+
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__DESTINATION_GCP_PROJECT
 # GCP project name where the GCS bucket lives
 destination_gcp_project = ""
+
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__DESTINATION_GCS_BUCKET
 # GCS bucket name where domain metadata will be uploaded
 destination_gcs_bucket = ""
+
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__DESTINATION_CDN_HOSTNAME
 # CDN hostname of the GCS bucket where domain metadata will be uploaded
 destination_cdn_hostname = ""
+
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__FORCE_UPLOAD
 # Flag to enable uploading the domain metadata to GCS bucket even if it aleady exists there
 force_upload = false
+
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__MIN_FAVICON_WIDTH
 # Minimum width of the domain favicon required for it to be a part of domain metadata
 min_favicon_width = 48
 
+
 [default.jobs.amo_rs_uploader]
+# MERINO_JOBS__AMO_RS_UPLOADER__RECORD_TYPE
 # The "type" of each remote settings record
 record_type = "amo-suggestions"
