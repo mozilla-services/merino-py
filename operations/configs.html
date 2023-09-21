@@ -142,51 +142,54 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="configuring-merino-operations"><a class="header" href="#configuring-merino-operations">Configuring Merino (Operations)</a></h1>
+<p>To manage configurations and view all documentation for individual config values,
+please view the <a href="https://github.com/mozilla-services/merino-py/tree/main/merino/configs/default.toml">default.toml</a> file.</p>
 <h2 id="settings"><a class="header" href="#settings">Settings</a></h2>
-<p>Merino's settings are managed via Dynaconf and can be specified in two ways: by a
-TOML file in the <code>merino/configs/</code> directory, or via environment variables. Environment
-variables take precedence over the values set in the TOML files. TOML files set with the
-same environment name that is currently activated also automatically override defaults.
-Any config file that is pointed to will override the <code>merino/configs/default.toml</code> file.
-Read below for more specific details.</p>
-<h3 id="file-organization"><a class="header" href="#file-organization"><a href="#file-organization">File organization</a></a></h3>
+<p>Merino's settings are managed via <a href="https://www.dynaconf.com/">Dynaconf</a> and can be specified in two ways: </p>
+<ol>
+<li>a <a href="https://toml.io/en/">TOML file</a> in the <code>merino/configs/</code> <a href="https://github.com/mozilla-services/merino-py/tree/main/merino/configs">directory</a>.</li>
+<li>via environment variables.
+Environment variables take precedence over the values set in the TOML files.
+Production environment variables are managed by SRE and defined in the relevant merino-py repo.
+TOML files set with the same environment name that is currently activated also automatically override defaults.
+Any config file that is pointed to will override the <code>merino/configs/default.toml</code> file.</li>
+</ol>
+<h2 id="file-organization"><a class="header" href="#file-organization">File organization</a></h2>
 <p>These are the settings sources, with later sources overriding earlier ones.</p>
 <ul>
 <li>
-<p>A <code>config.py</code> file establishes a Dynaconf instance and environment-specific values
-are pulled in from the corresponding TOML files and environment variables. Other
-configurations are established by files that are prefixed with <code>config_*.py</code>,
+<p>A <a href="https://github.com/mozilla-services/merino-py/blob/main/merino/config.py"><code>config.py</code></a> file establishes a Dynaconf instance and environment-specific values
+are pulled in from the corresponding TOML files and environment variables.
+Other configurations are established by files that are prefixed with <code>config_*.py</code>,
 such as <code>config_sentry.py</code> or <code>config_logging.py</code>.</p>
 </li>
 <li>
-<p>Per-environment configuration files are in the <code>configs</code> directory. The environment
-is selected using the environment variable <code>MERINO_ENV</code>. The settings for
-that environment are then loaded from <code>configs/${env}.toml</code>, if the file/env exists. The
-default environment is &quot;development&quot;. A &quot;production&quot; environment is also
-provided.</p>
+<p>Per-environment configuration files are in the <a href="https://github.com/mozilla-services/merino-py/tree/main/merino/configs"><code>configs</code> directory</a>.
+The environment is selected using the environment variable <code>MERINO_ENV</code>.
+The settings for that environment are then loaded from <code>configs/${env}.toml</code>, if the file/env exists. The default environment is &quot;development&quot;. A &quot;production&quot; environment is also provided.</p>
 </li>
 <li>
-<p>Local configuration files are not checked into the repository, but if created should be named
-<code>configs/development.local.toml</code>, following the format of <code>&lt;environment&gt;.local.toml</code>.
+<p>Local configuration files are not checked into the repository,
+but if created should be named <code>configs/development.local.toml</code>,
+following the format of <code>&lt;environment&gt;.local.toml</code>.
 This file is listed in the <code>.gitignore</code> file and is safe to use for local configuration.
 One may add secrets here if desired, though it is advised to exercise great caution.</p>
 </li>
 </ul>
-<h3 id="general"><a class="header" href="#general">General</a></h3>
+<h2 id="general"><a class="header" href="#general">General</a></h2>
 <ul>
 <li>
-<p>All environments are prefixed with <code>MERINO_</code>. This is established in the
-<code>config.py</code> file by setting the <code>envvar_prefix=&quot;MERINO&quot;</code> for the Dynaconf
-instance. The first level following <code>MERINO_</code> is accessed with a single underscore <code>_</code>
-and any subsequent levels require two underscores <code>__</code>. For example,
-the logging format can be controlled from the environment variable
-<code>MERINO_LOGGING__FORMAT</code>.</p>
+<p>All environments are prefixed with <code>MERINO_</code>. 
+This is established in the <code>config.py</code> file by setting the <code>envvar_prefix=&quot;MERINO&quot;</code> 
+for the Dynaconf instance.
+The first level following <code>MERINO_</code> is accessed with a single underscore <code>_</code> and any subsequent levels require two underscores <code>__</code>. 
+For example, the logging format can be controlled from the environment variable <code>MERINO_LOGGING__FORMAT</code>.</p>
 </li>
 <li>
 <p>Production environment variables are set by SRE and stored in the
-cloudops project in the <code>configmap.yml</code> file. Contact SRE if you require
-information or access on this file, or request access to the cloudops infra
-repo.</p>
+cloudops project in the <code>configmap.yml</code> file. 
+Contact SRE if you require information or access on this file,
+or request access to the cloudops infra repo.</p>
 </li>
 <li>
 <p>You can set these environment variables in your setup by modifying the <code>.toml</code> files.
@@ -196,20 +199,21 @@ desired environment variables using CLI flags.</p>
 <code>MERINO_ENV=production MERINO_LOGGING__FORMAT=pretty make dev</code></p>
 </li>
 <li>
-<p><code>env</code> (<code>MERINO_ENV</code>) - Only settable from environment variables. Controls
-which environment configuration is loaded, as described above.</p>
+<p><code>env</code> (<code>MERINO_ENV</code>) - Only settable from environment variables. 
+Controls which environment configuration is loaded, as described above.</p>
 </li>
 <li>
 <p><code>debug</code> (<code>MERINO_DEBUG</code>) - Boolean that enables additional features to debug
-the application. This should not be set to true in public environments, as it
-reveals all configuration, including any configured secrets.</p>
+the application.
+This should not be set to true in public environments, as it reveals all configuration,
+including any configured secrets.</p>
 </li>
 <li>
 <p><code>format</code> (<code>MERINO_LOGGING__FORMAT</code>) - Controls the format of outputted logs in
-either <code>pretty</code> or <code>mozlog</code> format. See <a href="../../merino/config_logging.py">../config_logging.py</a>.</p>
+either <code>pretty</code> or <code>mozlog</code> format. See <a href="https://github.com/mozilla-services/merino-py/blob/main/merino/config_logging.py">config_logging.py</a>.</p>
 </li>
 </ul>
-<h3 id="caveat"><a class="header" href="#caveat">Caveat</a></h3>
+<h2 id="caveat"><a class="header" href="#caveat">Caveat</a></h2>
 <p>Be extra careful whenever you need to reference those deeply nested settings
 (e.g. <code>settings.foo.bar.baz</code>) in the hot paths of the code base, such as middlewares
 or route handlers. Under the hood, Dynaconf will perform a dictionary lookup
@@ -217,278 +221,6 @@ for each level of the configuration hierarchy. While it's harmless to do those
 lookups once or twice, it comes a surprisingly high overhead if accessing them
 repeatedly in the hot paths. You can cache those settings somewhere to mitigate
 this issue.</p>
-<h3 id="deployment"><a class="header" href="#deployment">Deployment</a></h3>
-<p>This group currently features a single setting:</p>
-<ul>
-<li><code>deployment.canary</code> (<code>MERINO_DEPLOYMENT__CANARY</code>) - a boolean that represents
-whether the pod running this application is deployed as a canary. The value is
-added as a constant tag <code>deployment.canary</code> with type <code>int</code> to emitted metrics.
-Note that this setting is supposed to be controlled exclusively by deployment
-tooling.</li>
-</ul>
-<h3 id="runtime-configurations"><a class="header" href="#runtime-configurations">Runtime Configurations</a></h3>
-<ul>
-<li><code>runtime.query_timeout_sec</code> (<code>MERINO_RUNTIME__QUERY_TIMEOUT_SEC</code>) - A floating
-point (in seconds) indicating the maximum waiting period for queries issued within
-the handler of the <code>suggest</code> endpoint. All the unfinished query tasks will be
-cancelled once the timeout gets triggered. Note that this timeout can also be
-configured by specific providers. The provider timeout takes precedence over this
-value.</li>
-</ul>
-<h3 id="api-configurations"><a class="header" href="#api-configurations">API Configurations</a></h3>
-<ul>
-<li>
-<p><code>default.web.api.v1.client_variant_max</code> (<code>MERINO_WEB__API__V1__CLIENT_VARIANT_MAX</code>)</p>
-</li>
-<li>
-<p>A non-negative integer to contol the limit of optional client variants passed
-to suggest endpoint as part of experiments or rollouts.  Additional validators
-can/will be implemented to ensure a limitation on the number of variants passed
-to the request. See: https://mozilla-services.github.io/merino/api.html#suggest.</p>
-</li>
-<li>
-<p><code>default.web.api.v1.query_character_max</code> (<code>MERINO_WEB__API__V1__QUERY_CHARACTER_MAX</code>)</p>
-</li>
-<li>
-<p>A non-negative integer value that is passed into the <code>max_length</code> parameter
-of the FastAPI Query object constructor.  This limits the string character length
-of a given query string, in this case the total string length count for the suggestion query.</p>
-</li>
-<li>
-<p><code>default.web.api.v1.client_variant_character_max</code> (<code>MERINO_WEB__API__V1__CLIENT_VARIANT_CHARACTER_MAX</code>)</p>
-</li>
-<li>
-<p>A non-negative integer value that is passed into the <code>max_length</code> parameter
-of the FastAPI Query object constructor.  This limits the string character length
-of a given query string, in this case the total string length count for client variants.</p>
-</li>
-</ul>
-<h3 id="logging"><a class="header" href="#logging">Logging</a></h3>
-<p>Settings to control the format and amount of logs generated.</p>
-<ul>
-<li>
-<p><code>logging.format</code> (<code>MERINO_LOGGING__FORMAT</code>) - The format to emit logs in. One of</p>
-<ul>
-<li><code>pretty</code> (default in development) - Multiple lines per event, human-oriented
-formatting and color.</li>
-<li><code>mozlog</code> (default in production) - A single line per event, formatted as
-JSON in <a href="https://wiki.mozilla.org/Firefox/Services/Logging">MozLog</a> format.</li>
-</ul>
-</li>
-<li>
-<p><code>logging.level</code> (<code>MERINO_LOGGING__LEVEL</code>) - Minimum level of logs that should
-be reported. This should be a number of <em>entries</em> separated by commas (for
-environment variables) or specified as list (TOML).</p>
-<p>Each entry can be one of <code>CRITICAL</code>, <code>ERROR</code>, <code>WARN</code>, <code>INFO</code>,  or <code>DEBUG</code> (in
-increasing verbosity).</p>
-</li>
-</ul>
-<h3 id="metrics"><a class="header" href="#metrics">Metrics</a></h3>
-<p>Settings for Statsd/Datadog style metrics reporting.</p>
-<ul>
-<li>
-<p><code>metrics.host</code> (<code>MERINO_METRICS__HOST</code>) - The IP or hostname to send metrics
-to over UDP. Defaults to localhost.</p>
-</li>
-<li>
-<p><code>metrics.port</code> (<code>MERINO_METRICS__PORT</code>) - The port to send metrics to over
-UDP. Defaults to 8092.</p>
-</li>
-<li>
-<p><code>metrics.dev_logger</code> (<code>MERINO_METRICS__DEV_LOGGER</code>) - Whether or not to send
-metrics over to the logger. Should only be used for non-production environments.</p>
-</li>
-</ul>
-<h3 id="sentry"><a class="header" href="#sentry">Sentry</a></h3>
-<p>Error reporting via Sentry.</p>
-<ul>
-<li><code>sentry.mode</code> (<code>MERINO_SENTRY__MODE</code>) - The type of Sentry integration to
-enable. One of <code>release</code>, <code>debug</code>, or <code>disabled</code>. The <code>debug</code> setting
-should only be used for local development.</li>
-</ul>
-<p>If <code>sentry.mode</code> is set to <code>release</code>, then the following two settings are
-required:</p>
-<ul>
-<li><code>sentry.dsn</code> (<code>MERINO_SENTRY__DSN</code>) - Configuration to connect to the Sentry project.</li>
-<li><code>sentry.env</code> (<code>MERINO_SENTRY__ENV</code>) - The environment to report to Sentry.
-Probably &quot;prod&quot;, &quot;stage&quot;, or &quot;dev&quot;.</li>
-</ul>
-<p>If <code>sentry.mode</code> is set to <code>disabled</code>, no Sentry integration will be activated.
-If it is set to <code>debug</code>, the DSN will be set to a testing value
-recommended by Sentry, and extra output will be included in the logs.</p>
-<h3 id="remote_settings"><a class="header" href="#remote_settings">Remote_settings</a></h3>
-<p>Connection to Remote Settings. This is used by the Remote Settings suggestion
-provider below.</p>
-<ul>
-<li>
-<p><code>remote_settings.server</code> (<code>MERINO_REMOTE_SETTINGS__SERVER</code>) - The server to
-sync from. Example: <code>https://firefox.settings.services.mozilla.com</code>.</p>
-</li>
-<li>
-<p><code>remote_settings.bucket</code> (<code>MERINO_REMOTE_SETTINGS__BUCKET</code>) -
-The bucket to use for Remote Settings providers if not specified in the
-provider config. Example: &quot;main&quot;.</p>
-</li>
-<li>
-<p><code>remote_settings.collection</code>
-(<code>MERINO_REMOTE_SETTINGS__COLLECTION</code>) - The collection to use for
-Remote Settings providers if not specified in the provider config. Example:
-&quot;quicksuggest&quot;.</p>
-</li>
-</ul>
-<h3 id="location"><a class="header" href="#location">Location</a></h3>
-<p>Configuration for determining the location of users.</p>
-<ul>
-<li><code>location.maxmind_database</code> (<code>MERINO_LOCATION__MAXMIND_DATABASE</code>) - Path to a
-MaxMind GeoIP database file.</li>
-</ul>
-<h3 id="redis"><a class="header" href="#redis"><a href="#redis">Redis</a></a></h3>
-<p>Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.</p>
-<ul>
-<li><code>redis.server</code> (<code>MERINO_REDIS__SERVER</code>) - The Redis server URL, in the form of
-<code>redis://localhost:6379</code>.</li>
-</ul>
-<h3 id="accuweather"><a class="header" href="#accuweather">AccuWeather</a></h3>
-<p>Configuration for using AccuWeather as a weather backend</p>
-<ul>
-<li><code>api_key</code> (<code>MERINO_ACCUWEATHER__API_KEY</code>) - The API key to AccuWeather's API
-endpoint. In production, this should be set via environment variable as a secret.</li>
-<li><code>url_base</code> (<code>MERINO_ACCUWEATHER__URL_BASE</code>) - The base URL of AccuWeather's
-API endpoint.</li>
-<li><code>url_param_api_key</code> (<code>MERINO_ACCUWEATHER__URL_PARAM_API_KEY</code>) - The parameter
-of the API key for AccuWeather's API endpoint.</li>
-<li><code>url_current_conditions_path</code> (<code>MERINO_ACCUWEATHER__URL_CURRENT_CONDITIONS_PATH</code>) -
-The URL path for current conditions.</li>
-<li><code>url_forecasts_path</code> (<code>MERINO_ACCUWEATHER__URL_FORECASTS_PATH</code>) - The URL path
-for forecasts.</li>
-<li><code>url_postalcodes_path</code> (<code>MERINO_ACCUWEATHER__URL_POSTALCODES_PATH</code>) - The URL path
-for postal codes.</li>
-<li><code>url_postalcodes_param_query</code> (<code>MERINO_ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY</code>) -
-The query parameter for postal codes.</li>
-<li><code>url_param_partner_code</code> (<code>MERINO_ACCUWEATHER__URL_PARAM_PARTNER_CODE</code>) -
-The query parameter for the <a href="https://apidev.accuweather.com/developers/partner-code">partner code</a>
-to append to URLs in the current conditions and forecast responses.</li>
-<li><code>partner_code</code> (<code>MERINO_ACCUWEATHER__PARTNER_CODE</code>) -
-The partner code to append to URLs in the current conditions and forecast responses.</li>
-</ul>
-<h3 id="amo-api"><a class="header" href="#amo-api">AMO API</a></h3>
-<ul>
-<li><code>api_url</code> (<code>MERINO_AMO__DYNAMIC__API_URL</code>) - the base URL of the Addons API.</li>
-</ul>
-<h3 id="provider-configuration"><a class="header" href="#provider-configuration">Provider Configuration</a></h3>
-<p>The configuration for suggestion providers.</p>
-<h4 id="adm-provider"><a class="header" href="#adm-provider">Adm Provider</a></h4>
-<p>These are production providers that generate suggestions.</p>
-<ul>
-<li>Remote Settings - Provides suggestions from a RS collection, such as the
-suggestions provided by adM. See also the top level configuration for Remote
-Settings above.
-<ul>
-<li><code>type</code> (<code>MERINO_PROVIDERS__ADM__TYPE</code>) - The type of this provider, should be <code>adm</code>.</li>
-<li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__ADM__ENABLED_BY_DEFAULT</code>) - Whether
-this provider is enabled by default.</li>
-<li><code>backend</code> (<code>MERINO_PROVIDERS__ADM__BACKEND</code>) - The backend of the provider.
-Either <code>remote-settings</code> or <code>test</code>.</li>
-<li><code>resync_interval_sec</code> (<code>MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC</code>) - The time
-between re-syncs of Remote Settings data, in seconds. Defaults to 3 hours.</li>
-<li><code>cron_interval_sec</code>
-(<code>MERINO_PROVIDERS__ADM__CRON_INTERVAL_SEC</code>) - The interval of the Remote
-Settings cron job (in seconds). Following tasks are done in this cron job:
-<ul>
-<li>Resync with Remote Settings if needed. The resync interval is configured
-separately by the provider. Note that this interval should be set smaller
-than <code>resync_interval_sec</code> of the Remote Settings leaf provider.</li>
-<li>Retry if the regular resync fails.</li>
-</ul>
-</li>
-<li><code>score</code> (<code>MERINO_PROVIDERS__ADM__SCORE</code>) - The ranking score for this provider
-as a floating point number. Defaults to 0.3.</li>
-</ul>
-</li>
-</ul>
-<h4 id="accuweather-provider"><a class="header" href="#accuweather-provider">AccuWeather Provider</a></h4>
-<ul>
-<li>AccuWeather - Provides weather suggestions &amp; forecasts.
-<ul>
-<li><code>type</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__TYPE</code>) - The type of this provider, should be
-<code>accuweather</code>.</li>
-<li><code>backend</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__backend</code>) - The backend of the provider.
-Either <code>accuweather</code> or <code>test</code>.</li>
-<li><code>cache</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__CACHE</code>) - The store used to cache weather reports.
-Either <code>redis</code> or <code>none</code>. If <code>redis</code>, the <a href="#redis">global Redis settings</a> must be set.
-Defaults to <code>none</code>.</li>
-<li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT</code>) - Whether
-this provider is enabled by default.</li>
-<li><code>score</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__SCORE</code>) - The ranking score for this provider
-as a floating point number. Defaults to 0.3.</li>
-<li><code>query_timeout_sec</code> (<code>MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC</code>) - A floating
-point (in seconds) indicating the maximum waiting period when Merino queries
-for weather forecasts. This will override the default query timeout.</li>
-</ul>
-</li>
-</ul>
-<h4 id="amo-provider"><a class="header" href="#amo-provider">AMO Provider</a></h4>
-<ul>
-<li><code>type</code> (<code>MERINO_PROVIDERS__AMO__TYPE</code>) - The type of this provider, should be <code>amo</code>.</li>
-<li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__AMO__ENABLED_BY_DEFAULT</code>) - Whether
-this provider is enabled by default. Defaults to false.</li>
-<li><code>backend</code> (<code>MERINO_PROVIDERS__AMO__BACKEND</code>) - The backend of the provider.
-Either <code>static</code> or <code>dynamic</code>.</li>
-<li><code>score</code> (<code>MERINO_PROVIDERS__AMO__SCORE</code>) - The ranking score for this provider
-as a floating point number. Defaults to 0.3.</li>
-<li><code>min_chars</code> (<code>MERINO_PROVIDERS__AMO__MIN_CHARS</code>) - The minimum number of characters
-to process a querystring.</li>
-<li><code>resync_interval_sec</code> (<code>MERINO_PROVIDERS__AMO__RESYNC_INTERVAL_SEC</code>) - The re-syncing frequency
-for the AMO data. Defaults to daily.</li>
-<li><code>cron_interval_sec</code> (<code>MERINO_PROVIDERS__AMO__CRON_INTERVAL_SEC</code>) - The frequency that the cron checks
-to see if re-syncing is required. This should be more frequent than the <code>resync_interval_sec</code> to retry
-on errors. Defaults to every minute.</li>
-</ul>
-<h4 id="top-picks-provider"><a class="header" href="#top-picks-provider">Top Picks Provider</a></h4>
-<ul>
-<li>Top Picks - Provides suggestions from a static domain list of the 1000 most visited websites.
-<ul>
-<li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__TOP_PICKS__ENABLED_BY_DEFAULT</code>) - Boolean that defines
-whether this provider is enabled by default.</li>
-<li><code>score</code> (<code>MERINO_PROVIDERS__TOP_PICKS__SCORE</code>) - The ranking score for this provider as a floating
-point number with a default set to 0.25.</li>
-<li><code>query_char_limit</code> (<code>MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT</code>) - The minimum character limit
-for a Top Picks suggestion to be indexed and query to be processed. Represented as an integer with a
-default set to 4.</li>
-<li><code>firefox_char_limit</code> (<code>MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT</code>) - The minimum character
-limit set for short suggestion indexing and for Firefox to process a query on Merino. Represented
-as an integer. Default is set to 2.</li>
-<li><code>top_picks_file_path</code> (<code>MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH</code>) - File path to the json
-file of domains, represented as a string. Either <code>dev/top_picks.json</code> in production
-or <code>tests/data/top_picks.json</code> for testing.</li>
-</ul>
-</li>
-</ul>
-<h4 id="wikipedia-dynamic-match-provider"><a class="header" href="#wikipedia-dynamic-match-provider">Wikipedia Dynamic Match Provider</a></h4>
-<ul>
-<li>Wikipedia - Provider backed by the locally indexed Wikipedia through Elasticsearch.
-<ul>
-<li><code>type</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__TYPE</code>) - The type of this provider, should be
-<code>wikipedia</code>.</li>
-<li><code>enabled_by_default</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ENABLED_BY_DEFAULT</code>) - Whether
-this provider is enabled by default.</li>
-<li><code>backend</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__backend</code>) - The backend of the provider.
-Either <code>elasticsearch</code> or <code>test</code>.</li>
-<li><code>es_url</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_URL</code>) - The URL of the cluster that we
-want to connect to.</li>
-<li><code>es_api_key</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY</code>) - The base64 key used to
-authenticate on the Elasticsearch cluster specified by <code>es_cloud_id</code>.</li>
-<li><code>es_index</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX</code>) - The index identifier
-of Wikipedia in Elasticsearch.</li>
-<li><code>es_max_suggestions</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_MAX_SUGGESTIONS</code>) - The
-maximum suggestions for each search request to Elasticsearch.</li>
-<li><code>es_request_timeout_ms</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS</code>) - The
-timeout in milliseconds for each search request to Elasticsearch.</li>
-<li><code>score</code> (<code>MERINO_PROVIDERS__WIKIPEDIA__SCORE</code>) - The ranking score for this provider
-as a floating point number. Defaults to 0.23.</li>
-</ul>
-</li>
-</ul>
 
                     </main>
 
