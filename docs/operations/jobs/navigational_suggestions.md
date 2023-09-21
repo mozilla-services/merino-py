@@ -14,15 +14,28 @@ please see the [navigational suggestions blocklist runbook][nav_sug_blocklist_ru
 Normally, the job is set as a cron to run at set intervals as a DAG in [Airflow][airflow_docs].
 There may be instances you need to manually re-run the job from the Airflow dashboard.
 
-1. Visit the [Airflow dashboard for `merino_jobs`][merino_jobs-graph].
-2. Click on the `nav_suggestions_prepare_domain_metadata_prod` task in the Graph view. Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod.
-3. Click on Clear and the executor will re-run the job.
-4. Do this for both stage and prod
+### Grid View Tab (Airflow UI)
+1. Visit the [Airflow dashboard for `merino_jobs`][merino_jobs-grid].
+2. In the Grid View Tab, select the task you want to re-run.
+3. Click on 'Clear Task' and the executor will re-run the job.
+![merino_jobs UI Diagram](dag_ui.png "merino_jobs UI Diagram")
+
+### Graph View Tab (Airflow UI)
+1b. 1. Visit the [Airflow dashboard for `merino_jobs`][merino_jobs-graph].
+2b. From the Graph View Tab, Click on the `nav_suggestions_prepare_domain_metadata_prod` task. 
+![merino_jobs Nav Suggest Graph View](nav_sug_graph_view.png "merino_jobs UI Graph View")
+3b. Click on 'Clear' and the job will re-run.
+![merino_jobs UI Task Instance Clear](task_instance_clear.png "merino_jobs UI Task Clear")
+
+Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod to verify the correction of an error. 
+
 
 See Airflow's [documentation on re-running DAGs][airflow_rerun_dag] for more information and implementation details.
 
 
 To see the code for the `merino_jobs` DAG, visit the [telemetry-airflow repo][merino_jobs_repo]. The source for the job is also in the ['code' tab][merino_jobs_code] in the airflow console.
+
+To see the navigational suggestions code that is run when the job is invoked, visit [Merino `jobs/navigational_suggestions`][nav_sug_dir].
 
 [nav_sug_blocklist_runbook]: https://github.com/mozilla-services/merino-py/blob/main/docs/operations/blocklist-nav-suggestions.md
 [nav_sug_dir]: https://github.com/mozilla-services/merino-py/tree/main/merino/jobs/navigational_suggestions
