@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Test Strategy - Merino Book</title>
+        <title>Integration Tests - Merino Book</title>
 
 
         <!-- Custom HTML head -->
@@ -80,7 +80,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item affix "><a href="../intro.html">Intro</a></li><li class="chapter-item affix "><li class="part-title">General Documentation</li><li class="chapter-item "><a href="../api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item "><a href="../firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item "><a href="../data.html"><strong aria-hidden="true">3.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="../dev/index.html"><strong aria-hidden="true">4.</strong> Working on the code</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../dev/content-moderation.html"><strong aria-hidden="true">4.1.</strong> Content Moderation</a></li><li class="chapter-item "><a href="../dev/dependencies.html"><strong aria-hidden="true">4.2.</strong> Dependencies</a></li><li class="chapter-item "><a href="../dev/logging-and-metrics.html"><strong aria-hidden="true">4.3.</strong> Logging and Metrics</a></li><li class="chapter-item "><a href="../dev/middlewares.html"><strong aria-hidden="true">4.4.</strong> Middlewares</a></li><li class="chapter-item "><a href="../dev/feature_flags.html"><strong aria-hidden="true">4.5.</strong> Feature Flags</a></li><li class="chapter-item expanded "><a href="../dev/testing.html" class="active"><strong aria-hidden="true">4.6.</strong> Test Strategy</a></li><li class="chapter-item "><a href="../dev/release-process.html"><strong aria-hidden="true">4.7.</strong> Release Process</a></li><li class="chapter-item "><a href="../dev/profiling.html"><strong aria-hidden="true">4.8.</strong> Profiling</a></li></ol></li><li class="chapter-item "><a href="../operations/index.html"><strong aria-hidden="true">5.</strong> Operations</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../operations/rollback.html"><strong aria-hidden="true">5.1.</strong> Rollback</a></li><li class="chapter-item "><a href="../operations/blocklist-nav-suggestions.html"><strong aria-hidden="true">5.2.</strong> Modify Navigational Suggestions Blocklist</a></li><li class="chapter-item "><a href="../operations/blocklist-wikipedia.html"><strong aria-hidden="true">5.3.</strong> Modify Wikipedia Suggestions Blocklist</a></li><li class="chapter-item "><a href="../operations/testfailures.html"><strong aria-hidden="true">5.4.</strong> Test Failures in CI</a></li><li class="chapter-item "><a href="../operations/configs.html"><strong aria-hidden="true">5.5.</strong> Configs</a></li><li class="chapter-item "><a href="../operations/elasticsearch.html"><strong aria-hidden="true">5.6.</strong> Elasticsearch</a></li><li class="chapter-item "><a href="../operations/jobs.html"><strong aria-hidden="true">5.7.</strong> Jobs</a></li></ol></li><li class="chapter-item "><li class="part-title">ADR</li><li class="chapter-item "><a href="../adr/index.html"><strong aria-hidden="true">6.</strong> Archive</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../adr/0001-locust-vs-k6-merino-py-performance-test-framework.html"><strong aria-hidden="true">6.1.</strong> Load Test Framework: Locust VS K6</a></li><li class="chapter-item "><a href="../adr/0002-merino-general-response.html"><strong aria-hidden="true">6.2.</strong> General API Response</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item affix "><a href="../intro.html">Intro</a></li><li class="chapter-item affix "><li class="part-title">General Documentation</li><li class="chapter-item "><a href="../api.html"><strong aria-hidden="true">1.</strong> Using the HTTP API</a></li><li class="chapter-item "><a href="../firefox.html"><strong aria-hidden="true">2.</strong> Configuring Firefox and Merino Environments</a></li><li class="chapter-item "><a href="../data.html"><strong aria-hidden="true">3.</strong> Data collection</a></li><li class="chapter-item expanded "><a href="../dev/index.html"><strong aria-hidden="true">4.</strong> Working on the Code</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../dev/content-moderation.html"><strong aria-hidden="true">4.1.</strong> Content Moderation</a></li><li class="chapter-item "><a href="../dev/dependencies.html"><strong aria-hidden="true">4.2.</strong> Dependencies</a></li><li class="chapter-item "><a href="../dev/logging-and-metrics.html"><strong aria-hidden="true">4.3.</strong> Logging and Metrics</a></li><li class="chapter-item "><a href="../dev/middlewares.html"><strong aria-hidden="true">4.4.</strong> Middlewares</a></li><li class="chapter-item "><a href="../dev/feature_flags.html"><strong aria-hidden="true">4.5.</strong> Feature Flags</a></li><li class="chapter-item "><a href="../dev/release-process.html"><strong aria-hidden="true">4.6.</strong> Release Process</a></li><li class="chapter-item "><a href="../dev/profiling.html"><strong aria-hidden="true">4.7.</strong> Profiling</a></li><li class="chapter-item expanded "><a href="../testing/index.html"><strong aria-hidden="true">4.8.</strong> Testing & Test Strategy</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../testing/unit-tests.html"><strong aria-hidden="true">4.8.1.</strong> Unit Tests</a></li><li class="chapter-item expanded "><a href="../testing/integration-tests.html" class="active"><strong aria-hidden="true">4.8.2.</strong> Integration Tests</a></li><li class="chapter-item "><a href="../testing/load-tests.html"><strong aria-hidden="true">4.8.3.</strong> Load Tests</a></li><li class="chapter-item "><a href="../testing/contract-tests/index.html"><strong aria-hidden="true">4.8.4.</strong> Contract Tests</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../testing/contract-tests/kinto-setup.html"><strong aria-hidden="true">4.8.4.1.</strong> Kinto Setup</a></li><li class="chapter-item "><a href="../testing/contract-tests/client.html"><strong aria-hidden="true">4.8.4.2.</strong> Client</a></li></ol></li></ol></li></ol></li><li class="chapter-item "><a href="../operations/index.html"><strong aria-hidden="true">5.</strong> Operations</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../operations/rollback.html"><strong aria-hidden="true">5.1.</strong> Rollback</a></li><li class="chapter-item "><a href="../operations/blocklist-nav-suggestions.html"><strong aria-hidden="true">5.2.</strong> Modify Navigational Suggestions Blocklist</a></li><li class="chapter-item "><a href="../operations/blocklist-wikipedia.html"><strong aria-hidden="true">5.3.</strong> Modify Wikipedia Suggestions Blocklist</a></li><li class="chapter-item "><a href="../operations/testfailures.html"><strong aria-hidden="true">5.4.</strong> Test Failures in CI</a></li><li class="chapter-item "><a href="../operations/configs.html"><strong aria-hidden="true">5.5.</strong> Configs</a></li><li class="chapter-item "><a href="../operations/elasticsearch.html"><strong aria-hidden="true">5.6.</strong> Elasticsearch</a></li><li class="chapter-item "><a href="../operations/jobs.html"><strong aria-hidden="true">5.7.</strong> Jobs</a></li></ol></li><li class="chapter-item "><li class="part-title">ADR</li><li class="chapter-item "><a href="../adr/index.html"><strong aria-hidden="true">6.</strong> Archive</a><a class="toggle"><div>❱</div></a></li><li><ol class="section"><li class="chapter-item "><a href="../adr/0001-locust-vs-k6-merino-py-performance-test-framework.html"><strong aria-hidden="true">6.1.</strong> Load Test Framework: Locust VS K6</a></li><li class="chapter-item "><a href="../adr/0002-merino-general-response.html"><strong aria-hidden="true">6.2.</strong> General API Response</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -141,77 +141,35 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="test-strategy"><a class="header" href="#test-strategy">Test Strategy</a></h1>
-<p>Merino is tested using a combination of functional and performance tests.</p>
-<p>Test code resides in the <code>tests</code> directory.</p>
-<h2 id="functional"><a class="header" href="#functional">Functional</a></h2>
-<p>The functional test strategy is four-tiered, composed of: unit, integration, contract
-and end-to-end testing.</p>
-<h3 id="unit-tests"><a class="header" href="#unit-tests">Unit Tests</a></h3>
-<p>The unit layer is suitable for testing complex behavior at a small scale, with
-fine-grained control over the inputs. Due to their narrow scope, unit tests are
-fundamental to thorough test coverage.</p>
-<p>To execute unit tests, use: <code>make unit-tests</code></p>
-<p>Unit tests are written and executed with pytest and are located in the <code>tests/unit</code>
-directory, using the same organizational structure as the source code of the merino
-service. Type aliases dedicated for test should be stored in the <code>types.py</code> module.
-The <code>conftest.py</code> modules contain common utilities in fixtures.</p>
-<p>For a breakdown of fixtures in use per test, use: <code>make unit-test-fixtures</code></p>
-<p>Available fixtures include:</p>
-<h4 id="filtercaplogfixture"><a class="header" href="#filtercaplogfixture">FilterCaplogFixture</a></h4>
-<p>Useful when verifying log messages, this fixture filters log records captured with
-pytest's caplog by a given <code>logger_name</code>.</p>
-<p><em><strong>Usage:</strong></em></p>
-<pre><code class="language-python">def test_with_filter_caplog(
-    caplog: LogCaptureFixture, filter_caplog: FilterCaplogFixture
-) -&gt; None:
-    records: list[LogRecord] = filter_caplog(caplog.records, &quot;merino.providers.adm&quot;)
-</code></pre>
-<p>Note: This fixture is shared with integration tests.</p>
-<h4 id="suggestionrequestfixture"><a class="header" href="#suggestionrequestfixture">SuggestionRequestFixture</a></h4>
-<p>For use when querying providers, this fixture creates a SuggestionRequest object with
-a given <code>query</code></p>
-<p><em><strong>Usage:</strong></em></p>
-<pre><code class="language-python">def test_with_suggestion_request(srequest: SuggestionRequestFixture) -&gt; None:
-    request: SuggestionRequest = srequest(&quot;example&quot;)
-    result: list[BaseSuggestion] = await provider.query(request)
-</code></pre>
-<h4 id="scopefixture-receivemockfixture--sendmockfixture"><a class="header" href="#scopefixture-receivemockfixture--sendmockfixture">ScopeFixture, ReceiveMockFixture &amp; SendMockFixture</a></h4>
-<p>For use when testing middleware, these fixtures initialize or mock the common Scope,
-Receive and Send object dependencies.</p>
-<p><em><strong>Usage:</strong></em></p>
-<pre><code class="language-python">def test_middleware(scope: Scope, receive_mock: Receive, send_mock: Send) -&gt; None:
-    pass
-</code></pre>
-<h3 id="integration-tests"><a class="header" href="#integration-tests">Integration Tests</a></h3>
-<p>The integration layer of testing allows for verification of interactions between
-service components, with lower development, maintenance and execution costs compared
-with higher level tests, such as contract tests.</p>
+                        <h1 id="integration-tests"><a class="header" href="#integration-tests">Integration Tests</a></h1>
+<p>The integration layer of testing allows for verification of interactions between service components,
+with lower development, maintenance and execution costs compared with higher level tests, such as contract tests.</p>
 <p>To execute integration tests, use: <code>make integration-tests</code></p>
-<p>Integration tests are located in the <code>tests/integration</code> directory. They use pytest and
-the FastAPI <code>TestClient</code> to send requests to specific merino endpoints and verify
-responses as well as other outputs, such as logs. Tests are organized according to the
-API path under test. Type aliases dedicated for test should be stored in the <code>types.py</code>
-module. Fake providers created for test should be stored in the <code>fake_providers.py</code>
-module. The <code>conftest.py</code> modules contain common utilities in fixtures.</p>
+<p>Integration tests are located in the <code>tests/integration</code> directory.
+They use pytest and the FastAPI <code>TestClient</code> to send requests to specific merino endpoints and verify responses as well as other outputs, such as logs.
+Tests are organized according to the API path under test.
+Type aliases dedicated for test should be stored in the <code>types.py</code> module.
+Fake providers created for test should be stored in the <code>fake_providers.py</code> module.
+The <code>conftest.py</code> modules contain common utilities in fixtures.</p>
 <p>For a breakdown of fixtures in use per test, use: <code>make integration-test-fixtures</code></p>
+<h2 id="fixtures"><a class="header" href="#fixtures">Fixtures</a></h2>
 <p>Available fixtures include:</p>
-<h4 id="filtercaplogfixture-1"><a class="header" href="#filtercaplogfixture-1">FilterCaplogFixture</a></h4>
+<h3 id="filtercaplogfixture"><a class="header" href="#filtercaplogfixture">FilterCaplogFixture</a></h3>
 <p><a href="#FilterCaplogFixture">Details</a> available in Unit Tests section</p>
-<h4 id="testclientfixture"><a class="header" href="#testclientfixture">TestClientFixture</a></h4>
+<h3 id="testclientfixture"><a class="header" href="#testclientfixture">TestClientFixture</a></h3>
 <p>This fixture creates an instance of the TestClient to be used in testing API calls.</p>
 <p><em><strong>Usage:</strong></em></p>
 <pre><code class="language-python">def test_with_test_client(client: TestClient):
     response: Response = client.get(&quot;/api/v1/endpoint&quot;)
 </code></pre>
-<h4 id="testclientwitheventsfixture"><a class="header" href="#testclientwitheventsfixture">TestClientWithEventsFixture</a></h4>
+<h3 id="testclientwitheventsfixture"><a class="header" href="#testclientwitheventsfixture">TestClientWithEventsFixture</a></h3>
 <p>This fixture creates an instance of the TestClient, that will trigger event handlers
 (i.e. <code>startup</code> and <code>shutdown</code>) to be used in testing API calls.</p>
 <p><em><strong>Usage:</strong></em></p>
 <pre><code class="language-python">def test_with_test_client_with_event(client_with_events: TestClient):
     response: Response = client_with_events.get(&quot;/api/v1/endpoint&quot;)
 </code></pre>
-<h4 id="requestsummarylogdatafixture"><a class="header" href="#requestsummarylogdatafixture">RequestSummaryLogDataFixture</a></h4>
+<h3 id="requestsummarylogdatafixture"><a class="header" href="#requestsummarylogdatafixture">RequestSummaryLogDataFixture</a></h3>
 <p>This fixture will extract the extra log data from a captured 'request.summary'
 LogRecord for verification</p>
 <p><em><strong>Usage:</strong></em></p>
@@ -227,7 +185,7 @@ LogRecord for verification</p>
     log_data: dict[str, Any] = extract_request_summary_log_data(record)
     assert log_data == expected_log_data
 </code></pre>
-<h4 id="injectprovidersfixture--providersfixture"><a class="header" href="#injectprovidersfixture--providersfixture">InjectProvidersFixture &amp; ProvidersFixture</a></h4>
+<h3 id="injectprovidersfixture--providersfixture"><a class="header" href="#injectprovidersfixture--providersfixture">InjectProvidersFixture &amp; ProvidersFixture</a></h3>
 <p>These fixture will setup and teardown given providers.</p>
 <p><em><strong>Usage:</strong></em></p>
 <p>If specifying providers for a module:</p>
@@ -240,14 +198,14 @@ def fixture_providers() -&gt; Providers:
 def test_with_provider() -&gt; None:
     pass
 </code></pre>
-<h4 id="setupprovidersfixture"><a class="header" href="#setupprovidersfixture">SetupProvidersFixture</a></h4>
+<h3 id="setupprovidersfixture"><a class="header" href="#setupprovidersfixture">SetupProvidersFixture</a></h3>
 <p>This fixture sets application provider dependency overrides.</p>
 <p><em><strong>Usage:</strong></em></p>
 <pre><code class="language-python">def test_with_setup_providers(setup_providers: SetupProvidersFixture):
     providers: dict[str, BaseProvider] = {&quot;test-provider&quot;: TestProvider()}
     setup_providers(providers)
 </code></pre>
-<h4 id="teardownprovidersfixture"><a class="header" href="#teardownprovidersfixture">TeardownProvidersFixture</a></h4>
+<h3 id="teardownprovidersfixture"><a class="header" href="#teardownprovidersfixture">TeardownProvidersFixture</a></h3>
 <p>This fixture resets application provider dependency overrides and is often used in
 teardown fixtures.</p>
 <p><em><strong>Usage:</strong></em></p>
@@ -256,33 +214,16 @@ def teardown(teardown_providers: TeardownProvidersFixture):
     yield
     teardown_providers()
 </code></pre>
-<h3 id="contract-tests"><a class="header" href="#contract-tests">Contract Tests</a></h3>
-<p>The tests in the <code>tests/contract</code> directory are contract tests
-that consume Merino's APIs using more opaque techniques. These tests run against
-a Docker container of the service, specify settings via environment variables,
-and operate on the HTTP API layer only and as such are more concerned with
-external contracts and behavior. The contract tests cannot configure the server
-per test.</p>
-<p>For more details see the README.md file in the <code>test/contract</code> directory.</p>
-<h3 id="end-to-end-tests"><a class="header" href="#end-to-end-tests">End-to-End Tests</a></h3>
-<p>The end-to-end tests are executed manually by Softvision.</p>
-<h2 id="performance"><a class="header" href="#performance">Performance</a></h2>
-<h3 id="load-tests"><a class="header" href="#load-tests">Load Tests</a></h3>
-<p>The tests in the <code>tests/load</code> directory are load tests that spawn multiple HTTP
-clients that consume Merino's API in order to simulate real-world load on the Merino
-infrastructure. These tests use the Locust framework and are triggered manually at the
-discretion of the Merino Engineering Team.</p>
-<p>For more details see the README.md file in the <code>test/load</code> directory.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../dev/feature_flags.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../testing/unit-tests.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="../dev/release-process.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="../testing/load-tests.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -292,11 +233,11 @@ discretion of the Merino Engineering Team.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../dev/feature_flags.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../testing/unit-tests.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="../dev/release-process.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="../testing/load-tests.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
