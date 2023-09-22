@@ -22,12 +22,12 @@ The functional test strategy is four-tiered, composed of:
 See documentation and repositories in each given test area for specific details on running and maintaining tests.
 
 [test_dir]: https://github.com/mozilla-services/merino-py/tree/main/tests
-[test_docs_dir]: https://github.com/mozilla-services/merino-py/tree/main/docs/testing
+[test_docs_dir]: ./index.md
 [unit_tests]: https://github.com/mozilla-services/merino-py/tree/main/tests/unit
-[unit_tests_docs]: https://github.com/mozilla-services/merino-py/tree/main/docs/testing/unit-tests.md
+[unit_tests_docs]: ./unit-tests.md
 [integration_tests]: https://github.com/mozilla-services/merino-py/tree/main/tests/integration
-[integration_tests_docs]: https://github.com/mozilla-services/merino-py/tree/main/docs/testing/integration-tests.md
+[integration_tests_docs]: ./integration-tests.md
 [contract_tests]: https://github.com/mozilla-services/merino-py/tree/main/tests/contract
-[contract_tests_docs]: https://github.com/mozilla-services/merino-py/tree/main/docs/testing/contract-tests/index.md
+[contract_tests_docs]: ./contract-tests/index.md
 [load_tests]: https://github.com/mozilla-services/merino-py/tree/main/tests/load
-[load_tests_docs]: https://github.com/mozilla-services/merino-py/tree/main/docs/testing/load-tests.md
+[load_tests_docs]: ./load-tests.md

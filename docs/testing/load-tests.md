@@ -290,5 +290,5 @@ updating the following:
 [poetry]: https://python-poetry.org/docs/
 [poetry_lock]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/poetry.lock
 [pyproject_toml]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/pyproject.toml
-[load_test_docs]: https://github.com/mozilla-services/merino-py/tree/main/docs/testing/load-tests.md
+[load_test_docs]: ./load-tests.md
 [setup_k8s]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/setup_k8s.sh
