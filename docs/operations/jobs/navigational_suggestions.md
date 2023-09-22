@@ -11,7 +11,7 @@ If needing to update the blocklist to avoid certain domains and suggestions from
 please see the [navigational suggestions blocklist runbook][nav_sug_blocklist_runbook].
 
 ## Running the job in Airflow
-Normally, the job is set as a cron to run at set intervals as a DAG in [Airflow][airflow_docs].
+Normally, the job is set as a cron to run at set intervals as a [DAG in Airflow][airflow_docs].
 There may be instances you need to manually re-run the job from the Airflow dashboard.
 
 ### Grid View Tab (Airflow UI)
@@ -39,7 +39,7 @@ To see the navigational suggestions code that is run when the job is invoked, vi
 
 [nav_sug_blocklist_runbook]: https://github.com/mozilla-services/merino-py/blob/main/docs/operations/blocklist-nav-suggestions.md
 [nav_sug_dir]: https://github.com/mozilla-services/merino-py/tree/main/merino/jobs/navigational_suggestions
-[airflow_docs]: https://airflow.apache.org/docs/apache-airflow/stable/index.htmlpublic-airflow-interface.html#dags
+[airflow_docs]: https://airflow.apache.org/docs/apache-airflow/stable/public-airflow-interface.html#dags
 [airflow_rerun_dag]: https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html#re-run-dag
 [merino_jobs_repo]: https://github.com/mozilla/telemetry-airflow/blob/main/dags/merino_jobs.py
 [merino_jobs_code]: https://workflow.telemetry.mozilla.org/dags/merino_jobs/code?root=
