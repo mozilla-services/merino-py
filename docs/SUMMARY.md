@@ -30,6 +30,7 @@
   - [Configs](./operations/configs.md)
   - [Elasticsearch](./operations/elasticsearch.md)
   - [Jobs](./operations/jobs.md)
+  - [Updating Remote Settings](./operations/jobs.md#csv-remote-settings-uploader)
 
 # ADR
 - [Archive](./adr/index.md)

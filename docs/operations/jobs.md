@@ -23,16 +23,16 @@ You can access the job in the
 The CSV remote settings uploader is a job that uploads suggestions data in a CSV
 file to remote settings. It takes two inputs:
 
-* A CSV file. The first row in the file is assumed to be a header that names
+1. A CSV file. The first row in the file is assumed to be a header that names
   the fields (columns) in the data.
-* A Python module that validates the CSV contents and describes how to convert
+2. A Python module that validates the CSV contents and describes how to convert
   it into suggestions JSON.
 
 If you're uploading suggestions from a Google sheet, you can export a CSV file
 from File > Download > Comma Separated Values (.csv). Make sure the first row in
 the sheet is a header that names the columns.
 
-### Uploading suggestions
+### Uploading suggestions (Step by step)
 
 If you're uploading a type of suggestion that the uploader already supports,
 skip to [Running the uploader](#running-the-uploader) below. If you're not sure
@@ -60,8 +60,8 @@ In the module, implement a class called `Suggestion` that derives from
 `BaseSuggestion` in `merino.jobs.csv_rs_uploader.base`. This class will be the
 model of the new suggestion type. `BaseSuggestion` itself derives from
 Pydantic's `BaseModel`, so the validation the class will perform will be based
-on [Pydantic][], which is used throughout Merino. (`BaseSuggestion` is
-implemented in `base.py`.)
+on [Pydantic][Pydantic], which is used throughout Merino. `BaseSuggestion` is
+implemented in `base.py`.
 
 [Pydantic]: https://docs.pydantic.dev/latest/usage/models/
 
@@ -75,11 +75,10 @@ module.
 
 #### 4. Add validator methods to the class
 
-Add a method annotated with `@validator` for each field. Each validator method
-should transform its field's input value into an appropriate output value and
-raise a `ValueError` if the input value is invalid. Pydantic will call these
-methods automatically as it performs validation. Their return values will be
-used as the values in the output JSON.
+Add a method annotated with Pydanyic's `@field_validator` decorator for each field.
+Each validator method should transform its field's input value into an appropriate output value and raise a `ValueError` if the input value is invalid.
+Pydantic will call these methods automatically as it performs validation.
+Their return values will be used as the values in the output JSON.
 
 `BaseSuggestion` implements two helpers you should use:
 
@@ -114,7 +113,7 @@ fail due to validation errors and missing fields (columns) in the input CSV.
   passing in a `list[dict]` instead of creating a file and passing a path, since
   it's simpler.
 * `do_error_test()` - Makes sure a given error is raised when expected. Use
-  `ValidationError` from `pydantic` to check validation errors and
+  `ValidationError` from the `pydantic` module to check validation errors and
   `MissingFieldError` from `merino.jobs.csv_rs_uploader` to check input CSV that
   is missing an expected field (column).
 
