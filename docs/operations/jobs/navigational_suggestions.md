@@ -5,7 +5,8 @@ This document provides instructions and documentation on the navigational sugges
 This job creates a file that is ingested by the Top Picks/Navigational Suggestions provider.
 The provider indexes a collection of the top 1000 searched domains and generates the `top_picks.json` file.  Then the provider backend can serve suggestions that match query terms that are searched by the client to second-level domains.
 
-If you need to run the navigational suggestions job ad-hoc, the quickest recommended solution is to run it locally and then replace the `top_picks.json` file in the Merino repo with the newly generated one.
+If you need to run the navigational suggestions job ad-hoc, the quickest recommended solution is to run it in Airflow, download the `top_picks.json` file sent by email,
+and then merge the new file into the Merino repo with the newly generated one.
 
 If needing to update the blocklist to avoid certain domains and suggestions from being displayed,
 please see the [navigational suggestions blocklist runbook][nav_sug_blocklist_runbook].
@@ -25,7 +26,9 @@ There may be instances you need to manually re-run the job from the Airflow dash
 2b. From the Graph View Tab, Click on the `nav_suggestions_prepare_domain_metadata_prod` task. 
 ![merino_jobs Nav Suggest Graph View](nav_sug_graph_view.png "merino_jobs UI Graph View")
 3b. Click on 'Clear' and the job will re-run.
-![merino_jobs UI Task Instance Clear](task_instance_clear.png "merino_jobs UI Task Clear")
+![merino_jobs UI Task Instance Clear](nav_task_instance_clear.png "merino_jobs UI Task Clear")
+
+At the conclusion of the job, you should recieve an email with a link to the newly generated file. Ensure you are a member of the `disco-team` email distro group to recieve the email.
 
 Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod to verify the correction of an error. 
 
