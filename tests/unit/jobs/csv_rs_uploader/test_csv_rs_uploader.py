@@ -163,7 +163,7 @@ def test_lowConfidenceKeywords_transform(mocker):
         csv_rows=[
             {
                 **TEST_CSV_ROW,
-                FIELD_KEYWORDS_LOW: "   AaA\n,b,\r\nCCC,  d  ,e’e",
+                FIELD_KEYWORDS_LOW: "   AaA\n,b,\r\nCCC,  d  ,aaa,e’e",
             },
         ],
         expected_suggestions=[
@@ -186,7 +186,7 @@ def test_highConfidenceKeywords_transform(mocker):
         csv_rows=[
             {
                 **TEST_CSV_ROW,
-                FIELD_KEYWORDS_HIGH: "   AaA\n,b,\r\nCCC,  d  ,e’e",
+                FIELD_KEYWORDS_HIGH: "   AaA\n,b,\r\nCCC,  d  ,aaa,e’e",
             },
         ],
         expected_suggestions=[

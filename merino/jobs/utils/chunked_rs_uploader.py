@@ -5,8 +5,16 @@ import logging
 from typing import Any
 
 import kinto_http
+from pydantic_core import Url
 
 logger = logging.getLogger(__name__)
+
+
+class _JSONEncoder(json.JSONEncoder):
+    def default(self, value):
+        if isinstance(value, Url):
+            return str(value)
+        return super().default(value)
 
 
 class _Chunk:
@@ -167,7 +175,7 @@ class ChunkedRemoteSettingsUploader:
             "id": record_id,
             "type": self.record_type,
         }
-        attachment_json = json.dumps(chunk.suggestions)
+        attachment_json = json.dumps(chunk.suggestions, cls=_JSONEncoder)
 
         logger.info(f"Uploading record: {record}")
         if not self.dry_run:

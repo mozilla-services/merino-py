@@ -35,9 +35,9 @@ class BaseSuggestion(BaseModel):
         validated list of keyword strings. Each keyword is converted to
         lowercase, some non-ASCII characters are replaced with ASCII
         equivalents that users are more likely to type, leading and trailing
-        whitespace is stripped, and all whitespace is replaced with spaces and
-        collapsed. Subclasses may call this method to validate keywords in their
-        models.
+        whitespace is stripped, all whitespace is replaced with spaces and
+        collapsed, and duplicate keywords are removed. Subclasses may call this
+        method to validate keywords in their models.
         """
         value = value.lower()
         value = re.sub(r"\s+", " ", value)
@@ -48,6 +48,8 @@ class BaseSuggestion(BaseModel):
                 map(str.strip, value.split(",")),
             )
         ]
+        # Sort the list so tests can rely on a consistent ordering.
+        keywords = sorted(list(set(keywords)))
         if not keywords or len(keywords) == 0:
             raise ValueError(f"{name} must not be empty")
         return keywords

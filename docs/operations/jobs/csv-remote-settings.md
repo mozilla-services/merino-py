@@ -72,8 +72,9 @@ Their return values will be used as the values in the output JSON.
   takes a comma-delimited string and splits it into individual keyword strings.
   Each keyword is converted to lowercase, some non-ASCII characters are replaced
   with ASCII equivalents that users are more likely to type, leading and
-  trailing whitespace is stripped, and all whitespace is replaced with spaces
-  and collapsed. Returns the list of keyword strings.
+  trailing whitespace is stripped, all whitespace is replaced with spaces and
+  collapsed, and duplicate keywords are removed. Returns the list of keyword
+  strings.
 
 #### 5. Implement the `csv_to_json()` class method
 
