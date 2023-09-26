@@ -24,11 +24,11 @@ There may be instances you need to manually re-run the job from the Airflow dash
 3. Click on 'Clear Task' and the executor will re-run the job.
 ![merino_jobs UI Diagram](dag_ui_wiki.png "merino_jobs UI Diagram")
 
-### Graph View Tab (Airflow UI)
-1b. 1. Visit the [Airflow dashboard for `merino_jobs`][merino_jobs-graph].
-2b. From the Graph View Tab, Click on the `wikipedia_indexer_build_index_production` task. 
+### Graph View Tab (Airflow UI) - Alternative
+1. Visit the [Airflow dashboard for `merino_jobs`][merino_jobs-graph].
+2. From the Graph View Tab, Click on the `wikipedia_indexer_build_index_production` task. 
 ![merino_jobs Wikipedia Indexer Graph View](wiki_graph_view.png "merino_jobs UI Graph View")
-3b. Click on 'Clear' and the job will re-run.
+3. Click on 'Clear' and the job will re-run.
 ![merino_jobs UI Task Instance Clear](wiki_task_instance_clear.png "merino_jobs UI Task Clear")
 
 Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod to verify the correction of an error. 

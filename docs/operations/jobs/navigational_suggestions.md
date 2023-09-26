@@ -21,11 +21,11 @@ There may be instances you need to manually re-run the job from the Airflow dash
 3. Click on 'Clear Task' and the executor will re-run the job.
 ![merino_jobs UI Diagram](dag_ui.png "merino_jobs UI Diagram")
 
-### Graph View Tab (Airflow UI)
-1b. 1. Visit the [Airflow dashboard for `merino_jobs`][merino_jobs-graph].
-2b. From the Graph View Tab, Click on the `nav_suggestions_prepare_domain_metadata_prod` task. 
+### Graph View Tab (Airflow UI) - Alternative
+1. Visit the [Airflow dashboard for `merino_jobs`][merino_jobs-graph].
+2. From the Graph View Tab, Click on the `nav_suggestions_prepare_domain_metadata_prod` task. 
 ![merino_jobs Nav Suggest Graph View](nav_sug_graph_view.png "merino_jobs UI Graph View")
-3b. Click on 'Clear' and the job will re-run.
+3. Click on 'Clear' and the job will re-run.
 ![merino_jobs UI Task Instance Clear](nav_task_instance_clear.png "merino_jobs UI Task Clear")
 
 At the conclusion of the job, you should recieve an email with a link to the newly generated file. Ensure you are a member of the `disco-team` email distro group to recieve the email.
