@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 from click.exceptions import BadParameter
-from pydantic import HttpUrl, ValidationError
+from pydantic import ValidationError
 
 from merino.jobs.csv_rs_uploader import MissingFieldError, upload
 from tests.unit.jobs.csv_rs_uploader.model import (
@@ -44,7 +44,7 @@ TEST_CSV_ROW = {
 }
 
 TEST_EXPECTED_SUGGESTION = {
-    "url": HttpUrl(TEST_CSV_ROW[FIELD_URL]),
+    "url": TEST_CSV_ROW[FIELD_URL],
     "title": TEST_CSV_ROW[FIELD_TITLE],
     "description": TEST_CSV_ROW[FIELD_DESC],
     "lowConfidenceKeywords": TEST_CSV_ROW[FIELD_KEYWORDS_LOW].split(","),
@@ -60,7 +60,7 @@ def expected_primary_suggestions() -> list[dict[str, Any]]:
     for s in range(PRIMARY_SUGGESTION_COUNT):
         suggestions.append(
             {
-                "url": HttpUrl(f"http://example.com/pocket-{s}"),
+                "url": f"http://example.com/pocket-{s}",
                 "title": f"Title {s}",
                 "description": f"Description {s}",
                 "lowConfidenceKeywords": [

@@ -49,7 +49,7 @@ class BaseSuggestion(BaseModel):
             )
         ]
         # Sort the list so tests can rely on a consistent ordering.
-        keywords = sorted(list(set(keywords)))
+        keywords = sorted(set(keywords))
         if not keywords or len(keywords) == 0:
             raise ValueError(f"{name} must not be empty")
         return keywords

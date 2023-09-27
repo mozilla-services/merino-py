@@ -5,16 +5,8 @@ import logging
 from typing import Any
 
 import kinto_http
-from pydantic_core import Url
 
 logger = logging.getLogger(__name__)
-
-
-class _JSONEncoder(json.JSONEncoder):
-    def default(self, value):
-        if isinstance(value, Url):
-            return str(value)
-        return super().default(value)
 
 
 class _Chunk:
@@ -54,8 +46,11 @@ class ChunkedRemoteSettingsUploader:
                 uploader.add_suggestion(s)
 
     This class can be used with any type of suggestion regardless of schema. The
-    values passed to `add_suggestion()` are simply dictionaries that can contain
-    anything.
+    values passed to `add_suggestion()` are dictionaries that can contain
+    anything. However, the dictionaries must be JSON serializable, i.e., they
+    must be able to be passed to `json.dumps()`. It's the consumer's
+    responsibility to convert unserializable dicts to serializable dicts before
+    passing them to the uploader.
 
     For each chunk, the uploader will create a record with an attachment. The
     record represents the chunk and the attachment contains the chunk's
@@ -84,6 +79,7 @@ class ChunkedRemoteSettingsUploader:
     a convenience the uploader can also delete all records of its `record_type`:
 
         uploader.delete_records()
+
     """
 
     chunk_size: int
@@ -175,7 +171,7 @@ class ChunkedRemoteSettingsUploader:
             "id": record_id,
             "type": self.record_type,
         }
-        attachment_json = json.dumps(chunk.suggestions, cls=_JSONEncoder)
+        attachment_json = json.dumps(chunk.suggestions)
 
         logger.info(f"Uploading record: {record}")
         if not self.dry_run:
