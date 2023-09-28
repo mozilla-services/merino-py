@@ -230,4 +230,4 @@ async def _upload_file_object(
             uploader.delete_records()
 
         for suggestion in suggestions:
-            uploader.add_suggestion(vars(suggestion))
+            uploader.add_suggestion(suggestion.model_dump(mode="json"))
