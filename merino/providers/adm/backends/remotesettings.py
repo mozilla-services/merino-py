@@ -12,6 +12,8 @@ from merino.exceptions import BackendError
 from merino.providers.adm.backends.protocol import SuggestionContent
 from merino.utils.http_client import create_http_client
 
+RS_CONNECT_TIMEOUT: float = 5.0
+
 RecordType = Literal["data", "icon", "offline-expansion-data"]
 
 
@@ -189,7 +191,9 @@ class RemoteSettingsBackend:
         Raises:
             RemoteSettingsError: Failed request to Remote Settings.
         """
-        async with create_http_client() as httpx_client:
+        async with create_http_client(
+            connect_timeout=RS_CONNECT_TIMEOUT
+        ) as httpx_client:
             try:
                 response: httpx.Response = await httpx_client.get(url)
                 response.raise_for_status()
