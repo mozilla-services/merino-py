@@ -1983,8 +1983,9 @@ serialized in the input data as comma-delimited strings. This helper method
 takes a comma-delimited string and splits it into individual keyword strings.
 Each keyword is converted to lowercase, some non-ASCII characters are replaced
 with ASCII equivalents that users are more likely to type, leading and
-trailing whitespace is stripped, and all whitespace is replaced with spaces
-and collapsed. Returns the list of keyword strings.</li>
+trailing whitespace is stripped, all whitespace is replaced with spaces and
+collapsed, and duplicate keywords are removed. Returns the list of keyword
+strings.</li>
 </ul>
 <h4 id="5-implement-the-csv_to_json-class-method"><a class="header" href="#5-implement-the-csv_to_json-class-method">5. Implement the <code>csv_to_json()</code> class method</a></h4>
 <p>Add a <code>@classmethod</code> to <code>Suggestion</code> called <code>csv_to_json()</code>. It should return a
