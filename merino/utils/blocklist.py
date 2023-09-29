@@ -1,3 +1,4 @@
-"""Util module containing block list for Dynamic Wikipedia provider."""
+"""Util module containing blocklists for Dynamic Wikipedia and Top Picks providers."""
 
-TITLE_BLOCKLIST: set[str] = set()
+WIKIPEDIA_TITLE_BLOCKLIST: set[str] = set()
+TOP_PICKS_BLOCKLIST: set[str] = set()

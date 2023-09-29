@@ -18,4 +18,4 @@ The next time the Wikipedia indexer job runs, this title will be excluded during
 
 *NOTE:* There are two blocklists referenced by the Wikipedia Indexer Job:
 1. `blocklist_file_url`: a key contained in the `merino/configs/default.toml` file that points to a remote block list which encapsulates blocked categories.
-2. `title_blocklist`: an application-level list of titles found at `/merino/utils/blocklist.py` as explained above.
+2. `WIKIPEDIA_TITLE_BLOCKLIST`: an application-level list of titles found at `/merino/utils/blocklist.py` as explained above.
