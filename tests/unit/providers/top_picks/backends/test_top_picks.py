@@ -13,13 +13,20 @@ from merino.config import settings
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
 
 
+@pytest.fixture(name="domain_blocklist")
+def fixture_top_picks_domain_blocklist() -> set[str]:
+    """Create domain_blocklist."""
+    return {"baddomain"}
+
+
 @pytest.fixture(name="top_picks_backend_parameters")
-def fixture_top_picks_parameters() -> dict[str, Any]:
-    """Create a Top Picks backend object for test."""
+def fixture_top_picks_backend_parameters(domain_blocklist: set[str]) -> dict[str, Any]:
+    """Define Top Picks backed parameters for test."""
     return {
         "top_picks_file_path": settings.providers.top_picks.top_picks_file_path,
         "query_char_limit": settings.providers.top_picks.query_char_limit,
         "firefox_char_limit": settings.providers.top_picks.firefox_char_limit,
+        "domain_blocklist": domain_blocklist,
     }
 
 
@@ -88,3 +95,10 @@ async def test_fetch(top_picks_backend: TopPicksBackend, attr: str) -> None:
     """Test the fetch method returns TopPickData."""
     result = await top_picks_backend.fetch()
     assert hasattr(result, attr)
+
+
+def test_domain_blocklist(
+    top_picks_backend: TopPicksBackend, domain_blocklist: set[str]
+) -> None:
+    """Test that the domain_blocklist has expected value."""
+    assert top_picks_backend.domain_blocklist == domain_blocklist
