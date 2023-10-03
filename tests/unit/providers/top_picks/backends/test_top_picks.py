@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from merino.config import settings
+from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
 
 
@@ -100,5 +101,17 @@ async def test_fetch(top_picks_backend: TopPicksBackend, attr: str) -> None:
 def test_domain_blocklist(
     top_picks_backend: TopPicksBackend, domain_blocklist: set[str]
 ) -> None:
-    """Test that the domain_blocklist has expected value."""
-    assert top_picks_backend.domain_blocklist == domain_blocklist
+    """Test that the blocked domain, while found in the processed domain data
+    is not indexed and therefore not found in any indeces.
+    """
+    domain_list: list[dict[str, Any]] = top_picks_backend.read_domain_list(
+        settings.providers.top_picks.top_picks_file_path
+    )["domains"]
+    domains: list = [domain["domain"] for domain in domain_list]
+    top_picks_data: TopPicksData = top_picks_backend.build_indices()
+
+    for blocked_domain in domain_blocklist:
+        assert blocked_domain in domains
+        assert blocked_domain not in top_picks_data.primary_index.keys()
+        assert blocked_domain not in top_picks_data.secondary_index.keys()
+        assert blocked_domain not in top_picks_data.short_domain_index.keys()
