@@ -145,7 +145,7 @@
 <h2 id="provider---rapid-blocklist-addition"><a class="header" href="#provider---rapid-blocklist-addition">Provider - Rapid Blocklist Addition</a></h2>
 <p>These steps define how to rapidly add and therefore block a Wikipedia article by its title.</p>
 <ol>
-<li>In <code>/merino/utils/blocklist.py</code>, add the matching title to <code>TITLE_BLOCK_LIST</code>.</li>
+<li>In <code>/merino/utils/blocklists.py</code>, add the matching title to <code>TITLE_BLOCK_LIST</code>.</li>
 </ol>
 <p><em>NOTE:</em> Ensure the title field is added as it appears with correct spacing between the words.
 In adding to the list, enter the title as it appears in Wikipedia.
@@ -160,7 +160,7 @@ The next time the Wikipedia indexer job runs, this title will be excluded during
 <p><em>NOTE:</em> There are two blocklists referenced by the Wikipedia Indexer Job:</p>
 <ol>
 <li><code>blocklist_file_url</code>: a key contained in the <code>merino/configs/default.toml</code> file that points to a remote block list which encapsulates blocked categories.</li>
-<li><code>title_blocklist</code>: an application-level list of titles found at <code>/merino/utils/blocklist.py</code> as explained above.</li>
+<li><code>WIKIPEDIA_TITLE_BLOCKLIST</code>: an application-level list of titles found at <code>/merino/utils/blocklists.py</code> as explained above.</li>
 </ol>
 
                     </main>

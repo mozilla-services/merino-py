@@ -597,9 +597,9 @@ In this case, suggestions are compared to a static list in the code that blocks 
 At job runtime, the indexer reads the remote blocklist and creates a set of article categories that are be excluded from indexing. </p>
 <p>The article categories in the blocklist are chosen based off of analysis and best guesses of what could be considered <em>objectionable</em> content, based off of Mozilla's values and brand image.
 Any modifications to the file should be done with careful consideration.</p>
-<p>The indexer also blocks titles that are defined in the <code>title_blocklist</code> in the application, which is referenced below.  Any title that matches this blocklist is excluded from indexing. </p>
+<p>The indexer also blocks titles that are defined in the <code>WIKIPEDIA_TITLE_BLOCKLIST</code> in the application, which is referenced below.  Any title that matches this blocklist is excluded from indexing. </p>
 <h3 id="provider"><a class="header" href="#provider">Provider</a></h3>
-<p>When queried, the Wikipedia provider reads the <code>title_blocklist</code> when creating a <code>WikipediaSuggestion</code> and if the query matches a blocked title, the suggestion is not shown to the client. </p>
+<p>When queried, the Wikipedia provider reads the <code>WIKIPEDIA_TITLE_BLOCKLIST</code> when creating a <code>WikipediaSuggestion</code> and if the query matches a blocked title, the suggestion is not shown to the client. </p>
 <p>We have this feature because the indexing job is not run daily. Therefore, we desire having an option to rapidly add to this list should we need to block a specific article. </p>
 <p>See <a href="dev/../operations/blocklist-wikipedia.html">wikipedia blocklist runbook</a> for more information.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="development-dependencies"><a class="header" href="#development-dependencies">Development Dependencies</a></h1>
@@ -1684,7 +1684,7 @@ You can also override the top picks file path using <code>--top-picks-path &lt;p
 <h2 id="provider---rapid-blocklist-addition"><a class="header" href="#provider---rapid-blocklist-addition">Provider - Rapid Blocklist Addition</a></h2>
 <p>These steps define how to rapidly add and therefore block a Wikipedia article by its title.</p>
 <ol>
-<li>In <code>/merino/utils/blocklist.py</code>, add the matching title to <code>TITLE_BLOCK_LIST</code>.</li>
+<li>In <code>/merino/utils/blocklists.py</code>, add the matching title to <code>TITLE_BLOCK_LIST</code>.</li>
 </ol>
 <p><em>NOTE:</em> Ensure the title field is added as it appears with correct spacing between the words.
 In adding to the list, enter the title as it appears in Wikipedia.
@@ -1699,7 +1699,7 @@ The next time the Wikipedia indexer job runs, this title will be excluded during
 <p><em>NOTE:</em> There are two blocklists referenced by the Wikipedia Indexer Job:</p>
 <ol>
 <li><code>blocklist_file_url</code>: a key contained in the <code>merino/configs/default.toml</code> file that points to a remote block list which encapsulates blocked categories.</li>
-<li><code>title_blocklist</code>: an application-level list of titles found at <code>/merino/utils/blocklist.py</code> as explained above.</li>
+<li><code>WIKIPEDIA_TITLE_BLOCKLIST</code>: an application-level list of titles found at <code>/merino/utils/blocklists.py</code> as explained above.</li>
 </ol>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="what-to-do-with-test-failures-in-ci"><a class="header" href="#what-to-do-with-test-failures-in-ci">What to do with test failures in CI?</a></h1>
 <ol>
