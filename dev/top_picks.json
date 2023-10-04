@@ -2579,7 +2579,7 @@
                 "Ecommerce"
             ],
             "url": "https://www.samsclub.com",
-            "title": "Samsclub",
+            "title": "Sam's Club - Wholesale Prices on Top Brands",
             "icon": "https://merino-images.services.mozilla.com/favicons/66e4a6934dc13359717a2caf7c25f4f052af213bfc97639381151610458fcc48_2457.svg"
         },
         {
@@ -3027,7 +3027,7 @@
                 "Sports"
             ],
             "url": "https://si.com",
-            "title": "si.com",
+            "title": "Sports Illustrated",
             "icon": "https://merino-images.services.mozilla.com/favicons/aad29e14fc9754a977caeee3e2884e0c930863c43fec04a4da39bf5fc663b707_7664.png"
         },
         {
@@ -3310,7 +3310,7 @@
                 "Video Streaming"
             ],
             "url": "https://thestreet.com",
-            "title": "thestreet.com",
+            "title": "Stock Market - Business News, Market Data, Stock Analysis - TheStreet",
             "icon": ""
         },
         {
@@ -3848,7 +3848,7 @@
                 "News & Media"
             ],
             "url": "https://parade.com",
-            "title": "parade.com",
+            "title": "Parade: Entertainment, Recipes, Health, Life, Holidays",
             "icon": "https://merino-images.services.mozilla.com/favicons/fd99beca89b7729895cdf3f640353e448b1443a726298e590a48c7d0c65c22c3_9892.png"
         },
         {
@@ -6316,7 +6316,7 @@
                 "Travel"
             ],
             "url": "https://www.alaskaair.com",
-            "title": "Alaskaair",
+            "title": "Alaska Airlines - Flight Deals and Cheap Airline Tickets - Book Today",
             "icon": ""
         },
         {
@@ -7239,8 +7239,8 @@
             "categories": [
                 "Ecommerce"
             ],
-            "url": "https://beta.govdeals.com",
-            "title": "Home",
+            "url": "https://www.govdeals.com",
+            "title": "Government Surplus Auctions - govdeals.com",
             "icon": ""
         },
         {
