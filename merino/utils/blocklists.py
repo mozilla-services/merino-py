@@ -9,4 +9,6 @@ TOP_PICKS_BLOCKLIST: set[str] = {
     "megapersonals",
     "4channel",
     "thegatewaypundit",
+    "winloot",
+    "sniffies",
 }
