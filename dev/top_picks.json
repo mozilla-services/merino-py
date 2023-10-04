@@ -1309,7 +1309,7 @@
             "categories": [
                 "Search Engines"
             ],
-            "url": "https://block.fiverr.com",
+            "url": "https://fiverr.com",
             "title": "Fiverr",
             "icon": "https://merino-images.services.mozilla.com/favicons/39251131bafa9aa3b3f3e5ee89b6a64140cfcd1ebc68e159b74102bdfa898e09_15406.oct"
         },
@@ -1616,7 +1616,7 @@
                 "Travel"
             ],
             "url": "https://www.expedia.com",
-            "title": "Bot or Not?",
+            "title": "Expedia Travel: Vacation Homes, Hotels, Car Rentals, Flights & More",
             "icon": "https://merino-images.services.mozilla.com/favicons/39c5ac0c0fc5052a4ca22e986d1e444bb4ca4daf021f366e19a585c3a32ac811_15086.ico"
         },
         {
@@ -1645,9 +1645,9 @@
             "categories": [
                 "Real Estate"
             ],
-            "url": "https://ratelimited.redfin.com",
-            "title": "Too Many Requests | Redfin",
-            "icon": ""
+            "url": "https://www.redfin.com",
+            "title": "Real Estate, Homes for Sale, MLS Listings, Agents | Redfin",
+            "icon": "https://merino-images.services.mozilla.com/favicons/4c87835218666170f45defc8801144c0cfca0351b1beb7deb1bd8a619d41ff48_2898.png"
         },
         {
             "rank": 161,
@@ -2048,8 +2048,8 @@
             "categories": [
                 "Auctions & Marketplaces"
             ],
-            "url": "https://portland.craigslist.org",
-            "title": "craigslist: portland jobs, apartments, for sale, services, community, and events",
+            "url": "https://craigslist.org",
+            "title": "craigslist: jobs, apartments, for sale, services, community, and events",
             "icon": ""
         },
         {
@@ -2705,7 +2705,7 @@
                 "Travel"
             ],
             "url": "https://www.hotels.com",
-            "title": "Bot or Not?",
+            "title": "Hotels.com - Deals & Discounts for Hotel Reservations from Luxury Hotels to Budget Accommodations",
             "icon": "https://merino-images.services.mozilla.com/favicons/cfb4c1ccfe8dfbefc4373b2eaf249e5c453ff883ba7d34394a8783af59c82435_15086.ico"
         },
         {
@@ -3153,7 +3153,7 @@
                 "Travel"
             ],
             "url": "https://www.vrbo.com",
-            "title": "Bot or Not?",
+            "title": "Vrbo | Book your vacation rentals: beach houses, cabins, condos & more",
             "icon": ""
         },
         {
@@ -5280,7 +5280,7 @@
                 "Music"
             ],
             "url": "https://rateyourmusic.com",
-            "title": "IP blocked",
+            "title": "Rate Your Music",
             "icon": "https://merino-images.services.mozilla.com/favicons/91c7e5f4ba26a58667712a086c0f8ac1e409096b91fa899918e2b0cead3a6451_34303.png"
         },
         {
@@ -5388,7 +5388,7 @@
                 "Technology"
             ],
             "url": "https://pcpartpicker.com",
-            "title": "Unavailable",
+            "title": "Pick parts. Build your PC. Compare and share. - PCPartPicker",
             "icon": ""
         },
         {
@@ -6108,7 +6108,7 @@
                 "Ecommerce"
             ],
             "url": "https://www.joann.com",
-            "title": "Are You A Bot?",
+            "title": "Shop the JOANN fabric and craft store online to stock up for any project.",
             "icon": ""
         },
         {
