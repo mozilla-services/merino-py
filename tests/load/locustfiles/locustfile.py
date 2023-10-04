@@ -30,6 +30,7 @@ from merino.providers.adm.backends.remotesettings import (
 from merino.providers.amo.addons_data import ADDON_KEYWORDS
 from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
+from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 from merino.utils.version import Version
 from merino.web.models_v1 import SuggestResponse
 from tests.load.common.client_info import DESKTOP_FIREFOX, LOCALES
@@ -125,6 +126,7 @@ def on_locust_test_start(environment, **kwargs) -> None:
             top_picks_file_path=MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH,
             query_char_limit=MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT,
             firefox_char_limit=MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT,
+            domain_blocklist=TOP_PICKS_BLOCKLIST,
         )
 
         logger.info(f"Download {len(query_data.top_picks)} queries for Top Picks")
@@ -200,7 +202,10 @@ def get_amo_queries() -> list[str]:
 
 
 def get_top_picks_queries(
-    top_picks_file_path: str | None, query_char_limit: int, firefox_char_limit: int
+    top_picks_file_path: str | None,
+    query_char_limit: int,
+    firefox_char_limit: int,
+    domain_blocklist: set[str],
 ) -> QueriesList:
     """Get query strings for use in testing the Top Picks Provider.
 
@@ -217,7 +222,7 @@ def get_top_picks_queries(
         TopPicksError: If the top picks file path cannot be opened or decoded
     """
     backend: TopPicksBackend = TopPicksBackend(
-        top_picks_file_path, query_char_limit, firefox_char_limit
+        top_picks_file_path, query_char_limit, firefox_char_limit, domain_blocklist
     )
     data: TopPicksData = asyncio.run(backend.fetch())
 

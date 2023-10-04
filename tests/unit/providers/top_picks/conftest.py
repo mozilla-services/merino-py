@@ -12,13 +12,20 @@ from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider
 
 
+@pytest.fixture(name="domain_blocklist")
+def fixture_top_picks_domain_blocklist() -> set[str]:
+    """Create domain_blocklist."""
+    return {"baddomain"}
+
+
 @pytest.fixture(name="top_picks_backend_parameters")
-def fixture_top_picks_backend_parameters() -> dict[str, Any]:
+def fixture_top_picks_backend_parameters(domain_blocklist: set[str]) -> dict[str, Any]:
     """Define Top Picks backed parameters for test."""
     return {
         "top_picks_file_path": settings.providers.top_picks.top_picks_file_path,
         "query_char_limit": settings.providers.top_picks.query_char_limit,
         "firefox_char_limit": settings.providers.top_picks.firefox_char_limit,
+        "domain_blocklist": domain_blocklist,
     }
 
 

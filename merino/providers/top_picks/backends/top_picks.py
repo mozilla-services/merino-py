@@ -21,6 +21,7 @@ class TopPicksBackend:
         top_picks_file_path: str | None,
         query_char_limit: int,
         firefox_char_limit: int,
+        domain_blocklist: set[str],
     ) -> None:
         """Initialize Top Picks backend.
 
@@ -33,6 +34,7 @@ class TopPicksBackend:
         self.top_picks_file_path = top_picks_file_path
         self.query_char_limit = query_char_limit
         self.firefox_char_limit = firefox_char_limit
+        self.domain_blocklist = {entry.lower() for entry in domain_blocklist}
 
     async def fetch(self) -> TopPicksData:
         """Fetch Top Picks suggestions from domain list.
@@ -77,7 +79,10 @@ class TopPicksBackend:
 
         for record in domain_list["domains"]:
             index_key: int = len(results)
-            domain = record["domain"].strip().lower()
+            domain: str = record["domain"].strip().lower()
+
+            if domain in self.domain_blocklist:
+                continue
 
             if len(domain) > query_max:
                 query_max = len(domain)

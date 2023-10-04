@@ -26,7 +26,7 @@ from merino.providers.weather.provider import Provider as WeatherProvider
 from merino.providers.wikipedia.backends.elastic import ElasticBackend
 from merino.providers.wikipedia.backends.fake_backends import FakeWikipediaBackend
 from merino.providers.wikipedia.provider import Provider as WikipediaProvider
-from merino.utils.blocklist import TITLE_BLOCKLIST
+from merino.utils.blocklists import TOP_PICKS_BLOCKLIST, WIKIPEDIA_TITLE_BLOCKLIST
 from merino.utils.http_client import create_http_client
 
 
@@ -116,6 +116,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     top_picks_file_path=setting.top_picks_file_path,
                     query_char_limit=setting.query_char_limit,
                     firefox_char_limit=setting.firefox_char_limit,
+                    domain_blocklist=TOP_PICKS_BLOCKLIST,
                 ),
                 score=setting.score,
                 name=provider_id,
@@ -131,7 +132,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 )  # type: ignore [arg-type]
                 if setting.backend == "elasticsearch"
                 else FakeWikipediaBackend(),
-                title_block_list=TITLE_BLOCKLIST,
+                title_block_list=WIKIPEDIA_TITLE_BLOCKLIST,
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,

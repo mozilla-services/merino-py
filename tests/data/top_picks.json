@@ -62,6 +62,20 @@
                 "acbc",
                 "aecbc"
             ]
+        },
+        {
+            "rank": 5,
+            "title": "BadDomain",
+            "domain": "baddomain",
+            "url": "https://baddomain.test",
+            "icon": "",
+            "categories": [
+                "web-browser"
+            ],
+            "similars": [
+                "bad",
+                "badd"
+            ]
         }
     ]
 }
