@@ -1,9 +1,15 @@
 """A wrapper for Top Picks Provider I/O Interactions"""
 import asyncio
+import re
 import json
 from collections import defaultdict
+from datetime import date, datetime
 from json import JSONDecodeError
-from typing import Any
+from pydantic import BaseModel
+from typing import Any, Pattern
+
+from google.cloud.storage import Blob, Client
+from google.cloud.storage.fileio import BlobReader, BlobWriter
 
 from merino.exceptions import BackendError
 from merino.providers.top_picks.backends.protocol import TopPicksData
@@ -11,6 +17,63 @@ from merino.providers.top_picks.backends.protocol import TopPicksData
 
 class TopPicksError(BackendError):
     """Error during interaction with Top Picks data."""
+
+
+class TopPicksFilemanager(BaseModel):
+    """Tools for processing remote and local Top Picks data."""
+
+    client: Client
+    gcs_bucket_path: str
+    file_pattern: Pattern
+    update_cadence: 
+
+    def __init__(
+        self,
+        gcs_project_path: str,
+        gcs_bucket_path: str,
+    ) -> None:
+        self.client = Client(gcs_project_path)
+        self.gcs_bucket_path = gcs_bucket_path
+        self.file_pattern = re.compile(r".0_top_picks_latest.json")
+
+    def _parse_date(self, blob: Blob) -> date | None:
+        """Parse the date metadata from the file."""
+        metadata: dict | None = blob.metadata
+        if not metadata:
+            raise TopPicksError(f"Cannot parse metadata")
+        if (generation_date := metadata.get("generation")) is not None:
+            return date.fromtimestamp(generation_date)
+
+    def _get_remote_file(self, gcs_bucket_path: str, file: str) -> Any:
+        """Read remote domain list file.
+
+        Raises:
+            TopPicksError: If the top picks file cannot be accessed.
+        """
+
+        bucket = self.client.get_bucket(gcs_bucket_path)
+        blob: Blob = bucket.blob(file)
+        blob_date: date | None = self._parse_date(blob=blob)
+        if (datetime.now() - blob_date).days > 7:
+            return
+
+        content = blob.download_as_text()
+        return content
+
+    def _get_local_file(self, file: str) -> dict[str, Any]:
+        """Read local domain list file.
+
+        Raises:
+            TopPicksError: If the top picks file path cannot be opened or decoded.
+        """
+        try:
+            with open(file, "r") as readfile:
+                domain_list: dict = json.load(readfile)
+                return domain_list
+        except OSError as os_error:
+            raise TopPicksError(f"Cannot open file '{file}'") from os_error
+        except JSONDecodeError as json_error:
+            raise TopPicksError(f"Cannot decode file '{file}'") from json_error
 
 
 class TopPicksBackend:
