@@ -1,12 +1,9 @@
 """CLI commands for the navigational_suggestions module"""
 import json
 import logging
-from ctypes import ArgumentError
-from enum import Enum
 from typing import Optional
 
 import typer
-from typing_extensions import Annotated
 
 from merino.config import settings as config
 from merino.jobs.navigational_suggestions.domain_data_downloader import (
@@ -21,7 +18,7 @@ from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
 from merino.jobs.navigational_suggestions.utils import (
     update_top_picks_with_firefox_favicons,
 )
-
+from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +116,9 @@ def prepare_domain_metadata(
     logger.info("domain data download complete")
 
     # extract domain metadata of top domains
-    domain_metadata_extractor = DomainMetadataExtractor()
+    domain_metadata_extractor = DomainMetadataExtractor(
+        blocked_domains=TOP_PICKS_BLOCKLIST
+    )
     domain_metadata: list[
         dict[str, Optional[str]]
     ] = domain_metadata_extractor.get_domain_metadata(domain_data, min_favicon_width)

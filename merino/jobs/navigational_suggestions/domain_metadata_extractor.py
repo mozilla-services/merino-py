@@ -171,12 +171,13 @@ class DomainMetadataExtractor:
 
     def __init__(
         self,
+        blocked_domains: set[str],
         scraper: Scraper = Scraper(),
         favicon_downloader: FaviconDownloader = FaviconDownloader(),
     ) -> None:
         self.scraper = scraper
         self.favicon_downloader = favicon_downloader
-        self.blocked_domains = load_blocklist()
+        self.blocked_domains = blocked_domains
 
     def _get_base_url(self, url: str) -> str:
         """Return base url from a given full url"""
