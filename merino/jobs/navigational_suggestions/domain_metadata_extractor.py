@@ -14,7 +14,6 @@ from merino.jobs.navigational_suggestions.utils import (
     TIMEOUT,
     FaviconDownloader,
     FaviconImage,
-    load_blocklist,
     requests_get,
 )
 

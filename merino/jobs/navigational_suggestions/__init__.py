@@ -19,10 +19,9 @@ from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
 from merino.jobs.navigational_suggestions.utils import (
-    load_blocklist,
     update_top_picks_with_firefox_favicons,
-    write_blocklist,
 )
+
 
 logger = logging.getLogger(__name__)
 
