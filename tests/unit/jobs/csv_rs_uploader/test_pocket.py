@@ -37,14 +37,14 @@ def test_upload(mocker):
                 FIELD_URL: "http://example.com/pocket/0",
                 FIELD_TITLE: "Title 0",
                 FIELD_DESC: "Description 0",
-                FIELD_KEYWORDS_LOW: "a,b,c",
+                FIELD_KEYWORDS_LOW: "a,b,c, AaA ,BBB, ccC ",
                 FIELD_KEYWORDS_HIGH: "aaa,bbb,ccc",
             },
             {
                 FIELD_URL: "http://example.com/pocket/1",
                 FIELD_TITLE: "      Title\n\r 1 \n",
                 FIELD_DESC: "      Description\n\t 1\r\n ",
-                FIELD_KEYWORDS_LOW: "  X  , Y , Z",
+                FIELD_KEYWORDS_LOW: "  X  , Y , Z,xxx,yyy,zzz",
                 FIELD_KEYWORDS_HIGH: "  XxX  , yYy , ZZZ   ",
             },
         ],
@@ -121,6 +121,23 @@ def test_lowConfidenceKeywords_empty(mocker):
             {
                 **TEST_CSV_ROW,
                 FIELD_KEYWORDS_LOW: "",
+            },
+        ],
+        expected_error=ValidationError,
+    )
+
+
+def test_lowConfidenceKeywords_empty_high_dupes(mocker):
+    """A lowConfidenceKeywords that becomes empty after removing keywords that
+    are present in highConfidenceKeywords should raise a ValidationError
+    """
+    do_error_test(
+        mocker,
+        model_name=MODEL_NAME,
+        csv_rows=[
+            {
+                **TEST_CSV_ROW,
+                FIELD_KEYWORDS_LOW: TEST_CSV_ROW[FIELD_KEYWORDS_HIGH],
             },
         ],
         expected_error=ValidationError,

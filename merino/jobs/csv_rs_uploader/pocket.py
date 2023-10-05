@@ -1,7 +1,7 @@
 """Pydantic model for Pocket suggestions as they should be serialized in the
 output JSON.
 """
-from pydantic import HttpUrl, field_validator
+from pydantic import HttpUrl, field_validator, model_validator
 
 from merino.jobs.csv_rs_uploader.base import BaseSuggestion
 
@@ -59,3 +59,21 @@ class Suggestion(BaseSuggestion):
     def validate_highConfidenceKeywords(cls, value):
         """Validate highConfidenceKeywords"""
         return cls._validate_keywords(cls, value, "highConfidenceKeywords")
+
+    @model_validator(mode="after")
+    def validate_model(self) -> "Suggestion":
+        """Validate model"""
+        # Make sure low- and high-confidence keywords are disjoint by removing
+        # keywords from low that are also present in high.
+        low = set(self.lowConfidenceKeywords)
+        high = set(self.highConfidenceKeywords)
+        low -= high
+        if len(low) == 0:
+            raise ValueError(
+                f"lowConfidenceKeywords became empty after removing keywords "
+                f"that are also present in highConfidenceKeywords: {self}"
+            )
+        # Sort the lists so tests can rely on a consistent ordering.
+        self.lowConfidenceKeywords = sorted(low)
+        self.highConfidenceKeywords = sorted(high)
+        return self
