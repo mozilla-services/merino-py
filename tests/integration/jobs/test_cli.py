@@ -34,7 +34,12 @@ def test_cli_help_shows_commands(command_name):
     argnames=["command_name", "subcommand_names"],
     argvalues=[
         ["wikipedia-indexer", ["index", "copy-export"]],
-        ["navigational-suggestions", ["prepare-domain-metadata", "blocklist"]],
+        [
+            "navigational-suggestions",
+            [
+                "prepare-domain-metadata",
+            ],
+        ],
     ],
 )
 def test_cli_help_shows_sub_commands(command_name, subcommand_names):

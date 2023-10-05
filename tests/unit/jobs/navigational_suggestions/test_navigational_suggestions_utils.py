@@ -7,7 +7,6 @@
 from merino.jobs.navigational_suggestions.utils import (
     REQUEST_HEADERS,
     FaviconDownloader,
-    load_blocklist,
     update_top_picks_with_firefox_favicons,
 )
 
@@ -96,10 +95,3 @@ def test_favicon_downloader(requests_mock):
     assert favicon is not None
     assert favicon.content == b"1"
     assert favicon.content_type == "image/x-icon"
-
-
-def test_load_blocklist():
-    """Test load blocklist functionality"""
-    blocklist_path = "tests/data/domain_blocklist.json"
-    blocklist = load_blocklist(blocklist_path)
-    assert {"foo", "bar"} == blocklist
