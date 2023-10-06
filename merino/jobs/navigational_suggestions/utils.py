@@ -1,8 +1,5 @@
 """Utilities for navigational suggestions job"""
-
-import json
 import logging
-import os
 
 import requests
 from pydantic import BaseModel
@@ -96,27 +93,3 @@ def update_top_picks_with_firefox_favicons(
         firefox_favicon: str | None = FIREFOX_PACKAGED_FAVICONS.get(domain)
         if firefox_favicon:
             domain_metadata["icon"] = firefox_favicon
-
-
-def _blocklist_path() -> str:
-    return os.path.join(
-        os.path.dirname(__file__),
-        "data/domain_blocklist.json",
-    )
-
-
-def load_blocklist(path: str | None = None) -> set[str]:
-    """Load the blocklist into a set."""
-    if path is None:
-        path = _blocklist_path()
-    with open(path, "r") as fp:
-        domains = json.load(fp)
-        return {domain for domain in domains}
-
-
-def write_blocklist(blocklist: set[str], path: str | None = None):
-    """Write the blocklist set to a file."""
-    if path is None:
-        path = _blocklist_path()
-    with open(path, "w") as fp:
-        json.dump([domain for domain in blocklist], fp, indent=2)

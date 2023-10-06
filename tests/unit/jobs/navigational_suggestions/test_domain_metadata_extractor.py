@@ -543,15 +543,15 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
             FaviconImage(content=b"\\x00", content_type="image/x-icon"),
         ],
         [(32, 32)],
-        "https://megapersonals.eu/favicon.ico",
-        "https://megapersonals.eu",
+        "https://foo.eu/favicon.ico",
+        "https://foo.eu",
         "dummy_title",
         [
             {
                 "rank": 821,
-                "domain": "megapersonals.eu",
-                "host": "megapersonals.eu",
-                "origin": "https://megapersonals.eu",
+                "domain": "foo.eu",
+                "host": "foo.eu",
+                "origin": "https://foo.eu",
                 "suffix": "eu",
                 "categories": ["Food & Drink"],
             },
@@ -566,6 +566,12 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ],
     ),
 ]
+
+
+@pytest.fixture(name="domain_blocklist")
+def fixture_domain_blocklist() -> set[str]:
+    """Domain blocklist fixture."""
+    return {"foo", "bar"}
 
 
 @pytest.mark.parametrize(
@@ -610,6 +616,7 @@ def test_get_domain_metadata(
     scraped_title: str | None,
     domains_data: list[dict[str, Any]],
     expected_domain_metadata: list[str],
+    domain_blocklist: set[str],
 ) -> None:
     """Test that DomainMetadataExtractor returns favicons as expected"""
     scraper_mock: Any = mocker.Mock(spec=Scraper)
@@ -635,7 +642,9 @@ def test_get_domain_metadata(
     ).open.return_value.__enter__.side_effect = images_mock
 
     metadata_extractor: DomainMetadataExtractor = DomainMetadataExtractor(
-        scraper=scraper_mock, favicon_downloader=favicon_downloader_mock
+        blocked_domains=domain_blocklist,
+        scraper=scraper_mock,
+        favicon_downloader=favicon_downloader_mock,
     )
 
     domain_metadata: list[
