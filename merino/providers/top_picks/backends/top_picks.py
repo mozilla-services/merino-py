@@ -1,15 +1,15 @@
 """A wrapper for Top Picks Provider I/O Interactions"""
 import asyncio
-import re
 import json
+import re
 from collections import defaultdict
 from datetime import date, datetime
 from json import JSONDecodeError
-from pydantic import BaseModel
 from typing import Any, Pattern
 
 from google.cloud.storage import Blob, Client
 from google.cloud.storage.fileio import BlobReader, BlobWriter
+from pydantic import BaseModel
 
 from merino.exceptions import BackendError
 from merino.providers.top_picks.backends.protocol import TopPicksData
@@ -19,13 +19,13 @@ class TopPicksError(BackendError):
     """Error during interaction with Top Picks data."""
 
 
-class TopPicksFilemanager(BaseModel):
+class TopPicksFilemanager:
     """Tools for processing remote and local Top Picks data."""
 
     client: Client
     gcs_bucket_path: str
     file_pattern: Pattern
-    update_cadence: 
+    update_cadence: int
 
     def __init__(
         self,
@@ -54,7 +54,7 @@ class TopPicksFilemanager(BaseModel):
         bucket = self.client.get_bucket(gcs_bucket_path)
         blob: Blob = bucket.blob(file)
         blob_date: date | None = self._parse_date(blob=blob)
-        if (datetime.now() - blob_date).days > 7:
+        if (datetime.now() - blob_date.days) > 7:
             return
 
         content = blob.download_as_text()
