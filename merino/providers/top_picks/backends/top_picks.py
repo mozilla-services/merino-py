@@ -1,18 +1,20 @@
 """A wrapper for Top Picks Provider I/O Interactions"""
 import asyncio
 import json
-import re
+import logging
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import datetime
 from json import JSONDecodeError
-from typing import Any, Pattern
+from typing import Any
 
 from google.cloud.storage import Blob, Client
-from google.cloud.storage.fileio import BlobReader, BlobWriter
-from pydantic import BaseModel
 
+from merino import cron
+from merino.config import settings
 from merino.exceptions import BackendError
 from merino.providers.top_picks.backends.protocol import TopPicksData
+
+logger = logging.getLogger(__name__)
 
 
 class TopPicksError(BackendError):
@@ -24,41 +26,82 @@ class TopPicksFilemanager:
 
     client: Client
     gcs_bucket_path: str
-    file_pattern: Pattern
     update_cadence: int
 
     def __init__(
         self,
         gcs_project_path: str,
         gcs_bucket_path: str,
+        static_file_path: str,
+        resync_interval_sec: float,
+        cron_interval_sec: float,
     ) -> None:
         self.client = Client(gcs_project_path)
         self.gcs_bucket_path = gcs_bucket_path
-        self.file_pattern = re.compile(r".0_top_picks_latest.json")
+        self.static_file_path = static_file_path
+        self.resync_interval_sec = resync_interval_sec
+        self.cron_interval_sec = cron_interval_sec
 
-    def _parse_date(self, blob: Blob) -> date | None:
-        """Parse the date metadata from the file."""
-        metadata: dict | None = blob.metadata
-        if not metadata:
-            raise TopPicksError(f"Cannot parse metadata")
-        if (generation_date := metadata.get("generation")) is not None:
-            return date.fromtimestamp(generation_date)
+    async def initialize(self) -> None:
+        """Initialize cron job to check whether or not to update domain file."""
+        try:
+            await self.get_remote_file(
+                gcs_bucket_path=self.gcs_bucket_path,
+                file="1695706860000.0_top_picks.json",
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch domain file from GCS, will retry shortly.",
+                extra={"error message": f"{e}"},
+            )
+            # Set the last fetch timestamp to 0 so that the cron job will retry
+            # the fetch upon the next tick.
+            self.last_fetch_at = 0
 
-    def _get_remote_file(self, gcs_bucket_path: str, file: str) -> Any:
+        # Run a cron job that will periodically check whether to update domain file.
+        cron_job = cron.Job(
+            name="resync_domain_file",
+            interval=self.cron_interval_sec,
+            condition=self._should_update,
+            task=self.get_remote_file,  # type: ignore [arg-type]
+        )
+        # Store the created task on the instance variable. Otherwise it will get
+        # garbage collected because asyncio's runtime only holds a weak
+        # reference to it.
+        self.cron_task = asyncio.create_task(cron_job())
+
+    def _parse_date(self, blob: Blob) -> datetime | None:
+        """Parse the datetime metadata from the file."""
+        try:
+            metadata: int | None = blob.generation
+        except AttributeError as e:
+            logger.error(
+                f"Cannot parse date, generation attribute not found for {blob}: {e}"
+            )
+            return None
+        if (generation_date := metadata) is not None:
+            return datetime.fromtimestamp(int(generation_date / 1000))
+
+    def _should_update(self) -> bool:
+        """Determine if a more recent file should be requested."""
+        return True
+
+    async def get_remote_file(
+        self, gcs_bucket_path: str, file: str | None
+    ) -> tuple[dict, datetime | None, datetime]:
         """Read remote domain list file.
 
         Raises:
             TopPicksError: If the top picks file cannot be accessed.
+        Returns:
+            Dictionary containing domain list
         """
-
         bucket = self.client.get_bucket(gcs_bucket_path)
         blob: Blob = bucket.blob(file)
-        blob_date: date | None = self._parse_date(blob=blob)
-        if (datetime.now() - blob_date.days) > 7:
-            return
-
-        content = blob.download_as_text()
-        return content
+        blob_date: datetime | None = self._parse_date(blob=blob)
+        current_date: datetime = datetime.now()
+        file_contents: dict = json.loads(blob.download_as_text())
+        return (file_contents, blob_date, current_date)
 
     def _get_local_file(self, file: str) -> dict[str, Any]:
         """Read local domain list file.
@@ -200,6 +243,14 @@ class TopPicksBackend:
 
     def build_indices(self) -> TopPicksData:
         """Read domain file, create indices and suggestions"""
+        filemanager: TopPicksFilemanager = TopPicksFilemanager(
+            settings.providers.top_picks.gcs_project,
+            settings.providers.top_picks.gcs_bucket,
+            settings.providers.top_picks.top_picks_file_path,
+            settings.providers.top_picks.resync_interval_sec,
+            settings.providers.top_picks.cron_interval_sec,
+        )
+
         domains: dict[str, Any] = self.read_domain_list(self.top_picks_file_path)
         index_results: TopPicksData = self.build_index(domains)
         return index_results

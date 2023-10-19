@@ -302,7 +302,7 @@ backend = "remote-settings"
 # The interval of the RemoteSettings cron job (in seconds)
 # The cron job should tick more frequently than `resync_interval_sec` so that
 # the resync failure can be retried soon.
-cron_interval_sec = 60
+cron_interval_sec = 6000
 
 # MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC
 # Time between re-syncs of Remote Settings data, in seconds. Defaults to 3 hours.
@@ -379,6 +379,28 @@ firefox_char_limit = 2
 # File path to the json file of domains, represented as a string.
 # Either `dev/top_picks.json` in production or `tests/data/top_picks.json` for testing.
 top_picks_file_path = "dev/top_picks.json"
+
+# MERINO_PROVIDERS__TOP_PICKS__CRON_INTERVAL_SEC
+# The interval of the TopPicksFilemanager cron job (in seconds)
+# The cron job should tick more frequently than `resync_interval_sec` so that
+# the resync failure can be retried soon.
+cron_interval_sec = 60
+
+# MERINO_PROVIDERS__TOP_PICKS__RESYNC_INTERVAL_SEC
+# Time between re-syncs of domain data, in seconds. Defaults to 3 hours.
+resync_interval_sec = 10800
+
+# MERINO_PROVIDERS__TOP_PICKS__DOMAIN_UPDATE_DAYS
+# Days between updating new domain file. Based on Airflow job cadence.
+domain_update_days = 7
+
+# MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
+# GCS project name that contains domain data
+gcs_project = "moz-fx-merino-prod-1c2f"
+
+# MERINO_PROVIDERS__TOP_PICKS__GCS_BUCKET
+# GCS bucket that contains domain data files
+gcs_bucket = "merino-images-prodpy"
 
 
 [default.providers.wikipedia]
