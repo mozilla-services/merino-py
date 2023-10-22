@@ -148,8 +148,12 @@ def load_providers() -> dict[str, BaseProvider]:
       - `InvalidProviderError` if the provider type is unknown.
     """
     providers: dict[str, BaseProvider] = {}
-
     for provider_id, setting in settings.providers.items():
+        # Do not initialize provider if disabled in config.
+        if (
+            provider_id.lower() in settings.runtime.disabled_providers
+            and provider_id.lower() in [pt.value for pt in ProviderType]
+        ):
+            continue
         providers[provider_id] = _create_provider(provider_id, setting)
-
     return providers
