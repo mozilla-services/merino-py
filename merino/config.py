@@ -3,6 +3,7 @@ from dynaconf import Dynaconf, Validator
 
 # Validators for Merino settings.
 _validators = [
+    Validator("providers.disabled", is_type_of=list),
     Validator("deployment.canary", is_type_of=bool),
     Validator("logging.format", is_in=["mozlog", "pretty"]),
     Validator("logging.level", is_in=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),

@@ -173,6 +173,10 @@ env = "dev"
 # If set to `debug`, the DSN will be set to a testing value recommended by Sentry, 
 # and extra output will be included in the logs.
 
+[default.providers]
+# MERINO_PROVIDERS__DISABLED
+# List containing providers to disable at startup.
+disabled = []
 
 [default.providers.accuweather]
 # MERINO_PROVIDERS__ACCUWEATHER__TYPE
