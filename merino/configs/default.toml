@@ -36,6 +36,7 @@ query_timeout_sec = 0.2
 
 # MERINO_RUNTIME__DISABLED_PROVIDERS
 # List containing providers to disable at startup.
+# Prevents a provider from being instantiated.
 disabled_providers = []
 
 

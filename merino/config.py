@@ -3,7 +3,6 @@ from dynaconf import Dynaconf, Validator
 
 # Validators for Merino settings.
 _validators = [
-    # Circuit-breaker to disable providers at startup
     Validator(
         "runtime.disabled_providers",
         is_type_of=list,
