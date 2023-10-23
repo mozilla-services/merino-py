@@ -4,6 +4,8 @@
 
 """Unit tests for the top picks provider module."""
 
+import time
+
 import pytest
 from pydantic import HttpUrl
 from pytest import LogCaptureFixture
@@ -33,9 +35,58 @@ def test_hidden(top_picks: Provider) -> None:
 async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None:
     """Test initialization of top pick provider"""
     await top_picks.initialize()
+
     backend_data = await backend.fetch()
 
     assert top_picks.top_picks_data == backend_data
+    assert top_picks.last_fetch_at > 0
+
+
+def test_should_fetch_default(top_picks: Provider):
+    """Test that provider should fetch is true as default."""
+    assert top_picks._should_fetch()
+
+
+def test_should_fetch_true(top_picks: Provider):
+    """Test that provider should fetch is true."""
+    top_picks.last_fetch_at = time.time() - top_picks.resync_interval_sec - 100
+    assert top_picks._should_fetch()
+
+
+def test_should_fetch_false(top_picks: Provider):
+    """Test that provider should fetch is false."""
+    top_picks.last_fetch_at = time.time()
+    assert top_picks._should_fetch() is False
+
+
+@pytest.mark.asyncio
+async def test_fetch_top_picks_data(top_picks: Provider):
+    """Test that the _fetch_top_picks_data returns TopPicksData."""
+    await top_picks._fetch_top_picks_data()
+    assert top_picks.top_picks_data
+    assert top_picks.last_fetch_at > 0
+
+
+@pytest.mark.asyncio
+async def test_fetch_top_picks_data_fails(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    backend: TopPicksBackend,
+    top_picks: Provider,
+    mocker,
+):
+    """Test that the _fetch_top_picks_data fails as expected."""
+    error_message: str = "Failed to fetch data from Top Picks Backend."
+
+    await top_picks._fetch_top_picks_data()
+
+    mocker.patch.object(backend, "fetch", side_effect=BackendError(error_message))
+    with pytest.raises(BackendError):
+        await top_picks._fetch_top_picks_data()
+
+    records = filter_caplog(caplog.records, "merino.providers.top_picks.provider")
+    assert len(records) == 1
+    assert records[0].__dict__["error message"] == error_message
 
 
 @pytest.mark.parametrize(

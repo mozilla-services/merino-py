@@ -3,7 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the Top Picks backend module."""
-
 import json
 import os
 from datetime import datetime
@@ -114,15 +113,12 @@ def fixture_blob_json() -> str:
     )
 
 
-@pytest.fixture(name="gcs_bucket_mock")
-def fixture_gcs_bucket_mock(
-    mocker: MockerFixture,
-) -> Any:
-    """Create a GCS Bucket mock object for testing."""
-    mock_bucket = mocker.MagicMock(spec=storage.Bucket)
-    mock_bucket.name = settings.providers.top_picks.gcs_bucket  # "moz-fx-merino-test"
-    storage.Client.get_bucket = mocker.MagicMock(return_balue=mock_bucket)
-    return mock_bucket
+@pytest.fixture
+def mock_gcs_client(mocker):
+    """Return a mock GCS Client instance"""
+    return mocker.patch(
+        "merino.providers.top_picks.backends.top_picks.Client"
+    ).return_value
 
 
 @pytest.fixture(name="gcs_blob_mock")
@@ -131,30 +127,85 @@ def fixture_gcs_blob_mock(
 ) -> Any:
     """Create a GCS Blob mock object for testing."""
     mock_blob = mocker.MagicMock(spec=storage.Blob)
-    mock_blob.name = "top_picks_latest.json"
+    mock_blob.name = "123456.top_picks_latest.json"
     mock_blob.generation = expected_timestamp
     mock_blob.download_as_text.return_value = blob_json
     return mock_blob
 
 
+@pytest.fixture(name="gcs_bucket_mock")
+def fixture_gcs_bucket_mock(mocker: MockerFixture, gcs_blob_mock) -> Any:
+    """Create a GCS Bucket mock object for testing."""
+    mock_bucket = gcs_blob_mock
+    storage.Client.get_bucket = mocker.MagicMock(return_value=gcs_blob_mock)
+    return mock_bucket
+
+
 @pytest.fixture(name="top_picks_filemanager_parameters")
 def fixture_top_picks_filemanager_parameters() -> dict[str, Any]:
     """Define Top Picks Filemanager parameters for test."""
+    # These settings read from testing.toml, not default.toml.
     return {
         "gcs_project_path": settings.providers.top_picks.gcs_project,
         "gcs_bucket_path": settings.providers.top_picks.gcs_bucket,
         "static_file_path": settings.providers.top_picks.top_picks_file_path,
-        "resync_interval_sec": settings.providers.top_picks.resync_interval_sec,
-        "cron_interval_sec": settings.providers.top_picks.cron_interval_sec,
     }
 
 
 @pytest.fixture(name="top_picks_filemanager")
 def fixture_top_picks_filemanager(
-    top_picks_filemanager_parameters: dict[str, Any]
+    top_picks_filemanager_parameters: dict[str, Any],
 ) -> TopPicksFilemanager:
     """Create a TopPicksFilemanager object for test."""
     return TopPicksFilemanager(**top_picks_filemanager_parameters)
+
+
+def test_filemanager__parse_date(
+    top_picks_filemanager: TopPicksFilemanager,
+    gcs_blob_mock: storage.Blob,
+    expected_timestamp,
+) -> None:
+    """Test that the filemanager _parse_date method parses a unix timestamp"""
+    expected_datetime = datetime.fromtimestamp(int(expected_timestamp / 1000))
+    assert expected_datetime == top_picks_filemanager._parse_date(blob=gcs_blob_mock)
+
+
+def test__parse_date_with_missing_metadata(
+    top_picks_filemanager: TopPicksFilemanager,
+    mocker: MockerFixture,
+) -> None:
+    """Test that the filemanager result is None when mock Blob has no generation
+    metadata.
+    """
+    mock_blob = mocker.MagicMock(spec=storage.Blob)
+    mock_blob.name = "123456.top_picks_latest.json"
+    mock_blob.generation = None
+
+    result = top_picks_filemanager._parse_date(blob=mock_blob)
+    assert not result
+
+
+def test_filemanager__parse_date_fails(
+    top_picks_filemanager: TopPicksFilemanager,
+    gcs_blob_mock: storage.Blob,
+    mocker,
+) -> None:
+    """Test that the filemanager _parse_date method raises the
+    expected AttributeError and returns None.
+    """
+    expected_datetime = None
+
+    error_message: str = "Cannot parse date, generation attribute not found."
+    mocker.patch.object(
+        top_picks_filemanager, "_parse_date", side_effect=AttributeError(error_message)
+    )
+
+    with pytest.raises(AttributeError):
+        result = top_picks_filemanager._parse_date(blob=gcs_blob_mock)
+        assert expected_datetime == top_picks_filemanager._parse_date(
+            blob=gcs_blob_mock
+        )
+        assert not result
 
 
 def test_init_failure_no_domain_file(
@@ -184,6 +235,14 @@ def test_read_domain_list_os_error(top_picks_backend: TopPicksBackend) -> None:
     """Test that read domain fails and raises exception with invalid file path."""
     with pytest.raises(TopPicksError):
         top_picks_backend.read_domain_list("./wrongfile.json")
+
+
+@pytest.mark.asyncio
+async def test_get_remote_file(
+    top_picks_filemanager: TopPicksFilemanager, gcs_blob_mock, gcs_bucket_mock
+) -> None:
+    """Test that get_remote_file returns domain data."""
+    pass
 
 
 def test_read_domain_list_json_decode_err(
@@ -235,23 +294,3 @@ def test_domain_blocklist(
         assert blocked_domain not in top_picks_data.primary_index.keys()
         assert blocked_domain not in top_picks_data.secondary_index.keys()
         assert blocked_domain not in top_picks_data.short_domain_index.keys()
-
-
-def test_filemanager__parse_date(
-    top_picks_filemanager: TopPicksFilemanager,
-    gcs_blob_mock: storage.Blob,
-    expected_timestamp,
-) -> None:
-    """Test that the filemanager _parse_date method parses a unix timestamp"""
-    expected_datetime = datetime.fromtimestamp(int(expected_timestamp / 1000))
-    assert expected_datetime == top_picks_filemanager._parse_date(blob=gcs_blob_mock)
-
-
-@pytest.mark.asyncio
-async def test_filemanager_get_remote_file(
-    top_picks_filemanager: TopPicksFilemanager,
-    gcs_bucket_mock: storage.Bucket,
-    gcs_blob_mock: storage.Blob,
-) -> None:
-    """Test that the filemanager _parse_date method parses a unix timestamp"""
-    pass

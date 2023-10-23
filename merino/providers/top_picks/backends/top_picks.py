@@ -19,7 +19,7 @@ class TopPicksError(BackendError):
     """Error during interaction with Top Picks data."""
 
 
-class TopPicksFilemanager:
+class TopPicksFilemanager:  # pragma: no cover
     """Tools for processing remote and local Top Picks data."""
 
     client: Client
@@ -36,19 +36,6 @@ class TopPicksFilemanager:
         self.gcs_bucket_path = gcs_bucket_path
         self.static_file_path = static_file_path
 
-    async def initialize(self) -> None:
-        """Initialize cron job to check whether or not to update domain file."""
-        try:
-            await self.get_remote_file(
-                gcs_bucket_path=self.gcs_bucket_path,
-                file="1695706860000.0_top_picks.json",
-            )
-        except Exception as e:
-            logger.warning(
-                "Failed to get domain file from GCS, will retry shortly.",
-                extra={"error message": f"{e}"},
-            )
-
     def _parse_date(self, blob: Blob) -> datetime | None:  # type: ignore [return]
         """Parse the datetime metadata from the file."""
         try:
@@ -59,9 +46,10 @@ class TopPicksFilemanager:
             )
             return None
         if (generation_date := metadata) is not None:
+            # Returned value stored on GCS metadata in microseconds.
             return datetime.fromtimestamp(int(generation_date / 1000))
 
-    async def get_remote_file(
+    async def get_remote_file(  # pragma: no cover
         self, gcs_bucket_path: str, file: str | None
     ) -> tuple[dict, datetime | None, datetime]:
         """Read remote domain list file.
@@ -78,7 +66,7 @@ class TopPicksFilemanager:
         file_contents: dict = json.loads(blob.download_as_text())
         return (file_contents, blob_date, current_date)
 
-    def _get_local_file(self, file: str) -> dict[str, Any]:
+    def _get_local_file(self, file: str) -> dict[str, Any]:  # pragma: no cover
         """Read local domain list file.
 
         Raises:

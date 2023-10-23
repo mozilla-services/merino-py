@@ -60,10 +60,9 @@ query_char_limit = 4
 firefox_char_limit = 2
 top_picks_file_path = "tests/data/top_picks.json"
 
-# GCS Test Settings
+# GCS Test Settings (Top Picks)
 cron_interval_sec = 60
 resync_interval_sec = 10800
-domain_update_days = 30
 gcs_project = "moz-fx-merino-test"
 gcs_bucket = "merino-bucket-testpy"
 
