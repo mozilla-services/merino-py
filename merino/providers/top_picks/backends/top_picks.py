@@ -9,8 +9,6 @@ from typing import Any
 
 from google.cloud.storage import Blob, Client
 
-from merino import cron
-from merino.config import settings
 from merino.exceptions import BackendError
 from merino.providers.top_picks.backends.protocol import TopPicksData
 
@@ -33,14 +31,10 @@ class TopPicksFilemanager:
         gcs_project_path: str,
         gcs_bucket_path: str,
         static_file_path: str,
-        resync_interval_sec: float,
-        cron_interval_sec: float,
     ) -> None:
         self.client = Client(gcs_project_path)
         self.gcs_bucket_path = gcs_bucket_path
         self.static_file_path = static_file_path
-        self.resync_interval_sec = resync_interval_sec
-        self.cron_interval_sec = cron_interval_sec
 
     async def initialize(self) -> None:
         """Initialize cron job to check whether or not to update domain file."""
@@ -51,26 +45,11 @@ class TopPicksFilemanager:
             )
         except Exception as e:
             logger.warning(
-                "Failed to fetch domain file from GCS, will retry shortly.",
+                "Failed to get domain file from GCS, will retry shortly.",
                 extra={"error message": f"{e}"},
             )
-            # Set the last fetch timestamp to 0 so that the cron job will retry
-            # the fetch upon the next tick.
-            self.last_fetch_at = 0
 
-        # Run a cron job that will periodically check whether to update domain file.
-        cron_job = cron.Job(
-            name="resync_domain_file",
-            interval=self.cron_interval_sec,
-            condition=self._should_update,
-            task=self.get_remote_file,  # type: ignore [arg-type]
-        )
-        # Store the created task on the instance variable. Otherwise it will get
-        # garbage collected because asyncio's runtime only holds a weak
-        # reference to it.
-        self.cron_task = asyncio.create_task(cron_job())
-
-    def _parse_date(self, blob: Blob) -> datetime | None:
+    def _parse_date(self, blob: Blob) -> datetime | None:  # type: ignore [return]
         """Parse the datetime metadata from the file."""
         try:
             metadata: int | None = blob.generation
@@ -81,10 +60,6 @@ class TopPicksFilemanager:
             return None
         if (generation_date := metadata) is not None:
             return datetime.fromtimestamp(int(generation_date / 1000))
-
-    def _should_update(self) -> bool:
-        """Determine if a more recent file should be requested."""
-        return True
 
     async def get_remote_file(
         self, gcs_bucket_path: str, file: str | None
@@ -243,13 +218,11 @@ class TopPicksBackend:
 
     def build_indices(self) -> TopPicksData:
         """Read domain file, create indices and suggestions"""
-        filemanager: TopPicksFilemanager = TopPicksFilemanager(
-            settings.providers.top_picks.gcs_project,
-            settings.providers.top_picks.gcs_bucket,
-            settings.providers.top_picks.top_picks_file_path,
-            settings.providers.top_picks.resync_interval_sec,
-            settings.providers.top_picks.cron_interval_sec,
-        )
+        # filemanager: TopPicksFilemanager = TopPicksFilemanager(
+        #     settings.providers.top_picks.gcs_project,
+        #     settings.providers.top_picks.gcs_bucket,
+        #     settings.providers.top_picks.top_picks_file_path,
+        # )
 
         domains: dict[str, Any] = self.read_domain_list(self.top_picks_file_path)
         index_results: TopPicksData = self.build_index(domains)
