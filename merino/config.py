@@ -77,7 +77,6 @@ _validators = [
             "dev/top_picks_for_ci.json",
         ],
     ),
-    Validator("providers.top_picks.domain_update_days", is_type_of=int),
     Validator("providers.top_picks.resync_interval_sec", gt=0),
     Validator("providers.top_picks.cron_interval_sec", gt=0),
     Validator("providers.top_picks.gcs_project", is_type_of=str),

@@ -390,10 +390,6 @@ cron_interval_sec = 60
 # Time between re-syncs of domain data, in seconds. Defaults to 3 hours.
 resync_interval_sec = 10800
 
-# MERINO_PROVIDERS__TOP_PICKS__DOMAIN_UPDATE_DAYS
-# Days between updating new domain file. Based on Airflow job cadence.
-domain_update_days = 7
-
 # MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
 # GCS project name that contains domain data
 gcs_project = "moz-fx-merino-prod-1c2f"
