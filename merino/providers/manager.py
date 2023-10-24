@@ -141,7 +141,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             raise InvalidProviderError(f"Unknown provider type: {setting.type}")
 
 
-def load_providers() -> dict[str, BaseProvider]:
+def load_providers(disabled_providers_list: list[str]) -> dict[str, BaseProvider]:
     """Load providers from configurations.
 
     Exceptions:
@@ -150,10 +150,6 @@ def load_providers() -> dict[str, BaseProvider]:
     providers: dict[str, BaseProvider] = {}
     for provider_id, setting in settings.providers.items():
         # Do not initialize provider if disabled in config.
-        if (
-            provider_id.lower() in settings.runtime.disabled_providers
-            and provider_id.lower() in [pt.value for pt in ProviderType]
-        ):
-            continue
-        providers[provider_id] = _create_provider(provider_id, setting)
+        if provider_id.lower() not in disabled_providers_list:
+            providers[provider_id] = _create_provider(provider_id, setting)
     return providers
