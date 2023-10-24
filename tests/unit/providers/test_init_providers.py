@@ -37,28 +37,17 @@ async def test_init_providers() -> None:
 
 @pytest.mark.parametrize("provider", ["adm", "amo", "top_picks", "wikipedia"])
 @pytest.mark.asyncio
-async def test_init_providers_with_disabled_provider(
-    monkeypatch: pytest.MonkeyPatch, provider: str
-) -> None:
+async def test_init_providers_with_disabled_provider(provider: str) -> None:
     """Test for the `init_providers`and `load_providers` methods when a provider
     is disabled through the `merino.runtime.disabled_providers` config.
     """
     await init_providers()
 
-    providers = load_providers(
-        disabled_providers_list=settings.runtime.disabled_providers
-    )
+    providers = load_providers(disabled_providers_list=[])
     assert provider in providers.keys()
 
-    monkeypatch.setattr(
-        settings,
-        "runtime",
-        {"disabled_providers": [provider]},
-    )
-
-    providers = load_providers(
-        disabled_providers_list=settings.runtime.disabled_providers
-    )
+    # Add provider from parameters to block instantiation.
+    providers = load_providers(disabled_providers_list=[provider])
     assert provider not in providers.keys()
 
 
