@@ -45,7 +45,9 @@ async def test_init_providers_with_disabled_provider(
     """
     await init_providers()
 
-    providers = load_providers()
+    providers = load_providers(
+        disabled_providers_list=settings.runtime.disabled_providers
+    )
     assert provider in providers.keys()
 
     monkeypatch.setattr(
@@ -54,7 +56,9 @@ async def test_init_providers_with_disabled_provider(
         {"disabled_providers": [provider]},
     )
 
-    providers = load_providers()
+    providers = load_providers(
+        disabled_providers_list=settings.runtime.disabled_providers
+    )
     assert provider not in providers.keys()
 
 

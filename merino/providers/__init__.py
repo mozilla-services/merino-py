@@ -2,8 +2,9 @@
 import asyncio
 import logging
 from timeit import default_timer as timer
-from merino.config import settings
+
 from merino import metrics
+from merino.config import settings
 from merino.providers.base import BaseProvider
 from merino.providers.manager import load_providers
 
