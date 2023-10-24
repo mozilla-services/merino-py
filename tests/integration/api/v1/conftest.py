@@ -9,6 +9,7 @@ from typing import Any, Callable, Coroutine
 
 import pytest_asyncio
 
+from merino.config import settings
 from merino.main import app
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider
@@ -63,6 +64,7 @@ async def fixture_inject_providers(
     setup_providers: SetupProvidersFixture,
     teardown_providers: TeardownProvidersFixture,
     providers: Providers,
+    disabled_providers=settings.runtime.disabled_providers,
 ):
     """Set up and teardown the given providers.
 
@@ -92,6 +94,10 @@ async def fixture_inject_providers(
         ],
     )
     """
-    setup_providers(providers)
+    # Ensures this test interface takes into account disabled providers.
+    enabled_providers = {
+        k: v for k, v in providers.items() if k not in disabled_providers
+    }
+    setup_providers(enabled_providers)
     yield
     await teardown_providers(providers)
