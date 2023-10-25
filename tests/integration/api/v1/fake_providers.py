@@ -222,3 +222,14 @@ class FakeProviderFactory:
             ),
             query_timeout_sec=settings.runtime.query_timeout_sec * 4,
         )
+
+    @staticmethod
+    def disabled_provider(enabled_by_default: bool = True) -> FakeProvider:
+        """Return a new provider that is intended to be disabled."""
+        provider_name = "disabled_provider"
+        return FakeProvider(
+            name=provider_name,
+            enabled_by_default=enabled_by_default,
+            hidden=False,
+            query_callable=query_sponsored(provider_name),
+        )

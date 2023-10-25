@@ -4,6 +4,7 @@ import logging
 from timeit import default_timer as timer
 
 from merino import metrics
+from merino.config import settings
 from merino.providers.base import BaseProvider
 from merino.providers.manager import load_providers
 
@@ -21,7 +22,9 @@ async def init_providers() -> None:
     start = timer()
 
     # register providers
-    providers.update(load_providers())
+    providers.update(
+        load_providers(disabled_providers_list=settings.runtime.disabled_providers)
+    )
 
     # initialize providers and record time
     init_metric = "providers.initialize"

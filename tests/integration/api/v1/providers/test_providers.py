@@ -84,6 +84,39 @@ def test_providers(
     assert response.json() == expected_response
 
 
+@pytest.mark.parametrize(
+    [
+        "expected_response",
+        "providers",
+    ],
+    [
+        (
+            [],
+            {
+                "disabled_provider": FakeProviderFactory.disabled_provider(
+                    enabled_by_default=True
+                ),
+            },
+        ),
+    ],
+    ids=[
+        "disabled_provider",
+    ],
+)
+def test_disabled_providers_setting(
+    client: TestClient,
+    expected_response: list[dict[str, str]],
+    providers: dict[str, BaseProvider],
+) -> None:
+    """Test that the disabled_providers setting behaves as expected when
+    querying the providers endpoint.
+    """
+    response = client.get("/api/v1/providers")
+
+    assert response.status_code == 200
+    assert response.json() == expected_response
+
+
 @freeze_time("1998-03-31")
 @pytest.mark.parametrize("providers", [{}])
 def test_providers_request_log_data(

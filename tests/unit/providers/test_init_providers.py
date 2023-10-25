@@ -11,7 +11,12 @@ from pytest_mock import MockerFixture
 
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
-from merino.providers import get_providers, init_providers, shutdown_providers
+from merino.providers import (
+    get_providers,
+    init_providers,
+    load_providers,
+    shutdown_providers,
+)
 from merino.providers.manager import ProviderType
 from tests.types import FilterCaplogFixture
 
@@ -28,6 +33,22 @@ async def test_init_providers() -> None:
     assert {provider.name for provider in default_providers} == {
         provider.name for provider in providers.values() if provider.enabled_by_default
     }
+
+
+@pytest.mark.parametrize("provider", ["adm", "amo", "top_picks", "wikipedia"])
+@pytest.mark.asyncio
+async def test_init_providers_with_disabled_provider(provider: str) -> None:
+    """Test for the `init_providers`and `load_providers` methods when a provider
+    is disabled through the `merino.runtime.disabled_providers` config.
+    """
+    await init_providers()
+
+    providers = load_providers(disabled_providers_list=[])
+    assert provider in providers.keys()
+
+    # Add provider from parameters to block instantiation.
+    providers = load_providers(disabled_providers_list=[provider])
+    assert provider not in providers.keys()
 
 
 @pytest.mark.asyncio

@@ -34,6 +34,11 @@ debug = false
 # The provider timeout takes precedence over this value.
 query_timeout_sec = 0.2
 
+# MERINO_RUNTIME__DISABLED_PROVIDERS
+# List containing providers to disable at startup.
+# Prevents a provider from being instantiated.
+disabled_providers = []
+
 
 [default.logging]
 # MERINO_LOGGING__LEVEL
@@ -172,7 +177,6 @@ env = "dev"
 # If `sentry.mode` is set to `disabled`, no Sentry integration will be activated.
 # If set to `debug`, the DSN will be set to a testing value recommended by Sentry, 
 # and extra output will be included in the logs.
-
 
 [default.providers.accuweather]
 # MERINO_PROVIDERS__ACCUWEATHER__TYPE
