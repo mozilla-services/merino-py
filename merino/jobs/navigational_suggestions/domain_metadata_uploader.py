@@ -42,6 +42,11 @@ class DomainMetadataUploader:
         """Upload the top pick contents to gcs."""
         bucket = self.storage_client.bucket(self.bucket_name)
         dst_top_pick_name = self._destination_top_pick_name()
+        self.update_latest_filename_suffix(
+            bucket_name=self.bucket_name,
+            bucket=bucket,
+            storage_client=self.storage_client,
+        )
         dst_blob = bucket.blob(dst_top_pick_name)
         dst_blob.upload_from_string(top_picks)
         return dst_blob
@@ -52,12 +57,13 @@ class DomainMetadataUploader:
         return f"{str(round(time.mktime(current.timetuple())))}_ \
             {self.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX}"
 
-    def _update_latest_filename_suffix(self) -> None:
+    def update_latest_filename_suffix(
+        self, bucket_name, bucket, storage_client
+    ) -> None:
         """If an existing file with the `_latest` suffix exists, remove it so the
         most recent file has the suffix.
         """
-        bucket = self.storage_client.bucket(self.bucket_name)
-        blobs = self.storage_client.list_blobs(self.bucket_name)
+        blobs = storage_client.list_blobs(bucket_name)
         for blob in blobs:
             if blob.name.endswith(self.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX):
                 bucket.copy_blob(
