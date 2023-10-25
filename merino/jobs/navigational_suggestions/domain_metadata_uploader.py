@@ -17,7 +17,7 @@ class DomainMetadataUploader:
     """Upload the domain metadata to GCS"""
 
     DESTINATION_FAVICONS_ROOT = "favicons"
-    DESTINATION_TOP_PICK_FILE_NAME_SUFFIX = "top_picks.json"
+    DESTINATION_TOP_PICK_FILE_NAME_SUFFIX = "top_picks_latest.json"
 
     bucket_name: str
     storage_client: Client
@@ -49,11 +49,24 @@ class DomainMetadataUploader:
     def _destination_top_pick_name(self) -> str:
         """Return the name of the top pick file to be used for uploading to GCS"""
         current = datetime.datetime.now()
-        return (
-            str(time.mktime(current.timetuple()) * 1000)
-            + "_"
-            + self.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
-        )
+        return f"{str(round(time.mktime(current.timetuple())))}_ \
+            {self.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX}"
+
+    def _update_latest_filename_suffix(self) -> None:
+        """If an existing file with the `_latest` suffix exists, remove it so the
+        most recent file has the suffix.
+        """
+        bucket = self.storage_client.bucket(self.bucket_name)
+        blobs = self.storage_client.list_blobs(self.bucket_name)
+        for blob in blobs:
+            if blob.name.endswith(self.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX):
+                bucket.copy_blob(
+                    blob=blob,
+                    destination_bucket=bucket,
+                    new_name=blob.name.replace("_latest", ""),
+                )
+                bucket.delete_blob(blob.name)
+        return
 
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload the domain favicons to gcs using their source url and
