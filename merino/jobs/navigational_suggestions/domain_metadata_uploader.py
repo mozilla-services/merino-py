@@ -2,7 +2,6 @@
 import datetime
 import hashlib
 import logging
-import time
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -41,7 +40,9 @@ class DomainMetadataUploader:
     def upload_top_picks(self, top_picks: str) -> Blob:
         """Upload the top pick contents to gcs."""
         bucket = self.storage_client.bucket(self.bucket_name)
-        dst_top_pick_name = self._destination_top_pick_name()
+        dst_top_pick_name = DomainMetadataUploader._destination_top_pick_name(
+            suffix=DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
+        )
         self.update_latest_filename_suffix(
             bucket_name=self.bucket_name,
             bucket=bucket,
@@ -51,11 +52,11 @@ class DomainMetadataUploader:
         dst_blob.upload_from_string(top_picks)
         return dst_blob
 
-    def _destination_top_pick_name(self) -> str:
+    @staticmethod
+    def _destination_top_pick_name(suffix: str) -> str:
         """Return the name of the top pick file to be used for uploading to GCS"""
         current = datetime.datetime.now()
-        return f"{str(round(time.mktime(current.timetuple())))}_ \
-            {self.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX}"
+        return f"{str(int(current.timestamp()))}_{suffix}"
 
     def update_latest_filename_suffix(
         self, bucket_name, bucket, storage_client

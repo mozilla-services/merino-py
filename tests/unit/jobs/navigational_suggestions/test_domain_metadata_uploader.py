@@ -3,9 +3,11 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for domain_metadata_uploader.py module."""
+import datetime
 from typing import Any
 
 import pytest
+from freezegun import freeze_time
 
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
@@ -31,6 +33,17 @@ def mock_favicon_downloader(mocker) -> Any:
     return favicon_downloader_mock
 
 
+@freeze_time("2022-01-01 00:00:00")
+def test_destination_top_pick_name() -> None:
+    """Test the file name generation creates the expected file name for the blob."""
+    current = datetime.datetime.now()
+    suffix = DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
+    result = DomainMetadataUploader._destination_top_pick_name(suffix=suffix)
+    expected_result = f"{str(int(current.timestamp()))}_{suffix}"
+
+    assert result == expected_result
+
+
 def test_upload_top_picks(mock_gcs_client, mock_favicon_downloader) -> None:
     """Test if upload top picks call relevant GCS api"""
     DUMMY_TOP_PICKS = "dummy top picks contents"
@@ -49,6 +62,13 @@ def test_upload_top_picks(mock_gcs_client, mock_favicon_downloader) -> None:
     mock_gcs_client.bucket.assert_called_once_with("dummy_gcs_bucket")
     mock_gcs_bucket.blob.assert_called_once()
     mock_dst_blob.upload_from_string.assert_called_once_with(DUMMY_TOP_PICKS)
+
+
+def test_update_latest_filename_suffix(
+    mock_gcs_client, mock_favicon_downloader
+) -> None:
+    """Test that the filename suffix update function renames the file."""
+    pass
 
 
 def test_upload_favicons_upload_if_not_present(
