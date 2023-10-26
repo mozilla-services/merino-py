@@ -2,10 +2,9 @@
 import datetime
 import hashlib
 import logging
-from typing import Optional
 from urllib.parse import urljoin
 
-from google.cloud.storage import Blob, Client
+from google.cloud.storage import Blob, Bucket, Client
 
 from merino.jobs.navigational_suggestions.utils import FaviconDownloader, FaviconImage
 
@@ -15,8 +14,8 @@ logger = logging.getLogger(__name__)
 class DomainMetadataUploader:
     """Upload the domain metadata to GCS"""
 
-    DESTINATION_FAVICONS_ROOT = "favicons"
-    DESTINATION_TOP_PICK_FILE_NAME_SUFFIX = "top_picks_latest.json"
+    DESTINATION_FAVICONS_ROOT: str = "favicons"
+    DESTINATION_TOP_PICK_FILE_NAME_SUFFIX: str = "top_picks_latest.json"
 
     bucket_name: str
     storage_client: Client
@@ -45,6 +44,7 @@ class DomainMetadataUploader:
         )
         self.update_latest_filename_suffix(
             bucket_name=self.bucket_name,
+            file_suffix=DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX,
             bucket=bucket,
             storage_client=self.storage_client,
         )
@@ -59,14 +59,18 @@ class DomainMetadataUploader:
         return f"{str(int(current.timestamp()))}_{suffix}"
 
     def update_latest_filename_suffix(
-        self, bucket_name, bucket, storage_client
+        self,
+        bucket_name: str,
+        file_suffix: str,
+        bucket: Bucket,
+        storage_client: Client,
     ) -> None:
         """If an existing file with the `_latest` suffix exists, remove it so the
         most recent file has the suffix.
         """
         blobs = storage_client.list_blobs(bucket_name)
         for blob in blobs:
-            if blob.name.endswith(self.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX):
+            if blob.name.endswith(file_suffix):
                 bucket.copy_blob(
                     blob=blob,
                     destination_bucket=bucket,
@@ -79,13 +83,13 @@ class DomainMetadataUploader:
         """Upload the domain favicons to gcs using their source url and
         return the public urls of the uploaded ones.
         """
-        dst_favicons = []
-        bucket = self.storage_client.bucket(self.bucket_name)
+        dst_favicons: list = []
+        bucket: Bucket = self.storage_client.bucket(self.bucket_name)
         for src_favicon in src_favicons:
             dst_favicon_public_url: str = ""
-            favicon_image: Optional[
-                FaviconImage
-            ] = self.favicon_downloader.download_favicon(src_favicon)
+            favicon_image: FaviconImage | None = (
+                self.favicon_downloader.download_favicon(src_favicon)
+            )
             if favicon_image:
                 try:
                     dst_favicon_name = self._destination_favicon_name(favicon_image)
@@ -128,9 +132,9 @@ class DomainMetadataUploader:
 
     def _destination_favicon_name(self, favicon_image: FaviconImage) -> str:
         """Return the name of the favicon to be used for uploading to GCS"""
-        content_hex_digest = hashlib.sha256(favicon_image.content).hexdigest()
-        content_len = str(len(favicon_image.content))
-        extension = ""
+        content_hex_digest: str = hashlib.sha256(favicon_image.content).hexdigest()
+        content_len: str = str(len(favicon_image.content))
+        extension: str = ""
         match favicon_image.content_type:
             case "image/jpeg" | "image/jpg":
                 extension = ".jpeg"

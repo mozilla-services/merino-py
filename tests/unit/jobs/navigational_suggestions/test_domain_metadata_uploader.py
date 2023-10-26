@@ -24,6 +24,24 @@ def mock_gcs_client(mocker):
 
 
 @pytest.fixture
+def mock_gcs_bucket(mocker):
+    """Return a mock GCS Bucket instance"""
+    bucket = mocker.patch(
+        "merino.jobs.navigational_suggestions.domain_metadata_uploader.Bucket"
+    ).return_value
+    bucket.name = "mock-bucket"
+    return bucket
+
+
+@pytest.fixture
+def mock_gcs_blob(mocker):
+    """Return a mock GCS Bucket instance"""
+    return mocker.patch(
+        "merino.jobs.navigational_suggestions.domain_metadata_uploader.Blob"
+    ).return_value
+
+
+@pytest.fixture
 def mock_favicon_downloader(mocker) -> Any:
     """Return a mock FaviconDownloader instance"""
     favicon_downloader_mock: Any = mocker.Mock(spec=FaviconDownloader)
@@ -44,6 +62,36 @@ def test_destination_top_pick_name() -> None:
     assert result == expected_result
 
 
+def test_update_latest_filename_suffix(
+    mocker, mock_gcs_client, mock_gcs_bucket, mock_gcs_blob, mock_favicon_downloader
+) -> None:
+    """Test that updating the `_latest` suffix successfully alters the file name."""
+    domain_metadata_uploader = DomainMetadataUploader(
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname="",
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
+    )
+
+    file_suffix = DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
+    mock_gcs_blob.name = "0_top_picks_latest.json"
+    mock_gcs_client.list_blobs.return_value = [mock_gcs_blob]
+    mocker.patch.object(mock_gcs_bucket, "copy_blob")
+    mocker.patch.object(mock_gcs_bucket, "delete_blob")
+
+    domain_metadata_uploader.update_latest_filename_suffix(
+        bucket_name=mock_gcs_bucket.name,
+        file_suffix=file_suffix,
+        bucket=mock_gcs_bucket,
+        storage_client=mock_gcs_client,
+    )
+
+    mock_gcs_client.list_blobs.assert_called_once()
+    mock_gcs_bucket.copy_blob.assert_called_once()
+    mock_gcs_bucket.delete_blob.assert_called_once()
+
+
 def test_upload_top_picks(mock_gcs_client, mock_favicon_downloader) -> None:
     """Test if upload top picks call relevant GCS api"""
     DUMMY_TOP_PICKS = "dummy top picks contents"
@@ -62,13 +110,6 @@ def test_upload_top_picks(mock_gcs_client, mock_favicon_downloader) -> None:
     mock_gcs_client.bucket.assert_called_once_with("dummy_gcs_bucket")
     mock_gcs_bucket.blob.assert_called_once()
     mock_dst_blob.upload_from_string.assert_called_once_with(DUMMY_TOP_PICKS)
-
-
-def test_update_latest_filename_suffix(
-    mock_gcs_client, mock_favicon_downloader
-) -> None:
-    """Test that the filename suffix update function renames the file."""
-    pass
 
 
 def test_upload_favicons_upload_if_not_present(
