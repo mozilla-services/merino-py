@@ -7,8 +7,9 @@ from datetime import datetime
 from json import JSONDecodeError
 from typing import Any
 
-from google.cloud.storage import Blob, Client
+from google.cloud.storage import Blob, Bucket, Client
 
+from merino.config import settings
 from merino.exceptions import BackendError
 from merino.providers.top_picks.backends.protocol import TopPicksData
 
@@ -47,11 +48,11 @@ class TopPicksFilemanager:  # pragma: no cover
             return None
         if (generation_date := metadata) is not None:
             # Returned value stored on GCS metadata in microseconds.
-            return datetime.fromtimestamp(int(generation_date / 1000))
+            return datetime.fromtimestamp(int(generation_date / 1000000))
 
-    async def get_remote_file(  # pragma: no cover
+    def get_remote_file(  # pragma: no cover
         self, gcs_bucket_path: str, file: str | None
-    ) -> tuple[dict, datetime | None, datetime]:
+    ) -> dict[str, Any] | None:
         """Read remote domain list file.
 
         Raises:
@@ -59,12 +60,21 @@ class TopPicksFilemanager:  # pragma: no cover
         Returns:
             Dictionary containing domain list
         """
-        bucket = self.client.get_bucket(gcs_bucket_path)
-        blob: Blob = bucket.blob(file)
-        blob_date: datetime | None = self._parse_date(blob=blob)
-        current_date: datetime = datetime.now()
-        file_contents: dict = json.loads(blob.download_as_text())
-        return (file_contents, blob_date, current_date)
+        bucket: Bucket = self.client.get_bucket(gcs_bucket_path)
+        domain_files: Any = bucket.list_blobs(delimiter="/")
+
+        for file in domain_files:
+            if file.name.endswith("1681866451000.0_top_picks.json"):  # type: ignore [union-attr]
+                data = file.download_as_text()  # type: ignore [union-attr]
+                blob_date: datetime | None = self._parse_date(blob=file)
+                current_date: datetime = datetime.now()
+                file_contents: dict = json.loads(data)
+                logger.info(
+                    f"Domain file {file.name} acquired. File generated on: {blob_date}."
+                    f"Updated in Merino backend on {current_date}."
+                )
+                return file_contents
+        return None
 
     def _get_local_file(self, file: str) -> dict[str, Any]:  # pragma: no cover
         """Read local domain list file.
@@ -212,6 +222,11 @@ class TopPicksBackend:
         #     settings.providers.top_picks.top_picks_file_path,
         # )
 
-        domains: dict[str, Any] = self.read_domain_list(self.top_picks_file_path)
+        # domains: dict[str, Any] | None = filemanager.get_remote_file(
+        #     settings.providers.top_picks.gcs_bucket, None
+        # )
+        # if not domains:
+        domains: dict[str, Any] | None = self.read_domain_list(self.top_picks_file_path)
+
         index_results: TopPicksData = self.build_index(domains)
         return index_results
