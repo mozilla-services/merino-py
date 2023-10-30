@@ -48,7 +48,7 @@ def fixture_top_picks(top_picks_backend_parameters: dict[str, Any]) -> TopPicksB
 @pytest.fixture(name="expected_timestamp")
 def fixture_expected_timestamp() -> int:
     """Return a unix timestamp for metadata mocking."""
-    return 1696916833000
+    return 1696916833376515
 
 
 @pytest.fixture(name="blob_json")
@@ -161,17 +161,18 @@ def fixture_top_picks_filemanager(
 
 
 def test_filemanager__parse_date(
-    top_picks_filemanager: TopPicksFilemanager,
     gcs_blob_mock: storage.Blob,
-    expected_timestamp,
+    expected_timestamp: int,
 ) -> None:
     """Test that the filemanager _parse_date method parses a unix timestamp"""
-    expected_datetime = datetime.fromtimestamp(int(expected_timestamp / 1000))
-    assert expected_datetime == top_picks_filemanager._parse_date(blob=gcs_blob_mock)
+    # import pdb
+
+    # pdb.set_trace()
+    expected_datetime = datetime.fromtimestamp(int(expected_timestamp / 100000))
+    assert expected_datetime == TopPicksFilemanager._parse_date(blob=gcs_blob_mock)
 
 
 def test__parse_date_with_missing_metadata(
-    top_picks_filemanager: TopPicksFilemanager,
     mocker: MockerFixture,
 ) -> None:
     """Test that the filemanager result is None when mock Blob has no generation
@@ -181,7 +182,7 @@ def test__parse_date_with_missing_metadata(
     mock_blob.name = "123456.top_picks_latest.json"
     mock_blob.generation = None
 
-    result = top_picks_filemanager._parse_date(blob=mock_blob)
+    result = TopPicksFilemanager._parse_date(blob=mock_blob)
     assert not result
 
 

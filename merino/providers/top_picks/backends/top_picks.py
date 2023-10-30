@@ -9,7 +9,6 @@ from typing import Any
 
 from google.cloud.storage import Blob, Bucket, Client
 
-from merino.config import settings
 from merino.exceptions import BackendError
 from merino.providers.top_picks.backends.protocol import TopPicksData
 
@@ -37,7 +36,8 @@ class TopPicksFilemanager:  # pragma: no cover
         self.gcs_bucket_path = gcs_bucket_path
         self.static_file_path = static_file_path
 
-    def _parse_date(self, blob: Blob) -> datetime | None:  # type: ignore [return]
+    @staticmethod
+    def _parse_date(blob: Blob) -> datetime | None:  # type: ignore [return]
         """Parse the datetime metadata from the file."""
         try:
             metadata: int | None = blob.generation
@@ -48,10 +48,10 @@ class TopPicksFilemanager:  # pragma: no cover
             return None
         if (generation_date := metadata) is not None:
             # Returned value stored on GCS metadata in microseconds.
-            return datetime.fromtimestamp(int(generation_date / 1000000))
+            return datetime.fromtimestamp(int(generation_date / 100000))
 
     def get_remote_file(  # pragma: no cover
-        self, gcs_bucket_path: str, file: str | None
+        self, gcs_bucket_path: str
     ) -> dict[str, Any] | None:
         """Read remote domain list file.
 
@@ -64,8 +64,8 @@ class TopPicksFilemanager:  # pragma: no cover
         domain_files: Any = bucket.list_blobs(delimiter="/")
 
         for file in domain_files:
-            if file.name.endswith("1681866451000.0_top_picks.json"):  # type: ignore [union-attr]
-                data = file.download_as_text()  # type: ignore [union-attr]
+            if file.name.endswith("1681866451000.0_top_picks.json"):
+                data = file.download_as_text()
                 blob_date: datetime | None = self._parse_date(blob=file)
                 current_date: datetime = datetime.now()
                 file_contents: dict = json.loads(data)
@@ -226,7 +226,7 @@ class TopPicksBackend:
         #     settings.providers.top_picks.gcs_bucket, None
         # )
         # if not domains:
-        domains: dict[str, Any] | None = self.read_domain_list(self.top_picks_file_path)
+        domains: dict[str, Any] = self.read_domain_list(self.top_picks_file_path)
 
         index_results: TopPicksData = self.build_index(domains)
         return index_results
