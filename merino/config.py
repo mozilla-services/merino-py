@@ -81,6 +81,11 @@ _validators = [
     Validator("providers.top_picks.cron_interval_sec", gt=0),
     Validator("providers.top_picks.gcs_project", is_type_of=str),
     Validator("providers.top_picks.gcs_bucket", is_type_of=str),
+    Validator(
+        "providers.top_picks.domain_data_source",
+        is_type_of=str,
+        is_in=["remote", "local"],
+    ),
     Validator("providers.wikipedia.backend", is_in=["elasticsearch", "test"]),
     Validator("providers.wikipedia.enabled_by_default", is_type_of=bool),
     Validator("providers.wikipedia.es_url", is_type_of=str),

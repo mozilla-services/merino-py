@@ -4,15 +4,24 @@ import json
 import logging
 from collections import defaultdict
 from datetime import datetime
+from enum import Enum
 from json import JSONDecodeError
 from typing import Any
 
 from google.cloud.storage import Blob, Bucket, Client
 
+from merino.config import settings
 from merino.exceptions import BackendError
 from merino.providers.top_picks.backends.protocol import TopPicksData
 
 logger = logging.getLogger(__name__)
+
+
+class DomainDataSource(str, Enum):
+    """Source enum for domain data source."""
+
+    remote = "remote"
+    local = "local"
 
 
 class TopPicksError(BackendError):
@@ -216,17 +225,26 @@ class TopPicksBackend:
 
     def build_indices(self) -> TopPicksData:
         """Read domain file, create indices and suggestions"""
-        # filemanager: TopPicksFilemanager = TopPicksFilemanager(
-        #     settings.providers.top_picks.gcs_project,
-        #     settings.providers.top_picks.gcs_bucket,
-        #     settings.providers.top_picks.top_picks_file_path,
-        # )
-
-        # domains: dict[str, Any] | None = filemanager.get_remote_file(
-        #     settings.providers.top_picks.gcs_bucket, None
-        # )
-        # if not domains:
-        domains: dict[str, Any] = self.read_domain_list(self.top_picks_file_path)
-
-        index_results: TopPicksData = self.build_index(domains)
-        return index_results
+        domain_data_source: str = settings.providers.top_picks.domain_data_source
+        match domain_data_source:
+            case DomainDataSource.remote:
+                filemanager: TopPicksFilemanager = TopPicksFilemanager(
+                    settings.providers.top_picks.gcs_project,
+                    settings.providers.top_picks.gcs_bucket,
+                    settings.providers.top_picks.top_picks_file_path,
+                )
+                remote_domains: dict[str, Any] = filemanager.get_remote_file(
+                    settings.providers.top_picks.gcs_bucket
+                )  # type: ignore [assignment]
+                index_results: TopPicksData = self.build_index(remote_domains)
+                return index_results
+            case DomainDataSource.local:
+                local_domains: dict[str, Any] = self.read_domain_list(
+                    self.top_picks_file_path
+                )
+                index_results: TopPicksData = self.build_index(local_domains)  # type: ignore
+                return index_results
+            case _:
+                raise TopPicksError(
+                    "Could not generate index from local or remote source."
+                )
