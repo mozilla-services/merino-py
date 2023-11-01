@@ -62,7 +62,7 @@ def test_destination_top_pick_name() -> None:
     assert result == expected_result
 
 
-def test_update_latest_filename_suffix(
+def test_remove_latest_from_all_top_picks_files(
     mocker, mock_gcs_client, mock_gcs_bucket, mock_gcs_blob, mock_favicon_downloader
 ) -> None:
     """Test that updating the `_latest` suffix successfully alters the file name."""
@@ -80,7 +80,7 @@ def test_update_latest_filename_suffix(
     mocker.patch.object(mock_gcs_bucket, "copy_blob")
     mocker.patch.object(mock_gcs_bucket, "delete_blob")
 
-    domain_metadata_uploader.update_latest_filename_suffix(
+    domain_metadata_uploader.remove_latest_from_all_top_picks_files(
         bucket_name=mock_gcs_bucket.name,
         file_suffix=file_suffix,
         bucket=mock_gcs_bucket,

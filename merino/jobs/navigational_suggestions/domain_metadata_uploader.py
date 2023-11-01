@@ -42,7 +42,7 @@ class DomainMetadataUploader:
         dst_top_pick_name = DomainMetadataUploader._destination_top_pick_name(
             suffix=DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
         )
-        self.update_latest_filename_suffix(
+        self.remove_latest_from_all_top_picks_files(
             bucket_name=self.bucket_name,
             file_suffix=DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX,
             bucket=bucket,
@@ -56,9 +56,9 @@ class DomainMetadataUploader:
     def _destination_top_pick_name(suffix: str) -> str:
         """Return the name of the top pick file to be used for uploading to GCS"""
         current = datetime.datetime.now()
-        return f"{str(int(current.timestamp()))}_{suffix}"
+        return f"{int(current.timestamp())}_{suffix}"
 
-    def update_latest_filename_suffix(
+    def remove_latest_from_all_top_picks_files(
         self,
         bucket_name: str,
         file_suffix: str,
