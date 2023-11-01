@@ -162,6 +162,9 @@ class DomainMetadataExtractor:
         "Please try again",
         "Access to this page",
         "We'll be right back",
+        "Bot or Not?",
+        "Too Many Requests",
+        "IP blocked",
     ]
 
     # List of blocked (second level) domains

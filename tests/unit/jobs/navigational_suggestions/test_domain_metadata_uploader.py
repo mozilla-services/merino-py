@@ -3,9 +3,11 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for domain_metadata_uploader.py module."""
+import datetime
 from typing import Any
 
 import pytest
+from freezegun import freeze_time
 
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
@@ -22,6 +24,24 @@ def mock_gcs_client(mocker):
 
 
 @pytest.fixture
+def mock_gcs_bucket(mocker):
+    """Return a mock GCS Bucket instance"""
+    bucket = mocker.patch(
+        "merino.jobs.navigational_suggestions.domain_metadata_uploader.Bucket"
+    ).return_value
+    bucket.name = "mock-bucket"
+    return bucket
+
+
+@pytest.fixture
+def mock_gcs_blob(mocker):
+    """Return a mock GCS Bucket instance"""
+    return mocker.patch(
+        "merino.jobs.navigational_suggestions.domain_metadata_uploader.Blob"
+    ).return_value
+
+
+@pytest.fixture
 def mock_favicon_downloader(mocker) -> Any:
     """Return a mock FaviconDownloader instance"""
     favicon_downloader_mock: Any = mocker.Mock(spec=FaviconDownloader)
@@ -29,6 +49,47 @@ def mock_favicon_downloader(mocker) -> Any:
         content=bytes(255), content_type="image/png"
     )
     return favicon_downloader_mock
+
+
+@freeze_time("2022-01-01 00:00:00")
+def test_destination_top_pick_name() -> None:
+    """Test the file name generation creates the expected file name for the blob."""
+    current = datetime.datetime.now()
+    suffix = DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
+    result = DomainMetadataUploader._destination_top_pick_name(suffix=suffix)
+    expected_result = f"{str(int(current.timestamp()))}_{suffix}"
+
+    assert result == expected_result
+
+
+def test_remove_latest_from_all_top_picks_files(
+    mocker, mock_gcs_client, mock_gcs_bucket, mock_gcs_blob, mock_favicon_downloader
+) -> None:
+    """Test that updating the `_latest` suffix successfully alters the file name."""
+    domain_metadata_uploader = DomainMetadataUploader(
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname="",
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
+    )
+
+    file_suffix = DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
+    mock_gcs_blob.name = "0_top_picks_latest.json"
+    mock_gcs_client.list_blobs.return_value = [mock_gcs_blob]
+    mocker.patch.object(mock_gcs_bucket, "copy_blob")
+    mocker.patch.object(mock_gcs_bucket, "delete_blob")
+
+    domain_metadata_uploader.remove_latest_from_all_top_picks_files(
+        bucket_name=mock_gcs_bucket.name,
+        file_suffix=file_suffix,
+        bucket=mock_gcs_bucket,
+        storage_client=mock_gcs_client,
+    )
+
+    mock_gcs_client.list_blobs.assert_called_once()
+    mock_gcs_bucket.copy_blob.assert_called_once()
+    mock_gcs_bucket.delete_blob.assert_called_once()
 
 
 def test_upload_top_picks(mock_gcs_client, mock_favicon_downloader) -> None:
