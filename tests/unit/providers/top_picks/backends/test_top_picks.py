@@ -160,19 +160,28 @@ def fixture_top_picks_filemanager(
     return TopPicksFilemanager(**top_picks_filemanager_parameters)
 
 
-def test_filemanager__parse_date(
+def test_init_gcs_client(
+    top_picks_filemanager: TopPicksFilemanager, mock_gcs_client
+) -> None:
+    """Test the initialization of the GCS client."""
+    with pytest.raises(AttributeError):
+        top_picks_filemanager.client
+
+    top_picks_filemanager.init_gcs_client()
+    assert top_picks_filemanager.client
+    # NOTE try assert called once here
+
+
+def test_parse_date(
     gcs_blob_mock: storage.Blob,
     expected_timestamp: int,
 ) -> None:
     """Test that the filemanager _parse_date method parses a unix timestamp"""
-    # import pdb
-
-    # pdb.set_trace()
     expected_datetime = datetime.fromtimestamp(int(expected_timestamp / 100000))
     assert expected_datetime == TopPicksFilemanager._parse_date(blob=gcs_blob_mock)
 
 
-def test__parse_date_with_missing_metadata(
+def test_parse_date_with_missing_metadata(
     mocker: MockerFixture,
 ) -> None:
     """Test that the filemanager result is None when mock Blob has no generation
@@ -186,7 +195,7 @@ def test__parse_date_with_missing_metadata(
     assert not result
 
 
-def test_filemanager__parse_date_fails(
+def test_parse_date_fails(
     top_picks_filemanager: TopPicksFilemanager,
     gcs_blob_mock: storage.Blob,
     mocker,
@@ -202,6 +211,16 @@ def test_filemanager__parse_date_fails(
     )
 
     with pytest.raises(AttributeError):
+        result = top_picks_filemanager._parse_date(blob=gcs_blob_mock)
+        assert expected_datetime == top_picks_filemanager._parse_date(
+            blob=gcs_blob_mock
+        )
+        assert not result
+
+    mocker.patch.object(
+        top_picks_filemanager, "_parse_date", side_effect=TypeError(error_message)
+    )
+    with pytest.raises(TypeError):
         result = top_picks_filemanager._parse_date(blob=gcs_blob_mock)
         assert expected_datetime == top_picks_filemanager._parse_date(
             blob=gcs_blob_mock
@@ -236,6 +255,34 @@ def test_read_domain_list_os_error(top_picks_backend: TopPicksBackend) -> None:
     """Test that read domain fails and raises exception with invalid file path."""
     with pytest.raises(TopPicksError):
         top_picks_backend.read_domain_list("./wrongfile.json")
+
+
+def test_get_local_file(top_picks_filemanager: TopPicksFilemanager) -> None:
+    """Test that the JSON file containing the domain list can be processed"""
+    domain_list = top_picks_filemanager.get_local_file(
+        settings.providers.top_picks.top_picks_file_path
+    )
+    assert domain_list["domains"][0]["domain"] == "example"
+    assert len(domain_list["domains"][1]["similars"]) == 5
+
+
+def test_get_local_file_os_error(top_picks_filemanager: TopPicksFilemanager) -> None:
+    """Test that read domain fails and raises exception with invalid file path."""
+    with pytest.raises(TopPicksError):
+        top_picks_filemanager.get_local_file("./wrongfile.json")
+
+
+def test_get_local_file_json_decode_err(
+    top_picks_filemanager: TopPicksFilemanager, mocker
+) -> None:
+    """Test that the read function fails, raising TopPicksError when a
+    JSONDecodeError is captured.
+    """
+    mocker.patch("json.load", side_effect=JSONDecodeError("test", "json", 1))
+    with pytest.raises(TopPicksError):
+        top_picks_filemanager.get_local_file(
+            settings.providers.top_picks.top_picks_file_path
+        )
 
 
 @pytest.mark.asyncio

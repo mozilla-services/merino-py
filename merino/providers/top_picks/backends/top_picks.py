@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 class DomainDataSource(str, Enum):
     """Source enum for domain data source."""
 
-    remote = "remote"
-    local = "local"
+    REMOTE = "remote"
+    LOCAL = "local"
 
 
 class TopPicksError(BackendError):
@@ -32,8 +32,9 @@ class TopPicksFilemanager:  # pragma: no cover
     """Tools for processing remote and local Top Picks data."""
 
     client: Client
+    gcs_project_path: str
     gcs_bucket_path: str
-    update_cadence: int
+    static_file_path: str
 
     def __init__(
         self,
@@ -41,27 +42,34 @@ class TopPicksFilemanager:  # pragma: no cover
         gcs_bucket_path: str,
         static_file_path: str,
     ) -> None:
-        self.client = Client(gcs_project_path)
+        self.gcs_project_path = gcs_project_path
         self.gcs_bucket_path = gcs_bucket_path
         self.static_file_path = static_file_path
+
+    def init_gcs_client(self) -> None:
+        """Initialize the GCS Client connection."""
+        self.client = Client(self.gcs_project_path)
 
     @staticmethod
     def _parse_date(blob: Blob) -> datetime | None:  # type: ignore [return]
         """Parse the datetime metadata from the file."""
         try:
-            metadata: int | None = blob.generation
+            date_metadata: int | None = blob.generation
         except AttributeError as e:
             logger.error(
                 f"Cannot parse date, generation attribute not found for {blob}: {e}"
             )
             return None
-        if (generation_date := metadata) is not None:
+        except TypeError as e:
+            logger.error(
+                f"Cannot parse date, generation attribute not found for {blob}: {e}"
+            )
+            return None
+        if (generation_date := date_metadata) is not None:
             # Returned value stored on GCS metadata in microseconds.
             return datetime.fromtimestamp(int(generation_date / 100000))
 
-    def get_remote_file(  # pragma: no cover
-        self, gcs_bucket_path: str
-    ) -> dict[str, Any] | None:
+    def get_remote_file(self, gcs_bucket_path: str) -> dict[str, Any] | None:
         """Read remote domain list file.
 
         Raises:
@@ -73,7 +81,7 @@ class TopPicksFilemanager:  # pragma: no cover
         domain_files: Any = bucket.list_blobs(delimiter="/")
 
         for file in domain_files:
-            if file.name.endswith("1681866451000.0_top_picks.json"):
+            if file.name.endswith("top_picks_latest.json"):
                 data = file.download_as_text()
                 blob_date: datetime | None = self._parse_date(blob=file)
                 current_date: datetime = datetime.now()
@@ -85,7 +93,7 @@ class TopPicksFilemanager:  # pragma: no cover
                 return file_contents
         return None
 
-    def _get_local_file(self, file: str) -> dict[str, Any]:  # pragma: no cover
+    def get_local_file(self, file: str) -> dict[str, Any]:
         """Read local domain list file.
 
         Raises:
@@ -226,25 +234,29 @@ class TopPicksBackend:
     def build_indices(self) -> TopPicksData:
         """Read domain file, create indices and suggestions"""
         domain_data_source: str = settings.providers.top_picks.domain_data_source
+        filemanager: TopPicksFilemanager = TopPicksFilemanager(
+            settings.providers.top_picks.gcs_project,
+            settings.providers.top_picks.gcs_bucket,
+            settings.providers.top_picks.top_picks_file_path,
+        )
         match domain_data_source:
-            case DomainDataSource.remote:
-                filemanager: TopPicksFilemanager = TopPicksFilemanager(
-                    settings.providers.top_picks.gcs_project,
-                    settings.providers.top_picks.gcs_bucket,
-                    settings.providers.top_picks.top_picks_file_path,
-                )
+            case DomainDataSource.REMOTE:
+                filemanager.init_gcs_client()
                 remote_domains: dict[str, Any] = filemanager.get_remote_file(
                     settings.providers.top_picks.gcs_bucket
                 )  # type: ignore [assignment]
                 index_results: TopPicksData = self.build_index(remote_domains)
+                logger.info("Top Picks Domain Data loaded remotely from GCS.")
                 return index_results
-            case DomainDataSource.local:
+            case DomainDataSource.LOCAL:
                 local_domains: dict[str, Any] = self.read_domain_list(
                     self.top_picks_file_path
                 )
                 index_results: TopPicksData = self.build_index(local_domains)  # type: ignore
+                logger.info("Top Picks Domain Data loaded locally from static file.")
                 return index_results
             case _:
+                logger.error("Could not generate index from local or remote source.")
                 raise TopPicksError(
                     "Could not generate index from local or remote source."
                 )
