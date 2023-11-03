@@ -100,6 +100,13 @@ class DomainMetadataUploader:
         """Process the domain list and return a list of all second-level domains."""
         return [entry["domain"] for entry in domain_list]
 
+    def process_categories(self, domain_list: list[dict[str, Any]]) -> list[str]:
+        """Process the domain list and return a list of all distinct categories."""
+        distinct_categories: list[str] = list(
+            set([value for entry in domain_list for value in entry["categories"]])
+        )
+        return distinct_categories
+
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload the domain favicons to gcs using their source url and
         return the public urls of the uploaded ones.
