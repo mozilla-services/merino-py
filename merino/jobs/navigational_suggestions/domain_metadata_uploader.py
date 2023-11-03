@@ -100,6 +100,10 @@ class DomainMetadataUploader:
         """Process the domain list and return a list of all second-level domains."""
         return [entry["domain"] for entry in domain_list]
 
+    def process_urls(self, domain_list: list[dict[str, Any]]) -> list[str]:
+        """Process the domain list and return a list of all urlss."""
+        return [entry["url"] for entry in domain_list]
+
     def process_categories(self, domain_list: list[dict[str, Any]]) -> list[str]:
         """Process the domain list and return a list of all distinct categories."""
         distinct_categories: list[str] = list(
