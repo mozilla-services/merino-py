@@ -3,6 +3,7 @@ import hashlib
 import json
 import logging
 from datetime import datetime
+from typing import Any
 from urllib.parse import urljoin
 
 from google.cloud.storage import Blob, Bucket, Client
@@ -94,6 +95,10 @@ class DomainMetadataUploader:
                 logger.info(f"Domain file {file.name} acquired.")
                 return file_contents
         return None
+
+    def process_domains(self, domain_list: list[dict[str, Any]]) -> list[str]:
+        """Process the domain list and return a list of all second-level domains."""
+        return [entry["domain"] for entry in domain_list]
 
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload the domain favicons to gcs using their source url and
