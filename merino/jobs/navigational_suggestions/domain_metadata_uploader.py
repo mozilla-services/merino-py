@@ -3,7 +3,7 @@ import hashlib
 import json
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urljoin
 
 from google.cloud.storage import Blob, Bucket, Client
@@ -93,21 +93,34 @@ class DomainMetadataUploader:
                 data = file.download_as_text()
                 file_contents: dict = json.loads(data)
                 logger.info(f"Domain file {file.name} acquired.")
+
                 return file_contents
         return None
 
-    def process_domains(self, domain_list: list[dict[str, Any]]) -> list[str]:
+    def process_domains(
+        self, domain_data: dict[Literal["domains"], list[dict[str, Any]]]
+    ) -> list[str]:
         """Process the domain list and return a list of all second-level domains."""
-        return [entry["domain"] for entry in domain_list]
+        return [entry["domain"] for entry in domain_data["domains"]]
 
-    def process_urls(self, domain_list: list[dict[str, Any]]) -> list[str]:
-        """Process the domain list and return a list of all urlss."""
-        return [entry["url"] for entry in domain_list]
+    def process_urls(
+        self, domain_data: dict[Literal["domains"], list[dict[str, Any]]]
+    ) -> list[str]:
+        """Process the domain list and return a list of all urls."""
+        return [entry["url"] for entry in domain_data["domains"]]
 
-    def process_categories(self, domain_list: list[dict[str, Any]]) -> list[str]:
+    def process_categories(
+        self, domain_data: dict[Literal["domains"], list[dict[str, Any]]]
+    ) -> list[str]:
         """Process the domain list and return a list of all distinct categories."""
         distinct_categories: list[str] = list(
-            set([value for entry in domain_list for value in entry["categories"]])
+            set(
+                [
+                    value
+                    for entry in domain_data["domains"]
+                    for value in entry["categories"]
+                ]
+            )
         )
         return distinct_categories
 

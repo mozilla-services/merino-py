@@ -4,6 +4,7 @@
 
 """Unit tests for domain_metadata_uploader.py module."""
 import datetime
+import json
 from typing import Any
 
 import pytest
@@ -13,6 +14,68 @@ from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
 from merino.jobs.navigational_suggestions.utils import FaviconDownloader, FaviconImage
+
+
+@pytest.fixture(name="json_domain_data")
+def fixture_json_domain_data() -> str:
+    """Return a JSON string of top picks data for mocking."""
+    return json.dumps(
+        {
+            "domains": [
+                {
+                    "rank": 1,
+                    "title": "Example",
+                    "domain": "example",
+                    "url": "https://example.com",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["exxample", "exampple", "eexample"],
+                },
+                {
+                    "rank": 2,
+                    "title": "Firefox",
+                    "domain": "firefox",
+                    "url": "https://firefox.com",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": [
+                        "firefoxx",
+                        "foyerfox",
+                        "fiirefox",
+                        "firesfox",
+                        "firefoxes",
+                    ],
+                },
+                {
+                    "rank": 3,
+                    "title": "Mozilla",
+                    "domain": "mozilla",
+                    "url": "https://mozilla.org/en-US/",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["mozzilla", "mozila"],
+                },
+                {
+                    "rank": 4,
+                    "title": "Abc",
+                    "domain": "abc",
+                    "url": "https://abc.test",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["aa", "ab", "acb", "acbc", "aecbc"],
+                },
+                {
+                    "rank": 5,
+                    "title": "BadDomain",
+                    "domain": "baddomain",
+                    "url": "https://baddomain.test",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["bad", "badd"],
+                },
+            ]
+        }
+    )
 
 
 @pytest.fixture
@@ -206,3 +269,78 @@ def test_upload_favicons_return_empty_url_for_failed_favicon_download(
 
     for uploaded_favicon in uploaded_favicons:
         assert uploaded_favicon == ""
+
+
+def test_process_domains(
+    mock_gcs_blob,
+    mock_gcs_client,
+    mock_favicon_downloader,
+    json_domain_data,
+) -> None:
+    """Test that the domain list can be processed and a list of all
+    second-level domains are returned.
+    """
+    default_domain_metadata_uploader = DomainMetadataUploader(
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname="",
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
+    )
+    mock_gcs_blob.name = "0_top_picks_latest.json"
+    mock_gcs_client.list_blobs.return_value = [mock_gcs_blob]
+    expected_domains = ["example", "firefox", "mozilla", "abc", "baddomain"]
+    processed_domains = default_domain_metadata_uploader.process_domains(
+        domain_data=json.loads(json_domain_data)
+    )
+    assert processed_domains == expected_domains
+
+
+def test_process_urls(
+    mock_gcs_blob, mock_gcs_client, json_domain_data, mock_favicon_downloader
+) -> None:
+    """Test that the domain list can be processed and a list of all
+    urls are returned.
+    """
+    default_domain_metadata_uploader = DomainMetadataUploader(
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname="",
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
+    )
+    mock_gcs_blob.name = "0_top_picks_latest.json"
+    mock_gcs_client.list_blobs.return_value = [mock_gcs_blob]
+    expected_urls = [
+        "https://example.com",
+        "https://firefox.com",
+        "https://mozilla.org/en-US/",
+        "https://abc.test",
+        "https://baddomain.test",
+    ]
+    processed_urls = default_domain_metadata_uploader.process_urls(
+        domain_data=json.loads(json_domain_data)
+    )
+    assert processed_urls == expected_urls
+
+
+def test_process_categories(
+    mock_gcs_blob, mock_gcs_client, mock_favicon_downloader, json_domain_data
+) -> None:
+    """Test that the domain list can be processed and a list of all
+    distinct categories.
+    """
+    default_domain_metadata_uploader = DomainMetadataUploader(
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname="",
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
+    )
+    mock_gcs_blob.name = "0_top_picks_latest.json"
+    mock_gcs_client.list_blobs.return_value = [mock_gcs_blob]
+    expected_categories = ["web-browser"]
+    processed_categories = default_domain_metadata_uploader.process_categories(
+        domain_data=json.loads(json_domain_data)
+    )
+    assert processed_categories == expected_categories
