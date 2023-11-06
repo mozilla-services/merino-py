@@ -85,6 +85,7 @@ _validators = [
         "providers.top_picks.domain_data_source",
         is_type_of=str,
         is_in=["remote", "local"],
+        must_exist=True,
     ),
     Validator("providers.wikipedia.backend", is_in=["elasticsearch", "test"]),
     Validator("providers.wikipedia.enabled_by_default", is_type_of=bool),

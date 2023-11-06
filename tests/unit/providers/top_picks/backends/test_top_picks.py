@@ -7,10 +7,12 @@ import json
 import os
 from datetime import datetime
 from json import JSONDecodeError
+from logging import LogRecord
 from typing import Any
 
 import pytest
 from google.cloud import storage
+from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.config import settings
@@ -20,6 +22,7 @@ from merino.providers.top_picks.backends.top_picks import (
     TopPicksError,
     TopPicksFilemanager,
 )
+from tests.types import FilterCaplogFixture
 
 
 @pytest.fixture(name="domain_blocklist")
@@ -323,6 +326,27 @@ async def test_fetch(top_picks_backend: TopPicksBackend, attr: str) -> None:
     """Test the fetch method returns TopPickData."""
     result = await top_picks_backend.fetch()
     assert hasattr(result, attr)
+
+
+def test_build_indicies_error(
+    top_picks_backend: TopPicksBackend,
+    mocker,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Test the catchall case when a source for building indicies
+    is not defined.
+    """
+    mocker.patch(
+        "merino.config.settings.providers.top_picks.domain_data_source"
+    ).return_value = "invalid"
+
+    with pytest.raises(TopPicksError):
+        top_picks_backend.build_indices()
+        records: list[LogRecord] = filter_caplog(
+            caplog.records, "merino.providers.top_picks"
+        )
+        assert len(records) == 1
 
 
 def test_domain_blocklist(
