@@ -16,7 +16,7 @@ TEST_UPLOADER_KWARGS: dict[str, Any] = {
     "bucket": "test-bucket",
     "collection": "test-collection",
     "record_type": "test-record-type",
-    "server": "http://localhost",
+    "server": "http://127.0.0.1",
 }
 
 

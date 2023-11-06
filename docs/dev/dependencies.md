@@ -59,7 +59,7 @@ $ make docker-compose-up-daemon
 $ make docker-compose-down
 ```
 
-Redis is listening on port 6397 and can be connected via `redis://localhost:6397`.
+Redis is listening on port 6397 and can be connected via `redis://127.0.0.1:6397`.
 
 This Dockerized set up is optional. Feel free to run the dependent services by
 any other means as well.
@@ -69,7 +69,7 @@ any other means as well.
 The docker-compose setup also includes some services that can help during
 development.
 
-- Redis Commander, http://localhost:8081 - Explore the Redis database started
+- Redis Commander, http://127.0.0.1:8081 - Explore the Redis database started
   above.
 
 

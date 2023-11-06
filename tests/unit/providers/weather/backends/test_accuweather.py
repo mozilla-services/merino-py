@@ -1328,16 +1328,16 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend) -> None:
     [
         (
             {"q": "asdfg", "apikey": "filter_me_out"},
-            f"AccuweatherBackend:v3:localhost:"
+            f"AccuweatherBackend:v3:127.0.0.1:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
         (
             {},
-            "AccuweatherBackend:v3:localhost",
+            "AccuweatherBackend:v3:127.0.0.1",
         ),
         (
             {"q": "asdfg"},
-            f"AccuweatherBackend:v3:localhost:"
+            f"AccuweatherBackend:v3:127.0.0.1:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
     ],
@@ -1349,7 +1349,7 @@ def test_cache_key_for_accuweather_request(
     expected_cache_key: str,
 ):
     """Test that the cache key is created properly."""
-    url = "localhost"
+    url = "127.0.0.1"
     cache_key = accuweather.cache_key_for_accuweather_request(
         url, query_params=query_params
     )

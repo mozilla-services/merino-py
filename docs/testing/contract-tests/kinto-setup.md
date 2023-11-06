@@ -25,7 +25,7 @@ within a Python virtual environment to prevent dependency cross contamination.
     The following environment variables are set in `docker-compose.yml`, but will
     require local setup via command line, pytest.ini file or IDE configuration:
     * `KINTO_URL`: The URL of the Kinto service
-      * Example: `KINTO_URL=http://localhost:8888`
+      * Example: `KINTO_URL=http://127.0.0.1:8888`
     * `KINTO_BUCKET`: The ID of the Kinto bucket to create
       * Example: `KINTO_BUCKET=main`
     * `KINTO_COLLECTION`: The ID of the Kinto collection to create

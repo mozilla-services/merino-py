@@ -15,7 +15,7 @@ mock_sentry_hint: dict[str, list] = {"exc_info": [RuntimeError, RuntimeError(), 
 mock_sentry_event_data: dict = {
     "request": {
         "method": "GET",
-        "url": "http://localhost:8000/api/v1/suggest",
+        "url": "http://127.0.0.1:8000/api/v1/suggest",
         "query_string": "query_str_foo",
     },
     "exception": {

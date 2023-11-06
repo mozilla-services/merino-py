@@ -19,7 +19,7 @@ from merino.providers.wikipedia.backends.elastic import (
 def fixture_es_backend() -> ElasticBackend:
     """Return an ES backend instance."""
     return ElasticBackend(
-        url="https://localhost:9200",
+        url="https://127.0.0.1:9200",
         api_key=settings.providers.wikipedia.es_api_key,
     )
 
@@ -27,7 +27,7 @@ def fixture_es_backend() -> ElasticBackend:
 def test_es_backend_initialize_with_url():
     """Test that backend initializes when we pass a URL."""
     backend = ElasticBackend(
-        url="https://localhost:9200",
+        url="https://127.0.0.1:9200",
         api_key=settings.providers.wikipedia.es_api_key,
     )
     assert backend

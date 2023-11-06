@@ -88,7 +88,7 @@ repository root:
 
 #### 1. Start Load Test
 
-* In a browser navigate to `http://localhost:8089/`
+* In a browser navigate to `http://127.0.0.1:8089/`
 * Set up the load test parameters:
     * Option 1: Select the `MerinoLoadTestShape`
       * This option has pre-defined settings and will last 10 minutes

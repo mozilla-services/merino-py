@@ -28,7 +28,7 @@ def test_create_blocklist(
     blocklist_csv_text: str,
 ):
     """Test that the blocklist is created from CSV file."""
-    url = "https://localhost"
+    url = "https://127.0.0.1"
     requests_mock.get(url, text=blocklist_csv_text)  # nosec
 
     categories = create_blocklist(blocklist_file_url=url)
@@ -86,7 +86,7 @@ def test_create_elasticsearch_client_url(mocker: MockerFixture):
     es_new_mock = mocker.patch.object(Elasticsearch, "__new__")
 
     api_key = "mMyY2E2ZDA0MjI0OWFmMGNjN2Q3YTllOTYyNTc0Mw=="
-    url = "http://localhost:9200"
+    url = "http://127.0.0.1:9200"
 
     create_elasticsearch_client(url, api_key)
 
