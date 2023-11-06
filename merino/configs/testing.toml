@@ -60,11 +60,12 @@ query_char_limit = 4
 firefox_char_limit = 2
 top_picks_file_path = "tests/data/top_picks.json"
 
-# GCS Test Settings (Top Picks)
+# GCS-related Remote Domain File Test Settings (Top Picks)
 cron_interval_sec = 60
 resync_interval_sec = 10800
 gcs_project = "moz-fx-merino-test"
 gcs_bucket = "merino-bucket-testpy"
+domain_data_source = "local"
 
 [testing.providers.wikipedia]
 # The backend of the provider. Either "elasticsearch" or "test".

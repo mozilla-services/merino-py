@@ -77,6 +77,7 @@ class TopPicksFilemanager:  # pragma: no cover
         Returns:
             Dictionary containing domain list
         """
+        self.init_gcs_client()
         bucket: Bucket = self.client.get_bucket(gcs_bucket_path)
         domain_files: Any = bucket.list_blobs(delimiter="/")
 
@@ -241,7 +242,6 @@ class TopPicksBackend:
         )
         match domain_data_source:
             case DomainDataSource.REMOTE:
-                filemanager.init_gcs_client()
                 remote_domains: dict[str, Any] = filemanager.get_remote_file(
                     settings.providers.top_picks.gcs_bucket
                 )  # type: ignore [assignment]
