@@ -12,7 +12,7 @@ from google.cloud.storage import Blob, Bucket, Client
 
 from merino.config import settings
 from merino.exceptions import BackendError
-from merino.providers.top_picks.backends.protocol import TopPicksData, TopPicksFileManager
+from merino.providers.top_picks.backends.protocol import TopPicksData
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class TopPicksError(BackendError):
     """Error during interaction with Top Picks data."""
 
 
-class TopPicksLocalFilemanager: # pragma: no cover
+class TopPicksLocalFilemanager:  # pragma: no cover
     """Filemanager for processing local Top Picks data."""
 
     static_file_path: str
@@ -54,6 +54,70 @@ class TopPicksLocalFilemanager: # pragma: no cover
             raise TopPicksError(
                 f"Cannot decode file '{self.static_file_path}'"
             ) from json_error
+
+
+class TopPicksRemoteFilemanager:  # pragma: no cover
+    """Filemanager for processing local Top Picks data."""
+
+    client: Client
+    gcs_project_path: str
+    gcs_bucket_path: str
+
+    def __init__(
+        self,
+        gcs_project_path: str,
+        gcs_bucket_path: str,
+    ) -> None:
+        self.gcs_project_path = gcs_project_path
+        self.gcs_bucket_path = gcs_bucket_path
+
+    def init_gcs_client(self) -> None:
+        """Initialize the GCS Client connection."""
+        self.client = Client(self.gcs_project_path)
+
+    @staticmethod
+    def _parse_date(blob: Blob) -> datetime | None:  # type: ignore [return]
+        """Parse the datetime metadata from the file."""
+        try:
+            date_metadata: int | None = blob.generation
+        except AttributeError as e:
+            logger.error(
+                f"Cannot parse date, generation attribute not found for {blob}: {e}"
+            )
+            return None
+        except TypeError as e:
+            logger.error(
+                f"Cannot parse date, generation attribute not found for {blob}: {e}"
+            )
+            return None
+        if (generation_date := date_metadata) is not None:
+            # Returned value stored on GCS metadata in microseconds.
+            return datetime.fromtimestamp(int(generation_date / 100000))
+
+    def get_file(self) -> dict[str, Any] | None:
+        """Read remote domain list file.
+
+        Raises:
+            TopPicksError: If the top picks file cannot be accessed.
+        Returns:
+            Dictionary containing domain list
+        """
+        self.init_gcs_client()
+        bucket: Bucket = self.client.get_bucket(self.gcs_bucket_path)
+        domain_files: Any = bucket.list_blobs(delimiter="/")
+
+        for file in domain_files:
+            if file.name.endswith("top_picks_latest.json"):
+                data = file.download_as_text()
+                blob_date: datetime | None = self._parse_date(blob=file)
+                current_date: datetime = datetime.now()
+                file_contents: dict = json.loads(data)
+                logger.info(
+                    f"Domain file {file.name} acquired. File generated on: {blob_date}."
+                    f"Updated in Merino backend on {current_date}."
+                )
+                return file_contents
+        return None
 
 
 class TopPicksFilemanager:  # pragma: no cover
