@@ -1,6 +1,6 @@
 """Protocol for the Top Picks provider backend."""
 from collections import defaultdict
-from typing import Protocol
+from typing import Any, Protocol
 
 from pydantic import BaseModel
 
@@ -27,4 +27,14 @@ class TopPicksBackend(Protocol):
         Raises:
             BackendError: If the top picks data is unavailable.
         """
+        ...
+
+
+class TopPicksFileManager(Protocol):
+    """Protocol for all Top Picks File managers that are local or remote.
+    These deliver data for the backend to consume.
+    """
+
+    def get_file(self) -> dict[str, Any]:  # pragma: no cover
+        """Get the domain data file that is passed to the backend."""
         ...

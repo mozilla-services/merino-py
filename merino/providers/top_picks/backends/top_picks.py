@@ -12,7 +12,7 @@ from google.cloud.storage import Blob, Bucket, Client
 
 from merino.config import settings
 from merino.exceptions import BackendError
-from merino.providers.top_picks.backends.protocol import TopPicksData
+from merino.providers.top_picks.backends.protocol import TopPicksData, TopPicksFileManager
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,34 @@ class DomainDataSource(str, Enum):
 
 class TopPicksError(BackendError):
     """Error during interaction with Top Picks data."""
+
+
+class TopPicksLocalFilemanager: # pragma: no cover
+    """Filemanager for processing local Top Picks data."""
+
+    static_file_path: str
+
+    def __init__(self, static_file_path: str) -> None:
+        self.static_file_path = static_file_path
+
+    def get_file(self) -> dict[str, Any]:
+        """Read local domain list file.
+
+        Raises:
+            TopPicksError: If the top picks file path cannot be opened or decoded.
+        """
+        try:
+            with open(self.static_file_path, "r") as readfile:
+                domain_list: dict = json.load(readfile)
+                return domain_list
+        except OSError as os_error:
+            raise TopPicksError(
+                f"Cannot open file '{self.static_file_path}'"
+            ) from os_error
+        except JSONDecodeError as json_error:
+            raise TopPicksError(
+                f"Cannot decode file '{self.static_file_path}'"
+            ) from json_error
 
 
 class TopPicksFilemanager:  # pragma: no cover
