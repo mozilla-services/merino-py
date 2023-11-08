@@ -28,7 +28,7 @@ class TopPicksError(BackendError):
     """Error during interaction with Top Picks data."""
 
 
-class TopPicksLocalFilemanager:  # pragma: no cover
+class TopPicksLocalFilemanager:
     """Filemanager for processing local Top Picks data."""
 
     static_file_path: str
@@ -56,7 +56,7 @@ class TopPicksLocalFilemanager:  # pragma: no cover
             ) from json_error
 
 
-class TopPicksRemoteFilemanager:  # pragma: no cover
+class TopPicksRemoteFilemanager:
     """Filemanager for processing local Top Picks data."""
 
     client: Client
@@ -80,12 +80,7 @@ class TopPicksRemoteFilemanager:  # pragma: no cover
         """Parse the datetime metadata from the file."""
         try:
             date_metadata: int | None = blob.generation
-        except AttributeError as e:
-            logger.error(
-                f"Cannot parse date, generation attribute not found for {blob}: {e}"
-            )
-            return None
-        except TypeError as e:
+        except (AttributeError, TypeError) as e:
             logger.error(
                 f"Cannot parse date, generation attribute not found for {blob}: {e}"
             )
