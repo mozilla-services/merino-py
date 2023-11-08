@@ -71,9 +71,9 @@ class TopPicksRemoteFilemanager:  # pragma: no cover
         self.gcs_project_path = gcs_project_path
         self.gcs_bucket_path = gcs_bucket_path
 
-    def init_gcs_client(self) -> None:
+    def create_gcs_client(self) -> Client:
         """Initialize the GCS Client connection."""
-        self.client = Client(self.gcs_project_path)
+        return Client(self.gcs_project_path)
 
     @staticmethod
     def _parse_date(blob: Blob) -> datetime | None:  # type: ignore [return]
@@ -94,7 +94,7 @@ class TopPicksRemoteFilemanager:  # pragma: no cover
             # Returned value stored on GCS metadata in microseconds.
             return datetime.fromtimestamp(int(generation_date / 100000))
 
-    def get_file(self) -> dict[str, Any] | None:
+    def get_file(self, client: Client) -> dict[str, Any]:  # type: ignore [return]
         """Read remote domain list file.
 
         Raises:
@@ -102,104 +102,23 @@ class TopPicksRemoteFilemanager:  # pragma: no cover
         Returns:
             Dictionary containing domain list
         """
-        self.init_gcs_client()
-        bucket: Bucket = self.client.get_bucket(self.gcs_bucket_path)
-        domain_files: Any = bucket.list_blobs(delimiter="/")
-
-        for file in domain_files:
-            if file.name.endswith("top_picks_latest.json"):
-                data = file.download_as_text()
-                blob_date: datetime | None = self._parse_date(blob=file)
-                current_date: datetime = datetime.now()
-                file_contents: dict = json.loads(data)
-                logger.info(
-                    f"Domain file {file.name} acquired. File generated on: {blob_date}."
-                    f"Updated in Merino backend on {current_date}."
-                )
-                return file_contents
-        return None
-
-
-class TopPicksFilemanager:  # pragma: no cover
-    """Tools for processing remote and local Top Picks data."""
-
-    client: Client
-    gcs_project_path: str
-    gcs_bucket_path: str
-    static_file_path: str
-
-    def __init__(
-        self,
-        gcs_project_path: str,
-        gcs_bucket_path: str,
-        static_file_path: str,
-    ) -> None:
-        self.gcs_project_path = gcs_project_path
-        self.gcs_bucket_path = gcs_bucket_path
-        self.static_file_path = static_file_path
-
-    def init_gcs_client(self) -> None:
-        """Initialize the GCS Client connection."""
-        self.client = Client(self.gcs_project_path)
-
-    @staticmethod
-    def _parse_date(blob: Blob) -> datetime | None:  # type: ignore [return]
-        """Parse the datetime metadata from the file."""
         try:
-            date_metadata: int | None = blob.generation
-        except AttributeError as e:
-            logger.error(
-                f"Cannot parse date, generation attribute not found for {blob}: {e}"
-            )
-            return None
-        except TypeError as e:
-            logger.error(
-                f"Cannot parse date, generation attribute not found for {blob}: {e}"
-            )
-            return None
-        if (generation_date := date_metadata) is not None:
-            # Returned value stored on GCS metadata in microseconds.
-            return datetime.fromtimestamp(int(generation_date / 100000))
+            bucket: Bucket = client.get_bucket(self.gcs_bucket_path)
+            domain_files: Any = bucket.list_blobs(delimiter="/")
 
-    def get_remote_file(self, gcs_bucket_path: str) -> dict[str, Any] | None:
-        """Read remote domain list file.
-
-        Raises:
-            TopPicksError: If the top picks file cannot be accessed.
-        Returns:
-            Dictionary containing domain list
-        """
-        self.init_gcs_client()
-        bucket: Bucket = self.client.get_bucket(gcs_bucket_path)
-        domain_files: Any = bucket.list_blobs(delimiter="/")
-
-        for file in domain_files:
-            if file.name.endswith("top_picks_latest.json"):
-                data = file.download_as_text()
-                blob_date: datetime | None = self._parse_date(blob=file)
-                current_date: datetime = datetime.now()
-                file_contents: dict = json.loads(data)
-                logger.info(
-                    f"Domain file {file.name} acquired. File generated on: {blob_date}."
-                    f"Updated in Merino backend on {current_date}."
-                )
-                return file_contents
-        return None
-
-    def get_local_file(self, file: str) -> dict[str, Any]:
-        """Read local domain list file.
-
-        Raises:
-            TopPicksError: If the top picks file path cannot be opened or decoded.
-        """
-        try:
-            with open(file, "r") as readfile:
-                domain_list: dict = json.load(readfile)
-                return domain_list
-        except OSError as os_error:
-            raise TopPicksError(f"Cannot open file '{file}'") from os_error
-        except JSONDecodeError as json_error:
-            raise TopPicksError(f"Cannot decode file '{file}'") from json_error
+            for file in domain_files:
+                if file.name.endswith("top_picks_latest.json"):
+                    data = file.download_as_text()
+                    blob_date: datetime | None = self._parse_date(blob=file)
+                    current_date: datetime = datetime.now()
+                    file_contents: dict = json.loads(data)
+                    logger.info(
+                        f"Domain file {file.name} acquired. File generated on: {blob_date}."
+                        f"Updated in Merino backend on {current_date}."
+                    )
+                    return file_contents
+        except Exception as e:
+            raise TopPicksError(f"Error getting remote file {e}")
 
 
 class TopPicksBackend:
@@ -327,26 +246,26 @@ class TopPicksBackend:
     def build_indices(self) -> TopPicksData:
         """Read domain file, create indices and suggestions"""
         domain_data_source: str = settings.providers.top_picks.domain_data_source
-        filemanager: TopPicksFilemanager = TopPicksFilemanager(
-            settings.providers.top_picks.gcs_project,
-            settings.providers.top_picks.gcs_bucket,
-            settings.providers.top_picks.top_picks_file_path,
-        )
+
         match domain_data_source:
             case DomainDataSource.REMOTE:
-                remote_domains: dict[str, Any] = filemanager.get_remote_file(
-                    settings.providers.top_picks.gcs_bucket
-                )  # type: ignore [assignment]
-                index_results: TopPicksData = self.build_index(remote_domains)
-                logger.info("Top Picks Domain Data loaded remotely from GCS.")
-                return index_results
-            case DomainDataSource.LOCAL:
-                local_domains: dict[str, Any] = self.read_domain_list(
-                    self.top_picks_file_path
+                remote_filemanager = TopPicksRemoteFilemanager(
+                    gcs_project_path=settings.providers.top_picks.gcs_project,
+                    gcs_bucket_path=settings.providers.top_picks.gcs_bucket,
                 )
-                index_results: TopPicksData = self.build_index(local_domains)  # type: ignore
+                client: Client = remote_filemanager.create_gcs_client()
+                remote_domains: dict[str, Any] = remote_filemanager.get_file(client)
+                remote_index_results: TopPicksData = self.build_index(remote_domains)
+                logger.info("Top Picks Domain Data loaded remotely from GCS.")
+                return remote_index_results
+            case DomainDataSource.LOCAL:
+                local_filemanager = TopPicksLocalFilemanager(
+                    static_file_path=settings.providers.top_picks.top_picks_file_path
+                )
+                local_domains = local_filemanager.get_file()
+                local_index_results: TopPicksData = self.build_index(local_domains)
                 logger.info("Top Picks Domain Data loaded locally from static file.")
-                return index_results
+                return local_index_results
             case _:
                 logger.error("Could not generate index from local or remote source.")
                 raise TopPicksError(
