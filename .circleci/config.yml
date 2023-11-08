@@ -154,7 +154,7 @@ jobs:
             - merinopy.tar.gz
   contract-tests:
     machine:
-      image: ubuntu-2004:2023.04.2
+      image: ubuntu-2004:2023.10.1
     working_directory: ~/merino
     steps:
       - checkout
