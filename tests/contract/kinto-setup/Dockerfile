@@ -1,4 +1,4 @@
-FROM python:3.11-slim-buster
+FROM python:3.12-slim-bookworm
 
 LABEL maintainer="Content Discovery Services (DISCO) Team <disco-team@mozilla.com>"
 
@@ -10,7 +10,7 @@ RUN python -m pip install --upgrade pip
 
 # Setup poetry and install requirements
 ENV POETRY_VIRTUALENVS_CREATE=false \
-    POETRY_VERSION=1.5.1
+    POETRY_VERSION=1.7
 RUN python -m pip install --no-cache-dir --quiet poetry
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --without client --no-interaction --no-ansi
