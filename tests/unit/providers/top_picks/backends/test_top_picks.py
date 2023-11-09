@@ -118,7 +118,7 @@ def fixture_blob_json() -> str:
     )
 
 
-@pytest.fixture(name="gcs_blob_mock")
+@pytest.fixture(name="gcs_blob_mock", autouse=True)
 def fixture_gcs_blob_mock(
     mocker: MockerFixture, expected_timestamp: int, blob_json: str
 ) -> Any:
@@ -130,7 +130,7 @@ def fixture_gcs_blob_mock(
     return mock_blob
 
 
-@pytest.fixture(name="gcs_bucket_mock")
+@pytest.fixture(name="gcs_bucket_mock", autouse=True)
 def fixture_gcs_bucket_mock(mocker: MockerFixture, gcs_blob_mock) -> Any:
     """Create a GCS Bucket mock object for testing."""
     mock_bucket = mocker.MagicMock(spec=Bucket)
@@ -139,7 +139,7 @@ def fixture_gcs_bucket_mock(mocker: MockerFixture, gcs_blob_mock) -> Any:
     return mock_bucket
 
 
-@pytest.fixture(name="gcs_client_mock")
+@pytest.fixture(name="gcs_client_mock", autouse=True)
 def mock_gcs_client(mocker: MockerFixture, gcs_bucket_mock):
     """Return a mock GCS Client instance"""
     mock_client = mocker.MagicMock(spec=Client)
@@ -398,6 +398,7 @@ def test_build_indicies_remote(
     top_picks_backend: TopPicksBackend,
     top_picks_remote_filemanager: TopPicksRemoteFilemanager,
     mocker,
+    gcs_client_mock,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     gcs_bucket_mock,
@@ -407,17 +408,24 @@ def test_build_indicies_remote(
     """
     caplog.set_level(logging.INFO)
     mocker.patch(
+        "merino.providers.top_picks.backends.top_picks.Client"
+    ).return_value = gcs_client_mock
+    mocker.patch(
         "merino.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
-    # mocker.patch.object(top_picks_filemanager, "get_remote_file").return_value
-    # top_picks_filemanager.get_remote_file(
-    #     gcs_bucket_path=settings.providers.top_picks.gcs_bucket
-    # )
-    # top_picks_filemanager.get_remote_file.assert_called_once()
-    # records: list[LogRecord] = filter_caplog(
-    #     caplog.records, "merino.providers.top_picks.backends.top_picks"
-    # )
-    # assert len(records) == 1
+
+    result = top_picks_backend.build_indices()
+    records: list[LogRecord] = filter_caplog(
+        caplog.records, "merino.providers.top_picks.backends.top_picks"
+    )
+    assert isinstance(result, TopPicksData)
+    assert len(records) == 2
+    assert records[0].message.startswith(
+        "Domain file 123456.top_picks_latest.json acquired."
+    )
+    assert records[1].message.startswith(
+        "Top Picks Domain Data loaded remotely from GCS."
+    )
 
 
 def test_build_indicies_error(
