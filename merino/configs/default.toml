@@ -384,11 +384,11 @@ top_picks_file_path = "dev/top_picks.json"
 # The interval of the TopPicksFilemanager cron job (in seconds)
 # The cron job should tick more frequently than `resync_interval_sec` so that
 # the resync failure can be retried soon.
-cron_interval_sec = 60
+cron_interval_sec = 3600
 
 # MERINO_PROVIDERS__TOP_PICKS__RESYNC_INTERVAL_SEC
-# Time between re-syncs of domain data, in seconds. Defaults to 3 hours.
-resync_interval_sec = 10800
+# Time between re-syncs of domain data, in seconds. Defaults to 12 hours.
+resync_interval_sec = 43200
 
 # MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
 # GCS project name that contains domain data

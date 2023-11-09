@@ -55,6 +55,15 @@ class TopPicksLocalFilemanager:
                 f"Cannot decode file '{self.static_file_path}'"
             ) from json_error
 
+    @staticmethod
+    def _parse_date(file_path: str) -> datetime | None:
+        """Parse the datetime from the file name."""
+        try:
+            return datetime.fromtimestamp(int(file_path.split("_")[0]))
+        except Exception as e:
+            logger.error(f"Cannot parse date from local file {file_path}: {e}")
+            return None
+
 
 class TopPicksRemoteFilemanager:
     """Filemanager for processing local Top Picks data."""
@@ -87,7 +96,7 @@ class TopPicksRemoteFilemanager:
             return None
         if (generation_date := date_metadata) is not None:
             # Returned value stored on GCS metadata in microseconds.
-            return datetime.fromtimestamp(int(generation_date / 100000))
+            return datetime.fromtimestamp(int(generation_date / 10_000_000))
 
     def get_file(self, client: Client) -> dict[str, Any]:  # type: ignore [return]
         """Read remote domain list file.
