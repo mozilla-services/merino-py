@@ -60,7 +60,7 @@ class TopPicksLocalFilemanager:
         """Parse the datetime from the file name."""
         try:
             return datetime.fromtimestamp(int(file_path.split("_")[0]))
-        except Exception as e:
+        except (AttributeError, TypeError, ValueError) as e:
             logger.error(f"Cannot parse date from local file {file_path}: {e}")
             return None
 
@@ -85,18 +85,17 @@ class TopPicksRemoteFilemanager:
         return Client(self.gcs_project_path)
 
     @staticmethod
-    def _parse_date(blob: Blob) -> datetime | None:  # type: ignore [return]
+    def _parse_date(blob: Blob) -> datetime | None:
         """Parse the datetime metadata from the file."""
         try:
-            date_metadata: int | None = blob.generation
-        except (AttributeError, TypeError) as e:
+            generation_timestamp: int = blob.generation
+            # Returned value stored on GCS metadata in microseconds.
+            return datetime.fromtimestamp(int(generation_timestamp / 10_000_000))
+        except (AttributeError, TypeError, ValueError) as e:
             logger.error(
                 f"Cannot parse date, generation attribute not found for {blob}: {e}"
             )
             return None
-        if (generation_date := date_metadata) is not None:
-            # Returned value stored on GCS metadata in microseconds.
-            return datetime.fromtimestamp(int(generation_date / 10_000_000))
 
     def get_file(self, client: Client) -> dict[str, Any]:  # type: ignore [return]
         """Read remote domain list file.

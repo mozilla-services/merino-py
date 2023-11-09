@@ -199,7 +199,6 @@ def test_create_gcs_client(
 
 
 def test_parse_date_local(
-    gcs_blob_mock: Blob,
     expected_timestamp: int,
     top_picks_local_filemanager: TopPicksLocalFilemanager,
 ) -> None:
@@ -387,6 +386,7 @@ def test_get_file_error(
     mocker.patch(
         "merino.providers.top_picks.backends.top_picks.TopPicksRemoteFilemanager.get_file"
     ).side_effect = TopPicksError(error_message)
+
     with pytest.raises(TopPicksError):
         top_picks_remote_filemanager.get_file(client=gcs_client_mock)
 
