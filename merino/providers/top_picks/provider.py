@@ -7,7 +7,6 @@ import logging
 
 from merino.exceptions import BackendError
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.top_picks.backends.fake_backends import FakeTopPicksBackend
 from merino.providers.top_picks.backends.protocol import TopPicksBackend, TopPicksData
 
 logger = logging.getLogger(__name__)
@@ -27,7 +26,7 @@ class Provider(BaseProvider):
 
     def __init__(
         self,
-        backend: TopPicksBackend | FakeTopPicksBackend,
+        backend: TopPicksBackend,
         score: float,
         name: str,
         enabled_by_default: bool = False,
