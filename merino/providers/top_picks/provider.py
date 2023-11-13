@@ -7,8 +7,8 @@ import logging
 
 from merino.exceptions import BackendError
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.top_picks.backends.protocol import TopPicksBackend, TopPicksData
 from merino.providers.top_picks.backends.fake_backends import FakeTopPicksBackend
+from merino.providers.top_picks.backends.protocol import TopPicksBackend, TopPicksData
 
 logger = logging.getLogger(__name__)
 
