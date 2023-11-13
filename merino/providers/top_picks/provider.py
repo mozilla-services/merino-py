@@ -67,16 +67,18 @@ class Provider(BaseProvider):
             raise BackendError
 
         # Run a cron job that will periodically check whether to update domain file.
-        cron_job = cron.Job(
-            name="resync_domain_file",
-            interval=self.cron_interval_sec,
-            condition=self._should_fetch,
-            task=self._fetch_top_picks_data,
-        )
-        # Store the created task on the instance variable. Otherwise it will get
-        # garbage collected because asyncio's runtime only holds a weak
-        # reference to it.
-        self.cron_task = asyncio.create_task(cron_job())
+        # Only runs when domain source set to `remote`.
+        if settings.providers.top_picks.domain_data_source == "remote":
+            cron_job = cron.Job(
+                name="resync_domain_file",
+                interval=self.cron_interval_sec,
+                condition=self._should_fetch,
+                task=self._fetch_top_picks_data,
+            )
+            # Store the created task on the instance variable. Otherwise it will get
+            # garbage collected because asyncio's runtime only holds a weak
+            # reference to it.
+            self.cron_task = asyncio.create_task(cron_job())
 
     async def _fetch_top_picks_data(self) -> None:
         try:

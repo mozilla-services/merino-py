@@ -302,7 +302,7 @@ backend = "remote-settings"
 # The interval of the RemoteSettings cron job (in seconds)
 # The cron job should tick more frequently than `resync_interval_sec` so that
 # the resync failure can be retried soon.
-cron_interval_sec = 6000
+cron_interval_sec = 60
 
 # MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC
 # Time between re-syncs of Remote Settings data, in seconds. Defaults to 3 hours.
@@ -389,14 +389,6 @@ cron_interval_sec = 3600
 # MERINO_PROVIDERS__TOP_PICKS__RESYNC_INTERVAL_SEC
 # Time between re-syncs of domain data, in seconds. Defaults to 12 hours.
 resync_interval_sec = 43200
-
-# MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
-# GCS project name that contains domain data
-gcs_project = "moz-fx-merino-prod-1c2f"
-
-# MERINO_PROVIDERS__TOP_PICKS__GCS_BUCKET
-# GCS bucket that contains domain data files
-gcs_bucket = "merino-images-prodpy"
 
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
 # Enum of either `remote` or `local` that defines whether domain data
