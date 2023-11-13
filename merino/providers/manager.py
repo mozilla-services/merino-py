@@ -18,6 +18,7 @@ from merino.providers.amo.backends.dynamic import DynamicAmoBackend
 from merino.providers.amo.backends.static import StaticAmoBackend
 from merino.providers.amo.provider import Provider as AmoProvider
 from merino.providers.base import BaseProvider
+from merino.providers.top_picks.backends.fake_backends import FakeTopPicksBackend
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider as TopPicksProvider
 from merino.providers.weather.backends.accuweather import AccuweatherBackend
@@ -117,7 +118,9 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     query_char_limit=setting.query_char_limit,
                     firefox_char_limit=setting.firefox_char_limit,
                     domain_blocklist=TOP_PICKS_BLOCKLIST,
-                ),
+                )
+                if setting.backend == "top-picks"
+                else FakeTopPicksBackend(),
                 score=setting.score,
                 name=provider_id,
                 enabled_by_default=setting.enabled_by_default,
