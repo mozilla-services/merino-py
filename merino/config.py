@@ -62,6 +62,7 @@ _validators = [
     Validator("providers.amo.type", is_type_of=str, must_exist=True),
     Validator("providers.amo.min_chars", is_type_of=int, gte=1, lte=10),
     Validator("providers.top_picks.enabled_by_default", is_type_of=bool),
+    Validator("providers.top_picks.backend", is_type_of=str, is_in=["top-picks", "test"]),
     Validator("providers.top_picks.score", is_type_of=float, gte=0, lte=1),
     Validator("providers.top_picks.query_char_limit", is_type_of=int, gte=1),
     Validator("providers.top_picks.firefox_char_limit", is_type_of=int, gte=1),

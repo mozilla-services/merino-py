@@ -346,6 +346,11 @@ type = "top_picks"
 # Whether this provider is enabled by default. Defaults to true.
 enabled_by_default = true
 
+# MERINO_PROVIDERS__TOP_PICKS__BACKEND
+# Specifies which backend to use. Either `test` or `top-picks`.
+# Otherwise a FakeTopPicksBackend that returns nothing is used for testing.
+backend = "top-picks"
+
 # MERINO_PROVIDERS__TOP_PICKS__SCORE
 # Ranking score for this provider as a floating point number with a default of 0.25.
 score = 0.25
