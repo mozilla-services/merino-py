@@ -9,7 +9,7 @@ LABEL maintainer="Content Discovery Services (DISCO) Team <disco-team@mozilla.co
 # Add gcc since there are no wheels for some packages for arm64/aarch64
 RUN apt-get update && apt-get install -y git && \
   if [ -n "$(arch | grep 'arm64\|aarch64')" ]; then \
-    apt install -y --no-install-recommends gcc python3-dev; \
+  apt install -y --no-install-recommends gcc python3-dev; \
   fi
 
 ENV LANG=C.UTF-8
@@ -23,7 +23,7 @@ RUN python -m pip install --upgrade pip
 
 # Setup poetry and install requirements
 ENV POETRY_VIRTUALENVS_CREATE=false \
-    POETRY_VERSION=1.5.1
+  POETRY_VERSION=1.7.0
 RUN python -m pip install --no-cache-dir --quiet poetry
 COPY ./tests/load/pyproject.toml ./tests/load/poetry.lock ./
 RUN poetry install --no-interaction --no-ansi

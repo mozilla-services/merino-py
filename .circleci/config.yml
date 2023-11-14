@@ -215,7 +215,7 @@ jobs:
             docker push "${DOCKERHUB_REPO}:latest"
   docker-image-publish-locust:
     docker:
-      - image: cimg/base:2023.07
+      - image: cimg/base:2023.11
     steps:
       - checkout
       - run:

@@ -8,19 +8,19 @@ license = "Mozilla Public License Version 2.0"
 [tool.poetry.dependencies]
 python = "^3.11"
 aiodogstatsd = "^0.16.0.post0"
-dynaconf = "^3.2.0"
-elasticsearch = "^8.8.2"
-faker = "^19.1.0"
+dynaconf = "^3.2.4"
+elasticsearch = "^8.11.0"
+faker = "^20.0.0"
 geoip2 = "^4.7.0"
-httpx = "^0.24.1"
-kinto-http = "^11.0.0"
-locust = "^2.14.2"
-pydantic = "2.1.0"
-redis = "^4.6.0"
-starlette = "^0.30.0"
-wrapt = "^1.14.1"
+httpx = "^0.25.1"
+kinto-http = "^11.0.1"
+locust = "^2.18.3"
+pydantic = "2.5.0"
+redis = "^5.0.1"
+starlette = "^0.32.0.post1"
+wrapt = "^1.16.0"
 
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.8.1"]
+build_backend = "poetry.core.masonry.api"
