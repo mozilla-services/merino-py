@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.11-slim-buster
 
 LABEL maintainer="Content Discovery Services (DISCO) Team <disco-team@mozilla.com>"
 
