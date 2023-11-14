@@ -73,6 +73,17 @@ def fixture_json_domain_data() -> str:
                     "categories": ["web-browser"],
                     "similars": ["bad", "badd"],
                 },
+                {
+                    "rank": 6,
+                    "title": "Subdomain Test",
+                    "domain": "subdomain",
+                    "url": "https://sub.subdomain.test",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": [
+                        "sub",
+                    ],
+                },
             ]
         }
     )
@@ -289,7 +300,14 @@ def test_process_domains(
     )
     mock_gcs_blob.name = "0_top_picks_latest.json"
     mock_gcs_client.list_blobs.return_value = [mock_gcs_blob]
-    expected_domains = ["example", "firefox", "mozilla", "abc", "baddomain"]
+    expected_domains = [
+        "example",
+        "firefox",
+        "mozilla",
+        "abc",
+        "baddomain",
+        "subdomain",
+    ]
     processed_domains = default_domain_metadata_uploader.process_domains(
         domain_data=json.loads(json_domain_data)
     )
@@ -317,6 +335,7 @@ def test_process_urls(
         "https://mozilla.org/en-US/",
         "https://abc.test",
         "https://baddomain.test",
+        "https://sub.subdomain.test",
     ]
     processed_urls = default_domain_metadata_uploader.process_urls(
         domain_data=json.loads(json_domain_data)
@@ -344,3 +363,28 @@ def test_process_categories(
         domain_data=json.loads(json_domain_data)
     )
     assert processed_categories == expected_categories
+
+
+def test_check_url_for_subdomain(
+    mock_gcs_blob, mock_gcs_client, mock_favicon_downloader, json_domain_data
+) -> None:
+    """Test that the domain list can be processed and a list of all
+    distinct categories.
+    """
+    default_domain_metadata_uploader = DomainMetadataUploader(
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname="",
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
+    )
+    mock_gcs_blob.name = "0_top_picks_latest.json"
+    mock_gcs_client.list_blobs.return_value = [mock_gcs_blob]
+    expected_subdomains = [
+        {"rank": 6, "domain": "subdomain", "url": "https://sub.subdomain.test"}
+    ]
+    subdomain_occurences = default_domain_metadata_uploader.check_url_for_subdomain(
+        domain_data=json.loads(json_domain_data)
+    )
+
+    assert subdomain_occurences == expected_subdomains

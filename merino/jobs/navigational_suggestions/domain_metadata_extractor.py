@@ -165,6 +165,7 @@ class DomainMetadataExtractor:
         "Bot or Not?",
         "Too Many Requests",
         "IP blocked",
+        "Service unavailable",
     ]
 
     # List of blocked (second level) domains

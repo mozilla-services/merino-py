@@ -2,6 +2,7 @@
 import hashlib
 import json
 import logging
+import re
 from datetime import datetime
 from typing import Any, Literal
 from urllib.parse import urljoin
@@ -81,7 +82,7 @@ class DomainMetadataUploader:
                 bucket.delete_blob(blob.name)
         return
 
-    def get_latest_file_for_diff(self) -> dict | None:
+    def get_latest_file_for_diff(self) -> dict:
         """Get the `_latest` top pick file so a comparison can be made between
         the previous file and the new file to be written.
         """
@@ -95,7 +96,7 @@ class DomainMetadataUploader:
                 logger.info(f"Domain file {file.name} acquired.")
 
                 return file_contents
-        return None
+        return {}
 
     def process_domains(
         self, domain_data: dict[Literal["domains"], list[dict[str, Any]]]
@@ -123,6 +124,40 @@ class DomainMetadataUploader:
             )
         )
         return distinct_categories
+
+    def check_url_for_subdomain(
+        self, domain_data: dict[Literal["domains"], list[dict[str, Any]]]
+    ) -> list[dict[str, str]]:
+        """Compare the domain and url to check if a subdomain occurs immediately
+        after scheme.
+        """
+        url_pattern: str = r"^https?://(www\.)?"
+        subdomain_occurences = []
+        for entry in domain_data["domains"]:
+            url_value = re.sub(url_pattern, "", entry["url"])
+            if url_value.split(".")[0] != entry["domain"]:
+                subdomain_occurences.append(
+                    {
+                        "rank": entry["rank"],
+                        "domain": entry["domain"],
+                        "url": entry["url"],
+                    }
+                )
+        return subdomain_occurences
+
+    def compare_top_picks(self, new_top_picks: str) -> tuple:  # pragma: no cover
+        """Compare the previous file with new data to be written in latest file."""
+        previous_data: dict = self.get_latest_file_for_diff()
+        new_data: dict = json.loads(new_top_picks)
+
+        previous_domains = set(self.process_domains(previous_data))
+        new_domains = set(self.process_domains(new_data))
+
+        same = new_domains.intersection(previous_domains)
+        # New returns the domains not in the previous `_latest` file
+        new = new_domains.difference(previous_domains)
+
+        return (same, new)
 
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload the domain favicons to gcs using their source url and
