@@ -150,18 +150,68 @@ class DomainMetadataUploader:
         previous_data: dict = self.get_latest_file_for_diff()
         new_data: dict = json.loads(new_top_picks)
 
-        previous_urls = set(self.process_urls(previous_data))
-        new_urls = set(self.process_urls(new_data))
-        previous_domains = set(self.process_domains(previous_data))
-        new_domains = set(self.process_domains(new_data))
-
+        categories = self.process_categories(new_data)
+        previous_urls = self.process_urls(previous_data)
+        new_urls = self.process_urls(new_data)
+        previous_domains = self.process_domains(previous_data)
+        new_domains = self.process_domains(new_data)
         subdomains = self.check_url_for_subdomain(new_data)
-        same = new_domains.intersection(previous_domains)
-        # New returns the domains not in the previous `_latest` file
-        added_domains = new_domains.difference(previous_domains)
-        added_urls = new_urls.difference(previous_urls)
 
-        return (same, added_domains, added_urls, subdomains)
+        unchanged = set(new_domains).intersection(set(previous_domains))
+        # added_domains returns the domains not in the previous `_latest` file
+        added_domains = set(new_domains).difference(set(previous_domains))
+        added_urls = set(new_urls).difference(set(previous_urls))
+
+        return (categories, unchanged, added_domains, added_urls, subdomains)
+
+    def create_diff_file(
+        self, file_name, categories, unchanged, domains, urls, subdomains
+    ) -> str:  # pragma: no cover
+        """Create string representation of diff file comaring domain data."""
+        title = "Top Picks Diff File"
+        header = f"Comparing newest {file_name} "
+        sep = "=" * 20
+
+        unchanged_summary = f"Total domain suggestions unchanged: {len(unchanged)}"
+        category_summary = f"Total Distinct Categories: {len(categories)}"
+        for category in categories:
+            category_summary += f"{category}\n"
+
+        domain_summary = f"""Newly added domains: {len(domains)}\n{sep}\n"""
+        for domain in domains:
+            domain_summary += f"{domain}\n"
+
+        url_summary = f"Newly added urls: {len(urls)}\n{sep}\n"
+        for url in urls:
+            url_summary += f"{url}\n"
+
+        subdomains_summary = f"Domains containing subdomain: {len(subdomains)}\n{sep}\n"
+        for subdomain in subdomains:
+            subdomains_summary += f"{subdomain}\n"
+        print(subdomains_summary)
+
+        file = f"""
+        {title}
+
+        {header}
+        {unchanged_summary}
+        {domain_summary}
+        {url_summary}
+        {subdomains_summary}
+        {category_summary}
+        """
+        return file
+
+    def upload_diff_file(self, diff_file_content: str) -> Blob:  # pragma: no cover
+        """Upload the top pick diff file to gcs."""
+        bucket = self.storage_client.bucket(self.bucket_name)
+        dst_top_pick_name = DomainMetadataUploader._destination_top_pick_name(
+            suffix=DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
+        )
+        diff_file_name: str = f"{dst_top_pick_name}_diff_file.txt"
+        diff_blob = bucket.blob(diff_file_name)
+        diff_blob.upload_from_string(diff_file_content)
+        return diff_blob
 
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload the domain favicons to gcs using their source url and
