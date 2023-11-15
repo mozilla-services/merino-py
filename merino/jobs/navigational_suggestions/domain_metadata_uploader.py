@@ -150,14 +150,18 @@ class DomainMetadataUploader:
         previous_data: dict = self.get_latest_file_for_diff()
         new_data: dict = json.loads(new_top_picks)
 
+        previous_urls = set(self.process_urls(previous_data))
+        new_urls = set(self.process_urls(new_data))
         previous_domains = set(self.process_domains(previous_data))
         new_domains = set(self.process_domains(new_data))
 
+        subdomains = self.check_url_for_subdomain(new_data)
         same = new_domains.intersection(previous_domains)
         # New returns the domains not in the previous `_latest` file
-        new = new_domains.difference(previous_domains)
+        added_domains = new_domains.difference(previous_domains)
+        added_urls = new_urls.difference(previous_urls)
 
-        return (same, new)
+        return (same, added_domains, added_urls, subdomains)
 
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload the domain favicons to gcs using their source url and
