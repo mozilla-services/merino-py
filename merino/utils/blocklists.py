@@ -11,4 +11,5 @@ TOP_PICKS_BLOCKLIST: set[str] = {
     "thegatewaypundit",
     "winloot",
     "sniffies",
+    "draftkings",
 }
