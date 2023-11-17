@@ -33,7 +33,7 @@
     - [Navigational Suggestions](./operations/jobs/navigational_suggestions.md)
     - [Dynamic Wikipedia Indexer](./operations/jobs/dynamic-wiki-indexer.md)
     - [Remote Settings CSV Uploader](./operations/jobs/csv-remote-settings.md)
-
+    - [Delete Wikipedia Export Data](./operations/jobs/delete-wiki-export-data.md)
 
 # ADR
 - [Archive](./adr/index.md)
