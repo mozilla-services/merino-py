@@ -149,9 +149,7 @@ class DomainMetadataUploader:
 
     def compare_top_picks(
         self, new_top_picks: str
-    ) -> tuple[
-        list[str], set[str], set[str], set[str], list[dict[str, str]]
-    ]:  # pragma: no cover
+    ) -> tuple[list[str], set[str], set[str], set[str], list[dict[str, str]]]:
         """Compare the previous file with new data to be written in latest file."""
         previous_data: dict = self.get_latest_file_for_diff(client=self.storage_client)
         new_data: dict = json.loads(new_top_picks)
@@ -163,12 +161,14 @@ class DomainMetadataUploader:
         new_domains: list[str] = self.process_domains(new_data)
         subdomains: list[dict[str, str]] = self.check_url_for_subdomain(new_data)
 
-        unchanged: set[str] = set(new_domains).intersection(set(previous_domains))
+        unchanged_domains: set[str] = set(new_domains).intersection(
+            set(previous_domains)
+        )
         # added_domains returns the domains not in the previous `_latest` file
         added_domains: set[str] = set(new_domains).difference(set(previous_domains))
         added_urls: set[str] = set(new_urls).difference(set(previous_urls))
 
-        return (categories, unchanged, added_domains, added_urls, subdomains)
+        return (categories, unchanged_domains, added_domains, added_urls, subdomains)
 
     def create_diff_file(
         self,
@@ -178,14 +178,14 @@ class DomainMetadataUploader:
         domains: set[str],
         urls: set[str],
         subdomains: list[dict[str, str]],
-    ) -> str:  # pragma: no cover
+    ) -> str:
         """Create string representation of diff file comaring domain data."""
         title = "Top Picks Diff File"
         header = f"Comparing newest {file_name} "
         sep = "=" * 20
 
         unchanged_summary = f"Total domain suggestions unchanged: {len(unchanged)}"
-        category_summary = f"Total Distinct Categories: {len(categories)}"
+        category_summary = f"Total Distinct Categories: {len(categories)}\n{sep}\n"
         for category in categories:
             category_summary += f"{category}\n"
 
@@ -211,7 +211,8 @@ class DomainMetadataUploader:
         {url_summary}
         {subdomains_summary}
         {category_summary}
-        """
+        """.strip()
+
         return file
 
     def upload_diff_file(self, diff_file_content: str) -> Blob:  # pragma: no cover

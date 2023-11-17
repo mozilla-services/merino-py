@@ -55,6 +55,14 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
         "",
     ]
 
+    mock_domain_metadata_uploader.compare_top_picks.return_value = (
+        ["Search Engines"],
+        {"dummy_domain"},
+        {},
+        {},
+        [],
+    )
+
     prepare_domain_metadata(
         "dummy_src_project", "dummy_destination_project", "dummy_destination_blob"
     )

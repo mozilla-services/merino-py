@@ -133,16 +133,32 @@ def prepare_domain_metadata(
     )
     favicons = [str(metadata["icon"]) for metadata in domain_metadata]
     uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
-    logger.info("domain favicons uploaded to gcs")
+    logger.info("domain favicons uploaded to GCS")
 
     # construct top pick contents, update them with firefox packaged favicons and upload to gcs
     top_picks = _construct_top_picks(domain_data, uploaded_favicons, domain_metadata)
     update_top_picks_with_firefox_favicons(top_picks)
+    (
+        categories,
+        unchanged,
+        added_domains,
+        added_urls,
+        subdomains,
+    ) = domain_metadata_uploader.compare_top_picks(json.dumps(top_picks, indent=4))
     top_pick_blob = domain_metadata_uploader.upload_top_picks(
         json.dumps(top_picks, indent=4)
     )
+    diff_file: str = domain_metadata_uploader.create_diff_file(
+        file_name=top_pick_blob.name,
+        categories=categories,
+        unchanged=unchanged,
+        domains=added_domains,
+        urls=added_urls,
+        subdomains=subdomains,
+    )
+    domain_metadata_uploader.upload_diff_file(diff_file)
     logger.info(
-        "top pick contents uploaded to gcs",
+        "top pick contents uploaded to GCS",
         extra={"public_url": top_pick_blob.public_url},
     )
     if write_xcom is True:
