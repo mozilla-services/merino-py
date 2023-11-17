@@ -12,4 +12,5 @@ TOP_PICKS_BLOCKLIST: set[str] = {
     "winloot",
     "sniffies",
     "draftkings",
+    "internalfb",
 }
