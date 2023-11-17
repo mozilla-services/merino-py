@@ -82,11 +82,13 @@ class DomainMetadataUploader:
                 bucket.delete_blob(blob.name)
         return
 
-    def get_latest_file_for_diff(self) -> dict:
+    def get_latest_file_for_diff(
+        self, client: Client
+    ) -> dict[Literal["domains"], list]:
         """Get the `_latest` top pick file so a comparison can be made between
         the previous file and the new file to be written.
         """
-        bucket: Bucket = self.storage_client.get_bucket(self.bucket_name)
+        bucket: Bucket = client.get_bucket(self.bucket_name)
         domain_files = bucket.list_blobs(delimiter="/")
 
         for file in domain_files:
@@ -96,7 +98,7 @@ class DomainMetadataUploader:
                 logger.info(f"Domain file {file.name} acquired.")
 
                 return file_contents
-        return {}
+        return {"domains": []}
 
     def process_domains(
         self, domain_data: dict[Literal["domains"], list[dict[str, Any]]]
@@ -145,27 +147,37 @@ class DomainMetadataUploader:
                 )
         return subdomain_occurences
 
-    def compare_top_picks(self, new_top_picks: str) -> tuple:  # pragma: no cover
+    def compare_top_picks(
+        self, new_top_picks: str
+    ) -> tuple[
+        list[str], set[str], set[str], set[str], list[dict[str, str]]
+    ]:  # pragma: no cover
         """Compare the previous file with new data to be written in latest file."""
-        previous_data: dict = self.get_latest_file_for_diff()
+        previous_data: dict = self.get_latest_file_for_diff(client=self.storage_client)
         new_data: dict = json.loads(new_top_picks)
 
-        categories = self.process_categories(new_data)
-        previous_urls = self.process_urls(previous_data)
-        new_urls = self.process_urls(new_data)
-        previous_domains = self.process_domains(previous_data)
-        new_domains = self.process_domains(new_data)
-        subdomains = self.check_url_for_subdomain(new_data)
+        categories: list[str] = self.process_categories(new_data)
+        previous_urls: list[str] = self.process_urls(previous_data)
+        new_urls: list[str] = self.process_urls(new_data)
+        previous_domains: list[str] = self.process_domains(previous_data)
+        new_domains: list[str] = self.process_domains(new_data)
+        subdomains: list[dict[str, str]] = self.check_url_for_subdomain(new_data)
 
-        unchanged = set(new_domains).intersection(set(previous_domains))
+        unchanged: set[str] = set(new_domains).intersection(set(previous_domains))
         # added_domains returns the domains not in the previous `_latest` file
-        added_domains = set(new_domains).difference(set(previous_domains))
-        added_urls = set(new_urls).difference(set(previous_urls))
+        added_domains: set[str] = set(new_domains).difference(set(previous_domains))
+        added_urls: set[str] = set(new_urls).difference(set(previous_urls))
 
         return (categories, unchanged, added_domains, added_urls, subdomains)
 
     def create_diff_file(
-        self, file_name, categories, unchanged, domains, urls, subdomains
+        self,
+        file_name,
+        categories: list[str],
+        unchanged: set[str],
+        domains: set[str],
+        urls: set[str],
+        subdomains: list[dict[str, str]],
     ) -> str:  # pragma: no cover
         """Create string representation of diff file comaring domain data."""
         title = "Top Picks Diff File"
