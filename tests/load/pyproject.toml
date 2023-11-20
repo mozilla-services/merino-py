@@ -6,7 +6,7 @@ authors = ["Mozilla"]
 license = "Mozilla Public License Version 2.0"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 aiodogstatsd = "^0.16.0.post0"
 dynaconf = "^3.2.4"
 elasticsearch = "^8.11.0"
