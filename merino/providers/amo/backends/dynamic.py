@@ -11,7 +11,7 @@ from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon
 from merino.providers.amo.backends.protocol import Addon, AmoBackendError
 from merino.utils.http_client import create_http_client
 
-AMO_CONNECT_TIMEOUT: float = 5.0
+AMO_CONNECT_TIMEOUT: float = 10.0
 
 logger = logging.getLogger(__name__)
 
