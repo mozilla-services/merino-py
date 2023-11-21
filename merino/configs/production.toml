@@ -13,6 +13,7 @@ dynaconf_merge = true
 [production.accuweather]
 url_base = "https://api.accuweather.com"
 
+[production.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
 # GCS project name that contains domain data
 gcs_project = "moz-fx-merino-prod-1c2f"

@@ -134,7 +134,7 @@ def fixture_gcs_blob_mock(
 def fixture_gcs_bucket_mock(mocker: MockerFixture, gcs_blob_mock) -> Any:
     """Create a GCS Bucket mock object for testing."""
     mock_bucket = mocker.MagicMock(spec=Bucket)
-    mock_bucket.list_blobs.return_value = [gcs_blob_mock]
+    mock_bucket.get_blob.return_value = gcs_blob_mock
     return mock_bucket
 
 
@@ -347,8 +347,7 @@ def test_local_filemanager_get_file_invalid_path(
         top_picks_local_filemanager.get_file()
 
 
-@pytest.mark.asyncio
-async def test_get_file(
+def test_get_file(
     top_picks_remote_filemanager: TopPicksRemoteFilemanager,
     mocker,
     caplog: LogCaptureFixture,

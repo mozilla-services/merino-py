@@ -395,6 +395,13 @@ resync_interval_sec = 43200
 # is remotely or locally acquired.
 domain_data_source = "local"
 
+# MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
+# GCS project name that contains domain data
+gcs_project = ""
+
+# MERINO_PROVIDERS__TOP_PICKS__GCS_BUCKET
+# GCS bucket that contains domain data files
+gcs_bucket = ""
 
 [default.providers.wikipedia]
 # MERINO_PROVIDERS__WIKIPEDIA__TYPE

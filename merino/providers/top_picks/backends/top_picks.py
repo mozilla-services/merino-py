@@ -97,7 +97,7 @@ class TopPicksRemoteFilemanager:
             )
             return None
 
-    def get_file(self, client: Client) -> dict[str, Any]:  # type: ignore [return]
+    def get_file(self, client: Client) -> dict[str, Any]:
         """Read remote domain list file.
 
         Raises:
@@ -107,19 +107,16 @@ class TopPicksRemoteFilemanager:
         """
         try:
             bucket: Bucket = client.get_bucket(self.gcs_bucket_path)
-            domain_files: Any = bucket.list_blobs(delimiter="/")
-
-            for file in domain_files:
-                if file.name.endswith("top_picks_latest.json"):
-                    data = file.download_as_text()
-                    blob_date: datetime | None = self._parse_date(blob=file)
-                    current_date: datetime = datetime.now()
-                    file_contents: dict = json.loads(data)
-                    logger.info(
-                        f"Domain file {file.name} acquired. File generated on: {blob_date}."
-                        f"Updated in Merino backend on {current_date}."
-                    )
-                    return file_contents
+            blob: Blob = bucket.get_blob("top_picks_latest.json")
+            blob_data = blob.download_as_text()
+            blob_date: datetime | None = self._parse_date(blob=blob)
+            current_date: datetime = datetime.now()
+            file_contents: dict = json.loads(blob_data)
+            logger.info(
+                f"Domain file {blob.name} acquired. File generated on: {blob_date}."
+                f"Updated in Merino backend on {current_date}."
+            )
+            return file_contents
         except Exception as e:
             raise TopPicksError(f"Error getting remote file {e}")
 
@@ -146,6 +143,7 @@ class TopPicksBackend:
         self.query_char_limit = query_char_limit
         self.firefox_char_limit = firefox_char_limit
         self.domain_blocklist = {entry.lower() for entry in domain_blocklist}
+        self._remote_generation_hash = None
 
     async def fetch(self) -> TopPicksData:
         """Fetch Top Picks suggestions from domain list.
