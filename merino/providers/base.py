@@ -150,11 +150,11 @@ class BaseProvider(ABC):
         """Boolean indicating whether or not provider is enabled."""
         return self._enabled_by_default
 
-    def hidden(self) -> bool:
+    def hidden(self) -> bool:  # pragma: no cover
         """Boolean indicating whether or not this provider is hidden."""
         return False
 
-    def availability(self) -> str:
+    def availability(self) -> str:  # pragma: no cover
         """Return the status of this provider."""
         if self.hidden():
             return "hidden"
@@ -169,6 +169,6 @@ class BaseProvider(ABC):
         return self._name
 
     @property
-    def query_timeout_sec(self) -> float:
+    def query_timeout_sec(self) -> float:  # pragma: no cover
         """Return the query timeout for this provider."""
         return self._query_timeout_sec
