@@ -369,8 +369,8 @@ def test_get_file(
         caplog.records, "merino.providers.top_picks.backends.top_picks"
     )
 
-    assert isinstance(result, dict)
-    assert result["domains"]
+    assert isinstance(result[0], dict)
+    assert result[0]["domains"]
     assert len(records) == 1
     assert records[0].message.startswith(f"Domain file {gcs_blob_mock.name} acquired.")
 

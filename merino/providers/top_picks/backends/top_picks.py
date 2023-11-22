@@ -97,7 +97,7 @@ class TopPicksRemoteFilemanager:
             )
             return None
 
-    def get_file(self, client: Client) -> dict[str, Any]:
+    def get_file(self, client: Client) -> tuple[dict[str, Any], int]:
         """Read remote domain list file.
 
         Raises:
@@ -108,6 +108,7 @@ class TopPicksRemoteFilemanager:
         try:
             bucket: Bucket = client.get_bucket(self.gcs_bucket_path)
             blob: Blob = bucket.get_blob("top_picks_latest.json")
+            blob_generation = blob.generation
             blob_data = blob.download_as_text()
             blob_date: datetime | None = self._parse_date(blob=blob)
             current_date: datetime = datetime.now()
@@ -116,7 +117,7 @@ class TopPicksRemoteFilemanager:
                 f"Domain file {blob.name} acquired. File generated on: {blob_date}."
                 f"Updated in Merino backend on {current_date}."
             )
-            return file_contents
+            return (file_contents, blob_generation)
         except Exception as e:
             raise TopPicksError(f"Error getting remote file {e}")
 
@@ -143,7 +144,7 @@ class TopPicksBackend:
         self.query_char_limit = query_char_limit
         self.firefox_char_limit = firefox_char_limit
         self.domain_blocklist = {entry.lower() for entry in domain_blocklist}
-        self._remote_generation_hash = None
+        self._generation: int | None = None
 
     async def fetch(self) -> TopPicksData:
         """Fetch Top Picks suggestions from domain list.
@@ -255,9 +256,14 @@ class TopPicksBackend:
                     gcs_bucket_path=settings.providers.top_picks.gcs_bucket,
                 )
                 client: Client = remote_filemanager.create_gcs_client()
-                remote_domains: dict[str, Any] = remote_filemanager.get_file(client)
+                remote_domains, remote_generation = remote_filemanager.get_file(client)
+                self._generation = remote_generation
                 remote_index_results: TopPicksData = self.build_index(remote_domains)
-                logger.info("Top Picks Domain Data loaded remotely from GCS.")
+                logger.info(
+                    f"Top Picks Domain Data loaded remotely from GCS.\
+                    {self._generation}"
+                )
+
                 return remote_index_results
             case DomainDataSource.LOCAL:
                 local_filemanager = TopPicksLocalFilemanager(
