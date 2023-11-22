@@ -32,6 +32,7 @@ class Provider(BaseProvider):
     resync_interval_sec: int
     cron_interval_sec: int
     last_fetch_at: float
+    generation: int
 
     def __init__(
         self,
@@ -50,6 +51,7 @@ class Provider(BaseProvider):
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
         self.last_fetch_at = 0
+        self.generation = 0
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
@@ -58,6 +60,7 @@ class Provider(BaseProvider):
             # Fetch Top Picks suggestions from domain list.
             self.top_picks_data: TopPicksData = await self.backend.fetch()
             self.last_fetch_at = time.time()
+            self.generation = self.backend.generation
         except BackendError as backend_error:
             logger.warning(
                 "Failed to fetch data from Top Picks Backend.",
@@ -85,6 +88,7 @@ class Provider(BaseProvider):
             # Fetch Top Picks suggestions from domain list.
             self.top_picks_data: TopPicksData = await self.backend.fetch()
             self.last_fetch_at = time.time()
+            self.generation = self.backend.generation
         except BackendError as backend_error:
             logger.warning(
                 "Failed to fetch data from Top Picks Backend.",
@@ -97,9 +101,11 @@ class Provider(BaseProvider):
 
     def _should_fetch(self) -> bool:
         """Determine if a more recent file should be requested."""
+        if self.generation != self.backend.generation:
+            return True
         if self.last_fetch_at:
             return (time.time() - self.last_fetch_at) >= self.resync_interval_sec
-        return True  # Fetch domain data if it's unclear if it's been synced yet.
+        return False
 
     def normalize_query(self, query: str) -> str:
         """Convert a query string to lowercase and remove trailing spaces."""

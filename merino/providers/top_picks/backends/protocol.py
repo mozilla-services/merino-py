@@ -21,6 +21,8 @@ class TopPicksData(BaseModel):
 class TopPicksBackend(Protocol):
     """Protocol for Top Picks backend that the provider depends on."""
 
+    generation: int
+
     async def fetch(self) -> TopPicksData:  # pragma: no cover
         """Fetch Top Picks suggestions from domain list.
 

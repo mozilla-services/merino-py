@@ -125,6 +125,8 @@ class TopPicksRemoteFilemanager:
 class TopPicksBackend:
     """Backend that indexes and provides Top Pick data."""
 
+    generation: int
+
     def __init__(
         self,
         top_picks_file_path: str | None,
@@ -144,7 +146,7 @@ class TopPicksBackend:
         self.query_char_limit = query_char_limit
         self.firefox_char_limit = firefox_char_limit
         self.domain_blocklist = {entry.lower() for entry in domain_blocklist}
-        self._generation: int | None = None
+        self.generation: int = 0
 
     async def fetch(self) -> TopPicksData:
         """Fetch Top Picks suggestions from domain list.
@@ -257,12 +259,9 @@ class TopPicksBackend:
                 )
                 client: Client = remote_filemanager.create_gcs_client()
                 remote_domains, remote_generation = remote_filemanager.get_file(client)
-                self._generation = remote_generation
+                self.generation = remote_generation
                 remote_index_results: TopPicksData = self.build_index(remote_domains)
-                logger.info(
-                    f"Top Picks Domain Data loaded remotely from GCS.\
-                    {self._generation}"
-                )
+                logger.info("Top Picks Domain Data loaded remotely from GCS.")
 
                 return remote_index_results
             case DomainDataSource.LOCAL:
