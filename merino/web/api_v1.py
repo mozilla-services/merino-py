@@ -4,6 +4,7 @@ from asyncio import Task
 from collections import Counter
 from functools import partial
 from itertools import chain
+from typing import Annotated
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Query
@@ -17,7 +18,7 @@ from merino.middleware import ScopeKey
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.utils import task_runner
-from merino.web.models_v1 import ProviderResponse, SuggestResponse
+from merino.web.models_v1 import ProviderResponse, SuggestResponse, NewTabResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -262,3 +263,24 @@ async def providers(
         for id, provider in active_providers.items()
     ]
     return JSONResponse(content=jsonable_encoder(providers))
+
+
+@router.get(
+    "/newtab",
+    tags=["newtab"],
+    summary="Merino experimental newtab endpoint",
+    response_model=NewTabResponse,
+)
+async def newtab(
+    request: Request,
+    locale: Annotated[str, Query(min_length=2, max_length=2)],
+    language: Annotated[str, Query(min_length=2, max_length=2)],
+) -> JSONResponse:
+    """Query Merino for New Tab recommendations.
+
+    Given a user's locale and language, we return content relevant to the user's region for the new tab page.
+
+    **Returns:**
+    A recommendation list with articles relevant to the user's locale and language.
+    """
+    return JSONResponse([locale, language])
