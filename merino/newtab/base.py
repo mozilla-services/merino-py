@@ -1,3 +1,4 @@
+"""Base Models for New Tab code."""
 from pydantic import BaseModel, Field
 
 
@@ -8,6 +9,7 @@ class Recommendation(BaseModel):
     """
 
     typename: str = Field(
+        default="Recommendation",
         description="Constant identifier for Recommendation type objects.",
         serialization_alias="__typename",
     )
