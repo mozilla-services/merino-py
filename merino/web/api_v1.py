@@ -275,7 +275,6 @@ async def providers(
     response_model=NewTabResponse,
 )
 async def newtab(
-    request: Request,
     locale: Annotated[str, Query(min_length=2, max_length=6)],
     language: Annotated[str, Query(min_length=2, max_length=6)],
     provider: UpdayProvider | None = Depends(get_upday_provider),
@@ -290,5 +289,7 @@ async def newtab(
     """
     results: List[Recommendation] = []
     if provider:
-        results = await provider.get_upday_recommendations(locale, language)
+        results = await provider.get_upday_recommendations(
+            locale=locale, language=language
+        )
     return JSONResponse(content=jsonable_encoder(NewTabResponse(data=results)))

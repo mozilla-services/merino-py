@@ -8,7 +8,6 @@ from datetime import datetime
 from logging import LogRecord
 
 import aiodogstatsd
-import pytest
 from fastapi.testclient import TestClient
 from freezegun import freeze_time
 from pytest import LogCaptureFixture
@@ -20,7 +19,6 @@ from tests.types import FilterCaplogFixture
 
 
 @freeze_time("1998-03-31")
-@pytest.mark.parametrize("providers", [{}])
 def test_unsupported_endpoint_request_log_data(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
@@ -65,7 +63,6 @@ def test_unsupported_endpoint_request_log_data(
     assert log_data == expected_log_data
 
 
-@pytest.mark.parametrize("providers", [{}])
 def test_unsupported_endpoint_metrics(
     mocker: MockerFixture, client: TestClient
 ) -> None:
@@ -81,7 +78,6 @@ def test_unsupported_endpoint_metrics(
     assert metric_keys == expected_metric_keys
 
 
-@pytest.mark.parametrize("providers", [{}])
 def test_unsupported_endpoint_flags(mocker: MockerFixture, client: TestClient) -> None:
     """Test that feature flags are not added for unsupported endpoints
     (status code 404).
