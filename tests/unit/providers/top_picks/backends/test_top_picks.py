@@ -6,7 +6,6 @@
 import json
 import logging
 import os
-from datetime import datetime
 from json import JSONDecodeError
 from logging import LogRecord
 from typing import Any
@@ -198,86 +197,6 @@ def test_create_gcs_client(
     assert isinstance(result, Client)
 
 
-def test_parse_date_local(
-    expected_timestamp: int,
-    top_picks_local_filemanager: TopPicksLocalFilemanager,
-) -> None:
-    """Test that the local filemanager _parse_date method parses a unix timestamp"""
-    file_path: str = "1681866452_top_picks_latest.json"
-    expected_datetime = datetime.fromtimestamp(int(expected_timestamp / 10_000_000))
-    assert expected_datetime == top_picks_local_filemanager._parse_date(file_path)
-
-
-def test_parse_date_local_fails(
-    top_picks_local_filemanager: TopPicksLocalFilemanager,
-) -> None:
-    """Test that the local filemanager _parse_date method fails as expected."""
-    result = top_picks_local_filemanager._parse_date("invalid")
-    assert not result
-
-
-def test_parse_date_remote(
-    gcs_blob_mock: Blob,
-    expected_timestamp: int,
-) -> None:
-    """Test that the remote filemanager _parse_date method parses a unix timestamp"""
-    expected_datetime = datetime.fromtimestamp(int(expected_timestamp / 10_000_000))
-    assert expected_datetime == TopPicksRemoteFilemanager._parse_date(
-        blob=gcs_blob_mock
-    )
-
-
-def test_parse_date_with_missing_metadata(
-    mocker: MockerFixture,
-) -> None:
-    """Test that the filemanager result is None when mock Blob has no generation
-    metadata.
-    """
-    mock_blob = mocker.MagicMock(spec=Blob)
-    mock_blob.name = "1681866452_top_picks_latest.json"
-    mock_blob.generation = None
-
-    result = TopPicksRemoteFilemanager._parse_date(blob=mock_blob)
-    assert not result
-
-
-def test_parse_date_remote_fails(
-    top_picks_remote_filemanager: TopPicksRemoteFilemanager,
-    gcs_blob_mock: Blob,
-    mocker,
-) -> None:
-    """Test that the filemanager _parse_date method raises the
-    expected AttributeError and returns None.
-    """
-    expected_datetime = None
-
-    error_message: str = "Cannot parse date, generation attribute not found."
-    mocker.patch.object(
-        top_picks_remote_filemanager,
-        "_parse_date",
-        side_effect=AttributeError(error_message),
-    )
-
-    with pytest.raises(AttributeError):
-        result = top_picks_remote_filemanager._parse_date(blob=gcs_blob_mock)
-        assert expected_datetime == top_picks_remote_filemanager._parse_date(
-            blob=gcs_blob_mock
-        )
-        assert not result
-
-    mocker.patch.object(
-        top_picks_remote_filemanager,
-        "_parse_date",
-        side_effect=TypeError(error_message),
-    )
-    with pytest.raises(TypeError):
-        result = top_picks_remote_filemanager._parse_date(blob=gcs_blob_mock)
-        assert expected_datetime == top_picks_remote_filemanager._parse_date(
-            blob=gcs_blob_mock
-        )
-        assert not result
-
-
 def test_init_failure_no_domain_file(
     top_picks_backend_parameters: dict[str, Any]
 ) -> None:
@@ -353,8 +272,6 @@ def test_get_file(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     gcs_client_mock,
-    gcs_blob_mock,
-    gcs_bucket_mock,
 ) -> None:
     """Test that the Remote Filemanger get_file method returns domain data."""
     caplog.set_level(logging.INFO)
@@ -372,22 +289,26 @@ def test_get_file(
     assert isinstance(result[0], dict)
     assert result[0]["domains"]
     assert len(records) == 1
-    assert records[0].message.startswith(f"Domain file {gcs_blob_mock.name} acquired.")
+    assert records[0].message.startswith("Successfully loaded remote domain file.")
 
 
 def test_get_file_error(
     top_picks_remote_filemanager: TopPicksRemoteFilemanager,
     mocker,
     gcs_client_mock,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
 ) -> None:
     """Test that the Remote Filemanger raises a TopPicksError when it fails."""
-    error_message: str = "Error getting remote file"
-    mocker.patch(
-        "merino.providers.top_picks.backends.top_picks.TopPicksRemoteFilemanager.get_file"
-    ).side_effect = TopPicksError(error_message)
+    caplog.set_level(logging.INFO)
+    records: list[LogRecord] = filter_caplog(
+        caplog.records, "merino.providers.top_picks.backends.top_picks"
+    )
 
     with pytest.raises(TopPicksError):
-        top_picks_remote_filemanager.get_file(client=gcs_client_mock)
+        top_picks_remote_filemanager.get_file(client=mocker.MagicMock(spec=Client))
+        assert len(records) == 1
+        assert records[0].message.startswith("Error getting remote file")
 
 
 def test_read_domain_list_json_decode_err(
@@ -469,7 +390,7 @@ def test_build_indicies_remote(
     )
     assert isinstance(result, TopPicksData)
     assert len(records) == 2
-    assert records[0].message.startswith(f"Domain file {gcs_blob_mock.name} acquired.")
+    assert records[0].message.startswith("Successfully loaded remote domain file.")
     assert records[1].message.startswith(
         "Top Picks Domain Data loaded remotely from GCS."
     )

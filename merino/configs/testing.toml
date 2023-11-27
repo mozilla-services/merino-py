@@ -63,8 +63,6 @@ top_picks_file_path = "tests/data/top_picks.json"
 # GCS-related Remote Domain File Test Settings (Top Picks)
 cron_interval_sec = 60
 resync_interval_sec = 10800
-gcs_project = "moz-fx-merino-test"
-gcs_bucket = "merino-bucket-testpy"
 domain_data_source = "local"
 
 [testing.providers.wikipedia]

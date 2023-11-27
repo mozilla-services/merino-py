@@ -3,7 +3,6 @@ import asyncio
 import json
 import logging
 from collections import defaultdict
-from datetime import datetime
 from enum import Enum
 from json import JSONDecodeError
 from typing import Any
@@ -55,15 +54,6 @@ class TopPicksLocalFilemanager:
                 f"Cannot decode file '{self.static_file_path}'"
             ) from json_error
 
-    @staticmethod
-    def _parse_date(file_path: str) -> datetime | None:
-        """Parse the datetime from the file name."""
-        try:
-            return datetime.fromtimestamp(int(file_path.split("_")[0]))
-        except (AttributeError, TypeError, ValueError) as e:
-            logger.error(f"Cannot parse date from local file {file_path}: {e}")
-            return None
-
 
 class TopPicksRemoteFilemanager:
     """Filemanager for processing local Top Picks data."""
@@ -84,19 +74,6 @@ class TopPicksRemoteFilemanager:
         """Initialize the GCS Client connection."""
         return Client(self.gcs_project_path)
 
-    @staticmethod
-    def _parse_date(blob: Blob) -> datetime | None:
-        """Parse the datetime metadata from the file."""
-        try:
-            generation_timestamp: int = blob.generation
-            # Returned value stored on GCS metadata in microseconds.
-            return datetime.fromtimestamp(int(generation_timestamp / 10_000_000))
-        except (AttributeError, TypeError, ValueError) as e:
-            logger.error(
-                f"Cannot parse date, generation attribute not found for {blob}: {e}"
-            )
-            return None
-
     def get_file(self, client: Client) -> tuple[dict[str, Any], int]:
         """Read remote domain list file.
 
@@ -110,15 +87,11 @@ class TopPicksRemoteFilemanager:
             blob: Blob = bucket.get_blob("top_picks_latest.json")
             blob_generation = blob.generation
             blob_data = blob.download_as_text()
-            blob_date: datetime | None = self._parse_date(blob=blob)
-            current_date: datetime = datetime.now()
             file_contents: dict = json.loads(blob_data)
-            logger.info(
-                f"Domain file {blob.name} acquired. File generated on: {blob_date}."
-                f"Updated in Merino backend on {current_date}."
-            )
+            logger.info("Successfully loaded remote domain file.")
             return (file_contents, blob_generation)
         except Exception as e:
+            logger.error(f"Error with getting remote domain file. {e}")
             raise TopPicksError(f"Error getting remote file {e}")
 
 
@@ -168,8 +141,10 @@ class TopPicksBackend:
                 domain_list: dict = json.load(readfile)
                 return domain_list
         except OSError as os_error:
+            logger.error(f"Error opening local domain file: {os_error}")
             raise TopPicksError(f"Cannot open file '{file}'") from os_error
         except JSONDecodeError as json_error:
+            logger.error(f"Error decoding local domain file: {json_error}")
             raise TopPicksError(f"Cannot decode file '{file}'") from json_error
 
     def build_index(self, domain_list: dict[str, Any]) -> TopPicksData:
