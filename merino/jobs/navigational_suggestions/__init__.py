@@ -150,7 +150,6 @@ def prepare_domain_metadata(
         latest_domain_data=top_picks, old_domain_data=old_top_picks
     )
     (
-        categories,
         unchanged,
         added_domains,
         added_urls,
@@ -164,9 +163,8 @@ def prepare_domain_metadata(
     top_pick_blob = domain_metadata_uploader.upload_top_picks(
         json.dumps(top_picks, indent=4)
     )
-    diff_file: str = domain_diff.create_diff_file(
+    diff_file: str = domain_diff.create_diff(
         file_name=top_pick_blob.name,
-        categories=categories,
         unchanged=unchanged,
         domains=added_domains,
         urls=added_urls,

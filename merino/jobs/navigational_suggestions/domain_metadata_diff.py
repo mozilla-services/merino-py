@@ -22,22 +22,6 @@ class DomainDiff:
         """Process the domain list and return a list of all urls."""
         return [entry["url"] for entry in domain_data["domains"]]
 
-    def process_categories(
-        self, domain_data: dict[str, list[dict[str, str]]]
-    ) -> list[str]:
-        """Process the domain list and return a list of all distinct categories."""
-        distinct_categories: list[str] = list(
-            set(
-                [
-                    value
-                    for entry in domain_data["domains"]
-                    for value in entry["categories"]
-                ]
-            )
-        )
-
-        return distinct_categories
-
     def check_url_for_subdomain(
         self, domain_data: dict[str, list[dict[str, str]]]
     ) -> list[dict[str, str]]:
@@ -62,12 +46,10 @@ class DomainDiff:
         self,
         new_top_picks: dict[str, list[dict[str, str]]],
         old_top_picks: dict[str, list[dict[str, str]]],
-    ) -> tuple[list[str], set[str], set[str], set[str], list[dict[str, str]]]:
+    ) -> tuple[set[str], set[str], set[str], list[dict[str, str]]]:
         """Compare the previous file with new data to be written in latest file."""
         previous_data: dict[str, list[dict[str, str]]] = old_top_picks
         new_data: dict[str, list[dict[str, str]]] = new_top_picks
-
-        categories: list[str] = self.process_categories(new_data)
         previous_urls: list[str] = self.process_urls(previous_data)
         new_urls: list[str] = self.process_urls(new_data)
         previous_domains: list[str] = self.process_domains(previous_data)
@@ -81,12 +63,11 @@ class DomainDiff:
         added_domains: set[str] = set(new_domains).difference(set(previous_domains))
         added_urls: set[str] = set(new_urls).difference(set(previous_urls))
 
-        return (categories, unchanged_domains, added_domains, added_urls, subdomains)
+        return (unchanged_domains, added_domains, added_urls, subdomains)
 
-    def create_diff_file(
+    def create_diff(
         self,
         file_name,
-        categories: list[str],
         unchanged: set[str],
         domains: set[str],
         urls: set[str],
@@ -98,7 +79,6 @@ class DomainDiff:
         sep = "=" * 20
 
         unchanged_summary = f"Total domain suggestions unchanged: {len(unchanged)}"
-        category_summary = f"Total Distinct Categories: {len(categories)}\n{sep}\n"
 
         domain_summary = f"""Newly added domains: {len(domains)}\n{sep}\n"""
         for domain in domains:
@@ -117,7 +97,6 @@ class DomainDiff:
 
         {header}
         {unchanged_summary}
-        {category_summary}
         {domain_summary}
         {url_summary}
         {subdomains_summary}

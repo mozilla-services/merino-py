@@ -200,22 +200,6 @@ def test_process_urls(json_domain_data_latest, json_domain_data_old) -> None:
     assert processed_urls == expected_urls
 
 
-def test_process_categories(json_domain_data_latest, json_domain_data_old) -> None:
-    """Test that the domain list can be processed and a list of all
-    distinct categories.
-    """
-    domain_diff = DomainDiff(
-        latest_domain_data=json_domain_data_latest, old_domain_data=json_domain_data_old
-    )
-
-    expected_categories = ["web-browser"]
-    processed_categories = domain_diff.process_categories(
-        domain_data=domain_diff.latest_domain_data
-    )
-
-    assert processed_categories == expected_categories
-
-
 def test_check_url_for_subdomain(json_domain_data_latest, json_domain_data_old) -> None:
     """Test that the domain list can be processed and a list of all
     distinct categories.
@@ -243,7 +227,6 @@ def test_compare_top_picks(json_domain_data_latest, json_domain_data_old) -> Non
     result = domain_diff.compare_top_picks(
         new_top_picks=json_domain_data_latest, old_top_picks=json_domain_data_old
     )
-    expected_categories = ["web-browser"]
     expected_unchanged = {"subdomain", "firefox", "baddomain", "abc", "mozilla"}
     expected_added_domains = {"test-example"}
     expected_added_urls = {"https://testexample.com", "https://test.firefox.com"}
@@ -252,20 +235,18 @@ def test_compare_top_picks(json_domain_data_latest, json_domain_data_old) -> Non
         {"rank": 2, "domain": "firefox", "url": "https://test.firefox.com"},
         {"rank": 6, "domain": "subdomain", "url": "https://sub.subdomain.test"},
     ]
-    assert result[0] == expected_categories
-    assert result[1] == expected_unchanged
-    assert result[2] == expected_added_domains
-    assert result[3] == expected_added_urls
-    assert result[4] == expected_subdomains
+    assert result[0] == expected_unchanged
+    assert result[1] == expected_added_domains
+    assert result[2] == expected_added_urls
+    assert result[3] == expected_subdomains
 
 
-def test_create_diff_file(json_domain_data_latest, json_domain_data_old) -> None:
-    """Test that the expected diff file is generated."""
+def test_create_diff(json_domain_data_latest, json_domain_data_old) -> None:
+    """Test that the expected diff is generated."""
     domain_diff = DomainDiff(
         latest_domain_data=json_domain_data_latest, old_domain_data=json_domain_data_old
     )
     (
-        categories,
         unchanged_domains,
         added_domains,
         added_urls,
@@ -274,9 +255,8 @@ def test_create_diff_file(json_domain_data_latest, json_domain_data_old) -> None
         new_top_picks=json_domain_data_latest, old_top_picks=json_domain_data_old
     )
 
-    diff_file = domain_diff.create_diff_file(
+    diff_file = domain_diff.create_diff(
         file_name="test_blob.json",
-        categories=categories,
         unchanged=unchanged_domains,
         domains=added_domains,
         urls=added_urls,
