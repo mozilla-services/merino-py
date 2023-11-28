@@ -99,8 +99,6 @@ class DomainDiff:
 
         unchanged_summary = f"Total domain suggestions unchanged: {len(unchanged)}"
         category_summary = f"Total Distinct Categories: {len(categories)}\n{sep}\n"
-        for category in categories:
-            category_summary += f"{category}\n"
 
         domain_summary = f"""Newly added domains: {len(domains)}\n{sep}\n"""
         for domain in domains:
@@ -113,17 +111,17 @@ class DomainDiff:
         subdomains_summary = f"Domains containing subdomain: {len(subdomains)}\n{sep}\n"
         for subdomain in subdomains:
             subdomains_summary += f"{subdomain}\n"
-        print(subdomains_summary)
 
         file = f"""
         {title}
 
         {header}
         {unchanged_summary}
+        {category_summary}
         {domain_summary}
         {url_summary}
         {subdomains_summary}
-        {category_summary}
+
         """.strip()
 
         return file
