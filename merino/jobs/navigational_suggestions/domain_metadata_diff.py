@@ -1,33 +1,29 @@
 """Compare Domain files for Top Picks"""
-import json
 import re
-from typing import Any, Literal
 
 
 class DomainDiff:
     """Process and prepare diff for domain files."""
 
-    latest_domain_data: dict[Literal["domains"], list[dict[str, Any]]]
-    old_domain_data: dict[Literal["domains"], list[dict[str, Any]]]
+    latest_domain_data: dict[str, list[dict[str, str]]]
+    old_domain_data: dict[str, list[dict[str, str]]]
 
     def __init__(self, latest_domain_data, old_domain_data) -> None:
         self.latest_domain_data = latest_domain_data
         self.old_domain_data = old_domain_data
 
     def process_domains(
-        self, domain_data: dict[Literal["domains"], list[dict[str, Any]]]
+        self, domain_data: dict[str, list[dict[str, str]]]
     ) -> list[str]:
         """Process the domain list and return a list of all second-level domains."""
         return [entry["domain"] for entry in domain_data["domains"]]
 
-    def process_urls(
-        self, domain_data: dict[Literal["domains"], list[dict[str, Any]]]
-    ) -> list[str]:
+    def process_urls(self, domain_data: dict[str, list[dict[str, str]]]) -> list[str]:
         """Process the domain list and return a list of all urls."""
         return [entry["url"] for entry in domain_data["domains"]]
 
     def process_categories(
-        self, domain_data: dict[Literal["domains"], list[dict[str, Any]]]
+        self, domain_data: dict[str, list[dict[str, str]]]
     ) -> list[str]:
         """Process the domain list and return a list of all distinct categories."""
         distinct_categories: list[str] = list(
@@ -43,7 +39,7 @@ class DomainDiff:
         return distinct_categories
 
     def check_url_for_subdomain(
-        self, domain_data: dict[Literal["domains"], list[dict[str, Any]]]
+        self, domain_data: dict[str, list[dict[str, str]]]
     ) -> list[dict[str, str]]:
         """Compare the domain and url to check if a subdomain occurs immediately
         after scheme.
@@ -63,11 +59,13 @@ class DomainDiff:
         return subdomain_occurences
 
     def compare_top_picks(
-        self, new_top_picks: str, old_top_picks: str
+        self,
+        new_top_picks: dict[str, list[dict[str, str]]],
+        old_top_picks: dict[str, list[dict[str, str]]],
     ) -> tuple[list[str], set[str], set[str], set[str], list[dict[str, str]]]:
         """Compare the previous file with new data to be written in latest file."""
-        previous_data: dict = json.loads(old_top_picks)
-        new_data: dict = json.loads(new_top_picks)
+        previous_data: dict[str, list[dict[str, str]]] = old_top_picks
+        new_data: dict[str, list[dict[str, str]]] = new_top_picks
 
         categories: list[str] = self.process_categories(new_data)
         previous_urls: list[str] = self.process_urls(previous_data)

@@ -5,6 +5,7 @@
 """Unit tests for domain_metadata_diff.py module."""
 
 import json
+from typing import Any
 
 import pytest
 
@@ -12,9 +13,9 @@ from merino.jobs.navigational_suggestions.domain_metadata_diff import DomainDiff
 
 
 @pytest.fixture(name="json_domain_data_old")
-def fixture_json_domain_data() -> str:
+def fixture_json_domain_data() -> Any:
     """Return a JSON string of top picks data for mocking."""
-    return json.dumps(
+    json_data = json.dumps(
         {
             "domains": [
                 {
@@ -82,12 +83,13 @@ def fixture_json_domain_data() -> str:
             ]
         }
     )
+    return json.loads(json_data)
 
 
 @pytest.fixture(name="json_domain_data_latest")
-def fixture_json_domain_data_latest() -> str:
+def fixture_json_domain_data_latest() -> Any:
     """Return a JSON string of top picks data for mocking."""
-    return json.dumps(
+    json_data = json.dumps(
         {
             "domains": [
                 {
@@ -155,43 +157,7 @@ def fixture_json_domain_data_latest() -> str:
             ]
         }
     )
-
-
-# def test_get_latest_file_for_diff(
-#     mock_favicon_downloader,
-#     caplog: LogCaptureFixture,
-#     filter_caplog: FilterCaplogFixture,
-#     remote_blob,
-#     remote_client,
-#     mocker,
-# ) -> None:
-#     """Test acquiring the latest file data from mock GCS bucket.
-#     Also checks case if there is no data.
-#     """
-#     mocker.patch(
-#         "merino.jobs.navigational_suggestions.domain_metadata_uploader.Client"
-#     ).return_value = remote_client
-#     caplog.set_level(INFO)
-#     default_domain_metadata_uploader = DomainMetadataUploader(
-#         destination_gcp_project="dummy_gcp_project",
-#         destination_bucket_name="dummy_gcs_bucket",
-#         destination_cdn_hostname="",
-#         force_upload=False,
-#         favicon_downloader=mock_favicon_downloader,
-#     )
-
-#     result = default_domain_metadata_uploader.get_latest_file_for_diff(
-#         client=remote_client
-#     )
-#     records: list[LogRecord] = filter_caplog(
-#         caplog.records, "merino.jobs.navigational_suggestions.domain_metadata_uploader"
-#     )
-#     assert isinstance(result, dict)
-#     assert result["domains"]
-#     assert len(result["domains"]) == 6
-
-#     assert len(records) == 1
-#     assert records[0].message.startswith(f"Domain file {remote_blob.name} acquired.")
+    return json.loads(json_data)
 
 
 def test_process_domains(json_domain_data_latest, json_domain_data_old) -> None:
@@ -209,9 +175,7 @@ def test_process_domains(json_domain_data_latest, json_domain_data_old) -> None:
         "baddomain",
         "subdomain",
     ]
-    processed_domains = domain_diff.process_domains(
-        domain_data=json.loads(json_domain_data_latest)
-    )
+    processed_domains = domain_diff.process_domains(domain_data=json_domain_data_latest)
 
     assert processed_domains == expected_domains
 
@@ -231,9 +195,7 @@ def test_process_urls(json_domain_data_latest, json_domain_data_old) -> None:
         "https://baddomain.test",
         "https://sub.subdomain.test",
     ]
-    processed_urls = domain_diff.process_urls(
-        domain_data=json.loads(json_domain_data_latest)
-    )
+    processed_urls = domain_diff.process_urls(domain_data=json_domain_data_latest)
 
     assert processed_urls == expected_urls
 
@@ -245,9 +207,10 @@ def test_process_categories(json_domain_data_latest, json_domain_data_old) -> No
     domain_diff = DomainDiff(
         latest_domain_data=json_domain_data_latest, old_domain_data=json_domain_data_old
     )
+
     expected_categories = ["web-browser"]
     processed_categories = domain_diff.process_categories(
-        domain_data=json.loads(json_domain_data_latest)
+        domain_data=domain_diff.latest_domain_data
     )
 
     assert processed_categories == expected_categories
@@ -266,7 +229,7 @@ def test_check_url_for_subdomain(json_domain_data_latest, json_domain_data_old) 
         {"rank": 6, "domain": "subdomain", "url": "https://sub.subdomain.test"},
     ]
     subdomain_occurences = domain_diff.check_url_for_subdomain(
-        domain_data=json.loads(json_domain_data_latest)
+        domain_data=json_domain_data_latest
     )
 
     assert subdomain_occurences == expected_subdomains
