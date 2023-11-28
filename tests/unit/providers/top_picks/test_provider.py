@@ -42,18 +42,6 @@ async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None
     assert top_picks.last_fetch_at > 0
 
 
-def test_should_fetch_default(top_picks: Provider):
-    """Test that provider should fetch is False as default."""
-    assert top_picks._should_fetch() is False
-
-
-def test_should_fetch_generation(top_picks: Provider):
-    """Test generation comparison. Since no fetch has been made, generation
-    0 for both backend and provider.
-    """
-    assert top_picks._should_fetch() is False
-
-
 def test_should_fetch_true(top_picks: Provider):
     """Test that provider should fetch is true."""
     top_picks.last_fetch_at = time.time() - top_picks.resync_interval_sec - 100
