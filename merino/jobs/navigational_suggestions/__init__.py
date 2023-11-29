@@ -163,17 +163,16 @@ def prepare_domain_metadata(
     top_pick_blob = domain_metadata_uploader.upload_top_picks(
         json.dumps(top_picks, indent=4)
     )
-    diff_file: str = domain_diff.create_diff(
+    diff: str = domain_diff.create_diff(
         file_name=top_pick_blob.name,
         unchanged=unchanged,
         domains=added_domains,
         urls=added_urls,
         subdomains=subdomains,
     )
-    domain_metadata_uploader.upload_diff_file(diff_file)
     logger.info(
         "top pick contents uploaded to GCS",
         extra={"public_url": top_pick_blob.public_url},
     )
     if write_xcom is True:
-        _write_xcom_file({"top_pick_url": top_pick_blob.public_url})
+        _write_xcom_file({"top_pick_url": top_pick_blob.public_url, "diff": diff})

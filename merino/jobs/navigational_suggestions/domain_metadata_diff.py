@@ -74,16 +74,11 @@ class DomainDiff:
         subdomains: list[dict[str, str]],
     ) -> str:
         """Create string representation of diff file comaring domain data."""
-        title = "Top Picks Diff File"
-        header = f"Comparing newest {file_name} "
+        title = f"Top Picks Diff File {file_name}"
         sep = "=" * 20
 
         unchanged_summary = f"Total domain suggestions unchanged: {len(unchanged)}"
-
         domain_summary = f"""Newly added domains: {len(domains)}\n{sep}\n"""
-        for domain in domains:
-            domain_summary += f"{domain}\n"
-
         url_summary = f"Newly added urls: {len(urls)}\n{sep}\n"
         for url in urls:
             url_summary += f"{url}\n"
@@ -95,12 +90,10 @@ class DomainDiff:
         file = f"""
         {title}
 
-        {header}
         {unchanged_summary}
         {domain_summary}
         {url_summary}
         {subdomains_summary}
-
         """.strip()
 
         return file

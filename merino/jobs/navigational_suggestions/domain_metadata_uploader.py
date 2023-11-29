@@ -98,17 +98,6 @@ class DomainMetadataUploader:
                 return file_contents
         return {"domains": []}
 
-    def upload_diff_file(self, diff_file_content: str) -> Blob:  # pragma: no cover
-        """Upload the top pick diff file to gcs."""
-        bucket = self.storage_client.bucket(self.bucket_name)
-        dst_top_pick_name = DomainMetadataUploader._destination_top_pick_name(
-            suffix=DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
-        )
-        diff_file_name: str = f"{dst_top_pick_name}_diff_file.txt"
-        diff_blob = bucket.blob(diff_file_name)
-        diff_blob.upload_from_string(diff_file_content)
-        return diff_blob
-
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload the domain favicons to gcs using their source url and
         return the public urls of the uploaded ones.
