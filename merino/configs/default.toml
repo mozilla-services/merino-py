@@ -181,12 +181,12 @@ env = "dev"
 [default.newtab.upday]
 # MERINO_NEWTAB__UPDAY__URL
 # The URL of the Upday API that we want to try
-url = "https://api-staging.upday.com/"
+url = ""
 
 # MERINO_NEWTAB__UPDAY__USERNAME
 # Upday requires basic auth to get tokens to be used for querying their local newsfeed API.
 # This is the username for the basic auth.
-username = "mozilla-staging"
+username = ""
 
 # MERINO_NEWTAB__UPDAY__PASSWORD
 # Upday requires basic auth to get tokens to be used for querying their local newsfeed API.

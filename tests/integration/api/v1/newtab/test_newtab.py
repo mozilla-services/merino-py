@@ -27,17 +27,19 @@ Scenario = namedtuple("Scenario", ["upday_side_effect", "expected_response"])
 
 SCENARIOS: dict[str, Scenario] = {
     "Case-I: Return empty Upday response": Scenario(
-        upday_side_effect=[], expected_response={"data": []}
+        upday_side_effect=[[]], expected_response={"data": []}
     ),
     "Case-II: Return Upday response": Scenario(
         upday_side_effect=[
-            Recommendation(
-                title="Title",
-                url="https://localhost/",
-                image_url="https://localhost/",
-                excerpt="This is the excerpt",
-                publisher="upday",
-            )
+            [
+                Recommendation(
+                    title="Title",
+                    url="https://localhost/",
+                    image_url="https://localhost/",
+                    excerpt="This is the excerpt",
+                    publisher="upday",
+                )
+            ]
         ],
         expected_response={
             "data": [
@@ -48,11 +50,15 @@ SCENARIOS: dict[str, Scenario] = {
                     "excerpt": "This is the excerpt",
                     "publisher": "upday",
                     "imageUrl": "https://localhost/",
-                    "titleId": None,
+                    "tileId": None,
                     "timeToRead": None,
+                    "recommendationId": None,
                 }
             ]
         },
+    ),
+    "Case-III: Error processing Response": Scenario(
+        upday_side_effect=KeyError, expected_response={"data": []}
     ),
 }
 
@@ -70,8 +76,8 @@ async def test_newtab_upday(
     expected_response: dict[str, Any],
 ) -> None:
     """Test that the newtab endpoint returns results as expected."""
-    upday_mock.get_upday_recommendations.side_effect = [upday_side_effect]
-    response = client.get("/api/v1/newtab?locale=nl&language=nl")
+    upday_mock.get_upday_recommendations.side_effect = upday_side_effect
+    response = client.get("/api/v1/newtab?locale=nl&region=nl")
     assert response.status_code == 200
 
     result = response.json()
@@ -83,7 +89,7 @@ async def test_newtab_upday(
 def test_newtab_upday_no_provider(client: TestClient) -> None:
     """Test the path where provider is not initialized."""
     app.dependency_overrides[get_upday_provider] = lambda: None
-    response = client.get("/api/v1/newtab?locale=nl&language=nl")
+    response = client.get("/api/v1/newtab?locale=nl&region=nl")
     assert response.status_code == 200
 
     result = response.json()

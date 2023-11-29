@@ -21,18 +21,25 @@ class Recommendation(BaseModel):
         description="The primary image for a Recommendation.",
         serialization_alias="imageUrl",
     )
-    title_id: int | None = Field(
+    tile_id: int | None = Field(
         default=None,
         description="Pocket specific and not used. Keeping this in the model for reference."
         "Numerical identifier for the Recommendation. "
         "This is specifically a number for Fx client and Mozilla data pipeline compatibility. "
         "This property will continue to be present because Firefox clients depend on it, "
         "but downstream users should use the recommendation id instead when available.",
-        serialization_alias="titleId",
+        serialization_alias="tileId",
     )
     time_to_read: int | None = Field(
         default=None,
         description="Pocket specific and not used. Keeping this in the model for reference."
         "Article read time in minutes",
         serialization_alias="timeToRead",
+    )
+    recommendation_id: str | None = Field(
+        default=None,
+        description="Pocket specific and not used. Keeping this in the model for reference. "
+        "String identifier for the Recommendation. "
+        "This value is expected to be different on each request.",
+        serialization_alias="recommendationId",
     )

@@ -12,6 +12,10 @@ dynaconf_merge = true
 [development.metrics]
 dev_logger = true
 
+[development.newtab.upday]
+url = "https://api-staging.upday.com/"
+username = "mozilla-staging"
+
 [development.logging]
 # Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
 level = "DEBUG"

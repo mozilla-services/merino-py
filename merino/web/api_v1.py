@@ -4,7 +4,7 @@ from asyncio import Task
 from collections import Counter
 from functools import partial
 from itertools import chain
-from typing import Annotated, List
+from typing import Annotated
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Query
@@ -276,7 +276,7 @@ async def providers(
 )
 async def newtab(
     locale: Annotated[str, Query(min_length=2, max_length=6)],
-    language: Annotated[str, Query(min_length=2, max_length=6)],
+    region: Annotated[str, Query(min_length=2, max_length=6)],
     provider: UpdayProvider | None = Depends(get_upday_provider),
 ) -> JSONResponse:
     """Query Merino for New Tab recommendations.
@@ -287,9 +287,14 @@ async def newtab(
     **Returns:**
     A recommendation list with articles relevant to the user's locale and language.
     """
-    results: List[Recommendation] = []
+    results: list[Recommendation] = []
     if provider:
-        results = await provider.get_upday_recommendations(
-            locale=locale, language=language
-        )
+        try:
+            results = await provider.get_upday_recommendations(
+                language=locale, country=region
+            )
+        except Exception as e:
+            logger.error(
+                f"Error getting Upday Recommendations. Returning empty response: {e}"
+            )
     return JSONResponse(content=jsonable_encoder(NewTabResponse(data=results)))

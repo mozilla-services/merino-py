@@ -28,25 +28,20 @@ class UpdayProvider:
         self.http_client = http_client
 
     async def get_upday_recommendations(
-        self, locale: str, language: str
+        self, language: str, country: str
     ) -> list[Recommendation]:
         """Get the Upday recommendations given the local and language of the request."""
         access_token, token_type = await self._get_access_token()
 
         articles = await self._get_articles_from_upday(
-            access_token, language, locale, token_type
+            access_token, language, country, token_type
         )
 
         recommendations = []
         for article in articles:
-            url_to_use: str = (
-                article["partnerUrl"]
-                if article.get("partnerUrl")
-                else article.get("url")
-            )
             recommendations.append(
                 Recommendation(
-                    url=url_to_use,
+                    url=article["partnerUrl"] or article["url"],
                     title=article["title"],
                     excerpt=article["previewText"],
                     publisher=article["source"],
@@ -86,8 +81,8 @@ class UpdayProvider:
                 "Could not get authentication token from Upday."
             ) from error
         response_json = response.json()
-        access_token = response_json.get("access_token")
-        token_type = response_json.get("token_type")
+        access_token = response_json["access_token"]
+        token_type = response_json["token_type"]
         return access_token, token_type
 
     async def shutdown(self) -> None:
