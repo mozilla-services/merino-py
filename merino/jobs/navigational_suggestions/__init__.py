@@ -153,7 +153,6 @@ def prepare_domain_metadata(
         unchanged,
         added_domains,
         added_urls,
-        subdomains,
     ) = domain_diff.compare_top_picks(
         new_top_picks=top_picks,
         old_top_picks=old_top_picks,
@@ -168,7 +167,6 @@ def prepare_domain_metadata(
         unchanged=unchanged,
         domains=added_domains,
         urls=added_urls,
-        subdomains=subdomains,
     )
     logger.info(
         "top pick contents uploaded to GCS",
