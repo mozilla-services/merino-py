@@ -4,15 +4,167 @@
 
 """Unit tests for domain_metadata_uploader.py module."""
 import datetime
+import json
+from logging import INFO, LogRecord
 from typing import Any
 
 import pytest
 from freezegun import freeze_time
+from google.cloud.storage import Blob, Bucket, Client
+from pytest import LogCaptureFixture
+from pytest_mock import MockerFixture
 
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
 from merino.jobs.navigational_suggestions.utils import FaviconDownloader, FaviconImage
+from tests.types import FilterCaplogFixture
+
+
+@pytest.fixture(name="json_domain_data")
+def fixture_json_domain_data() -> str:
+    """Return a JSON string of top picks data for mocking."""
+    return json.dumps(
+        {
+            "domains": [
+                {
+                    "rank": 1,
+                    "title": "Example",
+                    "domain": "example",
+                    "url": "https://example.com",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["exxample", "exampple", "eexample"],
+                },
+                {
+                    "rank": 2,
+                    "title": "Firefox",
+                    "domain": "firefox",
+                    "url": "https://firefox.com",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": [
+                        "firefoxx",
+                        "foyerfox",
+                        "fiirefox",
+                        "firesfox",
+                        "firefoxes",
+                    ],
+                },
+                {
+                    "rank": 3,
+                    "title": "Mozilla",
+                    "domain": "mozilla",
+                    "url": "https://mozilla.org/en-US/",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["mozzilla", "mozila"],
+                },
+                {
+                    "rank": 4,
+                    "title": "Abc",
+                    "domain": "abc",
+                    "url": "https://abc.test",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["aa", "ab", "acb", "acbc", "aecbc"],
+                },
+                {
+                    "rank": 5,
+                    "title": "BadDomain",
+                    "domain": "baddomain",
+                    "url": "https://baddomain.test",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["bad", "badd"],
+                },
+                {
+                    "rank": 6,
+                    "title": "Subdomain Test",
+                    "domain": "subdomain",
+                    "url": "https://sub.subdomain.test",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": [
+                        "sub",
+                    ],
+                },
+            ]
+        }
+    )
+
+
+@pytest.fixture(name="json_domain_data_latest")
+def fixture_json_domain_data_latest() -> str:
+    """Return a JSON string of top picks data for mocking."""
+    return json.dumps(
+        {
+            "domains": [
+                {
+                    "rank": 1,
+                    "title": "TestExample",
+                    "domain": "test-example",
+                    "url": "https://testexample.com",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["exxample", "exampple", "eexample"],
+                },
+                {
+                    "rank": 2,
+                    "title": "Firefox",
+                    "domain": "firefox",
+                    "url": "https://test.firefox.com",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": [
+                        "firefoxx",
+                        "foyerfox",
+                        "fiirefox",
+                        "firesfox",
+                        "firefoxes",
+                    ],
+                },
+                {
+                    "rank": 3,
+                    "title": "Mozilla",
+                    "domain": "mozilla",
+                    "url": "https://mozilla.org/en-US/",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["mozzilla", "mozila"],
+                },
+                {
+                    "rank": 4,
+                    "title": "Abc",
+                    "domain": "abc",
+                    "url": "https://abc.test",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["aa", "ab", "acb", "acbc", "aecbc"],
+                },
+                {
+                    "rank": 5,
+                    "title": "BadDomain",
+                    "domain": "baddomain",
+                    "url": "https://baddomain.test",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": ["bad", "badd"],
+                },
+                {
+                    "rank": 6,
+                    "title": "Subdomain Test",
+                    "domain": "subdomain",
+                    "url": "https://sub.subdomain.test",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "similars": [
+                        "sub",
+                    ],
+                },
+            ]
+        }
+    )
 
 
 @pytest.fixture
@@ -39,6 +191,31 @@ def mock_gcs_blob(mocker):
     return mocker.patch(
         "merino.jobs.navigational_suggestions.domain_metadata_uploader.Blob"
     ).return_value
+
+
+@pytest.fixture(name="remote_blob", autouse=True)
+def fixture_remote_blob(mocker: MockerFixture, json_domain_data) -> Any:
+    """Create a remote blob mock object for testing."""
+    remote_blob = mocker.MagicMock(spec=Blob)
+    remote_blob.name = "1681866452_top_picks_latest.json"
+    remote_blob.download_as_text.return_value = json_domain_data
+    return remote_blob
+
+
+@pytest.fixture(name="remote_bucket", autouse=True)
+def fixture_remote_bucket(mocker: MockerFixture, remote_blob) -> Any:
+    """Create a remote bucket mock object for testing."""
+    remote_bucket = mocker.MagicMock(spec=Bucket)
+    remote_bucket.list_blobs.return_value = [remote_blob]
+    return remote_bucket
+
+
+@pytest.fixture(name="remote_client", autouse=True)
+def mock_remote_client(mocker: MockerFixture, remote_bucket):
+    """Create a remote client mock object for testing"""
+    remote_client = mocker.MagicMock(spec=Client)
+    remote_client.get_bucket.return_value = remote_bucket
+    return remote_client
 
 
 @pytest.fixture
@@ -206,3 +383,40 @@ def test_upload_favicons_return_empty_url_for_failed_favicon_download(
 
     for uploaded_favicon in uploaded_favicons:
         assert uploaded_favicon == ""
+
+
+def test_get_latest_file_for_diff(
+    mock_favicon_downloader,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    remote_blob,
+    remote_client,
+    mocker,
+) -> None:
+    """Test acquiring the latest file data from mock GCS bucket.
+    Also checks case if there is no data.
+    """
+    mocker.patch(
+        "merino.jobs.navigational_suggestions.domain_metadata_uploader.Client"
+    ).return_value = remote_client
+    caplog.set_level(INFO)
+    default_domain_metadata_uploader = DomainMetadataUploader(
+        destination_gcp_project="dummy_gcp_project",
+        destination_bucket_name="dummy_gcs_bucket",
+        destination_cdn_hostname="",
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
+    )
+
+    result = default_domain_metadata_uploader.get_latest_file_for_diff(
+        client=remote_client
+    )
+    records: list[LogRecord] = filter_caplog(
+        caplog.records, "merino.jobs.navigational_suggestions.domain_metadata_uploader"
+    )
+    assert isinstance(result, dict)
+    assert result["domains"]
+    assert len(result["domains"]) == 6
+
+    assert len(records) == 1
+    assert records[0].message.startswith(f"Domain file {remote_blob.name} acquired.")

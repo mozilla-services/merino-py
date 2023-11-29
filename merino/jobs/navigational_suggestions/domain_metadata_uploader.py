@@ -1,7 +1,8 @@
 """Upload the domain metadata to GCS"""
-import datetime
 import hashlib
+import json
 import logging
+from datetime import datetime
 from urllib.parse import urljoin
 
 from google.cloud.storage import Blob, Bucket, Client
@@ -55,7 +56,7 @@ class DomainMetadataUploader:
     @staticmethod
     def _destination_top_pick_name(suffix: str) -> str:
         """Return the name of the top pick file to be used for uploading to GCS"""
-        current = datetime.datetime.now()
+        current = datetime.now()
         return f"{int(current.timestamp())}_{suffix}"
 
     def remove_latest_from_all_top_picks_files(
@@ -78,6 +79,24 @@ class DomainMetadataUploader:
                 )
                 bucket.delete_blob(blob.name)
         return
+
+    def get_latest_file_for_diff(
+        self, client: Client
+    ) -> dict[str, list[dict[str, str]]]:
+        """Get the `_latest` top pick file so a comparison can be made between
+        the previous file and the new file to be written.
+        """
+        bucket: Bucket = client.get_bucket(self.bucket_name)
+        domain_files = bucket.list_blobs(delimiter="/")
+
+        for file in domain_files:
+            if file.name.endswith("top_picks_latest.json"):
+                data = file.download_as_text()
+                file_contents: dict = json.loads(data)
+                logger.info(f"Domain file {file.name} acquired.")
+
+                return file_contents
+        return {"domains": []}
 
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload the domain favicons to gcs using their source url and

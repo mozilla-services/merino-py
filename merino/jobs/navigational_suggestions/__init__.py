@@ -9,6 +9,7 @@ from merino.config import settings as config
 from merino.jobs.navigational_suggestions.domain_data_downloader import (
     DomainDataDownloader,
 )
+from merino.jobs.navigational_suggestions.domain_metadata_diff import DomainDiff
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
 )
@@ -133,17 +134,43 @@ def prepare_domain_metadata(
     )
     favicons = [str(metadata["icon"]) for metadata in domain_metadata]
     uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
-    logger.info("domain favicons uploaded to gcs")
+    logger.info("domain favicons uploaded to GCS")
 
     # construct top pick contents, update them with firefox packaged favicons and upload to gcs
     top_picks = _construct_top_picks(domain_data, uploaded_favicons, domain_metadata)
     update_top_picks_with_firefox_favicons(top_picks)
+
+    # Create diff class for comparison of Top Picks Files
+    old_top_picks: dict[
+        str, list[dict[str, str]]
+    ] = domain_metadata_uploader.get_latest_file_for_diff(
+        client=domain_metadata_uploader.storage_client
+    )
+    domain_diff = DomainDiff(
+        latest_domain_data=top_picks, old_domain_data=old_top_picks
+    )
+    (
+        unchanged,
+        added_domains,
+        added_urls,
+    ) = domain_diff.compare_top_picks(
+        new_top_picks=top_picks,
+        old_top_picks=old_top_picks,
+    )
+
+    # Upload new domain file to replace old now that data is acquired for compare.
     top_pick_blob = domain_metadata_uploader.upload_top_picks(
         json.dumps(top_picks, indent=4)
     )
+    diff: str = domain_diff.create_diff(
+        file_name=top_pick_blob.name,
+        unchanged=unchanged,
+        domains=added_domains,
+        urls=added_urls,
+    )
     logger.info(
-        "top pick contents uploaded to gcs",
+        "top pick contents uploaded to GCS",
         extra={"public_url": top_pick_blob.public_url},
     )
     if write_xcom is True:
-        _write_xcom_file({"top_pick_url": top_pick_blob.public_url})
+        _write_xcom_file({"top_pick_url": top_pick_blob.public_url, "diff": diff})
