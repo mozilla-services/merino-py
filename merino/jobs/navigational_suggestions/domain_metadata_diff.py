@@ -32,15 +32,15 @@ class DomainDiff:
         old_domains = self.process_domains(old_top_picks)
         new_domains = self.process_domains(new_top_picks)
 
-        unchanged_domains = set(new_domains).intersection(set(old_domains))
-        added_domains = set(new_domains).difference(set(old_domains))
-        added_urls = set(new_urls).difference(set(old_urls))
+        unchanged_domains = set(new_domains).intersection(old_domains)
+        added_domains = set(new_domains).difference(old_domains)
+        added_urls = set(new_urls).difference(old_urls)
 
         return (unchanged_domains, added_domains, added_urls)
 
     def create_diff(
         self,
-        file_name,
+        file_name: str,
         unchanged: set[str],
         domains: set[str],
         urls: set[str],
