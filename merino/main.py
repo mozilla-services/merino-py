@@ -6,7 +6,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from merino import providers
+from merino import newtab
+from merino import providers as suggest_providers
 from merino.config_logging import configure_logging
 from merino.config_sentry import configure_sentry
 from merino.metrics import configure_metrics, get_metrics_client
@@ -38,13 +39,15 @@ async def startup_configuration() -> None:
 @app.on_event("startup")
 async def startup_providers() -> None:
     """Run tasks at application startup."""
-    await providers.init_providers()
+    await suggest_providers.init_providers()
+    await newtab.init_providers()
 
 
 @app.on_event("shutdown")
 async def shutdown_providers() -> None:
     """Shut down all the providers."""
-    await providers.shutdown_providers()
+    await suggest_providers.shutdown_providers()
+    await newtab.shutdown_providers()
 
 
 @app.on_event("shutdown")

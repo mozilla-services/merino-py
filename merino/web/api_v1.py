@@ -4,6 +4,7 @@ from asyncio import Task
 from collections import Counter
 from functools import partial
 from itertools import chain
+from typing import Annotated
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Query
@@ -14,10 +15,13 @@ from starlette.requests import Request
 from merino.config import settings
 from merino.metrics import Client
 from merino.middleware import ScopeKey
-from merino.providers import get_providers
+from merino.newtab import get_upday_provider
+from merino.newtab.base import Recommendation
+from merino.newtab.upday_provider import UpdayProvider
+from merino.providers import get_providers as get_suggest_providers
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.utils import task_runner
-from merino.web.models_v1 import ProviderResponse, SuggestResponse
+from merino.web.models_v1 import NewTabResponse, ProviderResponse, SuggestResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -56,7 +60,7 @@ async def suggest(
     client_variants: str
     | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
-        get_providers
+        get_suggest_providers
     ),
 ) -> JSONResponse:
     """Query Merino for suggestions.
@@ -229,7 +233,7 @@ def emit_suggestions_per_metrics(
 )
 async def providers(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
-        get_providers
+        get_suggest_providers
     ),
 ) -> JSONResponse:
     """Query Merino for suggestion providers.
@@ -262,3 +266,35 @@ async def providers(
         for id, provider in active_providers.items()
     ]
     return JSONResponse(content=jsonable_encoder(providers))
+
+
+@router.get(
+    "/newtab",
+    tags=["newtab"],
+    summary="Merino experimental newtab endpoint",
+    response_model=NewTabResponse,
+)
+async def newtab(
+    locale: Annotated[str, Query(min_length=2, max_length=6)],
+    region: Annotated[str, Query(min_length=2, max_length=6)],
+    provider: UpdayProvider | None = Depends(get_upday_provider),
+) -> JSONResponse:
+    """Query Merino for New Tab recommendations.
+
+    Given a user's region (ISO 3166-2 country code) and locale (ISO 639-2),
+    we return content relevant to the user's region for the new tab page.
+
+    **Returns:**
+    A recommendation list with articles relevant to the user's locale and language.
+    """
+    results: list[Recommendation] = []
+    if provider:
+        try:
+            results = await provider.get_upday_recommendations(
+                language=locale, country=region
+            )
+        except Exception as e:
+            logger.error(
+                f"Error getting Upday Recommendations. Returning empty response: {e}"
+            )
+    return JSONResponse(content=jsonable_encoder(NewTabResponse(data=results)))

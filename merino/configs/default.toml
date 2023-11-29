@@ -178,6 +178,21 @@ env = "dev"
 # If set to `debug`, the DSN will be set to a testing value recommended by Sentry, 
 # and extra output will be included in the logs.
 
+[default.newtab.upday]
+# MERINO_NEWTAB__UPDAY__URL
+# The URL of the Upday API that we want to try
+url = ""
+
+# MERINO_NEWTAB__UPDAY__USERNAME
+# Upday requires basic auth to get tokens to be used for querying their local newsfeed API.
+# This is the username for the basic auth.
+username = ""
+
+# MERINO_NEWTAB__UPDAY__PASSWORD
+# Upday requires basic auth to get tokens to be used for querying their local newsfeed API.
+# This is the password for the basic auth.
+password = ""
+
 [default.providers.accuweather]
 # MERINO_PROVIDERS__ACCUWEATHER__TYPE
 # The type of this provider, should be `accuweather`.

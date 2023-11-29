@@ -1,6 +1,9 @@
 """Suggest and Provider Models"""
+from typing import List
+
 from pydantic import BaseModel, SerializeAsAny
 
+from merino.newtab.base import Recommendation
 from merino.providers.base import BaseSuggestion
 
 
@@ -22,3 +25,9 @@ class SuggestResponse(BaseModel):
     request_id: str | None = None
     client_variants: list[str] = []
     server_variants: list[str] = []
+
+
+class NewTabResponse(BaseModel):
+    """Model for the `newtab` API response."""
+
+    data: List[Recommendation]
