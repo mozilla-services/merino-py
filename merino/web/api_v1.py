@@ -281,8 +281,8 @@ async def newtab(
 ) -> JSONResponse:
     """Query Merino for New Tab recommendations.
 
-    Given a user's locale and language, we return content relevant to
-    the user's region for the new tab page.
+    Given a user's region (ISO 3166-2 country code) and locale (ISO 639-2),
+    we return content relevant to the user's region for the new tab page.
 
     **Returns:**
     A recommendation list with articles relevant to the user's locale and language.
