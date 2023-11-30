@@ -39,6 +39,7 @@ score = 0.3
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
 top_picks_file_path = "dev/top_picks_for_ci.json"
+domain_data_source = "local"
 
 [ci.providers.wikipedia]
 # The backend of the provider. Either "elasticsearch" or "test".
