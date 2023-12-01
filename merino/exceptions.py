@@ -5,6 +5,12 @@ class BackendError(Exception):
     """Error specific to provider backend functions."""
 
 
+class FilemanagerError(Exception):
+    """Exception raised for errors processing data for backends."""
+
+    pass
+
+
 class InvalidProviderError(Exception):
     """Raised when an unknown provider encountered."""
 

@@ -3,96 +3,23 @@ import asyncio
 import json
 import logging
 from collections import defaultdict
-from enum import Enum
 from json import JSONDecodeError
 from typing import Any
 
-from google.cloud.storage import Blob, Bucket, Client
-
 from merino.config import settings
 from merino.exceptions import BackendError
+from merino.providers.top_picks.backends.filemanager import (
+    DomainDataSource,
+    TopPicksLocalFilemanager,
+    TopPicksRemoteFilemanager,
+)
 from merino.providers.top_picks.backends.protocol import TopPicksData
 
 logger = logging.getLogger(__name__)
 
 
-class DomainDataSource(str, Enum):
-    """Source enum for domain data source."""
-
-    REMOTE = "remote"
-    LOCAL = "local"
-
-
 class TopPicksError(BackendError):
     """Error during interaction with Top Picks data."""
-
-
-class TopPicksLocalFilemanager:
-    """Filemanager for processing local Top Picks data."""
-
-    static_file_path: str
-
-    def __init__(self, static_file_path: str) -> None:
-        self.static_file_path = static_file_path
-
-    def get_file(self) -> dict[str, Any]:
-        """Read local domain list file.
-
-        Raises:
-            TopPicksError: If the top picks file path cannot be opened or decoded.
-        """
-        try:
-            with open(self.static_file_path, "r") as readfile:
-                domain_list: dict = json.load(readfile)
-                return domain_list
-        except OSError as os_error:
-            raise TopPicksError(
-                f"Cannot open file '{self.static_file_path}'"
-            ) from os_error
-        except JSONDecodeError as json_error:
-            raise TopPicksError(
-                f"Cannot decode file '{self.static_file_path}'"
-            ) from json_error
-
-
-class TopPicksRemoteFilemanager:
-    """Filemanager for processing local Top Picks data."""
-
-    client: Client
-    gcs_project_path: str
-    gcs_bucket_path: str
-
-    def __init__(
-        self,
-        gcs_project_path: str,
-        gcs_bucket_path: str,
-    ) -> None:
-        self.gcs_project_path = gcs_project_path
-        self.gcs_bucket_path = gcs_bucket_path
-
-    def create_gcs_client(self) -> Client:
-        """Initialize the GCS Client connection."""
-        return Client(self.gcs_project_path)
-
-    def get_file(self, client: Client) -> tuple[dict[str, Any], int]:
-        """Read remote domain list file.
-
-        Raises:
-            TopPicksError: If the top picks file cannot be accessed.
-        Returns:
-            Dictionary containing domain list
-        """
-        try:
-            bucket: Bucket = client.get_bucket(self.gcs_bucket_path)
-            blob: Blob = bucket.get_blob("top_picks_latest.json")
-            blob_generation = blob.generation
-            blob_data = blob.download_as_text()
-            file_contents: dict = json.loads(blob_data)
-            logger.info("Successfully loaded remote domain file.")
-            return (file_contents, blob_generation)
-        except Exception as e:
-            logger.error(f"Error with getting remote domain file. {e}")
-            raise TopPicksError(f"Error getting remote file {e}")
 
 
 class TopPicksBackend:
@@ -121,7 +48,7 @@ class TopPicksBackend:
         self.domain_blocklist = {entry.lower() for entry in domain_blocklist}
         self.generation: int = 0
 
-    async def fetch(self) -> TopPicksData:
+    async def fetch(self) -> TopPicksData | None:
         """Fetch Top Picks suggestions from domain list.
 
         Raises:
@@ -222,7 +149,7 @@ class TopPicksBackend:
             firefox_char_limit=self.firefox_char_limit,
         )
 
-    def build_indices(self) -> TopPicksData:
+    def build_indices(self) -> TopPicksData | None:
         """Read domain file, create indices and suggestions"""
         domain_data_source: str = settings.providers.top_picks.domain_data_source
 
@@ -232,13 +159,16 @@ class TopPicksBackend:
                     gcs_project_path=settings.providers.top_picks.gcs_project,
                     gcs_bucket_path=settings.providers.top_picks.gcs_bucket,
                 )
-                client: Client = remote_filemanager.create_gcs_client()
-                remote_domains, remote_generation = remote_filemanager.get_file(client)
-                self.generation = remote_generation
-                remote_index_results: TopPicksData = self.build_index(remote_domains)
-                logger.info("Top Picks Domain Data loaded remotely from GCS.")
-
-                return remote_index_results
+                client = remote_filemanager.create_gcs_client()
+                if (remote_file := remote_filemanager.get_file(client)) is not None:
+                    remote_domains, remote_generation = remote_file
+                    self.generation = remote_generation
+                    remote_index_results: TopPicksData = self.build_index(
+                        remote_domains
+                    )
+                    logger.info("Top Picks Domain Data loaded remotely from GCS.")
+                    return remote_index_results
+                return None
             case DomainDataSource.LOCAL:
                 local_filemanager = TopPicksLocalFilemanager(
                     static_file_path=settings.providers.top_picks.top_picks_file_path

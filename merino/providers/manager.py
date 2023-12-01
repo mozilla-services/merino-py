@@ -117,7 +117,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     query_char_limit=setting.query_char_limit,
                     firefox_char_limit=setting.firefox_char_limit,
                     domain_blocklist=TOP_PICKS_BLOCKLIST,
-                ),
+                ),  # type: ignore [arg-type]
                 score=setting.score,
                 name=provider_id,
                 enabled_by_default=setting.enabled_by_default,

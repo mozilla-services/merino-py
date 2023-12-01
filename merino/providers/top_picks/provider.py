@@ -57,8 +57,9 @@ class Provider(BaseProvider):
         """Initialize the provider."""
         try:
             # Fetch Top Picks suggestions from domain list.
-            self.top_picks_data: TopPicksData = await self.backend.fetch()
-            self.last_fetch_at = time.time()
+            if (result := await self.backend.fetch()) is not None:
+                self.top_picks_data: TopPicksData = result
+                self.last_fetch_at = time.time()
         except BackendError as backend_error:
             logger.warning(
                 "Failed to fetch data from Top Picks Backend.",
@@ -86,8 +87,9 @@ class Provider(BaseProvider):
     async def _fetch_top_picks_data(self) -> None:
         try:
             # Fetch Top Picks suggestions from domain list.
-            self.top_picks_data: TopPicksData = await self.backend.fetch()
-            self.last_fetch_at = time.time()
+            if (result := await self.backend.fetch()) is not None:
+                self.top_picks_data: TopPicksData = result
+                self.last_fetch_at = time.time()
         except BackendError as backend_error:
             logger.warning(
                 "Failed to fetch data from Top Picks Backend.",

@@ -17,12 +17,7 @@ from pytest_mock import MockerFixture
 
 from merino.config import settings
 from merino.providers.top_picks.backends.protocol import TopPicksData
-from merino.providers.top_picks.backends.top_picks import (
-    TopPicksBackend,
-    TopPicksError,
-    TopPicksLocalFilemanager,
-    TopPicksRemoteFilemanager,
-)
+from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
 from tests.types import FilterCaplogFixture
 
 
@@ -145,58 +140,6 @@ def mock_gcs_client(mocker: MockerFixture, gcs_bucket_mock):
     return mock_client
 
 
-@pytest.fixture(name="top_picks_local_filemanager_parameters")
-def fixture_top_picks_local_filemanager_parameters() -> dict[str, Any]:
-    """Define TopPicksLocalFilemanager parameters for test."""
-    # These settings read from testing.toml, not default.toml.
-    return {
-        "static_file_path": settings.providers.top_picks.top_picks_file_path,
-    }
-
-
-@pytest.fixture(name="top_picks_local_filemanager")
-def fixture_top_picks_local_filemanager(
-    top_picks_local_filemanager_parameters: dict[str, Any],
-) -> TopPicksLocalFilemanager:
-    """Create a TopPicksLocalFilemanager object for test."""
-    return TopPicksLocalFilemanager(**top_picks_local_filemanager_parameters)
-
-
-@pytest.fixture(name="top_picks_remote_filemanager_parameters")
-def fixture_top_picks_remote_filemanager_parameters() -> dict[str, Any]:
-    """Define TopPicksRemoteFilemanager parameters for test."""
-    # These settings read from testing.toml, not default.toml.
-    return {
-        "gcs_project_path": settings.providers.top_picks.gcs_project,
-        "gcs_bucket_path": settings.providers.top_picks.gcs_bucket,
-    }
-
-
-@pytest.fixture(name="top_picks_remote_filemanager")
-def fixture_top_picks_remote_filemanager(
-    top_picks_remote_filemanager_parameters: dict[str, Any],
-) -> TopPicksRemoteFilemanager:
-    """Create a TopPicksRemoteFilemanager object for test."""
-    return TopPicksRemoteFilemanager(**top_picks_remote_filemanager_parameters)
-
-
-def test_create_gcs_client(
-    top_picks_remote_filemanager: TopPicksRemoteFilemanager, mocker, gcs_client_mock
-) -> None:
-    """Test that create_gcs_client returns the GCS client."""
-    mocker.patch(
-        "merino.config.settings.providers.top_picks.domain_data_source"
-    ).return_value = "remote"
-
-    mocker.patch.object(
-        top_picks_remote_filemanager, "create_gcs_client"
-    ).return_value = gcs_client_mock
-    result = top_picks_remote_filemanager.create_gcs_client()
-
-    assert result
-    assert isinstance(result, Client)
-
-
 def test_init_failure_no_domain_file(
     top_picks_backend_parameters: dict[str, Any]
 ) -> None:
@@ -224,91 +167,6 @@ def test_read_domain_list_os_error(top_picks_backend: TopPicksBackend) -> None:
     """Test that read domain fails and raises exception with invalid file path."""
     with pytest.raises(TopPicksError):
         top_picks_backend.read_domain_list("./wrongfile.json")
-
-
-def test_get_local_file(top_picks_local_filemanager: TopPicksLocalFilemanager) -> None:
-    """Test that the JSON file containing the domain list can be processed"""
-    domain_list = top_picks_local_filemanager.get_file()
-    assert domain_list["domains"][0]["domain"] == "example"
-    assert len(domain_list["domains"][1]["similars"]) == 5
-
-
-def test_local_filemanager_get_file_json_decode_error(
-    top_picks_local_filemanager: TopPicksLocalFilemanager, mocker
-) -> None:
-    """Test that the read function fails, raising TopPicksError when a
-    JSONDecodeError is captured.
-    """
-    mocker.patch("json.load", side_effect=JSONDecodeError("test", "json", 1))
-    with pytest.raises(TopPicksError):
-        top_picks_local_filemanager.get_file()
-
-
-def test_local_filemanager_get_file_os_error(
-    top_picks_local_filemanager: TopPicksLocalFilemanager, mocker
-) -> None:
-    """Test that the read function fails, raising TopPicksError when an
-    OSError is captured.
-    """
-    mocker.patch("json.load", side_effect=OSError("test", "json", 1))
-    with pytest.raises(TopPicksError):
-        top_picks_local_filemanager.get_file()
-
-
-def test_local_filemanager_get_file_invalid_path(
-    top_picks_local_filemanager: TopPicksLocalFilemanager, mocker
-) -> None:
-    """Test that read domain fails and raises exception with invalid file path."""
-    mocker.patch.object(
-        top_picks_local_filemanager, "static_file_path", return_value="./wrongfile.json"
-    )
-    with pytest.raises(TopPicksError):
-        top_picks_local_filemanager.get_file()
-
-
-def test_get_file(
-    top_picks_remote_filemanager: TopPicksRemoteFilemanager,
-    mocker,
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
-    gcs_client_mock,
-) -> None:
-    """Test that the Remote Filemanger get_file method returns domain data."""
-    caplog.set_level(logging.INFO)
-    mocker.patch(
-        "merino.providers.top_picks.backends.top_picks.Client"
-    ).return_value = gcs_client_mock
-    mocker.patch(
-        "merino.config.settings.providers.top_picks.domain_data_source"
-    ).return_value = "remote"
-    result = top_picks_remote_filemanager.get_file(client=gcs_client_mock)
-    records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.providers.top_picks.backends.top_picks"
-    )
-
-    assert isinstance(result[0], dict)
-    assert result[0]["domains"]
-    assert len(records) == 1
-    assert records[0].message.startswith("Successfully loaded remote domain file.")
-
-
-def test_get_file_error(
-    top_picks_remote_filemanager: TopPicksRemoteFilemanager,
-    mocker,
-    gcs_client_mock,
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
-) -> None:
-    """Test that the Remote Filemanger raises a TopPicksError when it fails."""
-    caplog.set_level(logging.INFO)
-    records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.providers.top_picks.backends.top_picks"
-    )
-
-    with pytest.raises(TopPicksError):
-        top_picks_remote_filemanager.get_file(client=mocker.MagicMock(spec=Client))
-        assert len(records) == 1
-        assert records[0].message.startswith("Error getting remote file")
 
 
 def test_read_domain_list_json_decode_err(
@@ -378,7 +236,7 @@ def test_build_indicies_remote(
     """
     caplog.set_level(logging.INFO)
     mocker.patch(
-        "merino.providers.top_picks.backends.top_picks.Client"
+        "merino.providers.top_picks.backends.filemanager.Client"
     ).return_value = gcs_client_mock
     mocker.patch(
         "merino.config.settings.providers.top_picks.domain_data_source"
@@ -389,9 +247,8 @@ def test_build_indicies_remote(
         caplog.records, "merino.providers.top_picks.backends.top_picks"
     )
     assert isinstance(result, TopPicksData)
-    assert len(records) == 2
-    assert records[0].message.startswith("Successfully loaded remote domain file.")
-    assert records[1].message.startswith(
+    assert len(records) == 1
+    assert records[0].message.startswith(
         "Top Picks Domain Data loaded remotely from GCS."
     )
 
@@ -427,7 +284,7 @@ def test_domain_blocklist(
         settings.providers.top_picks.top_picks_file_path
     )["domains"]
     domains: list = [domain["domain"] for domain in domain_list]
-    top_picks_data: TopPicksData = top_picks_backend.build_indices()
+    top_picks_data: TopPicksData = top_picks_backend.build_indices()  # type: ignore [assignment]
 
     for blocked_domain in domain_blocklist:
         assert blocked_domain in domains

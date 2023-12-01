@@ -53,4 +53,4 @@ def fixture_top_picks(
     backend: TopPicksBackend, top_picks_parameters: dict[str, Any]
 ) -> Provider:
     """Create Top Pick Provider for test."""
-    return Provider(backend=backend, **top_picks_parameters)
+    return Provider(backend=backend, **top_picks_parameters)  # type: ignore [arg-type]
