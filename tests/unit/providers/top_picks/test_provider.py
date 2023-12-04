@@ -76,8 +76,8 @@ async def test_fetch_top_picks_data_fails(
     await top_picks._fetch_top_picks_data()
 
     mocker.patch.object(backend, "fetch", side_effect=BackendError(error_message))
-    with pytest.raises(BackendError):
-        await top_picks._fetch_top_picks_data()
+
+    await top_picks._fetch_top_picks_data()
 
     records = filter_caplog(caplog.records, "merino.providers.top_picks.provider")
     assert len(records) == 1
@@ -126,8 +126,8 @@ async def test_initialize_failure(
     error_message: str = "Failed to fetch data from Top Picks Backend."
     # override default behavior for fetch
     mocker.patch.object(backend, "fetch", side_effect=BackendError(error_message))
-    with pytest.raises(BackendError):
-        await top_picks.initialize()
+
+    await top_picks.initialize()
 
     records = filter_caplog(caplog.records, "merino.providers.top_picks.provider")
     assert len(records) == 1

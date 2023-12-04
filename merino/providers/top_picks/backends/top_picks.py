@@ -54,7 +54,7 @@ class TopPicksBackend:
         Raises:
             TopPicksError: If the top picks file path is not specified.
         """
-        return await asyncio.to_thread(self.build_indices)
+        return await asyncio.to_thread(self.maybe_build_indices)
 
     @staticmethod
     def read_domain_list(file: str) -> dict[str, Any]:
@@ -149,11 +149,22 @@ class TopPicksBackend:
             firefox_char_limit=self.firefox_char_limit,
         )
 
-    def build_indices(self) -> TopPicksData | None:
-        """Read domain file, create indices and suggestions"""
+    def maybe_build_indices(self) -> TopPicksData | None:
+        """Build indices of domain data either from `remote` or `local` source defined
+        in configuration. `domain_data_source` dictates data source and which
+        filemanager is used to acquire data.
+
+        Returns
+        -------
+        TopPicksData
+            If data source has new data, return newest TopPicksData.
+        None
+            If backend source does not have new data, None is returned.
+            For `remote`, this is is the `generation` attribute has not changed.
+        """
         domain_data_source: str = settings.providers.top_picks.domain_data_source
 
-        match domain_data_source:
+        match DomainDataSource(domain_data_source):
             case DomainDataSource.REMOTE:
                 remote_filemanager = TopPicksRemoteFilemanager(
                     gcs_project_path=settings.providers.top_picks.gcs_project,
@@ -179,6 +190,4 @@ class TopPicksBackend:
                 return local_index_results
             case _:
                 logger.error("Could not generate index from local or remote source.")
-                raise TopPicksError(
-                    "Could not generate index from local or remote source."
-                )
+                return None

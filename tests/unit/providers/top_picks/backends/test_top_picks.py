@@ -201,7 +201,7 @@ async def test_fetch(top_picks_backend: TopPicksBackend, attr: str) -> None:
     assert hasattr(result, attr)
 
 
-def test_build_indicies_local(
+def test_maybe_build_indicies_local(
     top_picks_backend: TopPicksBackend,
     mocker,
     caplog: LogCaptureFixture,
@@ -213,7 +213,7 @@ def test_build_indicies_local(
         "merino.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "local"
 
-    result = top_picks_backend.build_indices()
+    result = top_picks_backend.maybe_build_indices()
 
     assert result
     assert isinstance(result, TopPicksData)
@@ -223,7 +223,7 @@ def test_build_indicies_local(
     assert len(records) == 1
 
 
-def test_build_indicies_remote(
+def test_maybe_build_indicies_remote(
     top_picks_backend: TopPicksBackend,
     mocker,
     gcs_client_mock,
@@ -242,7 +242,7 @@ def test_build_indicies_remote(
         "merino.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
 
-    result = top_picks_backend.build_indices()
+    result = top_picks_backend.maybe_build_indices()
     records: list[LogRecord] = filter_caplog(
         caplog.records, "merino.providers.top_picks.backends.top_picks"
     )
@@ -251,6 +251,29 @@ def test_build_indicies_remote(
     assert records[0].message.startswith(
         "Top Picks Domain Data loaded remotely from GCS."
     )
+
+
+def test_maybe_build_indicies_remote_none(
+    top_picks_backend: TopPicksBackend,
+    mocker,
+    gcs_client_mock,
+    gcs_blob_mock,
+) -> None:
+    """Test the catchall case when a source for building indicies
+    is not defined.
+    """
+    mocker.patch(
+        "merino.providers.top_picks.backends.filemanager.Client"
+    ).return_value = gcs_client_mock
+    mocker.patch(
+        "merino.providers.top_picks.backends.filemanager.TopPicksRemoteFilemanager.get_file"
+    ).return_value = None
+    mocker.patch(
+        "merino.config.settings.providers.top_picks.domain_data_source"
+    ).return_value = "remote"
+
+    result = top_picks_backend.maybe_build_indices()
+    assert result is None
 
 
 def test_build_indicies_error(
@@ -266,8 +289,8 @@ def test_build_indicies_error(
         "merino.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "invalid"
 
-    with pytest.raises(TopPicksError):
-        top_picks_backend.build_indices()
+    with pytest.raises(ValueError):
+        top_picks_backend.maybe_build_indices()
         records: list[LogRecord] = filter_caplog(
             caplog.records, "merino.providers.top_picks.backends.top_picks"
         )
@@ -284,7 +307,7 @@ def test_domain_blocklist(
         settings.providers.top_picks.top_picks_file_path
     )["domains"]
     domains: list = [domain["domain"] for domain in domain_list]
-    top_picks_data: TopPicksData = top_picks_backend.build_indices()  # type: ignore [assignment]
+    top_picks_data: TopPicksData = top_picks_backend.maybe_build_indices()  # type: ignore
 
     for blocked_domain in domain_blocklist:
         assert blocked_domain in domains

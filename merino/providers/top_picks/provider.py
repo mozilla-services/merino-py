@@ -65,7 +65,6 @@ class Provider(BaseProvider):
                 "Failed to fetch data from Top Picks Backend.",
                 extra={"error message": f"{backend_error}"},
             )
-            raise BackendError
 
         # Run a cron job that will periodically check whether to update domain file.
         # Only runs when domain source set to `remote`.
@@ -95,7 +94,6 @@ class Provider(BaseProvider):
                 "Failed to fetch data from Top Picks Backend.",
                 extra={"error message": f"{backend_error}"},
             )
-            raise BackendError
 
     def hidden(self) -> bool:  # noqa: D102
         return False
