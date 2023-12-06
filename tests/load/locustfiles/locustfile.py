@@ -28,7 +28,7 @@ from merino.providers.adm.backends.remotesettings import (
     RemoteSettingsError,
 )
 from merino.providers.amo.addons_data import ADDON_KEYWORDS
-from merino.providers.top_picks.backends.protocol import TopPicksData
+from merino.providers.top_picks.backends.filemanager import GetFileResultCode
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 from merino.utils.version import Version
@@ -224,9 +224,7 @@ def get_top_picks_queries(
     backend: TopPicksBackend = TopPicksBackend(
         top_picks_file_path, query_char_limit, firefox_char_limit, domain_blocklist
     )
-    data: TopPicksData = asyncio.run(backend.fetch())  # type: ignore [assignment]
-    # `type: ignore` is necessary to avoid confusing mypy as in the local context of load tests,
-    # we won't risk returning `None` from a local fetch.
+    result_code, data = asyncio.run(backend.fetch())
 
     def add_queries(index: dict[str, list[int]], queries: dict[int, list[str]]):
         for query, result_ids in index.items():
@@ -234,9 +232,12 @@ def get_top_picks_queries(
                 queries.setdefault(result_id, []).append(query)
 
     query_dict: dict[int, list[str]] = {}
-    add_queries(data.short_domain_index, query_dict)
-    add_queries(data.primary_index, query_dict)
-    add_queries(data.secondary_index, query_dict)
+    # `type: ignore` is necessary to avoid confusing mypy as in the local context of load tests,
+    # we won't risk returning `None` from a fetch.
+    if result_code is GetFileResultCode.SUCCESS:
+        add_queries(data.short_domain_index, query_dict)  # type: ignore [union-attr]
+        add_queries(data.primary_index, query_dict)  # type: ignore [union-attr]
+        add_queries(data.secondary_index, query_dict)  # type: ignore [union-attr]
 
     return list(query_dict.values())
 
