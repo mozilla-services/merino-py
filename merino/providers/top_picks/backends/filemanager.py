@@ -19,6 +19,14 @@ class DomainDataSource(str, Enum):
     LOCAL = "local"
 
 
+class GetFileResultCode(Enum):
+    """Enum to capture the result of getting domain file."""
+
+    SUCCESS = 0
+    FAIL = 1
+    SKIP = 2
+
+
 class TopPicksFilemanagerError(FilemanagerError):
     """Error during interaction with Top Picks data."""
 
@@ -72,7 +80,7 @@ class TopPicksRemoteFilemanager:
         """Initialize the GCS Client connection."""
         return Client(self.gcs_project_path)
 
-    def get_file(self, client: Client) -> tuple[dict[str, Any], int] | None:
+    def get_file(self, client: Client) -> tuple[Enum, dict[str, Any] | None]:
         """Read remote domain list file.
 
         Raises:
@@ -92,8 +100,8 @@ class TopPicksRemoteFilemanager:
                 blob_data = blob.download_as_text()
                 file_contents: dict = json.loads(blob_data)
                 logger.info("Successfully loaded remote domain file.")
-                return (file_contents, self.blob_generation)
-            return None
+                return (GetFileResultCode.SUCCESS, file_contents)
+            return (GetFileResultCode.SKIP, None)
         except Exception as e:
             logger.error(f"Error with getting remote domain file. {e}")
-            raise TopPicksFilemanagerError(f"Error getting remote file {e}")
+            return (GetFileResultCode.FAIL, None)

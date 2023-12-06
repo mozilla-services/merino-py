@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 from collections import defaultdict
+from enum import Enum
 from json import JSONDecodeError
 from typing import Any
 
@@ -10,6 +11,7 @@ from merino.config import settings
 from merino.exceptions import BackendError
 from merino.providers.top_picks.backends.filemanager import (
     DomainDataSource,
+    GetFileResultCode,
     TopPicksLocalFilemanager,
     TopPicksRemoteFilemanager,
 )
@@ -24,8 +26,6 @@ class TopPicksError(BackendError):
 
 class TopPicksBackend:
     """Backend that indexes and provides Top Pick data."""
-
-    generation: int
 
     def __init__(
         self,
@@ -46,14 +46,9 @@ class TopPicksBackend:
         self.query_char_limit = query_char_limit
         self.firefox_char_limit = firefox_char_limit
         self.domain_blocklist = {entry.lower() for entry in domain_blocklist}
-        self.generation: int = 0
 
-    async def fetch(self) -> TopPicksData | None:
-        """Fetch Top Picks suggestions from domain list.
-
-        Raises:
-            TopPicksError: If the top picks file path is not specified.
-        """
+    async def fetch(self) -> tuple[Enum, TopPicksData | None]:
+        """Fetch Top Picks suggestions from domain list."""
         return await asyncio.to_thread(self.maybe_build_indices)
 
     @staticmethod
@@ -149,7 +144,7 @@ class TopPicksBackend:
             firefox_char_limit=self.firefox_char_limit,
         )
 
-    def maybe_build_indices(self) -> TopPicksData | None:
+    def maybe_build_indices(self) -> tuple[Enum, TopPicksData | None]:  # type: ignore [return]
         """Build indices of domain data either from `remote` or `local` source defined
         in configuration. `domain_data_source` dictates data source and which
         filemanager is used to acquire data.
@@ -171,15 +166,22 @@ class TopPicksBackend:
                     gcs_bucket_path=settings.providers.top_picks.gcs_bucket,
                 )
                 client = remote_filemanager.create_gcs_client()
-                if (remote_file := remote_filemanager.get_file(client)) is not None:
-                    remote_domains, remote_generation = remote_file
-                    self.generation = remote_generation
-                    remote_index_results: TopPicksData = self.build_index(
-                        remote_domains
-                    )
-                    logger.info("Top Picks Domain Data loaded remotely from GCS.")
-                    return remote_index_results
-                return None
+                get_file_result_code, remote_domains = remote_filemanager.get_file(
+                    client
+                )
+
+                match GetFileResultCode(get_file_result_code):
+                    case GetFileResultCode.SUCCESS:
+                        remote_index_results: TopPicksData = self.build_index(
+                            remote_domains  # type: ignore
+                        )
+                        logger.info("Top Picks Domain Data loaded remotely from GCS.")
+                        return (get_file_result_code, remote_index_results)
+                    case GetFileResultCode.SKIP:
+                        return (get_file_result_code, None)
+                    case GetFileResultCode.FAIL:
+                        return (get_file_result_code, None)
+
             case DomainDataSource.LOCAL:
                 local_filemanager = TopPicksLocalFilemanager(
                     static_file_path=settings.providers.top_picks.top_picks_file_path
@@ -187,7 +189,7 @@ class TopPicksBackend:
                 local_domains = local_filemanager.get_file()
                 local_index_results: TopPicksData = self.build_index(local_domains)
                 logger.info("Top Picks Domain Data loaded locally from static file.")
-                return local_index_results
+                return (GetFileResultCode.SUCCESS, local_index_results)
             case _:
                 logger.error("Could not generate index from local or remote source.")
-                return None
+                return (GetFileResultCode.FAIL, None)

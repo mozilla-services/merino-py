@@ -13,6 +13,7 @@ from pytest import LogCaptureFixture
 from merino.config import settings
 from merino.exceptions import BackendError
 from merino.providers.base import BaseSuggestion
+from merino.providers.top_picks.backends.filemanager import GetFileResultCode
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider, Suggestion
 from tests.types import FilterCaplogFixture
@@ -36,10 +37,44 @@ async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None
     """Test initialization of top pick provider"""
     await top_picks.initialize()
 
-    backend_data = await backend.fetch()
+    result_code, backend_data = await backend.fetch()
 
+    assert result_code is GetFileResultCode.SUCCESS
     assert top_picks.top_picks_data == backend_data
     assert top_picks.last_fetch_at > 0
+
+
+@pytest.mark.asyncio
+async def test_initialize_skip(
+    mocker, top_picks: Provider, backend: TopPicksBackend
+) -> None:
+    """Test initialization of top pick provider when result_code enum value is skip"""
+    mocker.patch(
+        "merino.config.settings.providers.top_picks.domain_data_source"
+    ).return_value = "remote"
+    mocker.patch(
+        "merino.providers.top_picks.backends.top_picks.TopPicksBackend.fetch"
+    ).return_value = (GetFileResultCode.SKIP, None)
+    await top_picks.initialize()
+
+    assert not hasattr(top_picks, "top_picks_data")
+
+
+@pytest.mark.asyncio
+async def test_initialize_fail(
+    mocker,
+    top_picks: Provider,
+    backend: TopPicksBackend,
+) -> None:
+    """Test initialization of top pick provider when result_code enum value is fail"""
+    mocker.patch(
+        "merino.config.settings.providers.top_picks.domain_data_source"
+    ).return_value = "remote"
+    mocker.patch(
+        "merino.providers.top_picks.backends.top_picks.TopPicksBackend.fetch"
+    ).return_value = (GetFileResultCode.FAIL, None)
+    await top_picks.initialize()
+    assert not hasattr(top_picks, "top_picks_data")
 
 
 def test_should_fetch_true(top_picks: Provider):
@@ -71,17 +106,44 @@ async def test_fetch_top_picks_data_fails(
     mocker,
 ):
     """Test that the _fetch_top_picks_data fails as expected."""
-    error_message: str = "Failed to fetch data from Top Picks Backend."
-
-    await top_picks._fetch_top_picks_data()
-
-    mocker.patch.object(backend, "fetch", side_effect=BackendError(error_message))
+    mocker.patch.object(backend, "fetch", side_effect=BackendError())
 
     await top_picks._fetch_top_picks_data()
 
     records = filter_caplog(caplog.records, "merino.providers.top_picks.provider")
     assert len(records) == 1
-    assert records[0].__dict__["error message"] == error_message
+
+
+@pytest.mark.asyncio
+async def test_fetch_top_picks_data_skip(
+    mocker, top_picks: Provider, backend: TopPicksBackend
+) -> None:
+    """Test _fetch_top_picks_data_skip when result_code enum value is skip."""
+    mocker.patch(
+        "merino.config.settings.providers.top_picks.domain_data_source"
+    ).return_value = "remote"
+    mocker.patch(
+        "merino.providers.top_picks.backends.top_picks.TopPicksBackend.fetch"
+    ).return_value = (GetFileResultCode.SKIP, None)
+    await top_picks._fetch_top_picks_data()
+
+    assert not hasattr(top_picks, "top_picks_data")
+
+
+@pytest.mark.asyncio
+async def test_fetch_top_picks_data_fail(
+    mocker, top_picks: Provider, backend: TopPicksBackend
+) -> None:
+    """Test _fetch_top_picks_data_skip when result_code enum value is fail."""
+    mocker.patch(
+        "merino.config.settings.providers.top_picks.domain_data_source"
+    ).return_value = "remote"
+    mocker.patch(
+        "merino.providers.top_picks.backends.top_picks.TopPicksBackend.fetch"
+    ).return_value = (GetFileResultCode.FAIL, None)
+    await top_picks._fetch_top_picks_data()
+
+    assert not hasattr(top_picks, "top_picks_data")
 
 
 @pytest.mark.parametrize(

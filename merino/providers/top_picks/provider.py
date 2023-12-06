@@ -12,6 +12,7 @@ from merino import cron
 from merino.config import settings
 from merino.exceptions import BackendError
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.top_picks.backends.filemanager import GetFileResultCode
 from merino.providers.top_picks.backends.protocol import TopPicksBackend, TopPicksData
 from merino.providers.top_picks.backends.top_picks import DomainDataSource
 
@@ -57,11 +58,19 @@ class Provider(BaseProvider):
         """Initialize the provider."""
         try:
             # Fetch Top Picks suggestions from domain list.
-            if (result := await self.backend.fetch()) is not None:
-                self.top_picks_data: TopPicksData = result
-                self.last_fetch_at = time.time()
+            result_code, result = await self.backend.fetch()
+
+            match GetFileResultCode(result_code):
+                case GetFileResultCode.SUCCESS:
+                    self.top_picks_data: TopPicksData = result  # type: ignore
+                    self.last_fetch_at = time.time()
+                case GetFileResultCode.SKIP:
+                    return None
+                case GetFileResultCode.FAIL:
+                    logger.error("Failed to fetch data from Top Picks Backend.")
+                    return None
         except BackendError as backend_error:
-            logger.warning(
+            logger.error(
                 "Failed to fetch data from Top Picks Backend.",
                 extra={"error message": f"{backend_error}"},
             )
@@ -84,13 +93,23 @@ class Provider(BaseProvider):
             self.cron_task = asyncio.create_task(cron_job())
 
     async def _fetch_top_picks_data(self) -> None:
+        """Cron fetch method to re-run after set interval.
+        Does not set top_picks_data if non-success code passed with None.
+        """
         try:
             # Fetch Top Picks suggestions from domain list.
-            if (result := await self.backend.fetch()) is not None:
-                self.top_picks_data: TopPicksData = result
-                self.last_fetch_at = time.time()
+            result_code, result = await self.backend.fetch()
+            match GetFileResultCode(result_code):
+                case GetFileResultCode.SUCCESS:
+                    self.top_picks_data: TopPicksData = result  # type: ignore
+                    self.last_fetch_at = time.time()
+                case GetFileResultCode.SKIP:
+                    return None
+                case GetFileResultCode.FAIL:
+                    logger.error("Failed to fetch data from Top Picks Backend.")
+                    return None
         except BackendError as backend_error:
-            logger.warning(
+            logger.error(
                 "Failed to fetch data from Top Picks Backend.",
                 extra={"error message": f"{backend_error}"},
             )

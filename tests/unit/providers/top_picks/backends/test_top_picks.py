@@ -16,6 +16,7 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.config import settings
+from merino.providers.top_picks.backends.filemanager import GetFileResultCode
 from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
 from tests.types import FilterCaplogFixture
@@ -197,7 +198,8 @@ def test_read_domain_list_json_decode_err(
 )
 async def test_fetch(top_picks_backend: TopPicksBackend, attr: str) -> None:
     """Test the fetch method returns TopPickData."""
-    result = await top_picks_backend.fetch()
+    result_code, result = await top_picks_backend.fetch()
+    assert result_code is GetFileResultCode.SUCCESS
     assert hasattr(result, attr)
 
 
@@ -213,9 +215,10 @@ def test_maybe_build_indicies_local(
         "merino.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "local"
 
-    result = top_picks_backend.maybe_build_indices()
+    get_file_result_code, result = top_picks_backend.maybe_build_indices()
 
     assert result
+    assert get_file_result_code is GetFileResultCode.SUCCESS
     assert isinstance(result, TopPicksData)
     records: list[LogRecord] = filter_caplog(
         caplog.records, "merino.providers.top_picks.backends.top_picks"
@@ -231,9 +234,7 @@ def test_maybe_build_indicies_remote(
     filter_caplog: FilterCaplogFixture,
     gcs_blob_mock,
 ) -> None:
-    """Test the catchall case when a source for building indicies
-    is not defined.
-    """
+    """Test remote build indicies method."""
     caplog.set_level(logging.INFO)
     mocker.patch(
         "merino.providers.top_picks.backends.filemanager.Client"
@@ -242,10 +243,11 @@ def test_maybe_build_indicies_remote(
         "merino.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
 
-    result = top_picks_backend.maybe_build_indices()
+    get_file_result_code, result = top_picks_backend.maybe_build_indices()
     records: list[LogRecord] = filter_caplog(
         caplog.records, "merino.providers.top_picks.backends.top_picks"
     )
+    assert get_file_result_code is GetFileResultCode.SUCCESS
     assert isinstance(result, TopPicksData)
     assert len(records) == 1
     assert records[0].message.startswith(
@@ -253,11 +255,10 @@ def test_maybe_build_indicies_remote(
     )
 
 
-def test_maybe_build_indicies_remote_none(
+def test_maybe_build_indicies_remote_fail(
     top_picks_backend: TopPicksBackend,
     mocker,
     gcs_client_mock,
-    gcs_blob_mock,
 ) -> None:
     """Test the catchall case when a source for building indicies
     is not defined.
@@ -265,18 +266,47 @@ def test_maybe_build_indicies_remote_none(
     mocker.patch(
         "merino.providers.top_picks.backends.filemanager.Client"
     ).return_value = gcs_client_mock
-    mocker.patch(
-        "merino.providers.top_picks.backends.filemanager.TopPicksRemoteFilemanager.get_file"
-    ).return_value = None
+
     mocker.patch(
         "merino.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
 
-    result = top_picks_backend.maybe_build_indices()
+    mocker.patch(
+        "merino.providers.top_picks.backends.filemanager.TopPicksRemoteFilemanager.get_file"
+    ).return_value = (GetFileResultCode.FAIL, None)
+
+    get_file_result_code, result = top_picks_backend.maybe_build_indices()
+
+    assert get_file_result_code is GetFileResultCode.FAIL
     assert result is None
 
 
-def test_build_indicies_error(
+def test_maybe_build_indicies_remote_skip(
+    top_picks_backend: TopPicksBackend,
+    mocker,
+    gcs_client_mock,
+) -> None:
+    """Test the catchall case when a source for building indicies
+    is not defined.
+    """
+    mocker.patch(
+        "merino.providers.top_picks.backends.filemanager.Client"
+    ).return_value = gcs_client_mock
+
+    mocker.patch(
+        "merino.config.settings.providers.top_picks.domain_data_source"
+    ).return_value = "remote"
+
+    mocker.patch(
+        "merino.providers.top_picks.backends.filemanager.TopPicksRemoteFilemanager.get_file"
+    ).return_value = (GetFileResultCode.SKIP, None)
+
+    get_file_result_code, result = top_picks_backend.maybe_build_indices()
+    assert get_file_result_code is GetFileResultCode.SKIP
+    assert result is None
+
+
+def test_maybe_build_indicies_error(
     top_picks_backend: TopPicksBackend,
     mocker,
     caplog: LogCaptureFixture,
@@ -307,10 +337,12 @@ def test_domain_blocklist(
         settings.providers.top_picks.top_picks_file_path
     )["domains"]
     domains: list = [domain["domain"] for domain in domain_list]
-    top_picks_data: TopPicksData = top_picks_backend.maybe_build_indices()  # type: ignore
+    result = top_picks_backend.maybe_build_indices()
+    get_file_result_code, top_picks_data = result
 
+    assert get_file_result_code is GetFileResultCode.SUCCESS
     for blocked_domain in domain_blocklist:
         assert blocked_domain in domains
-        assert blocked_domain not in top_picks_data.primary_index.keys()
-        assert blocked_domain not in top_picks_data.secondary_index.keys()
-        assert blocked_domain not in top_picks_data.short_domain_index.keys()
+        assert blocked_domain not in top_picks_data.primary_index.keys()  # type: ignore
+        assert blocked_domain not in top_picks_data.secondary_index.keys()  # type: ignore
+        assert blocked_domain not in top_picks_data.short_domain_index.keys()  # type: ignore

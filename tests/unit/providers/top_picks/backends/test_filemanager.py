@@ -17,6 +17,7 @@ from pytest_mock import MockerFixture
 
 from merino.config import settings
 from merino.providers.top_picks.backends.filemanager import (
+    GetFileResultCode,
     TopPicksFilemanagerError,
     TopPicksLocalFilemanager,
     TopPicksRemoteFilemanager,
@@ -234,32 +235,58 @@ def test_get_file(
     mocker.patch(
         "merino.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
-    result = top_picks_remote_filemanager.get_file(client=gcs_client_mock)
+    get_file_result_code, result = top_picks_remote_filemanager.get_file(
+        client=gcs_client_mock
+    )
     records: list[LogRecord] = filter_caplog(
         caplog.records, "merino.providers.top_picks.backends.filemanager"
     )
+
     # `type: ignore` required as mock testing will never result in `get_file`
     # returning `None` and mypy can't intuit this.
-    assert isinstance(result[0], dict)  # type: ignore [index]
-    assert result[0]["domains"]  # type: ignore [index]
+    assert isinstance(result, dict)
+    assert get_file_result_code is GetFileResultCode.SUCCESS
+    assert result["domains"]
     assert len(records) == 1
     assert records[0].message.startswith("Successfully loaded remote domain file.")
+
+
+def test_get_file_skip(
+    top_picks_remote_filemanager: TopPicksRemoteFilemanager,
+    mocker,
+    gcs_client_mock,
+    gcs_bucket_mock,
+) -> None:
+    """Test that the Remote Filemanger get_file method returns None and proper skip code."""
+    mocker.patch(
+        "merino.providers.top_picks.backends.filemanager.Client"
+    ).return_value = gcs_client_mock
+
+    mocker.patch(
+        "merino.providers.top_picks.backends.filemanager.Bucket"
+    ).return_value = gcs_bucket_mock
+
+    mocker.patch.object(gcs_bucket_mock, "get_blob").return_value = None
+
+    mocker.patch(
+        "merino.config.settings.providers.top_picks.domain_data_source"
+    ).return_value = "remote"
+
+    get_file_result_code, result = top_picks_remote_filemanager.get_file(
+        client=gcs_client_mock
+    )
+
+    assert get_file_result_code is GetFileResultCode.SKIP
+    assert result is None
 
 
 def test_get_file_error(
     top_picks_remote_filemanager: TopPicksRemoteFilemanager,
     mocker,
-    gcs_client_mock,
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
 ) -> None:
-    """Test that the Remote Filemanger raises a TopPicksFilemanagerError when it fails."""
-    caplog.set_level(logging.INFO)
-    records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.providers.top_picks.backends.filemanager"
+    """Test that the Remote Filemanger returns None and correct failure code."""
+    get_file_result_code, result = top_picks_remote_filemanager.get_file(
+        client=mocker.MagicMock(spec=Client)
     )
-
-    with pytest.raises(TopPicksFilemanagerError):
-        top_picks_remote_filemanager.get_file(client=mocker.MagicMock(spec=Client))
-        assert len(records) == 1
-        assert records[0].message.startswith("Error getting remote file")
+    assert result is None
+    assert get_file_result_code is GetFileResultCode.FAIL
