@@ -224,7 +224,9 @@ def get_top_picks_queries(
     backend: TopPicksBackend = TopPicksBackend(
         top_picks_file_path, query_char_limit, firefox_char_limit, domain_blocklist
     )
-    data: TopPicksData = asyncio.run(backend.fetch())
+    data: TopPicksData = asyncio.run(backend.fetch())  # type: ignore [assignment]
+    # `type: ignore` is necessary to avoid confusing mypy as in the local context of load tests,
+    # we won't risk returning `None` from a local fetch.
 
     def add_queries(index: dict[str, list[int]], queries: dict[int, list[str]]):
         for query, result_ids in index.items():

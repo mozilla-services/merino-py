@@ -380,6 +380,28 @@ firefox_char_limit = 2
 # Either `dev/top_picks.json` in production or `tests/data/top_picks.json` for testing.
 top_picks_file_path = "dev/top_picks.json"
 
+# MERINO_PROVIDERS__TOP_PICKS__CRON_INTERVAL_SEC
+# The interval of the TopPicksFilemanager cron job (in seconds)
+# The cron job should tick more frequently than `resync_interval_sec` so that
+# the resync failure can be retried soon.
+cron_interval_sec = 60
+
+# MERINO_PROVIDERS__TOP_PICKS__RESYNC_INTERVAL_SEC
+# Time between re-syncs of domain data, in seconds. Defaults to 12 hours.
+resync_interval_sec = 43200
+
+# MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
+# Enum of either `remote` or `local` that defines whether domain data
+# is remotely or locally acquired.
+domain_data_source = "local"
+
+# MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
+# GCS project name that contains domain data
+gcs_project = ""
+
+# MERINO_PROVIDERS__TOP_PICKS__GCS_BUCKET
+# GCS bucket that contains domain data files
+gcs_bucket = ""
 
 [default.providers.wikipedia]
 # MERINO_PROVIDERS__WIKIPEDIA__TYPE

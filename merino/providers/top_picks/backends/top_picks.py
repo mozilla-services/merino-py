@@ -1,12 +1,23 @@
 """A wrapper for Top Picks Provider I/O Interactions"""
 import asyncio
 import json
+import logging
 from collections import defaultdict
+from enum import Enum
 from json import JSONDecodeError
 from typing import Any
 
+from merino.config import settings
 from merino.exceptions import BackendError
+from merino.providers.top_picks.backends.filemanager import (
+    DomainDataSource,
+    GetFileResultCode,
+    TopPicksLocalFilemanager,
+    TopPicksRemoteFilemanager,
+)
 from merino.providers.top_picks.backends.protocol import TopPicksData
+
+logger = logging.getLogger(__name__)
 
 
 class TopPicksError(BackendError):
@@ -36,13 +47,9 @@ class TopPicksBackend:
         self.firefox_char_limit = firefox_char_limit
         self.domain_blocklist = {entry.lower() for entry in domain_blocklist}
 
-    async def fetch(self) -> TopPicksData:
-        """Fetch Top Picks suggestions from domain list.
-
-        Raises:
-            TopPicksError: If the top picks file path is not specified.
-        """
-        return await asyncio.to_thread(self.build_indices)
+    async def fetch(self) -> tuple[Enum, TopPicksData | None]:
+        """Fetch Top Picks suggestions from domain list."""
+        return await asyncio.to_thread(self.maybe_build_indices)
 
     @staticmethod
     def read_domain_list(file: str) -> dict[str, Any]:
@@ -56,8 +63,10 @@ class TopPicksBackend:
                 domain_list: dict = json.load(readfile)
                 return domain_list
         except OSError as os_error:
+            logger.error(f"Error opening local domain file: {os_error}")
             raise TopPicksError(f"Cannot open file '{file}'") from os_error
         except JSONDecodeError as json_error:
+            logger.error(f"Error decoding local domain file: {json_error}")
             raise TopPicksError(f"Cannot decode file '{file}'") from json_error
 
     def build_index(self, domain_list: dict[str, Any]) -> TopPicksData:
@@ -135,8 +144,52 @@ class TopPicksBackend:
             firefox_char_limit=self.firefox_char_limit,
         )
 
-    def build_indices(self) -> TopPicksData:
-        """Read domain file, create indices and suggestions"""
-        domains: dict[str, Any] = self.read_domain_list(self.top_picks_file_path)
-        index_results: TopPicksData = self.build_index(domains)
-        return index_results
+    def maybe_build_indices(self) -> tuple[Enum, TopPicksData | None]:  # type: ignore [return]
+        """Build indices of domain data either from `remote` or `local` source defined
+        in configuration. `domain_data_source` dictates data source and which
+        filemanager is used to acquire data.
+
+        Returns
+        -------
+        TopPicksData
+            If data source has new data, return newest TopPicksData.
+        None
+            If backend source does not have new data, None is returned.
+            For `remote`, this is is the `generation` attribute has not changed.
+        """
+        domain_data_source: str = settings.providers.top_picks.domain_data_source
+
+        match DomainDataSource(domain_data_source):
+            case DomainDataSource.REMOTE:
+                remote_filemanager = TopPicksRemoteFilemanager(
+                    gcs_project_path=settings.providers.top_picks.gcs_project,
+                    gcs_bucket_path=settings.providers.top_picks.gcs_bucket,
+                )
+                client = remote_filemanager.create_gcs_client()
+                get_file_result_code, remote_domains = remote_filemanager.get_file(
+                    client
+                )
+
+                match GetFileResultCode(get_file_result_code):
+                    case GetFileResultCode.SUCCESS:
+                        remote_index_results: TopPicksData = self.build_index(
+                            remote_domains  # type: ignore
+                        )
+                        logger.info("Top Picks Domain Data loaded remotely from GCS.")
+                        return (get_file_result_code, remote_index_results)
+                    case GetFileResultCode.SKIP:
+                        return (get_file_result_code, None)
+                    case GetFileResultCode.FAIL:
+                        return (get_file_result_code, None)
+
+            case DomainDataSource.LOCAL:
+                local_filemanager = TopPicksLocalFilemanager(
+                    static_file_path=settings.providers.top_picks.top_picks_file_path
+                )
+                local_domains = local_filemanager.get_file()
+                local_index_results: TopPicksData = self.build_index(local_domains)
+                logger.info("Top Picks Domain Data loaded locally from static file.")
+                return (GetFileResultCode.SUCCESS, local_index_results)
+            case _:
+                logger.error("Could not generate index from local or remote source.")
+                return (GetFileResultCode.FAIL, None)

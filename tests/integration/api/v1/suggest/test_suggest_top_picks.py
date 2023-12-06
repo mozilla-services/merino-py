@@ -58,7 +58,11 @@ def fixture_providers(
     backend: TopPicksBackend, top_picks_parameters: dict[str, Any]
 ) -> Providers:
     """Define providers for this module which are injected automatically."""
-    return {"top_picks": Provider(backend=backend, **top_picks_parameters)}
+    return {
+        "top_picks": Provider(
+            backend=backend, **top_picks_parameters  # type: ignore [arg-type]
+        )
+    }
 
 
 @pytest.mark.parametrize("query", ["exam", "exxa", "example", "Exam", "EXAM", "EXXa"])

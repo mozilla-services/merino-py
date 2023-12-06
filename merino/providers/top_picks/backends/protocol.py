@@ -1,5 +1,6 @@
 """Protocol for the Top Picks provider backend."""
 from collections import defaultdict
+from enum import Enum
 from typing import Protocol
 
 from pydantic import BaseModel
@@ -21,7 +22,9 @@ class TopPicksData(BaseModel):
 class TopPicksBackend(Protocol):
     """Protocol for Top Picks backend that the provider depends on."""
 
-    async def fetch(self) -> TopPicksData:  # pragma: no cover
+    generation: int
+
+    async def fetch(self) -> tuple[Enum, TopPicksData | None]:  # pragma: no cover
         """Fetch Top Picks suggestions from domain list.
 
         Raises:

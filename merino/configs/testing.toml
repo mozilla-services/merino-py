@@ -60,6 +60,11 @@ query_char_limit = 4
 firefox_char_limit = 2
 top_picks_file_path = "tests/data/top_picks.json"
 
+# GCS-related Remote Domain File Test Settings (Top Picks)
+cron_interval_sec = 60
+resync_interval_sec = 10800
+domain_data_source = "local"
+
 [testing.providers.wikipedia]
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "test"
