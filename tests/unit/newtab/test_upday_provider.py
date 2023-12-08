@@ -185,4 +185,4 @@ async def test_shutdown(
 ) -> None:
     """Test shutdown closes http client."""
     await provider.shutdown()
-    assert http_mock.aclose.called_once()
+    http_mock.aclose.assert_called_once()

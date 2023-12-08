@@ -83,8 +83,6 @@ async def test_newtab_upday(
     result = response.json()
     assert result == expected_response
 
-    await upday_mock.get_upday_recommendations.called_once_with("nl", "nl")
-
 
 def test_newtab_upday_no_provider(client: TestClient) -> None:
     """Test the path where provider is not initialized."""
