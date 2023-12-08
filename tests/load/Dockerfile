@@ -7,10 +7,9 @@ FROM python:3.12-slim-bookworm
 LABEL maintainer="Content Discovery Services (DISCO) Team <disco-team@mozilla.com>"
 
 # Add gcc since there are no wheels for some packages for arm64/aarch64
+# (g++/make for gevent on pypy)
 RUN apt-get update && apt-get install -y git && \
-  if [ -n "$(arch | grep 'arm64\|aarch64')" ]; then \
-  apt install -y --no-install-recommends gcc python3-dev; \
-  fi
+  apt install -y --no-install-recommends build-essential python3-dev
 
 ENV LANG=C.UTF-8
 ENV PYTHONUNBUFFERED=1
