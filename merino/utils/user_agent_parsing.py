@@ -54,7 +54,7 @@ def _parse_os_family(operating_system: dict[str, Any]) -> str:
             return "other"
 
 
-def _parse_form_factor(device: dict[str, Any], os_family: str) -> str:  # type: ignore [return]
+def _parse_form_factor(device: dict[str, Any], os_family: str) -> str:
     """Parse the form factor from the device dictionary.
 
     It takes an extra argument `os_family` to facilitate parsing for Windows

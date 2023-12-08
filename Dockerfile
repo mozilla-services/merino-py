@@ -1,4 +1,4 @@
-ARG PYTHON_VERSION=3.11
+ARG PYTHON_VERSION=3.12
 
 # This stage is used to generate requirements.txt from Poetry
 FROM python:${PYTHON_VERSION}-slim AS build
@@ -32,12 +32,12 @@ COPY --from=build /tmp/requirements.txt $APP_HOME/requirements.txt
 
 # Install libmaxminddb* to build the MaxMindDB Python client with C extension.
 RUN apt-get update && \
-    apt-get install --yes build-essential libmaxminddb0 libmaxminddb-dev && \
-    pip install --no-cache-dir --quiet --upgrade -r requirements.txt && \
-    apt-get remove --yes build-essential && \
-    apt-get -q --yes autoremove && \
-    apt-get clean && \
-    rm -rf /root/.cache
+  apt-get install --yes build-essential libmaxminddb0 libmaxminddb-dev && \
+  pip install --no-cache-dir --quiet --upgrade -r requirements.txt && \
+  apt-get remove --yes build-essential && \
+  apt-get -q --yes autoremove && \
+  apt-get clean && \
+  rm -rf /root/.cache
 
 # Create a build context that can be used for running merino jobs
 FROM app_base as job_runner
