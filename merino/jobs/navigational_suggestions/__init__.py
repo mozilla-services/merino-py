@@ -162,7 +162,7 @@ def prepare_domain_metadata(
     top_pick_blob = domain_metadata_uploader.upload_top_picks(
         json.dumps(top_picks, indent=4)
     )
-    diff: str = domain_diff.create_diff(
+    diff: dict = domain_diff.create_diff(
         file_name=top_pick_blob.name,
         unchanged=unchanged,
         domains=added_domains,
@@ -173,4 +173,6 @@ def prepare_domain_metadata(
         extra={"public_url": top_pick_blob.public_url},
     )
     if write_xcom is True:
-        _write_xcom_file({"top_pick_url": top_pick_blob.public_url, "diff": diff})
+        _write_xcom_file(
+            {"top_pick_url": top_pick_blob.public_url, "diff": diff}
+        )
