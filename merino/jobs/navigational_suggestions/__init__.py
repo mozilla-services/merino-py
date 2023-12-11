@@ -173,6 +173,4 @@ def prepare_domain_metadata(
         extra={"public_url": top_pick_blob.public_url},
     )
     if write_xcom is True:
-        _write_xcom_file(
-            {"top_pick_url": top_pick_blob.public_url, "diff": diff}
-        )
+        _write_xcom_file({"top_pick_url": top_pick_blob.public_url, "diff": diff})
