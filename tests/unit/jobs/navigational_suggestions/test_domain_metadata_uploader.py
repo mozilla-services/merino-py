@@ -5,6 +5,7 @@
 """Unit tests for domain_metadata_uploader.py module."""
 import datetime
 import json
+import re
 from logging import INFO, LogRecord
 from typing import Any
 
@@ -232,7 +233,7 @@ def mock_favicon_downloader(mocker) -> Any:
 def test_destination_top_pick_name() -> None:
     """Test the file name generation creates the expected file name for the blob."""
     current = datetime.datetime.now()
-    suffix = DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
+    suffix = DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME
     result = DomainMetadataUploader._destination_top_pick_name(suffix=suffix)
     expected_result = f"{str(int(current.timestamp()))}_{suffix}"
 
@@ -251,19 +252,17 @@ def test_remove_latest_from_all_top_picks_files(
         favicon_downloader=mock_favicon_downloader,
     )
 
-    file_suffix = DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
     mock_gcs_blob.name = "0_top_picks_latest.json"
+    mocker.patch.object(re, "search").return_value = "0_top_picks_latest.json"
     mock_gcs_client.list_blobs.return_value = [mock_gcs_blob]
     mocker.patch.object(mock_gcs_bucket, "copy_blob")
     mocker.patch.object(mock_gcs_bucket, "delete_blob")
 
     domain_metadata_uploader.remove_latest_from_all_top_picks_files(
         bucket_name=mock_gcs_bucket.name,
-        file_suffix=file_suffix,
         bucket=mock_gcs_bucket,
         storage_client=mock_gcs_client,
     )
-
     mock_gcs_client.list_blobs.assert_called_once()
     mock_gcs_bucket.copy_blob.assert_called_once()
     mock_gcs_bucket.delete_blob.assert_called_once()
@@ -285,8 +284,8 @@ def test_upload_top_picks(mock_gcs_client, mock_favicon_downloader) -> None:
     domain_metadata_uploader.upload_top_picks(DUMMY_TOP_PICKS)
 
     mock_gcs_client.bucket.assert_called_once_with("dummy_gcs_bucket")
-    mock_gcs_bucket.blob.assert_called_once()
-    mock_dst_blob.upload_from_string.assert_called_once_with(DUMMY_TOP_PICKS)
+    mock_gcs_bucket.blob.assert_called()
+    mock_dst_blob.upload_from_string.assert_called_with(DUMMY_TOP_PICKS)
 
 
 def test_upload_favicons_upload_if_not_present(
@@ -408,6 +407,7 @@ def test_get_latest_file_for_diff(
         favicon_downloader=mock_favicon_downloader,
     )
 
+    mocker.patch.object(re, "search").return_value = "0_top_picks_latest.json"
     result = default_domain_metadata_uploader.get_latest_file_for_diff(
         client=remote_client
     )
