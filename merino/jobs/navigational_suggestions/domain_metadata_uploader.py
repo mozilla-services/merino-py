@@ -2,7 +2,6 @@
 import hashlib
 import json
 import logging
-import re
 from datetime import datetime
 from urllib.parse import urljoin
 
@@ -17,7 +16,7 @@ class DomainMetadataUploader:
     """Upload the domain metadata to GCS"""
 
     DESTINATION_FAVICONS_ROOT: str = "favicons"
-    DESTINATION_TOP_PICK_FILE_NAME: str = "top_picks_latest.json"
+    DESTINATION_TOP_PICK_FILE_NAME: str = "top_picks.json"
 
     bucket_name: str
     storage_client: Client
@@ -47,11 +46,6 @@ class DomainMetadataUploader:
         dst_top_pick_name = DomainMetadataUploader._destination_top_pick_name(
             suffix=DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME
         )
-        self.remove_latest_from_all_top_picks_files(
-            bucket_name=self.bucket_name,
-            bucket=bucket,
-            storage_client=self.storage_client,
-        )
         latest_blob = bucket.blob(self.DESTINATION_TOP_PICK_FILE_NAME)
         latest_blob.upload_from_string(top_picks)
         dated_blob = bucket.blob(dst_top_pick_name)
@@ -64,45 +58,25 @@ class DomainMetadataUploader:
         current = datetime.now()
         return f"{int(current.timestamp())}_{suffix}"
 
-    def remove_latest_from_all_top_picks_files(
-        self,
-        bucket_name: str,
-        bucket: Bucket,
-        storage_client: Client,
-    ) -> None:
-        """If an existing file with a timestamp and the `_latest` suffix exists,
-        remove `_latest` so only the most recent file has the suffix.
-        """
-        blobs = storage_client.list_blobs(bucket_name)
-        file_pattern = re.compile(r"\d+_top_picks_latest\.json")
-
-        for blob in blobs:
-            if re.search(file_pattern, blob):
-                bucket.copy_blob(
-                    blob=blob,
-                    destination_bucket=bucket,
-                    new_name=blob.name.replace("_latest", ""),
-                )
-                bucket.delete_blob(blob.name)
-        return
-
     def get_latest_file_for_diff(
         self, client: Client
     ) -> dict[str, list[dict[str, str]]]:
-        """Get the `_latest` top pick file with timestamp so a comparison
+        """Get the most recent top pick file with timestamp so a comparison
         can be made between the previous file and the new file to be written.
         """
         bucket: Bucket = client.get_bucket(self.bucket_name)
-        domain_files = bucket.list_blobs(delimiter="/")
-        file_pattern = re.compile(r"\d+_top_picks_latest\.json")
+        blobs = [
+            blob
+            for blob in bucket.list_blobs(self.bucket_name)
+            if blob.name != "top_picks.json"
+        ]
+        most_recent = sorted(blobs, key=lambda blob: blob.name, reverse=True)[0]
 
-        for file in domain_files:
-            if re.search(file_pattern, file):
-                data = file.download_as_text()
-                file_contents: dict = json.loads(data)
-                logger.info(f"Domain file {file.name} acquired.")
-
-                return file_contents
+        if most_recent:
+            data = most_recent.download_as_text()
+            file_contents: dict = json.loads(data)
+            logger.info(f"Domain file {most_recent.name} acquired.")
+            return file_contents
         return {"domains": []}
 
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
