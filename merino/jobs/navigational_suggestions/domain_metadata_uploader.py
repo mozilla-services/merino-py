@@ -16,7 +16,7 @@ class DomainMetadataUploader:
     """Upload the domain metadata to GCS"""
 
     DESTINATION_FAVICONS_ROOT: str = "favicons"
-    DESTINATION_TOP_PICK_FILE_NAME: str = "top_picks.json"
+    DESTINATION_TOP_PICK_FILE_NAME: str = "top_picks_latest.json"
 
     bucket_name: str
     storage_client: Client
@@ -44,7 +44,7 @@ class DomainMetadataUploader:
         """
         bucket = self.storage_client.bucket(self.bucket_name)
         dst_top_pick_name = DomainMetadataUploader._destination_top_pick_name(
-            suffix=DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME
+            suffix="top_picks.json"
         )
         latest_blob = bucket.blob(self.DESTINATION_TOP_PICK_FILE_NAME)
         latest_blob.upload_from_string(top_picks)
@@ -55,8 +55,8 @@ class DomainMetadataUploader:
     @staticmethod
     def _destination_top_pick_name(suffix: str) -> str:
         """Return the name of the top pick file to be used for uploading to GCS with timestamp."""
-        current = datetime.now()
-        return f"{int(current.timestamp())}_{suffix}"
+        current = datetime.now().strftime("%Y%m%d%H%M%S")
+        return f"{current}_{suffix}"
 
     def get_latest_file_for_diff(
         self, client: Client
@@ -68,16 +68,16 @@ class DomainMetadataUploader:
         blobs = [
             blob
             for blob in bucket.list_blobs(self.bucket_name)
-            if blob.name != "top_picks.json"
+            if blob.name != self.DESTINATION_TOP_PICK_FILE_NAME
         ]
-        most_recent = sorted(blobs, key=lambda blob: blob.name, reverse=True)[0]
 
-        if most_recent:
-            data = most_recent.download_as_text()
-            file_contents: dict = json.loads(data)
-            logger.info(f"Domain file {most_recent.name} acquired.")
-            return file_contents
-        return {"domains": []}
+        if not blobs:
+            return {"domains": []}
+        most_recent = sorted(blobs, key=lambda blob: blob.name, reverse=True)[0]
+        data = most_recent.download_as_text()
+        file_contents: dict = json.loads(data)
+        logger.info(f"Domain file {most_recent.name} acquired.")
+        return file_contents
 
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload the domain favicons to gcs using their source url and

@@ -197,7 +197,7 @@ def mock_gcs_blob(mocker):
 def fixture_remote_blob(mocker: MockerFixture, json_domain_data) -> Any:
     """Create a remote blob mock object for testing."""
     remote_blob = mocker.MagicMock(spec=Blob)
-    remote_blob.name = "1681866452_top_picks.json"
+    remote_blob.name = "20220101120555_top_picks.json"
     remote_blob.download_as_text.return_value = json_domain_data
     return remote_blob
 
@@ -208,7 +208,7 @@ def fixture_remote_blob_newest(mocker: MockerFixture, json_domain_data) -> Any:
     Has higher timestamp, therefore newer.
     """
     remote_blob = mocker.MagicMock(spec=Blob)
-    remote_blob.name = "1681866864_top_picks.json"
+    remote_blob.name = "20220501120555_top_picks.json"
     remote_blob.download_as_text.return_value = json_domain_data
     return remote_blob
 
@@ -241,14 +241,13 @@ def mock_favicon_downloader(mocker) -> Any:
     return favicon_downloader_mock
 
 
-@freeze_time("2022-01-01 00:00:00")
+@freeze_time("2022-01-01 12:05:55")
 def test_destination_top_pick_name() -> None:
     """Test the file name generation creates the expected file name for the blob."""
-    current = datetime.datetime.now()
-    suffix = DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME
+    current = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    suffix = "top_picks.json"
     result = DomainMetadataUploader._destination_top_pick_name(suffix=suffix)
-    expected_result = f"{str(int(current.timestamp()))}_{suffix}"
-
+    expected_result = f"{current}_{suffix}"
     assert result == expected_result
 
 
@@ -260,7 +259,7 @@ def test_upload_top_picks(
     mock_gcs_bucket = mock_gcs_client.bucket.return_value
     mock_dst_blob = mock_gcs_bucket.blob.return_value
 
-    mock_gcs_blob.name = "0_top_picks.json"
+    mock_gcs_blob.name = "20220101120555_top_picks.json"
     mock_gcs_client.list_blobs.return_value = [mock_gcs_blob]
     mocker.patch.object(mock_gcs_bucket, "copy_blob")
     mocker.patch.object(mock_gcs_bucket, "delete_blob")
