@@ -43,20 +43,13 @@ class DomainMetadataUploader:
         the other file is the latest entry from which data is loaded.
         """
         bucket = self.storage_client.bucket(self.bucket_name)
-        dst_top_pick_name = DomainMetadataUploader._destination_top_pick_name(
-            suffix="top_picks.json"
-        )
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        timestamp_file_name = f"{timestamp}_top_picks.json"
         latest_blob = bucket.blob(self.DESTINATION_TOP_PICK_FILE_NAME)
         latest_blob.upload_from_string(top_picks)
-        dated_blob = bucket.blob(dst_top_pick_name)
+        dated_blob = bucket.blob(timestamp_file_name)
         dated_blob.upload_from_string(top_picks)
         return dated_blob
-
-    @staticmethod
-    def _destination_top_pick_name(suffix: str) -> str:
-        """Return the name of the top pick file to be used for uploading to GCS with timestamp."""
-        current = datetime.now().strftime("%Y%m%d%H%M%S")
-        return f"{current}_{suffix}"
 
     def get_latest_file_for_diff(
         self, client: Client

@@ -6,6 +6,7 @@
 import asyncio
 import logging
 import time
+from collections import defaultdict
 from typing import Any
 
 from merino import cron
@@ -52,6 +53,16 @@ class Provider(BaseProvider):
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
         self.last_fetch_at = 0
+        self.top_picks_data = TopPicksData(
+            primary_index=defaultdict(),
+            secondary_index=defaultdict(),
+            short_domain_index=defaultdict(),
+            results=[],
+            query_min=0,
+            query_max=0,
+            query_char_limit=0,
+            firefox_char_limit=0,
+        )
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:

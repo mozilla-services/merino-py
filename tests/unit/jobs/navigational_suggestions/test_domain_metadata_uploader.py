@@ -3,13 +3,11 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for domain_metadata_uploader.py module."""
-import datetime
 import json
 from logging import INFO, LogRecord
 from typing import Any
 
 import pytest
-from freezegun import freeze_time
 from google.cloud.storage import Blob, Bucket, Client
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
@@ -239,16 +237,6 @@ def mock_favicon_downloader(mocker) -> Any:
         content=bytes(255), content_type="image/png"
     )
     return favicon_downloader_mock
-
-
-@freeze_time("2022-01-01 12:05:55")
-def test_destination_top_pick_name() -> None:
-    """Test the file name generation creates the expected file name for the blob."""
-    current = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    suffix = "top_picks.json"
-    result = DomainMetadataUploader._destination_top_pick_name(suffix=suffix)
-    expected_result = f"{current}_{suffix}"
-    assert result == expected_result
 
 
 def test_upload_top_picks(
