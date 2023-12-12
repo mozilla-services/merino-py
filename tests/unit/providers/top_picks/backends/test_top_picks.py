@@ -119,7 +119,7 @@ def fixture_gcs_blob_mock(
 ) -> Any:
     """Create a GCS Blob mock object for testing."""
     mock_blob = mocker.MagicMock(spec=Blob)
-    mock_blob.name = "1681866452_top_picks_latest.json"
+    mock_blob.name = "1681866452_top_picks.json"
     mock_blob.generation = expected_timestamp
     mock_blob.download_as_text.return_value = blob_json
     return mock_blob

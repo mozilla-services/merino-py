@@ -5,7 +5,6 @@
 """Unit tests for domain_metadata_uploader.py module."""
 import datetime
 import json
-import re
 from logging import INFO, LogRecord
 from typing import Any
 
@@ -198,16 +197,29 @@ def mock_gcs_blob(mocker):
 def fixture_remote_blob(mocker: MockerFixture, json_domain_data) -> Any:
     """Create a remote blob mock object for testing."""
     remote_blob = mocker.MagicMock(spec=Blob)
-    remote_blob.name = "1681866452_top_picks_latest.json"
+    remote_blob.name = "1681866452_top_picks.json"
+    remote_blob.download_as_text.return_value = json_domain_data
+    return remote_blob
+
+
+@pytest.fixture(name="remote_blob_newest", autouse=True)
+def fixture_remote_blob_newest(mocker: MockerFixture, json_domain_data) -> Any:
+    """Create a remote blob mock object for testing.
+    Has higher timestamp, therefore newer.
+    """
+    remote_blob = mocker.MagicMock(spec=Blob)
+    remote_blob.name = "1681866864_top_picks.json"
     remote_blob.download_as_text.return_value = json_domain_data
     return remote_blob
 
 
 @pytest.fixture(name="remote_bucket", autouse=True)
-def fixture_remote_bucket(mocker: MockerFixture, remote_blob) -> Any:
+def fixture_remote_bucket(
+    mocker: MockerFixture, remote_blob, remote_blob_newest
+) -> Any:
     """Create a remote bucket mock object for testing."""
     remote_bucket = mocker.MagicMock(spec=Bucket)
-    remote_bucket.list_blobs.return_value = [remote_blob]
+    remote_bucket.list_blobs.return_value = [remote_blob, remote_blob_newest]
     return remote_bucket
 
 
@@ -240,39 +252,18 @@ def test_destination_top_pick_name() -> None:
     assert result == expected_result
 
 
-def test_remove_latest_from_all_top_picks_files(
-    mocker, mock_gcs_client, mock_gcs_bucket, mock_gcs_blob, mock_favicon_downloader
+def test_upload_top_picks(
+    mocker, mock_gcs_client, mock_gcs_blob, mock_favicon_downloader
 ) -> None:
-    """Test that updating the `_latest` suffix successfully alters the file name."""
-    domain_metadata_uploader = DomainMetadataUploader(
-        destination_gcp_project="dummy_gcp_project",
-        destination_bucket_name="dummy_gcs_bucket",
-        destination_cdn_hostname="",
-        force_upload=False,
-        favicon_downloader=mock_favicon_downloader,
-    )
-
-    mock_gcs_blob.name = "0_top_picks_latest.json"
-    mocker.patch.object(re, "search").return_value = "0_top_picks_latest.json"
-    mock_gcs_client.list_blobs.return_value = [mock_gcs_blob]
-    mocker.patch.object(mock_gcs_bucket, "copy_blob")
-    mocker.patch.object(mock_gcs_bucket, "delete_blob")
-
-    domain_metadata_uploader.remove_latest_from_all_top_picks_files(
-        bucket_name=mock_gcs_bucket.name,
-        bucket=mock_gcs_bucket,
-        storage_client=mock_gcs_client,
-    )
-    mock_gcs_client.list_blobs.assert_called_once()
-    mock_gcs_bucket.copy_blob.assert_called_once()
-    mock_gcs_bucket.delete_blob.assert_called_once()
-
-
-def test_upload_top_picks(mock_gcs_client, mock_favicon_downloader) -> None:
-    """Test if upload top picks call relevant GCS api"""
+    """Test if upload top picks call relevant GCS API."""
     DUMMY_TOP_PICKS = "dummy top picks contents"
     mock_gcs_bucket = mock_gcs_client.bucket.return_value
     mock_dst_blob = mock_gcs_bucket.blob.return_value
+
+    mock_gcs_blob.name = "0_top_picks.json"
+    mock_gcs_client.list_blobs.return_value = [mock_gcs_blob]
+    mocker.patch.object(mock_gcs_bucket, "copy_blob")
+    mocker.patch.object(mock_gcs_bucket, "delete_blob")
 
     domain_metadata_uploader = DomainMetadataUploader(
         destination_gcp_project="dummy_gcp_project",
@@ -388,7 +379,7 @@ def test_get_latest_file_for_diff(
     mock_favicon_downloader,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
-    remote_blob,
+    remote_blob_newest,
     remote_client,
     mocker,
 ) -> None:
@@ -407,7 +398,6 @@ def test_get_latest_file_for_diff(
         favicon_downloader=mock_favicon_downloader,
     )
 
-    mocker.patch.object(re, "search").return_value = "0_top_picks_latest.json"
     result = default_domain_metadata_uploader.get_latest_file_for_diff(
         client=remote_client
     )
@@ -419,4 +409,6 @@ def test_get_latest_file_for_diff(
     assert len(result["domains"]) == 6
 
     assert len(records) == 1
-    assert records[0].message.startswith(f"Domain file {remote_blob.name} acquired.")
+    assert records[0].message.startswith(
+        f"Domain file {remote_blob_newest.name} acquired."
+    )

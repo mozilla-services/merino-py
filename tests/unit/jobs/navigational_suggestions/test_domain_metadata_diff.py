@@ -241,7 +241,7 @@ def test_create_diff(json_domain_data_latest, json_domain_data_old) -> None:
         "total_domains_unchanged": 5,
         "newly_added_domains": 1,
         "newly_added_urls": 2,
-        "url_summary": ["https://test.firefox.com", "https://testexample.com"],
+        "url_summary": sorted(["https://test.firefox.com", "https://testexample.com"]),
     }
 
     assert diff_file == expected_diff
