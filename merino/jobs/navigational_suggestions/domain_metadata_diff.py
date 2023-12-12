@@ -51,5 +51,5 @@ class DomainDiff:
             "total_domains_unchanged": len(unchanged),
             "newly_added_domains": len(domains),
             "newly_added_urls": len(urls),
-            "url_summary": sorted(urls),
+            "new_urls_summary": sorted(urls),
         }
