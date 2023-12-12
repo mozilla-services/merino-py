@@ -92,7 +92,7 @@ class TopPicksRemoteFilemanager:
             bucket: Bucket = client.get_bucket(self.gcs_bucket_path)
             if (
                 blob := bucket.get_blob(
-                    "top_picks.json",
+                    "top_picks_latest.json",
                     if_generation_not_match=self.blob_generation,
                 )
             ) is not None:

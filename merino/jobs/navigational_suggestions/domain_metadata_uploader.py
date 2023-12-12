@@ -16,7 +16,7 @@ class DomainMetadataUploader:
     """Upload the domain metadata to GCS"""
 
     DESTINATION_FAVICONS_ROOT: str = "favicons"
-    DESTINATION_TOP_PICK_FILE_NAME_SUFFIX: str = "top_picks_latest.json"
+    DESTINATION_TOP_PICK_FILE_NAME: str = "top_picks_latest.json"
 
     bucket_name: str
     storage_client: Client
@@ -38,65 +38,39 @@ class DomainMetadataUploader:
         self.favicon_downloader = favicon_downloader
 
     def upload_top_picks(self, top_picks: str) -> Blob:
-        """Upload the top pick contents to gcs."""
-        bucket = self.storage_client.bucket(self.bucket_name)
-        dst_top_pick_name = DomainMetadataUploader._destination_top_pick_name(
-            suffix=DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX
-        )
-        self.remove_latest_from_all_top_picks_files(
-            bucket_name=self.bucket_name,
-            file_suffix=DomainMetadataUploader.DESTINATION_TOP_PICK_FILE_NAME_SUFFIX,
-            bucket=bucket,
-            storage_client=self.storage_client,
-        )
-        dst_blob = bucket.blob(dst_top_pick_name)
-        dst_blob.upload_from_string(top_picks)
-        return dst_blob
-
-    @staticmethod
-    def _destination_top_pick_name(suffix: str) -> str:
-        """Return the name of the top pick file to be used for uploading to GCS"""
-        current = datetime.now()
-        return f"{int(current.timestamp())}_{suffix}"
-
-    def remove_latest_from_all_top_picks_files(
-        self,
-        bucket_name: str,
-        file_suffix: str,
-        bucket: Bucket,
-        storage_client: Client,
-    ) -> None:
-        """If an existing file with the `_latest` suffix exists, remove it so the
-        most recent file has the suffix.
+        """Upload the top pick contents to GCS.
+        One file is prepended by a timestamp for record keeping,
+        the other file is the latest entry from which data is loaded.
         """
-        blobs = storage_client.list_blobs(bucket_name)
-        for blob in blobs:
-            if blob.name.endswith(file_suffix):
-                bucket.copy_blob(
-                    blob=blob,
-                    destination_bucket=bucket,
-                    new_name=blob.name.replace("_latest", ""),
-                )
-                bucket.delete_blob(blob.name)
-        return
+        bucket = self.storage_client.bucket(self.bucket_name)
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        timestamp_file_name = f"{timestamp}_top_picks.json"
+        latest_blob = bucket.blob(self.DESTINATION_TOP_PICK_FILE_NAME)
+        latest_blob.upload_from_string(top_picks)
+        dated_blob = bucket.blob(timestamp_file_name)
+        dated_blob.upload_from_string(top_picks)
+        return dated_blob
 
     def get_latest_file_for_diff(
         self, client: Client
     ) -> dict[str, list[dict[str, str]]]:
-        """Get the `_latest` top pick file so a comparison can be made between
-        the previous file and the new file to be written.
+        """Get the most recent top pick file with timestamp so a comparison
+        can be made between the previous file and the new file to be written.
         """
         bucket: Bucket = client.get_bucket(self.bucket_name)
-        domain_files = bucket.list_blobs(delimiter="/")
+        blobs = [
+            blob
+            for blob in bucket.list_blobs(self.bucket_name)
+            if blob.name != self.DESTINATION_TOP_PICK_FILE_NAME
+        ]
 
-        for file in domain_files:
-            if file.name.endswith("top_picks_latest.json"):
-                data = file.download_as_text()
-                file_contents: dict = json.loads(data)
-                logger.info(f"Domain file {file.name} acquired.")
-
-                return file_contents
-        return {"domains": []}
+        if not blobs:
+            return {"domains": []}
+        most_recent = sorted(blobs, key=lambda blob: blob.name, reverse=True)[0]
+        data = most_recent.download_as_text()
+        file_contents: dict = json.loads(data)
+        logger.info(f"Domain file {most_recent.name} acquired.")
+        return file_contents
 
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload the domain favicons to gcs using their source url and

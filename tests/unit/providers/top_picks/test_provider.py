@@ -5,6 +5,7 @@
 """Unit tests for the top picks provider module."""
 
 import time
+from collections import defaultdict
 
 import pytest
 from pydantic import HttpUrl
@@ -14,12 +15,28 @@ from merino.config import settings
 from merino.exceptions import BackendError
 from merino.providers.base import BaseSuggestion
 from merino.providers.top_picks.backends.filemanager import GetFileResultCode
+from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider, Suggestion
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
 
 # NOTE: top_picks provider fixture in conftest.py.
+
+
+@pytest.fixture(name="expected_empty_top_picks_data")
+def fixture_expected_empty_top_picks_data() -> TopPicksData:
+    """Fixture for empty default TopPicksData class."""
+    return TopPicksData(
+        primary_index=defaultdict(),
+        secondary_index=defaultdict(),
+        short_domain_index=defaultdict(),
+        results=[],
+        query_min=0,
+        query_max=0,
+        query_char_limit=0,
+        firefox_char_limit=0,
+    )
 
 
 def test_enabled_by_default(top_picks: Provider) -> None:
@@ -46,7 +63,10 @@ async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None
 
 @pytest.mark.asyncio
 async def test_initialize_skip(
-    mocker, top_picks: Provider, backend: TopPicksBackend
+    mocker,
+    top_picks: Provider,
+    backend: TopPicksBackend,
+    expected_empty_top_picks_data: TopPicksData,
 ) -> None:
     """Test initialization of top pick provider when result_code enum value is skip"""
     mocker.patch(
@@ -57,7 +77,7 @@ async def test_initialize_skip(
     ).return_value = (GetFileResultCode.SKIP, None)
     await top_picks.initialize()
 
-    assert not hasattr(top_picks, "top_picks_data")
+    assert top_picks.top_picks_data == expected_empty_top_picks_data
 
 
 @pytest.mark.asyncio
@@ -65,6 +85,7 @@ async def test_initialize_fail(
     mocker,
     top_picks: Provider,
     backend: TopPicksBackend,
+    expected_empty_top_picks_data: TopPicksData,
 ) -> None:
     """Test initialization of top pick provider when result_code enum value is fail"""
     mocker.patch(
@@ -74,7 +95,8 @@ async def test_initialize_fail(
         "merino.providers.top_picks.backends.top_picks.TopPicksBackend.fetch"
     ).return_value = (GetFileResultCode.FAIL, None)
     await top_picks.initialize()
-    assert not hasattr(top_picks, "top_picks_data")
+
+    assert top_picks.top_picks_data == expected_empty_top_picks_data
 
 
 def test_should_fetch_true(top_picks: Provider):
@@ -116,7 +138,10 @@ async def test_fetch_top_picks_data_fails(
 
 @pytest.mark.asyncio
 async def test_fetch_top_picks_data_skip(
-    mocker, top_picks: Provider, backend: TopPicksBackend
+    mocker,
+    top_picks: Provider,
+    backend: TopPicksBackend,
+    expected_empty_top_picks_data: TopPicksData,
 ) -> None:
     """Test _fetch_top_picks_data_skip when result_code enum value is skip."""
     mocker.patch(
@@ -127,12 +152,15 @@ async def test_fetch_top_picks_data_skip(
     ).return_value = (GetFileResultCode.SKIP, None)
     await top_picks._fetch_top_picks_data()
 
-    assert not hasattr(top_picks, "top_picks_data")
+    assert top_picks.top_picks_data == expected_empty_top_picks_data
 
 
 @pytest.mark.asyncio
 async def test_fetch_top_picks_data_fail(
-    mocker, top_picks: Provider, backend: TopPicksBackend
+    mocker,
+    top_picks: Provider,
+    backend: TopPicksBackend,
+    expected_empty_top_picks_data: TopPicksData,
 ) -> None:
     """Test _fetch_top_picks_data_skip when result_code enum value is fail."""
     mocker.patch(
@@ -141,9 +169,10 @@ async def test_fetch_top_picks_data_fail(
     mocker.patch(
         "merino.providers.top_picks.backends.top_picks.TopPicksBackend.fetch"
     ).return_value = (GetFileResultCode.FAIL, None)
+
     await top_picks._fetch_top_picks_data()
 
-    assert not hasattr(top_picks, "top_picks_data")
+    assert top_picks.top_picks_data == expected_empty_top_picks_data
 
 
 @pytest.mark.parametrize(

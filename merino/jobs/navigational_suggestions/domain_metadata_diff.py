@@ -44,20 +44,12 @@ class DomainDiff:
         unchanged: set[str],
         domains: set[str],
         urls: set[str],
-    ) -> str:
-        """Create string representation of diff file comaring domain data."""
-        title = f"Top Picks Diff File {file_name}"
-        sep = "=" * 20
-
-        unchanged_summary = f"Total domain suggestions unchanged: {len(unchanged)}"
-        domain_summary = f"Newly added domains: {len(domains)}\n{sep}\n"
-        url_summary = f"Newly added urls: {len(urls)}\n{sep}\n"
-        url_summary += "\n".join(urls)
-
-        return f"""
-{title}
-
-{unchanged_summary}
-{domain_summary}
-{url_summary}
-""".strip()
+    ) -> dict:
+        """Create dict representation of diff file comaring domain data."""
+        return {
+            "title": f"Top Picks Diff File for: {file_name}",
+            "total_domains_unchanged": len(unchanged),
+            "newly_added_domains": len(domains),
+            "newly_added_urls": len(urls),
+            "new_urls_summary": sorted(urls),
+        }

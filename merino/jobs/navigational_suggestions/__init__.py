@@ -162,7 +162,7 @@ def prepare_domain_metadata(
     top_pick_blob = domain_metadata_uploader.upload_top_picks(
         json.dumps(top_picks, indent=4)
     )
-    diff: str = domain_diff.create_diff(
+    diff: dict = domain_diff.create_diff(
         file_name=top_pick_blob.name,
         unchanged=unchanged,
         domains=added_domains,

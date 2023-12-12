@@ -236,6 +236,13 @@ def test_create_diff(json_domain_data_latest, json_domain_data_old) -> None:
         domains=added_domains,
         urls=added_urls,
     )
-
-    assert diff_file.startswith("Top Picks Diff File")
-    assert "Newly added domains: 1" in diff_file
+    expected_diff = {
+        "title": "Top Picks Diff File for: test_blob.json",
+        "total_domains_unchanged": 5,
+        "newly_added_domains": 1,
+        "newly_added_urls": 2,
+        "new_urls_summary": sorted(
+            ["https://test.firefox.com", "https://testexample.com"]
+        ),
+    }
+    assert diff_file == expected_diff
