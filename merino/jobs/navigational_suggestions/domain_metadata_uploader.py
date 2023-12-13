@@ -60,7 +60,7 @@ class DomainMetadataUploader:
         bucket: Bucket = client.get_bucket(self.bucket_name)
         blobs = [
             blob
-            for blob in bucket.list_blobs(self.bucket_name)
+            for blob in bucket.list_blobs(match_glob="*_top_picks.json")
             if blob.name != self.DESTINATION_TOP_PICK_FILE_NAME
         ]
 
