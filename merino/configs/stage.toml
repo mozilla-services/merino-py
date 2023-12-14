@@ -1,0 +1,21 @@
+# Configurations for stage. Configurations defined here will override the
+# counterparts in `default.toml`.
+
+# You can manually switch to this environment via:
+#
+# MERINO_ENV=stage /path/to/your/command
+
+[stage]
+# For `list` or `table` settings, `dynaconf_merge` allows you to merge settings with the default
+# settings. This enables merge for the entire `stage` environment.
+dynaconf_merge = true
+
+[stage.providers.top_picks]
+# MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
+gcs_project = "moz-fx-merino-nonprod-ee93"
+
+# MERINO_PROVIDERS__TOP_PICKS__GCS_BUCKET
+gcs_bucket = "merino-images-stagepy"
+
+# MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
+domain_data_source = "remote"
