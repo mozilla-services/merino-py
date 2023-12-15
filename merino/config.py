@@ -138,6 +138,7 @@ settings = Dynaconf(
         "configs/default.toml",
         "configs/development.toml",
         "configs/production.toml",
+        "configs/stage.toml",
         "configs/ci.toml",
         "configs/testing.toml",
     ],
