@@ -10,6 +10,9 @@
 # settings. This enables merge for the entire `stage` environment.
 dynaconf_merge = true
 
+[stage.accuweather]
+url_base = "https://api.accuweather.com"
+
 [stage.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
 gcs_project = "moz-fx-merino-nonprod-ee93"
