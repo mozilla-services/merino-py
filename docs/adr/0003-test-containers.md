@@ -1,8 +1,8 @@
-# [short title of solved problem and solution]
+# Streamline Test Coverage of Third-Party Integrations
 
 * **Status:** Draft
 * **Deciders:** Nan Jiang & Katrina Anderson
-* **Date:** 2023-12-14
+* **Date:** 2023-12-19
 
 ## Context and Problem Statement
 
@@ -14,8 +14,8 @@ with third-party integrations.
 The current test approach uses a combination of unit, integration, and contract feature
 tests, where third-party integrations such as cloud services, data storage services,
 and external API integrations are test doubled in the lower level unit and integration tests.
-While test doubles (find more details about [Test Doubles] here) might be easier to work with,
-they still cannot compete with the real dependencies in terms of matching the production
+While test doubles (find more details about test doubles [here][1]) might be easier to work with,
+they lack the accuracy of working with real dependencies in terms of matching the production
 environment and covering all the integration surfaces and concerns in tests.
 
 Despite the potential to test with third-party integrations in
@@ -51,92 +51,122 @@ against third-party integrations?
 
 ## Considered Options
 
-* A. Yes. Expand the Scope of Integration Tests using dependency Docker containers
-  through [Testcontainers]
-* B. Yes. Expand the Scope of Integration Tests using Merino staging environment
+* A. Yes. Expand the Scope of Integration Tests Using Dependency Docker Containers (Testcontainers)
+* B. Yes. Reduce the Dependency Overhead in Tests Using Development and Stage Environments
 * C. No. Fulfill the Current Test Strategy with Contract Test Coverage (Status quo)
 
 ## Decision Outcome
 
-Chosen option: A
+**Chosen option: A**
 
-Testcontainers is a widely adopted container-based test platform that supports a wide
-range of programming languages including those popular ones used by Mozilla.
-It allows us to run any Docker containers in our tests (unit & integration) in a lightweight
+[Testcontainers][2] is a widely adopted container-based test platform that supports a wide
+range of programming languages including Python and Rust, which are popular at Mozilla.
+It would allow us to run any Docker containers in our integration tests in a lightweight
 and sandboxed fashion. Overall, we believe that Testcontainers' "Test dependencies as code"
-approach meets all the above decision drivers well with manageable shortcomings as follows.
+approach best fulfills the Usability & Skill Transferability and Maturity &
+Expandability decision drivers and long term would prove to be the most Cost Efficient
+option. We expect there to be initial labour costs to integrating Testcontainers, but
+anticipate that moving more verification responsibility to the integration test layer
+will be more accessible for developers and will reduce bugs found between Merino and
+third-party integrations.
 
-### Positive Consequences of Option A
+## Pros and Cons of the Options
 
-* Testcontainers works with any Docker images. Almost all the existing dependencies
-  (or their close emulators) of Merino can be run as Docker containers. As a result,
-  we can use real dependencies in Merino's tests without solely relying on test doubles
-* Testcontainers allows us to programmatically launch and manage those containers
-  in tests, which drastically simplifies its usage as developers do not need to
-  run any Docker commands separately for testing
-* Testcontainers, which is now part of Docker, is fairly mature and supports many
-  popular programming languages. There are also a large number of community maintained
-  clients available for popular services such as PostgreSQL, Redis, Elasticsearch, etc.
-* It's lightweight and sandboxed, meaning that we can run tests isolately in parallel
-  without having to worry about sharing the same service and resource cleanup
-* Docker-compose is also supported, which means we could even use Testcontainers to run
-  multiple dependency containers for more complex test cases
-* It works well along with existing test frameworks such as PyTest and Cargo-Test
+### A. Yes. Expand the Scope of Integration Tests Using Dependency Docker Containers (Testcontainers)
 
-### Negative Consequences of Option A
-
-* It requires a Docker runtime to run all the tests that depend on Testcontainers.
-  While it should not be a problem in CI, now you will need to install a Docker
-  runtime locally as well
-* Tests cannot be run completely offline as Docker images need to be downloaded first
-* Developers need to understand more about how to configure and work with the
-  dependency containers. Despite that the communite has offered many popular
-  services out of the box, developers would still need to know & do more than
-  what's required when using test doubles
-* It could be challenging to provision test fixtures for the underlying containers
-  as that'd involve certain ceremony to feed the fixture data into the containers
-
-## Pros and Cons of Other Options <!-- optional -->
-
-### Option B
-
-There has been considerations of using Merino's staging services for testing in the past.
-The key challenges of such approach lie in how to share the stage environment across
-all the test consumsers (devs & CI) as most of the services do not support multi-tenant
-usage and require significant amount of effort to support resource isolation.
+Overtime a preference for the unit and integration feature test layers in Merino has
+emerged. These test layers are white box, which means developers can more easily set up
+program environments to test either happy paths or edge cases. In addition, tooling for
+debugging and measuring code coverage is readily available in these layers.
+[Testcontainers][2] can be used to increase the scope of integration tests, covering
+the interface with third-party integrations, the current test strategy's point of
+weakness.
 
 #### Pros
 
-* Best match the production environment
+* Testcontainers works with any Docker image. Almost all the existing dependencies
+  (or their close emulators) of Merino can be run as Docker containers. As a result,
+  we can use real dependencies in Merino's tests as opposed to test doubles
+* Testcontainers allows contributors to programmatically launch and manage containers
+  in the test code. This simplifies its usage for developers, who will not need to
+  run any Docker commands separately for testing
+* Testcontainers, which has [recently been acquired by Docker][3], is fairly mature and supports many
+  popular programming languages. There are also a large number of community maintained
+  clients available for popular services such as PostgreSQL, Redis, Elasticsearch, etc.
+* Testcontainers is lightweight and sandboxed, meaning service resources aren't shared
+  and are cleaned up, promoting test isolation and parallelization
+* Docker-compose is also supported by Testcontainers, facilitating use of
+  multiple dependency containers for more complex test cases
+* Testcontainers supports both Python and Rust languages and works well with their respective test
+  frameworks [PyTest][6] and [Cargo-Test][5]
+
+#### Cons
+* A Docker runtime is required to run all the tests that depend on Testcontainers.
+  Docker is already setup in CI, but developers may need to install a Docker
+  runtime locally
+* Integration tests cannot be run completely offline as Docker images need to be downloaded first
+* Developers will need to understand more about how to configure and work with
+  dependency containers. The development community has many popular
+  services out of the box, but developers would still need to know and do more than
+  what's required when using test doubles
+* It could be challenging to provision test fixtures for the underlying containers.
+  Feeding the fixture data into the containers could be complex.
+
+### B. Yes. Reduce the Dependency Overhead in Tests Using Development and Stage Environments
+
+Using Merino's staging environment and third-party development resources in tests has
+been considered. This would effectively cover the current test strategy's weakness with
+third-party integrations without the cost and complexity involved with setting up test
+doubles or dependency containers. However, this approach has a
+key challenge in how to share the stage environment across
+all the test consumers (devs & CI) as most of the services do not support multi-tenant
+usage and would require a significant amount of effort to support resource isolation.
+
+#### Pros
+
+* Best matches the production environment
 * Do not need extra effort to create test doubles or dependencies for testing
 
 #### Cons
 
-* Tests can no longer be run locally but require the services in staging as well as
-  network connection
-* Due to the lack of sandboxing, it's very hard to support parallel test runs because
-  they all share the same test resources
+* Tests cannot be run offline, since they would require a network connection to
+  interact with development and stage environments
+* This option breaks the [Testing Guidelines & Best Practices][6] for Merino, which
+  require tests to be isolated and repeatable. A dependency on shared network resources
+  will almost certainly lead to test flake, reducing the confidence in the test suite
+* Test execution speeds would be negatively impacted, due to the lack of sandboxing,
+  which enables parallel test runs
 
-### Option C
+### C. No. Fulfill the Current Test Strategy with Contract Test Coverage (Status quo)
 
-Option C maintains the status quo - continue to use test doubles in unit & integration tests.
-Only use contract tests to cover key integration surfaces with real dependencies.
+The current test strategy, which relies on the contract tests to verify the interface
+between Merino and third-party dependencies, has not been implemented as designed. The
+missing coverage explains the current test strategy's weakness.
 
 #### Pros
 
-* Minimal interruption to the existing test strategy and tooling
-* Enjoy the relatively low learning curve and ease-of-use of test doubles
+* The most cost-effective solution, at least on the short term, since the test framework
+  and Docker dependencies are set up and integrated into CI
+* The unit and integration feature test layers remain simple by using test doubles
 
 #### Cons
 
-* Unable to cover all integration surfaces and concerns
-* Having to write and maintain many test doubles and fake services can be a chore
-* High overhead to test everything at the contract test level
+* The black box nature of contract tests makes it harder to set up the environmental
+  conditions required to enable testing edge cases
+* Adding dependency containers is complex, often requiring developers to have advanced
+  knowledge of Docker and CircleCI
+* There is a high level of redundancy between unit, integration and contract tests that
+  negatively impacts development speed
 
-## Links <!-- optional -->
+## Links
 
-* [Link type] [Link to ADR] <!-- example: Refined by [ADR-0005](0005-example.md) -->
-* … <!-- numbers of links can vary -->
+* [DISCO-2704 - Use Testcontainer for Merino][6]
 
-[Test Doubles]: https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs
-[Testcontainers]: https://testcontainers.com/
+<!-- References -->
+[1]: https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs
+[2]: https://testcontainers.com/
+[3]: https://www.docker.com/blog/docker-whale-comes-atomicjar-maker-of-testcontainers/
+[4]: https://docs.pytest.org/en/7.4.x/
+[5]: https://doc.rust-lang.org/cargo/guide/tests.html
+[6]: https://github.com/mozilla-services/merino-py/blob/disco-2704/CONTRIBUTING.md#testing-guidelines--best-practices
+[7]: https://mozilla-hub.atlassian.net/browse/DISCO-2704
