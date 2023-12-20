@@ -2,19 +2,23 @@
 
 * **Status:** Draft
 * **Deciders:** Nan Jiang & Katrina Anderson
-* **Date:** 2023-12-19
+* **Date:** 2023-12-20
 
 ## Context and Problem Statement
 
 In 2024, it is anticipated that Merino will expand to be consumed by a greater set of
 Firefox surfaces and to include more content providers. This will challenge the current
-feature test strategy, which has recently shown weakness in detecting incompatibility
-with third-party integrations.
+feature test strategy, which has shown weakness in detecting incompatibility
+with third-party integrations. Examples:
+
+1. [Weather Incident with Redis Integration][1]
+1. [Navigation Suggestions Error with GCP Integration][2]
 
 The current test approach uses a combination of unit, integration, and contract feature
 tests, where third-party integrations such as cloud services, data storage services,
-and external API integrations are test doubled in the lower-level unit and integration tests.
-While test doubles (find more details about test doubles [here][1]) might be easier to work with,
+and external API integrations are [test doubled][3] in the unit and integration tests
+and emulated with Docker containers in contract tests.
+While test doubles might be easier to work with,
 they lack the accuracy of working with real dependencies in terms of matching the production
 environment and covering all the integration surfaces and concerns in tests.
 
@@ -46,8 +50,7 @@ against third-party integrations?
 1. **Cost Efficiency**
 
     The worker hours and tooling expenditures associated with the implementation and
-    execution of the test strategy should ensure the profitability of Merino
-    service.
+    execution of the test strategy should ensure the profitability of Merino.
 
 ## Considered Options
 
@@ -59,10 +62,9 @@ against third-party integrations?
 
 **Chosen option: A**
 
-[Testcontainers][2] is a widely adopted container-based test platform that supports a wide
-range of programming languages including Python and Rust, which are popular at Mozilla.
-It would allow us to run any Docker containers in our integration tests in a lightweight
-and sandboxed fashion. Overall, we believe that Testcontainers' "Test dependencies as code"
+Overall, we believe that increasing the scope of integration tests to verify third-party
+integrations with [Testcontainers'][4] will be the most effective and sustainable way forward.
+Testcontainers "Test dependencies as code"
 approach best fulfills the Usability & Skill Transferability and Maturity &
 Expandability decision drivers and long-term would prove to be the most Cost Efficient
 option.
@@ -72,10 +74,12 @@ anticipate that moving more verification responsibility to the integration test 
 will be more accessible for developers and will reduce bugs found between Merino and
 third-party integrations.
 
-There is reasonable belief that Testcontainers would have applicability accross services in PXI,
-and given the success of Rapid Release and other experiments in Merino, it's a good candidate
+Testcontainers is a widely adopted container-based test platform that supports a wide
+range of programming languages including Python and Rust, which are popular at Mozilla and
+there is indication that Testcontainers would have applicability across services in PXI.
+Given the success of Rapid Release and other experiments in Merino, it's a good candidate
 to use in Merino first as a pilot test. Should we find any issues or unsoundness about it,
-we can always revert the decision in future.
+we can always revert the decision in the future.
 
 ## Pros and Cons of the Options
 
@@ -85,7 +89,7 @@ A preference for the unit and integration feature test layers in Merino has emer
 over time. These test layers are white-box, which means developers can more easily set up
 program environments to test either happy paths or edge cases. In addition, tooling for
 debugging and measuring code coverage is readily available in these layers.
-[Testcontainers][2] can be used to increase the scope of integration tests, covering
+[Testcontainers][4] can be used to increase the scope of integration tests, covering
 the interface with third-party integrations, the current test strategy's point of
 weakness.
 
@@ -97,7 +101,7 @@ weakness.
 * Testcontainers allows developers to programmatically launch and manage containers
   in the test code. This simplifies its usage for developers, who will not need to
   run any Docker commands separately for testing
-* Testcontainers, which has [recently been acquired by Docker][3], is fairly mature and supports many
+* Testcontainers, which has [recently been acquired by Docker][5], is fairly mature and supports many
   popular programming languages. There are also a large number of community maintained
   clients available for popular services such as PostgreSQL, Redis, Elasticsearch, etc.
 * Testcontainers is lightweight and sandboxed, meaning service resources aren't shared
@@ -105,7 +109,7 @@ weakness.
 * Docker-compose is also supported by Testcontainers, facilitating use of
   multiple dependency containers for more complex test cases
 * Testcontainers supports both Python and Rust languages and works well with their respective test
-  frameworks [PyTest][6] and [Cargo-Test][5]
+  frameworks [PyTest][6] and [Cargo-Test][7]
 
 #### Cons
 * A Docker runtime is required to run all the tests that depend on Testcontainers.
@@ -132,23 +136,27 @@ usage and would require a significant amount of effort to support resource isola
 #### Pros
 
 * Best matches the production environment
-* Do not need extra effort to create test doubles or dependencies for testing
+* Doesn't need extra effort to create test doubles or dependencies for testing
 
 #### Cons
 
-* Tests cannot be run offline, since they would require a network connection to
+* Tests cannot be run offline since they would require a network connection to
   interact with development and stage environments
-* This option breaks the [Testing Guidelines & Best Practices][6] for Merino, which
+* This option breaks the [Testing Guidelines & Best Practices][8] for Merino, which
   require tests to be isolated and repeatable. A dependency on shared network resources
-  will almost certainly lead to test flake, reducing the confidence in the test suites
+  will almost certainly lead to test flake, reducing the confidence in the test suite
 * Test execution speeds would be negatively impacted, due to the lack of sandboxing,
   which enables parallel test runs
 
 ### C. No. Fulfill the Current Test Strategy with Contract Test Coverage (Status quo)
 
 The current test strategy, which relies on the contract tests to verify the interface
-between Merino and third-party dependencies, has not been implemented as designed. The
-missing coverage explains the current test strategy's weakness.
+between Merino and third-party dependencies, has not been fully implemented as designed.
+The missing coverage explains the current test strategy's weakness. Examples:
+
+1. [DISCO-2032: Weather Contract Tests][9]
+1. [DISCO-2324: Add a merino-py contract test that interacts with a real Redis instance][10]
+1. [DISCO-2055: Dynamic Wikipedia Contract Tests][11]
 
 #### Pros
 
@@ -163,17 +171,22 @@ missing coverage explains the current test strategy's weakness.
 * Adding dependency containers is complex, often requiring developers to have advanced
   knowledge of Docker and CI vendors (e.g. CircleCI)
 * There is a high level of redundancy between unit, integration, and contract tests that
-  negatively impacts development productivity
+  negatively impacts development pace
 
 ## Links
 
-* [DISCO-2704 - Use Testcontainer for Merino][6]
+* [DISCO-2704 - Use Testcontainer for Merino][12]
 
 <!-- References -->
-[1]: https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs
-[2]: https://testcontainers.com/
-[3]: https://www.docker.com/blog/docker-whale-comes-atomicjar-maker-of-testcontainers/
-[4]: https://docs.pytest.org/en/7.4.x/
-[5]: https://doc.rust-lang.org/cargo/guide/tests.html
-[6]: https://github.com/mozilla-services/merino-py/blob/disco-2704/CONTRIBUTING.md#testing-guidelines--best-practices
-[7]: https://mozilla-hub.atlassian.net/browse/DISCO-2704
+[1]: https://docs.google.com/document/d/1hQKTro1ulxrurPBybUVHguVGgt7xCPED-ZJAOtlDqsU/edit#
+[2]: https://github.com/mozilla-services/merino-py/pull/467
+[3]: https://martinfowler.com/articles/mocksArentStubs.html#TheDifferenceBetweenMocksAndStubs
+[4]: https://testcontainers.com/
+[5]: https://www.docker.com/blog/docker-whale-comes-atomicjar-maker-of-testcontainers/
+[6]: https://docs.pytest.org/en/7.4.x/
+[7]: https://doc.rust-lang.org/cargo/guide/tests.html
+[8]: https://github.com/mozilla-services/merino-py/blob/disco-2704/CONTRIBUTING.md#testing-guidelines--best-practices
+[9]: https://mozilla-hub.atlassian.net/browse/DISCO-2032
+[10]: https://mozilla-hub.atlassian.net/browse/DISCO-2324
+[11]: https://mozilla-hub.atlassian.net/browse/DISCO-2055
+[12]: https://mozilla-hub.atlassian.net/browse/DISCO-2704
