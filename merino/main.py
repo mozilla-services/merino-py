@@ -5,11 +5,13 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from merino import newtab
 from merino import providers as suggest_providers
 from merino.config_logging import configure_logging
 from merino.config_sentry import configure_sentry
+from merino.config_trace import configure_trace
 from merino.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging, metrics, user_agent
 from merino.web import api_v1, dockerflow
@@ -33,6 +35,7 @@ async def startup_configuration() -> None:
     """Set up various configurations such as logging."""
     configure_logging()
     configure_sentry()
+    configure_trace()
     await configure_metrics()
 
 
@@ -83,6 +86,8 @@ app.add_middleware(logging.LoggingMiddleware)
 
 app.include_router(dockerflow.router)
 app.include_router(api_v1.router, prefix="/api/v1")
+
+FastAPIInstrumentor.instrument_app(app, excluded_urls="__.*__")
 
 
 if __name__ == "__main__":

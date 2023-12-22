@@ -24,6 +24,10 @@
 [default]
 debug = false
 
+# MERINO_ENABLE_TRACE
+# A boolean that allows us to enable/disable tracing for the application.
+enable_trace = false
+
 
 [default.runtime]
 # MERINO_RUNTIME__QUERY_TIMEOUT_SEC
