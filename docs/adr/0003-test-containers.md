@@ -1,8 +1,8 @@
 # Streamline Test Coverage of Third-Party Integrations
 
-* **Status:** Draft
+* **Status:** In Review
 * **Deciders:** Nan Jiang & Katrina Anderson
-* **Date:** 2023-12-20
+* **Date:** 2024-01-08
 
 ## Context and Problem Statement
 
