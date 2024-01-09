@@ -8,7 +8,7 @@
 
 In 2024, it is anticipated that Merino will expand to be consumed by a greater set of Firefox
 surfaces and to include more content providers. This will challenge the current feature test
-strategy, which has shown weakness in detecting incompatibility with third-party integrations.
+strategy, which has shown weakness in detecting incompatibilities with third-party integrations.
 Examples:
 
 1. [Weather Incident with Redis Integration][1]
@@ -34,9 +34,10 @@ integrations?
 
 **1. Usability & Skill Transferability**
 
-The test strategy should prefer tools that require less effort and time to acquire proficiency.
-It should be easy to learn and work with. Ideally, any skills or knowledge acquired should be
-applicable across current contexts or for future scenarios.
+Ease-of-use is the key critirion when we assess a tool for testing. The test strategy should
+prefer tools that require less effort and time to acquire proficiency. It should be easy to
+learn and work with. Ideally, any skills or knowledge acquired should be applicable across
+current contexts or for future scenarios.
 
 **2. Maturity & Expandability**
 
@@ -108,6 +109,7 @@ strategy's point of weakness.
   frameworks [PyTest][6] and [Cargo-Test][7]
 
 #### Cons
+
 * A Docker runtime is required to run all the tests that depend on Testcontainers. Docker is
   already setup in CI, but developers may need to install a Docker runtime locally
 * Integration tests cannot be run completely offline as Docker images need to be downloaded first
@@ -115,7 +117,12 @@ strategy's point of weakness.
   containers. The development community has many popular services out of the box, but developers
   would still need to know and do more than what's required when using test doubles
 * It could be challenging to provision test fixtures for the underlying containers. Feeding the
-  fixture data into the containers could be complex.
+  fixture data into the containers could be complex
+* Developers need to ensure version consistency across the development, testing, and production
+  environments
+* For third-party API integrations, if the provider doesn't provide a Docker image for their API,
+  Testcontainers alone will not help us much. It's possible to use fake API container generators,
+  but it comes with its own complexities as well
 
 ### B. Yes. Reduce the Dependency Overhead in Tests Using Development and Stage Environments
 
