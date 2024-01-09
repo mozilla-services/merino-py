@@ -6,7 +6,6 @@ metadata:
     github.com/project-slug: mozilla-services/merino-py
     github.com/team-slug: mozilla-services/teams/context-services
     circleci.com/project-slug: github/mozilla-services/merino-py
-    backstage.io/techdocs-ref: url:https://mozilla-services.github.io/merino-py/
     sentry.io/project-slug: mozilla/merino-py
   description: Service to provide address bar suggestions to Firefox.
   tags:
