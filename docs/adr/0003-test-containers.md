@@ -43,7 +43,7 @@ applicable across current contexts or for future scenarios.
 The test strategy and tooling should be able to handle known third-party Merino dependencies
 in tests with a reasonable belief that it will cover future growth. Known third-party
 dependencies include: REST APIs, Remote Settings, GCP Cloud Storage, Redis, and Elasticsearch.
-Future dependencies include: rational DBMS such as PostgreSQL and other GCP cloud services
+Future dependencies include: relational DBMS such as PostgreSQL and other GCP cloud services
 such as Pub/Sub.
 
 **3. Cost Efficiency**
