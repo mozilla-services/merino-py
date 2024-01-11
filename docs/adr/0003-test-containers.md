@@ -2,7 +2,7 @@
 
 * **Status:** In Review
 * **Deciders:** Nan Jiang & Katrina Anderson
-* **Date:** 2024-01-08
+* **Date:** 2024-01-11
 
 ## Context and Problem Statement
 
@@ -87,8 +87,8 @@ A preference for the unit and integration feature test layers in Merino has emer
 These test layers are white-box, which means developers can more easily set up program environments
 to test either happy paths or edge cases. In addition, tooling for debugging and measuring code
 coverage is readily available in these layers.[Testcontainers][4] can be used to increase the scope
-of integration tests, covering the interface with third-party integrations, the current test
-strategy's point of weakness.
+of integration tests, covering the backend layer logic and network communication with third-party
+integrations, the current test strategy's point of weakness.
 
 #### Pros
 
