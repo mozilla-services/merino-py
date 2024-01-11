@@ -34,7 +34,7 @@ integrations?
 
 **1. Usability & Skill Transferability**
 
-Ease-of-use is the key critirion when we assess a tool for testing. The test strategy should
+Ease-of-use is the key criterion when we assess a tool for testing. The test strategy should
 prefer tools that require less effort and time to acquire proficiency. It should be easy to
 learn and work with. Ideally, any skills or knowledge acquired should be applicable across
 current contexts or for future scenarios.
