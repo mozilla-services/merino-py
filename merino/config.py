@@ -3,6 +3,7 @@ from dynaconf import Dynaconf, Validator
 
 # Validators for Merino settings.
 _validators = [
+    Validator("enable_trace", is_type_of=bool),
     Validator(
         "runtime.disabled_providers",
         is_type_of=list,
