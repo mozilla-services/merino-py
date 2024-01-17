@@ -22,11 +22,6 @@ level = "DEBUG"
 format = "pretty"
 can_propagate = true
 
-[testing.newtab.upday]
-url = "https://localhost/"
-username = "mozilla-local"
-password = "fake_value"
-
 
 [testing.web.api.v1]
 # Setting to contol the limit on optional client variants passed

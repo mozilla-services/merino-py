@@ -8,8 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from merino import newtab
-from merino import providers as suggest_providers
+from merino import providers
 from merino.config_logging import configure_logging
 from merino.config_sentry import configure_sentry
 from merino.metrics import configure_metrics, get_metrics_client
@@ -38,12 +37,10 @@ async def lifespan(app: FastAPI):
     configure_logging()
     configure_sentry()
     await configure_metrics()
-    await suggest_providers.init_providers()
-    await newtab.init_providers()
+    await providers.init_providers()
     yield
     # Shut down providers and clean up.
-    await suggest_providers.shutdown_providers()
-    await newtab.shutdown_providers()
+    await providers.shutdown_providers()
     await get_metrics_client().close()
 
 
