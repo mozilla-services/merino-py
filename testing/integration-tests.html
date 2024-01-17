@@ -185,9 +185,6 @@ LogRecord for verification</p>
     log_data: dict[str, Any] = extract_request_summary_log_data(record)
     assert log_data == expected_log_data
 </code></pre>
-<h2 id="suggest-specific-fixtures"><a class="header" href="#suggest-specific-fixtures">Suggest Specific Fixtures</a></h2>
-<p>These fixtures are specific to Firefox Suggest and should only be injected
-for tests for Firefox Suggest.</p>
 <h3 id="injectprovidersfixture--providersfixture"><a class="header" href="#injectprovidersfixture--providersfixture">InjectProvidersFixture &amp; ProvidersFixture</a></h3>
 <p>These fixture will setup and teardown given providers.</p>
 <p><em><strong>Usage:</strong></em></p>
