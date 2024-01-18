@@ -201,19 +201,12 @@ async def _upload_file_object(
             f"`{model_name}`. Please define a `Suggestion` class."
         )
 
-    csv_to_json = Suggestion.csv_to_json()
     csv_reader = csv.DictReader(file_object)
 
     # Generate the full list of suggestions before creating the chunked uploader
     # so we can validate the source data before deleting existing records and
     # starting the upload.
-    suggestions: list = []
-    for row in csv_reader:
-        for field in csv_to_json.keys():
-            if field not in row:
-                raise MissingFieldError(f"Expected CSV field `{field}` is missing")
-        kwargs = {prop: row[field] for field, prop in csv_to_json.items()}
-        suggestions.append(Suggestion(**kwargs))
+    suggestions = Suggestion.csv_to_suggestions(csv_reader)
 
     with ChunkedRemoteSettingsUploader(
         auth=auth,

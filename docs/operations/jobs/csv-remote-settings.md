@@ -39,11 +39,13 @@ data in the CSV, and define how the input data should map to the output JSON.
 #### 2. Add the `Suggestion` class
 
 In the module, implement a class called `Suggestion` that derives from
-`BaseSuggestion` in `merino.jobs.csv_rs_uploader.base`. This class will be the
-model of the new suggestion type. `BaseSuggestion` itself derives from
-Pydantic's `BaseModel`, so the validation the class will perform will be based
-on [Pydantic][Pydantic], which is used throughout Merino. `BaseSuggestion` is
-implemented in `base.py`.
+`BaseSuggestion` in `merino.jobs.csv_rs_uploader.base` or
+`RowMajorBaseSuggestion` in `merino.jobs.csv_rs_uploader.row_major_base`.
+`BaseSuggestion` class will be the model of the new suggestion type.
+`BaseSuggestion` itself derives from Pydantic's `BaseModel`, so the validation
+the class will perform will be based on [Pydantic][Pydantic], which is used
+throughout Merino. `BaseSuggestion` is implemented in `base.py`. If the CSV data
+is row-major based, please use `RowMajorBaseSuggestion`,
 
 [Pydantic]: https://docs.pydantic.dev/latest/usage/models/
 
@@ -76,11 +78,14 @@ Their return values will be used as the values in the output JSON.
   collapsed, and duplicate keywords are removed. Returns the list of keyword
   strings.
 
-#### 5. Implement the `csv_to_json()` class method
+#### 5. Implement the class methods
 
-Add a `@classmethod` to `Suggestion` called `csv_to_json()`. It should return a
-`dict` that maps from field (column) names in the input CSV to property names in
-the output JSON.
+For suggestion created from row-major based CSV, should add a `@classmethod` to
+`Suggestion` called `row_major_field_map()`. It should return a `dict` that maps
+from field (column) names in the input CSV to property names in the output JSON.
+Otherwise, should add a `@classmethod` to `Suggestion` called
+`csv_to_suggestions()`. It should return suggestion array created from passed CSV
+reader.
 
 #### 6. Add a test
 
