@@ -2,7 +2,7 @@
 
 * **Status:** In Review
 * **Deciders:** Nan Jiang & Katrina Anderson
-* **Date:** 2024-01-11
+* **Date:** 2024-01-22
 
 ## Context and Problem Statement
 
@@ -92,11 +92,11 @@ integrations, the current test strategy's point of weakness.
 
 #### Pros
 
-* Testcontainers works with any Docker image. Almost all the existing dependencies (or their
-  close emulators) of Merino can be run as Docker containers. As a result, we can use real
-  dependencies in Merino's tests as opposed to test doubles
-* Testcontainers allows developers to programmatically launch and manage containers in the test
-  code. This simplifies its usage for developers, who will not need to run any Docker commands
+* Testcontainers works with any Docker image and has numerous pre-built modules. Almost all the
+  existing dependencies (or their close emulators) of Merino can be run as Docker containers. As a
+  result, we can use real dependencies in Merino's tests as opposed to test doubles
+* Testcontainers allows developers to programmatically manage the lifecycle of containers in the
+  test code. This simplifies its usage for developers, who will not need to run any Docker commands
   separately for testing
 * Testcontainers, which has [recently been acquired by Docker][5], is fairly mature and supports
   many popular programming languages. There are also a large number of community maintained clients
@@ -105,8 +105,8 @@ integrations, the current test strategy's point of weakness.
   cleaned up automatically, promoting test isolation and parallelization
 * Docker-compose is also supported by Testcontainers, facilitating use of multiple dependency
   containers for more complex test cases
-* Testcontainers supports both Python and Rust languages and works well with their respective test
-  frameworks [PyTest][6] and [Cargo-Test][7]
+* Testcontainers supports Python, Rust and Javascript languages and works well with their respective
+  test frameworks [PyTest][6], [Cargo-Test][7] and [Jest][8]
 
 #### Cons
 
@@ -119,10 +119,12 @@ integrations, the current test strategy's point of weakness.
 * It could be challenging to provision test fixtures for the underlying containers. Feeding the
   fixture data into the containers could be complex
 * Developers need to ensure version consistency across the development, testing, and production
-  environments
+  environments in the integration test layer
 * For third-party API integrations, if the provider doesn't provide a Docker image for their API,
   Testcontainers alone will not help us much. It's possible to use fake API container generators,
-  but it comes with its own complexities as well
+  such as [Wiremock][9], but it comes with its own complexities
+* Implementation of Testcontainers would require refactoring of integration tests, including the
+  removal of mocks and fixtures
 
 ### B. Yes. Reduce the Dependency Overhead in Tests Using Development and Stage Environments
 
@@ -142,7 +144,7 @@ usage and would require a significant amount of effort to support resource isola
 
 * Tests cannot be run offline since they would require a network connection to interact with
   development and stage environments
-* This option breaks the [Testing Guidelines & Best Practices][8] for Merino, which require tests
+* This option breaks the [Testing Guidelines & Best Practices][10] for Merino, which require tests
   to be isolated and repeatable. A dependency on shared network resources will almost certainly
   lead to test flake, reducing the confidence in the test suite
 * Test execution speeds would be negatively impacted, due to the lack of sandboxing, which enables
@@ -155,9 +157,9 @@ Merino and third-party dependencies, has not been fully implemented as designed.
 coverage explains the current test strategy's weakness.
 Examples:
 
-1. [DISCO-2032: Weather Contract Tests][9]
-2. [DISCO-2324: Add a merino-py contract test that interacts with a real Redis instance][10]
-3. [DISCO-2055: Dynamic Wikipedia Contract Tests][11]
+1. [DISCO-2032: Weather Contract Tests][11]
+2. [DISCO-2324: Add a merino-py contract test that interacts with a real Redis instance][12]
+3. [DISCO-2055: Dynamic Wikipedia Contract Tests][13]
 
 #### Pros
 
@@ -176,7 +178,7 @@ Examples:
 
 ## Links
 
-* [DISCO-2704 - Use Testcontainer for Merino][12]
+* [DISCO-2704 - Use Testcontainer for Merino][13]
 
 <!-- References -->
 [1]: https://docs.google.com/document/d/1hQKTro1ulxrurPBybUVHguVGgt7xCPED-ZJAOtlDqsU/edit#
@@ -186,8 +188,10 @@ Examples:
 [5]: https://www.docker.com/blog/docker-whale-comes-atomicjar-maker-of-testcontainers/
 [6]: https://docs.pytest.org/en/7.4.x/
 [7]: https://doc.rust-lang.org/cargo/guide/tests.html
-[8]: https://github.com/mozilla-services/merino-py/blob/disco-2704/CONTRIBUTING.md#testing-guidelines--best-practices
-[9]: https://mozilla-hub.atlassian.net/browse/DISCO-2032
-[10]: https://mozilla-hub.atlassian.net/browse/DISCO-2324
-[11]: https://mozilla-hub.atlassian.net/browse/DISCO-2055
-[12]: https://mozilla-hub.atlassian.net/browse/DISCO-2704
+[8]: https://jestjs.io/
+[9]: https://wiremock.org/
+[10]: https://github.com/mozilla-services/merino-py/blob/disco-2704/CONTRIBUTING.md#testing-guidelines--best-practices
+[11]: https://mozilla-hub.atlassian.net/browse/DISCO-2032
+[12]: https://mozilla-hub.atlassian.net/browse/DISCO-2324
+[13]: https://mozilla-hub.atlassian.net/browse/DISCO-2055
+[14]: https://mozilla-hub.atlassian.net/browse/DISCO-2704
