@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: merino-py
+  annotations:
+    github.com/project-slug: mozilla-services/merino-py
+    github.com/team-slug: mozilla-services/teams/context-services
+    circleci.com/project-slug: github/mozilla-services/merino-py
+    sentry.io/project-slug: mozilla/merino-py
+  description: Service to provide address bar suggestions to Firefox.
+  tags:
+    - python
+  links:
+    - url: https://merinopy.services.mozilla.com/docs
+      title: Merino API Documentation
+      type: openapi-docs
+spec:
+  type: service
+  lifecycle: production
+  owner: group:context-services

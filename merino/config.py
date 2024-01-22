@@ -14,9 +14,6 @@ _validators = [
     Validator("metrics.dev_logger", is_type_of=bool),
     Validator("metrics.host", is_type_of=str),
     Validator("metrics.port", gte=0, is_type_of=int),
-    Validator("newtab.upday.url", is_type_of=str, must_exist=True),
-    Validator("newtab.upday.username", is_type_of=str, must_exist=True),
-    Validator("newtab.upday.password", is_type_of=str, must_exist=True),
     Validator(
         "accuweather.url_location_key_placeholder", is_type_of=str, must_exist=True
     ),
@@ -138,6 +135,7 @@ settings = Dynaconf(
         "configs/default.toml",
         "configs/development.toml",
         "configs/production.toml",
+        "configs/stage.toml",
         "configs/ci.toml",
         "configs/testing.toml",
     ],

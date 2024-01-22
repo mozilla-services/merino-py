@@ -1,4 +1,6 @@
 """App startup point"""
+from contextlib import asynccontextmanager
+
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, status
 from fastapi.encoders import jsonable_encoder
@@ -6,8 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from merino import newtab
-from merino import providers as suggest_providers
+from merino import providers
 from merino.config_logging import configure_logging
 from merino.config_sentry import configure_sentry
 from merino.metrics import configure_metrics, get_metrics_client
@@ -25,35 +26,25 @@ tags_metadata = [
     },
 ]
 
-app = FastAPI(openapi_tags=tags_metadata)
 
-
-@app.on_event("startup")
-async def startup_configuration() -> None:
-    """Set up various configurations such as logging."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Set up various configurations at startup and handle shutdown clean up.
+    See lifespan events in fastAPI docs https://fastapi.tiangolo.com/advanced/events/
+    """
+    # Setup methods run before `yield` and cleanup methods after.
+    # Load sentry and logging, init providers.
     configure_logging()
     configure_sentry()
     await configure_metrics()
-
-
-@app.on_event("startup")
-async def startup_providers() -> None:
-    """Run tasks at application startup."""
-    await suggest_providers.init_providers()
-    await newtab.init_providers()
-
-
-@app.on_event("shutdown")
-async def shutdown_providers() -> None:
-    """Shut down all the providers."""
-    await suggest_providers.shutdown_providers()
-    await newtab.shutdown_providers()
-
-
-@app.on_event("shutdown")
-async def shutdown() -> None:
-    """Clean up for the application shutdown."""
+    await providers.init_providers()
+    yield
+    # Shut down providers and clean up.
+    await providers.shutdown_providers()
     await get_metrics_client().close()
+
+
+app = FastAPI(openapi_tags=tags_metadata, lifespan=lifespan)
 
 
 @app.exception_handler(RequestValidationError)

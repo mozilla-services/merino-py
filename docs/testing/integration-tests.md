@@ -60,11 +60,6 @@ def test_with_log_data(
     assert log_data == expected_log_data
 ```
 
-## Suggest Specific Fixtures
-
-These fixtures are specific to Firefox Suggest and should only be injected
-for tests for Firefox Suggest.
-
 ### InjectProvidersFixture & ProvidersFixture
 These fixture will setup and teardown given providers.
 
