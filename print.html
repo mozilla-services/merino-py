@@ -1945,11 +1945,13 @@ serialized in the output JSON, perform validation and conversion of the input
 data in the CSV, and define how the input data should map to the output JSON.</p>
 <h4 id="2-add-the-suggestion-class"><a class="header" href="#2-add-the-suggestion-class">2. Add the <code>Suggestion</code> class</a></h4>
 <p>In the module, implement a class called <code>Suggestion</code> that derives from
-<code>BaseSuggestion</code> in <code>merino.jobs.csv_rs_uploader.base</code>. This class will be the
-model of the new suggestion type. <code>BaseSuggestion</code> itself derives from
-Pydantic's <code>BaseModel</code>, so the validation the class will perform will be based
-on <a href="https://docs.pydantic.dev/latest/usage/models/">Pydantic</a>, which is used throughout Merino. <code>BaseSuggestion</code> is
-implemented in <code>base.py</code>.</p>
+<code>BaseSuggestion</code> in <code>merino.jobs.csv_rs_uploader.base</code> or
+<code>RowMajorBaseSuggestion</code> in <code>merino.jobs.csv_rs_uploader.row_major_base</code>.
+<code>BaseSuggestion</code> class will be the model of the new suggestion type.
+<code>BaseSuggestion</code> itself derives from Pydantic's <code>BaseModel</code>, so the validation
+the class will perform will be based on <a href="https://docs.pydantic.dev/latest/usage/models/">Pydantic</a>, which is used
+throughout Merino. <code>BaseSuggestion</code> is implemented in <code>base.py</code>. If the CSV data
+is row-major based, please use <code>RowMajorBaseSuggestion</code>,</p>
 <h4 id="3-add-suggestion-fields-to-the-class"><a class="header" href="#3-add-suggestion-fields-to-the-class">3. Add suggestion fields to the class</a></h4>
 <p>Add a field to the class for each property that should appear in the output JSON
 (except <code>score</code>, which the uploader will add automatically). Name each field as
@@ -1975,10 +1977,13 @@ trailing whitespace is stripped, all whitespace is replaced with spaces and
 collapsed, and duplicate keywords are removed. Returns the list of keyword
 strings.</li>
 </ul>
-<h4 id="5-implement-the-csv_to_json-class-method"><a class="header" href="#5-implement-the-csv_to_json-class-method">5. Implement the <code>csv_to_json()</code> class method</a></h4>
-<p>Add a <code>@classmethod</code> to <code>Suggestion</code> called <code>csv_to_json()</code>. It should return a
-<code>dict</code> that maps from field (column) names in the input CSV to property names in
-the output JSON.</p>
+<h4 id="5-implement-the-class-methods"><a class="header" href="#5-implement-the-class-methods">5. Implement the class methods</a></h4>
+<p>For suggestion created from row-major based CSV, should add a <code>@classmethod</code> to
+<code>Suggestion</code> called <code>row_major_field_map()</code>. It should return a <code>dict</code> that maps
+from field (column) names in the input CSV to property names in the output JSON.
+Otherwise, should add a <code>@classmethod</code> to <code>Suggestion</code> called
+<code>csv_to_suggestions()</code>. It should return suggestion array created from passed CSV
+reader.</p>
 <h4 id="6-add-a-test"><a class="header" href="#6-add-a-test">6. Add a test</a></h4>
 <p>Add a test file to <code>tests/unit/jobs/csv_rs_uploader/</code>. See <code>test_mdn.py</code> as an
 example. The test should perform a successful upload as well as uploads that
