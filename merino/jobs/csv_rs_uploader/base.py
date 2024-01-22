@@ -12,9 +12,9 @@ class BaseSuggestion(BaseModel):
     """
 
     @classmethod
-    def csv_to_json(cls) -> dict[str, str]:
-        """Map field (column) names in the input CSV to suggestion property
-        names in the output JSON. Subclasses must override this method.
+    def csv_to_suggestions(cls, csv_reader) -> list["BaseSuggestion"]:
+        """Convert CSV content to Suggestions. Subclasses must override this
+        method.
         """
         raise Exception("Subclass must override")
 

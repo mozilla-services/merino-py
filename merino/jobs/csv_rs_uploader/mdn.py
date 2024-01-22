@@ -3,7 +3,7 @@ output JSON.
 """
 from pydantic import HttpUrl, field_validator
 
-from merino.jobs.csv_rs_uploader.base import BaseSuggestion
+from merino.jobs.csv_rs_uploader.row_major_base import RowMajorBaseSuggestion
 
 FIELD_URL = "url"
 FIELD_TITLE = "title"
@@ -11,7 +11,7 @@ FIELD_DESC = "summary"
 FIELD_KEYWORDS = "keyword"
 
 
-class Suggestion(BaseSuggestion):
+class Suggestion(RowMajorBaseSuggestion):
     """Model for MDN suggestions as they should be serialized in the output
     JSON.
     """
@@ -22,7 +22,7 @@ class Suggestion(BaseSuggestion):
     keywords: list[str]
 
     @classmethod
-    def csv_to_json(cls) -> dict[str, str]:
+    def row_major_field_map(cls) -> dict[str, str]:
         """Map field (column) names in the input CSV to suggestion property
         names in the output JSON.
         """

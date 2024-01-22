@@ -1,7 +1,7 @@
 """Test model"""
 from pydantic import HttpUrl, field_validator
 
-from merino.jobs.csv_rs_uploader.base import BaseSuggestion
+from merino.jobs.csv_rs_uploader.row_major_base import RowMajorBaseSuggestion
 
 # The names of expected fields (columns) in the CSV input data.
 FIELD_DESC = "Collection Description"
@@ -11,7 +11,7 @@ FIELD_TITLE = "Collection Title"
 FIELD_URL = "Collection URL"
 
 
-class Suggestion(BaseSuggestion):
+class Suggestion(RowMajorBaseSuggestion):
     """Test model"""
 
     url: HttpUrl
@@ -21,7 +21,7 @@ class Suggestion(BaseSuggestion):
     highConfidenceKeywords: list[str]
 
     @classmethod
-    def csv_to_json(cls) -> dict[str, str]:
+    def row_major_field_map(cls) -> dict[str, str]:
         """Map field (column) names in the input CSV to suggestion property
         names in the output JSON.
         """
