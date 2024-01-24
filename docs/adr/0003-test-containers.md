@@ -1,8 +1,8 @@
 # Streamline Test Coverage of Third-Party Integrations
 
-* **Status:** In Review
+* **Status:** Accepted
 * **Deciders:** Nan Jiang & Katrina Anderson
-* **Date:** 2024-01-22
+* **Date:** 2024-01-24
 
 ## Context and Problem Statement
 
@@ -175,6 +175,13 @@ Examples:
   of Docker and CI vendors (e.g. CircleCI)
 * There is a high level of redundancy between unit, integration, and contract tests that negatively
   impacts development pace
+
+## Open Questions
+
+* How to test 3rd party API integrations? We have two options for consideration: Either use
+  generic API mocking frameworks or keep status quo and rely on other means (e.g. observerbility)
+  to capture API breakages. They both have pros and cons and warrant a separate ADR to discuss
+  in detail
 
 ## Links
 
