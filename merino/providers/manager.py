@@ -18,6 +18,7 @@ from merino.providers.amo.backends.dynamic import DynamicAmoBackend
 from merino.providers.amo.backends.static import StaticAmoBackend
 from merino.providers.amo.provider import Provider as AmoProvider
 from merino.providers.base import BaseProvider
+from merino.providers.geolocation.provider import Provider as GeolocationProvider
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider as TopPicksProvider
 from merino.providers.weather.backends.accuweather import AccuweatherBackend
@@ -37,6 +38,7 @@ class ProviderType(str, Enum):
     ACCUWEATHER = "accuweather"
     AMO = "amo"
     ADM = "adm"
+    GEOLOCATION = "geolocation"
     TOP_PICKS = "top_picks"
     WIKIPEDIA = "wikipedia"
 
@@ -108,6 +110,11 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 name=provider_id,
                 resync_interval_sec=setting.resync_interval_sec,
                 cron_interval_sec=setting.cron_interval_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.GEOLOCATION:
+            return GeolocationProvider(
+                name=provider_id,
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.TOP_PICKS:

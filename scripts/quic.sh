@@ -52,7 +52,7 @@ else
   exit 1
 fi
 
-providers=("adm" "wikipedia" "accuweather" "top_picks")
+providers=("adm" "wikipedia" "accuweather" "top_picks" "geolocation")
 queries=("amazon" "mozilla" "" "reddit")
 status=yay
 red="\033[31m"
