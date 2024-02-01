@@ -21,7 +21,9 @@ def fixture_geolocation() -> Location:
     """Return a test Location."""
     return Location(
         country="US",
+        country_name="United States",
         region="CA",
+        region_name="California",
         city="San Francisco",
         dma=807,
         postal_code="94105",
@@ -33,7 +35,9 @@ def fixture_empty_region() -> Location:
     """Return a test Location."""
     return Location(
         country="US",
+        country_name="United States",
         region=None,
+        region_name=None,
         city="San Francisco",
         dma=807,
         postal_code="94105",
@@ -58,8 +62,8 @@ async def test_query_geolocation(provider: Provider, geolocation: Location) -> N
             score=0,
             custom_details=CustomDetails(
                 geolocation=GeolocationDetails(
-                    country="US",
-                    region="CA",
+                    country="United States",
+                    region="California",
                     city="San Francisco",
                 )
             ),
@@ -87,7 +91,7 @@ async def test_query_geolocation_empty_region(
             score=0,
             custom_details=CustomDetails(
                 geolocation=GeolocationDetails(
-                    country="US",
+                    country="United States",
                     city="San Francisco",
                 )
             ),

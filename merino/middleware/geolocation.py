@@ -22,7 +22,9 @@ class Location(BaseModel):
     """Data model for geolocation."""
 
     country: Optional[str] = None
+    country_name: Optional[str] = None
     region: Optional[str] = None
+    region_name: Optional[str] = None
     city: Optional[str] = None
     dma: Optional[int] = None
     postal_code: Optional[str] = None
@@ -63,7 +65,11 @@ class GeolocationMiddleware:
         scope[ScopeKey.GEOLOCATION] = (
             Location(
                 country=record.country.iso_code,
+                country_name=record.country.names.get("en"),
                 region=record.subdivisions[0].iso_code if record.subdivisions else None,
+                region_name=record.subdivisions[0].names.get("en")
+                if record.subdivisions
+                else None,
                 city=record.city.names.get("en"),
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,
