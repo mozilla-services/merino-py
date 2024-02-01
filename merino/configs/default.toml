@@ -44,13 +44,13 @@ disabled_providers = []
 # MERINO_LOGGING__LEVEL
 # Minimum level of logs that should be reported.
 # "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL" (in increasing verbosity).
-# This should be a number of entries separated by commas (environment variables) 
+# This should be a number of entries separated by commas (environment variables)
 # or specified as list (TOML).
 level = "INFO"
 
 # MERINO_LOGGING__FORMAT
 # pretty - default in development - Multiple lines per event, human-oriented formatting and color.
-# mozlog - default in production - A single line per event, formatted as JSON in 
+# mozlog - default in production - A single line per event, formatted as JSON in
 # MozLog format. See https://wiki.mozilla.org/Firefox/Services/Logging
 format = "mozlog"
 
@@ -84,7 +84,7 @@ query_character_max = 500
 # Settings for Statsd/Datadog style metrics reporting.
 
 # MERINO_METRICS__DEV_LOGGER
-# Whether or not to send metrics over to the logger. 
+# Whether or not to send metrics over to the logger.
 # Should only be used for non-production environments.
 dev_logger = false
 
@@ -123,12 +123,12 @@ client_ip_override = ""
 server = "https://firefox.settings.services.mozilla.com"
 
 # MERINO_REMOTE_SETTINGS__BUCKET
-# The bucket to use for Remote Settings providers if not specified in provider config. 
+# The bucket to use for Remote Settings providers if not specified in provider config.
 # Ex: "main".
 bucket = "main"
 
 # MERINO_REMOTE_SETTINGS__COLLECTION
-# The collection to use for Remote Settings providers if not specified in provider config. 
+# The collection to use for Remote Settings providers if not specified in provider config.
 # Ex: "quicksuggest".
 collection = "quicksuggest"
 
@@ -175,7 +175,7 @@ dsn = ""
 env = "dev"
 
 # If `sentry.mode` is set to `disabled`, no Sentry integration will be activated.
-# If set to `debug`, the DSN will be set to a testing value recommended by Sentry, 
+# If set to `debug`, the DSN will be set to a testing value recommended by Sentry,
 # and extra output will be included in the logs.
 
 
@@ -257,7 +257,7 @@ url_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
 # The URL path for postal codes.
 url_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"
 
-# MERINO_ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY 
+# MERINO_ACCUWEATHER__URL_POSTALCODES_PARAM_QUERY
 # The query parameter for postal codes.
 url_postalcodes_param_query = "q"
 
@@ -336,6 +336,24 @@ resync_interval_sec = 86400
 # This should be more frequent than the `resync_interval_sec` to retry
 # on errors. Defaults to every minute.
 cron_interval_sec = 60
+
+
+[default.providers.geolocation]
+# MERINO_PROVIDERS__GEOLOCATION__TYPE
+# The type of this provider, should be `geolocation`.
+type = "geolocation"
+
+# MERINO_PROVIDERS__GEOLOCATION__ENABLED_BY_DEFAULT
+# Whether or not this provider is enabled by default.
+enabled_by_default = false
+
+# MERINO_PROVIDERS__GEOLOCATION__DUMMY_URL
+# The dummy URL used in suggestion of geolocation.
+dummy_url = "https://merino.services.mozilla.com/"
+
+# MERINO_PROVIDERS__GEOLOCATION__DUMMY_TITLE
+# The dummy title used in suggestion of geolocation.
+dummy_title = ""
 
 
 [default.providers.top_picks]

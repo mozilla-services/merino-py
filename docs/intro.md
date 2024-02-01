@@ -90,6 +90,7 @@ flowchart TD
         subgraph providers [fa:fa-truck Providers]
             adm(adm)
             amo(amo)
+            geolocation(geolocation)
             toppicks(top-picks)
             weather(weather)
             wikipedia(wikipedia)
@@ -97,6 +98,7 @@ flowchart TD
 
         srh --> adm
         srh --> amo
+        srh --> geolocation
         srh --> toppicks
         srh --> weather
         srh --> wikipedia
@@ -147,5 +149,3 @@ flowchart TD
     online --> |/api/v1/suggest| srh
     offline ..- kinto
 ```
-
-
