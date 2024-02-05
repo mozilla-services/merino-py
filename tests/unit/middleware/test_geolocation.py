@@ -26,12 +26,25 @@ def fixture_geolocation_middleware(mocker: MockerFixture) -> GeolocationMiddlewa
     [
         (
             Location(
-                country="US", region="WA", city="Milton", dma=819, postal_code="98354"
+                country="US",
+                country_name="United States",
+                region="WA",
+                region_name="Washington",
+                city="Milton",
+                dma=819,
+                postal_code="98354",
             ),
             ["216.160.83.56", 50000],
         ),
         (
-            Location(country="GB", region="ENG", city="Boxford", postal_code="OX1"),
+            Location(
+                country="GB",
+                country_name="United Kingdom",
+                region="ENG",
+                region_name="England",
+                city="Boxford",
+                postal_code="OX1",
+            ),
             ["2.125.160.216", 50000],
         ),
         (
@@ -92,7 +105,13 @@ async def test_geolocation_client_ip_override(
     request IP assignment.
     """
     expected_location: Location = Location(
-        country="US", region="WA", city="Milton", dma=819, postal_code="98354"
+        country="US",
+        country_name="United States",
+        region="WA",
+        region_name="Washington",
+        city="Milton",
+        dma=819,
+        postal_code="98354",
     )
     mocker.patch("merino.middleware.geolocation.CLIENT_IP_OVERRIDE", "216.160.83.56")
 

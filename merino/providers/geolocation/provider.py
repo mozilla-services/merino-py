@@ -56,8 +56,8 @@ class Provider(BaseProvider):
                 score=0,
                 custom_details=CustomDetails(
                     geolocation=GeolocationDetails(
-                        country=srequest.geolocation.country,
-                        region=srequest.geolocation.region,
+                        country=srequest.geolocation.country_name,
+                        region=srequest.geolocation.region_name,
                         city=srequest.geolocation.city,
                     )
                 ),
