@@ -12,6 +12,12 @@ FIELD_LOCATION_MODIFIERS = "location-modifiers"
 FIELD_LOCATION_SIGNS = "location-signs"
 FIELD_YELP_MODIFIERS = "yelp-modifiers"
 
+# There is a Yelp icon that we manually uploaded to Remote Settings with
+# the record ID `icon-yelp-favicon`. It can be internally referenced with
+# the ID `yelp-favicon`. Make sure you update this icon ID if you want to
+# use a different record ID for the Yelp icon on Remote Settings.
+ICON_ID = "yelp-favicon"
+
 
 class LocationSign(BaseModel):
     """Model for location sign used in Yelp suggestion dataset as they should
@@ -32,6 +38,7 @@ class Suggestion(BaseSuggestion):
     postModifiers: list[str]
     locationSigns: list[LocationSign]
     yelpModifiers: list[str]
+    icon: str
 
     @classmethod
     def csv_to_suggestions(cls, csv_reader) -> list[BaseSuggestion]:
@@ -78,5 +85,6 @@ class Suggestion(BaseSuggestion):
                 postModifiers=post_modifiers,
                 locationSigns=location_signs,
                 yelpModifiers=yelp_modifiers,
+                icon=ICON_ID,
             )
         ]

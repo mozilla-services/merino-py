@@ -11,6 +11,7 @@ from merino.jobs.csv_rs_uploader.yelp import (
     FIELD_PRE_MODIFIERS,
     FIELD_SUBJECTS,
     FIELD_YELP_MODIFIERS,
+    ICON_ID,
 )
 from tests.unit.jobs.csv_rs_uploader.utils import do_csv_test
 
@@ -148,6 +149,7 @@ def test_upload(mocker):
                     "yelp-modifier-1",
                     "yelp-modifier-2",
                 ],
+                "icon": ICON_ID,
             }
         ],
     )
