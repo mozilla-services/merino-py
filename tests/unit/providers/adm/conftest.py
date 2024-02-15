@@ -38,7 +38,7 @@ def fixture_adm_suggestion_content() -> SuggestionContent:
                 "title": "Mozilla Firefox Accounts",
             }
         ],
-        icons={1: "attachment-host/main-workspace/quicksuggest/icon-01"},
+        icons={"01": "attachment-host/main-workspace/quicksuggest/icon-01"},
     )
 
 

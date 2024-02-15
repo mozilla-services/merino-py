@@ -18,7 +18,7 @@ class SuggestionContent(BaseModel):
     results: list[dict[str, Any]]
 
     # A dictionary of icon IDs to icon URLs.
-    icons: dict[int, str]
+    icons: dict[str, str]
 
 
 class AdmBackend(Protocol):
