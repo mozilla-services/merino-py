@@ -7,7 +7,7 @@ import logging
 
 from pytest import LogCaptureFixture
 
-from merino.config_sentry import strip_sensitive_data
+from merino.config_sentry import REDACTED_TEXT, strip_sensitive_data
 from tests.types import FilterCaplogFixture
 
 mock_sentry_hint: dict[str, list] = {"exc_info": [RuntimeError, RuntimeError(), None]}
@@ -101,6 +101,100 @@ mock_sentry_event_data: dict = {
                                 },
                             },
                         },
+                        {
+                            "function": "search",
+                            "module": "merino.providers.wikipedia.backends.elastic",
+                            "filename": "merino/providers/wikipedia/backends/elastic.py",
+                            "abs_path": "/app/merino/providers/wikipedia/backends/elastic.py",
+                            "lineno": 69,
+                            "pre_context": [
+                                "                },",
+                                "            }",
+                                "        }",
+                                "",
+                                "        try:",
+                            ],
+                            "context_line": "            res = await self.client.search(",
+                            "post_context": [
+                                "                index=INDEX_ID,",
+                                "                suggest=suggest,",
+                                "                timeout=TIMEOUT_MS,",
+                                '                source_includes=["title"],',
+                                "            )",
+                            ],
+                            "in_app": True,
+                            "vars": {
+                                "q": "what?",
+                                "self": "<merino.providers.wikipedia.backends."
+                                "elastic.ElasticBackend object at 0x7faaebfb0380>",
+                                "suggest": {
+                                    "suggest-on-title": {
+                                        "completion": {
+                                            "field": "'suggest'",
+                                            "size": "3",
+                                        },
+                                        "prefix": "'foobar'",
+                                    }
+                                },
+                            },
+                        },
+                        {
+                            "function": "perform_request",
+                            "module": "elasticsearch._async.client._base",
+                            "filename": "elasticsearch/_async/client/_base.py",
+                            "abs_path": "/usr/local/lib/python3.12/site-packages"
+                            "/elasticsearch/_async/client/_base.py",
+                            "lineno": 285,
+                            "pre_context": [
+                                "        if params:",
+                                '            target = f"{path}?{_quote_query(params)}"',
+                                "        else:",
+                                "            target = path",
+                                "",
+                            ],
+                            "context_line": "        meta, resp_body"
+                            " = await self.transport.perform_request(",
+                            "post_context": [
+                                "            method,",
+                                "            target,",
+                                "            headers=request_headers,",
+                                "            body=body,",
+                                "            request_timeout=self._request_timeout,",
+                            ],
+                            "in_app": False,
+                            "vars": {
+                                "body": {
+                                    "suggest": {
+                                        "suggest-on-title": {
+                                            "completion": '{"field":"\'suggest\'","size":"3"}',
+                                            "prefix": "'foobar'",
+                                        }
+                                    },
+                                    "timeout": "'5000ms'",
+                                },
+                                "headers": {
+                                    "accept": "'application/json'",
+                                    "content-type": "'application/json'",
+                                },
+                                "method": "'POST'",
+                                "mimetype_header_to_compat": "<function BaseClient."
+                                "perform_request.<locals>."
+                                "mimetype_header_to_compat at 0x7faad33b9760>",
+                                "params": {"_source_includes": ["'title'"]},
+                                "path": "'/enwiki-v1/_search'",
+                                "request_headers": {
+                                    "Accept": "'application/vnd.elasticsearch+json;"
+                                    " compatible-with=8'",
+                                    "Content-Type": "'application/vnd.elasticsearch+json;"
+                                    " compatible-with=8'",
+                                    "authorization": "[Filtered]",
+                                },
+                                "self": "<AsyncElasticsearch(["
+                                "'https://cb169725a2b843a2891476b0afb67df2.psc.us-west1"
+                                ".gcp.cloud.es.io:9243'])>",
+                                "target": "'/enwiki-v1/_search?_source_includes=title'",
+                            },
+                        },
                     ]
                 },
             }
@@ -112,7 +206,7 @@ mock_sentry_event_data: dict = {
 def test_strip_sensitive_data() -> None:
     """Test that strip_sensitive_data will remove sensitive data."""
     sanitized_event = strip_sensitive_data(mock_sentry_event_data, mock_sentry_hint)
-    assert sanitized_event["request"].get("query_string") == ""
+    assert sanitized_event["request"].get("query_string") == REDACTED_TEXT
     assert "exc_info" in mock_sentry_hint
     assert isinstance(mock_sentry_hint["exc_info"][1], RuntimeError)
 
@@ -120,26 +214,38 @@ def test_strip_sensitive_data() -> None:
         sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][0]["vars"][
             "q"
         ]
-        == ""
+        == REDACTED_TEXT
     )
     assert (
         sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][1]["vars"][
             "values"
         ]["q"]
-        == ""
+        == REDACTED_TEXT
     )
     assert (
         sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][2]["vars"][
             "srequest"
         ]
-        == ""
+        == REDACTED_TEXT
     )
 
     assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][3]["vars"][
-            "solved_result"
-        ][0]["q"]
-        == ""
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][4]["vars"][
+            "q"
+        ]
+        == REDACTED_TEXT
+    )
+    assert (
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][4]["vars"][
+            "suggest"
+        ]
+        == REDACTED_TEXT
+    )
+    assert (
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][5]["vars"][
+            "body"
+        ]
+        == REDACTED_TEXT
     )
 
 
