@@ -73,7 +73,7 @@ class RemoteSettingsBackend:
         suggestions: dict[str, tuple[int, int]] = {}
         full_keywords: list[str] = []
         results: list[dict[str, Any]] = []
-        icons: dict[int, str] = {}
+        icons: dict[str, str] = {}
 
         records: list[dict[str, Any]] = await self.get_records()
 
@@ -101,7 +101,7 @@ class RemoteSettingsBackend:
             results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
         icon_record = self.filter_records(record_type="icon", records=records)
         for icon in icon_record:
-            id = int(icon["id"].replace("icon-", ""))
+            id = icon["id"].replace("icon-", "")
             icons[id] = urljoin(
                 base=attachment_host, url=icon["attachment"]["location"]
             )

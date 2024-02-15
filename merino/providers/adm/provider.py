@@ -148,7 +148,7 @@ class Provider(BaseProvider):
                 "advertiser": res.get("advertiser"),
                 "is_sponsored": is_sponsored,
                 "icon": self.suggestion_content.icons.get(
-                    int(res.get("icon", MISSING_ICON_ID))
+                    res.get("icon", MISSING_ICON_ID)
                 ),
                 "score": self.score,
             }
