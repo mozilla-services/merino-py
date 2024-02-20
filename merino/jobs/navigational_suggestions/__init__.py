@@ -6,6 +6,7 @@ from typing import Optional
 import typer
 
 from merino.config import settings as config
+from merino.content_handler.gcp_uploader import GcsUploader
 from merino.jobs.navigational_suggestions.domain_data_downloader import (
     DomainDataDownloader,
 )
@@ -127,9 +128,11 @@ def prepare_domain_metadata(
 
     # upload favicons and get their public urls
     domain_metadata_uploader = DomainMetadataUploader(
-        destination_gcp_project,
-        destination_gcs_bucket,
-        destination_cdn_hostname,
+        GcsUploader(
+            destination_gcp_project,
+            destination_gcs_bucket,
+            destination_cdn_hostname,
+        ),
         force_upload,
     )
     favicons = [str(metadata["icon"]) for metadata in domain_metadata]
@@ -149,11 +152,7 @@ def prepare_domain_metadata(
     domain_diff = DomainDiff(
         latest_domain_data=top_picks, old_domain_data=old_top_picks
     )
-    (
-        unchanged,
-        added_domains,
-        added_urls,
-    ) = domain_diff.compare_top_picks(
+    (unchanged, added_domains, added_urls,) = domain_diff.compare_top_picks(
         new_top_picks=top_picks,
         old_top_picks=old_top_picks,
     )

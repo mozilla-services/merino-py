@@ -6,6 +6,7 @@
 import json
 from logging import INFO, LogRecord
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 from google.cloud.storage import Blob, Bucket, Client
@@ -15,7 +16,8 @@ from pytest_mock import MockerFixture
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
-from merino.jobs.navigational_suggestions.utils import FaviconDownloader, FaviconImage
+from merino.jobs.navigational_suggestions.utils import FaviconDownloader
+from merino.content_handler.models import Image, BaseContentUploader
 from tests.types import FilterCaplogFixture
 
 
@@ -233,14 +235,20 @@ def mock_remote_client(mocker: MockerFixture, remote_bucket):
 def mock_favicon_downloader(mocker) -> Any:
     """Return a mock FaviconDownloader instance"""
     favicon_downloader_mock: Any = mocker.Mock(spec=FaviconDownloader)
-    favicon_downloader_mock.download_favicon.return_value = FaviconImage(
+    favicon_downloader_mock.download_favicon.return_value = Image(
         content=bytes(255), content_type="image/png"
     )
     return favicon_downloader_mock
 
+@pytest.fixture
+def mock_gcs_uploader(mocker) -> Any:
+    """Return a mock FaviconDownloader instance"""
+    uploader_mock: Any = mocker.Mock(spec=BaseContentUploader)
+    return uploader_mock
+
 
 def test_upload_top_picks(
-    mocker, mock_gcs_client, mock_gcs_blob, mock_favicon_downloader
+    mocker, mock_gcs_uploader, mock_gcs_blob, mock_favicon_downloader
 ) -> None:
     """Test if upload top picks call relevant GCS API."""
     DUMMY_TOP_PICKS = "dummy top picks contents"
@@ -253,9 +261,7 @@ def test_upload_top_picks(
     mocker.patch.object(mock_gcs_bucket, "delete_blob")
 
     domain_metadata_uploader = DomainMetadataUploader(
-        destination_gcp_project="dummy_gcp_project",
-        destination_bucket_name="dummy_gcs_bucket",
-        destination_cdn_hostname="",
+        uploader=mock_gcs_uploader,
         force_upload=False,
         favicon_downloader=mock_favicon_downloader,
     )
@@ -378,9 +384,7 @@ def test_get_latest_file_for_diff(
     ).return_value = remote_client
     caplog.set_level(INFO)
     default_domain_metadata_uploader = DomainMetadataUploader(
-        destination_gcp_project="dummy_gcp_project",
-        destination_bucket_name="dummy_gcs_bucket",
-        destination_cdn_hostname="",
+        uploader=,
         force_upload=False,
         favicon_downloader=mock_favicon_downloader,
     )

@@ -13,9 +13,9 @@ from merino.jobs.navigational_suggestions.utils import (
     REQUEST_HEADERS,
     TIMEOUT,
     FaviconDownloader,
-    FaviconImage,
     requests_get,
 )
+from merino.content_handler.models import Image
 
 logger = logging.getLogger(__name__)
 
@@ -261,9 +261,9 @@ class DomainMetadataExtractor:
         for favicon in favicons:
             url = self._fix_url(favicon["href"])
             width = None
-            favicon_image: Optional[
-                FaviconImage
-            ] = self.favicon_downloader.download_favicon(url)
+            favicon_image: Optional[Image] = self.favicon_downloader.download_favicon(
+                url
+            )
             if favicon_image is None:
                 continue
 

@@ -7,7 +7,8 @@ from urllib.parse import urljoin
 
 from google.cloud.storage import Blob, Bucket, Client
 
-from merino.jobs.navigational_suggestions.utils import FaviconDownloader, FaviconImage
+from merino.jobs.navigational_suggestions.utils import FaviconDownloader
+from merino.content_handler.models import Image, BaseContentUploader
 
 logger = logging.getLogger(__name__)
 
@@ -18,22 +19,15 @@ class DomainMetadataUploader:
     DESTINATION_FAVICONS_ROOT: str = "favicons"
     DESTINATION_TOP_PICK_FILE_NAME: str = "top_picks_latest.json"
 
-    bucket_name: str
-    storage_client: Client
-    cdn_hostname: str
     favicon_downloader: FaviconDownloader
 
     def __init__(
         self,
-        destination_gcp_project: str,
-        destination_bucket_name: str,
-        destination_cdn_hostname: str,
         force_upload: bool,
+        uploader: BaseContentUploader,
         favicon_downloader: FaviconDownloader = FaviconDownloader(),
     ) -> None:
-        self.storage_client = Client(destination_gcp_project)
-        self.bucket_name = destination_bucket_name
-        self.cdn_hostname = destination_cdn_hostname
+        self.uploader = uploader
         self.force_upload = force_upload
         self.favicon_downloader = favicon_downloader
 
@@ -42,13 +36,14 @@ class DomainMetadataUploader:
         One file is prepended by a timestamp for record keeping,
         the other file is the latest entry from which data is loaded.
         """
-        bucket = self.storage_client.bucket(self.bucket_name)
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         timestamp_file_name = f"{timestamp}_top_picks.json"
-        latest_blob = bucket.blob(self.DESTINATION_TOP_PICK_FILE_NAME)
-        latest_blob.upload_from_string(top_picks)
-        dated_blob = bucket.blob(timestamp_file_name)
-        dated_blob.upload_from_string(top_picks)
+
+        _: Blob = self.uploader.upload_content(
+            top_picks, self.DESTINATION_TOP_PICK_FILE_NAME
+        )
+        dated_blob: Blob = self.uploader.upload_content(top_picks, timestamp_file_name)
+
         return dated_blob
 
     def get_latest_file_for_diff(
@@ -77,31 +72,16 @@ class DomainMetadataUploader:
         return the public urls of the uploaded ones.
         """
         dst_favicons: list = []
-        bucket: Bucket = self.storage_client.bucket(self.bucket_name)
         for src_favicon in src_favicons:
             dst_favicon_public_url: str = ""
-            favicon_image: FaviconImage | None = (
-                self.favicon_downloader.download_favicon(src_favicon)
+            favicon_image: Image | None = self.favicon_downloader.download_favicon(
+                src_favicon
             )
             if favicon_image:
                 try:
                     dst_favicon_name = self._destination_favicon_name(favicon_image)
-                    dst_blob = bucket.blob(dst_favicon_name)
-
-                    # upload favicon to gcs if force upload is set or if it doesn't exist there and
-                    # make it publicly accessible
-                    if self.force_upload or not dst_blob.exists():
-                        logger.info(
-                            f"Uploading favicon {src_favicon} to blob {dst_favicon_name}"
-                        )
-                        dst_blob.upload_from_string(
-                            favicon_image.content,
-                            content_type=favicon_image.content_type,
-                        )
-                        dst_blob.make_public()
-
-                    dst_favicon_public_url = self._get_favicon_public_url(
-                        dst_blob, dst_favicon_name
+                    dst_favicon_public_url = self.uploader.upload_image(
+                        favicon_image, dst_favicon_name, forced_upload=self.force_upload
                     )
                     logger.info(f"favicon public url: {dst_favicon_public_url}")
                 except Exception as e:
@@ -111,19 +91,7 @@ class DomainMetadataUploader:
 
         return dst_favicons
 
-    def _get_favicon_public_url(self, blob: Blob, favicon_name: str) -> str:
-        """Get public url for the uploaded favicon"""
-        if self.cdn_hostname:
-            base_url = (
-                f"https://{self.cdn_hostname}"
-                if "https" not in self.cdn_hostname
-                else self.cdn_hostname
-            )
-            return urljoin(base_url, favicon_name)
-        else:
-            return str(blob.public_url)
-
-    def _destination_favicon_name(self, favicon_image: FaviconImage) -> str:
+    def _destination_favicon_name(self, favicon_image: Image) -> str:
         """Return the name of the favicon to be used for uploading to GCS"""
         content_hex_digest: str = hashlib.sha256(favicon_image.content).hexdigest()
         content_len: str = str(len(favicon_image.content))

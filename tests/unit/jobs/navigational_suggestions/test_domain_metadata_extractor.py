@@ -13,12 +13,13 @@ from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     FaviconData,
     Scraper,
 )
-from merino.jobs.navigational_suggestions.utils import FaviconDownloader, FaviconImage
+from merino.jobs.navigational_suggestions.utils import FaviconDownloader
+from merino.content_handler.models import Image
 
 DomainMetadataScenario = tuple[
     FaviconData | None,
     list[dict[str, Any]],
-    list[FaviconImage] | None,
+    list[Image] | None,
     list[tuple[int, int]] | None,
     str | None,
     str | None,
@@ -32,7 +33,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         FaviconData(links=[], metas=[], manifests=[]),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
+            Image(content=b"\\x00", content_type="image/x-icon"),
         ],
         [(32, 32)],
         "https://google.com/favicon.ico",
@@ -71,7 +72,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/png"),
+            Image(content=b"\\x00", content_type="image/png"),
         ],
         [(32, 32)],
         None,
@@ -112,7 +113,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/jpg"),
+            Image(content=b"\\x00", content_type="image/jpg"),
         ],
         [(32, 32)],
         None,
@@ -157,7 +158,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
             }
         ],
         [
-            FaviconImage(content=b"\\x00", content_type="image/jpg"),
+            Image(content=b"\\x00", content_type="image/jpg"),
         ],
         [(32, 32)],
         None,
@@ -226,7 +227,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/svg+xml"),
+            Image(content=b"\\x00", content_type="image/svg+xml"),
         ],
         None,
         None,
@@ -271,8 +272,8 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/png"),
-            FaviconImage(content=b"\\x01", content_type="image/svg+xml"),
+            Image(content=b"\\x00", content_type="image/png"),
+            Image(content=b"\\x01", content_type="image/svg+xml"),
         ],
         [(32, 32)],
         None,
@@ -350,8 +351,8 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
-            FaviconImage(content=b"\\x01", content_type="image/x-icon"),
+            Image(content=b"\\x00", content_type="image/x-icon"),
+            Image(content=b"\\x01", content_type="image/x-icon"),
         ],
         [(64, 64), (32, 32)],
         None,
@@ -390,7 +391,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
+            Image(content=b"\\x00", content_type="image/x-icon"),
         ],
         [(16, 16)],
         None,
@@ -430,7 +431,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="text/html"),
+            Image(content=b"\\x00", content_type="text/html"),
         ],
         [(96, 96)],
         None,
@@ -540,7 +541,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         FaviconData(links=[], metas=[], manifests=[]),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
+            Image(content=b"\\x00", content_type="image/x-icon"),
         ],
         [(32, 32)],
         "https://foo.eu/favicon.ico",
@@ -609,7 +610,7 @@ def test_get_domain_metadata(
     mocker: MockerFixture,
     favicon_data: FaviconData | None,
     scraped_favicons_from_manifest: list[dict[str, Any]],
-    favicon_images: list[FaviconImage] | None,
+    favicon_images: list[Image] | None,
     favicon_image_sizes: list[tuple[int, int]] | None,
     default_favicon: str | None,
     scraped_url: str | None,
