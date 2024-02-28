@@ -8,13 +8,13 @@ from typing import Any
 import pytest
 from pytest_mock import MockerFixture
 
+from merino.content_handler.models import Image
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
     FaviconData,
     Scraper,
 )
 from merino.jobs.navigational_suggestions.utils import FaviconDownloader
-from merino.content_handler.models import Image
 
 DomainMetadataScenario = tuple[
     FaviconData | None,

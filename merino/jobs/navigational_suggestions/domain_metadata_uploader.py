@@ -3,12 +3,14 @@ import hashlib
 import json
 import logging
 from datetime import datetime
-from urllib.parse import urljoin
 
 from google.cloud.storage import Blob, Bucket, Client
 
+from merino.content_handler.models import BaseContentUploader, Image
 from merino.jobs.navigational_suggestions.utils import FaviconDownloader
-from merino.content_handler.models import Image, BaseContentUploader
+
+# from urllib.parse import urljoin
+
 
 logger = logging.getLogger(__name__)
 
@@ -47,21 +49,15 @@ class DomainMetadataUploader:
         return dated_blob
 
     def get_latest_file_for_diff(
-        self, client: Client
+        self, client: Client, bucket_name: str
     ) -> dict[str, list[dict[str, str]]]:
         """Get the most recent top pick file with timestamp so a comparison
         can be made between the previous file and the new file to be written.
         """
-        bucket: Bucket = client.get_bucket(self.bucket_name)
-        blobs = [
-            blob
-            for blob in bucket.list_blobs(delimiter="/", match_glob="*.json")
-            if blob.name != self.DESTINATION_TOP_PICK_FILE_NAME
-        ]
-
-        if not blobs:
-            return {"domains": []}
-        most_recent = sorted(blobs, key=lambda blob: blob.name, reverse=True)[0]
+        most_recent = self.uploader.get_most_recent_file(
+            exclusion=self.DESTINATION_TOP_PICK_FILE_NAME,
+            sort_key=lambda blob: blob.name,
+        )
         data = most_recent.download_as_text()
         file_contents: dict = json.loads(data)
         logger.info(f"Domain file {most_recent.name} acquired.")
@@ -85,7 +81,7 @@ class DomainMetadataUploader:
                     )
                     logger.info(f"favicon public url: {dst_favicon_public_url}")
                 except Exception as e:
-                    logger.info(f"Exception {e} occured while uploading {src_favicon}")
+                    logger.info(f"Exception {e} occurred while uploading {src_favicon}")
 
             dst_favicons.append(dst_favicon_public_url)
 

@@ -9,13 +9,13 @@ from PIL import Image
 from pydantic import BaseModel
 from robobrowser import RoboBrowser
 
+from merino.content_handler.models import Image
 from merino.jobs.navigational_suggestions.utils import (
     REQUEST_HEADERS,
     TIMEOUT,
     FaviconDownloader,
     requests_get,
 )
-from merino.content_handler.models import Image
 
 logger = logging.getLogger(__name__)
 

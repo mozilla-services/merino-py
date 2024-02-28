@@ -152,7 +152,11 @@ def prepare_domain_metadata(
     domain_diff = DomainDiff(
         latest_domain_data=top_picks, old_domain_data=old_top_picks
     )
-    (unchanged, added_domains, added_urls,) = domain_diff.compare_top_picks(
+    (
+        unchanged,
+        added_domains,
+        added_urls,
+    ) = domain_diff.compare_top_picks(
         new_top_picks=top_picks,
         old_top_picks=old_top_picks,
     )

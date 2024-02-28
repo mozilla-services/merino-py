@@ -13,11 +13,11 @@ from google.cloud.storage import Blob, Bucket, Client
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
+from merino.content_handler.models import BaseContentUploader, Image
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
 from merino.jobs.navigational_suggestions.utils import FaviconDownloader
-from merino.content_handler.models import Image, BaseContentUploader
 from tests.types import FilterCaplogFixture
 
 
@@ -240,6 +240,7 @@ def mock_favicon_downloader(mocker) -> Any:
     )
     return favicon_downloader_mock
 
+
 @pytest.fixture
 def mock_gcs_uploader(mocker) -> Any:
     """Return a mock FaviconDownloader instance"""
@@ -368,6 +369,7 @@ def test_upload_favicons_return_empty_url_for_failed_favicon_download(
         assert uploaded_favicon == ""
 
 
+# TODO work on this test first, mock the uploader to
 def test_get_latest_file_for_diff(
     mock_favicon_downloader,
     caplog: LogCaptureFixture,
@@ -384,7 +386,7 @@ def test_get_latest_file_for_diff(
     ).return_value = remote_client
     caplog.set_level(INFO)
     default_domain_metadata_uploader = DomainMetadataUploader(
-        uploader=,
+        uploader=mock_gcs_uploader,
         force_upload=False,
         favicon_downloader=mock_favicon_downloader,
     )

@@ -158,3 +158,6 @@ workspace/
 
 # Emacs autosave files
 *~
+
+# IntelliJ IDE local settings
+.idea

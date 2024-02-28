@@ -1,5 +1,6 @@
 """Uploads Content to GCS"""
 import logging
+from typing import Callable
 from urllib.parse import urljoin
 
 from google.cloud.storage import Blob, Bucket, Client
@@ -11,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 class GcsUploader:
     """Class that includes shared logic to upload an image to GCP."""
+
+    storage_client: Client
+    bucket_name: str
+    cdn_hostname: str
 
     def __init__(
         self,
@@ -37,11 +42,11 @@ class GcsUploader:
 
     def upload_content(
         self,
-        content: str,
+        content: bytes,
         destination_name: str,
-        content_type: str,
+        content_type: str = "text/plain",
         forced_upload: bool = False,
-    ) -> str:
+    ) -> Blob:
         """Upload the content then return the public URL where it is hosted."""
         bucket: Bucket = self.storage_client.bucket(self.bucket_name)
         destination_blob = bucket.blob(destination_name)
@@ -56,9 +61,23 @@ class GcsUploader:
                 destination_blob.make_public()
 
         except Exception as e:
-            logger.error(f"Exception {e} occured while uploading {destination_name}")
+            logger.error(f"Exception {e} occurred while uploading {destination_name}")
 
         return destination_blob
+
+    def get_most_recent_file(self, exclusion: str, sort_key: Callable) -> Blob | None:
+        bucket: Bucket = self.storage_client.get_bucket(self.bucket_name)
+        blobs = [
+            blob
+            for blob in bucket.list_blobs(delimiter="/", match_glob="*.json")
+            if blob.name != exclusion
+        ]
+
+        if not blobs:
+            return None
+        # return the most recent file. this sorts in ascending order, we are getting the last file.
+        most_recent = sorted(blobs, key=sort_key)[-1]
+        return most_recent
 
     def _get_public_url(self, blob: Blob, favicon_name: str) -> str:
         """Get public url for some content"""
