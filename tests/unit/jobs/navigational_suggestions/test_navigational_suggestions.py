@@ -9,6 +9,7 @@ import json
 from merino.jobs.navigational_suggestions import prepare_domain_metadata
 
 
+# TODO fix this
 def test_prepare_domain_metadata_top_picks_construction(mocker):
     """Test whether top pick is constructed properly"""
     mock_domain_data_downloader = mocker.patch(

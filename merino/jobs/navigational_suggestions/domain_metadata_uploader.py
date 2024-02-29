@@ -9,9 +9,6 @@ from google.cloud.storage import Blob, Bucket, Client
 from merino.content_handler.models import BaseContentUploader, Image
 from merino.jobs.navigational_suggestions.utils import FaviconDownloader
 
-# from urllib.parse import urljoin
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -49,7 +46,7 @@ class DomainMetadataUploader:
         return dated_blob
 
     def get_latest_file_for_diff(
-        self, client: Client, bucket_name: str
+        self,
     ) -> dict[str, list[dict[str, str]]]:
         """Get the most recent top pick file with timestamp so a comparison
         can be made between the previous file and the new file to be written.
