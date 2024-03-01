@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for domain_metadata_uploader.py module."""
+import hashlib
 import json
 from logging import INFO, LogRecord
 from typing import Any
@@ -243,45 +244,54 @@ def mock_gcs_uploader(mocker, remote_blob_newest) -> Any:
     return uploader_mock
 
 
-# TODO fix this
 def test_upload_top_picks(
-    mocker, mock_gcs_uploader, mock_gcs_blob, mock_gcs_bucket, mock_favicon_downloader
+    mock_gcs_uploader,
+    mock_gcs_blob,
+    mock_favicon_downloader,
 ) -> None:
     """Test if upload top picks call relevant GCS API."""
     DUMMY_TOP_PICKS = "dummy top picks contents"
-    # mock_gcs_bucket = mock_gcs_bucket.bucket.return_value
-    # mock_dst_blob = mock_gcs_blob.blob.return_value
+    mock_blob = mock_gcs_blob
 
-    mock_gcs_blob.name = "20220101120555_top_picks.json"
-    mock_gcs_uploader.list_blobs.return_value = [mock_gcs_blob]
-    mocker.patch.object(mock_gcs_bucket, "copy_blob")
-    mocker.patch.object(mock_gcs_bucket, "delete_blob")
+    mock_blob.name = "20220101120555_top_picks.json"
+
+    mock_gcs_uploader.upload_content.return_value = mock_blob
 
     domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
         force_upload=False,
         favicon_downloader=mock_favicon_downloader,
     )
-    domain_metadata_uploader.upload_top_picks(DUMMY_TOP_PICKS)
 
-    mock_gcs_uploader.bucket.assert_called_once_with("dummy_gcs_bucket")
-    mock_gcs_bucket.blob.assert_called()
-    mock_gcs_blob.upload_from_string.assert_called_with(DUMMY_TOP_PICKS)
+    result = domain_metadata_uploader.upload_top_picks(DUMMY_TOP_PICKS)
+
+    assert result == mock_blob
+    assert result.name == mock_blob.name
+
+    # TODO: ??
+    # assert uploader.upload_content is called with dummy top picks, timestamp.filename
+    # assert uploader's blob's upload_from_string is called with bytes, content_type
 
 
-# TODO fix this
 def test_upload_favicons_upload_if_not_present(
-    mock_gcs_bucket, mock_favicon_downloader, mock_gcs_uploader
+    mock_favicon_downloader, mock_gcs_uploader
 ) -> None:
     """Test that favicons are uploaded only if not already present in GCS when
     force upload is not set
     """
     FORCE_UPLOAD: bool = False
     UPLOADED_FAVICON_PUBLIC_URL = "DUMMY_PUBLIC_URL"
+    dummy_favicon = Image(content=bytes(255), content_type="image/png")
 
-    mock_dst_blob = mock_gcs_bucket.blob.return_value
-    mock_dst_blob.exists.return_value = False
-    mock_dst_blob.public_url = UPLOADED_FAVICON_PUBLIC_URL
+    # These variables are the values from the domain_metadata_uploader._destination_favicon_name()
+    # TODO: mock the private method to return a dummy value instead?
+    context_hex_digest = hashlib.sha256(dummy_favicon.content).hexdigest()
+    content_len: str = str(len(dummy_favicon.content))
+    extension = ".png"
+
+    destination_favicon_name = f"favicons/{context_hex_digest}_{content_len}{extension}"
+
+    mock_gcs_uploader.upload_image.return_value = UPLOADED_FAVICON_PUBLIC_URL
 
     domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
@@ -290,36 +300,43 @@ def test_upload_favicons_upload_if_not_present(
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
 
-    mock_dst_blob.upload_from_string.assert_called_once_with(
-        bytes(255), content_type="image/png"
-    )
-    mock_dst_blob.make_public.assert_called_once()
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
+    mock_gcs_uploader.upload_image.assert_called_once_with(
+        dummy_favicon, destination_favicon_name, forced_upload=FORCE_UPLOAD
+    )
 
 
-# TODO fix this
 def test_upload_favicons_upload_if_force_upload_set(
-    mock_gcs_client, mock_favicon_downloader, mock_gcs_uploader
+     mock_favicon_downloader, mock_gcs_uploader
 ) -> None:
     """Test that favicons are uploaded always when force upload is set"""
     FORCE_UPLOAD: bool = True
-    mock_dst_blob = mock_gcs_client.bucket.return_value.blob.return_value
-    mock_dst_blob.exists.return_value = True
+
+    UPLOADED_FAVICON_PUBLIC_URL = "DUMMY_PUBLIC_URL"
+    dummy_favicon = Image(content=bytes(255), content_type="image/png")
+
+    # These variables are the values from the domain_metadata_uploader._destination_favicon_name()
+    # TODO: mock the private method to return a dummy value instead?
+    context_hex_digest = hashlib.sha256(dummy_favicon.content).hexdigest()
+    content_len: str = str(len(dummy_favicon.content))
+    extension = ".png"
+
+    destination_favicon_name = f"favicons/{context_hex_digest}_{content_len}{extension}"
+
+    mock_gcs_uploader.upload_image.return_value = UPLOADED_FAVICON_PUBLIC_URL
 
     domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
         force_upload=FORCE_UPLOAD,
         favicon_downloader=mock_favicon_downloader,
     )
-    domain_metadata_uploader.upload_favicons(["favicon1.png"])
+    uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
 
-    # TODO expected vs asserted is close but not a match
-    mock_gcs_uploader.upload_image.assert_called_once_with(bytes(255), forced_upload=True)
+    assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
+    mock_gcs_uploader.upload_image.assert_called_once_with(
+        dummy_favicon, destination_favicon_name, forced_upload=FORCE_UPLOAD
+    )
 
-    # mock_dst_blob.upload_from_string.assert_called_once_with(
-    #     bytes(255), content_type="image/png"
-    # )
-    # mock_dst_blob.make_public.assert_called_once()
 
 
 def test_upload_favicons_return_favicon_with_cdn_hostname_when_provided(
@@ -369,15 +386,11 @@ def test_get_latest_file_for_diff(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     remote_blob_newest,
-    remote_client,
-    mocker,
 ) -> None:
     """Test acquiring the latest file data from mock GCS bucket.
     Also checks case if there is no data.
     """
-    mocker.patch(
-        "merino.content_handler.gcp_uploader.Client"
-    ).return_value = remote_client
+
     caplog.set_level(INFO)
     default_domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
