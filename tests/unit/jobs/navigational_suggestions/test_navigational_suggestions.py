@@ -22,6 +22,9 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
         "merino.jobs.navigational_suggestions.DomainMetadataUploader"
     ).return_value
 
+    # Mock the GCS Uploader
+    mocker.patch("merino.jobs.navigational_suggestions.GcsUploader").return_value
+
     mock_domain_data_downloader.download_data.return_value = [
         {
             "rank": 1,
