@@ -268,10 +268,6 @@ def test_upload_top_picks(
     assert result == mock_blob
     assert result.name == mock_blob.name
 
-    # TODO: ??
-    # assert uploader.upload_content is called with dummy top picks, timestamp.filename
-    # assert uploader's blob's upload_from_string is called with bytes, content_type
-
 
 def test_upload_favicons_upload_if_not_present(
     mock_favicon_downloader, mock_gcs_uploader
@@ -283,14 +279,6 @@ def test_upload_favicons_upload_if_not_present(
     UPLOADED_FAVICON_PUBLIC_URL = "DUMMY_PUBLIC_URL"
     dummy_favicon = Image(content=bytes(255), content_type="image/png")
 
-    # These variables are the values from the domain_metadata_uploader._destination_favicon_name()
-    # TODO: mock the private method to return a dummy value instead?
-    context_hex_digest = hashlib.sha256(dummy_favicon.content).hexdigest()
-    content_len: str = str(len(dummy_favicon.content))
-    extension = ".png"
-
-    destination_favicon_name = f"favicons/{context_hex_digest}_{content_len}{extension}"
-
     mock_gcs_uploader.upload_image.return_value = UPLOADED_FAVICON_PUBLIC_URL
 
     domain_metadata_uploader = DomainMetadataUploader(
@@ -298,7 +286,9 @@ def test_upload_favicons_upload_if_not_present(
         force_upload=FORCE_UPLOAD,
         favicon_downloader=mock_favicon_downloader,
     )
+
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
+    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(dummy_favicon)
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(
@@ -311,17 +301,8 @@ def test_upload_favicons_upload_if_force_upload_set(
 ) -> None:
     """Test that favicons are uploaded always when force upload is set"""
     FORCE_UPLOAD: bool = True
-
     UPLOADED_FAVICON_PUBLIC_URL = "DUMMY_PUBLIC_URL"
     dummy_favicon = Image(content=bytes(255), content_type="image/png")
-
-    # These variables are the values from the domain_metadata_uploader._destination_favicon_name()
-    # TODO: mock the private method to return a dummy value instead?
-    context_hex_digest = hashlib.sha256(dummy_favicon.content).hexdigest()
-    content_len: str = str(len(dummy_favicon.content))
-    extension = ".png"
-
-    destination_favicon_name = f"favicons/{context_hex_digest}_{content_len}{extension}"
 
     mock_gcs_uploader.upload_image.return_value = UPLOADED_FAVICON_PUBLIC_URL
 
@@ -330,7 +311,9 @@ def test_upload_favicons_upload_if_force_upload_set(
         force_upload=FORCE_UPLOAD,
         favicon_downloader=mock_favicon_downloader,
     )
+
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
+    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(dummy_favicon)
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(

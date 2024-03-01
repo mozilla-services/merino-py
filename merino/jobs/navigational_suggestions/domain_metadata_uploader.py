@@ -72,7 +72,7 @@ class DomainMetadataUploader:
             )
             if favicon_image:
                 try:
-                    dst_favicon_name = self._destination_favicon_name(favicon_image)
+                    dst_favicon_name = self.destination_favicon_name(favicon_image)
                     dst_favicon_public_url = self.uploader.upload_image(
                         favicon_image, dst_favicon_name, forced_upload=self.force_upload
                     )
@@ -84,7 +84,7 @@ class DomainMetadataUploader:
 
         return dst_favicons
 
-    def _destination_favicon_name(self, favicon_image: Image) -> str:
+    def destination_favicon_name(self, favicon_image: Image) -> str:
         """Return the name of the favicon to be used for uploading to GCS"""
         content_hex_digest: str = hashlib.sha256(favicon_image.content).hexdigest()
         content_len: str = str(len(favicon_image.content))
