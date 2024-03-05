@@ -263,7 +263,6 @@ def test_upload_content_with_forced_upload_true_and_existing_blob(
     mock_gcs_blob.make_public.assert_called_once()
 
 
-@pytest.mark.skip(reason="Exception capture not working yet")
 def test_upload_content_with_exception_thrown(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
@@ -281,21 +280,23 @@ def test_upload_content_with_exception_thrown(
 
     mock_gcs_client.bucket.return_value = mock_gcs_bucket
     mock_gcs_bucket.blob.return_value = mock_gcs_blob
-    mock_gcs_blob.make_public.side_effect = Exception
+
+    # make the blob.make_public() method throw a run time exception
+    mock_gcs_blob.make_public.side_effect = RuntimeError("test-exception")
 
     gcp_uploader = GcsUploader(
         mock_gcs_client, test_bucket_name, test_https_cdn_host_name
     )
 
-    # capture logger info output
+    # call the method
+    gcp_uploader.upload_content(content, test_destination_name, forced_upload=True)
+
+    # capture logger error output
     log_records: list[LogRecord] = filter_caplog(
         caplog.records, "merino.content_handler.gcp_uploader"
     )
 
-    # call the method
-    gcp_uploader.upload_content(content, test_destination_name, forced_upload=True)
-
     assert len(log_records) == 1
     assert log_records[0].message.startswith(
-        f"Exception {Exception} occurred while uploading {mock_gcs_blob}"
+        f"Exception test-exception occurred while uploading {test_destination_name}"
     )
