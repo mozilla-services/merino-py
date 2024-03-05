@@ -47,7 +47,7 @@ class GcsUploader:
         content_type: str = "text/plain",
         forced_upload: bool = False,
     ) -> Blob:
-        """Upload the content then return the public URL where it is hosted."""
+        """Upload the content then return the blob."""
         bucket: Bucket = self.storage_client.bucket(self.bucket_name)
         destination_blob = bucket.blob(destination_name)
 
