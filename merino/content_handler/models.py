@@ -10,7 +10,7 @@ class Image(BaseModel):
 
     content: bytes
     content_type: str = Field(
-        description="Content type of the Image. Can be 'image/png', 'image/jpeg', 'image"
+        description="Content type of the Image. Can be 'image/png', 'image/jpeg', 'image'"
     )
 
 

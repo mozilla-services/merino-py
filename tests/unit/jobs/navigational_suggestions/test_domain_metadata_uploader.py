@@ -3,11 +3,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for domain_metadata_uploader.py module."""
-import hashlib
 import json
 from logging import INFO, LogRecord
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 from google.cloud.storage import Blob, Bucket, Client
@@ -288,7 +286,9 @@ def test_upload_favicons_upload_if_not_present(
     )
 
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
-    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(dummy_favicon)
+    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(
+        dummy_favicon
+    )
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(
@@ -297,7 +297,7 @@ def test_upload_favicons_upload_if_not_present(
 
 
 def test_upload_favicons_upload_if_force_upload_set(
-     mock_favicon_downloader, mock_gcs_uploader
+    mock_favicon_downloader, mock_gcs_uploader
 ) -> None:
     """Test that favicons are uploaded always when force upload is set"""
     FORCE_UPLOAD: bool = True
@@ -313,13 +313,14 @@ def test_upload_favicons_upload_if_force_upload_set(
     )
 
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
-    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(dummy_favicon)
+    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(
+        dummy_favicon
+    )
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(
         dummy_favicon, destination_favicon_name, forced_upload=FORCE_UPLOAD
     )
-
 
 
 def test_upload_favicons_return_favicon_with_cdn_hostname_when_provided(
