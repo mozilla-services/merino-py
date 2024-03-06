@@ -23,12 +23,14 @@ workflows:
           requires:
             - unit-tests
             - integration-tests
-      - docker-image-build:
-          <<: *pr-filters
       - contract-tests:
           <<: *pr-filters
           requires:
             - docker-image-build
+      - docker-image-build:
+          <<: *pr-filters
+      - docker-image-build-locust:
+          <<: *pr-filters
       - docs-build:
           <<: *pr-filters
 
@@ -47,12 +49,14 @@ workflows:
           requires:
             - unit-tests
             - integration-tests
-      - docker-image-build:
-          <<: *main-filters
       - contract-tests:
           <<: *main-filters
           requires:
             - docker-image-build
+      - docker-image-build:
+          <<: *main-filters
+      - docker-image-build-locust:
+          <<: *main-filters
       - docs-build:
           <<: *main-filters
       - docs-publish-github-pages:
@@ -65,6 +69,7 @@ workflows:
             - checks
             - test-coverage-check
             - contract-tests
+            - docker-image-build-locust
       - docker-image-publish:
           <<: *main-filters
           requires:
@@ -129,6 +134,26 @@ jobs:
           command: make test-coverage-check
           environment:
             TEST_RESULTS_DIR: workspace/test-results
+  contract-tests:
+    machine:
+      image: ubuntu-2004:2023.10.1
+    working_directory: ~/merino
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Load Docker image from workspace
+          command: docker load -i /tmp/workspace/merinopy.tar.gz
+      - run:
+          name: Contract tests
+          environment:
+            TEST_RESULTS_DIR: workspace/test-results
+          command: |
+            sudo chown 1000:1000 tests/contract/kinto-attachments
+            make run-contract-tests
+      - store_test_results:
+          path: workspace/test-results
   docker-image-build:
     docker:
       - image: cimg/base:2022.08
@@ -152,26 +177,25 @@ jobs:
           root: /tmp/workspace
           paths:
             - merinopy.tar.gz
-  contract-tests:
-    machine:
-      image: ubuntu-2004:2023.10.1
-    working_directory: ~/merino
+  docker-image-build-locust:
+    docker:
+      - image: cimg/base:2024.02
     steps:
       - checkout
-      - attach_workspace:
-          at: /tmp/workspace
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
-          name: Load Docker image from workspace
-          command: docker load -i /tmp/workspace/merinopy.tar.gz
+          name: Build image
+          command: docker build -t merino-locust -f ./tests/load/Dockerfile .
       - run:
-          name: Contract tests
-          environment:
-            TEST_RESULTS_DIR: workspace/test-results
+          name: Save image into workspace
           command: |
-            sudo chown 1000:1000 tests/contract/kinto-attachments
-            make run-contract-tests
-      - store_test_results:
-          path: workspace/test-results
+            mkdir -p /tmp/workspace
+            docker save -o /tmp/workspace/merino-locust.tar merino-locust
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - merino-locust.tar
   docker-image-publish:
     # Pushing a new production Docker image to the Docker Hub registry triggers a
     # webhook that starts the Jenkins deployment workflow
@@ -225,11 +249,13 @@ jobs:
               echo "Skipping remaining steps in this job: load test not required."
               circleci-agent step halt
             fi
+      - attach_workspace:
+          at: /tmp/workspace
       - setup_remote_docker:
           docker_layer_caching: true
       - run:
-          name: Build image
-          command: docker build -t merino-locust -f ./tests/load/Dockerfile .
+          name: Load Docker image from workspace
+          command: docker load -i /tmp/workspace/merino-locust.tar
       - dockerhub-login
       - run:
           name: Push to Docker Hub

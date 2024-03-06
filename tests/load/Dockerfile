@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y git && \
 ENV LANG=C.UTF-8
 ENV PYTHONUNBUFFERED=1
 
-ENV PYTHON_VENV=/venv
+ENV PYTHON_VENV=/.venv
 RUN python -m venv ${PYTHON_VENV}
 ENV PATH="${PYTHON_VENV}/bin:${PATH}"
 
@@ -25,7 +25,7 @@ ENV POETRY_VIRTUALENVS_CREATE=false \
   POETRY_VERSION=1.7.0
 RUN python -m pip install --no-cache-dir --quiet poetry
 COPY ./tests/load/pyproject.toml ./tests/load/poetry.lock ./
-RUN poetry install --no-interaction --no-ansi
+RUN poetry install --no-interaction --no-ansi --no-root
 
 RUN useradd --create-home locust
 WORKDIR /home/locust
