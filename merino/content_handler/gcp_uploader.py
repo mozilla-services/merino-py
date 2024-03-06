@@ -75,7 +75,7 @@ class GcsUploader:
 
         if not blobs:
             return None
-        # return the most recent file. this sorts in ascending order, we are getting the last file.
+        # return the most recent file. This sorts in ascending order, we are getting the last file.
         most_recent = sorted(blobs, key=sort_key)[-1]
         return most_recent
 

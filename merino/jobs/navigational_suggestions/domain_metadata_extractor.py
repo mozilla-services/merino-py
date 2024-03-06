@@ -261,7 +261,7 @@ class DomainMetadataExtractor:
         for favicon in favicons:
             url = self._fix_url(favicon["href"])
             width = None
-            favicon_image: Optional[Image] = self.favicon_downloader.download_favicon(
+            favicon_image: Image | None = self.favicon_downloader.download_favicon(
                 url
             )
             if favicon_image is None:
