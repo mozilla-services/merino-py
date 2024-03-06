@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import datetime
 
-from google.cloud.storage import Blob, Bucket, Client
+from google.cloud.storage import Blob
 
 from merino.content_handler.models import BaseContentUploader, Image
 from merino.jobs.navigational_suggestions.utils import FaviconDownloader
@@ -53,7 +53,7 @@ class DomainMetadataUploader:
             exclusion=self.DESTINATION_TOP_PICK_FILE_NAME,
             sort_key=lambda blob: blob.name,
         )
-        data = most_recent.download_as_text()
+        data: Blob = most_recent.download_as_text()
         file_contents: dict = json.loads(data)
         logger.info(f"Domain file {most_recent.name} acquired.")
         return file_contents

@@ -247,7 +247,7 @@ def test_upload_top_picks(
     mock_gcs_blob,
     mock_favicon_downloader,
 ) -> None:
-    """Test if upload top picks call relevant GCS API."""
+    """Test if upload top picks call relevant GCS API"""
     DUMMY_TOP_PICKS = "dummy top picks contents"
     mock_blob = mock_gcs_blob
 
@@ -270,8 +270,8 @@ def test_upload_top_picks(
 def test_upload_favicons_upload_if_not_present(
     mock_favicon_downloader, mock_gcs_uploader
 ) -> None:
-    """Test that favicons are uploaded only if not already present in GCS when
-    force upload is not set
+    """Test that favicons are uploaded only if not already present
+    in GCS when force upload is not set
     """
     FORCE_UPLOAD: bool = False
     UPLOADED_FAVICON_PUBLIC_URL = "DUMMY_PUBLIC_URL"
@@ -348,8 +348,8 @@ def test_upload_favicons_return_favicon_with_cdn_hostname_when_provided(
 def test_upload_favicons_return_empty_url_for_failed_favicon_download(
     mock_gcs_client, mock_favicon_downloader, mock_gcs_uploader
 ) -> None:
-    """Test if a failure in downloading favicon from the scraped url returns an empty
-    uploaded favicon url
+    """Test if a failure in downloading favicon from the scraped url returns an empty uploaded
+    favicon url
     """
     mock_favicon_downloader.download_favicon.return_value = None
 
@@ -372,9 +372,8 @@ def test_get_latest_file_for_diff(
     remote_blob_newest,
 ) -> None:
     """Test acquiring the latest file data from mock GCS bucket.
-    Also checks case if there is no data.
+    Also checks case if there is no data
     """
-
     caplog.set_level(INFO)
     default_domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,

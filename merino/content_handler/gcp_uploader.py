@@ -66,6 +66,7 @@ class GcsUploader:
         return destination_blob
 
     def get_most_recent_file(self, exclusion: str, sort_key: Callable) -> Blob | None:
+        """Get the most recent file from the bucket"""
         bucket: Bucket = self.storage_client.get_bucket(self.bucket_name)
         blobs = [
             blob

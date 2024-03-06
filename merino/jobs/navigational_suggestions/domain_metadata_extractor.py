@@ -5,7 +5,6 @@ from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
 
 import requests
-from PIL import Image
 from pydantic import BaseModel
 from robobrowser import RoboBrowser
 

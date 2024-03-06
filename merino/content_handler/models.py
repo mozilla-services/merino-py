@@ -1,3 +1,4 @@
+"""Base Image and Content Uploader models"""
 from abc import ABC, abstractmethod
 from typing import Callable
 

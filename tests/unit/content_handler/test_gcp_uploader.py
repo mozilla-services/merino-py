@@ -1,3 +1,5 @@
+"""Unit tests for merino.content_handler.gcp_uploader"""
+
 from logging import ERROR, INFO, LogRecord
 
 import pytest
@@ -42,26 +44,31 @@ def mock_gcs_bucket(mocker):
 
 @pytest.fixture
 def test_https_cdn_host_name() -> str:
+    """Return a test host url with https prepended to it"""
     return "https://test-cdn-host"
 
 
 @pytest.fixture
 def test_cdn_host_name() -> str:
+    """Return a test host url"""
     return "test-cdn-host"
 
 
 @pytest.fixture
 def test_destination_name() -> str:
+    """Return a test destination name"""
     return "test-destination-name"
 
 
 @pytest.fixture
 def test_bucket_name() -> str:
+    """Return a test bucket name"""
     return "test-bucket-name"
 
 
 @pytest.fixture
 def test_image() -> Image:
+    """Return a test Image object of type png"""
     return Image(content=bytes(255), content_type="image/png")
 
 
@@ -74,8 +81,9 @@ def test_upload_image_with_non_https_cdn_host_name(
     test_destination_name,
     test_image,
 ) -> None:
-    """Test the upload_image method with the cdn_hostname class instance set to a non https value"""
-
+    """Test the upload_image method with the cdn_hostname class instance set to a non https
+    value
+    """
     # set the logger level to the same in source method
     caplog.set_level(INFO)
 
@@ -106,7 +114,6 @@ def test_upload_image_with_https_cdn_host_name(
     test_image,
 ) -> None:
     """Test the upload_image method with the cdn_hostname class instance set to a https value"""
-
     # set the logger level to the same in source method
     caplog.set_level(INFO)
 
@@ -138,7 +145,6 @@ def test_get_most_recent_file_with_two_files(
     test_bucket_name,
 ) -> None:
     """Test the get_most_recent_file method with bucket returning two blobs/files"""
-
     mock_gcs_blob.name = "20210101120555_top_picks.json"
     # set the mock bucket's blob list to the two mocked blobs
     mock_gcs_bucket.list_blobs.return_value = [mock_most_recent_gcs_blob, mock_gcs_blob]
@@ -152,7 +158,7 @@ def test_get_most_recent_file_with_two_files(
         exclusion=excluded_file, sort_key=lambda blob: blob.name
     )
 
-    # result should be the the most recent blob / file
+    # result should be the most recent blob / file
     assert result.name == mock_most_recent_gcs_blob.name
 
 
@@ -163,8 +169,9 @@ def test_get_most_recent_file_with_excluded_file(
     test_https_cdn_host_name,
     test_bucket_name,
 ) -> None:
-    """Test the get_most_recent_file method with the mock bucket containing only the excluded blob/file"""
-
+    """Test the get_most_recent_file method with the mock bucket containing only the excluded
+    blob/file
+    """
     excluded_file: str = "excluded.json"
     mock_gcs_blob.name = excluded_file
 
@@ -195,7 +202,6 @@ def test_upload_content_with_forced_upload_false_and_existing_blob(
     test_https_cdn_host_name,
 ) -> None:
     """Test the upload_content method with default arguments"""
-
     # set the logger level to the same in source method
     caplog.set_level(INFO)
 
@@ -273,6 +279,7 @@ def test_upload_content_with_exception_thrown(
     test_destination_name,
     test_https_cdn_host_name,
 ) -> None:
+    """Test the upload content method with a blob method throw an exception."""
     # set the logger level to ERROR for the exception
     caplog.set_level(ERROR)
 
