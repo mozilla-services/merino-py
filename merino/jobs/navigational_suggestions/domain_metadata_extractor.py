@@ -5,6 +5,7 @@ from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
 
 import requests
+from PIL import Image as PILImage
 from pydantic import BaseModel
 from robobrowser import RoboBrowser
 
@@ -193,9 +194,9 @@ class DomainMetadataExtractor:
             return f"https:{url}"
         return url
 
-    def _get_favicon_smallest_dimension(self, content: bytes) -> int:
+    def _get_favicon_smallest_dimension(self, image: Image) -> int:
         """Return the smallest of the favicon image width and height"""
-        with Image.open(BytesIO(content)) as img:
+        with PILImage.open(BytesIO(image.content)) as img:
             width, height = img.size
             return int(min(width, height))
 
@@ -279,7 +280,7 @@ class DomainMetadataExtractor:
                     logger.info(f"Masked SVG favicon {favicon} found; skipping it")
                     continue
             try:
-                width = self._get_favicon_smallest_dimension(favicon_image.content)
+                width = self._get_favicon_smallest_dimension(favicon_image)
             except Exception as e:
                 logger.info(f"Exception {e} for favicon {favicon}")
 
