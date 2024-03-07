@@ -159,6 +159,7 @@ def test_get_most_recent_file_with_two_files(
     )
 
     # result should be the most recent blob / file
+    assert result is not None
     assert result.name == mock_most_recent_gcs_blob.name
 
 

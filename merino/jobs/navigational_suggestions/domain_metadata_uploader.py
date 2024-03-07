@@ -45,7 +45,7 @@ class DomainMetadataUploader:
 
     def get_latest_file_for_diff(
         self,
-    ) -> dict[str, list[dict[str, str]]]:
+    ) -> dict[str, list[dict[str, str]]] | None:
         """Get the most recent top pick file with timestamp so a comparison
         can be made between the previous file and the new file to be written.
         """
@@ -53,7 +53,11 @@ class DomainMetadataUploader:
             exclusion=self.DESTINATION_TOP_PICK_FILE_NAME,
             sort_key=lambda blob: blob.name,
         )
-        data: Blob = most_recent.download_as_text()
+        # early exit if no file is returned from the uploader
+        if most_recent is None:
+            return None
+
+        data = most_recent.download_as_text()
         file_contents: dict = json.loads(data)
         logger.info(f"Domain file {most_recent.name} acquired.")
         return file_contents

@@ -5,12 +5,12 @@ from urllib.parse import urljoin
 
 from google.cloud.storage import Blob, Bucket, Client
 
-from merino.content_handler.models import Image
+from merino.content_handler.models import BaseContentUploader, Image
 
 logger = logging.getLogger(__name__)
 
 
-class GcsUploader:
+class GcsUploader(BaseContentUploader):
     """Class that includes shared logic to upload an image to GCP."""
 
     storage_client: Client
@@ -42,7 +42,7 @@ class GcsUploader:
 
     def upload_content(
         self,
-        content: bytes,
+        content: bytes | str,
         destination_name: str,
         content_type: str = "text/plain",
         forced_upload: bool = False,

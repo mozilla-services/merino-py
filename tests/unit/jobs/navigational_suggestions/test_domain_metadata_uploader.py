@@ -393,3 +393,21 @@ def test_get_latest_file_for_diff(
     assert records[0].message.startswith(
         f"Domain file {remote_blob_newest.name} acquired."
     )
+
+
+def test_get_latest_file_for_diff_when_no_file_is_returned_by_the_uploader(
+    mock_favicon_downloader,
+    mock_gcs_uploader,
+) -> None:
+    """Test the case where the uploader returns no most recent file"""
+    mock_gcs_uploader.get_most_recent_file.return_value = None
+
+    default_domain_metadata_uploader = DomainMetadataUploader(
+        uploader=mock_gcs_uploader,
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
+    )
+
+    result = default_domain_metadata_uploader.get_latest_file_for_diff()
+
+    assert result is None

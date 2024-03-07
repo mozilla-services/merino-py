@@ -128,12 +128,12 @@ def prepare_domain_metadata(
 
     # upload favicons and get their public urls
     domain_metadata_uploader = DomainMetadataUploader(
+        force_upload,
         GcsUploader(
             destination_gcp_project,
             destination_gcs_bucket,
             destination_cdn_hostname,
         ),
-        force_upload,
     )
     favicons = [str(metadata["icon"]) for metadata in domain_metadata]
     uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
@@ -146,9 +146,11 @@ def prepare_domain_metadata(
     # Create diff class for comparison of Top Picks Files
     old_top_picks: dict[
         str, list[dict[str, str]]
-    ] = domain_metadata_uploader.get_latest_file_for_diff(
-        client=domain_metadata_uploader.storage_client
-    )
+    ] | None = domain_metadata_uploader.get_latest_file_for_diff()
+
+    if old_top_picks is None:
+        old_top_picks = {}
+
     domain_diff = DomainDiff(
         latest_domain_data=top_picks, old_domain_data=old_top_picks
     )
