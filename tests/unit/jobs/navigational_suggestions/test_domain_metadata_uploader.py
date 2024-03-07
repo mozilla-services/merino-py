@@ -173,14 +173,6 @@ def mock_gcs_client(mocker):
 
 
 @pytest.fixture
-def mock_gcs_bucket(mocker):
-    """Return a mock GCS Bucket instance"""
-    bucket = mocker.patch("merino.content_handler.gcp_uploader.Bucket").return_value
-    bucket.name = "mock-bucket"
-    return bucket
-
-
-@pytest.fixture
 def mock_gcs_blob(mocker):
     """Return a mock GCS Bucket instance"""
     return mocker.patch("merino.content_handler.gcp_uploader.Blob").return_value

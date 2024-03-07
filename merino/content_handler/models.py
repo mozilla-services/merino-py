@@ -18,6 +18,7 @@ class Image(BaseModel):
 
     @staticmethod
     def open(bytes_io: BytesIO) -> PILImage:
+        """Open and return an PIL Image object"""
         return PILImage.open(bytes_io)
 
 
