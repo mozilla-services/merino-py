@@ -1,11 +1,9 @@
 """Extract domain metadata from domain data"""
 import logging
-from io import BytesIO
 from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
 
 import requests
-from PIL import Image as PILImage
 from pydantic import BaseModel
 from robobrowser import RoboBrowser
 
@@ -196,9 +194,8 @@ class DomainMetadataExtractor:
 
     def _get_favicon_smallest_dimension(self, image: Image) -> int:
         """Return the smallest of the favicon image width and height"""
-        with PILImage.open(BytesIO(image.content)) as img:
-            width, height = img.size
-            return int(min(width, height))
+        width, height = image.open()
+        return int(min(width, height))
 
     def _extract_favicons(self, scraped_url: str) -> list[dict[str, Any]]:
         """Extract all favicons for an already opened url"""

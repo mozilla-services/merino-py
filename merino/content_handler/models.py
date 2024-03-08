@@ -1,8 +1,10 @@
 """Base Image and Content Uploader models"""
 from abc import ABC, abstractmethod
+from io import BytesIO
 from typing import Callable
 
 from google.cloud.storage import Blob
+from PIL import Image as PILImage
 from pydantic import BaseModel, Field
 
 
@@ -13,6 +15,10 @@ class Image(BaseModel):
     content_type: str = Field(
         description="Content type of the Image. Can be 'image/png', 'image/jpeg', 'image'"
     )
+
+    def open(self) -> PILImage:
+        """Open and return an PIL Image object"""
+        return PILImage.open(BytesIO(self.content))
 
 
 class BaseContentUploader(ABC):
