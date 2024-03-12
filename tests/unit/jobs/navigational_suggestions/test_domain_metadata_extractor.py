@@ -8,17 +8,18 @@ from typing import Any
 import pytest
 from pytest_mock import MockerFixture
 
+from merino.content_handler.models import Image
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
     FaviconData,
     Scraper,
 )
-from merino.jobs.navigational_suggestions.utils import FaviconDownloader, FaviconImage
+from merino.jobs.navigational_suggestions.utils import FaviconDownloader
 
 DomainMetadataScenario = tuple[
     FaviconData | None,
     list[dict[str, Any]],
-    list[FaviconImage] | None,
+    list[Image] | None,
     list[tuple[int, int]] | None,
     str | None,
     str | None,
@@ -32,7 +33,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         FaviconData(links=[], metas=[], manifests=[]),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
+            Image(content=b"\\x00", content_type="image/x-icon"),
         ],
         [(32, 32)],
         "https://google.com/favicon.ico",
@@ -71,7 +72,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/png"),
+            Image(content=b"\\x00", content_type="image/png"),
         ],
         [(32, 32)],
         None,
@@ -112,7 +113,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/jpg"),
+            Image(content=b"\\x00", content_type="image/jpg"),
         ],
         [(32, 32)],
         None,
@@ -157,7 +158,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
             }
         ],
         [
-            FaviconImage(content=b"\\x00", content_type="image/jpg"),
+            Image(content=b"\\x00", content_type="image/jpg"),
         ],
         [(32, 32)],
         None,
@@ -226,7 +227,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/svg+xml"),
+            Image(content=b"\\x00", content_type="image/svg+xml"),
         ],
         None,
         None,
@@ -271,8 +272,8 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/png"),
-            FaviconImage(content=b"\\x01", content_type="image/svg+xml"),
+            Image(content=b"\\x00", content_type="image/png"),
+            Image(content=b"\\x01", content_type="image/svg+xml"),
         ],
         [(32, 32)],
         None,
@@ -350,8 +351,8 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
-            FaviconImage(content=b"\\x01", content_type="image/x-icon"),
+            Image(content=b"\\x00", content_type="image/x-icon"),
+            Image(content=b"\\x01", content_type="image/x-icon"),
         ],
         [(64, 64), (32, 32)],
         None,
@@ -390,7 +391,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
+            Image(content=b"\\x00", content_type="image/x-icon"),
         ],
         [(16, 16)],
         None,
@@ -430,7 +431,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         ),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="text/html"),
+            Image(content=b"\\x00", content_type="text/html"),
         ],
         [(96, 96)],
         None,
@@ -540,7 +541,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
         FaviconData(links=[], metas=[], manifests=[]),
         [],
         [
-            FaviconImage(content=b"\\x00", content_type="image/x-icon"),
+            Image(content=b"\\x00", content_type="image/x-icon"),
         ],
         [(32, 32)],
         "https://foo.eu/favicon.ico",
@@ -609,7 +610,7 @@ def test_get_domain_metadata(
     mocker: MockerFixture,
     favicon_data: FaviconData | None,
     scraped_favicons_from_manifest: list[dict[str, Any]],
-    favicon_images: list[FaviconImage] | None,
+    favicon_images: list[Image] | None,
     favicon_image_sizes: list[tuple[int, int]] | None,
     default_favicon: str | None,
     scraped_url: str | None,
@@ -631,15 +632,17 @@ def test_get_domain_metadata(
     favicon_downloader_mock: Any = mocker.Mock(spec=FaviconDownloader)
     favicon_downloader_mock.download_favicon.side_effect = favicon_images
 
+    # set the values from favicon_image_size as the size property on each mock image object
     images_mock = []
     for image_size in favicon_image_sizes or []:
         image_mock: Any = mocker.Mock()
         image_mock.size = image_size
         images_mock.append(image_mock)
 
+    # mock the PIL module's Image.open method in our custom Image model
     mocker.patch(
-        "merino.jobs.navigational_suggestions.domain_metadata_extractor.Image"
-    ).open.return_value.__enter__.side_effect = images_mock
+        "merino.content_handler.models.PILImage.open"
+    ).return_value.__enter__.side_effect = images_mock
 
     metadata_extractor: DomainMetadataExtractor = DomainMetadataExtractor(
         blocked_domains=domain_blocklist,

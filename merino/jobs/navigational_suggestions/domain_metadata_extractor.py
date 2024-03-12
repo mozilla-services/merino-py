@@ -1,19 +1,17 @@
 """Extract domain metadata from domain data"""
 import logging
-from io import BytesIO
 from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
 
 import requests
-from PIL import Image
 from pydantic import BaseModel
 from robobrowser import RoboBrowser
 
+from merino.content_handler.models import Image
 from merino.jobs.navigational_suggestions.utils import (
     REQUEST_HEADERS,
     TIMEOUT,
     FaviconDownloader,
-    FaviconImage,
     requests_get,
 )
 
@@ -194,11 +192,10 @@ class DomainMetadataExtractor:
             return f"https:{url}"
         return url
 
-    def _get_favicon_smallest_dimension(self, content: bytes) -> int:
+    def _get_favicon_smallest_dimension(self, image: Image) -> int:
         """Return the smallest of the favicon image width and height"""
-        with Image.open(BytesIO(content)) as img:
-            width, height = img.size
-            return int(min(width, height))
+        width, height = image.open().size
+        return int(min(width, height))
 
     def _extract_favicons(self, scraped_url: str) -> list[dict[str, Any]]:
         """Extract all favicons for an already opened url"""
@@ -261,9 +258,7 @@ class DomainMetadataExtractor:
         for favicon in favicons:
             url = self._fix_url(favicon["href"])
             width = None
-            favicon_image: Optional[
-                FaviconImage
-            ] = self.favicon_downloader.download_favicon(url)
+            favicon_image: Image | None = self.favicon_downloader.download_favicon(url)
             if favicon_image is None:
                 continue
 
@@ -282,7 +277,7 @@ class DomainMetadataExtractor:
                     logger.info(f"Masked SVG favicon {favicon} found; skipping it")
                     continue
             try:
-                width = self._get_favicon_smallest_dimension(favicon_image.content)
+                width = self._get_favicon_smallest_dimension(favicon_image)
             except Exception as e:
                 logger.info(f"Exception {e} for favicon {favicon}")
 

@@ -2,7 +2,8 @@
 import logging
 
 import requests
-from pydantic import BaseModel
+
+from merino.content_handler.models import Image
 
 REQUEST_HEADERS: dict[str, str] = {
     "User-Agent": (
@@ -32,28 +33,21 @@ FIREFOX_PACKAGED_FAVICONS: dict[str, str] = {
 logger = logging.getLogger(__name__)
 
 
-class FaviconImage(BaseModel):
-    """Data model for favicon image contents and associated metadata."""
-
-    content: bytes
-    content_type: str
-
-
 class FaviconDownloader:
     """Download favicon from the web"""
 
-    def download_favicon(self, url: str) -> FaviconImage | None:
+    def download_favicon(self, url: str) -> Image | None:
         """Download the favicon from the given url.
 
         Args:
             url: favicon URL
         Returns:
-            FaviconImage: favicon image content and associated metadata
+            Image: favicon image content and associated metadata
         """
         try:
             response = requests_get(url)
             return (
-                FaviconImage(
+                Image(
                     content=response.content,
                     content_type=str(response.headers.get("Content-Type")),
                 )
