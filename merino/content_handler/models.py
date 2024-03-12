@@ -18,7 +18,8 @@ class Image(BaseModel):
 
     def open(self) -> PILImage:
         """Open and return an PIL Image object"""
-        return PILImage.open(BytesIO(self.content))
+        with PILImage.open(BytesIO(self.content)) as image:
+            return image
 
 
 class BaseContentUploader(ABC):
