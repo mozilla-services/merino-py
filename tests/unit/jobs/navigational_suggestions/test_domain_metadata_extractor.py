@@ -632,10 +632,16 @@ def test_get_domain_metadata(
     favicon_downloader_mock: Any = mocker.Mock(spec=FaviconDownloader)
     favicon_downloader_mock.download_favicon.side_effect = favicon_images
 
+    images_mock = []
+    for image_size in favicon_image_sizes or []:
+        image_mock: Any = mocker.Mock()
+        image_mock.size = image_size
+        images_mock.append(image_mock)
+
     # mock the PIL module's Image.open method in our custom Image model
     mocker.patch(
         "merino.content_handler.models.PILImage.open"
-    ).side_effect = favicon_image_sizes
+    ).side_effect = images_mock
 
     metadata_extractor: DomainMetadataExtractor = DomainMetadataExtractor(
         blocked_domains=domain_blocklist,
