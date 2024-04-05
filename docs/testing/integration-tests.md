@@ -112,7 +112,7 @@ _**Usage:**_
 
 ```python
 @pytest.fixture(scope="module")
-def gcs_storage_container() -> DockerContainer:
+def your_docker_container() -> DockerContainer:
     os.environ.setdefault("STORAGE_EMULATOR_HOST", "http://localhost:4443")
 
     container = (
