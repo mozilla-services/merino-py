@@ -928,13 +928,14 @@ Receive and Send object dependencies.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="integration-tests"><a class="header" href="#integration-tests">Integration Tests</a></h1>
 <p>The integration layer of testing allows for verification of interactions between service components,
 with lower development, maintenance and execution costs compared with higher level tests, such as contract tests.</p>
-<p>To execute integration tests, use: <code>make integration-tests</code></p>
+<p>To execute integration tests, make sure you have Docker installed and a docker daemon running. Then use: <code>make integration-tests</code></p>
 <p>Integration tests are located in the <code>tests/integration</code> directory.
 They use pytest and the FastAPI <code>TestClient</code> to send requests to specific merino endpoints and verify responses as well as other outputs, such as logs.
 Tests are organized according to the API path under test.
 Type aliases dedicated for test should be stored in the <code>types.py</code> module.
 Fake providers created for test should be stored in the <code>fake_providers.py</code> module.
 The <code>conftest.py</code> modules contain common utilities in fixtures.</p>
+<p>We have also added integration tests that use <code>Docker</code> via the <code>testcontainers</code> <a href="https://testcontainers-python.readthedocs.io/en/latest/">library</a>. See fixture example below.</p>
 <p>For a breakdown of fixtures in use per test, use: <code>make integration-test-fixtures</code></p>
 <h2 id="fixtures-1"><a class="header" href="#fixtures-1">Fixtures</a></h2>
 <p>Available fixtures include:</p>
@@ -997,6 +998,28 @@ teardown fixtures.</p>
 def teardown(teardown_providers: TeardownProvidersFixture):
     yield
     teardown_providers()
+</code></pre>
+<h3 id="testcontainersfixture"><a class="header" href="#testcontainersfixture">TestcontainersFixture</a></h3>
+<p>See <code>tests/integration/jobs/navigational_suggestions/test_domain_metadata_uploader.py</code> for a detailed example.</p>
+<p>This is a lightweight example on how to set up a docker container for your integration tests.</p>
+<p><em><strong>Usage:</strong></em></p>
+<pre><code class="language-python">@pytest.fixture(scope=&quot;module&quot;)
+def your_docker_container() -&gt; DockerContainer:
+    os.environ.setdefault(&quot;STORAGE_EMULATOR_HOST&quot;, &quot;http://localhost:4443&quot;)
+
+    container = (
+        DockerContainer(&quot;your-docker-image&quot;)
+        .with_command(&quot;-scheme http&quot;)
+        .with_bind_ports(4443, 4443)
+    ).start()
+
+    # wait for the container to start and emit logs
+    delay = wait_for_logs(container, &quot;server started at&quot;)
+    port = container.get_exposed_port(4443)
+
+    yield container
+
+    container.stop()
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="merino-load-locust-tests"><a class="header" href="#merino-load-locust-tests">Merino Load (Locust) Tests</a></h1>
 <p>This documentation describes the load tests for Merino.
