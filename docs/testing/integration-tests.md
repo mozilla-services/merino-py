@@ -3,7 +3,7 @@
 The integration layer of testing allows for verification of interactions between service components,
 with lower development, maintenance and execution costs compared with higher level tests, such as contract tests.
 
-To execute integration tests, use: `make integration-tests`
+To execute integration tests, make sure you have Docker installed and a docker daemon running. Then use: `make integration-tests`
 
 Integration tests are located in the `tests/integration` directory.
 They use pytest and the FastAPI `TestClient` to send requests to specific merino endpoints and verify responses as well as other outputs, such as logs.
@@ -11,6 +11,8 @@ Tests are organized according to the API path under test.
 Type aliases dedicated for test should be stored in the `types.py` module.
 Fake providers created for test should be stored in the `fake_providers.py` module.
 The `conftest.py` modules contain common utilities in fixtures.
+
+We have also added integration tests that use `Docker` via the `testcontainers` [library](https://testcontainers-python.readthedocs.io/en/latest/). See fixture example below.
 
 For a breakdown of fixtures in use per test, use: `make integration-test-fixtures`
 
@@ -99,4 +101,31 @@ _**Usage:**_
 def teardown(teardown_providers: TeardownProvidersFixture):
     yield
     teardown_providers()
+```
+
+### TestcontainersFixture
+See `tests/integration/jobs/navigational_suggestions/test_domain_metadata_uploader.py` for a detailed example.
+
+This is a lightweight example on how to set up a docker container for your integration tests.
+
+_**Usage:**_
+
+```python
+@pytest.fixture(scope="module")
+def your_docker_container() -> DockerContainer:
+    os.environ.setdefault("STORAGE_EMULATOR_HOST", "http://localhost:4443")
+
+    container = (
+        DockerContainer("your-docker-image")
+        .with_command("-scheme http")
+        .with_bind_ports(4443, 4443)
+    ).start()
+
+    # wait for the container to start and emit logs
+    delay = wait_for_logs(container, "server started at")
+    port = container.get_exposed_port(4443)
+
+    yield container
+
+    container.stop()
 ```
