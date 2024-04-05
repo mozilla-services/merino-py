@@ -245,3 +245,27 @@ def test_get_latest_file_for_diff(gcs_storage_client, gcs_storage_bucket):
 
     # this should return the test_top_picks_1 since it's the latest one amongst the two files
     assert latest_file == test_top_picks_1
+
+
+def test_get_latest_file_for_diff_when_no_file_is_found(
+    gcs_storage_client, gcs_storage_bucket
+):
+    """Test get_latest_file_for_diff method of DomainMetaDataUploader. This test also tests
+    implicitly the get_latest_file_for_diff method on the GcsUploader
+    """
+    # create a GcsUploader instance
+    gcp_uploader = GcsUploader(
+        destination_gcp_project=gcs_storage_client.project,
+        destination_bucket_name=gcs_storage_bucket.name,
+        destination_cdn_hostname="test_cdn_hostname",
+    )
+
+    # create a DomainMetadataUploader instance
+    domain_metadata_uploader = DomainMetadataUploader(
+        uploader=gcp_uploader, force_upload=False
+    )
+
+    # this should return None since we didn't upload anything to our gcs bucket
+    latest_file = domain_metadata_uploader.get_latest_file_for_diff()
+
+    assert latest_file is None
