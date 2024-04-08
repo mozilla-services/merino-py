@@ -9,29 +9,31 @@ import kinto_http
 logger = logging.getLogger(__name__)
 
 
-class _Chunk:
+class Chunk:
     """A chunk of suggestions to be uploaded in a single attachment."""
 
     start_index: int
-    suggestions: list[dict[str, Any]]
+    data: list[dict[str, Any]]
 
     def __init__(self, start_index: int):
         self.start_index = start_index
-        self.suggestions = []
+        self.data = []
 
-    def add_suggestion(self, suggestion: dict[str, Any]) -> None:
-        self.suggestions.append(suggestion)
+    def add_data(self, data: dict[str, Any]) -> None:
+        """Add data to the chunk."""
+        self.data.append(data)
 
     @property
     def size(self) -> int:
-        return len(self.suggestions)
+        """Return the length of the data."""
+        return len(self.data)
 
 
 class ChunkedRemoteSettingsUploader:
-    """A class that uploads suggestions to remote settings. Suggestions are
+    """A class that uploads data to remote settings. Data is
     uploaded and stored in chunks. Chunking is handled automatically, and the
-    caller only needs to specify a chunk size and call `add_suggestion()` until
-    all suggestions have been added:
+    caller only needs to specify a chunk size and call `add_data()` until
+    all data has been added:
 
         with ChunkedRemoteSettingsUploader(
             chunk_size=200,
@@ -42,11 +44,11 @@ class ChunkedRemoteSettingsUploader:
             server="http://example.com/",
             total_suggestion_count=1234
         ) as uploader:
-            for s in my_suggestions:
-                uploader.add_suggestion(s)
+            for s in my_data:
+                uploader.add_data(s)
 
-    This class can be used with any type of suggestion regardless of schema. The
-    values passed to `add_suggestion()` are dictionaries that can contain
+    This class can be used with any type of data regardless of schema. The
+    values passed to `add_data()` are dictionaries that can contain
     anything. However, the dictionaries must be JSON serializable, i.e., they
     must be able to be passed to `json.dumps()`. It's the consumer's
     responsibility to convert unserializable dicts to serializable dicts before
@@ -54,12 +56,12 @@ class ChunkedRemoteSettingsUploader:
 
     For each chunk, the uploader will create a record with an attachment. The
     record represents the chunk and the attachment contains the chunk's
-    suggestions as JSON. All chunks will contain the number of suggestions
+    data as JSON. All chunks will contain the number of data
     specified by the uploader's `chunk_size` except possibly the final chunk,
     which may contain fewer suggestions.
 
     Each record's "id" will encode the uploader's `record_type` and the range of
-    suggestions contained in the record's chunk, and its "type" will be the
+    data contained in the record's chunk, and its "type" will be the
     uploader's `record_type`, like this:
 
         {
@@ -83,12 +85,12 @@ class ChunkedRemoteSettingsUploader:
     """
 
     chunk_size: int
-    current_chunk: _Chunk
+    current_chunk: Chunk
     dry_run: bool
     kinto: kinto_http.Client
     record_type: str
     suggestion_score_fallback: float | None
-    total_suggestion_count: int | None
+    total_data_count: int | None
 
     def __init__(
         self,
@@ -100,15 +102,15 @@ class ChunkedRemoteSettingsUploader:
         server: str,
         dry_run: bool = False,
         suggestion_score_fallback: float | None = None,
-        total_suggestion_count: int | None = None,
+        total_data_count: int | None = None,
     ):
         """Initialize the uploader."""
         self.chunk_size = chunk_size
-        self.current_chunk = _Chunk(0)
+        self.current_chunk = Chunk(0)
         self.dry_run = dry_run
         self.record_type = record_type
         self.suggestion_score_fallback = suggestion_score_fallback
-        self.total_suggestion_count = total_suggestion_count
+        self.total_data_count = total_data_count
         self.kinto = kinto_http.Client(
             server_url=server, bucket=bucket, collection=collection, auth=auth
         )
@@ -119,7 +121,7 @@ class ChunkedRemoteSettingsUploader:
         """
         if self.suggestion_score_fallback and "score" not in suggestion:
             suggestion |= {"score": self.suggestion_score_fallback}
-        self.current_chunk.add_suggestion(suggestion)
+        self.current_chunk.add_data(suggestion)
         if self.current_chunk.size == self.chunk_size:
             self._finish_current_chunk()
 
@@ -151,19 +153,15 @@ class ChunkedRemoteSettingsUploader:
         """
         if self.current_chunk.size:
             self._upload_chunk(self.current_chunk)
-            self.current_chunk = _Chunk(
+            self.current_chunk = Chunk(
                 self.current_chunk.start_index + self.current_chunk.size
             )
 
-    def _upload_chunk(self, chunk: _Chunk) -> None:
+    def _upload_chunk(self, chunk: Chunk) -> None:
         """Create a record and attachment for a chunk."""
         # The record ID will be "{record_type}-{start}-{end}", where `start` and
         # `end` are zero-padded based on the total suggestion count.
-        places = (
-            0
-            if not self.total_suggestion_count
-            else len(str(self.total_suggestion_count))
-        )
+        places = 0 if not self.total_data_count else len(str(self.total_data_count))
         start = f"{chunk.start_index:0{places}}"
         end = f"{chunk.start_index + chunk.size:0{places}}"
         record_id = "-".join([self.record_type, start, end])
@@ -171,7 +169,7 @@ class ChunkedRemoteSettingsUploader:
             "id": record_id,
             "type": self.record_type,
         }
-        attachment_json = json.dumps(chunk.suggestions)
+        attachment_json = json.dumps(chunk.data)
 
         logger.info(f"Uploading record: {record}")
         if not self.dry_run:
