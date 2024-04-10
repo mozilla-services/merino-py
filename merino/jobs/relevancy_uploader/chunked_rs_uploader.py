@@ -49,15 +49,6 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
         if self.current_chunk.size == self.chunk_size:
             self._finish_current_chunk()
 
-    def _finish_current_chunk(self) -> None:
-        """If the current chunk is not empty, upload it and create a new empty
-        current chunk.
-        """
-        self._upload_chunk(self.current_chunk)
-        self.current_chunk = Chunk(
-            self.current_chunk.start_index + self.current_chunk.size
-        )
-
     def _upload_chunk(self, chunk: Chunk) -> None:
         """Create a record and attachment for a chunk."""
         # The record ID will be "{record_type}-{start}-{end}", where `start` and
