@@ -1,5 +1,6 @@
 """CLI commands for the relevancy_csv_rs_uploader module"""
 import asyncio
+import base64
 import csv
 import io
 from collections import defaultdict
@@ -18,17 +19,17 @@ from merino.jobs.relevancy_uploader.chunked_rs_uploader import (
 class Category(Enum):
     """Enum of possible interests for a domain."""
 
-    Animals = 0
-    Arts = 1
-    Autos = 2
-    Business = 3
-    Career = 4
-    Education = 5
-    Fashion = 6
-    Finance = 7
-    Food = 8
-    Government = 9
-    Health = 10
+    Inconclusive = 0
+    Animals = 1
+    Arts = 2
+    Autos = 3
+    Business = 4
+    Career = 5
+    Education = 6
+    Fashion = 7
+    Finance = 8
+    Food = 9
+    Government = 10
     Hobbies = 11
     Home = 12
     News = 13
@@ -37,13 +38,12 @@ class Category(Enum):
     Sports = 16
     Tech = 17
     Travel = 18
-    Inconclusive = 19
 
 
 RELEVANCY_RECORD_TYPE = "category_to_domains"
 
 # Mapping to unify categories across the sources
-MAPPING: dict[str, Category] = {
+UPLOAD_CATEGORY_TO_R2D2_CATEGORY: dict[str, Category] = {
     "Sports": Category.Sports,
     "Economy & Finance": Category.Finance,
     "Ecommerce": Category.Inconclusive,
@@ -55,7 +55,7 @@ MAPPING: dict[str, Category] = {
     "Social Networks": Category.Inconclusive,
     "Instant Messengers": Category.Inconclusive,
     "Business": Category.Business,
-    "Health & Fitness": Category.Health,
+    "Health & Fitness": Category.Inconclusive,
     "Music": Category.Hobbies,
     "Home & Garden": Category.Home,
     "Science": Category.Education,
@@ -89,14 +89,15 @@ class RelevancyData(BaseModel):
         for row in rows:
             categories = row["categories"].strip("[]").split(",")
             for category in categories:
-                category_mapped = MAPPING.get(category, Category.Inconclusive)
+                category_mapped = UPLOAD_CATEGORY_TO_R2D2_CATEGORY.get(
+                    category, Category.Inconclusive
+                )
                 if category_mapped != Category.Inconclusive:
+                    md5_hash = md5(
+                        row["domain"].encode(), usedforsecurity=False
+                    ).digest()
                     data[category_mapped].append(
-                        {
-                            "domain": md5(
-                                row["origin"].encode(), usedforsecurity=False
-                            ).hexdigest()
-                        }
+                        {"domain": base64.b64encode(md5_hash).decode()}
                     )
         return data
 

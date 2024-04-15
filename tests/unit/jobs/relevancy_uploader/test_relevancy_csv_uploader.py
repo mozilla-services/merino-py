@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for __init__.py module."""
-
+import base64
 import pathlib
 from hashlib import md5
 from typing import Any
@@ -29,13 +29,8 @@ def expected_relevancy_data() -> list[dict[str, Any]]:
     """
     data: list[dict[str, Any]] = []
     for s in range(PRIMARY_DATA_COUNT):
-        data.append(
-            {
-                "domain": md5(
-                    f"https://sports{s}.sports.com".encode(), usedforsecurity=False
-                ).hexdigest()
-            }
-        )
+        md5_hash = md5("sports.com".encode(), usedforsecurity=False).digest()
+        data.append({"domain": base64.b64encode(md5_hash).decode()})
     return data
 
 
@@ -59,12 +54,12 @@ def test_delete_and_upload(mocker):
     )
 
 
-def test_missing_origin(mocker):
-    """A missing origin field should raise a KeyError"""
+def test_missing_domain(mocker):
+    """A missing domain field should raise a KeyError"""
     row = {
         "rank": 0,
-        "domain": "sports.com",
         "host": "sports0.sports.com",
+        "origin": "https://sports0.sports.com",
         "suffix": "com",
         "categories": "[Sports]",
     }

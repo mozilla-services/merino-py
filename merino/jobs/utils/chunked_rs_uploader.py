@@ -30,10 +30,10 @@ class Chunk:
 
 
 class ChunkedRemoteSettingsUploader:
-    """A class that uploads data to remote settings. Data is
-    uploaded and stored in chunks. Chunking is handled automatically, and the
-    caller only needs to specify a chunk size and call `add_data()` until
-    all data has been added:
+    """A class that uploads data (e.g. suggestions of relevancy inputs) to remote
+    settings. Data is uploaded and stored in chunks. Chunking is handled
+    automatically, and the caller only needs to specify a chunk size and call
+    `add_data()` until all data has been added:
 
         with ChunkedRemoteSettingsUploader(
             chunk_size=200,
