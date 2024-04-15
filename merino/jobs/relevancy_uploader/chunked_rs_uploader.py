@@ -62,7 +62,7 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
             "type": self.record_type,
             "record_custom_details": {
                 "category_to_domains": {
-                    "category": self.category_name,
+                    "category": self.category_name.lower(),
                     "category_code": self.category_code,
                 }
             },

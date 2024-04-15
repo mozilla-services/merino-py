@@ -30,14 +30,16 @@ class Category(Enum):
     Finance = 8
     Food = 9
     Government = 10
-    Hobbies = 11
-    Home = 12
-    News = 13
-    RealEstate = 14
-    Society = 15
-    Sports = 16
-    Tech = 17
-    Travel = 18
+    # Disable this per policy consultation
+    # Health = 11
+    Hobbies = 12
+    Home = 13
+    News = 14
+    RealEstate = 15
+    Society = 16
+    Sports = 17
+    Tech = 18
+    Travel = 19
 
 
 RELEVANCY_RECORD_TYPE = "category_to_domains"
@@ -76,14 +78,18 @@ UPLOAD_CATEGORY_TO_R2D2_CATEGORY: dict[str, Category] = {
 }
 
 
-class RelevancyData(BaseModel):
-    """Pydantic base model for remote settings relevancy data."""
+class RelevancyData:
+    """Class to relate to conforming data to remote settings structure."""
 
     @classmethod
     def csv_to_relevancy_data(
         cls, csv_reader
     ) -> defaultdict[Category, list[dict[str, str]]]:
-        """Read CSV file and extract required data for relevancy."""
+        """Read CSV file and extract required data for relevancy in the structure
+        [
+            { "domain" : <base64 string> }
+        ]
+        """
         rows = sorted(csv_reader, key=lambda x: x["categories"])
         data: defaultdict[Category, list[dict[str, str]]] = defaultdict(list)
         for row in rows:
@@ -92,13 +98,10 @@ class RelevancyData(BaseModel):
                 category_mapped = UPLOAD_CATEGORY_TO_R2D2_CATEGORY.get(
                     category, Category.Inconclusive
                 )
-                if category_mapped != Category.Inconclusive:
-                    md5_hash = md5(
-                        row["domain"].encode(), usedforsecurity=False
-                    ).digest()
-                    data[category_mapped].append(
-                        {"domain": base64.b64encode(md5_hash).decode()}
-                    )
+                md5_hash = md5(row["domain"].encode(), usedforsecurity=False).digest()
+                data[category_mapped].append(
+                    {"domain": base64.b64encode(md5_hash).decode()}
+                )
         return data
 
 
@@ -234,7 +237,9 @@ async def _upload_file_object(
     # so we can validate the source data before deleting existing records and
     # starting the upload.
     data = RelevancyData.csv_to_relevancy_data(csv_reader)
-    for category in data:
+    for category, domains in data.items():
+        # TODO: We want to clean this up and no need suggestion_score_fallback
+        #  https://mozilla-hub.atlassian.net/browse/DISCO-2794
         with ChunkedRemoteSettingsRelevancyUploader(
             auth=auth,
             bucket=bucket,
@@ -251,6 +256,5 @@ async def _upload_file_object(
             if delete_existing_records:
                 uploader.delete_records()
 
-            domains = data[category]
             for domain in domains:
                 uploader.add_relevancy_data(domain)

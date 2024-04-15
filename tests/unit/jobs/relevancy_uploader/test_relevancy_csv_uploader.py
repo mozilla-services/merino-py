@@ -20,12 +20,12 @@ from tests.unit.jobs.relevancy_uploader.utils import do_csv_test, do_error_test
 # - expected_relevancy_data()
 PRIMARY_CSV_BASENAME = "test_relevancy_data.csv"
 PRIMARY_CSV_PATH = str(pathlib.Path(__file__).parent / PRIMARY_CSV_BASENAME)
-PRIMARY_DATA_COUNT = 3
+PRIMARY_DATA_COUNT = 4
 
 
-def expected_relevancy_data() -> list[dict[str, Any]]:
+def expected_primary_category_data() -> list[dict[str, Any]]:
     """Return a list of expected relevancy domains for the CSV test data in
-    `PRIMARY_CSV_PATH`.
+    `PRIMARY_CSV_PATH` related to the 'Sports' category.
     """
     data: list[dict[str, Any]] = []
     for s in range(PRIMARY_DATA_COUNT):
@@ -34,12 +34,30 @@ def expected_relevancy_data() -> list[dict[str, Any]]:
     return data
 
 
+def expected_secondary_category_data() -> list[dict[str, Any]]:
+    """Return a list of expected relevancy domains for the CSV test data in
+    `PRIMARY_CSV_PATH` related to the 'News' Category.
+    """
+    md5_hash = md5("sports.com".encode(), usedforsecurity=False).digest()
+    return [{"domain": base64.b64encode(md5_hash).decode()}]
+
+
+def expected_inconclusive_category_data() -> list[dict[str, Any]]:
+    """Return a list of expected relevancy domains for the CSV test data in
+    `PRIMARY_CSV_PATH` related to the 'Inconclusive' Category.
+    """
+    md5_hash = md5("inconclusive.com".encode(), usedforsecurity=False).digest()
+    return [{"domain": base64.b64encode(md5_hash).decode()}]
+
+
 def test_upload_without_deleting(mocker):
     """upload(delete_existing_records=False) with the primary CSV test data"""
     do_csv_test(
         mocker=mocker,
         csv_path=PRIMARY_CSV_PATH,
-        expected_suggestions=expected_relevancy_data(),
+        primary_category_data=expected_primary_category_data(),
+        secondary_category_data=expected_secondary_category_data(),
+        inconclusive_category_data=expected_inconclusive_category_data(),
         delete_existing_records=False,
     )
 
@@ -49,7 +67,9 @@ def test_delete_and_upload(mocker):
     do_csv_test(
         mocker=mocker,
         csv_path=PRIMARY_CSV_PATH,
-        expected_suggestions=expected_relevancy_data(),
+        primary_category_data=expected_primary_category_data(),
+        secondary_category_data=expected_secondary_category_data(),
+        inconclusive_category_data=expected_inconclusive_category_data(),
         delete_existing_records=True,
     )
 

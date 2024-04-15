@@ -24,7 +24,9 @@ def _do_csv_test(
     mocker,
     upload_callable: Callable[[dict[str, Any]], None],
     delete_existing_records: bool,
-    expected_data: list[dict[str, Any]],
+    primary_category_data: list[dict[str, Any]],
+    secondary_category_data: list[dict[str, Any]] = [],
+    inconclusive_category_data: list[dict[str, Any]] = [],
 ) -> None:
     """Helper-method for `do_csv_test()`"""
     # Mock the chunked uploader.
@@ -50,29 +52,48 @@ def _do_csv_test(
             "delete_existing_records": delete_existing_records,
         }
     )
-
-    mock_chunked_uploader_ctor.assert_called_once_with(
+    mock_chunked_uploader_ctor.assert_any_call(
         **common_kwargs,
         record_type="category_to_domains",
         suggestion_score_fallback=0,
-        total_data_count=len(expected_data),
+        total_data_count=len(primary_category_data),
         category_name="Sports",
-        category_code=16
+        category_code=17
+    )
+
+    mock_chunked_uploader_ctor.assert_any_call(
+        **common_kwargs,
+        record_type="category_to_domains",
+        suggestion_score_fallback=0,
+        total_data_count=len(secondary_category_data),
+        category_name="News",
+        category_code=14
+    )
+
+    mock_chunked_uploader_ctor.assert_any_call(
+        **common_kwargs,
+        record_type="category_to_domains",
+        suggestion_score_fallback=0,
+        total_data_count=len(inconclusive_category_data),
+        category_name="Inconclusive",
+        category_code=0
     )
 
     if delete_existing_records:
-        mock_chunked_uploader.delete_records.assert_called_once()
+        mock_chunked_uploader.delete_records.assert_called()
     else:
         mock_chunked_uploader.delete_records.assert_not_called()
 
     mock_chunked_uploader.add_relevancy_data.assert_has_calls(
-        [*map(mocker.call, expected_data)]
+        [*map(mocker.call, primary_category_data)]
     )
 
 
 def do_csv_test(
     mocker,
-    expected_suggestions: list[dict[str, Any]],
+    primary_category_data: list[dict[str, Any]],
+    secondary_category_data: list[dict[str, Any]],
+    inconclusive_category_data: list[dict[str, Any]],
     csv_path: str | None = None,
     csv_rows: list[dict[str, str]] | None = None,
     delete_existing_records: bool = False,
@@ -92,7 +113,9 @@ def do_csv_test(
         mocker=mocker,
         upload_callable=uploader,
         delete_existing_records=delete_existing_records,
-        expected_data=expected_suggestions,
+        primary_category_data=primary_category_data,
+        secondary_category_data=secondary_category_data,
+        inconclusive_category_data=inconclusive_category_data,
     )
 
     if file_object:

@@ -1,4 +1,6 @@
 rank,domain,host,origin,suffix,categories
-0,sports.com,sports0.sports.com,https://sports0.sports.com,com,[Sports]
-1,sports.com,sports1.sports.com,https://sports1.sports.com,com,[Sports]
-2,sports.com,sports2.sports.com,https://sports2.sports.com,com,[Sports]
+0,sports.com,sports0.sports.com,https://sports0.sports.com,com,"[Sports]"
+1,sports.com,sports1.sports.com,https://sports1.sports.com,com,"[Sports]"
+2,sports.com,sports2.sports.com,https://sports2.sports.com,com,"[Sports]"
+3,sports.com,sports3.sports.com,https://sports3.sports.com,com,"[Sports,News & Media]"
+4,inconclusive.com,inconclusive.inconclusive.com,https://inconclusive.inconclusive.com,com,"[Hello]"
