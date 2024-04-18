@@ -16,6 +16,9 @@ from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.custom_details import CustomDetails, WeatherDetails
+from merino.providers.weather.provider import Provider as WeatherProvider
+from merino.providers.weather.provider import Suggestion as WeatherSuggestion
 from merino.utils import task_runner
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
@@ -34,6 +37,9 @@ DEFAULT_PROVIDERS_PARAM_NAME: str = "default"
 
 # Timeout for query tasks.
 QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
+
+# Default Cache-Control TTL value for /suggest endpoint requests
+DEFAULT_CACHE_CONTROL_TTL = settings.runtime.default_suggestions_request_ttl_sec
 
 # Client Variant Maximum - used to limit the number of
 # possible client variants for experiments.
@@ -199,7 +205,18 @@ async def suggest(
         if client_variants
         else [],
     )
-    return JSONResponse(content=jsonable_encoder(response, exclude_none=True))
+
+    # response headers for cache-control directive
+    response_headers: dict[str, str] = {}
+
+    ttl = get_ttl_for_cache_control_header(search_from, suggestions)
+    if ttl is not None:
+        response_headers["Cache-control"] = f"private, max-age={ttl}"
+
+    return JSONResponse(
+        content=jsonable_encoder(response, exclude_none=True),
+        headers=response_headers,
+    )
 
 
 def emit_suggestions_per_metrics(
@@ -219,6 +236,36 @@ def emit_suggestions_per_metrics(
             f"suggestions-per.provider.{provider_name}",
             value=suggestion_count,
         )
+
+
+def get_ttl_for_cache_control_header(
+    request_providers: list[BaseProvider], suggestions: list[BaseSuggestion]
+) -> int | None:
+    """Retrieve the TTL value for the Cache-Control header based on provider and suggestions
+    type
+    """
+    match request_providers:
+        case [WeatherProvider()]:
+            match suggestions:
+                # this case targets accuweather suggestions and pulls out the ttl and then
+                # deletes the custom_details attribute to be not included in the response
+                case [
+                    WeatherSuggestion(
+                        custom_details=CustomDetails(
+                            weather=WeatherDetails(weather_report_ttl=ttl)
+                        )
+                    ) as suggestion
+                ]:
+                    delattr(suggestion, "custom_details")
+                    # return the weather report ttl if found, otherwise return the default
+                    # request ttl
+                    return ttl if ttl is not None else DEFAULT_CACHE_CONTROL_TTL
+                case _:
+                    # can add a use case for some other type of suggestion
+                    return None
+        case _:
+            # can add a use case for some other type of provider
+            return None
 
 
 @router.get(
