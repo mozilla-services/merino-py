@@ -32,14 +32,14 @@ class Category(Enum):
     Government = 10
     # Disable this per policy consultation
     # Health = 11
-    Hobbies = 12
-    Home = 13
-    News = 14
-    RealEstate = 15
-    Society = 16
-    Sports = 17
-    Tech = 18
-    Travel = 19
+    Hobbies = 11
+    Home = 12
+    News = 13
+    RealEstate = 14
+    Society = 15
+    Sports = 16
+    Tech = 17
+    Travel = 18
 
 
 RELEVANCY_RECORD_TYPE = "category_to_domains"

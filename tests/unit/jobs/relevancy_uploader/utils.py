@@ -58,7 +58,7 @@ def _do_csv_test(
         suggestion_score_fallback=0,
         total_data_count=len(primary_category_data),
         category_name="Sports",
-        category_code=17
+        category_code=16
     )
 
     mock_chunked_uploader_ctor.assert_any_call(
@@ -67,7 +67,7 @@ def _do_csv_test(
         suggestion_score_fallback=0,
         total_data_count=len(secondary_category_data),
         category_name="News",
-        category_code=14
+        category_code=13
     )
 
     mock_chunked_uploader_ctor.assert_any_call(
