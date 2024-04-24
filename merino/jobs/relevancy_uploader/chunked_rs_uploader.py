@@ -24,6 +24,7 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
         server: str,
         category_name: str,
         category_code: int,
+        version: int,
         dry_run: bool = False,
         suggestion_score_fallback: float | None = None,
         total_data_count: int | None = None,
@@ -42,6 +43,25 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
         )
         self.category_name = category_name
         self.category_code = category_code
+        self.version = version
+
+    def delete_records(self) -> None:
+        """Delete records whose "category_code" is equal to the uploader's
+        `category_code`.
+        """
+        logger.info(f"Deleting records with type: {self.record_type}")
+        count = 0
+        for record in self.kinto.get_records():
+            record_details = record.get("record_custom_details", {})
+            if (
+                record_details.get("category_code") == self.category_code
+                and record_details.get("version") == self.version
+            ):
+                logger.info(f"Deleting record: {record['id']}")
+                if not self.dry_run:
+                    self.kinto.delete_record(id=record["id"])
+                    count += 1
+        logger.info(f"Deleted {count} records")
 
     def add_relevancy_data(self, data: Any) -> None:
         """Add Relevancy data to the current chunk."""
@@ -64,6 +84,7 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
                 "category_to_domains": {
                     "category": self.category_name.lower(),
                     "category_code": self.category_code,
+                    "version": self.version,
                 }
             },
         }
