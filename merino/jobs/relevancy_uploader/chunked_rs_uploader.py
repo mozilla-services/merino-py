@@ -8,8 +8,6 @@ from merino.jobs.utils.chunked_rs_uploader import Chunk, ChunkedRemoteSettingsUp
 
 logger = logging.getLogger(__name__)
 
-CURRENT_VERSION = 1
-
 
 class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
     """A class that uploads relevancy data to remote settings."""
@@ -26,6 +24,7 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
         server: str,
         category_name: str,
         category_code: int,
+        version: int,
         dry_run: bool = False,
         suggestion_score_fallback: float | None = None,
         total_data_count: int | None = None,
@@ -44,6 +43,7 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
         )
         self.category_name = category_name
         self.category_code = category_code
+        self.version = version
 
     def delete_records(self) -> None:
         """Delete records whose "category_code" is equal to the uploader's
@@ -55,7 +55,7 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
             record_details = record.get("record_custom_details", {})
             if (
                 record_details.get("category_code") == self.category_code
-                and record_details.get("version") == CURRENT_VERSION
+                and record_details.get("version") == self.version
             ):
                 logger.info(f"Deleting record: {record['id']}")
                 if not self.dry_run:
@@ -84,7 +84,7 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
                 "category_to_domains": {
                     "category": self.category_name.lower(),
                     "category_code": self.category_code,
-                    "version": CURRENT_VERSION,
+                    "version": self.version,
                 }
             },
         }

@@ -166,6 +166,7 @@ def do_upload_test(
 
     with ChunkedRemoteSettingsRelevancyUploader(
         chunk_size=chunk_size,
+        version=1,
         **TEST_UPLOADER_KWARGS,
         **uploader_kwargs,
     ) as uploader:

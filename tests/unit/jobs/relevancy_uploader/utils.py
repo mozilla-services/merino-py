@@ -27,6 +27,7 @@ def _do_csv_test(
     primary_category_data: list[dict[str, Any]],
     secondary_category_data: list[dict[str, Any]] = [],
     inconclusive_category_data: list[dict[str, Any]] = [],
+    version: int = 1,
 ) -> None:
     """Helper-method for `do_csv_test()`"""
     # Mock the chunked uploader.
@@ -45,6 +46,7 @@ def _do_csv_test(
         "collection": "collection",
         "dry_run": False,
         "server": "server",
+        "version": version,
     }
     upload_callable(
         {
@@ -79,7 +81,7 @@ def _do_csv_test(
         category_code=0
     )
 
-    if delete_existing_records:
+    if delete_existing_records and version == 1:
         mock_chunked_uploader.delete_records.assert_called()
     else:
         mock_chunked_uploader.delete_records.assert_not_called()
@@ -97,6 +99,7 @@ def do_csv_test(
     csv_path: str | None = None,
     csv_rows: list[dict[str, str]] | None = None,
     delete_existing_records: bool = False,
+    version: int = 1,
 ) -> None:
     """Perform an upload test that is expected to succeed."""
     file_object = None
@@ -116,6 +119,7 @@ def do_csv_test(
         primary_category_data=primary_category_data,
         secondary_category_data=secondary_category_data,
         inconclusive_category_data=inconclusive_category_data,
+        version=version,
     )
 
     if file_object:
@@ -140,6 +144,7 @@ def do_error_test(
                 dry_run=False,
                 file_object=file_object,
                 server="server",
+                version=1,
             )
         )
     file_object.close()

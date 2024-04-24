@@ -15,6 +15,8 @@ from merino.jobs.relevancy_uploader.chunked_rs_uploader import (
     ChunkedRemoteSettingsRelevancyUploader,
 )
 
+CLASSIFICATION_CURRENT_VERSION = 1
+
 
 class Category(Enum):
     """Enum of possible interests for a domain."""
@@ -156,6 +158,12 @@ csv_path_option = typer.Option(
     help="Path to CSV file containing the source data",
 )
 
+version_option = typer.Option(
+    CLASSIFICATION_CURRENT_VERSION,
+    "--version",
+    help="version of the classification data",
+)
+
 
 relevancy_csv_rs_uploader_cmd = typer.Typer(
     name="relevancy-csv-rs-uploader",
@@ -179,6 +187,7 @@ def upload(
     delete_existing_records: bool = delete_existing_records_option,
     dry_run: bool = dry_run_option,
     server: str = server_option,
+    version: int = version_option,
 ):
     """Upload relevancy domains from a CSV file to remote settings."""
     if not csv_path:
@@ -194,6 +203,7 @@ def upload(
             delete_existing_records=delete_existing_records,
             dry_run=dry_run,
             server=server,
+            version=version,
         )
     )
 
@@ -207,6 +217,7 @@ async def _upload(
     delete_existing_records: bool,
     dry_run: bool,
     server: str,
+    version: int,
 ):
     with open(csv_path, newline="", encoding="utf-8-sig") as csv_file:
         await _upload_file_object(
@@ -218,6 +229,7 @@ async def _upload(
             dry_run=dry_run,
             file_object=csv_file,
             server=server,
+            version=version,
         )
 
 
@@ -230,6 +242,7 @@ async def _upload_file_object(
     delete_existing_records: bool,
     dry_run: bool,
     server: str,
+    version: int,
 ):
     csv_reader = csv.DictReader(file_object)
 
@@ -252,6 +265,7 @@ async def _upload_file_object(
             total_data_count=len(data[category]),
             category_name=category.name,
             category_code=category.value,
+            version=version,
         ) as uploader:
             if delete_existing_records:
                 uploader.delete_records()
