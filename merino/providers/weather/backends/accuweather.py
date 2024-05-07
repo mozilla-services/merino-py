@@ -134,7 +134,6 @@ class AccuweatherBackend:
     cached_location_key_ttl_sec: int
     cached_current_condition_ttl_sec: int
     cached_forecast_ttl_sec: int
-    cached_default_weather_report_ttl_sec: int
     metrics_client: aiodogstatsd.Client
     url_param_api_key: str
     url_postalcodes_path: str
