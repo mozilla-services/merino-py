@@ -38,8 +38,8 @@ DEFAULT_PROVIDERS_PARAM_NAME: str = "default"
 # Timeout for query tasks.
 QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
 
-# Default Cache-Control TTL value for /suggest endpoint requests
-DEFAULT_CACHE_CONTROL_TTL = settings.runtime.default_suggestions_request_ttl_sec
+# Default Cache-Control TTL value for /suggest endpoint responses
+DEFAULT_CACHE_CONTROL_TTL: int = settings.runtime.default_suggestions_response_ttl_sec
 
 # Client Variant Maximum - used to limit the number of
 # possible client variants for experiments.
@@ -206,12 +206,12 @@ async def suggest(
         else [],
     )
 
-    # response headers for cache-control directive
-    response_headers: dict[str, str] = {}
+    # response headers
+    response_headers = {}
 
-    ttl = get_ttl_for_cache_control_header(search_from, suggestions)
-    if ttl is not None:
-        response_headers["Cache-control"] = f"private, max-age={ttl}"
+    # could be specific or default
+    ttl = get_ttl_for_cache_control_header_for_suggestions(search_from, suggestions)
+    response_headers["Cache-control"] = f"private, max-age={ttl}"
 
     return JSONResponse(
         content=jsonable_encoder(response, exclude_none=True),
@@ -238,11 +238,11 @@ def emit_suggestions_per_metrics(
         )
 
 
-def get_ttl_for_cache_control_header(
+def get_ttl_for_cache_control_header_for_suggestions(
     request_providers: list[BaseProvider], suggestions: list[BaseSuggestion]
-) -> int | None:
+) -> int:
     """Retrieve the TTL value for the Cache-Control header based on provider and suggestions
-    type
+    type. Return the default suggestions response ttl sec otherwise.
     """
     match request_providers:
         case [WeatherProvider()]:
@@ -257,15 +257,13 @@ def get_ttl_for_cache_control_header(
                     ) as suggestion
                 ]:
                     delattr(suggestion, "custom_details")
-                    # return the weather report ttl if found, otherwise return the default
-                    # request ttl
-                    return ttl if ttl is not None else DEFAULT_CACHE_CONTROL_TTL
+                    return ttl or DEFAULT_CACHE_CONTROL_TTL
                 case _:
                     # can add a use case for some other type of suggestion
-                    return None
+                    return DEFAULT_CACHE_CONTROL_TTL
         case _:
             # can add a use case for some other type of provider
-            return None
+            return DEFAULT_CACHE_CONTROL_TTL
 
 
 @router.get(
