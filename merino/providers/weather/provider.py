@@ -8,6 +8,7 @@ import aiodogstatsd
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.custom_details import CustomDetails, WeatherDetails
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -72,6 +73,7 @@ class Provider(BaseProvider):
 
         if weather_report is None:
             return []
+
         return [
             Suggestion(
                 title=f"Weather for {weather_report.city_name}",
@@ -83,6 +85,9 @@ class Provider(BaseProvider):
                 city_name=weather_report.city_name,
                 current_conditions=weather_report.current_conditions,
                 forecast=weather_report.forecast,
+                custom_details=CustomDetails(
+                    weather=WeatherDetails(weather_report_ttl=weather_report.ttl)
+                ),
             )
         ]
 

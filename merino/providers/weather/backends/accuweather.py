@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 from enum import Enum
-from typing import Any, Callable, NamedTuple
+from typing import Any, Callable, NamedTuple, cast
 
 import aiodogstatsd
 from dateutil import parser
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
 PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
 
-# The Lua script to fetch the location key, current condition, and forecast for
+# The Lua script to fetch the location key, current condition, forecast, and a TTL for
 # a given country/postal code.
 #
 # Note:
@@ -46,6 +46,10 @@ PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
 #     `[location_key, current_condition, forecast]`. The last two element can be `nil`
 #     if they are not present in the cache
 #   - If the location key is missing, it will return an empty array
+#   - TTL values are all integer type. Could be one of -2, -1, or a non-negative non-zero
+#     integer. The TTL returned is the smaller one of the two TTLs; current conditions and
+#     forecast. We are explicitly returning the -2 and -1 as a TTL value since those represent
+#     error values. See official Redis TTL docs for more info.
 LUA_SCRIPT_CACHE_BULK_FETCH: str = """
     local location_key = redis.call("GET", KEYS[1])
 
@@ -60,7 +64,19 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
     local current_conditions = redis.call("GET", condition_key)
     local forecast = redis.call("GET", forecast_key)
 
-    return {location_key, current_conditions, forecast}
+    local current_conditions_ttl = redis.call("TTL", condition_key)
+    local forecast_ttl = redis.call("TTL", forecast_key)
+    local ttl
+
+    if current_conditions_ttl == -2 or forecast_ttl == -2 then
+        ttl =  -2
+    elseif current_conditions_ttl == -1 or forecast_ttl == -1 then
+        ttl = -1
+    else
+        ttl = math.min(current_conditions_ttl, forecast_ttl)
+    end
+
+    return {location_key, current_conditions, forecast, ttl}
 """
 SCRIPT_ID: str = "bulk_fetch"
 
@@ -77,11 +93,26 @@ class AccuweatherLocation(BaseModel):
 
 
 class WeatherData(NamedTuple):
-    """The triplet for weather data used internally."""
+    """The quartet for weather data used internally."""
 
     location: AccuweatherLocation | None = None
     current_conditions: CurrentConditions | None = None
     forecast: Forecast | None = None
+    ttl: int | None = None
+
+
+class CurrentConditionsWithTTL(NamedTuple):
+    """CurrentConditions and its TTL value that is used to build a WeatherReport instance"""
+
+    current_conditions: CurrentConditions
+    ttl: int
+
+
+class ForecastWithTTL(NamedTuple):
+    """Forecast and its TTL value that is used to build a WeatherReport instance"""
+
+    forecast: Forecast
+    ttl: int
 
 
 class AccuweatherError(BackendError):
@@ -207,7 +238,7 @@ class AccuweatherBackend:
         then actually make the call if there's a cache miss.
         """
         cache_key = self.cache_key_for_accuweather_request(url_path, params)
-        response_dict: dict[str, str] | None
+        response_dict: dict[str, Any] | None
 
         # The top level path in the URL gives us a good enough idea of what type of request
         # we are calling from here.
@@ -225,9 +256,11 @@ class AccuweatherBackend:
 
         response_expiry: str = response.headers.get("Expires")
         try:
-            await self.store_request_into_cache(
+            cached_request_ttl = await self.store_request_into_cache(
                 cache_key, response_dict, response_expiry, cache_ttl_sec
             )
+            # add the ttl of the just cached request to the response dict we return
+            response_dict["cached_request_ttl"] = cached_request_ttl
         except (CacheAdapterError, ValueError) as exc:
             logger.error(f"Error with storing Accuweather to cache: {exc}")
             error_type = (
@@ -246,9 +279,9 @@ class AccuweatherBackend:
         response_dict: dict[str, Any],
         response_expiry: str,
         cache_ttl_sec: int,
-    ):
+    ) -> int:
         """Store the request into cache. Also ensures that the cache ttl is
-        at least `cached_ttl_sec`.
+        at least `cached_ttl_sec`. Returns the cached request's ttl in seconds.
         """
         with self.metrics_client.timeit("accuweather.cache.store"):
             expiry_delta: datetime.timedelta = parser.parse(
@@ -259,6 +292,8 @@ class AccuweatherBackend:
             )
             cache_value = json.dumps(response_dict).encode("utf-8")
             await self.cache.set(cache_key, cache_value, ttl=cache_ttl)
+
+        return cache_ttl.seconds
 
     def emit_cache_fetch_metrics(self, cached_data: list[bytes | None]) -> None:
         """Emit cache fetch metrics.
@@ -271,7 +306,9 @@ class AccuweatherBackend:
         match cached_data:
             case []:
                 pass
-            case [location_cached, current_cached, forecast_cached]:
+            # the last variable is ttl but is omitted here since we don't need to use but need
+            # it to satisfy this match case
+            case [location_cached, current_cached, forecast_cached, _]:
                 location, current, forecast = (
                     location_cached is not None,
                     current_cached is not None,
@@ -303,16 +340,17 @@ class AccuweatherBackend:
 
         Params:
             - `cached_data` {list[bytes]} A list of bytes for location_key,
-              current_conditions, forecast
+              current_conditions, forecast, ttl
         """
         if len(cached_data) == 0:
             return WeatherData()
 
-        location_cached, current_cached, forecast_cached = cached_data
+        location_cached, current_cached, forecast_cached, ttl_cached = cached_data
 
         location: AccuweatherLocation | None = None
         current_conditions: CurrentConditions | None = None
         forecast: Forecast | None = None
+        ttl: int | None = None
 
         try:
             if location_cached is not None:
@@ -323,11 +361,16 @@ class AccuweatherBackend:
                 )
             if forecast_cached is not None:
                 forecast = Forecast.model_validate_json(forecast_cached)
+            if ttl_cached is not None:
+                # redis returns the TTL value as an integer, however, we are explicitly casting
+                # the value returned from the cache since it's received as bytes as the method
+                # argument. This satisfies the type checker.
+                ttl = cast(int, ttl_cached)
         except ValidationError as exc:
             logger.error(f"Failed to load weather report data from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.data.error")
 
-        return WeatherData(location, current_conditions, forecast)
+        return WeatherData(location, current_conditions, forecast, ttl)
 
     def get_location_key_query_params(self, postal_code: str) -> dict[str, str]:
         """Get the query parameters for the location key for a given postal code."""
@@ -401,14 +444,21 @@ class AccuweatherBackend:
             """Wrap a non-awaitable value into a coroutine and resolve it right away."""
             return val
 
-        location, current_conditions, forecast = cached_report
+        location, current_conditions, forecast, ttl = cached_report
+
+        # validate the integer value of the TTL received from the cache. log a warning if there was
+        # an error getting the ttl from the cache
+        if ttl_error_message := get_ttl_error_message(ttl):
+            logger.warning(ttl_error_message)
 
         if location and current_conditions and forecast:
-            # Everything is ready, just return them.
+            # Return the weather report with the values returned from the cache.
+            # `ttl` here could be the cached ttl value or None.
             return WeatherReport(
                 city_name=location.localized_name,
                 current_conditions=current_conditions,
                 forecast=forecast,
+                ttl=ttl,
             )
 
         # The cached report is incomplete, now fetching from AccuWeather.
@@ -431,18 +481,25 @@ class AccuweatherBackend:
         except ExceptionGroup as e:
             raise AccuweatherError(f"Failed to fetch weather report: {e.exceptions}")
 
-        current_conditions = await task_current
-        forecast = await task_forecast
+        if (current_conditions_response := await task_current) is not None and (
+            forecast_response := await task_forecast
+        ):
+            current_conditions, current_conditions_ttl = current_conditions_response
+            forecast, forecast_ttl = forecast_response
+            weather_report_ttl = min(current_conditions_ttl, forecast_ttl)
 
-        return (
-            WeatherReport(
-                city_name=location.localized_name,
-                current_conditions=current_conditions,
-                forecast=forecast,
+            return (
+                WeatherReport(
+                    city_name=location.localized_name,
+                    current_conditions=current_conditions,
+                    forecast=forecast,
+                    ttl=weather_report_ttl,
+                )
+                if current_conditions is not None and forecast is not None
+                else None
             )
-            if current_conditions and forecast
-            else None
-        )
+        else:
+            return None
 
     async def get_location(
         self, country: str, postal_code: str
@@ -469,7 +526,7 @@ class AccuweatherBackend:
 
     async def get_current_conditions(
         self, location_key: str
-    ) -> CurrentConditions | None:
+    ) -> CurrentConditionsWithTTL | None:
         """Return current conditions data for a specific location or None if current
         conditions data is not found.
 
@@ -491,17 +548,20 @@ class AccuweatherBackend:
             raise AccuweatherError("Unexpected current conditions response") from error
 
         return (
-            CurrentConditions(
-                url=response["url"],
-                summary=response["summary"],
-                icon_id=response["icon_id"],
-                temperature=Temperature(**response["temperature"]),
+            CurrentConditionsWithTTL(
+                current_conditions=CurrentConditions(
+                    url=response["url"],
+                    summary=response["summary"],
+                    icon_id=response["icon_id"],
+                    temperature=Temperature(**response["temperature"]),
+                ),
+                ttl=response["cached_request_ttl"],
             )
             if response
             else None
         )
 
-    async def get_forecast(self, location_key: str) -> Forecast | None:
+    async def get_forecast(self, location_key: str) -> ForecastWithTTL | None:
         """Return daily forecast data for a specific location or None if daily
         forecast data is not found.
 
@@ -523,11 +583,14 @@ class AccuweatherBackend:
             raise AccuweatherError("Unexpected forecast response") from error
 
         return (
-            Forecast(
-                url=response["url"],
-                summary=response["summary"],
-                high=Temperature(**response["high"]),
-                low=Temperature(**response["low"]),
+            ForecastWithTTL(
+                forecast=Forecast(
+                    url=response["url"],
+                    summary=response["summary"],
+                    high=Temperature(**response["high"]),
+                    low=Temperature(**response["low"]),
+                ),
+                ttl=response["cached_request_ttl"],
             )
             if response
             else None
@@ -649,3 +712,20 @@ def process_forecast_response(response: Any) -> dict[str, Any] | None:
             }
         case _:
             return None
+
+
+def get_ttl_error_message(ttl: int | None) -> str | None:
+    """Get the error message based on the TTL value received from the cache. These are defined
+    according to Redis TTL docs. -1 if the key exists but has no associated expiration. -2 if
+    the key does not exist.
+    """
+    if isinstance(ttl, int) and ttl >= 0:
+        return None
+
+    ttl_errors = {
+        None: "Error getting TTL. No TTL value returned from cache.",
+        -1: "Error getting TTL. Key does not have associated expiration.",
+        -2: "Error getting TTL. Key does not exist, using default ttl.",
+    }
+
+    return ttl_errors.get(ttl)
