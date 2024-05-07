@@ -31,8 +31,6 @@ from tests.integration.api.types import RequestSummaryLogDataFixture
 from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
 
-DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC = 300
-
 
 @pytest.fixture(name="backend_mock")
 def fixture_backend_mock(mocker: MockerFixture) -> Any:
@@ -83,7 +81,6 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
             high=Temperature(c=-1.7, f=29.0),
             low=Temperature(c=-7.8, f=18.0),
         ),
-        ttl=500,
     )
     expected_suggestion: list[Suggestion] = [
         Suggestion(
@@ -106,7 +103,6 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
     response = client.get("/api/v1/suggest?q=weather")
 
     assert response.status_code == 200
-    assert response.headers["Cache-Control"] == "private, max-age=500"
     result = response.json()
     assert expected_suggestion == TypeAdapter(list[Suggestion]).validate_python(
         result["suggestions"]
@@ -123,10 +119,6 @@ def test_suggest_without_weather_report(client: TestClient, backend_mock: Any) -
     response = client.get("/api/v1/suggest?q=weather")
 
     assert response.status_code == 200
-    assert (
-        response.headers["Cache-Control"]
-        == f"private, max-age={DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC}"
-    )
     result = response.json()
     assert result["suggestions"] == expected_suggestion
 

@@ -15,7 +15,6 @@ from merino.config import settings
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseSuggestion, SuggestionRequest
-from merino.providers.custom_details import CustomDetails, WeatherDetails
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -25,8 +24,6 @@ from merino.providers.weather.backends.protocol import (
 )
 from merino.providers.weather.provider import Provider, Suggestion
 from tests.types import FilterCaplogFixture
-
-TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC = 300
 
 
 @pytest.fixture(name="geolocation")
@@ -94,7 +91,6 @@ async def test_query_weather_report_returned(
             high=Temperature(c=21.1, f=70.0),
             low=Temperature(c=13.9, f=57.0),
         ),
-        ttl=TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
     )
     expected_suggestions: list[Suggestion] = [
         Suggestion(
@@ -110,9 +106,6 @@ async def test_query_weather_report_returned(
             city_name=report.city_name,
             current_conditions=report.current_conditions,
             forecast=report.forecast,
-            custom_details=CustomDetails(
-                weather=WeatherDetails(weather_report_ttl=report.ttl)
-            ),
         )
     ]
     backend_mock.get_weather_report.return_value = report

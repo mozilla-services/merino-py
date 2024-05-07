@@ -33,7 +33,7 @@ class CacheAdapter(Protocol):
         ...
 
     def register_script(self, sid: str, script: str) -> None:  # pragma: no cover
-        """Register a Lua script in Redis. Register multiple scripts using the same `sid`
+        """Register a Lua script in Redis. Regist multiple scripts using the same `sid`
         will overwrite the previous ones.
 
         Params:

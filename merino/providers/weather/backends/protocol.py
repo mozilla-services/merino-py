@@ -50,7 +50,6 @@ class WeatherReport(BaseModel):
     city_name: str
     current_conditions: CurrentConditions
     forecast: Forecast
-    ttl: int | None
 
 
 class WeatherBackend(Protocol):
