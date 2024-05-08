@@ -257,7 +257,7 @@ def get_ttl_for_cache_control_header_for_suggestions(
                     ) as suggestion
                 ]:
                     delattr(suggestion, "custom_details")
-                    return ttl or DEFAULT_CACHE_CONTROL_TTL
+                    return ttl
                 case _:
                     # can add a use case for some other type of suggestion
                     return DEFAULT_CACHE_CONTROL_TTL

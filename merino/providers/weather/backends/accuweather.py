@@ -451,7 +451,7 @@ class AccuweatherBackend:
         if ttl_error_message := get_ttl_error_message(ttl):
             logger.warning(ttl_error_message)
 
-        if location and current_conditions and forecast:
+        if location and current_conditions and forecast and ttl:
             # Return the weather report with the values returned from the cache.
             # `ttl` here could be the cached ttl value or None.
             return WeatherReport(

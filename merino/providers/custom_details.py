@@ -21,7 +21,7 @@ class GeolocationDetails(BaseModel):
 class WeatherDetails(BaseModel):
     """Weather specific fields."""
 
-    weather_report_ttl: int | None = None
+    weather_report_ttl: int
 
 
 class CustomDetails(BaseModel, arbitrary_types_allowed=False):
