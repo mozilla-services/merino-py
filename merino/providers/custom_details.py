@@ -18,6 +18,12 @@ class GeolocationDetails(BaseModel):
     city: str | None = None
 
 
+class WeatherDetails(BaseModel):
+    """Weather specific fields."""
+
+    weather_report_ttl: int | None = None
+
+
 class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     """Contain references to custom fields for each provider.
     This object uses the provider name as the key, and references custom schema models.
@@ -26,3 +32,4 @@ class CustomDetails(BaseModel, arbitrary_types_allowed=False):
 
     amo: AmoDetails | None = None
     geolocation: GeolocationDetails | None = None
+    weather: WeatherDetails | None = None

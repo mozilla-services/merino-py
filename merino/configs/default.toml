@@ -39,6 +39,9 @@ query_timeout_sec = 0.2
 # Prevents a provider from being instantiated.
 disabled_providers = []
 
+# MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
+default_suggestions_response_ttl_sec = 300 # 5 mins
+
 
 [default.logging]
 # MERINO_LOGGING__LEVEL
