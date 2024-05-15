@@ -262,6 +262,10 @@ url_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
 # Note that this is the name of the partner code parameter, not the partner code itself.
 url_param_partner_code = "partner"
 
+# MERINO_ACCUWEATHER__URL_LOCATION_COMPLETION_PATH
+# The url path for accuweather locations autocomplete.
+url_location_completion_path = "/locations/v1/{country_code}/autocomplete.json"
+
 # MERINO_ACCUWEATHER__URL_POSTALCODES_PATH
 # The URL path for postal codes.
 url_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"

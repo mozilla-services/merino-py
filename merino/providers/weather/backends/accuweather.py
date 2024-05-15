@@ -126,6 +126,13 @@ class WeatherDataType(Enum):
     FORECAST = 2
 
 
+# TODO add class to return location completion response
+class LocationCompletion(NamedTuple):
+    """TODO comment"""
+
+    locations: list[dict[str, Any]]
+
+
 class AccuweatherBackend:
     """Backend that connects to the AccuWeather API."""
 
@@ -140,6 +147,7 @@ class AccuweatherBackend:
     url_postalcodes_param_query: str
     url_current_conditions_path: str
     url_forecasts_path: str
+    url_location_completion_path: str
     url_location_key_placeholder: str
     http_client: AsyncClient
 
@@ -157,6 +165,7 @@ class AccuweatherBackend:
         url_postalcodes_param_query: str,
         url_current_conditions_path: str,
         url_forecasts_path: str,
+        url_location_completion_path: str,
         url_location_key_placeholder: str,
     ) -> None:
         """Initialize the AccuWeather backend.
@@ -191,6 +200,8 @@ class AccuweatherBackend:
         self.url_postalcodes_param_query = url_postalcodes_param_query
         self.url_current_conditions_path = url_current_conditions_path
         self.url_forecasts_path = url_forecasts_path
+        # TODO add location completion url path
+        self.url_location_completion_path = url_location_completion_path
         self.url_location_key_placeholder = url_location_key_placeholder
 
     def cache_key_for_accuweather_request(
@@ -604,6 +615,29 @@ class AccuweatherBackend:
             if response
             else None
         )
+
+    # TODO add return type
+    async def get_location_completion(self, geolocation: Location, search_term: str):
+        # TODO check the cache first
+
+
+        response = await self.get_request(
+            self.url_location_completion_path.format(country_code=geolocation.country),
+            params={
+                "q": search_term,
+                "language": "en-us",
+                self.url_param_api_key: self.api_key,
+            },
+            process_api_response=process_location_completion_response,
+            cache_ttl_sec=3600,  # TODO  cache ttl for this request,
+        )
+
+        # TODO remove
+        print(f"\n***** Response *****")
+        print(f"{response}")
+
+        # TODO return response
+        # return LocationCompletion()
 
     async def shutdown(self) -> None:
         """Close out the cache during shutdown."""
@@ -1109,6 +1143,16 @@ def add_partner_code(
         return str(parsed_url.copy_add_param(url_param_id, partner_code))
     except InvalidURL:  # pragma: no cover
         return url
+
+
+def process_location_completion_response(response: Any) -> dict[str, Any]:
+    """TODO add comment"""
+    result = [
+        {"Key": location["Key"], "LocalizedName": location["LocalizedName"]}
+        for location in response
+    ]
+
+    return {"locations": result}
 
 
 def process_location_response(response: Any) -> dict[str, Any] | None:

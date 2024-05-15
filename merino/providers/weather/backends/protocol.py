@@ -53,6 +53,10 @@ class WeatherReport(BaseModel):
     ttl: int
 
 
+class LocationCompletion(BaseModel):
+    """TODO add stuff here"""
+
+
 class WeatherBackend(Protocol):
     """Protocol for a weather backend that this provider depends on.
 
@@ -66,6 +70,16 @@ class WeatherBackend(Protocol):
     ) -> WeatherReport | None:  # pragma: no cover
         """Get weather information from partner.
 
+        Raises:
+            BackendError: Category of error specific to provider backends.
+        """
+        ...
+
+    # TODO add return type of LocationCompletion
+    async def get_location_completion(
+        self, geolocation: Location, search_term: str
+    ):  # pragma: no cover
+        """TODO
         Raises:
             BackendError: Category of error specific to provider backends.
         """

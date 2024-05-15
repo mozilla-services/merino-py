@@ -9,6 +9,7 @@ from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import CustomDetails, WeatherDetails
+from merino.providers.weather.backends.accuweather import LocationCompletion
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -25,6 +26,9 @@ class Suggestion(BaseSuggestion):
     city_name: str
     current_conditions: CurrentConditions
     forecast: Forecast
+
+
+# TODO create location completion suggestion class
 
 
 class Provider(BaseProvider):
@@ -63,16 +67,25 @@ class Provider(BaseProvider):
         """Provide weather suggestions."""
         geolocation: Location = srequest.geolocation
         weather_report: WeatherReport | None = None
+        location_completion: LocationCompletion | None = None
+        is_location_completion_request = srequest.request_type == "location"
 
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
-                weather_report = await self.backend.get_weather_report(geolocation)
+                if is_location_completion_request:
+                    location_completion = await self.backend.get_location_completion(
+                        geolocation, search_term=srequest.query
+                    )
+                else:
+                    weather_report = await self.backend.get_weather_report(geolocation)
 
         except BackendError as backend_error:
             logger.warning(backend_error)
 
         if weather_report is None:
             return []
+
+        # TODO build suggestion based on weather or location
 
         return [
             Suggestion(
