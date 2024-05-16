@@ -79,7 +79,7 @@ async def test_query_weather_report_returned(
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "http://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/current-weather/39376_pc?lang=en-us"
+                "94103/current-weather/39376?lang=en-us"
             ),
             summary="Mostly cloudy",
             icon_id=6,
@@ -88,7 +88,7 @@ async def test_query_weather_report_returned(
         forecast=Forecast(
             url=HttpUrl(
                 "http://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/daily-weather-forecast/39376_pc?lang=en-us"
+                "94103/daily-weather-forecast/39376?lang=en-us"
             ),
             summary="Pleasant Saturday",
             high=Temperature(c=21.1, f=70.0),
@@ -101,7 +101,7 @@ async def test_query_weather_report_returned(
             title="Weather for San Francisco",
             url=HttpUrl(
                 "http://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/current-weather/39376_pc?lang=en-us"
+                "94103/current-weather/39376?lang=en-us"
             ),
             provider="weather",
             is_sponsored=False,
