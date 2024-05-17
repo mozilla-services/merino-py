@@ -20,6 +20,7 @@ from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    LocationCompletion,
     Temperature,
     WeatherReport,
 )
@@ -124,13 +125,6 @@ class WeatherDataType(Enum):
 
     CURRENT_CONDITIONS = 1
     FORECAST = 2
-
-
-# TODO add class to return location completion response
-class LocationCompletion(NamedTuple):
-    """TODO comment"""
-
-    locations: list[dict[str, Any]]
 
 
 class AccuweatherBackend:
@@ -616,28 +610,48 @@ class AccuweatherBackend:
             else None
         )
 
-    # TODO add return type
-    async def get_location_completion(self, geolocation: Location, search_term: str):
-        # TODO check the cache first
+    async def get_location_completion(
+        self, geolocation: Location, search_term: str
+    ) -> list[LocationCompletion] | None:
+        """Fetch a list of locations from the Accuweather API given a search term and location."""
 
-
-        response = await self.get_request(
-            self.url_location_completion_path.format(country_code=geolocation.country),
-            params={
-                "q": search_term,
-                "language": "en-us",
-                self.url_param_api_key: self.api_key,
-            },
-            process_api_response=process_location_completion_response,
-            cache_ttl_sec=3600,  # TODO  cache ttl for this request,
+        url_path = self.url_location_completion_path.format(
+            country_code=geolocation.country
         )
+        params = {
+            "q": search_term,
+            "language": "en-us",
+            self.url_param_api_key: self.api_key,
+        }
 
-        # TODO remove
-        print(f"\n***** Response *****")
-        print(f"{response}")
+        request_type: str = url_path.strip("/").split("/", 1)[0]
 
-        # TODO return response
-        # return LocationCompletion()
+        with self.metrics_client.timeit(f"accuweather.request.{request_type}.get"):
+            response: Response = await self.http_client.get(url_path, params=params)
+            response.raise_for_status()
+
+        processed_location_completions = process_location_completion_response(
+            response.json()
+        )["locations"]
+
+        location_completions = [
+            LocationCompletion(**item) for item in processed_location_completions
+        ]
+
+        return location_completions
+
+        # response = await self.get_request(
+        #     self.url_location_completion_path.format(country_code=geolocation.country),
+        #     params={
+        #         "q": search_term,
+        #         "language": "en-us",
+        #         self.url_param_api_key: self.api_key,
+        #     },
+        #     process_api_response=process_location_completion_response,
+        #     cache_ttl_sec=0,
+        # )
+        #
+        # return response["locations"] if response else None
 
     async def shutdown(self) -> None:
         """Close out the cache during shutdown."""
@@ -1146,9 +1160,13 @@ def add_partner_code(
 
 
 def process_location_completion_response(response: Any) -> dict[str, Any]:
-    """TODO add comment"""
+    """Process the API response for location completion request."""
     result = [
-        {"Key": location["Key"], "LocalizedName": location["LocalizedName"]}
+        {
+            "key": location["Key"],
+            "localized_name": location["LocalizedName"],
+            "country": location["Country"]["LocalizedName"],
+        }
         for location in response
     ]
 

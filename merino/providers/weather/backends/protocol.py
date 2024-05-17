@@ -54,7 +54,11 @@ class WeatherReport(BaseModel):
 
 
 class LocationCompletion(BaseModel):
-    """TODO add stuff here"""
+    """Model for location completion."""
+
+    key: str
+    localized_name: str
+    country: str
 
 
 class WeatherBackend(Protocol):
@@ -75,11 +79,10 @@ class WeatherBackend(Protocol):
         """
         ...
 
-    # TODO add return type of LocationCompletion
     async def get_location_completion(
         self, geolocation: Location, search_term: str
-    ):  # pragma: no cover
-        """TODO
+    ) -> list[LocationCompletion] | None:  # pragma: no cover
+        """Get a list of locations (cities and country) from partner
         Raises:
             BackendError: Category of error specific to provider backends.
         """

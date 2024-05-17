@@ -92,7 +92,10 @@ async def suggest(
         value to the `providers` parameter will return suggestions from the default providers.
         You can then pass other providers that are not enabled after `default`,
         allowing for customization of the suggestion request.
-    - `request_type`: [Optional] TODO add comment
+    - `request_type`: [Optional] For AccuWeather provider, the request type should be either a
+        "location" or "weather" string. For "location" it will get location completion
+        suggestion. For "weather" it will return weather suggestions. If omitted, it defaults
+        to weather suggestions.
 
     **Headers:**
 
