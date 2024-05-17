@@ -13,7 +13,7 @@ class SuggestionRequest(BaseModel):
 
     query: str
     geolocation: Location
-    request_type: str | None = None
+    is_location_completion_request: bool = False
 
 
 class BaseSuggestion(BaseModel):

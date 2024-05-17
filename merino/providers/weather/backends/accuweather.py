@@ -80,6 +80,7 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
     return {location_key, current_conditions, forecast, ttl}
 """
 SCRIPT_ID: str = "bulk_fetch"
+LOCATION_COMPLETION_REQUEST_TYPE: str = "autocomplete"
 
 
 class AccuweatherLocation(BaseModel):
@@ -194,7 +195,6 @@ class AccuweatherBackend:
         self.url_postalcodes_param_query = url_postalcodes_param_query
         self.url_current_conditions_path = url_current_conditions_path
         self.url_forecasts_path = url_forecasts_path
-        # TODO add location completion url path
         self.url_location_completion_path = url_location_completion_path
         self.url_location_key_placeholder = url_location_key_placeholder
 
@@ -624,34 +624,21 @@ class AccuweatherBackend:
             self.url_param_api_key: self.api_key,
         }
 
-        request_type: str = url_path.strip("/").split("/", 1)[0]
-
-        with self.metrics_client.timeit(f"accuweather.request.{request_type}.get"):
+        with self.metrics_client.timeit(
+            f"accuweather.request." f"{LOCATION_COMPLETION_REQUEST_TYPE}.get"
+        ):
             response: Response = await self.http_client.get(url_path, params=params)
             response.raise_for_status()
 
         processed_location_completions = process_location_completion_response(
             response.json()
-        )["locations"]
+        )
 
         location_completions = [
             LocationCompletion(**item) for item in processed_location_completions
         ]
 
         return location_completions
-
-        # response = await self.get_request(
-        #     self.url_location_completion_path.format(country_code=geolocation.country),
-        #     params={
-        #         "q": search_term,
-        #         "language": "en-us",
-        #         self.url_param_api_key: self.api_key,
-        #     },
-        #     process_api_response=process_location_completion_response,
-        #     cache_ttl_sec=0,
-        # )
-        #
-        # return response["locations"] if response else None
 
     async def shutdown(self) -> None:
         """Close out the cache during shutdown."""
@@ -1159,9 +1146,9 @@ def add_partner_code(
         return url
 
 
-def process_location_completion_response(response: Any) -> dict[str, Any]:
+def process_location_completion_response(response: Any) -> list[dict[str, Any]]:
     """Process the API response for location completion request."""
-    result = [
+    return [
         {
             "key": location["Key"],
             "localized_name": location["LocalizedName"],
@@ -1169,8 +1156,6 @@ def process_location_completion_response(response: Any) -> dict[str, Any]:
         }
         for location in response
     ]
-
-    return {"locations": result}
 
 
 def process_location_response(response: Any) -> dict[str, Any] | None:

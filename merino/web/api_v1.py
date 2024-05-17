@@ -4,6 +4,7 @@ from asyncio import Task
 from collections import Counter
 from functools import partial
 from itertools import chain
+from typing import Annotated
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Query
@@ -64,7 +65,7 @@ async def suggest(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
-    request_type: str | None = None,
+    request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
 ) -> JSONResponse:
     """Query Merino for suggestions.
 
@@ -171,7 +172,7 @@ async def suggest(
         srequest = SuggestionRequest(
             query=p.normalize_query(q),
             geolocation=request.scope[ScopeKey.GEOLOCATION],
-            request_type=request_type,
+            is_location_completion_request=request_type == "location",
         )
         task = metrics_client.timeit_task(
             p.query(srequest), f"providers.{p.name}.query"

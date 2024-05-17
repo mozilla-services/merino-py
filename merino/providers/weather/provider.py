@@ -73,13 +73,12 @@ class Provider(BaseProvider):
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide weather suggestions."""
         geolocation: Location = srequest.geolocation
-        is_location_completion_request = srequest.request_type == "location"
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
 
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
-                if is_location_completion_request:
+                if srequest.is_location_completion_request:
                     location_completions = await self.backend.get_location_completion(
                         geolocation, search_term=srequest.query
                     )
@@ -99,7 +98,7 @@ class Provider(BaseProvider):
 
     def build_suggestion(
         self, data: WeatherReport | list[LocationCompletion]
-    ) -> BaseSuggestion:
+    ) -> Suggestion | LocationCompletionSuggestion:
         """Build either a weather suggestion or a location completion suggestion."""
         if isinstance(data, WeatherReport):
             return Suggestion(
