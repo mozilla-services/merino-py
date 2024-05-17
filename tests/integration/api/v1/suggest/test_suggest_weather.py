@@ -21,11 +21,16 @@ from merino.exceptions import BackendError
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    LocationCompletion,
     Temperature,
     WeatherBackend,
     WeatherReport,
 )
-from merino.providers.weather.provider import Provider, Suggestion
+from merino.providers.weather.provider import (
+    LocationCompletionSuggestion,
+    Provider,
+    Suggestion,
+)
 from merino.utils.log_data_creators import RequestSummaryLogDataModel
 from tests.integration.api.types import RequestSummaryLogDataFixture
 from tests.integration.api.v1.types import Providers
@@ -54,6 +59,103 @@ def fixture_providers(backend_mock: Any, statsd_mock: Any) -> Providers:
             enabled_by_default=True,
         )
     }
+
+
+@pytest.fixture(name="location_completion_sample_cities")
+def fixture_location_completion_sample_cities() -> list[dict[str, Any]]:
+    """Create a list of sample location completions for the search term 'new'"""
+    return [
+        {
+            "Version": 1,
+            "Key": "349727",
+            "Type": "City",
+            "Rank": 15,
+            "LocalizedName": "New York",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "NY", "LocalizedName": "New York"},
+        },
+        {
+            "Version": 1,
+            "Key": "348585",
+            "Type": "City",
+            "Rank": 35,
+            "LocalizedName": "New Orleans",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "LA", "LocalizedName": "Louisiana"},
+        },
+        {
+            "Version": 1,
+            "Key": "349530",
+            "Type": "City",
+            "Rank": 35,
+            "LocalizedName": "Newark",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "NJ", "LocalizedName": "New Jersey"},
+        },
+        {
+            "Version": 1,
+            "Key": "331967",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "Newport Beach",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "CA", "LocalizedName": "California"},
+        },
+        {
+            "Version": 1,
+            "Key": "327357",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "New Haven",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "CT", "LocalizedName": "Connecticut"},
+        },
+        {
+            "Version": 1,
+            "Key": "333575",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "New Bedford",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "MA", "LocalizedName": "Massachusetts"},
+        },
+        {
+            "Version": 1,
+            "Key": "338640",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "Newton",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "MA", "LocalizedName": "Massachusetts"},
+        },
+        {
+            "Version": 1,
+            "Key": "339713",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "New Rochelle",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "NY", "LocalizedName": "New York"},
+        },
+        {
+            "Version": 1,
+            "Key": "336210",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "Newport News",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "VA", "LocalizedName": "Virginia"},
+        },
+        {
+            "Version": 1,
+            "Key": "2626691",
+            "Type": "City",
+            "Rank": 55,
+            "LocalizedName": "Near Eastside",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "IN", "LocalizedName": "Indiana"},
+        },
+    ]
 
 
 def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> None:
@@ -194,3 +296,44 @@ def test_providers_request_log_data_weather(
     record: LogRecord = records[0]
     log_data: RequestSummaryLogDataModel = extract_request_summary_log_data(record)
     assert log_data == expected_log_data
+
+
+def test_suggest_with_location_completion(
+    client: TestClient, backend_mock: Any, location_completion_sample_cities
+) -> None:
+    """Test that the suggest endpoint response is as expected when the Weather provider
+    supplies a location completion.
+    """
+    location_completion: list[LocationCompletion] = [
+        LocationCompletion(
+            key=location["Key"],
+            localized_name=location["LocalizedName"],
+            country=location["Country"]["LocalizedName"],
+        )
+        for location in location_completion_sample_cities
+    ]
+
+    expected_suggestion: list[LocationCompletionSuggestion] = [
+        LocationCompletionSuggestion(
+            title="Location completions",
+            url=HttpUrl(url="https://merino.services.mozilla.com/"),
+            provider="weather",
+            is_sponsored=False,
+            score=0.3,
+            icon=None,
+            locations=location_completion,
+        )
+    ]
+
+    backend_mock.get_location_completion.return_value = location_completion
+
+    response = client.get(
+        url="/api/v1/suggest",
+        params={"q": "new", "providers": "weather", "request_type": "location"},
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert expected_suggestion == TypeAdapter(
+        list[LocationCompletionSuggestion]
+    ).validate_python(result["suggestions"])

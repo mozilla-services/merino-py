@@ -614,7 +614,6 @@ class AccuweatherBackend:
         self, geolocation: Location, search_term: str
     ) -> list[LocationCompletion] | None:
         """Fetch a list of locations from the Accuweather API given a search term and location."""
-
         url_path = self.url_location_completion_path.format(
             country_code=geolocation.country
         )

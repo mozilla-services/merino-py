@@ -172,7 +172,7 @@ async def suggest(
         srequest = SuggestionRequest(
             query=p.normalize_query(q),
             geolocation=request.scope[ScopeKey.GEOLOCATION],
-            is_location_completion_request=request_type == "location",
+            request_type=request_type,
         )
         task = metrics_client.timeit_task(
             p.query(srequest), f"providers.{p.name}.query"
@@ -219,6 +219,8 @@ async def suggest(
     # could be specific or default
     ttl = get_ttl_for_cache_control_header_for_suggestions(search_from, suggestions)
     response_headers["Cache-control"] = f"private, max-age={ttl}"
+
+    print(f"--------------------------> RESPONSE: {response}")
 
     return JSONResponse(
         content=jsonable_encoder(response, exclude_none=True),

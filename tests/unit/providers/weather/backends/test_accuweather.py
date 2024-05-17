@@ -67,8 +67,9 @@ def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
     return mock
 
 
-@pytest.fixture(name="location_completion_test_cities")
-def fixture_location_completion_test_cities() -> list[dict[str, Any]]:
+@pytest.fixture(name="location_completion_sample_cities")
+def fixture_location_completion_sample_cities() -> list[dict[str, Any]]:
+    """Create a list of sample location completions for the search term 'new'"""
     return [
         {
             "Version": 1,
@@ -214,7 +215,7 @@ def fixture_expected_weather_report() -> WeatherReport:
 
 @pytest.fixture(name="expected_location_completion")
 def fixture_expected_location_completion(
-    location_completion_test_cities,
+    location_completion_sample_cities,
 ) -> list[LocationCompletion]:
     """Create a `LocationCompletion` list for assertions"""
     return [
@@ -223,7 +224,7 @@ def fixture_expected_location_completion(
             localized_name=location["LocalizedName"],
             country=location["Country"]["LocalizedName"],
         )
-        for location in location_completion_test_cities
+        for location in location_completion_sample_cities
     ]
 
 
@@ -333,10 +334,10 @@ def fixture_accuweather_location_response() -> bytes:
 
 @pytest.fixture(name="accuweather_location_completion_response")
 def fixture_accuweather_location_completion_response(
-    location_completion_test_cities,
+    location_completion_sample_cities,
 ) -> bytes:
     """Return response content for AccuWeather location autocomplete endpoint."""
-    return json.dumps(location_completion_test_cities).encode("utf-8")
+    return json.dumps(location_completion_sample_cities).encode("utf-8")
 
 
 @pytest.fixture(name="accuweather_cached_location_key")
@@ -1844,7 +1845,7 @@ async def test_get_location_completion(
     """Test that the get_location_completion method returns a list of LocationCompletion."""
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
-    search_term = "ne"
+    search_term = "new"
     client_mock.get.side_effect = [
         Response(
             status_code=200,
