@@ -1866,3 +1866,37 @@ async def test_get_location_completion(
     ] = await accuweather.get_location_completion(geolocation, search_term)
 
     assert location_completions == expected_location_completion
+
+
+@pytest.mark.asyncio
+async def test_get_location_completion_with_empty_search_term(
+    accuweather: AccuweatherBackend,
+    geolocation: Location,
+    accuweather_location_completion_response: bytes,
+) -> None:
+    """Test that the get_location_completion method returns None when the search_term parameter
+    is an empty string.
+    """
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    search_term = ""
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            content=accuweather_location_completion_response,
+            request=Request(
+                method="GET",
+                url=(
+                    f"http://www.accuweather.com/locations/v1/"
+                    f"{geolocation.country}/autocomplete.json?apikey=test&q"
+                    f"={search_term}"
+                ),
+            ),
+        )
+    ]
+
+    location_completions: Optional[
+        list[LocationCompletion]
+    ] = await accuweather.get_location_completion(geolocation, search_term)
+
+    assert location_completions is None

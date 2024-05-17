@@ -337,3 +337,33 @@ def test_suggest_with_location_completion(
     assert expected_suggestion == TypeAdapter(
         list[LocationCompletionSuggestion]
     ).validate_python(result["suggestions"])
+
+
+def test_suggest_with_location_completion_with_empty_search_term(
+    client: TestClient, backend_mock: Any, location_completion_sample_cities
+) -> None:
+    """Test that the suggest endpoint response returns empty location_completion when the q
+    param (search_term) is an empty string
+    """
+    response = client.get(
+        url="/api/v1/suggest",
+        params={"q": "", "providers": "weather", "request_type": "location"},
+    )
+    expected_suggestion = response.json()["suggestions"][0]["locations"]
+
+    assert response.status_code == 200
+    assert expected_suggestion == []
+
+
+def test_suggest_with_location_completion_with_incorrect_request_type_param(
+    client: TestClient, backend_mock: Any, location_completion_sample_cities
+) -> None:
+    """Test that the suggest endpoint response does not return a response when the request_type
+    query param is invalid.
+    """
+    response = client.get(
+        url="/api/v1/suggest",
+        params={"q": "new", "providers": "weather", "request_type": "unsupported"},
+    )
+
+    assert response.status_code == 400
