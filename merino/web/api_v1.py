@@ -220,8 +220,6 @@ async def suggest(
     ttl = get_ttl_for_cache_control_header_for_suggestions(search_from, suggestions)
     response_headers["Cache-control"] = f"private, max-age={ttl}"
 
-    print(f"--------------------------> RESPONSE: {response}")
-
     return JSONResponse(
         content=jsonable_encoder(response, exclude_none=True),
         headers=response_headers,

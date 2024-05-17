@@ -93,9 +93,6 @@ class Provider(BaseProvider):
         if weather_report:
             return [self.build_suggestion(weather_report)]
         if location_completions:
-            print("\n------ PROVIDER")
-            print(f"{location_completions}")
-            print("\n")
             return [self.build_suggestion(location_completions)]
         else:
             return []
