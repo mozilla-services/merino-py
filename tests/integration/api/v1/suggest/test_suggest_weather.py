@@ -22,9 +22,10 @@ from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
     LocationCompletion,
+    LocationCompletionGeoDetails,
     Temperature,
     WeatherBackend,
-    WeatherReport, LocationCompletionGeoDetails,
+    WeatherReport,
 )
 from merino.providers.weather.provider import (
     LocationCompletionSuggestion,

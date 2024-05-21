@@ -1933,7 +1933,8 @@ async def test_get_location_completion_with_no_geolocation_country_code(
             request=Request(
                 method="GET",
                 url=(
-                    f"http://www.accuweather.com/locations/v1/autocomplete.json?apikey=test&q{search_term}"
+                    f"http://www.accuweather.com/locations/v1/autocomplete.json?"
+                    f"apikey=test&q{search_term}"
                 ),
             ),
         )
