@@ -34,6 +34,7 @@ from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
     LocationCompletion,
+    LocationCompletionGeoDetails,
     Temperature,
     WeatherReport,
 )
@@ -221,8 +222,17 @@ def fixture_expected_location_completion(
     return [
         LocationCompletion(
             key=location["Key"],
+            rank=location["Rank"],
+            type=location["Type"],
             localized_name=location["LocalizedName"],
-            country=location["Country"]["LocalizedName"],
+            country=LocationCompletionGeoDetails(
+                id=location["Country"]["ID"],
+                localized_name=location["Country"]["LocalizedName"],
+            ),
+            administrative_area=LocationCompletionGeoDetails(
+                id=location["AdministrativeArea"]["ID"],
+                localized_name=location["AdministrativeArea"]["LocalizedName"],
+            ),
         )
         for location in location_completion_sample_cities
     ]
@@ -1900,3 +1910,37 @@ async def test_get_location_completion_with_empty_search_term(
     ] = await accuweather.get_location_completion(geolocation, search_term)
 
     assert location_completions is None
+
+
+@pytest.mark.asyncio
+async def test_get_location_completion_with_no_geolocation_country_code(
+    accuweather: AccuweatherBackend,
+    expected_location_completion: list[LocationCompletion],
+    geolocation: Location,
+    accuweather_location_completion_response: bytes,
+) -> None:
+    """Test that the get_location_completion method returns a list of LocationCompletion
+    when no geolocation country code is provided.
+    """
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    search_term = "new"
+    geolocation.country = None
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            content=accuweather_location_completion_response,
+            request=Request(
+                method="GET",
+                url=(
+                    f"http://www.accuweather.com/locations/v1/autocomplete.json?apikey=test&q{search_term}"
+                ),
+            ),
+        )
+    ]
+
+    location_completions: Optional[
+        list[LocationCompletion]
+    ] = await accuweather.get_location_completion(geolocation, search_term)
+
+    assert location_completions == expected_location_completion

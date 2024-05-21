@@ -24,7 +24,7 @@ from merino.providers.weather.backends.protocol import (
     LocationCompletion,
     Temperature,
     WeatherBackend,
-    WeatherReport,
+    WeatherReport, LocationCompletionGeoDetails,
 )
 from merino.providers.weather.provider import (
     LocationCompletionSuggestion,
@@ -307,8 +307,17 @@ def test_suggest_with_location_completion(
     location_completion: list[LocationCompletion] = [
         LocationCompletion(
             key=location["Key"],
+            rank=location["Rank"],
+            type=location["Type"],
             localized_name=location["LocalizedName"],
-            country=location["Country"]["LocalizedName"],
+            country=LocationCompletionGeoDetails(
+                id=location["Country"]["ID"],
+                localized_name=location["Country"]["LocalizedName"],
+            ),
+            administrative_area=LocationCompletionGeoDetails(
+                id=location["AdministrativeArea"]["ID"],
+                localized_name=location["AdministrativeArea"]["LocalizedName"],
+            ),
         )
         for location in location_completion_sample_cities
     ]

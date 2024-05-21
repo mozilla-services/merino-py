@@ -617,12 +617,16 @@ class AccuweatherBackend:
         if not search_term:
             return None
 
-        url_path = self.url_location_completion_path.format(
-            country_code=geolocation.country
-        )
+        url_path = self.url_location_completion_path
+
+        # if unable to derive country code from client geolocation, remove it from the url
+        if not geolocation.country:
+            url_path = url_path.replace("/{country_code}", "")
+        else:
+            url_path = url_path.format(country_code=geolocation.country)
+
         params = {
             "q": search_term,
-            "language": "en-us",
             self.url_param_api_key: self.api_key,
         }
 
@@ -1153,8 +1157,17 @@ def process_location_completion_response(response: Any) -> list[dict[str, Any]]:
     return [
         {
             "key": location["Key"],
+            "rank": location["Rank"],
+            "type": location["Type"],
             "localized_name": location["LocalizedName"],
-            "country": location["Country"]["LocalizedName"],
+            "country": {
+                "id": location["Country"]["ID"],
+                "localized_name": location["Country"]["LocalizedName"],
+            },
+            "administrative_area": {
+                "id": location["AdministrativeArea"]["ID"],
+                "localized_name": location["AdministrativeArea"]["LocalizedName"],
+            },
         }
         for location in response
     ]

@@ -26,6 +26,13 @@ class Temperature(BaseModel):
         super().__init__(c=cc, f=ff)
 
 
+class LocationCompletionGeoDetails(BaseModel):
+    """Model for a location completion's country and administrative area attributes."""
+
+    id: str
+    localized_name: str
+
+
 class CurrentConditions(BaseModel):
     """Model for weather current conditions."""
 
@@ -57,8 +64,11 @@ class LocationCompletion(BaseModel):
     """Model for location completion."""
 
     key: str
+    rank: int
+    type: str
     localized_name: str
-    country: str
+    country: LocationCompletionGeoDetails
+    administrative_area: LocationCompletionGeoDetails
 
 
 class WeatherBackend(Protocol):
