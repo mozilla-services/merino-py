@@ -21,7 +21,10 @@ from merino.providers.base import BaseProvider
 from merino.providers.geolocation.provider import Provider as GeolocationProvider
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider as TopPicksProvider
-from merino.providers.weather.backends.accuweather import AccuweatherBackend
+from merino.providers.weather.backends.accuweather import (
+    AccuweatherBackend,
+    AccuweatherCityBackend,
+)
 from merino.providers.weather.backends.fake_backends import FakeWeatherBackend
 from merino.providers.weather.provider import Provider as WeatherProvider
 from merino.providers.wikipedia.backends.elastic import ElasticBackend
@@ -36,6 +39,7 @@ class ProviderType(str, Enum):
     """Enum for provider type."""
 
     ACCUWEATHER = "accuweather"
+    ACCUWEATHER_CITY = "accuweather_city"
     AMO = "amo"
     ADM = "adm"
     GEOLOCATION = "geolocation"
@@ -70,6 +74,38 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     url_param_api_key=settings.accuweather.url_param_api_key,
                     url_postalcodes_path=settings.accuweather.url_postalcodes_path,
                     url_postalcodes_param_query=settings.accuweather.url_postalcodes_param_query,
+                    url_current_conditions_path=settings.accuweather.url_current_conditions_path,
+                    url_forecasts_path=settings.accuweather.url_forecasts_path,
+                    url_location_key_placeholder=settings.accuweather.url_location_key_placeholder,
+                )
+                if setting.backend == "accuweather"
+                else FakeWeatherBackend(),
+                metrics_client=get_metrics_client(),
+                score=setting.score,
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.ACCUWEATHER_CITY:
+            cache = (
+                RedisAdapter(Redis.from_url(settings.redis.server))
+                if setting.cache == "redis"
+                else NoCacheAdapter()
+            )
+            return WeatherProvider(
+                backend=AccuweatherCityBackend(
+                    api_key=settings.accuweather.api_key,
+                    cache=cache,  # type: ignore [arg-type]
+                    cached_location_key_ttl_sec=setting.cache_ttls.location_key_ttl_sec,
+                    cached_current_condition_ttl_sec=setting.cache_ttls.current_condition_ttl_sec,
+                    cached_forecast_ttl_sec=setting.cache_ttls.forecast_ttl_sec,
+                    metrics_client=get_metrics_client(),
+                    http_client=create_http_client(
+                        base_url=settings.accuweather.url_base
+                    ),
+                    url_param_api_key=settings.accuweather.url_param_api_key,
+                    url_cities_path=settings.accuweather.url_cities_path,
+                    url_cities_param_query=settings.accuweather.url_cities_param_query,
                     url_current_conditions_path=settings.accuweather.url_current_conditions_path,
                     url_forecasts_path=settings.accuweather.url_forecasts_path,
                     url_location_key_placeholder=settings.accuweather.url_location_key_placeholder,

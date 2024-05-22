@@ -26,3 +26,6 @@ gcs_bucket = "merino-images-prodpy"
 # Enum of either `remote` or `local` that defines whether domain data
 # is remotely or locally acquired.
 domain_data_source = "local"
+
+[production.providers.accuweather_city]
+cache = "redis"
