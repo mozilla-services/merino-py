@@ -142,7 +142,6 @@ class AccuweatherBackend:
     url_postalcodes_param_query: str
     url_current_conditions_path: str
     url_forecasts_path: str
-    url_location_completion_path: str
     url_location_key_placeholder: str
     http_client: AsyncClient
 
@@ -160,7 +159,6 @@ class AccuweatherBackend:
         url_postalcodes_param_query: str,
         url_current_conditions_path: str,
         url_forecasts_path: str,
-        url_location_completion_path: str,
         url_location_key_placeholder: str,
     ) -> None:
         """Initialize the AccuWeather backend.
@@ -195,7 +193,6 @@ class AccuweatherBackend:
         self.url_postalcodes_param_query = url_postalcodes_param_query
         self.url_current_conditions_path = url_current_conditions_path
         self.url_forecasts_path = url_forecasts_path
-        self.url_location_completion_path = url_location_completion_path
         self.url_location_key_placeholder = url_location_key_placeholder
 
     def cache_key_for_accuweather_request(
@@ -610,41 +607,13 @@ class AccuweatherBackend:
             else None
         )
 
+    # NOTE: This method is not being used for this class / backend. This only here to satisfy mypy
+    # type checker. This will be removed once we cut over to the AccuweatherCityBackend
     async def get_location_completion(
         self, geolocation: Location, search_term: str
     ) -> list[LocationCompletion] | None:
         """Fetch a list of locations from the Accuweather API given a search term and location."""
-        if not search_term:
-            return None
-
-        url_path = self.url_location_completion_path
-
-        # if unable to derive country code from client geolocation, remove it from the url
-        if not geolocation.country:
-            url_path = url_path.replace("/{country_code}", "")
-        else:
-            url_path = url_path.format(country_code=geolocation.country)
-
-        params = {
-            "q": search_term,
-            self.url_param_api_key: self.api_key,
-        }
-
-        with self.metrics_client.timeit(
-            f"accuweather.request." f"{LOCATION_COMPLETION_REQUEST_TYPE}.get"
-        ):
-            response: Response = await self.http_client.get(url_path, params=params)
-            response.raise_for_status()
-
-        processed_location_completions = process_location_completion_response(
-            response.json()
-        )
-
-        location_completions = [
-            LocationCompletion(**item) for item in processed_location_completions
-        ]
-
-        return location_completions
+        ...
 
     async def shutdown(self) -> None:
         """Close out the cache during shutdown."""
@@ -667,6 +636,7 @@ class AccuweatherCityBackend:
     url_current_conditions_path: str
     url_forecasts_path: str
     url_location_key_placeholder: str
+    url_location_completion_path: str
     http_client: AsyncClient
 
     def __init__(
@@ -683,6 +653,7 @@ class AccuweatherCityBackend:
         url_cities_param_query: str,
         url_current_conditions_path: str,
         url_forecasts_path: str,
+        url_location_completion_path: str,
         url_location_key_placeholder: str,
     ) -> None:
         """Initialize the AccuWeather backend.
@@ -717,6 +688,7 @@ class AccuweatherCityBackend:
         self.url_cities_param_query = url_cities_param_query
         self.url_current_conditions_path = url_current_conditions_path
         self.url_forecasts_path = url_forecasts_path
+        self.url_location_completion_path = url_location_completion_path
         self.url_location_key_placeholder = url_location_key_placeholder
 
     def cache_key_for_accuweather_request(
@@ -1131,6 +1103,42 @@ class AccuweatherCityBackend:
             if response
             else None
         )
+
+    async def get_location_completion(
+        self, geolocation: Location, search_term: str
+    ) -> list[LocationCompletion] | None:
+        """Fetch a list of locations from the Accuweather API given a search term and location."""
+        if not search_term:
+            return None
+
+        url_path = self.url_location_completion_path
+
+        # if unable to derive country code from client geolocation, remove it from the url
+        if not geolocation.country:
+            url_path = url_path.replace("/{country_code}", "")
+        else:
+            url_path = url_path.format(country_code=geolocation.country)
+
+        params = {
+            "q": search_term,
+            self.url_param_api_key: self.api_key,
+        }
+
+        with self.metrics_client.timeit(
+            f"accuweather.request." f"{LOCATION_COMPLETION_REQUEST_TYPE}.get"
+        ):
+            response: Response = await self.http_client.get(url_path, params=params)
+            response.raise_for_status()
+
+        processed_location_completions = process_location_completion_response(
+            response.json()
+        )
+
+        location_completions = [
+            LocationCompletion(**item) for item in processed_location_completions
+        ]
+
+        return location_completions
 
     async def shutdown(self) -> None:
         """Close out the cache during shutdown."""

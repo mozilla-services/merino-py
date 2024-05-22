@@ -350,7 +350,7 @@ def test_suggest_with_location_completion(
 
 
 def test_suggest_with_location_completion_with_empty_search_term(
-    client: TestClient, backend_mock: Any, location_completion_sample_cities
+    client: TestClient,
 ) -> None:
     """Test that the suggest endpoint response returns empty location_completion when the q
     param (search_term) is an empty string
@@ -366,7 +366,7 @@ def test_suggest_with_location_completion_with_empty_search_term(
 
 
 def test_suggest_with_location_completion_with_incorrect_request_type_param(
-    client: TestClient, backend_mock: Any, location_completion_sample_cities
+    client: TestClient,
 ) -> None:
     """Test that the suggest endpoint response does not return a response when the request_type
     query param is invalid.

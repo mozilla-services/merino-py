@@ -76,7 +76,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     url_postalcodes_param_query=settings.accuweather.url_postalcodes_param_query,
                     url_current_conditions_path=settings.accuweather.url_current_conditions_path,
                     url_forecasts_path=settings.accuweather.url_forecasts_path,
-                    url_location_completion_path=settings.accuweather.url_location_completion_path,
                     url_location_key_placeholder=settings.accuweather.url_location_key_placeholder,
                 )
                 if setting.backend == "accuweather"
@@ -109,6 +108,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     url_cities_param_query=settings.accuweather.url_cities_param_query,
                     url_current_conditions_path=settings.accuweather.url_current_conditions_path,
                     url_forecasts_path=settings.accuweather.url_forecasts_path,
+                    url_location_completion_path=settings.accuweather.url_location_completion_path,
                     url_location_key_placeholder=settings.accuweather.url_location_key_placeholder,
                 )
                 if setting.backend == "accuweather"
