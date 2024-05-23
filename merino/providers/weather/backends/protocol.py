@@ -26,6 +26,13 @@ class Temperature(BaseModel):
         super().__init__(c=cc, f=ff)
 
 
+class LocationCompletionGeoDetails(BaseModel):
+    """Model for a location completion's country and administrative area attributes."""
+
+    id: str
+    localized_name: str
+
+
 class CurrentConditions(BaseModel):
     """Model for weather current conditions."""
 
@@ -53,6 +60,17 @@ class WeatherReport(BaseModel):
     ttl: int
 
 
+class LocationCompletion(BaseModel):
+    """Model for location completion."""
+
+    key: str
+    rank: int
+    type: str
+    localized_name: str
+    country: LocationCompletionGeoDetails
+    administrative_area: LocationCompletionGeoDetails
+
+
 class WeatherBackend(Protocol):
     """Protocol for a weather backend that this provider depends on.
 
@@ -66,6 +84,15 @@ class WeatherBackend(Protocol):
     ) -> WeatherReport | None:  # pragma: no cover
         """Get weather information from partner.
 
+        Raises:
+            BackendError: Category of error specific to provider backends.
+        """
+        ...
+
+    async def get_location_completion(
+        self, geolocation: Location, search_term: str
+    ) -> list[LocationCompletion] | None:  # pragma: no cover
+        """Get a list of locations (cities and country) from partner
         Raises:
             BackendError: Category of error specific to provider backends.
         """

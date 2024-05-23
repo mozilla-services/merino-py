@@ -34,6 +34,8 @@ from merino.providers.weather.backends.accuweather import (
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    LocationCompletion,
+    LocationCompletionGeoDetails,
     Temperature,
     WeatherReport,
 )
@@ -67,6 +69,103 @@ def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
     return mock
 
 
+@pytest.fixture(name="location_completion_sample_cities")
+def fixture_location_completion_sample_cities() -> list[dict[str, Any]]:
+    """Create a list of sample location completions for the search term 'new'"""
+    return [
+        {
+            "Version": 1,
+            "Key": "349727",
+            "Type": "City",
+            "Rank": 15,
+            "LocalizedName": "New York",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "NY", "LocalizedName": "New York"},
+        },
+        {
+            "Version": 1,
+            "Key": "348585",
+            "Type": "City",
+            "Rank": 35,
+            "LocalizedName": "New Orleans",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "LA", "LocalizedName": "Louisiana"},
+        },
+        {
+            "Version": 1,
+            "Key": "349530",
+            "Type": "City",
+            "Rank": 35,
+            "LocalizedName": "Newark",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "NJ", "LocalizedName": "New Jersey"},
+        },
+        {
+            "Version": 1,
+            "Key": "331967",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "Newport Beach",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "CA", "LocalizedName": "California"},
+        },
+        {
+            "Version": 1,
+            "Key": "327357",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "New Haven",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "CT", "LocalizedName": "Connecticut"},
+        },
+        {
+            "Version": 1,
+            "Key": "333575",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "New Bedford",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "MA", "LocalizedName": "Massachusetts"},
+        },
+        {
+            "Version": 1,
+            "Key": "338640",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "Newton",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "MA", "LocalizedName": "Massachusetts"},
+        },
+        {
+            "Version": 1,
+            "Key": "339713",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "New Rochelle",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "NY", "LocalizedName": "New York"},
+        },
+        {
+            "Version": 1,
+            "Key": "336210",
+            "Type": "City",
+            "Rank": 45,
+            "LocalizedName": "Newport News",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "VA", "LocalizedName": "Virginia"},
+        },
+        {
+            "Version": 1,
+            "Key": "2626691",
+            "Type": "City",
+            "Rank": 55,
+            "LocalizedName": "Near Eastside",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "IN", "LocalizedName": "Indiana"},
+        },
+    ]
+
+
 @pytest.fixture(name="accuweather_city_parameters")
 def fixture_accuweather_city_parameters(
     mocker: MockerFixture, statsd_mock: Any
@@ -84,6 +183,7 @@ def fixture_accuweather_city_parameters(
         "url_cities_param_query": "q",
         "url_current_conditions_path": "/currentconditions/v1/{location_key}.json",
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
+        "url_location_completion_path": "/locations/v1/{country_code}/autocomplete.json",
         "url_location_key_placeholder": "{location_key}",
     }
 
@@ -113,6 +213,38 @@ def fixture_expected_weather_report() -> WeatherReport:
         ),
         ttl=TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
     )
+
+
+@pytest.fixture(name="expected_location_completion")
+def fixture_expected_location_completion(
+    location_completion_sample_cities,
+) -> list[LocationCompletion]:
+    """Create a `LocationCompletion` list for assertions"""
+    return [
+        LocationCompletion(
+            key=location["Key"],
+            rank=location["Rank"],
+            type=location["Type"],
+            localized_name=location["LocalizedName"],
+            country=LocationCompletionGeoDetails(
+                id=location["Country"]["ID"],
+                localized_name=location["Country"]["LocalizedName"],
+            ),
+            administrative_area=LocationCompletionGeoDetails(
+                id=location["AdministrativeArea"]["ID"],
+                localized_name=location["AdministrativeArea"]["LocalizedName"],
+            ),
+        )
+        for location in location_completion_sample_cities
+    ]
+
+
+@pytest.fixture(name="accuweather_location_completion_response")
+def fixture_accuweather_location_completion_response(
+    location_completion_sample_cities,
+) -> bytes:
+    """Return response content for AccuWeather location autocomplete endpoint."""
+    return json.dumps(location_completion_sample_cities).encode("utf-8")
 
 
 @pytest.fixture(name="response_header")
@@ -1718,3 +1850,105 @@ def test_parse_cached_data_error(
     assert records[0].message.startswith(
         "Failed to load weather report data from Redis:"
     )
+
+
+@pytest.mark.asyncio
+async def test_get_location_completion(
+    accuweather: AccuweatherCityBackend,
+    expected_location_completion: list[LocationCompletion],
+    geolocation: Location,
+    accuweather_location_completion_response: bytes,
+) -> None:
+    """Test that the get_location_completion method returns a list of LocationCompletion."""
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    search_term = "new"
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            content=accuweather_location_completion_response,
+            request=Request(
+                method="GET",
+                url=(
+                    f"http://www.accuweather.com/locations/v1/"
+                    f"{geolocation.country}/autocomplete.json?apikey=test&q"
+                    f"={search_term}"
+                ),
+            ),
+        )
+    ]
+
+    location_completions: Optional[
+        list[LocationCompletion]
+    ] = await accuweather.get_location_completion(geolocation, search_term)
+
+    assert location_completions == expected_location_completion
+
+
+@pytest.mark.asyncio
+async def test_get_location_completion_with_empty_search_term(
+    accuweather: AccuweatherCityBackend,
+    geolocation: Location,
+    accuweather_location_completion_response: bytes,
+) -> None:
+    """Test that the get_location_completion method returns None when the search_term parameter
+    is an empty string.
+    """
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    search_term = ""
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            content=accuweather_location_completion_response,
+            request=Request(
+                method="GET",
+                url=(
+                    f"http://www.accuweather.com/locations/v1/"
+                    f"{geolocation.country}/autocomplete.json?apikey=test&q"
+                    f"={search_term}"
+                ),
+            ),
+        )
+    ]
+
+    location_completions: Optional[
+        list[LocationCompletion]
+    ] = await accuweather.get_location_completion(geolocation, search_term)
+
+    assert location_completions is None
+
+
+@pytest.mark.asyncio
+async def test_get_location_completion_with_no_geolocation_country_code(
+    accuweather: AccuweatherCityBackend,
+    expected_location_completion: list[LocationCompletion],
+    geolocation: Location,
+    accuweather_location_completion_response: bytes,
+) -> None:
+    """Test that the get_location_completion method returns a list of LocationCompletion
+    when no geolocation country code is provided.
+    """
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    search_term = "new"
+    geolocation.country = None
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            content=accuweather_location_completion_response,
+            request=Request(
+                method="GET",
+                url=(
+                    f"http://www.accuweather.com/locations/v1/autocomplete.json?"
+                    f"apikey=test&q{search_term}"
+                ),
+            ),
+        )
+    ]
+
+    location_completions: Optional[
+        list[LocationCompletion]
+    ] = await accuweather.get_location_completion(geolocation, search_term)
+
+    assert location_completions == expected_location_completion

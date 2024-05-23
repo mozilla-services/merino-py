@@ -4,6 +4,7 @@ from asyncio import Task
 from collections import Counter
 from functools import partial
 from itertools import chain
+from typing import Annotated
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Query
@@ -64,6 +65,7 @@ async def suggest(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
+    request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
 ) -> JSONResponse:
     """Query Merino for suggestions.
 
@@ -91,13 +93,17 @@ async def suggest(
         value to the `providers` parameter will return suggestions from the default providers.
         You can then pass other providers that are not enabled after `default`,
         allowing for customization of the suggestion request.
+    - `request_type`: [Optional] For AccuWeather provider, the request type should be either a
+        "location" or "weather" string. For "location" it will get location completion
+        suggestion. For "weather" it will return weather suggestions. If omitted, it defaults
+        to weather suggestions.
 
     **Headers:**
 
     - `Accept-Language` - The locale preferences expressed in this header in
       accordance with [RFC 2616 section 14.4][rfc-2616-14-4] will be used to
       determine suggestions. Merino maintains a list of supported locales. Merino
-      will choose the locale from it's list that has the highest `q` (quality) value
+      will choose the locale from its list that has the highest `q` (quality) value
       in the user's `Accept-Language` header. Locales with `q=0` will not be used.
 
       If no locales match, Merino will not return any suggestions. If the header is
@@ -146,7 +152,6 @@ async def suggest(
     # line to get access to feature flags and then check if your feature flag is
     # enabled for this request by calling feature_flags.is_enabled("example").
     # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
-
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
 
     active_providers, default_providers = sources
@@ -165,7 +170,9 @@ async def suggest(
     lookups: list[Task] = []
     for p in search_from:
         srequest = SuggestionRequest(
-            query=p.normalize_query(q), geolocation=request.scope[ScopeKey.GEOLOCATION]
+            query=p.normalize_query(q),
+            geolocation=request.scope[ScopeKey.GEOLOCATION],
+            request_type=request_type,
         )
         task = metrics_client.timeit_task(
             p.query(srequest), f"providers.{p.name}.query"
