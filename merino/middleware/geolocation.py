@@ -28,6 +28,7 @@ class Location(BaseModel):
     city: Optional[str] = None
     dma: Optional[int] = None
     postal_code: Optional[str] = None
+    key: Optional[str] = None
 
 
 class GeolocationMiddleware:

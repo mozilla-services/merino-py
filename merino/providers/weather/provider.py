@@ -84,7 +84,9 @@ class Provider(BaseProvider):
                         geolocation, search_term=srequest.query
                     )
                 else:
-                    weather_report = await self.backend.get_weather_report(geolocation)
+                    weather_report = await self.backend.get_weather_report(
+                        geolocation, srequest.query
+                    )
 
         except BackendError as backend_error:
             logger.warning(backend_error)
