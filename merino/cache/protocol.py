@@ -43,7 +43,10 @@ class CacheAdapter(Protocol):
         ...
 
     async def run_script(
-        self, sid: str, keys: list, args: list
+        self,
+        sid: str,
+        keys: list,
+        args: list,
     ) -> Any:  # pragma: no cover
         """Run a given script with keys and arguments.
 

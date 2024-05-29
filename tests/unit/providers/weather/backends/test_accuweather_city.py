@@ -188,11 +188,44 @@ def fixture_accuweather_city_parameters(
     }
 
 
+@pytest.fixture(name="accuweather_location_key")
+def fixture_accuweather_location_key() -> str:
+    """Location key for the expected weather report."""
+    return "39376"
+
+
 @pytest.fixture(name="expected_weather_report")
 def fixture_expected_weather_report() -> WeatherReport:
     """Create an `AccuWeatherReport` for assertions"""
     return WeatherReport(
         city_name="San Francisco",
+        current_conditions=CurrentConditions(
+            url=HttpUrl(
+                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "current-weather/39376?lang=en-us"
+            ),
+            summary="Mostly cloudy",
+            icon_id=6,
+            temperature=Temperature(c=15.5, f=60.0),
+        ),
+        forecast=Forecast(
+            url=HttpUrl(
+                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "daily-weather-forecast/39376?lang=en-us"
+            ),
+            summary="Pleasant Saturday",
+            high=Temperature(c=21.1, f=70.0),
+            low=Temperature(c=13.9, f=57.0),
+        ),
+        ttl=TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
+    )
+
+
+@pytest.fixture(name="expected_weather_report_via_location_key")
+def fixture_expected_weather_report_via_location_key() -> WeatherReport:
+    """Create an `AccuWeatherReport` for assertions"""
+    return WeatherReport(
+        city_name="N/A",
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
@@ -695,7 +728,7 @@ def test_init_url_value_error(
 @pytest.mark.asyncio
 async def test_get_weather_report(
     mocker: MockerFixture,
-    accuweather: AccuweatherBackend,
+    accuweather: AccuweatherCityBackend,
     expected_weather_report: WeatherReport,
     geolocation: Location,
     accuweather_location_response: bytes,
@@ -757,6 +790,60 @@ async def test_get_weather_report(
 
 
 @pytest.mark.asyncio
+async def test_get_weather_report_with_location_key(
+    mocker: MockerFixture,
+    accuweather: AccuweatherCityBackend,
+    expected_weather_report_via_location_key: WeatherReport,
+    geolocation: Location,
+    accuweather_location_key: str,
+    accuweather_location_response: bytes,
+    accuweather_current_conditions_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
+    response_header: dict[str, str],
+) -> None:
+    """Test that the get_weather_report method returns a WeatherReport."""
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_current_conditions_response,
+            request=Request(
+                method="GET",
+                url=(
+                    "http://www.accuweather.com/currentconditions/v1/39376.json?"
+                    "apikey=test"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_forecast_response_fahrenheit,
+            request=Request(
+                method="GET",
+                url=(
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                    "apikey=test"
+                ),
+            ),
+        ),
+    ]
+
+    # This request flow hits the store_request_into_cache method that returns the ttl. Mocking
+    # that call to return the default weather report ttl
+    mocker.patch(
+        "merino.providers.weather.backends.accuweather.AccuweatherCityBackend"
+        ".store_request_into_cache"
+    ).return_value = TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        geolocation, accuweather_location_key
+    )
+
+    assert report == expected_weather_report_via_location_key
+
+
+@pytest.mark.asyncio
 async def test_get_weather_report_from_cache(
     mocker: MockerFixture,
     geolocation: Location,
@@ -803,6 +890,60 @@ async def test_get_weather_report_from_cache(
     ]
     assert metrics_increment_called == [
         "accuweather.cache.hit.locations",
+        "accuweather.cache.hit.currentconditions",
+        "accuweather.cache.hit.forecasts",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_with_location_key_from_cache(
+    mocker: MockerFixture,
+    geolocation: Location,
+    statsd_mock: Any,
+    expected_weather_report_via_location_key: WeatherReport,
+    accuweather_city_parameters: dict[str, Any],
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_current_conditions: bytes,
+    accuweather_cached_forecast_fahrenheit: bytes,
+    accuweather_location_key: str,
+) -> None:
+    """Test that we can get the weather report from cache."""
+    redis_mock = mocker.AsyncMock(spec=Redis)
+
+    async def script_callable(keys, args) -> list:
+        return [
+            None,
+            accuweather_cached_current_conditions,
+            accuweather_cached_forecast_fahrenheit,
+            TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
+        ]
+
+    def mock_register_script(script) -> Callable[[list, list], Awaitable[list]]:
+        return script_callable
+
+    redis_mock.register_script.side_effect = mock_register_script
+
+    accuweather: AccuweatherCityBackend = AccuweatherCityBackend(
+        cache=RedisAdapter(redis_mock), **accuweather_city_parameters
+    )
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        geolocation, accuweather_location_key
+    )
+
+    assert report == expected_weather_report_via_location_key
+    client_mock.get.assert_not_called()
+
+    metrics_timeit_called = [
+        call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list
+    ]
+    assert metrics_timeit_called == ["accuweather.cache.fetch-via-location-key"]
+
+    metrics_increment_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_increment_called == [
         "accuweather.cache.hit.currentconditions",
         "accuweather.cache.hit.forecasts",
     ]
@@ -959,6 +1100,118 @@ async def test_get_weather_report_with_partial_cache_hits(
 
     expected_weather_report.ttl = expected_weather_report_ttl
     assert report == expected_weather_report
+    assert client_mock.get.call_count == expected_http_call_count
+
+
+@pytest.mark.parametrize(
+    "cached_current_fixture,cached_forecast_fixture,expected_http_call_count,"
+    "expected_weather_report_ttl",
+    [
+        (None, None, 2, TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC),
+        ("accuweather_cached_current_conditions", None, 1, TEST_CACHE_TTL_SEC),
+        (None, "accuweather_cached_forecast_fahrenheit", 1, TEST_CACHE_TTL_SEC),
+    ],
+    ids=["missing-both", "missing-forecast", "missing-current-conditions"],
+)
+@pytest.mark.asyncio
+async def test_get_weather_report_via_location_key_with_partial_cache_hits(
+    request: FixtureRequest,
+    mocker: MockerFixture,
+    geolocation: Location,
+    expected_weather_report_via_location_key: WeatherReport,
+    accuweather_city_parameters: dict[str, Any],
+    accuweather_cached_location_key: bytes,
+    cached_current_fixture: Optional[str],
+    cached_forecast_fixture: Optional[str],
+    expected_http_call_count: int,
+    expected_weather_report_ttl: int,
+    accuweather_current_conditions_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
+    accuweather_location_key: str,
+    response_header: dict[str, str],
+) -> None:
+    """Test that we can get the weather report with partial cache hits."""
+    cached_current_conditions = (
+        request.getfixturevalue(cached_current_fixture)
+        if cached_current_fixture
+        else None
+    )
+    cached_forecast = (
+        request.getfixturevalue(cached_forecast_fixture)
+        if cached_forecast_fixture
+        else None
+    )
+
+    redis_mock = mocker.AsyncMock(spec=Redis)
+
+    async def mock_set(key, value, **kwargs) -> Any:
+        return None
+
+    async def script_callable(keys, args) -> list:
+        return [
+            None,
+            cached_current_conditions,
+            cached_forecast,
+            None,
+        ]
+
+    def mock_register_script(script) -> Callable[[list, list], Awaitable[list]]:
+        return script_callable
+
+    redis_mock.register_script.side_effect = mock_register_script
+    redis_mock.set.side_effect = mock_set
+
+    accuweather: AccuweatherCityBackend = AccuweatherCityBackend(
+        cache=RedisAdapter(redis_mock), **accuweather_city_parameters
+    )
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    responses: list = []
+    if cached_current_conditions is None:
+        responses.append(
+            Response(
+                status_code=200,
+                headers=response_header,
+                content=accuweather_current_conditions_response,
+                request=Request(
+                    method="GET",
+                    url=(
+                        "http://www.accuweather.com/currentconditions/v1/39376.json?"
+                        "apikey=test"
+                    ),
+                ),
+            )
+        )
+    if cached_forecast is None:
+        responses.append(
+            Response(
+                status_code=200,
+                headers=response_header,
+                content=accuweather_forecast_response_fahrenheit,
+                request=Request(
+                    method="GET",
+                    url=(
+                        "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                        "apikey=test"
+                    ),
+                ),
+            )
+        )
+
+    # this only affects the first test run where both values are None.
+    if cached_current_conditions is None and cached_forecast is None:
+        mocker.patch(
+            "merino.providers.weather.backends.accuweather.AccuweatherCityBackend"
+            ".store_request_into_cache"
+        ).return_value = TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC
+
+    client_mock.get.side_effect = responses
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        geolocation, accuweather_location_key
+    )
+
+    expected_weather_report_via_location_key.ttl = expected_weather_report_ttl
+    assert report == expected_weather_report_via_location_key
     assert client_mock.get.call_count == expected_http_call_count
 
 
@@ -1193,9 +1446,9 @@ async def test_get_location(
         ),
     )
 
-    location: Optional[AccuweatherLocation] = await accuweather.get_location(
-        country, region, city
-    )
+    location: Optional[
+        AccuweatherLocation
+    ] = await accuweather.get_location_by_geolocation(country, region, city)
 
     assert location == expected_location
 
@@ -1224,9 +1477,9 @@ async def test_get_location_no_location_returned(
         ),
     )
 
-    location: Optional[AccuweatherLocation] = await accuweather.get_location(
-        country, region, city
-    )
+    location: Optional[
+        AccuweatherLocation
+    ] = await accuweather.get_location_by_geolocation(country, region, city)
 
     assert location is None
 
@@ -1260,7 +1513,7 @@ async def test_get_location_error(accuweather: AccuweatherCityBackend) -> None:
     )
 
     with pytest.raises(AccuweatherError) as accuweather_error:
-        await accuweather.get_location(country, region, city)
+        await accuweather.get_location_by_geolocation(country, region, city)
 
     assert str(accuweather_error.value) == expected_error_value
 

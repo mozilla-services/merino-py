@@ -80,6 +80,44 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
     return {location_key, current_conditions, forecast, ttl}
 """
 SCRIPT_ID: str = "bulk_fetch"
+
+
+# The Lua script to fetch the location key, current condition, forecast, and a TTL for
+# a given a city-based_location key.
+#
+# Note:
+#   - The script retrieves the cached current conditions and forecase data
+#   - The cache key for current conditions and forecast should be provided
+#     through `ARGV[1]` and `ARGV[2]`
+#   - It returns a 3-element array (for compatability reasons the first value is nil.)
+#     `[nil, current_condition, forecast]`. The last two element can be `nil`
+#     if they are not present in the cache
+#   - TTL values are all integer type. Could be one of -2, -1, or a non-negative non-zero
+#     integer. The TTL returned is the smaller one of the two TTLs; current conditions and
+#     forecast. We are explicitly returning the -2 and -1 as a TTL value since those represent
+#     error values. See official Redis TTL docs for more info.
+LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
+    local condition_key = ARGV[1]
+    local forecast_key = ARGV[2]
+
+    local current_conditions = redis.call("GET", condition_key)
+    local forecast = redis.call("GET", forecast_key)
+
+    local current_conditions_ttl = redis.call("TTL", condition_key)
+    local forecast_ttl = redis.call("TTL", forecast_key)
+    local ttl
+
+    if current_conditions_ttl == -2 or forecast_ttl == -2 then
+        ttl =  -2
+    elseif current_conditions_ttl == -1 or forecast_ttl == -1 then
+        ttl = -1
+    else
+        ttl = math.min(current_conditions_ttl, forecast_ttl)
+    end
+    local location = nil
+    return {location, current_conditions, forecast, ttl}
+"""
+SCRIPT_LOCATION_KEY_ID = "bulk_fetch_by_location_key"
 LOCATION_COMPLETION_REQUEST_TYPE: str = "autocomplete"
 
 
@@ -381,7 +419,9 @@ class AccuweatherBackend:
             self.url_postalcodes_param_query: postal_code,
         }
 
-    async def get_weather_report(self, geolocation: Location) -> WeatherReport | None:
+    async def get_weather_report(
+        self, geolocation: Location, location_key: str | None = None
+    ) -> WeatherReport | None:
         """Get weather information from AccuWeather.
 
         Firstly, it will look up the Redis cache for the location key, current condition,
@@ -635,6 +675,7 @@ class AccuweatherCityBackend:
     url_cities_param_query: str
     url_current_conditions_path: str
     url_forecasts_path: str
+    url_location_path: str
     url_location_key_placeholder: str
     url_location_completion_path: str
     http_client: AsyncClient
@@ -677,6 +718,9 @@ class AccuweatherCityBackend:
         self.api_key = api_key
         self.cache = cache
         # This registration is lazy (i.e. no interaction with Redis) and infallible.
+        self.cache.register_script(
+            SCRIPT_LOCATION_KEY_ID, LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION
+        )
         self.cache.register_script(SCRIPT_ID, LUA_SCRIPT_CACHE_BULK_FETCH)
         self.cached_location_key_ttl_sec = cached_location_key_ttl_sec
         self.cached_current_condition_ttl_sec = cached_current_condition_ttl_sec
@@ -793,12 +837,15 @@ class AccuweatherCityBackend:
 
         return cache_ttl.seconds
 
-    def emit_cache_fetch_metrics(self, cached_data: list[bytes | None]) -> None:
+    def emit_cache_fetch_metrics(
+        self, cached_data: list[bytes | None], skip_location_key=False
+    ) -> None:
         """Emit cache fetch metrics.
 
         Params:
             - `cached_data` {list[bytes]} A list of bytes for location_key,
               current_condition, forecast
+            -  `skip_location_key` A boolean to determine whether location was looked up.
         """
         location, current, forecast = False, False, False
         match cached_data:
@@ -814,12 +861,12 @@ class AccuweatherCityBackend:
                 )
             case _:  # pragma: no cover
                 pass
-
-        self.metrics_client.increment(
-            "accuweather.cache.hit.locations"
-            if location
-            else "accuweather.cache.fetch.miss.locations"
-        )
+        if not skip_location_key:
+            self.metrics_client.increment(
+                "accuweather.cache.hit.locations"
+                if location
+                else "accuweather.cache.fetch.miss.locations"
+            )
         self.metrics_client.increment(
             "accuweather.cache.hit.currentconditions"
             if current
@@ -877,10 +924,21 @@ class AccuweatherCityBackend:
             self.url_cities_param_query: city,
         }
 
-    async def get_weather_report(self, geolocation: Location) -> WeatherReport | None:
+    async def get_weather_report(
+        self, geolocation: Location, location_key: str | None = None
+    ) -> WeatherReport | None:
+        """Get weather report either via location key or geolocation."""
+        if location_key:
+            return await self.get_weather_report_with_location_key(location_key)
+
+        return await self.get_weather_report_with_geolocation(geolocation)
+
+    async def get_weather_report_with_location_key(
+        self, location_key
+    ) -> WeatherReport | None:
         """Get weather information from AccuWeather.
 
-        Firstly, it will look up the Redis cache for the location key, current condition,
+        Firstly, it will look up the Redis cache for the current condition,
         and forecast. If all of them are found in the cache, then return them without
         requesting those from AccuWeather. Otherwise, it will issue API requests to
         AccuWeather for the missing data. Lastly, the API responses are stored in the
@@ -891,6 +949,53 @@ class AccuweatherCityBackend:
               "Cache Avalanche", it will *not* call AccuWeather for weather reports upon any
               cache errors such as timeouts or connection issues to Redis
 
+        Raises:
+            AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
+        """
+        # Look up for all the weather data from the cache.
+        try:
+            with self.metrics_client.timeit("accuweather.cache.fetch-via-location-key"):
+                cached_data: list[bytes | None] = await self.cache.run_script(
+                    sid=SCRIPT_LOCATION_KEY_ID,
+                    keys=[],
+                    # The order matters below.
+                    # See `LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION` for details.
+                    args=[
+                        self.cache_key_for_accuweather_request(
+                            self.url_current_conditions_path.format(
+                                location_key=location_key
+                            )
+                        ),
+                        self.cache_key_for_accuweather_request(
+                            self.url_forecasts_path.format(location_key=location_key)
+                        ),
+                    ],
+                )
+        except CacheAdapterError as exc:
+            logger.error(f"Failed to fetch weather report from Redis: {exc}")
+            self.metrics_client.increment(
+                "accuweather.cache.fetch-via-location-key.error"
+            )
+            return None
+
+        self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)
+        cached_report = self.parse_cached_data(cached_data)
+        location = Location(key=location_key)
+        return await self.make_weather_report(cached_report, location)
+
+    async def get_weather_report_with_geolocation(
+        self, geolocation: Location
+    ) -> WeatherReport | None:
+        """Get weather information from AccuWeather.
+        Firstly, it will look up the Redis cache for the location key, current condition,
+        and forecast. If all of them are found in the cache, then return them without
+        requesting those from AccuWeather. Otherwise, it will issue API requests to
+        AccuWeather for the missing data. Lastly, the API responses are stored in the
+        cache for future uses.
+        Note:
+            - To avoid making excessive API requests to Accuweather in the event of
+              "Cache Avalanche", it will *not* call AccuWeather for weather reports upon any
+              cache errors such as timeouts or connection issues to Redis
         Raises:
             AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
         """
@@ -924,26 +1029,32 @@ class AccuweatherCityBackend:
 
         self.emit_cache_fetch_metrics(cached_data)
         cached_report = self.parse_cached_data(cached_data)
-        return await self.make_weather_report(cached_report, country, region, city)
+        geolocation = Location(country=country, city=city, region=region)
+        return await self.make_weather_report(cached_report, geolocation)
 
     async def make_weather_report(
-        self,
-        cached_report: WeatherData,
-        country: str,
-        region: str,
-        city: str,
+        self, cached_report: WeatherData, geolocation: Location
     ) -> WeatherReport | None:
         """Make a `WeatherReport` either using the cached data or fetching from AccuWeather.
 
         Raises:
             AccuWeatherError: Failed request or 4xx and 5xx response from AccuWeather.
         """
+        country = geolocation.country
+        city = geolocation.city
+        region = geolocation.region
+        location_key = geolocation.key
 
         async def as_awaitable(val: Any) -> Any:
             """Wrap a non-awaitable value into a coroutine and resolve it right away."""
             return val
 
         location, current_conditions, forecast, ttl = cached_report
+
+        if location_key and location is None:
+            # request was made with location key rather than geolocation
+            # so location info is not in the cache
+            location = AccuweatherLocation(localized_name="N/A", key=location_key)
 
         # validate the integer value of the TTL received from the cache. log a warning if there was
         # an error getting the ttl from the cache
@@ -962,7 +1073,14 @@ class AccuweatherCityBackend:
 
         # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
-            if (location := await self.get_location(country, city, region)) is None:
+            if country and city and region:
+                if (
+                    location := await self.get_location_by_geolocation(
+                        country, city, region
+                    )
+                ) is None:
+                    return None
+            else:
                 return None
 
         try:
@@ -1009,7 +1127,7 @@ class AccuweatherCityBackend:
         else:
             return None
 
-    async def get_location(
+    async def get_location_by_geolocation(
         self, country: str, city: str, region: str
     ) -> AccuweatherLocation | None:
         """Return location data for a specific country and city or None if
