@@ -838,13 +838,14 @@ class AccuweatherCityBackend:
         return cache_ttl.seconds
 
     def emit_cache_fetch_metrics(
-        self, cached_data: list[bytes | None], location_key=None
+        self, cached_data: list[bytes | None], skip_location_key=False
     ) -> None:
         """Emit cache fetch metrics.
 
         Params:
             - `cached_data` {list[bytes]} A list of bytes for location_key,
               current_condition, forecast
+            -  `skip_location_key` A boolean to determine whether location was looked up.
         """
         location, current, forecast = False, False, False
         match cached_data:
@@ -860,7 +861,7 @@ class AccuweatherCityBackend:
                 )
             case _:  # pragma: no cover
                 pass
-        if location_key is None:
+        if not skip_location_key:
             self.metrics_client.increment(
                 "accuweather.cache.hit.locations"
                 if location
@@ -977,7 +978,7 @@ class AccuweatherCityBackend:
             )
             return None
 
-        self.emit_cache_fetch_metrics(cached_data, location_key=location_key)
+        self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)
         cached_report = self.parse_cached_data(cached_data)
         location = Location(key=location_key)
         return await self.make_weather_report(cached_report, location)
