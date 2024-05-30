@@ -264,7 +264,7 @@ url_param_partner_code = "partner"
 
 # MERINO_ACCUWEATHER__URL_LOCATION_COMPLETION_PATH
 # The url path for accuweather locations autocomplete.
-url_location_completion_path = "/locations/v1/{country_code}/autocomplete.json"
+url_location_completion_path = "/locations/v1/cities/{country_code}/autocomplete.json"
 
 # MERINO_ACCUWEATHER__URL_POSTALCODES_PATH
 # The URL path for postal codes.

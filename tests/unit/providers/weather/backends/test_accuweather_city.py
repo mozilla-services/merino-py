@@ -183,7 +183,7 @@ def fixture_accuweather_city_parameters(
         "url_cities_param_query": "q",
         "url_current_conditions_path": "/currentconditions/v1/{location_key}.json",
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
-        "url_location_completion_path": "/locations/v1/{country_code}/autocomplete.json",
+        "url_location_completion_path": "/locations/v1/cities/{country_code}/autocomplete.json",
         "url_location_key_placeholder": "{location_key}",
     }
 
