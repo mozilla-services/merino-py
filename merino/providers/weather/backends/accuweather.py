@@ -459,7 +459,7 @@ class AccuweatherBackend:
         """
         # Look up for all the weather data from the cache.
         try:
-            with self.metrics_client.timeit("accuweather.cache.fetch"):
+            with self.metrics_client.timeit("accuweather.cache.fetch-via-location-key"):
                 cached_data: list[bytes | None] = await self.cache.run_script(
                     sid=SCRIPT_LOCATION_KEY_ID,
                     keys=[],
@@ -478,7 +478,9 @@ class AccuweatherBackend:
                 )
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
-            self.metrics_client.increment("accuweather.cache.fetch.error")
+            self.metrics_client.increment(
+                "accuweather.cache.fetch-via-location-key.error"
+            )
             return None
 
         self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)

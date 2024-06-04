@@ -937,7 +937,7 @@ async def test_get_weather_report_with_location_key_from_cache(
     metrics_timeit_called = [
         call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list
     ]
-    assert metrics_timeit_called == ["accuweather.cache.fetch"]
+    assert metrics_timeit_called == ["accuweather.cache.fetch-via-location-key"]
 
     metrics_increment_called = [
         call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
