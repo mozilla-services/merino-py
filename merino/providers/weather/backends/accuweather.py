@@ -120,6 +120,11 @@ LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
 SCRIPT_LOCATION_KEY_ID = "bulk_fetch_by_location_key"
 LOCATION_COMPLETION_REQUEST_TYPE: str = "autocomplete"
 
+ALIAS_PARAM: str = "alias"
+ALIAS_PARAM_VALUE: str = "always"
+LOCATION_COMPLETE_ALIAS_PARAM: str = "includealiases"
+LOCATION_COMPLETE_ALIAS_PARAM_VALUE: str = "true"
+
 
 class AccuweatherLocation(BaseModel):
     """Location model for response data from AccuWeather endpoints."""
@@ -427,6 +432,7 @@ class AccuweatherBackend:
         return {
             self.url_param_api_key: self.api_key,
             self.url_cities_param_query: city,
+            ALIAS_PARAM: ALIAS_PARAM_VALUE,
         }
 
     async def get_weather_report(
@@ -745,6 +751,7 @@ class AccuweatherBackend:
         params = {
             "q": search_term,
             self.url_param_api_key: self.api_key,
+            LOCATION_COMPLETE_ALIAS_PARAM: LOCATION_COMPLETE_ALIAS_PARAM_VALUE,
         }
 
         with self.metrics_client.timeit(
