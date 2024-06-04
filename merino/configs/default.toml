@@ -285,46 +285,6 @@ url_cities_param_query = "q"
 # MERINO_ACCUWEATHER__PARTNER_CODE - partner_code (Not currently defined)
 # The partner code to append to URLs in the current conditions and forecast responses.
 
-[default.providers.accuweather_city.cache_ttls]
-# Cache TTLs for weather data.
-
-# MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__LOCATION_KEY_TTL_SEC
-location_key_ttl_sec = 604800 # 7 days
-
-# MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__CURRENT_CONDITION_TTL_SEC
-current_condition_ttl_sec = 1800 # 1/2 hr
-
-# MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__FORECAST_TTL_SEC
-forecast_ttl_sec = 3600 # 1 hr
-
-
-[default.providers.accuweather_city]
-# MERINO_PROVIDERS__ACCUWEATHER__TYPE
-# The type of this provider, should be `accuweather`.
-type = "accuweather_city"
-
-# MERINO_PROVIDERS__ACCUWEATHER__BACKEND
-#  The backend of the provider. Either `accuweather` or `test`.
-backend = "accuweather"
-
-# MERINO_PROVIDERS__ACCUWEATHER__CACHE
-# The store used to cache weather reports. Either `redis` or `none`.
-# If `redis`, the global Redis settings must be set. See redis.server.
-cache = "none"
-
-# MERINO_PROVIDERS__ACCUWEATHER__ENABLED_BY_DEFAULT
-# Whether this provider is enabled by default.
-enabled_by_default = false
-
-# MERINO_PROVIDERS__ACCUWEATHER__SCORE
-# The ranking score for this provider as a floating point number.
-score = 0.3
-
-# MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC
-# A floating  point (in seconds) indicating the maximum waiting period when Merino queries
-# for weather forecasts. This will override the default global query timeout.
-query_timeout_sec = 5.0
-
 
 [default.providers.adm]
 # MERINO_PROVIDERS__ADM__TYPE
