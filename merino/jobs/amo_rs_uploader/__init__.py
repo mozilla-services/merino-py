@@ -6,7 +6,7 @@ from typing import Any
 import typer
 
 from merino.config import settings as config
-from merino.jobs.utils.chunked_rs_uploader import ChunkedRemoteSettingsUploader
+from merino.jobs.csv_rs_uploader import ChunkedRemoteSettingsSuggestionUploader
 from merino.providers.amo.addons_data import ADDON_DATA, ADDON_KEYWORDS
 from merino.providers.amo.backends.dynamic import DynamicAmoBackend
 
@@ -120,7 +120,7 @@ async def _upload(
     backend = DynamicAmoBackend(config.amo.dynamic.api_url)
     await backend.fetch_and_cache_addons_info()
 
-    with ChunkedRemoteSettingsUploader(
+    with ChunkedRemoteSettingsSuggestionUploader(
         auth=auth,
         bucket=bucket,
         chunk_size=chunk_size,

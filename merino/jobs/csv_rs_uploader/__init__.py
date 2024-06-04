@@ -7,6 +7,9 @@ import io
 import typer
 
 from merino.config import settings as config
+from merino.jobs.csv_rs_uploader.chunked_rs_uploader import (
+    ChunkedRemoteSettingsSuggestionUploader,
+)
 from merino.jobs.utils.chunked_rs_uploader import ChunkedRemoteSettingsUploader
 
 rs_settings = config.remote_settings
@@ -208,7 +211,7 @@ async def _upload_file_object(
     # starting the upload.
     suggestions = Suggestion.csv_to_suggestions(csv_reader)
 
-    with ChunkedRemoteSettingsUploader(
+    with ChunkedRemoteSettingsSuggestionUploader(
         auth=auth,
         bucket=bucket,
         chunk_size=chunk_size,

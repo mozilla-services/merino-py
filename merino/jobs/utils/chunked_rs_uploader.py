@@ -74,7 +74,7 @@ class ChunkedRemoteSettingsUploader:
 
         { "id": "my-record-type-400-600", "type": "my-record-type" }
 
-    The record's attachment will be the list of suggestions in the chunk as JSON
+    The record's attachment will be the list of data in the chunk as JSON
     (MIME type "application/json").
 
     It's common to delete existing suggestions before uploading new ones, so as
@@ -89,7 +89,6 @@ class ChunkedRemoteSettingsUploader:
     dry_run: bool
     kinto: kinto_http.Client
     record_type: str
-    suggestion_score_fallback: float | None
     total_data_count: int | None
 
     def __init__(
@@ -101,7 +100,6 @@ class ChunkedRemoteSettingsUploader:
         record_type: str,
         server: str,
         dry_run: bool = False,
-        suggestion_score_fallback: float | None = None,
         total_data_count: int | None = None,
     ):
         """Initialize the uploader."""
@@ -109,21 +107,10 @@ class ChunkedRemoteSettingsUploader:
         self.current_chunk = Chunk(0)
         self.dry_run = dry_run
         self.record_type = record_type
-        self.suggestion_score_fallback = suggestion_score_fallback
         self.total_data_count = total_data_count
         self.kinto = kinto_http.Client(
             server_url=server, bucket=bucket, collection=collection, auth=auth
         )
-
-    def add_suggestion(self, suggestion: dict[str, Any]) -> None:
-        """Add a suggestion. If the current chunk becomes full as a result, it
-        will be uploaded before this method returns.
-        """
-        if self.suggestion_score_fallback and "score" not in suggestion:
-            suggestion |= {"score": self.suggestion_score_fallback}
-        self.current_chunk.add_data(suggestion)
-        if self.current_chunk.size == self.chunk_size:
-            self._finish_current_chunk()
 
     def finish(self) -> None:
         """Finish the currrent chunk. If the chunk is not empty, it will be

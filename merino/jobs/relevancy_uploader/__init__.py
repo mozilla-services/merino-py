@@ -251,8 +251,6 @@ async def _upload_file_object(
     # starting the upload.
     data = RelevancyData.csv_to_relevancy_data(csv_reader)
     for category, domains in data.items():
-        # TODO: We want to clean this up and no need suggestion_score_fallback
-        #  https://mozilla-hub.atlassian.net/browse/DISCO-2794
         with ChunkedRemoteSettingsRelevancyUploader(
             auth=auth,
             bucket=bucket,
@@ -261,7 +259,6 @@ async def _upload_file_object(
             dry_run=dry_run,
             record_type=RELEVANCY_RECORD_TYPE,
             server=server,
-            suggestion_score_fallback=0,
             total_data_count=len(data[category]),
             category_name=category.name,
             category_code=category.value,

@@ -57,7 +57,6 @@ def _do_csv_test(
     mock_chunked_uploader_ctor.assert_any_call(
         **common_kwargs,
         record_type="category_to_domains",
-        suggestion_score_fallback=0,
         total_data_count=len(primary_category_data),
         category_name="Sports",
         category_code=17
@@ -66,7 +65,6 @@ def _do_csv_test(
     mock_chunked_uploader_ctor.assert_any_call(
         **common_kwargs,
         record_type="category_to_domains",
-        suggestion_score_fallback=0,
         total_data_count=len(secondary_category_data),
         category_name="News",
         category_code=14
@@ -75,7 +73,6 @@ def _do_csv_test(
     mock_chunked_uploader_ctor.assert_any_call(
         **common_kwargs,
         record_type="category_to_domains",
-        suggestion_score_fallback=0,
         total_data_count=len(inconclusive_category_data),
         category_name="Inconclusive",
         category_code=0

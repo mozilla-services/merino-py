@@ -26,7 +26,6 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
         category_code: int,
         version: int,
         dry_run: bool = False,
-        suggestion_score_fallback: float | None = None,
         total_data_count: int | None = None,
     ):
         """Initialize the uploader."""
@@ -38,7 +37,6 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
             record_type,
             server,
             dry_run,
-            suggestion_score_fallback,
             total_data_count,
         )
         self.category_name = category_name

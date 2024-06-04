@@ -34,7 +34,7 @@ def _do_csv_test(
     """Helper-method for `do_csv_test()`"""
     # Mock the chunked uploader.
     mock_chunked_uploader_ctor = mocker.patch(
-        "merino.jobs.csv_rs_uploader.ChunkedRemoteSettingsUploader"
+        "merino.jobs.csv_rs_uploader.ChunkedRemoteSettingsSuggestionUploader"
     )
     mock_chunked_uploader = (
         mock_chunked_uploader_ctor.return_value.__enter__.return_value
