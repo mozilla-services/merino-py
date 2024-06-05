@@ -9,7 +9,7 @@ from typing import Any
 
 from requests_toolbelt.multipart.decoder import MultipartDecoder
 
-from merino.jobs.utils.chunked_rs_uploader import ChunkedRemoteSettingsUploader
+from merino.jobs.csv_rs_uploader import ChunkedRemoteSettingsSuggestionUploader
 
 TEST_UPLOADER_KWARGS: dict[str, Any] = {
     "auth": "Bearer auth",
@@ -156,7 +156,7 @@ def do_upload_test(
         requests_mock.put(record.url, json={})  # nosec
         requests_mock.post(record.attachment_url, json={})  # nosec
 
-    with ChunkedRemoteSettingsUploader(
+    with ChunkedRemoteSettingsSuggestionUploader(
         chunk_size=chunk_size,
         **TEST_UPLOADER_KWARGS,
         **uploader_kwargs,
@@ -350,7 +350,7 @@ def test_delete_records(requests_mock):
     for r in records:
         requests_mock.delete(r.url, json={"data": {}})  # nosec
 
-    with ChunkedRemoteSettingsUploader(
+    with ChunkedRemoteSettingsSuggestionUploader(
         chunk_size=10, **TEST_UPLOADER_KWARGS
     ) as uploader:
         uploader.delete_records()
