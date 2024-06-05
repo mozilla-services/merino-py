@@ -268,4 +268,4 @@ async def _upload_file_object(
                 uploader.delete_records()
 
             for domain in domains:
-                uploader.add_relevancy_data(domain)
+                uploader.add_data(domain)

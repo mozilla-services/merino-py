@@ -83,7 +83,7 @@ def _do_csv_test(
     else:
         mock_chunked_uploader.delete_records.assert_not_called()
 
-    mock_chunked_uploader.add_relevancy_data.assert_has_calls(
+    mock_chunked_uploader.add_data.assert_has_calls(
         [*map(mocker.call, primary_category_data)]
     )
 

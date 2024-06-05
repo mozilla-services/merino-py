@@ -2,7 +2,6 @@
 import io
 import json
 import logging
-from typing import Any
 
 from merino.jobs.utils.chunked_rs_uploader import Chunk, ChunkedRemoteSettingsUploader
 
@@ -60,12 +59,6 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
                     self.kinto.delete_record(id=record["id"])
                     count += 1
         logger.info(f"Deleted {count} records")
-
-    def add_relevancy_data(self, data: Any) -> None:
-        """Add Relevancy data to the current chunk."""
-        self.current_chunk.add_data(data)
-        if self.current_chunk.size == self.chunk_size:
-            self._finish_current_chunk()
 
     def _upload_chunk(self, chunk: Chunk) -> None:
         """Create a record and attachment for a chunk."""

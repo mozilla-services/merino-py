@@ -112,6 +112,14 @@ class ChunkedRemoteSettingsUploader:
             server_url=server, bucket=bucket, collection=collection, auth=auth
         )
 
+    def add_data(self, data: dict[str, Any]) -> None:
+        """Add data to the current_chunk. If the current chunk becomes full as a result, it
+        will be uploaded before this method returns.
+        """
+        self.current_chunk.add_data(data)
+        if self.current_chunk.size == self.chunk_size:
+            self._finish_current_chunk()
+
     def finish(self) -> None:
         """Finish the currrent chunk. If the chunk is not empty, it will be
         uploaded before this method returns. This method should be called when
