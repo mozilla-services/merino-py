@@ -34,7 +34,7 @@ chunk_size_option = typer.Option(
 )
 
 collection_option = typer.Option(
-    rs_settings.collection,
+    "",
     "--collection",
     help="Remote settings collection ID",
 )
@@ -204,6 +204,8 @@ async def _upload_file_object(
             f"`{model_name}`. Please define a `Suggestion` class."
         )
 
+    if not collection:
+        collection = Suggestion.default_collection()
     csv_reader = csv.DictReader(file_object)
 
     # Generate the full list of suggestions before creating the chunked uploader

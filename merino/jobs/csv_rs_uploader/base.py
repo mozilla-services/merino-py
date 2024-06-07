@@ -2,8 +2,11 @@
 serialized in the output JSON, plus related helpers.
 """
 import re
+from typing import cast
 
 from pydantic import BaseModel
+
+from merino.config import settings
 
 
 class BaseSuggestion(BaseModel):
@@ -55,3 +58,12 @@ class BaseSuggestion(BaseModel):
         if not keywords or len(keywords) == 0:
             raise ValueError(f"{name} must not be empty")
         return keywords
+
+    @classmethod
+    def default_collection(cls) -> str:
+        """Get the collection to use if none is specified on the CLI
+
+        This returns the `remote_settings.collection` config value, which defaults to
+        `quicksuggest`.
+        """
+        return cast(str, settings.remote_settings.collection)
