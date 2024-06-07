@@ -37,16 +37,16 @@ class Suggestion(RowMajorBaseSuggestion):
     @classmethod
     def validate_title(cls, value):
         """Validate title"""
-        return cls._validate_str(cls, value, "title")
+        return cls._validate_str(value, "title")
 
     @field_validator("description", mode="before")
     @classmethod
     def validate_description(cls, value):
         """Validate description"""
-        return cls._validate_str(cls, value, "description")
+        return cls._validate_str(value, "description")
 
     @field_validator("keywords", mode="before")
     @classmethod
     def validate_keywords(cls, value):
         """Validate keywords"""
-        return cls._validate_keywords(cls, value, "keywords")
+        return cls._validate_keywords(value, "keywords")

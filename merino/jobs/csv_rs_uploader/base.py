@@ -18,6 +18,7 @@ class BaseSuggestion(BaseModel):
         """
         raise Exception("Subclass must override")
 
+    @classmethod
     def _validate_str(cls, value: str, name: str) -> str:
         """Validate a string value and return the validated value. Leading and
         trailing whitespace is stripped, and all whitespace is replaced with
@@ -30,6 +31,7 @@ class BaseSuggestion(BaseModel):
             raise ValueError(f"{name} must not be empty")
         return value
 
+    @classmethod
     def _validate_keywords(cls, value: str, name: str) -> list[str]:
         """Validate a comma-separated string of keywords and return the
         validated list of keyword strings. Each keyword is converted to
