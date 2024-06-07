@@ -378,7 +378,74 @@ def fixture_accuweather_location_response() -> bytes:
                 "MinuteCast",
                 "Radar",
             ],
-        }
+        },
+        {
+            "Version": 2,
+            "Key": "888888",
+            "Type": "City",
+            "Rank": 135,
+            "LocalizedName": "San Francisco",
+            "EnglishName": "San Francisco",
+            "PrimaryPostalCode": "94105",
+            "Region": {
+                "ID": "NAM",
+                "LocalizedName": "North America",
+                "EnglishName": "North America",
+            },
+            "Country": {
+                "ID": "US",
+                "LocalizedName": "United States",
+                "EnglishName": "United States",
+            },
+            "AdministrativeArea": {
+                "ID": "CA",
+                "LocalizedName": "California",
+                "EnglishName": "California",
+                "Level": 1,
+                "LocalizedType": "State",
+                "EnglishType": "State",
+                "CountryID": "US",
+            },
+            "TimeZone": {
+                "Code": "PDT",
+                "Name": "America/Los_Angeles",
+                "GmtOffset": -7.0,
+                "IsDaylightSaving": True,
+                "NextOffsetChange": "2022-11-06T09:00:00Z",
+            },
+            "GeoPosition": {
+                "Latitude": 37.792,
+                "Longitude": -122.392,
+                "Elevation": {
+                    "Metric": {"Value": 19.0, "Unit": "m", "UnitType": 5},
+                    "Imperial": {"Value": 62.0, "Unit": "ft", "UnitType": 0},
+                },
+            },
+            "IsAlias": False,
+            "ParentCity": {
+                "Key": "347629",
+                "LocalizedName": "San Francisco",
+                "EnglishName": "San Francisco",
+            },
+            "SupplementalAdminAreas": [
+                {
+                    "Level": 2,
+                    "LocalizedName": "San Francisco",
+                    "EnglishName": "San Francisco",
+                }
+            ],
+            "DataSets": [
+                "AirQualityCurrentConditions",
+                "AirQualityForecasts",
+                "Alerts",
+                "DailyAirQualityForecast",
+                "DailyPollenForecast",
+                "ForecastConfidence",
+                "FutureRadar",
+                "MinuteCast",
+                "Radar",
+            ],
+        },
     ]
     return json.dumps(response).encode("utf-8")
 
