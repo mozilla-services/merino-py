@@ -37,22 +37,22 @@ class Suggestion(RowMajorBaseSuggestion):
     @classmethod
     def validate_title(cls, value):
         """Validate title"""
-        return cls._validate_str(cls, value, "title")
+        return cls._validate_str(value, "title")
 
     @field_validator("description", mode="before")
     @classmethod
     def validate_description(cls, value):
         """Validate description"""
-        return cls._validate_str(cls, value, "description")
+        return cls._validate_str(value, "description")
 
     @field_validator("lowConfidenceKeywords", mode="before")
     @classmethod
     def validate_lowConfidenceKeywords(cls, value):
         """Validate lowConfidenceKeywords"""
-        return cls._validate_keywords(cls, value, "lowConfidenceKeywords")
+        return cls._validate_keywords(value, "lowConfidenceKeywords")
 
     @field_validator("highConfidenceKeywords", mode="before")
     @classmethod
     def validate_highConfidenceKeywords(cls, value):
         """Validate highConfidenceKeywords"""
-        return cls._validate_keywords(cls, value, "highConfidenceKeywords")
+        return cls._validate_keywords(value, "highConfidenceKeywords")
