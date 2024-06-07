@@ -472,13 +472,11 @@ class AccuweatherBackend:
                     # The order matters below.
                     # See `LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION` for details.
                     args=[
-                        self.cache_key_for_accuweather_request(
-                            self.url_current_conditions_path.format(
-                                location_key=location_key
-                            )
-                        ),
-                        self.cache_key_for_accuweather_request(
-                            self.url_forecasts_path.format(location_key=location_key)
+                        self.cache_key_template(
+                            WeatherDataType.CURRENT_CONDITIONS
+                        ).format(location_key=location_key),
+                        self.cache_key_template(WeatherDataType.FORECAST).format(
+                            location_key=location_key
                         ),
                     ],
                 )
@@ -823,6 +821,7 @@ def process_location_response(response: Any) -> dict[str, Any] | None:
                 "Key": key,
                 "LocalizedName": localized_name,
             },
+            *_,
         ]:
             # `type: ignore` is necessary because mypy gets confused when
             # matching structures of type `Any` and reports the following
