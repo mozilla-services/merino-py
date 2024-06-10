@@ -1,4 +1,5 @@
 """Upload the domain metadata to GCS"""
+
 import hashlib
 import json
 import logging

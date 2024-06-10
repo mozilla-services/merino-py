@@ -1,4 +1,5 @@
 """Suggestion building/scoring tests"""
+
 from merino.jobs.wikipedia_indexer.suggestion import Builder
 
 

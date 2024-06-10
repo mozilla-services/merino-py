@@ -1,6 +1,7 @@
 """Pydantic base model for remote settings suggestions as they should be
 serialized in the output JSON, plus related helpers.
 """
+
 import re
 
 from pydantic import BaseModel

@@ -650,8 +650,8 @@ def test_get_domain_metadata(
         favicon_downloader=favicon_downloader_mock,
     )
 
-    domain_metadata: list[
-        dict[str, str | None]
-    ] = metadata_extractor.get_domain_metadata(domains_data, favicon_min_width=32)
+    domain_metadata: list[dict[str, str | None]] = (
+        metadata_extractor.get_domain_metadata(domains_data, favicon_min_width=32)
+    )
 
     assert domain_metadata == expected_domain_metadata

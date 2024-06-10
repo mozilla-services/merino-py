@@ -1,4 +1,5 @@
 """App startup point"""
+
 from contextlib import asynccontextmanager
 
 from asgi_correlation_id import CorrelationIdMiddleware

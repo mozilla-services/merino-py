@@ -6,7 +6,7 @@ Merino currently builds the Elasticsearch indexing job that runs in Airflow.
 Airflow takes the `latest` image built as the base image.
 The reasons to keep the job code close to the application code are:
 
-1. Data models can be shared between the indexing job and application more easily. 
+1. Data models can be shared between the indexing job and application more easily.
    This means that data migrations will be simpler.
 2. All the logic regarding Merino functionality can be found in one place.
 3. Eliminates unintended differences in functionality due to dependency mismatch.
@@ -26,12 +26,12 @@ There may be instances you need to manually re-run the job from the Airflow dash
 
 ### Graph View Tab (Airflow UI) - Alternative
 1. Visit the [Airflow dashboard for `merino_jobs`][merino_jobs-graph].
-2. From the Graph View Tab, Click on the `wikipedia_indexer_build_index_production` task. 
+2. From the Graph View Tab, Click on the `wikipedia_indexer_build_index_production` task.
 ![merino_jobs Wikipedia Indexer Graph View](wiki_graph_view.png "merino_jobs UI Graph View")
 3. Click on 'Clear' and the job will re-run.
 ![merino_jobs UI Task Instance Clear](wiki_task_instance_clear.png "merino_jobs UI Task Clear")
 
-Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod to verify the correction of an error. 
+Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod to verify the correction of an error.
 
 
 See Airflow's [documentation on re-running DAGs][airflow_rerun_dag] for more information and implementation details.

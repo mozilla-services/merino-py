@@ -4,15 +4,17 @@
 
 """Unit tests for the config_sentry.py module."""
 import logging
+import typing
 
 from pytest import LogCaptureFixture
+from sentry_sdk.types import Event
 
 from merino.config_sentry import REDACTED_TEXT, strip_sensitive_data
 from tests.types import FilterCaplogFixture
 
 mock_sentry_hint: dict[str, list] = {"exc_info": [RuntimeError, RuntimeError(), None]}
 
-mock_sentry_event_data: dict = {
+mock_sentry_event_data: Event = {
     "request": {
         "method": "GET",
         "url": "http://localhost:8000/api/v1/suggest",
@@ -205,7 +207,9 @@ mock_sentry_event_data: dict = {
 
 def test_strip_sensitive_data() -> None:
     """Test that strip_sensitive_data will remove sensitive data."""
-    sanitized_event = strip_sensitive_data(mock_sentry_event_data, mock_sentry_hint)
+    sanitized_event = typing.cast(
+        Event, strip_sensitive_data(mock_sentry_event_data, mock_sentry_hint)
+    )
     assert sanitized_event["request"].get("query_string") == REDACTED_TEXT
     assert "exc_info" in mock_sentry_hint
     assert isinstance(mock_sentry_hint["exc_info"][1], RuntimeError)
@@ -258,7 +262,7 @@ def test_strip_sensitive_data_lookup_error(
     """
     caplog.set_level(logging.WARNING)
     strip_sensitive_data(
-        event={"bad_request": {}, "exception": {"invalid_values": [{}]}},
+        event={"bad_request": {}, "exception": {"invalid_values": [{}]}},  # type: ignore
         hint=mock_sentry_hint,
     )
 

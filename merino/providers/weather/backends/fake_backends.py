@@ -1,4 +1,5 @@
 """Test backend for the Weather provider."""
+
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.protocol import WeatherReport
 

@@ -1,4 +1,5 @@
 """Unit tests for the Addon API provider backend"""
+
 import json
 
 import httpx

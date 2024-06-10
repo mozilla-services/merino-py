@@ -1,10 +1,12 @@
 """Sentry Configuration"""
+
 import json
 import logging
 
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
+from sentry_sdk.types import Event, Hint
 
 from merino.config import settings
 from merino.utils.version import fetch_app_version_from_file
@@ -37,7 +39,7 @@ def configure_sentry() -> None:  # pragma: no cover
     )
 
 
-def strip_sensitive_data(event: dict, hint: dict) -> dict:
+def strip_sensitive_data(event: Event, hint: Hint) -> Event | None:
     """Filter out sensitive data from Sentry events."""
     #  See: https://docs.sentry.io/platforms/python/configuration/filtering/
     if event.get("request", {}).get("query_string", {}):

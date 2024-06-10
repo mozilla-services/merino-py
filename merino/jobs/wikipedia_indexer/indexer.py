@@ -1,4 +1,5 @@
 """Builds the elasticsearch index from the export file"""
+
 import json
 import logging
 import time

@@ -1,4 +1,5 @@
 """The provider for the dynamic Wikipedia integration."""
+
 import logging
 from typing import Any, Final
 
@@ -10,9 +11,9 @@ from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionReques
 from merino.providers.wikipedia.backends.protocol import WikipediaBackend
 
 # The packaged Wikipedia icon
-ICON: Final[
-    str
-] = "chrome://activity-stream/content/data/content/tippytop/favicons/wikipedia-org.ico"
+ICON: Final[str] = (
+    "chrome://activity-stream/content/data/content/tippytop/favicons/wikipedia-org.ico"
+)
 ADVERTISER: Final[str] = "dynamic-wikipedia"
 BLOCK_ID: Final[int] = 0
 

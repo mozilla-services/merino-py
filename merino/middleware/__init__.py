@@ -1,4 +1,5 @@
 """Merino middlewares"""
+
 from enum import Enum, unique
 
 

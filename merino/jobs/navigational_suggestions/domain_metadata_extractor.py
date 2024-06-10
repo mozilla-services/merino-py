@@ -1,4 +1,5 @@
 """Extract domain metadata from domain data"""
+
 import logging
 from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
@@ -229,9 +230,9 @@ class DomainMetadataExtractor:
             for manifest in favicon_data.manifests:
                 manifest_url: str = str(manifest.get("href"))
                 manifest_absolute_url: str = urljoin(scraped_url, manifest_url)
-                scraped_favicons: list[
-                    dict[str, Any]
-                ] = self.scraper.scrape_favicons_from_manifest(manifest_absolute_url)
+                scraped_favicons: list[dict[str, Any]] = (
+                    self.scraper.scrape_favicons_from_manifest(manifest_absolute_url)
+                )
                 for scraped_favicon in scraped_favicons:
                     favicon_url = urljoin(
                         manifest_absolute_url, scraped_favicon.get("src")

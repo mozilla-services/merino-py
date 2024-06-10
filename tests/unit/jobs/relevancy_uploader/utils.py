@@ -1,4 +1,5 @@
 """Test utils for the relevancy csv_rs_uploader module"""
+
 import asyncio
 import csv
 import io

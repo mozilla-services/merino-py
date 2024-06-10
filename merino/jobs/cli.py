@@ -1,4 +1,5 @@
 """Entrypoint for the command line interface."""
+
 import typer
 
 from merino.config_logging import configure_logging

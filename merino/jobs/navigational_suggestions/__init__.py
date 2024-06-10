@@ -1,4 +1,5 @@
 """CLI commands for the navigational_suggestions module"""
+
 import json
 import logging
 from typing import Optional
@@ -121,9 +122,9 @@ def prepare_domain_metadata(
     domain_metadata_extractor = DomainMetadataExtractor(
         blocked_domains=TOP_PICKS_BLOCKLIST
     )
-    domain_metadata: list[
-        dict[str, Optional[str]]
-    ] = domain_metadata_extractor.get_domain_metadata(domain_data, min_favicon_width)
+    domain_metadata: list[dict[str, Optional[str]]] = (
+        domain_metadata_extractor.get_domain_metadata(domain_data, min_favicon_width)
+    )
     logger.info("domain metadata extraction complete")
 
     # upload favicons and get their public urls
@@ -144,9 +145,9 @@ def prepare_domain_metadata(
     update_top_picks_with_firefox_favicons(top_picks)
 
     # Create diff class for comparison of Top Picks Files
-    old_top_picks: dict[
-        str, list[dict[str, str]]
-    ] | None = domain_metadata_uploader.get_latest_file_for_diff()
+    old_top_picks: dict[str, list[dict[str, str]]] | None = (
+        domain_metadata_uploader.get_latest_file_for_diff()
+    )
 
     if old_top_picks is None:
         old_top_picks = {}

@@ -1,4 +1,5 @@
 """CLI commands for the relevancy_csv_rs_uploader module"""
+
 import asyncio
 import base64
 import csv

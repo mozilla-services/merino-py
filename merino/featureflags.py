@@ -1,4 +1,5 @@
 """Implementation of Feature Flags (feature toggles) for Merino"""
+
 import hashlib
 import logging
 from contextvars import ContextVar

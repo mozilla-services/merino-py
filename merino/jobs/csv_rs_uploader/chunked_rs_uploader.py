@@ -1,4 +1,5 @@
 """Chunked remote settings uploader"""
+
 import logging
 from typing import Any
 

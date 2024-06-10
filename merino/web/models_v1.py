@@ -1,4 +1,5 @@
 """Suggest and Provider Models"""
+
 from pydantic import BaseModel, SerializeAsAny
 
 from merino.providers.base import BaseSuggestion

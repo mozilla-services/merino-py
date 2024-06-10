@@ -1,4 +1,5 @@
 """Dynamic AMO Backend"""
+
 import logging
 from asyncio import Task, TaskGroup
 from json import JSONDecodeError

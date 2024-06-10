@@ -1,4 +1,5 @@
 """CLI commands for the csv_rs_uploader module"""
+
 import asyncio
 import csv
 import importlib

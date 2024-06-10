@@ -1,4 +1,5 @@
 """Static Addon Endpoint"""
+
 from typing import Any
 
 from merino.providers.amo.addons_data import ADDON_DATA, SupportedAddon

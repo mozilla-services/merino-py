@@ -4,7 +4,7 @@ please view the [default.toml][default.toml] file.
 
 ## Settings
 
-Merino's settings are managed via [Dynaconf][dynaconf] and can be specified in two ways: 
+Merino's settings are managed via [Dynaconf][dynaconf] and can be specified in two ways:
 1. a [TOML file][toml] in the `merino/configs/` [directory][configs_dir].
 2. via environment variables.
 Environment variables take precedence over the values set in the TOML files.
@@ -34,14 +34,14 @@ These are the settings sources, with later sources overriding earlier ones.
 
 ## General
 
-- All environments are prefixed with `MERINO_`. 
-  This is established in the `config.py` file by setting the `envvar_prefix="MERINO"` 
+- All environments are prefixed with `MERINO_`.
+  This is established in the `config.py` file by setting the `envvar_prefix="MERINO"`
   for the Dynaconf instance.
-  The first level following `MERINO_` is accessed with a single underscore `_` and any subsequent levels require two underscores `__`. 
+  The first level following `MERINO_` is accessed with a single underscore `_` and any subsequent levels require two underscores `__`.
   For example, the logging format can be controlled from the environment variable `MERINO_LOGGING__FORMAT`.
 
 - Production environment variables are set by SRE and stored in the
-  cloudops project in the `configmap.yml` file. 
+  cloudops project in the `configmap.yml` file.
   Contact SRE if you require information or access on this file,
   or request access to the cloudops infra repo.
 
@@ -52,7 +52,7 @@ These are the settings sources, with later sources overriding earlier ones.
   Example:
   `MERINO_ENV=production MERINO_LOGGING__FORMAT=pretty make dev`
 
-- `env` (`MERINO_ENV`) - Only settable from environment variables. 
+- `env` (`MERINO_ENV`) - Only settable from environment variables.
   Controls which environment configuration is loaded, as described above.
 
 - `debug` (`MERINO_DEBUG`) - Boolean that enables additional features to debug

@@ -1,4 +1,5 @@
 """Index mapping & settings"""
+
 from merino.jobs.wikipedia_indexer.settings import v1
 
 SETTING_VERSIONS = {"v1": v1}

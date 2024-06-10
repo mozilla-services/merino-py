@@ -1,6 +1,7 @@
 """Pydantic model for row-major based suggestion as they should be serialized in
 the output JSON.
 """
+
 from merino.jobs.csv_rs_uploader import MissingFieldError
 from merino.jobs.csv_rs_uploader.base import BaseSuggestion
 

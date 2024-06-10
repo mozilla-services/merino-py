@@ -7,7 +7,7 @@
 
 ## Context and Problem Statement
 
-As Merino continues to add more suggestions, 
+As Merino continues to add more suggestions,
 suggestion providers are going to have to return all sorts of
 data to the clients that are bespoke to the particular suggestion.
 For instance, weather suggestion returns a `temperature`.
@@ -15,8 +15,8 @@ Currently, we do not have a strategy to manage these bespoke pieces of data
 which results in them returned at the top level of the suggestion object.
 However, this will pose a problem when
 
-1. names of fields are shared between providers, but have different semantics 
-  (i.e. `rating` may be a decimal value between 0-1 in one type, 
+1. names of fields are shared between providers, but have different semantics
+  (i.e. `rating` may be a decimal value between 0-1 in one type,
    and a "star" integer rating between 1-5 in another)
 1. the API is unclear about what will _necessarily_ exist, and what is _optional_,
    which leads to client confusion about the contract
@@ -87,7 +87,7 @@ to `custom_details` in the v1 API.
 * Might be missing an opportune time to migrate, as features are currently not out yet
   which means the flexibility for change is higher.
 
-## Pros and Cons of the Options 
+## Pros and Cons of the Options
 
 ### A. Continue to add to Top Level with Optional Fields
 
@@ -182,7 +182,7 @@ The partial JSON Schema validation will look something like:
 * Can specify specific validation per provider.
 * Merino is still kind of immature, so it still might be too early to think about design.
 * Less nesting in the models (resulting in less complexity).
-* Currently, backwards compatible as we don't have to do anything 
+* Currently, backwards compatible as we don't have to do anything
   to existing providers, as this follows the existing patterns.
 
 #### Cons
@@ -390,11 +390,11 @@ Example:
 #### Pros
 
 * All the pros for B applies here
-* Can decouple the `custom_details` from `provider`. This will be helpful for potentially 
+* Can decouple the `custom_details` from `provider`. This will be helpful for potentially
   sharing the `type` with other suggestions produced by different providers. For instance,
-  we may want this to specify different _rendering_ paths in the client 
+  we may want this to specify different _rendering_ paths in the client
   (i.e. a "top picks" type to be shared between `addons` and `top_picks` providers,
-  as there's many shared fields because they're rendered similarly). 
+  as there's many shared fields because they're rendered similarly).
 
 #### Cons
 
@@ -436,7 +436,7 @@ Example:
 #### Pros
 
 * Can share custom components with schema validation.
-* Backwards compatible with clients who don't have the necessary components to render. 
+* Backwards compatible with clients who don't have the necessary components to render.
   It will just use the default renderer via the Fx Suggest Design Framework
 
 #### Cons
@@ -445,6 +445,6 @@ Example:
 * This tightly couples the API to the design framework of Desktop Firefox, which makes the fields potentially
   less relevant to other clients.
 
-## Links 
+## Links
 
 * [JSON Schema Specification](https://json-schema.org/)

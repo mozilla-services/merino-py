@@ -736,14 +736,12 @@ def fixture_accuweather_cached_data_misses() -> list[Optional[bytes]]:
 
 
 @pytest.fixture(name="accuweather_parsed_data_misses")
-def fixture_accuweather_parsed_data_misses() -> (
-    tuple[
-        Optional[AccuweatherLocation],
-        Optional[CurrentConditions],
-        Optional[Forecast],
-        Optional[int],
-    ]
-):
+def fixture_accuweather_parsed_data_misses() -> tuple[
+    Optional[AccuweatherLocation],
+    Optional[CurrentConditions],
+    Optional[Forecast],
+    Optional[int],
+]:
     """Return the partial parsed AccuWeather quartet for a cache hit."""
     return (None, None, None, None)
 
@@ -1512,9 +1510,9 @@ async def test_get_location(
         ),
     )
 
-    location: Optional[
-        AccuweatherLocation
-    ] = await accuweather.get_location_by_geolocation(country, region, city)
+    location: Optional[AccuweatherLocation] = (
+        await accuweather.get_location_by_geolocation(country, region, city)
+    )
 
     assert location == expected_location
 
@@ -1543,9 +1541,9 @@ async def test_get_location_no_location_returned(
         ),
     )
 
-    location: Optional[
-        AccuweatherLocation
-    ] = await accuweather.get_location_by_geolocation(country, region, city)
+    location: Optional[AccuweatherLocation] = (
+        await accuweather.get_location_by_geolocation(country, region, city)
+    )
 
     assert location is None
 
@@ -1637,9 +1635,9 @@ async def test_get_current_conditions(
         ),
     )
 
-    conditions: Optional[
-        CurrentConditionsWithTTL
-    ] = await accuweather.get_current_conditions(location_key)
+    conditions: Optional[CurrentConditionsWithTTL] = (
+        await accuweather.get_current_conditions(location_key)
+    )
 
     assert conditions == expected_conditions
 
@@ -1666,9 +1664,9 @@ async def test_get_current_conditions_no_current_conditions_returned(
         ),
     )
 
-    conditions: Optional[
-        CurrentConditionsWithTTL
-    ] = await accuweather.get_current_conditions(location_key)
+    conditions: Optional[CurrentConditionsWithTTL] = (
+        await accuweather.get_current_conditions(location_key)
+    )
 
     assert conditions is None
 
@@ -2195,9 +2193,9 @@ async def test_get_location_completion(
         )
     ]
 
-    location_completions: Optional[
-        list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, search_term)
+    location_completions: Optional[list[LocationCompletion]] = (
+        await accuweather.get_location_completion(geolocation, search_term)
+    )
 
     assert location_completions == expected_location_completion
 
@@ -2229,9 +2227,9 @@ async def test_get_location_completion_with_empty_search_term(
         )
     ]
 
-    location_completions: Optional[
-        list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, search_term)
+    location_completions: Optional[list[LocationCompletion]] = (
+        await accuweather.get_location_completion(geolocation, search_term)
+    )
 
     assert location_completions is None
 
@@ -2264,8 +2262,8 @@ async def test_get_location_completion_with_no_geolocation_country_code(
         )
     ]
 
-    location_completions: Optional[
-        list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, search_term)
+    location_completions: Optional[list[LocationCompletion]] = (
+        await accuweather.get_location_completion(geolocation, search_term)
+    )
 
     assert location_completions == expected_location_completion

@@ -1,4 +1,5 @@
 """Test StaticAddonsBackend."""
+
 from typing import Any
 
 import pytest
