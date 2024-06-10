@@ -47,10 +47,8 @@ PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
 #     `[location_key, current_condition, forecast]`. The last two element can be `nil`
 #     if they are not present in the cache
 #   - If the location key is missing, it will return an empty array
-#   - TTL values are all integer type. Could be one of -2, -1, or a non-negative non-zero
-#     integer. The TTL returned is the smaller one of the two TTLs; current conditions and
-#     forecast. We are explicitly returning the -2 and -1 as a TTL value since those represent
-#     error values. See official Redis TTL docs for more info.
+#   - If the forecast and current_conditions TTLs are a non-positive value (-1 or -2),
+#     it will return ttl as false, which is translated to None type in app code.
 LUA_SCRIPT_CACHE_BULK_FETCH: str = """
     local location_key = redis.call("GET", KEYS[1])
 
@@ -67,16 +65,11 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
 
     local current_conditions_ttl = redis.call("TTL", condition_key)
     local forecast_ttl = redis.call("TTL", forecast_key)
-    local ttl
+    local ttl = false
 
-    if current_conditions_ttl == -2 or forecast_ttl == -2 then
-        ttl =  -2
-    elseif current_conditions_ttl == -1 or forecast_ttl == -1 then
-        ttl = -1
-    else
+    if current_conditions_ttl >= 0 and forecast_ttl >= 0 then
         ttl = math.min(current_conditions_ttl, forecast_ttl)
     end
-
     return {location_key, current_conditions, forecast, ttl}
 """
 SCRIPT_ID: str = "bulk_fetch"
@@ -92,10 +85,8 @@ SCRIPT_ID: str = "bulk_fetch"
 #   - It returns a 3-element array (for compatability reasons the first value is nil.)
 #     `[nil, current_condition, forecast]`. The last two element can be `nil`
 #     if they are not present in the cache
-#   - TTL values are all integer type. Could be one of -2, -1, or a non-negative non-zero
-#     integer. The TTL returned is the smaller one of the two TTLs; current conditions and
-#     forecast. We are explicitly returning the -2 and -1 as a TTL value since those represent
-#     error values. See official Redis TTL docs for more info.
+#   - If the forecast and current_conditions TTLs are a non-positive value (-1 or -2),
+#     it will return ttl as false, which is translated to None type in app code.
 LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
     local condition_key = ARGV[1]
     local forecast_key = ARGV[2]
@@ -105,13 +96,9 @@ LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
 
     local current_conditions_ttl = redis.call("TTL", condition_key)
     local forecast_ttl = redis.call("TTL", forecast_key)
-    local ttl
+    local ttl = false
 
-    if current_conditions_ttl == -2 or forecast_ttl == -2 then
-        ttl =  -2
-    elseif current_conditions_ttl == -1 or forecast_ttl == -1 then
-        ttl = -1
-    else
+    if current_conditions_ttl >= 0 and forecast_ttl >= 0 then
         ttl = math.min(current_conditions_ttl, forecast_ttl)
     end
     local location = nil
@@ -565,14 +552,9 @@ class AccuweatherBackend:
             # so location info is not in the cache
             location = AccuweatherLocation(localized_name="N/A", key=location_key)
 
-        # validate the integer value of the TTL received from the cache. log a warning if there was
-        # an error getting the ttl from the cache
-        if ttl_error_message := get_ttl_error_message(ttl):
-            logger.warning(ttl_error_message)
-
+        # if all the other three values are present, ttl here would be a valid ttl value
         if location and current_conditions and forecast and ttl:
             # Return the weather report with the values returned from the cache.
-            # `ttl` here could be the cached ttl value or None.
             return WeatherReport(
                 city_name=location.localized_name,
                 current_conditions=current_conditions,
@@ -906,20 +888,3 @@ def process_forecast_response(response: Any) -> dict[str, Any] | None:
             }
         case _:
             return None
-
-
-def get_ttl_error_message(ttl: int | None) -> str | None:
-    """Get the error message based on the TTL value received from the cache. These are defined
-    according to Redis TTL docs. -1 if the key exists but has no associated expiration. -2 if
-    the key does not exist.
-    """
-    if isinstance(ttl, int) and ttl >= 0:
-        return None
-
-    ttl_errors = {
-        None: "Error getting TTL. No TTL value returned from cache.",
-        -1: "Error getting TTL. Key does not have associated expiration.",
-        -2: "Error getting TTL. Key does not exist, using default ttl.",
-    }
-
-    return ttl_errors.get(ttl)
