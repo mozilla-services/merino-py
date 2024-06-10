@@ -145,7 +145,7 @@
 <p>To manage configurations and view all documentation for individual config values,
 please view the <a href="https://github.com/mozilla-services/merino-py/tree/main/merino/configs/default.toml">default.toml</a> file.</p>
 <h2 id="settings"><a class="header" href="#settings">Settings</a></h2>
-<p>Merino's settings are managed via <a href="https://www.dynaconf.com/">Dynaconf</a> and can be specified in two ways: </p>
+<p>Merino's settings are managed via <a href="https://www.dynaconf.com/">Dynaconf</a> and can be specified in two ways:</p>
 <ol>
 <li>a <a href="https://toml.io/en/">TOML file</a> in the <code>merino/configs/</code> <a href="https://github.com/mozilla-services/merino-py/tree/main/merino/configs">directory</a>.</li>
 <li>via environment variables.
@@ -179,15 +179,15 @@ One may add secrets here if desired, though it is advised to exercise great caut
 <h2 id="general"><a class="header" href="#general">General</a></h2>
 <ul>
 <li>
-<p>All environments are prefixed with <code>MERINO_</code>. 
-This is established in the <code>config.py</code> file by setting the <code>envvar_prefix=&quot;MERINO&quot;</code> 
+<p>All environments are prefixed with <code>MERINO_</code>.
+This is established in the <code>config.py</code> file by setting the <code>envvar_prefix=&quot;MERINO&quot;</code>
 for the Dynaconf instance.
-The first level following <code>MERINO_</code> is accessed with a single underscore <code>_</code> and any subsequent levels require two underscores <code>__</code>. 
+The first level following <code>MERINO_</code> is accessed with a single underscore <code>_</code> and any subsequent levels require two underscores <code>__</code>.
 For example, the logging format can be controlled from the environment variable <code>MERINO_LOGGING__FORMAT</code>.</p>
 </li>
 <li>
 <p>Production environment variables are set by SRE and stored in the
-cloudops project in the <code>configmap.yml</code> file. 
+cloudops project in the <code>configmap.yml</code> file.
 Contact SRE if you require information or access on this file,
 or request access to the cloudops infra repo.</p>
 </li>
@@ -199,7 +199,7 @@ desired environment variables using CLI flags.</p>
 <code>MERINO_ENV=production MERINO_LOGGING__FORMAT=pretty make dev</code></p>
 </li>
 <li>
-<p><code>env</code> (<code>MERINO_ENV</code>) - Only settable from environment variables. 
+<p><code>env</code> (<code>MERINO_ENV</code>) - Only settable from environment variables.
 Controls which environment configuration is loaded, as described above.</p>
 </li>
 <li>

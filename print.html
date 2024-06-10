@@ -592,17 +592,17 @@ In this case, suggestions are compared to a static list in the code that blocks 
 <p>The blocklist, <a href="dev//merino/jobs/navigational_suggestions/data/domain_blocklist.json"><code>domain_blocklist.json</code></a>,  is referenced during data generation of the <a href="dev//dev/top_picks.json"><code>top_picks.json</code></a> file, which is ingested by the provider backend. This ensures specific domains are not indexed for suggestions. The blocklist is loaded and an exact string comparison is made between all second-level domains and the second-level domains defined in the blocklist.</p>
 <p>See <a href="dev/../operations/blocklist-nav-suggestions.html">nav-suggestions blocklist runbook</a> for more information.</p>
 <h2 id="wikipedia"><a class="header" href="#wikipedia">Wikipedia</a></h2>
-<p>The Wikipedia Provider does both title filtering and category filtering at the data indexing level. </p>
+<p>The Wikipedia Provider does both title filtering and category filtering at the data indexing level.</p>
 <p>Since the indexing jobs run periodically, we also implemented title filtering in the provider to get the blocking out sooner.</p>
 <h3 id="indexer"><a class="header" href="#indexer">Indexer</a></h3>
 <p>The Wikipedia Indexer Job references a remote blocklist which contains sensitive categories.
-At job runtime, the indexer reads the remote blocklist and creates a set of article categories that are be excluded from indexing. </p>
+At job runtime, the indexer reads the remote blocklist and creates a set of article categories that are be excluded from indexing.</p>
 <p>The article categories in the blocklist are chosen based off of analysis and best guesses of what could be considered <em>objectionable</em> content, based off of Mozilla's values and brand image.
 Any modifications to the file should be done with careful consideration.</p>
-<p>The indexer also blocks titles that are defined in the <code>WIKIPEDIA_TITLE_BLOCKLIST</code> in the application, which is referenced below.  Any title that matches this blocklist is excluded from indexing. </p>
+<p>The indexer also blocks titles that are defined in the <code>WIKIPEDIA_TITLE_BLOCKLIST</code> in the application, which is referenced below.  Any title that matches this blocklist is excluded from indexing.</p>
 <h3 id="provider"><a class="header" href="#provider">Provider</a></h3>
-<p>When queried, the Wikipedia provider reads the <code>WIKIPEDIA_TITLE_BLOCKLIST</code> when creating a <code>WikipediaSuggestion</code> and if the query matches a blocked title, the suggestion is not shown to the client. </p>
-<p>We have this feature because the indexing job is not run daily. Therefore, we desire having an option to rapidly add to this list should we need to block a specific article. </p>
+<p>When queried, the Wikipedia provider reads the <code>WIKIPEDIA_TITLE_BLOCKLIST</code> when creating a <code>WikipediaSuggestion</code> and if the query matches a blocked title, the suggestion is not shown to the client.</p>
+<p>We have this feature because the indexing job is not run daily. Therefore, we desire having an option to rapidly add to this list should we need to block a specific article.</p>
 <p>See <a href="dev/../operations/blocklist-wikipedia.html">wikipedia blocklist runbook</a> for more information.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="development-dependencies"><a class="header" href="#development-dependencies">Development Dependencies</a></h1>
 <h2 id="package-dependencies"><a class="header" href="#package-dependencies">Package Dependencies</a></h2>
@@ -881,7 +881,7 @@ or fix those issues, test or profile it again to verify if the fix is working.</
 <p>Merino's test strategy requires that we do not go below a minimum test coverage percentage for unit and integration tests.
 All Contract tests must pass and load tests cannot go below a minimum performance threshold.</p>
 <p>Test documentation resides in the <a href="testing/./index.html">/docs/testing/</a> directory.</p>
-<p>The functional test strategy is four-tiered, composed of: </p>
+<p>The functional test strategy is four-tiered, composed of:</p>
 <ul>
 <li><a href="https://github.com/mozilla-services/merino-py/tree/main/tests/unit">unit</a> - <a href="testing/./unit-tests.html">documentation</a></li>
 <li><a href="https://github.com/mozilla-services/merino-py/tree/main/tests/integration">integration</a> - <a href="testing/./integration-tests.html">documentation</a></li>
@@ -1050,8 +1050,8 @@ Do this by running <code>make load-tests-clean</code>.</p>
 <p>Follow the steps bellow to execute the load tests locally:</p>
 <h3 id="setup-environment"><a class="header" href="#setup-environment">Setup Environment</a></h3>
 <h4 id="1-configure-environment-variables"><a class="header" href="#1-configure-environment-variables">1. Configure Environment Variables</a></h4>
-<p>The following environment variables as well as 
-<a href="https://docs.locust.io/en/stable/configuration.html#environment-variables">Locust environment variables</a> can be set in 
+<p>The following environment variables as well as
+<a href="https://docs.locust.io/en/stable/configuration.html#environment-variables">Locust environment variables</a> can be set in
 <code>tests\load\docker-compose.yml</code>.
 Make sure any required API key is added but then not checked into source control (i.e. <code>WIKIPEDIA__ES_API_KEY</code>).</p>
 <div class="table-wrapper"><table><thead><tr><th>Environment Variable</th><th>Node(s)</th><th>Description</th></tr></thead><tbody>
@@ -1084,7 +1084,7 @@ repository root:</p>
 </code></pre>
 </li>
 <li>Option 3: Use the Docker instance
-<pre><code class="language-shell">make docker-build &amp;&amp; docker run -p 8000:8000 app:build 
+<pre><code class="language-shell">make docker-build &amp;&amp; docker run -p 8000:8000 app:build
 </code></pre>
 </li>
 </ul>
@@ -1103,7 +1103,7 @@ repository root:</p>
 <ul>
 <li>Number of users: 35</li>
 <li>Spawn rate: 1</li>
-<li>Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net' 
+<li>Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
 <ul>
 <li>Set host to 'http://host.docker.internal:8000' to test against a local instance of Merino</li>
 </ul>
@@ -1116,8 +1116,8 @@ repository root:</p>
 <li>Select &quot;Start Swarming&quot;</li>
 </ul>
 <h4 id="2-stop-load-test"><a class="header" href="#2-stop-load-test">2. Stop Load Test</a></h4>
-<p>Select the 'Stop' button in the top right hand corner of the Locust UI, after the 
-desired test duration has elapsed. If the 'Run time' is set in step 1, the load test 
+<p>Select the 'Stop' button in the top right hand corner of the Locust UI, after the
+desired test duration has elapsed. If the 'Run time' is set in step 1, the load test
 will stop automatically.</p>
 <h4 id="3-analyse-results"><a class="header" href="#3-analyse-results">3. Analyse Results</a></h4>
 <ul>
@@ -1137,11 +1137,11 @@ local instance of Merino.</li>
 <p>The load tests can be executed from the <a href="https://console.cloud.google.com/home/dashboard?q=search&amp;referrer=search&amp;project=spheric-keel-331521&amp;cloudshell=false">contextual-services-test-eng cloud shell</a>.</p>
 <h4 id="2-configure-the-bash-script"><a class="header" href="#2-configure-the-bash-script">2. Configure the Bash Script</a></h4>
 <ul>
-<li>The <code>setup_k8s.sh</code> file, located in the <code>tests\load</code> directory, contains shell 
-commands to <strong>create</strong> a GKE cluster, <strong>setup</strong> an existing GKE cluster or <strong>delete</strong> 
+<li>The <code>setup_k8s.sh</code> file, located in the <code>tests\load</code> directory, contains shell
+commands to <strong>create</strong> a GKE cluster, <strong>setup</strong> an existing GKE cluster or <strong>delete</strong>
 a GKE cluster
 <ul>
-<li>Modify the script to include the MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY 
+<li>Modify the script to include the MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY
 environment variables</li>
 <li>Execute the following from the root directory, to make the file executable:
 <pre><code class="language-shell">chmod +x tests/load/setup_k8s.sh
@@ -1152,19 +1152,19 @@ environment variables</li>
 </ul>
 <h4 id="3-create-the-gcp-cluster"><a class="header" href="#3-create-the-gcp-cluster">3. Create the GCP Cluster</a></h4>
 <ul>
-<li>Execute the <code>setup_k8s.sh</code> file and select the <strong>create</strong> option, in order to 
-initiate the process of creating a cluster, setting up the env variables and 
+<li>Execute the <code>setup_k8s.sh</code> file and select the <strong>create</strong> option, in order to
+initiate the process of creating a cluster, setting up the env variables and
 building the docker image
 <pre><code class="language-shell">./tests/load/setup_k8s.sh
 </code></pre>
 </li>
-<li>The cluster creation process will take some time. It is considered complete, once 
+<li>The cluster creation process will take some time. It is considered complete, once
 an external IP is assigned to the <code>locust_master</code> node. Monitor the assignment via
 a watch loop:
 <pre><code class="language-bash">kubectl get svc locust-master --watch
 </code></pre>
 </li>
-<li>The number of workers is defaulted to 5, but can be modified with the 
+<li>The number of workers is defaulted to 5, but can be modified with the
 <code>kubectl scale</code> command. Example (10 workers):
 <pre><code class="language-bash">kubectl scale deployment/locust-worker --replicas=10
 </code></pre>
@@ -1195,8 +1195,8 @@ echo http://$EXTERNAL_IP:8089
 </li>
 </ul>
 <h4 id="2-stop-load-test-1"><a class="header" href="#2-stop-load-test-1">2. Stop Load Test</a></h4>
-<p>Select the 'Stop' button in the top right hand corner of the Locust UI, after the 
-desired test duration has elapsed. If the 'Run time' is set in step 1, the load test 
+<p>Select the 'Stop' button in the top right hand corner of the Locust UI, after the
+desired test duration has elapsed. If the 'Run time' is set in step 1, the load test
 will stop automatically.</p>
 <h4 id="3-analyse-results-1"><a class="header" href="#3-analyse-results-1">3. Analyse Results</a></h4>
 <p><strong>RPS</strong></p>
@@ -1256,7 +1256,7 @@ The <code>master-pod-name</code> can be found at the top of the pod list:
 <pre><code class="language-bash">kubectl get pods -o wide
 </code></pre>
 </li>
-<li>Upload the files to the <a href="https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux:">ConServ</a> drive and record the links in the 
+<li>Upload the files to the <a href="https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux:">ConServ</a> drive and record the links in the
 spreadsheet</li>
 </ul>
 </li>
@@ -1349,8 +1349,8 @@ to the <code>merino</code> container startup, a pre-requisite.</p>
 sharing abilities. It uses the <code>kinto-attachments</code> container to store data locally.</p>
 <p>For more details, see the Remote Settings <a href="https://remote-settings.readthedocs.io/en/latest/">documentation</a>.</p>
 <h2 id="local-execution-1"><a class="header" href="#local-execution-1">Local Execution</a></h2>
-<p>Local execution can be expedited by simply running <code>make contract-tests</code>, from the 
-repository root. This creates the Docker containers with kinto, Merino and the test 
+<p>Local execution can be expedited by simply running <code>make contract-tests</code>, from the
+repository root. This creates the Docker containers with kinto, Merino and the test
 client and runs the test scenarios against them.</p>
 <pre><code class="language-shell">make contract-tests
 </code></pre>
@@ -1358,7 +1358,7 @@ client and runs the test scenarios against them.</p>
 the repository root:</p>
 <pre><code class="language-shell">make contract-tests-clean
 </code></pre>
-<p>Failing to run this clean command between code changes may result in your changes not 
+<p>Failing to run this clean command between code changes may result in your changes not
 being reflected.</p>
 <p>See <a href="https://github.com/mozilla-services/merino-py/blob/main/Makefile">Makefile</a> for details.</p>
 <h2 id="maintenance-1"><a class="header" href="#maintenance-1">Maintenance</a></h2>
@@ -1670,7 +1670,7 @@ require local setup via command line, pytest.ini file or IDE configuration:</p>
 <li>Depending on the severity of the problem, decide if this warrants
 <a href="https://mozilla-hub.atlassian.net/wiki/spaces/MIR/overview">kicking off an incident</a>;</li>
 <li>Identify the problematic commit (it may not be the latest commit)
-and create a revert PR. 
+and create a revert PR.
 If it is the latest commit, you can revert the change with:
 <pre><code>git revert HEAD~1
 </code></pre>
@@ -1763,7 +1763,7 @@ initiated manually by triggering the CI pipeline in <a href="https://app.circlec
 <p>To manage configurations and view all documentation for individual config values,
 please view the <a href="https://github.com/mozilla-services/merino-py/tree/main/merino/configs/default.toml">default.toml</a> file.</p>
 <h2 id="settings"><a class="header" href="#settings">Settings</a></h2>
-<p>Merino's settings are managed via <a href="https://www.dynaconf.com/">Dynaconf</a> and can be specified in two ways: </p>
+<p>Merino's settings are managed via <a href="https://www.dynaconf.com/">Dynaconf</a> and can be specified in two ways:</p>
 <ol>
 <li>a <a href="https://toml.io/en/">TOML file</a> in the <code>merino/configs/</code> <a href="https://github.com/mozilla-services/merino-py/tree/main/merino/configs">directory</a>.</li>
 <li>via environment variables.
@@ -1797,15 +1797,15 @@ One may add secrets here if desired, though it is advised to exercise great caut
 <h2 id="general"><a class="header" href="#general">General</a></h2>
 <ul>
 <li>
-<p>All environments are prefixed with <code>MERINO_</code>. 
-This is established in the <code>config.py</code> file by setting the <code>envvar_prefix=&quot;MERINO&quot;</code> 
+<p>All environments are prefixed with <code>MERINO_</code>.
+This is established in the <code>config.py</code> file by setting the <code>envvar_prefix=&quot;MERINO&quot;</code>
 for the Dynaconf instance.
-The first level following <code>MERINO_</code> is accessed with a single underscore <code>_</code> and any subsequent levels require two underscores <code>__</code>. 
+The first level following <code>MERINO_</code> is accessed with a single underscore <code>_</code> and any subsequent levels require two underscores <code>__</code>.
 For example, the logging format can be controlled from the environment variable <code>MERINO_LOGGING__FORMAT</code>.</p>
 </li>
 <li>
 <p>Production environment variables are set by SRE and stored in the
-cloudops project in the <code>configmap.yml</code> file. 
+cloudops project in the <code>configmap.yml</code> file.
 Contact SRE if you require information or access on this file,
 or request access to the cloudops infra repo.</p>
 </li>
@@ -1817,7 +1817,7 @@ desired environment variables using CLI flags.</p>
 <code>MERINO_ENV=production MERINO_LOGGING__FORMAT=pretty make dev</code></p>
 </li>
 <li>
-<p><code>env</code> (<code>MERINO_ENV</code>) - Only settable from environment variables. 
+<p><code>env</code> (<code>MERINO_ENV</code>) - Only settable from environment variables.
 Controls which environment configuration is loaded, as described above.</p>
 </li>
 <li>
@@ -1894,13 +1894,13 @@ There may be instances you need to manually re-run the job from the Airflow dash
 <h3 id="graph-view-tab-airflow-ui---alternative"><a class="header" href="#graph-view-tab-airflow-ui---alternative">Graph View Tab (Airflow UI) - Alternative</a></h3>
 <ol>
 <li>Visit the <a href="https://workflow.telemetry.mozilla.org/dags/merino_jobs/graph?root=">Airflow dashboard for <code>merino_jobs</code></a>.</li>
-<li>From the Graph View Tab, Click on the <code>nav_suggestions_prepare_domain_metadata_prod</code> task. 
+<li>From the Graph View Tab, Click on the <code>nav_suggestions_prepare_domain_metadata_prod</code> task.
 <img src="operations/jobs/nav_sug_graph_view.png" alt="merino_jobs Nav Suggest Graph View" title="merino_jobs UI Graph View" /></li>
 <li>Click on 'Clear' and the job will re-run.
 <img src="operations/jobs/nav_task_instance_clear.png" alt="merino_jobs UI Task Instance Clear" title="merino_jobs UI Task Clear" /></li>
 </ol>
 <p>At the conclusion of the job, you should recieve an email with a link to the newly generated file. Ensure you are a member of the <code>disco-team</code> email distro group to recieve the email.</p>
-<p>Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod to verify the correction of an error. </p>
+<p>Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod to verify the correction of an error.</p>
 <p>See Airflow's <a href="https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html#re-run-dag">documentation on re-running DAGs</a> for more information and implementation details.</p>
 <p>To see the code for the <code>merino_jobs</code> DAG, visit the <a href="https://github.com/mozilla/telemetry-airflow/blob/main/dags/merino_jobs.py">telemetry-airflow repo</a>. The source for the job is also in the <a href="https://workflow.telemetry.mozilla.org/dags/merino_jobs/code?root=">'code' tab</a> in the airflow console.</p>
 <p>To see the navigational suggestions code that is run when the job is invoked, visit <a href="https://github.com/mozilla-services/merino-py/tree/main/merino/jobs/navigational_suggestions">Merino <code>jobs/navigational_suggestions</code></a>.</p>
@@ -1910,7 +1910,7 @@ There may be instances you need to manually re-run the job from the Airflow dash
 Airflow takes the <code>latest</code> image built as the base image.
 The reasons to keep the job code close to the application code are:</p>
 <ol>
-<li>Data models can be shared between the indexing job and application more easily. 
+<li>Data models can be shared between the indexing job and application more easily.
 This means that data migrations will be simpler.</li>
 <li>All the logic regarding Merino functionality can be found in one place.</li>
 <li>Eliminates unintended differences in functionality due to dependency mismatch.</li>
@@ -1930,12 +1930,12 @@ There may be instances you need to manually re-run the job from the Airflow dash
 <h3 id="graph-view-tab-airflow-ui---alternative-1"><a class="header" href="#graph-view-tab-airflow-ui---alternative-1">Graph View Tab (Airflow UI) - Alternative</a></h3>
 <ol>
 <li>Visit the <a href="https://workflow.telemetry.mozilla.org/dags/merino_jobs/graph?root=">Airflow dashboard for <code>merino_jobs</code></a>.</li>
-<li>From the Graph View Tab, Click on the <code>wikipedia_indexer_build_index_production</code> task. 
+<li>From the Graph View Tab, Click on the <code>wikipedia_indexer_build_index_production</code> task.
 <img src="operations/jobs/wiki_graph_view.png" alt="merino_jobs Wikipedia Indexer Graph View" title="merino_jobs UI Graph View" /></li>
 <li>Click on 'Clear' and the job will re-run.
 <img src="operations/jobs/wiki_task_instance_clear.png" alt="merino_jobs UI Task Instance Clear" title="merino_jobs UI Task Clear" /></li>
 </ol>
-<p>Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod to verify the correction of an error. </p>
+<p>Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod to verify the correction of an error.</p>
 <p>See Airflow's <a href="https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html#re-run-dag">documentation on re-running DAGs</a> for more information and implementation details.</p>
 <p>To see the code for the <code>merino_jobs</code> DAG, visit the <a href="https://github.com/mozilla/telemetry-airflow/blob/main/dags/merino_jobs.py">telemetry-airflow repo</a>. The source for the job is also in the <a href="https://workflow.telemetry.mozilla.org/dags/merino_jobs/code?root=">'code' tab</a> in the airflow console.</p>
 <p>To see the Wikipedia Indexer code that is run when the job is invoked, visit <a href="https://github.com/mozilla-services/merino-py/tree/main/merino/jobs/wikipedia_indexer">Merino <code>jobs/wikipedia_indexer</code></a>.</p>
@@ -2095,17 +2095,17 @@ objects in the chunk.</p>
 <li><strong>Date:</strong> 2023-02-21</li>
 </ul>
 <h2 id="context-and-problem-statement"><a class="header" href="#context-and-problem-statement">Context and Problem Statement</a></h2>
-<p>Performance testing for the Rust version of Merino was conducted with the <a href="https://locust.io/">Locust</a> 
-test framework and focused on the detection of HTTP request failures. During the 
-migration of Merino from Rust to Python, performance testing was conducted with <a href="https://k6.io/">k6</a> 
-and focused on the evaluation of request latency. Going forward a unified performance 
+<p>Performance testing for the Rust version of Merino was conducted with the <a href="https://locust.io/">Locust</a>
+test framework and focused on the detection of HTTP request failures. During the
+migration of Merino from Rust to Python, performance testing was conducted with <a href="https://k6.io/">k6</a>
+and focused on the evaluation of request latency. Going forward a unified performance
 testing solution is preferred, should the test framework be Locust or k6?</p>
 <h2 id="decision-drivers"><a class="header" href="#decision-drivers">Decision Drivers</a></h2>
 <ol>
-<li>The test framework supports the current load test design, a 10-minute test run with 
+<li>The test framework supports the current load test design, a 10-minute test run with
 an average load of 1500RPS (see <a href="https://docs.google.com/document/d/1v7LDXENPZg37KXeNcznEZKNZ8rQlOhNbsHprFyMXHhs/edit?usp=sharing">Merino Load Test Plan</a>)</li>
 <li>The test framework measures HTTP request failure and client-side latency metrics</li>
-<li>The test framework is compatible with the Rapid Release Model for Firefox Services 
+<li>The test framework is compatible with the Rapid Release Model for Firefox Services
 initiative, meaning:
 <ul>
 <li>It can execute through command line</li>
@@ -2114,7 +2114,7 @@ initiative, meaning:
 <li>It can report metrics to <a href="https://earthangel-b40313e5.influxcloud.net/?orgId=1%5D">Grafana</a></li>
 </ul>
 </li>
-<li>The members of the DISCO and ETE teams are able to contribute to and maintain load 
+<li>The members of the DISCO and ETE teams are able to contribute to and maintain load
 tests written with the test framework</li>
 </ol>
 <h2 id="considered-options"><a class="header" href="#considered-options">Considered Options</a></h2>
@@ -2127,10 +2127,10 @@ tests written with the test framework</li>
 <ul>
 <li><strong>A. Locust</strong></li>
 </ul>
-<p>Both k6 and Locust are able to execute the current load test design, report required 
-metrics and fulfill the Rapid Release Model for Firefox Services initiative; However, 
-Locust's Python tech stack ultimately makes it the better fit for the Merino-py 
-project. In-line with the team's single repository direction (see <a href="https://github.com/mozilla-services/merino-py/pull/186">PR</a>), using 
+<p>Both k6 and Locust are able to execute the current load test design, report required
+metrics and fulfill the Rapid Release Model for Firefox Services initiative; However,
+Locust's Python tech stack ultimately makes it the better fit for the Merino-py
+project. In-line with the team's single repository direction (see <a href="https://github.com/mozilla-services/merino-py/pull/186">PR</a>), using
 Locust will:</p>
 <ul>
 <li>Leverage existing testing, linting and formatting infrastructure</li>
@@ -2138,14 +2138,14 @@ Locust will:</p>
 </ul>
 <h2 id="pros-and-cons-of-the-options"><a class="header" href="#pros-and-cons-of-the-options">Pros and Cons of the Options</a></h2>
 <h3 id="a-locust"><a class="header" href="#a-locust">A. Locust</a></h3>
-<p><a href="https://locust.io/">Locust</a> can be viewed as the status quo option, since it is the framework that is 
-currently integrated into the Merino-py repository and is the basis for the CD load 
-test integration currently underway (see <a href="https://mozilla-hub.atlassian.net/browse/DISCO-2113">DISCO-2113</a>). </p>
+<p><a href="https://locust.io/">Locust</a> can be viewed as the status quo option, since it is the framework that is
+currently integrated into the Merino-py repository and is the basis for the CD load
+test integration currently underway (see <a href="https://mozilla-hub.atlassian.net/browse/DISCO-2113">DISCO-2113</a>).</p>
 <h4 id="pros"><a class="header" href="#pros">Pros</a></h4>
 <ul>
-<li>Locust has a mature distributed load generation feature and can easily support a 1500 
+<li>Locust has a mature distributed load generation feature and can easily support a 1500
 RPS load</li>
-<li>Locust has built-in RPS, HTTP request failure and time metrics with customizable URL 
+<li>Locust has built-in RPS, HTTP request failure and time metrics with customizable URL
 break-down</li>
 <li>Locust scripting is in Python</li>
 <li>Locust supports direct command line usage</li>
@@ -2154,27 +2154,27 @@ ETE team</li>
 </ul>
 <h4 id="cons"><a class="header" href="#cons">Cons</a></h4>
 <ul>
-<li>Locust is 100% community driven (no </li>
-<li>commercial business), which means its 
+<li>Locust is 100% community driven (no</li>
+<li>commercial business), which means its
 contribution level can wane</li>
-<li>Preliminary research indicates that reporting metrics from Locust to <a href="https://earthangel-b40313e5.influxcloud.net/?orgId=1%5D">Grafana</a> 
+<li>Preliminary research indicates that reporting metrics from Locust to <a href="https://earthangel-b40313e5.influxcloud.net/?orgId=1%5D">Grafana</a>
 requires the creation of custom code, a plugin or a third party integration</li>
 </ul>
 <h3 id="b-k6"><a class="header" href="#b-k6">B. k6</a></h3>
-<p>For the launch of Merino-py, performance bench-marking was conducted using a <a href="https://k6.io/">k6</a> 
-load test script (see <a href="https://github.com/quiiver/merino-explorations">Merino Explorations</a>). This script was reused from the Merino 
-rewrite exploration effort and has proven successful in assessing if Merino-py 
-performance achieves the target p95 latency threshold, effecting preventative change 
-(See <a href="https://github.com/mozilla-services/merino-py/pull/67#issuecomment-1266031853">PR</a>). k6's effectiveness and popularity amongst team members is an incentive 
+<p>For the launch of Merino-py, performance bench-marking was conducted using a <a href="https://k6.io/">k6</a>
+load test script (see <a href="https://github.com/quiiver/merino-explorations">Merino Explorations</a>). This script was reused from the Merino
+rewrite exploration effort and has proven successful in assessing if Merino-py
+performance achieves the target p95 latency threshold, effecting preventative change
+(See <a href="https://github.com/mozilla-services/merino-py/pull/67#issuecomment-1266031853">PR</a>). k6's effectiveness and popularity amongst team members is an incentive
 to pause and evaluate if it is a more suitable framework going forward.</p>
 <h4 id="pros-1"><a class="header" href="#pros-1">Pros</a></h4>
 <ul>
 <li>k6 is an open-source commercially backed framework with a high contribution rate</li>
 <li>k6 is built by Grafana Labs, inferring easy integration with dashboards</li>
-<li>k6 has built-in RPS, HTTP request failure and time metrics with customizable URL 
+<li>k6 has built-in RPS, HTTP request failure and time metrics with customizable URL
 break-down</li>
 <li>k6 supports direct command line usage</li>
-<li>k6 is feature rich, including built-in functions to generate pass/fail results and 
+<li>k6 is feature rich, including built-in functions to generate pass/fail results and
 create custom metrics</li>
 </ul>
 <h4 id="cons-1"><a class="header" href="#cons-1">Cons</a></h4>
@@ -2182,15 +2182,15 @@ create custom metrics</li>
 <li>The k6 development stack is in JavaScript/TypeScript. This means:
 <ul>
 <li>Modeling and backend layer code would need to be duplicated and maintained</li>
-<li>Linting, formatting and dependency infrastructure would need to be added and 
+<li>Linting, formatting and dependency infrastructure would need to be added and
 maintained</li>
 </ul>
 </li>
-<li>k6 has an immature distributed load generation feature, with <a href="https://k6.io/docs/testing-guides/running-large-tests/#distributed-execution">documented</a> 
+<li>k6 has an immature distributed load generation feature, with <a href="https://k6.io/docs/testing-guides/running-large-tests/#distributed-execution">documented</a>
 limitations
 <ul>
 <li>k6 runs more efficiently than other frameworks, so it may be possible to achieve
-1500 RPS without distribution </li>
+1500 RPS without distribution</li>
 </ul>
 </li>
 </ul>
@@ -2207,7 +2207,7 @@ Drew Willcoxon, Taddes Korris, Tiffany Tran</li>
 <li>Date: 2023-04-20</li>
 </ul>
 <h2 id="context-and-problem-statement-1"><a class="header" href="#context-and-problem-statement-1">Context and Problem Statement</a></h2>
-<p>As Merino continues to add more suggestions, 
+<p>As Merino continues to add more suggestions,
 suggestion providers are going to have to return all sorts of
 data to the clients that are bespoke to the particular suggestion.
 For instance, weather suggestion returns a <code>temperature</code>.
@@ -2215,8 +2215,8 @@ Currently, we do not have a strategy to manage these bespoke pieces of data
 which results in them returned at the top level of the suggestion object.
 However, this will pose a problem when</p>
 <ol>
-<li>names of fields are shared between providers, but have different semantics 
-(i.e. <code>rating</code> may be a decimal value between 0-1 in one type, 
+<li>names of fields are shared between providers, but have different semantics
+(i.e. <code>rating</code> may be a decimal value between 0-1 in one type,
 and a &quot;star&quot; integer rating between 1-5 in another)</li>
 <li>the API is unclear about what will <em>necessarily</em> exist, and what is <em>optional</em>,
 which leads to client confusion about the contract</li>
@@ -2369,7 +2369,7 @@ based off of which provider is specified.</p>
 <li>Can specify specific validation per provider.</li>
 <li>Merino is still kind of immature, so it still might be too early to think about design.</li>
 <li>Less nesting in the models (resulting in less complexity).</li>
-<li>Currently, backwards compatible as we don't have to do anything 
+<li>Currently, backwards compatible as we don't have to do anything
 to existing providers, as this follows the existing patterns.</li>
 </ul>
 <h4 id="cons-2"><a class="header" href="#cons-2">Cons</a></h4>
@@ -2555,11 +2555,11 @@ as they will likely be used to specify a specific rendering path in the client.<
 <h4 id="pros-5"><a class="header" href="#pros-5">Pros</a></h4>
 <ul>
 <li>All the pros for B applies here</li>
-<li>Can decouple the <code>custom_details</code> from <code>provider</code>. This will be helpful for potentially 
+<li>Can decouple the <code>custom_details</code> from <code>provider</code>. This will be helpful for potentially
 sharing the <code>type</code> with other suggestions produced by different providers. For instance,
-we may want this to specify different <em>rendering</em> paths in the client 
+we may want this to specify different <em>rendering</em> paths in the client
 (i.e. a &quot;top picks&quot; type to be shared between <code>addons</code> and <code>top_picks</code> providers,
-as there's many shared fields because they're rendered similarly). </li>
+as there's many shared fields because they're rendered similarly).</li>
 </ul>
 <h4 id="cons-5"><a class="header" href="#cons-5">Cons</a></h4>
 <ul>
@@ -2595,7 +2595,7 @@ This will assume that the client side have these specific rendering types.</p>
 <h4 id="pros-6"><a class="header" href="#pros-6">Pros</a></h4>
 <ul>
 <li>Can share custom components with schema validation.</li>
-<li>Backwards compatible with clients who don't have the necessary components to render. 
+<li>Backwards compatible with clients who don't have the necessary components to render.
 It will just use the default renderer via the Fx Suggest Design Framework</li>
 </ul>
 <h4 id="cons-6"><a class="header" href="#cons-6">Cons</a></h4>

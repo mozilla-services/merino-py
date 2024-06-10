@@ -149,7 +149,7 @@ Drew Willcoxon, Taddes Korris, Tiffany Tran</li>
 <li>Date: 2023-04-20</li>
 </ul>
 <h2 id="context-and-problem-statement"><a class="header" href="#context-and-problem-statement">Context and Problem Statement</a></h2>
-<p>As Merino continues to add more suggestions, 
+<p>As Merino continues to add more suggestions,
 suggestion providers are going to have to return all sorts of
 data to the clients that are bespoke to the particular suggestion.
 For instance, weather suggestion returns a <code>temperature</code>.
@@ -157,8 +157,8 @@ Currently, we do not have a strategy to manage these bespoke pieces of data
 which results in them returned at the top level of the suggestion object.
 However, this will pose a problem when</p>
 <ol>
-<li>names of fields are shared between providers, but have different semantics 
-(i.e. <code>rating</code> may be a decimal value between 0-1 in one type, 
+<li>names of fields are shared between providers, but have different semantics
+(i.e. <code>rating</code> may be a decimal value between 0-1 in one type,
 and a &quot;star&quot; integer rating between 1-5 in another)</li>
 <li>the API is unclear about what will <em>necessarily</em> exist, and what is <em>optional</em>,
 which leads to client confusion about the contract</li>
@@ -311,7 +311,7 @@ based off of which provider is specified.</p>
 <li>Can specify specific validation per provider.</li>
 <li>Merino is still kind of immature, so it still might be too early to think about design.</li>
 <li>Less nesting in the models (resulting in less complexity).</li>
-<li>Currently, backwards compatible as we don't have to do anything 
+<li>Currently, backwards compatible as we don't have to do anything
 to existing providers, as this follows the existing patterns.</li>
 </ul>
 <h4 id="cons"><a class="header" href="#cons">Cons</a></h4>
@@ -497,11 +497,11 @@ as they will likely be used to specify a specific rendering path in the client.<
 <h4 id="pros-3"><a class="header" href="#pros-3">Pros</a></h4>
 <ul>
 <li>All the pros for B applies here</li>
-<li>Can decouple the <code>custom_details</code> from <code>provider</code>. This will be helpful for potentially 
+<li>Can decouple the <code>custom_details</code> from <code>provider</code>. This will be helpful for potentially
 sharing the <code>type</code> with other suggestions produced by different providers. For instance,
-we may want this to specify different <em>rendering</em> paths in the client 
+we may want this to specify different <em>rendering</em> paths in the client
 (i.e. a &quot;top picks&quot; type to be shared between <code>addons</code> and <code>top_picks</code> providers,
-as there's many shared fields because they're rendered similarly). </li>
+as there's many shared fields because they're rendered similarly).</li>
 </ul>
 <h4 id="cons-3"><a class="header" href="#cons-3">Cons</a></h4>
 <ul>
@@ -537,7 +537,7 @@ This will assume that the client side have these specific rendering types.</p>
 <h4 id="pros-4"><a class="header" href="#pros-4">Pros</a></h4>
 <ul>
 <li>Can share custom components with schema validation.</li>
-<li>Backwards compatible with clients who don't have the necessary components to render. 
+<li>Backwards compatible with clients who don't have the necessary components to render.
 It will just use the default renderer via the Fx Suggest Design Framework</li>
 </ul>
 <h4 id="cons-4"><a class="header" href="#cons-4">Cons</a></h4>

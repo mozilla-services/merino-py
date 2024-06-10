@@ -164,17 +164,17 @@ In this case, suggestions are compared to a static list in the code that blocks 
 <p>The blocklist, <a href="/merino/jobs/navigational_suggestions/data/domain_blocklist.json"><code>domain_blocklist.json</code></a>,  is referenced during data generation of the <a href="/dev/top_picks.json"><code>top_picks.json</code></a> file, which is ingested by the provider backend. This ensures specific domains are not indexed for suggestions. The blocklist is loaded and an exact string comparison is made between all second-level domains and the second-level domains defined in the blocklist.</p>
 <p>See <a href="../operations/blocklist-nav-suggestions.html">nav-suggestions blocklist runbook</a> for more information.</p>
 <h2 id="wikipedia"><a class="header" href="#wikipedia">Wikipedia</a></h2>
-<p>The Wikipedia Provider does both title filtering and category filtering at the data indexing level. </p>
+<p>The Wikipedia Provider does both title filtering and category filtering at the data indexing level.</p>
 <p>Since the indexing jobs run periodically, we also implemented title filtering in the provider to get the blocking out sooner.</p>
 <h3 id="indexer"><a class="header" href="#indexer">Indexer</a></h3>
 <p>The Wikipedia Indexer Job references a remote blocklist which contains sensitive categories.
-At job runtime, the indexer reads the remote blocklist and creates a set of article categories that are be excluded from indexing. </p>
+At job runtime, the indexer reads the remote blocklist and creates a set of article categories that are be excluded from indexing.</p>
 <p>The article categories in the blocklist are chosen based off of analysis and best guesses of what could be considered <em>objectionable</em> content, based off of Mozilla's values and brand image.
 Any modifications to the file should be done with careful consideration.</p>
-<p>The indexer also blocks titles that are defined in the <code>WIKIPEDIA_TITLE_BLOCKLIST</code> in the application, which is referenced below.  Any title that matches this blocklist is excluded from indexing. </p>
+<p>The indexer also blocks titles that are defined in the <code>WIKIPEDIA_TITLE_BLOCKLIST</code> in the application, which is referenced below.  Any title that matches this blocklist is excluded from indexing.</p>
 <h3 id="provider"><a class="header" href="#provider">Provider</a></h3>
-<p>When queried, the Wikipedia provider reads the <code>WIKIPEDIA_TITLE_BLOCKLIST</code> when creating a <code>WikipediaSuggestion</code> and if the query matches a blocked title, the suggestion is not shown to the client. </p>
-<p>We have this feature because the indexing job is not run daily. Therefore, we desire having an option to rapidly add to this list should we need to block a specific article. </p>
+<p>When queried, the Wikipedia provider reads the <code>WIKIPEDIA_TITLE_BLOCKLIST</code> when creating a <code>WikipediaSuggestion</code> and if the query matches a blocked title, the suggestion is not shown to the client.</p>
+<p>We have this feature because the indexing job is not run daily. Therefore, we desire having an option to rapidly add to this list should we need to block a specific article.</p>
 <p>See <a href="../operations/blocklist-wikipedia.html">wikipedia blocklist runbook</a> for more information.</p>
 
                     </main>

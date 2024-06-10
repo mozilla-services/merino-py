@@ -170,8 +170,8 @@ Do this by running <code>make load-tests-clean</code>.</p>
 <p>Follow the steps bellow to execute the load tests locally:</p>
 <h3 id="setup-environment"><a class="header" href="#setup-environment">Setup Environment</a></h3>
 <h4 id="1-configure-environment-variables"><a class="header" href="#1-configure-environment-variables">1. Configure Environment Variables</a></h4>
-<p>The following environment variables as well as 
-<a href="https://docs.locust.io/en/stable/configuration.html#environment-variables">Locust environment variables</a> can be set in 
+<p>The following environment variables as well as
+<a href="https://docs.locust.io/en/stable/configuration.html#environment-variables">Locust environment variables</a> can be set in
 <code>tests\load\docker-compose.yml</code>.
 Make sure any required API key is added but then not checked into source control (i.e. <code>WIKIPEDIA__ES_API_KEY</code>).</p>
 <div class="table-wrapper"><table><thead><tr><th>Environment Variable</th><th>Node(s)</th><th>Description</th></tr></thead><tbody>
@@ -204,7 +204,7 @@ repository root:</p>
 </code></pre>
 </li>
 <li>Option 3: Use the Docker instance
-<pre><code class="language-shell">make docker-build &amp;&amp; docker run -p 8000:8000 app:build 
+<pre><code class="language-shell">make docker-build &amp;&amp; docker run -p 8000:8000 app:build
 </code></pre>
 </li>
 </ul>
@@ -223,7 +223,7 @@ repository root:</p>
 <ul>
 <li>Number of users: 35</li>
 <li>Spawn rate: 1</li>
-<li>Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net' 
+<li>Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
 <ul>
 <li>Set host to 'http://host.docker.internal:8000' to test against a local instance of Merino</li>
 </ul>
@@ -236,8 +236,8 @@ repository root:</p>
 <li>Select &quot;Start Swarming&quot;</li>
 </ul>
 <h4 id="2-stop-load-test"><a class="header" href="#2-stop-load-test">2. Stop Load Test</a></h4>
-<p>Select the 'Stop' button in the top right hand corner of the Locust UI, after the 
-desired test duration has elapsed. If the 'Run time' is set in step 1, the load test 
+<p>Select the 'Stop' button in the top right hand corner of the Locust UI, after the
+desired test duration has elapsed. If the 'Run time' is set in step 1, the load test
 will stop automatically.</p>
 <h4 id="3-analyse-results"><a class="header" href="#3-analyse-results">3. Analyse Results</a></h4>
 <ul>
@@ -257,11 +257,11 @@ local instance of Merino.</li>
 <p>The load tests can be executed from the <a href="https://console.cloud.google.com/home/dashboard?q=search&amp;referrer=search&amp;project=spheric-keel-331521&amp;cloudshell=false">contextual-services-test-eng cloud shell</a>.</p>
 <h4 id="2-configure-the-bash-script"><a class="header" href="#2-configure-the-bash-script">2. Configure the Bash Script</a></h4>
 <ul>
-<li>The <code>setup_k8s.sh</code> file, located in the <code>tests\load</code> directory, contains shell 
-commands to <strong>create</strong> a GKE cluster, <strong>setup</strong> an existing GKE cluster or <strong>delete</strong> 
+<li>The <code>setup_k8s.sh</code> file, located in the <code>tests\load</code> directory, contains shell
+commands to <strong>create</strong> a GKE cluster, <strong>setup</strong> an existing GKE cluster or <strong>delete</strong>
 a GKE cluster
 <ul>
-<li>Modify the script to include the MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY 
+<li>Modify the script to include the MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY
 environment variables</li>
 <li>Execute the following from the root directory, to make the file executable:
 <pre><code class="language-shell">chmod +x tests/load/setup_k8s.sh
@@ -272,19 +272,19 @@ environment variables</li>
 </ul>
 <h4 id="3-create-the-gcp-cluster"><a class="header" href="#3-create-the-gcp-cluster">3. Create the GCP Cluster</a></h4>
 <ul>
-<li>Execute the <code>setup_k8s.sh</code> file and select the <strong>create</strong> option, in order to 
-initiate the process of creating a cluster, setting up the env variables and 
+<li>Execute the <code>setup_k8s.sh</code> file and select the <strong>create</strong> option, in order to
+initiate the process of creating a cluster, setting up the env variables and
 building the docker image
 <pre><code class="language-shell">./tests/load/setup_k8s.sh
 </code></pre>
 </li>
-<li>The cluster creation process will take some time. It is considered complete, once 
+<li>The cluster creation process will take some time. It is considered complete, once
 an external IP is assigned to the <code>locust_master</code> node. Monitor the assignment via
 a watch loop:
 <pre><code class="language-bash">kubectl get svc locust-master --watch
 </code></pre>
 </li>
-<li>The number of workers is defaulted to 5, but can be modified with the 
+<li>The number of workers is defaulted to 5, but can be modified with the
 <code>kubectl scale</code> command. Example (10 workers):
 <pre><code class="language-bash">kubectl scale deployment/locust-worker --replicas=10
 </code></pre>
@@ -315,8 +315,8 @@ echo http://$EXTERNAL_IP:8089
 </li>
 </ul>
 <h4 id="2-stop-load-test-1"><a class="header" href="#2-stop-load-test-1">2. Stop Load Test</a></h4>
-<p>Select the 'Stop' button in the top right hand corner of the Locust UI, after the 
-desired test duration has elapsed. If the 'Run time' is set in step 1, the load test 
+<p>Select the 'Stop' button in the top right hand corner of the Locust UI, after the
+desired test duration has elapsed. If the 'Run time' is set in step 1, the load test
 will stop automatically.</p>
 <h4 id="3-analyse-results-1"><a class="header" href="#3-analyse-results-1">3. Analyse Results</a></h4>
 <p><strong>RPS</strong></p>
@@ -376,7 +376,7 @@ The <code>master-pod-name</code> can be found at the top of the pod list:
 <pre><code class="language-bash">kubectl get pods -o wide
 </code></pre>
 </li>
-<li>Upload the files to the <a href="https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux:">ConServ</a> drive and record the links in the 
+<li>Upload the files to the <a href="https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux:">ConServ</a> drive and record the links in the
 spreadsheet</li>
 </ul>
 </li>

@@ -148,17 +148,17 @@
 <li><strong>Date:</strong> 2023-02-21</li>
 </ul>
 <h2 id="context-and-problem-statement"><a class="header" href="#context-and-problem-statement">Context and Problem Statement</a></h2>
-<p>Performance testing for the Rust version of Merino was conducted with the <a href="https://locust.io/">Locust</a> 
-test framework and focused on the detection of HTTP request failures. During the 
-migration of Merino from Rust to Python, performance testing was conducted with <a href="https://k6.io/">k6</a> 
-and focused on the evaluation of request latency. Going forward a unified performance 
+<p>Performance testing for the Rust version of Merino was conducted with the <a href="https://locust.io/">Locust</a>
+test framework and focused on the detection of HTTP request failures. During the
+migration of Merino from Rust to Python, performance testing was conducted with <a href="https://k6.io/">k6</a>
+and focused on the evaluation of request latency. Going forward a unified performance
 testing solution is preferred, should the test framework be Locust or k6?</p>
 <h2 id="decision-drivers"><a class="header" href="#decision-drivers">Decision Drivers</a></h2>
 <ol>
-<li>The test framework supports the current load test design, a 10-minute test run with 
+<li>The test framework supports the current load test design, a 10-minute test run with
 an average load of 1500RPS (see <a href="https://docs.google.com/document/d/1v7LDXENPZg37KXeNcznEZKNZ8rQlOhNbsHprFyMXHhs/edit?usp=sharing">Merino Load Test Plan</a>)</li>
 <li>The test framework measures HTTP request failure and client-side latency metrics</li>
-<li>The test framework is compatible with the Rapid Release Model for Firefox Services 
+<li>The test framework is compatible with the Rapid Release Model for Firefox Services
 initiative, meaning:
 <ul>
 <li>It can execute through command line</li>
@@ -167,7 +167,7 @@ initiative, meaning:
 <li>It can report metrics to <a href="https://earthangel-b40313e5.influxcloud.net/?orgId=1%5D">Grafana</a></li>
 </ul>
 </li>
-<li>The members of the DISCO and ETE teams are able to contribute to and maintain load 
+<li>The members of the DISCO and ETE teams are able to contribute to and maintain load
 tests written with the test framework</li>
 </ol>
 <h2 id="considered-options"><a class="header" href="#considered-options">Considered Options</a></h2>
@@ -180,10 +180,10 @@ tests written with the test framework</li>
 <ul>
 <li><strong>A. Locust</strong></li>
 </ul>
-<p>Both k6 and Locust are able to execute the current load test design, report required 
-metrics and fulfill the Rapid Release Model for Firefox Services initiative; However, 
-Locust's Python tech stack ultimately makes it the better fit for the Merino-py 
-project. In-line with the team's single repository direction (see <a href="https://github.com/mozilla-services/merino-py/pull/186">PR</a>), using 
+<p>Both k6 and Locust are able to execute the current load test design, report required
+metrics and fulfill the Rapid Release Model for Firefox Services initiative; However,
+Locust's Python tech stack ultimately makes it the better fit for the Merino-py
+project. In-line with the team's single repository direction (see <a href="https://github.com/mozilla-services/merino-py/pull/186">PR</a>), using
 Locust will:</p>
 <ul>
 <li>Leverage existing testing, linting and formatting infrastructure</li>
@@ -191,14 +191,14 @@ Locust will:</p>
 </ul>
 <h2 id="pros-and-cons-of-the-options"><a class="header" href="#pros-and-cons-of-the-options">Pros and Cons of the Options</a></h2>
 <h3 id="a-locust"><a class="header" href="#a-locust">A. Locust</a></h3>
-<p><a href="https://locust.io/">Locust</a> can be viewed as the status quo option, since it is the framework that is 
-currently integrated into the Merino-py repository and is the basis for the CD load 
-test integration currently underway (see <a href="https://mozilla-hub.atlassian.net/browse/DISCO-2113">DISCO-2113</a>). </p>
+<p><a href="https://locust.io/">Locust</a> can be viewed as the status quo option, since it is the framework that is
+currently integrated into the Merino-py repository and is the basis for the CD load
+test integration currently underway (see <a href="https://mozilla-hub.atlassian.net/browse/DISCO-2113">DISCO-2113</a>).</p>
 <h4 id="pros"><a class="header" href="#pros">Pros</a></h4>
 <ul>
-<li>Locust has a mature distributed load generation feature and can easily support a 1500 
+<li>Locust has a mature distributed load generation feature and can easily support a 1500
 RPS load</li>
-<li>Locust has built-in RPS, HTTP request failure and time metrics with customizable URL 
+<li>Locust has built-in RPS, HTTP request failure and time metrics with customizable URL
 break-down</li>
 <li>Locust scripting is in Python</li>
 <li>Locust supports direct command line usage</li>
@@ -207,27 +207,27 @@ ETE team</li>
 </ul>
 <h4 id="cons"><a class="header" href="#cons">Cons</a></h4>
 <ul>
-<li>Locust is 100% community driven (no </li>
-<li>commercial business), which means its 
+<li>Locust is 100% community driven (no</li>
+<li>commercial business), which means its
 contribution level can wane</li>
-<li>Preliminary research indicates that reporting metrics from Locust to <a href="https://earthangel-b40313e5.influxcloud.net/?orgId=1%5D">Grafana</a> 
+<li>Preliminary research indicates that reporting metrics from Locust to <a href="https://earthangel-b40313e5.influxcloud.net/?orgId=1%5D">Grafana</a>
 requires the creation of custom code, a plugin or a third party integration</li>
 </ul>
 <h3 id="b-k6"><a class="header" href="#b-k6">B. k6</a></h3>
-<p>For the launch of Merino-py, performance bench-marking was conducted using a <a href="https://k6.io/">k6</a> 
-load test script (see <a href="https://github.com/quiiver/merino-explorations">Merino Explorations</a>). This script was reused from the Merino 
-rewrite exploration effort and has proven successful in assessing if Merino-py 
-performance achieves the target p95 latency threshold, effecting preventative change 
-(See <a href="https://github.com/mozilla-services/merino-py/pull/67#issuecomment-1266031853">PR</a>). k6's effectiveness and popularity amongst team members is an incentive 
+<p>For the launch of Merino-py, performance bench-marking was conducted using a <a href="https://k6.io/">k6</a>
+load test script (see <a href="https://github.com/quiiver/merino-explorations">Merino Explorations</a>). This script was reused from the Merino
+rewrite exploration effort and has proven successful in assessing if Merino-py
+performance achieves the target p95 latency threshold, effecting preventative change
+(See <a href="https://github.com/mozilla-services/merino-py/pull/67#issuecomment-1266031853">PR</a>). k6's effectiveness and popularity amongst team members is an incentive
 to pause and evaluate if it is a more suitable framework going forward.</p>
 <h4 id="pros-1"><a class="header" href="#pros-1">Pros</a></h4>
 <ul>
 <li>k6 is an open-source commercially backed framework with a high contribution rate</li>
 <li>k6 is built by Grafana Labs, inferring easy integration with dashboards</li>
-<li>k6 has built-in RPS, HTTP request failure and time metrics with customizable URL 
+<li>k6 has built-in RPS, HTTP request failure and time metrics with customizable URL
 break-down</li>
 <li>k6 supports direct command line usage</li>
-<li>k6 is feature rich, including built-in functions to generate pass/fail results and 
+<li>k6 is feature rich, including built-in functions to generate pass/fail results and
 create custom metrics</li>
 </ul>
 <h4 id="cons-1"><a class="header" href="#cons-1">Cons</a></h4>
@@ -235,15 +235,15 @@ create custom metrics</li>
 <li>The k6 development stack is in JavaScript/TypeScript. This means:
 <ul>
 <li>Modeling and backend layer code would need to be duplicated and maintained</li>
-<li>Linting, formatting and dependency infrastructure would need to be added and 
+<li>Linting, formatting and dependency infrastructure would need to be added and
 maintained</li>
 </ul>
 </li>
-<li>k6 has an immature distributed load generation feature, with <a href="https://k6.io/docs/testing-guides/running-large-tests/#distributed-execution">documented</a> 
+<li>k6 has an immature distributed load generation feature, with <a href="https://k6.io/docs/testing-guides/running-large-tests/#distributed-execution">documented</a>
 limitations
 <ul>
 <li>k6 runs more efficiently than other frameworks, so it may be possible to achieve
-1500 RPS without distribution </li>
+1500 RPS without distribution</li>
 </ul>
 </li>
 </ul>

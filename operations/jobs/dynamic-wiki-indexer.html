@@ -147,7 +147,7 @@
 Airflow takes the <code>latest</code> image built as the base image.
 The reasons to keep the job code close to the application code are:</p>
 <ol>
-<li>Data models can be shared between the indexing job and application more easily. 
+<li>Data models can be shared between the indexing job and application more easily.
 This means that data migrations will be simpler.</li>
 <li>All the logic regarding Merino functionality can be found in one place.</li>
 <li>Eliminates unintended differences in functionality due to dependency mismatch.</li>
@@ -167,12 +167,12 @@ There may be instances you need to manually re-run the job from the Airflow dash
 <h3 id="graph-view-tab-airflow-ui---alternative"><a class="header" href="#graph-view-tab-airflow-ui---alternative">Graph View Tab (Airflow UI) - Alternative</a></h3>
 <ol>
 <li>Visit the <a href="https://workflow.telemetry.mozilla.org/dags/merino_jobs/graph?root=">Airflow dashboard for <code>merino_jobs</code></a>.</li>
-<li>From the Graph View Tab, Click on the <code>wikipedia_indexer_build_index_production</code> task. 
+<li>From the Graph View Tab, Click on the <code>wikipedia_indexer_build_index_production</code> task.
 <img src="wiki_graph_view.png" alt="merino_jobs Wikipedia Indexer Graph View" title="merino_jobs UI Graph View" /></li>
 <li>Click on 'Clear' and the job will re-run.
 <img src="wiki_task_instance_clear.png" alt="merino_jobs UI Task Instance Clear" title="merino_jobs UI Task Clear" /></li>
 </ol>
-<p>Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod to verify the correction of an error. </p>
+<p>Note: You can also re-run the stage job, but the changes won't reflect in production. Stage should be re-run in the event of an error before running in prod to verify the correction of an error.</p>
 <p>See Airflow's <a href="https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html#re-run-dag">documentation on re-running DAGs</a> for more information and implementation details.</p>
 <p>To see the code for the <code>merino_jobs</code> DAG, visit the <a href="https://github.com/mozilla/telemetry-airflow/blob/main/dags/merino_jobs.py">telemetry-airflow repo</a>. The source for the job is also in the <a href="https://workflow.telemetry.mozilla.org/dags/merino_jobs/code?root=">'code' tab</a> in the airflow console.</p>
 <p>To see the Wikipedia Indexer code that is run when the job is invoked, visit <a href="https://github.com/mozilla-services/merino-py/tree/main/merino/jobs/wikipedia_indexer">Merino <code>jobs/wikipedia_indexer</code></a>.</p>
