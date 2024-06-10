@@ -52,7 +52,7 @@ When submitting a PR:
 ## Code Review
 
 This project is production Mozilla code and subject to our
-[committing rules and responsibilities][committing_rules_and_responsibilities]. 
+[committing rules and responsibilities][committing_rules_and_responsibilities].
 Every patch must be peer reviewed.
 
 [committing_rules_and_responsibilities]: https://firefox-source-docs.mozilla.org/contributing/committing_rules_and_responsibilities.html
@@ -73,7 +73,7 @@ of `<type>: <subject>` where `type` must be one of:
 * **chore**: Changes to the build process or auxiliary tools and libraries such as documentation
   generation
 
-If associated with a Jira ticket, synchronization with Jira and GitHub is possible by appending the suffix of the Jiraticket to the branch name (`MOZ-1234` in the example below). Name the branch using this nomenclature with the optional `<type>` followed by a forward slash, followed by the Jira ticket and then a 
+If associated with a Jira ticket, synchronization with Jira and GitHub is possible by appending the suffix of the Jiraticket to the branch name (`MOZ-1234` in the example below). Name the branch using this nomenclature with the optional `<type>` followed by a forward slash, followed by the Jira ticket and then a
 dash-separated description of the task. Ex. `feat/MOZ-1234-add-sentry-sdk` or `MOZ-1234-add-sentry-sdk` Note, the Jira ticket project and number can be added anywhere in the
 branch name, but adding to the beginning is ideal. You can also include the Jira issue at the end of
 commit messages to keep the task up to date. See Jira Docs for referencing issues [here][jira]

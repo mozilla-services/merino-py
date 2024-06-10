@@ -1,4 +1,5 @@
 """Download domain data from BigQuery tables"""
+
 from typing import Any
 
 from google.cloud.bigquery import Client

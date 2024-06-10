@@ -59,9 +59,7 @@ def fixture_providers(
 ) -> Providers:
     """Define providers for this module which are injected automatically."""
     return {
-        "top_picks": Provider(
-            backend=backend, **top_picks_parameters  # type: ignore [arg-type]
-        )
+        "top_picks": Provider(backend=backend, **top_picks_parameters)  # type: ignore [arg-type]
     }
 
 

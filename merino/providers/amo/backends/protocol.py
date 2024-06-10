@@ -1,4 +1,5 @@
 """Addon Base Models and Protocol."""
+
 from typing import Protocol
 
 from pydantic import BaseModel

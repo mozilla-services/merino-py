@@ -1,4 +1,5 @@
 """A wrapper for AccuWeather API interactions."""
+
 import asyncio
 import datetime
 import functools

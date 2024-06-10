@@ -1,4 +1,5 @@
 """Indexer tests"""
+
 import datetime
 import json
 

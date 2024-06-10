@@ -1,6 +1,7 @@
 """Integration tests for DomainMetadataUploader class. These tests use the testcontainers
 library to emulate GCS Storage entities used by the GcsUploader class in a docker container
 """
+
 import json
 import logging
 import os
@@ -54,7 +55,7 @@ def gcs_storage_client(gcs_storage_container) -> Client:
     after this test suite has finished running
     """
     client: Client = Client(
-        credentials=AnonymousCredentials(), project="test_gcp_uploader_project"
+        credentials=AnonymousCredentials(), project="test_gcp_uploader_project"  # type: ignore
     )
 
     yield client

@@ -1,4 +1,5 @@
 """Integration tests for Addons"""
+
 from collections import namedtuple
 from typing import Any
 

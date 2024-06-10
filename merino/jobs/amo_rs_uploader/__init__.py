@@ -1,4 +1,5 @@
 """CLI commands for the amo_rs_uploader module"""
+
 import asyncio
 import logging
 from typing import Any

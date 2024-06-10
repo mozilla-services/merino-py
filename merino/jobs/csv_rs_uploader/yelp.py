@@ -1,6 +1,7 @@
 """Pydantic model for Yelp suggestions as they should be serialized in the
 output JSON.
 """
+
 from pydantic import BaseModel
 
 from merino.jobs.csv_rs_uploader.base import BaseSuggestion

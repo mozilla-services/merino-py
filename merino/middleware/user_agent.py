@@ -3,6 +3,7 @@
 Note that Merino is a service made for Firefox users, this middleware only
 focuses on Firefox related user agents.
 """
+
 from pydantic import BaseModel
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send

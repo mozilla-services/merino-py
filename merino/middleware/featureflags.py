@@ -1,4 +1,5 @@
 """The middleware that configures features flags for Merino"""
+
 from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 

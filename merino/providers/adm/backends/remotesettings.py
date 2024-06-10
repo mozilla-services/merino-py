@@ -1,4 +1,5 @@
 """A thin wrapper around the Remote Settings client."""
+
 import asyncio
 from asyncio import Task
 from typing import Any, Literal, cast

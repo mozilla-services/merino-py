@@ -1,4 +1,5 @@
 """Build and score suggestions for the suggestion type in elasticsearch"""
+
 import time
 from math import log, log2
 from typing import Any, Dict

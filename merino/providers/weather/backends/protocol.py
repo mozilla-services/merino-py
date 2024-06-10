@@ -1,4 +1,5 @@
 """Protocol for weather provider backends."""
+
 from typing import Protocol
 
 from pydantic import BaseModel, HttpUrl

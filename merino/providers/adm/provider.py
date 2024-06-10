@@ -1,4 +1,5 @@
 """AdM integration that uses the remote-settings provided data."""
+
 import asyncio
 import logging
 import time
@@ -153,8 +154,10 @@ class Provider(BaseProvider):
                 "score": self.score,
             }
             return [
-                SponsoredSuggestion(**suggestion_dict)
-                if is_sponsored
-                else NonsponsoredSuggestion(**suggestion_dict)
+                (
+                    SponsoredSuggestion(**suggestion_dict)
+                    if is_sponsored
+                    else NonsponsoredSuggestion(**suggestion_dict)
+                )
             ]
         return []

@@ -1,4 +1,5 @@
 """Abstract class for Providers"""
+
 from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, Field, HttpUrl

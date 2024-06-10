@@ -1,4 +1,5 @@
 """Protocol for the Top Picks provider backend."""
+
 from collections import defaultdict
 from enum import Enum
 from typing import Protocol

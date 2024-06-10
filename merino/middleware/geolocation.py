@@ -1,4 +1,5 @@
 """The middleware that parses geolocation from the client IP address."""
+
 import logging
 from typing import Optional
 
@@ -68,9 +69,11 @@ class GeolocationMiddleware:
                 country=record.country.iso_code,
                 country_name=record.country.names.get("en"),
                 region=record.subdivisions[0].iso_code if record.subdivisions else None,
-                region_name=record.subdivisions[0].names.get("en")
-                if record.subdivisions
-                else None,
+                region_name=(
+                    record.subdivisions[0].names.get("en")
+                    if record.subdivisions
+                    else None
+                ),
                 city=record.city.names.get("en"),
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,

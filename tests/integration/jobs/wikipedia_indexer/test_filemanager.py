@@ -1,4 +1,5 @@
 """FileManager tests"""
+
 import re
 from datetime import datetime as dt
 

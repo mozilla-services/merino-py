@@ -1,4 +1,5 @@
 """Utilities for Dynamic Wikipedia indexer job"""
+
 import csv
 from io import StringIO
 from logging import Logger

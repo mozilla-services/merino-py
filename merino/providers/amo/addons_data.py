@@ -1,6 +1,7 @@
 """Static Mapping for the Addon data, along with the associated keywords
 to do the query string matching.
 """
+
 import enum
 
 

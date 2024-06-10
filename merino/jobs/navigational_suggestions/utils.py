@@ -1,4 +1,5 @@
 """Utilities for navigational suggestions job"""
+
 import logging
 
 import requests

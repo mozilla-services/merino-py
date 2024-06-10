@@ -1,4 +1,5 @@
 """Merino V1 API"""
+
 import logging
 from asyncio import Task
 from collections import Counter
@@ -60,8 +61,9 @@ async def suggest(
     request: Request,
     q: str = Query(max_length=QUERY_CHARACTER_MAX),
     providers: str | None = None,
-    client_variants: str
-    | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
+    client_variants: str | None = Query(
+        default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX
+    ),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
         get_providers
     ),
@@ -206,11 +208,11 @@ async def suggest(
         suggestions=suggestions,
         request_id=correlation_id.get(),
         # [:CLIENT_VARIANT_MAX] filter at end to drop any trailing string beyond max_split.
-        client_variants=client_variants.split(",", maxsplit=CLIENT_VARIANT_MAX)[
-            :CLIENT_VARIANT_MAX
-        ]
-        if client_variants
-        else [],
+        client_variants=(
+            client_variants.split(",", maxsplit=CLIENT_VARIANT_MAX)[:CLIENT_VARIANT_MAX]
+            if client_variants
+            else []
+        ),
     )
 
     # response headers

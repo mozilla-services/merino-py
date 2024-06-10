@@ -1,4 +1,5 @@
 """CLI commands for the wikipedia_indexer module"""
+
 import logging
 
 import typer

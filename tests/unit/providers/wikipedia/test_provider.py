@@ -1,4 +1,5 @@
 """Unit tests for the Merino v1 suggest API endpoint for the Wikipedia provider."""
+
 import pytest
 from pydantic import HttpUrl
 from pytest_mock import MockerFixture

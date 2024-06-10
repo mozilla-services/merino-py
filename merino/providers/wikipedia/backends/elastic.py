@@ -1,4 +1,5 @@
 """The Elasticsearch backend for Dynamic Wikipedia."""
+
 import logging
 import string
 from typing import Any, Final

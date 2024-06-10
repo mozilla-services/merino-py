@@ -1,4 +1,5 @@
 """Unit tests for the Elastic Backend."""
+
 import string
 from unittest.mock import AsyncMock
 

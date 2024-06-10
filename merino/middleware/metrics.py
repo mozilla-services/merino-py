@@ -1,4 +1,5 @@
 """Middleware for request metrics."""
+
 import logging
 from asyncio import get_event_loop
 from functools import cache
