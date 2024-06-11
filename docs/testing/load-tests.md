@@ -228,16 +228,19 @@ will stop automatically.
 
 * Results should be recorded in the [Merino Load Test Spreadsheet][merino_spreadsheet]
 * Optionally, the Locust reports can be saved and linked in the spreadsheet:
+  * The results are persisted in the `/data` directory of the `locust-master-0` pod
+    in the `locust-master` k8s cluster in the GCP project of `merino-nonprod`.
   * Download the results via the Locust UI or via command:
       ```bash
-      kubectl cp <master-pod-name>:/home/locust/merino_stats.csv merino_stats.csv
-      kubectl cp <master-pod-name>:/home/locust/merino_exceptions.csv merino_exceptions.csv
-      kubectl cp <master-pod-name>:/home/locust/merino_failures.csv merino_failures.csv
+      kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_stats.csv merino_stats.csv
+      kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_exceptions.csv merino_exceptions.csv
+      kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_failures.csv merino_failures.csv
       ```
-    The `master-pod-name` can be found at the top of the pod list:
+    The `{run-id}` uniquely identifies each load test run and can be found by:
       ```bash
-      kubectl get pods -o wide
+      kubectl exec -n locust-merino locust-master-0 -- ls -al /data/
       ```
+    and then locate the files with the file creation timestamp when the test was performed.
   * Upload the files to the [ConServ][conserv] drive and record the links in the
     spreadsheet
 
@@ -274,7 +277,7 @@ updating the following:
 [circle_ci]: https://circleci.com/docs/
 [circle_config_yml]: https://github.com/mozilla-services/merino-py/blob/main/.circleci/config.yml
 [cloud]: https://console.cloud.google.com/home/dashboard?q=search&referrer=search&project=spheric-keel-331521&cloudshell=false
-[conserv]: https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux:
+[conserv]: https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux
 [container_registry]: https://console.cloud.google.com/gcr/images/spheric-keel-331521/global/locust-merino?project=spheric-keel-331521
 [docker]: https://docs.docker.com/
 [docker_compose]:https://github.com/mozilla-services/merino-py/blob/main/tests/load/docker-compose.yml
