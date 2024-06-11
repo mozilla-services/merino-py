@@ -1247,16 +1247,18 @@ container, CPU and memory usage should trend consistently between load test runs
 <li>Results should be recorded in the <a href="https://docs.google.com/spreadsheets/d/1SAO3QYIrbxDRxzmYIab-ebZXA1dF06W1lT4I1h2R3a8/edit?usp=sharing">Merino Load Test Spreadsheet</a></li>
 <li>Optionally, the Locust reports can be saved and linked in the spreadsheet:
 <ul>
+<li>The results are persisted in the <code>/data</code> directory of the <code>locust-master-0</code> pod
+in the <code>locust-master</code> k8s cluster in the GCP project of <code>merino-nonprod</code>.</li>
 <li>Download the results via the Locust UI or via command:
-<pre><code class="language-bash">kubectl cp &lt;master-pod-name&gt;:/home/locust/merino_stats.csv merino_stats.csv
-kubectl cp &lt;master-pod-name&gt;:/home/locust/merino_exceptions.csv merino_exceptions.csv
-kubectl cp &lt;master-pod-name&gt;:/home/locust/merino_failures.csv merino_failures.csv
+<pre><code class="language-bash">kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_stats.csv merino_stats.csv
+kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_exceptions.csv merino_exceptions.csv
+kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_failures.csv merino_failures.csv
 </code></pre>
-The <code>master-pod-name</code> can be found at the top of the pod list:
-<pre><code class="language-bash">kubectl get pods -o wide
+The <code>{run-id}</code> uniquely identifies each load test run and can be found by:
+<pre><code class="language-bash">kubectl exec -n locust-merino locust-master-0 -- ls -al /data/
 </code></pre>
-</li>
-<li>Upload the files to the <a href="https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux:">ConServ</a> drive and record the links in the
+and then locate the files with the file creation timestamp when the test was performed.</li>
+<li>Upload the files to the <a href="https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux">ConServ</a> drive and record the links in the
 spreadsheet</li>
 </ul>
 </li>
