@@ -1,11 +1,12 @@
 """Merino V1 API"""
 
 import logging
+import time
 from asyncio import Task
 from collections import Counter
 from functools import partial
 from itertools import chain
-from typing import Annotated
+from typing import Annotated, Optional
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Query
@@ -14,6 +15,14 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 from merino.config import settings
+from merino.curated_recommendations.corpus_backends.fake_backends import (
+    FakeCuratedCorpusBackend,
+)
+from merino.curated_recommendations.provider import (
+    CuratedRecommendationsProvider,
+    CuratedRecommendationsRequest,
+    CuratedRecommendationsResponse,
+)
 from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
@@ -316,3 +325,11 @@ async def providers(
         for id, provider in active_providers.items()
     ]
     return JSONResponse(content=jsonable_encoder(providers))
+
+
+@router.post("/curated-recommendations", summary="Curated recommendations for New Tab")
+async def curated_content(
+    curated_recommendations_request: CuratedRecommendationsRequest,
+) -> CuratedRecommendationsResponse:
+    provider = CuratedRecommendationsProvider(corpus_backend=FakeCuratedCorpusBackend())
+    return await provider.fetch()
