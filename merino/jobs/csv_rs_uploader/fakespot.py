@@ -1,6 +1,7 @@
 """Pydantic model for MDN suggestions as they should be serialized in the
 output JSON.
 """
+
 from typing import cast
 
 from pydantic import HttpUrl, field_validator
