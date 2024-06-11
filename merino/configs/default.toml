@@ -135,6 +135,9 @@ bucket = "main"
 # Ex: "quicksuggest".
 collection = "quicksuggest"
 
+# The collection to use for uploading fakespot suggestions if not specified on the command line
+collection_fakespot = "fakespot-suggest-products"
+
 # MERINO_REMOTE_SETTINGS__AUTH
 # Authorization token when uploading suggestions.
 auth = ""
