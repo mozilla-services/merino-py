@@ -577,8 +577,8 @@ class AccuweatherBackend:
 
         try:
             async with asyncio.TaskGroup() as tg:
-                task_current = (
-                    tg.create_task(self.get_current_conditions(location.key))
+                task_current = tg.create_task(
+                    self.get_current_conditions(location.key)
                     if current_conditions is None
                     else as_awaitable(
                         CurrentConditionsWithTTL(
@@ -587,8 +587,8 @@ class AccuweatherBackend:
                         )
                     )
                 )
-                task_forecast = (
-                    tg.create_task(self.get_forecast(location.key))
+                task_forecast = tg.create_task(
+                    self.get_forecast(location.key)
                     if forecast is None
                     else as_awaitable(
                         ForecastWithTTL(
