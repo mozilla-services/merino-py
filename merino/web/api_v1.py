@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 from merino.config import settings
+from merino.curated_recommendations.corpus_backends.corpus_api_backend import CorpusApiBackend
 from merino.curated_recommendations.corpus_backends.fake_backends import (
     FakeCuratedCorpusBackend,
 )
@@ -331,5 +332,5 @@ async def providers(
 async def curated_content(
     curated_recommendations_request: CuratedRecommendationsRequest,
 ) -> CuratedRecommendationsResponse:
-    provider = CuratedRecommendationsProvider(corpus_backend=FakeCuratedCorpusBackend())
+    provider = CuratedRecommendationsProvider(corpus_backend=CorpusApiBackend())
     return await provider.fetch()
