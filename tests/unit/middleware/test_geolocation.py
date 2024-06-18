@@ -40,8 +40,8 @@ def fixture_geolocation_middleware(mocker: MockerFixture) -> GeolocationMiddlewa
             Location(
                 country="GB",
                 country_name="United Kingdom",
-                region="ENG",
-                region_name="England",
+                region="WBK",
+                region_name="West Berkshire",
                 city="Boxford",
                 postal_code="OX1",
             ),
