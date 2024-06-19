@@ -81,7 +81,7 @@ def expected_add_suggestion_calls(
 
 def do_upload_test(
     mocker,
-    delete_existing_records: bool = False,
+    keep_existing_records: bool = True,
     score: float = 0.99,
 ) -> None:
     """Perform an upload test."""
@@ -113,7 +113,7 @@ def do_upload_test(
     }
     upload(
         **common_kwargs,
-        delete_existing_records=delete_existing_records,
+        keep_existing_records=keep_existing_records,
         score=score,
     )
 
@@ -127,7 +127,7 @@ def do_upload_test(
         total_data_count=TEST_ADDON_COUNT,
     )
 
-    if delete_existing_records:
+    if not keep_existing_records:
         mock_chunked_uploader.delete_records.assert_called_once()
     else:
         mock_chunked_uploader.delete_records.assert_not_called()
@@ -138,13 +138,13 @@ def do_upload_test(
 
 
 def test_upload_without_deleting(mocker):
-    """Tests `upload(delete_existing_records=False)`"""
-    do_upload_test(mocker, delete_existing_records=False)
+    """Tests `upload(keep_existing_records=True)`"""
+    do_upload_test(mocker, keep_existing_records=True)
 
 
 def test_delete_and_upload(mocker):
-    """Tests `upload(delete_existing_records=True)`"""
-    do_upload_test(mocker, delete_existing_records=True)
+    """Tests `upload(keep_existing_records=True)`"""
+    do_upload_test(mocker, keep_existing_records=False)
 
 
 def test_upload_with_score(mocker):

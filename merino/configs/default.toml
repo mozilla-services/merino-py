@@ -147,8 +147,8 @@ auth = ""
 chunk_size = 200
 
 # MERINO_REMOTE_SETTINGS__DELETE_EXISTING_RECORDS
-# Delete existing records before uploading new records.
-delete_existing_records = true
+# keep existing records before uploading new records.
+keep_existing_records = false
 
 # MERINO_REMOTE_SETTINGS__DRY_RUN
 # Log changes but don't actually make them when uploading suggestions.

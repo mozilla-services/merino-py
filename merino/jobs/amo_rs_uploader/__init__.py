@@ -42,10 +42,10 @@ collection_option = typer.Option(
     help="Remote settings collection ID",
 )
 
-delete_existing_records_option = typer.Option(
-    rs_settings.delete_existing_records,
-    "--delete-existing-records",
-    help="Delete existing records before uploading new records",
+keep_existing_records_option = typer.Option(
+    rs_settings.keep_existing_records,
+    "--keep-existing-records",
+    help="Keep existing records before uploading new records",
 )
 
 dry_run_option = typer.Option(
@@ -84,7 +84,7 @@ def upload(
     bucket: str = bucket_option,
     chunk_size: int = chunk_size_option,
     collection: str = collection_option,
-    delete_existing_records: bool = delete_existing_records_option,
+    keep_existing_records: bool = keep_existing_records_option,
     dry_run: bool = dry_run_option,
     record_type: str = record_type_option,
     score: float = score_option,
@@ -97,7 +97,7 @@ def upload(
             bucket=bucket,
             chunk_size=chunk_size,
             collection=collection,
-            delete_existing_records=delete_existing_records,
+            keep_existing_records=keep_existing_records,
             dry_run=dry_run,
             record_type=record_type,
             score=score,
@@ -111,7 +111,7 @@ async def _upload(
     bucket: str,
     chunk_size: int,
     collection: str,
-    delete_existing_records: bool,
+    keep_existing_records: bool,
     dry_run: bool,
     record_type: str,
     score: float,
@@ -132,7 +132,7 @@ async def _upload(
         suggestion_score_fallback=score,
         total_data_count=len(backend.dynamic_data),
     ) as uploader:
-        if delete_existing_records:
+        if not keep_existing_records:
             uploader.delete_records()
 
         for addon, dynamic_data in backend.dynamic_data.items():
