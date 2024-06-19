@@ -19,13 +19,18 @@ class Topic(str, Enum):
     TECH = ("tech",)
     TRAVEL = ("travel",)
 
+    @staticmethod
+    def values():
+        """maps enum values & returns"""
+        return Topic._value2member_map_
+
 
 class CorpusItem(BaseModel):
     scheduledCorpusItemId: str
     url: HttpUrl
     title: str
     excerpt: str
-    topic: Topic
+    topic: Topic | None = None
     publisher: str
     imageUrl: HttpUrl
 
