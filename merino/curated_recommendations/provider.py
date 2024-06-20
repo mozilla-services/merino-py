@@ -1,6 +1,5 @@
 """Provider for curated recommendations on New Tab."""
 
-import logging
 import time
 from enum import Enum, unique
 
@@ -10,8 +9,6 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     CorpusItem,
 )
-
-logger = logging.getLogger(__name__)
 
 
 @unique
