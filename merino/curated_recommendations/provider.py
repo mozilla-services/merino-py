@@ -1,4 +1,5 @@
-import logging
+"""Provider for curated recommendations on New Tab."""
+
 import time
 from enum import Enum, unique
 
@@ -9,14 +10,12 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
 )
 
-logger = logging.getLogger(__name__)
-
 
 @unique
 class TypeName(str, Enum):
-    """
-    This value could be used in the future to distinguish between different
-    types of content. Currently, the only value is recommendation.
+    """This value could be used in the future to distinguish between different types of content.
+
+    Currently, the only value is recommendation.
     """
 
     RECOMMENDATION = "recommendation"
@@ -24,6 +23,8 @@ class TypeName(str, Enum):
 
 @unique
 class Locale(str, Enum):
+    """Supported locales for curated recommendations on New Tab"""
+
     FR = ("fr",)
     FR_FR = ("fr-FR",)
     ES = ("es",)
@@ -41,23 +42,29 @@ class Locale(str, Enum):
 
 
 class CuratedRecommendation(CorpusItem):
+    """Extends CorpusItem with additional fields for a curated recommendation"""
+
     __typename: TypeName = TypeName.RECOMMENDATION
     receivedRank: int
 
 
 class CuratedRecommendationsRequest(BaseModel):
+    """Body schema for requesting a list of curated recommendations"""
+
     locale: Locale
     region: str | None = None
     count: int = 100
 
 
 class CuratedRecommendationsResponse(BaseModel):
+    """Response schema for a list of curated recommendations"""
+
     recommendedAt: int
     data: list[CuratedRecommendation]
 
 
 class CuratedRecommendationsProvider:
-    """Curated recommendations provider."""
+    """Provider for recommendations that have been reviewed by human curators."""
 
     corpus_backend: CorpusBackend
 
@@ -87,7 +94,5 @@ class CuratedRecommendationsProvider:
 
     @staticmethod
     def time_ms() -> int:
-        """
-        :returns: The time in milliseconds since the epoch as an integer.
-        """
+        """Return the time in milliseconds since the epoch as an integer."""
         return int(time.time() * 1000)

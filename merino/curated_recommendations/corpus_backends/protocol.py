@@ -1,4 +1,5 @@
 """Protocol for the Corpus provider backend."""
+
 from enum import Enum, unique
 from typing import Protocol
 
@@ -7,6 +8,8 @@ from pydantic import BaseModel, HttpUrl
 
 @unique
 class Topic(str, Enum):
+    """Topics supported for curated recommendations."""
+
     ARTS = ("arts",)
     BUSINESS = ("business",)
     EDUCATION = ("education",)
@@ -26,6 +29,11 @@ class Topic(str, Enum):
 
 
 class CorpusItem(BaseModel):
+    """Represents a scheduled item from our 'corpus'.
+
+    The corpus is the set of all curated items deemed recommendable.
+    """
+
     scheduledCorpusItemId: str
     url: HttpUrl
     title: str
@@ -39,9 +47,5 @@ class CorpusBackend(Protocol):
     """Protocol for Curated Recommendation backend that the provider depends on."""
 
     async def fetch(self) -> list[CorpusItem]:  # pragma: no cover
-        """Fetch Curated Recommendations
-
-        Raises:
-            BackendError: If curated recommendations are unavailable.
-        """
+        """Fetch Curated Recommendations"""
         ...

@@ -1,12 +1,11 @@
 """Merino V1 API"""
 
 import logging
-import time
 from asyncio import Task
 from collections import Counter
 from functools import partial
 from itertools import chain
-from typing import Annotated, Optional
+from typing import Annotated
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Query
@@ -15,7 +14,6 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 from merino.config import settings
-from merino.curated_recommendations.corpus_backends.corpus_api_backend import CorpusApiBackend
 from merino.curated_recommendations.corpus_backends.fake_backends import (
     FakeCuratedCorpusBackend,
 )
@@ -332,5 +330,24 @@ async def providers(
 async def curated_content(
     curated_recommendations_request: CuratedRecommendationsRequest,
 ) -> CuratedRecommendationsResponse:
-    provider = CuratedRecommendationsProvider(corpus_backend=CorpusApiBackend())
+    """Query Merino for curated recommendations.
+
+    This endpoint accepts POST requests and takes parameters as a JSON body.
+
+    **JSON body:**
+
+    locale: Locale
+    region: str | None = None
+    count: int = 100
+    - `locale`: The Firefox installed locale, for example en, en-US, de-DE.
+        See the [Merino API docs][merino-api-docs] for the full list of supported values.
+        This will determine the language of the recommendations.
+    - `region`: [Optional] The country-level region, for example US or IE (Ireland).
+        This will help return more relevant recommendations. If `region` is not provided,
+        then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
+    - `count`: [Optional] The maximum number of recommendations to return. Defaults to 100.
+
+    [merino-api-docs]: https://merinopy.services.mozilla.com/docs
+    """
+    provider = CuratedRecommendationsProvider(corpus_backend=FakeCuratedCorpusBackend())
     return await provider.fetch()

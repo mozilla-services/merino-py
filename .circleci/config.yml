@@ -99,6 +99,8 @@ jobs:
             TEST_RESULTS_DIR: workspace/test-results
       - store_test_results:
           path: workspace/test-results
+      - store_artifacts:
+          path: workspace/test-results
       - persist_to_workspace:
           root: workspace
           paths:
@@ -119,6 +121,8 @@ jobs:
             TEST_RESULTS_DIR: workspace/test-results
       - store_test_results:
           path: workspace/test-results
+      - store_artifacts:
+          path: workspace/test-results
       - persist_to_workspace:
           root: workspace
           paths:
@@ -135,6 +139,8 @@ jobs:
           command: make test-coverage-check
           environment:
             TEST_RESULTS_DIR: workspace/test-results
+      - store_artifacts:
+          path: workspace/test-results/.coverage
   contract-tests:
     machine:
       image: ubuntu-2004:2024.01.1
@@ -154,6 +160,8 @@ jobs:
             sudo chown 1000:1000 tests/contract/kinto-attachments
             make run-contract-tests
       - store_test_results:
+          path: workspace/test-results
+      - store_artifacts:
           path: workspace/test-results
   docker-image-build:
     docker:
