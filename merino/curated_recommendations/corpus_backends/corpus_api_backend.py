@@ -44,7 +44,7 @@ CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING = {
 }
 
 
-def map_corpus_topic_to_serp_topic(topic: str) -> Topic:
+def map_corpus_topic_to_serp_topic(topic: str) -> tuple[str] | None:
     """Map the corpus topic to the SERP topic."""
     return CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING.get(topic.lower())
 
