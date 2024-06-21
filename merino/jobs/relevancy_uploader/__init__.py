@@ -136,7 +136,7 @@ collection_option = typer.Option(
 )
 
 keep_existing_records_option = typer.Option(
-    rs_settings.keep_existing_records,
+    False,
     "--keep-existing-records",
     help="Keep existing records before uploading new records",
 )
