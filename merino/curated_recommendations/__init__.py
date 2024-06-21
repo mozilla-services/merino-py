@@ -12,13 +12,13 @@ from merino.utils.http_client import create_http_client
 corpus_api_provider: dict[str, CuratedRecommendationsProvider] = {}
 
 
-async def init_providers():
+async def init_providers() -> None:
     """Initialize the corpus api provider."""
     corpus_api_provider["corpus_provider"] = CuratedRecommendationsProvider(
         corpus_backend=CorpusApiBackend(create_http_client(base_url=""))
     )
 
 
-def get_provider():
+def get_provider() -> CuratedRecommendationsProvider:
     """Return the corpus api provider."""
     return corpus_api_provider["corpus_provider"]
