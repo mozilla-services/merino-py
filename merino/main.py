@@ -15,7 +15,7 @@ from merino.config_sentry import configure_sentry
 from merino.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging, metrics, user_agent
 from merino.web import api_v1, dockerflow
-
+from merino import curated_recommendations
 tags_metadata = [
     {
         "name": "suggest",
@@ -39,6 +39,8 @@ async def lifespan(app: FastAPI):
     configure_sentry()
     await configure_metrics()
     await providers.init_providers()
+    # curated recommendations provider (corpus-api)
+    await curated_recommendations.init_providers()
     yield
     # Shut down providers and clean up.
     await providers.shutdown_providers()

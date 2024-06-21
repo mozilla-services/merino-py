@@ -10,17 +10,17 @@ from pydantic import BaseModel, HttpUrl
 class Topic(str, Enum):
     """Topics supported for curated recommendations."""
 
-    ARTS = ("arts",)
-    BUSINESS = ("business",)
-    EDUCATION = ("education",)
-    FINANCE = ("finance",)
-    FOOD = ("food",)
-    GOVERNMENT = ("government",)
-    HEALTH = ("health",)
-    SOCIETY = ("society",)
-    SPORTS = ("sports",)
-    TECH = ("tech",)
-    TRAVEL = ("travel",)
+    ARTS = "arts",
+    BUSINESS = "business",
+    EDUCATION = "education",
+    FINANCE = "finance",
+    FOOD = "food",
+    GOVERNMENT = "government",
+    HEALTH = "health",
+    SOCIETY = "society",
+    SPORTS = "sports",
+    TECH = "tech",
+    TRAVEL = "travel",
 
     @staticmethod
     def values():
