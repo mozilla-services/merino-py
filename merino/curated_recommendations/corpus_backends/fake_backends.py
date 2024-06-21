@@ -22,8 +22,8 @@ class FakeCuratedCorpusBackend(CorpusBackend):
                 ),
                 title="Thunder, Bells, and Silence: the Eclipse That Went Extinct",
                 excerpt="What was it like for Martha, the endling of her species, to die alone at "
-                        "the Cincinnati Zoo that late-summer day in 1914, all the other "
-                        "passenger pigeons gone from the face of the Earth, having onc…",
+                "the Cincinnati Zoo that late-summer day in 1914, all the other "
+                "passenger pigeons gone from the face of the Earth, having onc…",
                 topic=Topic.EDUCATION,
                 publisher="The Marginalian",
                 imageUrl=HttpUrl(

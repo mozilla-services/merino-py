@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 from merino.config import settings
+from merino.curated_recommendations import get_provider as get_corpus_api_provider
 from merino.curated_recommendations.provider import (
     CuratedRecommendationsProvider,
     CuratedRecommendationsRequest,
@@ -28,7 +29,6 @@ from merino.providers.weather.provider import Provider as WeatherProvider
 from merino.providers.weather.provider import Suggestion as WeatherSuggestion
 from merino.utils import task_runner
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
-from merino.curated_recommendations import get_providers as get_corpus_api_provider
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -64,16 +64,16 @@ CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
     response_model=SuggestResponse,
 )
 async def suggest(
-        request: Request,
-        q: str = Query(max_length=QUERY_CHARACTER_MAX),
-        providers: str | None = None,
-        client_variants: str | None = Query(
-            default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX
-        ),
-        sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
-            get_providers
-        ),
-        request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
+    request: Request,
+    q: str = Query(max_length=QUERY_CHARACTER_MAX),
+    providers: str | None = None,
+    client_variants: str | None = Query(
+        default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX
+    ),
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
+        get_providers
+    ),
+    request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
 ) -> JSONResponse:
     """Query Merino for suggestions.
 
@@ -235,9 +235,9 @@ async def suggest(
 
 
 def emit_suggestions_per_metrics(
-        metrics_client: Client,
-        suggestions: list[BaseSuggestion],
-        searched_providers: list[BaseProvider],
+    metrics_client: Client,
+    suggestions: list[BaseSuggestion],
+    searched_providers: list[BaseProvider],
 ) -> None:
     """Emit metrics for suggestions per request and suggestions per request by provider."""
     metrics_client.histogram("suggestions-per.request", value=len(suggestions))
@@ -254,7 +254,7 @@ def emit_suggestions_per_metrics(
 
 
 def get_ttl_for_cache_control_header_for_suggestions(
-        request_providers: list[BaseProvider], suggestions: list[BaseSuggestion]
+    request_providers: list[BaseProvider], suggestions: list[BaseSuggestion]
 ) -> int:
     """Retrieve the TTL value for the Cache-Control header based on provider and suggestions
     type. Return the default suggestions response ttl sec otherwise.
@@ -288,9 +288,9 @@ def get_ttl_for_cache_control_header_for_suggestions(
     response_model=list[ProviderResponse],
 )
 async def providers(
-        sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
-            get_providers
-        ),
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
+        get_providers
+    ),
 ) -> JSONResponse:
     """Query Merino for suggestion providers.
 
@@ -326,8 +326,8 @@ async def providers(
 
 @router.post("/curated-recommendations", summary="Curated recommendations for New Tab")
 async def curated_content(
-        curated_recommendations_request: CuratedRecommendationsRequest,
-        provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider)
+    curated_recommendations_request: CuratedRecommendationsRequest,
+    provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
 ) -> CuratedRecommendationsResponse:
     """Query Merino for curated recommendations.
 

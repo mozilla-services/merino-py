@@ -10,27 +10,26 @@ from pydantic import BaseModel, HttpUrl
 class Topic(str, Enum):
     """Topics supported for curated recommendations."""
 
-    ARTS = "arts",
-    BUSINESS = "business",
-    EDUCATION = "education",
-    FINANCE = "finance",
-    FOOD = "food",
-    GOVERNMENT = "government",
-    HEALTH = "health",
-    SOCIETY = "society",
-    SPORTS = "sports",
-    TECH = "tech",
-    TRAVEL = "travel",
+    ARTS = ("arts",)
+    BUSINESS = ("business",)
+    EDUCATION = ("education",)
+    FINANCE = ("finance",)
+    FOOD = ("food",)
+    GOVERNMENT = ("government",)
+    HEALTH = ("health",)
+    SOCIETY = ("society",)
+    SPORTS = ("sports",)
+    TECH = ("tech",)
+    TRAVEL = ("travel",)
 
     @staticmethod
     def values():
-        """maps enum values & returns"""
+        """Map enum values & returns"""
         return Topic._value2member_map_
 
 
 class CorpusItem(BaseModel):
     """Represents a scheduled item from our 'corpus'.
-
     The corpus is the set of all curated items deemed recommendable.
     """
 
