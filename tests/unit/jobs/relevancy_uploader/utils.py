@@ -24,7 +24,7 @@ def _make_csv_file_object(csv_rows: list[dict[str, str]]) -> io.TextIOWrapper:
 def _do_csv_test(
     mocker,
     upload_callable: Callable[[dict[str, Any]], None],
-    delete_existing_records: bool,
+    keep_existing_records: bool,
     primary_category_data: list[dict[str, Any]],
     secondary_category_data: list[dict[str, Any]] = [],
     inconclusive_category_data: list[dict[str, Any]] = [],
@@ -52,7 +52,7 @@ def _do_csv_test(
     upload_callable(
         {
             **common_kwargs,
-            "delete_existing_records": delete_existing_records,
+            "keep_existing_records": keep_existing_records,
         }
     )
     mock_chunked_uploader_ctor.assert_any_call(
@@ -79,7 +79,7 @@ def _do_csv_test(
         category_code=0
     )
 
-    if delete_existing_records and version == 1:
+    if not keep_existing_records and version == 1:
         mock_chunked_uploader.delete_records.assert_called()
     else:
         mock_chunked_uploader.delete_records.assert_not_called()
@@ -96,7 +96,7 @@ def do_csv_test(
     inconclusive_category_data: list[dict[str, Any]],
     csv_path: str | None = None,
     csv_rows: list[dict[str, str]] | None = None,
-    delete_existing_records: bool = False,
+    keep_existing_records: bool = False,
     version: int = 1,
 ) -> None:
     """Perform an upload test that is expected to succeed."""
@@ -113,7 +113,7 @@ def do_csv_test(
     _do_csv_test(
         mocker=mocker,
         upload_callable=uploader,
-        delete_existing_records=delete_existing_records,
+        keep_existing_records=keep_existing_records,
         primary_category_data=primary_category_data,
         secondary_category_data=secondary_category_data,
         inconclusive_category_data=inconclusive_category_data,
@@ -138,7 +138,7 @@ def do_error_test(
                 bucket="bucket",
                 chunk_size=99,
                 collection="collection",
-                delete_existing_records=False,
+                keep_existing_records=True,
                 dry_run=False,
                 file_object=file_object,
                 server="server",
