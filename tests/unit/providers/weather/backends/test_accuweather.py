@@ -7,6 +7,7 @@ import datetime
 import hashlib
 import json
 import logging
+import os
 from typing import Any, Awaitable, Callable, Optional, cast
 from unittest.mock import AsyncMock
 
@@ -18,6 +19,8 @@ from pytest import FixtureRequest, LogCaptureFixture
 from pytest_mock import MockerFixture
 from redis import RedisError
 from redis.asyncio import Redis
+from testcontainers.core.waiting_utils import wait_for_logs
+from testcontainers.redis import AsyncRedisContainer, RedisContainer
 
 from merino.cache.redis import RedisAdapter
 from merino.exceptions import CacheAdapterError, CacheMissError
@@ -28,6 +31,7 @@ from merino.providers.weather.backends.accuweather import (
     AccuweatherLocation,
     CurrentConditionsWithTTL,
     ForecastWithTTL,
+    WeatherDataType,
     add_partner_code,
 )
 from merino.providers.weather.backends.protocol import (
@@ -44,6 +48,7 @@ ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 TEST_CACHE_TTL_SEC = 1800
 TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC = 300
 
+logger = logging.getLogger(__name__)
 
 @pytest.fixture(name="redis_mock_cache_miss")
 def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
@@ -216,7 +221,7 @@ def fixture_expected_weather_report() -> WeatherReport:
             high=Temperature(c=21.1, f=70.0),
             low=Temperature(c=13.9, f=57.0),
         ),
-        ttl=TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
+        ttl=TEST_CACHE_TTL_SEC,
     )
 
 
@@ -243,7 +248,7 @@ def fixture_expected_weather_report_via_location_key() -> WeatherReport:
             high=Temperature(c=21.1, f=70.0),
             low=Temperature(c=13.9, f=57.0),
         ),
-        ttl=TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
+        ttl=TEST_CACHE_TTL_SEC,
     )
 
 
@@ -908,10 +913,29 @@ async def test_get_weather_report_with_location_key(
 
     assert report == expected_weather_report_via_location_key
 
+@pytest.fixture(scope="module")
+def redis_container() -> AsyncRedisContainer:
+    """Create and return a docker container for Redis. Tear it down after all the tests have
+    finished running
+    """
+    logger.info("Starting up redis container")
+    container = AsyncRedisContainer().start()
+
+    # wait for the container to start and emit logs
+    delay = wait_for_logs(container, "Server initialized")
+    logger.info(
+        f"\n Redis server started with delay: {delay} seconds on port: {container.port}"
+    )
+
+    yield container
+
+    container.stop()
+    logger.info("\n Redis container stopped")
+
 
 @pytest.mark.asyncio
 async def test_get_weather_report_from_cache(
-    mocker: MockerFixture,
+    redis_container,
     geolocation: Location,
     statsd_mock: Any,
     expected_weather_report: WeatherReport,
@@ -919,26 +943,41 @@ async def test_get_weather_report_from_cache(
     accuweather_cached_location_key: bytes,
     accuweather_cached_current_conditions: bytes,
     accuweather_cached_forecast_fahrenheit: bytes,
+    accuweather_location_key: str,
 ) -> None:
     """Test that we can get the weather report from cache."""
-    redis_mock = mocker.AsyncMock(spec=Redis)
+    redis_client = await redis_container.get_async_client()
 
-    async def script_callable(keys, args) -> list:
-        return [
-            accuweather_cached_location_key,
-            accuweather_cached_current_conditions,
-            accuweather_cached_forecast_fahrenheit,
-            TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
-        ]
-
-    def mock_register_script(script) -> Callable[[list, list], Awaitable[list]]:
-        return script_callable
-
-    redis_mock.register_script.side_effect = mock_register_script
-
+    # set up the accuweather backend object with the testcontainer redis client
     accuweather: AccuweatherBackend = AccuweatherBackend(
-        cache=RedisAdapter(redis_mock), **accuweather_parameters
+        cache=RedisAdapter(redis_client), **accuweather_parameters
     )
+
+    # using the accuweather backend's cache key methods to create keys
+    location_key = accuweather.cache_key_for_accuweather_request(
+        accuweather.url_cities_path.format(
+            country_code=geolocation.country, admin_code=geolocation.region
+        ),
+        query_params=accuweather.get_location_key_query_params(geolocation.city),
+    )
+
+    current_condition_cache_key = accuweather.cache_key_template(
+        WeatherDataType.CURRENT_CONDITIONS
+    ).format(location_key=accuweather_location_key)
+
+    forecast_cache_key = accuweather.cache_key_template(
+        WeatherDataType.FORECAST
+    ).format(location_key=accuweather_location_key)
+
+    # set the above keys with their values as their corresponding fixtures
+    await redis_client.set(location_key, accuweather_cached_location_key)
+    await redis_client.set(
+        current_condition_cache_key, accuweather_cached_current_conditions
+    )
+    await redis_client.set(forecast_cache_key, accuweather_cached_forecast_fahrenheit)
+
+    # this http client mock isn't used to make any calls, but we do assert below on it not being
+    # called
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
@@ -963,7 +1002,7 @@ async def test_get_weather_report_from_cache(
 
 @pytest.mark.asyncio
 async def test_get_weather_report_with_location_key_from_cache(
-    mocker: MockerFixture,
+    redis_container,
     geolocation: Location,
     statsd_mock: Any,
     expected_weather_report_via_location_key: WeatherReport,
@@ -974,25 +1013,27 @@ async def test_get_weather_report_with_location_key_from_cache(
     accuweather_location_key: str,
 ) -> None:
     """Test that we can get the weather report from cache."""
-    redis_mock = mocker.AsyncMock(spec=Redis)
-
-    async def script_callable(keys, args) -> list:
-        return [
-            None,
-            accuweather_cached_current_conditions,
-            accuweather_cached_forecast_fahrenheit,
-            TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
-        ]
-
-    def mock_register_script(script) -> Callable[[list, list], Awaitable[list]]:
-        return script_callable
-
-    redis_mock.register_script.side_effect = mock_register_script
+    redis_client = await redis_container.get_async_client()
 
     accuweather: AccuweatherBackend = AccuweatherBackend(
-        cache=RedisAdapter(redis_mock), **accuweather_parameters
+        cache=RedisAdapter(redis_client), **accuweather_parameters
     )
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    # using the accuweather backend's cache key methods to create keys
+    current_condition_cache_key = accuweather.cache_key_template(
+        WeatherDataType.CURRENT_CONDITIONS
+    ).format(location_key=accuweather_location_key)
+
+    forecast_cache_key = accuweather.cache_key_template(
+        WeatherDataType.FORECAST
+    ).format(location_key=accuweather_location_key)
+
+    # set the above keys with their values as their corresponding fixtures
+    await redis_client.set(
+        current_condition_cache_key, accuweather_cached_current_conditions
+    )
+    await redis_client.set(forecast_cache_key, accuweather_cached_forecast_fahrenheit)
 
     report: Optional[WeatherReport] = await accuweather.get_weather_report(
         geolocation, accuweather_location_key

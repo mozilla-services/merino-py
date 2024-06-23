@@ -101,7 +101,7 @@ LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
     if current_conditions_ttl >= 0 and forecast_ttl >= 0 then
         ttl = math.min(current_conditions_ttl, forecast_ttl)
     end
-    local location = nil
+    local location = false
     return {location, current_conditions, forecast, ttl}
 """
 SCRIPT_LOCATION_KEY_ID = "bulk_fetch_by_location_key"
@@ -473,7 +473,6 @@ class AccuweatherBackend:
                 "accuweather.cache.fetch-via-location-key.error"
             )
             return None
-
         self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)
         cached_report = self.parse_cached_data(cached_data)
         location = Location(key=location_key)
@@ -500,7 +499,6 @@ class AccuweatherBackend:
         city: str | None = geolocation.city
         if not country or not region or not city:
             raise AccuweatherError("Country and/or region/city unknown")
-
         cache_key: str = self.cache_key_for_accuweather_request(
             self.url_cities_path.format(country_code=country, admin_code=region),
             query_params=self.get_location_key_query_params(city),
