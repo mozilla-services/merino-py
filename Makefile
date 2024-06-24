@@ -50,7 +50,7 @@ lint: $(INSTALL_STAMP) ruff-sort ruff-lint ruff-doc black bandit mypy ##  Run va
 
 .PHONY: format
 format: $(INSTALL_STAMP)  ##  Sort imports and reformat code
-    $(POETRY) run ruff check --select I --fix $(APP_AND_TEST_DIRS)
+	$(POETRY) run ruff check --select I --fix $(APP_AND_TEST_DIRS)
 	$(POETRY) run black $(APP_AND_TEST_DIRS)
 
 .PHONY: dev
