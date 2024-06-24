@@ -12,12 +12,13 @@ from pydantic import HttpUrl
 from merino.curated_recommendations import (
     CorpusApiBackend,
     CuratedRecommendationsProvider,
-    corpus_api_provider,
+    get_provider,
 )
 from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
     CorpusApiGraphConfig,
 )
 from merino.curated_recommendations.provider import CuratedRecommendation
+from merino.main import app
 
 
 @pytest.fixture(name="corpus_http_client")
@@ -53,15 +54,15 @@ def fixture_mock_corpus_backend(corpus_http_client: AsyncMock) -> CorpusApiBacke
 
 
 @pytest.fixture
-def provider(corpus_backend):
-    """Mock corpus provider."""
+def provider(corpus_backend: CorpusApiBackend) -> CuratedRecommendationsProvider:
+    """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(corpus_backend=corpus_backend)
 
 
 @pytest.fixture(autouse=True)
 def setup_providers(provider):
-    """Set up the corpus api provider"""
-    corpus_api_provider["corpus_provider"] = provider
+    """Set up the curated recommendations provider"""
+    app.dependency_overrides[get_provider] = lambda: provider
 
 
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)

@@ -39,8 +39,7 @@ async def lifespan(app: FastAPI):
     configure_sentry()
     await configure_metrics()
     await providers.init_providers()
-    # curated recommendations provider (corpus-api)
-    await curated_recommendations.init_providers()
+    await curated_recommendations.init_provider()
     yield
     # Shut down providers and clean up.
     await providers.shutdown_providers()

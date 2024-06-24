@@ -9,6 +9,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
     Topic,
 )
+from merino.utils.version import fetch_app_version_from_file
 
 
 class CorpusApiGraphConfig:
@@ -17,7 +18,7 @@ class CorpusApiGraphConfig:
     CORPUS_API_PROD_ENDPOINT = "https://client-api.getpocket.com"
     CORPUS_API_DEV_ENDPOINT = "https://client-api.getpocket.dev"
     CLIENT_NAME = "merino-py"
-    CLIENT_VERSION = "0.1.0"  # TODO: get this from pyproject.tml
+    CLIENT_VERSION = fetch_app_version_from_file().commit
     HEADERS = {
         "apollographql-client-name": CLIENT_NAME,
         "apollographql-client-version": CLIENT_VERSION,
@@ -79,8 +80,8 @@ class CorpusApiBackend(CorpusBackend):
             }
         """
 
-        # The date is supposed to progress at 3am local time, where 'local time' is
-        # based on the timezone associated with the scheduled surface.
+        # TODO: [MC-1199] The date is supposed to progress at 3am local time,
+        # where 'local time' is based on the timezone associated with the scheduled surface.
         # This requirement is documented in the NewTab slate spec:
         # https://getpocket.atlassian.net/wiki/spaces/PE/pages/2927100008/Fx+NewTab+Slate+spec
         today = datetime.now()
@@ -108,8 +109,8 @@ class CorpusApiBackend(CorpusBackend):
                 item["corpusItem"]["topic"]
             )
 
-        corpus_items = [
+        curated_recommendations = [
             CorpusItem(**item["corpusItem"], scheduledCorpusItemId=item["id"])
             for item in data["data"]["scheduledSurface"]["items"]
         ]
-        return corpus_items
+        return curated_recommendations
