@@ -200,7 +200,7 @@ def fixture_expected_weather_report() -> WeatherReport:
         city_name="San Francisco",
         current_conditions=CurrentConditions(
             url=HttpUrl(
-                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
                 "current-weather/39376?lang=en-us"
             ),
             summary="Mostly cloudy",
@@ -209,7 +209,7 @@ def fixture_expected_weather_report() -> WeatherReport:
         ),
         forecast=Forecast(
             url=HttpUrl(
-                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
                 "daily-weather-forecast/39376?lang=en-us"
             ),
             summary="Pleasant Saturday",
@@ -227,7 +227,7 @@ def fixture_expected_weather_report_via_location_key() -> WeatherReport:
         city_name="N/A",
         current_conditions=CurrentConditions(
             url=HttpUrl(
-                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
                 "current-weather/39376?lang=en-us"
             ),
             summary="Mostly cloudy",
@@ -236,7 +236,7 @@ def fixture_expected_weather_report_via_location_key() -> WeatherReport:
         ),
         forecast=Forecast(
             url=HttpUrl(
-                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
                 "daily-weather-forecast/39376?lang=en-us"
             ),
             summary="Pleasant Saturday",
@@ -485,11 +485,11 @@ def fixture_accuweather_current_conditions_response() -> bytes:
                 },
             },
             "MobileLink": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/current-weather/39376?lang=en-us"
             ),
             "Link": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/current-weather/39376?lang=en-us"
             ),
         },
@@ -503,7 +503,7 @@ def fixture_accuweather_cached_current_conditions() -> bytes:
     return json.dumps(
         {
             "url": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/current-weather/39376?lang=en-us"
             ),
             "summary": "Mostly cloudy",
@@ -529,11 +529,11 @@ def fixture_accuweather_forecast_response() -> dict[str, Any]:
             "EndDate": None,
             "EndEpochDate": None,
             "MobileLink": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/daily-weather-forecast/39376?lang=en-us"
             ),
             "Link": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/daily-weather-forecast/39376?lang=en-us"
             ),
         },
@@ -550,11 +550,11 @@ def fixture_accuweather_forecast_response() -> dict[str, Any]:
                 },
                 "Sources": ["AccuWeather"],
                 "MobileLink": (
-                    "http://www.accuweather.com/en/us/san-francisco-ca/"
+                    "https://www.accuweather.com/en/us/san-francisco-ca/"
                     "94103/daily-weather-forecast/39376?day=1&lang=en-us"
                 ),
                 "Link": (
-                    "http://www.accuweather.com/en/us/san-francisco-ca/"
+                    "https://www.accuweather.com/en/us/san-francisco-ca/"
                     "94103/daily-weather-forecast/39376?day=1&lang=en-us"
                 ),
             }
@@ -592,7 +592,7 @@ def fixture_accuweather_cached_forecast_fahrenheit() -> bytes:
     return json.dumps(
         {
             "url": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/daily-weather-forecast/39376?lang=en-us"
             ),
             "summary": "Pleasant Saturday",
@@ -810,7 +810,7 @@ async def test_get_weather_report(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                     "apikey=test&q=94105"
                 ),
             ),
@@ -822,7 +822,7 @@ async def test_get_weather_report(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/currentconditions/v1/39376.json?"
+                    "https://www.accuweather.com/currentconditions/v1/39376.json?"
                     "apikey=test"
                 ),
             ),
@@ -834,7 +834,7 @@ async def test_get_weather_report(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                    "https://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
                     "apikey=test"
                 ),
             ),
@@ -875,7 +875,7 @@ async def test_get_weather_report_with_location_key(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/currentconditions/v1/39376.json?"
+                    "https://www.accuweather.com/currentconditions/v1/39376.json?"
                     "apikey=test"
                 ),
             ),
@@ -887,7 +887,7 @@ async def test_get_weather_report_with_location_key(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                    "https://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
                     "apikey=test"
                 ),
             ),
@@ -1130,7 +1130,7 @@ async def test_get_weather_report_with_partial_cache_hits(
                 request=Request(
                     method="GET",
                     url=(
-                        "http://www.accuweather.com/currentconditions/v1/39376.json?"
+                        "https://www.accuweather.com/currentconditions/v1/39376.json?"
                         "apikey=test"
                     ),
                 ),
@@ -1145,7 +1145,7 @@ async def test_get_weather_report_with_partial_cache_hits(
                 request=Request(
                     method="GET",
                     url=(
-                        "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                        "https://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
                         "apikey=test"
                     ),
                 ),
@@ -1240,7 +1240,7 @@ async def test_get_weather_report_via_location_key_with_partial_cache_hits(
                 request=Request(
                     method="GET",
                     url=(
-                        "http://www.accuweather.com/currentconditions/v1/39376.json?"
+                        "https://www.accuweather.com/currentconditions/v1/39376.json?"
                         "apikey=test"
                     ),
                 ),
@@ -1255,7 +1255,7 @@ async def test_get_weather_report_via_location_key_with_partial_cache_hits(
                 request=Request(
                     method="GET",
                     url=(
-                        "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                        "https://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
                         "apikey=test"
                     ),
                 ),
@@ -1296,7 +1296,7 @@ async def test_get_weather_report_failed_location_query(
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                 "apikey=test&q=94105"
             ),
         ),
@@ -1327,7 +1327,7 @@ async def test_get_weather_report_failed_current_conditions_query(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                     "apikey=test&q=94105"
                 ),
             ),
@@ -1339,7 +1339,7 @@ async def test_get_weather_report_failed_current_conditions_query(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/currentconditions/v1/39376.json?"
+                    "https://www.accuweather.com/currentconditions/v1/39376.json?"
                     "apikey=test"
                 ),
             ),
@@ -1351,7 +1351,7 @@ async def test_get_weather_report_failed_current_conditions_query(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                    "https://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
                     "apikey=test"
                 ),
             ),
@@ -1383,7 +1383,7 @@ async def test_get_weather_report_handles_exception_group_properly(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                     "apikey=test&q=94105"
                 ),
             ),
@@ -1424,7 +1424,7 @@ async def test_get_weather_report_failed_forecast_query(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                     "apikey=test&q=94105"
                 ),
             ),
@@ -1436,7 +1436,7 @@ async def test_get_weather_report_failed_forecast_query(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/currentconditions/v1/39376.json?"
+                    "https://www.accuweather.com/currentconditions/v1/39376.json?"
                     "apikey=test"
                 ),
             ),
@@ -1448,7 +1448,7 @@ async def test_get_weather_report_failed_forecast_query(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                    "https://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
                     "apikey=test"
                 ),
             ),
@@ -1504,7 +1504,7 @@ async def test_get_location(
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                 "apikey=test&q=San%20Francisco"
             ),
         ),
@@ -1535,7 +1535,7 @@ async def test_get_location_no_location_returned(
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                 "apikey=test&q=San%20Francisco"
             ),
         ),
@@ -1570,7 +1570,7 @@ async def test_get_location_error(accuweather: AccuweatherBackend) -> None:
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                 "apikey=test&q=San%20Francisco"
             ),
         ),
@@ -1587,7 +1587,7 @@ async def test_get_location_error(accuweather: AccuweatherBackend) -> None:
     [
         (
             "accuweather",
-            "http://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/"
+            "https://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/"
             "39376?lang=en-us",
         ),
     ],
@@ -1629,7 +1629,7 @@ async def test_get_current_conditions(
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/currentconditions/v1/39376.json?"
+                "https://www.accuweather.com/currentconditions/v1/39376.json?"
                 "apikey=test"
             ),
         ),
@@ -1658,7 +1658,7 @@ async def test_get_current_conditions_no_current_conditions_returned(
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/currentconditions/v1/39376.json?"
+                "https://www.accuweather.com/currentconditions/v1/39376.json?"
                 "apikey=test"
             ),
         ),
@@ -1694,7 +1694,7 @@ async def test_get_current_conditions_error(
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/currentconditions/v1/INVALID.json?"
+                "https://www.accuweather.com/currentconditions/v1/INVALID.json?"
                 "apikey=test"
             ),
         ),
@@ -1711,7 +1711,7 @@ async def test_get_current_conditions_error(
     [
         (
             "accuweather",
-            "http://www.accuweather.com/en/us/san-francisco-ca/94103/daily-weather-forecast/"
+            "https://www.accuweather.com/en/us/san-francisco-ca/94103/daily-weather-forecast/"
             "39376?lang=en-us",
         ),
     ],
@@ -1763,7 +1763,7 @@ async def test_get_forecast(
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                "https://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
                 "apikey=test"
             ),
         ),
@@ -1791,7 +1791,7 @@ async def test_get_forecast_no_forecast_returned(
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                "https://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
                 "apikey=test"
             ),
         ),
@@ -1822,7 +1822,7 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend) -> None:
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/forecasts/v1/daily/1day/INVALID.json?"
+                "https://www.accuweather.com/forecasts/v1/daily/1day/INVALID.json?"
                 "apikey=test"
             ),
         ),
@@ -1902,7 +1902,7 @@ async def test_get_request_cache_get_errors(
         content=json.dumps(expected_client_response).encode("utf-8"),
         request=Request(
             method="GET",
-            url=f"http://www.accuweather.com/{url}?apikey=test",
+            url=f"https://www.accuweather.com/{url}?apikey=test",
         ),
     )
 
@@ -1959,7 +1959,7 @@ async def test_get_request_cache_store_errors(
         content=json.dumps(expected_client_response).encode("utf-8"),
         request=Request(
             method="GET",
-            url=f"http://www.accuweather.com/{url}?apikey=test",
+            url=f"https://www.accuweather.com/{url}?apikey=test",
         ),
     )
 
@@ -2185,7 +2185,7 @@ async def test_get_location_completion(
             request=Request(
                 method="GET",
                 url=(
-                    f"http://www.accuweather.com/locations/v1/"
+                    f"https://www.accuweather.com/locations/v1/"
                     f"{geolocation.country}/autocomplete.json?apikey=test&q"
                     f"={search_term}"
                 ),
@@ -2219,7 +2219,7 @@ async def test_get_location_completion_with_empty_search_term(
             request=Request(
                 method="GET",
                 url=(
-                    f"http://www.accuweather.com/locations/v1/"
+                    f"https://www.accuweather.com/locations/v1/"
                     f"{geolocation.country}/autocomplete.json?apikey=test&q"
                     f"={search_term}"
                 ),
@@ -2255,7 +2255,7 @@ async def test_get_location_completion_with_no_geolocation_country_code(
             request=Request(
                 method="GET",
                 url=(
-                    f"http://www.accuweather.com/locations/v1/autocomplete.json?"
+                    f"https://www.accuweather.com/locations/v1/autocomplete.json?"
                     f"apikey=test&q{search_term}"
                 ),
             ),
