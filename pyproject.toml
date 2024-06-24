@@ -11,7 +11,6 @@ line-length = 99
 exclude = ["build", "dist", "__pycache__", ".git"]
 # Error Code Ref: https://www.pydocstyle.org/en/stable/error_codes.html
 # D212 Multi-line docstring summary should start at the first line
-lint.select = ["D"]
 lint.extend-select = ["D212"]
 # D105 Docstrings for magic methods
 # D107 Docstrings for __init__

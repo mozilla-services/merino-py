@@ -30,7 +30,7 @@ ruff-lint: $(INSTALL_STAMP)  ##  Run ruff format checker
 
 .PHONY: ruff-doc
 ruff-doc: $(INSTALL_STAMP)  ##  Run ruff docstrings
-	$(POETRY) run ruff check --select D $(APP_AND_TEST_DIRS)
+	$(POETRY) run ruff check --select D --ignore D105,D107,D203,D205,D400 $(APP_AND_TEST_DIRS) 
 
 .PHONY: ruff-format
 ruff-sort: $(INSTALL_STAMP)  ##  Run ruff format
