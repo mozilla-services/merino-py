@@ -12,7 +12,7 @@ from merino.utils.http_client import create_http_client
 _provider: CuratedRecommendationsProvider
 
 
-async def init_provider() -> None:
+def init_provider() -> None:
     """Initialize the curated recommendations provider."""
     global _provider
     _provider = CuratedRecommendationsProvider(
@@ -22,4 +22,5 @@ async def init_provider() -> None:
 
 def get_provider() -> CuratedRecommendationsProvider:
     """Return the curated recommendations provider."""
-    return _provider  # noqa: F821
+    global _provider
+    return _provider
