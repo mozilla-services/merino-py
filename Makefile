@@ -23,6 +23,7 @@ $(INSTALL_STAMP): pyproject.toml poetry.lock
 .PHONY: ruff-sort
 ruff-sort: $(INSTALL_STAMP)  ##  Run ruff sorting
 	$(POETRY) run ruff check --fix $(APP_AND_TEST_DIRS)
+	$(POETRY) run ruff format $(APP_AND_TEST_DIRS)
 
 .PHONY: ruff-lint
 ruff-lint: $(INSTALL_STAMP)  ##  Run ruff linting
