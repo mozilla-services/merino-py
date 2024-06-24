@@ -25,7 +25,7 @@ ruff-lint: $(INSTALL_STAMP)  ##  Run ruff linting
 	$(POETRY) run ruff check $(APP_AND_TEST_DIRS)
 
 .PHONY: ruff-fmt
-ruff-lint: $(INSTALL_STAMP)  ##  Run ruff format checker
+ruff-fmt: $(INSTALL_STAMP)  ##  Run ruff format checker
 	$(POETRY) run ruff format --check $(APP_AND_TEST_DIRS)
 
 .PHONY: ruff-doc
@@ -33,7 +33,7 @@ ruff-doc: $(INSTALL_STAMP)  ##  Run ruff docstrings
 	$(POETRY) run ruff check --select D --ignore D105,D107,D203,D205,D400 $(APP_AND_TEST_DIRS) 
 
 .PHONY: ruff-format
-ruff-sort: $(INSTALL_STAMP)  ##  Run ruff format
+ruff-format: $(INSTALL_STAMP)  ##  Run ruff format
 	$(POETRY) run ruff format $(APP_AND_TEST_DIRS)
 
 .PHONY: bandit
