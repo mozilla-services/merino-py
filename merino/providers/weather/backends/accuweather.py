@@ -8,6 +8,7 @@ import json
 import logging
 from enum import Enum
 from typing import Any, Callable, NamedTuple, cast
+from urllib.parse import urlparse
 
 import aiodogstatsd
 from dateutil import parser
@@ -761,11 +762,14 @@ def add_partner_code(
     url: str, url_param_id: str | None = None, partner_code: str | None = None
 ) -> str:
     """Add the partner code to the given URL."""
+    # reformat the http url returned for current conditions and forecast to https
+    https_url = url if url.startswith("https:") else url.replace("http:", "https:", 1)
+
     if not url_param_id or not partner_code:
-        return url
+        return https_url
 
     try:
-        parsed_url = URL(url)
+        parsed_url = URL(https_url)
         return str(parsed_url.copy_add_param(url_param_id, partner_code))
     except InvalidURL:  # pragma: no cover
         return url
@@ -841,7 +845,6 @@ def process_current_condition_response(response: Any) -> dict[str, Any] | None:
             # lines as unreachable. See
             # https://github.com/python/mypy/issues/12770
             url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)  # type: ignore
-
             return {
                 "url": url,
                 "summary": summary,
