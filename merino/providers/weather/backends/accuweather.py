@@ -8,7 +8,6 @@ import json
 import logging
 from enum import Enum
 from typing import Any, Callable, NamedTuple, cast
-from urllib.parse import urlparse
 
 import aiodogstatsd
 from dateutil import parser
