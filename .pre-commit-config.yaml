@@ -11,10 +11,13 @@ repos:
     rev: 24.4.2
     hooks:
       - id: black
-  - repo: "https://github.com/pycqa/flake8"
-    rev: 7.0.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.10
     hooks:
-      - id: flake8
+      # Run the linter.
+      - id: ruff
+      # Run the formatter.
+      - id: ruff-format
   - repo: "https://github.com/pycqa/isort"
     rev: 5.13.2
     hooks:

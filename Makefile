@@ -28,9 +28,9 @@ isort: $(INSTALL_STAMP)  ##  Run isort
 black: $(INSTALL_STAMP)  ##  Run black
 	$(POETRY) run black --quiet --diff --check merino $(APP_AND_TEST_DIRS)
 
-.PHONY: flake8
-flake8: $(INSTALL_STAMP)  ##  Run flake8
-	$(POETRY) run flake8 $(APP_AND_TEST_DIRS)
+.PHONY: ruff
+ruff: $(INSTALL_STAMP)  ##  Run ruff
+	$(POETRY) run ruff check $(APP_AND_TEST_DIRS)
 
 .PHONY: bandit
 bandit: $(INSTALL_STAMP)  ##  Run bandit
@@ -45,7 +45,7 @@ mypy: $(INSTALL_STAMP)  ##  Run mypy
 	$(POETRY) run mypy $(APP_AND_TEST_DIRS) --config-file="pyproject.toml"
 
 .PHONY: lint
-lint: $(INSTALL_STAMP) isort black flake8 bandit pydocstyle mypy ##  Run various linters
+lint: $(INSTALL_STAMP) isort black ruff bandit pydocstyle mypy ##  Run various linters
 
 .PHONY: format
 format: $(INSTALL_STAMP)  ##  Sort imports and reformat code

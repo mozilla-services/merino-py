@@ -38,8 +38,8 @@ $ make isort
 # Run black
 $ make black
 
-# Run flake8
-$ make flake8
+# Run ruff
+$ make ruff
 
 # Run bandit
 $ make bandit
