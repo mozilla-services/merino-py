@@ -32,14 +32,17 @@ $ make help
 # Just like `poetry install`
 $ make install
 
-# Run sort
-$ make ruff-sort
-
 # Run linter
 $ make ruff-lint
 
+# Run format checker
+$ make ruff-fmt
+
 # Run doc checker
 $ make ruff-doc
+
+# Run formatter
+$ make ruff-format
 
 # Run black
 $ make black
