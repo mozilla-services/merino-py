@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Integration tests for the Merino v1 suggest API endpoint."""
+
 import logging
 from datetime import datetime
 
@@ -451,9 +452,7 @@ def test_suggest_feature_flags_tags_in_metrics(
 
     # TODO: Remove reliance on internal details of aiodogstatsd
     feature_flag_tags_per_metric = {
-        call.args[0]: [
-            tag for tag in call.args[3].keys() if tag.startswith("feature_flag.")
-        ]
+        call.args[0]: [tag for tag in call.args[3].keys() if tag.startswith("feature_flag.")]
         for call in report.call_args_list
     }
 

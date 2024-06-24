@@ -146,8 +146,6 @@ async def _upload(
 
             # Add keywords. Sort them to make it easier to compare keywords from
             # one dataset to the next.
-            suggestion["keywords"] = sorted(
-                [kw.lower() for kw in ADDON_KEYWORDS[addon]]
-            )
+            suggestion["keywords"] = sorted([kw.lower() for kw in ADDON_KEYWORDS[addon]])
 
             uploader.add_suggestion(suggestion)

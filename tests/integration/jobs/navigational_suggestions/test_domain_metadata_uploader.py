@@ -55,7 +55,8 @@ def gcs_storage_client(gcs_storage_container) -> Client:
     after this test suite has finished running
     """
     client: Client = Client(
-        credentials=AnonymousCredentials(), project="test_gcp_uploader_project"  # type: ignore
+        credentials=AnonymousCredentials(),
+        project="test_gcp_uploader_project",
     )
 
     yield client
@@ -159,9 +160,7 @@ def test_upload_top_picks(gcs_storage_client, gcs_storage_bucket):
     )
 
     # create a DomainMetadataUploader instance
-    domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False
-    )
+    domain_metadata_uploader = DomainMetadataUploader(uploader=gcp_uploader, force_upload=False)
 
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
@@ -177,9 +176,7 @@ def test_upload_top_picks(gcs_storage_client, gcs_storage_bucket):
     assert top_picks_latest_blob is not None
 
 
-def test_upload_favicons(
-    gcs_storage_client, gcs_storage_bucket, mock_favicon_downloader
-):
+def test_upload_favicons(gcs_storage_client, gcs_storage_bucket, mock_favicon_downloader):
     """Test upload_favicons method of DomainMetaDataUploader. This test uses the mocked version
     of the favicon downloader. This test also implicitly tests the underlying gcs uploader methods.
     """
@@ -202,9 +199,7 @@ def test_upload_favicons(
     # call the upload method with a test top picks json
     uploaded_favicons = domain_metadata_uploader.upload_favicons(test_favicons)
 
-    bucket_with_uploaded_favicons = gcp_uploader.storage_client.get_bucket(
-        gcs_storage_bucket.name
-    )
+    bucket_with_uploaded_favicons = gcp_uploader.storage_client.get_bucket(gcs_storage_bucket.name)
 
     assert uploaded_favicons is not None
     assert len(uploaded_favicons) == len(test_favicons)
@@ -228,18 +223,12 @@ def test_get_latest_file_for_diff(gcs_storage_client, gcs_storage_bucket):
     )
 
     # create a DomainMetadataUploader instance
-    domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False
-    )
+    domain_metadata_uploader = DomainMetadataUploader(uploader=gcp_uploader, force_upload=False)
 
     # upload test_top_picks_1 for the 2024... file
-    gcp_uploader.upload_content(
-        json.dumps(test_top_picks_1), "20240101120555_top_picks.json"
-    )
+    gcp_uploader.upload_content(json.dumps(test_top_picks_1), "20240101120555_top_picks.json")
     # upload test_top_picks_2 for the 2023... file
-    gcp_uploader.upload_content(
-        json.dumps(test_top_picks_2), "20230101120555_top_picks.json"
-    )
+    gcp_uploader.upload_content(json.dumps(test_top_picks_2), "20230101120555_top_picks.json")
 
     # get the latest file
     latest_file = domain_metadata_uploader.get_latest_file_for_diff()
@@ -248,9 +237,7 @@ def test_get_latest_file_for_diff(gcs_storage_client, gcs_storage_bucket):
     assert latest_file == test_top_picks_1
 
 
-def test_get_latest_file_for_diff_when_no_file_is_found(
-    gcs_storage_client, gcs_storage_bucket
-):
+def test_get_latest_file_for_diff_when_no_file_is_found(gcs_storage_client, gcs_storage_bucket):
     """Test get_latest_file_for_diff method of DomainMetaDataUploader. This test also tests
     implicitly the get_latest_file_for_diff method on the GcsUploader
     """
@@ -262,9 +249,7 @@ def test_get_latest_file_for_diff_when_no_file_is_found(
     )
 
     # create a DomainMetadataUploader instance
-    domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False
-    )
+    domain_metadata_uploader = DomainMetadataUploader(uploader=gcp_uploader, force_upload=False)
 
     # this should return None since we didn't upload anything to our gcs bucket
     latest_file = domain_metadata_uploader.get_latest_file_for_diff()

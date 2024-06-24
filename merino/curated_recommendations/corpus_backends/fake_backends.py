@@ -17,9 +17,7 @@ class FakeCuratedCorpusBackend(CorpusBackend):
         return [
             CorpusItem(
                 scheduledCorpusItemId="50f86ebe-3f25-41d8-bd84-53ead7bdc76e",
-                url=HttpUrl(
-                    "https://www.themarginalian.org/2024/05/28/passenger-pigeon/"
-                ),
+                url=HttpUrl("https://www.themarginalian.org/2024/05/28/passenger-pigeon/"),
                 title="Thunder, Bells, and Silence: the Eclipse That Went Extinct",
                 excerpt="What was it like for Martha, the endling of her species, to die alone at "
                 "the Cincinnati Zoo that late-summer day in 1914, all the other "

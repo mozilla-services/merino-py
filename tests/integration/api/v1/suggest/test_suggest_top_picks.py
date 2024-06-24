@@ -5,6 +5,7 @@
 """Integration tests for the Merino v1 suggest API endpoint configured with the
 Top Picks provider.
 """
+
 from typing import Any
 
 import pytest
@@ -54,9 +55,7 @@ def fixture_top_picks_parameters() -> dict[str, Any]:
 
 
 @pytest.fixture(name="providers")
-def fixture_providers(
-    backend: TopPicksBackend, top_picks_parameters: dict[str, Any]
-) -> Providers:
+def fixture_providers(backend: TopPicksBackend, top_picks_parameters: dict[str, Any]) -> Providers:
     """Define providers for this module which are injected automatically."""
     return {
         "top_picks": Provider(backend=backend, **top_picks_parameters)  # type: ignore [arg-type]
@@ -114,9 +113,7 @@ def test_top_picks_no_result(client: TestClient, query: str):
         ("acb", "Abc", "https://abc.test"),
     ],
 )
-def test_top_picks_short_domains(
-    client: TestClient, query: str, title: str, url: str
-) -> None:
+def test_top_picks_short_domains(client: TestClient, query: str, title: str, url: str) -> None:
     """Test if Top Picks provider responds with a short domain or similar"""
     expected_suggestion: list[Suggestion] = [
         Suggestion(

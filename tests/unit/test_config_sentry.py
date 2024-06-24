@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the config_sentry.py module."""
+
 import logging
 import typing
 
@@ -215,40 +216,28 @@ def test_strip_sensitive_data() -> None:
     assert isinstance(mock_sentry_hint["exc_info"][1], RuntimeError)
 
     assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][0]["vars"][
-            "q"
-        ]
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][0]["vars"]["q"]
         == REDACTED_TEXT
     )
     assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][1]["vars"][
-            "values"
-        ]["q"]
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][1]["vars"]["values"]["q"]
         == REDACTED_TEXT
     )
     assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][2]["vars"][
-            "srequest"
-        ]
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][2]["vars"]["srequest"]
         == REDACTED_TEXT
     )
 
     assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][4]["vars"][
-            "q"
-        ]
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][4]["vars"]["q"]
         == REDACTED_TEXT
     )
     assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][4]["vars"][
-            "suggest"
-        ]
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][4]["vars"]["suggest"]
         == REDACTED_TEXT
     )
     assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][5]["vars"][
-            "body"
-        ]
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][5]["vars"]["body"]
         == REDACTED_TEXT
     )
 
@@ -262,7 +251,7 @@ def test_strip_sensitive_data_lookup_error(
     """
     caplog.set_level(logging.WARNING)
     strip_sensitive_data(
-        event={"bad_request": {}, "exception": {"invalid_values": [{}]}},  # type: ignore
+        event={"bad_request": {}, "exception": {"invalid_values": [{}]}},
         hint=mock_sentry_hint,
     )
 

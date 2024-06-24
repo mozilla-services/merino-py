@@ -35,9 +35,7 @@ def _do_csv_test(
     mock_chunked_uploader_ctor = mocker.patch(
         "merino.jobs.relevancy_uploader.ChunkedRemoteSettingsRelevancyUploader"
     )
-    mock_chunked_uploader = (
-        mock_chunked_uploader_ctor.return_value.__enter__.return_value
-    )
+    mock_chunked_uploader = mock_chunked_uploader_ctor.return_value.__enter__.return_value
 
     # Do the upload.
     common_kwargs: dict[str, Any] = {
@@ -60,7 +58,7 @@ def _do_csv_test(
         record_type="category_to_domains",
         total_data_count=len(primary_category_data),
         category_name="Sports",
-        category_code=17
+        category_code=17,
     )
 
     mock_chunked_uploader_ctor.assert_any_call(
@@ -68,7 +66,7 @@ def _do_csv_test(
         record_type="category_to_domains",
         total_data_count=len(secondary_category_data),
         category_name="News",
-        category_code=14
+        category_code=14,
     )
 
     mock_chunked_uploader_ctor.assert_any_call(
@@ -76,7 +74,7 @@ def _do_csv_test(
         record_type="category_to_domains",
         total_data_count=len(inconclusive_category_data),
         category_name="Inconclusive",
-        category_code=0
+        category_code=0,
     )
 
     if not keep_existing_records and version == 1:
@@ -84,9 +82,7 @@ def _do_csv_test(
     else:
         mock_chunked_uploader.delete_records.assert_not_called()
 
-    mock_chunked_uploader.add_data.assert_has_calls(
-        [*map(mocker.call, primary_category_data)]
-    )
+    mock_chunked_uploader.add_data.assert_has_calls([*map(mocker.call, primary_category_data)])
 
 
 def do_csv_test(

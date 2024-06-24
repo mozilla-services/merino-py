@@ -85,21 +85,17 @@ def fixture_merino_step(
     def merino_step(step: Step) -> None:
         if type(step.request) is not MerinoRequest:
             raise TypeError(
-                f"Unsupported request type {type(step.request)} for Merino service "
-                f"step."
+                f"Unsupported request type {type(step.request)} for Merino service " f"step."
             )
 
         if type(step.response) is not Response:
             raise TypeError(
-                f"Unsupported response type {type(step.request)} for Merino service "
-                f"step."
+                f"Unsupported response type {type(step.request)} for Merino service " f"step."
             )
 
         method: str = step.request.method
         url: str = f"{merino_url}{step.request.path}"
-        headers: dict[str, str] = {
-            header.name: header.value for header in step.request.headers
-        }
+        headers: dict[str, str] = {header.name: header.value for header in step.request.headers}
 
         response: RequestsResponse = requests.request(method, url, headers=headers)
 

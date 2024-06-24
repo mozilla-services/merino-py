@@ -33,9 +33,7 @@ def test_curated_recommendations_locale(client: TestClient) -> None:
     result = response.json()
     assert result["recommendedAt"] == 1326511294000  # 2012-01-14 03:21:34 UTC
 
-    actual_recommendation: CuratedRecommendation = CuratedRecommendation(
-        **result["data"][0]
-    )
+    actual_recommendation: CuratedRecommendation = CuratedRecommendation(**result["data"][0])
 
     assert actual_recommendation == expected_recommendation
 

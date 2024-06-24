@@ -63,12 +63,8 @@ def expected_primary_suggestions() -> list[dict[str, Any]]:
                 "url": f"http://example.com/pocket-{s}",
                 "title": f"Title {s}",
                 "description": f"Description {s}",
-                "lowConfidenceKeywords": [
-                    f"low-{s}-{k}" for k in range(PRIMARY_KEYWORD_COUNT)
-                ],
-                "highConfidenceKeywords": [
-                    f"high-{s}-{k}" for k in range(PRIMARY_KEYWORD_COUNT)
-                ],
+                "lowConfidenceKeywords": [f"low-{s}-{k}" for k in range(PRIMARY_KEYWORD_COUNT)],
+                "highConfidenceKeywords": [f"high-{s}-{k}" for k in range(PRIMARY_KEYWORD_COUNT)],
             }
         )
     return suggestions

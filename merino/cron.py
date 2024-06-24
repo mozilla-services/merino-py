@@ -36,9 +36,7 @@ class Job:
     condition: Condition
     task: Task
 
-    def __init__(
-        self, *, name: str, interval: float, condition: Condition, task: Task
-    ) -> None:
+    def __init__(self, *, name: str, interval: float, condition: Condition, task: Task) -> None:
         self.name = name
         self.interval = interval
         self.condition = condition

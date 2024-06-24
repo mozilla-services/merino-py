@@ -36,9 +36,7 @@ class Scraper:
         'link[rel="SHORTCUT ICON"], link[rel="fluid-icon"], link[rel="mask-icon"],'
         'link[rel="apple-touch-startup-image"]'
     )
-    META_SELECTOR: str = (
-        "meta[name=apple-touch-icon], meta[name=msapplication-TileImage]"
-    )
+    META_SELECTOR: str = "meta[name=apple-touch-icon], meta[name=msapplication-TileImage]"
     MANIFEST_SELECTOR: str = 'link[rel="manifest"]'
 
     browser: RoboBrowser
@@ -46,9 +44,7 @@ class Scraper:
     def __init__(self) -> None:
         session: requests.Session = requests.Session()
         session.headers.update(REQUEST_HEADERS)
-        self.browser = RoboBrowser(
-            session=session, parser="html.parser", allow_redirects=True
-        )
+        self.browser = RoboBrowser(session=session, parser="html.parser", allow_redirects=True)
 
     def open(self, url: str) -> Optional[str]:
         """Open the given url for scraping.
@@ -96,9 +92,7 @@ class Scraper:
             if response:
                 result = response.json().get("icons")
         except Exception as e:
-            logger.info(
-                f"Exception: {e} while parsing icons from manifest {manifest_url}"
-            )
+            logger.info(f"Exception: {e} while parsing icons from manifest {manifest_url}")
         return result
 
     def get_default_favicon(self, url: str) -> Optional[str]:
@@ -114,9 +108,7 @@ class Scraper:
             response: Optional[requests.Response] = requests_get(default_favicon_url)
             return response.url if response else None
         except Exception as e:
-            logger.info(
-                f"Exception: {e} while getting default favicon {default_favicon_url}"
-            )
+            logger.info(f"Exception: {e} while getting default favicon {default_favicon_url}")
             return None
 
     def scrape_title(self) -> Optional[str]:
@@ -209,9 +201,7 @@ class DomainMetadataExtractor:
                 favicon_url = favicon["href"]
                 if favicon_url.startswith("data:"):
                     continue
-                if not favicon_url.startswith("http") and not favicon_url.startswith(
-                    "//"
-                ):
+                if not favicon_url.startswith("http") and not favicon_url.startswith("//"):
                     favicon["href"] = urljoin(scraped_url, favicon_url)
                 favicons.append(favicon)
 
@@ -219,9 +209,7 @@ class DomainMetadataExtractor:
                 favicon_url = favicon["content"]
                 if favicon_url.startswith("data:"):
                     continue
-                if not favicon_url.startswith("http") and not favicon_url.startswith(
-                    "//"
-                ):
+                if not favicon_url.startswith("http") and not favicon_url.startswith("//"):
                     favicon["href"] = urljoin(scraped_url, favicon_url)
                 else:
                     favicon["href"] = favicon_url
@@ -234,9 +222,7 @@ class DomainMetadataExtractor:
                     self.scraper.scrape_favicons_from_manifest(manifest_absolute_url)
                 )
                 for scraped_favicon in scraped_favicons:
-                    favicon_url = urljoin(
-                        manifest_absolute_url, scraped_favicon.get("src")
-                    )
+                    favicon_url = urljoin(manifest_absolute_url, scraped_favicon.get("src"))
                     favicons.append({"href": favicon_url})
 
             # Include the default "favicon.ico" if it exists in domain root
@@ -309,9 +295,7 @@ class DomainMetadataExtractor:
             title = (
                 title
                 if title
-                and not [
-                    t for t in self.INVALID_TITLES if t.casefold() in title.casefold()
-                ]
+                and not [t for t in self.INVALID_TITLES if t.casefold() in title.casefold()]
                 else None
             )
         return title

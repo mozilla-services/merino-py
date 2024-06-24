@@ -37,9 +37,7 @@ def _do_csv_test(
     mock_chunked_uploader_ctor = mocker.patch(
         "merino.jobs.csv_rs_uploader.ChunkedRemoteSettingsSuggestionUploader"
     )
-    mock_chunked_uploader = (
-        mock_chunked_uploader_ctor.return_value.__enter__.return_value
-    )
+    mock_chunked_uploader = mock_chunked_uploader_ctor.return_value.__enter__.return_value
 
     # Do the upload.
     common_kwargs: dict[str, Any] = {

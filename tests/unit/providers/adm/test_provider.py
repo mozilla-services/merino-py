@@ -27,9 +27,7 @@ def test_hidden(adm: Provider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_initialize(
-    adm: Provider, adm_suggestion_content: SuggestionContent
-) -> None:
+async def test_initialize(adm: Provider, adm_suggestion_content: SuggestionContent) -> None:
     """Test for the initialize() method of the adM provider."""
     await adm.initialize()
 
@@ -137,9 +135,7 @@ async def test_query_success(
 
 
 @pytest.mark.asyncio
-async def test_query_with_missing_key(
-    srequest: SuggestionRequestFixture, adm: Provider
-) -> None:
+async def test_query_with_missing_key(srequest: SuggestionRequestFixture, adm: Provider) -> None:
     """Test for the query() method of the adM provider with a missing key."""
     await adm.initialize()
 

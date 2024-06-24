@@ -119,9 +119,7 @@ def prepare_domain_metadata(
     logger.info("domain data download complete")
 
     # extract domain metadata of top domains
-    domain_metadata_extractor = DomainMetadataExtractor(
-        blocked_domains=TOP_PICKS_BLOCKLIST
-    )
+    domain_metadata_extractor = DomainMetadataExtractor(blocked_domains=TOP_PICKS_BLOCKLIST)
     domain_metadata: list[dict[str, Optional[str]]] = (
         domain_metadata_extractor.get_domain_metadata(domain_data, min_favicon_width)
     )
@@ -152,9 +150,7 @@ def prepare_domain_metadata(
     if old_top_picks is None:
         old_top_picks = {}
 
-    domain_diff = DomainDiff(
-        latest_domain_data=top_picks, old_domain_data=old_top_picks
-    )
+    domain_diff = DomainDiff(latest_domain_data=top_picks, old_domain_data=old_top_picks)
     (
         unchanged,
         added_domains,
@@ -165,9 +161,7 @@ def prepare_domain_metadata(
     )
 
     # Upload new domain file to replace old now that data is acquired for compare.
-    top_pick_blob = domain_metadata_uploader.upload_top_picks(
-        json.dumps(top_picks, indent=4)
-    )
+    top_pick_blob = domain_metadata_uploader.upload_top_picks(json.dumps(top_picks, indent=4))
     diff: dict = domain_diff.create_diff(
         file_name=top_pick_blob.name,
         unchanged=unchanged,

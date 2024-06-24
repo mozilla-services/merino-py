@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the Top Picks backend module."""
+
 import json
 import logging
 import os
@@ -114,9 +115,7 @@ def fixture_blob_json() -> str:
 
 
 @pytest.fixture(name="gcs_blob_mock", autouse=True)
-def fixture_gcs_blob_mock(
-    mocker: MockerFixture, expected_timestamp: int, blob_json: str
-) -> Any:
+def fixture_gcs_blob_mock(mocker: MockerFixture, expected_timestamp: int, blob_json: str) -> Any:
     """Create a GCS Blob mock object for testing."""
     mock_blob = mocker.MagicMock(spec=Blob)
     mock_blob.name = "20220101120555_top_picks.json"
@@ -141,9 +140,7 @@ def mock_gcs_client(mocker: MockerFixture, gcs_bucket_mock):
     return mock_client
 
 
-def test_init_failure_no_domain_file(
-    top_picks_backend_parameters: dict[str, Any]
-) -> None:
+def test_init_failure_no_domain_file(top_picks_backend_parameters: dict[str, Any]) -> None:
     """Test exception handling for the __init__() method when no domain file provided."""
     top_picks_backend_parameters["top_picks_file_path"] = None
     with pytest.raises(ValueError):
@@ -170,17 +167,13 @@ def test_read_domain_list_os_error(top_picks_backend: TopPicksBackend) -> None:
         top_picks_backend.read_domain_list("./wrongfile.json")
 
 
-def test_read_domain_list_json_decode_err(
-    top_picks_backend: TopPicksBackend, mocker
-) -> None:
+def test_read_domain_list_json_decode_err(top_picks_backend: TopPicksBackend, mocker) -> None:
     """Test that the read function fails, raising TopPicksError when a
     JSONDecodeError is captured.
     """
     mocker.patch("json.load", side_effect=JSONDecodeError("test", "json", 1))
     with pytest.raises(TopPicksError):
-        top_picks_backend.read_domain_list(
-            settings.providers.top_picks.top_picks_file_path
-        )
+        top_picks_backend.read_domain_list(settings.providers.top_picks.top_picks_file_path)
 
 
 @pytest.mark.asyncio
@@ -250,9 +243,7 @@ def test_maybe_build_indicies_remote(
     assert get_file_result_code is GetFileResultCode.SUCCESS
     assert isinstance(result, TopPicksData)
     assert len(records) == 1
-    assert records[0].message.startswith(
-        "Top Picks Domain Data loaded remotely from GCS."
-    )
+    assert records[0].message.startswith("Top Picks Domain Data loaded remotely from GCS.")
 
 
 def test_maybe_build_indicies_remote_fail(
@@ -327,9 +318,7 @@ def test_maybe_build_indicies_error(
         assert len(records) == 1
 
 
-def test_domain_blocklist(
-    top_picks_backend: TopPicksBackend, domain_blocklist: set[str]
-) -> None:
+def test_domain_blocklist(top_picks_backend: TopPicksBackend, domain_blocklist: set[str]) -> None:
     """Test that the blocked domain, while found in the processed domain data
     is not indexed and therefore not found in any indeces.
     """

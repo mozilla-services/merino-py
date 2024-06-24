@@ -13,9 +13,7 @@ from tests.types import FilterCaplogFixture
 @pytest.fixture
 def mock_gcs_client(mocker, mock_gcs_bucket):
     """Return a mock GCS Client instance"""
-    mock_client = mocker.patch(
-        "merino.content_handler.gcp_uploader.Client"
-    ).return_value
+    mock_client = mocker.patch("merino.content_handler.gcp_uploader.Client").return_value
     mock_client.get_bucket.return_value = mock_gcs_bucket
     return mock_client
 
@@ -29,9 +27,7 @@ def mock_gcs_blob(mocker):
 @pytest.fixture
 def mock_most_recent_gcs_blob(mocker):
     """Return a mock GCS Blob instance"""
-    most_recent_blob = mocker.patch(
-        "merino.content_handler.gcp_uploader.Blob"
-    ).return_value
+    most_recent_blob = mocker.patch("merino.content_handler.gcp_uploader.Blob").return_value
     most_recent_blob.name = "20220101120555_top_picks.json"
     return most_recent_blob
 
@@ -118,9 +114,7 @@ def test_upload_image_with_https_cdn_host_name(
     caplog.set_level(INFO)
 
     # creating the uploader object with cdn host name containing "https"
-    gcp_uploader = GcsUploader(
-        mock_gcs_client, test_bucket_name, test_https_cdn_host_name
-    )
+    gcp_uploader = GcsUploader(mock_gcs_client, test_bucket_name, test_https_cdn_host_name)
 
     # force upload is set to FALSE by default
     result = gcp_uploader.upload_image(test_image, test_destination_name)
@@ -149,9 +143,7 @@ def test_get_most_recent_file_with_two_files(
     # set the mock bucket's blob list to the two mocked blobs
     mock_gcs_bucket.list_blobs.return_value = [mock_most_recent_gcs_blob, mock_gcs_blob]
 
-    gcp_uploader = GcsUploader(
-        mock_gcs_client, test_bucket_name, test_https_cdn_host_name
-    )
+    gcp_uploader = GcsUploader(mock_gcs_client, test_bucket_name, test_https_cdn_host_name)
 
     excluded_file: str = "excluded.json"
     result = gcp_uploader.get_most_recent_file(
@@ -179,9 +171,7 @@ def test_get_most_recent_file_with_excluded_file(
     # bucket only contains the excluded file
     mock_gcs_bucket.list_blobs.return_value = [mock_gcs_blob]
 
-    gcp_uploader = GcsUploader(
-        mock_gcs_client, test_bucket_name, test_https_cdn_host_name
-    )
+    gcp_uploader = GcsUploader(mock_gcs_client, test_bucket_name, test_https_cdn_host_name)
 
     # call the method with the exclusion argument set to the excluded file
     result = gcp_uploader.get_most_recent_file(
@@ -209,9 +199,7 @@ def test_upload_content_with_forced_upload_false_and_existing_blob(
     mock_gcs_client.bucket.return_value = mock_gcs_bucket
     mock_gcs_bucket.blob.return_value = mock_gcs_blob
 
-    gcp_uploader = GcsUploader(
-        mock_gcs_client, test_bucket_name, test_https_cdn_host_name
-    )
+    gcp_uploader = GcsUploader(mock_gcs_client, test_bucket_name, test_https_cdn_host_name)
     content = bytes(255)
 
     # call the method
@@ -246,14 +234,10 @@ def test_upload_content_with_forced_upload_true_and_existing_blob(
     mock_gcs_client.bucket.return_value = mock_gcs_bucket
     mock_gcs_bucket.blob.return_value = mock_gcs_blob
 
-    gcp_uploader = GcsUploader(
-        mock_gcs_client, test_bucket_name, test_https_cdn_host_name
-    )
+    gcp_uploader = GcsUploader(mock_gcs_client, test_bucket_name, test_https_cdn_host_name)
     content = bytes(255)
 
-    result = gcp_uploader.upload_content(
-        content, test_destination_name, forced_upload=True
-    )
+    result = gcp_uploader.upload_content(content, test_destination_name, forced_upload=True)
 
     # capture logger info output
     log_records: list[LogRecord] = filter_caplog(
@@ -264,9 +248,7 @@ def test_upload_content_with_forced_upload_true_and_existing_blob(
     assert len(log_records) == 1
     assert log_records[0].message.startswith(f"Uploading blob: {mock_gcs_blob}")
 
-    mock_gcs_blob.upload_from_string.assert_called_once_with(
-        content, content_type="text/plain"
-    )
+    mock_gcs_blob.upload_from_string.assert_called_once_with(content, content_type="text/plain")
     mock_gcs_blob.make_public.assert_called_once()
 
 
@@ -292,9 +274,7 @@ def test_upload_content_with_exception_thrown(
     # make the blob.make_public() method throw a run time exception
     mock_gcs_blob.make_public.side_effect = RuntimeError("test-exception")
 
-    gcp_uploader = GcsUploader(
-        mock_gcs_client, test_bucket_name, test_https_cdn_host_name
-    )
+    gcp_uploader = GcsUploader(mock_gcs_client, test_bucket_name, test_https_cdn_host_name)
 
     # call the method
     gcp_uploader.upload_content(content, test_destination_name, forced_upload=True)

@@ -31,9 +31,7 @@ Scenario = namedtuple(
 SCENARIOS: dict[str, Scenario] = {
     "Case-I: Backend returns": Scenario(
         providers={
-            "wikipedia": Provider(
-                backend=FakeEchoWikipediaBackend(), title_block_list=BLOCK_LIST
-            )
+            "wikipedia": Provider(backend=FakeEchoWikipediaBackend(), title_block_list=BLOCK_LIST)
         },
         query="foo bar",
         expected_suggestion_count=1,
@@ -53,9 +51,7 @@ SCENARIOS: dict[str, Scenario] = {
     ),
     "Case-III: Block list filter": Scenario(
         providers={
-            "wikipedia": Provider(
-                backend=FakeEchoWikipediaBackend(), title_block_list=BLOCK_LIST
-            )
+            "wikipedia": Provider(backend=FakeEchoWikipediaBackend(), title_block_list=BLOCK_LIST)
         },
         query="unsafe content",
         expected_suggestion_count=0,

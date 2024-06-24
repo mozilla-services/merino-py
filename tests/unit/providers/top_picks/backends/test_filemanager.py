@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the Top Picks backend module."""
+
 import json
 import logging
 import os
@@ -94,9 +95,7 @@ def fixture_blob_json() -> str:
 
 
 @pytest.fixture(name="gcs_blob_mock", autouse=True)
-def fixture_gcs_blob_mock(
-    mocker: MockerFixture, expected_timestamp: int, blob_json: str
-) -> Any:
+def fixture_gcs_blob_mock(mocker: MockerFixture, expected_timestamp: int, blob_json: str) -> Any:
     """Create a GCS Blob mock object for testing."""
     mock_blob = mocker.MagicMock(spec=Blob)
     mock_blob.name = "20220101120555_top_picks.json"
@@ -235,9 +234,7 @@ def test_get_file(
     mocker.patch(
         "merino.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
-    get_file_result_code, result = top_picks_remote_filemanager.get_file(
-        client=gcs_client_mock
-    )
+    get_file_result_code, result = top_picks_remote_filemanager.get_file(client=gcs_client_mock)
     records: list[LogRecord] = filter_caplog(
         caplog.records, "merino.providers.top_picks.backends.filemanager"
     )
@@ -272,9 +269,7 @@ def test_get_file_skip(
         "merino.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
 
-    get_file_result_code, result = top_picks_remote_filemanager.get_file(
-        client=gcs_client_mock
-    )
+    get_file_result_code, result = top_picks_remote_filemanager.get_file(client=gcs_client_mock)
 
     assert get_file_result_code is GetFileResultCode.SKIP
     assert result is None

@@ -145,9 +145,7 @@ async def test_es_backend_search_exception(
     es_backend: ElasticBackend,
 ) -> None:
     """Test the exception handling in the search method of the ES backend."""
-    mocker.patch.object(
-        AsyncElasticsearch, "search", side_effect=Exception("404 error")
-    )
+    mocker.patch.object(AsyncElasticsearch, "search", side_effect=Exception("404 error"))
 
     with pytest.raises(BackendError) as excinfo:
         await es_backend.search("foo")
@@ -156,9 +154,7 @@ async def test_es_backend_search_exception(
 
 
 @pytest.mark.asyncio
-async def test_es_backend_shutdown(
-    mocker: MockerFixture, es_backend: ElasticBackend
-) -> None:
+async def test_es_backend_shutdown(mocker: MockerFixture, es_backend: ElasticBackend) -> None:
     """Test the shutdown method of the ES backend."""
     spy = mocker.spy(AsyncElasticsearch, "close")
 

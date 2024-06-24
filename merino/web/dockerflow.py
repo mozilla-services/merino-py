@@ -33,17 +33,13 @@ async def version() -> Version:
         return app_version
 
 
-@router.get(
-    "/__heartbeat__", tags=["__heartbeat__"], summary="Dockerflow: __heartbeat__"
-)
+@router.get("/__heartbeat__", tags=["__heartbeat__"], summary="Dockerflow: __heartbeat__")
 async def heartbeat() -> Response:
     """Dockerflow: Query service heartbeat. It returns an empty string in the response."""
     return Response(content="")
 
 
-@router.get(
-    "/__lbheartbeat__", tags=["__lbheartbeat__"], summary="Dockerflow: __lbheartbeat__"
-)
+@router.get("/__lbheartbeat__", tags=["__lbheartbeat__"], summary="Dockerflow: __lbheartbeat__")
 async def lbheartbeat() -> Response:
     """Dockerflow: Query service heartbeat for load balancer. It returns an empty string in the
     response.

@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Top Pick Navigational Queries Provider"""
+
 import asyncio
 import logging
 import time
@@ -88,10 +89,7 @@ class Provider(BaseProvider):
 
         # Run a cron job that will periodically check whether to update domain file.
         # Only runs when domain source set to `remote`.
-        if (
-            settings.providers.top_picks.domain_data_source
-            == DomainDataSource.REMOTE.value
-        ):
+        if settings.providers.top_picks.domain_data_source == DomainDataSource.REMOTE.value:
             cron_job = cron.Job(
                 name="resync_domain_file",
                 interval=self.cron_interval_sec,
@@ -154,17 +152,11 @@ class Provider(BaseProvider):
             ):
                 ids = self.top_picks_data.short_domain_index.get(query)
             case qlen if (
-                self.top_picks_data.query_char_limit
-                <= qlen
-                <= self.top_picks_data.query_max
+                self.top_picks_data.query_char_limit <= qlen <= self.top_picks_data.query_max
             ):
                 ids = self.top_picks_data.primary_index.get(
                     query
                 ) or self.top_picks_data.secondary_index.get(query)
             case _:
                 ids = None
-        return (
-            [Suggestion(**self.top_picks_data.results[ids[0]], score=self.score)]
-            if ids
-            else []
-        )
+        return [Suggestion(**self.top_picks_data.results[ids[0]], score=self.score)] if ids else []
