@@ -12,10 +12,6 @@ exclude = ["build", "dist", "__pycache__", ".git"]
 lint.extend-ignore = ["E203"]
 lint.per-file-ignores = {"__init__.py" = ["F401"]}
 
-[tool.isort]
-profile = "black"
-skip_gitignore = true
-
 [tool.bandit]
 # skips asserts
 # B101: https://bandit.readthedocs.io/en/latest/plugins/b101_assert_used.html#
@@ -94,7 +90,6 @@ pydantic = "^2.1.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.0"
-isort = "^5.10.1"
 pydocstyle = "^6.1.1"
 mypy = "^1.5"
 pre-commit = "^2.20.0"
@@ -110,10 +105,10 @@ pytest-mock = "^3.10.0"
 freezegun = "^1.2.2"
 requests-mock = "^1.10.0"
 requests-toolbelt = "^1.0.0"
+ruff = "^0.4.10"
 types-redis = "^4.5.1.1"
 testcontainers = "^4.0.1"
 types-pillow = "^10.2.0.20240520"
-ruff = "^0.4.10"
 
 [build-system]
 requires = ["poetry-core>=1.8.1"]

@@ -32,14 +32,14 @@ $ make help
 # Just like `poetry install`
 $ make install
 
-# Run isort
-$ make isort
+# Run sort
+$ make ruff-sort
 
 # Run black
 $ make black
 
-# Run ruff
-$ make ruff
+# Run linter
+$ make ruff-lint
 
 # Run bandit
 $ make bandit
