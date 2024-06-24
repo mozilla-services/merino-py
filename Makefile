@@ -24,28 +24,28 @@ $(INSTALL_STAMP): pyproject.toml poetry.lock
 ruff-sort: $(INSTALL_STAMP)  ##  Run ruff sorting
 	$(POETRY) run ruff check --fix $(APP_AND_TEST_DIRS)
 
+.PHONY: ruff-lint
+ruff-lint: $(INSTALL_STAMP)  ##  Run ruff linting
+	$(POETRY) run ruff check $(APP_AND_TEST_DIRS)
+
+.PHONY: ruff-doc
+ruff-doc: $(INSTALL_STAMP)  ##  Run ruff docs
+	$(POETRY) run ruff check --select D $(APP_AND_TEST_DIRS)
+
 .PHONY: black
 black: $(INSTALL_STAMP)  ##  Run black
 	$(POETRY) run black --quiet --diff --check merino $(APP_AND_TEST_DIRS)
 
-.PHONY: ruff-lint
-ruff-lint: $(INSTALL_STAMP)  ##  Run ruff
-	$(POETRY) run ruff check $(APP_AND_TEST_DIRS)
-
 .PHONY: bandit
 bandit: $(INSTALL_STAMP)  ##  Run bandit
 	$(POETRY) run bandit --quiet -r $(APP_AND_TEST_DIRS) -c "pyproject.toml"
-
-.PHONY: pydocstyle
-pydocstyle: $(INSTALL_STAMP)  ##  Run pydocstyle
-	$(POETRY) run pydocstyle $(APP_AND_TEST_DIRS) --config="pyproject.toml"
 
 .PHONY: mypy
 mypy: $(INSTALL_STAMP)  ##  Run mypy
 	$(POETRY) run mypy $(APP_AND_TEST_DIRS) --config-file="pyproject.toml"
 
 .PHONY: lint
-lint: $(INSTALL_STAMP) black ruff-sort ruff-lint bandit pydocstyle mypy ##  Run various linters
+lint: $(INSTALL_STAMP) ruff-sort ruff-lint ruff-doc black bandit mypy ##  Run various linters
 
 .PHONY: format
 format: $(INSTALL_STAMP)  ##  Sort imports and reformat code

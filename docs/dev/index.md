@@ -35,17 +35,17 @@ $ make install
 # Run sort
 $ make ruff-sort
 
-# Run black
-$ make black
-
 # Run linter
 $ make ruff-lint
 
+# Run doc checker
+$ make ruff-doc
+
+# Run black
+$ make black
+
 # Run bandit
 $ make bandit
-
-# Run pydocstyle
-$ make pydocstyle
 
 # Run mypy
 $ make mypy

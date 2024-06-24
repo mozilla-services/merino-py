@@ -9,8 +9,17 @@ show_missing = true
 [tool.ruff]
 line-length = 99
 exclude = ["build", "dist", "__pycache__", ".git"]
+# Error Code Ref: https://www.pydocstyle.org/en/stable/error_codes.html
+# D212 Multi-line docstring summary should start at the first line
+lint.extend-select = ["D212"]
+# D105 Docstrings for magic methods
+# D107 Docstrings for __init__
+# D203 as it conflicts with D211 https://github.com/PyCQA/pydocstyle/issues/141
+# D205 1 blank line required between summary line and description, awkward spacing
+# D400 First line should end with a period, doesn't work when sentence spans 2 lineslint.ignore = ["D105", "D107", "D203", "D205", "D400"]
 lint.extend-ignore = ["E203"]
 lint.per-file-ignores = {"__init__.py" = ["F401"]}
+lint.pydocstyle.convention = "pep257"
 
 [tool.bandit]
 # skips asserts
@@ -32,19 +41,6 @@ warn_redundant_casts = true
 warn_return_any = true
 warn_unused_ignores = true
 warn_unreachable = true
-
-[tool.pydocstyle]
-match = ".*\\.py"
-convention = "pep257"
-# Error Code Ref: https://www.pydocstyle.org/en/stable/error_codes.html
-# D212 Multi-line docstring summary should start at the first line
-add-select = ["D212"]
-# D105 Docstrings for magic methods
-# D107 Docstrings for __init__
-# D203 as it conflicts with D211 https://github.com/PyCQA/pydocstyle/issues/141
-# D205 1 blank line required between summary line and description, awkward spacing
-# D400 First line should end with a period, doesn't work when sentence spans 2 lines
-add-ignore = ["D105","D107","D203", "D205", "D400"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -90,7 +86,6 @@ pydantic = "^2.1.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.0"
-pydocstyle = "^6.1.1"
 mypy = "^1.5"
 pre-commit = "^2.20.0"
 bandit = {extras = ["toml"], version = "^1.7.5"}
