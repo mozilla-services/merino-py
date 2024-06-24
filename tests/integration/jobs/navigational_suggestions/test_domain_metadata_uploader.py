@@ -55,7 +55,7 @@ def gcs_storage_client(gcs_storage_container) -> Client:
     after this test suite has finished running
     """
     client: Client = Client(
-        credentials=AnonymousCredentials(),
+        credentials=AnonymousCredentials(),  # type: ignore
         project="test_gcp_uploader_project",
     )
 

@@ -251,7 +251,7 @@ def test_strip_sensitive_data_lookup_error(
     """
     caplog.set_level(logging.WARNING)
     strip_sensitive_data(
-        event={"bad_request": {}, "exception": {"invalid_values": [{}]}},
+        event={"bad_request": {}, "exception": {"invalid_values": [{}]}},  # type: ignore
         hint=mock_sentry_hint,
     )
 
