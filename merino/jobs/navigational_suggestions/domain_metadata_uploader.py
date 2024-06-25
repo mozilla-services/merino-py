@@ -70,9 +70,7 @@ class DomainMetadataUploader:
         dst_favicons: list = []
         for src_favicon in src_favicons:
             dst_favicon_public_url: str = ""
-            favicon_image: Image | None = self.favicon_downloader.download_favicon(
-                src_favicon
-            )
+            favicon_image: Image | None = self.favicon_downloader.download_favicon(src_favicon)
             if favicon_image:
                 try:
                     dst_favicon_name = self.destination_favicon_name(favicon_image)

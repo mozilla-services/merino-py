@@ -21,23 +21,17 @@ Scenario = namedtuple(
 
 SCENARIOS: dict[str, Scenario] = {
     "Case-I: Returns Matched Addon": Scenario(
-        providers={
-            "addons": Provider(backend=StaticAmoBackend(), keywords=ADDON_KEYWORDS)
-        },
+        providers={"addons": Provider(backend=StaticAmoBackend(), keywords=ADDON_KEYWORDS)},
         query="night mo",
         expected_title="Dark Reader",
     ),
     "Case-II: No Addon Matches": Scenario(
-        providers={
-            "addons": Provider(backend=StaticAmoBackend(), keywords=ADDON_KEYWORDS)
-        },
+        providers={"addons": Provider(backend=StaticAmoBackend(), keywords=ADDON_KEYWORDS)},
         query="nigh",
         expected_title=None,
     ),
     "Case-III: Case Insensitive Match": Scenario(
-        providers={
-            "addons": Provider(backend=StaticAmoBackend(), keywords=ADDON_KEYWORDS)
-        },
+        providers={"addons": Provider(backend=StaticAmoBackend(), keywords=ADDON_KEYWORDS)},
         query="NIghT",
         expected_title="Dark Reader",
     ),

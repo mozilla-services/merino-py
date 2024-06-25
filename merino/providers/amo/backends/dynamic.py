@@ -65,9 +65,7 @@ class DynamicAmoBackend:
                 "number_of_ratings": json_res["ratings"]["count"],
             }
         except httpx.HTTPError as e:
-            logger.error(
-                f"Addons API could not find key: {addon_key}, {e}, {e.__class__}"
-            )
+            logger.error(f"Addons API could not find key: {addon_key}, {e}, {e.__class__}")
         except (KeyError, JSONDecodeError):
             logger.error(
                 "Problem with Addons API formatting. "
@@ -91,9 +89,7 @@ class DynamicAmoBackend:
             ):
                 for addon_key in SupportedAddon:
                     tasks.append(
-                        group.create_task(
-                            self._fetch_addon(client, addon_key), name=addon_key
-                        )
+                        group.create_task(self._fetch_addon(client, addon_key), name=addon_key)
                     )
 
             # Update in place without clearing out the map so that fetch failures
@@ -112,9 +108,7 @@ class DynamicAmoBackend:
         try:
             icon_and_rating: dict[str, str] = self.dynamic_data[addon_key]
         except KeyError:
-            raise DynamicAmoBackendException(
-                "Missing Addon in execution. Skip returning Addon."
-            )
+            raise DynamicAmoBackendException("Missing Addon in execution. Skip returning Addon.")
 
         return Addon(
             name=static_info["name"],

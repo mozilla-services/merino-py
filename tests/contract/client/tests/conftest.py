@@ -51,8 +51,7 @@ def fixture_kinto_attachments(request: Any) -> dict[str, KintoRequestAttachment]
     for data_file in pathlib.Path(kinto_data_dir).glob("*.json"):
         content: bytes = data_file.read_bytes()
         suggestions: list[KintoSuggestion] = [
-            KintoSuggestion(**suggestion)
-            for suggestion in json.loads(data_file.read_text())
+            KintoSuggestion(**suggestion) for suggestion in json.loads(data_file.read_text())
         ]
         kinto_attachments[data_file.name] = KintoRequestAttachment(
             filename=data_file.name,
@@ -99,9 +98,7 @@ def pytest_configure(config: Any) -> None:
     with pathlib.Path(config.option.scenarios_file).open() as f:
         loaded_scenarios = yaml.safe_load(f)
 
-    config.merino_scenarios = [
-        Scenario(**scenario) for scenario in loaded_scenarios["scenarios"]
-    ]
+    config.merino_scenarios = [Scenario(**scenario) for scenario in loaded_scenarios["scenarios"]]
 
 
 def pytest_generate_tests(metafunc: Any) -> None:

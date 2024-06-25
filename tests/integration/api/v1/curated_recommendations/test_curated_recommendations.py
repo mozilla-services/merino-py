@@ -90,7 +90,6 @@ async def test_curated_recommendations_locale(client: TestClient):
     assert response.status_code == 200
 
     corpus_items = data["data"]
-
     # assert total of 80 items returned
     assert len(corpus_items) == 80
     # Assert all corpus_items have expected fields populated.
@@ -99,9 +98,7 @@ async def test_curated_recommendations_locale(client: TestClient):
     assert all(item["imageUrl"] for item in corpus_items)
 
     # Assert 2nd returned recommendation has topic = None & all fields returned are expected
-    actual_recommendation: CuratedRecommendation = CuratedRecommendation(
-        **corpus_items[1]
-    )
+    actual_recommendation: CuratedRecommendation = CuratedRecommendation(**corpus_items[1])
     assert actual_recommendation == expected_recommendation
 
 

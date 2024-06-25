@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Integration tests for the Merino __version__ API endpoint."""
+
 import logging
 import pathlib
 from datetime import datetime
@@ -56,8 +57,7 @@ def test_version_request_log_data(
 
     expected_log_data: RequestSummaryLogDataModel = RequestSummaryLogDataModel(
         agent=(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0)"
-            " Gecko/20100101 Firefox/103.0"
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0)" " Gecko/20100101 Firefox/103.0"
         ),
         path="/__version__",
         method="GET",

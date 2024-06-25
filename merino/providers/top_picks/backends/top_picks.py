@@ -167,9 +167,7 @@ class TopPicksBackend:
                     gcs_bucket_path=settings.providers.top_picks.gcs_bucket,
                 )
                 client = remote_filemanager.create_gcs_client()
-                get_file_result_code, remote_domains = remote_filemanager.get_file(
-                    client
-                )
+                get_file_result_code, remote_domains = remote_filemanager.get_file(client)
 
                 match GetFileResultCode(get_file_result_code):
                     case GetFileResultCode.SUCCESS:

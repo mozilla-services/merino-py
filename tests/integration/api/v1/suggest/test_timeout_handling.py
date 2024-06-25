@@ -5,6 +5,7 @@
 """Integration tests for the Merino v1 suggest API endpoint focusing on time out
 behavior.
 """
+
 from collections import namedtuple
 
 import aiodogstatsd
@@ -35,9 +36,7 @@ SCENARIOS: dict[str, Scenario] = {
     #     - Timeout metrics recorded in the task runner
     "Case-I: A-timed-out-provider": Scenario(
         providers={
-            "timedout-sponsored": FakeProviderFactory.timeout_sponsored(
-                enabled_by_default=True
-            ),
+            "timedout-sponsored": FakeProviderFactory.timeout_sponsored(enabled_by_default=True),
         },
         expected_suggestion_count=0,
         expected_logs_on_task_runner={
@@ -63,9 +62,7 @@ SCENARIOS: dict[str, Scenario] = {
     "Case-II: A-non-timed-out-and-a-timed-out-providers": Scenario(
         providers={
             "sponsored": FakeProviderFactory.sponsored(enabled_by_default=True),
-            "timedout-sponsored": FakeProviderFactory.timeout_sponsored(
-                enabled_by_default=True
-            ),
+            "timedout-sponsored": FakeProviderFactory.timeout_sponsored(enabled_by_default=True),
         },
         expected_suggestion_count=1,
         expected_logs_on_task_runner={
@@ -119,9 +116,7 @@ SCENARIOS: dict[str, Scenario] = {
     "Case-IV: A-non-timed-out-and-a-timed-out-tolerant-and-a-timed-out-providers": Scenario(
         providers={
             "sponsored": FakeProviderFactory.sponsored(enabled_by_default=True),
-            "timedout-sponsored": FakeProviderFactory.timeout_sponsored(
-                enabled_by_default=True
-            ),
+            "timedout-sponsored": FakeProviderFactory.timeout_sponsored(enabled_by_default=True),
             "timedout-tolerant-sponsored": FakeProviderFactory.timeout_tolerant_sponsored(
                 enabled_by_default=True
             ),
@@ -178,9 +173,7 @@ def test_timedout_providers(
     # Check logs for the timed out query(-ies)
     records = filter_caplog(caplog.records, "merino.utils.task_runner")
 
-    assert {
-        record.__dict__["msg"] for record in records
-    } == expected_logs_on_task_runner
+    assert {record.__dict__["msg"] for record in records} == expected_logs_on_task_runner
 
     # Check metrics for the timed out query(-ies)
     assert {call.args[0] for call in report.call_args_list} == expected_metric_keys

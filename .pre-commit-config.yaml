@@ -11,14 +11,16 @@ repos:
     rev: 24.4.2
     hooks:
       - id: black
-  - repo: "https://github.com/pycqa/flake8"
-    rev: 7.0.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.10
     hooks:
-      - id: flake8
-  - repo: "https://github.com/pycqa/isort"
-    rev: 5.13.2
-    hooks:
-      - id: isort
+      # Run the linter
+      - id: ruff
+        types_or: [python, pyi]
+        args: [--fix, --exit-non-zero-on-fix, --config=pyproject.toml]
+      # Run the formatter
+      - id: ruff-format
+        args: [--config=pyproject.toml]
   - repo: "https://github.com/pycqa/bandit"
     rev: 1.7.8
     hooks:
@@ -29,17 +31,6 @@ repos:
         args:
           - "--skip"
           - "B101,B104,B311"
-  - repo: "https://github.com/pycqa/pydocstyle"
-    rev: 6.3.0
-    hooks:
-      - id: pydocstyle
-        args:
-          - "--convention"
-          - pep257
-          - "--add-select"
-          - "D212"
-          - "--add-ignore"
-          - "D105,D107,D203,D205,D400"
   - repo: "https://github.com/pre-commit/mirrors-mypy"
     rev: v1.10.0
     hooks:

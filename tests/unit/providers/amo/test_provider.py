@@ -128,9 +128,7 @@ async def test_query_return_match(
 
     req = SuggestionRequest(query="dictionary", geolocation=Location())
     expected_info: dict[str, str] = ADDON_DATA[SupportedAddon.LANGAUGE_TOOL]
-    expected_icon_rating: dict[str, Any] = STATIC_RATING_AND_ICONS[
-        SupportedAddon.LANGAUGE_TOOL
-    ]
+    expected_icon_rating: dict[str, Any] = STATIC_RATING_AND_ICONS[SupportedAddon.LANGAUGE_TOOL]
     assert [
         AddonSuggestion(
             title=expected_info["name"],
@@ -151,9 +149,7 @@ async def test_query_return_match(
 
 
 @pytest.mark.asyncio
-async def test_query_error(
-    caplog: LogCaptureFixture, keywords: dict[SupportedAddon, set[str]]
-):
+async def test_query_error(caplog: LogCaptureFixture, keywords: dict[SupportedAddon, set[str]]):
     """Test that provider can handle query error."""
     provider = AddonsProvider(
         backend=AmoErrorBackend(),
@@ -203,9 +199,7 @@ async def test_fetch_addon(
     await addons_provider._fetch_addon_info()
     assert (
         addons_provider.last_fetch_at
-        == datetime.datetime(
-            year=2012, month=1, day=14, hour=3, minute=21, second=34
-        ).timestamp()
+        == datetime.datetime(year=2012, month=1, day=14, hour=3, minute=21, second=34).timestamp()
     )
 
 
@@ -217,7 +211,5 @@ def test_should_fetch_false(addons_provider: AddonsProvider):
 
 def test_should_fetch_true(addons_provider: AddonsProvider):
     """Test that provider should fetch is true."""
-    addons_provider.last_fetch_at = (
-        time.time() - addons_provider.resync_interval_sec - 100
-    )
+    addons_provider.last_fetch_at = time.time() - addons_provider.resync_interval_sec - 100
     assert addons_provider._should_fetch()

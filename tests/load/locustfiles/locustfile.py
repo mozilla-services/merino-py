@@ -56,9 +56,7 @@ CLIENT_VARIANTS: str = ""
 # IP RANGE CSV FILES (GZIP)
 # This test framework uses IP2Location LITE data available from
 # https://lite.ip2location.com
-CANADA_IP_ADDRESS_RANGES_GZIP: str = (
-    "tests/load/data/ip2location_canada_ip_address_ranges.gz"
-)
+CANADA_IP_ADDRESS_RANGES_GZIP: str = "tests/load/data/ip2location_canada_ip_address_ranges.gz"
 US_IP_ADDRESS_RANGES_GZIP: str = (
     "tests/load/data/ip2location_united_states_of_america_ip_address_ranges.gz"
 )
@@ -74,9 +72,7 @@ MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT: int = int(
 MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT: int = int(
     os.getenv("MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT", 0)
 )
-MERINO_PROVIDERS__WIKIPEDIA__ES_URL: str | None = os.getenv(
-    "MERINO_PROVIDERS__WIKIPEDIA__ES_URL"
-)
+MERINO_PROVIDERS__WIKIPEDIA__ES_URL: str | None = os.getenv("MERINO_PROVIDERS__WIKIPEDIA__ES_URL")
 MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY: str | None = os.getenv(
     "MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY"
 )
@@ -143,9 +139,7 @@ def on_locust_test_start(environment, **kwargs) -> None:
             ip_range_files=[CANADA_IP_ADDRESS_RANGES_GZIP, US_IP_ADDRESS_RANGES_GZIP]
         )
 
-        logger.info(
-            f"Download {len(query_data.ip_ranges)} IP ranges for X-Forward-For headers"
-        )
+        logger.info(f"Download {len(query_data.ip_ranges)} IP ranges for X-Forward-For headers")
     except (
         ApiError,
         ElasticsearchWarning,
@@ -159,14 +153,10 @@ def on_locust_test_start(environment, **kwargs) -> None:
         quit(1)
 
     for worker in environment.runner.clients:
-        environment.runner.send_message(
-            "store_suggestions", dict(query_data), client_id=worker
-        )
+        environment.runner.send_message("store_suggestions", dict(query_data), client_id=worker)
 
 
-def get_adm_queries(
-    server: str | None, collection: str | None, bucket: str | None
-) -> QueriesList:
+def get_adm_queries(server: str | None, collection: str | None, bucket: str | None) -> QueriesList:
     """Get query strings for use in testing the AdM Provider.
 
     Args:
@@ -196,9 +186,7 @@ def get_amo_queries() -> list[str]:
     Returns:
         List[str]: List of full query strings to use with the AMO provider
     """
-    return list(
-        set(map(lambda x: x.lower(), chain.from_iterable(ADDON_KEYWORDS.values())))
-    )
+    return list(set(map(lambda x: x.lower(), chain.from_iterable(ADDON_KEYWORDS.values()))))
 
 
 def get_top_picks_queries(
@@ -242,9 +230,7 @@ def get_top_picks_queries(
     return list(query_dict.values())
 
 
-def get_wikipedia_queries(
-    url: str | None, api_key: str | None, index: str | None
-) -> list[str]:
+def get_wikipedia_queries(url: str | None, api_key: str | None, index: str | None) -> list[str]:
     """Get query strings for use in testing the Wikipedia Provider.
 
     Args:
@@ -479,9 +465,7 @@ class MerinoUser(HttpUser):
             # manually control if an HTTP request should be marked as successful or
             # a failure in Locust's statistics
             if response.status_code != 200:
-                response.failure(
-                    f"{response.status_code=}, expected 200, {response.text=}"
-                )
+                response.failure(f"{response.status_code=}, expected 200, {response.text=}")
                 return
 
             # Create a pydantic model instance for validating the response content
@@ -501,12 +485,8 @@ class MerinoUser(HttpUser):
             "Accept-Language": choice(LOCALES),  # nosec
             "User-Agent": choice(DESKTOP_FIREFOX),  # nosec
         }
-        with self.client.get(
-            url=VERSION_API, headers=headers, catch_response=True
-        ) as response:
+        with self.client.get(url=VERSION_API, headers=headers, catch_response=True) as response:
             if response.status_code != 200:
-                response.failure(
-                    f"{response.status_code=}, expected 200, {response.text=}"
-                )
+                response.failure(f"{response.status_code=}, expected 200, {response.text=}")
                 return None
             return Version(**response.json())

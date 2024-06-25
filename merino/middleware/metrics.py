@@ -59,9 +59,7 @@ class MetricsMiddleware:
                 # don't track NOT_FOUND statuses by path.
                 # Instead we will track those within a general `response.status_codes` metric.
                 if status_code != HTTPStatus.NOT_FOUND.value:
-                    metric_name = self._build_metric_name(
-                        request.method, request.url.path
-                    )
+                    metric_name = self._build_metric_name(request.method, request.url.path)
                     client.timing(
                         f"{metric_name}.timing",
                         value=duration,
@@ -88,6 +86,4 @@ class MetricsMiddleware:
 
     @cache
     def _build_metric_name(self, method: str, path: str) -> str:
-        return "{}.{}".format(
-            method, path.lower().lstrip("/").replace("/", ".")
-        ).lower()
+        return "{}.{}".format(method, path.lower().lstrip("/").replace("/", ".")).lower()

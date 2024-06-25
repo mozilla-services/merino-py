@@ -8,6 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from merino.jobs.csv_rs_uploader import MissingFieldError
+from merino.jobs.csv_rs_uploader import fakespot
 from tests.unit.jobs.csv_rs_uploader.utils import do_csv_test, do_error_test
 
 MODEL_NAME = "fakespot"
@@ -71,6 +72,47 @@ def test_upload(mocker):
     )
 
 
+def test_blocklist(mocker, monkeypatch):
+    """Suggestions should be added and validated."""
+    monkeypatch.setattr(fakespot, "FAKESPOT_CSV_UPLOADER_BLOCKLIST", {"test-ABCDEF"})
+    do_csv_test(
+        mocker=mocker,
+        model_name=MODEL_NAME,
+        csv_rows=[
+            {
+                "fakespot_grade": "A",
+                "product_id": "test-ABCDEF",
+                "rating": "3.6",
+                "title": "Brand new widget",
+                "total_reviews": "10",
+                "url": "https://example.com/new-widget",
+                "score": "8.5",
+            },
+            {
+                "fakespot_grade": "B",
+                "product_id": "  test-XYZ  ",
+                "rating": "3.0",
+                "title": "  Refurbished widget  \n  ",
+                "total_reviews": "15",
+                "url": "https://example.com/old-widget",
+                "score": "8.2",
+            },
+        ],
+        expected_suggestions=[
+            # The only the second item should be here, since the first was in the blocklist
+            {
+                "fakespot_grade": "B",
+                "product_id": "test-XYZ",
+                "rating": 3.0,
+                "title": "Refurbished widget",
+                "total_reviews": 15,
+                "url": "https://example.com/old-widget",
+                "score": 8.2,
+            },
+        ],
+    )
+
+
 @pytest.fixture
 def verify_field_validation_error(mocker):
     """Verify that a value for a field will raise a ValidationError"""
@@ -93,9 +135,7 @@ def verify_field_required(mocker):
     """Verify that a missing field value will raise a MissingFieldError"""
 
     def verify(field_name):
-        row = {
-            name: value for (name, value) in TEST_CSV_ROW.items() if name != field_name
-        }
+        row = {name: value for (name, value) in TEST_CSV_ROW.items() if name != field_name}
         do_error_test(
             mocker,
             model_name=MODEL_NAME,

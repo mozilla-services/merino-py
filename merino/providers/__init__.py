@@ -23,9 +23,7 @@ async def init_providers() -> None:
     start = timer()
 
     # register providers
-    providers.update(
-        load_providers(disabled_providers_list=settings.runtime.disabled_providers)
-    )
+    providers.update(load_providers(disabled_providers_list=settings.runtime.disabled_providers))
 
     # initialize providers and record time
     init_metric = "providers.initialize"
@@ -36,9 +34,7 @@ async def init_providers() -> None:
             for provider_name, p in providers.items()
         ]
         await asyncio.gather(*wrapped_tasks)
-        default_providers.extend(
-            [p for p in providers.values() if p.enabled_by_default]
-        )
+        default_providers.extend([p for p in providers.values() if p.enabled_by_default])
         logger.info(
             "Provider initialization completed",
             extra={"providers": [*providers.keys()], "elapsed": timer() - start},

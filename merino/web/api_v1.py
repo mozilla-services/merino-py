@@ -67,12 +67,8 @@ async def suggest(
     request: Request,
     q: str = Query(max_length=QUERY_CHARACTER_MAX),
     providers: str | None = None,
-    client_variants: str | None = Query(
-        default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX
-    ),
-    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
-        get_providers
-    ),
+    client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
     request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
 ) -> JSONResponse:
     """Query Merino for suggestions.
@@ -182,9 +178,7 @@ async def suggest(
             geolocation=request.scope[ScopeKey.GEOLOCATION],
             request_type=request_type,
         )
-        task = metrics_client.timeit_task(
-            p.query(srequest), f"providers.{p.name}.query"
-        )
+        task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
         # `timeit_task()` doesn't support task naming, need to set the task name manually
         task.set_name(p.name)
         lookups.append(task)
@@ -288,9 +282,7 @@ def get_ttl_for_cache_control_header_for_suggestions(
     response_model=list[ProviderResponse],
 )
 async def providers(
-    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
-        get_providers
-    ),
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
 ) -> JSONResponse:
     """Query Merino for suggestion providers.
 

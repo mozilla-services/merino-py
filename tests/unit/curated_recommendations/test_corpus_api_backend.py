@@ -7,9 +7,7 @@ from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
 )
 
 
-@pytest.mark.parametrize(
-    "topic", ["PARENTING", "CORONAVIRUS", "GAMING", "CAREER", "EDUCATION"]
-)
+@pytest.mark.parametrize("topic", ["PARENTING", "CORONAVIRUS", "GAMING", "CAREER", "EDUCATION"])
 def test_map_corpus_to_serp_topic_return_none(topic):
     """Testing the map_to_corpus_serp_topic() method
     & ensuring topics that don't have a mapping return None.

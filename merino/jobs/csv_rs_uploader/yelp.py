@@ -42,7 +42,7 @@ class Suggestion(BaseSuggestion):
     icon: str
 
     @classmethod
-    def csv_to_suggestions(cls, csv_reader) -> list[BaseSuggestion]:
+    def csv_to_suggestions(cls, csv_reader) -> list["Suggestion"]:
         """Convert CSV content to Yelp Suggestions."""
         subjects = []
         pre_modifiers = []
@@ -65,15 +65,11 @@ class Suggestion(BaseSuggestion):
 
             location_modifier = row[FIELD_LOCATION_MODIFIERS]
             if location_modifier:
-                location_signs.append(
-                    LocationSign(keyword=location_modifier, needLocation=False)
-                )
+                location_signs.append(LocationSign(keyword=location_modifier, needLocation=False))
 
             location_sign = row[FIELD_LOCATION_SIGNS]
             if location_sign:
-                location_signs.append(
-                    LocationSign(keyword=location_sign, needLocation=True)
-                )
+                location_signs.append(LocationSign(keyword=location_sign, needLocation=True))
 
             yelp_modifier = row[FIELD_YELP_MODIFIERS]
             if yelp_modifier:

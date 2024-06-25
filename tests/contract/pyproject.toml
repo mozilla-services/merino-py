@@ -16,7 +16,7 @@ pytest = "^7.4.3"
 PyYAML = "^6.0.1"
 
 [tool.poetry.group.kinto.dependencies]
-typer = "^0.9.0"
+typer = "^0.11.0"
 
 
 [build-system]

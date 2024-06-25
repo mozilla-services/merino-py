@@ -45,16 +45,15 @@ class LoggingMiddleware:
                 # https://mozilla-hub.atlassian.net/browse/DISCO-2489
                 if (
                     PATTERN.match(request.url.path)
-                    and request.query_params.get("providers", "").strip().lower()
-                    != "accuweather"
+                    and request.query_params.get("providers", "").strip().lower() != "accuweather"
                 ):
                     suggest_log_data: SuggestLogDataModel = create_suggest_log_data(
                         request, message, dt
                     )
                     suggest_request_logger.info("", extra=suggest_log_data.model_dump())
                 else:
-                    request_log_data: RequestSummaryLogDataModel = (
-                        create_request_summary_log_data(request, message, dt)
+                    request_log_data: RequestSummaryLogDataModel = create_request_summary_log_data(
+                        request, message, dt
                     )
                     logger.info("", extra=request_log_data.model_dump())
 
