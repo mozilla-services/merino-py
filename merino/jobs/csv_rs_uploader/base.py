@@ -3,7 +3,7 @@ serialized in the output JSON, plus related helpers.
 """
 
 import re
-from typing import cast
+from typing import cast, Self
 
 from pydantic import BaseModel
 
@@ -16,7 +16,7 @@ class BaseSuggestion(BaseModel):
     """
 
     @classmethod
-    def csv_to_suggestions(cls, csv_reader) -> list["BaseSuggestion"]:
+    def csv_to_suggestions(cls, csv_reader) -> list[Self]:
         """Convert CSV content to Suggestions. Subclasses must override this
         method.
         """

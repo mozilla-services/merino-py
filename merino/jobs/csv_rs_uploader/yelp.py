@@ -42,7 +42,7 @@ class Suggestion(BaseSuggestion):
     icon: str
 
     @classmethod
-    def csv_to_suggestions(cls, csv_reader) -> list[BaseSuggestion]:
+    def csv_to_suggestions(cls, csv_reader) -> list["Suggestion"]:
         """Convert CSV content to Yelp Suggestions."""
         subjects = []
         pre_modifiers = []
