@@ -1,4 +1,5 @@
 """Uploads Content to GCS"""
+
 import logging
 from typing import Callable
 from urllib.parse import urljoin

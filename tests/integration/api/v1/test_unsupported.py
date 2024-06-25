@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Integration tests for unsupported Merino v1 API endpoints."""
+
 import logging
 from datetime import datetime
 from logging import LogRecord
@@ -32,8 +33,7 @@ def test_unsupported_endpoint_request_log_data(
 
     expected_log_data: RequestSummaryLogDataModel = RequestSummaryLogDataModel(
         agent=(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0)"
-            " Gecko/20100101 Firefox/103.0"
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0)" " Gecko/20100101 Firefox/103.0"
         ),
         path="/api/v1/unsupported",
         method="GET",
@@ -63,9 +63,7 @@ def test_unsupported_endpoint_request_log_data(
     assert log_data == expected_log_data
 
 
-def test_unsupported_endpoint_metrics(
-    mocker: MockerFixture, client: TestClient
-) -> None:
+def test_unsupported_endpoint_metrics(mocker: MockerFixture, client: TestClient) -> None:
     """Test that metrics are recorded for unsupported endpoints (status code 404)."""
     expected_metric_keys: list[str] = ["response.status_codes.404"]
 

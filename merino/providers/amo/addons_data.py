@@ -1,6 +1,7 @@
 """Static Mapping for the Addon data, along with the associated keywords
 to do the query string matching.
 """
+
 import enum
 
 
@@ -42,8 +43,7 @@ ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
     SupportedAddon.PRIVATE_RELAY: {
         "name": "Firefox Relay",
         "description": (
-            "Email masking to protect your inbox and identity "
-            "from hackers and junk mail."
+            "Email masking to protect your inbox and identity " "from hackers and junk mail."
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/private-relay/",
         "guid": "private-relay@firefox.com",
@@ -60,8 +60,7 @@ ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
     SupportedAddon.DARKREADER: {
         "name": "Dark Reader",
         "description": (
-            "Get night mode for the entire internet. "
-            "Adjust colors and reduce eye strain."
+            "Get night mode for the entire internet. " "Adjust colors and reduce eye strain."
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/darkreader/",
         "guid": "addon@darkreader.org",
@@ -78,8 +77,7 @@ ADDON_DATA: dict[SupportedAddon, dict[str, str]] = {
     SupportedAddon.UBLOCK_ORIGIN: {
         "name": "uBlock Origin",
         "description": (
-            "Block ads and enjoy a faster internet with "
-            "this efficient content blocker."
+            "Block ads and enjoy a faster internet with " "this efficient content blocker."
         ),
         "url": "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/",
         "guid": "uBlock0@raymondhill.net",

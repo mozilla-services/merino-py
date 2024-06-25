@@ -1,4 +1,5 @@
 """Integration test for CLI command output"""
+
 import pytest
 from typer.testing import CliRunner
 

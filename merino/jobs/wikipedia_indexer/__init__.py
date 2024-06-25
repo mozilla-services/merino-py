@@ -1,4 +1,5 @@
 """CLI commands for the wikipedia_indexer module"""
+
 import logging
 
 import typer
@@ -31,9 +32,7 @@ gcp_project_option = typer.Option(
 )
 
 
-version_option = typer.Option(
-    job_settings.index_version, "--version", help="Version of the index"
-)
+version_option = typer.Option(job_settings.index_version, "--version", help="Version of the index")
 
 
 indexer_cmd = typer.Typer(

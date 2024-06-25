@@ -54,8 +54,8 @@ For more details, see the Remote Settings [documentation][kinto_docs].
 
 ## Local Execution
 
-Local execution can be expedited by simply running `make contract-tests`, from the 
-repository root. This creates the Docker containers with kinto, Merino and the test 
+Local execution can be expedited by simply running `make contract-tests`, from the
+repository root. This creates the Docker containers with kinto, Merino and the test
 client and runs the test scenarios against them.
 
 ```shell
@@ -68,7 +68,7 @@ the repository root:
 ```shell
 make contract-tests-clean
 ```
-Failing to run this clean command between code changes may result in your changes not 
+Failing to run this clean command between code changes may result in your changes not
 being reflected.
 
 See [Makefile][makefile] for details.

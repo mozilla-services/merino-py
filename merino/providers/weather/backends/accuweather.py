@@ -1,4 +1,5 @@
 """A wrapper for AccuWeather API interactions."""
+
 import asyncio
 import datetime
 import functools
@@ -288,9 +289,7 @@ class AccuweatherBackend:
             response.raise_for_status()
 
         if (response_dict := process_api_response(response.json())) is None:
-            self.metrics_client.increment(
-                f"accuweather.request.{request_type}.processor.error"
-            )
+            self.metrics_client.increment(f"accuweather.request.{request_type}.processor.error")
             return None
 
         response_expiry: str = response.headers.get("Expires")
@@ -302,9 +301,7 @@ class AccuweatherBackend:
             response_dict["cached_request_ttl"] = cached_request_ttl
         except (CacheAdapterError, ValueError) as exc:
             logger.error(f"Error with storing Accuweather to cache: {exc}")
-            error_type = (
-                "set_error" if isinstance(exc, CacheAdapterError) else "ttl_date_error"
-            )
+            error_type = "set_error" if isinstance(exc, CacheAdapterError) else "ttl_date_error"
             self.metrics_client.increment(f"accuweather.cache.store.{error_type}")
             raise AccuweatherError(
                 "Something went wrong with storing to cache. Did not update cache."
@@ -398,9 +395,7 @@ class AccuweatherBackend:
             if location_cached is not None:
                 location = AccuweatherLocation.model_validate_json(location_cached)
             if current_cached is not None:
-                current_conditions = CurrentConditions.model_validate_json(
-                    current_cached
-                )
+                current_conditions = CurrentConditions.model_validate_json(current_cached)
             if forecast_cached is not None:
                 forecast = Forecast.model_validate_json(forecast_cached)
             if ttl_cached is not None:
@@ -431,9 +426,7 @@ class AccuweatherBackend:
 
         return await self.get_weather_report_with_geolocation(geolocation)
 
-    async def get_weather_report_with_location_key(
-        self, location_key
-    ) -> WeatherReport | None:
+    async def get_weather_report_with_location_key(self, location_key) -> WeatherReport | None:
         """Get weather information from AccuWeather.
 
         Firstly, it will look up the Redis cache for the current condition,
@@ -459,9 +452,9 @@ class AccuweatherBackend:
                     # The order matters below.
                     # See `LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION` for details.
                     args=[
-                        self.cache_key_template(
-                            WeatherDataType.CURRENT_CONDITIONS
-                        ).format(location_key=location_key),
+                        self.cache_key_template(WeatherDataType.CURRENT_CONDITIONS).format(
+                            location_key=location_key
+                        ),
                         self.cache_key_template(WeatherDataType.FORECAST).format(
                             location_key=location_key
                         ),
@@ -469,9 +462,7 @@ class AccuweatherBackend:
                 )
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
-            self.metrics_client.increment(
-                "accuweather.cache.fetch-via-location-key.error"
-            )
+            self.metrics_client.increment("accuweather.cache.fetch-via-location-key.error")
             return None
         self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)
         cached_report = self.parse_cached_data(cached_data)
@@ -564,9 +555,7 @@ class AccuweatherBackend:
         if location is None:
             if country and city and region:
                 if (
-                    location := await self.get_location_by_geolocation(
-                        country, city, region
-                    )
+                    location := await self.get_location_by_geolocation(country, city, region)
                 ) is None:
                     return None
             else:
@@ -574,8 +563,8 @@ class AccuweatherBackend:
 
         try:
             async with asyncio.TaskGroup() as tg:
-                task_current = (
-                    tg.create_task(self.get_current_conditions(location.key))
+                task_current = tg.create_task(
+                    self.get_current_conditions(location.key)
                     if current_conditions is None
                     else as_awaitable(
                         CurrentConditionsWithTTL(
@@ -584,13 +573,11 @@ class AccuweatherBackend:
                         )
                     )
                 )
-                task_forecast = (
-                    tg.create_task(self.get_forecast(location.key))
+                task_forecast = tg.create_task(
+                    self.get_forecast(location.key)
                     if forecast is None
                     else as_awaitable(
-                        ForecastWithTTL(
-                            forecast=forecast, ttl=self.cached_forecast_ttl_sec
-                        )
+                        ForecastWithTTL(forecast=forecast, ttl=self.cached_forecast_ttl_sec)
                     )
                 )
         except ExceptionGroup as e:
@@ -639,9 +626,7 @@ class AccuweatherBackend:
 
         return AccuweatherLocation(**response) if response else None
 
-    async def get_current_conditions(
-        self, location_key: str
-    ) -> CurrentConditionsWithTTL | None:
+    async def get_current_conditions(self, location_key: str) -> CurrentConditionsWithTTL | None:
         """Return current conditions data for a specific location or None if current
         conditions data is not found.
 
@@ -738,9 +723,7 @@ class AccuweatherBackend:
             response: Response = await self.http_client.get(url_path, params=params)
             response.raise_for_status()
 
-        processed_location_completions = process_location_completion_response(
-            response.json()
-        )
+        processed_location_completions = process_location_completion_response(response.json())
 
         location_completions = [
             LocationCompletion(**item) for item in processed_location_completions
@@ -758,11 +741,14 @@ def add_partner_code(
     url: str, url_param_id: str | None = None, partner_code: str | None = None
 ) -> str:
     """Add the partner code to the given URL."""
+    # reformat the http url returned for current conditions and forecast to https
+    https_url = url if url.startswith("https:") else url.replace("http:", "https:", 1)
+
     if not url_param_id or not partner_code:
-        return url
+        return https_url
 
     try:
-        parsed_url = URL(url)
+        parsed_url = URL(https_url)
         return str(parsed_url.copy_add_param(url_param_id, partner_code))
     except InvalidURL:  # pragma: no cover
         return url
@@ -838,7 +824,6 @@ def process_current_condition_response(response: Any) -> dict[str, Any] | None:
             # lines as unreachable. See
             # https://github.com/python/mypy/issues/12770
             url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)  # type: ignore
-
             return {
                 "url": url,
                 "summary": summary,

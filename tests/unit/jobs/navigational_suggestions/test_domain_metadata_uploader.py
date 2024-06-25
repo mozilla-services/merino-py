@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for domain_metadata_uploader.py module."""
+
 import json
 from logging import INFO, LogRecord
 from typing import Any
@@ -199,9 +200,7 @@ def fixture_remote_blob_newest(mocker: MockerFixture, json_domain_data) -> Any:
 
 
 @pytest.fixture(name="remote_bucket", autouse=True)
-def fixture_remote_bucket(
-    mocker: MockerFixture, remote_blob, remote_blob_newest
-) -> Any:
+def fixture_remote_bucket(mocker: MockerFixture, remote_blob, remote_blob_newest) -> Any:
     """Create a remote bucket mock object for testing."""
     remote_bucket = mocker.MagicMock(spec=Bucket)
     remote_bucket.list_blobs.return_value = [remote_blob, remote_blob_newest]
@@ -259,9 +258,7 @@ def test_upload_top_picks(
     assert result.name == mock_blob.name
 
 
-def test_upload_favicons_upload_if_not_present(
-    mock_favicon_downloader, mock_gcs_uploader
-) -> None:
+def test_upload_favicons_upload_if_not_present(mock_favicon_downloader, mock_gcs_uploader) -> None:
     """Test that favicons are uploaded only if not already present
     in GCS when force upload is not set
     """
@@ -278,9 +275,7 @@ def test_upload_favicons_upload_if_not_present(
     )
 
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
-    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(
-        dummy_favicon
-    )
+    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(dummy_favicon)
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(
@@ -305,9 +300,7 @@ def test_upload_favicons_upload_if_force_upload_set(
     )
 
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
-    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(
-        dummy_favicon
-    )
+    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(dummy_favicon)
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(
@@ -382,9 +375,7 @@ def test_get_latest_file_for_diff(
     assert len(result["domains"]) == 6
 
     assert len(records) == 1
-    assert records[0].message.startswith(
-        f"Domain file {remote_blob_newest.name} acquired."
-    )
+    assert records[0].message.startswith(f"Domain file {remote_blob_newest.name} acquired.")
 
 
 def test_get_latest_file_for_diff_when_no_file_is_returned_by_the_uploader(

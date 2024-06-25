@@ -1,4 +1,5 @@
 """Merino V1 API"""
+
 import logging
 from asyncio import Task
 from collections import Counter
@@ -13,6 +14,14 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 from merino.config import settings
+from merino.curated_recommendations.corpus_backends.fake_backends import (
+    FakeCuratedCorpusBackend,
+)
+from merino.curated_recommendations.provider import (
+    CuratedRecommendationsProvider,
+    CuratedRecommendationsRequest,
+    CuratedRecommendationsResponse,
+)
 from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
@@ -60,11 +69,8 @@ async def suggest(
     request: Request,
     q: str = Query(max_length=QUERY_CHARACTER_MAX),
     providers: str | None = None,
-    client_variants: str
-    | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
-    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
-        get_providers
-    ),
+    client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
     request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
 ) -> JSONResponse:
     """Query Merino for suggestions.
@@ -174,9 +180,7 @@ async def suggest(
             geolocation=request.scope[ScopeKey.GEOLOCATION],
             request_type=request_type,
         )
-        task = metrics_client.timeit_task(
-            p.query(srequest), f"providers.{p.name}.query"
-        )
+        task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
         # `timeit_task()` doesn't support task naming, need to set the task name manually
         task.set_name(p.name)
         lookups.append(task)
@@ -206,11 +210,11 @@ async def suggest(
         suggestions=suggestions,
         request_id=correlation_id.get(),
         # [:CLIENT_VARIANT_MAX] filter at end to drop any trailing string beyond max_split.
-        client_variants=client_variants.split(",", maxsplit=CLIENT_VARIANT_MAX)[
-            :CLIENT_VARIANT_MAX
-        ]
-        if client_variants
-        else [],
+        client_variants=(
+            client_variants.split(",", maxsplit=CLIENT_VARIANT_MAX)[:CLIENT_VARIANT_MAX]
+            if client_variants
+            else []
+        ),
     )
 
     # response headers
@@ -280,9 +284,7 @@ def get_ttl_for_cache_control_header_for_suggestions(
     response_model=list[ProviderResponse],
 )
 async def providers(
-    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(
-        get_providers
-    ),
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
 ) -> JSONResponse:
     """Query Merino for suggestion providers.
 
@@ -314,3 +316,30 @@ async def providers(
         for id, provider in active_providers.items()
     ]
     return JSONResponse(content=jsonable_encoder(providers))
+
+
+@router.post("/curated-recommendations", summary="Curated recommendations for New Tab")
+async def curated_content(
+    curated_recommendations_request: CuratedRecommendationsRequest,
+) -> CuratedRecommendationsResponse:
+    """Query Merino for curated recommendations.
+
+    This endpoint accepts POST requests and takes parameters as a JSON body.
+
+    **JSON body:**
+
+    locale: Locale
+    region: str | None = None
+    count: int = 100
+    - `locale`: The Firefox installed locale, for example en, en-US, de-DE.
+        See the [Merino API docs][merino-api-docs] for the full list of supported values.
+        This will determine the language of the recommendations.
+    - `region`: [Optional] The country-level region, for example US or IE (Ireland).
+        This will help return more relevant recommendations. If `region` is not provided,
+        then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
+    - `count`: [Optional] The maximum number of recommendations to return. Defaults to 100.
+
+    [merino-api-docs]: https://merinopy.services.mozilla.com/docs
+    """
+    provider = CuratedRecommendationsProvider(corpus_backend=FakeCuratedCorpusBackend())
+    return await provider.fetch()

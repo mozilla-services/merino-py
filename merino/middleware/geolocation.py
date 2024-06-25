@@ -1,4 +1,5 @@
 """The middleware that parses geolocation from the client IP address."""
+
 import logging
 from typing import Optional
 
@@ -53,9 +54,7 @@ class GeolocationMiddleware:
 
         request = Request(scope=scope)
         record = None
-        ip_address = CLIENT_IP_OVERRIDE or (
-            request.client.host or "" if request.client else ""
-        )
+        ip_address = CLIENT_IP_OVERRIDE or (request.client.host or "" if request.client else "")
         try:
             record = reader.city(ip_address)
         except ValueError:
@@ -67,10 +66,8 @@ class GeolocationMiddleware:
             Location(
                 country=record.country.iso_code,
                 country_name=record.country.names.get("en"),
-                region=record.subdivisions[0].iso_code if record.subdivisions else None,
-                region_name=record.subdivisions[0].names.get("en")
-                if record.subdivisions
-                else None,
+                region=record.subdivisions.most_specific.iso_code,
+                region_name=record.subdivisions.most_specific.names.get("en"),
                 city=record.city.names.get("en"),
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,

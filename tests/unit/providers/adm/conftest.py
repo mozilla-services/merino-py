@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Module for test configurations for the AdM provider unit test directory."""
+
 from typing import Any
 
 import pytest
@@ -54,9 +55,7 @@ def fixture_adm_parameters() -> dict[str, Any]:
 
 
 @pytest.fixture(name="backend_mock")
-def fixture_backend_mock(
-    mocker: MockerFixture, adm_suggestion_content: SuggestionContent
-) -> Any:
+def fixture_backend_mock(mocker: MockerFixture, adm_suggestion_content: SuggestionContent) -> Any:
     """Create an AdmBackend mock object for test."""
     backend_mock: Any = mocker.AsyncMock(spec=AdmBackend)
     backend_mock.fetch.return_value = adm_suggestion_content

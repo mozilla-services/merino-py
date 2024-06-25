@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Integration tests for the Merino __error__ API endpoint."""
+
 import logging
 from datetime import datetime
 from logging import LogRecord
@@ -46,8 +47,7 @@ def test_error_request_log_data(
 
     expected_log_data: RequestSummaryLogDataModel = RequestSummaryLogDataModel(
         agent=(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0)"
-            " Gecko/20100101 Firefox/103.0"
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0)" " Gecko/20100101 Firefox/103.0"
         ),
         path="/__error__",
         method="GET",

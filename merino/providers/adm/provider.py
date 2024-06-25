@@ -1,4 +1,5 @@
 """AdM integration that uses the remote-settings provided data."""
+
 import asyncio
 import logging
 import time
@@ -147,14 +148,14 @@ class Provider(BaseProvider):
                 "provider": self.name,
                 "advertiser": res.get("advertiser"),
                 "is_sponsored": is_sponsored,
-                "icon": self.suggestion_content.icons.get(
-                    res.get("icon", MISSING_ICON_ID)
-                ),
+                "icon": self.suggestion_content.icons.get(res.get("icon", MISSING_ICON_ID)),
                 "score": self.score,
             }
             return [
-                SponsoredSuggestion(**suggestion_dict)
-                if is_sponsored
-                else NonsponsoredSuggestion(**suggestion_dict)
+                (
+                    SponsoredSuggestion(**suggestion_dict)
+                    if is_sponsored
+                    else NonsponsoredSuggestion(**suggestion_dict)
+                )
             ]
         return []

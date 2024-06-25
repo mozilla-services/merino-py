@@ -110,9 +110,7 @@ async def test_query_weather_report_returned(
             city_name=report.city_name,
             current_conditions=report.current_conditions,
             forecast=report.forecast,
-            custom_details=CustomDetails(
-                weather=WeatherDetails(weather_report_ttl=report.ttl)
-            ),
+            custom_details=CustomDetails(weather=WeatherDetails(weather_report_ttl=report.ttl)),
         )
     ]
     backend_mock.get_weather_report.return_value = report
@@ -156,9 +154,7 @@ async def test_query_error(
     expected_log_messages: list[dict[str, str]] = [
         {"levelname": "WARNING", "message": "Could not generate a weather report"}
     ]
-    backend_mock.get_weather_report.side_effect = BackendError(
-        expected_log_messages[0]["message"]
-    )
+    backend_mock.get_weather_report.side_effect = BackendError(expected_log_messages[0]["message"])
 
     suggestions: list[BaseSuggestion] = await provider.query(
         SuggestionRequest(query="", geolocation=geolocation)

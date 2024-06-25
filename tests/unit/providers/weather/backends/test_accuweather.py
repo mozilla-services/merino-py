@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the AccuWeather backend module."""
+
 import datetime
 import hashlib
 import json
@@ -172,9 +173,7 @@ def fixture_location_completion_sample_cities() -> list[dict[str, Any]]:
 
 
 @pytest.fixture(name="accuweather_parameters")
-def fixture_accuweather_parameters(
-    mocker: MockerFixture, statsd_mock: Any
-) -> dict[str, Any]:
+def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> dict[str, Any]:
     """Create an Accuweather object for test."""
     return {
         "api_key": "test",
@@ -206,7 +205,7 @@ def fixture_expected_weather_report() -> WeatherReport:
         city_name="San Francisco",
         current_conditions=CurrentConditions(
             url=HttpUrl(
-                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
                 "current-weather/39376?lang=en-us"
             ),
             summary="Mostly cloudy",
@@ -215,7 +214,7 @@ def fixture_expected_weather_report() -> WeatherReport:
         ),
         forecast=Forecast(
             url=HttpUrl(
-                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
                 "daily-weather-forecast/39376?lang=en-us"
             ),
             summary="Pleasant Saturday",
@@ -233,7 +232,7 @@ def fixture_expected_weather_report_via_location_key() -> WeatherReport:
         city_name="N/A",
         current_conditions=CurrentConditions(
             url=HttpUrl(
-                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
                 "current-weather/39376?lang=en-us"
             ),
             summary="Mostly cloudy",
@@ -242,7 +241,7 @@ def fixture_expected_weather_report_via_location_key() -> WeatherReport:
         ),
         forecast=Forecast(
             url=HttpUrl(
-                "http://www.accuweather.com/en/us/san-francisco-ca/94103/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
                 "daily-weather-forecast/39376?lang=en-us"
             ),
             summary="Pleasant Saturday",
@@ -309,9 +308,7 @@ def fixture_accuweather(
 @pytest.fixture(name="geolocation")
 def fixture_geolocation() -> Location:
     """Create a Location object for test."""
-    return Location(
-        country="US", region="CA", city="San Francisco", dma=807, postal_code="94105"
-    )
+    return Location(country="US", region="CA", city="San Francisco", dma=807, postal_code="94105")
 
 
 @pytest.fixture(name="accuweather_location_response")
@@ -491,11 +488,11 @@ def fixture_accuweather_current_conditions_response() -> bytes:
                 },
             },
             "MobileLink": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/current-weather/39376?lang=en-us"
             ),
             "Link": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/current-weather/39376?lang=en-us"
             ),
         },
@@ -509,7 +506,7 @@ def fixture_accuweather_cached_current_conditions() -> bytes:
     return json.dumps(
         {
             "url": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/current-weather/39376?lang=en-us"
             ),
             "summary": "Mostly cloudy",
@@ -535,11 +532,11 @@ def fixture_accuweather_forecast_response() -> dict[str, Any]:
             "EndDate": None,
             "EndEpochDate": None,
             "MobileLink": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/daily-weather-forecast/39376?lang=en-us"
             ),
             "Link": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/daily-weather-forecast/39376?lang=en-us"
             ),
         },
@@ -556,11 +553,11 @@ def fixture_accuweather_forecast_response() -> dict[str, Any]:
                 },
                 "Sources": ["AccuWeather"],
                 "MobileLink": (
-                    "http://www.accuweather.com/en/us/san-francisco-ca/"
+                    "https://www.accuweather.com/en/us/san-francisco-ca/"
                     "94103/daily-weather-forecast/39376?day=1&lang=en-us"
                 ),
                 "Link": (
-                    "http://www.accuweather.com/en/us/san-francisco-ca/"
+                    "https://www.accuweather.com/en/us/san-francisco-ca/"
                     "94103/daily-weather-forecast/39376?day=1&lang=en-us"
                 ),
             }
@@ -570,7 +567,7 @@ def fixture_accuweather_forecast_response() -> dict[str, Any]:
 
 @pytest.fixture(name="accuweather_forecast_response_celsius")
 def fixture_accuweather_forecast_response_celsius(
-    accuweather_forecast_response: dict[str, Any]
+    accuweather_forecast_response: dict[str, Any],
 ) -> bytes:
     """Return response content for AccuWeather forecast endpoint in celsius."""
     accuweather_forecast_response["DailyForecasts"][0]["Temperature"] = {
@@ -582,7 +579,7 @@ def fixture_accuweather_forecast_response_celsius(
 
 @pytest.fixture(name="accuweather_forecast_response_fahrenheit")
 def fixture_accuweather_forecast_response_fahrenheit(
-    accuweather_forecast_response: dict[str, Any]
+    accuweather_forecast_response: dict[str, Any],
 ) -> bytes:
     """Return response content for AccuWeather forecast endpoint in fahrenheit."""
     accuweather_forecast_response["DailyForecasts"][0]["Temperature"] = {
@@ -598,7 +595,7 @@ def fixture_accuweather_cached_forecast_fahrenheit() -> bytes:
     return json.dumps(
         {
             "url": (
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "https://www.accuweather.com/en/us/san-francisco-ca/"
                 "94103/daily-weather-forecast/39376?lang=en-us"
             ),
             "summary": "Pleasant Saturday",
@@ -784,15 +781,11 @@ def test_init_url_value_error(
     mocker: MockerFixture, accuweather_parameters: dict[str, Any], url_value: str
 ) -> None:
     """Test that a ValueError is raised if initializing with empty URL values."""
-    expected_error_value: str = (
-        "One or more AccuWeather API URL parameters are undefined"
-    )
+    expected_error_value: str = "One or more AccuWeather API URL parameters are undefined"
     accuweather_parameters[url_value] = ""
 
     with pytest.raises(ValueError) as accuweather_error:
-        AccuweatherBackend(
-            cache=mocker.AsyncMock(spec=RedisAdapter), **accuweather_parameters
-        )
+        AccuweatherBackend(cache=mocker.AsyncMock(spec=RedisAdapter), **accuweather_parameters)
 
     assert str(accuweather_error.value) == expected_error_value
 
@@ -818,7 +811,7 @@ async def test_get_weather_report(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                     "apikey=test&q=94105"
                 ),
             ),
@@ -829,10 +822,7 @@ async def test_get_weather_report(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url=(
-                    "http://www.accuweather.com/currentconditions/v1/39376.json?"
-                    "apikey=test"
-                ),
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
             ),
         ),
         Response(
@@ -842,8 +832,7 @@ async def test_get_weather_report(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
-                    "apikey=test"
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
                 ),
             ),
         ),
@@ -882,10 +871,7 @@ async def test_get_weather_report_with_location_key(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url=(
-                    "http://www.accuweather.com/currentconditions/v1/39376.json?"
-                    "apikey=test"
-                ),
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
             ),
         ),
         Response(
@@ -895,8 +881,7 @@ async def test_get_weather_report_with_location_key(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
-                    "apikey=test"
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
                 ),
             ),
         ),
@@ -987,9 +972,7 @@ async def test_get_weather_report_from_cache(
     assert report == expected_weather_report
     client_mock.get.assert_not_called()
 
-    metrics_timeit_called = [
-        call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list
-    ]
+    metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
     assert metrics_timeit_called == ["accuweather.cache.fetch"]
 
     metrics_increment_called = [
@@ -1044,9 +1027,7 @@ async def test_get_weather_report_with_location_key_from_cache(
     assert report == expected_weather_report_via_location_key
     client_mock.get.assert_not_called()
 
-    metrics_timeit_called = [
-        call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list
-    ]
+    metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
     assert metrics_timeit_called == ["accuweather.cache.fetch-via-location-key"]
 
     metrics_increment_called = [
@@ -1090,14 +1071,10 @@ async def test_get_weather_report_with_cache_fetch_error(
     assert report is None
     client_mock.get.assert_not_called()
 
-    metrics_called = [
-        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
-    ]
+    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
     assert metrics_called == ["accuweather.cache.fetch.error"]
 
-    records = filter_caplog(
-        caplog.records, "merino.providers.weather.backends.accuweather"
-    )
+    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
 
     assert len(caplog.records) == 1
     assert records[0].message.startswith("Failed to fetch weather report from Redis:")
@@ -1132,6 +1109,7 @@ async def test_get_weather_report_with_partial_cache_hits(
 ) -> None:
     """Test that we can get the weather report with partial cache hits."""
     redis_client = await redis_container.get_async_client()
+
 
     accuweather: AccuweatherBackend = AccuweatherBackend(
         cache=RedisAdapter(redis_client), **accuweather_parameters
@@ -1191,8 +1169,7 @@ async def test_get_weather_report_with_partial_cache_hits(
                 request=Request(
                     method="GET",
                     url=(
-                        "http://www.accuweather.com/currentconditions/v1/39376.json?"
-                        "apikey=test"
+                        "http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"
                     ),
                 ),
             )
@@ -1210,7 +1187,7 @@ async def test_get_weather_report_with_partial_cache_hits(
                 request=Request(
                     method="GET",
                     url=(
-                        "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                        "https://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
                         "apikey=test"
                     ),
                 ),
@@ -1302,8 +1279,7 @@ async def test_get_weather_report_via_location_key_with_partial_cache_hits(
                 request=Request(
                     method="GET",
                     url=(
-                        "http://www.accuweather.com/currentconditions/v1/39376.json?"
-                        "apikey=test"
+                        "http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"
                     ),
                 ),
             )
@@ -1321,7 +1297,7 @@ async def test_get_weather_report_via_location_key_with_partial_cache_hits(
                 request=Request(
                     method="GET",
                     url=(
-                        "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
+                        "https://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
                         "apikey=test"
                     ),
                 ),
@@ -1354,7 +1330,7 @@ async def test_get_weather_report_failed_location_query(
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                 "apikey=test&q=94105"
             ),
         ),
@@ -1385,7 +1361,7 @@ async def test_get_weather_report_failed_current_conditions_query(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                     "apikey=test&q=94105"
                 ),
             ),
@@ -1396,10 +1372,7 @@ async def test_get_weather_report_failed_current_conditions_query(
             content=b"[]",
             request=Request(
                 method="GET",
-                url=(
-                    "http://www.accuweather.com/currentconditions/v1/39376.json?"
-                    "apikey=test"
-                ),
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
             ),
         ),
         Response(
@@ -1409,8 +1382,7 @@ async def test_get_weather_report_failed_current_conditions_query(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
-                    "apikey=test"
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
                 ),
             ),
         ),
@@ -1441,7 +1413,7 @@ async def test_get_weather_report_handles_exception_group_properly(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                     "apikey=test&q=94105"
                 ),
             ),
@@ -1482,7 +1454,7 @@ async def test_get_weather_report_failed_forecast_query(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                     "apikey=test&q=94105"
                 ),
             ),
@@ -1493,10 +1465,7 @@ async def test_get_weather_report_failed_forecast_query(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url=(
-                    "http://www.accuweather.com/currentconditions/v1/39376.json?"
-                    "apikey=test"
-                ),
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
             ),
         ),
         Response(
@@ -1506,8 +1475,7 @@ async def test_get_weather_report_failed_forecast_query(
             request=Request(
                 method="GET",
                 url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
-                    "apikey=test"
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
                 ),
             ),
         ),
@@ -1562,15 +1530,15 @@ async def test_get_location(
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                 "apikey=test&q=San%20Francisco"
             ),
         ),
     )
 
-    location: Optional[
-        AccuweatherLocation
-    ] = await accuweather.get_location_by_geolocation(country, region, city)
+    location: Optional[AccuweatherLocation] = await accuweather.get_location_by_geolocation(
+        country, region, city
+    )
 
     assert location == expected_location
 
@@ -1593,15 +1561,15 @@ async def test_get_location_no_location_returned(
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                 "apikey=test&q=San%20Francisco"
             ),
         ),
     )
 
-    location: Optional[
-        AccuweatherLocation
-    ] = await accuweather.get_location_by_geolocation(country, region, city)
+    location: Optional[AccuweatherLocation] = await accuweather.get_location_by_geolocation(
+        country, region, city
+    )
 
     assert location is None
 
@@ -1628,7 +1596,7 @@ async def test_get_location_error(accuweather: AccuweatherBackend) -> None:
         request=Request(
             method="GET",
             url=(
-                "http://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                 "apikey=test&q=San%20Francisco"
             ),
         ),
@@ -1645,7 +1613,7 @@ async def test_get_location_error(accuweather: AccuweatherBackend) -> None:
     [
         (
             "accuweather",
-            "http://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/"
+            "https://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/"
             "39376?lang=en-us",
         ),
     ],
@@ -1686,16 +1654,13 @@ async def test_get_current_conditions(
         content=accuweather_current_conditions_response,
         request=Request(
             method="GET",
-            url=(
-                "http://www.accuweather.com/currentconditions/v1/39376.json?"
-                "apikey=test"
-            ),
+            url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
         ),
     )
 
-    conditions: Optional[
-        CurrentConditionsWithTTL
-    ] = await accuweather.get_current_conditions(location_key)
+    conditions: Optional[CurrentConditionsWithTTL] = await accuweather.get_current_conditions(
+        location_key
+    )
 
     assert conditions == expected_conditions
 
@@ -1715,16 +1680,13 @@ async def test_get_current_conditions_no_current_conditions_returned(
         content=b"[]",
         request=Request(
             method="GET",
-            url=(
-                "http://www.accuweather.com/currentconditions/v1/39376.json?"
-                "apikey=test"
-            ),
+            url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
         ),
     )
 
-    conditions: Optional[
-        CurrentConditionsWithTTL
-    ] = await accuweather.get_current_conditions(location_key)
+    conditions: Optional[CurrentConditionsWithTTL] = await accuweather.get_current_conditions(
+        location_key
+    )
 
     assert conditions is None
 
@@ -1751,10 +1713,7 @@ async def test_get_current_conditions_error(
         ),
         request=Request(
             method="GET",
-            url=(
-                "http://www.accuweather.com/currentconditions/v1/INVALID.json?"
-                "apikey=test"
-            ),
+            url=("http://www.accuweather.com/currentconditions/v1/INVALID.json?" "apikey=test"),
         ),
     )
 
@@ -1769,7 +1728,7 @@ async def test_get_current_conditions_error(
     [
         (
             "accuweather",
-            "http://www.accuweather.com/en/us/san-francisco-ca/94103/daily-weather-forecast/"
+            "https://www.accuweather.com/en/us/san-francisco-ca/94103/daily-weather-forecast/"
             "39376?lang=en-us",
         ),
     ],
@@ -1820,10 +1779,7 @@ async def test_get_forecast(
         content=content,
         request=Request(
             method="GET",
-            url=(
-                "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
-                "apikey=test"
-            ),
+            url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"),
         ),
     )
 
@@ -1848,10 +1804,7 @@ async def test_get_forecast_no_forecast_returned(
         content=b"{}",
         request=Request(
             method="GET",
-            url=(
-                "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?"
-                "apikey=test"
-            ),
+            url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"),
         ),
     )
 
@@ -1879,10 +1832,7 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend) -> None:
         ),
         request=Request(
             method="GET",
-            url=(
-                "http://www.accuweather.com/forecasts/v1/daily/1day/INVALID.json?"
-                "apikey=test"
-            ),
+            url=("http://www.accuweather.com/forecasts/v1/daily/1day/INVALID.json?" "apikey=test"),
         ),
     )
 
@@ -1919,9 +1869,7 @@ def test_cache_key_for_accuweather_request(
 ):
     """Test that the cache key is created properly."""
     url = "localhost"
-    cache_key = accuweather.cache_key_for_accuweather_request(
-        url, query_params=query_params
-    )
+    cache_key = accuweather.cache_key_for_accuweather_request(url, query_params=query_params)
     assert cache_key == expected_cache_key
 
 
@@ -1948,9 +1896,7 @@ async def test_get_request_cache_get_errors(
     """Test for cache errors/misses. Ensures that the right metrics are
     called and that the API request is actually made.
     """
-    expiry_date = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(
-        days=2
-    )
+    expiry_date = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=2)
     expected_client_response = {"hello": "world", "cached_request_ttl": 0}
 
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
@@ -1960,7 +1906,7 @@ async def test_get_request_cache_get_errors(
         content=json.dumps(expected_client_response).encode("utf-8"),
         request=Request(
             method="GET",
-            url=f"http://www.accuweather.com/{url}?apikey=test",
+            url=f"https://www.accuweather.com/{url}?apikey=test",
         ),
     )
 
@@ -1973,9 +1919,7 @@ async def test_get_request_cache_get_errors(
 
     assert expected_client_response == results
 
-    timeit_metrics_called = [
-        call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list
-    ]
+    timeit_metrics_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
     assert [
         f"accuweather.request.{expected_url_type}.get",
         "accuweather.cache.store",
@@ -1997,13 +1941,9 @@ async def test_get_request_cache_store_errors(
     url = "/forecasts/v1/daily/1day/39376.json"
 
     redis_mock.get.side_effect = CacheMissError
-    redis_mock.set.side_effect = CacheAdapterError(
-        "Failed to set key with error: MockError"
-    )
+    redis_mock.set.side_effect = CacheAdapterError("Failed to set key with error: MockError")
 
-    expiry_date = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(
-        days=2
-    )
+    expiry_date = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=2)
     expected_client_response = {"hello": "world"}
 
     accuweather: AccuweatherBackend = AccuweatherBackend(
@@ -2017,7 +1957,7 @@ async def test_get_request_cache_store_errors(
         content=json.dumps(expected_client_response).encode("utf-8"),
         request=Request(
             method="GET",
-            url=f"http://www.accuweather.com/{url}?apikey=test",
+            url=f"https://www.accuweather.com/{url}?apikey=test",
         ),
     )
 
@@ -2029,17 +1969,13 @@ async def test_get_request_cache_store_errors(
             cache_ttl_sec=TEST_CACHE_TTL_SEC,
         )
 
-    timeit_metrics_called = [
-        call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list
-    ]
+    timeit_metrics_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
     assert [
         "accuweather.request.forecasts.get",
         "accuweather.cache.store",
     ] == timeit_metrics_called
 
-    increment_called = [
-        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
-    ]
+    increment_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
     assert [
         "accuweather.cache.store.set_error",
     ] == increment_called
@@ -2132,9 +2068,7 @@ def test_metrics_for_cache_fetch(
     """Test metrics for cache fetches."""
     accuweather.emit_cache_fetch_metrics(cached_data)
 
-    metrics_called = [
-        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
-    ]
+    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
     assert [f"accuweather.cache.{val}" for val in expected_metrics] == metrics_called
 
 
@@ -2204,25 +2138,17 @@ def test_parse_cached_data_error(
         ]
     )
 
-    assert location == AccuweatherLocation.model_validate_json(
-        accuweather_cached_location_key
-    )
+    assert location == AccuweatherLocation.model_validate_json(accuweather_cached_location_key)
     assert current_conditions is None
     assert forecast is None
 
-    metrics_called = [
-        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
-    ]
+    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
     assert metrics_called == ["accuweather.cache.data.error"]
 
-    records = filter_caplog(
-        caplog.records, "merino.providers.weather.backends.accuweather"
-    )
+    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
 
     assert len(caplog.records) == 1
-    assert records[0].message.startswith(
-        "Failed to load weather report data from Redis:"
-    )
+    assert records[0].message.startswith("Failed to load weather report data from Redis:")
 
 
 @pytest.mark.asyncio
@@ -2243,7 +2169,7 @@ async def test_get_location_completion(
             request=Request(
                 method="GET",
                 url=(
-                    f"http://www.accuweather.com/locations/v1/"
+                    f"https://www.accuweather.com/locations/v1/"
                     f"{geolocation.country}/autocomplete.json?apikey=test&q"
                     f"={search_term}"
                 ),
@@ -2277,7 +2203,7 @@ async def test_get_location_completion_with_empty_search_term(
             request=Request(
                 method="GET",
                 url=(
-                    f"http://www.accuweather.com/locations/v1/"
+                    f"https://www.accuweather.com/locations/v1/"
                     f"{geolocation.country}/autocomplete.json?apikey=test&q"
                     f"={search_term}"
                 ),
@@ -2313,7 +2239,7 @@ async def test_get_location_completion_with_no_geolocation_country_code(
             request=Request(
                 method="GET",
                 url=(
-                    f"http://www.accuweather.com/locations/v1/autocomplete.json?"
+                    f"https://www.accuweather.com/locations/v1/autocomplete.json?"
                     f"apikey=test&q{search_term}"
                 ),
             ),

@@ -1,4 +1,5 @@
 """Test model without Suggestion.csv_to_json() implementation"""
+
 from merino.jobs.csv_rs_uploader.base import BaseSuggestion
 
 

@@ -1,4 +1,5 @@
 """Chunked remote settings uploader"""
+
 import io
 import json
 import logging
@@ -148,9 +149,7 @@ class ChunkedRemoteSettingsUploader:
         """
         if self.current_chunk.size:
             self._upload_chunk(self.current_chunk)
-            self.current_chunk = Chunk(
-                self.current_chunk.start_index + self.current_chunk.size
-            )
+            self.current_chunk = Chunk(self.current_chunk.start_index + self.current_chunk.size)
 
     def _upload_chunk(self, chunk: Chunk) -> None:
         """Create a record and attachment for a chunk."""

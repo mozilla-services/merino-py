@@ -12,7 +12,7 @@ All Contract tests must pass and load tests cannot go below a minimum performanc
 
 Test documentation resides in the [/docs/testing/][test_docs_dir] directory.
 
-The functional test strategy is four-tiered, composed of: 
+The functional test strategy is four-tiered, composed of:
 
 - [unit][unit_tests] - [documentation][unit_tests_docs]
 - [integration][integration_tests] - [documentation][integration_tests_docs]

@@ -55,9 +55,7 @@ def feature_flags_as_tags(feature_flags: FeatureFlags) -> MetricTags:
 
 
 @decorator
-def add_feature_flags(
-    wrapped_method: Callable, instance: C, args: tuple, kwargs: dict
-) -> Any:
+def add_feature_flags(wrapped_method: Callable, instance: C, args: tuple, kwargs: dict) -> Any:
     """Add feature flag decisions as tags when recording metrics."""
     # Tags added manually to the metrics client call
     tags = kwargs.pop("tags", {})
@@ -89,9 +87,7 @@ class ClientMeta(type):
         ) -> Callable[Concatenate[C, P], R]:
             """Return a method that proxies to correct method of the StatsD client."""
 
-            def client_method(
-                instance: C, *method_args: P.args, **method_kwargs: P.kwargs
-            ) -> R:
+            def client_method(instance: C, *method_args: P.args, **method_kwargs: P.kwargs) -> R:
                 """Look up the correct method of the StatsD client call it."""
                 # Keep track of all calls made to the metrics client
                 call: MetricCall = {
@@ -122,9 +118,7 @@ class Client(metaclass=ClientMeta):
     feature_flags: FeatureFlags
     calls: MetricCalls
 
-    def __init__(
-        self, statsd_client: aiodogstatsd.Client, feature_flags: FeatureFlags
-    ) -> None:
+    def __init__(self, statsd_client: aiodogstatsd.Client, feature_flags: FeatureFlags) -> None:
         """Initialize the client instance."""
         self.statsd_client = statsd_client
         self.feature_flags = feature_flags
@@ -133,9 +127,7 @@ class Client(metaclass=ClientMeta):
     def __getattr__(self, attr_name: str):
         """Raise an exception when an unsupported attribute is requested."""
         logger.warning(f"{attr_name} is not a supported method: {SUPPORTED_METHODS}")
-        raise AttributeError(
-            f"attribute '{attr_name}' is not supported by metrics.Client class"
-        )
+        raise AttributeError(f"attribute '{attr_name}' is not supported by metrics.Client class")
 
 
 @cache

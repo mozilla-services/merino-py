@@ -5,6 +5,7 @@
 """Integration tests for the Merino v1 suggest API endpoint configured with a weather
 provider.
 """
+
 import logging
 from datetime import datetime
 from logging import LogRecord
@@ -247,9 +248,7 @@ def test_suggest_weather_backend_error(
     expected_log_messages: list[dict[str, str]] = [
         {"levelname": "WARNING", "message": "Could not generate a weather report"}
     ]
-    backend_mock.get_weather_report.side_effect = BackendError(
-        expected_log_messages[0]["message"]
-    )
+    backend_mock.get_weather_report.side_effect = BackendError(expected_log_messages[0]["message"])
 
     response = client.get("/api/v1/suggest?q=weather")
 
@@ -289,9 +288,7 @@ def test_providers_request_log_data_weather(
     records: list[LogRecord] = filter_caplog(caplog.records, "request.summary")
     assert len(records) == 1
 
-    suggest_records: list[LogRecord] = filter_caplog(
-        caplog.records, "web.suggest.request"
-    )
+    suggest_records: list[LogRecord] = filter_caplog(caplog.records, "web.suggest.request")
     assert len(suggest_records) == 0
 
     record: LogRecord = records[0]
@@ -344,9 +341,9 @@ def test_suggest_with_location_completion(
 
     assert response.status_code == 200
     result = response.json()
-    assert expected_suggestion == TypeAdapter(
-        list[LocationCompletionSuggestion]
-    ).validate_python(result["suggestions"])
+    assert expected_suggestion == TypeAdapter(list[LocationCompletionSuggestion]).validate_python(
+        result["suggestions"]
+    )
 
 
 def test_suggest_with_location_completion_with_empty_search_term(

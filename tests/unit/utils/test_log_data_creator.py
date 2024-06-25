@@ -65,9 +65,7 @@ def test_create_request_summary_log_data(
     )
     message: Message = {"type": "http.response.start", "status": "200"}
 
-    log_data: RequestSummaryLogDataModel = create_request_summary_log_data(
-        request, message, dt
-    )
+    log_data: RequestSummaryLogDataModel = create_request_summary_log_data(request, message, dt)
 
     assert log_data == expected_log_data
 

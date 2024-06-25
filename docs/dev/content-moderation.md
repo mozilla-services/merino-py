@@ -21,23 +21,23 @@ The blocklist, [`domain_blocklist.json`][1],  is referenced during data generati
 See [nav-suggestions blocklist runbook][3] for more information.
 
 ## Wikipedia
-The Wikipedia Provider does both title filtering and category filtering at the data indexing level. 
+The Wikipedia Provider does both title filtering and category filtering at the data indexing level.
 
 Since the indexing jobs run periodically, we also implemented title filtering in the provider to get the blocking out sooner.
 
 ### Indexer
 The Wikipedia Indexer Job references a remote blocklist which contains sensitive categories.
-At job runtime, the indexer reads the remote blocklist and creates a set of article categories that are be excluded from indexing. 
+At job runtime, the indexer reads the remote blocklist and creates a set of article categories that are be excluded from indexing.
 
 The article categories in the blocklist are chosen based off of analysis and best guesses of what could be considered _objectionable_ content, based off of Mozilla's values and brand image.
 Any modifications to the file should be done with careful consideration.
 
-The indexer also blocks titles that are defined in the `WIKIPEDIA_TITLE_BLOCKLIST` in the application, which is referenced below.  Any title that matches this blocklist is excluded from indexing. 
+The indexer also blocks titles that are defined in the `WIKIPEDIA_TITLE_BLOCKLIST` in the application, which is referenced below.  Any title that matches this blocklist is excluded from indexing.
 
 ### Provider
-When queried, the Wikipedia provider reads the `WIKIPEDIA_TITLE_BLOCKLIST` when creating a `WikipediaSuggestion` and if the query matches a blocked title, the suggestion is not shown to the client. 
+When queried, the Wikipedia provider reads the `WIKIPEDIA_TITLE_BLOCKLIST` when creating a `WikipediaSuggestion` and if the query matches a blocked title, the suggestion is not shown to the client.
 
-We have this feature because the indexing job is not run daily. Therefore, we desire having an option to rapidly add to this list should we need to block a specific article. 
+We have this feature because the indexing job is not run daily. Therefore, we desire having an option to rapidly add to this list should we need to block a specific article.
 
 See [wikipedia blocklist runbook][4] for more information.
 

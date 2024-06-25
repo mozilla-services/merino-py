@@ -1,4 +1,5 @@
 """CLI commands for the csv_rs_uploader module"""
+
 import asyncio
 import csv
 import importlib
@@ -34,15 +35,15 @@ chunk_size_option = typer.Option(
 )
 
 collection_option = typer.Option(
-    rs_settings.collection,
+    "",
     "--collection",
     help="Remote settings collection ID",
 )
 
-delete_existing_records_option = typer.Option(
-    rs_settings.delete_existing_records,
-    "--delete-existing-records",
-    help="Delete existing records before uploading new records",
+keep_existing_records_option = typer.Option(
+    False,
+    "--keep-existing-records",
+    help="Keep existing records before uploading new records",
 )
 
 dry_run_option = typer.Option(
@@ -106,7 +107,7 @@ def upload(
     chunk_size: int = chunk_size_option,
     collection: str = collection_option,
     csv_path: str = csv_path_option,
-    delete_existing_records: bool = delete_existing_records_option,
+    keep_existing_records: bool = keep_existing_records_option,
     dry_run: bool = dry_run_option,
     model_name: str = model_name_option,
     model_package: str = model_package_option,
@@ -127,7 +128,7 @@ def upload(
             chunk_size=chunk_size,
             collection=collection,
             csv_path=csv_path,
-            delete_existing_records=delete_existing_records,
+            keep_existing_records=keep_existing_records,
             dry_run=dry_run,
             model_name=model_name,
             model_package=model_package,
@@ -144,7 +145,7 @@ async def _upload(
     chunk_size: int,
     collection: str,
     csv_path: str,
-    delete_existing_records: bool,
+    keep_existing_records: bool,
     dry_run: bool,
     model_name: str,
     model_package: str,
@@ -158,7 +159,7 @@ async def _upload(
             bucket=bucket,
             chunk_size=chunk_size,
             collection=collection,
-            delete_existing_records=delete_existing_records,
+            keep_existing_records=keep_existing_records,
             dry_run=dry_run,
             file_object=csv_file,
             model_name=model_name,
@@ -175,7 +176,7 @@ async def _upload_file_object(
     chunk_size: int,
     collection: str,
     file_object: io.TextIOWrapper,
-    delete_existing_records: bool,
+    keep_existing_records: bool,
     dry_run: bool,
     model_name: str,
     model_package: str,
@@ -204,6 +205,8 @@ async def _upload_file_object(
             f"`{model_name}`. Please define a `Suggestion` class."
         )
 
+    if not collection:
+        collection = Suggestion.default_collection()
     csv_reader = csv.DictReader(file_object)
 
     # Generate the full list of suggestions before creating the chunked uploader
@@ -222,7 +225,7 @@ async def _upload_file_object(
         suggestion_score_fallback=score,
         total_data_count=len(suggestions),
     ) as uploader:
-        if delete_existing_records:
+        if not keep_existing_records:
             uploader.delete_records()
 
         for suggestion in suggestions:

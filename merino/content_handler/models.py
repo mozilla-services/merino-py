@@ -1,4 +1,5 @@
 """Base Image and Content Uploader models"""
+
 from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import Callable
@@ -16,7 +17,7 @@ class Image(BaseModel):
         description="Content type of the Image. Can be 'image/png', 'image/jpeg', 'image'"
     )
 
-    def open(self) -> PILImage:
+    def open(self) -> PILImage.Image:
         """Open and return an PIL Image object"""
         with PILImage.open(BytesIO(self.content)) as image:
             return image

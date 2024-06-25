@@ -1,4 +1,5 @@
 """A Filemanager to acquire data for the Top Picks Backend."""
+
 import json
 import logging
 from enum import Enum

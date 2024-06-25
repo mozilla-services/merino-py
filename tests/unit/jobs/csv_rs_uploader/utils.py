@@ -1,4 +1,5 @@
 """Test utils for the csv_rs_uploader module"""
+
 import asyncio
 import csv
 import io
@@ -25,7 +26,7 @@ def _do_csv_test(
     model_name: str,
     model_package: str,
     upload_callable: Callable[[dict[str, Any]], None],
-    delete_existing_records: bool,
+    keep_existing_records: bool,
     record_type: str,
     score: float,
     expected_suggestions: list[dict[str, Any]],
@@ -36,9 +37,7 @@ def _do_csv_test(
     mock_chunked_uploader_ctor = mocker.patch(
         "merino.jobs.csv_rs_uploader.ChunkedRemoteSettingsSuggestionUploader"
     )
-    mock_chunked_uploader = (
-        mock_chunked_uploader_ctor.return_value.__enter__.return_value
-    )
+    mock_chunked_uploader = mock_chunked_uploader_ctor.return_value.__enter__.return_value
 
     # Do the upload.
     common_kwargs: dict[str, Any] = {
@@ -53,7 +52,7 @@ def _do_csv_test(
     upload_callable(
         {
             **common_kwargs,
-            "delete_existing_records": delete_existing_records,
+            "keep_existing_records": keep_existing_records,
             "score": score,
             "model_name": model_name,
             "model_package": model_package,
@@ -69,7 +68,7 @@ def _do_csv_test(
         total_data_count=len(expected_suggestions),
     )
 
-    if delete_existing_records:
+    if not keep_existing_records:
         mock_chunked_uploader.delete_records.assert_called_once()
     else:
         mock_chunked_uploader.delete_records.assert_not_called()
@@ -85,7 +84,7 @@ def do_csv_test(
     expected_suggestions: list[dict[str, Any]],
     csv_path: str | None = None,
     csv_rows: list[dict[str, str]] | None = None,
-    delete_existing_records: bool = False,
+    keep_existing_records: bool = True,
     record_type: str = "record_type",
     expected_record_type: str = "record_type",
     score: float = 0.99,
@@ -107,7 +106,7 @@ def do_csv_test(
         model_name=model_name,
         model_package=model_package,
         upload_callable=uploader,
-        delete_existing_records=delete_existing_records,
+        keep_existing_records=keep_existing_records,
         record_type=record_type,
         score=score,
         expected_suggestions=expected_suggestions,
@@ -134,7 +133,7 @@ def do_error_test(
                 bucket="bucket",
                 chunk_size=99,
                 collection="collection",
-                delete_existing_records=False,
+                keep_existing_records=True,
                 dry_run=False,
                 file_object=file_object,
                 model_name=model_name,

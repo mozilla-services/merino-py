@@ -98,10 +98,7 @@ async def test_gather_tasks_with_timeout(
 
     assert len(records) == 2
     assert records[0].__dict__["msg"] == "Timeout triggered in the task runner"
-    assert (
-        records[1].__dict__["msg"]
-        == "Cancelling the task: timedout-task due to timeout"
-    )
+    assert records[1].__dict__["msg"] == "Cancelling the task: timedout-task due to timeout"
 
 
 @pytest.mark.asyncio
@@ -179,7 +176,4 @@ async def test_gather_tasks_without_timeout_callback(
 
     assert len(records) == 2
     assert records[0].__dict__["msg"] == "Timeout triggered in the task runner"
-    assert (
-        records[1].__dict__["msg"]
-        == "Cancelling the task: timedout-task due to timeout"
-    )
+    assert records[1].__dict__["msg"] == "Cancelling the task: timedout-task due to timeout"

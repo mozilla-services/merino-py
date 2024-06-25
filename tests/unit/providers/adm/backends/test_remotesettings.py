@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for the Remote Settings backend module."""
+
 from typing import Any
 from urllib.parse import urljoin
 
@@ -226,8 +227,7 @@ def test_init_invalid_remote_settings_parameter_error(
     values.
     """
     expected_error_value: str = (
-        "The Remote Settings 'server', 'collection' or 'bucket' parameters are not "
-        "specified"
+        "The Remote Settings 'server', 'collection' or 'bucket' parameters are not " "specified"
     )
     rs_parameters[parameter] = ""
 
@@ -248,9 +248,7 @@ async def test_fetch(
 ) -> None:
     """Test that the fetch method returns the proper suggestion content."""
     mocker.patch.object(kinto_http.AsyncClient, "get_records", return_value=rs_records)
-    mocker.patch.object(
-        kinto_http.AsyncClient, "server_info", return_value=rs_server_info
-    )
+    mocker.patch.object(kinto_http.AsyncClient, "server_info", return_value=rs_server_info)
     mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
 
     suggestion_content: SuggestionContent = await rs_backend.fetch()
@@ -270,12 +268,8 @@ async def test_fetch_no_adm_wikipedia_result(
     records with Wikipedia defined as advertiser.
     """
     mocker.patch.object(kinto_http.AsyncClient, "get_records", return_value=rs_records)
-    mocker.patch.object(
-        kinto_http.AsyncClient, "server_info", return_value=rs_server_info
-    )
-    mocker.patch.object(
-        httpx.AsyncClient, "get", return_value=rs_wiki_attachment_response
-    )
+    mocker.patch.object(kinto_http.AsyncClient, "server_info", return_value=rs_server_info)
+    mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_wiki_attachment_response)
 
     suggestion_content: SuggestionContent = await rs_backend.fetch()
 
@@ -311,9 +305,7 @@ async def test_get_attachment_host(
 ) -> None:
     """Test that the method returns the proper attachment host."""
     expected_attachment_host: str = "attachment-host/"
-    mocker.patch.object(
-        kinto_http.AsyncClient, "server_info", return_value=rs_server_info
-    )
+    mocker.patch.object(kinto_http.AsyncClient, "server_info", return_value=rs_server_info)
 
     attachment_host: str = await rs_backend.get_attachment_host()
 

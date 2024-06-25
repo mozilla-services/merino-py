@@ -41,8 +41,8 @@ Follow the steps bellow to execute the load tests locally:
 
 #### 1. Configure Environment Variables
 
-The following environment variables as well as 
-[Locust environment variables][locust_environment_variables] can be set in 
+The following environment variables as well as
+[Locust environment variables][locust_environment_variables] can be set in
 `tests\load\docker-compose.yml`.
 Make sure any required API key is added but then not checked into source control (i.e. `WIKIPEDIA__ES_API_KEY`).
 
@@ -66,7 +66,7 @@ Execute the following from the repository root:
 make load-tests
 ```
 
-#### 3. (Optional) Host Merino Locally 
+#### 3. (Optional) Host Merino Locally
 
 Use one of the following commands to host Merino locally. Execute the following from the
 repository root:
@@ -81,7 +81,7 @@ repository root:
   ```
 - Option 3: Use the Docker instance
   ```shell
-  make docker-build && docker run -p 8000:8000 app:build 
+  make docker-build && docker run -p 8000:8000 app:build
   ```
 
 ### Run Test Session
@@ -95,15 +95,15 @@ repository root:
     * Option 2: Select the `Default` load test shape with the following recommended settings:
       * Number of users: 35
       * Spawn rate: 1
-      * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net' 
+      * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
         * Set host to 'http://host.docker.internal:8000' to test against a local instance of Merino
       * Duration (Optional): 10m
 * Select "Start Swarming"
 
 #### 2. Stop Load Test
 
-Select the 'Stop' button in the top right hand corner of the Locust UI, after the 
-desired test duration has elapsed. If the 'Run time' is set in step 1, the load test 
+Select the 'Stop' button in the top right hand corner of the Locust UI, after the
+desired test duration has elapsed. If the 'Run time' is set in step 1, the load test
 will stop automatically.
 
 #### 3. Analyse Results
@@ -133,10 +133,10 @@ The load tests can be executed from the [contextual-services-test-eng cloud shel
 
 #### 2. Configure the Bash Script
 
-* The `setup_k8s.sh` file, located in the `tests\load` directory, contains shell 
-commands to **create** a GKE cluster, **setup** an existing GKE cluster or **delete** 
+* The `setup_k8s.sh` file, located in the `tests\load` directory, contains shell
+commands to **create** a GKE cluster, **setup** an existing GKE cluster or **delete**
 a GKE cluster
-  * Modify the script to include the MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY 
+  * Modify the script to include the MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY
     environment variables
   * Execute the following from the root directory, to make the file executable:
     ```shell
@@ -145,19 +145,19 @@ a GKE cluster
 
 #### 3. Create the GCP Cluster
 
-* Execute the `setup_k8s.sh` file and select the **create** option, in order to 
-  initiate the process of creating a cluster, setting up the env variables and 
+* Execute the `setup_k8s.sh` file and select the **create** option, in order to
+  initiate the process of creating a cluster, setting up the env variables and
   building the docker image
   ```shell
   ./tests/load/setup_k8s.sh
   ```
-* The cluster creation process will take some time. It is considered complete, once 
+* The cluster creation process will take some time. It is considered complete, once
   an external IP is assigned to the `locust_master` node. Monitor the assignment via
   a watch loop:
   ```bash
   kubectl get svc locust-master --watch
   ```
-* The number of workers is defaulted to 5, but can be modified with the 
+* The number of workers is defaulted to 5, but can be modified with the
   `kubectl scale` command. Example (10 workers):
   ```bash
   kubectl scale deployment/locust-worker --replicas=10
@@ -172,7 +172,7 @@ a GKE cluster
 #### 1. Start Load Test
 
 * In a browser navigate to `http://$EXTERNAL_IP:8089`
-   
+
   This url can be generated via command
   ```bash
   EXTERNAL_IP=$(kubectl get svc locust-master -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
@@ -183,8 +183,8 @@ a GKE cluster
 
 #### 2. Stop Load Test
 
-Select the 'Stop' button in the top right hand corner of the Locust UI, after the 
-desired test duration has elapsed. If the 'Run time' is set in step 1, the load test 
+Select the 'Stop' button in the top right hand corner of the Locust UI, after the
+desired test duration has elapsed. If the 'Run time' is set in step 1, the load test
 will stop automatically.
 
 #### 3. Analyse Results
@@ -228,17 +228,20 @@ will stop automatically.
 
 * Results should be recorded in the [Merino Load Test Spreadsheet][merino_spreadsheet]
 * Optionally, the Locust reports can be saved and linked in the spreadsheet:
+  * The results are persisted in the `/data` directory of the `locust-master-0` pod
+    in the `locust-master` k8s cluster in the GCP project of `merino-nonprod`.
   * Download the results via the Locust UI or via command:
       ```bash
-      kubectl cp <master-pod-name>:/home/locust/merino_stats.csv merino_stats.csv
-      kubectl cp <master-pod-name>:/home/locust/merino_exceptions.csv merino_exceptions.csv
-      kubectl cp <master-pod-name>:/home/locust/merino_failures.csv merino_failures.csv
+      kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_stats.csv merino_stats.csv
+      kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_exceptions.csv merino_exceptions.csv
+      kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_failures.csv merino_failures.csv
       ```
-    The `master-pod-name` can be found at the top of the pod list:
-      ```bash 
-      kubectl get pods -o wide
+    The `{run-id}` uniquely identifies each load test run and can be found by:
+      ```bash
+      kubectl exec -n locust-merino locust-master-0 -- ls -al /data/
       ```
-  * Upload the files to the [ConServ][conserv] drive and record the links in the 
+    and then locate the files with the file creation timestamp when the test was performed.
+  * Upload the files to the [ConServ][conserv] drive and record the links in the
     spreadsheet
 
 ### Clean-up Environment
@@ -274,7 +277,7 @@ updating the following:
 [circle_ci]: https://circleci.com/docs/
 [circle_config_yml]: https://github.com/mozilla-services/merino-py/blob/main/.circleci/config.yml
 [cloud]: https://console.cloud.google.com/home/dashboard?q=search&referrer=search&project=spheric-keel-331521&cloudshell=false
-[conserv]: https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux:
+[conserv]: https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux
 [container_registry]: https://console.cloud.google.com/gcr/images/spheric-keel-331521/global/locust-merino?project=spheric-keel-331521
 [docker]: https://docs.docker.com/
 [docker_compose]:https://github.com/mozilla-services/merino-py/blob/main/tests/load/docker-compose.yml

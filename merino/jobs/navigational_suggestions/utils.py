@@ -1,4 +1,5 @@
 """Utilities for navigational suggestions job"""
+
 import logging
 
 import requests
@@ -76,7 +77,7 @@ def requests_get(url: str) -> requests.Response | None:
 
 
 def update_top_picks_with_firefox_favicons(
-    top_picks: dict[str, list[dict[str, str]]]
+    top_picks: dict[str, list[dict[str, str]]],
 ) -> None:
     """Update top picks with high resolution favicons that are internally packaged in firefox
     for some of the selected domains for which favicon scraping didn't return anything

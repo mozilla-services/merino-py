@@ -1,4 +1,5 @@
 """Implementation of Feature Flags (feature toggles) for Merino"""
+
 import hashlib
 import logging
 from contextvars import ContextVar
@@ -48,9 +49,7 @@ FeatureFlagsDecisions = dict[str, bool]
 # Load the dynaconf configuration and parse it into Pydantic models once and
 # then use it as the default value for `flags` in `FeatureFlags`.
 # See https://docs.pydantic.dev/latest/usage/type_adapter/#parsing-data-into-a-specified-type
-_DYNACONF_FLAGS = TypeAdapter(FeatureFlagsConfigurations).validate_python(
-    _dynaconf_loader()
-)
+_DYNACONF_FLAGS = TypeAdapter(FeatureFlagsConfigurations).validate_python(_dynaconf_loader())
 
 
 @decorator
@@ -73,9 +72,7 @@ def record_decision(
     decision = wrapped_method(flag_name, *remaining_args, **kwargs)
 
     instance.decisions[flag_name] = decision
-    logger.info(
-        f"Record feature flag decision for {flag_name}", extra={flag_name: decision}
-    )
+    logger.info(f"Record feature flag decision for {flag_name}", extra={flag_name: decision})
 
     return decision
 
@@ -160,9 +157,7 @@ class FeatureFlags:
             logger.exception(err)
             return False
 
-    def _get_bucketing_id(
-        self, scheme: BucketingScheme, bucket_for: str | bytes | None
-    ) -> bytes:
+    def _get_bucketing_id(self, scheme: BucketingScheme, bucket_for: str | bytes | None) -> bytes:
         """Return a bytearray that can then be used to check against the
         enabled percent for inclusion into the feature.
 
@@ -196,9 +191,7 @@ class FeatureFlags:
                 case BucketingScheme.session:
                     session_id = session_id_context.get()
                     if session_id is None:
-                        raise ValueError(
-                            "Expected a session_id but none exist in this context"
-                        )
+                        raise ValueError("Expected a session_id but none exist in this context")
                     return self._get_digest(session_id)
 
     @staticmethod

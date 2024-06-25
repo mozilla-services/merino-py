@@ -5,7 +5,7 @@ Note: We use "roll-forward" strategy for rolling back changes in production.
 1. Depending on the severity of the problem, decide if this warrants
    [kicking off an incident][incident_docs];
 2. Identify the problematic commit (it may not be the latest commit)
-   and create a revert PR. 
+   and create a revert PR.
    If it is the latest commit, you can revert the change with:
    ```
    git revert HEAD~1

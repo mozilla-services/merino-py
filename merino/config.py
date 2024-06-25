@@ -1,4 +1,5 @@
 """Configuration for merino-py"""
+
 from dynaconf import Dynaconf, Validator
 
 # Validators for Merino settings.
@@ -14,9 +15,7 @@ _validators = [
     Validator("metrics.dev_logger", is_type_of=bool),
     Validator("metrics.host", is_type_of=str),
     Validator("metrics.port", gte=0, is_type_of=int),
-    Validator(
-        "accuweather.url_location_key_placeholder", is_type_of=str, must_exist=True
-    ),
+    Validator("accuweather.url_location_key_placeholder", is_type_of=str, must_exist=True),
     Validator(
         "accuweather.url_param_partner_code",
         is_type_of=str,
@@ -35,9 +34,7 @@ _validators = [
     ),
     # Set the upper bound of query timeout to 5 seconds as we don't want Merino
     # to wait for responses from Accuweather indefinitely.
-    Validator(
-        "providers.accuweather.query_timeout_sec", is_type_of=float, gte=0, lte=5.0
-    ),
+    Validator("providers.accuweather.query_timeout_sec", is_type_of=float, gte=0, lte=5.0),
     Validator("providers.accuweather.type", is_type_of=str, must_exist=True),
     Validator("providers.accuweather.cache", is_in=["redis", "none"]),
     Validator(
@@ -45,12 +42,8 @@ _validators = [
         is_type_of=int,
         gte=0,
     ),
-    Validator(
-        "providers.accuweather.cache_ttls.forecast_ttl_sec", is_type_of=int, gte=0
-    ),
-    Validator(
-        "providers.accuweather.cached_ttls.location_key_ttl_sec", is_type_of=int, gte=0
-    ),
+    Validator("providers.accuweather.cache_ttls.forecast_ttl_sec", is_type_of=int, gte=0),
+    Validator("providers.accuweather.cached_ttls.location_key_ttl_sec", is_type_of=int, gte=0),
     Validator("providers.adm.backend", is_in=["remote-settings", "test"]),
     Validator("providers.adm.cron_interval_sec", gt=0),
     Validator("providers.adm.enabled_by_default", is_type_of=bool),

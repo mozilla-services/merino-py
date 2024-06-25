@@ -1,6 +1,5 @@
 """Unit tests for the utils module in wikipedia-indexer job"""
 
-
 import logging
 from unittest.mock import ANY
 

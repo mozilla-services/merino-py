@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for __init__.py module."""
+
 import base64
 import pathlib
 from hashlib import md5
@@ -51,26 +52,26 @@ def expected_inconclusive_category_data() -> list[dict[str, Any]]:
 
 
 def test_upload_without_deleting(mocker):
-    """upload(delete_existing_records=False) with the primary CSV test data"""
+    """upload(keep_existing_records=True) with the primary CSV test data"""
     do_csv_test(
         mocker=mocker,
         csv_path=PRIMARY_CSV_PATH,
         primary_category_data=expected_primary_category_data(),
         secondary_category_data=expected_secondary_category_data(),
         inconclusive_category_data=expected_inconclusive_category_data(),
-        delete_existing_records=False,
+        keep_existing_records=True,
     )
 
 
 def test_delete_and_upload(mocker):
-    """upload(delete_existing_records=True) with the primary CSV test data"""
+    """upload(keep_existing_records=False) with the primary CSV test data"""
     do_csv_test(
         mocker=mocker,
         csv_path=PRIMARY_CSV_PATH,
         primary_category_data=expected_primary_category_data(),
         secondary_category_data=expected_secondary_category_data(),
         inconclusive_category_data=expected_inconclusive_category_data(),
-        delete_existing_records=True,
+        keep_existing_records=False,
     )
 
 

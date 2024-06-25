@@ -1,4 +1,5 @@
 """A thin wrapper around the Remote Settings client."""
+
 import asyncio
 from asyncio import Task
 from typing import Any, Literal, cast
@@ -41,9 +42,7 @@ class RemoteSettingsBackend:
 
     kinto_http_client: kinto_http.AsyncClient
 
-    def __init__(
-        self, server: str | None, collection: str | None, bucket: str | None
-    ) -> None:
+    def __init__(self, server: str | None, collection: str | None, bucket: str | None) -> None:
         """Init the Remote Settings backend and create a new client.
 
         Args:
@@ -102,9 +101,7 @@ class RemoteSettingsBackend:
         icon_record = self.filter_records(record_type="icon", records=records)
         for icon in icon_record:
             id = icon["id"].replace("icon-", "")
-            icons[id] = urljoin(
-                base=attachment_host, url=icon["attachment"]["location"]
-            )
+            icons[id] = urljoin(base=attachment_host, url=icon["attachment"]["location"])
 
         return SuggestionContent(
             suggestions=suggestions,
@@ -191,9 +188,7 @@ class RemoteSettingsBackend:
         Raises:
             RemoteSettingsError: Failed request to Remote Settings.
         """
-        async with create_http_client(
-            connect_timeout=RS_CONNECT_TIMEOUT
-        ) as httpx_client:
+        async with create_http_client(connect_timeout=RS_CONNECT_TIMEOUT) as httpx_client:
             try:
                 response: httpx.Response = await httpx_client.get(url)
                 response.raise_for_status()

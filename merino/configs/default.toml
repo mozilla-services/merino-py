@@ -135,6 +135,9 @@ bucket = "main"
 # Ex: "quicksuggest".
 collection = "quicksuggest"
 
+# The collection to use for uploading fakespot suggestions if not specified on the command line
+collection_fakespot = "fakespot-suggest-products"
+
 # MERINO_REMOTE_SETTINGS__AUTH
 # Authorization token when uploading suggestions.
 auth = ""
@@ -142,10 +145,6 @@ auth = ""
 # MERINO_REMOTE_SETTINGS__CHUNK_SIZE
 # The maximum number of suggestions to store in each attachment when uploading suggestions.
 chunk_size = 200
-
-# MERINO_REMOTE_SETTINGS__DELETE_EXISTING_RECORDS
-# Delete existing records before uploading new records.
-delete_existing_records = true
 
 # MERINO_REMOTE_SETTINGS__DRY_RUN
 # Log changes but don't actually make them when uploading suggestions.

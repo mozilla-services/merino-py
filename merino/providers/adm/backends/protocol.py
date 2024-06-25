@@ -1,4 +1,5 @@
 """Protocol for the AdM provider backends."""
+
 from typing import Any, Protocol
 
 from pydantic import BaseModel

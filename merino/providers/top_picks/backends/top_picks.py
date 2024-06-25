@@ -1,4 +1,5 @@
 """A wrapper for Top Picks Provider I/O Interactions"""
+
 import asyncio
 import json
 import logging
@@ -144,7 +145,7 @@ class TopPicksBackend:
             firefox_char_limit=self.firefox_char_limit,
         )
 
-    def maybe_build_indices(self) -> tuple[Enum, TopPicksData | None]:  # type: ignore [return]
+    def maybe_build_indices(self) -> tuple[Enum, TopPicksData | None]:
         """Build indices of domain data either from `remote` or `local` source defined
         in configuration. `domain_data_source` dictates data source and which
         filemanager is used to acquire data.
@@ -166,9 +167,7 @@ class TopPicksBackend:
                     gcs_bucket_path=settings.providers.top_picks.gcs_bucket,
                 )
                 client = remote_filemanager.create_gcs_client()
-                get_file_result_code, remote_domains = remote_filemanager.get_file(
-                    client
-                )
+                get_file_result_code, remote_domains = remote_filemanager.get_file(client)
 
                 match GetFileResultCode(get_file_result_code):
                     case GetFileResultCode.SUCCESS:
@@ -190,6 +189,3 @@ class TopPicksBackend:
                 local_index_results: TopPicksData = self.build_index(local_domains)
                 logger.info("Top Picks Domain Data loaded locally from static file.")
                 return (GetFileResultCode.SUCCESS, local_index_results)
-            case _:
-                logger.error("Could not generate index from local or remote source.")
-                return (GetFileResultCode.FAIL, None)

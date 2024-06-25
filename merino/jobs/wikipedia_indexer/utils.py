@@ -1,4 +1,5 @@
 """Utilities for Dynamic Wikipedia indexer job"""
+
 import csv
 from io import StringIO
 from logging import Logger
@@ -17,9 +18,7 @@ class ProgressReporter:
     total: int
     progress: int
 
-    def __init__(
-        self, logger: Logger, action: str, source: str, destination: str, total: int
-    ):
+    def __init__(self, logger: Logger, action: str, source: str, destination: str, total: int):
         self.logger = logger
         self.action = action
         self.source = source

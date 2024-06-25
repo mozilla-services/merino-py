@@ -1,4 +1,5 @@
 """A utility module for log data creation"""
+
 from datetime import datetime
 from typing import Any
 
@@ -92,9 +93,9 @@ def create_suggest_log_data(
         code=message["status"],
         rid=Headers(scope=message)["X-Request-ID"],
         session_id=request.query_params.get("sid"),
-        sequence_no=int(seq)
-        if (seq := request.query_params.get("seq", "")) and seq.isdecimal()
-        else None,
+        sequence_no=(
+            int(seq) if (seq := request.query_params.get("seq", "")) and seq.isdecimal() else None
+        ),
         client_variants=request.query_params.get("client_variants", ""),
         requested_providers=request.query_params.get("providers", ""),
         # Location Data

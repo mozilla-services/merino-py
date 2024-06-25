@@ -1,4 +1,5 @@
 """Abstract class for Providers"""
+
 from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, Field, HttpUrl
@@ -125,9 +126,7 @@ class BaseProvider(ABC):
         return
 
     @abstractmethod
-    async def query(
-        self, srequest: SuggestionRequest
-    ) -> list[BaseSuggestion]:  # pragma: no cover
+    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:  # pragma: no cover
         """Query against this provider.
 
         Args:

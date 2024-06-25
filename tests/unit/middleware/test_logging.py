@@ -24,9 +24,7 @@ async def test_logging_invalid_scope_type(
     """Test that no logging action takes place for an unexpected Scope type."""
     caplog.set_level(logging.INFO)
     scope: Scope = {"type": "not-http"}
-    logging_middleware: LoggingMiddleware = LoggingMiddleware(
-        mocker.AsyncMock(spec=ASGIApp)
-    )
+    logging_middleware: LoggingMiddleware = LoggingMiddleware(mocker.AsyncMock(spec=ASGIApp))
 
     await logging_middleware(scope, receive_mock, send_mock)
 

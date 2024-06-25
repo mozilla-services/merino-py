@@ -11,7 +11,7 @@ Membership checks of the block list are not case sensitive and any underscores i
 
 2. Check in the changes to source control, merge a pull request with the new block list and deploy Merino.
 
-## Indexer Job 
+## Indexer Job
 Since the indexer runs at a regular cadence, you do not need to re-run the Airflow job.
 Adding to the blocklist using the steps above is sufficient to rapidly block a title.
 The next time the Wikipedia indexer job runs, this title will be excluded during the indexer job.

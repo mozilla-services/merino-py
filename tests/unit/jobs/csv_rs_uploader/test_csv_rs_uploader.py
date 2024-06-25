@@ -63,38 +63,34 @@ def expected_primary_suggestions() -> list[dict[str, Any]]:
                 "url": f"http://example.com/pocket-{s}",
                 "title": f"Title {s}",
                 "description": f"Description {s}",
-                "lowConfidenceKeywords": [
-                    f"low-{s}-{k}" for k in range(PRIMARY_KEYWORD_COUNT)
-                ],
-                "highConfidenceKeywords": [
-                    f"high-{s}-{k}" for k in range(PRIMARY_KEYWORD_COUNT)
-                ],
+                "lowConfidenceKeywords": [f"low-{s}-{k}" for k in range(PRIMARY_KEYWORD_COUNT)],
+                "highConfidenceKeywords": [f"high-{s}-{k}" for k in range(PRIMARY_KEYWORD_COUNT)],
             }
         )
     return suggestions
 
 
 def test_upload_without_deleting(mocker):
-    """upload(delete_existing_records=False) with the primary CSV test data"""
+    """upload(keep_existing_records=True) with the primary CSV test data"""
     do_csv_test(
         mocker=mocker,
         csv_path=PRIMARY_CSV_PATH,
         model_name=MODEL_NAME,
         model_package=MODEL_PACKAGE,
         expected_suggestions=expected_primary_suggestions(),
-        delete_existing_records=False,
+        keep_existing_records=True,
     )
 
 
 def test_delete_and_upload(mocker):
-    """upload(delete_existing_records=True) with the primary CSV test data"""
+    """upload(keep_existing_records=True) with the primary CSV test data"""
     do_csv_test(
         mocker=mocker,
         csv_path=PRIMARY_CSV_PATH,
         model_name=MODEL_NAME,
         model_package=MODEL_PACKAGE,
         expected_suggestions=expected_primary_suggestions(),
-        delete_existing_records=True,
+        keep_existing_records=False,
     )
 
 

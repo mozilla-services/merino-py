@@ -1,4 +1,5 @@
 """Custom Details specific Models"""
+
 from pydantic import BaseModel
 
 

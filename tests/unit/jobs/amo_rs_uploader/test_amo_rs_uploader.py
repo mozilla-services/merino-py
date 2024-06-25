@@ -31,8 +31,7 @@ def mock_addons_data(
     type(mock_backend).dynamic_data = mocker.PropertyMock(
         return_value={
             f"addon-{a}": {
-                f"dynamic-key-{a}-{p}": f"dynamic-value-{a}-{p}"
-                for p in range(data_count)
+                f"dynamic-key-{a}-{p}": f"dynamic-value-{a}-{p}" for p in range(data_count)
             }
             for a in range(addon_count)
         }
@@ -43,8 +42,7 @@ def mock_addons_data(
         "merino.jobs.amo_rs_uploader.ADDON_DATA",
         new={
             f"addon-{a}": {
-                f"static-key-{a}-{p}": f"static-value-{a}-{p}"
-                for p in range(data_count)
+                f"static-key-{a}-{p}": f"static-value-{a}-{p}" for p in range(data_count)
             }
             | {"name": f"name-{a}"}
             for a in range(addon_count)
@@ -55,8 +53,7 @@ def mock_addons_data(
     mocker.patch(
         "merino.jobs.amo_rs_uploader.ADDON_KEYWORDS",
         new={
-            f"addon-{a}": [f"kw-{a}-{k}" for k in range(keyword_count)]
-            for a in range(addon_count)
+            f"addon-{a}": [f"kw-{a}-{k}" for k in range(keyword_count)] for a in range(addon_count)
         },
     )
 
@@ -81,7 +78,7 @@ def expected_add_suggestion_calls(
 
 def do_upload_test(
     mocker,
-    delete_existing_records: bool = False,
+    keep_existing_records: bool = True,
     score: float = 0.99,
 ) -> None:
     """Perform an upload test."""
@@ -97,9 +94,7 @@ def do_upload_test(
     mock_chunked_uploader_ctor = mocker.patch(
         "merino.jobs.amo_rs_uploader.ChunkedRemoteSettingsSuggestionUploader"
     )
-    mock_chunked_uploader = (
-        mock_chunked_uploader_ctor.return_value.__enter__.return_value
-    )
+    mock_chunked_uploader = mock_chunked_uploader_ctor.return_value.__enter__.return_value
 
     # Do the upload.
     common_kwargs: dict[str, Any] = {
@@ -113,7 +108,7 @@ def do_upload_test(
     }
     upload(
         **common_kwargs,
-        delete_existing_records=delete_existing_records,
+        keep_existing_records=keep_existing_records,
         score=score,
     )
 
@@ -127,24 +122,22 @@ def do_upload_test(
         total_data_count=TEST_ADDON_COUNT,
     )
 
-    if delete_existing_records:
+    if not keep_existing_records:
         mock_chunked_uploader.delete_records.assert_called_once()
     else:
         mock_chunked_uploader.delete_records.assert_not_called()
 
-    mock_chunked_uploader.add_suggestion.assert_has_calls(
-        expected_add_suggestion_calls(mocker)
-    )
+    mock_chunked_uploader.add_suggestion.assert_has_calls(expected_add_suggestion_calls(mocker))
 
 
 def test_upload_without_deleting(mocker):
-    """Tests `upload(delete_existing_records=False)`"""
-    do_upload_test(mocker, delete_existing_records=False)
+    """Tests `upload(keep_existing_records=True)`"""
+    do_upload_test(mocker, keep_existing_records=True)
 
 
 def test_delete_and_upload(mocker):
-    """Tests `upload(delete_existing_records=True)`"""
-    do_upload_test(mocker, delete_existing_records=True)
+    """Tests `upload(keep_existing_records=True)`"""
+    do_upload_test(mocker, keep_existing_records=False)
 
 
 def test_upload_with_score(mocker):

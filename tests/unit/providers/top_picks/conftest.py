@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Module for test configurations for the Top Picks provider unit test directory."""
+
 from typing import Any
 
 import pytest
@@ -49,8 +50,6 @@ def fixture_top_picks_parameters() -> dict[str, Any]:
 
 
 @pytest.fixture(name="top_picks")
-def fixture_top_picks(
-    backend: TopPicksBackend, top_picks_parameters: dict[str, Any]
-) -> Provider:
+def fixture_top_picks(backend: TopPicksBackend, top_picks_parameters: dict[str, Any]) -> Provider:
     """Create Top Pick Provider for test."""
     return Provider(backend=backend, **top_picks_parameters)  # type: ignore [arg-type]

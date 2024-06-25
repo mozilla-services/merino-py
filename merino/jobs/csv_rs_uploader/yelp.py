@@ -1,6 +1,7 @@
 """Pydantic model for Yelp suggestions as they should be serialized in the
 output JSON.
 """
+
 from pydantic import BaseModel
 
 from merino.jobs.csv_rs_uploader.base import BaseSuggestion
@@ -64,15 +65,11 @@ class Suggestion(BaseSuggestion):
 
             location_modifier = row[FIELD_LOCATION_MODIFIERS]
             if location_modifier:
-                location_signs.append(
-                    LocationSign(keyword=location_modifier, needLocation=False)
-                )
+                location_signs.append(LocationSign(keyword=location_modifier, needLocation=False))
 
             location_sign = row[FIELD_LOCATION_SIGNS]
             if location_sign:
-                location_signs.append(
-                    LocationSign(keyword=location_sign, needLocation=True)
-                )
+                location_signs.append(LocationSign(keyword=location_sign, needLocation=True))
 
             yelp_modifier = row[FIELD_YELP_MODIFIERS]
             if yelp_modifier:

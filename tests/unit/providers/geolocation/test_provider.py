@@ -4,7 +4,6 @@
 
 """Unit tests for the geolocation provider module."""
 
-
 from typing import Any
 
 import pytest
@@ -78,9 +77,7 @@ async def test_query_geolocation(provider: Provider, geolocation: Location) -> N
 
 
 @pytest.mark.asyncio
-async def test_query_geolocation_empty_region(
-    provider: Provider, empty_region: Location
-) -> None:
+async def test_query_geolocation_empty_region(provider: Provider, empty_region: Location) -> None:
     """Test that the query method provides a valid geolocation suggestion."""
     expected_suggestions: list[BaseSuggestion] = [
         Suggestion(

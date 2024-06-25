@@ -1,4 +1,5 @@
 """Unit tests for the Addon API provider backend"""
+
 import json
 
 import httpx
@@ -44,9 +45,7 @@ def _patch_addons_api_calls(mocker: MockerFixture) -> None:
 
 
 @pytest.mark.asyncio
-async def test_fetch_addons_succeed(
-    mocker: MockerFixture, dynamic_backend: DynamicAmoBackend
-):
+async def test_fetch_addons_succeed(mocker: MockerFixture, dynamic_backend: DynamicAmoBackend):
     """Test that fetch populates the Addons."""
     _patch_addons_api_calls(mocker)
 
@@ -62,9 +61,7 @@ async def test_fetch_addons_skipped_api_failure(
     """Test that fetch fails raises error when Addon requests fails before it
     returns a response.
     """
-    mocker.patch.object(
-        AsyncClient, "get", side_effect=httpx.TimeoutException("timedout!")
-    )
+    mocker.patch.object(AsyncClient, "get", side_effect=httpx.TimeoutException("timedout!"))
     await dynamic_backend.fetch_and_cache_addons_info()
 
     # Ensure that all the messages are errors due to the timeout.
@@ -110,9 +107,7 @@ async def test_fetch_addons_skipped_api_request_failure(
 
     assert len(dynamic_backend.dynamic_data) == len(SupportedAddon) - 1
     assert len(caplog.messages) == 1
-    assert caplog.messages[0].startswith(
-        "Addons API could not find key: video-downloadhelper"
-    )
+    assert caplog.messages[0].startswith("Addons API could not find key: video-downloadhelper")
 
 
 @pytest.mark.asyncio
@@ -162,18 +157,14 @@ async def test_fetch_addons_handled_task_group_exceptions(
     mocker: MockerFixture, dynamic_backend: DynamicAmoBackend
 ):
     """Test that `TaskGroup` exceptions are captured and propagated as `AmoBackendError`."""
-    mocker.patch.object(
-        dynamic_backend, "_fetch_addon", side_effect=Exception("mocked error")
-    )
+    mocker.patch.object(dynamic_backend, "_fetch_addon", side_effect=Exception("mocked error"))
 
     with pytest.raises(AmoBackendError):
         await dynamic_backend.fetch_and_cache_addons_info()
 
 
 @pytest.mark.asyncio
-async def test_get_addon_request(
-    mocker: MockerFixture, dynamic_backend: DynamicAmoBackend
-):
+async def test_get_addon_request(mocker: MockerFixture, dynamic_backend: DynamicAmoBackend):
     """Test that we can get the Addons details."""
     _patch_addons_api_calls(mocker)
     await dynamic_backend.fetch_and_cache_addons_info()
@@ -196,9 +187,7 @@ async def test_get_addon_request(
 
 
 @pytest.mark.asyncio
-async def test_get_addon_key_error(
-    mocker: MockerFixture, dynamic_backend: DynamicAmoBackend
-):
+async def test_get_addon_key_error(mocker: MockerFixture, dynamic_backend: DynamicAmoBackend):
     """Test that we raise the right error for Key Error."""
     _patch_addons_api_calls(mocker)
     await dynamic_backend.fetch_and_cache_addons_info()

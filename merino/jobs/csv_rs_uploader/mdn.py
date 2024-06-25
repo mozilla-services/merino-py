@@ -1,6 +1,7 @@
 """Pydantic model for MDN suggestions as they should be serialized in the
 output JSON.
 """
+
 from pydantic import HttpUrl, field_validator
 
 from merino.jobs.csv_rs_uploader.row_major_base import RowMajorBaseSuggestion

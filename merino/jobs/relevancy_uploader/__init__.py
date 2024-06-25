@@ -1,4 +1,5 @@
 """CLI commands for the relevancy_csv_rs_uploader module"""
+
 import asyncio
 import base64
 import csv
@@ -84,9 +85,7 @@ class RelevancyData:
     """Class to relate to conforming data to remote settings structure."""
 
     @classmethod
-    def csv_to_relevancy_data(
-        cls, csv_reader
-    ) -> defaultdict[Category, list[dict[str, str]]]:
+    def csv_to_relevancy_data(cls, csv_reader) -> defaultdict[Category, list[dict[str, str]]]:
         """Read CSV file and extract required data for relevancy in the structure
         [
             { "domain" : <base64 string> }
@@ -101,9 +100,7 @@ class RelevancyData:
                     category, Category.Inconclusive
                 )
                 md5_hash = md5(row["domain"].encode(), usedforsecurity=False).digest()
-                data[category_mapped].append(
-                    {"domain": base64.b64encode(md5_hash).decode()}
-                )
+                data[category_mapped].append({"domain": base64.b64encode(md5_hash).decode()})
         return data
 
 
@@ -134,10 +131,10 @@ collection_option = typer.Option(
     help="Remote settings collection ID",
 )
 
-delete_existing_records_option = typer.Option(
-    rs_settings.delete_existing_records,
-    "--delete-existing-records",
-    help="Delete existing records before uploading new records",
+keep_existing_records_option = typer.Option(
+    False,
+    "--keep-existing-records",
+    help="Keep existing records before uploading new records",
 )
 
 dry_run_option = typer.Option(
@@ -184,7 +181,7 @@ def upload(
     chunk_size: int = chunk_size_option,
     collection: str = collection_option,
     csv_path: str = csv_path_option,
-    delete_existing_records: bool = delete_existing_records_option,
+    keep_existing_records: bool = keep_existing_records_option,
     dry_run: bool = dry_run_option,
     server: str = server_option,
     version: int = version_option,
@@ -200,7 +197,7 @@ def upload(
             chunk_size=chunk_size,
             collection=collection,
             csv_path=csv_path,
-            delete_existing_records=delete_existing_records,
+            keep_existing_records=keep_existing_records,
             dry_run=dry_run,
             server=server,
             version=version,
@@ -214,7 +211,7 @@ async def _upload(
     chunk_size: int,
     collection: str,
     csv_path: str,
-    delete_existing_records: bool,
+    keep_existing_records: bool,
     dry_run: bool,
     server: str,
     version: int,
@@ -225,7 +222,7 @@ async def _upload(
             bucket=bucket,
             chunk_size=chunk_size,
             collection=collection,
-            delete_existing_records=delete_existing_records,
+            keep_existing_records=keep_existing_records,
             dry_run=dry_run,
             file_object=csv_file,
             server=server,
@@ -239,7 +236,7 @@ async def _upload_file_object(
     chunk_size: int,
     collection: str,
     file_object: io.TextIOWrapper,
-    delete_existing_records: bool,
+    keep_existing_records: bool,
     dry_run: bool,
     server: str,
     version: int,
@@ -264,7 +261,7 @@ async def _upload_file_object(
             category_code=category.value,
             version=version,
         ) as uploader:
-            if delete_existing_records:
+            if not keep_existing_records:
                 uploader.delete_records()
 
             for domain in domains:
