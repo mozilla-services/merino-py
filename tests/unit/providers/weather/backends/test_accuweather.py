@@ -843,7 +843,7 @@ async def test_get_weather_report(
     mocker.patch(
         "merino.providers.weather.backends.accuweather.AccuweatherBackend"
         ".store_request_into_cache"
-    ).return_value = TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC
+    ).return_value = TEST_CACHE_TTL_SEC
 
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
 
@@ -892,7 +892,7 @@ async def test_get_weather_report_with_location_key(
     mocker.patch(
         "merino.providers.weather.backends.accuweather.AccuweatherBackend"
         ".store_request_into_cache"
-    ).return_value = TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC
+    ).return_value = TEST_CACHE_TTL_SEC
     report: Optional[WeatherReport] = await accuweather.get_weather_report(
         geolocation, accuweather_location_key
     )
