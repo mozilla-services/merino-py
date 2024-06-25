@@ -37,9 +37,7 @@ class Scorer:
 
     def __init__(self, max_docs: int) -> None:
         self.max_docs = max_docs
-        self.incoming_links_norm = int(
-            float(self.max_docs) * self.INCOMING_LINKS_MAX_DOCS_FACTOR
-        )
+        self.incoming_links_norm = int(float(self.max_docs) * self.INCOMING_LINKS_MAX_DOCS_FACTOR)
 
     def score(self, doc: Dict) -> float:
         """Calculate suggestion scores from the incoming doc"""

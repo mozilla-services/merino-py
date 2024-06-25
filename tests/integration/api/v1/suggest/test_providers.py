@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Integration tests for the Merino v1 providers API endpoint."""
+
 import logging
 from datetime import datetime
 from logging import LogRecord
@@ -55,9 +56,7 @@ from tests.types import FilterCaplogFixture
             ],
             {
                 "sponsored": FakeProviderFactory.sponsored(enabled_by_default=True),
-                "nonsponsored": FakeProviderFactory.nonsponsored(
-                    enabled_by_default=False
-                ),
+                "nonsponsored": FakeProviderFactory.nonsponsored(enabled_by_default=False),
                 "hidden-provider": FakeProviderFactory.hidden(enabled_by_default=True),
             },
         ),
@@ -132,8 +131,7 @@ def test_providers_request_log_data(
 
     expected_log_data: RequestSummaryLogDataModel = RequestSummaryLogDataModel(
         agent=(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0)"
-            " Gecko/20100101 Firefox/103.0"
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0)" " Gecko/20100101 Firefox/103.0"
         ),
         path="/api/v1/providers",
         method="GET",

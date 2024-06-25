@@ -85,9 +85,7 @@ class RelevancyData:
     """Class to relate to conforming data to remote settings structure."""
 
     @classmethod
-    def csv_to_relevancy_data(
-        cls, csv_reader
-    ) -> defaultdict[Category, list[dict[str, str]]]:
+    def csv_to_relevancy_data(cls, csv_reader) -> defaultdict[Category, list[dict[str, str]]]:
         """Read CSV file and extract required data for relevancy in the structure
         [
             { "domain" : <base64 string> }
@@ -102,9 +100,7 @@ class RelevancyData:
                     category, Category.Inconclusive
                 )
                 md5_hash = md5(row["domain"].encode(), usedforsecurity=False).digest()
-                data[category_mapped].append(
-                    {"domain": base64.b64encode(md5_hash).decode()}
-                )
+                data[category_mapped].append({"domain": base64.b64encode(md5_hash).decode()})
         return data
 
 

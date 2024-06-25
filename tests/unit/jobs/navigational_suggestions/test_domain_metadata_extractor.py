@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for domain_metadata_extractor.py module."""
+
 from typing import Any
 
 import pytest
@@ -104,8 +105,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
                 {
                     "name": "apple-touch-icon",
                     "content": (
-                        "https://assets.nflxext.com/en_us/layout/ecweb/"
-                        "netflix-app-icon_152.jpg"
+                        "https://assets.nflxext.com/en_us/layout/ecweb/" "netflix-app-icon_152.jpg"
                     ),
                 }
             ],
@@ -217,9 +217,7 @@ DOMAIN_METADATA_SCENARIOS: list[DomainMetadataScenario] = [
                     "rel": ["icon"],
                     "sizes": "any",
                     "mask": "",
-                    "href": (
-                        "//www.baidu.com/img/baidu_85beaf5496f291521eb75ba38eacbd87.svg"
-                    ),
+                    "href": ("//www.baidu.com/img/baidu_85beaf5496f291521eb75ba38eacbd87.svg"),
                 },
             ],
             metas=[],
@@ -622,9 +620,7 @@ def test_get_domain_metadata(
     """Test that DomainMetadataExtractor returns favicons as expected"""
     scraper_mock: Any = mocker.Mock(spec=Scraper)
     scraper_mock.scrape_favicon_data.return_value = favicon_data
-    scraper_mock.scrape_favicons_from_manifest.return_value = (
-        scraped_favicons_from_manifest
-    )
+    scraper_mock.scrape_favicons_from_manifest.return_value = scraped_favicons_from_manifest
     scraper_mock.get_default_favicon.return_value = default_favicon
     scraper_mock.open.return_value = scraped_url
     scraper_mock.scrape_title.return_value = scraped_title
@@ -650,8 +646,8 @@ def test_get_domain_metadata(
         favicon_downloader=favicon_downloader_mock,
     )
 
-    domain_metadata: list[dict[str, str | None]] = (
-        metadata_extractor.get_domain_metadata(domains_data, favicon_min_width=32)
+    domain_metadata: list[dict[str, str | None]] = metadata_extractor.get_domain_metadata(
+        domains_data, favicon_min_width=32
     )
 
     assert domain_metadata == expected_domain_metadata

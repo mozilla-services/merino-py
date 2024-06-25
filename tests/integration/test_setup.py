@@ -15,9 +15,7 @@ from merino.main import app
 
 def test_unknown_providers_should_shutdown_app(mocker: MockerFixture) -> None:
     """Test Merino should shut down upon an unknown provider."""
-    mocker.patch.dict(
-        settings.providers, values={"unknown-provider": {"type": "unknown-type"}}
-    )
+    mocker.patch.dict(settings.providers, values={"unknown-provider": {"type": "unknown-type"}})
 
     with pytest.raises(InvalidProviderError) as excinfo:
         # This will run all the FastAPI startup event handlers.

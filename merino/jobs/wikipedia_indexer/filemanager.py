@@ -48,9 +48,7 @@ class FileManager:
     client: Client
 
     def __init__(self, gcs_bucket: str, gcs_project: str, export_base_url: str) -> None:
-        self.file_pattern = re.compile(
-            r"(?:.*/|^)enwiki-(\d+)-cirrussearch-content.json.gz"
-        )
+        self.file_pattern = re.compile(r"(?:.*/|^)enwiki-(\d+)-cirrussearch-content.json.gz")
         self.client = Client(gcs_project)
         self.base_url = export_base_url
         if "/" in gcs_bucket:

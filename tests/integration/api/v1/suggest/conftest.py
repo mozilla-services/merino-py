@@ -95,9 +95,7 @@ async def fixture_inject_providers(
     )
     """
     # Ensures this test interface takes into account disabled providers.
-    enabled_providers = {
-        k: v for k, v in providers.items() if k not in disabled_providers
-    }
+    enabled_providers = {k: v for k, v in providers.items() if k not in disabled_providers}
     setup_providers(enabled_providers)
     yield
     await teardown_providers(providers)

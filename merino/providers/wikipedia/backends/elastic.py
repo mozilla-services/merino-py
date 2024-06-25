@@ -77,10 +77,7 @@ class ElasticBackend:
             raise BackendError(f"Failed to search from Elasticsearch: {e}") from e
 
         if "suggest" in res:
-            return [
-                self.build_article(q, doc)
-                for doc in res["suggest"][SUGGEST_ID][0]["options"]
-            ]
+            return [self.build_article(q, doc) for doc in res["suggest"][SUGGEST_ID][0]["options"]]
         else:
             return []
 

@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Unit tests for __init__.py module."""
+
 import base64
 import pathlib
 from hashlib import md5

@@ -49,9 +49,7 @@ class Record:
         self.type = type
         self.suggestion_score = suggestion_score
         self.id = id or f"{type}-{start_index}-{size}"
-        self.url = (
-            f"{server}/buckets/{bucket}/collections/{collection}/records/{self.id}"
-        )
+        self.url = f"{server}/buckets/{bucket}/collections/{collection}/records/{self.id}"
         self.attachment_url = f"{self.url}/attachment"
 
     @property
@@ -73,9 +71,7 @@ class Record:
         """A dict that describes the request that Kinto should receive when the
         uploader uploads an attachment.
         """
-        attachment: list[dict[str, Any]] = [
-            {"i": i} for i in range(self.start_index, self.size)
-        ]
+        attachment: list[dict[str, Any]] = [{"i": i} for i in range(self.start_index, self.size)]
         if self.suggestion_score:
             for suggestion in attachment:
                 suggestion["score"] = self.suggestion_score
@@ -130,9 +126,7 @@ def check_request(actual, expected: dict[str, Any]) -> None:
             assert actual_headers == expected["headers"]
 
 
-def check_upload_requests(
-    actual_requests: list, expected_records: list[Record]
-) -> None:
+def check_upload_requests(actual_requests: list, expected_records: list[Record]) -> None:
     """Assert a list of actual requests matches expected requests given the
     expected records. Each record should correspond to two requests, one for
     uploading the record and one for uploading the attachment.

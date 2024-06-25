@@ -62,9 +62,7 @@ class Indexer:
 
         if self._create_index(index_name):
             logger.info("Start indexing", extra={"index": index_name})
-            reporter = ProgressReporter(
-                logger, "Indexing", latest.name, index_name, total_docs
-            )
+            reporter = ProgressReporter(logger, "Indexing", latest.name, index_name, total_docs)
             indexed = 0
             blocked = 0
             gcs_stream = self.file_manager.stream_from_gcs(latest)
@@ -112,12 +110,8 @@ class Indexer:
         """
         categories: set[str] = set(doc.get("category", []))
         title: str = doc.get("title", "")
-        should_filter_category: bool = not self.category_blocklist.isdisjoint(
-            categories
-        )
-        should_filter_title: bool = (
-            title.lower() in self.title_blocklist if title != "" else True
-        )
+        should_filter_category: bool = not self.category_blocklist.isdisjoint(categories)
+        should_filter_title: bool = title.lower() in self.title_blocklist if title != "" else True
         return should_filter_category or should_filter_title
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
@@ -179,9 +173,7 @@ class Indexer:
         alias = alias.format(version=self.index_version)
 
         # fetch previous index using alias so we know what to delete
-        actions: list[Mapping[str, Any]] = [
-            {"add": {"index": current_index, "alias": alias}}
-        ]
+        actions: list[Mapping[str, Any]] = [{"add": {"index": current_index, "alias": alias}}]
 
         indices_to_close = []
         if self.es_client.indices.exists_alias(name=alias):

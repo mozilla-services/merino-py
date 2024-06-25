@@ -4,7 +4,6 @@
 
 """Unit tests for the config_logging.py module."""
 
-
 import logging
 from typing import Any
 

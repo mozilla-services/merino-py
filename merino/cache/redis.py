@@ -28,9 +28,7 @@ class RedisAdapter:
         try:
             return await self.redis.get(key)
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to get `{repr(key)}` with error: `{exc}`"
-            ) from exc
+            raise CacheAdapterError(f"Failed to get `{repr(key)}` with error: `{exc}`") from exc
 
     async def set(
         self,
@@ -45,13 +43,9 @@ class RedisAdapter:
             - `CacheAdapterError` if Redis returns an error.
         """
         try:
-            await self.redis.set(
-                key, value, ex=ttl.days * 86400 + ttl.seconds if ttl else None
-            )
+            await self.redis.set(key, value, ex=ttl.days * 86400 + ttl.seconds if ttl else None)
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to set `{repr(key)}` with error: `{exc}`"
-            ) from exc
+            raise CacheAdapterError(f"Failed to set `{repr(key)}` with error: `{exc}`") from exc
 
     async def close(self) -> None:
         """Close the Redis connection."""
@@ -85,8 +79,6 @@ class RedisAdapter:
         try:
             res = await self.scripts[sid](keys, args)
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to run script {id} with error: `{exc}`"
-            ) from exc
+            raise CacheAdapterError(f"Failed to run script {id} with error: `{exc}`") from exc
 
         return res

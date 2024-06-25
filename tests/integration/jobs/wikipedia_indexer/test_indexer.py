@@ -61,9 +61,7 @@ def test_get_index_name(
     expected,
 ):
     """Test filename to index name parsing."""
-    indexer = Indexer(
-        version, category_blocklist, title_blocklist, file_manager, es_client
-    )
+    indexer = Indexer(version, category_blocklist, title_blocklist, file_manager, es_client)
 
     index_name = indexer._get_index_name(file_name)
     assert index_name == expected
@@ -93,9 +91,7 @@ def test_create_index(
     es_client.indices.create.return_value = create_return
 
     index_name = "enwiki-123-v1"
-    indexer = Indexer(
-        "v1", category_blocklist, title_blocklist, file_manager, es_client
-    )
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
 
     assert expected_return == indexer._create_index(index_name)
     assert expected_create_called == es_client.indices.create.called
@@ -107,9 +103,7 @@ def test_index_from_export_no_exports_available(
     """Test that RuntimeError is emitted."""
     file_manager.get_latest_gcs.return_value = Blob("", "bucket")
     es_client.indices.exists.return_value = False
-    indexer = Indexer(
-        "v1", category_blocklist, title_blocklist, file_manager, es_client
-    )
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
     with pytest.raises(RuntimeError) as exc_info:
         indexer.index_from_export(100, "fake_alias")
 
@@ -128,9 +122,7 @@ def test_index_from_export_fail_on_existing_index(
     )
     es_client.indices.exists.return_value = False
     es_client.indices.create.return_value = {}
-    indexer = Indexer(
-        "v1", category_blocklist, title_blocklist, file_manager, es_client
-    )
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
     with pytest.raises(Exception) as exc_info:
         indexer.index_from_export(100, "fake_alias")
 
@@ -193,9 +185,7 @@ def test_flip_alias(
     es_client.indices.exists_alias.return_value = len(existing_indices) > 0
     es_client.indices.get_alias.return_value = existing_indices
 
-    indexer = Indexer(
-        "v1", category_blocklist, title_blocklist, file_manager, es_client
-    )
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
     indexer._flip_alias_to_latest(new_index_name, alias_name)
 
     assert es_client.indices.update_aliases.called
@@ -242,9 +232,7 @@ def test_index_from_export(
     ]
 
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer(
-        "v1", category_blocklist, title_blocklist, file_manager, es_client
-    )
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
 
     indexer.index_from_export(1, "enwiki")
 
@@ -310,9 +298,7 @@ def test_index_from_export_with_category_blocklist_content_filter(
     ]
 
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer(
-        "v1", category_blocklist, title_blocklist, file_manager, es_client
-    )
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
 
     indexer.index_from_export(1, "enwiki")
 
@@ -378,9 +364,7 @@ def test_index_from_export_with_title_blocklist_content_filter(
     ]
 
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer(
-        "v1", category_blocklist, title_blocklist, file_manager, es_client
-    )
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
 
     indexer.index_from_export(1, "enwiki")
 

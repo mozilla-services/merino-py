@@ -93,9 +93,7 @@ def verify_field_required(mocker):
     """Verify that a missing field value will raise a MissingFieldError"""
 
     def verify(field_name):
-        row = {
-            name: value for (name, value) in TEST_CSV_ROW.items() if name != field_name
-        }
+        row = {name: value for (name, value) in TEST_CSV_ROW.items() if name != field_name}
         do_error_test(
             mocker,
             model_name=MODEL_NAME,
