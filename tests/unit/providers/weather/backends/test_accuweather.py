@@ -1101,7 +1101,6 @@ async def test_get_weather_report_with_partial_cache_hits(
     accuweather_current_conditions_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
     accuweather_location_key: str,
-    response_header: dict[str, str],
 ) -> None:
     """Test that we can get the weather report with partial cache hits."""
     redis_client = await redis_container.get_async_client()
@@ -1222,7 +1221,6 @@ async def test_get_weather_report_via_location_key_with_partial_cache_hits(
     accuweather_current_conditions_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
     accuweather_location_key: str,
-    response_header: dict[str, str],
 ) -> None:
     """Test that we can get the weather report with partial cache hits."""
     redis_client = await redis_container.get_async_client()
