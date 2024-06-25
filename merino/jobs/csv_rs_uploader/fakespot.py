@@ -7,6 +7,7 @@ from typing import cast
 from pydantic import HttpUrl, field_validator
 
 from merino.config import settings
+from merino.utils.blocklists import FAKESPOT_CSV_UPLOADER_BLOCKLIST
 from merino.jobs.csv_rs_uploader.row_major_base import RowMajorBaseSuggestion
 
 
@@ -22,6 +23,18 @@ class Suggestion(RowMajorBaseSuggestion):
     total_reviews: int
     url: HttpUrl
     score: float
+
+    @classmethod
+    def csv_to_suggestions(cls, csv_reader) -> list["Suggestion"]:
+        """Convert CSV content to Suggestions.
+
+        Override the base method to filter out items using the blocklist.
+        """
+        return [
+            suggestion
+            for suggestion in super().csv_to_suggestions(csv_reader)
+            if suggestion.product_id not in FAKESPOT_CSV_UPLOADER_BLOCKLIST
+        ]
 
     @classmethod
     def default_collection(cls) -> str:

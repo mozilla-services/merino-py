@@ -14,3 +14,5 @@ TOP_PICKS_BLOCKLIST: set[str] = {
     "draftkings",
     "internalfb",
 }
+
+FAKESPOT_CSV_UPLOADER_BLOCKLIST: set[str] = set()

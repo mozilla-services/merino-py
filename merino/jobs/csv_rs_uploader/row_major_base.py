@@ -2,6 +2,8 @@
 the output JSON.
 """
 
+from typing import Self
+
 from merino.jobs.csv_rs_uploader import MissingFieldError
 from merino.jobs.csv_rs_uploader.base import BaseSuggestion
 
@@ -12,7 +14,7 @@ class RowMajorBaseSuggestion(BaseSuggestion):
     """
 
     @classmethod
-    def csv_to_suggestions(cls, csv_reader) -> list[BaseSuggestion]:
+    def csv_to_suggestions(cls, csv_reader) -> list[Self]:
         """Convert row-major based CSV content to Suggestions."""
         field_map = cls.row_major_field_map()
         suggestions: list = []
