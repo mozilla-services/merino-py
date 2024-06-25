@@ -28,10 +28,6 @@ ruff-lint: $(INSTALL_STAMP)  ##  Run ruff linting
 ruff-fmt: $(INSTALL_STAMP)  ##  Run ruff format checker
 	$(POETRY) run ruff format --check $(APP_AND_TEST_DIRS)
 
-.PHONY: ruff-doc
-ruff-doc: $(INSTALL_STAMP)  ##  Run ruff docstrings
-	$(POETRY) run ruff check --select D --ignore D105,D107,D203,D205,D400 $(APP_AND_TEST_DIRS) 
-
 .PHONY: ruff-format
 ruff-format: $(INSTALL_STAMP)  ##  Run ruff format
 	$(POETRY) run ruff format $(APP_AND_TEST_DIRS)
@@ -45,7 +41,7 @@ mypy: $(INSTALL_STAMP)  ##  Run mypy
 	$(POETRY) run mypy $(APP_AND_TEST_DIRS) --config-file="pyproject.toml"
 
 .PHONY: lint
-lint: $(INSTALL_STAMP) ruff-lint ruff-fmt ruff-doc bandit mypy ##  Run various linters
+lint: $(INSTALL_STAMP) ruff-lint ruff-fmt bandit mypy ##  Run various linters
 
 .PHONY: format
 format: $(INSTALL_STAMP)  ##  Sort imports and reformat code

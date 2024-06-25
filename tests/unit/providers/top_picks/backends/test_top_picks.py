@@ -140,7 +140,9 @@ def mock_gcs_client(mocker: MockerFixture, gcs_bucket_mock):
     return mock_client
 
 
-def test_init_failure_no_domain_file(top_picks_backend_parameters: dict[str, Any]) -> None:
+def test_init_failure_no_domain_file(
+    top_picks_backend_parameters: dict[str, Any],
+) -> None:
     """Test exception handling for the __init__() method when no domain file provided."""
     top_picks_backend_parameters["top_picks_file_path"] = None
     with pytest.raises(ValueError):

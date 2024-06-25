@@ -10,12 +10,12 @@ class NoCacheAdapter:  # pragma: no cover
     async def get(self, key: str) -> bytes | None:  # noqa: D102
         return None
 
-    async def set(
+    async def set(  # noqa: D102
         self,
         key: str,
         value: bytes | str,
         ttl: timedelta | None = None,
-    ) -> None:  # noqa: D102
+    ) -> None:
         pass
 
     async def close(self) -> None:  # noqa: D102

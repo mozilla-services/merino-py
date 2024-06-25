@@ -15,16 +15,14 @@ logger = logging.getLogger(__name__)
 class Condition(Protocol):
     """Check whether the cron task should run."""
 
-    def __call__(self) -> bool:  # pragma: no cover
-        # noqa: D102
+    def __call__(self) -> bool:  # pragma: no cover # noqa: D102
         ...
 
 
 class Task(Protocol):
     """Task for the cron job."""
 
-    async def __call__(self) -> None:  # pragma: no cover
-        # noqa: D102
+    async def __call__(self) -> None:  # pragma: no cover # noqa: D102
         ...
 
 
@@ -42,8 +40,7 @@ class Job:
         self.condition = condition
         self.task = task
 
-    async def __call__(self) -> None:
-        # noqa: D102
+    async def __call__(self) -> None:  # noqa: D102
         last_tick: float = time.time()
 
         while True:
