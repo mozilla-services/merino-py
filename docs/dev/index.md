@@ -38,9 +38,6 @@ $ make ruff-lint
 # Run format checker
 $ make ruff-fmt
 
-# Run doc checker
-$ make ruff-doc
-
 # Run formatter
 $ make ruff-format
 
