@@ -1,0 +1,888 @@
+{
+  "data": {
+    "scheduledSurface": {
+      "items": [
+        {
+          "id": "de614b6b-6df6-470a-97f2-30344c56c1b3",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-brownies-and-cakes",
+            "title": "Milk Powder Is the Key to Better Cookies, Brownies, and Cakes",
+            "excerpt": "Consider this pantry staple your secret ingredient for making more flavorful desserts.",
+            "topic": "FOOD",
+            "publisher": "Epicurious",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg"
+          }
+        },
+        {
+          "id": "50f86ebe-3f25-41d8-bd84-53ead7bdc76e",
+          "corpusItem": {
+            "url": "https://www.themarginalian.org/2024/05/28/passenger-pigeon/",
+            "title": "Thunder, Bells, and Silence: the Eclipse That Went Extinct",
+            "excerpt": "Juneteenth isn’t the “other” Independence Day, it is THE Independence Day.",
+            "topic": "CAREER",
+            "publisher": "The Marginalian",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/87fd6901-5bf5-4b12-8bde-24b86be79003.jpeg"
+          }
+        },
+        {
+          "id": "1452b7ea-7ba9-4da9-ba39-ab44e8147d5e",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/other-countries-have-social-safety-nets-the-u-s-has-women",
+            "title": "“Other Countries Have Social Safety Nets. The U.S. Has Women.”",
+            "excerpt": "Anne Helen Petersen and Jessica Calarco discuss how mothers are experiencing and responding to pandemic-related disruptions in their normal routines.",
+            "topic": "PARENTING",
+            "publisher": "Culture Study",
+            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/3a4a6ed6-a1df-497d-8d31-f777534806ac.jpeg"
+          }
+        },
+        {
+          "id": "8c9cfea8-8bb8-4197-bcfc-bbd574c5b796",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/what-s-it-like-working-in-a-ghost-kitchen-we-couldn-t-get-close-enough-to-ask",
+            "title": "What’s It Like Working in a Ghost Kitchen? We Couldn’t Get Close Enough to Ask.",
+            "excerpt": "Your burger or tacos or pizza could be cooked anywhere by anyone — which is what makes the ghost kitchen concept so lucrative and appealing to owners and investors.",
+            "topic": "BUSINESS",
+            "publisher": "Eater",
+            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/f5d9c5ff-aaa2-4c2a-ab2b-661f84126bf7.jpeg"
+          }
+        },
+        {
+          "id": "3068efb0-1706-4fc0-bde3-955257069fcb",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/she-was-headed-to-a-locked-psych-ward-then-an-er-doctor-made-a-startling-discovery",
+            "title": "She Was Headed to a Locked Psych Ward. Then an ER Doctor Made a Startling Discovery.",
+            "excerpt": "A physician’s gut instinct about a young woman led to a diagnosis that had been overlooked for years.",
+            "topic": "SCIENCE",
+            "publisher": "The Washington Post",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/93b368a5-a663-4d25-83e8-e2de4adbfea8.jpeg"
+          }
+        },
+        {
+          "id": "07cf47e4-f458-458b-87dc-7535e4b45315",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/what-happens-to-your-body-when-you-take-a-sip-of-caffeine",
+            "title": "What Happens to Your Body When You Take a Sip of Caffeine",
+            "excerpt": "We explain the biological changes that begin with your morning tea or coffee.",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "The Telegraph",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2aaffb04-80e0-4008-95af-7c65a213d191.jpeg"
+          }
+        },
+        {
+          "id": "08898f33-254f-4a33-84a2-8ff9c9d685a3",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/the-21-best-skin-care-tips-of-all-time-according-to-dermatologists",
+            "title": "The 21 Best Skin-Care Tips of All Time, According to Dermatologists",
+            "excerpt": "These aren’t your run-of-the-mill skin-care tricks. Here, the experts share the rules they’ve learned and recommended throughout their careers.",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "Allure",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/27386d38-3513-485c-8872-6f3d2c0ec5c8.jpeg"
+          }
+        },
+        {
+          "id": "c5a32bb6-0c16-438b-8bc8-5422f314326a",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/29-flowers-that-are-sure-to-attract-butterflies-to-your-yard",
+            "title": "29 Flowers That Are Sure to Attract Butterflies to Your Yard",
+            "excerpt": "Plant these beautiful blooms and watch butterflies flock to your garden.",
+            "topic": "SCIENCE",
+            "publisher": "Country Living",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7aaf09a4-b794-4455-b724-315c897b82cc.jpeg"
+          }
+        },
+        {
+          "id": "5695fe90-9177-41d4-a778-e1e2d08a962b",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/stuffed-peppers",
+            "title": "Stuffed Peppers",
+            "excerpt": "It’s almost like peppers were made to be stuffed with meat and cheese.",
+            "topic": "FOOD",
+            "publisher": "Delish",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/11249bb8-7d46-4f54-aca5-e7861669734b.jpeg"
+          }
+        },
+        {
+          "id": "b9c59c9c-c51e-4614-8a3a-a0b116fe2368",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/inside-the-world-s-most-beloved-independent-bookstores",
+            "title": "Inside the World’s Most Beloved Independent Bookstores",
+            "excerpt": "In the age of Amazon and e-books, these bookstores have faced more challenges than ever, but many have been able to persevere and remain treasured parts of their communities.",
+            "topic": "TRAVEL",
+            "publisher": "Architectural Digest",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/52ebb1c9-3834-4378-812f-0bfcd2529357.jpeg"
+          }
+        },
+        {
+          "id": "20abed2a-4067-4c92-9970-887cb02959d8",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/the-lesser-known-history-of-african-american-cowboys",
+            "title": "The Lesser-Known History of African-American Cowboys",
+            "excerpt": "One in four cowboys was black. So why aren’t they more present in popular culture?",
+            "topic": "EDUCATION",
+            "publisher": "Smithsonian Magazine",
+            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/4b1e272f-dd05-4678-939d-22fbd6bde5e7.jpeg"
+          }
+        },
+        {
+          "id": "87100ddc-a391-4f93-8963-78b7bd91d811",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/would-you-go-public-with-your-plastic-surgery",
+            "title": "Would You Go Public With Your Plastic Surgery?",
+            "excerpt": "We’ve gone from denying Botox to celebrating our face-lifts. Welcome to the new era of living out loud.",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "Town & Country Magazine",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/da9b38c6-2e48-4938-bf87-85a60bf85190.jpeg"
+          }
+        },
+        {
+          "id": "58306b4f-b3ba-4312-bf88-790de429b290",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/the-war-vet-the-dating-site-and-the-phone-call-from-hell",
+            "title": "The War Vet, the Dating Site, and the Phone Call From Hell",
+            "excerpt": "Jared Johns found out too late that swapping messages with the pretty girl from a dating site would mean serious trouble. If only he had known who she really was.",
+            "topic": "TECHNOLOGY",
+            "publisher": "WIRED",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/66ce2845-c410-48d2-b1df-450e69177692.jpeg"
+          }
+        },
+        {
+          "id": "61a5e774-cc55-416c-b0d5-505dbdf54a9a",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/6-myths-about-the-history-of-black-people-in-america",
+            "title": "6 Myths About the History of Black People in America",
+            "excerpt": "Six historians weigh in on the biggest misconceptions about Black history, including the Tuskegee experiment and enslaved people’s finances.",
+            "topic": "EDUCATION",
+            "publisher": "Vox",
+            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/c03326d1-bbfd-4654-a9db-ac431757b9f6.jpeg"
+          }
+        },
+        {
+          "id": "6c9a5e6f-13f0-42f9-8b3e-2127a9db46a8",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/why-teenagers-aren-t-what-they-used-to-be",
+            "title": "Why Teenagers Aren’t What They Used to Be",
+            "excerpt": "Here’s how we’ve defined adolescence throughout history - and why it’s time for a new category.",
+            "topic": "EDUCATION",
+            "publisher": "BBC Future",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1f11fb0d-3f0c-46a7-a667-cc2fcea6334e.jpeg"
+          }
+        },
+        {
+          "id": "3dc5ba73-4081-409f-b4de-bec89e879d5a",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/why-rumination-is-keeping-you-up-at-night-and-how-to-beat-it-for-better-sleep",
+            "title": "Why Rumination Is Keeping You Up at Night – And How to Beat It for Better Sleep",
+            "excerpt": "Do you find yourself dwelling on the same worries, memories or regrets when you’re trying to drift off to sleep? Here’s how to break out of the rumination cycle.",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "Stylist",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0421cd6c-4e2a-4d98-b648-040c1bf50ea1.jpeg"
+          }
+        },
+        {
+          "id": "058336bf-40ed-4cf5-9edc-c56d42edcf0b",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/workout-motivation-the-overjustification-effect-might-explain-why-you-don-t-want-to-exercise",
+            "title": "The Overjustification Effect Might Explain Why You Don’t Want to Exercise",
+            "excerpt": "The psychological phenomenon known as the overjustification effect explains why extrinsic motivation isn’t getting you to the gym.",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "Stylist",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/043fc6f9-733a-4cc5-9539-0a98ba8266ba.jpeg"
+          }
+        },
+        {
+          "id": "5ce949bd-3bc9-4b07-9eb8-ffc42d2ef5b8",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/the-first-self-proclaimed-drag-queen-was-a-formerly-enslaved-man",
+            "title": "The First Self-Proclaimed Drag Queen Was a Formerly Enslaved Man",
+            "excerpt": "In the late 19th century, William Dorsey Swann’s private parties attracted unwelcome attention from authorities and the press.",
+            "topic": "POLITICS",
+            "publisher": "Smithsonian Magazine",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/df6d9089-b587-468c-a976-1f2f4eb104a7.jpeg"
+          }
+        },
+        {
+          "id": "5309b7dd-ae95-4fee-bc36-3b02aab6c7aa",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/we-asked-experts-whether-cooling-bedding-works-here-s-what-they-said",
+            "title": "We Asked Experts Whether Cooling Bedding Works. Here’s What They Said.",
+            "excerpt": "A look at the dizzying array of mattresses, bedding and gadgets designed to keep you from overheating at night",
+            "topic": "PERSONAL_FINANCE",
+            "publisher": "The Washington Post",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0177bba1-9597-4a0a-a6e1-1747a85eea93.jpeg"
+          }
+        },
+        {
+          "id": "97e52d23-aac7-4d75-b20e-a76d8e5a297a",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/biden-and-trump-may-forget-names-or-personal-details-but-here-is-what-really-matters-in-assessing",
+            "title": "Here’s What Really Matters When Assessing Trump or Biden’s Cognitive Abilities",
+            "excerpt": "Decision-making abilities are critical to a president’s performance.",
+            "topic": "POLITICS",
+            "publisher": "The Conversation",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ad9da37b-4375-4851-9fe4-5eef105dfb9a.jpeg"
+          }
+        },
+        {
+          "id": "1134669c-3ab8-4f68-8514-4e2ec9c0b4b1",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/worried-about-sending-your-baby-to-daycare-our-research-shows-they-like-being-in-groups",
+            "title": "Worried About Sending Your Baby to Daycare? Research Shows They Like Being in Groups",
+            "excerpt": "Babies as young as six months respond to and enjoy being in groups with other babies.",
+            "topic": "PARENTING",
+            "publisher": "The Conversation",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b9182b66-5398-4fe2-a95d-8b9a46e5a05d.jpeg"
+          }
+        },
+        {
+          "id": "686ce029-4e50-4b29-ba13-ad799e77e383",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/a-hot-drink-on-a-hot-day-can-cool-you-down",
+            "title": "A Hot Drink on a Hot Day Can Cool You Down",
+            "excerpt": "A rigorous experiment revealed that on a hot, dry day, drinking a hot beverage can help your body stay cool.",
+            "topic": "FOOD",
+            "publisher": "Smithsonian Magazine",
+            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/968a6566-df7a-4f7d-aefd-8678853544b1.jpeg"
+          }
+        },
+        {
+          "id": "1cdcbb73-8dfb-4747-af33-553305ed48b2",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/new-orleans-tree-survey-shows-ongoing-effects-of-hurricane-katrina",
+            "title": "What’s Happening to the Trees in New Orleans?",
+            "excerpt": "The Louisiana city has struggled to rebuild its tree canopy, devastated by storms and neglect. But an influx of federal aid and a new reforestation plan could offer hope.",
+            "topic": "SCIENCE",
+            "publisher": "CityLab",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1e4ad4d9-f33c-4d83-b8de-31aac076e35e.jpeg"
+          }
+        },
+        {
+          "id": "f8cd199d-9673-40cc-bf65-c5013d220335",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/car-ownership-maintenance-repairs-detailing-car-care",
+            "title": "How to Repair, Maintain, and Care for Your Car",
+            "excerpt": "Here are the repair, maintenance, and car-care tips you need to know to keep your ride in top shape for years to come.",
+            "topic": "PERSONAL_FINANCE",
+            "publisher": "Car and Driver",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c5f5b8db-3798-4460-8185-41b26eac7ce6.jpeg"
+          }
+        },
+        {
+          "id": "dda48992-ebc7-4f26-93b6-9d38ab2fbb3f",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/advice-on-handling-a-toxic-co-worker",
+            "title": "Advice on Handling a Toxic Co-worker",
+            "excerpt": "What to do when there’s a toxic employee and the CEO or president is ignoring it.",
+            "topic": "CAREER",
+            "publisher": "Bloomberg Businessweek",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/67e39fa6-2ce9-4da9-be6e-95fdbfa08bcf.jpeg"
+          }
+        },
+        {
+          "id": "00a1e79e-5921-40d1-b4b8-8ae390dda552",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/why-is-it-so-hard-for-black-creators-to-get-their-due",
+            "title": "Why Is It So Hard for Black Creators to Get Their Due?",
+            "excerpt": "Ever since the TikTok “dance strike,” Black dancers looking for credit and compensation from social media face a complicated landscape.",
+            "topic": "ENTERTAINMENT",
+            "publisher": "Rolling Stone",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a47f7e6e-408c-449d-866d-00e36070b672.jpeg"
+          }
+        },
+        {
+          "id": "5d2cdda4-e4bf-48be-9eb4-dea33828b1f5",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/the-army-of-women-who-took-down-larry-nassar",
+            "title": "The Army of Women Who Took Down Larry Nassar",
+            "excerpt": "One woman spoke out, another listened. That helped put an end to the abuse that lasted for more than 20 years. Meet the survivors, detective, attorney, and judge who told the world: Believe women.",
+            "topic": "SPORTS",
+            "publisher": "Glamour",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b604bf49-89b5-491a-8542-b2aa7a7950e6.jpeg"
+          }
+        },
+        {
+          "id": "cb1aced0-07f2-4cac-945b-a4cf8d69b390",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/true-kilts-debunking-the-myths-about-highlanders-and-clan-tartans",
+            "title": "True Kilts: Debunking the Myths About Highlanders and Clan Tartans",
+            "excerpt": "You might assume the clan tartans seen on kilts are several millennia old. You would be wrong.",
+            "topic": "EDUCATION",
+            "publisher": "Collectors Weekly",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7658ea46-a487-4afd-8306-44a7477b424a.jpeg"
+          }
+        },
+        {
+          "id": "cc4bd2a0-af90-4b50-9eda-05d935960c62",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/here-s-how-to-jump-start-a-car-without-cables",
+            "title": "Here’s How to Jump Start a Car Without Cables",
+            "excerpt": "This is one instance you don’t want to channel Angus “Mac” MacGyver.",
+            "topic": "TECHNOLOGY",
+            "publisher": "The Drive",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fe2764c9-a3b1-47f4-bc30-2f2b22ef6304.jpeg"
+          }
+        },
+        {
+          "id": "be1c7b5f-f2f2-4827-b0b0-4e18160a6704",
+          "corpusItem": {
+            "url": "https://www.context.news/ai/african-techies-develop-ai-language-tools-from-swahili-to-zulu",
+            "title": "From Swahili to Zulu, African Techies Develop AI Language Tools",
+            "excerpt": "African techies pioneer AI tools in local languages to bridge the digital divide but data scarcity, ethical concerns are challenges",
+            "topic": "TECHNOLOGY",
+            "publisher": "Context",
+            "imageUrl": "https://ddc514qh7t05d.cloudfront.net/dA/0f6290ca16a4952dac171747534209b5/1200w/Jpeg"
+          }
+        },
+        {
+          "id": "f6717587-9db6-491c-ba44-3e090591c290",
+          "corpusItem": {
+            "url": "https://www.axios.com/2024/06/16/parenting-father-time-nurture-book-sarah-hrdy",
+            "title": "Dads’ Nurturing Nature",
+            "excerpt": "Fathers are relatively new scientific subjects.",
+            "topic": "PARENTING",
+            "publisher": "Axios",
+            "imageUrl": "https://images.axios.com/1dNeIXqBMs40MPXo4qydevDYxok=/0x0:1920x1080/1366x768/2024/06/13/1718299823754.jpg"
+          }
+        },
+        {
+          "id": "2e7f5cdb-6eda-45ce-9fb9-eca7ab1114de",
+          "corpusItem": {
+            "url": "https://www.newyorker.com/sports/sporting-scene/the-mental-challenge-of-winning-the-nba-finals",
+            "title": "The Mental Challenge of Winning the N.B.A. Finals",
+            "excerpt": "Four games between the Boston Celtics and Dallas Mavericks have mostly come down to talent and strategy. But the mind-set of the players matters, too.",
+            "topic": "SPORTS",
+            "publisher": "The New Yorker",
+            "imageUrl": "https://media.newyorker.com/photos/666c732fc62d3122265f82a3/16:9/w_1280,c_limit/Thomas-Sporting-Scene1.jpg"
+          }
+        },
+        {
+          "id": "aeeba41e-41df-44ac-9c6f-224bbb9b60e7",
+          "corpusItem": {
+            "url": "https://www.sportico.com/feature/mlb-betting-gambling-rules-1234784194/",
+            "title": "MLB’s Rules on Gambling: What Happens When Players Bet?",
+            "excerpt": "Padres prospect Tucupita Marcano was recently given a lifetime ban by MLB for betting on baseball games when he was playing with the Pirates.",
+            "topic": "SPORTS",
+            "publisher": "Sportico",
+            "imageUrl": "https://www.sportico.com/wp-content/uploads/2024/06/GettyImages-1526423533-e1718382312742.jpg?w=1024"
+          }
+        },
+        {
+          "id": "4d271e4b-5207-4711-a341-6f792ce6e1c7",
+          "corpusItem": {
+            "url": "https://www.popsci.com/diy/how-to-share-eta-google-maps-apple-maps/",
+            "title": "How to Share Your ETA in Google Maps or Apple Maps",
+            "excerpt": "Let other people know when you’re going to show up while traveling. Whether you use Google, Apple, or another navigation app.",
+            "topic": "TECHNOLOGY",
+            "publisher": "Popular Science",
+            "imageUrl": "https://www.popsci.com/wp-content/uploads/2024/06/share-ETA-on-google-and-apple-maps.jpg"
+          }
+        },
+        {
+          "id": "d6a65829-3e17-4f10-a1e2-25051e081e56",
+          "corpusItem": {
+            "url": "https://www.theguardian.com/music/article/2024/jun/16/john-cale-poptical-illusion-lou-reed-aaron-copland",
+            "title": "‘Hip-hop is the new avant garde’: John Cale on Lou Reed, anger and continual reinvention",
+            "excerpt": "He made rock history with the Velvet Underground and produced landmark albums for the likes of Patti Smith. At 82, his 18th solo outing proves he’s still at the bleeding edge",
+            "topic": "ENTERTAINMENT",
+            "publisher": "The Observer ",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c1164543-b082-4d66-afa1-71d913ab9fc4.jpeg"
+          }
+        },
+        {
+          "id": "deebdca8-6fae-41a9-89b7-673dfd99a30e",
+          "corpusItem": {
+            "url": "https://www.billboard.com/pro/production-libraries-licensing-ai-companies-threaten-business/",
+            "title": "Production Libraries Are Licensing to AI Companies. Could It Threaten Their Whole Business?",
+            "excerpt": "The $1 billion production music business has begun licensing its works to AI companies. Could it spell the end of the business as a whole?",
+            "topic": "TECHNOLOGY",
+            "publisher": "Billboard",
+            "imageUrl": "https://www.billboard.com/wp-content/uploads/2024/05/ai-music-robot-2024-billboard-pro-1260.jpg?w=1024"
+          }
+        },
+        {
+          "id": "b5b87f0d-30e9-41cd-8cc3-a885d303b9f1",
+          "corpusItem": {
+            "url": "https://www.si.com/olympics/colts-nfl-stadium-transformed-into-a-swimming-pool-for-us-olympic-trials",
+            "title": "How an NFL Stadium Transformed Into a Swimming Pool for U.S. Olympic Trials",
+            "excerpt": "It’s so huge you can’t smell the chlorine.",
+            "topic": "SPORTS",
+            "publisher": "Sports Illustrated",
+            "imageUrl": "https://images2.minutemediacdn.com/image/upload/c_crop,w_6823,h_3837,x_0,y_210/c_fill,w_1440,ar_16:9,f_auto,q_auto,g_auto/images/ImagnImages/mmsport/si/01j08xqehhmtemqqfxz4.jpg"
+          }
+        },
+        {
+          "id": "e16545a8-7c83-49ad-80e1-ee8407721281",
+          "corpusItem": {
+            "url": "https://www.fastcompany.com/91139325/is-psychological-safety-being-weaponized",
+            "title": "Is Psychological Safety Being Weaponized?",
+            "excerpt": "How leaders can take actionable steps to turn psychological safety from a misguided weapon to a powerful tool.",
+            "topic": "CAREER",
+            "publisher": "Fast Company",
+            "imageUrl": "https://images.fastcompany.com/image/upload/f_auto,q_auto,c_fit,w_1024,h_1024/wp-cms-2/2024/06/p-91139325-Is-psychological-safety-being-weaponized.jpg"
+          }
+        },
+        {
+          "id": "284f1e4f-c792-49db-9c66-bb7acd97106a",
+          "corpusItem": {
+            "url": "https://www.esquire.com/style/big-black-book-summer-2024/a60873213/albert-muzquiz-edgy-mens-fashion-style-interview/",
+            "title": "Edgy Albert Is the New Voice of Style on Social Media",
+            "excerpt": "Getting philosophical with the menswear’s favorite Instagram and TikTok star, Albert Muzquiz.",
+            "topic": "ENTERTAINMENT",
+            "publisher": "Esquire",
+            "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/jm-esquire-edgy-albert-11-001-664fbbbeca45e.jpg?crop=1.00xw:0.334xh;0,0.0326xh&resize=640:*"
+          }
+        },
+        {
+          "id": "8f9001be-60d0-4d48-8875-06da18f0fc24",
+          "corpusItem": {
+            "url": "https://www.newyorker.com/magazine/2024/06/24/the-era-of-the-line-cook",
+            "title": "The Era of the Line Cook",
+            "excerpt": "In a dinner series called the Line Up, line cooks, sous-chefs, and chefs de cuisine from buzzy New York restaurants get to be executive chefs for a night.",
+            "topic": "FOOD",
+            "publisher": "The New Yorker",
+            "imageUrl": "https://media.newyorker.com/photos/666b2a7efa7b62b11e4ea308/16:9/w_1280,c_limit/r44443_rd.jpg"
+          }
+        },
+        {
+          "id": "ebe2bd62-3092-4237-829f-f2cf67ec6ee0",
+          "corpusItem": {
+            "url": "https://www.newyorker.com/books/under-review/a-new-book-about-plant-intelligence-highlights-the-messiness-of-scientific-change",
+            "title": "A New Book About Plant Intelligence Highlights the Messiness of Scientific Change",
+            "excerpt": "In “The Light Eaters,” by Zoë Schlanger, the field of botany itself functions as a character—one in the process of undergoing a potentially radical transformation.",
+            "topic": "SCIENCE",
+            "publisher": "The New Yorker",
+            "imageUrl": "https://media.newyorker.com/photos/666736f33d68093e808d34c1/16:9/w_1280,c_limit/Riederer_Plants.jpg"
+          }
+        },
+        {
+          "id": "2ada37c2-03d9-4905-adda-01809f1f4b5e",
+          "corpusItem": {
+            "url": "https://www.esquire.com/style/big-black-book-summer-2024/a60872988/summer-shoes-from-around-the-world/",
+            "title": "7 Summer Shoes From Around the World to Add to Your Rotation",
+            "excerpt": "Tired of the same old sandals and slip-ons? Try one of these picks from a few of the balmiest—and most stylish—spots on Earth.",
+            "topic": "ENTERTAINMENT",
+            "publisher": "Esquire",
+            "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/esq060199digbbbshoes-001-664fa3f1556e9.jpg?crop=1.00xw:0.873xh;0,0.0737xh&resize=640:*"
+          }
+        },
+        {
+          "id": "8fc9e19e-3095-4d68-b31d-d8316cd02668",
+          "corpusItem": {
+            "url": "https://www.theatlantic.com/international/archive/2024/06/thitu-island-south-china-sea-tension/678692/",
+            "title": "Between a Rock and a Hard Place in the South China Sea",
+            "excerpt": "A remote outpost of the Philippines in the South China Sea is on the front line of potential geopolitical conflict.",
+            "topic": "POLITICS",
+            "publisher": "The Atlantic",
+            "imageUrl": "https://cdn.theatlantic.com/thumbor/P6m-sR0G-YAB0sGbvHO4tGqflnY=/0x43:2000x1085/1200x625/media/img/mt/2024/06/Quiambao_1/original.jpg"
+          }
+        },
+        {
+          "id": "e7cb5af5-432f-49f1-86d1-5c09b8bb1c4c",
+          "corpusItem": {
+            "url": "https://www.theatlantic.com/newsletters/archive/2024/06/an-all-american-hot-dog-controversy/678705/",
+            "title": "An All-American Hot-Dog Controversy",
+            "excerpt": "What happens when you combine franks, the Fourth of July, a sponsorship dispute, and a Netflix special?",
+            "topic": "ENTERTAINMENT",
+            "publisher": "The Atlantic",
+            "imageUrl": "https://cdn.theatlantic.com/thumbor/nX_7zXMqBrC47-fwu8YHvuvzgt8=/8x722:5759x3717/1200x625/media/img/mt/2024/06/GettyImages_991477622/original.jpg"
+          }
+        },
+        {
+          "id": "5e0c3a40-d633-4a5b-8e5c-ef3af36731ce",
+          "corpusItem": {
+            "url": "https://www.elle.com/culture/movies-tv/a61061462/olivia-cooke-house-of-the-dragon-season-2-interview/",
+            "title": "Olivia Cooke Can Do It All",
+            "excerpt": "Olivia Cooke talks to ELLE.com about Alicent’s journey in “House of the Dragon” season 2, Rhaenicent, and going viral.",
+            "topic": "ENTERTAINMENT",
+            "publisher": "Elle",
+            "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/elm060124cooke-dig-01-666b1011d1665.jpg?crop=0.811xw:0.326xh;0,0.0664xh&resize=640:*"
+          }
+        },
+        {
+          "id": "c3c7dbab-65e7-4cc2-a927-79b657fe6ac5",
+          "corpusItem": {
+            "url": "https://aeon.co/essays/why-intelligence-exists-only-in-the-eye-of-the-beholder",
+            "title": "What Is Intelligent Life?",
+            "excerpt": "Our human minds hold us back from truly understanding the many brilliant ways that other creatures solve their problems",
+            "topic": "SCIENCE",
+            "publisher": "Aeon",
+            "imageUrl": "https://images.aeonmedia.co/images/4a96e2d9-5ee7-4765-8325-8192d0757e0e/essay-final-naturepl_01590112.jpg?width=1200&quality=75&format=auto"
+          }
+        },
+        {
+          "id": "36a340f7-fde8-4b88-9a6f-65849969b934",
+          "corpusItem": {
+            "url": "https://www.theguardian.com/lifeandstyle/article/2024/jun/14/its-feeding-time-why-plants-need-more-than-sunlight-and-water-to-thrive",
+            "title": "It’s Feeding Time: Why Plants Need More Than Sunlight and Water to Thrive",
+            "excerpt": "With warmer weather comes an explosion of growth – so make sure your plants get the ingredients they need to sustain it",
+            "topic": "FOOD",
+            "publisher": "The Guardian",
+            "imageUrl": "https://i.guim.co.uk/img/media/f90b3add281715b54d9d42f458f0a5e0ba1e2239/0_89_5138_3083/master/5138.jpg?width=1200&height=630&quality=85&auto=format&fit=crop&overlay-align=bottom%2Cleft&overlay-width=100p&overlay-base64=L2ltZy9zdGF0aWMvb3ZlcmxheXMvdGctZGVmYXVsdC5wbmc&enable=upscale&s=04aa577b776edbc76ce15ab86a70453d"
+          }
+        },
+        {
+          "id": "67615b99-1b3e-47ff-a533-56b4ad2320d4",
+          "corpusItem": {
+            "url": "https://psyche.co/ideas/grief-is-not-a-process-with-five-stages-it-is-shattered-glass",
+            "title": "Grief Is Not a Process With Five Stages. It Is Shattered Glass",
+            "excerpt": "The five stages describe a grief that’s knowable and controlled. An accident in my kitchen helped me find a truer metaphor",
+            "topic": "EDUCATION",
+            "publisher": "Psyche",
+            "imageUrl": "https://images.aeonmedia.co/images/1aee7ed4-e453-437e-bf2a-85ac3aad8a3c/rt-final-gettyimages-820481530.jpg"
+          }
+        },
+        {
+          "id": "d80675e6-85ac-4fa2-956a-d6e38cfb2d6f",
+          "corpusItem": {
+            "url": "https://knowablemagazine.org/content/article/food-environment/2024/the-scientific-mission-to-save-the-sharks",
+            "title": "A Scientific Mission to Save the Sharks",
+            "excerpt": "Despite increasing protection measures, these fish are among the world’s most endangered animals. New tests to detect species being traded, as well as population studies, aim to help save them.",
+            "topic": "SCIENCE",
+            "publisher": "Knowable Magazine",
+            "imageUrl": "https://knowablemagazine.org/docserver/fulltext/shark-fin-trade-2-1600x600.jpg"
+          }
+        },
+        {
+          "id": "8d94e4fa-2893-4404-8e38-a057ee303d61",
+          "corpusItem": {
+            "url": "https://19thnews.org/2024/06/this-cartoonist-wants-to-tell-the-complicated-history-of-womens-voting-rights/",
+            "title": "This Cartoonist Wants to Tell the Complicated History of Women’s Voting Rights",
+            "excerpt": "In her new nonfiction graphic book, Caitlin Cass unpacks the active role that some White women played in suppressing voting rights for all — and the lessons today in the ongoing fight for universal ballot access.",
+            "topic": "POLITICS",
+            "publisher": "The 19th",
+            "imageUrl": "https://19thnews.org/wp-content/uploads/2024/06/caitlin-cass-book-1.jpg"
+          }
+        },
+        {
+          "id": "03662fe5-54a1-4fe7-95a5-e4a33a47ecc3",
+          "corpusItem": {
+            "url": "https://www.technologyreview.com/2024/06/13/1093375/gamification-behaviorism-npcs-video-games/",
+            "title": "How Gamification Took Over the World",
+            "excerpt": "Gamification was always just behaviorism dressed up in pixels and point systems. Why did we fall for it?",
+            "topic": "GAMING",
+            "publisher": "MIT Technology Review",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f37feac7-4386-457b-9c83-1c330c6eaeaf.jpeg"
+          }
+        },
+        {
+          "id": "2a463366-608e-4a7d-ae00-35c25daf491b",
+          "corpusItem": {
+            "url": "https://www.wired.com/story/film-photography-beginners-guide/",
+            "title": "Analog Photography: the Beginner’s Guide to Film Cameras",
+            "excerpt": "Which film camera should you get? Which films are the best? We demystify the world of analog photography to help you get started.",
+            "topic": "TECHNOLOGY",
+            "publisher": "WIRED",
+            "imageUrl": "https://media.wired.com/photos/665de99d4cef22c35a95a789/191:100/w_1280,c_limit/Film-Camera-Guide-collage-062024-SOURCE-Scott-Gilbertson.jpg"
+          }
+        },
+        {
+          "id": "5576778c-1074-40d3-a109-f4a60cd46e8c",
+          "corpusItem": {
+            "url": "https://www.npr.org/2024/06/14/g-s1-4570/a-major-disinformation-research-teams-future-is-uncertain-after-political-attacks",
+            "title": "A Major Disinformation Research Team’s Future Is Uncertain After Political Attacks",
+            "excerpt": "The Stanford Internet Observatory studied how social media platforms are abused. Now, its top leaders are out and future funding is uncertain amid attacks on its work by conservatives.",
+            "topic": "POLITICS",
+            "publisher": "NPR",
+            "imageUrl": "https://npr.brightspotcdn.com/dims3/default/strip/false/crop/3000x1688+0+120/resize/1400/quality/100/format/jpeg/?url=http%3A%2F%2Fnpr-brightspot.s3.amazonaws.com%2F19%2F5d%2F256e4ff34f41902592a5899ba29e%2Fgettyimages-490832273.jpg"
+          }
+        },
+        {
+          "id": "711852d1-329b-47e4-b693-3c037bba73e0",
+          "corpusItem": {
+            "url": "https://www.thetakeout.com/1581701/fridge-russia-milk-fresh-frogs/",
+            "title": "Before Fridges, Russians Used to Keep Their Milk Fresh With Frogs",
+            "excerpt": "Letting an amphibian take up residence in your dairy products may not seem like a good idea, but believe it or not ... it works! Here’s why.",
+            "topic": "FOOD",
+            "publisher": "The Takeout",
+            "imageUrl": "https://www.thetakeout.com/img/gallery/before-fridges-russians-used-to-keep-their-milk-fresh-with-frogs/l-intro-1715699240.jpg"
+          }
+        },
+        {
+          "id": "47de1668-16ab-4fea-8792-3bd3624c091f",
+          "corpusItem": {
+            "url": "https://www.theatlantic.com/magazine/archive/2024/07/anthony-fauci-covid-trump-white-house-response/678491/",
+            "title": "The First Three Months",
+            "excerpt": "What I saw inside the government’s response to COVID-19",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "The Atlantic",
+            "imageUrl": "https://cdn.theatlantic.com/thumbor/ss6K1O1wmbZPkNboU0YOM98ekEo=/0x43:2000x1085/1200x625/media/img/2024/05/FauciOpener-1/original.png"
+          }
+        },
+        {
+          "id": "371f2878-5cfb-42c6-8043-0697c57110d6",
+          "corpusItem": {
+            "url": "https://lithub.com/how-colorism-impacts-black-womens-physical-and-mental-health/",
+            "title": "How Colorism Impacts Black Women’s Physical and Mental Health",
+            "excerpt": "Layal Liverpool on racist beauty standards and the hidden harms of hair relaxers.",
+            "topic": "EDUCATION",
+            "publisher": "Literary Hub",
+            "imageUrl": "https://s26162.pcdn.co/wp-content/uploads/2024/06/hair-relaxer.jpg"
+          }
+        },
+        {
+          "id": "92a93eca-9038-4364-88d3-a8c1bf8574bf",
+          "corpusItem": {
+            "url": "https://aeon.co/essays/in-memory-of-all-that-i-lost-when-tinnitus-took-away-my-silence",
+            "title": "Eulogy for Silence",
+            "excerpt": "Tinnitus is like a constant scream inside my head, depriving me of what I formerly treasured: the moments of serene quiet.",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "Aeon",
+            "imageUrl": "https://images.aeonmedia.co/images/f6b4f986-a7f8-424c-9534-3060b996fdd8/essay-par377566.jpg?width=1200&quality=75&format=auto"
+          }
+        },
+        {
+          "id": "0ef6c793-02fc-4f78-90c8-cdf6070c7699",
+          "corpusItem": {
+            "url": "https://gizmodo.com/americas-notorious-cancer-alley-is-even-more-toxic-than-1851532462",
+            "title": "America’s Notorious ‘Cancer Alley’ Is Even More Toxic Than We Thought",
+            "excerpt": "A new study finds levels of the carcinogen ethylene oxide that are nine times higher than those estimated by the EPA’s models.",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "Gizmodo",
+            "imageUrl": "https://i.kinja-img.com/image/upload/c_fill,h_675,pg_1,q_80,w_1200/9509ed3e35428a6d7fff9e8a89349e58.jpg"
+          }
+        },
+        {
+          "id": "479e4681-c203-4e70-8219-3d3ed3704f88",
+          "corpusItem": {
+            "url": "https://www.vox.com/future-perfect/355108/alzheimers-disease-drug-approval-research-retraction",
+            "title": "Do We Have Alzheimer’s Disease All Wrong?",
+            "excerpt": "Retracted studies and new treatments reveal the confusing state of Alzheimer’s research.",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "Vox",
+            "imageUrl": "https://platform.vox.com/wp-content/uploads/sites/2/2024/06/GettyImages-512298231.jpg?quality=90&strip=all&crop=0,10.732984293194,100,78.534031413613"
+          }
+        },
+        {
+          "id": "20f42c85-6a4f-4b94-bf8f-76e72300a183",
+          "corpusItem": {
+            "url": "https://www.wired.com/story/banks-are-finally-realizing-what-climate-change-will-do-to-housing/",
+            "title": "Banks Are Finally Realizing What Climate Change Will Do to Housing",
+            "excerpt": "Extreme weather threatens the investment value of many properties, but financing for climate mitigation efforts are only just getting going.",
+            "topic": "SCIENCE",
+            "publisher": "WIRED",
+            "imageUrl": "https://media.wired.com/photos/666c9e38dac254cb00a3f0df/191:100/w_1280,c_limit/Science_Flood_housing_GettyImages-1699083412.jpg"
+          }
+        },
+        {
+          "id": "85b3052b-6d92-4d89-9212-f6d874b9c377",
+          "corpusItem": {
+            "url": "https://www.nature.com/articles/d41586-024-02038-9",
+            "title": "My Pivot From Grain Scientist to Slave-Trade Historian",
+            "excerpt": "Geoff Palmer, Scotland’s first Black professor, now applies scientific rigour to researching slavery.",
+            "topic": "SCIENCE",
+            "publisher": "Nature",
+            "imageUrl": "https://media.nature.com/lw1200/magazine-assets/d41586-024-02038-9/d41586-024-02038-9_27181876.jpg"
+          }
+        },
+        {
+          "id": "873e2cd3-6b4b-4bf0-ac2c-3bd09b5e98ed",
+          "corpusItem": {
+            "url": "https://www.bbc.com/news/articles/ceqqex325vgo",
+            "title": "‘I Feel Broken’: Inside the Mind of the Woman Who Ran 1,000km in 12 Days",
+            "excerpt": "At the end of her challenge, the 52-year-old says ultra-running is a good way to “get uncomfortable”.",
+            "topic": "SPORTS",
+            "publisher": "BBC",
+            "imageUrl": "https://ichef.bbci.co.uk/news/480/cpsprodpb/b497/live/ea3da2d0-2a21-11ef-a427-217fb9597453.jpg.webp"
+          }
+        },
+        {
+          "id": "0cbb007c-b917-4c2a-9cb8-7932922b28e1",
+          "corpusItem": {
+            "url": "https://thewalrus.ca/the-scourge-of-self-checkout/",
+            "title": "The Scourge of Self-Checkout",
+            "excerpt": "The technology promised to make shopping easier. It has done the opposite",
+            "topic": "BUSINESS",
+            "publisher": "The Walrus",
+            "imageUrl": "https://walrus-assets.s3.amazonaws.com/img/CUSTOM-HORIZONTAL-SOCIAL-CARDS-Moscrop-SelfCheckout.png"
+          }
+        },
+        {
+          "id": "80a3cee8-bc24-41d8-8afc-be4d38de5645",
+          "corpusItem": {
+            "url": "https://www.nature.com/articles/d41586-024-02029-w",
+            "title": "Push and Pull: How to Measure the Forces That Sculpt Embryos",
+            "excerpt": "A steadily growing toolbox is giving researchers the ability to monitor and measure the physical forces that shape embryonic development.",
+            "topic": "SCIENCE",
+            "publisher": "Nature",
+            "imageUrl": "https://media.nature.com/lw1200/magazine-assets/d41586-024-02029-w/d41586-024-02029-w_27201134.jpg"
+          }
+        },
+        {
+          "id": "772f2429-d40a-4cc9-ad36-80b6c46b1c07",
+          "corpusItem": {
+            "url": "https://www.bbc.com/future/article/20240614-how-neurosurgery-in-the-womb-is-saving-babies-lives",
+            "title": "Neurological Conditions Claim the Lives of Thousands of Children Every Year. New Treatments in the Womb May Save Them",
+            "excerpt": "Cutting-edge therapies delivering treatment to foetuses diagnosed with neurological defects have the potential to change natal care as we know it.",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "BBC",
+            "imageUrl": "https://ichef.bbci.co.uk/images/ic/480xn/p0j48gnj.jpg.webp"
+          }
+        },
+        {
+          "id": "b9badf0e-e559-4ec7-952f-03f116ae3b85",
+          "corpusItem": {
+            "url": "https://www.inverse.com/science/problem-humans-colonize-the-moon-geopolitical-commercial-gain",
+            "title": "An Astrophysicist Reveals a Major Problem We’ll Encounter If Humans Colonize the Moon",
+            "excerpt": "Astronomers have started thinking about the potential conflicts between expanding knowledge of the universe and commercial gain.",
+            "topic": "SCIENCE",
+            "publisher": "Inverse",
+            "imageUrl": "https://imgix.bustle.com/uploads/image/2024/5/31/0c29afe0/file-20240516-21-amgccw.jpg?w=1200&h=630&fit=crop&crop=faces&fm=jpg"
+          }
+        },
+        {
+          "id": "a277532b-2cb9-40da-977e-6de0450324d8",
+          "corpusItem": {
+            "url": "https://www.vox.com/policy/355088/rent-tenants-cash-vouchers-housing",
+            "title": "The Federal Government’s New Plan to (Maybe) Give Renters Straight Cash",
+            "excerpt": "A bold experiment to help tenants is advancing.",
+            "topic": "POLITICS",
+            "publisher": "Vox",
+            "imageUrl": "https://platform.vox.com/wp-content/uploads/sites/2/2024/06/gettyimages-1537696713.jpg?quality=90&strip=all&crop=0,10.732984293194,100,78.534031413613"
+          }
+        },
+        {
+          "id": "1a97f882-9e02-4a91-8bc7-2e7860a89e0c",
+          "corpusItem": {
+            "url": "https://www.polygon.com/24177873/sports-video-games-fanfiction-challengers-topspin",
+            "title": "Sports Video Games Made Me Understand Fanfiction",
+            "excerpt": "Challengers’ Tashi Duncan... I can save her",
+            "topic": "GAMING",
+            "publisher": "Polygon",
+            "imageUrl": "https://cdn.vox-cdn.com/thumbor/b1omDgEBHqIqhWi9dKd2QU50XFk=/0x0:1919x1005/fit-in/1200x630/cdn.vox-cdn.com/uploads/chorus_asset/file/25490372/Screenshot_2024_06_13_145720.png"
+          }
+        },
+        {
+          "id": "29376209-6736-4775-a36b-ace56e72b94f",
+          "corpusItem": {
+            "url": "https://www.themarginalian.org/2024/06/13/rose-macaulay-personal-pleasures/",
+            "title": "The Pleasure of Being Left Alone",
+            "excerpt": "There is a form of being together that feels as easy and spacious as being alone, when your experience is not crowded out or eclipsed by the presence of the other but deepened and magnified. Such companionship is extremely rare and extremely precious.",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "The Marginalian",
+            "imageUrl": "https://www.themarginalian.org/wp-content/uploads/2019/11/velocity_debbie_dasha.jpg?fit=600%2C315&ssl=1"
+          }
+        },
+        {
+          "id": "796032b5-6a55-47f4-a211-e2e60d56dbda",
+          "corpusItem": {
+            "url": "http://businessinsider.com/most-beautiful-places-to-visit-from-expert-2024-6",
+            "title": "6 of the Most Beautiful Places in the World, According to Someone Who’s Been to 107 Countries",
+            "excerpt": "I’ve visited 107 countries, and these six places, from Iceland to Slovenia, are the most beautiful places I’ve seen. \n    ",
+            "topic": "TRAVEL",
+            "publisher": "Business Insider",
+            "imageUrl": "https://i.insider.com/6650af2da961b37edf39b243?width=1200&format=jpeg"
+          }
+        },
+        {
+          "id": "f9f1e9b7-ba96-44d9-bfbe-6c901b619bbf",
+          "corpusItem": {
+            "url": "https://www.zocalopublicsquare.org/2024/06/17/how-does-a-therapist-stay-neutral/ideas/essay/",
+            "title": "How Does a Therapist Stay Neutral?",
+            "excerpt": "Counseling couples or families is about empathy, not objectivity.",
+            "topic": "SELF_IMPROVEMENT",
+            "publisher": "Zocalo Public Square",
+            "imageUrl": "https://www.zocalopublicsquare.org/wp-content/uploads/2024/06/Therapeutic-neutrality-l.jpg"
+          }
+        },
+        {
+          "id": "1d133673-2911-4d91-b433-cc0d96540831",
+          "corpusItem": {
+            "url": "https://www.afar.com/magazine/the-best-things-to-see-and-do-in-a-long-weekend-in-tokyo",
+            "title": "How to Make the Most of 4 Days in Tokyo",
+            "excerpt": "Fuel up on coffee at artist Takashi Murakami’s retro cafe, immerse yourself in a new digital art museum, and take a meditative walk in the heart of a forest.",
+            "topic": "TRAVEL",
+            "publisher": "Afar",
+            "imageUrl": "https://afar.brightspotcdn.com/dims4/default/4e20695/2147483647/strip/true/crop/3000x1500+0+0/resize/1440x720!/quality/90/?url=https%3A%2F%2Fk3-prod-afar-media.s3.us-west-2.amazonaws.com%2Fbrightspot%2Fe4%2F9f%2F3e7a0c934fa8aca7da05146bc497%2Fgeoff-haggray-tokyo-lede.jpg"
+          }
+        },
+        {
+          "id": "1fad0944-1e9b-4842-a195-97ea94cb08b1",
+          "corpusItem": {
+            "url": "https://undark.org/2024/06/17/tracking-illegal-cheetah-trade/",
+            "title": "On the Hunt: The Effort to Track the Illegal Cheetah Trade",
+            "excerpt": "Scientists are testing new tools to spot the origin of cheetahs poached from the wild and smuggled for the pet trade.",
+            "topic": "EDUCATION",
+            "publisher": "Undark",
+            "imageUrl": "https://undark.org/wp-content/uploads/2024/06/trio-of-cubs_lede.jpeg"
+          }
+        },
+        {
+          "id": "b02e194b-fed5-447b-9ff3-5964fc75e6cb",
+          "corpusItem": {
+            "url": "https://www.thecut.com/article/shopping-ban-for-years.html",
+            "title": "What It’s Like to Not Buy New Clothes for 7 Years",
+            "excerpt": "Three women who have done long-term shopping bans share their advice.",
+            "topic": "PERSONAL_FINANCE",
+            "publisher": "The Cut",
+            "imageUrl": "https://pyxis.nymag.com/v1/imgs/72c/f78/8c5e661254f06ca6f6811e896a97b0662c-My2Cents-Treatment-june-12.1x.rsocial.w1200.jpg"
+          }
+        },
+        {
+          "id": "b01e5e6c-a0c6-4a02-a3ea-77bceeb2939a",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/10-gardening-mistakes-to-avoid-at-all-costs",
+            "title": "10 Gardening Mistakes to Avoid at All Costs",
+            "excerpt": "Practice grows progress.",
+            "topic": "SELF_IMPROVEMENT",
+            "publisher": "Architectural Digest",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/cbf91d32-792f-4ce6-a7b8-6270cbc43a7c.jpeg"
+          }
+        },
+        {
+          "id": "4b2ab72e-1d3c-43c3-83d8-1e7489a5a759",
+          "corpusItem": {
+            "url": "https://www.collectorsweekly.com/articles/the-curious-melodic-case-of-the-regina-music-box/",
+            "title": "The Curious Melodic Case of The Regina Music Box ",
+            "excerpt": "The tale of the Regina Music Box Company is one composed of innovation, initial success, perseverance, and the struggle to remain relevant in the capricious home music landscape of the US at the turn of the century.",
+            "topic": "BUSINESS",
+            "publisher": "Collectors Weekly",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/264c8cf0-3b8f-46a3-92d6-13ebddf9289c.jpeg"
+          }
+        },
+        {
+          "id": "7bdff6ea-4300-4604-8f59-19f15ebeaab5",
+          "corpusItem": {
+            "url": "https://www.okayplayer.com/black-country-music",
+            "title": "Black Music Month: Country Music’s Black Past and Present",
+            "excerpt": "​Cowboy Carter wasn’t Black music’s first foray into the country genre.",
+            "topic": "ENTERTAINMENT",
+            "publisher": "Okayplayer",
+            "imageUrl": "https://www.okayplayer.com/media-library/photo-of-darius-rucker-by-jason-kempin-getty-images-beyonce-by-kevin-mazur-getty-images-for-iheartradio-shaboozey-by-brett-ca.jpg?id=52453110&width=1200&height=600&coordinates=0%2C195%2C0%2C55"
+          }
+        },
+        {
+          "id": "2f50cc70-cba3-454f-8192-76000f7190ad",
+          "corpusItem": {
+            "url": "https://lifehacker.com/home/improve-your-homes-lighting",
+            "title": "Six Ways to Improve Your Home’s Lighting",
+            "excerpt": "Better lighting can increase your home’s safety—adding visibility will reduce trip hazards in dark hallways or stairwells, for example—and improve energy efficiency to save you money on your electricity bill. Upgraded lighting may also add value to your h",
+            "topic": "SELF_IMPROVEMENT",
+            "publisher": "Lifehacker",
+            "imageUrl": "https://lifehacker.com/imagery/articles/01J04FS8768RSV42Y3DHXZA3KW/hero-image.fill.size_1200x675.jpg"
+          }
+        },
+        {
+          "id": "add20454-4ef4-4d7e-b0a1-29b6e2044cef",
+          "corpusItem": {
+            "url": "https://nymag.com/intelligencer/article/conservatives-republican-party-women-rebecca-traister.html",
+            "title": "How Did Republican Women End Up Like This?",
+            "excerpt": "The baffling, contradictory demands of being female in the party of Donald Trump.",
+            "topic": "POLITICS",
+            "publisher": "New York Magazine",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f0069eea-68dd-4536-be2e-bda6f1d87102.jpeg"
+          }
+        },
+        {
+          "id": "4096468c-dcf2-4f00-9501-df7eb630b6a4",
+          "corpusItem": {
+            "url": "https://getpocket.com/collections/no-heat-pump-no-problem-ways-to-cool-down-when-a-heatwave-strikes",
+            "title": "No Heat Pump, No Problem: 5 Ways to Cool Down When a Heatwave Strikes",
+            "excerpt": "How to cook without cooking, find the sweet spot for your fan, and get to sleep when the temperatures just won’t drop.",
+            "topic": "HEALTH_FITNESS",
+            "publisher": "Pocket Collections",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f1b806a8-f0e0-48ff-885b-529a5d3af59e.jpeg"
+          }
+        }
+      ]
+    }
+  }
+}

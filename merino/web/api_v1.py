@@ -14,9 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 from merino.config import settings
-from merino.curated_recommendations.corpus_backends.fake_backends import (
-    FakeCuratedCorpusBackend,
-)
+from merino.curated_recommendations import get_provider as get_corpus_api_provider
 from merino.curated_recommendations.provider import (
     CuratedRecommendationsProvider,
     CuratedRecommendationsRequest,
@@ -321,6 +319,7 @@ async def providers(
 @router.post("/curated-recommendations", summary="Curated recommendations for New Tab")
 async def curated_content(
     curated_recommendations_request: CuratedRecommendationsRequest,
+    provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
 ) -> CuratedRecommendationsResponse:
     """Query Merino for curated recommendations.
 
@@ -341,5 +340,4 @@ async def curated_content(
 
     [merino-api-docs]: https://merinopy.services.mozilla.com/docs
     """
-    provider = CuratedRecommendationsProvider(corpus_backend=FakeCuratedCorpusBackend())
     return await provider.fetch()

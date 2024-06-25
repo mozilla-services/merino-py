@@ -22,10 +22,14 @@ class Topic(str, Enum):
     TECH = ("tech",)
     TRAVEL = ("travel",)
 
+    @staticmethod
+    def values():
+        """Map enum values & returns"""
+        return Topic._value2member_map_
+
 
 class CorpusItem(BaseModel):
     """Represents a scheduled item from our 'corpus'.
-
     The corpus is the set of all curated items deemed recommendable.
     """
 
@@ -33,7 +37,7 @@ class CorpusItem(BaseModel):
     url: HttpUrl
     title: str
     excerpt: str
-    topic: Topic
+    topic: Topic | None = None
     publisher: str
     imageUrl: HttpUrl
 
