@@ -937,6 +937,9 @@ async def test_get_weather_report_from_cache(
         cache=RedisAdapter(redis_client), **accuweather_parameters
     )
 
+    # this is to satisfy the linter. The Location class defines all properties as optional,
+    # however, the fixture we use has all properties set.
+    assert geolocation.city is not None
     # using the accuweather backend's cache key methods to create keys
     location_key = accuweather.cache_key_for_accuweather_request(
         accuweather.url_cities_path.format(
@@ -1109,6 +1112,9 @@ async def test_get_weather_report_with_partial_cache_hits(
 
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
+    # this is to satisfy the linter. The Location class defines all properties as optional,
+    # however, the fixture we use has all properties set.
+    assert geolocation.city is not None
     # using the accuweather backend's cache key methods to create keys
     location_key = accuweather.cache_key_for_accuweather_request(
         accuweather.url_cities_path.format(
