@@ -8,7 +8,6 @@ import datetime
 import hashlib
 import json
 import logging
-import os
 from typing import Any, Awaitable, Callable, Optional, cast
 from unittest.mock import AsyncMock
 
@@ -21,7 +20,7 @@ from pytest_mock import MockerFixture
 from redis import RedisError
 from redis.asyncio import Redis
 from testcontainers.core.waiting_utils import wait_for_logs
-from testcontainers.redis import AsyncRedisContainer, RedisContainer
+from testcontainers.redis import AsyncRedisContainer
 
 from merino.cache.redis import RedisAdapter
 from merino.exceptions import CacheAdapterError, CacheMissError
@@ -910,9 +909,7 @@ def redis_container() -> AsyncRedisContainer:
 
     # wait for the container to start and emit logs
     delay = wait_for_logs(container, "Server initialized")
-    logger.info(
-        f"\n Redis server started with delay: {delay} seconds on port: {container.port}"
-    )
+    logger.info(f"\n Redis server started with delay: {delay} seconds on port: {container.port}")
 
     yield container
 
@@ -952,15 +949,13 @@ async def test_get_weather_report_from_cache(
         WeatherDataType.CURRENT_CONDITIONS
     ).format(location_key=accuweather_location_key)
 
-    forecast_cache_key = accuweather.cache_key_template(
-        WeatherDataType.FORECAST
-    ).format(location_key=accuweather_location_key)
+    forecast_cache_key = accuweather.cache_key_template(WeatherDataType.FORECAST).format(
+        location_key=accuweather_location_key
+    )
 
     # set the above keys with their values as their corresponding fixtures
     await redis_client.set(location_key, accuweather_cached_location_key)
-    await redis_client.set(
-        current_condition_cache_key, accuweather_cached_current_conditions
-    )
+    await redis_client.set(current_condition_cache_key, accuweather_cached_current_conditions)
     await redis_client.set(forecast_cache_key, accuweather_cached_forecast_fahrenheit)
 
     # this http client mock isn't used to make any calls, but we do assert below on it not being
@@ -1010,14 +1005,12 @@ async def test_get_weather_report_with_location_key_from_cache(
         WeatherDataType.CURRENT_CONDITIONS
     ).format(location_key=accuweather_location_key)
 
-    forecast_cache_key = accuweather.cache_key_template(
-        WeatherDataType.FORECAST
-    ).format(location_key=accuweather_location_key)
+    forecast_cache_key = accuweather.cache_key_template(WeatherDataType.FORECAST).format(
+        location_key=accuweather_location_key
+    )
 
     # set the above keys with their values as their corresponding fixtures
-    await redis_client.set(
-        current_condition_cache_key, accuweather_cached_current_conditions
-    )
+    await redis_client.set(current_condition_cache_key, accuweather_cached_current_conditions)
     await redis_client.set(forecast_cache_key, accuweather_cached_forecast_fahrenheit)
 
     report: Optional[WeatherReport] = await accuweather.get_weather_report(
@@ -1110,7 +1103,6 @@ async def test_get_weather_report_with_partial_cache_hits(
     """Test that we can get the weather report with partial cache hits."""
     redis_client = await redis_container.get_async_client()
 
-
     accuweather: AccuweatherBackend = AccuweatherBackend(
         cache=RedisAdapter(redis_client), **accuweather_parameters
     )
@@ -1131,9 +1123,9 @@ async def test_get_weather_report_with_partial_cache_hits(
         WeatherDataType.CURRENT_CONDITIONS
     ).format(location_key=accuweather_location_key)
 
-    forecast_cache_key = accuweather.cache_key_template(
-        WeatherDataType.FORECAST
-    ).format(location_key=accuweather_location_key)
+    forecast_cache_key = accuweather.cache_key_template(WeatherDataType.FORECAST).format(
+        location_key=accuweather_location_key
+    )
 
     # current conditions that gets written to cache. Would be None if the parameterized fixture
     # value is not set. If it is set, we write it in the cache.
@@ -1151,9 +1143,7 @@ async def test_get_weather_report_with_partial_cache_hits(
 
     # generating a datetime of now to resemble source code and set it as the 'Expiry' response
     # header
-    expiry_time = datetime.datetime.now(
-        tz=datetime.timezone.utc
-    )
+    expiry_time = datetime.datetime.now(tz=datetime.timezone.utc)
     resp_header = {"Expires": expiry_time.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)}
     responses: list = []
 
@@ -1241,9 +1231,9 @@ async def test_get_weather_report_via_location_key_with_partial_cache_hits(
         WeatherDataType.CURRENT_CONDITIONS
     ).format(location_key=accuweather_location_key)
 
-    forecast_cache_key = accuweather.cache_key_template(
-        WeatherDataType.FORECAST
-    ).format(location_key=accuweather_location_key)
+    forecast_cache_key = accuweather.cache_key_template(WeatherDataType.FORECAST).format(
+        location_key=accuweather_location_key
+    )
 
     # current conditions that gets written to cache. Would be None if the parameterized fixture
     # value is not set. If it is set, we write it in the cache.
@@ -1261,9 +1251,7 @@ async def test_get_weather_report_via_location_key_with_partial_cache_hits(
 
     # generating a datetime of now to resemble source code and set it as the 'Expiry' response
     # header
-    expiry_time = datetime.datetime.now(
-        tz=datetime.timezone.utc
-    )
+    expiry_time = datetime.datetime.now(tz=datetime.timezone.utc)
     resp_header = {"Expires": expiry_time.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)}
 
     responses: list = []
