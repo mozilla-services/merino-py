@@ -340,4 +340,4 @@ async def curated_content(
 
     [merino-api-docs]: https://merinopy.services.mozilla.com/docs
     """
-    return await provider.fetch()
+    return await provider.fetch(curated_recommendations_request)

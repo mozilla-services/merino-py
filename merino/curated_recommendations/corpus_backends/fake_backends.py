@@ -6,13 +6,14 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     CorpusItem,
     Topic,
+    RecommendationSurfaceId,
 )
 
 
 class FakeCuratedCorpusBackend(CorpusBackend):
     """A fake backend that returns static content."""
 
-    async def fetch(self) -> list[CorpusItem]:
+    async def fetch(self, surface_id: RecommendationSurfaceId) -> list[CorpusItem]:
         """Echoing the query as the single suggestion."""
         return [
             CorpusItem(
