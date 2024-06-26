@@ -352,7 +352,7 @@ class AccuweatherBackend:
                     location_cached is not None,
                     current_cached is not None,
                     forecast_cached is not None,
-                    ttl_cached is not False,
+                    ttl_cached is not None,
                 )
             case _:  # pragma: no cover
                 pass
