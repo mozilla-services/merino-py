@@ -353,7 +353,6 @@ class AccuweatherBackend:
                     current_cached is not None,
                     forecast_cached is not None,
                     ttl_cached is not False,
-
                 )
             case _:  # pragma: no cover
                 pass
@@ -374,9 +373,7 @@ class AccuweatherBackend:
             else "accuweather.cache.fetch.miss.forecasts"
         )
         self.metrics_client.increment(
-            "accuweather.cache.hit.ttl"
-            if ttl
-            else "accuweather.cache.fetch.miss.ttl"
+            "accuweather.cache.hit.ttl" if ttl else "accuweather.cache.fetch.miss.ttl"
         )
 
     def parse_cached_data(self, cached_data: list[bytes | None]) -> WeatherData:
