@@ -625,7 +625,7 @@ def fixture_accuweather_parsed_data_hits(
     Optional[Forecast],
     Optional[int],
 ]:
-    """Return the cached AccuWeather triplet for a cache hit."""
+    """Return the parsed AccuWeather triplet for a cache hit."""
     return (
         AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
         CurrentConditions.model_validate_json(accuweather_cached_current_conditions),
@@ -661,7 +661,7 @@ def fixture_accuweather_parsed_data_partial_hits(
 
 
 @pytest.fixture(name="accuweather_cached_data_partial_hits_left")
-def Fixture_accuweather_cached_data_partial_hits_left(
+def fixture_accuweather_cached_data_partial_hits_left(
     accuweather_cached_location_key: bytes,
     accuweather_cached_current_conditions: bytes,
 ) -> list[Optional[bytes]]:
@@ -721,6 +721,41 @@ def fixture_accuweather_parsed_data_partial_hits_right(
     return (
         AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
         None,
+        Forecast.model_validate_json(accuweather_cached_forecast_fahrenheit),
+        None,
+    )
+
+
+@pytest.fixture(name="accuweather_cached_data_partial_miss_ttl")
+def fixture_accuweather_cached_data_partial_miss_ttl(
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_current_conditions: bytes,
+    accuweather_cached_forecast_fahrenheit: bytes,
+) -> list[Optional[bytes] | Optional[int]]:
+    """Return the cached AccuWeather quartet for a cache hit but a TTL miss"""
+    return [
+        accuweather_cached_location_key,
+        accuweather_cached_current_conditions,
+        accuweather_cached_forecast_fahrenheit,
+        None,
+    ]
+
+
+@pytest.fixture(name="accuweather_parsed_data_partial_miss_ttl")
+def fixture_accuweather_parsed_data_partial_miss_ttl(
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_current_conditions: bytes,
+    accuweather_cached_forecast_fahrenheit: bytes,
+) -> tuple[
+    Optional[AccuweatherLocation],
+    Optional[CurrentConditions],
+    Optional[Forecast],
+    Optional[int],
+]:
+    """Return the parsed AccuWeather triplet for a cache hit but a TTL miss"""
+    return (
+        AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
+        CurrentConditions.model_validate_json(accuweather_cached_current_conditions),
         Forecast.model_validate_json(accuweather_cached_forecast_fahrenheit),
         None,
     )
@@ -941,6 +976,7 @@ async def test_get_weather_report_from_cache(
         "accuweather.cache.hit.locations",
         "accuweather.cache.hit.currentconditions",
         "accuweather.cache.hit.forecasts",
+        "accuweather.cache.hit.ttl",
     ]
 
 
@@ -993,6 +1029,7 @@ async def test_get_weather_report_with_location_key_from_cache(
     assert metrics_increment_called == [
         "accuweather.cache.hit.currentconditions",
         "accuweather.cache.hit.forecasts",
+        "accuweather.cache.hit.ttl",
     ]
 
 
@@ -1963,19 +2000,23 @@ def test_add_partner_code(
     [
         (
             ["location", "current", "forecast", "ttl"],
-            ("hit.locations", "hit.currentconditions", "hit.forecasts"),
+            ("hit.locations", "hit.currentconditions", "hit.forecasts", "hit.ttl"),
         ),
         (
             ["location", None, "forecast", "ttl"],
-            ("hit.locations", "fetch.miss.currentconditions", "hit.forecasts"),
+            ("hit.locations", "fetch.miss.currentconditions", "hit.forecasts", "hit.ttl"),
         ),
         (
             ["location", "current", None, "ttl"],
-            ("hit.locations", "hit.currentconditions", "fetch.miss.forecasts"),
+            ("hit.locations", "hit.currentconditions", "fetch.miss.forecasts", "hit.ttl"),
         ),
         (
             ["location", None, None, "ttl"],
-            ("hit.locations", "fetch.miss.currentconditions", "fetch.miss.forecasts"),
+            ("hit.locations", "fetch.miss.currentconditions", "fetch.miss.forecasts", "hit.ttl"),
+        ),
+        (
+            ["location", "current", "forecast", None],
+            ("hit.locations", "hit.currentconditions", "hit.forecasts", "fetch.miss.ttl"),
         ),
         (
             [None, None, None, None],
@@ -1983,6 +2024,7 @@ def test_add_partner_code(
                 "fetch.miss.locations",
                 "fetch.miss.currentconditions",
                 "fetch.miss.forecasts",
+                "fetch.miss.ttl",
             ),
         ),
     ],
@@ -1991,6 +2033,7 @@ def test_add_partner_code(
         "partial-hits-left",
         "partial-hits-right",
         "partial-hits-one",
+        "partial-miss-ttl",
         "cache-misses",
     ],
 )
@@ -2027,6 +2070,10 @@ def test_metrics_for_cache_fetch(
             "accuweather_parsed_data_partial_hits_right",
         ),
         (
+            "accuweather_cached_data_partial_miss_ttl",
+            "accuweather_parsed_data_partial_miss_ttl",
+        ),
+        (
             "accuweather_cached_data_misses",
             "accuweather_parsed_data_misses",
         ),
@@ -2036,6 +2083,7 @@ def test_metrics_for_cache_fetch(
         "partial-hits",
         "partial-hits-left",
         "partial-hits-right",
+        "partial-miss-ttl",
         "cache-misses",
     ],
 )
