@@ -12,7 +12,6 @@ from typing import Any, Awaitable, Callable, Optional, cast
 from unittest.mock import AsyncMock
 
 import freezegun
-import pytestq
 from httpx import AsyncClient, HTTPError, Request, Response
 from pydantic import HttpUrl
 from pytest import FixtureRequest, LogCaptureFixture
