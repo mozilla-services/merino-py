@@ -85,14 +85,13 @@ jobs:
           name: Code linting
           command: make -k lint
   unit-tests:
-    machine:
-      image: ubuntu-2004:2024.01.1
+  - docker:
+      - image: cimg/python:3.12
     steps:
       - checkout
       - run:
           name: Create Workspace
           command: mkdir -p workspace
-      - setup-python-on-machine
       - run:
           name: Unit tests
           command: make unit-tests
