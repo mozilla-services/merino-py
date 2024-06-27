@@ -279,7 +279,6 @@ class AccuweatherBackend:
         """
         cache_key = self.cache_key_for_accuweather_request(url_path, params)
         response_dict: dict[str, Any] | None
-
         # The top level path in the URL gives us a good enough idea of what type of request
         # we are calling from here.
         request_type: str = url_path.strip("/").split("/", 1)[0]
@@ -287,7 +286,6 @@ class AccuweatherBackend:
         with self.metrics_client.timeit(f"accuweather.request.{request_type}.get"):
             response: Response = await self.http_client.get(url_path, params=params)
             response.raise_for_status()
-
         if (response_dict := process_api_response(response.json())) is None:
             self.metrics_client.increment(f"accuweather.request.{request_type}.processor.error")
             return None
@@ -306,7 +304,6 @@ class AccuweatherBackend:
             raise AccuweatherError(
                 "Something went wrong with storing to cache. Did not update cache."
             )
-
         return response_dict
 
     async def store_request_into_cache(
@@ -385,7 +382,6 @@ class AccuweatherBackend:
             return WeatherData()
 
         location_cached, current_cached, forecast_cached, ttl_cached = cached_data
-
         location: AccuweatherLocation | None = None
         current_conditions: CurrentConditions | None = None
         forecast: Forecast | None = None
