@@ -976,7 +976,6 @@ async def test_get_weather_report_from_cache(
         "accuweather.cache.hit.locations",
         "accuweather.cache.hit.currentconditions",
         "accuweather.cache.hit.forecasts",
-        "accuweather.cache.hit.ttl",
     ]
 
 
@@ -1029,7 +1028,6 @@ async def test_get_weather_report_with_location_key_from_cache(
     assert metrics_increment_called == [
         "accuweather.cache.hit.currentconditions",
         "accuweather.cache.hit.forecasts",
-        "accuweather.cache.hit.ttl",
     ]
 
 
@@ -2000,31 +1998,31 @@ def test_add_partner_code(
     [
         (
             ["location", "current", "forecast", "ttl"],
-            ("hit.locations", "hit.currentconditions", "hit.forecasts", "hit.ttl"),
+            ("hit.locations", "hit.currentconditions", "hit.forecasts"),
         ),
         (
             ["location", None, "forecast", "ttl"],
-            ("hit.locations", "fetch.miss.currentconditions", "hit.forecasts", "hit.ttl"),
+            ("hit.locations", "fetch.miss.currentconditions", "hit.forecasts"),
         ),
         (
             ["location", "current", None, "ttl"],
-            ("hit.locations", "hit.currentconditions", "fetch.miss.forecasts", "hit.ttl"),
+            ("hit.locations", "hit.currentconditions", "fetch.miss.forecasts"),
         ),
         (
             ["location", None, None, "ttl"],
-            ("hit.locations", "fetch.miss.currentconditions", "fetch.miss.forecasts", "hit.ttl"),
+            ("hit.locations", "fetch.miss.currentconditions", "fetch.miss.forecasts"),
         ),
         (
             ["location", "current", "forecast", None],
-            ("hit.locations", "hit.currentconditions", "hit.forecasts", "fetch.miss.ttl"),
+            ("hit.locations", "fetch.miss.ttl", "hit.currentconditions", "hit.forecasts"),
         ),
         (
             [None, None, None, None],
             (
                 "fetch.miss.locations",
+                "fetch.miss.ttl",
                 "fetch.miss.currentconditions",
                 "fetch.miss.forecasts",
-                "fetch.miss.ttl",
             ),
         ),
     ],

@@ -130,6 +130,7 @@ The weather provider records additional metrics.
   cached weather report is available.
 - `merino.providers.accuweather.query.cache.miss` - A counter to measure the number of times a
   weather report isn't in the cache.
+- `merino.providers.accuweather.query.cache.ttl`
 - `merino.providers.accuweather.query.backend.get` - A timer to measure the duration (in ms) of a
   request for a weather report from the backend. This metric isn't recorded for cache hits.
 - `merino.providers.accuweather.query.cache.store` - A timer to measure the duration (in ms) of

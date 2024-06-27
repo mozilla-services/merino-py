@@ -362,6 +362,8 @@ class AccuweatherBackend:
                 if location
                 else "accuweather.cache.fetch.miss.locations"
             )
+        if not ttl:
+            self.metrics_client.increment("accuweather.cache.fetch.miss.ttl")
         self.metrics_client.increment(
             "accuweather.cache.hit.currentconditions"
             if current
@@ -371,9 +373,6 @@ class AccuweatherBackend:
             "accuweather.cache.hit.forecasts"
             if forecast
             else "accuweather.cache.fetch.miss.forecasts"
-        )
-        self.metrics_client.increment(
-            "accuweather.cache.hit.ttl" if ttl else "accuweather.cache.fetch.miss.ttl"
         )
 
     def parse_cached_data(self, cached_data: list[bytes | None]) -> WeatherData:
