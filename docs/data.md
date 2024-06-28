@@ -124,6 +124,7 @@ log inspection interfaces.
 
 The weather provider records additional metrics.
 
+- `accuweather.request.location.not_provided` - A counter to measure the number of times a query was send without a location being provided, and therefore unable to process a weather request.
 - `merino.providers.accuweather.query.cache.fetch` - A timer to measure the duration (in ms) of
   looking up a weather report in the cache.
 - `merino.providers.accuweather.query.cache.fetch.miss.locations` - A counter to measure the number of times weather location was not in the cache.

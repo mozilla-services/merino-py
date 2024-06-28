@@ -1466,17 +1466,23 @@ async def test_get_weather_report_failed_forecast_query(
 )
 @pytest.mark.asyncio
 async def test_get_weather_report_invalid_location(
-    accuweather: AccuweatherBackend, location: Location
+    accuweather: AccuweatherBackend,
+    location: Location,
+    statsd_mock: Any,
 ) -> None:
     """Test that the get_weather_report method raises an error if location information
     is missing.
     """
-    expected_error_value: str = "Country and/or region/city unknown"
+    expected_result = None
 
-    with pytest.raises(AccuweatherError) as accuweather_error:
-        await accuweather.get_weather_report(location)
+    result = await accuweather.get_weather_report(location)
 
-    assert str(accuweather_error.value) == expected_error_value
+    assert expected_result == result
+
+    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
+    assert [
+        "accuweather.request.location.not_provided",
+    ] == metrics_called
 
 
 @pytest.mark.asyncio
