@@ -342,7 +342,8 @@ def generate_accuweather_cache_keys(
 
 
 async def set_redis_keys(redis_client: Redis, keys_and_values: list[tuple]) -> None:
-    """Set redis cache keys and values"""
+    """Set redis cache keys and values after flushing the db"""
+    await redis_client.flushall()
     for key, value in keys_and_values:
         await redis_client.set(key, value)
 
@@ -646,6 +647,7 @@ async def test_get_weather_report_via_location_key_with_both_current_conditions_
     forecast cache miss
     """
     redis_client = await redis_container.get_async_client()
+    await redis_client.flushall()
 
     accuweather: AccuweatherBackend = AccuweatherBackend(
         cache=RedisAdapter(redis_client), **accuweather_parameters
