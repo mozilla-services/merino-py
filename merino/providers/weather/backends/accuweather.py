@@ -279,6 +279,7 @@ class AccuweatherBackend:
         """
         cache_key = self.cache_key_for_accuweather_request(url_path, params)
         response_dict: dict[str, Any] | None
+
         # The top level path in the URL gives us a good enough idea of what type of request
         # we are calling from here.
         request_type: str = url_path.strip("/").split("/", 1)[0]
@@ -286,6 +287,7 @@ class AccuweatherBackend:
         with self.metrics_client.timeit(f"accuweather.request.{request_type}.get"):
             response: Response = await self.http_client.get(url_path, params=params)
             response.raise_for_status()
+
         if (response_dict := process_api_response(response.json())) is None:
             self.metrics_client.increment(f"accuweather.request.{request_type}.processor.error")
             return None
@@ -304,6 +306,7 @@ class AccuweatherBackend:
             raise AccuweatherError(
                 "Something went wrong with storing to cache. Did not update cache."
             )
+
         return response_dict
 
     async def store_request_into_cache(
@@ -382,6 +385,7 @@ class AccuweatherBackend:
             return WeatherData()
 
         location_cached, current_cached, forecast_cached, ttl_cached = cached_data
+
         location: AccuweatherLocation | None = None
         current_conditions: CurrentConditions | None = None
         forecast: Forecast | None = None
@@ -460,6 +464,7 @@ class AccuweatherBackend:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.fetch-via-location-key.error")
             return None
+
         self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)
         cached_report = self.parse_cached_data(cached_data)
         location = Location(key=location_key)
@@ -486,6 +491,7 @@ class AccuweatherBackend:
         city: str | None = geolocation.city
         if not country or not region or not city:
             raise AccuweatherError("Country and/or region/city unknown")
+
         cache_key: str = self.cache_key_for_accuweather_request(
             self.url_cities_path.format(country_code=country, admin_code=region),
             query_params=self.get_location_key_query_params(city),
