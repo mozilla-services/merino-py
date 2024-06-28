@@ -134,18 +134,6 @@ def fixture_response_header() -> dict[str, str]:
     return {"Expires": expiry_time.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)}
 
 
-@pytest.fixture(name="accuweather")
-def fixture_accuweather(
-    redis_mock_cache_miss: AsyncMock,
-    accuweather_parameters: dict[str, Any],
-) -> AccuweatherBackend:
-    """Create an Accuweather object for test. This object always have cache miss."""
-    return AccuweatherBackend(
-        cache=RedisAdapter(redis_mock_cache_miss),
-        **accuweather_parameters,
-    )
-
-
 @pytest.fixture(name="geolocation")
 def fixture_geolocation() -> Location:
     """Create a Location object for test."""
