@@ -33,7 +33,6 @@ from merino.providers.weather.backends.protocol import (
 
 ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 TEST_CACHE_TTL_SEC = 1800
-TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC = 300
 
 logger = logging.getLogger(__name__)
 
