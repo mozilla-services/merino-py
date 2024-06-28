@@ -411,6 +411,7 @@ suggestions returned per provider (per request).</p>
 <h3 id="accuweather"><a class="header" href="#accuweather">AccuWeather</a></h3>
 <p>The weather provider records additional metrics.</p>
 <ul>
+<li><code>accuweather.request.location.not_provided</code> - A counter to measure the number of times a query was send without a location being provided, and therefore unable to process a weather request.</li>
 <li><code>merino.providers.accuweather.query.cache.fetch</code> - A timer to measure the duration (in ms) of
 looking up a weather report in the cache.</li>
 <li><code>merino.providers.accuweather.query.cache.fetch.miss.locations</code> - A counter to measure the number of times weather location was not in the cache.</li>
