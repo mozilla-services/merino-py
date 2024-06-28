@@ -493,7 +493,8 @@ class AccuweatherBackend:
         region: str | None = geolocation.region
         city: str | None = geolocation.city
         if not country or not region or not city:
-            raise AccuweatherError("Country and/or region/city unknown")
+            self.metrics_client.increment("accuweather.request.location.not_provided")
+            return None
 
         cache_key: str = self.cache_key_for_accuweather_request(
             self.url_cities_path.format(country_code=country, admin_code=region),
