@@ -8,11 +8,9 @@ from typing import Any
 
 import pytest
 from pydantic import HttpUrl
-from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.config import settings
-from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import CustomDetails, WeatherDetails
@@ -24,7 +22,6 @@ from merino.providers.weather.backends.protocol import (
     WeatherReport,
 )
 from merino.providers.weather.provider import Provider, Suggestion
-from tests.types import FilterCaplogFixture
 
 TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC = 300
 
@@ -137,32 +134,3 @@ async def test_query_no_weather_report_returned(
     )
 
     assert suggestions == expected_suggestions
-
-
-@pytest.mark.asyncio
-async def test_query_error(
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
-    backend_mock: Any,
-    provider: Provider,
-    geolocation: Location,
-) -> None:
-    """Test that the query method logs a warning and doesn't provide a weather
-    suggestion if the backend raises an error.
-    """
-    expected_suggestions: list[Suggestion] = []
-    expected_log_messages: list[dict[str, str]] = [
-        {"levelname": "WARNING", "message": "Could not generate a weather report"}
-    ]
-    backend_mock.get_weather_report.side_effect = BackendError(expected_log_messages[0]["message"])
-
-    suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(query="", geolocation=geolocation)
-    )
-
-    assert suggestions == expected_suggestions
-    actual_log_messages: list[dict[str, str]] = [
-        {"levelname": record.levelname, "message": record.message}
-        for record in filter_caplog(caplog.records, "merino.providers.weather.provider")
-    ]
-    assert actual_log_messages == expected_log_messages

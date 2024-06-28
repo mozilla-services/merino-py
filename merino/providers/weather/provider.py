@@ -6,7 +6,6 @@ from typing import Any
 import aiodogstatsd
 from pydantic import HttpUrl
 
-from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import CustomDetails, WeatherDetails
@@ -77,19 +76,13 @@ class Provider(BaseProvider):
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
 
-        try:
-            with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
-                if is_location_completion_request:
-                    location_completions = await self.backend.get_location_completion(
-                        geolocation, search_term=srequest.query
-                    )
-                else:
-                    weather_report = await self.backend.get_weather_report(
-                        geolocation, srequest.query
-                    )
-
-        except BackendError as backend_error:
-            logger.warning(backend_error)
+        with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
+            if is_location_completion_request:
+                location_completions = await self.backend.get_location_completion(
+                    geolocation, search_term=srequest.query
+                )
+            else:
+                weather_report = await self.backend.get_weather_report(geolocation, srequest.query)
 
         # for this provider, the request can be either for weather or location completion
         if weather_report:
