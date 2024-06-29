@@ -1,6 +1,7 @@
 """Corpus API backend for making GRAPHQL requests"""
 
-from datetime import datetime
+from datetime import datetime, timedelta
+import asyncio
 
 from httpx import AsyncClient
 
@@ -54,14 +55,38 @@ def map_corpus_topic_to_serp_topic(topic: str) -> tuple[str] | None:
 class CorpusApiBackend(CorpusBackend):
     """Corpus API Backend hitting the curated corpus api
     & returning recommendations for current date & locale/region.
+    Uses an in-memory cache and request coalescing to limit request rate to the backend.
     """
 
     http_client: AsyncClient
 
+    cache_expiration_time = timedelta(minutes=1)
+    _cache: dict[ScheduledSurfaceId, list[CorpusItem]]
+    _expirations: dict[ScheduledSurfaceId, datetime]
+    _locks: dict[ScheduledSurfaceId, asyncio.Lock]
+
     def __init__(self, http_client: AsyncClient):
         self.http_client = http_client
+        self._cache = {}
+        self._expirations = {}
+        self._locks = {}
 
     async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
+        """Fetch corpus items with stale-while-revalidate caching and request coalescing."""
+        now = datetime.now()
+        cache_key = surface_id
+
+        # If we have expired cached data, revalidate asynchronously without waiting for the result.
+        if cache_key in self._cache:
+            if now >= self._expirations[cache_key]:
+                asyncio.create_task(self._revalidate_cache(surface_id))  # noqa: should not 'await'
+
+            return self._cache[cache_key]
+
+        # If no cache value exists, fetch new data and await the result.
+        return await self._revalidate_cache(surface_id)
+
+    async def _fetch_from_backend(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
         """Issue a scheduledSurface query"""
         query = """
             query ScheduledSurface($scheduledSurfaceId: ID!, $date: Date!) {
@@ -95,7 +120,6 @@ class CorpusApiBackend(CorpusBackend):
             },
         }
 
-        """Echoing the query as the single suggestion."""
         res = await self.http_client.post(
             CorpusApiGraphConfig.CORPUS_API_PROD_ENDPOINT,
             json=body,
@@ -115,3 +139,21 @@ class CorpusApiBackend(CorpusBackend):
             for item in data["data"]["scheduledSurface"]["items"]
         ]
         return curated_recommendations
+
+    async def _revalidate_cache(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
+        """Purge and update the cache for a specific surface."""
+        cache_key = surface_id
+
+        if cache_key not in self._locks:
+            self._locks[cache_key] = asyncio.Lock()
+
+        async with self._locks[cache_key]:
+            # Check if the cache was updated while waiting for the lock.
+            if cache_key in self._cache and datetime.now() < self._expirations[cache_key]:
+                return self._cache[cache_key]
+
+            # Fetch new data from the backend.
+            data = await self._fetch_from_backend(surface_id)
+            self._cache[cache_key] = data
+            self._expirations[cache_key] = datetime.now() + self.cache_expiration_time
+            return data
