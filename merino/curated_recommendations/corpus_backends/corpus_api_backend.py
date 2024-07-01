@@ -8,6 +8,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     CorpusItem,
     Topic,
+    ScheduledSurfaceId,
 )
 from merino.utils.version import fetch_app_version_from_file
 
@@ -52,7 +53,7 @@ def map_corpus_topic_to_serp_topic(topic: str) -> tuple[str] | None:
 
 class CorpusApiBackend(CorpusBackend):
     """Corpus API Backend hitting the curated corpus api
-    & returning recommendations for current date.
+    & returning recommendations for current date & locale/region.
     """
 
     http_client: AsyncClient
@@ -60,7 +61,7 @@ class CorpusApiBackend(CorpusBackend):
     def __init__(self, http_client: AsyncClient):
         self.http_client = http_client
 
-    async def fetch(self) -> list[CorpusItem]:
+    async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
         """Issue a scheduledSurface query"""
         query = """
             query ScheduledSurface($scheduledSurfaceId: ID!, $date: Date!) {
@@ -89,7 +90,7 @@ class CorpusApiBackend(CorpusBackend):
         body = {
             "query": query,
             "variables": {
-                "scheduledSurfaceId": "NEW_TAB_EN_US",
+                "scheduledSurfaceId": surface_id,
                 "date": today.strftime("%Y-%m-%d"),
             },
         }

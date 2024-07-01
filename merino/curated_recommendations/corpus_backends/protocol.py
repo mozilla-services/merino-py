@@ -22,10 +22,18 @@ class Topic(str, Enum):
     TECH = ("tech",)
     TRAVEL = ("travel",)
 
-    @staticmethod
-    def values():
-        """Map enum values & returns"""
-        return Topic._value2member_map_
+
+@unique
+class ScheduledSurfaceId(str, Enum):
+    """Defines the possible recommendation surfaces."""
+
+    NEW_TAB_EN_US = "NEW_TAB_EN_US"
+    NEW_TAB_EN_GB = "NEW_TAB_EN_GB"
+    NEW_TAB_EN_INTL = "NEW_TAB_EN_INTL"
+    NEW_TAB_DE_DE = "NEW_TAB_DE_DE"
+    NEW_TAB_ES_ES = "NEW_TAB_ES_ES"
+    NEW_TAB_FR_FR = "NEW_TAB_FR_FR"
+    NEW_TAB_IT_IT = "NEW_TAB_IT_IT"
 
 
 class CorpusItem(BaseModel):
@@ -45,6 +53,6 @@ class CorpusItem(BaseModel):
 class CorpusBackend(Protocol):
     """Protocol for Curated Recommendation backend that the provider depends on."""
 
-    async def fetch(self) -> list[CorpusItem]:  # pragma: no cover
+    async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:  # pragma: no cover
         """Fetch Curated Recommendations"""
         ...
