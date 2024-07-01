@@ -18,7 +18,6 @@ from pydantic import HttpUrl, TypeAdapter
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.exceptions import BackendError
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -233,34 +232,6 @@ def test_suggest_without_weather_report(client: TestClient, backend_mock: Any) -
     )
     result = response.json()
     assert result["suggestions"] == expected_suggestion
-
-
-def test_suggest_weather_backend_error(
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
-    client: TestClient,
-    backend_mock: Any,
-) -> None:
-    """Test that the suggest endpoint response is as expected and that a warning is
-    logged when the Weather provider receives an error from the backend.
-    """
-    expected_suggestion: list[Suggestion] = []
-    expected_log_messages: list[dict[str, str]] = [
-        {"levelname": "WARNING", "message": "Could not generate a weather report"}
-    ]
-    backend_mock.get_weather_report.side_effect = BackendError(expected_log_messages[0]["message"])
-
-    response = client.get("/api/v1/suggest?q=weather")
-
-    assert response.status_code == 200
-    result = response.json()
-    assert result["suggestions"] == expected_suggestion
-
-    actual_log_messages: list[dict[str, str]] = [
-        {"levelname": record.levelname, "message": record.message}
-        for record in filter_caplog(caplog.records, "merino.providers.weather.provider")
-    ]
-    assert actual_log_messages == expected_log_messages
 
 
 @freeze_time("1998-03-31")

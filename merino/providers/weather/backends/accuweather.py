@@ -44,11 +44,11 @@ PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
 #   - The placeholder for location key (i.e. `self.url_location_key_placeholder`)
 #     is passed via `ARGV[3]`
 #   - If the location key is present in the cache, it uses the key to fetch the current
-#     conditions and forecast for that key in the cache. It returns a 3-element array
-#     `[location_key, current_condition, forecast]`. The last two element can be `nil`
+#     conditions and forecast for that key in the cache. It returns a 4-element array
+#     `[location_key, current_condition, forecast, ttl]`. The `current_condition` and `forecast` are `nil`
 #     if they are not present in the cache
 #   - If the location key is missing, it will return an empty array
-#   - If the forecast and current_conditions TTLs are a non-positive value (-1 or -2),
+#   - If the current_conditions and forecast TTLs are a non-positive value (-1 or -2),
 #     it will return ttl as false, which is translated to None type in app code.
 LUA_SCRIPT_CACHE_BULK_FETCH: str = """
     local location_key = redis.call("GET", KEYS[1])
@@ -341,17 +341,18 @@ class AccuweatherBackend:
               current_condition, forecast
             -  `skip_location_key` A boolean to determine whether location was looked up.
         """
-        location, current, forecast = False, False, False
+        location, current, forecast, ttl = False, False, False, False
         match cached_data:
             case []:
                 pass
             # the last variable is ttl but is omitted here since we don't need to use but need
             # it to satisfy this match case
-            case [location_cached, current_cached, forecast_cached, _]:
-                location, current, forecast = (
+            case [location_cached, current_cached, forecast_cached, ttl_cached]:
+                location, current, forecast, ttl = (
                     location_cached is not None,
                     current_cached is not None,
                     forecast_cached is not None,
+                    ttl_cached is not None,
                 )
             case _:  # pragma: no cover
                 pass
@@ -361,6 +362,8 @@ class AccuweatherBackend:
                 if location
                 else "accuweather.cache.fetch.miss.locations"
             )
+        if not ttl:
+            self.metrics_client.increment("accuweather.cache.fetch.miss.ttl")
         self.metrics_client.increment(
             "accuweather.cache.hit.currentconditions"
             if current
@@ -490,7 +493,8 @@ class AccuweatherBackend:
         region: str | None = geolocation.region
         city: str | None = geolocation.city
         if not country or not region or not city:
-            raise AccuweatherError("Country and/or region/city unknown")
+            self.metrics_client.increment("accuweather.request.location.not_provided")
+            return None
 
         cache_key: str = self.cache_key_for_accuweather_request(
             self.url_cities_path.format(country_code=country, admin_code=region),
