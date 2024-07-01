@@ -85,6 +85,8 @@ def test_derive_region_return_none():
     assert CuratedRecommendationsProvider.derive_region("123", "123") is None
     # if only locale is passed
     assert CuratedRecommendationsProvider.derive_region("123") is None
+    # if only locale is passed
+    assert CuratedRecommendationsProvider.derive_region("en") is None
 
 
 @pytest.mark.parametrize(
