@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     CorpusItem,
-    RecommendationSurfaceId,
+    ScheduledSurfaceId,
 )
 
 
@@ -84,7 +84,7 @@ class CuratedRecommendationsProvider:
     @staticmethod
     def get_recommendation_surface_id(
         locale: Locale, region: str | None = None
-    ) -> RecommendationSurfaceId:
+    ) -> ScheduledSurfaceId:
         """Locale/region mapping is documented here:
         https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit
 
@@ -101,24 +101,24 @@ class CuratedRecommendationsProvider:
         derived_region = CuratedRecommendationsProvider.derive_region(locale, region)
 
         if language == "de":
-            return RecommendationSurfaceId.NEW_TAB_DE_DE
+            return ScheduledSurfaceId.NEW_TAB_DE_DE
         elif language == "es":
-            return RecommendationSurfaceId.NEW_TAB_ES_ES
+            return ScheduledSurfaceId.NEW_TAB_ES_ES
         elif language == "fr":
-            return RecommendationSurfaceId.NEW_TAB_FR_FR
+            return ScheduledSurfaceId.NEW_TAB_FR_FR
         elif language == "it":
-            return RecommendationSurfaceId.NEW_TAB_IT_IT
+            return ScheduledSurfaceId.NEW_TAB_IT_IT
         else:
             # Default to English language for all other values of language (including 'en' or None)
             if derived_region is None or derived_region in ["US", "CA"]:
-                return RecommendationSurfaceId.NEW_TAB_EN_US
+                return ScheduledSurfaceId.NEW_TAB_EN_US
             elif derived_region in ["GB", "IE"]:
-                return RecommendationSurfaceId.NEW_TAB_EN_GB
+                return ScheduledSurfaceId.NEW_TAB_EN_GB
             elif derived_region in ["IN"]:
-                return RecommendationSurfaceId.NEW_TAB_EN_INTL
+                return ScheduledSurfaceId.NEW_TAB_EN_INTL
             else:
                 # Default to the en-US New Tab if no 2-letter region can be derived from locale or region.
-                return RecommendationSurfaceId.NEW_TAB_EN_US
+                return ScheduledSurfaceId.NEW_TAB_EN_US
 
     @staticmethod
     def extract_language_from_locale(locale: Locale) -> str | None:

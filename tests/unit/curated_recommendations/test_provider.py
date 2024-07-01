@@ -2,7 +2,7 @@
 
 import pytest
 
-from merino.curated_recommendations.corpus_backends.protocol import RecommendationSurfaceId
+from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId
 from merino.curated_recommendations.provider import CuratedRecommendationsProvider, Locale
 
 
@@ -95,67 +95,67 @@ def test_derive_region_return_none():
         # Test cases below are from the Newtab locales/region documentation maintained by the Firefox integration team:
         # https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit
         # Ref: https://github.com/Pocket/recommendation-api/blob/c0fe2d1cab7ec7931c3c8c2e8e3d82908801ab00/tests/unit/data_providers/test_new_tab_dispatch.py#L7 # noqa
-        ("en-CA", "US", RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("en-GB", "US", RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("en-US", "US", RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("en-CA", "CA", RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("en-GB", "CA", RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("en-US", "CA", RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("de", "DE", RecommendationSurfaceId.NEW_TAB_DE_DE),
-        ("de-AT", "DE", RecommendationSurfaceId.NEW_TAB_DE_DE),
-        ("de-CH", "DE", RecommendationSurfaceId.NEW_TAB_DE_DE),
-        ("en-CA", "GB", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("en-GB", "GB", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("en-US", "GB", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("en-CA", "IE", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("en-GB", "IE", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("en-US", "IE", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("fr", "FR", RecommendationSurfaceId.NEW_TAB_FR_FR),
-        ("it", "IT", RecommendationSurfaceId.NEW_TAB_IT_IT),
-        ("es", "ES", RecommendationSurfaceId.NEW_TAB_ES_ES),
-        ("en-CA", "IN", RecommendationSurfaceId.NEW_TAB_EN_INTL),
-        ("en-GB", "IN", RecommendationSurfaceId.NEW_TAB_EN_INTL),
-        ("en-US", "IN", RecommendationSurfaceId.NEW_TAB_EN_INTL),
-        ("de", "CH", RecommendationSurfaceId.NEW_TAB_DE_DE),
-        ("de", "AT", RecommendationSurfaceId.NEW_TAB_DE_DE),
-        ("de", "BE", RecommendationSurfaceId.NEW_TAB_DE_DE),
+        ("en-CA", "US", ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("en-GB", "US", ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("en-US", "US", ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("en-CA", "CA", ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("en-GB", "CA", ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("en-US", "CA", ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("de", "DE", ScheduledSurfaceId.NEW_TAB_DE_DE),
+        ("de-AT", "DE", ScheduledSurfaceId.NEW_TAB_DE_DE),
+        ("de-CH", "DE", ScheduledSurfaceId.NEW_TAB_DE_DE),
+        ("en-CA", "GB", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("en-GB", "GB", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("en-US", "GB", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("en-CA", "IE", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("en-GB", "IE", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("en-US", "IE", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("fr", "FR", ScheduledSurfaceId.NEW_TAB_FR_FR),
+        ("it", "IT", ScheduledSurfaceId.NEW_TAB_IT_IT),
+        ("es", "ES", ScheduledSurfaceId.NEW_TAB_ES_ES),
+        ("en-CA", "IN", ScheduledSurfaceId.NEW_TAB_EN_INTL),
+        ("en-GB", "IN", ScheduledSurfaceId.NEW_TAB_EN_INTL),
+        ("en-US", "IN", ScheduledSurfaceId.NEW_TAB_EN_INTL),
+        ("de", "CH", ScheduledSurfaceId.NEW_TAB_DE_DE),
+        ("de", "AT", ScheduledSurfaceId.NEW_TAB_DE_DE),
+        ("de", "BE", ScheduledSurfaceId.NEW_TAB_DE_DE),
         # Locale can be a main language only.
-        ("en", "CA", RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("en", "US", RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("en", "GB", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("en", "IE", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("en", "IN", RecommendationSurfaceId.NEW_TAB_EN_INTL),
+        ("en", "CA", ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("en", "US", ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("en", "GB", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("en", "IE", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("en", "IN", ScheduledSurfaceId.NEW_TAB_EN_INTL),
         # The locale language primarily determines the market, even if it's not the most common language in the region.
-        ("de", "US", RecommendationSurfaceId.NEW_TAB_DE_DE),
-        ("en", "FR", RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("es", "DE", RecommendationSurfaceId.NEW_TAB_ES_ES),
-        ("fr", "ES", RecommendationSurfaceId.NEW_TAB_FR_FR),
-        ("it", "CA", RecommendationSurfaceId.NEW_TAB_IT_IT),
+        ("de", "US", ScheduledSurfaceId.NEW_TAB_DE_DE),
+        ("en", "FR", ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("es", "DE", ScheduledSurfaceId.NEW_TAB_ES_ES),
+        ("fr", "ES", ScheduledSurfaceId.NEW_TAB_FR_FR),
+        ("it", "CA", ScheduledSurfaceId.NEW_TAB_IT_IT),
         # Extract region from locale, if it is not explicitly provided.
-        ("en-US", None, RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("en-GB", None, RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("en-IE", None, RecommendationSurfaceId.NEW_TAB_EN_GB),
+        ("en-US", None, ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("en-GB", None, ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("en-IE", None, ScheduledSurfaceId.NEW_TAB_EN_GB),
         # locale can vary in case.
-        ("eN-US", None, RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("En-GB", None, RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("EN-ie", None, RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("en-cA", None, RecommendationSurfaceId.NEW_TAB_EN_US),
+        ("eN-US", None, ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("En-GB", None, ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("EN-ie", None, ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("en-cA", None, ScheduledSurfaceId.NEW_TAB_EN_US),
         # region can vary in case.
-        ("en", "gB", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("en", "Ie", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("en", "in", RecommendationSurfaceId.NEW_TAB_EN_INTL),
+        ("en", "gB", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("en", "Ie", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("en", "in", ScheduledSurfaceId.NEW_TAB_EN_INTL),
         # Default to international NewTab when region is unknown.
-        ("en", "XX", RecommendationSurfaceId.NEW_TAB_EN_US),
+        ("en", "XX", ScheduledSurfaceId.NEW_TAB_EN_US),
         # Default to English when language is unknown.
-        ("xx", "US", RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("xx", "CA", RecommendationSurfaceId.NEW_TAB_EN_US),
-        ("xx", "GB", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("xx", "IE", RecommendationSurfaceId.NEW_TAB_EN_GB),
-        ("xx", "YY", RecommendationSurfaceId.NEW_TAB_EN_US),
+        ("xx", "US", ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("xx", "CA", ScheduledSurfaceId.NEW_TAB_EN_US),
+        ("xx", "GB", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("xx", "IE", ScheduledSurfaceId.NEW_TAB_EN_GB),
+        ("xx", "YY", ScheduledSurfaceId.NEW_TAB_EN_US),
     ],
 )
 def test_get_recommendation_surface_id(
-    locale: Locale, region: str, recommendation_surface_id: RecommendationSurfaceId
+    locale: Locale, region: str, recommendation_surface_id: ScheduledSurfaceId
 ):
     """Testing the get_recommendation_surface_id() method &
     ensure correct surface id is returned based on passed locale & region

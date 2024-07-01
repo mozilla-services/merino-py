@@ -24,10 +24,9 @@ class Topic(str, Enum):
 
 
 @unique
-class RecommendationSurfaceId(str, Enum):
+class ScheduledSurfaceId(str, Enum):
     """Defines the possible recommendation surfaces."""
 
-    HOME = "HOME"
     NEW_TAB_EN_US = "NEW_TAB_EN_US"
     NEW_TAB_EN_GB = "NEW_TAB_EN_GB"
     NEW_TAB_EN_INTL = "NEW_TAB_EN_INTL"
@@ -54,8 +53,6 @@ class CorpusItem(BaseModel):
 class CorpusBackend(Protocol):
     """Protocol for Curated Recommendation backend that the provider depends on."""
 
-    async def fetch(
-        self, surface_id: RecommendationSurfaceId
-    ) -> list[CorpusItem]:  # pragma: no cover
+    async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:  # pragma: no cover
         """Fetch Curated Recommendations"""
         ...

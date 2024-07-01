@@ -8,7 +8,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     CorpusItem,
     Topic,
-    RecommendationSurfaceId,
+    ScheduledSurfaceId,
 )
 from merino.utils.version import fetch_app_version_from_file
 
@@ -61,7 +61,7 @@ class CorpusApiBackend(CorpusBackend):
     def __init__(self, http_client: AsyncClient):
         self.http_client = http_client
 
-    async def fetch(self, surface_id: RecommendationSurfaceId) -> list[CorpusItem]:
+    async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
         """Issue a scheduledSurface query"""
         query = """
             query ScheduledSurface($scheduledSurfaceId: ID!, $date: Date!) {
