@@ -7,7 +7,7 @@
 import datetime
 import json
 import logging
-from typing import Any, Optional, cast
+from typing import Any, Optional, cast, AsyncGenerator
 from unittest.mock import AsyncMock
 
 import pytest
@@ -36,9 +36,7 @@ from merino.providers.weather.backends.protocol import (
 ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 ACCUWEATHER_LOCATION_KEY = "39376"
 TEST_CACHE_TTL_SEC = 1800
-CacheKeys = namedtuple(
-    "CacheKeys", ["location_key", "current_conditions_key", "forecast_key"]
-)
+CacheKeys = namedtuple("CacheKeys", ["location_key", "current_conditions_key", "forecast_key"])
 
 logger = logging.getLogger(__name__)
 
@@ -299,7 +297,9 @@ def redis_container() -> AsyncRedisContainer:
 
 
 @pytest_asyncio.fixture(name="redis_client")
-async def fixture_redis_client(redis_container: AsyncRedisContainer) -> Redis:
+async def fixture_redis_client(
+    redis_container: AsyncRedisContainer,
+) -> AsyncGenerator[Redis, None]:
     """Create and return a Redis client"""
     client = await redis_container.get_async_client()
 
