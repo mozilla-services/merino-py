@@ -347,7 +347,7 @@ def generate_accuweather_cache_keys(
 
 
 async def set_redis_keys(
-    redis_client: Redis, keys_and_values: list[tuple], expiry: int = None
+    redis_client: Redis, keys_and_values: list[tuple], expiry: Optional[int] = None
 ) -> None:
     """Set redis cache keys and values after flushing the db"""
     for key, value in keys_and_values:
@@ -848,7 +848,8 @@ async def test_get_weather_report_with_location_key_with_cache_error(
     mocker: MockerFixture,
 ) -> None:
     """Test that we catch the CacheAdapterError exception when running the script against the
-    cache."""
+    cache.
+    """
     caplog.set_level(ERROR)
 
     accuweather: AccuweatherBackend = AccuweatherBackend(
