@@ -7,10 +7,12 @@
 import datetime
 import json
 import logging
+from logging import ERROR, LogRecord
 from typing import Any, Optional, cast, AsyncGenerator
 from unittest.mock import AsyncMock
 
 import pytest
+from pytest import LogCaptureFixture
 import pytest_asyncio
 from httpx import AsyncClient, Request, Response
 from pydantic import HttpUrl
@@ -19,8 +21,10 @@ from redis.asyncio import Redis
 from testcontainers.core.waiting_utils import wait_for_logs
 from testcontainers.redis import AsyncRedisContainer
 
+from tests.types import FilterCaplogFixture
 from collections import namedtuple
 from merino.cache.redis import RedisAdapter
+from merino.exceptions import CacheAdapterError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.accuweather import (
     AccuweatherBackend,
@@ -36,8 +40,9 @@ from merino.providers.weather.backends.protocol import (
 ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 ACCUWEATHER_LOCATION_KEY = "39376"
 TEST_CACHE_TTL_SEC = 1800
-CacheKeys = namedtuple("CacheKeys", ["location_key", "current_conditions_key", "forecast_key"])
+TEST_CACHE_ERROR = "test cache error"
 
+CacheKeys = namedtuple("CacheKeys", ["location_key", "current_conditions_key", "forecast_key"])
 logger = logging.getLogger(__name__)
 
 
@@ -341,14 +346,16 @@ def generate_accuweather_cache_keys(
     )
 
 
-async def set_redis_keys(redis_client: Redis, keys_and_values: list[tuple]) -> None:
+async def set_redis_keys(
+    redis_client: Redis, keys_and_values: list[tuple], expiry: int = None
+) -> None:
     """Set redis cache keys and values after flushing the db"""
     for key, value in keys_and_values:
-        await redis_client.set(key, value)
+        await redis_client.set(key, value, ex=expiry)
 
 
 @pytest.mark.asyncio
-async def test_get_weather_report_from_cache(
+async def test_get_weather_report_from_cache_with_ttl(
     redis_client: Redis,
     geolocation: Location,
     statsd_mock: Any,
@@ -358,7 +365,62 @@ async def test_get_weather_report_from_cache(
     accuweather_cached_current_conditions: bytes,
     accuweather_cached_forecast_fahrenheit: bytes,
 ) -> None:
-    """Test that we can get the weather report from cache."""
+    """Test that we can get the weather report from cache with forecast and current conditions
+    having a valid TTL
+    """
+    # set up the accuweather backend object with the testcontainer redis client
+    accuweather: AccuweatherBackend = AccuweatherBackend(
+        cache=RedisAdapter(redis_client), **accuweather_parameters
+    )
+
+    # get cache keys
+    cache_keys = generate_accuweather_cache_keys(accuweather, geolocation)
+
+    # set the above keys with their values as their corresponding fixtures
+    keys_and_values = [
+        (cache_keys.location_key, accuweather_cached_location_key),
+        (cache_keys.current_conditions_key, accuweather_cached_current_conditions),
+        (cache_keys.forecast_key, accuweather_cached_forecast_fahrenheit),
+    ]
+    await set_redis_keys(redis_client, keys_and_values, expiry=TEST_CACHE_TTL_SEC)
+
+    # this http client mock isn't used to make any calls, but we do assert below on it not being
+    # called
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
+
+    assert report == expected_weather_report
+    client_mock.get.assert_not_called()
+
+    metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
+    assert metrics_timeit_called == ["accuweather.cache.fetch"]
+
+    metrics_increment_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+
+    assert metrics_increment_called == [
+        "accuweather.cache.hit.locations",
+        "accuweather.cache.hit.currentconditions",
+        "accuweather.cache.hit.forecasts",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_from_cache_without_ttl(
+    redis_client: Redis,
+    geolocation: Location,
+    statsd_mock: Any,
+    expected_weather_report: WeatherReport,
+    accuweather_parameters: dict[str, Any],
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_current_conditions: bytes,
+    accuweather_cached_forecast_fahrenheit: bytes,
+) -> None:
+    """Test that we can get the weather report from cache without a TTL set for forecast and
+    current conditions
+    """
     # set up the accuweather backend object with the testcontainer redis client
     accuweather: AccuweatherBackend = AccuweatherBackend(
         cache=RedisAdapter(redis_client), **accuweather_parameters
@@ -769,3 +831,93 @@ async def test_get_weather_report_via_location_key_with_only_forecast_cache_miss
 
     assert report == expected_weather_report_via_location_key
     assert client_mock.get.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_with_location_key_with_cache_error(
+    redis_client: Redis,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    geolocation: Location,
+    statsd_mock: Any,
+    expected_weather_report_via_location_key: WeatherReport,
+    accuweather_parameters: dict[str, Any],
+    accuweather_cached_location_key: bytes,
+    accuweather_cached_current_conditions: bytes,
+    accuweather_cached_forecast_fahrenheit: bytes,
+    mocker: MockerFixture,
+) -> None:
+    """Test that we catch the CacheAdapterError exception when running the script against the
+    cache."""
+    caplog.set_level(ERROR)
+
+    accuweather: AccuweatherBackend = AccuweatherBackend(
+        cache=RedisAdapter(redis_client), **accuweather_parameters
+    )
+    redis_error_mock = mocker.patch.object(accuweather.cache, "run_script", new_callable=AsyncMock)
+    redis_error_mock.side_effect = CacheAdapterError(TEST_CACHE_ERROR)
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    report = await accuweather.get_weather_report(geolocation, ACCUWEATHER_LOCATION_KEY)
+    records: list[LogRecord] = filter_caplog(
+        caplog.records, "merino.providers.weather.backends.accuweather"
+    )
+
+    client_mock.get.assert_not_called()
+    assert report is None
+
+    assert len(records) == 1
+    assert records[0].message.startswith(
+        f"Failed to fetch weather report from Redis: {TEST_CACHE_ERROR}"
+    )
+
+    metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
+    assert metrics_timeit_called == ["accuweather.cache.fetch-via-location-key"]
+
+    metrics_increment_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_increment_called == [
+        "accuweather.cache.fetch-via-location-key.error",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_with_geolocation_when_cache_is_empty(
+    redis_client: Redis,
+    accuweather_parameters: dict[str, Any],
+    geolocation: Location,
+) -> None:
+    """Test that we get None when trying to get weather report with geoloaction when the cache
+    is empty
+    """
+    # set up the accuweather backend object with the testcontainer redis client
+    accuweather: AccuweatherBackend = AccuweatherBackend(
+        cache=RedisAdapter(redis_client), **accuweather_parameters
+    )
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
+
+    assert report is None
+
+    @pytest.mark.asyncio
+    async def test_get_weather_report_with_location_key_when_cache_is_empty(
+        redis_client: Redis,
+        accuweather_parameters: dict[str, Any],
+        geolocation: Location,
+    ) -> None:
+        """Test that we get None when trying to get weather report with location key when the
+        cache
+        is empty
+        """
+        # set up the accuweather backend object with the testcontainer redis client
+        accuweather: AccuweatherBackend = AccuweatherBackend(
+            cache=RedisAdapter(redis_client), **accuweather_parameters
+        )
+
+        report: Optional[WeatherReport] = await accuweather.get_weather_report(
+            geolocation, ACCUWEATHER_LOCATION_KEY
+        )
+
+        assert report is None
