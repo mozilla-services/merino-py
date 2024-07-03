@@ -1,6 +1,8 @@
 """Corpus API backend for making GRAPHQL requests"""
 
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+import logging
 
 from httpx import AsyncClient
 
@@ -11,6 +13,8 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
 )
 from merino.utils.version import fetch_app_version_from_file
+
+logger = logging.getLogger(__name__)
 
 
 class CorpusApiGraphConfig:
@@ -61,6 +65,32 @@ class CorpusApiBackend(CorpusBackend):
     def __init__(self, http_client: AsyncClient):
         self.http_client = http_client
 
+    @staticmethod
+    def get_surface_timezone(scheduled_surface_id: str) -> ZoneInfo:
+        """Return the correct timezone for a scheduled surface id.
+        If no timezone is found, gracefully return timezone in UTC.
+        https://github.com/Pocket/recommendation-api/blob/main/app/data_providers/corpus/corpus_api_client.py#L98 # noqa
+        """
+        zones = {
+            "NEW_TAB_EN_US": "America/New_York",
+            "NEW_TAB_EN_GB": "Europe/London",
+            "NEW_TAB_EN_INTL": "Asia/Kolkata",  # Note: en-Intl is poorly named. Only India is currently eligible.
+            "NEW_TAB_DE_DE": "Europe/Berlin",
+            "NEW_TAB_ES_ES": "Europe/Madrid",
+            "NEW_TAB_FR_FR": "Europe/Paris",
+            "NEW_TAB_IT_IT": "Europe/Rome",
+        }
+
+        try:
+            return ZoneInfo(zones[scheduled_surface_id])
+        except (KeyError, ZoneInfoNotFoundError) as e:
+            # Graceful degradation: continue to serve recommendations if timezone cannot be obtained for the surface.
+            default_tz = ZoneInfo("UTC")
+            logging.error(
+                f"Failed to get timezone for {scheduled_surface_id}, so defaulting to {default_tz}: {e}"
+            )
+            return default_tz
+
     async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
         """Issue a scheduledSurface query"""
         query = """
@@ -81,11 +111,12 @@ class CorpusApiBackend(CorpusBackend):
             }
         """
 
-        # TODO: [MC-1199] The date is supposed to progress at 3am local time,
+        # The date is supposed to progress at 3am local time,
         # where 'local time' is based on the timezone associated with the scheduled surface.
         # This requirement is documented in the NewTab slate spec:
         # https://getpocket.atlassian.net/wiki/spaces/PE/pages/2927100008/Fx+NewTab+Slate+spec
-        today = datetime.now()
+        # today = datetime.now()
+        today = datetime.now(tz=self.get_surface_timezone(surface_id)) - timedelta(hours=3)
 
         body = {
             "query": query,
