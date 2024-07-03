@@ -102,7 +102,7 @@ LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
     if current_conditions_ttl >= 0 and forecast_ttl >= 0 then
         ttl = math.min(current_conditions_ttl, forecast_ttl)
     end
-    local location = nil
+    local location = false
     return {location, current_conditions, forecast, ttl}
 """
 SCRIPT_LOCATION_KEY_ID = "bulk_fetch_by_location_key"
