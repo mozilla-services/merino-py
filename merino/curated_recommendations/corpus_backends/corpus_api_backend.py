@@ -1,5 +1,6 @@
 """Corpus API backend for making GRAPHQL requests"""
 
+import random
 from datetime import datetime, timedelta
 import asyncio
 
@@ -60,10 +61,15 @@ class CorpusApiBackend(CorpusBackend):
 
     http_client: AsyncClient
 
-    cache_expiration_time = timedelta(minutes=1)
+    # time-to-live was chosen because 1 minute (+/- 10 s) is short enough that updates by curators
+    # such as breaking news or editorial corrections propagate fast enough, and that the request
+    # rate to the scheduledSurface query stays close to the historic rate of ~100 requests/minute.
+    cache_time_to_live_min = timedelta(seconds=50)
+    cache_time_to_live_max = timedelta(seconds=70)
     _cache: dict[ScheduledSurfaceId, list[CorpusItem]]
     _expirations: dict[ScheduledSurfaceId, datetime]
     _locks: dict[ScheduledSurfaceId, asyncio.Lock]
+    _background_tasks = set()
 
     def __init__(self, http_client: AsyncClient):
         self.http_client = http_client
@@ -79,7 +85,13 @@ class CorpusApiBackend(CorpusBackend):
         # If we have expired cached data, revalidate asynchronously without waiting for the result.
         if cache_key in self._cache:
             if now >= self._expirations[cache_key]:
-                asyncio.create_task(self._revalidate_cache(surface_id))  # noqa: should not 'await'
+                task = asyncio.create_task(self._revalidate_cache(surface_id))  # noqa: should not 'await'
+                # Save a reference to the result of this function, to avoid a task disappearing
+                # mid-execution. The event loop only keeps weak references to tasks. A task that
+                # isn’t referenced elsewhere may get garbage collected, even before it’s done.
+                # https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
+                self._background_tasks.add(task)
+                task.add_done_callback(self._background_tasks.discard)
 
             return self._cache[cache_key]
 
@@ -126,6 +138,7 @@ class CorpusApiBackend(CorpusBackend):
             headers=CorpusApiGraphConfig.HEADERS,
         )
 
+        res.raise_for_status()
         data = res.json()
 
         # Map Corpus topic to SERP topic
@@ -155,5 +168,15 @@ class CorpusApiBackend(CorpusBackend):
             # Fetch new data from the backend.
             data = await self._fetch_from_backend(surface_id)
             self._cache[cache_key] = data
-            self._expirations[cache_key] = datetime.now() + self.cache_expiration_time
+            self._expirations[cache_key] = self.get_expiration_time()
             return data
+
+    @staticmethod
+    def get_expiration_time() -> datetime:
+        """Return the date & time when a cached value should be expired."""
+        # Random jitter ensures that backend requests don't all happen at the same time.
+        time_to_live_seconds = random.uniform(
+            CorpusApiBackend.cache_time_to_live_min.total_seconds(),
+            CorpusApiBackend.cache_time_to_live_max.total_seconds(),
+        )
+        return datetime.now() + timedelta(seconds=time_to_live_seconds)

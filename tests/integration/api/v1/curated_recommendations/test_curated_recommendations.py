@@ -112,7 +112,7 @@ async def test_curated_recommendations_locale_bad_request():
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
 @pytest.mark.asyncio
 async def test_single_request_multiple_fetches(corpus_http_client):
-    """Test that only a single request is made if multiple fetch() calls are gathered."""
+    """Test that only a single request is made to the curated-corpus-api."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
 
         async def fetch():
@@ -130,7 +130,7 @@ async def test_single_request_multiple_fetches(corpus_http_client):
 
 @pytest.mark.asyncio
 async def test_cache_returned_on_subsequent_calls(corpus_http_client, fixture_response_data):
-    """Test that the cached value is returned on subsequent calls."""
+    """Test that the cache expires, and subsequent requests return new data."""
     with freezegun.freeze_time(tick=True) as frozen_datetime:
         async with AsyncClient(app=app, base_url="http://test") as ac:
 
@@ -148,8 +148,8 @@ async def test_cache_returned_on_subsequent_calls(corpus_http_client, fixture_re
                 json=fixture_response_data,
             )
 
-            # Progress time to when the cache expires.
-            frozen_datetime.tick(delta=CorpusApiBackend.cache_expiration_time)
+            # Progress time to after the cache expires.
+            frozen_datetime.tick(delta=CorpusApiBackend.cache_time_to_live_max)
             frozen_datetime.tick(delta=timedelta(seconds=1))
 
             # When the cache is expired, the first fetch may return stale data.
