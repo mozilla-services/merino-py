@@ -455,6 +455,7 @@ async def test_get_weather_report_from_cache_without_ttl(
 
     assert metrics_increment_called == [
         "accuweather.cache.hit.locations",
+        "accuweather.cache.fetch.miss.ttl",
         "accuweather.cache.hit.currentconditions",
         "accuweather.cache.hit.forecasts",
     ]
@@ -664,6 +665,7 @@ async def test_get_weather_report_with_location_key_from_cache(
     ]
 
     assert metrics_increment_called == [
+        "accuweather.cache.fetch.miss.ttl",
         "accuweather.cache.hit.currentconditions",
         "accuweather.cache.hit.forecasts",
     ]
