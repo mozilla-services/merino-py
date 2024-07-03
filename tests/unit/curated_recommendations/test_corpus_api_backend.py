@@ -1,6 +1,8 @@
 """Unit test for map_corpus_to_serp_topic."""
 
+from zoneinfo import ZoneInfo
 import pytest
+from freezegun import freeze_time
 
 from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
     map_corpus_topic_to_serp_topic,
@@ -75,3 +77,36 @@ def test_get_surface_timezone_bad_input(caplog: LogCaptureFixture):
     error_logs = [r for r in caplog.records if r.levelname == "ERROR"]
     assert len(error_logs) == 1
     assert "Failed to get timezone for foobar, so defaulting to UTC" in error_logs[0].message
+
+
+@pytest.mark.parametrize(
+    ("surface_id", "time_to_freeze", "expected_date"),
+    [
+        # The publishing day rolls over at 3:00am local time. At 2:59am, content from the previous day is requested.
+        ("America/New_York", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am New York
+        ("America/New_York", "2023-08-01 6:59:00", "2023-07-31"),  # 2:59am New York
+        ("Asia/Kolkata", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am Kolkata
+        ("Asia/Kolkata", "2023-07-31 21:29:00", "2023-07-31"),  # 2:59am Kolkata
+        ("Europe/London", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am London
+        ("Europe/London", "2023-08-01 6:59:00", "2023-07-31"),  # 3:00am London
+        ("Europe/Berlin", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am Berlin
+        ("Europe/Berlin", "2023-08-01 6:59:00", "2023-07-31"),  # 2:59am Berlin
+        ("Europe/Madrid", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am Madrid
+        ("Europe/Madrid", "2023-08-01 6:59:00", "2023-07-31"),  # 2:59am Madrid
+        ("Europe/Paris", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am Paris
+        ("Europe/Paris", "2023-08-01 6:59:00", "2023-07-31"),  # 2:59am Paris
+        ("Europe/Rome", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am Rome
+        ("Europe/Rome", "2023-08-01 6:59:00", "2023-07-31"),  # 2:59am Rome
+    ],
+)
+def test_get_scheduled_surface_date(surface_id, time_to_freeze, expected_date):
+    """Testing the get_scheduled_surface_date method & ensuring
+    the correct date is returned for a scheduled surface.
+    """
+    with freeze_time(time_to_freeze, tz_offset=0):
+        assert (
+            CorpusApiBackend.get_scheduled_surface_date(ZoneInfo("America/New_York")).strftime(
+                "%Y-%m-%d"
+            )
+            == expected_date
+        )  # noqa

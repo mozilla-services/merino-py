@@ -91,6 +91,11 @@ class CorpusApiBackend(CorpusBackend):
             )
             return default_tz
 
+    @staticmethod
+    def get_scheduled_surface_date(surface_timezone: ZoneInfo) -> datetime:
+        """Return scheduled surface date based on timezone."""
+        return datetime.now(tz=surface_timezone) - timedelta(hours=3)
+
     async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
         """Issue a scheduledSurface query"""
         query = """
@@ -115,8 +120,7 @@ class CorpusApiBackend(CorpusBackend):
         # where 'local time' is based on the timezone associated with the scheduled surface.
         # This requirement is documented in the NewTab slate spec:
         # https://getpocket.atlassian.net/wiki/spaces/PE/pages/2927100008/Fx+NewTab+Slate+spec
-        # today = datetime.now()
-        today = datetime.now(tz=self.get_surface_timezone(surface_id)) - timedelta(hours=3)
+        today = self.get_scheduled_surface_date(self.get_surface_timezone(surface_id))
 
         body = {
             "query": query,
