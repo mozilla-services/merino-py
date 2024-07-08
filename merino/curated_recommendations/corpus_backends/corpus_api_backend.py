@@ -5,7 +5,7 @@ import random
 from datetime import datetime, timedelta
 import asyncio
 
-from httpx import AsyncClient, HTTPStatusError
+from httpx import AsyncClient, HTTPError
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
@@ -176,7 +176,7 @@ class CorpusApiBackend(CorpusBackend):
             # Fetch new data from the backend.
             try:
                 data = await self._fetch_from_backend(surface_id)
-            except HTTPStatusError as e:
+            except HTTPError as e:
                 logger.warning(f"Retrying CorpusApiBackend._fetch_from_backend once after {e}")
                 # Backoff prevents high API rate during downtime.
                 await asyncio.sleep(self._backoff_time.total_seconds())
