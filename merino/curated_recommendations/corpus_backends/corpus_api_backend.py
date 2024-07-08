@@ -1,10 +1,11 @@
 """Corpus API backend for making GRAPHQL requests"""
 
+import logging
 import random
 from datetime import datetime, timedelta
 import asyncio
 
-from httpx import AsyncClient
+from httpx import AsyncClient, HTTPStatusError
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
@@ -13,6 +14,9 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
 )
 from merino.utils.version import fetch_app_version_from_file
+
+
+logger = logging.getLogger(__name__)
 
 
 class CorpusApiGraphConfig:
@@ -66,16 +70,20 @@ class CorpusApiBackend(CorpusBackend):
     # rate to the scheduledSurface query stays close to the historic rate of ~100 requests/minute.
     cache_time_to_live_min = timedelta(seconds=50)
     cache_time_to_live_max = timedelta(seconds=70)
+    # The backoff time is the time that is waited before retrying.
+    # fetch() makes a single retry attempt, so there's exponential backoff (for now).
+    _backoff_time = timedelta(seconds=0.5)
     _cache: dict[ScheduledSurfaceId, list[CorpusItem]]
     _expirations: dict[ScheduledSurfaceId, datetime]
     _locks: dict[ScheduledSurfaceId, asyncio.Lock]
-    _background_tasks = set()
+    _background_tasks: set[asyncio.Task]
 
     def __init__(self, http_client: AsyncClient):
         self.http_client = http_client
         self._cache = {}
         self._expirations = {}
         self._locks = {}
+        self._background_tasks = set()
 
     async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
         """Fetch corpus items with stale-while-revalidate caching and request coalescing."""
@@ -166,7 +174,19 @@ class CorpusApiBackend(CorpusBackend):
                 return self._cache[cache_key]
 
             # Fetch new data from the backend.
-            data = await self._fetch_from_backend(surface_id)
+            try:
+                data = await self._fetch_from_backend(surface_id)
+            except HTTPStatusError as e:
+                logger.warning(f"Retrying CorpusApiBackend._fetch_from_backend once after {e}")
+                # Backoff prevents high API rate during downtime.
+                await asyncio.sleep(self._backoff_time.total_seconds())
+                # http errors are expected to be rare, so a single retry attempt probably suffices.
+                data = await self._fetch_from_backend(surface_id)
+            except Exception as e:
+                # Backoff prevents high API rate when an unforeseen error occurs.
+                await asyncio.sleep(self._backoff_time.total_seconds())
+                raise e
+
             self._cache[cache_key] = data
             self._expirations[cache_key] = self.get_expiration_time()
             return data

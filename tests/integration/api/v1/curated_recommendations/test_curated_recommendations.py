@@ -2,12 +2,12 @@
 
 import asyncio
 import json
-from datetime import timedelta
+from datetime import timedelta, datetime
 from unittest.mock import AsyncMock
 
 import freezegun
 import pytest
-from httpx import AsyncClient, Response
+from httpx import AsyncClient, Request, Response, HTTPStatusError
 from pydantic import HttpUrl
 
 from merino.curated_recommendations import (
@@ -15,6 +15,7 @@ from merino.curated_recommendations import (
     CuratedRecommendationsProvider,
     get_provider,
 )
+from merino.curated_recommendations.corpus_backends.corpus_api_backend import CorpusApiGraphConfig
 from merino.curated_recommendations.provider import CuratedRecommendation
 from merino.main import app
 
@@ -26,8 +27,19 @@ def fixture_response_data():
         return json.load(f)
 
 
+@pytest.fixture()
+def fixture_request_data() -> Request:
+    """Load mock response data for the scheduledSurface query"""
+    return Request(
+        method="POST",
+        url=CorpusApiGraphConfig.CORPUS_API_PROD_ENDPOINT,
+        headers=CorpusApiGraphConfig.HEADERS,
+        json={"locale": "en-US"},
+    )
+
+
 @pytest.fixture(name="corpus_http_client")
-def fixture_mock_corpus_http_client(fixture_response_data) -> AsyncMock:
+def fixture_mock_corpus_http_client(fixture_response_data, fixture_request_data) -> AsyncMock:
     """Mock curated corpus api HTTP client."""
     # Create a mock HTTP client
     mock_http_client = AsyncMock(spec=AsyncClient)
@@ -36,6 +48,7 @@ def fixture_mock_corpus_http_client(fixture_response_data) -> AsyncMock:
     mock_http_client.post.return_value = Response(
         status_code=200,
         json=fixture_response_data,
+        request=fixture_request_data,
     )
 
     return mock_http_client
@@ -60,6 +73,11 @@ def setup_providers(provider):
     app.dependency_overrides[get_provider] = lambda: provider
 
 
+async def fetch_en_us(client: AsyncClient) -> Response:
+    """Make a curated recommendations request with en-US locale"""
+    return await client.post("/api/v1/curated-recommendations", json={"locale": "en-US"})
+
+
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
 @pytest.mark.asyncio
 async def test_curated_recommendations_locale():
@@ -79,7 +97,7 @@ async def test_curated_recommendations_locale():
             receivedRank=1,
         )
         # Mock the endpoint
-        response = await ac.post("/api/v1/curated-recommendations", json={"locale": "en-US"})
+        response = await fetch_en_us(ac)
         data = response.json()
 
         # Check if the mock response is valid
@@ -114,12 +132,8 @@ async def test_curated_recommendations_locale_bad_request():
 async def test_single_request_multiple_fetches(corpus_http_client):
     """Test that only a single request is made to the curated-corpus-api."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
-
-        async def fetch():
-            return await ac.post("/api/v1/curated-recommendations", json={"locale": "en-US"})
-
         # Gather multiple fetch calls
-        results = await asyncio.gather(fetch(), fetch(), fetch(), fetch(), fetch())
+        results = await asyncio.gather(fetch_en_us(ac), fetch_en_us(ac), fetch_en_us(ac))
 
         # Assert that exactly one request was made to the corpus api
         corpus_http_client.post.assert_called_once()
@@ -128,17 +142,62 @@ async def test_single_request_multiple_fetches(corpus_http_client):
         assert all(results[0].json() == result.json() for result in results)
 
 
+@freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
 @pytest.mark.asyncio
-async def test_cache_returned_on_subsequent_calls(corpus_http_client, fixture_response_data):
+async def test_single_request_multiple_failed_fetches(
+    corpus_http_client, fixture_request_data, fixture_response_data, caplog
+):
+    """Test that only a few requests are made to the curated-corpus-api when it is down."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        start_time = datetime.now()
+
+        def temporary_downtime(*args, **kwargs):
+            # Simulate the backend being unavailable for 0.2 seconds.
+            if datetime.now() < start_time + timedelta(seconds=0.2):
+                return Response(status_code=503, request=fixture_request_data)
+            else:
+                return Response(
+                    status_code=200,
+                    json=fixture_response_data,
+                    request=fixture_request_data,
+                )
+
+        corpus_http_client.post = AsyncMock(side_effect=temporary_downtime)
+
+        # Hit the endpoint until a 200 response is received.
+        while datetime.now() < start_time + timedelta(seconds=1):
+            try:
+                result = await fetch_en_us(ac)
+                if result.status_code == 200:
+                    break
+            except HTTPStatusError:
+                pass
+
+        assert result.status_code == 200
+
+        # Assert that we did not send a lot of requests to the backend
+        # call_count is 400+ for me locally when CorpusApiBackend._backoff_time is changed to 0.
+        print("call_count", corpus_http_client.post.call_count)
+        assert corpus_http_client.post.call_count == 2
+
+        # Assert that a warning was logged with a descriptive message.
+        warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+        assert len(warnings) == 1
+        assert (
+            "Retrying CorpusApiBackend._fetch_from_backend once after "
+            "Server error '503 Service Unavailable'"
+        ) in warnings[0].message
+
+
+@pytest.mark.asyncio
+async def test_cache_returned_on_subsequent_calls(
+    corpus_http_client, fixture_response_data, fixture_request_data
+):
     """Test that the cache expires, and subsequent requests return new data."""
     with freezegun.freeze_time(tick=True) as frozen_datetime:
         async with AsyncClient(app=app, base_url="http://test") as ac:
-
-            async def fetch():
-                return await ac.post("/api/v1/curated-recommendations", json={"locale": "en-US"})
-
             # First fetch to populate cache
-            initial_response = await fetch()
+            initial_response = await fetch_en_us(ac)
             initial_data = initial_response.json()
 
             for item in fixture_response_data["data"]["scheduledSurface"]["items"]:
@@ -146,6 +205,7 @@ async def test_cache_returned_on_subsequent_calls(corpus_http_client, fixture_re
             corpus_http_client.post.return_value = Response(
                 status_code=200,
                 json=fixture_response_data,
+                request=fixture_request_data,
             )
 
             # Progress time to after the cache expires.
@@ -153,11 +213,11 @@ async def test_cache_returned_on_subsequent_calls(corpus_http_client, fixture_re
             frozen_datetime.tick(delta=timedelta(seconds=1))
 
             # When the cache is expired, the first fetch may return stale data.
-            await fetch()
+            await fetch_en_us(ac)
             await asyncio.sleep(0.01)  # Allow asyncio background task to make an API request
 
             # Next fetch should get the new data
-            new_response = await fetch()
+            new_response = await fetch_en_us(ac)
             assert corpus_http_client.post.call_count == 2
             new_data = new_response.json()
             assert new_data["recommendedAt"] > initial_data["recommendedAt"]
