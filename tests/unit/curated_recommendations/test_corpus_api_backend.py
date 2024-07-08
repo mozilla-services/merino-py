@@ -1,6 +1,6 @@
 """Unit test for map_corpus_to_serp_topic."""
-
 from zoneinfo import ZoneInfo
+from datetime import datetime
 import pytest
 from freezegun import freeze_time
 
@@ -106,3 +106,17 @@ def test_get_scheduled_surface_date(time_zone, time_to_freeze, expected_date):
     with freeze_time(time_to_freeze, tz_offset=0):
         scheduled_surface_date = CorpusApiBackend.get_scheduled_surface_date(ZoneInfo(time_zone))
         assert scheduled_surface_date.strftime("%Y-%m-%d") == expected_date
+
+
+@freeze_time("2012-01-14 00:00:00", tz_offset=0)
+def test_get_expiration_time():
+    """Testing the generation of expiration times"""
+    times = [CorpusApiBackend.get_expiration_time() for _ in range(10)]
+
+    # Assert that times are within the expected range
+    min_expected_time = datetime(2012, 1, 14, 0, 0, 50)
+    max_expected_time = datetime(2012, 1, 14, 0, 1, 10)
+    assert all(min_expected_time <= t <= max_expected_time for t in times)
+
+    # Assert that all returned times are different
+    assert len(set(times)) == len(times)
