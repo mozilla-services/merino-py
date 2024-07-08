@@ -1,4 +1,5 @@
 """Unit test for map_corpus_to_serp_topic."""
+
 from zoneinfo import ZoneInfo
 from datetime import datetime
 import pytest

@@ -1,4 +1,5 @@
 """Corpus API backend for making GRAPHQL requests"""
+
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import logging
 import random
