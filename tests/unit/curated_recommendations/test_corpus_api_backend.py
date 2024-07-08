@@ -80,33 +80,29 @@ def test_get_surface_timezone_bad_input(caplog: LogCaptureFixture):
 
 
 @pytest.mark.parametrize(
-    ("surface_id", "time_to_freeze", "expected_date"),
+    ("time_zone", "time_to_freeze", "expected_date"),
     [
         # The publishing day rolls over at 3:00am local time. At 2:59am, content from the previous day is requested.
         ("America/New_York", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am New York
         ("America/New_York", "2023-08-01 6:59:00", "2023-07-31"),  # 2:59am New York
-        ("Asia/Kolkata", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am Kolkata
+        ("Asia/Kolkata", "2023-07-31 21:30:00", "2023-08-01"),  # 3:00am Kolkata
         ("Asia/Kolkata", "2023-07-31 21:29:00", "2023-07-31"),  # 2:59am Kolkata
-        ("Europe/London", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am London
-        ("Europe/London", "2023-08-01 6:59:00", "2023-07-31"),  # 3:00am London
-        ("Europe/Berlin", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am Berlin
-        ("Europe/Berlin", "2023-08-01 6:59:00", "2023-07-31"),  # 2:59am Berlin
-        ("Europe/Madrid", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am Madrid
-        ("Europe/Madrid", "2023-08-01 6:59:00", "2023-07-31"),  # 2:59am Madrid
-        ("Europe/Paris", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am Paris
-        ("Europe/Paris", "2023-08-01 6:59:00", "2023-07-31"),  # 2:59am Paris
-        ("Europe/Rome", "2023-08-01 7:00:00", "2023-08-01"),  # 3:00am Rome
-        ("Europe/Rome", "2023-08-01 6:59:00", "2023-07-31"),  # 2:59am Rome
+        ("Europe/London", "2023-08-01 2:00:00", "2023-08-01"),  # 3:00am London
+        ("Europe/London", "2023-08-01 1:59:00", "2023-07-31"),  # 3:00am London
+        ("Europe/Berlin", "2023-08-01 1:00:00", "2023-08-01"),  # 3:00am Berlin
+        ("Europe/Berlin", "2023-08-01 0:59:00", "2023-07-31"),  # 2:59am Berlin
+        ("Europe/Madrid", "2023-08-01 1:00:00", "2023-08-01"),  # 3:00am Madrid
+        ("Europe/Madrid", "2023-08-01 0:59:00", "2023-07-31"),  # 2:59am Madrid
+        ("Europe/Paris", "2023-08-01 1:00:00", "2023-08-01"),  # 3:00am Paris
+        ("Europe/Paris", "2023-08-01 0:59:00", "2023-07-31"),  # 2:59am Paris
+        ("Europe/Rome", "2023-08-01 1:00:00", "2023-08-01"),  # 3:00am Rome
+        ("Europe/Rome", "2023-08-01 0:59:00", "2023-07-31"),  # 2:59am Rome
     ],
 )
-def test_get_scheduled_surface_date(surface_id, time_to_freeze, expected_date):
+def test_get_scheduled_surface_date(time_zone, time_to_freeze, expected_date):
     """Testing the get_scheduled_surface_date method & ensuring
     the correct date is returned for a scheduled surface.
     """
     with freeze_time(time_to_freeze, tz_offset=0):
-        assert (
-            CorpusApiBackend.get_scheduled_surface_date(ZoneInfo("America/New_York")).strftime(
-                "%Y-%m-%d"
-            )
-            == expected_date
-        )  # noqa
+        scheduled_surface_date = CorpusApiBackend.get_scheduled_surface_date(ZoneInfo(time_zone))
+        assert scheduled_surface_date.strftime("%Y-%m-%d") == expected_date
