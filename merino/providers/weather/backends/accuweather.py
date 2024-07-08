@@ -102,10 +102,14 @@ LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
     if current_conditions_ttl >= 0 and forecast_ttl >= 0 then
         ttl = math.min(current_conditions_ttl, forecast_ttl)
     end
-    local location = false
-    return {location, current_conditions, forecast, ttl}
+    
+    return {current_conditions, forecast, ttl}
 """
 SCRIPT_LOCATION_KEY_ID = "bulk_fetch_by_location_key"
+# LOCATION_SENTINEL constant below is prepended to the list returned by the above
+# bulk_fetch_by_location_key script. This is to accommodate parse_cached_data method which
+# expects 4 list elements to be returned from the cache but this script only returns 3.
+LOCATION_SENTINEL = None
 LOCATION_COMPLETION_REQUEST_TYPE: str = "autocomplete"
 
 ALIAS_PARAM: str = "alias"
@@ -463,11 +467,12 @@ class AccuweatherBackend:
                         ),
                     ],
                 )
+                if cached_data:
+                    cached_data = [LOCATION_SENTINEL, *cached_data]
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.fetch-via-location-key.error")
             return None
-
         self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)
         cached_report = self.parse_cached_data(cached_data)
         location = Location(key=location_key)
