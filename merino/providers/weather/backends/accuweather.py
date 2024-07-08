@@ -76,16 +76,15 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
 SCRIPT_ID: str = "bulk_fetch"
 
 
-# The Lua script to fetch the location key, current condition, forecast, and a TTL for
+# The Lua script to fetch the current condition, forecast, and a TTL for
 # a given a city-based_location key.
 #
 # Note:
-#   - The script retrieves the cached current conditions and forecase data
+#   - The script retrieves the cached current conditions, forecast and TTL data
 #   - The cache key for current conditions and forecast should be provided
 #     through `ARGV[1]` and `ARGV[2]`
-#   - It returns a 3-element array (for compatability reasons the first value is nil.)
-#     `[nil, current_condition, forecast]`. The last two element can be `nil`
-#     if they are not present in the cache
+#   - It returns a 3-element array `[current_condition, forecast, ttl]`. All of these elements
+#     can be nil
 #   - If the forecast and current_conditions TTLs are a non-positive value (-1 or -2),
 #     it will return ttl as false, which is translated to None type in app code.
 LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
@@ -473,6 +472,7 @@ class AccuweatherBackend:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.fetch-via-location-key.error")
             return None
+
         self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)
         cached_report = self.parse_cached_data(cached_data)
         location = Location(key=location_key)
