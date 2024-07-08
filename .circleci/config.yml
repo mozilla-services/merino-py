@@ -97,10 +97,18 @@ jobs:
           command: make unit-tests
           environment:
             TEST_RESULTS_DIR: workspace/test-results
+      - install-coverage
+      - run:
+          name: Generate Coverage
+          command: |
+            coverage json --data-file="workspace/test-results/.coverage.unit" \
+            -o workspace/test-results/coverage_unit.json
       - store_test_results:
           path: workspace/test-results
       - store_artifacts:
-          path: workspace/test-results
+          path: workspace/test-results/coverage.json
+      - store_artifacts:
+          path: workspace/test-results/unit_results.xml
       - persist_to_workspace:
           root: workspace
           paths:
@@ -119,10 +127,18 @@ jobs:
           command: make integration-tests
           environment:
             TEST_RESULTS_DIR: workspace/test-results
+      - install-coverage
+      - run:
+          name: Generate Coverage
+          command: |
+            coverage json --data-file="workspace/test-results/.coverage.integration" \
+            -o workspace/test-results/coverage.json
       - store_test_results:
           path: workspace/test-results
       - store_artifacts:
-          path: workspace/test-results
+          path: workspace/test-results/integration_results.xml
+      - store_artifacts:
+          path: workspace/test-results/coverage_integration.json
       - persist_to_workspace:
           root: workspace
           paths:
@@ -139,8 +155,14 @@ jobs:
           command: make test-coverage-check
           environment:
             TEST_RESULTS_DIR: workspace/test-results
+      - install-coverage
+      - run:
+          name: Generate Coverage
+          command: |
+            coverage json --data-file="workspace/test-results/.coverage" \
+            -o workspace/test-results/coverage.json
       - store_artifacts:
-          path: workspace/test-results/.coverage
+          path: workspace/test-results/coverage.json
   contract-tests:
     machine:
       image: ubuntu-2004:2024.01.1
@@ -374,3 +396,9 @@ commands:
             "$CIRCLE_PROJECT_USERNAME" \
             "$CIRCLE_PROJECT_REPONAME" \
             "$CIRCLE_BUILD_URL" > version.json
+
+  install-coverage:
+    steps:
+      - run:
+          name: Install Coverage
+          command: pip install coverage
