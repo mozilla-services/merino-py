@@ -76,16 +76,15 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
 SCRIPT_ID: str = "bulk_fetch"
 
 
-# The Lua script to fetch the location key, current condition, forecast, and a TTL for
+# The Lua script to fetch the current condition, forecast, and a TTL for
 # a given a city-based_location key.
 #
 # Note:
-#   - The script retrieves the cached current conditions and forecase data
+#   - The script retrieves the cached current conditions, forecast and TTL data
 #   - The cache key for current conditions and forecast should be provided
 #     through `ARGV[1]` and `ARGV[2]`
-#   - It returns a 3-element array (for compatability reasons the first value is nil.)
-#     `[nil, current_condition, forecast]`. The last two element can be `nil`
-#     if they are not present in the cache
+#   - It returns a 3-element array `[current_condition, forecast, ttl]`. All of these elements
+#     can be nil
 #   - If the forecast and current_conditions TTLs are a non-positive value (-1 or -2),
 #     it will return ttl as false, which is translated to None type in app code.
 LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
@@ -102,10 +101,14 @@ LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
     if current_conditions_ttl >= 0 and forecast_ttl >= 0 then
         ttl = math.min(current_conditions_ttl, forecast_ttl)
     end
-    local location = false
-    return {location, current_conditions, forecast, ttl}
+    
+    return {current_conditions, forecast, ttl}
 """
 SCRIPT_LOCATION_KEY_ID = "bulk_fetch_by_location_key"
+# LOCATION_SENTINEL constant below is prepended to the list returned by the above
+# bulk_fetch_by_location_key script. This is to accommodate parse_cached_data method which
+# expects 4 list elements to be returned from the cache but this script only returns 3.
+LOCATION_SENTINEL = None
 LOCATION_COMPLETION_REQUEST_TYPE: str = "autocomplete"
 
 ALIAS_PARAM: str = "alias"
@@ -463,6 +466,8 @@ class AccuweatherBackend:
                         ),
                     ],
                 )
+                if cached_data:
+                    cached_data = [LOCATION_SENTINEL, *cached_data]
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.fetch-via-location-key.error")
