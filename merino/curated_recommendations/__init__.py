@@ -5,6 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
     CorpusApiBackend,
+    CorpusApiGraphConfig,
 )
 from merino.curated_recommendations.provider import CuratedRecommendationsProvider
 from merino.utils.http_client import create_http_client
@@ -16,7 +17,10 @@ def init_provider() -> None:
     """Initialize the curated recommendations provider."""
     global _provider
     _provider = CuratedRecommendationsProvider(
-        corpus_backend=CorpusApiBackend(create_http_client(base_url=""))
+        corpus_backend=CorpusApiBackend(
+            http_client=create_http_client(base_url=""),
+            graph_config=CorpusApiGraphConfig(),
+        )
     )
 
 

@@ -24,12 +24,19 @@ class CorpusApiGraphConfig:
 
     CORPUS_API_PROD_ENDPOINT = "https://client-api.getpocket.com"
     CORPUS_API_DEV_ENDPOINT = "https://client-api.getpocket.dev"
-    CLIENT_NAME = "merino-py"
-    CLIENT_VERSION = fetch_app_version_from_file().commit
-    HEADERS = {
-        "apollographql-client-name": CLIENT_NAME,
-        "apollographql-client-version": CLIENT_VERSION,
-    }
+
+    @property
+    def endpoint(self):
+        """Pocket GraphQL endpoint URL"""
+        return self.CORPUS_API_PROD_ENDPOINT
+
+    @property
+    def headers(self):
+        """Pocket GraphQL client headers"""
+        return {
+            "apollographql-client-name": "merino-py",
+            "apollographql-client-version": fetch_app_version_from_file().commit,
+        }
 
 
 """
@@ -64,6 +71,7 @@ class CorpusApiBackend(CorpusBackend):
     """
 
     http_client: AsyncClient
+    graph_config: CorpusApiGraphConfig
 
     # time-to-live was chosen because 1 minute (+/- 10 s) is short enough that updates by curators
     # such as breaking news or editorial corrections propagate fast enough, and that the request
@@ -78,8 +86,9 @@ class CorpusApiBackend(CorpusBackend):
     _locks: dict[ScheduledSurfaceId, asyncio.Lock]
     _background_tasks: set[asyncio.Task]
 
-    def __init__(self, http_client: AsyncClient):
+    def __init__(self, http_client: AsyncClient, graph_config: CorpusApiGraphConfig):
         self.http_client = http_client
+        self.graph_config = graph_config
         self._cache = {}
         self._expirations = {}
         self._locks = {}
@@ -172,9 +181,9 @@ class CorpusApiBackend(CorpusBackend):
         }
 
         res = await self.http_client.post(
-            CorpusApiGraphConfig.CORPUS_API_PROD_ENDPOINT,
+            self.graph_config.endpoint,
             json=body,
-            headers=CorpusApiGraphConfig.HEADERS,
+            headers=self.graph_config.headers,
         )
 
         res.raise_for_status()
