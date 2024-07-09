@@ -149,20 +149,8 @@
 <li>For functional tests (unit, integration or contract), logs can be found on
 <a href="https://app.circleci.com/pipelines/github/mozilla-services/merino-py">CircleCI</a></li>
 <li>For performance tests (load), insights can be found on <a href="https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&amp;from=now-24h&amp;to=now&amp;var-environment=prodpy&amp;refresh=1m">Grafana</a> and in the
-Locust logs. To access the Locust logs:
-<ol>
-<li>Open a cloud shell in the <a href="https://console.cloud.google.com/kubernetes/list/overview?project=moz-fx-merino-nonprod-ee93">Merino stage environment</a></li>
-<li>Authenticate by executing the following command:</li>
-</ol>
-<pre><code class="language-shell">gcloud container clusters get-credentials merino-nonprod-v1 \
-  --region us-west1 --project moz-fx-merino-nonprod-ee93
-</code></pre>
-<ol start="3">
-<li>Access the data in the Kubernetes pod by executing the following command:</li>
-</ol>
-<pre><code class="language-shell">  kubectl exec -it -n locust-merino locust-master-0 -- bash -c &quot;cd /data &amp;&amp; /bin/bash&quot;
-</code></pre>
-</li>
+Locust logs. To access the Locust logs see the <a href="https://mozilla-services.github.io/merino-py/testing/load-tests.html">Distributed GCP Exection - CI Trigger</a>
+section of the load test documentation.</li>
 </ul>
 </li>
 <li>

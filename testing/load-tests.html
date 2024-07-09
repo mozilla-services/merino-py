@@ -154,16 +154,6 @@ These tests use the Locust framework and are triggered at the discretion of the 
 <li><a href="https://docs.google.com/document/d/1BGNhKuclUH40Bit9KxYWLiv_N_VnE66uxi9pBFbRWbg/edit">Merino Load Test History</a></li>
 <li><a href="https://docs.google.com/spreadsheets/d/1SAO3QYIrbxDRxzmYIab-ebZXA1dF06W1lT4I1h2R3a8/edit?usp=sharing">Merino Load Test Spreadsheet</a></li>
 </ul>
-<h2 id="opt-in-execution-in-staging"><a class="header" href="#opt-in-execution-in-staging">Opt-In Execution in Staging</a></h2>
-<p>To automatically kick off load testing in staging along with your pull request commit, you have to include
-a label in your git commit. This must be the merge commit on the <code>main</code> branch, since only the most recent commit is checked for the label. This label is in the form of: <code>[load test: (abort|warn)]</code>. Take careful note
-of correct syntax and spacing within the label. There are two options for load tests, being <code>abort</code> and <code>warn</code>.</p>
-<p>The <code>abort</code> label will prevent a <code>prod</code> deployment should the load test fail.
-Ex. <code>feat: Add feature ABC [load test: abort]</code>.</p>
-<p>The <code>warn</code> label will output a Slack warning should the load test fail, but still allow for <code>prod</code> deployment.
-Ex. <code>feat: Add feature XYZ [load test: warn]</code>.</p>
-<p>The commit tag signals load test instructions to Jenkins by modifying the Docker image tag. The Jenkins deployment workflow first deploys to <code>stage</code> and then runs load tests if requested. The Docker image tag passed to Jenkins appears as follows:
-<code>^(?P&lt;environment&gt;stage|prod)(?:-(?P&lt;task&gt;\w+)-(?P&lt;onfailure&gt;warn|abort))?-(?P&lt;commit&gt;[a-z0-9]+)$</code>.</p>
 <h2 id="local-execution"><a class="header" href="#local-execution">Local Execution</a></h2>
 <p>Note that if you make changes to the load test code, you must stop and remove the Docker containers and networks for changes to reflect.
 Do this by running <code>make load-tests-clean</code>.</p>
@@ -241,7 +231,7 @@ desired test duration has elapsed. If the 'Run time' is set in step 1, the load 
 will stop automatically.</p>
 <h4 id="3-analyse-results"><a class="header" href="#3-analyse-results">3. Analyse Results</a></h4>
 <ul>
-<li>See <a href="#3-analyse-results-1">Distributed GCP Execution - Analyse Results</a></li>
+<li>See <a href="#3-analyse-results-1">Distributed GCP Execution (Manual Trigger) - Analyse Results</a></li>
 <li>Only client-side measures, provided by Locust, are available when executing against a
 local instance of Merino.</li>
 </ul>
@@ -250,8 +240,8 @@ local instance of Merino.</li>
 <p>Execute the following from the repository root:</p>
 <pre><code class="language-shell">make load-tests-clean
 </code></pre>
-<h2 id="distributed-gcp-execution"><a class="header" href="#distributed-gcp-execution">Distributed GCP Execution</a></h2>
-<p>Follow the steps bellow to execute the distributed load tests on GCP:</p>
+<h2 id="distributed-gcp-execution---manual-trigger"><a class="header" href="#distributed-gcp-execution---manual-trigger">Distributed GCP Execution - Manual Trigger</a></h2>
+<p>Follow the steps bellow to execute the distributed load tests on GCP with a manual trigger:</p>
 <h3 id="setup-environment-1"><a class="header" href="#setup-environment-1">Setup Environment</a></h3>
 <h4 id="1-start-a-gcp-cloud-shell"><a class="header" href="#1-start-a-gcp-cloud-shell">1. Start a GCP Cloud Shell</a></h4>
 <p>The load tests can be executed from the <a href="https://console.cloud.google.com/home/dashboard?q=search&amp;referrer=search&amp;project=spheric-keel-331521&amp;cloudshell=false">contextual-services-test-eng cloud shell</a>.</p>
@@ -367,17 +357,15 @@ container, CPU and memory usage should trend consistently between load test runs
 <li>Results should be recorded in the <a href="https://docs.google.com/spreadsheets/d/1SAO3QYIrbxDRxzmYIab-ebZXA1dF06W1lT4I1h2R3a8/edit?usp=sharing">Merino Load Test Spreadsheet</a></li>
 <li>Optionally, the Locust reports can be saved and linked in the spreadsheet:
 <ul>
-<li>The results are persisted in the <code>/data</code> directory of the <code>locust-master-0</code> pod
-in the <code>locust-master</code> k8s cluster in the GCP project of <code>merino-nonprod</code>.</li>
 <li>Download the results via the Locust UI or via command:
-<pre><code class="language-bash">kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_stats.csv merino_stats.csv
-kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_exceptions.csv merino_exceptions.csv
-kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_failures.csv merino_failures.csv
+<pre><code class="language-bash">kubectl cp &lt;master-pod-name&gt;:/home/locust/merino_stats.csv merino_stats.csv
+kubectl cp &lt;master-pod-name&gt;:/home/locust/merino_exceptions.csv merino_exceptions.csv
+kubectl cp &lt;master-pod-name&gt;:/home/locust/merino_failures.csv merino_failures.csv
 </code></pre>
-The <code>{run-id}</code> uniquely identifies each load test run and can be found by:
-<pre><code class="language-bash">kubectl exec -n locust-merino locust-master-0 -- ls -al /data/
+The <code>master-pod-name</code> can be found at the top of the pod list:
+<pre><code class="language-bash">kubectl get pods -o wide
 </code></pre>
-and then locate the files with the file creation timestamp when the test was performed.</li>
+</li>
 <li>Upload the files to the <a href="https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux">ConServ</a> drive and record the links in the
 spreadsheet</li>
 </ul>
@@ -388,6 +376,56 @@ spreadsheet</li>
 <p>Execute the <code>setup_k8s.sh</code> file and select the <strong>delete</strong> option</p>
 <pre><code class="language-shell">./tests/load/setup_k8s.sh
 </code></pre>
+<h2 id="distributed-gcp-execution---ci-trigger"><a class="header" href="#distributed-gcp-execution---ci-trigger">Distributed GCP Execution - CI Trigger</a></h2>
+<p>Follow the steps bellow to execute the distributed load tests on GCP with a CI trigger:</p>
+<h3 id="run-test-session-2"><a class="header" href="#run-test-session-2">Run Test Session</a></h3>
+<h4 id="1-execute-load-test"><a class="header" href="#1-execute-load-test">1. Execute Load Test</a></h4>
+<p>To automatically kick off load testing in staging along with your pull request commit, you have to
+include a label in your git commit. This must be the merge commit on the <code>main</code> branch, since only
+the most recent commit is checked for the label. This label is in the form of:
+<code>[load test: (abort|warn)]</code>. Take careful note of correct syntax and spacing within the label. There
+are two options for load tests, being <code>abort</code> and <code>warn</code>.</p>
+<p>The <code>abort</code> label will prevent a <code>prod</code> deployment should the load test fail.
+Ex. <code>feat: Add feature ABC [load test: abort]</code>.</p>
+<p>The <code>warn</code> label will output a Slack warning should the load test fail, but still allow for <code>prod</code>
+deployment.
+Ex. <code>feat: Add feature XYZ [load test: warn]</code>.</p>
+<p>The commit tag signals load test instructions to Jenkins by modifying the Docker image tag. The
+Jenkins deployment workflow first deploys to <code>stage</code> and then runs load tests if requested. The
+Docker image tag passed to Jenkins appears as follows:
+<code>^(?P&lt;environment&gt;stage|prod)(?:-(?P&lt;task&gt;\w+)-(?P&lt;onfailure&gt;warn|abort))?-(?P&lt;commit&gt;[a-z0-9]+)$</code>.</p>
+<h4 id="2-analyse-results"><a class="header" href="#2-analyse-results">2. Analyse Results</a></h4>
+<p>See <a href="#3-analyse-results-1">Distributed GCP Execution (Manual Trigger) - Analyse Results</a></p>
+<h4 id="3-report-results"><a class="header" href="#3-report-results">3. Report Results</a></h4>
+<ul>
+<li>Results should be recorded in the <a href="https://docs.google.com/spreadsheets/d/1SAO3QYIrbxDRxzmYIab-ebZXA1dF06W1lT4I1h2R3a8/edit?usp=sharing">Merino Load Test Spreadsheet</a></li>
+<li>Optionally, the Locust reports can be saved and linked in the spreadsheet. The results are
+persisted in the <code>/data</code> directory of the <code>locust-master-0</code> pod in the <code>locust-master</code> k8s cluster
+in the GCP project of <code>merino-nonprod</code>. To access the Locust logs:
+<ul>
+<li>Open a cloud shell in the <a href="https://console.cloud.google.com/kubernetes/list/overview?project=moz-fx-merino-nonprod-ee93">Merino stage environment</a></li>
+<li>Authenticate by executing the following command:
+<pre><code class="language-shell">  gcloud container clusters get-credentials merino-nonprod-v1 \
+    --region us-west1 --project moz-fx-merino-nonprod-ee93
+</code></pre>
+</li>
+<li>Identify the log files needed in the Kubernetes pod by executing the following command, which
+lists the log files along with file creation timestamp when the test was performed. The
+<code>{run-id}</code> uniquely identifies each load test run:
+<pre><code class="language-bash">  kubectl exec -n locust-merino locust-master-0 -- ls -al /data/
+</code></pre>
+</li>
+<li>Download the results via the Locust UI or via command:
+<pre><code class="language-bash">kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_stats.csv merino_stats.csv
+kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_exceptions.csv merino_exceptions.csv
+kubectl -n locust-merino cp locust-master-0:/data/{run-id}-merino_failures.csv merino_failures.csv
+</code></pre>
+</li>
+<li>Upload the files to the <a href="https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux">ConServ</a> drive and record the links in the
+spreadsheet</li>
+</ul>
+</li>
+</ul>
 <h2 id="maintenance"><a class="header" href="#maintenance">Maintenance</a></h2>
 <p>The load test maintenance schedule cadence is once a quarter and should include
 updating the following:</p>
