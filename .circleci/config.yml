@@ -99,9 +99,7 @@ jobs:
             TEST_RESULTS_DIR: workspace/test-results
       - run:
           name: Generate Coverage
-          command: |
-            poetry run coverage json --data-file="workspace/test-results/.coverage.unit" \
-            -o workspace/test-results/coverage_unit.json
+          command: make coverage-unit
       - store_test_results:
           path: workspace/test-results
       - store_artifacts:
@@ -128,9 +126,7 @@ jobs:
             TEST_RESULTS_DIR: workspace/test-results
       - run:
           name: Generate Coverage
-          command: |
-            poetry run coverage json --data-file="workspace/test-results/.coverage.integration" \
-            -o workspace/test-results/coverage_integration.json
+          command: make coverage-integration
       - store_test_results:
           path: workspace/test-results
       - store_artifacts:
@@ -155,9 +151,7 @@ jobs:
             TEST_RESULTS_DIR: workspace/test-results
       - run:
           name: Generate Coverage
-          command: |
-            poetry run coverage json --data-file="workspace/test-results/.coverage" \
-            -o workspace/test-results/coverage.json
+          command: make coverage-combined
       - store_artifacts:
           path: workspace/test-results/coverage.json
   contract-tests:
