@@ -175,3 +175,21 @@ health-check-prod:  ##  Check the production suggest endpoint with some test que
 .PHONY: health-check-staging
 health-check-staging:  ##  Check the staging suggest endpoint with some test queries
 	./scripts/quic.sh staging
+
+.PHONY: coverage-unit
+coverage-unit:
+	$(POETRY) run coverage json \
+		--data-file=$(TEST_RESULTS_DIR)/.coverage.unit \
+		-o $(TEST_RESULTS_DIR)/coverage_unit.json
+
+.PHONY: coverage-integration
+coverage-integration:
+	$(POETRY) run coverage json \
+		--data-file=$(TEST_RESULTS_DIR)/.coverage.integration \
+		-o $(TEST_RESULTS_DIR)/coverage_integration.json
+
+.PHONY: coverage-combined
+coverage-combined:
+	$(POETRY) run coverage json \
+		--data-file=$(TEST_RESULTS_DIR)/.coverage \
+		-o $(TEST_RESULTS_DIR)/coverage.json
