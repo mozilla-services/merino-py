@@ -16,6 +16,7 @@ from merino.curated_recommendations import (
     get_provider,
 )
 from merino.curated_recommendations.corpus_backends.corpus_api_backend import CorpusApiGraphConfig
+from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.provider import CuratedRecommendation
 from merino.main import app
 
@@ -89,7 +90,7 @@ async def test_curated_recommendations_locale():
             url=HttpUrl("https://www.themarginalian.org/2024/05/28/passenger-pigeon/"),
             title="Thunder, Bells, and Silence: the Eclipse That Went Extinct",
             excerpt="Juneteenth isn’t the “other” Independence Day, it is THE Independence Day.",
-            topic=None,
+            topic=Topic.CAREER,
             publisher="The Marginalian",
             imageUrl=HttpUrl(
                 "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/87fd6901-5bf5-4b12-8bde-24b86be79003.jpeg"

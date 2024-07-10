@@ -12,7 +12,7 @@ from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
 from pytest import LogCaptureFixture
 
 
-@pytest.mark.parametrize("topic", ["PARENTING", "CORONAVIRUS", "GAMING", "CAREER", "EDUCATION"])
+@pytest.mark.parametrize("topic", ["CORONAVIRUS"])
 def test_map_corpus_to_serp_topic_return_none(topic):
     """Testing the map_to_corpus_serp_topic() method
     & ensuring topics that don't have a mapping return None.
@@ -25,6 +25,9 @@ def test_map_corpus_to_serp_topic_return_none(topic):
     "topic, mapped_topic",
     [
         ("ENTERTAINMENT", "arts"),
+        ("EDUCATION", "education"),
+        ("GAMING", "hobbies"),
+        ("PARENTING", "society-parenting"),
         ("BUSINESS", "business"),
         ("SCIENCE", "education-science"),
         ("PERSONAL_FINANCE", "finance"),
@@ -42,7 +45,7 @@ def test_map_corpus_to_serp_topic(topic, mapped_topic):
     See for reference mapped topics:
     https://docs.google.com/document/d/1ICCHi1haxR-jIi_uZ3xQfPmphZm39MOmwQh0BRTXLHA/edit
     """
-    assert map_corpus_topic_to_serp_topic(topic) == mapped_topic
+    assert map_corpus_topic_to_serp_topic(topic).value == mapped_topic
 
 
 @pytest.mark.parametrize(

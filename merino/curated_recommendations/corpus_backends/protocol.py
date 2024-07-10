@@ -10,18 +10,21 @@ from pydantic import BaseModel, HttpUrl
 class Topic(str, Enum):
     """Topics supported for curated recommendations."""
 
-    ARTS = ("arts",)
-    BUSINESS = ("business",)
-    EDUCATION = ("education",)
-    EDUCATION_SCIENCE = ("education-science",)
-    FINANCE = ("finance",)
-    FOOD = ("food",)
-    GOVERNMENT = ("government",)
-    HEALTH = ("health",)
-    SOCIETY = ("society",)
-    SPORTS = ("sports",)
-    TECH = ("tech",)
-    TRAVEL = ("travel",)
+    BUSINESS = "business"
+    CAREER = "career"
+    ARTS = "arts"
+    FOOD = "food"
+    HEALTH_FITNESS = "health"
+    PERSONAL_FINANCE = "finance"
+    POLITICS = "government"
+    SPORTS = "sports"
+    TECHNOLOGY = "tech"
+    TRAVEL = "travel"
+    EDUCATION = "education"
+    GAMING = "hobbies"
+    PARENTING = "society-parenting"
+    SCIENCE = "education-science"
+    SELF_IMPROVEMENT = "society"
 
 
 @unique
