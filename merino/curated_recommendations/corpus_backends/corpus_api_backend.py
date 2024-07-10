@@ -40,7 +40,7 @@ See: https://mozilla-hub.atlassian.net/wiki/spaces/MozSocial/pages/735248385/Top
 CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING = {
     "entertainment": Topic.ARTS.value,
     "food": Topic.FOOD.value,
-    "science": Topic.EDUCATION.value,
+    "science": Topic.EDUCATION_SCIENCE.value,
     "health_fitness": Topic.HEALTH.value,
     "personal_finance": Topic.FINANCE.value,
     "politics": Topic.GOVERNMENT.value,

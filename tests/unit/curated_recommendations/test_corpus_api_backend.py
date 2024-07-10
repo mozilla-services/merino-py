@@ -26,7 +26,7 @@ def test_map_corpus_to_serp_topic_return_none(topic):
     [
         ("ENTERTAINMENT", "arts"),
         ("BUSINESS", "business"),
-        ("SCIENCE", "education"),
+        ("SCIENCE", "education-science"),
         ("PERSONAL_FINANCE", "finance"),
         ("FOOD", "food"),
         ("POLITICS", "government"),

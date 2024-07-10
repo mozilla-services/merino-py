@@ -13,6 +13,7 @@ class Topic(str, Enum):
     ARTS = ("arts",)
     BUSINESS = ("business",)
     EDUCATION = ("education",)
+    EDUCATION_SCIENCE = ("education-science",)
     FINANCE = ("finance",)
     FOOD = ("food",)
     GOVERNMENT = ("government",)
