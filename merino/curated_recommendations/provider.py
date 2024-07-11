@@ -2,6 +2,8 @@
 
 import time
 import re
+
+from copy import copy
 from enum import Enum, unique
 
 from pydantic import BaseModel
@@ -154,6 +156,35 @@ class CuratedRecommendationsProvider:
         else:
             return None
 
+    @staticmethod
+    def spread_publishers(
+        recs: list[CuratedRecommendation], spread_distance: int
+    ) -> list[CuratedRecommendation]:
+        """Spread a list of CuratedRecommendations by the publisher attribute to avoid encountering the same publisher
+        in sequence.
+
+        :param recs: The recommendations to be spread
+        :param spread_distance: The distance that recs with the same publisher value should be spread apart. The default
+            value of None greedily maximizes the distance, by basing the spread distance on the number of unique values.
+        :return: CuratedRecommendations spread by publisher, while otherwise preserving the order.
+        """
+        attr = "publisher"
+
+        result_recs: list[CuratedRecommendation] = []
+        remaining_recs = copy(recs)
+
+        while remaining_recs:
+            values_to_avoid = set(getattr(r, attr) for r in result_recs[-spread_distance:])
+            # Get the first remaining rec which value should not be avoided, or default to the first remaining rec.
+            rec = next(
+                (r for r in remaining_recs if getattr(r, attr) not in values_to_avoid),
+                remaining_recs[0],
+            )
+            result_recs.append(rec)
+            remaining_recs.remove(rec)
+
+        return result_recs
+
     async def fetch(
         self, curated_recommendations_request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:  # noqa
@@ -173,6 +204,11 @@ class CuratedRecommendationsProvider:
             )
             for rank, item in enumerate(corpus_items)
         ]
+
+        # Perform publisher spread on the recommendation set
+        recommendations = CuratedRecommendationsProvider.spread_publishers(
+            recommendations, spread_distance=3
+        )
 
         return CuratedRecommendationsResponse(
             recommendedAt=self.time_ms(),
