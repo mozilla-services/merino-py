@@ -3,13 +3,13 @@
 import asyncio
 import base64
 import csv
+import json
 import io
 from collections import defaultdict
 from enum import Enum
 from hashlib import md5
 
 import typer
-from pydantic import BaseModel
 
 from merino.config import settings as config
 from merino.jobs.relevancy_uploader.chunked_rs_uploader import (
@@ -17,6 +17,7 @@ from merino.jobs.relevancy_uploader.chunked_rs_uploader import (
 )
 
 CLASSIFICATION_CURRENT_VERSION = 1
+CATEGORY_SCORE_THRESHOLD = 0.5
 
 
 class Category(Enum):
@@ -47,60 +48,48 @@ class Category(Enum):
 
 RELEVANCY_RECORD_TYPE = "category_to_domains"
 
-# Mapping to unify categories across the sources
-UPLOAD_CATEGORY_TO_R2D2_CATEGORY: dict[str, Category] = {
-    "Sports": Category.Sports,
-    "Economy & Finance": Category.Finance,
-    "Ecommerce": Category.Inconclusive,
-    "Travel": Category.Travel,
-    "Information Technology": Category.Tech,
-    "News & Media": Category.News,
-    "Chat": Category.Inconclusive,
-    "Photography": Category.Hobbies,
-    "Social Networks": Category.Inconclusive,
-    "Instant Messengers": Category.Inconclusive,
-    "Business": Category.Business,
-    "Health & Fitness": Category.Inconclusive,
-    "Music": Category.Hobbies,
-    "Home & Garden": Category.Home,
-    "Science": Category.Education,
-    "Fashion": Category.Fashion,
-    "Technology": Category.Tech,
-    "Food & Drink": Category.Food,
-    "Video Streaming": Category.Hobbies,
-    "Education": Category.Education,
-    "Lifestyle": Category.Inconclusive,
-    "Cartoons & Anime": Category.Inconclusive,
-    "Gaming": Category.Hobbies,
-    "Magazines": Category.Inconclusive,
-    "Forums": Category.Inconclusive,
-    "Entertainment": Category.Inconclusive,
-    "Clothing": Category.Fashion,
-    "Weather": Category.Inconclusive,
-    "Government": Category.Government,
-}
-
 
 class RelevancyData:
     """Class to relate to conforming data to remote settings structure."""
 
     @classmethod
-    def csv_to_relevancy_data(cls, csv_reader) -> defaultdict[Category, list[dict[str, str]]]:
+    def csv_to_relevancy_data(
+        cls, csv_reader, categories_mapping
+    ) -> defaultdict[Category, list[dict[str, str]]]:
         """Read CSV file and extract required data for relevancy in the structure
         [
             { "domain" : <base64 string> }
         ]
         """
-        rows = sorted(csv_reader, key=lambda x: x["categories"])
+        unique_domains = set()
         data: defaultdict[Category, list[dict[str, str]]] = defaultdict(list)
-        for row in rows:
-            categories = row["categories"].strip("[]").split(",")
-            for category in categories:
-                category_mapped = UPLOAD_CATEGORY_TO_R2D2_CATEGORY.get(
-                    category, Category.Inconclusive
-                )
-                md5_hash = md5(row["domain"].encode(), usedforsecurity=False).digest()
-                data[category_mapped].append({"domain": base64.b64encode(md5_hash).decode()})
+        for row in csv_reader:
+            domain = row["domain"]
+            if domain not in unique_domains:
+                categories = categories_mapping.get(domain, {})
+                if categories:
+                    for category_name, score in categories.items():
+                        try:
+                            category = Category[category_name.title()]
+                            if score > CATEGORY_SCORE_THRESHOLD:
+                                md5_hash = md5(
+                                    row["domain"].encode(), usedforsecurity=False
+                                ).digest()
+                                data[category].append(
+                                    {"domain": base64.b64encode(md5_hash).decode()}
+                                )
+                            else:
+                                md5_hash = md5(
+                                    row["domain"].encode(), usedforsecurity=False
+                                ).digest()
+                                data[Category.Inconclusive].append(
+                                    {"domain": base64.b64encode(md5_hash).decode()}
+                                )
+                        except KeyError:
+                            pass
+
+                unique_domains.add(domain)
+
         return data
 
 
@@ -155,6 +144,12 @@ csv_path_option = typer.Option(
     help="Path to CSV file containing the source data",
 )
 
+categories_mapping_path = typer.Option(
+    "",
+    "--categories-mapping-path",
+    help="Path to categories mapping",
+)
+
 version_option = typer.Option(
     CLASSIFICATION_CURRENT_VERSION,
     "--version",
@@ -181,6 +176,7 @@ def upload(
     chunk_size: int = chunk_size_option,
     collection: str = collection_option,
     csv_path: str = csv_path_option,
+    categories_path: str = categories_mapping_path,
     keep_existing_records: bool = keep_existing_records_option,
     dry_run: bool = dry_run_option,
     server: str = server_option,
@@ -197,6 +193,7 @@ def upload(
             chunk_size=chunk_size,
             collection=collection,
             csv_path=csv_path,
+            categories_path=categories_path,
             keep_existing_records=keep_existing_records,
             dry_run=dry_run,
             server=server,
@@ -211,6 +208,7 @@ async def _upload(
     chunk_size: int,
     collection: str,
     csv_path: str,
+    categories_path: str,
     keep_existing_records: bool,
     dry_run: bool,
     server: str,
@@ -225,6 +223,7 @@ async def _upload(
             keep_existing_records=keep_existing_records,
             dry_run=dry_run,
             file_object=csv_file,
+            categories_path=categories_path,
             server=server,
             version=version,
         )
@@ -236,17 +235,19 @@ async def _upload_file_object(
     chunk_size: int,
     collection: str,
     file_object: io.TextIOWrapper,
+    categories_path: str,
     keep_existing_records: bool,
     dry_run: bool,
     server: str,
     version: int,
 ):
+    categories_mapping: dict = _read_categories_data(categories_path)
     csv_reader = csv.DictReader(file_object)
 
     # Generate the full list of domains before creating the chunked uploader
     # so we can validate the source data before deleting existing records and
     # starting the upload.
-    data = RelevancyData.csv_to_relevancy_data(csv_reader)
+    data = RelevancyData.csv_to_relevancy_data(csv_reader, categories_mapping)
 
     # since we upload based on category not record type,
     # we need to delete records before iterating on categories
@@ -284,3 +285,9 @@ async def _upload_file_object(
         ) as uploader:
             for domain in domains:
                 uploader.add_data(domain)
+
+
+def _read_categories_data(file_path) -> dict:
+    with open(file_path, "r") as f:
+        categories: dict[str, dict] = json.load(f)
+        return categories.get("domains", {})
