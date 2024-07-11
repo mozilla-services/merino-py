@@ -118,6 +118,74 @@ async def test_curated_recommendations_locale():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "topics",
+    [
+        None,
+        [],
+        # Each topic by itself is accepted.
+        ["arts"],
+        ["education"],
+        ["hobbies"],
+        ["society-parenting"],
+        ["business"],
+        ["education-science"],
+        ["finance"],
+        ["food"],
+        ["government"],
+        ["health"],
+        ["society"],
+        ["sports"],
+        ["tech"],
+        ["travel"],
+        # Multiple topics
+        ["tech", "travel"],
+        ["arts", "education", "hobbies", "society-parenting"],
+        [
+            "arts",
+            "education",
+            "hobbies",
+            "society-parenting",
+            "business",
+            "education-science",
+            "finance",
+            "food",
+            "government",
+            "health",
+            "society",
+            "sports",
+            "tech",
+            "travel",
+        ],
+    ],
+)
+async def test_curated_recommendations_topics(topics):
+    """Test the curated recommendations endpoint response is as expected."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
+        )
+        assert response.status_code == 200, f"{topics} resulted in {response.status_code}"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "topics",
+    [
+        "arts",  # Must be wrapped in a list
+        ["not-a-valid-topic"],
+    ],
+)
+async def test_curated_recommendations_topics_failure(topics):
+    """Test the curated recommendations endpoint response is as expected."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
+        )
+        assert response.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_curated_recommendations_locale_bad_request():
     """Test the curated recommendations endpoint response is 400 if locale is not provided"""
     async with AsyncClient(app=app, base_url="http://test") as ac:
