@@ -81,7 +81,7 @@ async def fetch_en_us(client: AsyncClient) -> Response:
 
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
 @pytest.mark.asyncio
-async def test_curated_recommendations_locale():
+async def test_curated_recommendations():
     """Test the curated recommendations endpoint response is as expected."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
         # expected recommendation with topic = None
@@ -115,6 +115,52 @@ async def test_curated_recommendations_locale():
         # Assert 2nd returned recommendation has topic = None & all fields returned are expected
         actual_recommendation: CuratedRecommendation = CuratedRecommendation(**corpus_items[1])
         assert actual_recommendation == expected_recommendation
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "locale",
+    [
+        "fr",
+        "fr-FR",
+        "es",
+        "es-ES",
+        "it",
+        "it-IT",
+        "en",
+        "en-CA",
+        "en-GB",
+        "en-US",
+        "de",
+        "de-DE",
+        "de-AT",
+        "de-CH",
+    ],
+)
+async def test_curated_recommendations_locales(locale):
+    """Test the curated recommendations endpoint accepts valid locales."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post("/api/v1/curated-recommendations", json={"locale": locale})
+        assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "locale",
+    [
+        None,
+        "",
+        "invalid-locale",
+        "en-XX",
+        "de-XYZ",
+        "es_123",
+    ],
+)
+async def test_curated_recommendations_locales_failure(locale):
+    """Test the curated recommendations endpoint rejects invalid locales."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post("/api/v1/curated-recommendations", json={"locale": locale})
+        assert response.status_code == 400
 
 
 @pytest.mark.asyncio
@@ -160,7 +206,7 @@ async def test_curated_recommendations_locale():
     ],
 )
 async def test_curated_recommendations_topics(topics):
-    """Test the curated recommendations endpoint response is as expected."""
+    """Test the curated recommendations endpoint accepts valid topics."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
         response = await ac.post(
             "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
@@ -177,7 +223,7 @@ async def test_curated_recommendations_topics(topics):
     ],
 )
 async def test_curated_recommendations_topics_failure(topics):
-    """Test the curated recommendations endpoint response is as expected."""
+    """Test the curated recommendations endpoint rejects invalid topics."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
         response = await ac.post(
             "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
