@@ -164,6 +164,50 @@ async def test_curated_recommendations_locales_failure(locale):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("count", [10, 50, 100])
+async def test_curated_recommendations_count(count):
+    """Test the curated recommendations endpoint accepts valid count."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "count": count}
+        )
+        assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("count", [None, 100.5])
+async def test_curated_recommendations_count_failure(count):
+    """Test the curated recommendations endpoint rejects invalid count."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "count": count}
+        )
+        assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("region", [None, "US", "DE", "SXM"])
+async def test_curated_recommendations_region(region):
+    """Test the curated recommendations endpoint accepts valid region."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "region": region}
+        )
+        assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("region", [675])
+async def test_curated_recommendations_region_failure(region):
+    """Test the curated recommendations endpoint rejects invalid region."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "region": region}
+        )
+        assert response.status_code == 400
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "topics",
     [
