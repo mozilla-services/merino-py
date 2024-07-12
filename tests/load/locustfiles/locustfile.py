@@ -429,6 +429,17 @@ class MerinoUser(HttpUser):
             headers={"User-Agent": choice(DESKTOP_FIREFOX)},
             catch_response=True,
         ) as response:
+            if response.status_code == 0:
+                # Do not classify as failure
+                #
+                # 0: The HttpSession catches any requests.RequestException thrown by
+                #    Session (caused by connection errors, timeouts or similar), instead
+                #    returning a dummy Response object with status_code set to 0 and
+                #    content set to None.
+                logger.warning("Received a response with a status code of 0.")
+                response.success()
+                return
+
             if response.status_code != 200:
                 response.failure(f"{response.status_code=}, expected 200, {response.text=}")
                 return
