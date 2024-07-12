@@ -25,6 +25,9 @@ class CorpusApiGraphConfig:
     CORPUS_API_PROD_ENDPOINT = "https://client-api.getpocket.com"
     CORPUS_API_DEV_ENDPOINT = "https://client-api.getpocket.dev"
 
+    def __init__(self):
+        self._app_version = fetch_app_version_from_file().commit
+
     @property
     def endpoint(self):
         """Pocket GraphQL endpoint URL"""
@@ -35,7 +38,7 @@ class CorpusApiGraphConfig:
         """Pocket GraphQL client headers"""
         return {
             "apollographql-client-name": "merino-py",
-            "apollographql-client-version": fetch_app_version_from_file().commit,
+            "apollographql-client-version": self._app_version,
         }
 
 
