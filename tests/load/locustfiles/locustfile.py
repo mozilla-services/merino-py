@@ -34,7 +34,11 @@ from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 from merino.utils.version import Version
 from merino.web.models_v1 import SuggestResponse
 from tests.load.common.client_info import DESKTOP_FIREFOX, LOCALES
-from merino.curated_recommendations.provider import Locale, CuratedRecommendationsRequest
+from merino.curated_recommendations.provider import (
+    Locale,
+    CuratedRecommendationsRequest,
+    CuratedRecommendationsResponse,
+)
 
 # Type definitions
 KintoRecords = list[dict[str, Any]]
@@ -429,7 +433,10 @@ class MerinoUser(HttpUser):
                 response.failure(f"{response.status_code=}, expected 200, {response.text=}")
                 return
 
-            response.success()
+            # Create a pydantic model instance for validating the response content
+            # from Merino. This will raise a ValidationError if the response is missing
+            # fields which will be reported as a failure in Locust's statistics.
+            CuratedRecommendationsResponse(**response.json())
 
     @staticmethod
     def _get_ip_from_range(begin_ip_address: str, end_ip_address: str) -> str:
