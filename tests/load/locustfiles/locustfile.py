@@ -243,7 +243,7 @@ def get_wikipedia_queries(url: str | None, api_key: str | None, index: str | Non
     Returns:
         List[str]: List of full query strings to use with the Wikipedia provider
     Raises:
-        ApiError: Error triggered from an HTTP response that isnΓÇÖt 2XX
+        ApiError: Error triggered from an HTTP response that isn't 2XX
         TransportError: Error triggered by an error occurring before an HTTP response
                         arrives
         ElasticsearchWarning: Warning that is raised when a deprecated option or
@@ -341,7 +341,7 @@ class MerinoUser(HttpUser):
 
         return super().on_start()
 
-    @task(weight=1)
+    @task(weight=2)
     def adm_suggestions(self) -> None:
         """Send multiple requests for AdM queries."""
         queries: list[str] = choice(ADM_QUERIES)  # nosec
@@ -350,7 +350,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=1)
+    @task(weight=2)
     def amo_suggestions(self) -> None:
         """Send a request for AMO. AMO matches work with matching the first keyword
         and then prefix on subsequent words.
@@ -363,7 +363,7 @@ class MerinoUser(HttpUser):
         for i in range(len(first_word), len(phrase) + 1):
             self._request_suggestions(phrase[:i], providers)
 
-    @task(weight=1)
+    @task(weight=2)
     def dynamic_wikipedia_suggestions(self) -> None:
         """Send multiple requests for Dynamic Wikipedia queries."""
         full_query: str = choice(WIKIPEDIA_QUERIES)  # nosec
@@ -373,7 +373,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=1)
+    @task(weight=2)
     def faker_suggestions(self) -> None:
         """Send multiple requests for random queries."""
         # This produces a query between 2 and 4 random words
@@ -386,7 +386,7 @@ class MerinoUser(HttpUser):
 
             self._request_suggestions(query)
 
-    @task(weight=1)
+    @task(weight=2)
     def top_picks_suggestions(self) -> None:
         """Send multiple requests for Top Picks queries."""
         queries: list[str] = choice(TOP_PICKS_QUERIES)  # nosec
@@ -395,7 +395,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=30)
+    @task(weight=495)
     def weather_suggestions(self) -> None:
         """Send multiple requests for Weather queries."""
         # Firefox will do local keyword matching to trigger weather suggestions
@@ -408,8 +408,8 @@ class MerinoUser(HttpUser):
 
         self._request_suggestions(query, providers, headers)
 
-    @task(weight=65)
-    def get_curated_recommendations(self) -> None:
+    @task(weight=495)
+    def curated_recommendations(self) -> None:
         """Send request to get curated recommendations."""
         self._request_recommendations(CuratedRecommendationsRequest(locale=choice(list(Locale))))
 
