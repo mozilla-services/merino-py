@@ -243,11 +243,11 @@ def get_wikipedia_queries(url: str | None, api_key: str | None, index: str | Non
     Returns:
         List[str]: List of full query strings to use with the Wikipedia provider
     Raises:
-        ApiError: Error triggered from an HTTP response that isn't 2XX
+        ApiError: Error triggered from an HTTP response that isn’t 2XX
         TransportError: Error triggered by an error occurring before an HTTP response
                         arrives
         ElasticsearchWarning: Warning that is raised when a deprecated option or
-                              incorrect usage is flagged via the ΓÇÿWarningΓÇÖ HTTP header
+                              incorrect usage is flagged via the ‘Warning’ HTTP header
     """
     with Elasticsearch(url, api_key=api_key) as client:
         response = client.search(index=index, size=10000)  # maximum size
