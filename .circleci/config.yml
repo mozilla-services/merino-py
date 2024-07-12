@@ -97,10 +97,15 @@ jobs:
           command: make unit-tests
           environment:
             TEST_RESULTS_DIR: workspace/test-results
+      - run:
+          name: Generate Coverage
+          command: make coverage-unit
       - store_test_results:
           path: workspace/test-results
       - store_artifacts:
-          path: workspace/test-results
+          path: workspace/test-results/coverage_unit.json
+      - store_artifacts:
+          path: workspace/test-results/unit_results.xml
       - persist_to_workspace:
           root: workspace
           paths:
@@ -119,10 +124,15 @@ jobs:
           command: make integration-tests
           environment:
             TEST_RESULTS_DIR: workspace/test-results
+      - run:
+          name: Generate Coverage
+          command: make coverage-integration
       - store_test_results:
           path: workspace/test-results
       - store_artifacts:
-          path: workspace/test-results
+          path: workspace/test-results/integration_results.xml
+      - store_artifacts:
+          path: workspace/test-results/coverage_integration.json
       - persist_to_workspace:
           root: workspace
           paths:
@@ -139,8 +149,11 @@ jobs:
           command: make test-coverage-check
           environment:
             TEST_RESULTS_DIR: workspace/test-results
+      - run:
+          name: Generate Coverage
+          command: make coverage-combined
       - store_artifacts:
-          path: workspace/test-results/.coverage
+          path: workspace/test-results/coverage.json
   contract-tests:
     machine:
       image: ubuntu-2004:2024.01.1

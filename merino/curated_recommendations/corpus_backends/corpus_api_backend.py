@@ -48,23 +48,27 @@ Note: Not all Corpus topics map to a SERP topic. For unmapped topics, null is re
 See: https://mozilla-hub.atlassian.net/wiki/spaces/MozSocial/pages/735248385/Topic+Selection+Tech+Spec+Draft#Topics  # noqa
 """
 CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING = {
-    "entertainment": Topic.ARTS.value,
-    "food": Topic.FOOD.value,
-    "science": Topic.EDUCATION.value,
-    "health_fitness": Topic.HEALTH.value,
-    "personal_finance": Topic.FINANCE.value,
-    "politics": Topic.GOVERNMENT.value,
-    "self_improvement": Topic.SOCIETY.value,
-    "technology": Topic.TECH.value,
-    "business": Topic.BUSINESS.value,
-    "travel": Topic.TRAVEL.value,
-    "sports": Topic.SPORTS.value,
+    "BUSINESS": Topic.BUSINESS,
+    "CAREER": Topic.CAREER,
+    "EDUCATION": Topic.EDUCATION,
+    "ENTERTAINMENT": Topic.ARTS,
+    "FOOD": Topic.FOOD,
+    "GAMING": Topic.GAMING,
+    "HEALTH_FITNESS": Topic.HEALTH_FITNESS,
+    "PARENTING": Topic.PARENTING,
+    "PERSONAL_FINANCE": Topic.PERSONAL_FINANCE,
+    "POLITICS": Topic.POLITICS,
+    "SCIENCE": Topic.SCIENCE,
+    "SELF_IMPROVEMENT": Topic.SELF_IMPROVEMENT,
+    "SPORTS": Topic.SPORTS,
+    "TECHNOLOGY": Topic.TECHNOLOGY,
+    "TRAVEL": Topic.TRAVEL,
 }
 
 
-def map_corpus_topic_to_serp_topic(topic: str) -> tuple[str] | None:
+def map_corpus_topic_to_serp_topic(topic: str) -> Topic | None:
     """Map the corpus topic to the SERP topic."""
-    return CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING.get(topic.lower())
+    return CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING.get(topic.upper())
 
 
 class CorpusApiBackend(CorpusBackend):

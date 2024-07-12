@@ -327,17 +327,15 @@ async def curated_content(
 
     **JSON body:**
 
-    locale: Locale
-    region: str | None = None
-    count: int = 100
     - `locale`: The Firefox installed locale, for example en, en-US, de-DE.
-        See the [Merino API docs][merino-api-docs] for the full list of supported values.
+        See the Request body schema below for the full list of supported values.
         This will determine the language of the recommendations.
     - `region`: [Optional] The country-level region, for example US or IE (Ireland).
         This will help return more relevant recommendations. If `region` is not provided,
         then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 100.
+    - `topics`: [Optional] A list of preferred [topics][curated-topics-doc].
 
-    [merino-api-docs]: https://merinopy.services.mozilla.com/docs
+    [curated-topics-doc]: https://mozilla-hub.atlassian.net/wiki/x/LQDaMg
     """
     return await provider.fetch(curated_recommendations_request)

@@ -10,6 +10,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     CorpusItem,
     ScheduledSurfaceId,
+    Topic,
 )
 
 
@@ -61,6 +62,7 @@ class CuratedRecommendationsRequest(BaseModel):
     locale: Locale
     region: str | None = None
     count: int = 100
+    topics: list[Topic] | None = None
 
 
 class CuratedRecommendationsResponse(BaseModel):
