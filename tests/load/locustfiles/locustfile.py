@@ -34,6 +34,7 @@ from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 from merino.utils.version import Version
 from merino.web.models_v1 import SuggestResponse
 from tests.load.common.client_info import DESKTOP_FIREFOX, LOCALES
+from merino.curated_recommendations.provider import Locale, CuratedRecommendationsRequest
 
 # Type definitions
 KintoRecords = list[dict[str, Any]]
@@ -48,6 +49,7 @@ logger.setLevel(int(LOGGING_LEVEL))
 # See https://mozilla-services.github.io/merino/api.html#suggest
 SUGGEST_API: str = "/api/v1/suggest"
 VERSION_API: str = "/__version__"
+CURATED_RECOMMENDATIONS_API = "/api/v1/curated-recommendations"
 
 # Optional. A comma-separated list of any experiments or rollouts that are
 # affecting the client's Suggest experience
@@ -241,11 +243,11 @@ def get_wikipedia_queries(url: str | None, api_key: str | None, index: str | Non
     Returns:
         List[str]: List of full query strings to use with the Wikipedia provider
     Raises:
-        ApiError: Error triggered from an HTTP response that isn’t 2XX
+        ApiError: Error triggered from an HTTP response that isnΓÇÖt 2XX
         TransportError: Error triggered by an error occurring before an HTTP response
                         arrives
         ElasticsearchWarning: Warning that is raised when a deprecated option or
-                              incorrect usage is flagged via the ‘Warning’ HTTP header
+                              incorrect usage is flagged via the ΓÇÿWarningΓÇÖ HTTP header
     """
     with Elasticsearch(url, api_key=api_key) as client:
         response = client.search(index=index, size=10000)  # maximum size
@@ -339,7 +341,7 @@ class MerinoUser(HttpUser):
 
         return super().on_start()
 
-    @task(weight=2)
+    @task(weight=1)
     def adm_suggestions(self) -> None:
         """Send multiple requests for AdM queries."""
         queries: list[str] = choice(ADM_QUERIES)  # nosec
@@ -348,7 +350,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=2)
+    @task(weight=1)
     def amo_suggestions(self) -> None:
         """Send a request for AMO. AMO matches work with matching the first keyword
         and then prefix on subsequent words.
@@ -361,7 +363,7 @@ class MerinoUser(HttpUser):
         for i in range(len(first_word), len(phrase) + 1):
             self._request_suggestions(phrase[:i], providers)
 
-    @task(weight=2)
+    @task(weight=1)
     def dynamic_wikipedia_suggestions(self) -> None:
         """Send multiple requests for Dynamic Wikipedia queries."""
         full_query: str = choice(WIKIPEDIA_QUERIES)  # nosec
@@ -371,7 +373,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=2)
+    @task(weight=1)
     def faker_suggestions(self) -> None:
         """Send multiple requests for random queries."""
         # This produces a query between 2 and 4 random words
@@ -384,7 +386,7 @@ class MerinoUser(HttpUser):
 
             self._request_suggestions(query)
 
-    @task(weight=2)
+    @task(weight=1)
     def top_picks_suggestions(self) -> None:
         """Send multiple requests for Top Picks queries."""
         queries: list[str] = choice(TOP_PICKS_QUERIES)  # nosec
@@ -393,7 +395,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=90)
+    @task(weight=30)
     def weather_suggestions(self) -> None:
         """Send multiple requests for Weather queries."""
         # Firefox will do local keyword matching to trigger weather suggestions
@@ -405,6 +407,29 @@ class MerinoUser(HttpUser):
         }
 
         self._request_suggestions(query, providers, headers)
+
+    @task(weight=65)
+    def get_curated_recommendations(self) -> None:
+        """Send request to get curated recommendations."""
+        self._request_recommendations(CuratedRecommendationsRequest(locale=choice(list(Locale))))
+
+    def _request_recommendations(self, data: CuratedRecommendationsRequest) -> None:
+        """Request recommendations from Merino for the given data.
+
+        Args:
+            data: CuratedRecommendationsRequest object containing request data
+        """
+        with self.client.post(
+            url=CURATED_RECOMMENDATIONS_API,
+            json=data.model_dump(),
+            headers={"User-Agent": choice(DESKTOP_FIREFOX)},
+            catch_response=True,
+        ) as response:
+            if response.status_code != 200:
+                response.failure(f"{response.status_code=}, expected 200, {response.text=}")
+                return
+
+            response.success()
 
     @staticmethod
     def _get_ip_from_range(begin_ip_address: str, end_ip_address: str) -> str:
