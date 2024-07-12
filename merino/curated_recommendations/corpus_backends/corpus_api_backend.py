@@ -25,7 +25,7 @@ class CorpusApiGraphConfig:
     CORPUS_API_PROD_ENDPOINT = "https://client-api.getpocket.com"
     CORPUS_API_DEV_ENDPOINT = "https://client-api.getpocket.dev"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._app_version = fetch_app_version_from_file().commit
 
     @property
