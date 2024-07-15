@@ -34,6 +34,11 @@ from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 from merino.utils.version import Version
 from merino.web.models_v1 import SuggestResponse
 from tests.load.common.client_info import DESKTOP_FIREFOX, LOCALES
+from merino.curated_recommendations.provider import (
+    Locale,
+    CuratedRecommendationsRequest,
+    CuratedRecommendationsResponse,
+)
 
 # Type definitions
 KintoRecords = list[dict[str, Any]]
@@ -48,6 +53,7 @@ logger.setLevel(int(LOGGING_LEVEL))
 # See https://mozilla-services.github.io/merino/api.html#suggest
 SUGGEST_API: str = "/api/v1/suggest"
 VERSION_API: str = "/__version__"
+CURATED_RECOMMENDATIONS_API = "/api/v1/curated-recommendations"
 
 # Optional. A comma-separated list of any experiments or rollouts that are
 # affecting the client's Suggest experience
@@ -393,7 +399,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=90)
+    @task(weight=495)
     def weather_suggestions(self) -> None:
         """Send multiple requests for Weather queries."""
         # Firefox will do local keyword matching to trigger weather suggestions
@@ -405,6 +411,43 @@ class MerinoUser(HttpUser):
         }
 
         self._request_suggestions(query, providers, headers)
+
+    @task(weight=495)
+    def curated_recommendations(self) -> None:
+        """Send request to get curated recommendations."""
+        self._request_recommendations(CuratedRecommendationsRequest(locale=choice(list(Locale))))
+
+    def _request_recommendations(self, data: CuratedRecommendationsRequest) -> None:
+        """Request recommendations from Merino for the given data.
+
+        Args:
+            data: CuratedRecommendationsRequest object containing request data
+        """
+        with self.client.post(
+            url=CURATED_RECOMMENDATIONS_API,
+            json=data.model_dump(),
+            headers={"User-Agent": choice(DESKTOP_FIREFOX)},
+            catch_response=True,
+        ) as response:
+            if response.status_code == 0:
+                # Do not classify as failure
+                #
+                # 0: The HttpSession catches any requests.RequestException thrown by
+                #    Session (caused by connection errors, timeouts or similar), instead
+                #    returning a dummy Response object with status_code set to 0 and
+                #    content set to None.
+                logger.warning("Received a response with a status code of 0.")
+                response.success()
+                return
+
+            if response.status_code != 200:
+                response.failure(f"{response.status_code=}, expected 200, {response.text=}")
+                return
+
+            # Create a pydantic model instance for validating the response content
+            # from Merino. This will raise a ValidationError if the response is missing
+            # fields which will be reported as a failure in Locust's statistics.
+            CuratedRecommendationsResponse(**response.json())
 
     @staticmethod
     def _get_ip_from_range(begin_ip_address: str, end_ip_address: str) -> str:

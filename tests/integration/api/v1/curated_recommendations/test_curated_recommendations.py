@@ -31,10 +31,12 @@ def fixture_response_data():
 @pytest.fixture()
 def fixture_request_data() -> Request:
     """Load mock response data for the scheduledSurface query"""
+    graph_config = CorpusApiGraphConfig()
+
     return Request(
         method="POST",
-        url=CorpusApiGraphConfig.CORPUS_API_PROD_ENDPOINT,
-        headers=CorpusApiGraphConfig.HEADERS,
+        url=graph_config.endpoint,
+        headers=graph_config.headers,
         json={"locale": "en-US"},
     )
 
@@ -59,7 +61,7 @@ def fixture_mock_corpus_http_client(fixture_response_data, fixture_request_data)
 def fixture_mock_corpus_backend(corpus_http_client: AsyncMock) -> CorpusApiBackend:
     """Mock corpus api backend."""
     # Initialize the backend with the mock HTTP client
-    return CorpusApiBackend(http_client=corpus_http_client)
+    return CorpusApiBackend(http_client=corpus_http_client, graph_config=CorpusApiGraphConfig())
 
 
 @pytest.fixture
