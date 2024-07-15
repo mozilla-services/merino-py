@@ -292,7 +292,9 @@ class AccuweatherBackend:
             response.raise_for_status()
 
         if (response_dict := process_api_response(response.json())) is None:
-            logger.warning(f"Unable to parse accuweather response from: {url_path}")
+            logger.warning(
+                f"Unable to parse accuweather response from: {url_path}, params: {params.get("q")}"
+            )
             self.metrics_client.increment(f"accuweather.request.{request_type}.processor.error")
             return None
 
@@ -657,7 +659,9 @@ class AccuweatherBackend:
                 cache_ttl_sec=self.cached_current_condition_ttl_sec,
             )
         except HTTPError as error:
-            raise AccuweatherError(f"Unexpected current conditions response, {error}") from error
+            raise AccuweatherError(
+                f"Unexpected current conditions response, Url: {self.url_current_conditions_path.format(location_key=location_key)}"
+            ) from error
 
         return (
             CurrentConditionsWithTTL(
@@ -692,7 +696,9 @@ class AccuweatherBackend:
                 cache_ttl_sec=self.cached_forecast_ttl_sec,
             )
         except HTTPError as error:
-            raise AccuweatherError(f"Unexpected forecast response, {error}") from error
+            raise AccuweatherError(
+                f"Unexpected forecast response, Url: {self.url_forecasts_path.format(location_key=location_key)}"
+            ) from error
 
         return (
             ForecastWithTTL(
