@@ -6,6 +6,7 @@ import random
 from datetime import datetime, timedelta
 import asyncio
 
+import aiodogstatsd
 from httpx import AsyncClient, HTTPError
 
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -79,6 +80,7 @@ class CorpusApiBackend(CorpusBackend):
 
     http_client: AsyncClient
     graph_config: CorpusApiGraphConfig
+    metrics_client: aiodogstatsd.Client
 
     # time-to-live was chosen because 1 minute (+/- 10 s) is short enough that updates by curators
     # such as breaking news or editorial corrections propagate fast enough, and that the request
@@ -93,9 +95,15 @@ class CorpusApiBackend(CorpusBackend):
     _locks: dict[ScheduledSurfaceId, asyncio.Lock]
     _background_tasks: set[asyncio.Task]
 
-    def __init__(self, http_client: AsyncClient, graph_config: CorpusApiGraphConfig):
+    def __init__(
+        self,
+        http_client: AsyncClient,
+        graph_config: CorpusApiGraphConfig,
+        metrics_client: aiodogstatsd.Client,
+    ):
         self.http_client = http_client
         self.graph_config = graph_config
+        self.metrics_client = metrics_client
         self._cache = {}
         self._expirations = {}
         self._locks = {}
@@ -148,9 +156,11 @@ class CorpusApiBackend(CorpusBackend):
                 self._background_tasks.add(task)
                 task.add_done_callback(self._background_tasks.discard)
 
+            self.metrics_client.increment("curated_recommendations.corpus_api_backend.cache.hit")
             return self._cache[cache_key]
 
         # If no cache value exists, fetch new data and await the result.
+        self.metrics_client.increment("curated_recommendations.corpus_api_backend.cache.miss")
         return await self._revalidate_cache(surface_id)
 
     async def _fetch_from_backend(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
@@ -187,10 +197,17 @@ class CorpusApiBackend(CorpusBackend):
             },
         }
 
-        res = await self.http_client.post(
-            self.graph_config.endpoint,
-            json=body,
-            headers=self.graph_config.headers,
+        with self.metrics_client.timeit(
+            "curated_recommendations.corpus_api_backend.request.timing"
+        ):
+            res = await self.http_client.post(
+                self.graph_config.endpoint,
+                json=body,
+                headers=self.graph_config.headers,
+            )
+
+        self.metrics_client.increment(
+            f"curated_recommendations.corpus_api_backend.request.status_codes.{res.status_code}"
         )
 
         res.raise_for_status()

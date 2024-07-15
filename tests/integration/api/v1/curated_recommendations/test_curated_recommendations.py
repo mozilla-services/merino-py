@@ -5,10 +5,12 @@ import json
 from datetime import timedelta, datetime
 from unittest.mock import AsyncMock
 
+import aiodogstatsd
 import freezegun
 import pytest
 from httpx import AsyncClient, Request, Response, HTTPStatusError
 from pydantic import HttpUrl
+from pytest_mock import MockerFixture
 
 from merino.curated_recommendations import (
     CorpusApiBackend,
@@ -19,6 +21,7 @@ from merino.curated_recommendations.corpus_backends.corpus_api_backend import Co
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.provider import CuratedRecommendation
 from merino.main import app
+from merino.metrics import get_metrics_client
 
 
 @pytest.fixture()
@@ -61,7 +64,11 @@ def fixture_mock_corpus_http_client(fixture_response_data, fixture_request_data)
 def fixture_mock_corpus_backend(corpus_http_client: AsyncMock) -> CorpusApiBackend:
     """Mock corpus api backend."""
     # Initialize the backend with the mock HTTP client
-    return CorpusApiBackend(http_client=corpus_http_client, graph_config=CorpusApiGraphConfig())
+    return CorpusApiBackend(
+        http_client=corpus_http_client,
+        graph_config=CorpusApiGraphConfig(),
+        metrics_client=get_metrics_client(),
+    )
 
 
 @pytest.fixture
@@ -383,3 +390,38 @@ async def test_cache_returned_on_subsequent_calls(
             new_data = new_response.json()
             assert new_data["recommendedAt"] > initial_data["recommendedAt"]
             assert all("NEW" in item["title"] for item in new_data["data"])
+
+
+@pytest.mark.asyncio
+async def test_curated_recommendations_metrics(
+    mocker: MockerFixture,
+) -> None:
+    """Test that metrics are recorded for the 'suggest' endpoint
+    (status codes: 200 & 400).
+    """
+    report = mocker.patch.object(aiodogstatsd.Client, "_report")
+
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        await fetch_en_us(ac)
+
+        # TODO: Remove reliance on internal details of aiodogstatsd
+        metric_keys_cache_miss: list[str] = [call.args[0] for call in report.call_args_list]
+        assert metric_keys_cache_miss == [
+            "curated_recommendations.corpus_api_backend.cache.miss",
+            "curated_recommendations.corpus_api_backend.request.timing",
+            "curated_recommendations.corpus_api_backend.request.status_codes.200",
+            "post.api.v1.curated-recommendations.timing",
+            "post.api.v1.curated-recommendations.status_codes.200",
+            "response.status_codes.200",
+        ]
+
+        report.reset_mock()
+        await fetch_en_us(ac)
+
+        metric_keys_cache_hit: list[str] = [call.args[0] for call in report.call_args_list]
+        assert metric_keys_cache_hit == [
+            "curated_recommendations.corpus_api_backend.cache.hit",
+            "post.api.v1.curated-recommendations.timing",
+            "post.api.v1.curated-recommendations.status_codes.200",
+            "response.status_codes.200",
+        ]
