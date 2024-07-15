@@ -1080,8 +1080,8 @@ async def test_get_weather_report_handles_exception_group_properly(
     ]
     expected_error_value: str = (
         "Failed to fetch weather report: ("
-        "AccuweatherError('Unexpected current conditions response'), "
-        "AccuweatherError('Unexpected forecast response')"
+        "AccuweatherError('Unexpected current conditions response, Invalid Request - Current Conditions'), "
+        "AccuweatherError('Unexpected forecast response, Invalid Request - Forecast')"
         ")"
     )
 
@@ -1361,7 +1361,9 @@ async def test_get_current_conditions_error(
     """Test that the get_current_conditions method raises an appropriate exception in
     the event of an AccuWeather API error.
     """
-    expected_error_value: str = "Unexpected current conditions response"
+    expected_error_value: str = (
+        "Unexpected current conditions response, Client error '400 Bad Request'"
+    )
     location_key: str = "INVALID"
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.return_value = Response(
@@ -1383,7 +1385,7 @@ async def test_get_current_conditions_error(
     with pytest.raises(AccuweatherError) as accuweather_error:
         await accuweather.get_current_conditions(location_key)
 
-    assert str(accuweather_error.value) == expected_error_value
+    assert expected_error_value in str(accuweather_error.value)
 
 
 @pytest.mark.parametrize(
@@ -1481,7 +1483,7 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend) -> None:
     """Test that the get_forecast method raises an appropriate exception in the event
     of an AccuWeather API error.
     """
-    expected_error_value: str = "Unexpected forecast response"
+    expected_error_value: str = "Unexpected forecast response, Client error '400 Bad Request'"
     location_key: str = "INVALID"
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.return_value = Response(
@@ -1502,7 +1504,7 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend) -> None:
     with pytest.raises(AccuweatherError) as accuweather_error:
         await accuweather.get_forecast(location_key)
 
-    assert str(accuweather_error.value) == expected_error_value
+    assert expected_error_value in str(accuweather_error.value)
 
 
 @pytest.mark.parametrize(
