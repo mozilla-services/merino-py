@@ -195,18 +195,14 @@ class CorpusApiBackend(CorpusBackend):
             },
         }
 
-        with self.metrics_client.timeit(
-            "curated_recommendations.corpus_api_backend.request.timing"
-        ):
+        with self.metrics_client.timeit("corpus_api.request.timing"):
             res = await self.http_client.post(
                 self.graph_config.endpoint,
                 json=body,
                 headers=self.graph_config.headers,
             )
 
-        self.metrics_client.increment(
-            f"curated_recommendations.corpus_api_backend.request.status_codes.{res.status_code}"
-        )
+        self.metrics_client.increment(f"corpus_api.request.status_codes.{res.status_code}")
 
         res.raise_for_status()
         data = res.json()

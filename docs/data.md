@@ -153,7 +153,7 @@ The weather provider records additional metrics.
 
 The following additional metrics are recorded when curated recommendations are requested.
 
-- `curated_recommendations.corpus_api_backend.request.timing` -
+- `corpus_api.request.timing` -
  A timer to measure the duration (in ms) of looking up a list of scheduled corpus items.
-- `curated_recommendations.corpus_api_backend.request.status_codes.{res.status_code}` -
+- `corpus_api.request.status_codes.{res.status_code}` -
  A counter to measure the status codes of an HTTP request to the curated-corpus-api.
