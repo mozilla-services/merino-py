@@ -122,7 +122,7 @@ async def test_curated_recommendations():
         assert all(item["imageUrl"] for item in corpus_items)
 
         # Assert 2nd returned recommendation has topic = None & all fields returned are expected
-        actual_recommendation: CuratedRecommendation = CuratedRecommendation(**corpus_items[1])
+        actual_recommendation = CuratedRecommendation(**corpus_items[1])
         assert actual_recommendation == expected_recommendation
 
 
