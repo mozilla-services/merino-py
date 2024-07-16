@@ -165,8 +165,14 @@ async def test_geolocation_invalid_scope_type(
     assert len(caplog.messages) == 0
 
 
-def test_normalize_string() -> None:
+@pytest.mark.parametrize(
+    "input_string, expected_output",
+    [
+        ("Kīhei", "Kihei"),
+        ("‘Aiea", "Aiea"),
+        ("Querétaro", "Queretaro"),
+    ],
+)
+def test_normalize_string(input_string, expected_output) -> None:
     """Test the normalization of strings with special characters"""
-    assert normalize_string("Kīhei") == "Kihei"
-    assert normalize_string("‘Aiea") == "Aiea"
-    assert normalize_string("Querétaro") == "Queretaro"
+    assert normalize_string(input_string) == expected_output
