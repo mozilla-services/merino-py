@@ -1,11 +1,11 @@
 # Merino
 
-Merino is a service that provides address bar suggestions to Firefox. Some of this content
-comes from third party providers. In this case, Merino serves as a privacy preserving
-buffer. User input in the address bar is handled by Merino and any clicked impression
-will be delegated to a Mozilla-controlled service which will then send an interaction
-ping if defined in the request and not to a provider directly. See API documentation
-for more details.
+Merino is a service that provides address bar suggestions and curated recommendations
+to Firefox. Some of this content comes from third party providers. In this case, Merino
+serves as a privacy preserving buffer. User input in the address bar is handled by Merino
+and any clicked impression will be delegated to a Mozilla-controlled service which will
+then send an interaction ping if defined in the request and not to a provider directly.
+See [API documentation](https://merinopy.services.mozilla.com) for more details.
 
 ## Table of Contents
 [api.md - API Documentation][1] describes endpoints, query parameters, request and response headers, response objects and details on the suggestion objects.
