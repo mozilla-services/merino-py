@@ -156,11 +156,9 @@ class CorpusApiBackend(CorpusBackend):
                 self._background_tasks.add(task)
                 task.add_done_callback(self._background_tasks.discard)
 
-            self.metrics_client.increment("curated_recommendations.corpus_api_backend.cache.hit")
             return self._cache[cache_key]
 
         # If no cache value exists, fetch new data and await the result.
-        self.metrics_client.increment("curated_recommendations.corpus_api_backend.cache.miss")
         return await self._revalidate_cache(surface_id)
 
     async def _fetch_from_backend(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:

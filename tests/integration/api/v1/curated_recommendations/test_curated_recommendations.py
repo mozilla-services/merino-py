@@ -407,7 +407,6 @@ async def test_curated_recommendations_metrics(
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys_cache_miss: list[str] = [call.args[0] for call in report.call_args_list]
         assert metric_keys_cache_miss == [
-            "curated_recommendations.corpus_api_backend.cache.miss",
             "curated_recommendations.corpus_api_backend.request.timing",
             "curated_recommendations.corpus_api_backend.request.status_codes.200",
             "post.api.v1.curated-recommendations.timing",
@@ -420,7 +419,6 @@ async def test_curated_recommendations_metrics(
 
         metric_keys_cache_hit: list[str] = [call.args[0] for call in report.call_args_list]
         assert metric_keys_cache_hit == [
-            "curated_recommendations.corpus_api_backend.cache.hit",
             "post.api.v1.curated-recommendations.timing",
             "post.api.v1.curated-recommendations.status_codes.200",
             "response.status_codes.200",
