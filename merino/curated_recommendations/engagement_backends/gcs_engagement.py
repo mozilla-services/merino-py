@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 class GcsEngagement(EngagementBackend):
     """Backend that retrieves engagement data from Google Cloud Storage.
 
-    This class will fetch engagement data from Google Cloud Storage in a background thread.
-    A thread is used because Google Cloud library does not support asyncio. This class uses a
-    single thread with a low request rate to GCS, so thread performance should not be an issue.
+    This class fetches engagement data from Google Cloud Storage in a background thread.
+    A thread is used because the Google Cloud library does not support asyncio. This class uses
+    a single thread with a low request rate to GCS, ensuring thread performance is not an issue.
     Alternatively, the gcloud-aio-storage library provides asyncio access to GCS.
     """
 
@@ -123,7 +123,7 @@ class GcsEngagement(EngagementBackend):
                         self._update_task()
             except Exception as e:
                 # Log unexpected exceptions to Sentry, and retry the update in the next interval.
-                logger.error(f"Failed to update cache: {e}")
+                logger.error(f"GcsEngagement failed to update cache: {e}")
             finally:
                 # Sleep between request (success or failure) to limit resource usage.
                 time.sleep(self.thread_sleep_period.total_seconds())

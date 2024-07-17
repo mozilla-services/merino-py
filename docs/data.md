@@ -75,6 +75,12 @@ log inspection interfaces.
  Failed to get timezone for scheduled surface.
 - `WARNING merino.curated_recommendations.corpus_backends.corpus_api_backend` -
  Retrying CorpusApiBackend after an http client exception was raised.
+- `ERROR GcsEngagement failed to update cache: {e}` - unexpected exception when updating engagement.
+- `ERROR Curated recommendations engagement size {blob.size} > {self.max_size}` -
+ Max engagement blob size is exceeded. The backend will gracefully fall back to cached data or 0's.
+- `INFO Curated recommendations engagement unchanged since {self.last_updated}.` -
+ The engagement blob was not updated since the last check. `last_updated` is expected to be
+ between 0 and 30 minutes.
 
 ## Metrics
 
