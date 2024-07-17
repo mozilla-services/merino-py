@@ -209,6 +209,13 @@ outside service is likely malicious or misconfigured.</li>
 <li><code>ERROR merino.featureflags</code> - There was an error while attempting to assign a
 feature flag for a suggest API request.</li>
 </ul>
+<h3 id="curated-recommendations"><a class="header" href="#curated-recommendations">Curated Recommendations</a></h3>
+<ul>
+<li><code>ERROR merino.curated_recommendations.corpus_backends.corpus_api_backend</code> -
+Failed to get timezone for scheduled surface.</li>
+<li><code>WARNING merino.curated_recommendations.corpus_backends.corpus_api_backend</code> -
+Retrying CorpusApiBackend after an http client exception was raised.</li>
+</ul>
 <h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>
 <blockquote>
 <p>A note on timers: Statsd timers are measured in milliseconds, and are reported
@@ -284,6 +291,14 @@ saving a weather report from the backend to the cache. This metric isn't recorde
 cache store returned an error when fetching or storing a weather report. This should be 0 in
 normal operation. In case of an error, the logs will include a <code>WARNING</code> with the full error
 message.</li>
+</ul>
+<h3 id="curated-recommendations-1"><a class="header" href="#curated-recommendations-1">Curated Recommendations</a></h3>
+<p>The following additional metrics are recorded when curated recommendations are requested.</p>
+<ul>
+<li><code>corpus_api.request.timing</code> -
+A timer to measure the duration (in ms) of looking up a list of scheduled corpus items.</li>
+<li><code>corpus_api.request.status_codes.{res.status_code}</code> -
+A counter to measure the status codes of an HTTP request to the curated-corpus-api.</li>
 </ul>
 
                     </main>
