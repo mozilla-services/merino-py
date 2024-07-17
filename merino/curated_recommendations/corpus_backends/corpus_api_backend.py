@@ -8,6 +8,7 @@ import asyncio
 
 import aiodogstatsd
 from httpx import AsyncClient, HTTPError
+from urllib.parse import urlparse, urlencode, parse_qsl
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
@@ -66,10 +67,19 @@ CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING = {
     "TRAVEL": Topic.TRAVEL,
 }
 
-
-def map_corpus_topic_to_serp_topic(topic: str) -> Topic | None:
-    """Map the corpus topic to the SERP topic."""
-    return CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING.get(topic.upper())
+"""
+Set utm_source for specific ScheduledSurfaceId.
+For ids not in the table, null is returned.
+"""
+SCHEDULED_SURFACE_ID_TO_UTM_SOURCE: dict[ScheduledSurfaceId, str] = {
+    ScheduledSurfaceId.NEW_TAB_EN_US: "pocket-newtab-en-us",
+    ScheduledSurfaceId.NEW_TAB_EN_GB: "pocket-newtab-en-gb",
+    ScheduledSurfaceId.NEW_TAB_EN_INTL: "pocket-newtab-en-intl",
+    ScheduledSurfaceId.NEW_TAB_DE_DE: "pocket-newtab-de-de",
+    ScheduledSurfaceId.NEW_TAB_ES_ES: "pocket-newtab-es-es",
+    ScheduledSurfaceId.NEW_TAB_FR_FR: "pocket-newtab-fr-fr",
+    ScheduledSurfaceId.NEW_TAB_IT_IT: "pocket-newtab-it-it",
+}
 
 
 class CorpusApiBackend(CorpusBackend):
@@ -110,19 +120,47 @@ class CorpusApiBackend(CorpusBackend):
         self._background_tasks = set()
 
     @staticmethod
-    def get_surface_timezone(scheduled_surface_id: str) -> ZoneInfo:
+    def map_corpus_topic_to_serp_topic(topic: str) -> Topic | None:
+        """Map the corpus topic to the SERP topic."""
+        return CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING.get(topic.upper())
+
+    @staticmethod
+    def get_utm_source(scheduled_surface_id: ScheduledSurfaceId) -> str | None:
+        """Return utm_source value to attribute curated recommendations to, based on the scheduled_surface_id.
+        https://github.com/Pocket/recommendation-api/blob/main/app/data_providers/slate_providers/slate_provider.py#L95C5-L100C46
+        """
+        return SCHEDULED_SURFACE_ID_TO_UTM_SOURCE.get(scheduled_surface_id)
+
+    @staticmethod
+    def update_url_utm_source(url: str, utm_source: str) -> str:
+        """Return an updated url where utm_source query param was added or replaced."""
+        utm_source_param = {"utm_source": utm_source}
+
+        # parse url into 6 parts
+        parsed_url = urlparse(url)
+        # get the query params as a dict
+        query = dict(parse_qsl(parsed_url.query))
+        # add the utm_source param to query
+        query.update(utm_source_param)
+        # add / replace utm_source with new utm_source param & return updated url
+        updated_url = parsed_url._replace(query=urlencode(query)).geturl()
+        return updated_url
+
+    @staticmethod
+    def get_surface_timezone(scheduled_surface_id: ScheduledSurfaceId) -> ZoneInfo:
         """Return the correct timezone for a scheduled surface id.
         If no timezone is found, gracefully return timezone in UTC.
         https://github.com/Pocket/recommendation-api/blob/main/app/data_providers/corpus/corpus_api_client.py#L98 # noqa
         """
         zones = {
-            "NEW_TAB_EN_US": "America/New_York",
-            "NEW_TAB_EN_GB": "Europe/London",
-            "NEW_TAB_EN_INTL": "Asia/Kolkata",  # Note: en-Intl is poorly named. Only India is currently eligible.
-            "NEW_TAB_DE_DE": "Europe/Berlin",
-            "NEW_TAB_ES_ES": "Europe/Madrid",
-            "NEW_TAB_FR_FR": "Europe/Paris",
-            "NEW_TAB_IT_IT": "Europe/Rome",
+            ScheduledSurfaceId.NEW_TAB_EN_US: "America/New_York",
+            ScheduledSurfaceId.NEW_TAB_EN_GB: "Europe/London",
+            # Note: en-Intl is poorly named. Only India is currently eligible.
+            ScheduledSurfaceId.NEW_TAB_EN_INTL: "Asia/Kolkata",
+            ScheduledSurfaceId.NEW_TAB_DE_DE: "Europe/Berlin",
+            ScheduledSurfaceId.NEW_TAB_ES_ES: "Europe/Madrid",
+            ScheduledSurfaceId.NEW_TAB_FR_FR: "Europe/Paris",
+            ScheduledSurfaceId.NEW_TAB_IT_IT: "Europe/Rome",
         }
 
         try:
@@ -207,10 +245,17 @@ class CorpusApiBackend(CorpusBackend):
         res.raise_for_status()
         data = res.json()
 
-        # Map Corpus topic to SERP topic
+        # get the utm_source based on scheduled surface id
+        utm_source = self.get_utm_source(surface_id)
+
         for item in data["data"]["scheduledSurface"]["items"]:
-            item["corpusItem"]["topic"] = map_corpus_topic_to_serp_topic(
+            # Map Corpus topic to SERP topic
+            item["corpusItem"]["topic"] = self.map_corpus_topic_to_serp_topic(
                 item["corpusItem"]["topic"]
+            )
+            # Update url (add / replace utm_source query param)
+            item["corpusItem"]["url"] = self.update_url_utm_source(
+                item["corpusItem"]["url"], str(utm_source)
             )
 
         curated_recommendations = [

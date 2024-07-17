@@ -96,7 +96,9 @@ async def test_curated_recommendations():
         # expected recommendation with topic = None
         expected_recommendation = CuratedRecommendation(
             scheduledCorpusItemId="50f86ebe-3f25-41d8-bd84-53ead7bdc76e",
-            url=HttpUrl("https://www.themarginalian.org/2024/05/28/passenger-pigeon/"),
+            url=HttpUrl(
+                "https://www.themarginalian.org/2024/05/28/passenger-pigeon/?utm_source=pocket-newtab-en-us"
+            ),
             title="Thunder, Bells, and Silence: the Eclipse That Went Extinct",
             excerpt="Juneteenth isn’t the “other” Independence Day, it is THE Independence Day.",
             topic=Topic.CAREER,
@@ -124,6 +126,55 @@ async def test_curated_recommendations():
         # Assert 2nd returned recommendation has topic = None & all fields returned are expected
         actual_recommendation = CuratedRecommendation(**corpus_items[1])
         assert actual_recommendation == expected_recommendation
+
+
+@freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
+@pytest.mark.asyncio
+async def test_curated_recommendations_utm_source():
+    """Test the curated recommendations endpoint returns urls with correct(new) utm_source"""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        # Mock the endpoint
+        response = await fetch_en_us(ac)
+        data = response.json()
+
+        # Check if the mock response is valid
+        assert response.status_code == 200
+
+        corpus_items = data["data"]
+        # assert total of 80 items returned
+        assert len(corpus_items) == 80
+        # Assert all corpus_items have expected fields populated.
+        # check that utm_source is present and has the correct value in all urls
+        assert all("?utm_source=pocket-newtab-en-us" in item["url"] for item in corpus_items)
+        assert all(item["publisher"] for item in corpus_items)
+        assert all(item["imageUrl"] for item in corpus_items)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "locale",
+    [
+        "fr",
+        "fr-FR",
+        "es",
+        "es-ES",
+        "it",
+        "it-IT",
+        "en",
+        "en-CA",
+        "en-GB",
+        "en-US",
+        "de",
+        "de-DE",
+        "de-AT",
+        "de-CH",
+    ],
+)
+async def test_curated_recommendations_locales(locale):
+    """Test the curated recommendations endpoint accepts valid locales."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post("/api/v1/curated-recommendations", json={"locale": locale})
+        assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
 
 
 class TestCuratedRecommendationsRequestParameters:
