@@ -400,8 +400,8 @@ class TestCuratedRecommendationsMetrics:
             await fetch_en_us(ac)
 
             # TODO: Remove reliance on internal details of aiodogstatsd
-            metric_keys_cache_miss: list[str] = [call.args[0] for call in report.call_args_list]
-            assert metric_keys_cache_miss == [
+            metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
+            assert metric_keys == [
                 "corpus_api.request.timing",
                 "corpus_api.request.status_codes.200",
                 "post.api.v1.curated-recommendations.timing",
@@ -413,16 +413,16 @@ class TestCuratedRecommendationsMetrics:
     async def test_metrics_cache_hit(self, mocker: MockerFixture) -> None:
         """Test that metrics are recorded when corpus api items are cached."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            # First call populates the cache.
+            # The first call populates the cache.
             await fetch_en_us(ac)
 
-            # This test covers the metrics emitted from the cached call.
+            # This test covers only the metrics emitted from the following cached call.
             report = mocker.patch.object(aiodogstatsd.Client, "_report")
             await fetch_en_us(ac)
 
             # TODO: Remove reliance on internal details of aiodogstatsd
-            metric_keys_cache_hit: list[str] = [call.args[0] for call in report.call_args_list]
-            assert metric_keys_cache_hit == [
+            metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
+            assert metric_keys == [
                 "post.api.v1.curated-recommendations.timing",
                 "post.api.v1.curated-recommendations.status_codes.200",
                 "response.status_codes.200",
@@ -445,8 +445,8 @@ class TestCuratedRecommendationsMetrics:
                 await fetch_en_us(ac)
 
             # TODO: Remove reliance on internal details of aiodogstatsd
-            metric_keys_cache_miss: list[str] = [call.args[0] for call in report.call_args_list]
-            assert metric_keys_cache_miss == [
+            metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
+            assert metric_keys == [
                 "corpus_api.request.timing",
                 "corpus_api.request.status_codes.500",
                 "corpus_api.request.timing",
