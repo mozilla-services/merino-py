@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
+from aiodogstatsd import Client as StatsdClient
 from google.cloud.storage import Client, Blob, Bucket
 
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
@@ -35,11 +36,21 @@ def mock_gcs_blob(mock_gcs_bucket):
     return blob
 
 
+@pytest.fixture
+def mock_metrics_client(mocker):
+    """Return a mock aiodogstatsd Client instance"""
+    metrics_client = mocker.Mock(spec=StatsdClient)
+    metrics_client.timeit.return_value.__enter__ = lambda *args: None
+    metrics_client.timeit.return_value.__exit__ = lambda *args: None
+    return metrics_client
+
+
 @pytest.fixture(name="gcs_engagement")
-def mock_gcs_engagement(mock_gcs_client):
+def mock_gcs_engagement(mock_gcs_client, mock_metrics_client):
     """Return a mock GCS Engagement instance"""
     gcs_engagement = GcsEngagement(
-        client=mock_gcs_client,
+        storage_client=mock_gcs_client,
+        metrics_client=mock_metrics_client,
         bucket_name="test-bucket",
         blob_name="test-blob",
         max_size=1024 * 1024,
@@ -97,7 +108,8 @@ def test_gcs_engagement_backend_download_count(mock_gcs_blob, mock_gcs_client):
     Alternatively, the 'time-machine' library does support mocking time in threads.
     """
     gcs_engagement = GcsEngagement(
-        client=mock_gcs_client,
+        storage_client=mock_gcs_client,
+        metrics_client=MagicMock(spec=StatsdClient),
         bucket_name="test-bucket",
         blob_name="test-blob",
         max_size=1024 * 1024,
@@ -122,3 +134,28 @@ def test_gcs_engagement_backend_download_count(mock_gcs_blob, mock_gcs_client):
     assert mock_gcs_blob.download_as_text.call_count == expected_downloads
 
     gcs_engagement.shutdown()
+
+
+def test_gcs_engagement_metrics(gcs_engagement, mock_gcs_blob, mock_metrics_client):
+    """Test that the backend records the correct metrics."""
+    engagement_data = [
+        {"scheduled_corpus_item_id": "12345", "clicks": 10, "impressions": 100},
+        {"scheduled_corpus_item_id": "67890", "clicks": 20, "impressions": 200},
+    ]
+    mock_gcs_blob.download_as_text.return_value = json.dumps(engagement_data)
+    mock_gcs_blob.size = 512
+    mock_gcs_blob.updated = datetime.now()
+
+    gcs_engagement.initialize()
+    time.sleep(0.02)  # Allow the background thread to fetch data.
+
+    # Verify the metrics are recorded correctly
+    mock_metrics_client.gauge.assert_any_call("recommendation.engagement.size", value=512)
+    mock_metrics_client.gauge.assert_any_call("recommendation.engagement.count", value=2)
+    mock_metrics_client.timeit.assert_any_call("recommendation.engagement.update.timing")
+
+    # Check the last_updated gauge value is between 0 and 1
+    assert any(
+        call[0][0] == "recommendation.engagement.last_updated" and 0 <= call[1]["value"] <= 1
+        for call in mock_metrics_client.gauge.call_args_list
+    ), "The gauge recommendation.engagement.last_updated was not called with value between 0 and 1"

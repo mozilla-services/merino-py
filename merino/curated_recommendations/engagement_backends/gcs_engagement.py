@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Dict
 
 from google.cloud.storage import Client
+from aiodogstatsd import Client as StatsdClient
 from .protocol import Engagement, EngagementBackend
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,8 @@ class GcsEngagement(EngagementBackend):
 
     def __init__(
         self,
-        client: Client,
+        storage_client: Client,
+        metrics_client: StatsdClient,
         bucket_name: str,
         blob_name: str,
         max_size: int,
@@ -36,7 +38,8 @@ class GcsEngagement(EngagementBackend):
         """Initialize the engagement backend but do not start the background task.
 
         Args:
-            client: GCS client initialized to the correct project
+            storage_client: GCS client initialized to the correct project
+            metrics_client: aiodogstatsd client for recording metrics
             bucket_name: GCS bucket name
             blob_name: GCS blob path
             max_size: Maximum size in bytes of the GCS blob. If exceeded, an error will be logged
@@ -44,7 +47,8 @@ class GcsEngagement(EngagementBackend):
             thread_sleep_period: Max time that thread will stay alive after shutdown() is called.
             gcs_check_interval: Interval at which to check GCS for updates.
         """
-        self.client = client
+        self.storage_client = storage_client
+        self.metrics_client = metrics_client
         self.bucket_name = bucket_name
         self.blob_name = blob_name
         self.max_size = max_size
@@ -65,7 +69,7 @@ class GcsEngagement(EngagementBackend):
         self._shutdown_event.set()
         if self._thread:
             self._thread.join()
-        self.client.close()
+        self.storage_client.close()
 
     def __getitem__(self, scheduled_corpus_item_id: str) -> Engagement:
         """Get engagement data for the given scheduled corpus item id from cache.
@@ -87,10 +91,12 @@ class GcsEngagement(EngagementBackend):
 
     def _update_task(self):
         """Task to update the cache with the latest engagement data from GCS."""
-        bucket = self.client.bucket(self.bucket_name)
+        bucket = self.storage_client.bucket(self.bucket_name)
         blob = bucket.blob(self.blob_name)
         # Reload properties from Cloud Storage. This populates blob.size and blob.updated.
         blob.reload()
+
+        self.metrics_client.gauge("recommendation.engagement.size", value=blob.size)
 
         if blob.size > self.max_size:
             logger.error(f"Curated recommendations engagement size {blob.size} > {self.max_size}")
@@ -99,8 +105,11 @@ class GcsEngagement(EngagementBackend):
         else:
             data = blob.download_as_text()
             engagement_data = self._parse_data(data)
-            self._cache.update(engagement_data)
+            self._cache = engagement_data
             self.last_updated = blob.updated
+            self.metrics_client.gauge(
+                "recommendation.engagement.count", value=len(engagement_data)
+            )
 
     def _update_cache_loop(self):
         """Loop to periodically update the cache with the latest engagement data from GCS."""
@@ -110,13 +119,19 @@ class GcsEngagement(EngagementBackend):
             try:
                 if datetime.now() >= next_update_time:
                     next_update_time += self.gcs_check_interval
-                    self._update_task()
+                    with self.metrics_client.timeit("recommendation.engagement.update.timing"):
+                        self._update_task()
             except Exception as e:
                 # Log unexpected exceptions to Sentry, and retry the update in the next interval.
                 logger.error(f"Failed to update cache: {e}")
             finally:
                 # Sleep between request (success or failure) to limit resource usage.
                 time.sleep(self.thread_sleep_period.total_seconds())
+                # Report the staleness of the engagement data in seconds.
+                self.metrics_client.gauge(
+                    "recommendation.engagement.last_updated",
+                    value=time.time() - self.last_updated.timestamp(),
+                )
 
     @staticmethod
     def _parse_data(data: str) -> Dict[str, Engagement]:
