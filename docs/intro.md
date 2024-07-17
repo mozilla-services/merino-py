@@ -5,7 +5,7 @@ to Firefox. Some of this content comes from third party providers. In this case,
 serves as a privacy preserving buffer. User input in the address bar is handled by Merino
 and any clicked impression will be delegated to a Mozilla-controlled service which will
 then send an interaction ping if defined in the request and not to a provider directly.
-See [API documentation](https://merinopy.services.mozilla.com) for more details.
+See [API documentation](https://merino.services.mozilla.com/docs) for more details.
 
 ## Table of Contents
 [api.md - API Documentation][1] describes endpoints, query parameters, request and response headers, response objects and details on the suggestion objects.
