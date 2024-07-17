@@ -82,11 +82,6 @@ SCHEDULED_SURFACE_ID_TO_UTM_SOURCE: dict[ScheduledSurfaceId, str] = {
 }
 
 
-def map_corpus_topic_to_serp_topic(topic: str) -> Topic | None:
-    """Map the corpus topic to the SERP topic."""
-    return CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING.get(topic.upper())
-
-
 class CorpusApiBackend(CorpusBackend):
     """Corpus API Backend hitting the curated corpus api
     & returning recommendations for current date & locale/region.
@@ -125,6 +120,11 @@ class CorpusApiBackend(CorpusBackend):
         self._background_tasks = set()
 
     @staticmethod
+    def map_corpus_topic_to_serp_topic(topic: str) -> Topic | None:
+        """Map the corpus topic to the SERP topic."""
+        return CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING.get(topic.upper())
+
+    @staticmethod
     def get_utm_source(scheduled_surface_id: ScheduledSurfaceId) -> str | None:
         """Return utm_source value to attribute curated recommendations to, based on the scheduled_surface_id.
         https://github.com/Pocket/recommendation-api/blob/main/app/data_providers/slate_providers/slate_provider.py#L95C5-L100C46
@@ -147,19 +147,20 @@ class CorpusApiBackend(CorpusBackend):
         return updated_url
 
     @staticmethod
-    def get_surface_timezone(scheduled_surface_id: str) -> ZoneInfo:
+    def get_surface_timezone(scheduled_surface_id: ScheduledSurfaceId) -> ZoneInfo:
         """Return the correct timezone for a scheduled surface id.
         If no timezone is found, gracefully return timezone in UTC.
         https://github.com/Pocket/recommendation-api/blob/main/app/data_providers/corpus/corpus_api_client.py#L98 # noqa
         """
         zones = {
-            "NEW_TAB_EN_US": "America/New_York",
-            "NEW_TAB_EN_GB": "Europe/London",
-            "NEW_TAB_EN_INTL": "Asia/Kolkata",  # Note: en-Intl is poorly named. Only India is currently eligible.
-            "NEW_TAB_DE_DE": "Europe/Berlin",
-            "NEW_TAB_ES_ES": "Europe/Madrid",
-            "NEW_TAB_FR_FR": "Europe/Paris",
-            "NEW_TAB_IT_IT": "Europe/Rome",
+            ScheduledSurfaceId.NEW_TAB_EN_US: "America/New_York",
+            ScheduledSurfaceId.NEW_TAB_EN_GB: "Europe/London",
+            # Note: en-Intl is poorly named. Only India is currently eligible.
+            ScheduledSurfaceId.NEW_TAB_EN_INTL: "Asia/Kolkata",
+            ScheduledSurfaceId.NEW_TAB_DE_DE: "Europe/Berlin",
+            ScheduledSurfaceId.NEW_TAB_ES_ES: "Europe/Madrid",
+            ScheduledSurfaceId.NEW_TAB_FR_FR: "Europe/Paris",
+            ScheduledSurfaceId.NEW_TAB_IT_IT: "Europe/Rome",
         }
 
         try:
@@ -249,7 +250,7 @@ class CorpusApiBackend(CorpusBackend):
 
         for item in data["data"]["scheduledSurface"]["items"]:
             # Map Corpus topic to SERP topic
-            item["corpusItem"]["topic"] = map_corpus_topic_to_serp_topic(
+            item["corpusItem"]["topic"] = self.map_corpus_topic_to_serp_topic(
                 item["corpusItem"]["topic"]
             )
             # Update url (add / replace utm_source query param)

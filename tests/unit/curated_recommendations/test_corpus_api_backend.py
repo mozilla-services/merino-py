@@ -6,10 +6,11 @@ import pytest
 from freezegun import freeze_time
 
 from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
-    map_corpus_topic_to_serp_topic,
     CorpusApiBackend,
 )
 from pytest import LogCaptureFixture
+
+from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId
 
 
 @pytest.mark.parametrize("topic", ["CORONAVIRUS"])
@@ -18,7 +19,7 @@ def test_map_corpus_to_serp_topic_return_none(topic):
     & ensuring topics that don't have a mapping return None.
     See for reference mapped topics: https://docs.google.com/document/d/1ICCHi1haxR-jIi_uZ3xQfPmphZm39MOmwQh0BRTXLHA/edit # noqa
     """
-    assert map_corpus_topic_to_serp_topic(topic) is None
+    assert CorpusApiBackend.map_corpus_topic_to_serp_topic(topic) is None
 
 
 @pytest.mark.parametrize(
@@ -45,19 +46,19 @@ def test_map_corpus_to_serp_topic(topic, mapped_topic):
     See for reference mapped topics:
     https://docs.google.com/document/d/1ICCHi1haxR-jIi_uZ3xQfPmphZm39MOmwQh0BRTXLHA/edit
     """
-    assert map_corpus_topic_to_serp_topic(topic).value == mapped_topic
+    assert CorpusApiBackend.map_corpus_topic_to_serp_topic(topic).value == mapped_topic
 
 
 @pytest.mark.parametrize(
     "surface_id, timezone",
     [
-        ("NEW_TAB_EN_US", "America/New_York"),
-        ("NEW_TAB_EN_GB", "Europe/London"),
-        ("NEW_TAB_EN_INTL", "Asia/Kolkata"),
-        ("NEW_TAB_DE_DE", "Europe/Berlin"),
-        ("NEW_TAB_ES_ES", "Europe/Madrid"),
-        ("NEW_TAB_FR_FR", "Europe/Paris"),
-        ("NEW_TAB_IT_IT", "Europe/Rome"),
+        (ScheduledSurfaceId.NEW_TAB_EN_US, "America/New_York"),
+        (ScheduledSurfaceId.NEW_TAB_EN_GB, "Europe/London"),
+        (ScheduledSurfaceId.NEW_TAB_EN_INTL, "Asia/Kolkata"),
+        (ScheduledSurfaceId.NEW_TAB_DE_DE, "Europe/Berlin"),
+        (ScheduledSurfaceId.NEW_TAB_ES_ES, "Europe/Madrid"),
+        (ScheduledSurfaceId.NEW_TAB_FR_FR, "Europe/Paris"),
+        (ScheduledSurfaceId.NEW_TAB_IT_IT, "Europe/Rome"),
     ],
 )
 def test_get_surface_timezone(surface_id, timezone, caplog: LogCaptureFixture):
@@ -75,7 +76,7 @@ def test_get_surface_timezone_bad_input(caplog: LogCaptureFixture):
     a bad input is provided, UTC is returned.
     """
     # Should default to UTC if bad input
-    tz = CorpusApiBackend.get_surface_timezone("foobar")
+    tz = CorpusApiBackend.get_surface_timezone("foobar")  # type: ignore
     assert tz.key == "UTC"
     # Error was logged
     error_logs = [r for r in caplog.records if r.levelname == "ERROR"]
@@ -137,13 +138,13 @@ def test_get_utm_source_return_none(scheduled_surface_id):
 @pytest.mark.parametrize(
     ("scheduled_surface_id", "expected_utm_source"),
     [
-        ("NEW_TAB_EN_US", "pocket-newtab-en-us"),
-        ("NEW_TAB_EN_GB", "pocket-newtab-en-gb"),
-        ("NEW_TAB_EN_INTL", "pocket-newtab-en-intl"),
-        ("NEW_TAB_DE_DE", "pocket-newtab-de-de"),
-        ("NEW_TAB_ES_ES", "pocket-newtab-es-es"),
-        ("NEW_TAB_FR_FR", "pocket-newtab-fr-fr"),
-        ("NEW_TAB_IT_IT", "pocket-newtab-it-it"),
+        (ScheduledSurfaceId.NEW_TAB_EN_US, "pocket-newtab-en-us"),
+        (ScheduledSurfaceId.NEW_TAB_EN_GB, "pocket-newtab-en-gb"),
+        (ScheduledSurfaceId.NEW_TAB_EN_INTL, "pocket-newtab-en-intl"),
+        (ScheduledSurfaceId.NEW_TAB_DE_DE, "pocket-newtab-de-de"),
+        (ScheduledSurfaceId.NEW_TAB_ES_ES, "pocket-newtab-es-es"),
+        (ScheduledSurfaceId.NEW_TAB_FR_FR, "pocket-newtab-fr-fr"),
+        (ScheduledSurfaceId.NEW_TAB_IT_IT, "pocket-newtab-it-it"),
     ],
 )
 def test_get_utm_source(scheduled_surface_id, expected_utm_source):
