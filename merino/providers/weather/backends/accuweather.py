@@ -292,9 +292,6 @@ class AccuweatherBackend:
             response.raise_for_status()
 
         if (response_dict := process_api_response(response.json())) is None:
-            logger.warning(
-                f"Unable to parse accuweather response from: {url_path}, params: {params.get("q")}"
-            )
             self.metrics_client.increment(f"accuweather.request.{request_type}.processor.error")
             return None
 

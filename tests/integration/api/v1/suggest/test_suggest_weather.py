@@ -206,7 +206,7 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
     ]
     backend_mock.get_weather_report.return_value = weather_report
 
-    response = client.get("/api/v1/suggest?q=weather")
+    response = client.get("/api/v1/suggest?q=weather&request_type=weather")
 
     assert response.status_code == 200
     assert response.headers["Cache-Control"] == "private, max-age=500"

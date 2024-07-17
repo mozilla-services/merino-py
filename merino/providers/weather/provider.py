@@ -73,20 +73,32 @@ class Provider(BaseProvider):
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide weather suggestions."""
         geolocation: Location = srequest.geolocation
-        is_location_completion_request = srequest.request_type == "location"
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
 
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
-                if is_location_completion_request:
-                    location_completions = await self.backend.get_location_completion(
-                        geolocation, search_term=srequest.query
-                    )
-                else:
-                    weather_report = await self.backend.get_weather_report(
-                        geolocation, srequest.query
-                    )
+                match srequest.request_type:
+                    case "location":
+                        location_completions = await self.backend.get_location_completion(
+                            geolocation, search_term=srequest.query
+                        )
+                    case "weather":
+                        weather_report = await self.backend.get_weather_report(
+                            geolocation, srequest.query
+                        )
+                    case None:
+                        if srequest.query:
+                            # if there's a query, we need the request type
+                            pass
+                        else:
+                            # legacy case
+                            weather_report = await self.backend.get_weather_report(
+                                geolocation, srequest.query
+                            )
+                    case _:
+                        # invalid request_type
+                        pass
 
         except BackendError as backend_error:
             logger.warning(backend_error)
