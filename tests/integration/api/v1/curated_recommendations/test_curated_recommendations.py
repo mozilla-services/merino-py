@@ -89,7 +89,9 @@ async def test_curated_recommendations():
         # expected recommendation with topic = None
         expected_recommendation = CuratedRecommendation(
             scheduledCorpusItemId="50f86ebe-3f25-41d8-bd84-53ead7bdc76e",
-            url=HttpUrl("https://www.themarginalian.org/2024/05/28/passenger-pigeon/"),
+            url=HttpUrl(
+                "https://www.themarginalian.org/2024/05/28/passenger-pigeon/?utm_source=pocket-newtab-en-us"
+            ),
             title="Thunder, Bells, and Silence: the Eclipse That Went Extinct",
             excerpt="Juneteenth isn’t the “other” Independence Day, it is THE Independence Day.",
             topic=Topic.CAREER,
@@ -116,6 +118,48 @@ async def test_curated_recommendations():
 
         # Assert 2nd returned recommendation has topic = None & all fields returned are expected
         actual_recommendation: CuratedRecommendation = CuratedRecommendation(**corpus_items[1])
+        assert actual_recommendation == expected_recommendation
+
+
+@freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
+@pytest.mark.asyncio
+async def test_curated_recommendations_utm_source():
+    """Test the curated recommendations endpoint returns urls with correct(new) utm_source"""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        # expected recommendation with new utm_source
+        expected_recommendation = CuratedRecommendation(
+            scheduledCorpusItemId="1452b7ea-7ba9-4da9-ba39-ab44e8147d5e",
+            url=HttpUrl(
+                "https://getpocket.com/explore/item/other-countries-have-social-safety-nets-the-u-s-has-women"
+                "?utm_source=pocket-newtab-en-us"
+            ),
+            title="Other Countries Have Social Safety Nets. The U.S. Has Women.",
+            excerpt="Anne Helen Petersen and Jessica Calarco discuss how mothers are experiencing and responding to "
+            "pandemic-related disruptions in their normal routines.",
+            topic=Topic.PARENTING,
+            publisher="Culture Study",
+            imageUrl=HttpUrl(
+                "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/3a4a6ed6-a1df-497d-8d31-f777534806ac.jpeg"
+            ),
+            receivedRank=2,
+        )
+        # Mock the endpoint
+        response = await fetch_en_us(ac)
+        data = response.json()
+
+        # Check if the mock response is valid
+        assert response.status_code == 200
+
+        corpus_items = data["data"]
+        # assert total of 80 items returned
+        assert len(corpus_items) == 80
+        # Assert all corpus_items have expected fields populated.
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["publisher"] for item in corpus_items)
+        assert all(item["imageUrl"] for item in corpus_items)
+
+        # Assert 2nd returned recommendation has topic = None & all fields returned are expected
+        actual_recommendation: CuratedRecommendation = CuratedRecommendation(**corpus_items[2])
         assert actual_recommendation == expected_recommendation
 
 

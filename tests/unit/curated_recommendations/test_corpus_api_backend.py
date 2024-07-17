@@ -124,3 +124,72 @@ def test_get_expiration_time():
 
     # Assert that all returned times are different
     assert len(set(times)) == len(times)
+
+
+@pytest.mark.parametrize("scheduled_surface_id", ["bad-scheduled-surface-id"])
+def test_get_utm_source_return_none(scheduled_surface_id):
+    """Testing the get_utm_source() method
+    & ensuring ids that don't have utm_source return None.
+    """
+    assert CorpusApiBackend.get_utm_source(scheduled_surface_id) is None
+
+
+@pytest.mark.parametrize(
+    ("scheduled_surface_id", "expected_utm_source"),
+    [
+        ("NEW_TAB_EN_US", "pocket-newtab-en-us"),
+        ("NEW_TAB_EN_GB", "pocket-newtab-en-gb"),
+        ("NEW_TAB_EN_INTL", "pocket-newtab-en-intl"),
+        ("NEW_TAB_DE_DE", "pocket-newtab-de-de"),
+        ("NEW_TAB_ES_ES", "pocket-newtab-es-es"),
+        ("NEW_TAB_FR_FR", "pocket-newtab-fr-fr"),
+        ("NEW_TAB_IT_IT", "pocket-newtab-it-it"),
+    ],
+)
+def test_get_utm_source(scheduled_surface_id, expected_utm_source):
+    """Testing the get_utm_source() method
+    & ensuring correct utm_source is returned for a scheduled surface id.
+    """
+    assert CorpusApiBackend.get_utm_source(scheduled_surface_id) == expected_utm_source
+
+
+@pytest.mark.parametrize(
+    ("url", "utm_source", "expected_url"),
+    [
+        # add new utm_source
+        (
+            "https://getpocket.com/explore/item/example-article",
+            "pocket-newtab-en-us",
+            "https://getpocket.com/explore/item/example-article?utm_source=pocket-newtab-en-us",
+        ),
+        # add new utm_source with another query param present in url
+        (
+            "https://getpocket.com/explore/item/example-article?foo=bar",
+            "pocket-newtab-en-gb",
+            "https://getpocket.com/explore/item/example-article?foo=bar&utm_source=pocket-newtab-en-gb",
+        ),
+        # replace old utm_source with new one
+        (
+            "https://getpocket.com/explore/item/example-article?utm_source=old_source",
+            "pocket-newtab-en-intl",
+            "https://getpocket.com/explore/item/example-article?utm_source=pocket-newtab-en-intl",
+        ),
+        # replace old utm_source with new one & when another query param present in url
+        (
+            "https://getpocket.com/explore/item/example-article?utm_source=old_source&foo=bar",
+            "pocket-newtab-de-de",
+            "https://getpocket.com/explore/item/example-article?utm_source=pocket-newtab-de-de&foo=bar",
+        ),
+        # pass empty utm_source (when no mapping is found)
+        (
+            "https://getpocket.com/explore/item/example-article?foo=bar",
+            "",
+            "https://getpocket.com/explore/item/example-article?foo=bar&utm_source=",
+        ),
+    ],
+)
+def test_update_url_utm_source(url, utm_source, expected_url):
+    """Testing the update_url_utm_source() method
+    & ensuring url is updated correctly.
+    """
+    assert CorpusApiBackend.update_url_utm_source(url, utm_source) == expected_url
