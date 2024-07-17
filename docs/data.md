@@ -69,6 +69,13 @@ log inspection interfaces.
 - `ERROR merino.featureflags` - There was an error while attempting to assign a
   feature flag for a suggest API request.
 
+### Curated Recommendations
+
+- `ERROR merino.curated_recommendations.corpus_backends.corpus_api_backend` -
+ Failed to get timezone for scheduled surface.
+- `WARNING merino.curated_recommendations.corpus_backends.corpus_api_backend` -
+ Retrying CorpusApiBackend after an http client exception was raised.
+
 ## Metrics
 
 > A note on timers: Statsd timers are measured in milliseconds, and are reported
@@ -141,3 +148,12 @@ The weather provider records additional metrics.
   cache store returned an error when fetching or storing a weather report. This should be 0 in
   normal operation. In case of an error, the logs will include a `WARNING` with the full error
   message.
+
+### Curated Recommendations
+
+The following additional metrics are recorded when curated recommendations are requested.
+
+- `corpus_api.request.timing` -
+ A timer to measure the duration (in ms) of looking up a list of scheduled corpus items.
+- `corpus_api.request.status_codes.{res.status_code}` -
+ A counter to measure the status codes of an HTTP request to the curated-corpus-api.

@@ -8,6 +8,7 @@ from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
     CorpusApiGraphConfig,
 )
 from merino.curated_recommendations.provider import CuratedRecommendationsProvider
+from merino.metrics import get_metrics_client
 from merino.utils.http_client import create_http_client
 
 _provider: CuratedRecommendationsProvider
@@ -20,6 +21,7 @@ def init_provider() -> None:
         corpus_backend=CorpusApiBackend(
             http_client=create_http_client(base_url=""),
             graph_config=CorpusApiGraphConfig(),
+            metrics_client=get_metrics_client(),
         )
     )
 
