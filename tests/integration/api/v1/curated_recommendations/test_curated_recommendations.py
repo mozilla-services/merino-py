@@ -133,23 +133,6 @@ async def test_curated_recommendations():
 async def test_curated_recommendations_utm_source():
     """Test the curated recommendations endpoint returns urls with correct(new) utm_source"""
     async with AsyncClient(app=app, base_url="http://test") as ac:
-        # expected recommendation with new utm_source
-        expected_recommendation = CuratedRecommendation(
-            scheduledCorpusItemId="1452b7ea-7ba9-4da9-ba39-ab44e8147d5e",
-            url=HttpUrl(
-                "https://getpocket.com/explore/item/other-countries-have-social-safety-nets-the-u-s-has-women"
-                "?utm_source=pocket-newtab-en-us"
-            ),
-            title="Other Countries Have Social Safety Nets. The U.S. Has Women.",
-            excerpt="Anne Helen Petersen and Jessica Calarco discuss how mothers are experiencing and responding to "
-            "pandemic-related disruptions in their normal routines.",
-            topic=Topic.PARENTING,
-            publisher="Culture Study",
-            imageUrl=HttpUrl(
-                "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/3a4a6ed6-a1df-497d-8d31-f777534806ac.jpeg"
-            ),
-            receivedRank=2,
-        )
         # Mock the endpoint
         response = await fetch_en_us(ac)
         data = response.json()
@@ -161,13 +144,10 @@ async def test_curated_recommendations_utm_source():
         # assert total of 80 items returned
         assert len(corpus_items) == 80
         # Assert all corpus_items have expected fields populated.
-        assert all(item["url"] for item in corpus_items)
+        # check that utm_source is present and has the correct value in all urls
+        assert all("?utm_source=pocket-newtab-en-us" in item["url"] for item in corpus_items)
         assert all(item["publisher"] for item in corpus_items)
         assert all(item["imageUrl"] for item in corpus_items)
-
-        # Assert 2nd returned recommendation has topic = None & all fields returned are expected
-        actual_recommendation: CuratedRecommendation = CuratedRecommendation(**corpus_items[2])
-        assert actual_recommendation == expected_recommendation
 
 
 @pytest.mark.asyncio
