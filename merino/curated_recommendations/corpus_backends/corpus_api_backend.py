@@ -245,23 +245,31 @@ class CorpusApiBackend(CorpusBackend):
         res.raise_for_status()
         data = res.json()
 
+        # log to Sentry if GraphQL returned errors
+        if res.status_code == 200 and "errors" in data:
+            for error in data["errors"]:
+                logger.exception(error)
+
         # get the utm_source based on scheduled surface id
         utm_source = self.get_utm_source(surface_id)
 
-        for item in data["data"]["scheduledSurface"]["items"]:
-            # Map Corpus topic to SERP topic
-            item["corpusItem"]["topic"] = self.map_corpus_topic_to_serp_topic(
-                item["corpusItem"]["topic"]
-            )
-            # Update url (add / replace utm_source query param)
-            item["corpusItem"]["url"] = self.update_url_utm_source(
-                item["corpusItem"]["url"], str(utm_source)
-            )
+        if data["data"] is not None:
+            for item in data["data"]["scheduledSurface"]["items"]:
+                # Map Corpus topic to SERP topic
+                item["corpusItem"]["topic"] = self.map_corpus_topic_to_serp_topic(
+                    item["corpusItem"]["topic"]
+                )
+                # Update url (add / replace utm_source query param)
+                item["corpusItem"]["url"] = self.update_url_utm_source(
+                    item["corpusItem"]["url"], str(utm_source)
+                )
 
-        curated_recommendations = [
-            CorpusItem(**item["corpusItem"], scheduledCorpusItemId=item["id"])
-            for item in data["data"]["scheduledSurface"]["items"]
-        ]
+            curated_recommendations = [
+                CorpusItem(**item["corpusItem"], scheduledCorpusItemId=item["id"])
+                for item in data["data"]["scheduledSurface"]["items"]
+            ]
+        else:
+            curated_recommendations = []
         return curated_recommendations
 
     async def _revalidate_cache(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:

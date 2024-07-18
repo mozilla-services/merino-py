@@ -1,0 +1,20 @@
+{
+  "data": null,
+  "errors": [
+    {
+      "message": "Could not find Scheduled Surface with id of \"NEW_TAB_EN_UX\".",
+      "locations": [
+        {
+          "line": 1,
+          "column": 79
+        }
+      ],
+      "path": [
+        "scheduledSurface"
+      ],
+      "extensions": {
+        "code": "BAD_USER_INPUT"
+      }
+    }
+  ]
+}

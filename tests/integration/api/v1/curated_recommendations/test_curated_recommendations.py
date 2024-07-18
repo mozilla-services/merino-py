@@ -32,6 +32,13 @@ def fixture_response_data():
 
 
 @pytest.fixture()
+def fixture_graphql_200ok_with_error_response():
+    """Load mock response data for a GraphQL error response"""
+    with open("tests/data/graphql_error.json") as f:
+        return json.load(f)
+
+
+@pytest.fixture()
 def fixture_request_data() -> Request:
     """Load mock response data for the scheduledSurface query"""
     graph_config = CorpusApiGraphConfig()
@@ -175,6 +182,34 @@ async def test_curated_recommendations_locales(locale):
     async with AsyncClient(app=app, base_url="http://test") as ac:
         response = await ac.post("/api/v1/curated-recommendations", json={"locale": locale})
         assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
+
+
+@pytest.mark.asyncio
+async def test_graphql_error(corpus_http_client, fixture_graphql_200ok_with_error_response,
+                             fixture_request_data, caplog) -> None:
+    """Test that GraphQL errors are logged properly where the graph returns a "200 Ok"."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        def return_with_graphql_error(*args, **kwargs):
+            # Simulate GraphQL returning an error instead of data
+            return Response(
+                status_code=200,
+                json=fixture_graphql_200ok_with_error_response,
+                request=fixture_request_data,
+            )
+
+        corpus_http_client.post = AsyncMock(side_effect=return_with_graphql_error)
+        response = await fetch_en_us(ac)
+
+        # GraphQL server returns a 200 OK...
+        assert response.status_code == 200
+
+        # ...yet an error was returned by the graph.
+        # Assert an exception was logged with the contents of the GraphQL error.
+        errors = [r for r in caplog.records if r.levelname == "ERROR"]
+        assert len(errors) == 1
+        assert (
+                   "Could not find Scheduled Surface with id of \"NEW_TAB_EN_UX\""
+               ) in errors[0].message
 
 
 class TestCuratedRecommendationsRequestParameters:
@@ -361,7 +396,7 @@ class TestCorpusApiCaching:
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.asyncio
     async def test_single_request_multiple_failed_fetches(
-        self, corpus_http_client, fixture_request_data, fixture_response_data, caplog
+            self, corpus_http_client, fixture_request_data, fixture_response_data, caplog
     ):
         """Test that only a few requests are made to the curated-corpus-api when it is down."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
@@ -400,13 +435,13 @@ class TestCorpusApiCaching:
             warnings = [r for r in caplog.records if r.levelname == "WARNING"]
             assert len(warnings) == 1
             assert (
-                "Retrying CorpusApiBackend._fetch_from_backend once after "
-                "Server error '503 Service Unavailable'"
-            ) in warnings[0].message
+                       "Retrying CorpusApiBackend._fetch_from_backend once after "
+                       "Server error '503 Service Unavailable'"
+                   ) in warnings[0].message
 
     @pytest.mark.asyncio
     async def test_cache_returned_on_subsequent_calls(
-        self, corpus_http_client, fixture_response_data, fixture_request_data
+            self, corpus_http_client, fixture_response_data, fixture_request_data
     ):
         """Test that the cache expires, and subsequent requests return new data."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -481,7 +516,7 @@ class TestCuratedRecommendationsMetrics:
 
     @pytest.mark.asyncio
     async def test_metrics_corpus_api_error(
-        self, mocker: MockerFixture, corpus_http_client, fixture_request_data
+            self, mocker: MockerFixture, corpus_http_client, fixture_request_data
     ) -> None:
         """Test that metrics are recorded when the curated-corpus-api returns a 500 error"""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
