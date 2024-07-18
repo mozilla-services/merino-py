@@ -17,7 +17,7 @@ from merino.jobs.relevancy_uploader.chunked_rs_uploader import (
 )
 
 CLASSIFICATION_CURRENT_VERSION = 1
-CATEGORY_SCORE_THRESHOLD = 0.5
+CATEGORY_SCORE_THRESHOLD = 0.3
 
 
 class Category(Enum):
@@ -46,6 +46,39 @@ class Category(Enum):
     Travel = 19
 
 
+# Mapping to unify categories across the sources
+UPLOAD_CATEGORY_TO_R2D2_CATEGORY: dict[str, Category] = {
+    "Sports": Category.Sports,
+    "Economy & Finance": Category.Finance,
+    "Ecommerce": Category.Inconclusive,
+    "Travel": Category.Travel,
+    "Information Technology": Category.Tech,
+    "News & Media": Category.News,
+    "Chat": Category.Inconclusive,
+    "Photography": Category.Hobbies,
+    "Social Networks": Category.Inconclusive,
+    "Instant Messengers": Category.Inconclusive,
+    "Business": Category.Business,
+    "Health & Fitness": Category.Inconclusive,
+    "Music": Category.Hobbies,
+    "Home & Garden": Category.Home,
+    "Science": Category.Education,
+    "Fashion": Category.Fashion,
+    "Technology": Category.Tech,
+    "Food & Drink": Category.Food,
+    "Video Streaming": Category.Hobbies,
+    "Education": Category.Education,
+    "Lifestyle": Category.Inconclusive,
+    "Cartoons & Anime": Category.Inconclusive,
+    "Gaming": Category.Hobbies,
+    "Magazines": Category.Inconclusive,
+    "Forums": Category.Inconclusive,
+    "Entertainment": Category.Inconclusive,
+    "Clothing": Category.Fashion,
+    "Weather": Category.Inconclusive,
+    "Government": Category.Government,
+}
+
 RELEVANCY_RECORD_TYPE = "category_to_domains"
 
 
@@ -59,38 +92,50 @@ class RelevancyData:
         """Read CSV file and extract required data for relevancy in the structure
         [
             { "domain" : <base64 string> }
-        ]
+        ].
+        Categories are determined by a category_mapping file. Where its structure is like
+        {
+            <domain>: {<category> : <score>}
+        }.
         """
-        unique_domains = set()
+        unique_domains = set((row["domain"], row["categories"]) for row in csv_reader)
         data: defaultdict[Category, list[dict[str, str]]] = defaultdict(list)
-        for row in csv_reader:
-            domain = row["domain"]
-            if domain not in unique_domains:
-                categories = categories_mapping.get(domain, {})
-                if categories:
-                    for category_name, score in categories.items():
-                        try:
-                            category = Category[category_name.title()]
-                            if score > CATEGORY_SCORE_THRESHOLD:
-                                md5_hash = md5(
-                                    row["domain"].encode(), usedforsecurity=False
-                                ).digest()
-                                data[category].append(
-                                    {"domain": base64.b64encode(md5_hash).decode()}
-                                )
-                            else:
-                                md5_hash = md5(
-                                    row["domain"].encode(), usedforsecurity=False
-                                ).digest()
-                                data[Category.Inconclusive].append(
-                                    {"domain": base64.b64encode(md5_hash).decode()}
-                                )
-                        except KeyError:
-                            pass
-
-                unique_domains.add(domain)
-
+        for domain, fallback_categories in unique_domains:
+            classified = classify_domain(domain, categories_mapping, data)
+            if not classified:
+                classify_domain_with_fallback(domain, fallback_categories, data)
         return data
+
+
+def classify_domain(domain, categories_mapping, data) -> bool:
+    """Classify domain to its Category."""
+    categories = categories_mapping.get(domain, {})
+    classified = False
+    if categories:
+        for category_name, score in categories.items():
+            try:
+                category = Category[category_name.title()]
+                if score > CATEGORY_SCORE_THRESHOLD:
+                    md5_hash = md5(domain.encode(), usedforsecurity=False).digest()
+                    data[category].append({"domain": base64.b64encode(md5_hash).decode()})
+                    classified = True
+            except KeyError:
+                pass
+    return classified
+
+
+def classify_domain_with_fallback(domain, categories, data) -> None:
+    """Classify the domain using UPLOAD_CATEGORY_TO_R2D2 mapping."""
+    classified = False
+    fallbacks = categories.strip("[]").split(",")
+    md5_hash = md5(domain.encode(), usedforsecurity=False).digest()
+    for category in fallbacks:
+        category_mapped = UPLOAD_CATEGORY_TO_R2D2_CATEGORY.get(category, Category.Inconclusive)
+        if category_mapped != Category.Inconclusive:
+            data[category_mapped].append({"domain": base64.b64encode(md5_hash).decode()})
+            classified = True
+    if not classified:
+        data[Category.Inconclusive].append({"domain": base64.b64encode(md5_hash).decode()})
 
 
 rs_settings = config.remote_settings

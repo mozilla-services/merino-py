@@ -38,8 +38,12 @@ def expected_secondary_category_data() -> list[dict[str, Any]]:
     """Return a list of expected relevancy domains for the CSV test data in
     `PRIMARY_CSV_PATH` related to the 'News' Category.
     """
-    md5_hash = md5("sportsnnews.com".encode(), usedforsecurity=False).digest()
-    return [{"domain": base64.b64encode(md5_hash).decode()}]
+    sportsnews_hash = md5("sportsnnews.com".encode(), usedforsecurity=False).digest()
+    fallback_hash = md5("fallback.com".encode(), usedforsecurity=False).digest()
+    return [
+        {"domain": base64.b64encode(sportsnews_hash).decode()},
+        {"domain": base64.b64encode(fallback_hash).decode()},
+    ]
 
 
 def expected_inconclusive_category_data() -> list[dict[str, Any]]:

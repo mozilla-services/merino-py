@@ -3,4 +3,5 @@ rank,domain,host,origin,suffix,categories
 1,sports.com,sports1.sports.com,https://sports1.sports.com,com,"[Sports]"
 2,sports.com,sports2.sports.com,https://sports2.sports.com,com,"[Sports]"
 3,sportsnnews.com,hi.sportsnnews.com,https://hi.sportsnnews.com,com,"[Sports,News & Media]"
-4,inconclusive.com,inconclusive.inconclusive.com,https://inconclusive.inconclusive.com,com,"[Hello]"
+4,fallback.com,cat.fallback.com,https://cat.fallback.com,com,"[News & Media]"
+5,inconclusive.com,inconclusive.inconclusive.com,https://inconclusive.inconclusive.com,com,"[Hello]"
