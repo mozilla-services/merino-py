@@ -187,6 +187,37 @@ class CuratedRecommendationsProvider:
 
         return result_recs
 
+    @staticmethod
+    def boost_preferred_topic(
+        recs: list[CuratedRecommendation],
+        preferred_topics: list[Topic],
+        boostable_slot: int = 1,
+    ):
+        """Boost a recommendation based on preferred topic(s) into `boostable_slot`.
+
+        :param recs: List of recommendations from which an item is boosted based on preferred topic(s).
+        :param preferred_topics: user's preferred topic(s)
+        :param boostable_slot: 0-based slot to boost an item into. Defaults to slot 1,
+        which is the second recommendation.
+        :return: CuratedRecommendations ranked based on a preferred topic, while otherwise preserving the order.
+        """
+        # get the first item found to boost based on the below condition starting after the 3rd item in the list.
+        # condition for boostable item: check if an item has a topic in the preferred_topics list.
+        boostable_rec = next(
+            (r for r in recs[boostable_slot + 1 :] if r.topic in preferred_topics),
+            None,
+        )
+
+        # if item to boost is found
+        if boostable_rec:
+            recs = copy(recs)  # Don't change the input, make a temp copy
+            recs.remove(boostable_rec)  # remove the item to boost from list of recs
+            recs.insert(
+                boostable_slot, boostable_rec
+            )  # insert it into the boostable_slot (2nd rec)
+
+        return recs
+
     async def fetch(
         self, curated_recommendations_request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:  # noqa
@@ -207,10 +238,14 @@ class CuratedRecommendationsProvider:
             for rank, item in enumerate(corpus_items)
         ]
 
-        # Perform publisher spread on the recommendation set
-        recommendations = CuratedRecommendationsProvider.spread_publishers(
-            recommendations, spread_distance=3
-        )
+        # 2. Perform publisher spread on the recommendation set
+        recommendations = self.spread_publishers(recommendations, spread_distance=3)
+
+        # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
+        if curated_recommendations_request.topics:
+            recommendations = self.boost_preferred_topic(
+                recommendations, curated_recommendations_request.topics
+            )
 
         return CuratedRecommendationsResponse(
             recommendedAt=self.time_ms(),

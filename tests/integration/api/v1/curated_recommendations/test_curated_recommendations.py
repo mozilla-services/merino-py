@@ -315,6 +315,25 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 200, f"{topics} resulted in {response.status_code}"
 
     @pytest.mark.asyncio
+    async def test_curated_recommendations_preferred_topic(self, fixture_response_data):
+        """Test the curated recommendations endpoint accepts a preferred topic & reorders the list."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": ["health"]}
+            )
+            data = response.json()
+            corpus_items = data["data"]
+
+            assert response.status_code == 200
+            # assert total of 80 items returned
+            assert len(corpus_items) == 80
+            # assert 6th rec is now in 2nd slot
+            assert (
+                fixture_response_data["data"]["scheduledSurface"]["items"][5]["id"]
+                == corpus_items[1]["scheduledCorpusItemId"]
+            )  # noqa
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "topics",
         [
