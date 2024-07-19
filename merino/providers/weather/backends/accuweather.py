@@ -597,7 +597,7 @@ class AccuweatherBackend:
                             )
                         break
                 if location is None:
-                    self.metrics_client.increment("accuweather.request.location.processor.error")
+                    self.metrics_client.increment("accuweather.request.locations.processor.error")
                     return None
             if location is None:
                 return None
