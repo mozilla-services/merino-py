@@ -368,7 +368,7 @@ class TestCorpusApiCaching:
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.parametrize("error_type", ["graphql", "http"])
     @pytest.mark.asyncio
-    async def test_single_request_multiple_failed_fetches(
+    async def test_single_request_multiple_failed_fetches_with_graphql_error(
         self,
         corpus_http_client,
         fixture_request_data,
