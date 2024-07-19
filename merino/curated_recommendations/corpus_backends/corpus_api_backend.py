@@ -247,8 +247,7 @@ class CorpusApiBackend(CorpusBackend):
 
         # log to Sentry if GraphQL returned errors
         if res.status_code == 200 and "errors" in data:
-            for error in data["errors"]:
-                logger.exception(error)
+            raise BackendError("curated-corpus-api returned GraphQL error(s) {data["errors"]}")
 
         # get the utm_source based on scheduled surface id
         utm_source = self.get_utm_source(surface_id)
