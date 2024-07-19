@@ -500,7 +500,9 @@ class AccuweatherBackend:
         """
         country: str | None = geolocation.country
         region: str | None = geolocation.region
-        alternative_regions: list[str] | None = geolocation.alternative_regions
+        alternative_regions: list[str] = (
+            geolocation.alternative_regions if geolocation.alternative_regions else []
+        )
         city: str | None = geolocation.city
 
         if not country or not region or not city:
@@ -508,7 +510,7 @@ class AccuweatherBackend:
             return None
         for subdivision in [
             region,
-            *(alternative_regions if alternative_regions is not None else []),
+            *alternative_regions,
         ]:
             cache_key: str = self.cache_key_for_accuweather_request(
                 self.url_cities_path.format(country_code=country, admin_code=subdivision),
@@ -554,7 +556,9 @@ class AccuweatherBackend:
         country = geolocation.country
         city = geolocation.city
         region = geolocation.region
-        alternative_regions = geolocation.alternative_regions
+        alternative_regions = (
+            geolocation.alternative_regions if geolocation.alternative_regions else []
+        )
         location_key = geolocation.key
 
         async def as_awaitable(val: Any) -> Any:
@@ -583,7 +587,7 @@ class AccuweatherBackend:
             if country and city and region:
                 for subdivision in [
                     region,
-                    *(alternative_regions if alternative_regions is not None else []),
+                    *alternative_regions,
                 ]:
                     location = await self.get_location_by_geolocation(country, city, subdivision)
                     if location is not None:
