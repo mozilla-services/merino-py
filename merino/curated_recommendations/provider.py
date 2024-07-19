@@ -222,11 +222,28 @@ class CuratedRecommendationsProvider:
         return result_recs
 
     @staticmethod
+    def is_boostable(
+        recs: list[CuratedRecommendation],
+        preferred_topics: list[Topic],
+    ) -> bool:
+        """Check if top 2 recommendations already have the preferred topics.
+
+        :param recs: List of recommendations
+        :param preferred_topics: user's preferred topic(s)
+        :return: bool
+        """
+        top_two_recs = recs[:2]  # slice operator, get the first two recs (index 0 & 1)
+        # check if topics in first two (0-1 index) recs are in preferred_topics
+        if not any(r.topic in preferred_topics for r in top_two_recs):
+            return True
+        return False
+
+    @staticmethod
     def boost_preferred_topic(
         recs: list[CuratedRecommendation],
         preferred_topics: list[Topic],
         boostable_slot: int = 1,
-    ):
+    ) -> list[CuratedRecommendation]:
         """Boost a recommendation based on preferred topic(s) into `boostable_slot`.
 
         :param recs: List of recommendations from which an item is boosted based on preferred topic(s).
@@ -235,7 +252,7 @@ class CuratedRecommendationsProvider:
         which is the second recommendation.
         :return: CuratedRecommendations ranked based on a preferred topic, while otherwise preserving the order.
         """
-        # get the first item found to boost based on the below condition starting after the 3rd item in the list.
+        # get the first item found to boost based on the below condition starting after the boostable_slot in the list.
         # condition for boostable item: check if an item has a topic in the preferred_topics list.
         boostable_rec = next(
             (r for r in recs[boostable_slot + 1 :] if r.topic in preferred_topics),
@@ -277,9 +294,11 @@ class CuratedRecommendationsProvider:
 
         # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
         if curated_recommendations_request.topics:
-            recommendations = self.boost_preferred_topic(
-                recommendations, curated_recommendations_request.topics
-            )
+            # Check if recs need boosting
+            if self.is_boostable(recommendations, curated_recommendations_request.topics):
+                recommendations = self.boost_preferred_topic(
+                    recommendations, curated_recommendations_request.topics
+                )
 
         return CuratedRecommendationsResponse(
             recommendedAt=self.time_ms(),

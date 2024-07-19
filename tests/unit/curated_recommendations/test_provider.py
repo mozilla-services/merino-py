@@ -345,7 +345,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
 
 class TestCuratedRecommendationsProviderBoostPreferredTopic:
-    """Unit tests for boost_preferred_topic."""
+    """Unit tests for boost_preferred_topic & is_boostable."""
 
     @staticmethod
     def generate_recommendations(topics: list[Topic]) -> list[CuratedRecommendation]:
@@ -416,6 +416,26 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
         assert len(recs) == len(reordered_recs)
         # assert that the order of recs has not changed since recs don't have preferred topic
         assert reordered_recs == recs
+
+    def test_is_boostable_return_true(self):
+        """Should return True if any of preferred topics is not in top 2 recs"""
+        recs = self.generate_recommendations(
+            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION]
+        )
+        is_boostable = CuratedRecommendationsProvider.is_boostable(recs, [Topic.EDUCATION])
+
+        assert is_boostable
+
+    def test_is_boostable_return_false(self):
+        """Should return False if any of preferred topics is already in top 2 recs"""
+        recs = self.generate_recommendations(
+            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION]
+        )
+        is_boostable = CuratedRecommendationsProvider.is_boostable(
+            recs, [Topic.CAREER, Topic.ARTS]
+        )
+
+        assert not is_boostable
 
 
 class TestCuratedRecommendationTileId:

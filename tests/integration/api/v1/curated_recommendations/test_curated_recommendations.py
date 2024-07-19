@@ -335,6 +335,42 @@ class TestCuratedRecommendationsRequestParameters:
             )  # noqa
 
     @pytest.mark.asyncio
+    @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
+    @pytest.mark.parametrize(
+        "preferred_topics",
+        [
+            # rec with topic FOOD is already the first rec in the list
+            [Topic.FOOD, Topic.EDUCATION],
+            # rec with topic CAREER is already the second rec in the list
+            [Topic.POLITICS, Topic.CAREER],
+        ],
+    )
+    async def test_curated_recommendations_preferred_topic_no_reorder(
+        self, fixture_response_data, preferred_topics
+    ):
+        """Test the curated recommendations endpoint accepts a preferred topic & does
+        not reorder the list if preferred topics already in top 2 recs.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            print("preferred_topics: ", preferred_topics)
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "en-US", "topics": preferred_topics},
+            )
+            data = response.json()
+            corpus_items = data["data"]
+
+            assert response.status_code == 200
+            # assert total of 80 items returned
+            assert len(corpus_items) == 80
+            # check that the first two recs haven't changed order.
+            for i in range(0, 2):
+                assert (
+                    corpus_items[i]["scheduledCorpusItemId"]
+                    == fixture_response_data["data"]["scheduledSurface"]["items"][i]["id"]
+                )
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "topics",
         [
