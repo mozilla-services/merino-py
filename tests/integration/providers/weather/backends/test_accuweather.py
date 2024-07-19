@@ -140,7 +140,14 @@ def fixture_response_header() -> dict[str, str]:
 @pytest.fixture(name="geolocation")
 def fixture_geolocation() -> Location:
     """Create a Location object for test."""
-    return Location(country="US", region="CA", city="San Francisco", dma=807, postal_code="94105")
+    return Location(
+        country="US",
+        region="CA",
+        city="San Francisco",
+        dma=807,
+        postal_code="94105",
+        subdivisions=["BC", "CA"],
+    )
 
 
 @pytest.fixture(name="accuweather_cached_location_key")
@@ -394,7 +401,7 @@ async def test_get_weather_report_from_cache_with_ttl(
     client_mock.get.assert_not_called()
 
     metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
-    assert metrics_timeit_called == ["accuweather.cache.fetch"]
+    assert metrics_timeit_called == ["accuweather.cache.fetch", "accuweather.cache.fetch"]
 
     metrics_increment_called = [
         call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
@@ -447,7 +454,7 @@ async def test_get_weather_report_from_cache_without_ttl(
     client_mock.get.assert_not_called()
 
     metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
-    assert metrics_timeit_called == ["accuweather.cache.fetch"]
+    assert metrics_timeit_called == ["accuweather.cache.fetch", "accuweather.cache.fetch"]
 
     metrics_increment_called = [
         call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list

@@ -302,7 +302,14 @@ def fixture_accuweather(
 @pytest.fixture(name="geolocation")
 def fixture_geolocation() -> Location:
     """Create a Location object for test."""
-    return Location(country="US", region="CA", city="San Francisco", dma=807, postal_code="94105")
+    return Location(
+        country="US",
+        region="CA",
+        city="San Francisco",
+        dma=807,
+        postal_code="94105",
+        subdivisions=["BC", "CA"],
+    )
 
 
 @pytest.fixture(name="accuweather_location_response")
@@ -833,6 +840,78 @@ async def test_get_weather_report(
     """Test that the get_weather_report method returns a WeatherReport."""
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_location_response,
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "apikey=test&q=94105"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_current_conditions_response,
+            request=Request(
+                method="GET",
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_forecast_response_fahrenheit,
+            request=Request(
+                method="GET",
+                url=(
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
+                ),
+            ),
+        ),
+    ]
+
+    # This request flow hits the store_request_into_cache method that returns the ttl. Mocking
+    # that call to return the default weather report ttl
+    mocker.patch(
+        "merino.providers.weather.backends.accuweather.AccuweatherBackend"
+        ".store_request_into_cache"
+    ).return_value = TEST_CACHE_TTL_SEC
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
+
+    assert report == expected_weather_report
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_with_second_subdivision(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    expected_weather_report: WeatherReport,
+    geolocation: Location,
+    accuweather_location_response: bytes,
+    accuweather_current_conditions_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
+    response_header: dict[str, str],
+) -> None:
+    """Test that the get_weather_report method returns a WeatherReport."""
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=b"[]",
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/BC/search.json?"
+                    "apikey=test&q=94105"
+                ),
+            ),
+        ),
         Response(
             status_code=200,
             headers=response_header,

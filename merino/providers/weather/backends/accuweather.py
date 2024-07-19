@@ -276,6 +276,7 @@ class AccuweatherBackend:
         params: dict[str, str],
         process_api_response: Callable[[Any], dict[str, Any] | None],
         cache_ttl_sec: int,
+        log_failure : bool = True
     ) -> dict[str, Any] | None:
         """Get API response. Attempt to get it from cache first,
         then actually make the call if there's a cache miss.
@@ -292,7 +293,8 @@ class AccuweatherBackend:
             response.raise_for_status()
 
         if (response_dict := process_api_response(response.json())) is None:
-            self.metrics_client.increment(f"accuweather.request.{request_type}.processor.error")
+            if log_failure:
+                self.metrics_client.increment(f"accuweather.request.{request_type}.processor.error")
             return None
 
         response_expiry: str = response.headers.get("Expires")
@@ -495,37 +497,46 @@ class AccuweatherBackend:
             AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
         """
         country: str | None = geolocation.country
-        region: str | None = geolocation.region
+        subdivisions: list[str] | None = geolocation.subdivisions
         city: str | None = geolocation.city
-        if not country or not region or not city:
+
+        cached_region = None
+        if not country or not subdivisions or not city:
             self.metrics_client.increment("accuweather.request.location.not_provided")
             return None
+        for subdivision in subdivisions:
+            cache_key: str = self.cache_key_for_accuweather_request(
+                self.url_cities_path.format(country_code=country, admin_code=subdivision),
+                query_params=self.get_location_key_query_params(city),
+            )
+            # Look up for all the weather data from the cache.
+            try:
+                with self.metrics_client.timeit("accuweather.cache.fetch"):
+                    cached_data: list[bytes | None] = await self.cache.run_script(
+                        sid=SCRIPT_ID,
+                        keys=[cache_key],
+                        # The order matters below. See `LUA_SCRIPT_CACHE_BULK_FETCH` for details.
+                        args=[
+                            self.cache_key_template(WeatherDataType.CURRENT_CONDITIONS),
+                            self.cache_key_template(WeatherDataType.FORECAST),
+                            self.url_location_key_placeholder,
+                        ],
+                    )
+            except CacheAdapterError as exc:
+                logger.error(f"Failed to fetch weather report from Redis: {exc}")
+                self.metrics_client.increment("accuweather.cache.fetch.error")
+                return None
 
-        cache_key: str = self.cache_key_for_accuweather_request(
-            self.url_cities_path.format(country_code=country, admin_code=region),
-            query_params=self.get_location_key_query_params(city),
-        )
-        # Look up for all the weather data from the cache.
-        try:
-            with self.metrics_client.timeit("accuweather.cache.fetch"):
-                cached_data: list[bytes | None] = await self.cache.run_script(
-                    sid=SCRIPT_ID,
-                    keys=[cache_key],
-                    # The order matters below. See `LUA_SCRIPT_CACHE_BULK_FETCH` for details.
-                    args=[
-                        self.cache_key_template(WeatherDataType.CURRENT_CONDITIONS),
-                        self.cache_key_template(WeatherDataType.FORECAST),
-                        self.url_location_key_placeholder,
-                    ],
-                )
-        except CacheAdapterError as exc:
-            logger.error(f"Failed to fetch weather report from Redis: {exc}")
-            self.metrics_client.increment("accuweather.cache.fetch.error")
-            return None
+            if cached_data:
+                cached_region = subdivision
+                break
 
         self.emit_cache_fetch_metrics(cached_data)
         cached_report = self.parse_cached_data(cached_data)
-        geolocation = Location(country=country, city=city, region=region)
+
+        geolocation = Location(
+            country=country, city=city, region=cached_region, subdivisions=subdivisions
+        )
         return await self.make_weather_report(cached_report, geolocation)
 
     async def make_weather_report(
@@ -539,6 +550,7 @@ class AccuweatherBackend:
         country = geolocation.country
         city = geolocation.city
         region = geolocation.region
+        subdivisions = geolocation.subdivisions
         location_key = geolocation.key
 
         async def as_awaitable(val: Any) -> Any:
@@ -564,12 +576,20 @@ class AccuweatherBackend:
 
         # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
-            if country and city and region:
-                if (
-                    location := await self.get_location_by_geolocation(country, city, region)
-                ) is None:
-                    return None
-            else:
+            if country and city:
+                if region:
+                    location = await self.get_location_by_geolocation(country, city, region)
+                elif subdivisions:
+                    for subdivision in subdivisions:
+                        location = await self.get_location_by_geolocation(
+                            country, city, subdivision
+                        )
+                        if location is not None:
+                            break
+                    if location is None:
+                        self.metrics_client.increment(f"accuweather.request.location.processor.error")
+                        return None
+            if location is None:
                 return None
 
         try:
@@ -631,6 +651,7 @@ class AccuweatherBackend:
                 params=self.get_location_key_query_params(city),
                 process_api_response=process_location_response,
                 cache_ttl_sec=self.cached_location_key_ttl_sec,
+                log_failure=False
             )
         except HTTPError as error:
             raise AccuweatherError("Unexpected location response") from error
