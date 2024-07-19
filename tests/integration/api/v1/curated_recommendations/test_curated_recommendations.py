@@ -209,7 +209,7 @@ async def test_graphql_error(
         # Assert an exception was logged with the contents of the GraphQL error.
         errors = [r for r in caplog.records if r.levelname == "ERROR"]
         assert len(errors) == 1
-        assert ('Could not find Scheduled Surface with id of "NEW_TAB_EN_UX"') in errors[0].message
+        assert 'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX"' in errors[0].message
 
 
 class TestCuratedRecommendationsRequestParameters:

@@ -17,6 +17,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
 )
 from merino.utils.version import fetch_app_version_from_file
+from merino.exceptions import BackendError
 
 logger = logging.getLogger(__name__)
 
@@ -247,28 +248,26 @@ class CorpusApiBackend(CorpusBackend):
 
         # log to Sentry if GraphQL returned errors
         if res.status_code == 200 and "errors" in data:
-            raise BackendError("curated-corpus-api returned GraphQL error(s) {data["errors"]}")
+            raise BackendError(f"curated-corpus-api returned GraphQL error(s) {data["errors"]}")
 
         # get the utm_source based on scheduled surface id
         utm_source = self.get_utm_source(surface_id)
 
-        if data["data"] is not None:
-            for item in data["data"]["scheduledSurface"]["items"]:
-                # Map Corpus topic to SERP topic
-                item["corpusItem"]["topic"] = self.map_corpus_topic_to_serp_topic(
-                    item["corpusItem"]["topic"]
-                )
-                # Update url (add / replace utm_source query param)
-                item["corpusItem"]["url"] = self.update_url_utm_source(
-                    item["corpusItem"]["url"], str(utm_source)
-                )
+        for item in data["data"]["scheduledSurface"]["items"]:
+            # Map Corpus topic to SERP topic
+            item["corpusItem"]["topic"] = self.map_corpus_topic_to_serp_topic(
+                item["corpusItem"]["topic"]
+            )
+            # Update url (add / replace utm_source query param)
+            item["corpusItem"]["url"] = self.update_url_utm_source(
+                item["corpusItem"]["url"], str(utm_source)
+            )
 
-            curated_recommendations = [
-                CorpusItem(**item["corpusItem"], scheduledCorpusItemId=item["id"])
-                for item in data["data"]["scheduledSurface"]["items"]
-            ]
-        else:
-            curated_recommendations = []
+        curated_recommendations = [
+            CorpusItem(**item["corpusItem"], scheduledCorpusItemId=item["id"])
+            for item in data["data"]["scheduledSurface"]["items"]
+        ]
+
         return curated_recommendations
 
     async def _revalidate_cache(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
@@ -286,7 +285,7 @@ class CorpusApiBackend(CorpusBackend):
             # Fetch new data from the backend.
             try:
                 data = await self._fetch_from_backend(surface_id)
-            except HTTPError as e:
+            except (BackendError, HTTPError) as e:
                 logger.warning(f"Retrying CorpusApiBackend._fetch_from_backend once after {e}")
                 # Backoff prevents high API rate during downtime.
                 await asyncio.sleep(self._backoff_time.total_seconds())
