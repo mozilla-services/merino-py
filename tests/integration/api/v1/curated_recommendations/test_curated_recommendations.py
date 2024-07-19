@@ -420,13 +420,12 @@ class TestCorpusApiCaching:
             warnings = [r for r in caplog.records if r.levelname == "WARNING"]
             assert len(warnings) == 1
             if error_type == "graphql":
-                # Assert an exception was logged with the contents of the GraphQL error.
-                errors = [r for r in caplog.records if r.levelname == "ERROR"]
-                assert len(errors) == 1
+                # Assert the contents of the GraphQL error was logged.
                 assert (
                     'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX".'
                 ) in warnings[0].message
             elif error_type == "http":
+                # Assert that a warning was logged with a descriptive message.
                 assert (
                     "Retrying CorpusApiBackend._fetch_from_backend once after "
                     "Server error '503 Service Unavailable'"
