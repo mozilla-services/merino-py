@@ -27,7 +27,7 @@ class Location(BaseModel):
     country_name: Optional[str] = None
     region: Optional[str] = None
     region_name: Optional[str] = None
-    subdivisions: Optional[list[str]] = None
+    alternative_regions: Optional[list[str]] = None
     city: Optional[str] = None
     dma: Optional[int] = None
     postal_code: Optional[str] = None
@@ -39,9 +39,11 @@ def normalize_string(input_str) -> str:
     return unicodedata.normalize("NFKD", input_str).encode("ascii", "ignore").decode("ascii")
 
 
-def get_subdivisions(sub_divisions) -> list[str]:
+def get_alternative_regions(regions) -> list[str]:
     """Get all subvisions iso codes."""
-    return [s.iso_code for s in sub_divisions]
+    if len(regions) > 1:
+        return [r.iso_code for r in regions if r != regions.most_specific]
+    return []
 
 
 class GeolocationMiddleware:
@@ -80,7 +82,7 @@ class GeolocationMiddleware:
                 country_name=record.country.names.get("en"),
                 region=record.subdivisions.most_specific.iso_code,
                 region_name=record.subdivisions.most_specific.names.get("en"),
-                subdivisions=get_subdivisions(record.subdivisions),
+                alternative_regions=get_alternative_regions(record.subdivisions),
                 city=normalize_string(city) if (city := record.city.names.get("en")) else None,
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,

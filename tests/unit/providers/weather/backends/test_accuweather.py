@@ -308,7 +308,7 @@ def fixture_geolocation() -> Location:
         city="San Francisco",
         dma=807,
         postal_code="94105",
-        subdivisions=["BC", "CA"],
+        alternative_regions=["BC"],
     )
 
 
@@ -887,7 +887,7 @@ async def test_get_weather_report(
 
 
 @pytest.mark.asyncio
-async def test_get_weather_report_with_second_subdivision(
+async def test_get_weather_report_with_alternative_region(
     mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     expected_weather_report: WeatherReport,
@@ -896,8 +896,12 @@ async def test_get_weather_report_with_second_subdivision(
     accuweather_current_conditions_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
     response_header: dict[str, str],
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
 ) -> None:
-    """Test that the get_weather_report method returns a WeatherReport."""
+    """Test that the get_weather_report method returns a WeatherReport using alternate region."""
+    caplog.set_level(logging.WARN)
+
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.side_effect = [
         Response(
@@ -907,7 +911,7 @@ async def test_get_weather_report_with_second_subdivision(
             request=Request(
                 method="GET",
                 url=(
-                    "https://www.accuweather.com/locations/v1/cities/US/BC/search.json?"
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
                     "apikey=test&q=94105"
                 ),
             ),
@@ -919,7 +923,7 @@ async def test_get_weather_report_with_second_subdivision(
             request=Request(
                 method="GET",
                 url=(
-                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "https://www.accuweather.com/locations/v1/cities/US/BC/search.json?"
                     "apikey=test&q=94105"
                 ),
             ),
@@ -956,6 +960,11 @@ async def test_get_weather_report_with_second_subdivision(
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
 
     assert report == expected_weather_report
+
+    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+
+    assert len(caplog.records) == 1
+    assert records[0].message.startswith("Alternative region used: US/BC/San Francisco")
 
 
 @pytest.mark.asyncio
@@ -1225,8 +1234,10 @@ async def test_get_weather_report_failed_forecast_query(
 @pytest.mark.parametrize(
     "location",
     [
-        Location(country="US", region="CA", dma=807),
-        Location(region="CA", city="San Francisco", dma=807, postal_code="94105"),
+        Location(country="US", region="CA", dma=807, alternative_regions=[]),
+        Location(
+            region="CA", city="San Francisco", dma=807, postal_code="94105", alternative_regions=[]
+        ),
     ],
     ids=["country", "city"],
 )

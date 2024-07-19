@@ -23,6 +23,7 @@ def fixture_geolocation() -> Location:
         country_name="United States",
         region="CA",
         region_name="California",
+        alternative_regions=[],
         city="San Francisco",
         dma=807,
         postal_code="94105",
