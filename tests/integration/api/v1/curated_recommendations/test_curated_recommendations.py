@@ -184,34 +184,6 @@ async def test_curated_recommendations_locales(locale):
         assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
 
 
-@pytest.mark.asyncio
-async def test_graphql_error(
-    corpus_http_client, fixture_graphql_200ok_with_error_response, fixture_request_data, caplog
-) -> None:
-    """Test that GraphQL errors are logged properly where the graph returns a "200 Ok"."""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-
-        def return_with_graphql_error(*args, **kwargs):
-            # Simulate GraphQL returning an error instead of data
-            return Response(
-                status_code=200,
-                json=fixture_graphql_200ok_with_error_response,
-                request=fixture_request_data,
-            )
-
-        corpus_http_client.post = AsyncMock(side_effect=return_with_graphql_error)
-        response = await fetch_en_us(ac)
-
-        # GraphQL server returns a 200 OK...
-        assert response.status_code == 200
-
-        # ...yet an error was returned by the graph.
-        # Assert an exception was logged with the contents of the GraphQL error.
-        errors = [r for r in caplog.records if r.levelname == "ERROR"]
-        assert len(errors) == 1
-        assert 'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX"' in errors[0].message
-
-
 class TestCuratedRecommendationsRequestParameters:
     """Test request body parameters for the curated-recommendations endpoint"""
 
@@ -392,6 +364,73 @@ class TestCorpusApiCaching:
 
             # Assert that the results are the same
             assert all(results[0].json() == result.json() for result in results)
+
+    @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
+    @pytest.mark.parametrize("error_type", ["graphql", "http"])
+    @pytest.mark.asyncio
+    async def test_single_request_multiple_failed_fetches(
+        self,
+        corpus_http_client,
+        fixture_request_data,
+        fixture_response_data,
+        fixture_graphql_200ok_with_error_response,
+        caplog,
+        error_type,
+    ):
+        """Test that if the backend returns a GraphQL error, it is handled correctly."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            start_time = datetime.now()
+
+            def temporary_downtime(*args, **kwargs):
+                # Simulate the backend being unavailable for 0.2 seconds.
+                if datetime.now() < start_time + timedelta(seconds=0.2):
+                    if error_type == "graphql":
+                        return Response(
+                            status_code=200,
+                            json=fixture_graphql_200ok_with_error_response,
+                            request=fixture_request_data,
+                        )
+                    elif error_type == "http":
+                        return Response(status_code=503, request=fixture_request_data)
+                else:
+                    return Response(
+                        status_code=200,
+                        json=fixture_response_data,
+                        request=fixture_request_data,
+                    )
+
+            corpus_http_client.post = AsyncMock(side_effect=temporary_downtime)
+
+            # Hit the endpoint until a 200 response is received.
+            while datetime.now() < start_time + timedelta(seconds=1):
+                try:
+                    result = await fetch_en_us(ac)
+                    if result.status_code == 200:
+                        break
+                except HTTPStatusError:
+                    pass
+
+            assert result.status_code == 200
+
+            # Assert that we did not send a lot of requests to the backend
+            # call_count is 400+ for me locally when CorpusApiBackend._backoff_time is changed to 0.
+            assert corpus_http_client.post.call_count == 2
+
+            # Assert that a warning was logged with a descriptive message.
+            warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+            assert len(warnings) == 1
+            if error_type == "graphql":
+                # Assert an exception was logged with the contents of the GraphQL error.
+                errors = [r for r in caplog.records if r.levelname == "ERROR"]
+                assert len(errors) == 1
+                assert (
+                    'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX".'
+                ) in warnings[0].message
+            elif error_type == "http":
+                assert (
+                    "Retrying CorpusApiBackend._fetch_from_backend once after "
+                    "Server error '503 Service Unavailable'"
+                ) in warnings[0].message
 
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.asyncio
