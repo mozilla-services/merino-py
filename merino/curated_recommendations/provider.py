@@ -223,16 +223,17 @@ class CuratedRecommendationsProvider:
 
     @staticmethod
     def is_boostable(
-        recs: list[CuratedRecommendation],
-        preferred_topics: list[Topic],
+        recs: list[CuratedRecommendation], preferred_topics: list[Topic], num_of_recs: int = 2
     ) -> bool:
         """Check if top 2 recommendations already have the preferred topics.
+        This will indicate if recs need boosting.
 
         :param recs: List of recommendations
         :param preferred_topics: user's preferred topic(s)
+        :param num_of_recs: get the first num of recs when slicing
         :return: bool
         """
-        top_two_recs = recs[:2]  # slice operator, get the first two recs (index 0 & 1)
+        top_two_recs = recs[:num_of_recs]  # slice operator, get the first two recs (index 0 & 1)
         # check if topics in first two (0-1 index) recs are in preferred_topics
         if not any(r.topic in preferred_topics for r in top_two_recs):
             return True
@@ -261,7 +262,7 @@ class CuratedRecommendationsProvider:
 
         # if item to boost is found
         if boostable_rec:
-            recs = copy(recs)  # Don't change the input, make a temp copy
+            recs = copy(recs)  # Create a shallow copy of recs
             recs.remove(boostable_rec)  # remove the item to boost from list of recs
             recs.insert(
                 boostable_slot, boostable_rec

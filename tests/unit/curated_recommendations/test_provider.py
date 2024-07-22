@@ -376,7 +376,6 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
         reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(
             recs, [Topic.EDUCATION]
         )
-        print(reordered_recs)
 
         assert len(recs) == len(reordered_recs)
         # assert the last rec (id = 5) is now the second recommendation
@@ -396,7 +395,6 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
         reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(
             recs, [Topic.CAREER, Topic.FOOD]
         )
-        print(reordered_recs)
 
         assert len(recs) == len(reordered_recs)
         # assert the second to last rec (id = 4) is now the second recommendation
@@ -411,7 +409,6 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
             [Topic.POLITICS, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.PERSONAL_FINANCE]
         )
         reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(recs, [Topic.CAREER])
-        print(reordered_recs)
 
         assert len(recs) == len(reordered_recs)
         # assert that the order of recs has not changed since recs don't have preferred topic

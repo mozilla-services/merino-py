@@ -71,16 +71,16 @@ def fixture_mock_corpus_backend(corpus_http_client: AsyncMock) -> CorpusApiBacke
     )
 
 
-@pytest.fixture
+@pytest.fixture(name="corpus_provider")
 def provider(corpus_backend: CorpusApiBackend) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(corpus_backend=corpus_backend)
 
 
 @pytest.fixture(autouse=True)
-def setup_providers(provider):
+def setup_providers(corpus_provider):
     """Set up the curated recommendations provider"""
-    app.dependency_overrides[get_provider] = lambda: provider
+    app.dependency_overrides[get_provider] = lambda: corpus_provider
 
 
 async def fetch_en_us(client: AsyncClient) -> Response:
@@ -316,8 +316,12 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 200, f"{topics} resulted in {response.status_code}"
 
     @pytest.mark.asyncio
-    async def test_curated_recommendations_preferred_topic(self, fixture_response_data):
+    async def test_curated_recommendations_preferred_topic(self, mocker):
         """Test the curated recommendations endpoint accepts a preferred topic & reorders the list."""
+        is_boostable_spy = mocker.spy(CuratedRecommendationsProvider, "is_boostable")
+        boost_preferred_topic_spy = mocker.spy(
+            CuratedRecommendationsProvider, "boost_preferred_topic"
+        )
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
                 "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": ["health"]}
@@ -328,11 +332,10 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 200
             # assert total of 80 items returned
             assert len(corpus_items) == 80
-            # assert 6th rec is now in 2nd slot
-            assert (
-                fixture_response_data["data"]["scheduledSurface"]["items"][5]["id"]
-                == corpus_items[1]["scheduledCorpusItemId"]
-            )  # noqa
+            # assert is_boostable was called
+            is_boostable_spy.assert_called_once()
+            # assert boost_preferred_topic was called
+            boost_preferred_topic_spy.assert_called_once()
 
     @pytest.mark.asyncio
     @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
@@ -346,11 +349,15 @@ class TestCuratedRecommendationsRequestParameters:
         ],
     )
     async def test_curated_recommendations_preferred_topic_no_reorder(
-        self, fixture_response_data, preferred_topics
+        self, preferred_topics, mocker
     ):
         """Test the curated recommendations endpoint accepts a preferred topic & does
         not reorder the list if preferred topics already in top 2 recs.
         """
+        is_boostable_spy = mocker.spy(CuratedRecommendationsProvider, "is_boostable")
+        boost_preferred_topic_spy = mocker.spy(
+            CuratedRecommendationsProvider, "boost_preferred_topic"
+        )
         async with AsyncClient(app=app, base_url="http://test") as ac:
             print("preferred_topics: ", preferred_topics)
             response = await ac.post(
@@ -363,12 +370,10 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 200
             # assert total of 80 items returned
             assert len(corpus_items) == 80
-            # check that the first two recs haven't changed order.
-            for i in range(0, 2):
-                assert (
-                    corpus_items[i]["scheduledCorpusItemId"]
-                    == fixture_response_data["data"]["scheduledSurface"]["items"][i]["id"]
-                )
+            # assert is_boostable was called
+            is_boostable_spy.assert_called_once()
+            # assert boost_preferred_topic was not called
+            boost_preferred_topic_spy.assert_not_called()
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
