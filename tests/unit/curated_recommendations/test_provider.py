@@ -111,9 +111,10 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
     @pytest.mark.parametrize(
         "locale,region,recommendation_surface_id",
         [
-            # Test cases below are from the Newtab locales/region documentation maintained by the Firefox integration team:
-            # https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit
-            # Ref: https://github.com/Pocket/recommendation-api/blob/c0fe2d1cab7ec7931c3c8c2e8e3d82908801ab00/tests/unit/data_providers/test_new_tab_dispatch.py#L7 # noqa
+            # Test cases below are from the Newtab locales/region documentation maintained by the Firefox integration
+            # team: https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit Ref:
+            # https://github.com/Pocket/recommendation-api/blob/c0fe2d1cab7ec7931c3c8c2e8e3d82908801ab00/tests/unit
+            # /data_providers/test_new_tab_dispatch.py#L7 # noqa
             ("en-CA", "US", ScheduledSurfaceId.NEW_TAB_EN_US),
             ("en-GB", "US", ScheduledSurfaceId.NEW_TAB_EN_US),
             ("en-US", "US", ScheduledSurfaceId.NEW_TAB_EN_US),
@@ -341,6 +342,97 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
             "7",
             "8",
         ]
+
+
+class TestCuratedRecommendationsProviderBoostPreferredTopic:
+    """Unit tests for boost_preferred_topic & is_boostable."""
+
+    @staticmethod
+    def generate_recommendations(topics: list[Topic]) -> list[CuratedRecommendation]:
+        """Create dummy recommendations for the tests below with specific topics."""
+        recs = []
+        i = 1
+        for topic in topics:
+            rec = CuratedRecommendation(
+                tileId=MIN_TILE_ID + random.randint(0, 101),
+                receivedRank=random.randint(0, 101),
+                scheduledCorpusItemId=str(i),
+                url=HttpUrl("https://littlelarry.com/"),
+                title="little larry",
+                excerpt="is failing english",
+                topic=topic,
+                publisher="cohens",
+                imageUrl=HttpUrl("https://placehold.co/600x400/"),
+            )
+            recs.append(rec)
+            i += 1
+        return recs
+
+    def test_boost_preferred_topic_one_topic(self):
+        """Should boost first item found with preferred topic to second slot."""
+        recs = self.generate_recommendations(
+            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION]
+        )
+        reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(
+            recs, [Topic.EDUCATION]
+        )
+
+        assert len(recs) == len(reordered_recs)
+        # assert the last rec (id = 5) is now the second recommendation
+        assert recs[-1] == reordered_recs[1]
+        # for readability
+        assert reordered_recs[1].topic == Topic.EDUCATION
+        assert reordered_recs[1].scheduledCorpusItemId == "5"
+
+    def test_boost_preferred_topic_two_topics(self):
+        """If two preferred topics are provided but only one topic is found in list or recs, boost item to second
+        slot.
+        """
+        recs = self.generate_recommendations(
+            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION]
+        )
+        # career topic is not present in rec list, boost item with food topic to second slot
+        reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(
+            recs, [Topic.CAREER, Topic.FOOD]
+        )
+
+        assert len(recs) == len(reordered_recs)
+        # assert the second to last rec (id = 4) is now the second recommendation
+        assert recs[-2] == reordered_recs[1]
+        # for readability
+        assert reordered_recs[1].topic == Topic.FOOD
+        assert reordered_recs[1].scheduledCorpusItemId == "4"
+
+    def test_boost_preferred_topic_no_preferred_topic_found(self):
+        """Don't reorder list of recs if no items with preferred topics are found."""
+        recs = self.generate_recommendations(
+            [Topic.POLITICS, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.PERSONAL_FINANCE]
+        )
+        reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(recs, [Topic.CAREER])
+
+        assert len(recs) == len(reordered_recs)
+        # assert that the order of recs has not changed since recs don't have preferred topic
+        assert reordered_recs == recs
+
+    def test_is_boostable_return_true(self):
+        """Should return True if any of preferred topics is not in top 2 recs"""
+        recs = self.generate_recommendations(
+            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION]
+        )
+        is_boostable = CuratedRecommendationsProvider.is_boostable(recs, [Topic.EDUCATION])
+
+        assert is_boostable
+
+    def test_is_boostable_return_false(self):
+        """Should return False if any of preferred topics is already in top 2 recs"""
+        recs = self.generate_recommendations(
+            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION]
+        )
+        is_boostable = CuratedRecommendationsProvider.is_boostable(
+            recs, [Topic.CAREER, Topic.ARTS]
+        )
+
+        assert not is_boostable
 
 
 class TestCuratedRecommendationTileId:

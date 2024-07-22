@@ -221,6 +221,55 @@ class CuratedRecommendationsProvider:
 
         return result_recs
 
+    @staticmethod
+    def is_boostable(
+        recs: list[CuratedRecommendation], preferred_topics: list[Topic], num_of_recs: int = 2
+    ) -> bool:
+        """Check if top 2 recommendations already have the preferred topics.
+        This will indicate if recs need boosting.
+
+        :param recs: List of recommendations
+        :param preferred_topics: user's preferred topic(s)
+        :param num_of_recs: get the first num of recs when slicing
+        :return: bool
+        """
+        top_two_recs = recs[:num_of_recs]  # slice operator, get the first two recs (index 0 & 1)
+        # check if topics in first two (0-1 index) recs are in preferred_topics
+        if not any(r.topic in preferred_topics for r in top_two_recs):
+            return True
+        return False
+
+    @staticmethod
+    def boost_preferred_topic(
+        recs: list[CuratedRecommendation],
+        preferred_topics: list[Topic],
+        boostable_slot: int = 1,
+    ) -> list[CuratedRecommendation]:
+        """Boost a recommendation based on preferred topic(s) into `boostable_slot`.
+
+        :param recs: List of recommendations from which an item is boosted based on preferred topic(s).
+        :param preferred_topics: user's preferred topic(s)
+        :param boostable_slot: 0-based slot to boost an item into. Defaults to slot 1,
+        which is the second recommendation.
+        :return: CuratedRecommendations ranked based on a preferred topic, while otherwise preserving the order.
+        """
+        # get the first item found to boost based on the below condition starting after the boostable_slot in the list.
+        # condition for boostable item: check if an item has a topic in the preferred_topics list.
+        boostable_rec = next(
+            (r for r in recs[boostable_slot + 1 :] if r.topic in preferred_topics),
+            None,
+        )
+
+        # if item to boost is found
+        if boostable_rec:
+            recs = copy(recs)  # Create a shallow copy of recs
+            recs.remove(boostable_rec)  # remove the item to boost from list of recs
+            recs.insert(
+                boostable_slot, boostable_rec
+            )  # insert it into the boostable_slot (2nd rec)
+
+        return recs
+
     async def fetch(
         self, curated_recommendations_request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:  # noqa
@@ -241,10 +290,16 @@ class CuratedRecommendationsProvider:
             for rank, item in enumerate(corpus_items)
         ]
 
-        # Perform publisher spread on the recommendation set
-        recommendations = CuratedRecommendationsProvider.spread_publishers(
-            recommendations, spread_distance=3
-        )
+        # 2. Perform publisher spread on the recommendation set
+        recommendations = self.spread_publishers(recommendations, spread_distance=3)
+
+        # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
+        if curated_recommendations_request.topics:
+            # Check if recs need boosting
+            if self.is_boostable(recommendations, curated_recommendations_request.topics):
+                recommendations = self.boost_preferred_topic(
+                    recommendations, curated_recommendations_request.topics
+                )
 
         return CuratedRecommendationsResponse(
             recommendedAt=self.time_ms(),
