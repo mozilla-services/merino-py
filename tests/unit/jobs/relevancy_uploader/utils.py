@@ -78,7 +78,7 @@ def _do_csv_test(
     )
 
     if not keep_existing_records and version == 1:
-        mock_chunked_uploader.delete_records.assert_called()
+        mock_chunked_uploader.delete_records.assert_called_once()
     else:
         mock_chunked_uploader.delete_records.assert_not_called()
 
