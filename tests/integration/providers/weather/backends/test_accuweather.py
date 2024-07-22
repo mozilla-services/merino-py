@@ -140,7 +140,14 @@ def fixture_response_header() -> dict[str, str]:
 @pytest.fixture(name="geolocation")
 def fixture_geolocation() -> Location:
     """Create a Location object for test."""
-    return Location(country="US", region="CA", city="San Francisco", dma=807, postal_code="94105")
+    return Location(
+        country="US",
+        region="CA",
+        city="San Francisco",
+        dma=807,
+        postal_code="94105",
+        alternative_regions=["BC"],
+    )
 
 
 @pytest.fixture(name="accuweather_cached_location_key")
