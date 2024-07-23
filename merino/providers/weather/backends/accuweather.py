@@ -598,6 +598,9 @@ class AccuweatherBackend:
                         break
                 if location is None:
                     self.metrics_client.increment("accuweather.request.locations.processor.error")
+                    logger.warning(
+                        f"Unable to get location from {country}/{city} using region: {region}, or {alternative_regions}"
+                    )
                     return None
             if location is None:
                 return None
@@ -664,7 +667,9 @@ class AccuweatherBackend:
                 log_failure=False,
             )
         except HTTPError as error:
-            raise AccuweatherError("Unexpected location response") from error
+            raise AccuweatherError(
+                f"Unexpected location response from: {self.url_cities_path.format(country_code=country, admin_code=region)}, city: {city}"
+            ) from error
 
         return AccuweatherLocation(**response) if response else None
 
