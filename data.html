@@ -215,6 +215,12 @@ feature flag for a suggest API request.</li>
 Failed to get timezone for scheduled surface.</li>
 <li><code>WARNING merino.curated_recommendations.corpus_backends.corpus_api_backend</code> -
 Retrying CorpusApiBackend after an http client exception was raised.</li>
+<li><code>ERROR GcsEngagement failed to update cache: {e}</code> - unexpected exception when updating engagement.</li>
+<li><code>ERROR Curated recommendations engagement size {blob.size} &gt; {self.max_size}</code> -
+Max engagement blob size is exceeded. The backend will gracefully fall back to cached data or 0's.</li>
+<li><code>INFO Curated recommendations engagement unchanged since {self.last_updated}.</code> -
+The engagement blob was not updated since the last check. <code>last_updated</code> is expected to be
+between 0 and 30 minutes.</li>
 </ul>
 <h2 id="metrics"><a class="header" href="#metrics">Metrics</a></h2>
 <blockquote>
@@ -299,6 +305,14 @@ message.</li>
 A timer to measure the duration (in ms) of looking up a list of scheduled corpus items.</li>
 <li><code>corpus_api.request.status_codes.{res.status_code}</code> -
 A counter to measure the status codes of an HTTP request to the curated-corpus-api.</li>
+<li><code>recommendation.engagement.update.timing</code> -
+A timer to measure the duration (in ms) of updating the engagement data from GCS.</li>
+<li><code>recommendation.engagement.size</code> - A gauge to track the size of the blob on GCS.</li>
+<li><code>recommendation.engagement.count</code> - A gauge to measure the number of scheduled corpus items with
+engagement data.</li>
+<li><code>recommendation.engagement.last_updated</code> -
+A gauge for the staleness (in seconds) of the engagement data, measured between when the data was
+updated in GCS and the current time.</li>
 </ul>
 
                     </main>
