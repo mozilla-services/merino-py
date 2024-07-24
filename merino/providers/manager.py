@@ -69,6 +69,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         metrics_client=get_metrics_client(),
                         http_client=create_http_client(base_url=settings.accuweather.url_base),
                         url_param_api_key=settings.accuweather.url_param_api_key,
+                        url_cities_admin_path=settings.accuweather.url_cities_admin_path,
                         url_cities_path=settings.accuweather.url_cities_path,
                         url_cities_param_query=settings.accuweather.url_cities_param_query,
                         url_current_conditions_path=(
