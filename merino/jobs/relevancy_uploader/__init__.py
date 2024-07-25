@@ -247,6 +247,27 @@ async def _upload_file_object(
     # so we can validate the source data before deleting existing records and
     # starting the upload.
     data = RelevancyData.csv_to_relevancy_data(csv_reader)
+
+    # since we upload based on category not record type,
+    # we need to delete records before iterating on categories
+    # or else we either delete the entire collection after each
+    # category upload or delete a category at a time, which may not
+    # cover all categories.
+    with ChunkedRemoteSettingsRelevancyUploader(
+        auth=auth,
+        bucket=bucket,
+        chunk_size=chunk_size,
+        collection=collection,
+        dry_run=dry_run,
+        record_type=RELEVANCY_RECORD_TYPE,
+        server=server,
+        category_name="",
+        category_code=0,
+        version=version,
+    ) as uploader:
+        if not keep_existing_records:
+            uploader.delete_records()
+
     for category, domains in data.items():
         with ChunkedRemoteSettingsRelevancyUploader(
             auth=auth,
@@ -261,8 +282,5 @@ async def _upload_file_object(
             category_code=category.value,
             version=version,
         ) as uploader:
-            if not keep_existing_records:
-                uploader.delete_records()
-
             for domain in domains:
                 uploader.add_data(domain)
