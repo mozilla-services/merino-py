@@ -665,17 +665,18 @@ class AccuweatherBackend:
         """
         if region:
             url_path = self.url_cities_admin_path.format(country_code=country, admin_code=region)
+            processor = process_location_response_with_country_and_region
             log_failure = False
+
         else:
             url_path = self.url_cities_path.format(country_code=country)
+            processor = process_location_response_with_country
             log_failure = True
         try:
             response: dict[str, Any] | None = await self.get_request(
                 url_path,
                 params=self.get_location_key_query_params(city),
-                process_api_response=process_location_response_with_country_and_region
-                if region
-                else process_location_response_with_country,
+                process_api_response=processor,
                 cache_ttl_sec=self.cached_location_key_ttl_sec,
                 log_failure=log_failure,
             )
@@ -881,7 +882,7 @@ def process_location_response_with_country_and_region(response: Any) -> dict[str
 
 
 def process_location_response_with_country(response: Any) -> dict[str, Any] | None:
-    """Process the API response for location keys from country code endpoint.
+    """Process the API response for a single location key from country code endpoint.
 
     Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
     to reflect the change(s) here.
