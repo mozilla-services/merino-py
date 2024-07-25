@@ -18,6 +18,9 @@ FROM python:${PYTHON_VERSION}-slim AS app_base
 # Allow statements and log messages to immediately appear
 ENV PYTHONUNBUFFERED True
 
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Set app home
 ENV APP_HOME /app
 WORKDIR $APP_HOME
@@ -33,7 +36,9 @@ COPY --from=build /tmp/requirements.txt $APP_HOME/requirements.txt
 # Install libmaxminddb* to build the MaxMindDB Python client with C extension.
 RUN apt-get update && \
   apt-get install --yes build-essential libmaxminddb0 libmaxminddb-dev && \
-  pip install --no-cache-dir --quiet --upgrade -r requirements.txt && \
+  pip install uv && \
+  uv venv $VIRTUAL_ENV && \
+  uv pip install --no-cache-dir --quiet --upgrade -r requirements.txt && \
   apt-get remove --yes build-essential && \
   apt-get -q --yes autoremove && \
   apt-get clean && \
