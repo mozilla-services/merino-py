@@ -673,7 +673,9 @@ class AccuweatherBackend:
             response: dict[str, Any] | None = await self.get_request(
                 url_path,
                 params=self.get_location_key_query_params(city),
-                process_api_response=process_location_response,
+                process_api_response=process_location_response_with_country_and_region
+                if region
+                else process_location_response_with_country,
                 cache_ttl_sec=self.cached_location_key_ttl_sec,
                 log_failure=log_failure,
             )
@@ -796,7 +798,7 @@ class AccuweatherBackend:
     async def check_cache_for_weather(self, cache_key) -> list[bytes | None]:
         """Get cached weather data."""
         with self.metrics_client.timeit("accuweather.cache.fetch"):
-            cached_data = await self.cache.run_script(
+            cached_data: list = await self.cache.run_script(
                 sid=SCRIPT_ID,
                 keys=[cache_key],
                 # The order matters below. See `LUA_SCRIPT_CACHE_BULK_FETCH` for details.
@@ -806,8 +808,6 @@ class AccuweatherBackend:
                     self.url_location_key_placeholder,
                 ],
             )
-            if not isinstance(cached_data, list):
-                return []
             return cached_data
 
     async def shutdown(self) -> None:
@@ -854,7 +854,7 @@ def process_location_completion_response(response: Any) -> list[dict[str, Any]]:
     ]
 
 
-def process_location_response(response: Any) -> dict[str, Any] | None:
+def process_location_response_with_country_and_region(response: Any) -> dict[str, Any] | None:
     """Process the API response for location keys.
 
     Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
@@ -867,6 +867,31 @@ def process_location_response(response: Any) -> dict[str, Any] | None:
                 "LocalizedName": localized_name,
             },
             *_,
+        ]:
+            # `type: ignore` is necessary because mypy gets confused when
+            # matching structures of type `Any` and reports the following
+            # line as unreachable. See
+            # https://github.com/python/mypy/issues/12770
+            return {  # type: ignore
+                "key": key,
+                "localized_name": localized_name,
+            }
+        case _:
+            return None
+
+
+def process_location_response_with_country(response: Any) -> dict[str, Any] | None:
+    """Process the API response for location keys from country code endpoint.
+
+    Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
+    to reflect the change(s) here.
+    """
+    match response:
+        case [
+            {
+                "Key": key,
+                "LocalizedName": localized_name,
+            },
         ]:
             # `type: ignore` is necessary because mypy gets confused when
             # matching structures of type `Any` and reports the following
