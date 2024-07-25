@@ -274,8 +274,11 @@ url_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"
 url_postalcodes_param_query = "q"
 
 # MERINO_ACCUWEATHER__URL_CITIES_PATH
-# The URL path for cities
-url_cities_path = "/locations/v1/cities/{country_code}/{admin_code}/search.json"
+# The URL path for cities using country and admin code
+url_cities_admin_path = "/locations/v1/cities/{country_code}/{admin_code}/search.json"
+
+# The URL path for cities using country code
+url_cities_path = "/locations/v1/cities/{country_code}/search.json"
 
 # MERINO_ACCUWEATHER__URL_CITIES_PARAM_QUERY
 # The query parameter for cities

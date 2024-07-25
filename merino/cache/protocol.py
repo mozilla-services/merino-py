@@ -55,7 +55,7 @@ class CacheAdapter(Protocol):
             - `keys` list[str], a list of keys used as the global `KEYS` in Redis scripting
             - `args` list[str], a list of arguments used as the global `ARGV` in Redis scripting
         Returns:
-            A Reids value based on the return value of the specified script
+            A Redis value based on the return value of the specified script
         Raises:
             - `CacheAdapterError` if Redis returns an error.
         """
