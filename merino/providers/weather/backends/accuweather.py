@@ -789,7 +789,7 @@ class AccuweatherBackend:
                 response: Response = await self.http_client.get(url_path, params=params)
                 response.raise_for_status()
         except httpx.HTTPError as exc:
-            logger.error(f"Failed to get location completion from Accuweather: {exc}")
+            logger.warning(f"Failed to get location completion from Accuweather: {exc}")
             return None
 
         processed_location_completions = process_location_completion_response(response.json())
