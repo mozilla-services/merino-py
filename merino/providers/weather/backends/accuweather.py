@@ -781,12 +781,14 @@ class AccuweatherBackend:
             self.url_param_api_key: self.api_key,
             LOCATION_COMPLETE_ALIAS_PARAM: LOCATION_COMPLETE_ALIAS_PARAM_VALUE,
         }
-
-        with self.metrics_client.timeit(
-            f"accuweather.request." f"{LOCATION_COMPLETION_REQUEST_TYPE}.get"
-        ):
-            response: Response = await self.http_client.get(url_path, params=params)
-            response.raise_for_status()
+        try:
+            with self.metrics_client.timeit(
+                f"accuweather.request. {LOCATION_COMPLETION_REQUEST_TYPE}.get"
+            ):
+                response: Response = await self.http_client.get(url_path, params=params)
+                response.raise_for_status()
+        except Exception as exc:
+            logger.error(f"Failed to get location completion from Accuweather: {exc}")
 
         processed_location_completions = process_location_completion_response(response.json())
 

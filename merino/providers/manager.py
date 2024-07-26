@@ -67,7 +67,10 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         ),
                         cached_forecast_ttl_sec=setting.cache_ttls.forecast_ttl_sec,
                         metrics_client=get_metrics_client(),
-                        http_client=create_http_client(base_url=settings.accuweather.url_base),
+                        http_client=create_http_client(
+                            base_url=settings.accuweather.url_base,
+                            connect_timeout=settings.providers.accuweather.connect_timeout_sec,
+                        ),
                         url_param_api_key=settings.accuweather.url_param_api_key,
                         url_cities_admin_path=settings.accuweather.url_cities_admin_path,
                         url_cities_path=settings.accuweather.url_cities_path,
