@@ -204,9 +204,14 @@ enabled_by_default = false
 score = 0.3
 
 # MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC
-# A floating  point (in seconds) indicating the maximum waiting period when Merino queries
+# A floating point (in seconds) indicating the maximum waiting period when Merino queries
 # for weather forecasts. This will override the default global query timeout.
 query_timeout_sec = 5.0
+
+# MERINO_PROVIDERS__ACCUWEATHER__CONNECT_TIMEOUT_SEC
+# A floating point (in seconds) indicating the maximum waiting period for the
+# accuweather backend http client to establish a connection to the host.
+connect_timeout_sec = 3.0
 
 
 # MERINO_REDIS__SERVER - redis.server (Currently not configured here)
