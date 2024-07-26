@@ -67,6 +67,14 @@ def _do_csv_test(
             "keep_existing_records": keep_existing_records,
         }
     )
+
+    mock_chunked_uploader_ctor.assert_any_call(
+        **common_kwargs,
+        record_type="category_to_domains",
+        category_name="",
+        category_code=0,
+    )
+
     mock_chunked_uploader_ctor.assert_any_call(
         **common_kwargs,
         record_type="category_to_domains",

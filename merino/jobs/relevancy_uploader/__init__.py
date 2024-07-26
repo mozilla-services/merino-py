@@ -87,7 +87,7 @@ class RelevancyData:
 
     @classmethod
     def csv_to_relevancy_data(
-        cls, csv_reader, categories_mapping
+        cls, csv_reader, upload_categories
     ) -> defaultdict[Category, list[dict[str, str]]]:
         """Read CSV file and extract required data for relevancy in the structure
         [
@@ -98,18 +98,26 @@ class RelevancyData:
             <domain>: {<category> : <score>}
         }.
         """
-        unique_domains = set((row["domain"], row["categories"]) for row in csv_reader)
+        domain_categories = defaultdict(list)
         data: defaultdict[Category, list[dict[str, str]]] = defaultdict(list)
-        for domain, fallback_categories in unique_domains:
-            classified = classify_domain(domain, categories_mapping, data)
+
+        for row in csv_reader:
+            domain = row["domain"]
+            categories = row["categories"]
+            csv_categories = categories.strip("[]").split(",")
+            for csv_category in csv_categories:
+                domain_categories[domain].append(csv_category)
+
+        for domain, csv_categories in domain_categories.items():
+            classified = classify_domain(domain, upload_categories, data)
             if not classified:
-                classify_domain_with_fallback(domain, fallback_categories, data)
+                classify_domain_with_fallback(domain, csv_categories, data)
         return data
 
 
-def classify_domain(domain, categories_mapping, data) -> bool:
+def classify_domain(domain, upload_categories, data) -> bool:
     """Classify domain to its Category."""
-    categories = categories_mapping.get(domain, {})
+    categories = upload_categories.get(domain, {})
     classified = False
     if categories:
         for category_name, score in categories.items():
@@ -127,9 +135,8 @@ def classify_domain(domain, categories_mapping, data) -> bool:
 def classify_domain_with_fallback(domain, categories, data) -> None:
     """Classify the domain using UPLOAD_CATEGORY_TO_R2D2 mapping."""
     classified = False
-    fallbacks = categories.strip("[]").split(",")
     md5_hash = md5(domain.encode(), usedforsecurity=False).digest()
-    for category in fallbacks:
+    for category in set(categories):
         category_mapped = UPLOAD_CATEGORY_TO_R2D2_CATEGORY.get(category, Category.Inconclusive)
         if category_mapped != Category.Inconclusive:
             data[category_mapped].append({"domain": base64.b64encode(md5_hash).decode()})
