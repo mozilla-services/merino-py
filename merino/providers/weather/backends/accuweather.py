@@ -789,6 +789,7 @@ class AccuweatherBackend:
                 response.raise_for_status()
         except Exception as exc:
             logger.error(f"Failed to get location completion from Accuweather: {exc}")
+            return None
 
         processed_location_completions = process_location_completion_response(response.json())
 
