@@ -10,6 +10,7 @@ from enum import Enum
 from typing import Any, Callable, NamedTuple, cast
 
 import aiodogstatsd
+import httpx
 from dateutil import parser
 from httpx import URL, AsyncClient, HTTPError, InvalidURL, Response
 from pydantic import BaseModel, ValidationError
@@ -787,8 +788,8 @@ class AccuweatherBackend:
             ):
                 response: Response = await self.http_client.get(url_path, params=params)
                 response.raise_for_status()
-        except Exception as exc:
-            logger.error(f"Failed to get location completion from Accuweather: {exc}")
+        except httpx.HTTPError as exc:
+            logger.warning(f"Failed to get location completion from Accuweather: {exc}")
             return None
 
         processed_location_completions = process_location_completion_response(response.json())
