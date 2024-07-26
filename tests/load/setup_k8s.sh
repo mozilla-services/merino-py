@@ -10,28 +10,25 @@ CLUSTER='merino-locust-load-test'
 TARGET='https://stagepy.merino.nonprod.cloudops.mozgcp.net'
 SCOPE='https://www.googleapis.com/auth/cloud-platform'
 REGION='us-west1'
-WORKER_COUNT=5
-MACHINE_TYPE='n1-standard-2'
-BOLD=$(tput bold)
-NORM=$(tput sgr0)
+WORKER_COUNT=5 # Default worker count
+MACHINE_TYPE='n1-standard-2' # 2 CPUs + 7.50GB Memory
 DIRECTORY=$(pwd)
 
 MERINO_DIRECTORY=$DIRECTORY/tests/load/kubernetes-config
 MASTER_FILE=locust-master-controller.yml
 WORKER_FILE=locust-worker-controller.yml
 SERVICE_FILE=locust-master-service.yml
+DAEMONSET_FILE=locust-worker-daemonset.yml
+WORKER_KUBELET_CONFIG_FILE=worker-kubelet-config.yml
 
 LOCUST_IMAGE_TAG=$(git log -1 --pretty=format:%h)
 echo "Docker image tag for locust is set to: ${LOCUST_IMAGE_TAG}"
 
-##Declare variables to be replaced later in the YAML file using the sed commands
+# Declare variables to be replaced later in the YAML file using the sed commands
 ENVIRONMENT_VARIABLES=(
   "TARGET_HOST,$TARGET"
   'LOCUST_CSV,merino'
   "LOCUST_HOST,$TARGET"
-  'LOCUST_USERS,"35"'
-  'LOCUST_SPAWN_RATE,"1"'
-  'LOCUST_RUN_TIME,"600"' # 10 minutes
   'MERINO_REMOTE_SETTINGS__SERVER,https://firefox.settings.services.mozilla.com'
   'MERINO_REMOTE_SETTINGS__COLLECTION,quicksuggest'
   'MERINO_REMOTE_SETTINGS__BUCKET,main'
@@ -43,24 +40,59 @@ ENVIRONMENT_VARIABLES=(
   'MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX,enwiki-v1'
 )
 
-SetEnvironmentVariables()
-{
-  filePath=$1
+# Usage function
+usage() {
+    echo "Usage: $0 {create|setup|delete} [smoke|average]"
+    echo "Note: The shape parameter is only required for 'create' and 'setup' operations."
+    exit 1
+}
+
+# Validate and set operation and shape parameters
+set_params() {
+    local response=$1
+    local shape=${2:-smoke}
+
+    case $response in
+        create|setup)
+            case $shape in
+                smoke)
+                    WORKER_COUNT=5
+                    ;;
+                average)
+                    WORKER_COUNT=25
+                    ;;
+                *)
+                    echo -e "==================== Invalid shape! Please choose 'smoke' or 'average'."
+                    usage
+                    ;;
+            esac
+            ;;
+        delete)
+            ;;
+        *)
+            echo -e "==================== Invalid operation! Please choose 'create', 'setup', or 'delete'."
+            usage
+            ;;
+    esac
+
+    OPERATION=$response
+}
+
+SetEnvironmentVariables() {
+  local filePath=$1
   for e in "${ENVIRONMENT_VARIABLES[@]}"
   do
-      IFS="," read name value <<< "$e"
+      IFS="," read -r name value <<< "$e"
       if [ -z "$value" ]; then
         echo -e "\033[33mWARNING! The $name environment variable is undefined\033[0m"
         continue
       fi
-      $SED -i -e "/name: $name/{n; s|value:.*|value: $value|}" $filePath
+      $SED -i -e "/name: $name/{n; s|value:.*|value: $value|}" "$filePath"
   done
 }
 
-SetupGksCluster()
-{
-
-    #Configure Kubernetes
+SetupGksCluster() {
+    # Configure Kubernetes
     echo -e "==================== Prepare environments with set of environment variables "
     echo -e "==================== Set Kubernetes Cluster "
     export CLUSTER=$CLUSTER
@@ -70,61 +102,70 @@ SetupGksCluster()
     export SCOPE=$SCOPE
 
     echo -e "==================== Refresh Kubeconfig at path ~/.kube/config "
-    $GCLOUD container clusters get-credentials $CLUSTER --region $REGION --project $GOOGLE_CLOUD_PROJECT
+    $GCLOUD container clusters get-credentials $CLUSTER --region $REGION --project "$GOOGLE_CLOUD_PROJECT"
 
-    ##Build Docker Images
+    # Build Docker Images
     echo -e "==================== Build the Docker image and store it in your project's container registry. Tag with the latest commit hash "
-    $GCLOUD builds submit --config=./tests/load/cloudbuild.yaml --substitutions=TAG_NAME=$LOCUST_IMAGE_TAG
+    $GCLOUD builds submit --config=./tests/load/cloudbuild.yaml --substitutions=TAG_NAME="$LOCUST_IMAGE_TAG"
     echo -e "==================== Verify that the Docker image is in your project's container repository"
     $GCLOUD container images list | grep locust-merino
 
-    ##Deploying the Locust master and worker nodes
+    # Deploying the Locust master and worker nodes
     echo -e "==================== Update Kubernetes Manifests "
     echo -e "==================== Replace the target host and project ID with the deployed endpoint and project ID in the locust-master-controller.yml and locust-worker-controller.yml files"
 
-    $SED -i -e "s|replicas:.*|replicas: $WORKER_COUNT|" $MERINO_DIRECTORY/$WORKER_FILE
+    $SED -i -e "s|replicas:.*|replicas: $WORKER_COUNT|" "$MERINO_DIRECTORY/$WORKER_FILE"
     for file in $MASTER_FILE $WORKER_FILE
     do
-        $SED -i -e "s|image:.*|image: gcr.io/$GOOGLE_CLOUD_PROJECT/locust-merino:$LOCUST_IMAGE_TAG|" $MERINO_DIRECTORY/$file
-        SetEnvironmentVariables $MERINO_DIRECTORY/$file
+        $SED -i -e "s|image:.*|image: gcr.io/$GOOGLE_CLOUD_PROJECT/locust-merino:$LOCUST_IMAGE_TAG|" "$MERINO_DIRECTORY/$file"
+        SetEnvironmentVariables "$MERINO_DIRECTORY/$file"
     done
 
-    ##Deploy the Locust master and worker nodes using Kubernetes Manifests
+    # Deploy the Locust master and worker nodes using Kubernetes Manifests
     echo -e "==================== Deploy the Locust master and worker nodes"
-    $KUBECTL apply -f $MERINO_DIRECTORY/$MASTER_FILE
-    $KUBECTL apply -f $MERINO_DIRECTORY/$SERVICE_FILE
-    $KUBECTL apply -f $MERINO_DIRECTORY/$WORKER_FILE
+    $KUBECTL apply -f "$MERINO_DIRECTORY/$MASTER_FILE"
+    $KUBECTL apply -f "$MERINO_DIRECTORY/$SERVICE_FILE"
+    $KUBECTL apply -f "$MERINO_DIRECTORY/$WORKER_FILE"
+    $KUBECTL apply -f "$MERINO_DIRECTORY/$DAEMONSET_FILE"
 
     echo -e "==================== Verify the Locust deployments & Services"
     $KUBECTL get pods -o wide
     $KUBECTL get services
 }
 
-echo "==================== The script is used to create & delete the GKE cluster"
-echo "==================== Do you want to create or setup the existing or delete GKE cluster? Select ${BOLD}create or delete or setup ${NORM}"
-while :
-do
-    read response
-    case $response in
-        create) #Setup Kubernetes Cluster
-            echo -e "==================== Creating the GKE cluster "
-            $GCLOUD container clusters create $CLUSTER --region $REGION --scopes $SCOPE --enable-autoscaling --total-min-nodes "5" --total-max-nodes "10" --scopes=logging-write,storage-ro --addons HorizontalPodAutoscaling,HttpLoadBalancing  --machine-type $MACHINE_TYPE
-            SetupGksCluster
-            break
-            ;;
-        delete)
-            echo -e "==================== Delete the GKE cluster "
-            $GCLOUD container clusters delete $CLUSTER --region $REGION
-            break
-            ;;
-        setup)
-            echo -e "==================== Setup the GKE cluster "
-            SetupGksCluster
-            break
-            ;;
-        *)
-            echo -e "==================== Incorrect input! "
-            break
-            ;;
-    esac
-done
+# Validate and set parameters
+if [[ $# -eq 0 ]]; then
+    read -r -p "Enter operation (create/setup/delete): " response
+    if [[ $response != "delete" ]]; then
+        read -r -p "Enter shape (smoke/average): " shape
+    else
+        shape=""
+    fi
+else
+    response=$1
+    shape=${2:-smoke}
+fi
+
+set_params "$response" "$shape"
+
+# Main operation
+case $OPERATION in
+    create)
+        echo -e "==================== Creating the GKE cluster "
+        $GCLOUD container clusters create $CLUSTER --region $REGION --scopes $SCOPE --enable-autoscaling --scopes=logging-write,storage-ro --machine-type=$MACHINE_TYPE --addons HorizontalPodAutoscaling,HttpLoadBalancing --enable-dataplane-v2
+        $GCLOUD container node-pools create locust-workers --cluster=$CLUSTER --region $REGION --node-labels=node-pool=locust-workers --enable-autoscaling --total-min-nodes=1 --total-max-nodes=30 --scopes=$SCOPE,logging-write,storage-ro --machine-type=$MACHINE_TYPE --system-config-from-file=$MERINO_DIRECTORY/$WORKER_KUBELET_CONFIG_FILE
+        SetupGksCluster
+        ;;
+    delete)
+        echo -e "==================== Deleting the GKE cluster "
+        $GCLOUD container clusters delete $CLUSTER --region $REGION
+        ;;
+    setup)
+        echo -e "==================== Setting up the GKE cluster "
+        SetupGksCluster
+        ;;
+    *)
+        echo -e "==================== Invalid operation! Please choose 'create', 'setup', or 'delete'."
+        usage
+        ;;
+esac

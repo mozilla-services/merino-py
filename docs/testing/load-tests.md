@@ -132,10 +132,15 @@ a GKE cluster
 
 * Execute the `setup_k8s.sh` file and select the **create** option, in order to
   initiate the process of creating a cluster, setting up the env variables and
-  building the docker image
+  building the docker image. Choose smoke or average depending on the type
+  of load test required.
   ```shell
-  ./tests/load/setup_k8s.sh
+  ./tests/load/setup_k8s.sh create [smoke|average]
   ```
+  * Smoke - The smoke load test verifies the system's performance under minimal load. The test is
+    run for a short period, possibly in CD, to ensure the system is working correctly.
+  * Average - The average load test measures the system's performance under standard operational conditions.
+    The test is meant to reflect an ordinary day in production.
 * The cluster creation process will take some time. It is considered complete, once
   an external IP is assigned to the `locust_master` node. Monitor the assignment via
   a watch loop:
@@ -292,6 +297,188 @@ See [Distributed GCP Execution (Manual Trigger) - Analyse Results](#3-analyse-re
   * Upload the files to the [ConServ][conserv] drive and record the links in the
     spreadsheet
 
+## Calibration
+
+Following the addition of new features, such as a Locust Task or Locust User, or
+environmental changes, such as node size or the upgrade of a major dependency like the
+python version image, it may be necessary to re-establish the recommended parameters of
+the performance test.
+
+| Parameter          | Description                                                                                                                                                                                                      |
+|--------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [WAIT TIME][13]    | - Changing this cadence will increase or decrease the number of channel subscriptions and notifications sent by a MerinoUser. <br/>- The default is currently in use for the MerinoUser class.                   |
+| [TASK WEIGHT][14]  | - Changing this weight impacts the probability of a task being chosen for execution. <br/>- This value is hardcoded in the task decorators of the MerinoUser class.                                              |
+| `USERS_PER_WORKER` | - This value should be set to the maximum number of users a Locust worker can support given CPU and memory constraints. <br/>- This value is hardcoded in the LoadTestShape classes.                             |
+| `WORKER_COUNT`     | - This value is derived by dividing the total number of users needed for the performance test by the `USERS_PER_WORKER`. <br>- This value is hardcoded in the LoadTestShape classes and the setup_k8s.sh script. |
+
+## Calibrating for USERS_PER_WORKER
+
+This process is used to determine the number of users that a Locust worker can support.
+
+### Setup Environment
+
+#### 1. Start a GCP Cloud Shell
+
+The load tests can be executed from the [contextual-services-test-eng cloud shell][cloud].
+If executing a load test for the first time, the git merino-py repository will need to
+be cloned locally.
+
+#### 2. Configure the Bash Script
+
+* The `setup_k8s.sh` file, located in the `tests\load` directory, contains
+  shell commands to **create** a GKE cluster, **setup** an existing GKE cluster or
+  **delete** a GKE cluster
+    * Execute the following from the root directory, to make the file executable:
+      ```shell
+      chmod +x tests/load/setup_k8s.sh
+      ```
+
+#### 3. Create the GCP Cluster
+
+* In the `setup_k8s.sh` script, modify the `WORKER_COUNT` variable to equal `1`
+* Execute the `setup_k8s.sh` file from the root directory and select the **create**
+  option, in order to initiate the process of creating a cluster, setting up the env
+  variables and building the docker image. Choose smoke or average depending on the type
+  of load test required.
+  ```shell
+  ./tests/load/setup_k8s.sh create [smoke|average]
+  ```
+* The cluster creation process will take some time. It is considered complete, once
+  an external IP is assigned to the `locust_master` node. Monitor the assignment via
+  a watch loop:
+  ```bash
+  kubectl get svc locust-master --watch
+  ```
+
+### Calibrate
+
+Repeat steps 1 to 3, using a process of elimination, such as the bisection method, to
+determine the maximum `USERS_PER_WORKER`. The load tests are considered optimized when
+CPU and memory resources are maximally utilized. This step is meant to determine the
+maximum user count that a node can accommodate by observing CPU and memory usage while
+steadily increasing or decreasing the user count. You can monitor the CPU percentage in
+the Locust UI but also in the Kubernetes engine Workloads tab where both memory and CPU
+are visualized on charts.
+
+#### 1. Start Load Test
+
+* In a browser navigate to `http://$EXTERNAL_IP:8089`
+  This url can be generated via command
+  ```bash
+  EXTERNAL_IP=$(kubectl get svc locust-master -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+  echo http://$EXTERNAL_IP:8089
+  ```
+* Set up the load test parameters:
+    * ShapeClass: Default
+    * UserClasses: MerinoUser
+    * Number of users: USERS_PER_WORKER (Consult the [Merino_spreadsheet][merino_spreadsheet] to determine a starting point)
+    * Ramp up: RAMP_UP (RAMP_UP = 5/USERS_PER_WORKER)
+    * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
+    * Duration (Optional): 600s
+* Select "Start Swarm"
+
+#### 2. Stop Load Test
+
+Select the 'Stop' button in the top right hand corner of the Locust UI, after the
+desired test duration has elapsed. If the 'Run time' or 'Duration' is set in step 1,
+the load test will stop automatically.
+
+#### 3. Analyse Results
+
+**CPU and Memory Resource Graphs**
+
+* CPU and Memory usage should be less than 90% of the available capacity
+    * CPU and Memory Resources can be observed in
+      [Google Cloud > Kubernetes Engine > Workloads][kubernetes_panel]
+
+**Log Errors or Warnings**
+
+* Locust will emit errors or warnings if high CPU or memory usage occurs during the
+  execution of a load test. The presence of these logs is a strong indication that the
+  `USERS_PER_WORKER` count is too high
+
+#### 4. Report Results
+
+See [Distributed GCP Execution (Manual Trigger) - Analyse Results](#3-analyse-results-1)
+
+#### 5. Update Shape and Script Values
+
+* `WORKER_COUNT = MAX_USERS/USERS_PER_WORKER`
+    * If `MAX_USERS` is unknown, calibrate to determine `WORKER_COUNT`
+* Update the `USERS_PER_WORKER` and `WORKER_COUNT` values in the following files:
+    * `\tests\load\locustfiles\smoke_load.py` or `\tests\load\locustfiles\average_load.py`
+    * \tests\load\setup_k8s.sh
+
+### Clean-up Environment
+
+See [Distributed GCP Execution (Manual Trigger) - Clean-up Environment](#clean-up-environment)
+
+## Calibrating for WORKER_COUNT
+
+This process is used to determine the number of Locust workers required in order to
+generate sufficient load for a test given a SHAPE_CLASS.
+
+### Setup Environment
+
+* See [Distributed GCP Execution (Manual Trigger) - Setup Environment](#setup-environment-1)
+* Note that in the `setup_k8s.sh` the maximum number of nodes is set using the
+  `total-max-nodes` google cloud option. It may need to be increased if the number of
+  workers can't be supported by the cluster.
+
+### Calibrate
+
+Repeat steps 1 to 4, using a process of elimination, such as the bisection method, to
+determine the maximum `WORKER_COUNT`. The tests are considered optimized when they
+generate the minimum load required to cause node scaling in the the Merino-py Stage
+environment. You can monitor the Merino-py pod counts on [Grafana][grafana].
+
+#### 1. Update Shape and Script Values
+
+* Update the `WORKER_COUNT` values in the following files:
+    * `\tests\load\locustfiles\smoke_load.py` or `\tests\load\locustfiles\average_load.py`
+    * \tests\load\setup_k8s.sh
+* Using Git, commit the changes locally
+
+#### 2. Start Load Test
+
+* In a browser navigate to `http://$EXTERNAL_IP:8089`
+  This url can be generated via command
+  ```bash
+  EXTERNAL_IP=$(kubectl get svc locust-master -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
+  echo http://$EXTERNAL_IP:8089
+  ```
+* Set up the load test parameters:
+    * ShapeClass: SHAPE_CLASS
+    * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
+* Select "Start Swarm"
+
+#### 3. Stop Load Test
+
+Select the 'Stop' button in the top right hand corner of the Locust UI, after the
+desired test duration has elapsed. If the 'Run time', 'Duration' or 'ShapeClass'
+are set in step 1, the load test will stop automatically.
+
+#### 4. Analyse Results
+
+**Stage Environment Pod Counts**
+
+* The 'Merino-py Pod Count' should demonstrate scaling during the execution of the load test
+  * The pod counts can be observed in [Grafana][grafana]
+
+**CPU and Memory Resources**
+
+* CPU and Memory usage should be less than 90% of the available capacity in the cluster
+    * CPU and Memory Resources can be observed in
+      [Google Cloud > Kubernetes Engine > Workloads][kubernetes_panel]
+
+#### 5. Report Results
+
+* See [Distributed GCP Execution (Manual Trigger) - Report Results](#4-report-results)
+
+### Clean-up Environment
+
+* See [Distributed GCP Execution (Manual Trigger) - Clean-up Environment](#clean-up-environment-1)
+
 ## Maintenance
 
 The load test maintenance schedule cadence is once a quarter and should include
@@ -322,6 +509,7 @@ updating the following:
 [docker_compose]:https://github.com/mozilla-services/merino-py/blob/main/tests/load/docker-compose.yml
 [dockerfile]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/Dockerfile
 [grafana]: https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/merino-py-application-and-infrastructure?orgId=1&refresh=1m&var-environment=stagepy
+[kubernetes_panel]: https://console.cloud.google.com/kubernetes/list/overview?cloudshell=false&project=spheric-keel-331521
 [locust_environment_variables]: https://docs.locust.io/en/stable/configuration.html#environment-variables
 [locust_master_controller]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/kubernetes-config/locust-master-controller.yml
 [locust_master_service]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/kubernetes-config/locust-master-service.yml
