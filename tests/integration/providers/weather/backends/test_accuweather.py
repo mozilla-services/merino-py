@@ -39,10 +39,13 @@ from merino.providers.weather.backends.protocol import (
 
 ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 ACCUWEATHER_LOCATION_KEY = "39376"
+
+# these TTL values below are the same as the default accuweather config values
 WEATHER_REPORT_TTL_SEC = 1800
 CURRENT_CONDITIONS_TTL_SEC = 1800
 FORECAST_TTL_SEC = 3600
 LOCATION_KEY_TTL_SEC = 604800
+
 TEST_CACHE_ERROR = "test cache error"
 
 CacheKeys = namedtuple("CacheKeys", ["location_key", "current_conditions_key", "forecast_key"])
