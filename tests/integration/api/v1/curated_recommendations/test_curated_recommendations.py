@@ -597,9 +597,9 @@ class TestCuratedRecommendationsMetrics:
                 status_code=500,
                 request=fixture_request_data,
             )
-            #
-            # with pytest.raises(HTTPStatusError):
-            await fetch_en_us(ac)
+
+            with pytest.raises(HTTPStatusError):
+                await fetch_en_us(ac)
 
             # TODO: Remove reliance on internal details of aiodogstatsd
             metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
