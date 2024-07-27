@@ -17,30 +17,33 @@ from tests.unit.jobs.relevancy_uploader.utils import do_csv_test, do_error_test
 
 # The CSV file containing the primary test relevancy data. If you modify this
 # file, be sure to keep the following in sync:
-# - PRIMARY_DATA_COUNT
 # - expected_relevancy_data()
 PRIMARY_CSV_BASENAME = "test_relevancy_data.csv"
 PRIMARY_CSV_PATH = str(pathlib.Path(__file__).parent / PRIMARY_CSV_BASENAME)
-PRIMARY_DATA_COUNT = 4
 
 
 def expected_primary_category_data() -> list[dict[str, Any]]:
     """Return a list of expected relevancy domains for the CSV test data in
     `PRIMARY_CSV_PATH` related to the 'Sports' category.
     """
-    data: list[dict[str, Any]] = []
-    for s in range(PRIMARY_DATA_COUNT):
-        md5_hash = md5("sports.com".encode(), usedforsecurity=False).digest()
-        data.append({"domain": base64.b64encode(md5_hash).decode()})
-    return data
+    sportsnnews_hash = md5("sportsnnews.com".encode(), usedforsecurity=False).digest()
+    sports_hash = md5("sports.com".encode(), usedforsecurity=False).digest()
+
+    sportsnnews_hash_encode = base64.b64encode(sportsnnews_hash).decode()
+    sports_hash_encode = base64.b64encode(sports_hash).decode()
+    return [{"domain": sportsnnews_hash_encode}, {"domain": sports_hash_encode}]
 
 
 def expected_secondary_category_data() -> list[dict[str, Any]]:
     """Return a list of expected relevancy domains for the CSV test data in
     `PRIMARY_CSV_PATH` related to the 'News' Category.
     """
-    md5_hash = md5("sports.com".encode(), usedforsecurity=False).digest()
-    return [{"domain": base64.b64encode(md5_hash).decode()}]
+    sportsnews_hash = md5("sportsnnews.com".encode(), usedforsecurity=False).digest()
+    fallback_hash = md5("fallback.com".encode(), usedforsecurity=False).digest()
+    return [
+        {"domain": base64.b64encode(sportsnews_hash).decode()},
+        {"domain": base64.b64encode(fallback_hash).decode()},
+    ]
 
 
 def expected_inconclusive_category_data() -> list[dict[str, Any]]:
@@ -83,23 +86,6 @@ def test_missing_domain(mocker):
         "origin": "https://sports0.sports.com",
         "suffix": "com",
         "categories": "[Sports]",
-    }
-
-    do_error_test(
-        mocker,
-        csv_rows=[row],
-        expected_error=KeyError,
-    )
-
-
-def test_missing_categories(mocker):
-    """A missing domain field should raise a KeyError"""
-    row = {
-        "rank": 0,
-        "domain": "sports.com",
-        "host": "sports0.sports.com",
-        "origin": "https: // sport0.sports.com",
-        "suffix": "com",
     }
 
     do_error_test(

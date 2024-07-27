@@ -27,7 +27,7 @@ class Task(Protocol):
 
 
 class Job:
-    """Periodally run a given task if a given condition is met."""
+    """Periodically run a given task if a given condition is met."""
 
     name: str
     interval: float
@@ -35,6 +35,14 @@ class Job:
     task: Task
 
     def __init__(self, *, name: str, interval: float, condition: Condition, task: Task) -> None:
+        """Create a cron job to periodically run a given task asynchronously.
+
+        Args:
+            name: The name used to identify the cron job in logs.
+            interval: The interval in seconds between each run of the task.
+            condition: A synchronous callable that determines whether the task should run.
+            task: An asynchronous callable that defines the task to be run.
+        """
         self.name = name
         self.interval = interval
         self.condition = condition

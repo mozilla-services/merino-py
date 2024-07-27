@@ -21,6 +21,14 @@ def _make_csv_file_object(csv_rows: list[dict[str, str]]) -> io.TextIOWrapper:
     return f
 
 
+def _mock_categories_mapping() -> dict:
+    return {
+        "sports.com": {"sports": 0.8},
+        "sportsnnews.com": {"sports": 0.7, "news": 0.6},
+        "inconclusive.com": {"inconclusive": -1},
+    }
+
+
 def _do_csv_test(
     mocker,
     upload_callable: Callable[[dict[str, Any]], None],
@@ -36,6 +44,12 @@ def _do_csv_test(
         "merino.jobs.relevancy_uploader.ChunkedRemoteSettingsRelevancyUploader"
     )
     mock_chunked_uploader = mock_chunked_uploader_ctor.return_value.__enter__.return_value
+
+    # Mock categories mapping.
+    mock_categories_mapping_patch = mocker.patch(
+        "merino.jobs.relevancy_uploader._read_categories_data"
+    )
+    mock_categories_mapping_patch.return_value = _mock_categories_mapping()
 
     # Do the upload.
     common_kwargs: dict[str, Any] = {
@@ -53,6 +67,14 @@ def _do_csv_test(
             "keep_existing_records": keep_existing_records,
         }
     )
+
+    mock_chunked_uploader_ctor.assert_any_call(
+        **common_kwargs,
+        record_type="category_to_domains",
+        category_name="",
+        category_code=0,
+    )
+
     mock_chunked_uploader_ctor.assert_any_call(
         **common_kwargs,
         record_type="category_to_domains",
@@ -78,11 +100,19 @@ def _do_csv_test(
     )
 
     if not keep_existing_records and version == 1:
-        mock_chunked_uploader.delete_records.assert_called()
+        mock_chunked_uploader.delete_records.assert_called_once()
     else:
         mock_chunked_uploader.delete_records.assert_not_called()
 
-    mock_chunked_uploader.add_data.assert_has_calls([*map(mocker.call, primary_category_data)])
+    mock_chunked_uploader.add_data.assert_has_calls(
+        [
+            *map(
+                mocker.call,
+                [*primary_category_data, *secondary_category_data, *inconclusive_category_data],
+            )
+        ],
+        any_order=True,
+    )
 
 
 def do_csv_test(
@@ -127,6 +157,13 @@ def do_error_test(
 ) -> None:
     """Perform an upload test that is expected to raise an error."""
     file_object = _make_csv_file_object(csv_rows)
+
+    # Mock categories mapping.
+    mock_categories_mapping_patch = mocker.patch(
+        "merino.jobs.relevancy_uploader._read_categories_data"
+    )
+    mock_categories_mapping_patch.return_value = _mock_categories_mapping()
+
     with pytest.raises(expected_error):
         asyncio.run(
             _upload_file_object(
@@ -138,6 +175,7 @@ def do_error_test(
                 dry_run=False,
                 file_object=file_object,
                 server="server",
+                categories_path="test/mapping.json",
                 version=1,
             )
         )

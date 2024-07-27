@@ -10,6 +10,7 @@ from enum import Enum
 from typing import Any, Callable, NamedTuple, cast
 
 import aiodogstatsd
+import httpx
 from dateutil import parser
 from httpx import URL, AsyncClient, HTTPError, InvalidURL, Response
 from pydantic import BaseModel, ValidationError
@@ -172,6 +173,7 @@ class AccuweatherBackend:
     cached_forecast_ttl_sec: int
     metrics_client: aiodogstatsd.Client
     url_param_api_key: str
+    url_cities_admin_path: str
     url_cities_path: str
     url_cities_param_query: str
     url_current_conditions_path: str
@@ -191,6 +193,7 @@ class AccuweatherBackend:
         metrics_client: aiodogstatsd.Client,
         http_client: AsyncClient,
         url_param_api_key: str,
+        url_cities_admin_path: str,
         url_cities_path: str,
         url_cities_param_query: str,
         url_current_conditions_path: str,
@@ -208,6 +211,7 @@ class AccuweatherBackend:
 
         if (
             not url_param_api_key
+            or not url_cities_admin_path
             or not url_cities_path
             or not url_cities_param_query
             or not url_current_conditions_path
@@ -229,6 +233,7 @@ class AccuweatherBackend:
         self.metrics_client = metrics_client
         self.http_client = http_client
         self.url_param_api_key = url_param_api_key
+        self.url_cities_admin_path = url_cities_admin_path
         self.url_cities_path = url_cities_path
         self.url_cities_param_query = url_cities_param_query
         self.url_current_conditions_path = url_current_conditions_path
@@ -508,34 +513,35 @@ class AccuweatherBackend:
         if not country or not region or not city:
             self.metrics_client.increment("accuweather.request.location.not_provided")
             return None
-        for subdivision in [
-            region,
-            *alternative_regions,
-        ]:
-            cache_key: str = self.cache_key_for_accuweather_request(
-                self.url_cities_path.format(country_code=country, admin_code=subdivision),
-                query_params=self.get_location_key_query_params(city),
-            )
-            # Look up for all the weather data from the cache.
-            try:
-                with self.metrics_client.timeit("accuweather.cache.fetch"):
-                    cached_data: list[bytes | None] = await self.cache.run_script(
-                        sid=SCRIPT_ID,
-                        keys=[cache_key],
-                        # The order matters below. See `LUA_SCRIPT_CACHE_BULK_FETCH` for details.
-                        args=[
-                            self.cache_key_template(WeatherDataType.CURRENT_CONDITIONS),
-                            self.cache_key_template(WeatherDataType.FORECAST),
-                            self.url_location_key_placeholder,
-                        ],
-                    )
-            except CacheAdapterError as exc:
-                logger.error(f"Failed to fetch weather report from Redis: {exc}")
-                self.metrics_client.increment("accuweather.cache.fetch.error")
-                return None
+        try:
+            for subdivision in [
+                region,
+                *alternative_regions,
+            ]:
+                cache_key: str = self.cache_key_for_accuweather_request(
+                    self.url_cities_admin_path.format(
+                        country_code=country, admin_code=subdivision
+                    ),
+                    query_params=self.get_location_key_query_params(city),
+                )
+                # Look up for all the weather data from the cache.
+                cached_data = await self.check_cache_for_weather(cache_key)
 
-            if cached_data:
-                break
+                if cached_data:
+                    break
+
+            # cycling through alternative regions returns nothing, retry using just country code
+            if not cached_data:
+                country_only_cache_key: str = self.cache_key_for_accuweather_request(
+                    self.url_cities_path.format(country_code=country),
+                    query_params=self.get_location_key_query_params(city),
+                )
+                cached_data = await self.check_cache_for_weather(country_only_cache_key)
+
+        except CacheAdapterError as exc:
+            logger.error(f"Failed to fetch weather report from Redis: {exc}")
+            self.metrics_client.increment("accuweather.cache.fetch.error")
+            return None
 
         self.emit_cache_fetch_metrics(cached_data)
         cached_report = self.parse_cached_data(cached_data)
@@ -597,9 +603,12 @@ class AccuweatherBackend:
                             )
                         break
                 if location is None:
-                    self.metrics_client.increment("accuweather.request.locations.processor.error")
-                    return None
+                    logger.warning(
+                        f"Using fallback country only endpoint after trying {country}/{city}/{region}, alt regions:{alternative_regions}"
+                    )
+                    location = await self.get_location_by_geolocation(country, city)
             if location is None:
+                logger.warning(f"Unable to find location for {country}/{city}")
                 return None
 
         try:
@@ -645,7 +654,7 @@ class AccuweatherBackend:
             return None
 
     async def get_location_by_geolocation(
-        self, country: str, city: str, region: str
+        self, country: str, city: str, region: str | None = None
     ) -> AccuweatherLocation | None:
         """Return location data for a specific country and city or None if
         location data is not found.
@@ -655,16 +664,27 @@ class AccuweatherBackend:
         Reference:
             https://developer.accuweather.com/accuweather-locations-api/apis/get/locations/v1/cities/{countryCode}/{adminCode}/search
         """
+        if region:
+            url_path = self.url_cities_admin_path.format(country_code=country, admin_code=region)
+            processor = process_location_response_with_country_and_region
+            log_failure = False
+
+        else:
+            url_path = self.url_cities_path.format(country_code=country)
+            processor = process_location_response_with_country
+            log_failure = True
         try:
             response: dict[str, Any] | None = await self.get_request(
-                self.url_cities_path.format(country_code=country, admin_code=region),
+                url_path,
                 params=self.get_location_key_query_params(city),
-                process_api_response=process_location_response,
+                process_api_response=processor,
                 cache_ttl_sec=self.cached_location_key_ttl_sec,
-                log_failure=False,
+                log_failure=log_failure,
             )
         except HTTPError as error:
-            raise AccuweatherError("Unexpected location response") from error
+            raise AccuweatherError(
+                f"Unexpected location response from: {url_path}, city: {city}"
+            ) from error
 
         return AccuweatherLocation(**response) if response else None
 
@@ -762,12 +782,15 @@ class AccuweatherBackend:
             self.url_param_api_key: self.api_key,
             LOCATION_COMPLETE_ALIAS_PARAM: LOCATION_COMPLETE_ALIAS_PARAM_VALUE,
         }
-
-        with self.metrics_client.timeit(
-            f"accuweather.request." f"{LOCATION_COMPLETION_REQUEST_TYPE}.get"
-        ):
-            response: Response = await self.http_client.get(url_path, params=params)
-            response.raise_for_status()
+        try:
+            with self.metrics_client.timeit(
+                f"accuweather.request. {LOCATION_COMPLETION_REQUEST_TYPE}.get"
+            ):
+                response: Response = await self.http_client.get(url_path, params=params)
+                response.raise_for_status()
+        except httpx.HTTPError as exc:
+            logger.warning(f"Failed to get location completion from Accuweather: {exc}")
+            return None
 
         processed_location_completions = process_location_completion_response(response.json())
 
@@ -776,6 +799,21 @@ class AccuweatherBackend:
         ]
 
         return location_completions
+
+    async def check_cache_for_weather(self, cache_key) -> list[bytes | None]:
+        """Get cached weather data."""
+        with self.metrics_client.timeit("accuweather.cache.fetch"):
+            cached_data: list = await self.cache.run_script(
+                sid=SCRIPT_ID,
+                keys=[cache_key],
+                # The order matters below. See `LUA_SCRIPT_CACHE_BULK_FETCH` for details.
+                args=[
+                    self.cache_key_template(WeatherDataType.CURRENT_CONDITIONS),
+                    self.cache_key_template(WeatherDataType.FORECAST),
+                    self.url_location_key_placeholder,
+                ],
+            )
+            return cached_data
 
     async def shutdown(self) -> None:
         """Close out the cache during shutdown."""
@@ -821,7 +859,7 @@ def process_location_completion_response(response: Any) -> list[dict[str, Any]]:
     ]
 
 
-def process_location_response(response: Any) -> dict[str, Any] | None:
+def process_location_response_with_country_and_region(response: Any) -> dict[str, Any] | None:
     """Process the API response for location keys.
 
     Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
@@ -834,6 +872,31 @@ def process_location_response(response: Any) -> dict[str, Any] | None:
                 "LocalizedName": localized_name,
             },
             *_,
+        ]:
+            # `type: ignore` is necessary because mypy gets confused when
+            # matching structures of type `Any` and reports the following
+            # line as unreachable. See
+            # https://github.com/python/mypy/issues/12770
+            return {  # type: ignore
+                "key": key,
+                "localized_name": localized_name,
+            }
+        case _:
+            return None
+
+
+def process_location_response_with_country(response: Any) -> dict[str, Any] | None:
+    """Process the API response for a single location key from country code endpoint.
+
+    Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
+    to reflect the change(s) here.
+    """
+    match response:
+        case [
+            {
+                "Key": key,
+                "LocalizedName": localized_name,
+            },
         ]:
             # `type: ignore` is necessary because mypy gets confused when
             # matching structures of type `Any` and reports the following

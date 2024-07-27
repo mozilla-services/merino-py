@@ -57,7 +57,8 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "metrics_client": statsd_mock,
         "http_client": mocker.AsyncMock(spec=AsyncClient),
         "url_param_api_key": "apikey",
-        "url_cities_path": "/locations/v1/cities/{country_code}/{admin_code}/search.json",
+        "url_cities_admin_path": "/locations/v1/cities/{country_code}/{admin_code}/search.json",
+        "url_cities_path": "/locations/v1/cities/{country_code}/search.json",
         "url_cities_param_query": "q",
         "url_current_conditions_path": "/currentconditions/v1/{location_key}.json",
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
@@ -332,7 +333,7 @@ def generate_accuweather_cache_keys(
     assert geolocation.city is not None
 
     location_key: str = accuweather.cache_key_for_accuweather_request(
-        accuweather.url_cities_path.format(
+        accuweather.url_cities_admin_path.format(
             country_code=geolocation.country, admin_code=geolocation.region
         ),
         query_params=accuweather.get_location_key_query_params(geolocation.city),
