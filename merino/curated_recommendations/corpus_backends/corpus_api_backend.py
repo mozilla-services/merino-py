@@ -193,7 +193,6 @@ class CorpusApiBackend(CorpusBackend):
                 # https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
                 self._background_tasks.add(task)
                 task.add_done_callback(self._background_tasks.discard)
-
             return self._cache[cache_key]
 
         # If no cache value exists, fetch new data and await the result.
@@ -239,7 +238,6 @@ class CorpusApiBackend(CorpusBackend):
                 json=body,
                 headers=self.graph_config.headers,
             )
-
         self.metrics_client.increment(f"corpus_api.request.status_codes.{res.status_code}")
 
         res.raise_for_status()
@@ -265,7 +263,10 @@ class CorpusApiBackend(CorpusBackend):
         return curated_recommendations
 
     async def _revalidate_cache(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
-        """Purge and update the cache for a specific surface."""
+        """Purge and update the cache for a specific surface. If the API responds with an error code,
+        re-try the request again. If there is still an error response, don't bust cache, return the latest
+        valid data from the cache.
+        """
         cache_key = surface_id
 
         if cache_key not in self._locks:
@@ -276,23 +277,31 @@ class CorpusApiBackend(CorpusBackend):
             if cache_key in self._cache and datetime.now() < self._expirations[cache_key]:
                 return self._cache[cache_key]
 
-            # Fetch new data from the backend.
+            # Attempt to fetch new data from the backend
             try:
-                data = await self._fetch_from_backend(surface_id)
-            except HTTPError as e:
-                logger.warning(f"Retrying CorpusApiBackend._fetch_from_backend once after {e}")
-                # Backoff prevents high API rate during downtime.
-                await asyncio.sleep(self._backoff_time.total_seconds())
-                # http errors are expected to be rare, so a single retry attempt probably suffices.
-                data = await self._fetch_from_backend(surface_id)
+                data = await self.retry_fetch(surface_id, cache_key)
+                return data
+            except (HTTPError, ValueError) as e:
+                logger.warning(
+                    f"Exception occurred on first attempt to fetch: "
+                    f"Retrying CorpusApiBackend._fetch_from_backend once after {e}"
+                )
+
+                # Retry fetching data
+                try:
+                    data = await self.retry_fetch(surface_id, cache_key)
+                    return data
+                except (HTTPError, ValueError) as e:
+                    logger.warning(
+                        f"Retrying CorpusApiBackend._fetch_from_backend failed: {e}. "
+                        f"Returning latest valid cached data."
+                    )
+                    # Provide the latest valid cached data if available
+                    return self._cache.get(cache_key, [])
             except Exception as e:
                 # Backoff prevents high API rate when an unforeseen error occurs.
                 await asyncio.sleep(self._backoff_time.total_seconds())
                 raise e
-
-            self._cache[cache_key] = data
-            self._expirations[cache_key] = self.get_expiration_time()
-            return data
 
     @staticmethod
     def get_expiration_time() -> datetime:
@@ -303,3 +312,15 @@ class CorpusApiBackend(CorpusBackend):
             CorpusApiBackend.cache_time_to_live_max.total_seconds(),
         )
         return datetime.now() + timedelta(seconds=time_to_live_seconds)
+
+    async def retry_fetch(
+        self, surface_id: ScheduledSurfaceId, cache_key: ScheduledSurfaceId
+    ) -> list[CorpusItem]:
+        """Retry fetching data & update cache with valid data."""
+        data = await self._fetch_from_backend(surface_id)
+        if not data:  # Check if the fetched data is valid
+            raise ValueError("retry_fetch: Response is invalid or empty")
+        # Update the cache with valid data
+        self._cache[cache_key] = data
+        self._expirations[cache_key] = self.get_expiration_time()
+        return data
