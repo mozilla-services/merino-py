@@ -791,7 +791,20 @@ class AccuweatherBackend:
             logger.warning(f"Failed to get location completion from Accuweather: {exc}")
             return None
 
-        processed_location_completions = process_location_completion_response(response.json())
+        location_completion_response = response.json()
+
+        # if the accuweather request is successful but the response object shape is not valid
+        if location_completion_response is None or not isinstance(
+            location_completion_response, list
+        ):
+            logger.warning(
+                f"Invalid location completion response from Accuweather: {location_completion_response}"
+            )
+            return None
+
+        processed_location_completions = process_location_completion_response(
+            location_completion_response
+        )
 
         location_completions = [
             LocationCompletion(**item) for item in processed_location_completions
@@ -837,7 +850,7 @@ def add_partner_code(
         return url
 
 
-def process_location_completion_response(response: Any) -> list[dict[str, Any]]:
+def process_location_completion_response(response: list) -> list[dict[str, Any]]:
     """Process the API response for location completion request."""
     return [
         {
