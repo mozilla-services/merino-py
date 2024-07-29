@@ -279,14 +279,9 @@ class CorpusApiBackend(CorpusBackend):
 
             # Attempt to fetch new data from the backend
             try:
-                data = await self._fetch_from_backend(surface_id)
-                if not data:  # Check if the fetched data is valid
-                    raise ValueError("_revalidate_cache: Response is invalid or empty")
-                # Update the cache with valid data
-                self._cache[cache_key] = data
-                self._expirations[cache_key] = self.get_expiration_time()
+                data = await self.retry_fetch(surface_id, cache_key)
                 return data
-            except HTTPError as e:
+            except (HTTPError, ValueError) as e:
                 logger.warning(
                     f"Exception occurred on first attempt to fetch: "
                     f"Retrying CorpusApiBackend._fetch_from_backend once after {e}"
@@ -294,14 +289,9 @@ class CorpusApiBackend(CorpusBackend):
 
                 # Retry fetching data
                 try:
-                    data = await self._fetch_from_backend(surface_id)
-                    if not data:  # Check if the fetched data is valid
-                        raise ValueError("_revalidate_cache: Response is invalid or empty")
-                    # Update the cache with valid data
-                    self._cache[cache_key] = data
-                    self._expirations[cache_key] = self.get_expiration_time()
+                    data = await self.retry_fetch(surface_id, cache_key)
                     return data
-                except HTTPError as e:
+                except (HTTPError, ValueError) as e:
                     logger.warning(
                         f"Retrying CorpusApiBackend._fetch_from_backend failed: {e}. "
                         f"Returning latest valid cached data."
@@ -322,3 +312,15 @@ class CorpusApiBackend(CorpusBackend):
             CorpusApiBackend.cache_time_to_live_max.total_seconds(),
         )
         return datetime.now() + timedelta(seconds=time_to_live_seconds)
+
+    async def retry_fetch(
+        self, surface_id: ScheduledSurfaceId, cache_key: ScheduledSurfaceId
+    ) -> list[CorpusItem]:
+        """Retry fetching data & update cache with valid data."""
+        data = await self._fetch_from_backend(surface_id)
+        if not data:  # Check if the fetched data is valid
+            raise ValueError("_revalidate_cache: Response is invalid or empty")
+        # Update the cache with valid data
+        self._cache[cache_key] = data
+        self._expirations[cache_key] = self.get_expiration_time()
+        return data
