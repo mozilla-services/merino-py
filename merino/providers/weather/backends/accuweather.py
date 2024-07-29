@@ -806,11 +806,7 @@ class AccuweatherBackend:
             location_completion_response
         )
 
-        location_completions = [
-            LocationCompletion(**item) for item in processed_location_completions
-        ]
-
-        return location_completions
+        return [LocationCompletion(**item) for item in processed_location_completions]
 
     async def check_cache_for_weather(self, cache_key) -> list[bytes | None]:
         """Get cached weather data."""
