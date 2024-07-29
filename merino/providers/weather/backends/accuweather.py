@@ -64,14 +64,14 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
 
     local current_conditions = redis.call("GET", condition_key)
     local forecast = redis.call("GET", forecast_key)
-
-    local current_conditions_ttl = redis.call("TTL", condition_key)
-    local forecast_ttl = redis.call("TTL", forecast_key)
     local ttl = false
 
-    if current_conditions_ttl >= 0 and forecast_ttl >= 0 then
+    if current_conditions and forecast then
+        local current_conditions_ttl = redis.call("TTL", condition_key)
+        local forecast_ttl = redis.call("TTL", forecast_key)
         ttl = math.min(current_conditions_ttl, forecast_ttl)
     end
+
     return {location_key, current_conditions, forecast, ttl}
 """
 SCRIPT_ID: str = "bulk_fetch"
@@ -94,12 +94,11 @@ LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
 
     local current_conditions = redis.call("GET", condition_key)
     local forecast = redis.call("GET", forecast_key)
-
-    local current_conditions_ttl = redis.call("TTL", condition_key)
-    local forecast_ttl = redis.call("TTL", forecast_key)
     local ttl = false
 
-    if current_conditions_ttl >= 0 and forecast_ttl >= 0 then
+    if current_conditions and forecast then
+        local current_conditions_ttl = redis.call("TTL", condition_key)
+        local forecast_ttl = redis.call("TTL", forecast_key)
         ttl = math.min(current_conditions_ttl, forecast_ttl)
     end
     
