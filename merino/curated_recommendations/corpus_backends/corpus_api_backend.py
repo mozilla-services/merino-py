@@ -319,7 +319,7 @@ class CorpusApiBackend(CorpusBackend):
         """Retry fetching data & update cache with valid data."""
         data = await self._fetch_from_backend(surface_id)
         if not data:  # Check if the fetched data is valid
-            raise ValueError("_revalidate_cache: Response is invalid or empty")
+            raise ValueError("retry_fetch: Response is invalid or empty")
         # Update the cache with valid data
         self._cache[cache_key] = data
         self._expirations[cache_key] = self.get_expiration_time()
