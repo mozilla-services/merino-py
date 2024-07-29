@@ -301,7 +301,7 @@ class CorpusApiBackend(CorpusBackend):
                     self._cache[cache_key] = data
                     self._expirations[cache_key] = self.get_expiration_time()
                     return data
-                except HTTPError:
+                except HTTPError as e:
                     logger.warning(
                         f"Retrying CorpusApiBackend._fetch_from_backend failed: {e}. "
                         f"Returning latest valid cached data."

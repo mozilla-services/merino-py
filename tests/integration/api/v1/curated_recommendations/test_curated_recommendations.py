@@ -501,8 +501,10 @@ class TestCorpusApiCaching:
 
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.asyncio
-    async def test_cache_returned_on_error(self, corpus_http_client, fixture_request_data, caplog):
-        """Test that the cache does not cache error data even if expired"""
+    async def test_valid_cache_returned_on_error(
+        self, corpus_http_client, fixture_request_data, caplog
+    ):
+        """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
             async with AsyncClient(app=app, base_url="http://test") as ac:
                 # First fetch to populate cache with good data
@@ -598,17 +600,19 @@ class TestCuratedRecommendationsMetrics:
                 request=fixture_request_data,
             )
 
-            with pytest.raises(HTTPStatusError):
-                await fetch_en_us(ac)
+            await fetch_en_us(ac)
 
             # TODO: Remove reliance on internal details of aiodogstatsd
             metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
-            assert metric_keys == [
-                "corpus_api.request.timing",
-                "corpus_api.request.status_codes.500",
-                "corpus_api.request.timing",
-                "corpus_api.request.status_codes.500",
-                "post.api.v1.curated-recommendations.timing",
-                "post.api.v1.curated-recommendations.status_codes.500",
-                "response.status_codes.500",
-            ]
+            assert (
+                metric_keys
+                == [
+                    "corpus_api.request.timing",
+                    "corpus_api.request.status_codes.500",
+                    "corpus_api.request.timing",
+                    "corpus_api.request.status_codes.500",
+                    "post.api.v1.curated-recommendations.timing",
+                    "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
+                    "response.status_codes.200",
+                ]
+            )
