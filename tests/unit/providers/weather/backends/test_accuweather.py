@@ -2287,6 +2287,49 @@ async def test_get_location_completion(
 
 
 @pytest.mark.asyncio
+async def test_get_location_completion_with_invalid_accuweather_response(
+    accuweather: AccuweatherBackend,
+    geolocation: Location,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Test that the get_location_completion method returns None
+    when the response json received by accuweather is of invalid shape
+    """
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    caplog.set_level(logging.WARN)
+
+    search_term = "new"
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            content=b"{}",  # response will be an empty object
+            request=Request(
+                method="GET",
+                url=(
+                    f"https://www.accuweather.com/locations/v1/"
+                    f"{geolocation.country}/autocomplete.json?apikey=test&q"
+                    f"={search_term}"
+                ),
+            ),
+        )
+    ]
+
+    location_completions: Optional[
+        list[LocationCompletion]
+    ] = await accuweather.get_location_completion(geolocation, search_term)
+
+    # assert below the correct warning is logged
+    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+
+    assert len(caplog.records) == 1
+    assert records[0].message.startswith("Invalid location completion response from Accuweather:")
+
+    # assert that None is returned from the function
+    assert location_completions is None
+
+
+@pytest.mark.asyncio
 async def test_get_location_completion_with_empty_search_term(
     accuweather: AccuweatherBackend,
     geolocation: Location,

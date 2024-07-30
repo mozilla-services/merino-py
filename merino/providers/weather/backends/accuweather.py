@@ -791,13 +791,22 @@ class AccuweatherBackend:
             logger.warning(f"Failed to get location completion from Accuweather: {exc}")
             return None
 
-        processed_location_completions = process_location_completion_response(response.json())
+        location_completion_response = response.json()
 
-        location_completions = [
-            LocationCompletion(**item) for item in processed_location_completions
-        ]
+        # if the accuweather request is successful but the response object shape is not valid
+        if location_completion_response is None or not isinstance(
+            location_completion_response, list
+        ):
+            logger.warning(
+                f"Invalid location completion response from Accuweather: {location_completion_response}"
+            )
+            return None
 
-        return location_completions
+        processed_location_completions = process_location_completion_response(
+            location_completion_response
+        )
+
+        return [LocationCompletion(**item) for item in processed_location_completions]
 
     async def check_cache_for_weather(self, cache_key) -> list[bytes | None]:
         """Get cached weather data."""
@@ -837,7 +846,7 @@ def add_partner_code(
         return url
 
 
-def process_location_completion_response(response: Any) -> list[dict[str, Any]]:
+def process_location_completion_response(response: list) -> list[dict[str, Any]]:
     """Process the API response for location completion request."""
     return [
         {
