@@ -16,12 +16,16 @@ from random import choice, randint
 from typing import Any
 
 import faker
-from elasticsearch import ApiError, Elasticsearch, ElasticsearchWarning, TransportError
 from locust import HttpUser, events, task
 from locust.exception import StopUser
 from locust.runners import MasterRunner
 from pydantic import BaseModel
 
+from merino.curated_recommendations.provider import (
+    Locale,
+    CuratedRecommendationsRequest,
+    CuratedRecommendationsResponse,
+)
 from merino.providers.adm.backends.protocol import SuggestionContent
 from merino.providers.adm.backends.remotesettings import (
     RemoteSettingsBackend,
@@ -34,11 +38,6 @@ from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 from merino.utils.version import Version
 from merino.web.models_v1 import SuggestResponse
 from tests.load.common.client_info import DESKTOP_FIREFOX, LOCALES
-from merino.curated_recommendations.provider import (
-    Locale,
-    CuratedRecommendationsRequest,
-    CuratedRecommendationsResponse,
-)
 
 # Type definitions
 KintoRecords = list[dict[str, Any]]
@@ -78,13 +77,6 @@ MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT: int = int(
 MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT: int = int(
     os.getenv("MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT", 0)
 )
-MERINO_PROVIDERS__WIKIPEDIA__ES_URL: str | None = os.getenv("MERINO_PROVIDERS__WIKIPEDIA__ES_URL")
-MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY: str | None = os.getenv(
-    "MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY"
-)
-MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX: str | None = os.getenv(
-    "MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX"
-)
 MERINO_REMOTE_SETTINGS__SERVER: str | None = os.getenv(
     "MERINO_REMOTE_SETTINGS__SERVER", os.getenv("KINTO__SERVER_URL")
 )
@@ -101,7 +93,6 @@ ADM_QUERIES: QueriesList = []
 AMO_QUERIES: list[str] = []
 IP_RANGES: IpRangeList = []
 TOP_PICKS_QUERIES: QueriesList = []
-WIKIPEDIA_QUERIES: list[str] = []
 
 
 @events.test_start.add_listener
@@ -133,26 +124,15 @@ def on_locust_test_start(environment, **kwargs) -> None:
 
         logger.info(f"Download {len(query_data.top_picks)} queries for Top Picks")
 
-        query_data.wikipedia = get_wikipedia_queries(
-            url=MERINO_PROVIDERS__WIKIPEDIA__ES_URL,
-            api_key=MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY,
-            index=MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX,
-        )
-
-        logger.info(f"Download {len(query_data.wikipedia)} queries for Wikipedia")
-
         query_data.ip_ranges = get_ip_ranges(
             ip_range_files=[CANADA_IP_ADDRESS_RANGES_GZIP, US_IP_ADDRESS_RANGES_GZIP]
         )
 
         logger.info(f"Download {len(query_data.ip_ranges)} IP ranges for X-Forward-For headers")
     except (
-        ApiError,
-        ElasticsearchWarning,
         OSError,
         RemoteSettingsError,
         TopPicksError,
-        TransportError,
         ValueError,
     ):
         logger.error("Failed to gather query data. Stopping Test!")
@@ -236,34 +216,6 @@ def get_top_picks_queries(
     return list(query_dict.values())
 
 
-def get_wikipedia_queries(url: str | None, api_key: str | None, index: str | None) -> list[str]:
-    """Get query strings for use in testing the Wikipedia Provider.
-
-    Args:
-        url: The URL for the Elasticsearch cluster
-        api_key: The base64 key used to authenticate on the Elasticsearch cluster
-        index: A comma-separated list of index names to search; use `_all` or empty
-               string to perform the operation on all indices
-    Returns:
-        List[str]: List of full query strings to use with the Wikipedia provider
-    Raises:
-        ApiError: Error triggered from an HTTP response that isn’t 2XX
-        TransportError: Error triggered by an error occurring before an HTTP response
-                        arrives
-        ElasticsearchWarning: Warning that is raised when a deprecated option or
-                              incorrect usage is flagged via the ‘Warning’ HTTP header
-    """
-    with Elasticsearch(url, api_key=api_key) as client:
-        response = client.search(index=index, size=10000)  # maximum size
-
-    query_list: list[str] = []
-    for hit in response["hits"]["hits"]:
-        full_query: str = hit["_source"]["title"]
-        query_list.append(full_query)
-
-    return query_list
-
-
 def get_ip_ranges(ip_range_files: list[str]) -> IpRangeList:
     """Get IP address ranges for use when testing with the 'X-Forwarded-For' headers.
 
@@ -295,14 +247,14 @@ def store_suggestions(environment, msg, **kwargs) -> None:
     AMO_QUERIES[:] = query_data.amo
     IP_RANGES[:] = query_data.ip_ranges
     TOP_PICKS_QUERIES[:] = query_data.top_picks
-    WIKIPEDIA_QUERIES[:] = query_data.wikipedia
 
 
 @events.init.add_listener
 def on_locust_init(environment, **kwargs):
     """Register a message on worker nodes."""
     if not isinstance(environment.runner, MasterRunner):
-        environment.runner.register_message("store_suggestions", store_suggestions)
+        if "store_suggestions" not in environment.runner.custom_messages:
+            environment.runner.register_message("store_suggestions", store_suggestions)
 
 
 class QueryData(BaseModel):
@@ -312,7 +264,6 @@ class QueryData(BaseModel):
     amo: list[str] = []
     ip_ranges: IpRangeList = []
     top_picks: QueriesList = []
-    wikipedia: list[str] = []
 
 
 class MerinoUser(HttpUser):
@@ -340,7 +291,6 @@ class MerinoUser(HttpUser):
             f"adm: {len(ADM_QUERIES)}, "
             f"amo: {len(AMO_QUERIES)}, "
             f"top picks: {len(TOP_PICKS_QUERIES)},"
-            f"wikipedia: {len(WIKIPEDIA_QUERIES)}"
         )
 
         return super().on_start()
@@ -368,16 +318,6 @@ class MerinoUser(HttpUser):
             self._request_suggestions(phrase[:i], providers)
 
     @task(weight=2)
-    def dynamic_wikipedia_suggestions(self) -> None:
-        """Send multiple requests for Dynamic Wikipedia queries."""
-        full_query: str = choice(WIKIPEDIA_QUERIES)  # nosec
-        providers: str = "wikipedia"
-
-        queries: list[str] = [full_query[:x] for x in range(2, (len(full_query) + 1))]
-        for query in queries:
-            self._request_suggestions(query, providers)
-
-    @task(weight=2)
     def faker_suggestions(self) -> None:
         """Send multiple requests for random queries."""
         # This produces a query between 2 and 4 random words
@@ -399,7 +339,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=495)
+    @task(weight=496)
     def weather_suggestions(self) -> None:
         """Send multiple requests for Weather queries."""
         # Firefox will do local keyword matching to trigger weather suggestions
@@ -412,7 +352,7 @@ class MerinoUser(HttpUser):
 
         self._request_suggestions(query, providers, headers)
 
-    @task(weight=495)
+    @task(weight=496)
     def curated_recommendations(self) -> None:
         """Send request to get curated recommendations."""
         self._request_recommendations(CuratedRecommendationsRequest(locale=choice(list(Locale))))

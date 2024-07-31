@@ -39,12 +39,6 @@ spec:
               value:
             - name: MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT
               value:
-            - name: MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY
-              value:
-            - name: MERINO_PROVIDERS__WIKIPEDIA__ES_URL
-              value:
-            - name: MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX
-              value:
           resources:
             # Forcing requests and limits to match to ensured pods run in Guaranteed QoS class
             # Using 1 core per worker based on recommendations from https://docs.locust.io/en/stable/running-distributed.html
