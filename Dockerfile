@@ -16,13 +16,13 @@ RUN poetry export --no-interaction --output requirements.txt --without-hashes
 FROM python:${PYTHON_VERSION}-slim AS app_base
 
 # Allow statements and log messages to immediately appear
-ENV PYTHONUNBUFFERED True
+ENV PYTHONUNBUFFERED=True
 
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Set app home
-ENV APP_HOME /app
+ENV APP_HOME=/app
 WORKDIR $APP_HOME
 
 RUN groupadd --gid 10001 app \
@@ -45,13 +45,13 @@ RUN apt-get update && \
   rm -rf /root/.cache
 
 # Create a build context that can be used for running merino jobs
-FROM app_base as job_runner
+FROM app_base AS job_runner
 
 ENTRYPOINT ["python", "-m", "merino.jobs.cli"]
 
 
 # Now create the final context that runs the web api.
-FROM app_base as web_api
+FROM app_base AS web_api
 
 EXPOSE 8000
 
