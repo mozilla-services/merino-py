@@ -242,6 +242,9 @@ Execute the `setup_k8s.sh` file and select the **delete** option
 
 ## Distributed GCP Execution - CI Trigger
 
+The load tests are triggered in CI via [Jenkins][jenkins_load_test], which has a command overriding
+the load test Dockerfile entrypoint.
+
 Follow the steps bellow to execute the distributed load tests on GCP with a CI trigger:
 
 ### Run Test Session
@@ -509,6 +512,7 @@ updating the following:
 [docker_compose]:https://github.com/mozilla-services/merino-py/blob/main/tests/load/docker-compose.yml
 [dockerfile]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/Dockerfile
 [grafana]: https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/merino-py-application-and-infrastructure?orgId=1&refresh=1m&var-environment=stagepy
+[jenkins_load_test]: https://github.com/mozilla-services/cloudops-infra/blob/master/projects/merino/Jenkinsfile-stage-py
 [kubernetes_panel]: https://console.cloud.google.com/kubernetes/list/overview?cloudshell=false&project=spheric-keel-331521
 [locust_environment_variables]: https://docs.locust.io/en/stable/configuration.html#environment-variables
 [locust_master_controller]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/kubernetes-config/locust-master-controller.yml

@@ -118,14 +118,14 @@ contract-tests-clean:  ##  Stop and remove containers and networks for contract 
 
 .PHONY: load-tests
 load-tests:  ##  Run local execution of (Locust) load tests
-	docker-compose \
+	docker compose \
       -f $(LOAD_TEST_DIR)/docker-compose.yml \
       -p merino-py-load-tests \
       up --scale locust_worker=1
 
 .PHONY: load-tests-clean
 load-tests-clean:  ##  Stop and remove containers and networks for load tests
-	docker-compose \
+	docker compose \
       -f $(LOAD_TEST_DIR)/docker-compose.yml \
       -p merino-py-load-tests \
       down
@@ -150,15 +150,15 @@ profile:  ## Profile Merino with Scalene
 
 .PHONY: docker-compose-up
 docker-compose-up:  ## Run `docker-compose up` in `./dev`
-	docker-compose -f dev/docker-compose.yaml up
+	docker compose -f dev/docker-compose.yaml up
 
 .PHONY: docker-compose-up-daemon
 docker-compose-up-daemon:  ## Run `docker-compose up -d` in `./dev`
-	docker-compose -f dev/docker-compose.yaml up -d
+	docker compose -f dev/docker-compose.yaml up -d
 
 .PHONY: docker-compose-down
 docker-compose-down:  ## Run `docker-compose down` in `./dev`
-	docker-compose -f dev/docker-compose.yaml down
+	docker compose -f dev/docker-compose.yaml down
 
 .PHONY: help
 help:
