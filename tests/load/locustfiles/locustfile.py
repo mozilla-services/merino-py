@@ -12,7 +12,7 @@ import os
 import socket
 import struct
 from itertools import chain
-from random import choice, randint
+from random import choice, randint, sample
 from typing import Any
 
 import faker
@@ -95,7 +95,6 @@ MERINO_REMOTE_SETTINGS__BUCKET: str | None = os.getenv(
 MERINO_REMOTE_SETTINGS__COLLECTION: str | None = os.getenv(
     "MERINO_REMOTE_SETTINGS__COLLECTION", os.getenv("KINTO__COLLECTION")
 )
-
 
 # This will be populated on each worker
 ADM_QUERIES: QueriesList = []
@@ -415,16 +414,19 @@ class MerinoUser(HttpUser):
 
     @task(weight=495)
     def curated_recommendations_locale(self) -> None:
-        """Send request to get curated recommendations, specifying random locale."""
+        """Send request to get curated recommendations, specifying random locale & 0 topics."""
         self._request_recommendations(CuratedRecommendationsRequest(locale=choice(list(Locale))))
 
     @task(weight=495)
-    def curated_recommendations_topics(self) -> None:
-        """Send request to get curated recommendations, specifying random topics."""
+    def curated_recommendations_random_topics(self) -> None:
+        """Send request to get curated recommendations with a random number of topics (between 1 & 4(max))."""
+        num_topics = randint(1, 4)  # Randomly choose between 1 and 4 topics
         self._request_recommendations(
             CuratedRecommendationsRequest(
                 locale=choice(list(Locale)),
-                topics=self.generate_random_arr_from_enum(enum_class=Topic, end_range=15),
+                topics=self.generate_random_arr_from_enum(
+                    enum_values=list(Topic), array_length=num_topics
+                ),
             )
         )
 
@@ -461,15 +463,9 @@ class MerinoUser(HttpUser):
             CuratedRecommendationsResponse(**response.json())
 
     @staticmethod
-    def generate_random_arr_from_enum(enum_class, end_range: int):
-        """Generate an array of random enum values."""
-        # Get all possible values of the enum
-        enum_values = list(enum_class)
-        # Generate a random length for the array
-        array_length = randint(a=1, b=end_range)
-        # Create an array with random values from the enum
-        random_enum_array = [choice(enum_values) for _ in range(array_length)]
-        return random_enum_array
+    def generate_random_arr_from_enum(enum_values, array_length: int):
+        """Generate an array of random unique enum values."""
+        return sample(enum_values, array_length)
 
     @staticmethod
     def _get_ip_from_range(begin_ip_address: str, end_ip_address: str) -> str:
