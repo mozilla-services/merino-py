@@ -368,7 +368,7 @@ class TestCorpusApiCaching:
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.parametrize("error_type", ["graphql", "http"])
     @pytest.mark.asyncio
-    async def test_single_request_multiple_failed_fetches_with_graphql_error(
+    async def test_single_request_multiple_failed_fetches(
         self,
         corpus_http_client,
         fixture_request_data,
@@ -377,7 +377,9 @@ class TestCorpusApiCaching:
         caplog,
         error_type,
     ):
-        """Test that if the backend returns a GraphQL error, it is handled correctly."""
+        """Test that only a few requests are made to the curated-corpus-api when it is down.
+        Additionally, test that if the backend returns a GraphQL error, it is handled correctly.
+        """
         async with AsyncClient(app=app, base_url="http://test") as ac:
             start_time = datetime.now()
 
@@ -414,68 +416,21 @@ class TestCorpusApiCaching:
 
             # Assert that we did not send a lot of requests to the backend
             # call_count is 400+ for me locally when CorpusApiBackend._backoff_time is changed to 0.
-            assert corpus_http_client.post.call_count == 2
-
-            # Assert that a warning was logged with a descriptive message.
-            warnings = [r for r in caplog.records if r.levelname == "WARNING"]
-            assert len(warnings) == 1
-            if error_type == "graphql":
-                # Assert the contents of the GraphQL error was logged.
-                assert (
-                    'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX".'
-                ) in warnings[0].message
-            elif error_type == "http":
-                # Assert that a warning was logged with a descriptive message.
-                assert (
-                    "Retrying CorpusApiBackend._fetch_from_backend once after "
-                    "Server error '503 Service Unavailable'"
-                ) in warnings[0].message
-
-    @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
-    @pytest.mark.asyncio
-    async def test_single_request_multiple_failed_fetches(
-        self, corpus_http_client, fixture_request_data, fixture_response_data, caplog
-    ):
-        """Test that only a few requests are made to the curated-corpus-api when it is down."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            start_time = datetime.now()
-
-            def temporary_downtime(*args, **kwargs):
-                # Simulate the backend being unavailable for 0.2 seconds.
-                if datetime.now() < start_time + timedelta(seconds=0.2):
-                    return Response(status_code=503, request=fixture_request_data)
-                else:
-                    return Response(
-                        status_code=200,
-                        json=fixture_response_data,
-                        request=fixture_request_data,
-                    )
-
-            corpus_http_client.post = AsyncMock(side_effect=temporary_downtime)
-
-            # Hit the endpoint until a 200 response is received.
-            while datetime.now() < start_time + timedelta(seconds=1):
-                try:
-                    result = await fetch_en_us(ac)
-                    if result.status_code == 200:
-                        break
-                except HTTPStatusError:
-                    pass
-
-            assert result.status_code == 200
-
-            # Assert that we did not send a lot of requests to the backend
-            # call_count is 400+ for me locally when CorpusApiBackend._backoff_time is changed to 0.
             print("call_count", corpus_http_client.post.call_count)
             assert corpus_http_client.post.call_count == 2
 
             # Assert that a warning was logged with a descriptive message.
             warnings = [r for r in caplog.records if r.levelname == "WARNING"]
             assert len(warnings) == 1
-            assert (
-                "Retrying CorpusApiBackend._fetch_from_backend once after "
-                "Server error '503 Service Unavailable'"
-            ) in warnings[0].message
+            if error_type == "graphql":
+                assert (
+                    'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX".'
+                ) in warnings[0].message
+            elif error_type == "http":
+                assert (
+                    "Retrying CorpusApiBackend._fetch_from_backend once after "
+                    "Server error '503 Service Unavailable'"
+                ) in warnings[0].message
 
     @pytest.mark.asyncio
     async def test_cache_returned_on_subsequent_calls(
