@@ -204,14 +204,14 @@ repository root:</p>
 <li>In a browser navigate to <code>http://localhost:8089/</code></li>
 <li>Set up the load test parameters:
 <ul>
-<li>Option 1: Select the <code>MerinoLoadTestShape</code>
+<li>Option 1: Select the <code>MerinoSmokeLoadTestShape</code> or <code>MerinoAverageLoadTestShape</code>
 <ul>
-<li>This option has pre-defined settings and will last 10 minutes</li>
+<li>These options have pre-defined settings</li>
 </ul>
 </li>
 <li>Option 2: Select the <code>Default</code> load test shape with the following recommended settings:
 <ul>
-<li>Number of users: 35</li>
+<li>Number of users: 25</li>
 <li>Spawn rate: 1</li>
 <li>Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
 <ul>
@@ -384,6 +384,8 @@ spreadsheet</li>
 <pre><code class="language-shell">./tests/load/setup_k8s.sh
 </code></pre>
 <h2 id="distributed-gcp-execution---ci-trigger"><a class="header" href="#distributed-gcp-execution---ci-trigger">Distributed GCP Execution - CI Trigger</a></h2>
+<p>The load tests are triggered in CI via <a href="https://github.com/mozilla-services/cloudops-infra/blob/master/projects/merino/Jenkinsfile-stage-py">Jenkins</a>, which has a command overriding
+the load test Dockerfile entrypoint.</p>
 <p>Follow the steps bellow to execute the distributed load tests on GCP with a CI trigger:</p>
 <h3 id="run-test-session-2"><a class="header" href="#run-test-session-2">Run Test Session</a></h3>
 <h4 id="1-execute-load-test"><a class="header" href="#1-execute-load-test">1. Execute Load Test</a></h4>
