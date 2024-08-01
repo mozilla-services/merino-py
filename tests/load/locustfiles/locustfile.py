@@ -412,12 +412,12 @@ class MerinoUser(HttpUser):
 
         self._request_suggestions(query, providers, headers)
 
-    @task(weight=495)
+    @task(weight=421)
     def curated_recommendations_locale(self) -> None:
         """Send request to get curated recommendations, specifying random locale & 0 topics."""
         self._request_recommendations(CuratedRecommendationsRequest(locale=choice(list(Locale))))
 
-    @task(weight=495)
+    @task(weight=74)
     def curated_recommendations_random_topics(self) -> None:
         """Send request to get curated recommendations with a random number of topics (between 1 & 4(max))."""
         num_topics = randint(1, 4)  # Randomly choose between 1 and 4 topics
