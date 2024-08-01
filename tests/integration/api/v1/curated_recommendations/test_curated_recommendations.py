@@ -488,9 +488,9 @@ class TestCorpusApiCaching:
                 ) in warnings[0].message
             elif error_type == "http":
                 assert (
-                           "Retrying CorpusApiBackend._fetch_from_backend once after "
-                           "Server error '503 Service Unavailable'"
-                       ) in warnings[0].message
+                    "Retrying CorpusApiBackend._fetch_from_backend once after "
+                    "Server error '503 Service Unavailable'"
+                ) in warnings[0].message
                 assert ("Returning latest valid cached data.") in warnings[1].message
 
     @pytest.mark.asyncio
