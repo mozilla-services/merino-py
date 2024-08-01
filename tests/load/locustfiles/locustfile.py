@@ -22,6 +22,7 @@ from locust.exception import StopUser
 from locust.runners import MasterRunner
 from pydantic import BaseModel
 
+from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.providers.adm.backends.protocol import SuggestionContent
 from merino.providers.adm.backends.remotesettings import (
     RemoteSettingsBackend,
@@ -413,9 +414,19 @@ class MerinoUser(HttpUser):
         self._request_suggestions(query, providers, headers)
 
     @task(weight=495)
-    def curated_recommendations(self) -> None:
-        """Send request to get curated recommendations."""
+    def curated_recommendations_locale(self) -> None:
+        """Send request to get curated recommendations, specifying random locale."""
         self._request_recommendations(CuratedRecommendationsRequest(locale=choice(list(Locale))))
+
+    @task(weight=495)
+    def curated_recommendations_topics(self) -> None:
+        """Send request to get curated recommendations, specifying random topics."""
+        self._request_recommendations(
+            CuratedRecommendationsRequest(
+                locale=choice(list(Locale)),
+                topics=self.generate_random_arr_from_enum(enum_class=Topic, end_range=15),
+            )
+        )
 
     def _request_recommendations(self, data: CuratedRecommendationsRequest) -> None:
         """Request recommendations from Merino for the given data.
@@ -448,6 +459,17 @@ class MerinoUser(HttpUser):
             # from Merino. This will raise a ValidationError if the response is missing
             # fields which will be reported as a failure in Locust's statistics.
             CuratedRecommendationsResponse(**response.json())
+
+    @staticmethod
+    def generate_random_arr_from_enum(enum_class, end_range: int):
+        """Generate an array of random enum values."""
+        # Get all possible values of the enum
+        enum_values = list(enum_class)
+        # Generate a random length for the array
+        array_length = randint(a=1, b=end_range)
+        # Create an array with random values from the enum
+        random_enum_array = [choice(enum_values) for _ in range(array_length)]
+        return random_enum_array
 
     @staticmethod
     def _get_ip_from_range(begin_ip_address: str, end_ip_address: str) -> str:
