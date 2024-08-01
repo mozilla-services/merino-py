@@ -41,4 +41,4 @@ COPY ./tests/load/locustfiles ./tests/load/locustfiles
 EXPOSE 8089 5557
 
 USER locust
-ENTRYPOINT ["locust", "-f", "tests/load/locustfiles/locustfile.py,tests/load/locustfiles/load.py"]
+ENTRYPOINT ["locust", "-f", "tests/load/locustfiles/locustfile.py,tests/load/locustfiles/smoke_load.py"]

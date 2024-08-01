@@ -27,6 +27,7 @@ class Location(BaseModel):
     country_name: Optional[str] = None
     region: Optional[str] = None
     region_name: Optional[str] = None
+    alternative_regions: Optional[list[str]] = None
     city: Optional[str] = None
     dma: Optional[int] = None
     postal_code: Optional[str] = None
@@ -74,6 +75,13 @@ class GeolocationMiddleware:
                 country_name=record.country.names.get("en"),
                 region=record.subdivisions.most_specific.iso_code,
                 region_name=record.subdivisions.most_specific.names.get("en"),
+                # `record.subdivisions` should be always present,
+                #  as a result, the type of `alternative_regions` should be `list[str]`
+                alternative_regions=[
+                    s.iso_code
+                    for s in record.subdivisions
+                    if s != record.subdivisions.most_specific
+                ],
                 city=normalize_string(city) if (city := record.city.names.get("en")) else None,
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,

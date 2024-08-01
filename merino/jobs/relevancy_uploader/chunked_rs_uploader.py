@@ -51,10 +51,8 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
         count = 0
         for record in self.kinto.get_records():
             record_details = record.get("record_custom_details", {})
-            if (
-                record_details.get("category_code") == self.category_code
-                and record_details.get("version") == self.version
-            ):
+            cat_to_domains_details = record_details.get("category_to_domains", {})
+            if cat_to_domains_details.get("version") == self.version:
                 logger.info(f"Deleting record: {record['id']}")
                 if not self.dry_run:
                     self.kinto.delete_record(id=record["id"])

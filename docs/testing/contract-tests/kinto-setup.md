@@ -56,5 +56,5 @@ within a Python virtual environment to prevent dependency cross contamination.
     python tests/contract/kinto-setup/main.py
     ```
 
-[contract_tests_readme]: ./contract-tests.md
+[contract_tests_docs]: ./index.md
 [dependencies]: ../../dev/dependencies.md

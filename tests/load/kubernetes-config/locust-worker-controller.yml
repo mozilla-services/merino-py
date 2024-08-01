@@ -45,3 +45,12 @@ spec:
               value:
             - name: MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX
               value:
+          resources:
+            # Forcing requests and limits to match to ensured pods run in Guaranteed QoS class
+            # Using 1 core per worker based on recommendations from https://docs.locust.io/en/stable/running-distributed.html
+            limits:
+              cpu: 1
+              memory: 2Gi
+            requests:
+              cpu: 1
+              memory: 2Gi

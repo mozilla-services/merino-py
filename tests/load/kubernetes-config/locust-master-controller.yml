@@ -22,17 +22,13 @@ spec:
               value: "true"
             - name: LOCUST_USERCLASS_PICKER
               value: "true"
+            - name: LOCUST_MODERN_UI
+              value: "true"
             - name: TARGET_HOST
               value:
             - name: LOCUST_CSV
               value:
             - name: LOCUST_HOST
-              value:
-            - name: LOCUST_USERS
-              value:
-            - name: LOCUST_SPAWN_RATE
-              value:
-            - name: LOCUST_RUN_TIME
               value:
             - name: LOAD_TESTS__LOGGING_LEVEL
               # The logging level value 20 defines the 'info' level
@@ -65,3 +61,11 @@ spec:
             - name: loc-master-p2
               containerPort: 5558
               protocol: TCP
+          resources:
+            # Should match https://github.com/mozilla-services/cloudops-infra/blob/master/projects/merino/k8s/charts/locust/values.yaml
+            limits:
+              cpu: 2
+              memory: 2Gi
+            requests:
+              cpu: 1
+              memory: 1Gi

@@ -1,12 +1,14 @@
 """Provider for curated recommendations on New Tab."""
 
+import hashlib
 import time
 import re
 
 from copy import copy
 from enum import Enum, unique
+from typing import Annotated
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
@@ -51,11 +53,43 @@ class Locale(str, Enum):
         return Locale._value2member_map_
 
 
+# Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
+# value of a Javascript number can be found using `Number.MAX_SAFE_INTEGER`. which is 2^53 - 1
+# because it uses a 64-bit IEEE 754 float.
+MAX_TILE_ID = (1 << 53) - 1
+# Generate tile_ids well out of the range of the old MySQL-based system, which has a max tile_id of
+# 99,999 as of 2023-03-13. This is done to make it easy for engineers/analysts to see which system
+# generated the identifier.
+MIN_TILE_ID = 10000000
+
+
 class CuratedRecommendation(CorpusItem):
     """Extends CorpusItem with additional fields for a curated recommendation"""
 
     __typename: TypeName = TypeName.RECOMMENDATION
+    tileId: Annotated[int, Field(strict=True, ge=MIN_TILE_ID, le=MAX_TILE_ID)]
     receivedRank: int
+
+    @model_validator(mode="before")
+    def set_tileId(cls, values):
+        """Set the tileId field automatically."""
+        scheduled_corpus_item_id = values.get("scheduledCorpusItemId")
+
+        if scheduled_corpus_item_id and "tileId" not in values:
+            values["tileId"] = cls._integer_hash(
+                scheduled_corpus_item_id, MIN_TILE_ID, MAX_TILE_ID
+            )
+
+        return values
+
+    @staticmethod
+    def _integer_hash(s: str, start: int, stop: int) -> int:
+        """:param s: String to be hashed.
+        :param start: Minimum integer to be returned.
+        :param stop: Integer that is greater than start. Maximum return value is stop - 1.
+        :return: Integer hash of s in the range [start, stop)
+        """
+        return start + (int(hashlib.sha256(s.encode("utf-8")).hexdigest(), 16) % (stop - start))
 
 
 class CuratedRecommendationsRequest(BaseModel):
@@ -187,6 +221,55 @@ class CuratedRecommendationsProvider:
 
         return result_recs
 
+    @staticmethod
+    def is_boostable(
+        recs: list[CuratedRecommendation], preferred_topics: list[Topic], num_of_recs: int = 2
+    ) -> bool:
+        """Check if top 2 recommendations already have the preferred topics.
+        This will indicate if recs need boosting.
+
+        :param recs: List of recommendations
+        :param preferred_topics: user's preferred topic(s)
+        :param num_of_recs: get the first num of recs when slicing
+        :return: bool
+        """
+        top_two_recs = recs[:num_of_recs]  # slice operator, get the first two recs (index 0 & 1)
+        # check if topics in first two (0-1 index) recs are in preferred_topics
+        if not any(r.topic in preferred_topics for r in top_two_recs):
+            return True
+        return False
+
+    @staticmethod
+    def boost_preferred_topic(
+        recs: list[CuratedRecommendation],
+        preferred_topics: list[Topic],
+        boostable_slot: int = 1,
+    ) -> list[CuratedRecommendation]:
+        """Boost a recommendation based on preferred topic(s) into `boostable_slot`.
+
+        :param recs: List of recommendations from which an item is boosted based on preferred topic(s).
+        :param preferred_topics: user's preferred topic(s)
+        :param boostable_slot: 0-based slot to boost an item into. Defaults to slot 1,
+        which is the second recommendation.
+        :return: CuratedRecommendations ranked based on a preferred topic, while otherwise preserving the order.
+        """
+        # get the first item found to boost based on the below condition starting after the boostable_slot in the list.
+        # condition for boostable item: check if an item has a topic in the preferred_topics list.
+        boostable_rec = next(
+            (r for r in recs[boostable_slot + 1 :] if r.topic in preferred_topics),
+            None,
+        )
+
+        # if item to boost is found
+        if boostable_rec:
+            recs = copy(recs)  # Create a shallow copy of recs
+            recs.remove(boostable_rec)  # remove the item to boost from list of recs
+            recs.insert(
+                boostable_slot, boostable_rec
+            )  # insert it into the boostable_slot (2nd rec)
+
+        return recs
+
     async def fetch(
         self, curated_recommendations_request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:  # noqa
@@ -207,10 +290,16 @@ class CuratedRecommendationsProvider:
             for rank, item in enumerate(corpus_items)
         ]
 
-        # Perform publisher spread on the recommendation set
-        recommendations = CuratedRecommendationsProvider.spread_publishers(
-            recommendations, spread_distance=3
-        )
+        # 2. Perform publisher spread on the recommendation set
+        recommendations = self.spread_publishers(recommendations, spread_distance=3)
+
+        # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
+        if curated_recommendations_request.topics:
+            # Check if recs need boosting
+            if self.is_boostable(recommendations, curated_recommendations_request.topics):
+                recommendations = self.boost_preferred_topic(
+                    recommendations, curated_recommendations_request.topics
+                )
 
         return CuratedRecommendationsResponse(
             recommendedAt=self.time_ms(),

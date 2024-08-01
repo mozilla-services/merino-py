@@ -204,9 +204,14 @@ enabled_by_default = false
 score = 0.3
 
 # MERINO_PROVIDERS__ACCUWEATHER__QUERY_TIMEOUT_SEC
-# A floating  point (in seconds) indicating the maximum waiting period when Merino queries
+# A floating point (in seconds) indicating the maximum waiting period when Merino queries
 # for weather forecasts. This will override the default global query timeout.
 query_timeout_sec = 5.0
+
+# MERINO_PROVIDERS__ACCUWEATHER__CONNECT_TIMEOUT_SEC
+# A floating point (in seconds) indicating the maximum waiting period for the
+# accuweather backend http client to establish a connection to the host.
+connect_timeout_sec = 3.0
 
 
 # MERINO_REDIS__SERVER - redis.server (Currently not configured here)
@@ -274,8 +279,11 @@ url_postalcodes_path = "/locations/v1/postalcodes/{country_code}/search.json"
 url_postalcodes_param_query = "q"
 
 # MERINO_ACCUWEATHER__URL_CITIES_PATH
-# The URL path for cities
-url_cities_path = "/locations/v1/cities/{country_code}/{admin_code}/search.json"
+# The URL path for cities using country and admin code
+url_cities_admin_path = "/locations/v1/cities/{country_code}/{admin_code}/search.json"
+
+# The URL path for cities using country code
+url_cities_path = "/locations/v1/cities/{country_code}/search.json"
 
 # MERINO_ACCUWEATHER__URL_CITIES_PARAM_QUERY
 # The query parameter for cities

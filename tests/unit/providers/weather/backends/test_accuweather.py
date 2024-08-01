@@ -177,7 +177,8 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "metrics_client": statsd_mock,
         "http_client": mocker.AsyncMock(spec=AsyncClient),
         "url_param_api_key": "apikey",
-        "url_cities_path": "/locations/v1/cities/{country_code}/{admin_code}/search.json",
+        "url_cities_admin_path": "/locations/v1/cities/{country_code}/{admin_code}/search.json",
+        "url_cities_path": "locations/v1/cities/{country_code}/search.json",
         "url_cities_param_query": "q",
         "url_current_conditions_path": "/currentconditions/v1/{location_key}.json",
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
@@ -302,7 +303,14 @@ def fixture_accuweather(
 @pytest.fixture(name="geolocation")
 def fixture_geolocation() -> Location:
     """Create a Location object for test."""
-    return Location(country="US", region="CA", city="San Francisco", dma=807, postal_code="94105")
+    return Location(
+        country="US",
+        region="CA",
+        city="San Francisco",
+        dma=807,
+        postal_code="94105",
+        alternative_regions=["BC"],
+    )
 
 
 @pytest.fixture(name="accuweather_location_response")
@@ -880,6 +888,420 @@ async def test_get_weather_report(
 
 
 @pytest.mark.asyncio
+async def test_get_weather_report_with_alternative_region(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    expected_weather_report: WeatherReport,
+    geolocation: Location,
+    accuweather_location_response: bytes,
+    accuweather_current_conditions_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
+    response_header: dict[str, str],
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Test that the get_weather_report method returns a WeatherReport using alternate region."""
+    caplog.set_level(logging.WARN)
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=b"[]",
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "apikey=test&q=94105"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_location_response,
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/BC/search.json?"
+                    "apikey=test&q=94105"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_current_conditions_response,
+            request=Request(
+                method="GET",
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_forecast_response_fahrenheit,
+            request=Request(
+                method="GET",
+                url=(
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
+                ),
+            ),
+        ),
+    ]
+
+    # This request flow hits the store_request_into_cache method that returns the ttl. Mocking
+    # that call to return the default weather report ttl
+    mocker.patch(
+        "merino.providers.weather.backends.accuweather.AccuweatherBackend"
+        ".store_request_into_cache"
+    ).return_value = TEST_CACHE_TTL_SEC
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
+
+    assert report == expected_weather_report
+
+    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+
+    assert len(caplog.records) == 1
+    assert records[0].message.startswith("Alternative region used: US/BC/San Francisco")
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_with_fallback_city_endpoint(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    geolocation: Location,
+    accuweather_location_response: bytes,
+    accuweather_current_conditions_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
+    response_header: dict[str, str],
+    expected_weather_report: WeatherReport,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Test that the get_weather_report method returns a WeatherReport using alternate region."""
+    caplog.set_level(logging.WARN)
+
+    location_response_for_fallback = [
+        {
+            "Version": 1,
+            "Key": "39376",
+            "Type": "City",
+            "Rank": 35,
+            "LocalizedName": "San Francisco",
+            "EnglishName": "San Francisco",
+            "PrimaryPostalCode": "94105",
+            "Region": {
+                "ID": "NAM",
+                "LocalizedName": "North America",
+                "EnglishName": "North America",
+            },
+            "Country": {
+                "ID": "US",
+                "LocalizedName": "United States",
+                "EnglishName": "United States",
+            },
+            "AdministrativeArea": {
+                "ID": "CA",
+                "LocalizedName": "California",
+                "EnglishName": "California",
+                "Level": 1,
+                "LocalizedType": "State",
+                "EnglishType": "State",
+                "CountryID": "US",
+            },
+            "TimeZone": {
+                "Code": "PDT",
+                "Name": "America/Los_Angeles",
+                "GmtOffset": -7.0,
+                "IsDaylightSaving": True,
+                "NextOffsetChange": "2022-11-06T09:00:00Z",
+            },
+            "GeoPosition": {
+                "Latitude": 37.792,
+                "Longitude": -122.392,
+                "Elevation": {
+                    "Metric": {"Value": 19.0, "Unit": "m", "UnitType": 5},
+                    "Imperial": {"Value": 62.0, "Unit": "ft", "UnitType": 0},
+                },
+            },
+            "IsAlias": False,
+            "ParentCity": {
+                "Key": "347629",
+                "LocalizedName": "San Francisco",
+                "EnglishName": "San Francisco",
+            },
+            "SupplementalAdminAreas": [
+                {
+                    "Level": 2,
+                    "LocalizedName": "San Francisco",
+                    "EnglishName": "San Francisco",
+                }
+            ],
+            "DataSets": [
+                "AirQualityCurrentConditions",
+                "AirQualityForecasts",
+                "Alerts",
+                "DailyAirQualityForecast",
+                "DailyPollenForecast",
+                "ForecastConfidence",
+                "FutureRadar",
+                "MinuteCast",
+                "Radar",
+            ],
+        },
+    ]
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=b"[]",
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "apikey=test&q=SanFrancisco"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=b"[]",
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/BC/search.json?"
+                    "apikey=test&q=SanFrancisco"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=json.dumps(location_response_for_fallback).encode("utf-8"),
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/search.json?"
+                    "apikey=test&q=SanFrancisco"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_current_conditions_response,
+            request=Request(
+                method="GET",
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_forecast_response_fahrenheit,
+            request=Request(
+                method="GET",
+                url=(
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
+                ),
+            ),
+        ),
+    ]
+
+    # This request flow hits the store_request_into_cache method that returns the ttl. Mocking
+    # that call to return the default weather report ttl
+    mocker.patch(
+        "merino.providers.weather.backends.accuweather.AccuweatherBackend"
+        ".store_request_into_cache"
+    ).return_value = TEST_CACHE_TTL_SEC
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
+
+    assert report == expected_weather_report
+
+    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+
+    assert len(caplog.records) == 1
+    assert records[0].message.startswith(
+        "Using fallback country only endpoint after trying US/San Francisco/CA, alt regions:['BC']"
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_with_fallback_city_endpoint_returns_none(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    geolocation: Location,
+    accuweather_location_response: bytes,
+    accuweather_current_conditions_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
+    response_header: dict[str, str],
+    expected_weather_report: WeatherReport,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Test that the get_weather_report method returns nothing when multiple locations in response."""
+    caplog.set_level(logging.WARN)
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=b"[]",
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "apikey=test&q=SanFrancisco"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=b"[]",
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/BC/search.json?"
+                    "apikey=test&q=SanFrancisco"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_location_response,
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/search.json?"
+                    "apikey=test&q=SanFrancisco"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_current_conditions_response,
+            request=Request(
+                method="GET",
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_forecast_response_fahrenheit,
+            request=Request(
+                method="GET",
+                url=(
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
+                ),
+            ),
+        ),
+    ]
+
+    # This request flow hits the store_request_into_cache method that returns the ttl. Mocking
+    # that call to return the default weather report ttl
+    mocker.patch(
+        "merino.providers.weather.backends.accuweather.AccuweatherBackend"
+        ".store_request_into_cache"
+    ).return_value = TEST_CACHE_TTL_SEC
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
+
+    assert report is None
+
+    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+
+    assert len(caplog.records) == 2
+    assert records[0].message.startswith(
+        "Using fallback country only endpoint after trying US/San Francisco/CA, alt regions:['BC']"
+    )
+    assert records[1].message.startswith("Unable to find location for US/San Francisco")
+
+
+@pytest.mark.asyncio
+async def test_get_weather_report_with_fallback_city_endpoint_with_no_location(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    geolocation: Location,
+    response_header: dict[str, str],
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Test that the get_weather_report method returns a WeatherReport using alternate region."""
+    caplog.set_level(logging.WARN)
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=b"[]",
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "apikey=test&q=SanFrancisco"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=b"[]",
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/BC/search.json?"
+                    "apikey=test&q=SanFrancisco"
+                ),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=b"[]",
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/search.json?"
+                    "apikey=test&q=SanFrancisco"
+                ),
+            ),
+        ),
+    ]
+
+    # This request flow hits the store_request_into_cache method that returns the ttl. Mocking
+    # that call to return the default weather report ttl
+    mocker.patch(
+        "merino.providers.weather.backends.accuweather.AccuweatherBackend"
+        ".store_request_into_cache"
+    ).return_value = TEST_CACHE_TTL_SEC
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
+
+    assert report is None
+
+    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+
+    assert len(caplog.records) == 2
+    assert records[0].message.startswith(
+        "Using fallback country only endpoint after trying US/San Francisco/CA, alt regions:['BC']"
+    )
+    assert records[1].message.startswith("Unable to find location for US/San Francisco")
+
+
+@pytest.mark.asyncio
 async def test_get_weather_report_with_location_key(
     mocker: MockerFixture,
     accuweather: AccuweatherBackend,
@@ -1146,8 +1568,10 @@ async def test_get_weather_report_failed_forecast_query(
 @pytest.mark.parametrize(
     "location",
     [
-        Location(country="US", region="CA", dma=807),
-        Location(region="CA", city="San Francisco", dma=807, postal_code="94105"),
+        Location(country="US", region="CA", dma=807, alternative_regions=[]),
+        Location(
+            region="CA", city="San Francisco", dma=807, postal_code="94105", alternative_regions=[]
+        ),
     ],
     ids=["country", "city"],
 )
@@ -1242,7 +1666,7 @@ async def test_get_location_error(accuweather: AccuweatherBackend) -> None:
     """Test that the get_location method raises an appropriate exception in the event
     of an AccuWeather API error.
     """
-    expected_error_value: str = "Unexpected location response"
+    expected_error_value: str = "Unexpected location response from: /locations/v1/cities/US/San Francisco/search.json, city: CA"
     country: str = "US"
     region: str = "CA"
     city: str = "San Francisco"
@@ -1860,6 +2284,49 @@ async def test_get_location_completion(
     ] = await accuweather.get_location_completion(geolocation, search_term)
 
     assert location_completions == expected_location_completion
+
+
+@pytest.mark.asyncio
+async def test_get_location_completion_with_invalid_accuweather_response(
+    accuweather: AccuweatherBackend,
+    geolocation: Location,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Test that the get_location_completion method returns None
+    when the response json received by accuweather is of invalid shape
+    """
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    caplog.set_level(logging.WARN)
+
+    search_term = "new"
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            content=b"{}",  # response will be an empty object
+            request=Request(
+                method="GET",
+                url=(
+                    f"https://www.accuweather.com/locations/v1/"
+                    f"{geolocation.country}/autocomplete.json?apikey=test&q"
+                    f"={search_term}"
+                ),
+            ),
+        )
+    ]
+
+    location_completions: Optional[
+        list[LocationCompletion]
+    ] = await accuweather.get_location_completion(geolocation, search_term)
+
+    # assert below the correct warning is logged
+    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+
+    assert len(caplog.records) == 1
+    assert records[0].message.startswith("Invalid location completion response from Accuweather:")
+
+    # assert that None is returned from the function
+    assert location_completions is None
 
 
 @pytest.mark.asyncio

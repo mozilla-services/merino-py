@@ -4,11 +4,13 @@
 
 """Load test shape module."""
 
+import os
 from typing import Type
 
 from locust import LoadTestShape, User
-from locustfile import MerinoUser
 from pydantic import BaseModel
+
+from locustfile import MerinoUser
 
 TickTuple = tuple[int, float, list[Type[User]] | None]
 
@@ -22,11 +24,23 @@ class ShapeStage(BaseModel):
     user_classes: list[Type[User]] = [MerinoUser]
 
 
-class MerinoLoadTestShape(LoadTestShape):
-    """A load test shape class for Merino (Duration: 10 minutes, Users: 35)."""
+class MerinoSmokeLoadTestShape(LoadTestShape):
+    """A load test shape class for Merino (Duration: 10 minutes, Users: 35).
+
+    The smoke load test verifies the system's performance under minimal load.
+    The test is run for a short period, possibly in CD, to ensure the system is working correctly.
+
+    Note: The Shape class assumes that the workers can support the generated spawn rates. Should
+    the number of available Locust workers change or should the Locust worker capacity change,
+    the WORKERS_COUNT and USERS_PER_WORKER values must be changed respectively.
+    """
 
     RUN_TIME: int = 600  # 10 minutes (must not be set to less than 1 minute)
-    USERS = 35
+    # Must match value defined in setup_k8s.sh
+    WORKER_COUNT: int = int(os.environ.get("WORKER_COUNT", 5))
+    # Number of users supported on a worker running on a n1-standard-2
+    USERS_PER_WORKER: int = int(os.environ.get("USERS_PER_WORKER", 6))
+    USERS: int = WORKER_COUNT * USERS_PER_WORKER
 
     stages: list[ShapeStage]
 
