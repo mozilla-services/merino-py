@@ -415,7 +415,9 @@ class MerinoUser(HttpUser):
     @task(weight=421)
     def curated_recommendations_locale(self) -> None:
         """Send request to get curated recommendations, specifying random locale & 0 topics."""
-        self._request_recommendations(CuratedRecommendationsRequest(locale=choice(list(Locale))), "locale")
+        self._request_recommendations(
+            CuratedRecommendationsRequest(locale=choice(list(Locale))), "locale"
+        )
 
     @task(weight=74)
     def curated_recommendations_random_topics(self) -> None:
@@ -428,10 +430,14 @@ class MerinoUser(HttpUser):
                     enum_values=list(Topic), array_length=num_topics
                 ),
             ),
-            "topics"
+            "topics",
         )
 
-    def _request_recommendations(self, data: CuratedRecommendationsRequest, query_param: str | None = None,) -> None:
+    def _request_recommendations(
+        self,
+        data: CuratedRecommendationsRequest,
+        query_param: str | None = None,
+    ) -> None:
         """Request recommendations from Merino for the given data.
 
         Args:
