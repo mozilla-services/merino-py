@@ -415,7 +415,7 @@ class MerinoUser(HttpUser):
     @task(weight=421)
     def curated_recommendations_locale(self) -> None:
         """Send request to get curated recommendations, specifying random locale & 0 topics."""
-        self._request_recommendations(CuratedRecommendationsRequest(locale=choice(list(Locale))))
+        self._request_recommendations(CuratedRecommendationsRequest(locale=choice(list(Locale))), "locale")
 
     @task(weight=74)
     def curated_recommendations_random_topics(self) -> None:
@@ -427,20 +427,23 @@ class MerinoUser(HttpUser):
                 topics=self.generate_random_arr_from_enum(
                     enum_values=list(Topic), array_length=num_topics
                 ),
-            )
+            ),
+            "topics"
         )
 
-    def _request_recommendations(self, data: CuratedRecommendationsRequest) -> None:
+    def _request_recommendations(self, data: CuratedRecommendationsRequest, query_param: str | None = None,) -> None:
         """Request recommendations from Merino for the given data.
 
         Args:
             data: CuratedRecommendationsRequest object containing request data
+            query_param: query param passed in body request
         """
         with self.client.post(
             url=CURATED_RECOMMENDATIONS_API,
             json=data.model_dump(),
             headers={"User-Agent": choice(DESKTOP_FIREFOX)},
             catch_response=True,
+            name=f"{CURATED_RECOMMENDATIONS_API}{(f'?{query_param}' if query_param else '')}",
         ) as response:
             if response.status_code == 0:
                 # Do not classify as failure
