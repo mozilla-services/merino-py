@@ -75,10 +75,10 @@ repository root:
 
 * In a browser navigate to `http://localhost:8089/`
 * Set up the load test parameters:
-    * Option 1: Select the `MerinoLoadTestShape`
-      * This option has pre-defined settings and will last 10 minutes
+    * Option 1: Select the `MerinoSmokeLoadTestShape` or `MerinoAverageLoadTestShape`
+      * These options have pre-defined settings
     * Option 2: Select the `Default` load test shape with the following recommended settings:
-      * Number of users: 35
+      * Number of users: 25
       * Spawn rate: 1
       * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
         * Set host to 'http://host.docker.internal:8000' to test against a local instance of Merino
@@ -241,6 +241,9 @@ Execute the `setup_k8s.sh` file and select the **delete** option
 ```
 
 ## Distributed GCP Execution - CI Trigger
+
+The load tests are triggered in CI via [Jenkins][jenkins_load_test], which has a command overriding
+the load test Dockerfile entrypoint.
 
 Follow the steps bellow to execute the distributed load tests on GCP with a CI trigger:
 
@@ -509,6 +512,7 @@ updating the following:
 [docker_compose]:https://github.com/mozilla-services/merino-py/blob/main/tests/load/docker-compose.yml
 [dockerfile]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/Dockerfile
 [grafana]: https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/merino-py-application-and-infrastructure?orgId=1&refresh=1m&var-environment=stagepy
+[jenkins_load_test]: https://github.com/mozilla-services/cloudops-infra/blob/master/projects/merino/Jenkinsfile-stage-py
 [kubernetes_panel]: https://console.cloud.google.com/kubernetes/list/overview?cloudshell=false&project=spheric-keel-331521
 [locust_environment_variables]: https://docs.locust.io/en/stable/configuration.html#environment-variables
 [locust_master_controller]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/kubernetes-config/locust-master-controller.yml
