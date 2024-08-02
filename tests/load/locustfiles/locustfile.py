@@ -449,7 +449,7 @@ class MerinoUser(HttpUser):
             json=data.model_dump(),
             headers={"User-Agent": choice(DESKTOP_FIREFOX)},
             catch_response=True,
-            name=f"{CURATED_RECOMMENDATIONS_API}{(f'?{query_param}' if query_param else '')}",
+            name=f"{CURATED_RECOMMENDATIONS_API}{(f'?query_param={query_param}' if query_param else '')}",
         ) as response:
             if response.status_code == 0:
                 # Do not classify as failure
