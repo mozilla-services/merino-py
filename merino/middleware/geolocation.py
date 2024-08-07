@@ -25,8 +25,8 @@ class Location(BaseModel):
 
     country: Optional[str] = None
     country_name: Optional[str] = None
-    region: Optional[str] = None
-    region_name: Optional[str] = None
+    regions: Optional[list[str]] = []
+    region_names: Optional[list[str]] = []
     alternative_regions: Optional[list[str]] = None
     city: Optional[str] = None
     dma: Optional[int] = None
@@ -37,6 +37,22 @@ class Location(BaseModel):
 def normalize_string(input_str) -> str:
     """Normalize string with special characters."""
     return unicodedata.normalize("NFKD", input_str).encode("ascii", "ignore").decode("ascii")
+
+
+def get_regions(subdivisions) -> list[str]:
+    """Get all the iso_codes from subdivisions."""
+    return [
+        subdivisions.most_specific.iso_code,
+        *[s.iso_code for s in subdivisions if s != subdivisions.most_specific],
+    ]
+
+
+def get_region_names(subdivisions) -> list[str]:
+    """Get all the regiion names from subdivisions."""
+    return [
+        subdivisions.most_specific.names.get("en"),
+        *[s.names.get("en") for s in subdivisions if s != subdivisions.most_specific],
+    ]
 
 
 class GeolocationMiddleware:
@@ -73,15 +89,8 @@ class GeolocationMiddleware:
             Location(
                 country=record.country.iso_code,
                 country_name=record.country.names.get("en"),
-                region=record.subdivisions.most_specific.iso_code,
-                region_name=record.subdivisions.most_specific.names.get("en"),
-                # `record.subdivisions` should be always present,
-                #  as a result, the type of `alternative_regions` should be `list[str]`
-                alternative_regions=[
-                    s.iso_code
-                    for s in record.subdivisions
-                    if s != record.subdivisions.most_specific
-                ],
+                regions=get_regions(record.subdivisions) if record.subdivisions else [],
+                region_names=get_region_names(record.subdivisions) if record.subdivisions else [],
                 city=normalize_string(city) if (city := record.city.names.get("en")) else None,
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,

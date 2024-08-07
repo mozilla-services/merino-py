@@ -21,9 +21,8 @@ def fixture_geolocation() -> Location:
     return Location(
         country="US",
         country_name="United States",
-        region="CA",
-        region_name="California",
-        alternative_regions=[],
+        regions=["CA"],
+        region_names=["California"],
         city="San Francisco",
         dma=807,
         postal_code="94105",
@@ -36,8 +35,8 @@ def fixture_empty_region() -> Location:
     return Location(
         country="US",
         country_name="United States",
-        region=None,
-        region_name=None,
+        regions=None,
+        region_names=None,
         city="San Francisco",
         dma=807,
         postal_code="94105",

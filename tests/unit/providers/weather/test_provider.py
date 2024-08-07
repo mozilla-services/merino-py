@@ -31,7 +31,7 @@ def fixture_geolocation() -> Location:
     """Return a test Location."""
     return Location(
         country="US",
-        region="CA",
+        regions=["CA"],
         city="San Francisco",
         dma=807,
         postal_code="94105",
