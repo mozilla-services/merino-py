@@ -153,7 +153,6 @@ def fixture_geolocation() -> Location:
         city="San Francisco",
         dma=807,
         postal_code="94105",
-        alternative_regions=["BC"],
     )
 
 
