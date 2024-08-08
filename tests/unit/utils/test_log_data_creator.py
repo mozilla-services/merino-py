@@ -116,7 +116,7 @@ def test_create_suggest_log_data(
     """
     location: Location = Location(
         country="US",
-        region="WA",
+        regions=["WA"],
         city="Milton",
         dma=819,
         postal_code="98354",
@@ -139,7 +139,7 @@ def test_create_suggest_log_data(
         client_variants=expected_client_variants,
         requested_providers=expected_providers,
         country=location.country,
-        region=location.region,
+        region=location.regions[0] if location.regions else None,
         city=location.city,
         dma=location.dma,
         browser=user_agent.browser,

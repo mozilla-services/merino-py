@@ -305,11 +305,10 @@ def fixture_geolocation() -> Location:
     """Create a Location object for test."""
     return Location(
         country="US",
-        region="CA",
+        regions=["CA", "BC"],
         city="San Francisco",
         dma=807,
         postal_code="94105",
-        alternative_regions=["BC"],
     )
 
 
@@ -1129,7 +1128,7 @@ async def test_get_weather_report_with_fallback_city_endpoint(
 
     assert len(caplog.records) == 1
     assert records[0].message.startswith(
-        "Using fallback country only endpoint after trying US/San Francisco/CA, alt regions:['BC']"
+        "Using fallback country only endpoint after trying US/San Francisco/['CA', 'BC']"
     )
 
 
@@ -1224,7 +1223,7 @@ async def test_get_weather_report_with_fallback_city_endpoint_returns_none(
 
     assert len(caplog.records) == 2
     assert records[0].message.startswith(
-        "Using fallback country only endpoint after trying US/San Francisco/CA, alt regions:['BC']"
+        "Using fallback country only endpoint after trying US/San Francisco/['CA', 'BC']"
     )
     assert records[1].message.startswith("Unable to find location for US/San Francisco")
 
@@ -1296,7 +1295,7 @@ async def test_get_weather_report_with_fallback_city_endpoint_with_no_location(
 
     assert len(caplog.records) == 2
     assert records[0].message.startswith(
-        "Using fallback country only endpoint after trying US/San Francisco/CA, alt regions:['BC']"
+        "Using fallback country only endpoint after trying US/San Francisco/['CA', 'BC']"
     )
     assert records[1].message.startswith("Unable to find location for US/San Francisco")
 
@@ -1568,9 +1567,16 @@ async def test_get_weather_report_failed_forecast_query(
 @pytest.mark.parametrize(
     "location",
     [
-        Location(country="US", region="CA", dma=807, alternative_regions=[]),
         Location(
-            region="CA", city="San Francisco", dma=807, postal_code="94105", alternative_regions=[]
+            country="US",
+            regions=["CA"],
+            dma=807,
+        ),
+        Location(
+            regions=["CA"],
+            city="San Francisco",
+            dma=807,
+            postal_code="94105",
         ),
     ],
     ids=["country", "city"],

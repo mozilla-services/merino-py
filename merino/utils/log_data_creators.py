@@ -100,7 +100,7 @@ def create_suggest_log_data(
         requested_providers=request.query_params.get("providers", ""),
         # Location Data
         country=location.country,
-        region=location.region,
+        region=location.regions[0] if location.regions else None,
         city=location.city,
         dma=location.dma,
         # User Agent Data

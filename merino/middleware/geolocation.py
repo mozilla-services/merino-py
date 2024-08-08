@@ -25,8 +25,8 @@ class Location(BaseModel):
 
     country: Optional[str] = None
     country_name: Optional[str] = None
-    region: Optional[str] = None
-    region_name: Optional[str] = None
+    regions: Optional[list[str]] = None
+    region_names: Optional[list[str]] = None
     alternative_regions: Optional[list[str]] = None
     city: Optional[str] = None
     dma: Optional[int] = None
@@ -37,6 +37,16 @@ class Location(BaseModel):
 def normalize_string(input_str) -> str:
     """Normalize string with special characters."""
     return unicodedata.normalize("NFKD", input_str).encode("ascii", "ignore").decode("ascii")
+
+
+def get_regions(subdivisions) -> Optional[list[str]]:
+    """Get all the iso_codes from subdivisions."""
+    return [s.iso_code for s in reversed(subdivisions)] or None
+
+
+def get_region_names(subdivisions) -> Optional[list[str]]:
+    """Get all the region names from subdivisions."""
+    return [s.names.get("en") for s in reversed(subdivisions)] or None
 
 
 class GeolocationMiddleware:
@@ -73,15 +83,8 @@ class GeolocationMiddleware:
             Location(
                 country=record.country.iso_code,
                 country_name=record.country.names.get("en"),
-                region=record.subdivisions.most_specific.iso_code,
-                region_name=record.subdivisions.most_specific.names.get("en"),
-                # `record.subdivisions` should be always present,
-                #  as a result, the type of `alternative_regions` should be `list[str]`
-                alternative_regions=[
-                    s.iso_code
-                    for s in record.subdivisions
-                    if s != record.subdivisions.most_specific
-                ],
+                regions=get_regions(record.subdivisions),
+                region_names=get_region_names(record.subdivisions),
                 city=normalize_string(city) if (city := record.city.names.get("en")) else None,
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,

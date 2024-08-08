@@ -503,20 +503,14 @@ class AccuweatherBackend:
             AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
         """
         country: str | None = geolocation.country
-        region: str | None = geolocation.region
-        alternative_regions: list[str] = (
-            geolocation.alternative_regions if geolocation.alternative_regions else []
-        )
+        regions: list[str] | None = geolocation.regions
         city: str | None = geolocation.city
 
-        if not country or not region or not city:
+        if not country or not regions or not city:
             self.metrics_client.increment("accuweather.request.location.not_provided")
             return None
         try:
-            for subdivision in [
-                region,
-                *alternative_regions,
-            ]:
+            for subdivision in regions:
                 cache_key: str = self.cache_key_for_accuweather_request(
                     self.url_cities_admin_path.format(
                         country_code=country, admin_code=subdivision
@@ -545,9 +539,7 @@ class AccuweatherBackend:
         self.emit_cache_fetch_metrics(cached_data)
         cached_report = self.parse_cached_data(cached_data)
 
-        geolocation = Location(
-            country=country, city=city, region=region, alternative_regions=alternative_regions
-        )
+        geolocation = Location(country=country, city=city, regions=regions)
         return await self.make_weather_report(cached_report, geolocation)
 
     async def make_weather_report(
@@ -560,10 +552,7 @@ class AccuweatherBackend:
         """
         country = geolocation.country
         city = geolocation.city
-        region = geolocation.region
-        alternative_regions = (
-            geolocation.alternative_regions if geolocation.alternative_regions else []
-        )
+        regions = geolocation.regions
         location_key = geolocation.key
 
         async def as_awaitable(val: Any) -> Any:
@@ -589,21 +578,18 @@ class AccuweatherBackend:
 
         # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
-            if country and city and region:
-                for subdivision in [
-                    region,
-                    *alternative_regions,
-                ]:
+            if country and city and regions:
+                for subdivision in regions:
                     location = await self.get_location_by_geolocation(country, city, subdivision)
                     if location is not None:
-                        if subdivision != region:
+                        if subdivision != regions[0]:
                             logger.warning(
                                 f"Alternative region used: {country}/{subdivision}/{city}"
                             )
                         break
                 if location is None:
                     logger.warning(
-                        f"Using fallback country only endpoint after trying {country}/{city}/{region}, alt regions:{alternative_regions}"
+                        f"Using fallback country only endpoint after trying {country}/{city}/{regions}"
                     )
                     location = await self.get_location_by_geolocation(country, city)
             if location is None:

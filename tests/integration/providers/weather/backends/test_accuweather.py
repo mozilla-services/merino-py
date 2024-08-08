@@ -149,7 +149,7 @@ def fixture_geolocation() -> Location:
     """Create a Location object for test."""
     return Location(
         country="US",
-        region="CA",
+        regions=["CA"],
         city="San Francisco",
         dma=807,
         postal_code="94105",
@@ -340,7 +340,8 @@ def generate_accuweather_cache_keys(
 
     location_key: str = accuweather.cache_key_for_accuweather_request(
         accuweather.url_cities_admin_path.format(
-            country_code=geolocation.country, admin_code=geolocation.region
+            country_code=geolocation.country,
+            admin_code=geolocation.regions[0] if geolocation.regions else None,
         ),
         query_params=accuweather.get_location_key_query_params(geolocation.city),
     )
