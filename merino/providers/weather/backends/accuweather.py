@@ -101,7 +101,7 @@ LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
         local forecast_ttl = redis.call("TTL", forecast_key)
         ttl = math.min(current_conditions_ttl, forecast_ttl)
     end
-    
+
     return {current_conditions, forecast, ttl}
 """
 SCRIPT_LOCATION_KEY_ID = "bulk_fetch_by_location_key"
@@ -510,11 +510,9 @@ class AccuweatherBackend:
             self.metrics_client.increment("accuweather.request.location.not_provided")
             return None
         try:
-            for subdivision in regions:
+            for region in regions:
                 cache_key: str = self.cache_key_for_accuweather_request(
-                    self.url_cities_admin_path.format(
-                        country_code=country, admin_code=subdivision
-                    ),
+                    self.url_cities_admin_path.format(country_code=country, admin_code=region),
                     query_params=self.get_location_key_query_params(city),
                 )
                 # Look up for all the weather data from the cache.
@@ -579,13 +577,11 @@ class AccuweatherBackend:
         # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
             if country and city and regions:
-                for subdivision in regions:
-                    location = await self.get_location_by_geolocation(country, city, subdivision)
+                for region in regions:
+                    location = await self.get_location_by_geolocation(country, city, region)
                     if location is not None:
-                        if subdivision != regions[0]:
-                            logger.warning(
-                                f"Alternative region used: {country}/{subdivision}/{city}"
-                            )
+                        if region != regions[0]:
+                            logger.warning(f"Alternative region used: {country}/{region}/{city}")
                         break
                 if location is None:
                     logger.warning(

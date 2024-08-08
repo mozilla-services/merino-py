@@ -27,7 +27,6 @@ class Location(BaseModel):
     country_name: Optional[str] = None
     regions: Optional[list[str]] = None
     region_names: Optional[list[str]] = None
-    alternative_regions: Optional[list[str]] = None
     city: Optional[str] = None
     dma: Optional[int] = None
     postal_code: Optional[str] = None

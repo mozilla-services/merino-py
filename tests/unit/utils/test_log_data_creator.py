@@ -120,7 +120,6 @@ def test_create_suggest_log_data(
         city="Milton",
         dma=819,
         postal_code="98354",
-        alternative_regions=[],
     )
     user_agent: UserAgent = UserAgent(
         browser="Firefox(103.0)", os_family="macos", form_factor="desktop"
