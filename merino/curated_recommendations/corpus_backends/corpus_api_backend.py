@@ -17,6 +17,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
 )
 from merino.utils.version import fetch_app_version_from_file
+from merino.exceptions import BackendError
 
 logger = logging.getLogger(__name__)
 
@@ -243,6 +244,10 @@ class CorpusApiBackend(CorpusBackend):
         res.raise_for_status()
         data = res.json()
 
+        # log to Sentry if GraphQL returned errors
+        if res.status_code == 200 and "errors" in data:
+            raise BackendError(f"curated-corpus-api returned GraphQL error(s) {data["errors"]}")
+
         # get the utm_source based on scheduled surface id
         utm_source = self.get_utm_source(surface_id)
 
@@ -260,6 +265,7 @@ class CorpusApiBackend(CorpusBackend):
             CorpusItem(**item["corpusItem"], scheduledCorpusItemId=item["id"])
             for item in data["data"]["scheduledSurface"]["items"]
         ]
+
         return curated_recommendations
 
     async def _revalidate_cache(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
@@ -281,7 +287,7 @@ class CorpusApiBackend(CorpusBackend):
             try:
                 data = await self.retry_fetch(surface_id, cache_key)
                 return data
-            except (HTTPError, ValueError) as e:
+            except (BackendError, HTTPError, ValueError) as e:
                 logger.warning(
                     f"Exception occurred on first attempt to fetch: "
                     f"Retrying CorpusApiBackend._fetch_from_backend once after {e}"
@@ -291,7 +297,7 @@ class CorpusApiBackend(CorpusBackend):
                 try:
                     data = await self.retry_fetch(surface_id, cache_key)
                     return data
-                except (HTTPError, ValueError) as e:
+                except (BackendError, HTTPError, ValueError) as e:
                     logger.warning(
                         f"Retrying CorpusApiBackend._fetch_from_backend failed: {e}. "
                         f"Returning latest valid cached data."
