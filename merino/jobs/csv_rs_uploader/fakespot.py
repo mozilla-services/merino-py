@@ -20,6 +20,8 @@ class Suggestion(RowMajorBaseSuggestion):
     product_id: str
     rating: float
     title: str
+    product_type: str
+    keywords: str
     total_reviews: int
     url: HttpUrl
     score: float
@@ -55,6 +57,8 @@ class Suggestion(RowMajorBaseSuggestion):
             "product_id": "product_id",
             "rating": "rating",
             "title": "title",
+            "product_type": "product_type",
+            "keywords": "keywords",
             "total_reviews": "total_reviews",
             "url": "url",
             "score": "score",
