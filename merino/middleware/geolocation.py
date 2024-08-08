@@ -25,8 +25,8 @@ class Location(BaseModel):
 
     country: Optional[str] = None
     country_name: Optional[str] = None
-    regions: Optional[list[str]] = []
-    region_names: Optional[list[str]] = []
+    regions: Optional[list[str]] = None
+    region_names: Optional[list[str]] = None
     alternative_regions: Optional[list[str]] = None
     city: Optional[str] = None
     dma: Optional[int] = None
@@ -39,20 +39,14 @@ def normalize_string(input_str) -> str:
     return unicodedata.normalize("NFKD", input_str).encode("ascii", "ignore").decode("ascii")
 
 
-def get_regions(subdivisions) -> list[str]:
+def get_regions(subdivisions) -> Optional[list[str]]:
     """Get all the iso_codes from subdivisions."""
-    return [
-        subdivisions.most_specific.iso_code,
-        *[s.iso_code for s in subdivisions if s != subdivisions.most_specific],
-    ]
+    return [s.iso_code for s in reversed(subdivisions)] or None
 
 
-def get_region_names(subdivisions) -> list[str]:
-    """Get all the regiion names from subdivisions."""
-    return [
-        subdivisions.most_specific.names.get("en"),
-        *[s.names.get("en") for s in subdivisions if s != subdivisions.most_specific],
-    ]
+def get_region_names(subdivisions) -> Optional[list[str]]:
+    """Get all the region names from subdivisions."""
+    return [s.names.get("en") for s in reversed(subdivisions)] or None
 
 
 class GeolocationMiddleware:
@@ -89,8 +83,8 @@ class GeolocationMiddleware:
             Location(
                 country=record.country.iso_code,
                 country_name=record.country.names.get("en"),
-                regions=get_regions(record.subdivisions) if record.subdivisions else [],
-                region_names=get_region_names(record.subdivisions) if record.subdivisions else [],
+                regions=get_regions(record.subdivisions),
+                region_names=get_region_names(record.subdivisions),
                 city=normalize_string(city) if (city := record.city.names.get("en")) else None,
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,
