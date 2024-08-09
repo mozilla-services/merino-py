@@ -838,7 +838,7 @@ async def test_get_weather_report_with_location_key_with_cache_error(
 
     report = await accuweather.get_weather_report(geolocation, ACCUWEATHER_LOCATION_KEY)
     records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.providers.weather.backends.accuweather"
+        caplog.records, "merino.providers.weather.backends.accuweather.backend"
     )
 
     client_mock.get.assert_not_called()

@@ -962,7 +962,9 @@ async def test_get_weather_report_with_alternative_region(
 
     assert report == expected_weather_report
 
-    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+    records = filter_caplog(
+        caplog.records, "merino.providers.weather.backends.accuweather.backend"
+    )
 
     assert len(caplog.records) == 1
     assert records[0].message.startswith("Alternative region used: US/BC/San Francisco")
@@ -1125,7 +1127,9 @@ async def test_get_weather_report_with_fallback_city_endpoint(
 
     assert report == expected_weather_report
 
-    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+    records = filter_caplog(
+        caplog.records, "merino.providers.weather.backends.accuweather.backend"
+    )
 
     assert len(caplog.records) == 1
     assert records[0].message.startswith(
@@ -1220,7 +1224,9 @@ async def test_get_weather_report_with_fallback_city_endpoint_returns_none(
 
     assert report is None
 
-    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+    records = filter_caplog(
+        caplog.records, "merino.providers.weather.backends.accuweather.backend"
+    )
 
     assert len(caplog.records) == 2
     assert records[0].message.startswith(
@@ -1292,7 +1298,9 @@ async def test_get_weather_report_with_fallback_city_endpoint_with_no_location(
 
     assert report is None
 
-    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+    records = filter_caplog(
+        caplog.records, "merino.providers.weather.backends.accuweather.backend"
+    )
 
     assert len(caplog.records) == 2
     assert records[0].message.startswith(
@@ -1386,7 +1394,9 @@ async def test_get_weather_report_with_cache_fetch_error(
     metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
     assert metrics_called == ["accuweather.cache.fetch.error"]
 
-    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+    records = filter_caplog(
+        caplog.records, "merino.providers.weather.backends.accuweather.backend"
+    )
 
     assert len(caplog.records) == 1
     assert records[0].message.startswith("Failed to fetch weather report from Redis:")
@@ -2325,7 +2335,9 @@ def test_parse_cached_data_error(
     metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
     assert metrics_called == ["accuweather.cache.data.error"]
 
-    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+    records = filter_caplog(
+        caplog.records, "merino.providers.weather.backends.accuweather.backend"
+    )
 
     assert len(caplog.records) == 1
     assert records[0].message.startswith("Failed to load weather report data from Redis:")
@@ -2398,7 +2410,9 @@ async def test_get_location_completion_with_invalid_accuweather_response(
     ] = await accuweather.get_location_completion(geolocation, search_term)
 
     # assert below the correct warning is logged
-    records = filter_caplog(caplog.records, "merino.providers.weather.backends.accuweather")
+    records = filter_caplog(
+        caplog.records, "merino.providers.weather.backends.accuweather.backend"
+    )
 
     assert len(caplog.records) == 1
     assert records[0].message.startswith("Invalid location completion response from Accuweather:")
