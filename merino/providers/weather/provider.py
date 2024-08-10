@@ -10,10 +10,10 @@ from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import CustomDetails, WeatherDetails
-from merino.providers.weather.backends.accuweather import LocationCompletion
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    LocationCompletion,
     WeatherBackend,
     WeatherReport,
 )

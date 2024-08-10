@@ -25,6 +25,8 @@ from merino.providers.weather.backends.protocol import (
     Temperature,
     WeatherReport,
 )
+from merino.providers.weather.backends.accuweather import pathfinder
+
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +116,17 @@ ALIAS_PARAM: str = "alias"
 ALIAS_PARAM_VALUE: str = "always"
 LOCATION_COMPLETE_ALIAS_PARAM: str = "includealiases"
 LOCATION_COMPLETE_ALIAS_PARAM_VALUE: str = "true"
+
+__all__ = [
+    "AccuweatherBackend",
+    "AccuweatherError",
+    "AccuweatherLocation",
+    "CurrentConditionsWithTTL",
+    "ForecastWithTTL",
+    "WeatherData",
+    "WeatherDataType",
+    "add_partner_code",
+]
 
 
 class AccuweatherLocation(BaseModel):
@@ -491,6 +504,38 @@ class AccuweatherBackend:
         location = Location(key=location_key)
         return await self.make_weather_report(cached_report, location)
 
+    async def _fetch_from_cache(
+        self, country: str | None, region: str | None, city: str | None
+    ) -> list[bytes | None] | None:
+        """Fetch weather data from cache."""
+        if country is None or city is None:
+            return None
+
+        cache_key: str
+        if region is not None:
+            cache_key = self.cache_key_for_accuweather_request(
+                self.url_cities_admin_path.format(country_code=country, admin_code=region),
+                query_params=self.get_location_key_query_params(city),
+            )
+        else:
+            cache_key = self.cache_key_for_accuweather_request(
+                self.url_cities_path.format(country_code=country),
+                query_params=self.get_location_key_query_params(city),
+            )
+
+        with self.metrics_client.timeit("accuweather.cache.fetch"):
+            cached_data: list = await self.cache.run_script(
+                sid=SCRIPT_ID,
+                keys=[cache_key],
+                # The order matters below. See `LUA_SCRIPT_CACHE_BULK_FETCH` for details.
+                args=[
+                    self.cache_key_template(WeatherDataType.CURRENT_CONDITIONS),
+                    self.cache_key_template(WeatherDataType.FORECAST),
+                    self.url_location_key_placeholder,
+                ],
+            )
+            return cached_data
+
     async def get_weather_report_with_geolocation(
         self, geolocation: Location
     ) -> WeatherReport | None:
@@ -508,41 +553,23 @@ class AccuweatherBackend:
             AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
         """
         country: str | None = geolocation.country
-        regions: list[str] | None = geolocation.regions
         city: str | None = geolocation.city
 
-        if not country or not regions or not city:
+        if country is None or city is None:
             self.metrics_client.increment("accuweather.request.location.not_provided")
             return None
+
         try:
-            for region in regions:
-                cache_key: str = self.cache_key_for_accuweather_request(
-                    self.url_cities_admin_path.format(country_code=country, admin_code=region),
-                    query_params=self.get_location_key_query_params(city),
-                )
-                # Look up for all the weather data from the cache.
-                cached_data = await self.check_cache_for_weather(cache_key)
-
-                if cached_data:
-                    break
-
-            # cycling through alternative regions returns nothing, retry using just country code
-            if not cached_data:
-                country_only_cache_key: str = self.cache_key_for_accuweather_request(
-                    self.url_cities_path.format(country_code=country),
-                    query_params=self.get_location_key_query_params(city),
-                )
-                cached_data = await self.check_cache_for_weather(country_only_cache_key)
-
+            cached_data = await pathfinder.explore(geolocation, self._fetch_from_cache)
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.fetch.error")
             return None
 
+        cached_data = cached_data if cached_data is not None else []
         self.emit_cache_fetch_metrics(cached_data)
         cached_report = self.parse_cached_data(cached_data)
 
-        geolocation = Location(country=country, city=city, regions=regions)
         return await self.make_weather_report(cached_report, geolocation)
 
     async def make_weather_report(
@@ -555,7 +582,6 @@ class AccuweatherBackend:
         """
         country = geolocation.country
         city = geolocation.city
-        regions = geolocation.regions
         location_key = geolocation.key
 
         async def as_awaitable(val: Any) -> Any:
@@ -581,18 +607,11 @@ class AccuweatherBackend:
 
         # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
-            if country and city and regions:
-                for region in regions:
-                    location = await self.get_location_by_geolocation(country, city, region)
-                    if location is not None:
-                        if region != regions[0]:
-                            logger.warning(f"Alternative region used: {country}/{region}/{city}")
-                        break
-                if location is None:
-                    logger.warning(
-                        f"Using fallback country only endpoint after trying {country}/{city}/{regions}"
-                    )
-                    location = await self.get_location_by_geolocation(country, city)
+            try:
+                location = await pathfinder.explore(geolocation, self.get_location_by_geolocation)
+            except AccuweatherError as exc:
+                logger.warning(f"{exc}")
+
             if location is None:
                 logger.warning(f"Unable to find location for {country}/{city}")
                 return None
@@ -640,7 +659,7 @@ class AccuweatherBackend:
             return None
 
     async def get_location_by_geolocation(
-        self, country: str, city: str, region: str | None = None
+        self, country: str | None, region: str | None, city: str | None
     ) -> AccuweatherLocation | None:
         """Return location data for a specific country and city or None if
         location data is not found.
@@ -650,11 +669,13 @@ class AccuweatherBackend:
         Reference:
             https://developer.accuweather.com/accuweather-locations-api/apis/get/locations/v1/cities/{countryCode}/{adminCode}/search
         """
+        if country is None or city is None:
+            return None
+
         if region:
             url_path = self.url_cities_admin_path.format(country_code=country, admin_code=region)
             processor = process_location_response_with_country_and_region
             log_failure = False
-
         else:
             url_path = self.url_cities_path.format(country_code=country)
             processor = process_location_response_with_country
@@ -816,21 +837,6 @@ class AccuweatherBackend:
         )
 
         return [LocationCompletion(**item) for item in processed_location_completions]
-
-    async def check_cache_for_weather(self, cache_key) -> list[bytes | None]:
-        """Get cached weather data."""
-        with self.metrics_client.timeit("accuweather.cache.fetch"):
-            cached_data: list = await self.cache.run_script(
-                sid=SCRIPT_ID,
-                keys=[cache_key],
-                # The order matters below. See `LUA_SCRIPT_CACHE_BULK_FETCH` for details.
-                args=[
-                    self.cache_key_template(WeatherDataType.CURRENT_CONDITIONS),
-                    self.cache_key_template(WeatherDataType.FORECAST),
-                    self.url_location_key_placeholder,
-                ],
-            )
-            return cached_data
 
     async def shutdown(self) -> None:
         """Close out the cache during shutdown."""
