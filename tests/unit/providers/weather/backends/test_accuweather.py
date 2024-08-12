@@ -30,6 +30,9 @@ from merino.providers.weather.backends.accuweather import (
     AccuweatherLocation,
     CurrentConditionsWithTTL,
     ForecastWithTTL,
+)
+from merino.providers.weather.backends.accuweather.utils import (
+    RequestType,
     add_partner_code,
 )
 from merino.providers.weather.backends.protocol import (
@@ -2159,23 +2162,23 @@ def test_cache_key_for_accuweather_request(
 
 
 @pytest.mark.parametrize(
-    ("url", "expected_url_type"),
+    ("url", "expected_request_type"),
     [
-        ("/forecasts/v1/daily/1day/39376.json", "forecasts"),
+        ("/forecasts/v1/daily/1day/39376.json", RequestType.FORCASTS),
         (
             "/currentconditions/v1/39376.json",
-            "currentconditions",
+            RequestType.CURRENT_CONDITIONS,
         ),
     ],
     ids=["cache_miss", "deserialization_error"],
 )
 @freezegun.freeze_time("2023-04-09")
 @pytest.mark.asyncio
-async def test_get_request_cache_get_errors(
+async def test_request_upstream_cache_get_errors(
     mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     url: str,
-    expected_url_type: str,
+    expected_request_type: RequestType,
     statsd_mock: Any,
 ):
     """Test for cache errors/misses. Ensures that the right metrics are
@@ -2195,9 +2198,10 @@ async def test_get_request_cache_get_errors(
         ),
     )
 
-    results: Optional[dict[str, Any]] = await accuweather.get_request(
+    results: Optional[dict[str, Any]] = await accuweather.request_upstream(
         url,
         {"apikey": "test"},
+        expected_request_type,
         lambda a: cast(Optional[dict[str, Any]], a),
         TEST_CACHE_TTL_SEC,
     )
@@ -2206,7 +2210,7 @@ async def test_get_request_cache_get_errors(
 
     timeit_metrics_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
     assert [
-        f"accuweather.request.{expected_url_type}.get",
+        f"accuweather.request.{expected_request_type}.get",
         "accuweather.cache.store",
     ] == timeit_metrics_called
 
@@ -2247,9 +2251,10 @@ async def test_get_request_cache_store_errors(
     )
 
     with pytest.raises(AccuweatherError):
-        await accuweather.get_request(
+        await accuweather.request_upstream(
             url,
             params={"apikey": "test"},
+            request_type=RequestType.FORCASTS,
             process_api_response=lambda a: cast(Optional[dict[str, Any]], a),
             cache_ttl_sec=TEST_CACHE_TTL_SEC,
         )
@@ -2485,14 +2490,12 @@ async def test_get_location_completion(
 async def test_get_location_completion_with_invalid_accuweather_response(
     accuweather: AccuweatherBackend,
     geolocation: Location,
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
+    statsd_mock: Any,
 ) -> None:
     """Test that the get_location_completion method returns None
     when the response json received by accuweather is of invalid shape
     """
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
-    caplog.set_level(logging.WARN)
 
     search_term = "new"
     client_mock.get.side_effect = [
@@ -2514,13 +2517,10 @@ async def test_get_location_completion_with_invalid_accuweather_response(
         list[LocationCompletion]
     ] = await accuweather.get_location_completion(geolocation, search_term)
 
-    # assert below the correct warning is logged
-    records = filter_caplog(
-        caplog.records, "merino.providers.weather.backends.accuweather.backend"
-    )
-
-    assert len(caplog.records) == 1
-    assert records[0].message.startswith("Invalid location completion response from Accuweather:")
+    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
+    assert [
+        f"accuweather.request.{RequestType.AUTOCOMPLETE}.processor.error",
+    ] == metrics_called
 
     # assert that None is returned from the function
     assert location_completions is None

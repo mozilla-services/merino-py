@@ -34,7 +34,7 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
 async def explore(
     location: Location, probe: Callable[[MaybeStr, MaybeStr, MaybeStr], Awaitable[Optional[Any]]]
 ) -> Optional[Any]:
-    """Repeatedly executes an async funciton (prober) for each candidate until a valid result (path) is found.
+    """Repeatedly executes an async function (prober) for each candidate until a valid result (path) is found.
 
     This can be used to find a result from various sources (cache or upstream API) for all possible location combinations.
 

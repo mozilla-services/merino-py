@@ -11,11 +11,10 @@ from typing import Any, Callable, NamedTuple, cast
 
 import aiodogstatsd
 from dateutil import parser
-from httpx import URL, AsyncClient, HTTPError, InvalidURL, Response
+from httpx import AsyncClient, HTTPError, Response
 from pydantic import BaseModel, ValidationError
 
 from merino.cache.protocol import CacheAdapter
-from merino.config import settings
 from merino.exceptions import BackendError, CacheAdapterError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.protocol import (
@@ -26,12 +25,17 @@ from merino.providers.weather.backends.protocol import (
     WeatherReport,
 )
 from merino.providers.weather.backends.accuweather import pathfinder
+from merino.providers.weather.backends.accuweather.utils import (
+    RequestType,
+    process_location_completion_response,
+    process_forecast_response,
+    process_current_condition_response,
+    process_location_response_with_country,
+    process_location_response_with_country_and_region,
+)
 
 
 logger = logging.getLogger(__name__)
-
-PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
-PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
 
 # The Lua script to fetch the location key, current condition, forecast, and a TTL for
 # a given country/region/city.
@@ -110,7 +114,6 @@ SCRIPT_LOCATION_KEY_ID = "bulk_fetch_by_location_key"
 # bulk_fetch_by_location_key script. This is to accommodate parse_cached_data method which
 # expects 4 list elements to be returned from the cache but this script only returns 3.
 LOCATION_SENTINEL = None
-LOCATION_COMPLETION_REQUEST_TYPE: str = "autocomplete"
 
 ALIAS_PARAM: str = "alias"
 ALIAS_PARAM_VALUE: str = "always"
@@ -125,7 +128,6 @@ __all__ = [
     "ForecastWithTTL",
     "WeatherData",
     "WeatherDataType",
-    "add_partner_code",
 ]
 
 
@@ -286,23 +288,34 @@ class AccuweatherBackend:
                     query_params=query_params,
                 )
 
-    async def get_request(
+    async def request_upstream(
         self,
         url_path: str,
         params: dict[str, str],
-        process_api_response: Callable[[Any], dict[str, Any] | None],
-        cache_ttl_sec: int,
+        request_type: RequestType,
+        process_api_response: Callable[[Any], Any | None],
+        cache_ttl_sec: int = 0,
         log_failure: bool = True,
-    ) -> dict[str, Any] | None:
-        """Get API response. Attempt to get it from cache first,
-        then actually make the call if there's a cache miss.
-        """
-        cache_key = self.cache_key_for_accuweather_request(url_path, params)
-        response_dict: dict[str, Any] | None
+        should_cache: bool = True,
+    ) -> Any | None:
+        """Request the AccuWeather API and process the response. Optionally, the processed
+        response can be stored in the cache.
 
-        # The top level path in the URL gives us a good enough idea of what type of request
-        # we are calling from here.
-        request_type: str = url_path.strip("/").split("/", 1)[0]
+        Params:
+          - `url_path` {str}: the endpoint URL
+          - `params` {dict}: the query parameters of the URL
+          - `request_type` {RequestType}: the request type used for metrics and logging
+          - `process_api_response` {Callable}: the response processor, it returns None if the processing fails
+          - `cache_ttl_sec` {int}: the cache TTL in seconds
+          - `log_failure` {bool}: whether or not to log the processing errors via metrics
+          - `should_cache` {bool}: whether or not to cache the processed response
+        Return:
+          - The processed response or None if failed
+        Raises:
+          - `HTTPError` upon HTTP request errors
+          - `AccuweatherError` upon cache write errors
+        """
+        response_dict: dict[str, Any] | None
 
         with self.metrics_client.timeit(f"accuweather.request.{request_type}.get"):
             response: Response = await self.http_client.get(url_path, params=params)
@@ -315,20 +328,24 @@ class AccuweatherBackend:
                 )
             return None
 
-        response_expiry: str = response.headers.get("Expires")
-        try:
-            cached_request_ttl = await self.store_request_into_cache(
-                cache_key, response_dict, response_expiry, cache_ttl_sec
-            )
-            # add the ttl of the just cached request to the response dict we return
-            response_dict["cached_request_ttl"] = cached_request_ttl
-        except (CacheAdapterError, ValueError) as exc:
-            logger.error(f"Error with storing Accuweather to cache: {exc}")
-            error_type = "set_error" if isinstance(exc, CacheAdapterError) else "ttl_date_error"
-            self.metrics_client.increment(f"accuweather.cache.store.{error_type}")
-            raise AccuweatherError(
-                "Something went wrong with storing to cache. Did not update cache."
-            )
+        if should_cache:
+            cache_key = self.cache_key_for_accuweather_request(url_path, params)
+            response_expiry: str = response.headers.get("Expires")
+            try:
+                cached_request_ttl = await self.store_request_into_cache(
+                    cache_key, response_dict, response_expiry, cache_ttl_sec
+                )
+                # add the ttl of the just cached request to the response dict we return
+                response_dict["cached_request_ttl"] = cached_request_ttl
+            except (CacheAdapterError, ValueError) as exc:
+                logger.error(f"Error with storing Accuweather to cache: {exc}")
+                error_type = (
+                    "set_error" if isinstance(exc, CacheAdapterError) else "ttl_date_error"
+                )
+                self.metrics_client.increment(f"accuweather.cache.store.{error_type}")
+                raise AccuweatherError(
+                    "Something went wrong with storing to cache. Did not update cache."
+                )
 
         return response_dict
 
@@ -681,9 +698,10 @@ class AccuweatherBackend:
             processor = process_location_response_with_country
             log_failure = True
         try:
-            response: dict[str, Any] | None = await self.get_request(
+            response: dict[str, Any] | None = await self.request_upstream(
                 url_path,
                 params=self.get_location_key_query_params(city),
+                request_type=RequestType.LOCATIONS,
                 process_api_response=processor,
                 cache_ttl_sec=self.cached_location_key_ttl_sec,
                 log_failure=log_failure,
@@ -710,11 +728,12 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-current-conditions-api/apis/get/currentconditions/v1/{locationKey}
         """
         try:
-            response: dict[str, Any] | None = await self.get_request(
+            response: dict[str, Any] | None = await self.request_upstream(
                 self.url_current_conditions_path.format(location_key=location_key),
                 params={
                     self.url_param_api_key: self.api_key,
                 },
+                request_type=RequestType.CURRENT_CONDITIONS,
                 process_api_response=process_current_condition_response,
                 cache_ttl_sec=self.cached_current_condition_ttl_sec,
             )
@@ -752,11 +771,12 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-forecast-api/apis/get/forecasts/v1/daily/1day/{locationKey}
         """
         try:
-            response: dict[str, Any] | None = await self.get_request(
+            response: dict[str, Any] | None = await self.request_upstream(
                 self.url_forecasts_path.format(location_key=location_key),
                 params={
                     self.url_param_api_key: self.api_key,
                 },
+                request_type=RequestType.FORCASTS,
                 process_api_response=process_forecast_response,
                 cache_ttl_sec=self.cached_forecast_ttl_sec,
             )
@@ -804,202 +824,33 @@ class AccuweatherBackend:
             self.url_param_api_key: self.api_key,
             LOCATION_COMPLETE_ALIAS_PARAM: LOCATION_COMPLETE_ALIAS_PARAM_VALUE,
         }
+
         try:
-            with self.metrics_client.timeit(
-                f"accuweather.request. {LOCATION_COMPLETION_REQUEST_TYPE}.get"
-            ):
-                response: Response = await self.http_client.get(url_path, params=params)
-                response.raise_for_status()
-        except HTTPError as http_error:
+            response: dict[str, Any] | None = await self.request_upstream(
+                url_path,
+                params=params,
+                request_type=RequestType.AUTOCOMPLETE,
+                process_api_response=process_location_completion_response,
+                should_cache=False,
+            )
+        except HTTPError as error:
             raise AccuweatherError(
                 f"Failed to get location completion from Accuweather, http error occurred. "
                 f"url path: {url_path}, query: {search_term}"
-            ) from http_error
+            ) from error
         except Exception as exc:
             raise AccuweatherError(
                 f"Unexpected error occurred when requesting location completion from "
                 f"Accuweather: {exc.__class__.__name__}"
             ) from exc
 
-        location_completion_response = response.json()
-
-        # if the accuweather request is successful but the response object shape is not valid
-        if location_completion_response is None or not isinstance(
-            location_completion_response, list
-        ):
-            logger.warning(
-                f"Invalid location completion response from Accuweather: {location_completion_response}"
-            )
-            return None
-
-        processed_location_completions = process_location_completion_response(
-            location_completion_response
+        return (
+            [LocationCompletion(**cast(dict[str, Any], item)) for item in response]
+            if response
+            else None
         )
-
-        return [LocationCompletion(**item) for item in processed_location_completions]
 
     async def shutdown(self) -> None:
         """Close out the cache during shutdown."""
         await self.http_client.aclose()
         await self.cache.close()
-
-
-def add_partner_code(
-    url: str, url_param_id: str | None = None, partner_code: str | None = None
-) -> str:
-    """Add the partner code to the given URL."""
-    # reformat the http url returned for current conditions and forecast to https
-    https_url = url if url.startswith("https:") else url.replace("http:", "https:", 1)
-
-    if not url_param_id or not partner_code:
-        return https_url
-
-    try:
-        parsed_url = URL(https_url)
-        return str(parsed_url.copy_add_param(url_param_id, partner_code))
-    except InvalidURL:  # pragma: no cover
-        return url
-
-
-def process_location_completion_response(response: list) -> list[dict[str, Any]]:
-    """Process the API response for location completion request."""
-    return [
-        {
-            "key": location["Key"],
-            "rank": location["Rank"],
-            "type": location["Type"],
-            "localized_name": location["LocalizedName"],
-            "country": {
-                "id": location["Country"]["ID"],
-                "localized_name": location["Country"]["LocalizedName"],
-            },
-            "administrative_area": {
-                "id": location["AdministrativeArea"]["ID"],
-                "localized_name": location["AdministrativeArea"]["LocalizedName"],
-            },
-        }
-        for location in response
-    ]
-
-
-def process_location_response_with_country_and_region(response: Any) -> dict[str, Any] | None:
-    """Process the API response for location keys.
-
-    Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
-    to reflect the change(s) here.
-    """
-    match response:
-        case [
-            {
-                "Key": key,
-                "LocalizedName": localized_name,
-            },
-            *_,
-        ]:
-            # `type: ignore` is necessary because mypy gets confused when
-            # matching structures of type `Any` and reports the following
-            # line as unreachable. See
-            # https://github.com/python/mypy/issues/12770
-            return {  # type: ignore
-                "key": key,
-                "localized_name": localized_name,
-            }
-        case _:
-            return None
-
-
-def process_location_response_with_country(response: Any) -> dict[str, Any] | None:
-    """Process the API response for a single location key from country code endpoint.
-
-    Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
-    to reflect the change(s) here.
-    """
-    match response:
-        case [
-            {
-                "Key": key,
-                "LocalizedName": localized_name,
-            },
-        ]:
-            # `type: ignore` is necessary because mypy gets confused when
-            # matching structures of type `Any` and reports the following
-            # line as unreachable. See
-            # https://github.com/python/mypy/issues/12770
-            return {  # type: ignore
-                "key": key,
-                "localized_name": localized_name,
-            }
-        case _:
-            return None
-
-
-def process_current_condition_response(response: Any) -> dict[str, Any] | None:
-    """Process the API response for current conditions."""
-    match response:
-        case [
-            {
-                "Link": url,
-                "WeatherText": summary,
-                "WeatherIcon": icon_id,
-                "Temperature": {
-                    "Metric": {
-                        "Value": c,
-                    },
-                    "Imperial": {
-                        "Value": f,
-                    },
-                },
-            }
-        ]:
-            # `type: ignore` is necessary because mypy gets confused when
-            # matching structures of type `Any` and reports the following
-            # lines as unreachable. See
-            # https://github.com/python/mypy/issues/12770
-            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)  # type: ignore
-            return {
-                "url": url,
-                "summary": summary,
-                "icon_id": icon_id,
-                "temperature": {"c": c, "f": f},
-            }
-        case _:
-            return None
-
-
-def process_forecast_response(response: Any) -> dict[str, Any] | None:
-    """Process the API response for forecasts."""
-    match response:
-        case {
-            "Headline": {
-                "Text": summary,
-                "Link": url,
-            },
-            "DailyForecasts": [
-                {
-                    "Temperature": {
-                        "Maximum": {
-                            "Value": high_value,
-                            "Unit": ("C" | "F") as high_unit,
-                        },
-                        "Minimum": {
-                            "Value": low_value,
-                            "Unit": ("C" | "F") as low_unit,
-                        },
-                    },
-                }
-            ],
-        }:
-            # `type: ignore` is necessary because mypy gets confused when
-            # matching structures of type `Any` and reports the following
-            # lines as unreachable. See
-            # https://github.com/python/mypy/issues/12770
-            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)  # type: ignore
-
-            return {
-                "url": url,
-                "summary": summary,
-                "high": {high_unit.lower(): high_value},
-                "low": {low_unit.lower(): low_value},
-            }
-        case _:
-            return None
