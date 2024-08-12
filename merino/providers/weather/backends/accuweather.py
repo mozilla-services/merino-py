@@ -367,14 +367,14 @@ class AccuweatherBackend:
                 )
             case _:  # pragma: no cover
                 pass
+
         if not skip_location_key:
             self.metrics_client.increment(
                 "accuweather.cache.hit.locations"
                 if location
                 else "accuweather.cache.fetch.miss.locations"
             )
-        if not ttl:
-            self.metrics_client.increment("accuweather.cache.fetch.miss.ttl")
+
         self.metrics_client.increment(
             "accuweather.cache.hit.currentconditions"
             if current
@@ -385,6 +385,10 @@ class AccuweatherBackend:
             if forecast
             else "accuweather.cache.fetch.miss.forecasts"
         )
+
+        # register a ttl cache miss if we get current and forecast but no ttl
+        if current and forecast and not ttl:
+            self.metrics_client.increment("accuweather.cache.fetch.miss.ttl")
 
     def parse_cached_data(self, cached_data: list[bytes | None]) -> WeatherData:
         """Parse the weather data from cache.

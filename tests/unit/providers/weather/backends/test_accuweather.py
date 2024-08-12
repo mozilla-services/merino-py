@@ -2141,13 +2141,12 @@ def test_add_partner_code(
         ),
         (
             ["location", "current", "forecast", None],
-            ("hit.locations", "fetch.miss.ttl", "hit.currentconditions", "hit.forecasts"),
+            ("hit.locations", "hit.currentconditions", "hit.forecasts", "fetch.miss.ttl"),
         ),
         (
             [None, None, None, None],
             (
                 "fetch.miss.locations",
-                "fetch.miss.ttl",
                 "fetch.miss.currentconditions",
                 "fetch.miss.forecasts",
             ),
