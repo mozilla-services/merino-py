@@ -8,6 +8,7 @@ import datetime
 import hashlib
 import json
 import logging
+from ssl import SSLError
 from typing import Any, Awaitable, Callable, Optional, cast
 from unittest.mock import AsyncMock
 
@@ -1513,6 +1514,55 @@ async def test_get_weather_report_handles_exception_group_properly(
 
 
 @pytest.mark.asyncio
+async def test_get_weather_report_handles_non_http_exception_group_properly(
+    accuweather: AccuweatherBackend,
+    geolocation: Location,
+    accuweather_location_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
+    response_header: dict[str, str],
+) -> None:
+    """Test that the get_weather_report method raises an AccuweatherError if the current
+    conditions and forecast calls raise an error
+    """
+    # we are specifically raising SSLError and ValueError which should be caught by the
+    # generic Exception catch block in the respective function calls
+    current_conditions_error = SSLError("current conditions")
+    forecast_error = ValueError("forecast")
+
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_location_response,
+            request=Request(
+                method="GET",
+                url=(
+                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+                    "apikey=test&q=94105"
+                ),
+            ),
+        ),
+        current_conditions_error,
+        forecast_error,
+    ]
+    accuweather_error_for_current_conditions = AccuweatherError(
+        f"Unexpected error occurred when requesting current conditions from "
+        f"Accuweather: {current_conditions_error.__class__.__name__}"
+    )
+    accuweather_error_for_forecast = AccuweatherError(
+        f"Unexpected error occurred when requesting forecast from "
+        f"Accuweather: {forecast_error.__class__.__name__}"
+    )
+
+    with pytest.raises(AccuweatherError) as accuweather_error:
+        await accuweather.get_weather_report(geolocation)
+
+    assert str(accuweather_error_for_current_conditions) in str(accuweather_error.value)
+    assert str(accuweather_error_for_forecast) in str(accuweather_error.value)
+
+
+@pytest.mark.asyncio
 async def test_get_weather_report_failed_forecast_query(
     accuweather: AccuweatherBackend,
     geolocation: Location,
@@ -1603,7 +1653,7 @@ async def test_get_weather_report_invalid_location(
 
 
 @pytest.mark.asyncio
-async def test_get_location(
+async def test_get_location_by_geolocation(
     accuweather: AccuweatherBackend,
     accuweather_location_response: bytes,
     response_header,
@@ -1637,7 +1687,7 @@ async def test_get_location(
 
 
 @pytest.mark.asyncio
-async def test_get_location_no_location_returned(
+async def test_get_location_by_geolocation_no_location_returned(
     accuweather: AccuweatherBackend, response_header: dict[str, str]
 ) -> None:
     """Test that the get_location method returns None if the response content is not as
@@ -1668,7 +1718,7 @@ async def test_get_location_no_location_returned(
 
 
 @pytest.mark.asyncio
-async def test_get_location_error(accuweather: AccuweatherBackend) -> None:
+async def test_get_location_by_geolocation_error(accuweather: AccuweatherBackend) -> None:
     """Test that the get_location method raises an appropriate exception in the event
     of an AccuWeather API error.
     """
@@ -1698,6 +1748,29 @@ async def test_get_location_error(accuweather: AccuweatherBackend) -> None:
     with pytest.raises(AccuweatherError) as accuweather_error:
         await accuweather.get_location_by_geolocation(country, region, city)
 
+    assert str(accuweather_error.value) == expected_error_value
+
+
+@pytest.mark.asyncio
+async def test_get_location_by_geolocation_raises_accuweather_error_on_generic_exception_error(
+    accuweather: AccuweatherBackend, geolocation: Location
+) -> None:
+    """Test that the get_location_by_geolocation method raises an AccuweatherError when a generic
+    exception happens.
+    """
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.side_effect = ValueError
+
+    country: str = "US"
+    region: str = "CA"
+    city: str = "San Francisco"
+
+    with pytest.raises(AccuweatherError) as accuweather_error:
+        await accuweather.get_location_by_geolocation(country, region, city)
+    expected_error_value = (
+        "Unexpected error occurred when requesting location by geolocation "
+        "from Accuweather: ValueError"
+    )
     assert str(accuweather_error.value) == expected_error_value
 
 
@@ -2332,6 +2405,69 @@ async def test_get_location_completion_with_invalid_accuweather_response(
 
     # assert that None is returned from the function
     assert location_completions is None
+
+
+@pytest.mark.asyncio
+async def test_get_location_completion_raises_accuweather_error_on_catching_generic_exception(
+    accuweather: AccuweatherBackend,
+    geolocation: Location,
+) -> None:
+    """Test that the get_location_completion catches a generic Exception and raises it as an
+    AccuweatherError
+    """
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    search_term = "new"
+
+    client_mock.get.side_effect = SSLError
+
+    with pytest.raises(AccuweatherError) as accuweather_error:
+        await accuweather.get_location_completion(geolocation, search_term)
+
+    expected_error_message = (
+        "Unexpected error occurred when requesting location completion "
+        "from Accuweather: SSLError"
+    )
+
+    assert expected_error_message == str(accuweather_error.value)
+
+
+@pytest.mark.asyncio
+async def test_get_location_completion_raises_accuweather_error_on_catching_http_error(
+    accuweather: AccuweatherBackend,
+    geolocation: Location,
+) -> None:
+    """Test that the get_location_completion catches an HTTPError and raises it as an
+    AccuweatherError
+    """
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    search_term = "new"
+
+    # we are returning a 404 http response
+    client_mock.get.side_effect = [
+        Response(
+            status_code=404,
+            content=b'{"detail": "Not Found"}',  # response will be an empty object
+            request=Request(
+                method="GET",
+                url=(
+                    f"https://www.accuweather.com/locations/v1/"
+                    f"{geolocation.country}/autocomplete.json?apikey=test&q"
+                    f"={search_term}"
+                ),
+            ),
+        )
+    ]
+
+    with pytest.raises(AccuweatherError) as accuweather_error:
+        await accuweather.get_location_completion(geolocation, search_term)
+
+    url_path = f"/locations/v1/cities/{geolocation.country}/autocomplete.json"
+    expected_error_message = (
+        f"Failed to get location completion from Accuweather, http error occurred. "
+        f"url path: {url_path}, query: {search_term}"
+    )
+
+    assert expected_error_message == str(accuweather_error.value)
 
 
 @pytest.mark.asyncio

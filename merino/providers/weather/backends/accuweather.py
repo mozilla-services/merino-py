@@ -10,7 +10,6 @@ from enum import Enum
 from typing import Any, Callable, NamedTuple, cast
 
 import aiodogstatsd
-import httpx
 from dateutil import parser
 from httpx import URL, AsyncClient, HTTPError, InvalidURL, Response
 from pydantic import BaseModel, ValidationError
@@ -672,6 +671,11 @@ class AccuweatherBackend:
             raise AccuweatherError(
                 f"Unexpected location response from: {url_path}, city: {city}"
             ) from error
+        except Exception as exc:
+            raise AccuweatherError(
+                f"Unexpected error occurred when requesting location by geolocation from "
+                f"Accuweather: {exc.__class__.__name__}"
+            ) from exc
 
         return AccuweatherLocation(**response) if response else None
 
@@ -697,6 +701,11 @@ class AccuweatherBackend:
             raise AccuweatherError(
                 f"Unexpected current conditions response, Url: {self.url_current_conditions_path.format(location_key=location_key)}"
             ) from error
+        except Exception as exc:
+            raise AccuweatherError(
+                f"Unexpected error occurred when requesting current conditions from Accuweather:"
+                f" {exc.__class__.__name__}"
+            ) from exc
 
         return (
             CurrentConditionsWithTTL(
@@ -734,6 +743,11 @@ class AccuweatherBackend:
             raise AccuweatherError(
                 f"Unexpected forecast response, Url: {self.url_forecasts_path.format(location_key=location_key)}"
             ) from error
+        except Exception as exc:
+            raise AccuweatherError(
+                f"Unexpected error occurred when requesting forecast from Accuweather: "
+                f"{exc.__class__.__name__}"
+            ) from exc
 
         return (
             ForecastWithTTL(
@@ -775,9 +789,16 @@ class AccuweatherBackend:
             ):
                 response: Response = await self.http_client.get(url_path, params=params)
                 response.raise_for_status()
-        except httpx.HTTPError as exc:
-            logger.warning(f"Failed to get location completion from Accuweather: {exc}")
-            return None
+        except HTTPError as http_error:
+            raise AccuweatherError(
+                f"Failed to get location completion from Accuweather, http error occurred. "
+                f"url path: {url_path}, query: {search_term}"
+            ) from http_error
+        except Exception as exc:
+            raise AccuweatherError(
+                f"Unexpected error occurred when requesting location completion from "
+                f"Accuweather: {exc.__class__.__name__}"
+            ) from exc
 
         location_completion_response = response.json()
 
