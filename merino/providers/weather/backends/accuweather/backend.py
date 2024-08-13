@@ -79,7 +79,7 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
 
     return {location_key, current_conditions, forecast, ttl}
 """
-SCRIPT_ID: str = "bulk_fetch"
+SCRIPT_ID_BULK_FETCH_VIA_GEOLOCATION: str = "bulk_fetch_by_geolocation"
 
 
 # The Lua script to fetch the current condition, forecast, and a TTL for
@@ -239,7 +239,9 @@ class AccuweatherBackend:
         self.cache.register_script(
             SCRIPT_LOCATION_KEY_ID, LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION
         )
-        self.cache.register_script(SCRIPT_ID, LUA_SCRIPT_CACHE_BULK_FETCH)
+        self.cache.register_script(
+            SCRIPT_ID_BULK_FETCH_VIA_GEOLOCATION, LUA_SCRIPT_CACHE_BULK_FETCH
+        )
         self.cached_location_key_ttl_sec = cached_location_key_ttl_sec
         self.cached_current_condition_ttl_sec = cached_current_condition_ttl_sec
         self.cached_forecast_ttl_sec = cached_forecast_ttl_sec
@@ -542,7 +544,7 @@ class AccuweatherBackend:
 
         with self.metrics_client.timeit("accuweather.cache.fetch"):
             cached_data: list = await self.cache.run_script(
-                sid=SCRIPT_ID,
+                sid=SCRIPT_ID_BULK_FETCH_VIA_GEOLOCATION,
                 keys=[cache_key],
                 # The order matters below. See `LUA_SCRIPT_CACHE_BULK_FETCH` for details.
                 args=[
@@ -697,6 +699,7 @@ class AccuweatherBackend:
             url_path = self.url_cities_path.format(country_code=country)
             processor = process_location_response_with_country
             log_failure = True
+
         try:
             response: dict[str, Any] | None = await self.request_upstream(
                 url_path,

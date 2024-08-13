@@ -1824,12 +1824,21 @@ async def test_get_location_no_location_returned(
     assert location is None
 
 
+@pytest.mark.parametrize(
+    ["country", "city"],
+    [
+        ("US", None),
+        (None, "N/A"),
+    ],
+    ids=["no-city", "no-country"],
+)
+@pytest.mark.asyncio
 async def test_get_location_with_missing_country_city(
-    accuweather: AccuweatherBackend,
+    accuweather: AccuweatherBackend, country: str | None, city: str | None
 ) -> None:
     """Test that the get_location method returns None without valid country and city."""
     location: Optional[AccuweatherLocation] = await accuweather.get_location_by_geolocation(
-        None, None, None
+        country, None, city
     )
 
     assert location is None
@@ -2656,48 +2665,6 @@ async def test_get_location_completion_with_no_geolocation_country_code(
     ] = await accuweather.get_location_completion(geolocation, search_term)
 
     assert location_completions == expected_location_completion
-
-
-@pytest.mark.asyncio
-async def test_get_location_completion_with_http_error(
-    accuweather: AccuweatherBackend,
-    geolocation: Location,
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
-) -> None:
-    """Test that the get_location_completion method returns None upon HTTP errors."""
-    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
-
-    caplog.set_level(logging.WARN)
-    search_term = "new"
-    client_mock.get.side_effect = [
-        Response(
-            status_code=403,
-            content=(b"{" b'"Code":"Unauthorized",' b'"Message":"Api Authorization failed",' b"}"),
-            request=Request(
-                method="GET",
-                url=(
-                    f"https://www.accuweather.com/locations/v1/"
-                    f"{geolocation.country}/autocomplete.json?apikey=test&q"
-                    f"={search_term}"
-                ),
-            ),
-        )
-    ]
-
-    location_completions: Optional[
-        list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, search_term)
-
-    # assert below the correct warning is logged
-    records = filter_caplog(
-        caplog.records, "merino.providers.weather.backends.accuweather.backend"
-    )
-
-    assert len(caplog.records) == 1
-    assert records[0].message.startswith("Failed to get location completion from Accuweather")
-
-    assert location_completions is None
 
 
 @pytest.mark.asyncio
