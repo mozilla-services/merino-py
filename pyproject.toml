@@ -75,7 +75,7 @@ dockerflow = "^2022.7.0"
 asgi-correlation-id = "^3.0.1"
 dynaconf = "^3.2.4"
 httpx = "^0.23.0"
-sentry-sdk = {extras = ["fastapi"], version = "^1.9.5"}
+sentry-sdk = {extras = ["fastapi"], version = "^2.13.0"}
 kinto-http = "^11.0.0"
 aiodogstatsd = "^0.16.0"
 ua-parser = "^0.16.1"
