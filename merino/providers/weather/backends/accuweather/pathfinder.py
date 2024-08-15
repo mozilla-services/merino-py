@@ -8,6 +8,8 @@ from merino.middleware.geolocation import Location
 MaybeStr = Optional[str]
 Triplet = tuple[MaybeStr, MaybeStr, MaybeStr]
 
+SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {}
+
 
 def compass(location: Location) -> Generator[Triplet, None, None]:
     """Generate all the "country, region, city" triplets based on a `Location`.
@@ -22,7 +24,13 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
     # TODO(nanj): add more heuristics to here.
 
     # Append None as the fallback since AccuWeather can take params w/o the region code
-    if location.regions is not None:
+    if (
+        location.country
+        and location.city
+        and (location.country, location.city) in SUCCESSFUL_REGIONS_MAPPING
+    ):
+        regions = [SUCCESSFUL_REGIONS_MAPPING[(location.country, location.city)]]
+    elif location.regions is not None:
         regions = [*location.regions, None]
     else:
         regions = [None]
@@ -53,7 +61,10 @@ async def explore(
     """
     for country, region, city in compass(location):
         res = await probe(country, region, city)
-        if res is not None:
+
+        if res not in (None, []):
+            if country and city:
+                SUCCESSFUL_REGIONS_MAPPING[(country, city)] = region
             return res
 
     return None
