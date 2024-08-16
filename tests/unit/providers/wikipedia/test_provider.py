@@ -6,6 +6,7 @@ from pytest_mock import MockerFixture
 
 from merino.config import settings
 from merino.exceptions import BackendError
+from merino.providers.base import Category
 from merino.providers.wikipedia.backends.fake_backends import FakeEchoWikipediaBackend
 from merino.providers.wikipedia.provider import (
     ADVERTISER,
@@ -113,5 +114,6 @@ async def test_query(
             block_id=0,
             impression_url=None,
             click_url=None,
+            categories=[Category.Education],
         )
     ]
