@@ -185,6 +185,7 @@ class AccuweatherBackend:
     cached_current_condition_ttl_sec: int
     cached_forecast_ttl_sec: int
     metrics_client: aiodogstatsd.Client
+    metrics_client_with_sample_rate: aiodogstatsd.Client
     url_param_api_key: str
     url_cities_admin_path: str
     url_cities_path: str
@@ -204,6 +205,7 @@ class AccuweatherBackend:
         cached_current_condition_ttl_sec: int,
         cached_forecast_ttl_sec: int,
         metrics_client: aiodogstatsd.Client,
+        metrics_client_with_sample_rate: aiodogstatsd.Client,
         http_client: AsyncClient,
         url_param_api_key: str,
         url_cities_admin_path: str,
@@ -246,6 +248,7 @@ class AccuweatherBackend:
         self.cached_current_condition_ttl_sec = cached_current_condition_ttl_sec
         self.cached_forecast_ttl_sec = cached_forecast_ttl_sec
         self.metrics_client = metrics_client
+        self.metrics_client_with_sample_rate = metrics_client_with_sample_rate
         self.http_client = http_client
         self.url_param_api_key = url_param_api_key
         self.url_cities_admin_path = url_cities_admin_path
@@ -319,7 +322,9 @@ class AccuweatherBackend:
         """
         response_dict: dict[str, Any] | None
 
-        with self.metrics_client.timeit(f"accuweather.request.{request_type}.get"):
+        with self.metrics_client_with_sample_rate.timeit(
+            f"accuweather.request.{request_type}.get"
+        ):
             response: Response = await self.http_client.get(url_path, params=params)
             response.raise_for_status()
 
@@ -361,7 +366,7 @@ class AccuweatherBackend:
         """Store the request into cache. Also ensures that the cache ttl is
         at least `cached_ttl_sec`. Returns the cached request's ttl in seconds.
         """
-        with self.metrics_client.timeit("accuweather.cache.store"):
+        with self.metrics_client_with_sample_rate.timeit("accuweather.cache.store"):
             expiry_delta: datetime.timedelta = parser.parse(
                 response_expiry
             ) - datetime.datetime.now(datetime.timezone.utc)
@@ -400,18 +405,18 @@ class AccuweatherBackend:
                 pass
 
         if not skip_location_key:
-            self.metrics_client.increment(
+            self.metrics_client_with_sample_rate.increment(
                 "accuweather.cache.hit.locations"
                 if location
                 else "accuweather.cache.fetch.miss.locations"
             )
 
-        self.metrics_client.increment(
+        self.metrics_client_with_sample_rate.increment(
             "accuweather.cache.hit.currentconditions"
             if current
             else "accuweather.cache.fetch.miss.currentconditions"
         )
-        self.metrics_client.increment(
+        self.metrics_client_with_sample_rate.increment(
             "accuweather.cache.hit.forecasts"
             if forecast
             else "accuweather.cache.fetch.miss.forecasts"
@@ -421,7 +426,7 @@ class AccuweatherBackend:
         # check for the TTL for both keys. In a rare scenario, the TTL could have technically
         # run out by the time we fetch it We register this with this counter.
         if current and forecast and not ttl:
-            self.metrics_client.increment("accuweather.cache.fetch.miss.ttl")
+            self.metrics_client_with_sample_rate.increment("accuweather.cache.fetch.miss.ttl")
 
     def parse_cached_data(self, cached_data: list[bytes | None]) -> WeatherData:
         """Parse the weather data from cache.
@@ -496,7 +501,9 @@ class AccuweatherBackend:
         """
         # Look up for all the weather data from the cache.
         try:
-            with self.metrics_client.timeit("accuweather.cache.fetch-via-location-key"):
+            with self.metrics_client_with_sample_rate.timeit(
+                "accuweather.cache.fetch-via-location-key"
+            ):
                 cached_data: list[bytes | None] = await self.cache.run_script(
                     sid=SCRIPT_LOCATION_KEY_ID,
                     keys=[],
@@ -542,7 +549,7 @@ class AccuweatherBackend:
                 query_params=self.get_location_key_query_params(city),
             )
 
-        with self.metrics_client.timeit("accuweather.cache.fetch"):
+        with self.metrics_client_with_sample_rate.timeit("accuweather.cache.fetch"):
             cached_data: list = await self.cache.run_script(
                 sid=SCRIPT_ID_BULK_FETCH_VIA_GEOLOCATION,
                 keys=[cache_key],

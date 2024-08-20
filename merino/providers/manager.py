@@ -9,7 +9,7 @@ from merino.cache.none import NoCacheAdapter
 from merino.cache.redis import RedisAdapter
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
-from merino.metrics import get_metrics_client
+from merino.metrics import get_metrics_client, get_metrics_client_with_sample_rate
 from merino.providers.adm.backends.fake_backends import FakeAdmBackend
 from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
 from merino.providers.adm.provider import Provider as AdmProvider
@@ -67,6 +67,9 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         ),
                         cached_forecast_ttl_sec=setting.cache_ttls.forecast_ttl_sec,
                         metrics_client=get_metrics_client(),
+                        metrics_client_with_sample_rate=get_metrics_client_with_sample_rate(
+                            sample_rate=settings.accuweather.metrics_sampling_rate
+                        ),
                         http_client=create_http_client(
                             base_url=settings.accuweather.url_base,
                             connect_timeout=settings.providers.accuweather.connect_timeout_sec,
