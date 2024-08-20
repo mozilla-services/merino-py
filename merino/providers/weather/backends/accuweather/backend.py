@@ -17,6 +17,7 @@ from pydantic import BaseModel, ValidationError
 from merino.cache.protocol import CacheAdapter
 from merino.exceptions import BackendError, CacheAdapterError
 from merino.middleware.geolocation import Location
+from merino.providers.weather.backends.accuweather.pathfinder import SUCCESSFUL_REGIONS_MAPPING
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -60,7 +61,7 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
     local location_key = redis.call("GET", KEYS[1])
 
     if not location_key then
-        return {}
+        return nil
     end
 
     local key = cjson.decode(location_key)["key"]
@@ -525,7 +526,7 @@ class AccuweatherBackend:
 
     async def _fetch_from_cache(
         self, country: str | None, region: str | None, city: str | None
-    ) -> list[bytes | None] | None:
+    ) -> list[bytes] | None:
         """Fetch weather data from cache."""
         if country is None or city is None:
             return None
@@ -719,6 +720,9 @@ class AccuweatherBackend:
                 f"Accuweather: {exc.__class__.__name__}"
             ) from exc
 
+        # record the region that gave a location
+        if response and country and city:
+            SUCCESSFUL_REGIONS_MAPPING[(country, city)] = region
         return AccuweatherLocation(**response) if response else None
 
     async def get_current_conditions(self, location_key: str) -> CurrentConditionsWithTTL | None:

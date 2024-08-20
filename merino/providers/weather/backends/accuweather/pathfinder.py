@@ -23,20 +23,28 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
     """
     # TODO(nanj): add more heuristics to here.
 
-    # Append None as the fallback since AccuWeather can take params w/o the region code
-    if (
-        location.country
-        and location.city
-        and (location.country, location.city) in SUCCESSFUL_REGIONS_MAPPING
-    ):
-        regions = [SUCCESSFUL_REGIONS_MAPPING[(location.country, location.city)]]
-    elif location.regions is not None:
-        regions = [*location.regions, None]
-    else:
-        regions = [None]
+    country = location.country
+    regions = location.regions
+    city = location.city
 
-    for region in regions:
-        yield location.country, region, location.city
+    if regions and country and city:
+        match (country, city):
+            case ("US" | "CA", _):
+                yield country, regions[0], city  # use the most specific region
+            case ("IT" | "ES" | "GR", _):
+                yield country, regions[-1], city  # use the least specific region
+            case (country, city) if (
+                country,
+                city,
+            ) in SUCCESSFUL_REGIONS_MAPPING:  # dynamic rules we've learned
+                yield country, SUCCESSFUL_REGIONS_MAPPING[(country, city)], city
+
+            case _:  # Fall back to try all triplets
+                regions_to_try = [*regions, None]
+                for region in regions_to_try:
+                    yield country, region, city
+    else:
+        yield country, None, city
 
 
 async def explore(
@@ -61,10 +69,7 @@ async def explore(
     """
     for country, region, city in compass(location):
         res = await probe(country, region, city)
-
-        if res not in (None, []):
-            if country and city:
-                SUCCESSFUL_REGIONS_MAPPING[(country, city)] = region
+        if res is not None:
             return res
 
     return None
