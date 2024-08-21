@@ -159,9 +159,12 @@ def get_metrics_client_with_sample_rate(sample_rate: float | int) -> aiodogstats
 async def configure_metrics() -> None:
     """Configure metrics client. Used in application startup."""
     client = get_metrics_client()
+    client_with_sampling = get_metrics_client_with_sample_rate()
     if settings.metrics.dev_logger:
         client._protocol = _LocalDatagramLogger()
+        client_with_sampling._protocol = _LocalDatagramLogger()
     await client.connect()
+    await client_with_sampling.connect()
 
 
 class _LocalDatagramLogger(aiodogstatsd.client.DatagramProtocol):
