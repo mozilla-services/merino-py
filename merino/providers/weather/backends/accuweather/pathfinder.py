@@ -38,7 +38,6 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
                 city,
             ) in SUCCESSFUL_REGIONS_MAPPING:  # dynamic rules we've learned
                 yield country, SUCCESSFUL_REGIONS_MAPPING[(country, city)], city
-
             case _:  # Fall back to try all triplets
                 regions_to_try = [*regions, None]
                 for region in regions_to_try:
@@ -73,3 +72,21 @@ async def explore(
             return res
 
     return None
+
+
+def get_region_mapping() -> dict[tuple[str, str], str | None]:
+    """Get SUCCESSFUL_REGIONS_MAPPING."""
+    return SUCCESSFUL_REGIONS_MAPPING
+
+
+def set_region_mapping(country: str, city: str, region: str | None):
+    """Set country, city, region into SUCCESSFUL_REGIONS_MAPPING
+    that don't fall in countries where region can be determined.
+
+    Params:
+      - country {str}: country code
+      - city {str}: city name
+      - region {str}: admin code
+    """
+    if country not in ("CA", "US", "IT", "ES", "GR"):
+        SUCCESSFUL_REGIONS_MAPPING[(country, city)] = region
