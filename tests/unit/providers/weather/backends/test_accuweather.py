@@ -1755,10 +1755,13 @@ async def test_get_weather_report_invalid_location(
 
     assert expected_result == result
 
-    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
-    assert [
-        "accuweather.request.location.not_provided",
-    ] == metrics_called
+    metrics_called = [
+        (call_arg[0][0], call_arg[1]["sample_rate"])
+        for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_called == [
+        ("accuweather.request.location.not_provided", ACCUWEATHER_METRICS_SAMPLE_RATE)
+    ]
 
 
 @pytest.mark.asyncio
@@ -2186,7 +2189,6 @@ def test_cache_key_for_accuweather_request(
 @freezegun.freeze_time("2023-04-09")
 @pytest.mark.asyncio
 async def test_request_upstream_cache_get_errors(
-    mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     url: str,
     expected_request_type: RequestType,
@@ -2219,10 +2221,17 @@ async def test_request_upstream_cache_get_errors(
 
     assert expected_client_response == results
 
-    timeit_metrics_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
+    timeit_metrics_called = [
+        (call_arg[0][0], call_arg[1]["sample_rate"])
+        for call_arg in statsd_mock.timeit.call_args_list
+    ]
+
     assert [
-        f"accuweather.request.{expected_request_type}.get",
-        "accuweather.cache.store",
+        (f"accuweather.request.{expected_request_type}.get", ACCUWEATHER_METRICS_SAMPLE_RATE),
+        (
+            "accuweather.cache.store",
+            ACCUWEATHER_METRICS_SAMPLE_RATE,
+        ),
     ] == timeit_metrics_called
 
 
@@ -2270,10 +2279,13 @@ async def test_get_request_cache_store_errors(
             cache_ttl_sec=TEST_CACHE_TTL_SEC,
         )
 
-    timeit_metrics_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
+    timeit_metrics_called = [
+        (call_arg[0][0], call_arg[1]["sample_rate"])
+        for call_arg in statsd_mock.timeit.call_args_list
+    ]
     assert [
-        "accuweather.request.forecasts.get",
-        "accuweather.cache.store",
+        ("accuweather.request.forecasts.get", ACCUWEATHER_METRICS_SAMPLE_RATE),
+        ("accuweather.cache.store", ACCUWEATHER_METRICS_SAMPLE_RATE),
     ] == timeit_metrics_called
 
     increment_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
@@ -2374,8 +2386,13 @@ def test_metrics_for_cache_fetch(
     """Test metrics for cache fetches."""
     accuweather.emit_cache_fetch_metrics(cached_data)
 
-    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
-    assert [f"accuweather.cache.{val}" for val in expected_metrics] == metrics_called
+    metrics_called = [
+        (call_arg[0][0], call_arg[1]["sample_rate"])
+        for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert [
+        (f"accuweather.cache.{val}", ACCUWEATHER_METRICS_SAMPLE_RATE) for val in expected_metrics
+    ] == metrics_called
 
 
 @pytest.mark.parametrize(
