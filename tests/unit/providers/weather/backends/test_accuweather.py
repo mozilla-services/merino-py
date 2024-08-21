@@ -48,6 +48,7 @@ from tests.types import FilterCaplogFixture
 ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 TEST_CACHE_TTL_SEC = 1800
 TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC = 300
+ACCUWEATHER_METRICS_SAMPLE_RATE = 0.9
 
 
 @pytest.fixture(name="redis_mock_cache_miss")
@@ -264,6 +265,7 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
         "url_location_completion_path": "/locations/v1/cities/{country_code}/autocomplete.json",
         "url_location_key_placeholder": "{location_key}",
+        "metrics_sample_rate": ACCUWEATHER_METRICS_SAMPLE_RATE,
     }
 
 

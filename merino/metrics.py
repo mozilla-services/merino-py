@@ -45,20 +45,6 @@ SUPPORTED_METHODS: Final[list[str]] = [
 # Prefix for the tags for feature flags
 FLAGS_PREFIX: Final[str] = "feature_flag"
 
-# metric tags used in the metrics client default config
-CONSTANT_TAGS: MetricTags = {
-    "application": "merino-py",
-    "deployment.canary": int(settings.deployment.canary),
-}
-
-# metrics client default config
-METRICS_CLIENT_DEFAULT_CONFIG: dict[str, Any] = {
-    "host": settings.metrics.host,
-    "port": settings.metrics.port,
-    "namespace": "merino",
-    "constant_tags": CONSTANT_TAGS,
-}
-
 
 def feature_flags_as_tags(feature_flags: FeatureFlags) -> MetricTags:
     """Return a representation of feature flags decisions."""
@@ -147,24 +133,25 @@ class Client(metaclass=ClientMeta):
 @cache
 def get_metrics_client() -> aiodogstatsd.Client:
     """Instantiate and memoize the StatsD client."""
-    return aiodogstatsd.Client(**METRICS_CLIENT_DEFAULT_CONFIG)
+    constant_tags: MetricTags = {
+        "application": "merino-py",
+        "deployment.canary": int(settings.deployment.canary),
+    }
 
-
-@cache
-def get_metrics_client_with_sample_rate(sample_rate: float | int) -> aiodogstatsd.Client:
-    """Instantiate and memoize the StatsD client with a custom sample rate."""
-    return aiodogstatsd.Client(**METRICS_CLIENT_DEFAULT_CONFIG, sample_rate=sample_rate)
+    return aiodogstatsd.Client(
+        host=settings.metrics.host,
+        port=settings.metrics.port,
+        namespace="merino",
+        constant_tags=constant_tags,
+    )
 
 
 async def configure_metrics() -> None:
     """Configure metrics client. Used in application startup."""
     client = get_metrics_client()
-    client_with_sampling = get_metrics_client_with_sample_rate()
     if settings.metrics.dev_logger:
         client._protocol = _LocalDatagramLogger()
-        client_with_sampling._protocol = _LocalDatagramLogger()
     await client.connect()
-    await client_with_sampling.connect()
 
 
 class _LocalDatagramLogger(aiodogstatsd.client.DatagramProtocol):

@@ -39,6 +39,7 @@ from merino.providers.weather.backends.protocol import (
 
 ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 ACCUWEATHER_LOCATION_KEY = "39376"
+ACCUWEATHER_METRICS_SAMPLE_RATE = 0.9
 
 # these TTL values below are the same as the default accuweather config values
 WEATHER_REPORT_TTL_SEC = 1800
@@ -70,6 +71,7 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
         "url_location_completion_path": "/locations/v1/cities/{country_code}/autocomplete.json",
         "url_location_key_placeholder": "{location_key}",
+        "metrics_sample_rate": ACCUWEATHER_METRICS_SAMPLE_RATE,
     }
 
 
