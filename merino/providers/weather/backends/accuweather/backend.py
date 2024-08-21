@@ -591,7 +591,9 @@ class AccuweatherBackend:
         city: str | None = geolocation.city
 
         if country is None or city is None:
-            self.metrics_client.increment("accuweather.request.location.not_provided")
+            self.metrics_client.increment(
+                "accuweather.request.location.not_provided", sample_rate=self.metrics_sample_rate
+            )
             return None
 
         try:
