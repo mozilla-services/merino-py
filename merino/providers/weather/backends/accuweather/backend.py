@@ -61,7 +61,7 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
     local location_key = redis.call("GET", KEYS[1])
 
     if not location_key then
-        return nil
+        return {}
     end
 
     local key = cjson.decode(location_key)["key"]
@@ -554,7 +554,7 @@ class AccuweatherBackend:
                     self.url_location_key_placeholder,
                 ],
             )
-            return cached_data
+            return cached_data if cached_data else None
 
     async def get_weather_report_with_geolocation(
         self, geolocation: Location
