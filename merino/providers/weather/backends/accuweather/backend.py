@@ -19,7 +19,6 @@ from merino.exceptions import BackendError, CacheAdapterError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
-    get_region_mapping,
 )
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -726,9 +725,6 @@ class AccuweatherBackend:
         # record the region that gave a location
         if response and country and city:
             set_region_mapping(country, city, region)
-            self.metrics_client.gauge(
-                "accuweather.regions_mapping.size", value=len(get_region_mapping())
-            )
         return AccuweatherLocation(**response) if response else None
 
     async def get_current_conditions(self, location_key: str) -> CurrentConditionsWithTTL | None:

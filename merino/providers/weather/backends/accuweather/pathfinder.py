@@ -4,11 +4,11 @@ from typing import Any, Awaitable, Callable, Generator, Optional
 
 from merino.middleware.geolocation import Location
 
-
 MaybeStr = Optional[str]
 Triplet = tuple[MaybeStr, MaybeStr, MaybeStr]
 
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {}
+REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(["CA", "ES", "GR", "IT", "US"])
 
 
 def compass(location: Location) -> Generator[Triplet, None, None]:
@@ -86,7 +86,12 @@ def set_region_mapping(country: str, city: str, region: str | None):
     Params:
       - country {str}: country code
       - city {str}: city name
-      - region {str}: admin code
+      - region {str | None}: region code
     """
-    if country not in ("CA", "US", "IT", "ES", "GR"):
+    if country not in REGION_MAPPING_EXCLUSIONS:
         SUCCESSFUL_REGIONS_MAPPING[(country, city)] = region
+
+
+def clear_region_mapping():
+    """Clear SUCCESSFUL_REGIONS_MAPPING."""
+    SUCCESSFUL_REGIONS_MAPPING.clear()
