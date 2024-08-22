@@ -7,10 +7,13 @@
 from typing import Tuple
 
 import pytest
-from pytest_mock import MockFixture
 
 from merino.middleware.geolocation import Location
-from merino.providers.weather.backends.accuweather.pathfinder import compass, set_region_mapping
+from merino.providers.weather.backends.accuweather.pathfinder import (
+    compass,
+    set_region_mapping,
+    clear_region_mapping,
+)
 
 
 @pytest.mark.parametrize(
@@ -30,8 +33,10 @@ from merino.providers.weather.backends.accuweather.pathfinder import compass, se
         "Fallback No Region",
     ],
 )
-def test_compass(location: Location, expected_tuple: Tuple, mocker: MockFixture) -> None:
+def test_compass(location: Location, expected_tuple: Tuple) -> None:
     """Test country that returns the most specific region."""
     set_region_mapping("GB", "London", "LND")
 
     assert next(compass(location)) == expected_tuple
+
+    clear_region_mapping()

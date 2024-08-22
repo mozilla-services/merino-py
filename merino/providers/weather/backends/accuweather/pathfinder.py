@@ -74,11 +74,6 @@ async def explore(
     return None
 
 
-def get_region_mapping() -> dict[tuple[str, str], str | None]:
-    """Get SUCCESSFUL_REGIONS_MAPPING."""
-    return SUCCESSFUL_REGIONS_MAPPING
-
-
 def set_region_mapping(country: str, city: str, region: str | None):
     """Set country, city, region into SUCCESSFUL_REGIONS_MAPPING
     that don't fall in countries where region can be determined.
@@ -92,6 +87,6 @@ def set_region_mapping(country: str, city: str, region: str | None):
         SUCCESSFUL_REGIONS_MAPPING[(country, city)] = region
 
 
-def clear_region_mapping():
+def clear_region_mapping() -> None:
     """Clear SUCCESSFUL_REGIONS_MAPPING."""
     SUCCESSFUL_REGIONS_MAPPING.clear()
