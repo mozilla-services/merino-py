@@ -2,7 +2,7 @@
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -16,25 +16,47 @@ import asyncio
 
 
 @pytest.fixture
-def mock_gcs_client():
-    """Return a mock GCS Client instance"""
-    return MagicMock(spec=Client)
+def mock_gcs_blobs():
+    """Return a list of mock GCS Blob instances"""
+    blob1 = MagicMock(spec=Blob)
+    blob1.name = "newtab-merino-exports/engagement_202408211600.json"
+    blob1.size = 512
+    blob1.updated = datetime(2024, 8, 21, 16, 0, 0, tzinfo=timezone.utc)
+    blob1.download_as_text.return_value = json.dumps(
+        [
+            {"scheduled_corpus_item_id": "12345", "click_count": 10, "impression_count": 100},
+            {"scheduled_corpus_item_id": "67890", "click_count": 20, "impression_count": 200},
+        ]
+    )
+
+    blob2 = MagicMock(spec=Blob)
+    blob2.name = "newtab-merino-exports/engagement_202408211700.json"
+    blob2.size = 1024
+    blob2.updated = datetime(2024, 8, 21, 17, 0, 0, tzinfo=timezone.utc)
+    blob2.download_as_text.return_value = json.dumps(
+        [
+            {"scheduled_corpus_item_id": "12345", "click_count": 30, "impression_count": 300},
+            {"scheduled_corpus_item_id": "67890", "click_count": 40, "impression_count": 400},
+        ]
+    )
+
+    return [blob1, blob2]
 
 
 @pytest.fixture
-def mock_gcs_bucket(mock_gcs_client):
-    """Return a mock GCS Bucket instance"""
+def mock_gcs_bucket(mock_gcs_blobs):
+    """Return a mock GCS Bucket instance with blobs preset"""
     bucket = MagicMock(spec=Bucket)
-    mock_gcs_client.bucket.return_value = bucket
+    bucket.list_blobs.return_value = mock_gcs_blobs
     return bucket
 
 
 @pytest.fixture
-def mock_gcs_blob(mock_gcs_bucket):
-    """Return a mock GCS Blob instance"""
-    blob = MagicMock(spec=Blob)
-    mock_gcs_bucket.blob.return_value = blob
-    return blob
+def mock_gcs_client(mock_gcs_bucket):
+    """Return a mock GCS Client instance"""
+    client = MagicMock(spec=Client)
+    client.bucket.return_value = mock_gcs_bucket
+    return client
 
 
 @pytest.fixture
@@ -53,50 +75,37 @@ def mock_gcs_engagement(mock_gcs_client, mock_metrics_client) -> GcsEngagement:
         storage_client=mock_gcs_client,
         metrics_client=mock_metrics_client,
         bucket_name="test-bucket",
-        blob_name="test-blob",
+        blob_prefix="newtab-merino-exports/engagement_",
         max_size=1024 * 1024,
-        cron_interval=timedelta(milliseconds=10),  # Short interval ensures tests execute quickly.
+        cron_interval_seconds=0.01,  # Short interval ensures tests execute quickly.
     )
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_backend_return_zero_for_missing_keys(gcs_engagement):
-    """Test that the backend returns 0 clicks and impressions for keys not in the fixture"""
-    assert gcs_engagement["missing_key"] == Engagement(
-        scheduled_corpus_item_id="missing_key", clicks=0, impressions=0
-    )
+async def test_gcs_engagement_returns_zero_for_missing_keys(gcs_engagement):
+    """Test that the backend returns None for keys not in the fixture"""
+    assert gcs_engagement.get("missing_key") is None
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_backend_fetches_data(gcs_engagement, mock_gcs_blob):
+async def test_gcs_engagement_fetches_data(gcs_engagement):
     """Test that the backend fetches data from GCS and returns engagement data"""
-    engagement_data = [
-        {"scheduled_corpus_item_id": "12345", "clicks": 10, "impressions": 100},
-        {"scheduled_corpus_item_id": "67890", "clicks": 20, "impressions": 200},
-    ]
-    mock_gcs_blob.download_as_text.return_value = json.dumps(engagement_data)
-    mock_gcs_blob.size = 512
-    mock_gcs_blob.updated = datetime(2024, 1, 1, 0, 0, 0)
-
     gcs_engagement.initialize()
     await asyncio.sleep(0.02)  # Allow the cron job to fetch data.
 
-    assert gcs_engagement["12345"] == Engagement(
-        scheduled_corpus_item_id="12345", clicks=10, impressions=100
+    assert gcs_engagement.get("12345") == Engagement(
+        scheduled_corpus_item_id="12345", click_count=30, impression_count=300
     )
-    assert gcs_engagement["67890"] == Engagement(
-        scheduled_corpus_item_id="67890", clicks=20, impressions=200
+    assert gcs_engagement.get("67890") == Engagement(
+        scheduled_corpus_item_id="67890", click_count=40, impression_count=400
     )
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_backend_logs_error_for_large_blob(
-    gcs_engagement, mock_gcs_blob, caplog
-):
+async def test_gcs_engagement_logs_error_for_large_blob(gcs_engagement, mock_gcs_blobs, caplog):
     """Test that the backend logs an error if the blob size exceeds the max size"""
     caplog.set_level(logging.ERROR)
-    mock_gcs_blob.size = 1024 * 1024 + 1  # 1 byte over the limit
-    mock_gcs_blob.updated = datetime(2024, 1, 1, 0, 0, 0)
+    mock_gcs_blobs[1].size = 1024 * 1024 + 1  # 1 byte over the limit
 
     gcs_engagement.initialize()
     await asyncio.sleep(0.01)  # Allow the cron job to fetch data.
@@ -105,14 +114,10 @@ async def test_gcs_engagement_backend_logs_error_for_large_blob(
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_backend_download_count(
-    gcs_engagement, mock_gcs_blob, mock_gcs_client
-):
+async def test_gcs_engagement_download_count(gcs_engagement, mock_gcs_blobs):
     """Test that the backend periodically updates engagement from GCS"""
-    start_time = datetime.now()
-    mock_gcs_blob.updated = start_time
-    mock_gcs_blob.download_as_text.return_value = json.dumps([])
-    mock_gcs_blob.size = 512
+    start_time = datetime.now(timezone.utc)
+    mock_gcs_blobs[0].updated = start_time
 
     gcs_engagement.initialize()  # Start the cron job
 
@@ -120,32 +125,26 @@ async def test_gcs_engagement_backend_download_count(
     expected_downloads = 3
     update_period = timedelta(milliseconds=100)  # Time between simulated updates to the blob
     for i in range(expected_downloads):
-        mock_gcs_blob.updated = start_time + (i * update_period)
+        mock_gcs_blobs[0].updated = start_time + (i * update_period)
         await asyncio.sleep(update_period.total_seconds())
 
-    assert mock_gcs_blob.download_as_text.call_count == expected_downloads
+    assert mock_gcs_blobs[0].download_as_text.call_count == expected_downloads
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_metrics(gcs_engagement, mock_gcs_blob, mock_metrics_client):
+async def test_gcs_engagement_metrics(gcs_engagement, mock_metrics_client, mock_gcs_blobs):
     """Test that the backend records the correct metrics."""
-    engagement_data = [
-        {"scheduled_corpus_item_id": "12345", "clicks": 10, "impressions": 100},
-        {"scheduled_corpus_item_id": "67890", "clicks": 20, "impressions": 200},
-    ]
-    mock_gcs_blob.download_as_text.return_value = json.dumps(engagement_data)
-    mock_gcs_blob.size = 512
-    mock_gcs_blob.updated = datetime.now()
+    mock_gcs_blobs[1].updated = datetime.now(timezone.utc)
 
     gcs_engagement.initialize()
     await asyncio.sleep(0.1)  # Give the cron job time to run
 
     # Verify the metrics are recorded correctly
-    mock_metrics_client.gauge.assert_any_call("recommendation.engagement.size", value=512)
+    mock_metrics_client.gauge.assert_any_call("recommendation.engagement.size", value=1024)
     mock_metrics_client.gauge.assert_any_call("recommendation.engagement.count", value=2)
     mock_metrics_client.timeit.assert_any_call("recommendation.engagement.update.timing")
 
-    # Check the last_updated gauge value is between 0 and 1
+    # Check the last_updated gauge value shows that the engagement was updated just now.
     assert any(
         call[0][0] == "recommendation.engagement.last_updated" and 0 <= call[1]["value"] <= 1
         for call in mock_metrics_client.gauge.call_args_list

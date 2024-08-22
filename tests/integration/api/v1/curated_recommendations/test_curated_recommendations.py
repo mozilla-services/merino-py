@@ -7,10 +7,12 @@ from unittest.mock import AsyncMock
 
 import aiodogstatsd
 import freezegun
+import numpy as np
 import pytest
 from httpx import AsyncClient, Request, Response, HTTPStatusError
 from pydantic import HttpUrl
 from pytest_mock import MockerFixture
+from scipy.stats import linregress
 
 from merino.curated_recommendations import (
     CorpusApiBackend,
@@ -19,7 +21,11 @@ from merino.curated_recommendations import (
 )
 from merino.curated_recommendations.corpus_backends.corpus_api_backend import CorpusApiGraphConfig
 from merino.curated_recommendations.corpus_backends.protocol import Topic
-from merino.curated_recommendations.provider import CuratedRecommendation
+from merino.curated_recommendations.engagement_backends.protocol import (
+    EngagementBackend,
+    Engagement,
+)
+from merino.curated_recommendations.models import CuratedRecommendation
 from merino.main import app
 from merino.metrics import get_metrics_client
 
@@ -71,10 +77,50 @@ def fixture_mock_corpus_backend(corpus_http_client: AsyncMock) -> CorpusApiBacke
     )
 
 
+class MockEngagementBackend(EngagementBackend):
+    """Mock class implementing the protocol for EngagementBackend."""
+
+    def get(self, scheduled_corpus_item_id: str) -> Engagement | None:
+        """Return random click and impression counts based on the scheduled corpus id."""
+        rng = np.random.default_rng(seed=int.from_bytes(scheduled_corpus_item_id.encode()))
+
+        # 50% chance of no engagement data being available.
+        if scheduled_corpus_item_id == "50f86ebe-3f25-41d8-bd84-53ead7bdc76e":
+            # Give one item 100% click-through rate to put it on top with high certainty.
+            return Engagement(
+                scheduled_corpus_item_id=scheduled_corpus_item_id,
+                click_count=1000000,
+                impression_count=1000000,
+            )
+        elif rng.random() < 0.5:
+            return None
+        else:
+            return Engagement(
+                scheduled_corpus_item_id=scheduled_corpus_item_id,
+                click_count=rng.integers(10_000, 50_000),
+                impression_count=rng.integers(1_000_000, 5_000_000),
+            )
+
+    def initialize(self) -> None:
+        """Mock class must implement this method, but no initialization needs to happen."""
+        pass
+
+
+@pytest.fixture
+def engagement_backend():
+    """Fixture for the MockEngagementBackend"""
+    return MockEngagementBackend()
+
+
 @pytest.fixture(name="corpus_provider")
-def provider(corpus_backend: CorpusApiBackend) -> CuratedRecommendationsProvider:
+def provider(
+    corpus_backend: CorpusApiBackend, engagement_backend: EngagementBackend
+) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
-    return CuratedRecommendationsProvider(corpus_backend=corpus_backend)
+    return CuratedRecommendationsProvider(
+        corpus_backend=corpus_backend,
+        engagement_backend=engagement_backend,
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -99,6 +145,7 @@ async def test_curated_recommendations():
             url=HttpUrl(
                 "https://www.themarginalian.org/2024/05/28/passenger-pigeon/?utm_source=pocket-newtab-en-us"
             ),
+            tileId=4530137150580366,
             title="Thunder, Bells, and Silence: the Eclipse That Went Extinct",
             excerpt="Juneteenth isn’t the “other” Independence Day, it is THE Independence Day.",
             topic=Topic.CAREER,
@@ -124,8 +171,9 @@ async def test_curated_recommendations():
         assert all(item["imageUrl"] for item in corpus_items)
         assert all(item["tileId"] for item in corpus_items)
 
-        # Assert 2nd returned recommendation has topic = None & all fields returned are expected
-        actual_recommendation = CuratedRecommendation(**corpus_items[1])
+        # The first recommendation is guaranteed to be at the top because it has much higher
+        # CTR (100%) than any other recommendations.
+        actual_recommendation = CuratedRecommendation(**corpus_items[0])
         assert actual_recommendation == expected_recommendation
 
 
@@ -339,18 +387,7 @@ class TestCuratedRecommendationsRequestParameters:
 
     @pytest.mark.asyncio
     @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
-    @pytest.mark.parametrize(
-        "preferred_topics",
-        [
-            # rec with topic FOOD is already the first rec in the list
-            [Topic.FOOD, Topic.EDUCATION],
-            # rec with topic CAREER is already the second rec in the list
-            [Topic.POLITICS, Topic.CAREER],
-        ],
-    )
-    async def test_curated_recommendations_preferred_topic_no_reorder(
-        self, preferred_topics, mocker
-    ):
+    async def test_curated_recommendations_preferred_topic_no_reorder(self, mocker):
         """Test the curated recommendations endpoint accepts a preferred topic & does
         not reorder the list if preferred topics already in top 2 recs.
         """
@@ -359,6 +396,7 @@ class TestCuratedRecommendationsRequestParameters:
             CuratedRecommendationsProvider, "boost_preferred_topic"
         )
         async with AsyncClient(app=app, base_url="http://test") as ac:
+            preferred_topics = [Topic.POLITICS, Topic.CAREER]
             print("preferred_topics: ", preferred_topics)
             response = await ac.post(
                 "/api/v1/curated-recommendations",
@@ -412,12 +450,11 @@ class TestCorpusApiCaching:
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Gather multiple fetch calls
             results = await asyncio.gather(fetch_en_us(ac), fetch_en_us(ac), fetch_en_us(ac))
+            # Assert that recommendations were returned in each response.
+            assert all(len(result.json()["data"]) == 80 for result in results)
 
             # Assert that exactly one request was made to the corpus api
             corpus_http_client.post.assert_called_once()
-
-            # Assert that the results are the same
-            assert all(results[0].json() == result.json() for result in results)
 
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.asyncio
@@ -616,3 +653,50 @@ class TestCuratedRecommendationsMetrics:
                     "response.status_codes.200",
                 ]
             )
+
+
+class TestCorpusApiRanking:
+    """Tests covering the ranking behavior of the Corpus backend"""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "topics",
+        [
+            [Topic.POLITICS],
+            None,
+        ],
+    )
+    async def test_thompson_sampling_behavior(self, topics, engagement_backend):
+        """Test that Thompson sampling produces different orders and favors higher CTRs."""
+        n_iterations = 20  # Increase to 2000 when changing Thompson sampling to ensure reliability
+        past_id_orders = []
+
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            for i in range(n_iterations):
+                response = await ac.post(
+                    "/api/v1/curated-recommendations",
+                    json={"locale": "en-US", "topics": topics},
+                )
+                data = response.json()
+                corpus_items = data["data"]
+
+                # Assert that no response was ranked in the same way before.
+                id_order = [item["scheduledCorpusItemId"] for item in corpus_items]
+                assert id_order not in past_id_orders, f"Duplicate order at iteration {i}."
+                past_id_orders.append(id_order)  # a list of lists with all orders
+
+                engagements = [
+                    engagement_backend.get(item["scheduledCorpusItemId"]) for item in corpus_items
+                ]
+                ctr_by_rank = [
+                    (rank, e.click_count / e.impression_count)
+                    for rank, e in enumerate(engagements)
+                    if e is not None
+                ]
+
+                # Perform linear regression to find the coefficient
+                ranks, ctrs = zip(*ctr_by_rank)
+                slope, _, _, _, _ = linregress(ranks, ctrs)
+
+                # Assert that the slope is negative, meaning higher ranks have higher CTRs
+                assert slope < 0, f"Thompson sampling did not favor higher CTR on iteration {i}."

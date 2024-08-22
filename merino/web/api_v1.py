@@ -17,6 +17,8 @@ from merino.config import settings
 from merino.curated_recommendations import get_provider as get_corpus_api_provider
 from merino.curated_recommendations.provider import (
     CuratedRecommendationsProvider,
+)
+from merino.curated_recommendations.models import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
 )
