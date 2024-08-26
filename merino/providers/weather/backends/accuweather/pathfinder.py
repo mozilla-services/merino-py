@@ -4,9 +4,11 @@ from typing import Any, Awaitable, Callable, Generator, Optional
 
 from merino.middleware.geolocation import Location
 
-
 MaybeStr = Optional[str]
 Triplet = tuple[MaybeStr, MaybeStr, MaybeStr]
+
+SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {}
+REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(["CA", "ES", "GR", "IT", "US"])
 
 
 def compass(location: Location) -> Generator[Triplet, None, None]:
@@ -21,14 +23,27 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
     """
     # TODO(nanj): add more heuristics to here.
 
-    # Append None as the fallback since AccuWeather can take params w/o the region code
-    if location.regions is not None:
-        regions = [*location.regions, None]
-    else:
-        regions = [None]
+    country = location.country
+    regions = location.regions
+    city = location.city
 
-    for region in regions:
-        yield location.country, region, location.city
+    if regions and country and city:
+        match (country, city):
+            case ("US" | "CA", _):
+                yield country, regions[0], city  # use the most specific region
+            case ("IT" | "ES" | "GR", _):
+                yield country, regions[-1], city  # use the least specific region
+            case (country, city) if (
+                country,
+                city,
+            ) in SUCCESSFUL_REGIONS_MAPPING:  # dynamic rules we've learned
+                yield country, SUCCESSFUL_REGIONS_MAPPING[(country, city)], city
+            case _:  # Fall back to try all triplets
+                regions_to_try = [*regions, None]
+                for region in regions_to_try:
+                    yield country, region, city
+    else:
+        yield country, None, city
 
 
 async def explore(
@@ -57,3 +72,21 @@ async def explore(
             return res
 
     return None
+
+
+def set_region_mapping(country: str, city: str, region: str | None):
+    """Set country, city, region into SUCCESSFUL_REGIONS_MAPPING
+    that don't fall in countries where region can be determined.
+
+    Params:
+      - country {str}: country code
+      - city {str}: city name
+      - region {str | None}: region code
+    """
+    if country not in REGION_MAPPING_EXCLUSIONS:
+        SUCCESSFUL_REGIONS_MAPPING[(country, city)] = region
+
+
+def clear_region_mapping() -> None:
+    """Clear SUCCESSFUL_REGIONS_MAPPING."""
+    SUCCESSFUL_REGIONS_MAPPING.clear()
