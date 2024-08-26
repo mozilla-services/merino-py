@@ -369,27 +369,28 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
         return recs
 
     def test_boost_preferred_topic_one_topic(self):
-        """Should boost first item found with preferred topic to second slot."""
+        """Should boost first 2 recs found with preferred topic to the first two slots."""
         recs = self.generate_recommendations(
-            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION]
+            [Topic.TRAVEL, Topic.ARTS, Topic.EDUCATION, Topic.FOOD, Topic.EDUCATION]
         )
         reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(
             recs, [Topic.EDUCATION]
         )
 
         assert len(recs) == len(reordered_recs)
-        # assert the last rec (id = 5) is now the second recommendation
-        assert recs[-1] == reordered_recs[1]
         # for readability
+        # assert that the first two recs have topic EDUCATION
+        assert reordered_recs[0].topic == Topic.EDUCATION
         assert reordered_recs[1].topic == Topic.EDUCATION
+        assert reordered_recs[0].scheduledCorpusItemId == "3"
         assert reordered_recs[1].scheduledCorpusItemId == "5"
 
     def test_boost_preferred_topic_two_topics(self):
-        """If two preferred topics are provided but only one topic is found in list or recs, boost item to second
-        slot.
+        """If two preferred topics are provided but only one topic is found in list or recs, boost first 2 recs
+        to first two slots.
         """
         recs = self.generate_recommendations(
-            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION]
+            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION, Topic.FOOD]
         )
         # career topic is not present in rec list, boost item with food topic to second slot
         reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(
@@ -397,11 +398,125 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
         )
 
         assert len(recs) == len(reordered_recs)
-        # assert the second to last rec (id = 4) is now the second recommendation
-        assert recs[-2] == reordered_recs[1]
         # for readability
+        assert reordered_recs[0].topic == Topic.FOOD
+        assert reordered_recs[0].scheduledCorpusItemId == "4"
         assert reordered_recs[1].topic == Topic.FOOD
-        assert reordered_recs[1].scheduledCorpusItemId == "4"
+        assert reordered_recs[1].scheduledCorpusItemId == "6"
+
+    @pytest.mark.parametrize(
+        "preferred_topics, expected_topics, expected_ids",
+        [
+            # Test case for 2 preferred topics
+            (
+                [Topic.SPORTS, Topic.FOOD],
+                [Topic.SPORTS, Topic.SPORTS, Topic.FOOD, Topic.FOOD],
+                ["4", "13", "5", "7"],
+            ),
+            # Test case for 3 preferred topics
+            (
+                [Topic.BUSINESS, Topic.FOOD, Topic.TRAVEL],
+                [
+                    Topic.BUSINESS,
+                    Topic.BUSINESS,
+                    Topic.FOOD,
+                    Topic.FOOD,
+                    Topic.TRAVEL,
+                    Topic.TRAVEL,
+                ],
+                ["1", "14", "5", "7", "2", "8"],
+            ),
+            # Test case for 4 preferred topics
+            (
+                [Topic.POLITICS, Topic.ARTS, Topic.TRAVEL, Topic.SPORTS],
+                [
+                    Topic.POLITICS,
+                    Topic.POLITICS,
+                    Topic.ARTS,
+                    Topic.ARTS,
+                    Topic.TRAVEL,
+                    Topic.TRAVEL,
+                    Topic.SPORTS,
+                    Topic.SPORTS,
+                ],
+                ["9", "12", "3", "10", "2", "8", "4", "13"],
+            ),
+            # Test case for 5 preferred topics
+            (
+                [Topic.POLITICS, Topic.ARTS, Topic.TRAVEL, Topic.SPORTS, Topic.EDUCATION],
+                [
+                    Topic.POLITICS,
+                    Topic.POLITICS,
+                    Topic.ARTS,
+                    Topic.ARTS,
+                    Topic.TRAVEL,
+                    Topic.TRAVEL,
+                    Topic.SPORTS,
+                    Topic.SPORTS,
+                    Topic.EDUCATION,
+                    Topic.EDUCATION,
+                ],
+                ["9", "12", "3", "10", "2", "8", "4", "13", "6", "16"],
+            ),
+            # Test case for 6+ preferred topics (assuming max 10 items in total)
+            (
+                [
+                    Topic.POLITICS,
+                    Topic.ARTS,
+                    Topic.TRAVEL,
+                    Topic.SPORTS,
+                    Topic.EDUCATION,
+                    Topic.FOOD,
+                ],
+                [
+                    Topic.POLITICS,
+                    Topic.POLITICS,
+                    Topic.ARTS,
+                    Topic.ARTS,
+                    Topic.TRAVEL,
+                    Topic.TRAVEL,
+                    Topic.SPORTS,
+                    Topic.SPORTS,
+                    Topic.EDUCATION,
+                    Topic.EDUCATION,
+                ],
+                ["9", "12", "3", "10", "2", "8", "4", "13", "6", "16"],
+            ),
+        ],
+    )
+    def test_boost_preferred_topic(self, preferred_topics, expected_topics, expected_ids):
+        """Test boosting works correctly for 2, 3, 4, 5, 6+ preferred topics."""
+        recs = self.generate_recommendations(
+            [
+                Topic.BUSINESS,  # 1
+                Topic.TRAVEL,  # 2
+                Topic.ARTS,  # 3
+                Topic.SPORTS,  # 4
+                Topic.FOOD,  # 5
+                Topic.EDUCATION,  # 6
+                Topic.FOOD,  # 7
+                Topic.TRAVEL,  # 8
+                Topic.POLITICS,  # 9
+                Topic.ARTS,  # 10
+                Topic.ARTS,  # 11
+                Topic.POLITICS,  # 12
+                Topic.SPORTS,  # 13
+                Topic.BUSINESS,  # 14
+                Topic.PARENTING,  # 15
+                Topic.EDUCATION,  # 16
+            ]
+        )
+
+        reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(
+            recs, preferred_topics
+        )
+        # Check that the length of the reordered recommendations matches
+        assert len(reordered_recs) == len(recs)
+
+        # Check that the expected topics and IDs are in the correct positions
+        for idx, (expected_topic, expected_id) in enumerate(zip(expected_topics, expected_ids)):
+            assert reordered_recs[idx].topic == expected_topic
+            assert reordered_recs[idx].scheduledCorpusItemId == expected_id
 
     def test_boost_preferred_topic_no_preferred_topic_found(self):
         """Don't reorder list of recs if no items with preferred topics are found."""
@@ -415,21 +530,27 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
         assert reordered_recs == recs
 
     def test_is_boostable_return_true(self):
-        """Should return True if any of preferred topics is not in top 2 recs"""
+        """Should return True if all preferred topics are not in the top N slots (2 recs per topic)"""
         recs = self.generate_recommendations(
-            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION]
+            [Topic.TRAVEL, Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.EDUCATION, Topic.SPORTS]
         )
-        is_boostable = CuratedRecommendationsProvider.is_boostable(recs, [Topic.EDUCATION])
+        # should return true as recs with TRAVEL topic are in the first two slots, but 3rd slot is occupied by ARTS
+        # topic but should be occupied with SPORTS topic
+        is_boostable = CuratedRecommendationsProvider.is_boostable(
+            recs, [Topic.TRAVEL, Topic.SPORTS]
+        )
 
         assert is_boostable
 
     def test_is_boostable_return_false(self):
         """Should return False if any of preferred topics is already in top 2 recs"""
         recs = self.generate_recommendations(
-            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION]
+            [Topic.TRAVEL, Topic.TRAVEL, Topic.SPORTS, Topic.SPORTS, Topic.EDUCATION, Topic.SPORTS]
         )
+        # should return false as 2 topics are provided and top 4 slots are filled with recs from those topics
+        # 2 recs per topic
         is_boostable = CuratedRecommendationsProvider.is_boostable(
-            recs, [Topic.CAREER, Topic.ARTS]
+            recs, [Topic.TRAVEL, Topic.SPORTS]
         )
 
         assert not is_boostable

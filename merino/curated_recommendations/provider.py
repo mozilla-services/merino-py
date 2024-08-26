@@ -62,6 +62,9 @@ MAX_TILE_ID = (1 << 53) - 1
 # generated the identifier.
 MIN_TILE_ID = 10000000
 
+NUM_RECS_PER_TOPIC = 2
+MAX_TOP_REC_SLOTS = 10
+
 
 class CuratedRecommendation(CorpusItem):
     """Extends CorpusItem with additional fields for a curated recommendation"""
@@ -180,12 +183,12 @@ class CuratedRecommendationsProvider:
         Return a 2-letter region like 'US'.
         Ref: https://github.com/Pocket/recommendation-api/blob/c0fe2d1cab7ec7931c3c8c2e8e3d82908801ab00/app/data_providers/dispatch.py#L451 # noqa
         """
-        # derive from provided region
+        # Derive from provided region
         if region:
             m1 = re.search(r"[a-zA-Z]{2}", region)
             if m1:
                 return m1.group().upper()
-        # if region not provided, derive from locale
+        # If region not provided, derive from locale
         m2 = re.search(r"[_\-]([a-zA-Z]{2})", locale)
         if m2:
             return m2.group(1).upper()
@@ -222,51 +225,96 @@ class CuratedRecommendationsProvider:
         return result_recs
 
     @staticmethod
+    def get_top_recommendations_by_topic(
+        recs: list[CuratedRecommendation],
+        preferred_topics: list[Topic],
+        max_top_recs: int = MAX_TOP_REC_SLOTS,
+    ) -> list[CuratedRecommendation]:
+        """Get top recommendations based on preferred topics. 2 recs per preferred topic.
+
+        :param recs: List of recs to filter and boost
+        :param preferred_topics: User's preferred topic(s)
+        :param max_top_recs: Max number of top recs to return based on preferred topics in the first N slots.
+                             Default is 10.
+        :return: List of reordered recs based on preferred topics
+        """
+        # dictionary to store recommendations by preferred topic
+        topic_dict: dict[Topic, list[CuratedRecommendation]] = {
+            topic: [] for topic in preferred_topics
+        }
+
+        # group by topic
+        for rec in recs:
+            if rec.topic in topic_dict:
+                topic_dict[rec.topic].append(rec)
+
+        # Get the number of top recommendations based on the number of preferred topics
+        # i.e., 2 topics = 4 recs, 3 topics = 6 recs, etc. Max top recs is 10.
+        top_recs = []
+
+        for topic in preferred_topics:
+            top_recs.extend(topic_dict.get(topic, [])[:NUM_RECS_PER_TOPIC])
+
+        # Limit the total number of top recommendations (10 is max for now)
+        return top_recs[:max_top_recs]
+
+    @staticmethod
     def is_boostable(
-        recs: list[CuratedRecommendation], preferred_topics: list[Topic], num_of_recs: int = 2
+        recs: list[CuratedRecommendation],
+        preferred_topics: list[Topic],
     ) -> bool:
-        """Check if top 2 recommendations already have the preferred topics.
-        This will indicate if recs need boosting.
+        """Check if top N recommendations need boosting based on preferred topics.
 
         :param recs: List of recommendations
-        :param preferred_topics: user's preferred topic(s)
-        :param num_of_recs: get the first num of recs when slicing
-        :return: bool
+        :param preferred_topics: User's preferred topic(s)
+        :return: True if boosting is needed (i.e. less than 2 stories per topic in top N slots), else False
         """
-        top_two_recs = recs[:num_of_recs]  # slice operator, get the first two recs (index 0 & 1)
-        # check if topics in first two (0-1 index) recs are in preferred_topics
-        if not any(r.topic in preferred_topics for r in top_two_recs):
-            return True
-        return False
+        num_topics = len(preferred_topics)
+
+        if num_topics >= 5:
+            num_top_recs = MAX_TOP_REC_SLOTS
+        else:
+            num_top_recs = num_topics * NUM_RECS_PER_TOPIC
+
+        top_recs = recs[:num_top_recs]
+
+        # Create a dictionary to track how many stories per topic are in the top N slots
+        # Start with 0
+        topic_count = {topic: 0 for topic in preferred_topics}
+
+        for rec in top_recs:
+            if rec.topic in topic_count:
+                topic_count[rec.topic] += 1
+
+        # Check if each topic has at least 2 stories in the top N slots
+        return any(rec_count < NUM_RECS_PER_TOPIC for rec_count in topic_count.values())
 
     @staticmethod
     def boost_preferred_topic(
         recs: list[CuratedRecommendation],
         preferred_topics: list[Topic],
-        boostable_slot: int = 1,
     ) -> list[CuratedRecommendation]:
-        """Boost a recommendation based on preferred topic(s) into `boostable_slot`.
+        """Boost recommendations into top N slots based on preferred topics.
 
-        :param recs: List of recommendations from which an item is boosted based on preferred topic(s).
-        :param preferred_topics: user's preferred topic(s)
-        :param boostable_slot: 0-based slot to boost an item into. Defaults to slot 1,
-        which is the second recommendation.
-        :return: CuratedRecommendations ranked based on a preferred topic, while otherwise preserving the order.
+        :param recs: List of recommendations
+        :param preferred_topics: User's preferred topic(s)
+        :return: CuratedRecommendations ranked based on a preferred topic(s), while otherwise preserving the order.
         """
-        # get the first item found to boost based on the below condition starting after the boostable_slot in the list.
-        # condition for boostable item: check if an item has a topic in the preferred_topics list.
-        boostable_rec = next(
-            (r for r in recs[boostable_slot + 1 :] if r.topic in preferred_topics),
-            None,
+        # Get the top recommendations based on preferred topics
+        top_recs = CuratedRecommendationsProvider.get_top_recommendations_by_topic(
+            recs, preferred_topics
         )
 
-        # if item to boost is found
-        if boostable_rec:
-            recs = copy(recs)  # Create a shallow copy of recs
-            recs.remove(boostable_rec)  # remove the item to boost from list of recs
-            recs.insert(
-                boostable_slot, boostable_rec
-            )  # insert it into the boostable_slot (2nd rec)
+        # Create a shallow copy of recs
+        recs = recs.copy()
+
+        # Remove top_recs from the original list if they exist
+        for boostable_rec in top_recs:
+            if boostable_rec in recs:
+                recs.remove(boostable_rec)
+
+        # Insert top_recs into the start of the list
+        recs = top_recs + recs
 
         return recs
 
@@ -274,7 +322,7 @@ class CuratedRecommendationsProvider:
         self, curated_recommendations_request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:  # noqa
         """Provide curated recommendations."""
-        # get the recommendation surface ID based on passed locale & region
+        # Get the recommendation surface ID based on passed locale & region
         surface_id = CuratedRecommendationsProvider.get_recommendation_surface_id(
             curated_recommendations_request.locale, curated_recommendations_request.region
         )

@@ -95,16 +95,17 @@ async def test_curated_recommendations():
     async with AsyncClient(app=app, base_url="http://test") as ac:
         # expected recommendation with topic = None
         expected_recommendation = CuratedRecommendation(
-            scheduledCorpusItemId="50f86ebe-3f25-41d8-bd84-53ead7bdc76e",
+            scheduledCorpusItemId="886ce027-4e50-4b29-ba13-ad799e77e382",
             url=HttpUrl(
-                "https://www.themarginalian.org/2024/05/28/passenger-pigeon/?utm_source=pocket-newtab-en-us"
+                "https://getpocket.com/explore/item/a-hot-drink-on-a-hot-day-can-cool-you-down?utm_source=pocket-newtab-en-us"
             ),
-            title="Thunder, Bells, and Silence: the Eclipse That Went Extinct",
-            excerpt="Juneteenth isn’t the “other” Independence Day, it is THE Independence Day.",
-            topic=Topic.CAREER,
-            publisher="The Marginalian",
+            title="A Hot Drink on a Hot Day Can Cool You Down",
+            excerpt="A rigorous experiment revealed that on a hot, dry day, drinking a hot beverage can help your "
+            "body stay cool.",
+            topic=Topic.FOOD,
+            publisher="Smithsonian Magazine",
             imageUrl=HttpUrl(
-                "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/87fd6901-5bf5-4b12-8bde-24b86be79003.jpeg"
+                "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/968a6566-df7a-4f7d-aefd-8678853544b1.jpeg"
             ),
             receivedRank=1,
         )
@@ -339,18 +340,7 @@ class TestCuratedRecommendationsRequestParameters:
 
     @pytest.mark.asyncio
     @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
-    @pytest.mark.parametrize(
-        "preferred_topics",
-        [
-            # rec with topic FOOD is already the first rec in the list
-            [Topic.FOOD, Topic.EDUCATION],
-            # rec with topic CAREER is already the second rec in the list
-            [Topic.POLITICS, Topic.CAREER],
-        ],
-    )
-    async def test_curated_recommendations_preferred_topic_no_reorder(
-        self, preferred_topics, mocker
-    ):
+    async def test_curated_recommendations_preferred_topic_no_reorder(self, mocker):
         """Test the curated recommendations endpoint accepts a preferred topic & does
         not reorder the list if preferred topics already in top 2 recs.
         """
@@ -359,10 +349,9 @@ class TestCuratedRecommendationsRequestParameters:
             CuratedRecommendationsProvider, "boost_preferred_topic"
         )
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            print("preferred_topics: ", preferred_topics)
             response = await ac.post(
                 "/api/v1/curated-recommendations",
-                json={"locale": "en-US", "topics": preferred_topics},
+                json={"locale": "en-US", "topics": [Topic.FOOD]},
             )
             data = response.json()
             corpus_items = data["data"]
