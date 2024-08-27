@@ -4,7 +4,7 @@ import asyncio
 import datetime
 import functools
 import hashlib
-import json
+import orjson
 import logging
 from enum import Enum
 from typing import Any, Callable, NamedTuple, cast
@@ -378,7 +378,7 @@ class AccuweatherBackend:
             cache_ttl: datetime.timedelta = max(
                 expiry_delta, datetime.timedelta(seconds=cache_ttl_sec)
             )
-            cache_value = json.dumps(response_dict).encode("utf-8")
+            cache_value = orjson.dumps(response_dict)
             await self.cache.set(cache_key, cache_value, ttl=cache_ttl)
 
         return cache_ttl.seconds
@@ -459,11 +459,11 @@ class AccuweatherBackend:
 
         try:
             if location_cached is not None:
-                location = AccuweatherLocation.model_validate_json(location_cached)
+                location = AccuweatherLocation.model_validate(orjson.loads(location_cached))
             if current_cached is not None:
-                current_conditions = CurrentConditions.model_validate_json(current_cached)
+                current_conditions = CurrentConditions.model_validate(orjson.loads(current_cached))
             if forecast_cached is not None:
-                forecast = Forecast.model_validate_json(forecast_cached)
+                forecast = Forecast.model_validate(orjson.loads(forecast_cached))
             if ttl_cached is not None:
                 # redis returns the TTL value as an integer, however, we are explicitly casting
                 # the value returned from the cache since it's received as bytes as the method
