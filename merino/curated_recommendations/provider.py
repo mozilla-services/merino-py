@@ -225,98 +225,41 @@ class CuratedRecommendationsProvider:
         return result_recs
 
     @staticmethod
-    def get_top_recommendations_by_topic(
-        recs: list[CuratedRecommendation],
-        preferred_topics: list[Topic],
-        max_top_recs: int = MAX_TOP_REC_SLOTS,
-    ) -> list[CuratedRecommendation]:
-        """Get top recommendations based on preferred topics. 2 recs per preferred topic.
-
-        :param recs: List of recs to filter and boost
-        :param preferred_topics: User's preferred topic(s)
-        :param max_top_recs: Max number of top recs to return based on preferred topics in the first N slots.
-                             Default is 10.
-        :return: List of reordered recs based on preferred topics
-        """
-        # dictionary to store recommendations by preferred topic
-        topic_dict: dict[Topic, list[CuratedRecommendation]] = {
-            topic: [] for topic in preferred_topics
-        }
-
-        # group by topic
-        for rec in recs:
-            if rec.topic in topic_dict:
-                topic_dict[rec.topic].append(rec)
-
-        # Get the number of top recommendations based on the number of preferred topics
-        # i.e., 2 topics = 4 recs, 3 topics = 6 recs, etc. Max top recs is 10.
-        top_recs = []
-
-        for topic in preferred_topics:
-            top_recs.extend(topic_dict.get(topic, [])[:NUM_RECS_PER_TOPIC])
-
-        # Limit the total number of top recommendations (10 is max for now)
-        return top_recs[:max_top_recs]
-
-    @staticmethod
-    def is_boostable(
-        recs: list[CuratedRecommendation],
-        preferred_topics: list[Topic],
-    ) -> bool:
-        """Check if top N recommendations need boosting based on preferred topics.
-
-        :param recs: List of recommendations
-        :param preferred_topics: User's preferred topic(s)
-        :return: True if boosting is needed (i.e. less than 2 stories per topic in top N slots), else False
-        """
-        num_topics = len(preferred_topics)
-
-        if num_topics >= 5:
-            num_top_recs = MAX_TOP_REC_SLOTS
-        else:
-            num_top_recs = num_topics * NUM_RECS_PER_TOPIC
-
-        top_recs = recs[:num_top_recs]
-
-        # Create a dictionary to track how many stories per topic are in the top N slots
-        # Start with 0
-        topic_count = {topic: 0 for topic in preferred_topics}
-
-        for rec in top_recs:
-            if rec.topic in topic_count:
-                topic_count[rec.topic] += 1
-
-        # Check if each topic has at least 2 stories in the top N slots
-        return any(rec_count < NUM_RECS_PER_TOPIC for rec_count in topic_count.values())
-
-    @staticmethod
     def boost_preferred_topic(
         recs: list[CuratedRecommendation],
         preferred_topics: list[Topic],
     ) -> list[CuratedRecommendation]:
         """Boost recommendations into top N slots based on preferred topics.
+        2 recs per topic (for now).
 
         :param recs: List of recommendations
         :param preferred_topics: User's preferred topic(s)
-        :return: CuratedRecommendations ranked based on a preferred topic(s), while otherwise preserving the order.
+        :return: CuratedRecommendations ranked based on a preferred topic(s), while otherwise
+        preserving the order.
         """
-        # Get the top recommendations based on preferred topics
-        top_recs = CuratedRecommendationsProvider.get_top_recommendations_by_topic(
-            recs, preferred_topics
-        )
+        boosted_recs = []
+        remaining_recs = []
+        # The following dict tracks the number of recommendations per topic to be boosted.
+        remaining_num_topic_boosts = {
+            preferred_topic: NUM_RECS_PER_TOPIC for preferred_topic in preferred_topics
+        }
 
-        # Create a shallow copy of recs
-        recs = recs.copy()
+        for rec in recs:
+            topic = rec.topic
+            # Check if the recommendation should be boosted
+            # Boost if slots (e.g. 10) remain and its topic hasn't been boosted too often (e.g. 2).
+            # It relies on get() returning None for missing keys, and None and 0 being falsy.
+            if (
+                topic in remaining_num_topic_boosts
+                and len(remaining_num_topic_boosts) < MAX_TOP_REC_SLOTS
+                and remaining_num_topic_boosts[topic] > 0
+            ):
+                boosted_recs.append(rec)
+                remaining_num_topic_boosts[topic] -= 1  # decrement remaining # of topics to boost
+            else:
+                remaining_recs.append(rec)
 
-        # Remove top_recs from the original list if they exist
-        for boostable_rec in top_recs:
-            if boostable_rec in recs:
-                recs.remove(boostable_rec)
-
-        # Insert top_recs into the start of the list
-        recs = top_recs + recs
-
-        return recs
+        return boosted_recs + remaining_recs
 
     async def fetch(
         self, curated_recommendations_request: CuratedRecommendationsRequest
@@ -343,11 +286,10 @@ class CuratedRecommendationsProvider:
 
         # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
         if curated_recommendations_request.topics:
-            # Check if recs need boosting
-            if self.is_boostable(recommendations, curated_recommendations_request.topics):
-                recommendations = self.boost_preferred_topic(
-                    recommendations, curated_recommendations_request.topics
-                )
+            # Check if recs need boosting & boost if needed
+            recommendations = self.boost_preferred_topic(
+                recommendations, curated_recommendations_request.topics
+            )
 
         return CuratedRecommendationsResponse(
             recommendedAt=self.time_ms(),

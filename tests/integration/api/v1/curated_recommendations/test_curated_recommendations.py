@@ -31,6 +31,15 @@ def fixture_response_data():
         return json.load(f)
 
 
+# This fixture is used in tests where recs order is important to check &
+# keeping the list short is easier to manipulate.
+@pytest.fixture()
+def fixture_response_data_short():
+    """Load mock response data (shortened) for the scheduledSurface query"""
+    with open("tests/data/scheduled_surface_short.json") as f:
+        return json.load(f)
+
+
 @pytest.fixture()
 def fixture_request_data() -> Request:
     """Load mock response data for the scheduledSurface query"""
@@ -85,7 +94,9 @@ def setup_providers(corpus_provider):
 
 async def fetch_en_us(client: AsyncClient) -> Response:
     """Make a curated recommendations request with en-US locale"""
-    return await client.post("/api/v1/curated-recommendations", json={"locale": "en-US"})
+    return await client.post(
+        "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": [Topic.FOOD]}
+    )
 
 
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
@@ -317,9 +328,8 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 200, f"{topics} resulted in {response.status_code}"
 
     @pytest.mark.asyncio
-    async def test_curated_recommendations_preferred_topic(self, mocker):
+    async def test_curated_recommendations_preferred_topic(self, mocker, fixture_response_data):
         """Test the curated recommendations endpoint accepts a preferred topic & reorders the list."""
-        is_boostable_spy = mocker.spy(CuratedRecommendationsProvider, "is_boostable")
         boost_preferred_topic_spy = mocker.spy(
             CuratedRecommendationsProvider, "boost_preferred_topic"
         )
@@ -333,36 +343,50 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 200
             # assert total of 80 items returned
             assert len(corpus_items) == 80
-            # assert is_boostable was called
-            is_boostable_spy.assert_called_once()
             # assert boost_preferred_topic was called
             boost_preferred_topic_spy.assert_called_once()
 
+            # extract IDs from both lists
+            fixture_ids = [
+                item["id"] for item in fixture_response_data["data"]["scheduledSurface"]["items"]
+            ]
+            corpus_ids = [item["scheduledCorpusItemId"] for item in corpus_items]
+            # assert that recs were reordered
+            assert fixture_ids != corpus_ids
+
     @pytest.mark.asyncio
     @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
-    async def test_curated_recommendations_preferred_topic_no_reorder(self, mocker):
+    async def test_curated_recommendations_preferred_topic_no_reorder(
+        self, mocker, fixture_response_data_short, fixture_request_data, corpus_http_client
+    ):
         """Test the curated recommendations endpoint accepts a preferred topic & does
         not reorder the list if preferred topics already in top 2 recs.
         """
-        is_boostable_spy = mocker.spy(CuratedRecommendationsProvider, "is_boostable")
         boost_preferred_topic_spy = mocker.spy(
             CuratedRecommendationsProvider, "boost_preferred_topic"
         )
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": "en-US", "topics": [Topic.FOOD]},
+            corpus_http_client.post.return_value = Response(
+                status_code=200,
+                json=fixture_response_data_short,
+                request=fixture_request_data,
             )
+            response = await fetch_en_us(ac)
             data = response.json()
             corpus_items = data["data"]
 
             assert response.status_code == 200
-            # assert total of 80 items returned
-            assert len(corpus_items) == 80
-            # assert is_boostable was called
-            is_boostable_spy.assert_called_once()
-            # assert boost_preferred_topic was not called
-            boost_preferred_topic_spy.assert_not_called()
+            # assert total of 4 items returned (using scheduled_surface_short.json for response)
+            assert len(corpus_items) == 4
+            # assert boost_preferred_topic was called
+            boost_preferred_topic_spy.assert_called_once()
+            # assert that even though boost_preferred_topic was called, recs didn't need boosting
+            # so order remains the same
+            for i in range(len(corpus_items)):
+                assert (
+                    fixture_response_data_short["data"]["scheduledSurface"]["items"][i]["id"]
+                    == corpus_items[i]["scheduledCorpusItemId"]
+                )
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
