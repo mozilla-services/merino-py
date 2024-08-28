@@ -10,7 +10,7 @@ from typing import Annotated
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Query
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse
+from fastapi.responses import ORJSONResponse
 from starlette.requests import Request
 
 from merino.config import settings
@@ -72,7 +72,7 @@ async def suggest(
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
     request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
-) -> JSONResponse:
+) -> ORJSONResponse:
     """Query Merino for suggestions.
 
     This is the primary endpoint that consumes user input and suggests
@@ -224,7 +224,7 @@ async def suggest(
     ttl = get_ttl_for_cache_control_header_for_suggestions(search_from, suggestions)
     response_headers["Cache-control"] = f"private, max-age={ttl}"
 
-    return JSONResponse(
+    return ORJSONResponse(
         content=jsonable_encoder(response, exclude_none=True),
         headers=response_headers,
     )
@@ -285,7 +285,7 @@ def get_ttl_for_cache_control_header_for_suggestions(
 )
 async def providers(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
-) -> JSONResponse:
+) -> ORJSONResponse:
     """Query Merino for suggestion providers.
 
     This endpoint gives a list of available providers, along with their
@@ -315,7 +315,7 @@ async def providers(
         ProviderResponse(**{"id": id, "availability": provider.availability()})
         for id, provider in active_providers.items()
     ]
-    return JSONResponse(content=jsonable_encoder(providers))
+    return ORJSONResponse(content=jsonable_encoder(providers))
 
 
 @router.post("/curated-recommendations", summary="Curated recommendations for New Tab")
