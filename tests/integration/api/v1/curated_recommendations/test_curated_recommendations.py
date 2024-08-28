@@ -691,7 +691,8 @@ class TestCorpusApiRanking:
                 ctr_by_rank = [
                     (rank, e.click_count / e.impression_count)
                     for rank, e in enumerate(engagements)
-                    if e is not None
+                    # Exclude no engagement items and the first one, which has 100% CTR.
+                    if e is not None and rank > 0
                 ]
 
                 # Perform linear regression to find the coefficient
