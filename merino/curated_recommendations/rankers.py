@@ -1,7 +1,7 @@
 """Algorithms for ranking curated recommendations."""
 
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.models import CuratedRecommendation
+from merino.curated_recommendations.protocol import CuratedRecommendation
 from scipy.stats import beta
 
 DEFAULT_ALPHA_PRIOR = 188  # beta * P99 German NewTab CTR for 2023-03-28 to 2023-04-05 (1.5%)

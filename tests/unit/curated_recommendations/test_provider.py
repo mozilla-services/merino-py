@@ -9,7 +9,7 @@ from merino.curated_recommendations.corpus_backends.protocol import ScheduledSur
 from merino.curated_recommendations.provider import (
     CuratedRecommendationsProvider,
 )
-from merino.curated_recommendations.models import (
+from merino.curated_recommendations.protocol import (
     Locale,
     MAX_TILE_ID,
     MIN_TILE_ID,

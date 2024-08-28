@@ -1,4 +1,4 @@
-"""Curated Recommendations provider models"""
+"""Curated Recommendations provider top-level request and response models"""
 
 import hashlib
 from enum import unique, Enum

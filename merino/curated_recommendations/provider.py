@@ -11,7 +11,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     Topic,
 )
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.models import (
+from merino.curated_recommendations.protocol import (
     Locale,
     CuratedRecommendation,
     CuratedRecommendationsRequest,

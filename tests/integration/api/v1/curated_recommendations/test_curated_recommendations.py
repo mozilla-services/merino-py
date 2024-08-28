@@ -25,7 +25,7 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
     Engagement,
 )
-from merino.curated_recommendations.models import CuratedRecommendation
+from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
 from merino.metrics import get_metrics_client
 

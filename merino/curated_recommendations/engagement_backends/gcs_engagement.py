@@ -92,9 +92,11 @@ class GcsEngagement(EngagementBackend):
         """Task to update the cache with the latest engagement data from GCS."""
         bucket = self.storage_client.bucket(self.bucket_name)
 
-        # Only list files from the last day (about 100) to reduce memory usage.
+        # Only list files from the last day (about 100) to reduce memory usage and requests to GCS.
         start_date = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y%m%d%H")
         start_offset = f"{self.blob_prefix}{start_date}"
+        # Filter results to blobs whose names are lexicographically equal to or after start_offset.
+        # https://cloud.google.com/python/docs/reference/storage/latest/google.cloud.storage.bucket.Bucket#google_cloud_storage_bucket_Bucket_list_blobs
         blobs = list(bucket.list_blobs(start_offset=start_offset))
 
         if not blobs:
