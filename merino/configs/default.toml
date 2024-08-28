@@ -282,7 +282,7 @@ url_cities_path = "/locations/v1/cities/{country_code}/search.json"
 url_cities_param_query = "q"
 
 # Sampling rate (90%) used by some metrics, can be of int type as well.
-metrics_sampling_rate = 0.9
+metrics_sampling_rate = 0.75
 
 # MERINO_ACCUWEATHER__PARTNER_CODE - partner_code (Not currently defined)
 # The partner code to append to URLs in the current conditions and forecast responses.
