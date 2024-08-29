@@ -22,3 +22,12 @@ gcs_bucket = "merino-images-stagepy"
 
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
 domain_data_source = "remote"
+
+[stage.curated_recommendations.gcs_engagement]
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__BUCKET_NAME
+# GCS bucket that contains aggregate engagement data
+bucket_name = "merino-airflow-data-stagepy"
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__GCP_PROJECT
+# GCP project name where the GCS bucket lives.
+gcp_project = "moz-fx-merino-nonprod-ee93"

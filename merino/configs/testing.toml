@@ -63,3 +63,7 @@ domain_data_source = "local"
 [testing.providers.wikipedia]
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "test"
+
+[testing.curated_recommendations.gcs_engagement]
+bucket_name = "test-bucket"
+gcp_project = "test-project"

@@ -7,11 +7,14 @@ from pydantic import HttpUrl
 
 from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId, Topic
 from merino.curated_recommendations.provider import (
-    CuratedRecommendation,
     CuratedRecommendationsProvider,
+)
+from merino.curated_recommendations.rankers import Rankers
+from merino.curated_recommendations.protocol import (
     Locale,
     MAX_TILE_ID,
     MIN_TILE_ID,
+    CuratedRecommendation,
 )
 
 
@@ -222,7 +225,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
         recs[6].publisher = "walter.com"
         recs[7].publisher = "abides.com"
 
-        reordered = CuratedRecommendationsProvider.spread_publishers(recs, spread_distance=3)
+        reordered = Rankers.spread_publishers(recs, spread_distance=3)
 
         # ensure the elements are re-ordered in the way we expect
 
@@ -261,7 +264,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
         recs[6].publisher = "donnie.com"
         recs[7].publisher = "abides.com"
 
-        reordered = CuratedRecommendationsProvider.spread_publishers(recs, spread_distance=3)
+        reordered = Rankers.spread_publishers(recs, spread_distance=3)
 
         # ensure the elements are re-ordered in the way we expect
 
@@ -300,7 +303,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
         recs[6].publisher = "donnie.com"
         recs[7].publisher = "innout.com"
 
-        reordered = CuratedRecommendationsProvider.spread_publishers(recs, spread_distance=3)
+        reordered = Rankers.spread_publishers(recs, spread_distance=3)
 
         # ensure the elements are re-ordered in the way we expect
 
@@ -329,7 +332,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
         recs[6].publisher = "thedude.com"
         recs[7].publisher = "donnie.com"
 
-        reordered = CuratedRecommendationsProvider.spread_publishers(recs, spread_distance=3)
+        reordered = Rankers.spread_publishers(recs, spread_distance=3)
 
         # ensure the elements aren't reordered at all (as we don't have enough publisher variance)
         assert [x.scheduledCorpusItemId for x in reordered] == [
@@ -376,7 +379,7 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
             [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION, Topic.FOOD]
         )
         # career topic is not present in rec list, boost item with food topic to second slot
-        reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(
+        reordered_recs = Rankers.boost_preferred_topic(
             recs, [Topic.CAREER, Topic.FOOD]
         )
 
@@ -472,7 +475,7 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
             ]
         )
 
-        reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(
+        reordered_recs = Rankers.boost_preferred_topic(
             recs, preferred_topics
         )
 
@@ -489,7 +492,7 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
         recs = self.generate_recommendations(
             [Topic.POLITICS, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.PERSONAL_FINANCE]
         )
-        reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(recs, [Topic.CAREER])
+        reordered_recs = Rankers.boost_preferred_topic(recs, [Topic.CAREER])
 
         assert len(recs) == len(reordered_recs)
         # assert that the order of recs has not changed since recs don't have preferred topic
@@ -509,7 +512,7 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
         )
         # should return true as recs with TRAVEL topic are in the first two slots, but 3rd slot is occupied by ARTS
         # topic but should be occupied with SPORTS topic
-        not_reordered_recs = CuratedRecommendationsProvider.boost_preferred_topic(
+        not_reordered_recs = Rankers.boost_preferred_topic(
             recs, [Topic.TRAVEL, Topic.EDUCATION, Topic.SPORTS]
         )
 

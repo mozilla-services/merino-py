@@ -26,3 +26,12 @@ gcs_bucket = "merino-images-prodpy"
 # Enum of either `remote` or `local` that defines whether domain data
 # is remotely or locally acquired.
 domain_data_source = "local"
+
+[production.curated_recommendations.gcs_engagement]
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__BUCKET_NAME
+# GCS bucket that contains aggregate engagement data
+bucket_name = "merino-airflow-data-prodpy"
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__GCP_PROJECT
+# GCP project name where the GCS bucket lives.
+gcp_project = "moz-fx-merino-prod-1c2f"

@@ -17,6 +17,9 @@ from pydantic import BaseModel, ValidationError
 from merino.cache.protocol import CacheAdapter
 from merino.exceptions import BackendError, CacheAdapterError
 from merino.middleware.geolocation import Location
+from merino.providers.weather.backends.accuweather.pathfinder import (
+    set_region_mapping,
+)
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -569,7 +572,7 @@ class AccuweatherBackend:
                     self.url_location_key_placeholder,
                 ],
             )
-            return cached_data
+            return cached_data if cached_data else None
 
     async def get_weather_report_with_geolocation(
         self, geolocation: Location
@@ -737,6 +740,9 @@ class AccuweatherBackend:
                 f"Accuweather: {exc.__class__.__name__}"
             ) from exc
 
+        # record the region that gave a location
+        if response and country and city:
+            set_region_mapping(country, city, region)
         return AccuweatherLocation(**response) if response else None
 
     async def get_current_conditions(self, location_key: str) -> CurrentConditionsWithTTL | None:

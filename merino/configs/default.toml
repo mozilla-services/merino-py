@@ -281,8 +281,8 @@ url_cities_path = "/locations/v1/cities/{country_code}/search.json"
 # The query parameter for cities
 url_cities_param_query = "q"
 
-# Sampling rate (90%) used by some metrics, can be of int type as well.
-metrics_sampling_rate = 0.9
+# Sampling rate (75%) used by some metrics, can be of int type as well.
+metrics_sampling_rate = 0.75
 
 # MERINO_ACCUWEATHER__PARTNER_CODE - partner_code (Not currently defined)
 # The partner code to append to URLs in the current conditions and forecast responses.
@@ -464,6 +464,28 @@ query_timeout_sec = 5.0
 # MERINO_PROVIDERS__WIKIPEDIA__SCORE
 # The ranking score for this provider as a floating point number. Defaults to 0.23.
 score = 0.23
+
+
+[default.curated_recommendations.gcs_engagement]
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__MAX_SIZE
+# The maximum size in bytes of the GCS engagement blob. If exceeded, an error will be logged.
+max_size = 1_000_000
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__BUCKET_NAME
+# GCS bucket that contains aggregate engagement data
+bucket_name = ""
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__BLOB_PREFIX
+# GCS path. Combined bucket and object prefix (folders).
+blob_prefix = "newtab-merino-exports/engagement_"
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__GCP_PROJECT
+# GCP project name where the GCS bucket lives.
+gcp_project = ""
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains updated engagement data.
+cron_interval_seconds = 30
 
 
 [default.jobs.wikipedia_indexer]
