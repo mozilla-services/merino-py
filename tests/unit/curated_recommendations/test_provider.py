@@ -379,9 +379,7 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
             [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION, Topic.FOOD]
         )
         # career topic is not present in rec list, boost item with food topic to second slot
-        reordered_recs = Rankers.boost_preferred_topic(
-            recs, [Topic.CAREER, Topic.FOOD]
-        )
+        reordered_recs = Rankers.boost_preferred_topic(recs, [Topic.CAREER, Topic.FOOD])
 
         assert len(recs) == len(reordered_recs)
         # for readability
@@ -475,9 +473,7 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
             ]
         )
 
-        reordered_recs = Rankers.boost_preferred_topic(
-            recs, preferred_topics
-        )
+        reordered_recs = Rankers.boost_preferred_topic(recs, preferred_topics)
 
         # Check that the length of the reordered recommendations matches
         assert len(reordered_recs) == len(recs)

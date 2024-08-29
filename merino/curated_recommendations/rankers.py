@@ -1,4 +1,5 @@
 """Algorithms for ranking curated recommendations."""
+
 from copy import copy
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
@@ -16,12 +17,14 @@ NUM_RECS_PER_TOPIC = 2
 
 
 class Rankers:
+    """Ranker algorithms used for ranking recommendations."""
+
     @staticmethod
     def thompson_sampling(
-            recs: list[CuratedRecommendation],
-            engagement_backend: EngagementBackend,
-            alpha_prior=DEFAULT_ALPHA_PRIOR,
-            beta_prior=DEFAULT_BETA_PRIOR,
+        recs: list[CuratedRecommendation],
+        engagement_backend: EngagementBackend,
+        alpha_prior=DEFAULT_ALPHA_PRIOR,
+        beta_prior=DEFAULT_BETA_PRIOR,
     ) -> list[CuratedRecommendation]:
         """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
         CTR with exploration of new items using a prior.
@@ -51,7 +54,7 @@ class Rankers:
 
     @staticmethod
     def spread_publishers(
-            recs: list[CuratedRecommendation], spread_distance: int
+        recs: list[CuratedRecommendation], spread_distance: int
     ) -> list[CuratedRecommendation]:
         """Spread a list of CuratedRecommendations by the publisher attribute to avoid encountering the same publisher
         in sequence.
@@ -80,8 +83,8 @@ class Rankers:
 
     @staticmethod
     def boost_preferred_topic(
-            recs: list[CuratedRecommendation],
-            preferred_topics: list[Topic],
+        recs: list[CuratedRecommendation],
+        preferred_topics: list[Topic],
     ) -> list[CuratedRecommendation]:
         """Boost recommendations into top N slots based on preferred topics.
         2 recs per topic (for now).
@@ -104,9 +107,9 @@ class Rankers:
             # Boost if slots (e.g. 10) remain and its topic hasn't been boosted too often (e.g. 2).
             # It relies on get() returning None for missing keys, and None and 0 being falsy.
             if (
-                    topic in remaining_num_topic_boosts
-                    and len(remaining_num_topic_boosts) < MAX_TOP_REC_SLOTS
-                    and remaining_num_topic_boosts[topic] > 0
+                topic in remaining_num_topic_boosts
+                and len(remaining_num_topic_boosts) < MAX_TOP_REC_SLOTS
+                and remaining_num_topic_boosts[topic] > 0
             ):
                 boosted_recs.append(rec)
                 remaining_num_topic_boosts[topic] -= 1  # decrement remaining # of topics to boost

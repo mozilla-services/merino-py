@@ -125,7 +125,7 @@ def engagement_backend():
 
 @pytest.fixture(name="corpus_provider")
 def provider(
-        corpus_backend: CorpusApiBackend, engagement_backend: EngagementBackend
+    corpus_backend: CorpusApiBackend, engagement_backend: EngagementBackend
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
@@ -376,9 +376,7 @@ class TestCuratedRecommendationsRequestParameters:
     @pytest.mark.asyncio
     async def test_curated_recommendations_preferred_topic(self, mocker, fixture_response_data):
         """Test the curated recommendations endpoint accepts a preferred topic & reorders the list."""
-        boost_preferred_topic_spy = mocker.spy(
-            Rankers, "boost_preferred_topic"
-        )
+        boost_preferred_topic_spy = mocker.spy(Rankers, "boost_preferred_topic")
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
                 "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": ["health"]}
@@ -403,14 +401,12 @@ class TestCuratedRecommendationsRequestParameters:
     @pytest.mark.asyncio
     @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
     async def test_curated_recommendations_preferred_topic_no_reorder(
-            self, mocker, fixture_response_data_short, fixture_request_data, corpus_http_client
+        self, mocker, fixture_response_data_short, fixture_request_data, corpus_http_client
     ):
         """Test the curated recommendations endpoint accepts a preferred topic & does
         not reorder the list if preferred topics already in top 2 recs.
         """
-        boost_preferred_topic_spy = mocker.spy(
-            Rankers, "boost_preferred_topic"
-        )
+        boost_preferred_topic_spy = mocker.spy(Rankers, "boost_preferred_topic")
         async with AsyncClient(app=app, base_url="http://test") as ac:
             corpus_http_client.post.return_value = Response(
                 status_code=200,
@@ -430,8 +426,8 @@ class TestCuratedRecommendationsRequestParameters:
             # so order remains the same
             for i in range(len(corpus_items)):
                 assert (
-                        fixture_response_data_short["data"]["scheduledSurface"]["items"][i]["id"]
-                        == corpus_items[i]["scheduledCorpusItemId"]
+                    fixture_response_data_short["data"]["scheduledSurface"]["items"][i]["id"]
+                    == corpus_items[i]["scheduledCorpusItemId"]
                 )
 
     @pytest.mark.asyncio
@@ -480,7 +476,7 @@ class TestCorpusApiCaching:
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.asyncio
     async def test_single_request_multiple_failed_fetches(
-            self, corpus_http_client, fixture_request_data, fixture_response_data, caplog
+        self, corpus_http_client, fixture_request_data, fixture_response_data, caplog
     ):
         """Test that only a few requests are made to the curated-corpus-api when it is down."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
@@ -518,14 +514,14 @@ class TestCorpusApiCaching:
             warnings = [r for r in caplog.records if r.levelname == "WARNING"]
             assert len(warnings) == 2
             assert (
-                       "Retrying CorpusApiBackend._fetch_from_backend once after "
-                       "Server error '503 Service Unavailable'"
-                   ) in warnings[0].message
+                "Retrying CorpusApiBackend._fetch_from_backend once after "
+                "Server error '503 Service Unavailable'"
+            ) in warnings[0].message
             assert ("Returning latest valid cached data.") in warnings[1].message
 
     @pytest.mark.asyncio
     async def test_cache_returned_on_subsequent_calls(
-            self, corpus_http_client, fixture_response_data, fixture_request_data
+        self, corpus_http_client, fixture_response_data, fixture_request_data
     ):
         """Test that the cache expires, and subsequent requests return new data."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -560,7 +556,7 @@ class TestCorpusApiCaching:
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.asyncio
     async def test_valid_cache_returned_on_error(
-            self, corpus_http_client, fixture_request_data, caplog
+        self, corpus_http_client, fixture_request_data, caplog
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -594,10 +590,10 @@ class TestCorpusApiCaching:
                 warnings = [r for r in caplog.records if r.levelname == "WARNING"]
                 assert len(warnings) == 2
                 assert (
-                           "Exception occurred on first attempt to fetch: "
-                           "Retrying CorpusApiBackend._fetch_from_backend once after "
-                           "Server error '503 Service Unavailable'"
-                       ) in warnings[0].message
+                    "Exception occurred on first attempt to fetch: "
+                    "Retrying CorpusApiBackend._fetch_from_backend once after "
+                    "Server error '503 Service Unavailable'"
+                ) in warnings[0].message
                 assert ("Returning latest valid cached data.") in warnings[1].message
 
                 assert new_response.status_code == 200
@@ -647,7 +643,7 @@ class TestCuratedRecommendationsMetrics:
 
     @pytest.mark.asyncio
     async def test_metrics_corpus_api_error(
-            self, mocker: MockerFixture, corpus_http_client, fixture_request_data
+        self, mocker: MockerFixture, corpus_http_client, fixture_request_data
     ) -> None:
         """Test that metrics are recorded when the curated-corpus-api returns a 500 error"""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
@@ -663,16 +659,16 @@ class TestCuratedRecommendationsMetrics:
             # TODO: Remove reliance on internal details of aiodogstatsd
             metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
             assert (
-                    metric_keys
-                    == [
-                        "corpus_api.request.timing",
-                        "corpus_api.request.status_codes.500",
-                        "corpus_api.request.timing",
-                        "corpus_api.request.status_codes.500",
-                        "post.api.v1.curated-recommendations.timing",
-                        "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
-                        "response.status_codes.200",
-                    ]
+                metric_keys
+                == [
+                    "corpus_api.request.timing",
+                    "corpus_api.request.status_codes.500",
+                    "corpus_api.request.timing",
+                    "corpus_api.request.status_codes.500",
+                    "post.api.v1.curated-recommendations.timing",
+                    "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
+                    "response.status_codes.200",
+                ]
             )
 
 

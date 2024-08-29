@@ -23,14 +23,14 @@ class CuratedRecommendationsProvider:
     corpus_backend: CorpusBackend
 
     def __init__(
-            self, corpus_backend: CorpusBackend, engagement_backend: EngagementBackend
+        self, corpus_backend: CorpusBackend, engagement_backend: EngagementBackend
     ) -> None:
         self.corpus_backend = corpus_backend
         self.engagement_backend = engagement_backend
 
     @staticmethod
     def get_recommendation_surface_id(
-            locale: Locale, region: str | None = None
+        locale: Locale, region: str | None = None
     ) -> ScheduledSurfaceId:
         """Locale/region mapping is documented here:
         https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit
@@ -102,7 +102,7 @@ class CuratedRecommendationsProvider:
             return None
 
     async def fetch(
-            self, curated_recommendations_request: CuratedRecommendationsRequest
+        self, curated_recommendations_request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:  # noqa
         """Provide curated recommendations."""
         # Get the recommendation surface ID based on passed locale & region
