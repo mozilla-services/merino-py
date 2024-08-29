@@ -84,17 +84,18 @@ class MockEngagementBackend(EngagementBackend):
         """Return random click and impression counts based on the scheduled corpus id."""
         rng = np.random.default_rng(seed=int.from_bytes(scheduled_corpus_item_id.encode()))
 
-        # 50% chance of no engagement data being available.
         if scheduled_corpus_item_id == "50f86ebe-3f25-41d8-bd84-53ead7bdc76e":
-            # Give one item 100% click-through rate to put it on top with high certainty.
+            # Give the first item 100% click-through rate to put it on top with high certainty.
             return Engagement(
                 scheduled_corpus_item_id=scheduled_corpus_item_id,
                 click_count=1000000,
                 impression_count=1000000,
             )
         elif rng.random() < 0.5:
+            # 50% chance of no engagement data being available.
             return None
         else:
+            # Uniformly random clicks (10k-50k) and impressions (1M-5M)
             return Engagement(
                 scheduled_corpus_item_id=scheduled_corpus_item_id,
                 click_count=rng.integers(10_000, 50_000),
