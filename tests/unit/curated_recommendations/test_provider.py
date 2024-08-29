@@ -7,11 +7,13 @@ from pydantic import HttpUrl
 
 from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId, Topic
 from merino.curated_recommendations.provider import (
-    CuratedRecommendation,
     CuratedRecommendationsProvider,
+)
+from merino.curated_recommendations.protocol import (
     Locale,
     MAX_TILE_ID,
     MIN_TILE_ID,
+    CuratedRecommendation,
 )
 
 

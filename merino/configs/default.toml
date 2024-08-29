@@ -466,6 +466,28 @@ query_timeout_sec = 5.0
 score = 0.23
 
 
+[default.curated_recommendations.gcs_engagement]
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__MAX_SIZE
+# The maximum size in bytes of the GCS engagement blob. If exceeded, an error will be logged.
+max_size = 1_000_000
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__BUCKET_NAME
+# GCS bucket that contains aggregate engagement data
+bucket_name = ""
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__BLOB_PREFIX
+# GCS path. Combined bucket and object prefix (folders).
+blob_prefix = "newtab-merino-exports/engagement_"
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__GCP_PROJECT
+# GCP project name where the GCS bucket lives.
+gcp_project = ""
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains updated engagement data.
+cron_interval_seconds = 30
+
+
 [default.jobs.wikipedia_indexer]
 # MERINO_JOBS__WIKIPEDIA_INDEXER__ES_URL
 # The URL of the Elasticsearch cluster for indexing job.

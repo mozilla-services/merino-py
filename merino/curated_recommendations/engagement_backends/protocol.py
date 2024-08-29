@@ -13,14 +13,14 @@ class Engagement(BaseModel):
     """
 
     scheduled_corpus_item_id: str
-    clicks: int
-    impressions: int
+    click_count: int
+    impression_count: int
 
 
 class EngagementBackend(Protocol):
     """Protocol for Engagement backend that the provider depends on."""
 
-    def __getitem__(self, scheduled_corpus_item_id: str) -> Engagement:
+    def get(self, scheduled_corpus_item_id: str) -> Engagement | None:
         """Fetch engagement data for the given scheduled corpus item id"""
         ...
 
