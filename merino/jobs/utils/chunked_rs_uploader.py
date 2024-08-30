@@ -136,7 +136,7 @@ class ChunkedRemoteSettingsUploader:
         logger.info(f"Deleting records with type: {self.record_type}")
         count = 0
         for record in self.kinto.get_records():
-            if record["type"] == self.record_type:
+            if record.get("type") == self.record_type:
                 logger.info(f"Deleting record: {record['id']}")
                 if not self.dry_run:
                     self.kinto.delete_record(id=record["id"])
