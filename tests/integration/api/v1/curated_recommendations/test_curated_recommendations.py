@@ -523,12 +523,13 @@ class TestCuratedRecommendationsRequestParameters:
             # assert total of 80 items returned
             assert len(corpus_items) == 80
 
-            # get the top N recs
+            # determine the number of recs that are expected to be preferred
+            # based on number of preferred topics
             top_recs = min(10, 2 * len(preferred_topics))
-            # store the topics in the top N recs in an array
+            # store the topics for the top N recs in an array
             top_topics = [item["topic"] for item in corpus_items[:top_recs]]
-            # assert the intersection of the two sets
-            assert set(preferred_topics) & set(top_topics)
+            # assert that all top_topics are preferred topics
+            assert all([item in preferred_topics for item in top_topics])
 
     @pytest.mark.asyncio
     @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)

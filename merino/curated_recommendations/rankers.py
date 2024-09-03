@@ -90,7 +90,7 @@ def boost_preferred_topic(
     :return: CuratedRecommendations ranked based on a preferred topic(s), while otherwise
     preserving the order.
     """
-    boosted_recs = []
+    boosted_recs: list[CuratedRecommendation] = []
     remaining_recs = []
     # The following dict tracks the number of recommendations per topic to be boosted.
     remaining_num_topic_boosts = {
@@ -104,8 +104,8 @@ def boost_preferred_topic(
         # It relies on get() returning None for missing keys, and None and 0 being falsy.
         if (
             topic in remaining_num_topic_boosts
-            and len(remaining_num_topic_boosts) < MAX_TOP_REC_SLOTS
-            and remaining_num_topic_boosts[topic] > 0
+            and len(boosted_recs) < MAX_TOP_REC_SLOTS
+            and remaining_num_topic_boosts.get(topic)
         ):
             boosted_recs.append(rec)
             remaining_num_topic_boosts[topic] -= 1  # decrement remaining # of topics to boost
