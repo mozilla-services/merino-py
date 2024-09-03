@@ -6,7 +6,7 @@
 
 import datetime
 import hashlib
-import json
+import orjson
 import logging
 from ssl import SSLError
 from typing import Any, Awaitable, Callable, Optional, cast
@@ -77,7 +77,7 @@ def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
 @pytest.fixture(name="location_response_for_fallback")
 def fixture_location_response_for_fallback() -> bytes:
     """Create a fixture for location response for fallback."""
-    return json.dumps(
+    return orjson.dumps(
         [
             {
                 "Version": 1,
@@ -147,7 +147,7 @@ def fixture_location_response_for_fallback() -> bytes:
                 ],
             },
         ]
-    ).encode("utf-8")
+    )
 
 
 @pytest.fixture(name="location_completion_sample_cities")
@@ -358,7 +358,7 @@ def fixture_accuweather_location_completion_response(
     location_completion_sample_cities,
 ) -> bytes:
     """Return response content for AccuWeather location autocomplete endpoint."""
-    return json.dumps(location_completion_sample_cities).encode("utf-8")
+    return orjson.dumps(location_completion_sample_cities)
 
 
 @pytest.fixture(name="response_header")
@@ -533,7 +533,7 @@ def fixture_accuweather_location_response() -> bytes:
             ],
         },
     ]
-    return json.dumps(response).encode("utf-8")
+    return orjson.dumps(response)
 
 
 @pytest.fixture(name="accuweather_cached_location_key")
@@ -543,7 +543,7 @@ def fixture_accuweather_cached_location_key() -> bytes:
         "key": "39376",
         "localized_name": "San Francisco",
     }
-    return json.dumps(location).encode("utf-8")
+    return orjson.dumps(location)
 
 
 @pytest.fixture(name="accuweather_current_conditions_response")
@@ -580,13 +580,13 @@ def fixture_accuweather_current_conditions_response() -> bytes:
             ),
         },
     ]
-    return json.dumps(response).encode("utf-8")
+    return orjson.dumps(response)
 
 
 @pytest.fixture(name="accuweather_cached_current_conditions")
 def fixture_accuweather_cached_current_conditions() -> bytes:
     """Return the cached content for AccuWeather current conditions."""
-    return json.dumps(
+    return orjson.dumps(
         {
             "url": (
                 "https://www.accuweather.com/en/us/san-francisco-ca/"
@@ -596,7 +596,7 @@ def fixture_accuweather_cached_current_conditions() -> bytes:
             "icon_id": 6,
             "temperature": {"c": 15.5, "f": 60.0},
         }
-    ).encode("utf-8")
+    )
 
 
 @pytest.fixture(name="accuweather_forecast_response")
@@ -657,7 +657,7 @@ def fixture_accuweather_forecast_response_celsius(
         "Minimum": {"Value": 13.9, "Unit": "C", "UnitType": 17},
         "Maximum": {"Value": 21.1, "Unit": "C", "UnitType": 17},
     }
-    return json.dumps(accuweather_forecast_response).encode("utf-8")
+    return orjson.dumps(accuweather_forecast_response)
 
 
 @pytest.fixture(name="accuweather_forecast_response_fahrenheit")
@@ -669,13 +669,13 @@ def fixture_accuweather_forecast_response_fahrenheit(
         "Minimum": {"Value": 57.0, "Unit": "F", "UnitType": 18},
         "Maximum": {"Value": 70.0, "Unit": "F", "UnitType": 18},
     }
-    return json.dumps(accuweather_forecast_response).encode("utf-8")
+    return orjson.dumps(accuweather_forecast_response)
 
 
 @pytest.fixture(name="accuweather_cached_forecast_fahrenheit")
 def fixture_accuweather_cached_forecast_fahrenheit() -> bytes:
     """Return the cached AccuWeather forecast in fahrenheit."""
-    return json.dumps(
+    return orjson.dumps(
         {
             "url": (
                 "https://www.accuweather.com/en/us/san-francisco-ca/"
@@ -685,7 +685,7 @@ def fixture_accuweather_cached_forecast_fahrenheit() -> bytes:
             "high": {"f": 70.0},
             "low": {"f": 57.0},
         }
-    ).encode("utf-8")
+    )
 
 
 @pytest.fixture(name="accuweather_cached_data_hits")
@@ -1969,7 +1969,7 @@ async def test_request_upstream_cache_get_errors(
     client_mock.get.return_value = Response(
         status_code=200,
         headers={"Expires": expiry_date.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)},
-        content=json.dumps(expected_client_response).encode("utf-8"),
+        content=orjson.dumps(expected_client_response),
         request=Request(
             method="GET",
             url=f"https://www.accuweather.com/{url}?apikey=test",
@@ -2028,7 +2028,7 @@ async def test_get_request_cache_store_errors(
     client_mock.get.return_value = Response(
         status_code=200,
         headers={"Expires": expiry_date.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)},
-        content=json.dumps(expected_client_response).encode("utf-8"),
+        content=orjson.dumps(expected_client_response),
         request=Request(
             method="GET",
             url=f"https://www.accuweather.com/{url}?apikey=test",
@@ -2225,8 +2225,8 @@ def test_parse_cached_data_error(
     location, current_conditions, forecast, ttl = accuweather.parse_cached_data(
         [
             accuweather_cached_location_key,
-            b"invalid_current_condition",
-            b"invalid_forecast",
+            b"{}",
+            b"{}",
             None,
         ]
     )
