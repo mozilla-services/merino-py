@@ -26,7 +26,6 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     Engagement,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
-from merino.curated_recommendations.rankers import Rankers
 from merino.main import app
 from merino.metrics import get_metrics_client
 
@@ -374,12 +373,148 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 200, f"{topics} resulted in {response.status_code}"
 
     @pytest.mark.asyncio
-    async def test_curated_recommendations_preferred_topic(self, mocker, fixture_response_data):
-        """Test the curated recommendations endpoint accepts a preferred topic & reorders the list."""
-        boost_preferred_topic_spy = mocker.spy(Rankers, "boost_preferred_topic")
+    @pytest.mark.parametrize(
+        "preferred_topics",
+        [
+            [Topic.EDUCATION],
+            [Topic.EDUCATION, Topic.PERSONAL_FINANCE],
+            [Topic.EDUCATION, Topic.PERSONAL_FINANCE, Topic.BUSINESS],
+            [Topic.EDUCATION, Topic.PERSONAL_FINANCE, Topic.BUSINESS, Topic.TECHNOLOGY],
+            [
+                Topic.EDUCATION,
+                Topic.PERSONAL_FINANCE,
+                Topic.TECHNOLOGY,
+                Topic.TRAVEL,
+                Topic.FOOD,
+                Topic.BUSINESS,
+            ],
+            [
+                Topic.EDUCATION,
+                Topic.PERSONAL_FINANCE,
+                Topic.BUSINESS,
+                Topic.TECHNOLOGY,
+                Topic.TRAVEL,
+                Topic.FOOD,
+                Topic.ARTS,
+            ],
+            [
+                Topic.EDUCATION,
+                Topic.PERSONAL_FINANCE,
+                Topic.BUSINESS,
+                Topic.TECHNOLOGY,
+                Topic.TRAVEL,
+                Topic.FOOD,
+                Topic.ARTS,
+                Topic.POLITICS,
+            ],
+            [
+                Topic.EDUCATION,
+                Topic.PERSONAL_FINANCE,
+                Topic.BUSINESS,
+                Topic.TECHNOLOGY,
+                Topic.TRAVEL,
+                Topic.FOOD,
+                Topic.ARTS,
+                Topic.POLITICS,
+                Topic.GAMING,
+            ],
+            [
+                Topic.EDUCATION,
+                Topic.PERSONAL_FINANCE,
+                Topic.BUSINESS,
+                Topic.TECHNOLOGY,
+                Topic.TRAVEL,
+                Topic.FOOD,
+                Topic.ARTS,
+                Topic.POLITICS,
+                Topic.GAMING,
+                Topic.SPORTS,
+            ],
+            [
+                Topic.EDUCATION,
+                Topic.PERSONAL_FINANCE,
+                Topic.BUSINESS,
+                Topic.TECHNOLOGY,
+                Topic.TRAVEL,
+                Topic.FOOD,
+                Topic.ARTS,
+                Topic.POLITICS,
+                Topic.GAMING,
+                Topic.SPORTS,
+                Topic.SCIENCE,
+            ],
+            [
+                Topic.EDUCATION,
+                Topic.PERSONAL_FINANCE,
+                Topic.BUSINESS,
+                Topic.TECHNOLOGY,
+                Topic.TRAVEL,
+                Topic.FOOD,
+                Topic.ARTS,
+                Topic.POLITICS,
+                Topic.GAMING,
+                Topic.SPORTS,
+                Topic.SCIENCE,
+                Topic.SELF_IMPROVEMENT,
+            ],
+            [
+                Topic.EDUCATION,
+                Topic.PERSONAL_FINANCE,
+                Topic.BUSINESS,
+                Topic.TECHNOLOGY,
+                Topic.TRAVEL,
+                Topic.FOOD,
+                Topic.ARTS,
+                Topic.POLITICS,
+                Topic.GAMING,
+                Topic.SPORTS,
+                Topic.SCIENCE,
+                Topic.SELF_IMPROVEMENT,
+                Topic.PARENTING,
+            ],
+            [
+                Topic.EDUCATION,
+                Topic.PERSONAL_FINANCE,
+                Topic.BUSINESS,
+                Topic.TECHNOLOGY,
+                Topic.TRAVEL,
+                Topic.FOOD,
+                Topic.ARTS,
+                Topic.POLITICS,
+                Topic.GAMING,
+                Topic.SPORTS,
+                Topic.SCIENCE,
+                Topic.SELF_IMPROVEMENT,
+                Topic.PARENTING,
+                Topic.CAREER,
+            ],
+            [
+                Topic.EDUCATION,
+                Topic.PERSONAL_FINANCE,
+                Topic.BUSINESS,
+                Topic.TECHNOLOGY,
+                Topic.TRAVEL,
+                Topic.FOOD,
+                Topic.ARTS,
+                Topic.POLITICS,
+                Topic.GAMING,
+                Topic.SPORTS,
+                Topic.SCIENCE,
+                Topic.SELF_IMPROVEMENT,
+                Topic.PARENTING,
+                Topic.CAREER,
+                Topic.HEALTH_FITNESS,
+            ],
+        ],
+    )
+    async def test_curated_recommendations_preferred_topic(self, preferred_topics):
+        """Test the curated recommendations endpoint accepts 1-15 preferred topics &
+        top N recommendations contain the preferred topics.
+        """
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
-                "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": ["health"]}
+                "/api/v1/curated-recommendations",
+                json={"locale": "en-US", "topics": preferred_topics},
             )
             data = response.json()
             corpus_items = data["data"]
@@ -387,26 +522,22 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 200
             # assert total of 80 items returned
             assert len(corpus_items) == 80
-            # assert boost_preferred_topic was called
-            boost_preferred_topic_spy.assert_called_once()
 
-            # extract IDs from both lists
-            fixture_ids = [
-                item["id"] for item in fixture_response_data["data"]["scheduledSurface"]["items"]
-            ]
-            corpus_ids = [item["scheduledCorpusItemId"] for item in corpus_items]
-            # assert that recs were reordered
-            assert fixture_ids != corpus_ids
+            # get the top N recs
+            top_recs = min(10, 2 * len(preferred_topics))
+            # store the topics in the top N recs in an array
+            top_topics = [item["topic"] for item in corpus_items[:top_recs]]
+            # assert the intersection of the two sets
+            assert set(preferred_topics) & set(top_topics)
 
     @pytest.mark.asyncio
     @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
     async def test_curated_recommendations_preferred_topic_no_reorder(
-        self, mocker, fixture_response_data_short, fixture_request_data, corpus_http_client
+        self, fixture_response_data_short, fixture_request_data, corpus_http_client
     ):
         """Test the curated recommendations endpoint accepts a preferred topic & does
         not reorder the list if preferred topics already in top 2 recs.
         """
-        boost_preferred_topic_spy = mocker.spy(Rankers, "boost_preferred_topic")
         async with AsyncClient(app=app, base_url="http://test") as ac:
             corpus_http_client.post.return_value = Response(
                 status_code=200,
@@ -420,10 +551,7 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 200
             # assert total of 4 items returned (using scheduled_surface_short.json for response)
             assert len(corpus_items) == 4
-            # assert boost_preferred_topic was called
-            boost_preferred_topic_spy.assert_called_once()
-            # assert that even though boost_preferred_topic was called, recs didn't need boosting
-            # so order remains the same
+            # assert that recs didn't need boosting so order remains the same
             for i in range(len(corpus_items)):
                 assert (
                     fixture_response_data_short["data"]["scheduledSurface"]["items"][i]["id"]

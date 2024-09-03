@@ -14,7 +14,11 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
 )
-from merino.curated_recommendations.rankers import Rankers
+from merino.curated_recommendations.rankers import (
+    boost_preferred_topic,
+    spread_publishers,
+    thompson_sampling,
+)
 
 
 class CuratedRecommendationsProvider:
@@ -122,15 +126,14 @@ class CuratedRecommendationsProvider:
         ]
 
         # 3. Apply Thompson sampling to rank recommendations by engagement
-        recommendations = Rankers.thompson_sampling(recommendations, self.engagement_backend)
+        recommendations = thompson_sampling(recommendations, self.engagement_backend)
 
         # 2. Perform publisher spread on the recommendation set
-        recommendations = Rankers.spread_publishers(recommendations, spread_distance=3)
+        recommendations = spread_publishers(recommendations, spread_distance=3)
 
         # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
         if curated_recommendations_request.topics:
-            # Check if recs need boosting & boost if needed
-            recommendations = Rankers.boost_preferred_topic(
+            recommendations = boost_preferred_topic(
                 recommendations, curated_recommendations_request.topics
             )
 
