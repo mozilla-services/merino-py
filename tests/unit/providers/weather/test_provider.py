@@ -145,7 +145,7 @@ async def test_fetch_mapping(statsd_mock: Any, provider: Provider):
     assert len(statsd_mock.gauge.call_args_list) == 0
 
     set_region_mapping("Canada", "Vancouver", "BC")
-    await provider._fetch_mapping()
+    await provider._fetch_mapping_size()
 
     assert len(statsd_mock.gauge.call_args_list) == 1
     assert statsd_mock.gauge.call_args_list == [

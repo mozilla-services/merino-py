@@ -76,7 +76,7 @@ class Provider(BaseProvider):
             name="fetch_pathfinder_size",
             interval=self.cron_interval_sec,
             condition=self._should_fetch,
-            task=self._fetch_mapping,
+            task=self._fetch_mapping_size,
         )
         self.cron_task = asyncio.create_task(cron_job())
 
@@ -86,7 +86,7 @@ class Provider(BaseProvider):
     def _should_fetch(self) -> bool:
         return True
 
-    async def _fetch_mapping(self) -> None:
+    async def _fetch_mapping_size(self) -> None:
         self.metrics_client.gauge(
             name=f"providers.{self.name}.pathfinder.size", value=len(get_region_mapping())
         )
