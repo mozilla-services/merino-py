@@ -529,7 +529,7 @@ class TestCuratedRecommendationsRequestParameters:
             # store the topics for the top N recs in an array
             top_topics = [item["topic"] for item in corpus_items[:top_recs]]
             # assert that all top_topics are preferred topics
-            assert all([item in preferred_topics for item in top_topics])
+            assert all([topic in preferred_topics for topic in top_topics])
 
     @pytest.mark.asyncio
     @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
