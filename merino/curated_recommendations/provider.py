@@ -144,7 +144,10 @@ class CuratedRecommendationsProvider:
             # Topic labels are enabled only for en-US in Fx130. We are unsure about the quality of
             # localized topic strings in Firefox. As a workaround, we decided to only send topics
             # for New Tab en-US. This workaround should be removed once Fx131 is released on Oct 1.
-            if surface_id != ScheduledSurfaceId.NEW_TAB_EN_US:
+            if surface_id not in (
+                ScheduledSurfaceId.NEW_TAB_EN_US,
+                ScheduledSurfaceId.NEW_TAB_EN_GB,
+            ):
                 rec.topic = None
 
         return CuratedRecommendationsResponse(

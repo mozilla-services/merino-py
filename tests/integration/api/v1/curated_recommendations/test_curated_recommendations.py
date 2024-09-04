@@ -242,7 +242,7 @@ async def test_curated_recommendations_locales(locale):
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "locale",
-    ["fr", "fr-FR", "es", "es-ES", "it", "it-IT", "de", "de-DE", "de-AT", "de-CH", "en-GB"],
+    ["fr", "fr-FR", "es", "es-ES", "it", "it-IT", "de", "de-DE", "de-AT", "de-CH"],
 )
 async def test_curated_recommendations_non_en_us_topic(locale):
     """Test that topic is missing/null for non-en-US locales."""
