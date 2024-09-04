@@ -244,17 +244,38 @@ async def test_curated_recommendations_locales(locale):
     "locale",
     ["fr", "fr-FR", "es", "es-ES", "it", "it-IT", "de", "de-DE", "de-AT", "de-CH"],
 )
-async def test_curated_recommendations_non_en_us_topic(locale):
+@pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
+async def test_curated_recommendations_non_en_topic_is_null(locale, topics):
     """Test that topic is missing/null for non-en-US locales."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await ac.post("/api/v1/curated-recommendations", json={"locale": locale})
+        response = await ac.post(
+            "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
+        )
         data = response.json()
         corpus_items = data["data"]
 
-        assert response.status_code == 200
         assert len(corpus_items) > 0
         # Assert that the topic is None for all items in non-en-US locales.
         assert all(item["topic"] is None for item in corpus_items)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "locale",
+    ["en-US", "en-GB"],
+)
+@pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
+async def test_curated_recommendations_en_topic(locale, topics):
+    """Test that topic is missing/null for non-en-US locales."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post(
+            "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
+        )
+        data = response.json()
+        corpus_items = data["data"]
+
+        assert len(corpus_items) > 0
+        assert all(item["topic"] is not None for item in corpus_items)
 
 
 class TestCuratedRecommendationsRequestParameters:
