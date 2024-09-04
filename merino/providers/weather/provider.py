@@ -12,7 +12,7 @@ from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import CustomDetails, WeatherDetails
-from merino.providers.weather.backends.accuweather.pathfinder import get_region_mapping
+from merino.providers.weather.backends.accuweather.pathfinder import get_region_mapping_size
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -88,7 +88,7 @@ class Provider(BaseProvider):
 
     async def _fetch_mapping_size(self) -> None:
         self.metrics_client.gauge(
-            name=f"providers.{self.name}.pathfinder.size", value=len(get_region_mapping())
+            name=f"providers.{self.name}.pathfinder.mapping.size", value=get_region_mapping_size()
         )
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:

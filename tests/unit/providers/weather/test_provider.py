@@ -149,5 +149,5 @@ async def test_fetch_mapping(statsd_mock: Any, provider: Provider):
 
     assert len(statsd_mock.gauge.call_args_list) == 1
     assert statsd_mock.gauge.call_args_list == [
-        call(name="providers.weather.pathfinder.size", value=1)
+        call(name="providers.weather.pathfinder.mapping.size", value=1)
     ]
