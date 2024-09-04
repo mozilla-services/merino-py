@@ -137,6 +137,16 @@ class CuratedRecommendationsProvider:
                 recommendations, curated_recommendations_request.topics
             )
 
+        for rank, rec in enumerate(recommendations):
+            # Update received_rank now that recommendations have been ranked.
+            rec.receivedRank = rank
+
+            # Topic labels are enabled only for en-US in Fx130. We are unsure about the quality of
+            # localized topic strings in Firefox. As a workaround, we decided to only send topics
+            # for New Tab en-US. This workaround should be removed once Fx131 is released on Oct 1.
+            if surface_id != ScheduledSurfaceId.NEW_TAB_EN_US:
+                rec.topic = None
+
         return CuratedRecommendationsResponse(
             recommendedAt=self.time_ms(),
             data=recommendations,
