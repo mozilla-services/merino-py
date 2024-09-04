@@ -95,6 +95,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,
+                cron_interval_sec=setting.cron_interval_sec,
             )
         case ProviderType.AMO:
             return AmoProvider(

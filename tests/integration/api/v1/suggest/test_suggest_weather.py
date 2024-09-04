@@ -58,6 +58,7 @@ def fixture_providers(backend_mock: Any, statsd_mock: Any) -> Providers:
             name="weather",
             query_timeout_sec=0.2,
             enabled_by_default=True,
+            cron_interval_sec=100,
         )
     }
 

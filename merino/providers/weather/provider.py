@@ -1,15 +1,18 @@
 """Weather integration."""
 
+import asyncio
 import logging
 from typing import Any
 
 import aiodogstatsd
 from pydantic import HttpUrl
 
+from merino import cron
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import CustomDetails, WeatherDetails
+from merino.providers.weather.backends.accuweather.pathfinder import get_region_mapping_size
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -42,6 +45,8 @@ class Provider(BaseProvider):
     metrics_client: aiodogstatsd.Client
     score: float
     dummy_url: HttpUrl
+    cron_task: asyncio.Task
+    cron_interval_sec: float
 
     def __init__(
         self,
@@ -50,6 +55,7 @@ class Provider(BaseProvider):
         score: float,
         name: str,
         query_timeout_sec: float,
+        cron_interval_sec: float,
         enabled_by_default: bool = False,
         dummy_url: str = "https://merino.services.mozilla.com/",
         **kwargs: Any,
@@ -61,14 +67,29 @@ class Provider(BaseProvider):
         self._query_timeout_sec = query_timeout_sec
         self._enabled_by_default = enabled_by_default
         self.dummy_url = HttpUrl(dummy_url)
+        self.cron_interval_sec = cron_interval_sec
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
         """Initialize the provider."""
-        ...
+        cron_job = cron.Job(
+            name="fetch_pathfinder_size",
+            interval=self.cron_interval_sec,
+            condition=self._should_fetch,
+            task=self._fetch_mapping_size,
+        )
+        self.cron_task = asyncio.create_task(cron_job())
 
     def hidden(self) -> bool:  # noqa: D102
         return False
+
+    def _should_fetch(self) -> bool:
+        return True
+
+    async def _fetch_mapping_size(self) -> None:
+        self.metrics_client.gauge(
+            name=f"providers.{self.name}.pathfinder.mapping.size", value=get_region_mapping_size()
+        )
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide weather suggestions."""

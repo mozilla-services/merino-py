@@ -218,6 +218,8 @@ connect_timeout_sec = 3.0
 # Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
 # In the form of `redis://localhost:6379`.
 
+# MERINO_PROVIDERS__ACCUWEATHER__CRON_INTERVAL_SEC
+cron_interval_sec = 21600 # 6 hours
 
 [default.providers.accuweather.cache_ttls]
 # Cache TTLs for weather data.
