@@ -39,10 +39,8 @@ def expected_secondary_category_data() -> list[dict[str, Any]]:
     `PRIMARY_CSV_PATH` related to the 'News' Category.
     """
     sportsnews_hash = md5("sportsnnews.com".encode(), usedforsecurity=False).digest()
-    fallback_hash = md5("fallback.com".encode(), usedforsecurity=False).digest()
     return [
         {"domain": base64.b64encode(sportsnews_hash).decode()},
-        {"domain": base64.b64encode(fallback_hash).decode()},
     ]
 
 
