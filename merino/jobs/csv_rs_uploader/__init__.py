@@ -43,7 +43,13 @@ collection_option = typer.Option(
 keep_existing_records_option = typer.Option(
     False,
     "--keep-existing-records",
-    help="Keep existing records before uploading new records",
+    help="Keep existing records not present in the new CSV data",
+)
+
+allow_delete_option = typer.Option(
+    False,
+    "--allow-deletion",
+    help="Allow record deletion (see https://bugzilla.mozilla.org/show_bug.cgi?id=1908802 before enabling this)",
 )
 
 dry_run_option = typer.Option(
@@ -108,6 +114,7 @@ def upload(
     collection: str = collection_option,
     csv_path: str = csv_path_option,
     keep_existing_records: bool = keep_existing_records_option,
+    allow_delete: bool = allow_delete_option,
     dry_run: bool = dry_run_option,
     model_name: str = model_name_option,
     model_package: str = model_package_option,
@@ -129,6 +136,7 @@ def upload(
             collection=collection,
             csv_path=csv_path,
             keep_existing_records=keep_existing_records,
+            allow_delete=allow_delete,
             dry_run=dry_run,
             model_name=model_name,
             model_package=model_package,
@@ -146,6 +154,7 @@ async def _upload(
     collection: str,
     csv_path: str,
     keep_existing_records: bool,
+    allow_delete: bool,
     dry_run: bool,
     model_name: str,
     model_package: str,
@@ -160,6 +169,7 @@ async def _upload(
             chunk_size=chunk_size,
             collection=collection,
             keep_existing_records=keep_existing_records,
+            allow_delete=allow_delete,
             dry_run=dry_run,
             file_object=csv_file,
             model_name=model_name,
@@ -177,6 +187,7 @@ async def _upload_file_object(
     collection: str,
     file_object: io.TextIOWrapper,
     keep_existing_records: bool,
+    allow_delete: bool,
     dry_run: bool,
     model_name: str,
     model_package: str,
@@ -219,6 +230,7 @@ async def _upload_file_object(
         bucket=bucket,
         chunk_size=chunk_size,
         collection=collection,
+        allow_delete=allow_delete,
         dry_run=dry_run,
         record_type=record_type,
         server=server,
