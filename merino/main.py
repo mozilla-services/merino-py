@@ -5,9 +5,9 @@ from contextlib import asynccontextmanager
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, status
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import ORJSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 from merino import curated_recommendations, providers
 from merino.config_logging import configure_logging
@@ -46,13 +46,13 @@ async def lifespan(app: FastAPI):
     await get_metrics_client().close()
 
 
-app = FastAPI(openapi_tags=tags_metadata, lifespan=lifespan)
+app = FastAPI(openapi_tags=tags_metadata, lifespan=lifespan, default_response_class=ORJSONResponse)
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(_, exc) -> JSONResponse:
+async def validation_exception_handler(_, exc) -> ORJSONResponse:
     """Use HTTP status code: 400 for all invalid requests."""
-    return JSONResponse(
+    return ORJSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content=jsonable_encoder({"detail": exc.errors()}),
     )

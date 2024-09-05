@@ -25,7 +25,7 @@ class ShapeStage(BaseModel):
 
 
 class MerinoSmokeLoadTestShape(LoadTestShape):
-    """A load test shape class for Merino (Duration: 10 minutes, Users: 35).
+    """A load test shape class for Merino (Duration: 10 minutes, Users: 25).
 
     The smoke load test verifies the system's performance under minimal load.
     The test is run for a short period, possibly in CD, to ensure the system is working correctly.
@@ -39,7 +39,7 @@ class MerinoSmokeLoadTestShape(LoadTestShape):
     # Must match value defined in setup_k8s.sh
     WORKER_COUNT: int = int(os.environ.get("WORKER_COUNT", 5))
     # Number of users supported on a worker running on a n1-standard-2
-    USERS_PER_WORKER: int = int(os.environ.get("USERS_PER_WORKER", 6))
+    USERS_PER_WORKER: int = int(os.environ.get("USERS_PER_WORKER", 5))
     USERS: int = WORKER_COUNT * USERS_PER_WORKER
 
     stages: list[ShapeStage]

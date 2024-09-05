@@ -39,6 +39,7 @@ from merino.providers.weather.backends.protocol import (
 
 ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 ACCUWEATHER_LOCATION_KEY = "39376"
+ACCUWEATHER_METRICS_SAMPLE_RATE = 0.9
 
 # these TTL values below are the same as the default accuweather config values
 WEATHER_REPORT_TTL_SEC = 1800
@@ -70,6 +71,7 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
         "url_location_completion_path": "/locations/v1/cities/{country_code}/autocomplete.json",
         "url_location_key_placeholder": "{location_key}",
+        "metrics_sample_rate": ACCUWEATHER_METRICS_SAMPLE_RATE,
     }
 
 
@@ -149,11 +151,10 @@ def fixture_geolocation() -> Location:
     """Create a Location object for test."""
     return Location(
         country="US",
-        region="CA",
+        regions=["CA"],
         city="San Francisco",
         dma=807,
         postal_code="94105",
-        alternative_regions=["BC"],
     )
 
 
@@ -340,7 +341,8 @@ def generate_accuweather_cache_keys(
 
     location_key: str = accuweather.cache_key_for_accuweather_request(
         accuweather.url_cities_admin_path.format(
-            country_code=geolocation.country, admin_code=geolocation.region
+            country_code=geolocation.country,
+            admin_code=geolocation.regions[0] if geolocation.regions else None,
         ),
         query_params=accuweather.get_location_key_query_params(geolocation.city),
     )
@@ -838,7 +840,7 @@ async def test_get_weather_report_with_location_key_with_cache_error(
 
     report = await accuweather.get_weather_report(geolocation, ACCUWEATHER_LOCATION_KEY)
     records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.providers.weather.backends.accuweather"
+        caplog.records, "merino.providers.weather.backends.accuweather.backend"
     )
 
     client_mock.get.assert_not_called()

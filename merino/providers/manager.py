@@ -67,6 +67,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         ),
                         cached_forecast_ttl_sec=setting.cache_ttls.forecast_ttl_sec,
                         metrics_client=get_metrics_client(),
+                        metrics_sample_rate=settings.accuweather.metrics_sampling_rate,
                         http_client=create_http_client(
                             base_url=settings.accuweather.url_base,
                             connect_timeout=settings.providers.accuweather.connect_timeout_sec,
@@ -94,6 +95,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,
+                cron_interval_sec=setting.cron_interval_sec,
             )
         case ProviderType.AMO:
             return AmoProvider(

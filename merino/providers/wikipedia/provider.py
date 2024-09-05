@@ -7,7 +7,7 @@ from pydantic import HttpUrl
 
 from merino.config import settings
 from merino.exceptions import BackendError
-from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest, Category
 from merino.providers.wikipedia.backends.protocol import WikipediaBackend
 
 # The packaged Wikipedia icon
@@ -85,6 +85,7 @@ class Provider(BaseProvider):
                 icon=ICON,
                 score=self.score,
                 provider=self.name,
+                categories=[Category.Education],
                 **suggestion,
             )
             for suggestion in suggestions

@@ -104,6 +104,7 @@ def test_suggest_wikipedia(
             "provider": "wikipedia",
             "score": settings.providers.wikipedia.score,
             "icon": ICON,
+            "categories": [6],
         }
 
     # Check logs for the timed out query(-ies)

@@ -1,6 +1,7 @@
 """Abstract class for Providers"""
 
 from abc import ABC, abstractmethod
+from enum import Enum
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -15,6 +16,32 @@ class SuggestionRequest(BaseModel):
     query: str
     geolocation: Location
     request_type: str | None = None
+
+
+class Category(Enum):
+    """Enum of possible interests for a suggestion."""
+
+    Inconclusive = 0
+    Animals = 1
+    Arts = 2
+    Autos = 3
+    Business = 4
+    Career = 5
+    Education = 6
+    Fashion = 7
+    Finance = 8
+    Food = 9
+    Government = 10
+    # Disable this per policy consultation
+    # Health = 11
+    Hobbies = 12
+    Home = 13
+    News = 14
+    RealEstate = 15
+    Society = 16
+    Sports = 17
+    Tech = 18
+    Travel = 19
 
 
 class BaseSuggestion(BaseModel):
@@ -103,6 +130,10 @@ class BaseSuggestion(BaseModel):
         default=None,
         description="[Optional] Object that contains provider specific fields.`custom_details` "
         "is keyed by the provider name and references custom schemas.",
+    )
+    categories: list[Category] | None = Field(
+        default=None,
+        description="[Optional] List that contains categories associated to the suggestion.",
     )
 
 
