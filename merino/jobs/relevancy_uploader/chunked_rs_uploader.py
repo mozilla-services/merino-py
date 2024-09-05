@@ -25,6 +25,7 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
         category_name: str,
         category_code: int,
         version: int,
+        allow_delete: bool = True,
         dry_run: bool = False,
         total_data_count: int | None = None,
     ):
@@ -36,6 +37,7 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
             collection,
             record_type,
             server,
+            allow_delete,
             dry_run,
             total_data_count,
         )
