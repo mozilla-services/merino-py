@@ -246,7 +246,7 @@ async def test_curated_recommendations_locales(locale):
 )
 @pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
 async def test_curated_recommendations_non_en_topic_is_null(locale, topics):
-    """Test that topic is missing/null for non-en-US locales."""
+    """Test that topic is missing/null for non-English locales."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
         response = await ac.post(
             "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
@@ -266,7 +266,7 @@ async def test_curated_recommendations_non_en_topic_is_null(locale, topics):
 )
 @pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
 async def test_curated_recommendations_en_topic(locale, topics):
-    """Test that topic is missing/null for non-en-US locales."""
+    """Test that topic is present for English locales."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
         response = await ac.post(
             "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
