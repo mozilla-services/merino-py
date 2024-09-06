@@ -46,39 +46,6 @@ class Category(Enum):
     Travel = 19
 
 
-# Mapping to unify categories across the sources
-UPLOAD_CATEGORY_TO_R2D2_CATEGORY: dict[str, Category] = {
-    "Sports": Category.Sports,
-    "Economy & Finance": Category.Finance,
-    "Ecommerce": Category.Inconclusive,
-    "Travel": Category.Travel,
-    "Information Technology": Category.Tech,
-    "News & Media": Category.News,
-    "Chat": Category.Inconclusive,
-    "Photography": Category.Hobbies,
-    "Social Networks": Category.Inconclusive,
-    "Instant Messengers": Category.Inconclusive,
-    "Business": Category.Business,
-    "Health & Fitness": Category.Inconclusive,
-    "Music": Category.Hobbies,
-    "Home & Garden": Category.Home,
-    "Science": Category.Education,
-    "Fashion": Category.Fashion,
-    "Technology": Category.Tech,
-    "Food & Drink": Category.Food,
-    "Video Streaming": Category.Hobbies,
-    "Education": Category.Education,
-    "Lifestyle": Category.Inconclusive,
-    "Cartoons & Anime": Category.Inconclusive,
-    "Gaming": Category.Hobbies,
-    "Magazines": Category.Inconclusive,
-    "Forums": Category.Inconclusive,
-    "Entertainment": Category.Inconclusive,
-    "Clothing": Category.Fashion,
-    "Weather": Category.Inconclusive,
-    "Government": Category.Government,
-}
-
 RELEVANCY_RECORD_TYPE = "category_to_domains"
 
 
@@ -111,7 +78,7 @@ class RelevancyData:
         for domain, csv_categories in domain_categories.items():
             classified = classify_domain(domain, upload_categories, data)
             if not classified:
-                classify_domain_with_fallback(domain, csv_categories, data)
+                classify_domain_with_inconclusive(domain, data)
         return data
 
 
@@ -132,17 +99,10 @@ def classify_domain(domain, upload_categories, data) -> bool:
     return classified
 
 
-def classify_domain_with_fallback(domain, categories, data) -> None:
-    """Classify the domain using UPLOAD_CATEGORY_TO_R2D2 mapping."""
-    classified = False
+def classify_domain_with_inconclusive(domain, data) -> None:
+    """Classify the domain to inconclusive"""
     md5_hash = md5(domain.encode(), usedforsecurity=False).digest()
-    for category in set(categories):
-        category_mapped = UPLOAD_CATEGORY_TO_R2D2_CATEGORY.get(category, Category.Inconclusive)
-        if category_mapped != Category.Inconclusive:
-            data[category_mapped].append({"domain": base64.b64encode(md5_hash).decode()})
-            classified = True
-    if not classified:
-        data[Category.Inconclusive].append({"domain": base64.b64encode(md5_hash).decode()})
+    data[Category.Inconclusive].append({"domain": base64.b64encode(md5_hash).decode()})
 
 
 rs_settings = config.remote_settings
