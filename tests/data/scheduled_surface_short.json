@@ -45,6 +45,17 @@
             "publisher": "Culture Study",
             "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/3a4a6ed6-a1df-497d-8d31-f777534806ac.jpeg"
           }
+        },
+        {
+          "id": "1134669c-3ab8-4f68-8514-4e2ec9c0b5b1",
+          "corpusItem": {
+            "url": "https://getpocket.com/explore/item/worried-about-sending-your-baby-to-daycare-our-research-shows-they-like-being-in-groups",
+            "title": "Worried About Sending Your Baby to Daycare? Research Shows They Like Being in Groups",
+            "excerpt": "Babies as young as six months respond to and enjoy being in groups with other babies.",
+            "topic": "PARENTING",
+            "publisher": "The Conversation",
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b9182b66-5398-4fe2-a95d-8b9a46e5a05d.jpeg"
+          }
         }
       ]
     }

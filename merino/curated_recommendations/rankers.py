@@ -80,7 +80,7 @@ def spread_publishers(
 
 def boost_preferred_topic(
     recs: list[CuratedRecommendation],
-    preferred_topics: list[Topic],
+    preferred_topics: list[Topic | str],
 ) -> list[CuratedRecommendation]:
     """Boost recommendations into top N slots based on preferred topics.
     2 recs per topic (for now).
