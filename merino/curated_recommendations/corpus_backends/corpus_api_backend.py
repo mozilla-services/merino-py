@@ -1,25 +1,37 @@
 """Corpus API backend for making GRAPHQL requests"""
 
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+import asyncio
 import logging
 import random
 from datetime import datetime, timedelta
-import asyncio
+from urllib.parse import urlparse, urlencode, parse_qsl
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import aiodogstatsd
 from httpx import AsyncClient, HTTPError
-from urllib.parse import urlparse, urlencode, parse_qsl
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential_jitter,
+    before_sleep_log,
+)
 
+from merino.config import settings
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     CorpusItem,
     Topic,
     ScheduledSurfaceId,
 )
-from merino.utils.version import fetch_app_version_from_file
 from merino.exceptions import BackendError
+from merino.utils.version import fetch_app_version_from_file
 
 logger = logging.getLogger(__name__)
+
+
+class CorpusGraphQLError(BackendError):
+    """Error during interaction with the corpus GraphQL API."""
 
 
 class CorpusApiGraphConfig:
@@ -98,9 +110,6 @@ class CorpusApiBackend(CorpusBackend):
     # rate to the scheduledSurface query stays close to the historic rate of ~100 requests/minute.
     cache_time_to_live_min = timedelta(seconds=50)
     cache_time_to_live_max = timedelta(seconds=70)
-    # The backoff time is the time that is waited before retrying.
-    # fetch() makes a single retry attempt, so there's exponential backoff (for now).
-    _backoff_time = timedelta(seconds=0.5)
     _cache: dict[ScheduledSurfaceId, list[CorpusItem]]
     _expirations: dict[ScheduledSurfaceId, datetime]
     _locks: dict[ScheduledSurfaceId, asyncio.Lock]
@@ -127,7 +136,8 @@ class CorpusApiBackend(CorpusBackend):
 
     @staticmethod
     def get_utm_source(scheduled_surface_id: ScheduledSurfaceId) -> str | None:
-        """Return utm_source value to attribute curated recommendations to, based on the scheduled_surface_id.
+        """Return utm_source value to attribute curated recommendations to, based on the
+        scheduled_surface_id.
         https://github.com/Pocket/recommendation-api/blob/main/app/data_providers/slate_providers/slate_provider.py#L95C5-L100C46
         """
         return SCHEDULED_SURFACE_ID_TO_UTM_SOURCE.get(scheduled_surface_id)
@@ -167,10 +177,12 @@ class CorpusApiBackend(CorpusBackend):
         try:
             return ZoneInfo(zones[scheduled_surface_id])
         except (KeyError, ZoneInfoNotFoundError) as e:
-            # Graceful degradation: continue to serve recommendations if timezone cannot be obtained for the surface.
+            # Graceful degradation: continue to serve recommendations if timezone cannot be obtained
+            # for the surface.
             default_tz = ZoneInfo("UTC")
             logging.error(
-                f"Failed to get timezone for {scheduled_surface_id}, so defaulting to {default_tz}: {e}"
+                f"Failed to get timezone for {scheduled_surface_id}, "
+                f"so defaulting to {default_tz}: {e}"
             )
             return default_tz
 
@@ -187,11 +199,11 @@ class CorpusApiBackend(CorpusBackend):
         # If we have expired cached data, revalidate asynchronously without waiting for the result.
         if cache_key in self._cache:
             if now >= self._expirations[cache_key]:
-                task = asyncio.create_task(self._revalidate_cache(surface_id))  # noqa: should not 'await'
                 # Save a reference to the result of this function, to avoid a task disappearing
                 # mid-execution. The event loop only keeps weak references to tasks. A task that
                 # isn’t referenced elsewhere may get garbage collected, even before it’s done.
                 # https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
+                task = asyncio.create_task(self._revalidate_cache(surface_id))
                 self._background_tasks.add(task)
                 task.add_done_callback(self._background_tasks.discard)
             return self._cache[cache_key]
@@ -199,6 +211,16 @@ class CorpusApiBackend(CorpusBackend):
         # If no cache value exists, fetch new data and await the result.
         return await self._revalidate_cache(surface_id)
 
+    @retry(
+        wait=wait_exponential_jitter(
+            initial=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds,
+            jitter=settings.curated_recommendations.corpus_api.retry_wait_jitter_seconds,
+        ),
+        stop=stop_after_attempt(settings.curated_recommendations.corpus_api.retry_count),
+        retry=retry_if_exception_type((CorpusGraphQLError, HTTPError, ValueError)),
+        reraise=True,  # Raise the exception our code encountered, instead of a RetryError
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def _fetch_from_backend(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
         """Issue a scheduledSurface query"""
         query = """
@@ -244,9 +266,11 @@ class CorpusApiBackend(CorpusBackend):
         res.raise_for_status()
         data = res.json()
 
-        # log to Sentry if GraphQL returned errors
         if res.status_code == 200 and "errors" in data:
-            raise BackendError(f"curated-corpus-api returned GraphQL error(s) {data["errors"]}")
+            self.metrics_client.increment("corpus_api.request.graphql_error")
+            raise CorpusGraphQLError(
+                f"curated-corpus-api returned GraphQL errors {data['errors']}"
+            )
 
         # get the utm_source based on scheduled surface id
         utm_source = self.get_utm_source(surface_id)
@@ -269,9 +293,9 @@ class CorpusApiBackend(CorpusBackend):
         return curated_recommendations
 
     async def _revalidate_cache(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
-        """Purge and update the cache for a specific surface. If the API responds with an error code,
-        re-try the request again. If there is still an error response, don't bust cache, return the latest
-        valid data from the cache.
+        """Update the cache for a specific surface and return the corpus items.
+        If the API fails to respond successfully even after retries, return the latest cached data.
+        Only a single "coalesced" request will be made to the backend per surface id.
         """
         cache_key = surface_id
 
@@ -285,29 +309,18 @@ class CorpusApiBackend(CorpusBackend):
 
             # Attempt to fetch new data from the backend
             try:
-                data = await self.retry_fetch(surface_id, cache_key)
+                data = await self._fetch_from_backend(surface_id)
+                self._cache[cache_key] = data
+                self._expirations[cache_key] = self.get_expiration_time()
                 return data
-            except (BackendError, HTTPError, ValueError) as e:
-                logger.warning(
-                    f"Exception occurred on first attempt to fetch: "
-                    f"Retrying CorpusApiBackend._fetch_from_backend once after {e}"
-                )
-
-                # Retry fetching data
-                try:
-                    data = await self.retry_fetch(surface_id, cache_key)
-                    return data
-                except (BackendError, HTTPError, ValueError) as e:
-                    logger.warning(
-                        f"Retrying CorpusApiBackend._fetch_from_backend failed: {e}. "
-                        f"Returning latest valid cached data."
-                    )
-                    # Provide the latest valid cached data if available
-                    return self._cache.get(cache_key, [])
             except Exception as e:
-                # Backoff prevents high API rate when an unforeseen error occurs.
-                await asyncio.sleep(self._backoff_time.total_seconds())
-                raise e
+                if cache_key in self._cache:
+                    logger.error(
+                        f"Failed to update corpus cache: {e}. Returning stale cached data."
+                    )
+                    return self._cache[cache_key]
+                else:
+                    raise e
 
     @staticmethod
     def get_expiration_time() -> datetime:
@@ -318,15 +331,3 @@ class CorpusApiBackend(CorpusBackend):
             CorpusApiBackend.cache_time_to_live_max.total_seconds(),
         )
         return datetime.now() + timedelta(seconds=time_to_live_seconds)
-
-    async def retry_fetch(
-        self, surface_id: ScheduledSurfaceId, cache_key: ScheduledSurfaceId
-    ) -> list[CorpusItem]:
-        """Retry fetching data & update cache with valid data."""
-        data = await self._fetch_from_backend(surface_id)
-        if not data:  # Check if the fetched data is valid
-            raise ValueError("retry_fetch: Response is invalid or empty")
-        # Update the cache with valid data
-        self._cache[cache_key] = data
-        self._expirations[cache_key] = self.get_expiration_time()
-        return data

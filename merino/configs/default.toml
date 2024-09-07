@@ -490,6 +490,21 @@ gcp_project = ""
 cron_interval_seconds = 30
 
 
+[default.curated_recommendations.corpus_api]
+# MERINO__CURATED_RECOMMENDATIONS__CORPUS_API__RETRY_COUNT
+# The maximum number of times to retry corpus api requests on failure before giving up.
+retry_count = 3
+
+# MERINO__CURATED_RECOMMENDATIONS__CORPUS_API__RETRY_WAIT_INITIAL_SECONDS
+# Initial time in seconds to wait before retrying corpus api requests.
+# Gets doubled on each failure, until the maximum number of retries is met.
+retry_wait_initial_seconds = 0.5
+
+# MERINO__CURATED_RECOMMENDATIONS__CORPUS_API__RETRY_WAIT_JITTER_SECONDS
+# Uniformly random time in seconds to add to the wait time before retrying corpus api requests.
+retry_wait_jitter_seconds = 0.2
+
+
 [default.jobs.wikipedia_indexer]
 # MERINO_JOBS__WIKIPEDIA_INDEXER__ES_URL
 # The URL of the Elasticsearch cluster for indexing job.

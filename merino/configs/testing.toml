@@ -67,3 +67,10 @@ backend = "test"
 [testing.curated_recommendations.gcs_engagement]
 bucket_name = "test-bucket"
 gcp_project = "test-project"
+
+
+[testing.curated_recommendations.corpus_api]
+
+# Tests sleep for a shorter duration than defautl to make them execute more quickly.
+retry_wait_initial_seconds = 0.05
+retry_wait_jitter_seconds = 0.02
