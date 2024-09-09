@@ -16,7 +16,6 @@ from testcontainers.core.waiting_utils import wait_for_logs
 
 from merino.config import settings
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
-from merino.curated_recommendations.engagement_backends.protocol import Engagement
 
 
 @pytest.fixture(scope="module")

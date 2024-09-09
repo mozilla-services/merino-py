@@ -2055,6 +2055,7 @@ async def test_get_request_cache_store_errors(
 
     increment_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
     assert [
+        f"accuweather.upstream.request.{RequestType.FORCASTS}.get",
         "accuweather.cache.store.set_error",
     ] == increment_called
 
@@ -2312,6 +2313,7 @@ async def test_get_location_completion_with_invalid_accuweather_response(
 
     metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
     assert [
+        f"accuweather.upstream.request.{RequestType.AUTOCOMPLETE}.get",
         f"accuweather.request.{RequestType.AUTOCOMPLETE}.processor.error",
     ] == metrics_called
 
