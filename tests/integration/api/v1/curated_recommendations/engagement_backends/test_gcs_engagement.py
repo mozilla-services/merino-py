@@ -150,7 +150,7 @@ async def test_gcs_engagement_returns_zero_for_missing_keys(gcs_engagement):
 
 @pytest.mark.asyncio
 async def test_gcs_engagement_fetches_data(
-    gcs_engagement, blob_20min_ago, blob_5min_ago, execution_number
+    gcs_engagement, blob_20min_ago, blob_5min_ago
 ):
     """Test that the backend fetches data from GCS and returns engagement data."""
     gcs_engagement.initialize()
@@ -179,7 +179,7 @@ async def test_gcs_engagement_logs_error_for_large_blob(
 
 @pytest.mark.asyncio
 async def test_gcs_engagement_metrics(
-    gcs_engagement, mock_metrics_client, blob_5min_ago, execution_number
+    gcs_engagement, mock_metrics_client, blob_5min_ago
 ):
     """Test that the backend records the correct metrics."""
     gcs_engagement.initialize()
