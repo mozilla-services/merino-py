@@ -163,6 +163,8 @@ The following additional metrics are recorded when curated recommendations are r
  A timer to measure the duration (in ms) of looking up a list of scheduled corpus items.
 - `corpus_api.request.status_codes.{res.status_code}` -
  A counter to measure the status codes of an HTTP request to the curated-corpus-api.
+- `corpus_api.request.graphql_error` -
+ A counter to measure the number of GraphQL errors from the curated-corpus-api.
 - `recommendation.engagement.update.timing` -
  A timer to measure the duration (in ms) of updating the engagement data from GCS.
 - `recommendation.engagement.size` - A gauge to track the size of the blob on GCS.

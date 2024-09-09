@@ -14,6 +14,7 @@ from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 from scipy.stats import linregress
 
+from merino.config import settings
 from merino.curated_recommendations import (
     CorpusApiBackend,
     CuratedRecommendationsProvider,
@@ -43,6 +44,13 @@ def fixture_response_data():
 def fixture_response_data_short():
     """Load mock response data (shortened) for the scheduledSurface query"""
     with open("tests/data/scheduled_surface_short.json") as f:
+        return json.load(f)
+
+
+@pytest.fixture()
+def fixture_graphql_200ok_with_error_response():
+    """Load mock response data for a GraphQL error response"""
+    with open("tests/data/graphql_error.json") as f:
         return json.load(f)
 
 
@@ -144,6 +152,15 @@ async def fetch_en_us(client: AsyncClient) -> Response:
     return await client.post(
         "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": [Topic.FOOD]}
     )
+
+
+def get_max_total_retry_duration() -> float:
+    """Compute the maximum retry duration for the exponential backoff and jitter strategy."""
+    initial = settings.curated_recommendations.corpus_api.retry_wait_initial_seconds
+    jitter = settings.curated_recommendations.corpus_api.retry_wait_jitter_seconds
+    retry_count = settings.curated_recommendations.corpus_api.retry_count
+
+    return float(initial * (2**retry_count - 1) + retry_count * jitter)
 
 
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
@@ -694,18 +711,45 @@ class TestCorpusApiCaching:
             corpus_http_client.post.assert_called_once()
 
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
+    @pytest.mark.parametrize(
+        "error_type, expected_warning",
+        [
+            ("graphql", 'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX".'),
+            ("http", "'503 Service Unavailable' for url 'https://client-api.getpocket.com'"),
+        ],
+    )
     @pytest.mark.asyncio
     async def test_single_request_multiple_failed_fetches(
-        self, corpus_http_client, fixture_request_data, fixture_response_data, caplog
+        self,
+        corpus_http_client,
+        fixture_request_data,
+        fixture_response_data,
+        fixture_graphql_200ok_with_error_response,
+        caplog,
+        error_type,
+        expected_warning,
     ):
-        """Test that only a few requests are made to the curated-corpus-api when it is down."""
+        """Test that only a few requests are made to the curated-corpus-api when it is down.
+        Additionally, test that if the backend returns a GraphQL error, it is handled correctly.
+        """
         async with AsyncClient(app=app, base_url="http://test") as ac:
             start_time = datetime.now()
 
             def temporary_downtime(*args, **kwargs):
-                # Simulate the backend being unavailable for 0.2 seconds.
-                if datetime.now() < start_time + timedelta(seconds=0.2):
-                    return Response(status_code=503, request=fixture_request_data)
+                # Simulate the backend being unavailable for the minimum wait time.
+                downtime_end = start_time + timedelta(
+                    seconds=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds
+                )
+
+                if datetime.now() < downtime_end:
+                    if error_type == "graphql":
+                        return Response(
+                            status_code=200,
+                            json=fixture_graphql_200ok_with_error_response,
+                            request=fixture_request_data,
+                        )
+                    elif error_type == "http":
+                        return Response(status_code=503, request=fixture_request_data)
                 else:
                     return Response(
                         status_code=200,
@@ -715,7 +759,7 @@ class TestCorpusApiCaching:
 
             corpus_http_client.post = AsyncMock(side_effect=temporary_downtime)
 
-            # Hit the endpoint until a 200 response is received.
+            # Hit the endpoint until a 200 response is received or until timeout.
             while datetime.now() < start_time + timedelta(seconds=1):
                 try:
                     result = await fetch_en_us(ac)
@@ -726,18 +770,12 @@ class TestCorpusApiCaching:
 
             assert result.status_code == 200
 
-            # Assert that we did not send a lot of requests to the backend
-            # call_count is 400+ for me locally when CorpusApiBackend._backoff_time is changed to 0.
+            # Assert that we did not send a lot of requests to the backend.
             assert corpus_http_client.post.call_count == 2
 
             # Assert that a warning was logged with a descriptive message.
             warnings = [r for r in caplog.records if r.levelname == "WARNING"]
-            assert len(warnings) == 2
-            assert (
-                "Retrying CorpusApiBackend._fetch_from_backend once after "
-                "Server error '503 Service Unavailable'"
-            ) in warnings[0].message
-            assert ("Returning latest valid cached data.") in warnings[1].message
+            assert any(expected_warning in warning.message for warning in warnings)
 
     @pytest.mark.asyncio
     async def test_cache_returned_on_subsequent_calls(
@@ -785,6 +823,7 @@ class TestCorpusApiCaching:
                 initial_response = await fetch_en_us(ac)
                 initial_data = initial_response.json()
                 assert initial_response.status_code == 200
+                assert corpus_http_client.post.call_count == 1
 
                 # Simulate 503 error from Corpus API
                 corpus_http_client.post.return_value = Response(
@@ -799,22 +838,15 @@ class TestCorpusApiCaching:
                 # Try to fetch data when cache expired
                 new_response = await fetch_en_us(ac)
                 new_data = new_response.json()
-                await asyncio.sleep(0.01)  # Allow asyncio background task to make an API request
-                # assert that Corpus API was called 3 times
-                # 1st time during initial good request
-                # 2nd time when cache expired, status code == 503
-                # 3rd time when trying Corpus API once again, status code == 503
-                assert corpus_http_client.post.call_count == 3
-
-                # Assert that 2 warnings were logged with a descriptive message.
-                warnings = [r for r in caplog.records if r.levelname == "WARNING"]
-                assert len(warnings) == 2
+                await asyncio.sleep(
+                    get_max_total_retry_duration()
+                )  # Allow asyncio background task to make an API request
+                # assert that Corpus API was called the expected number of times
+                # 1 successful request from above, and retry_count number of retries.
                 assert (
-                    "Exception occurred on first attempt to fetch: "
-                    "Retrying CorpusApiBackend._fetch_from_backend once after "
-                    "Server error '503 Service Unavailable'"
-                ) in warnings[0].message
-                assert ("Returning latest valid cached data.") in warnings[1].message
+                    corpus_http_client.post.call_count
+                    == settings.curated_recommendations.corpus_api.retry_count + 1
+                )
 
                 assert new_response.status_code == 200
                 assert len(initial_data) == len(new_data)
@@ -863,16 +895,31 @@ class TestCuratedRecommendationsMetrics:
 
     @pytest.mark.asyncio
     async def test_metrics_corpus_api_error(
-        self, mocker: MockerFixture, corpus_http_client, fixture_request_data
+        self,
+        mocker: MockerFixture,
+        corpus_http_client,
+        fixture_request_data,
+        fixture_response_data,
     ) -> None:
         """Test that metrics are recorded when the curated-corpus-api returns a 500 error"""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            corpus_http_client.post.return_value = Response(
-                status_code=500,
-                request=fixture_request_data,
-            )
+            is_first_request = True
+
+            def first_request_returns_error(*args, **kwargs):
+                nonlocal is_first_request
+                if is_first_request:
+                    is_first_request = False
+                    return Response(status_code=500, request=fixture_request_data)
+                else:
+                    return Response(
+                        status_code=200,
+                        json=fixture_response_data,
+                        request=fixture_request_data,
+                    )
+
+            corpus_http_client.post = AsyncMock(side_effect=first_request_returns_error)
 
             await fetch_en_us(ac)
 
@@ -884,7 +931,7 @@ class TestCuratedRecommendationsMetrics:
                     "corpus_api.request.timing",
                     "corpus_api.request.status_codes.500",
                     "corpus_api.request.timing",
-                    "corpus_api.request.status_codes.500",
+                    "corpus_api.request.status_codes.200",
                     "post.api.v1.curated-recommendations.timing",
                     "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
                     "response.status_codes.200",
