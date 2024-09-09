@@ -3,10 +3,13 @@
 import hashlib
 from enum import unique, Enum
 from typing import Annotated
+import logging
 
-from pydantic import Field, model_validator, BaseModel
+from pydantic import Field, field_validator, model_validator, BaseModel
 
 from merino.curated_recommendations.corpus_backends.protocol import CorpusItem, Topic
+
+logger = logging.getLogger(__name__)
 
 
 @unique
@@ -89,7 +92,32 @@ class CuratedRecommendationsRequest(BaseModel):
     locale: Locale
     region: str | None = None
     count: int = 100
-    topics: list[Topic] | None = None
+    topics: list[Topic | str] | None = None
+
+    @field_validator("topics", mode="before")
+    def validate_topics(cls, values):
+        """Validate the topics param."""
+        if values:
+            if isinstance(values, list):
+                valid_topics = []
+                for value in values:
+                    # if value is a valid Topic, add it to valid_topics
+                    if isinstance(value, Topic):
+                        valid_topics.append(value)
+                    # if value is a string, check if its in enum Topic
+                    # skip if invalid topic
+                    elif isinstance(value, str):
+                        try:
+                            valid_topics.append(Topic(value))
+                        except ValueError:
+                            # Skip invalid topics
+                            logger.warning(f"Invalid topic: {value}")
+                            continue
+                return valid_topics
+            else:
+                # Not wrapped in a list
+                logger.warning(f"Topics not wrapped in a list: {values}")
+        return []
 
 
 class CuratedRecommendationsResponse(BaseModel):

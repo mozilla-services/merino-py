@@ -594,7 +594,7 @@ class TestCuratedRecommendationsRequestParameters:
 
             assert response.status_code == 200
             # assert total of 4 items returned (using scheduled_surface_short.json for response)
-            assert len(corpus_items) == 4
+            assert len(corpus_items) == 5
             # assert that recs didn't need boosting so order remains the same
             for i in range(len(corpus_items)):
                 assert (
@@ -604,19 +604,67 @@ class TestCuratedRecommendationsRequestParameters:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "topics",
+        "topics, expected_topics, expected_warning",
         [
-            "arts",  # Must be wrapped in a list
-            ["not-a-valid-topic"],
+            # Valid topic, but must be wrapped in a list
+            (
+                "arts",
+                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                "Topics not wrapped in a list: arts",
+            ),
+            # Invalid topic & must be wrapped in a list
+            (
+                "invalid-topic",
+                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                "Topics not wrapped in a list: invalid-topic",
+            ),
+            # Invalid topic in a list
+            (
+                ["not-a-valid-topic"],
+                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                "Invalid topic: not-a-valid-topic",
+            ),
+            # 2 valid topics, 1 invalid topic
+            (
+                ["food", "invalid_topic", "society-parenting"],
+                [Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD, Topic.CAREER],
+                "Invalid topic: invalid_topic",
+            ),
         ],
     )
-    async def test_curated_recommendations_topics_failure(self, topics):
-        """Test the curated recommendations endpoint rejects invalid topics."""
+    async def test_curated_recommendations_invalid_topic_return_200(
+        self,
+        topics,
+        expected_topics,
+        expected_warning,
+        fixture_response_data_short,
+        fixture_request_data,
+        corpus_http_client,
+        caplog,
+    ):
+        """Test the curated recommendations endpoint ignores invalid topic in topics param.
+        Should treat invalid topic as blank.
+        """
         async with AsyncClient(app=app, base_url="http://test") as ac:
+            corpus_http_client.post.return_value = Response(
+                status_code=200,
+                json=fixture_response_data_short,
+                request=fixture_request_data,
+            )
             response = await ac.post(
                 "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
             )
-            assert response.status_code == 400
+            data = response.json()
+            corpus_items = data["data"]
+            # assert 200 is returned even tho some invalid topics
+            assert response.status_code == 200
+            # get topics in returned recs
+            result_topics = [item["topic"] for item in corpus_items]
+            assert result_topics == expected_topics
+            # Assert that a warning was logged with a descriptive message when invalid topic
+            warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+            assert len(warnings) == 1
+            assert expected_warning in warnings[0].message
 
     @pytest.mark.asyncio
     async def test_curated_recommendations_locale_bad_request(self):
