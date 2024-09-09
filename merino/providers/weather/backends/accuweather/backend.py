@@ -805,7 +805,7 @@ class AccuweatherBackend:
                 params={
                     self.url_param_api_key: self.api_key,
                 },
-                request_type=RequestType.FORCASTS,
+                request_type=RequestType.FORECASTS,
                 process_api_response=process_forecast_response,
                 cache_ttl_sec=self.cached_forecast_ttl_sec,
             )
