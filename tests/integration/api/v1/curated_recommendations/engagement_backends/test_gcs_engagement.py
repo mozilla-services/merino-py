@@ -166,9 +166,8 @@ async def test_gcs_engagement_fetches_data(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("execution_number", range(100))
 async def test_gcs_engagement_logs_error_for_large_blob(
-    gcs_engagement, large_blob_1min_ago, caplog, execution_number
+    gcs_engagement, large_blob_1min_ago, caplog
 ):
     """Test that the backend logs an error if the blob size exceeds the max size."""
     caplog.set_level(logging.ERROR)
