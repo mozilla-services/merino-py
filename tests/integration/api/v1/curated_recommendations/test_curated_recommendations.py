@@ -604,19 +604,31 @@ class TestCuratedRecommendationsRequestParameters:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "topics, expected_topics",
+        "topics, expected_topics, expected_warning",
         [
-            # Must be wrapped in a list
-            ("arts", [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD]),
+            # Valid topic, but must be wrapped in a list
+            (
+                "arts",
+                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                "Topics not wrapped in a list: arts",
+            ),
+            # Invalid topic & must be wrapped in a list
+            (
+                "invalid-topic",
+                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                "Topics not wrapped in a list: invalid-topic",
+            ),
             # Invalid topic in a list
             (
                 ["not-a-valid-topic"],
                 [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                "Invalid topic: not-a-valid-topic",
             ),
             # 2 valid topics, 1 invalid topic
             (
                 ["food", "invalid_topic", "society-parenting"],
                 [Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD, Topic.CAREER],
+                "Invalid topic: invalid_topic",
             ),
         ],
     )
@@ -624,9 +636,11 @@ class TestCuratedRecommendationsRequestParameters:
         self,
         topics,
         expected_topics,
+        expected_warning,
         fixture_response_data_short,
         fixture_request_data,
         corpus_http_client,
+        caplog,
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
@@ -645,9 +659,13 @@ class TestCuratedRecommendationsRequestParameters:
             corpus_items = data["data"]
             # assert 200 is returned even tho some invalid topics
             assert response.status_code == 200
-            # store the topics for the top N recs in an array
+            # get topics in returned recs
             result_topics = [item["topic"] for item in corpus_items]
             assert result_topics == expected_topics
+            # Assert that a warning was logged with a descriptive message when invalid topic
+            warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+            assert len(warnings) == 1
+            assert expected_warning in warnings[0].message
 
     @pytest.mark.asyncio
     async def test_curated_recommendations_locale_bad_request(self):
