@@ -11,8 +11,8 @@ from merino.curated_recommendations.engagement_backends.protocol import Engageme
 from merino.curated_recommendations.protocol import (
     Locale,
     CuratedRecommendation,
-    CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
+    CuratedRecommendationsValidatedRequest,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -106,7 +106,7 @@ class CuratedRecommendationsProvider:
             return None
 
     async def fetch(
-        self, curated_recommendations_request: CuratedRecommendationsRequest
+        self, curated_recommendations_request: CuratedRecommendationsValidatedRequest
     ) -> CuratedRecommendationsResponse:  # noqa
         """Provide curated recommendations."""
         # Get the recommendation surface ID based on passed locale & region

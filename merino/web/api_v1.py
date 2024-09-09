@@ -21,6 +21,7 @@ from merino.curated_recommendations.provider import (
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
+    CuratedRecommendationsValidatedRequest,
 )
 from merino.metrics import Client
 from merino.middleware import ScopeKey
@@ -340,4 +341,6 @@ async def curated_content(
 
     [curated-topics-doc]: https://mozilla-hub.atlassian.net/wiki/x/LQDaMg
     """
-    return await provider.fetch(curated_recommendations_request)
+    return await provider.fetch(
+        CuratedRecommendationsValidatedRequest(**curated_recommendations_request.model_dump())
+    )

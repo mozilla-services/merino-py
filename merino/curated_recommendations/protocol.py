@@ -2,7 +2,7 @@
 
 import hashlib
 from enum import unique, Enum
-from typing import Annotated, Optional
+from typing import Annotated
 
 from pydantic import Field, field_validator, model_validator, BaseModel
 
@@ -89,9 +89,13 @@ class CuratedRecommendationsRequest(BaseModel):
     locale: Locale
     region: str | None = None
     count: int = 100
-    # # adding Optional as it gets rid of "Incompatible types in assignment
-    # (expression has type "None", variable has type "list[Topic | str]")"
-    topics: Optional[list[Topic | str]] = None
+    topics: list[Topic | str] | None = None
+
+
+class CuratedRecommendationsValidatedRequest(CuratedRecommendationsRequest):
+    """Validated schema for requesting a list of curated recommendations"""
+
+    topics: list[Topic] | None = None
 
     @field_validator("topics", mode="before")
     def validate_topics(cls, values):
