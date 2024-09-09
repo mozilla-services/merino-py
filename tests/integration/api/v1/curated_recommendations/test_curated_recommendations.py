@@ -654,7 +654,6 @@ class TestCuratedRecommendationsRequestParameters:
             response = await ac.post(
                 "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
             )
-            # response = await fetch_en_us(ac)
             data = response.json()
             corpus_items = data["data"]
             # assert 200 is returned even tho some invalid topics
