@@ -323,6 +323,8 @@ class AccuweatherBackend:
           - `HTTPError` upon HTTP request errors
           - `AccuweatherError` upon cache write errors
         """
+        # increment the upstream request stat counter
+        self.metrics_client.increment(f"accuweather.upstream.request.{request_type}.get")
         response_dict: dict[str, Any] | None
 
         with self.metrics_client.timeit(
@@ -803,7 +805,7 @@ class AccuweatherBackend:
                 params={
                     self.url_param_api_key: self.api_key,
                 },
-                request_type=RequestType.FORCASTS,
+                request_type=RequestType.FORECASTS,
                 process_api_response=process_forecast_response,
                 cache_ttl_sec=self.cached_forecast_ttl_sec,
             )

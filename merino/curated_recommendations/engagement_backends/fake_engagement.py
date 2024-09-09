@@ -16,3 +16,8 @@ class FakeEngagement(EngagementBackend):
     def initialize(self) -> None:
         """No-op for fake backend initialization."""
         pass
+
+    @property
+    def update_count(self) -> int:
+        """Return the number of times the engagement has been updated."""
+        return 0

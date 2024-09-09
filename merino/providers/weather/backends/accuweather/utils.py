@@ -19,7 +19,7 @@ class RequestType(StrEnum):
 
     LOCATIONS = "locations"
     CURRENT_CONDITIONS = "currentconditions"
-    FORCASTS = "forecasts"
+    FORECASTS = "forecasts"
     AUTOCOMPLETE = "autocomplete"
 
 

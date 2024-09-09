@@ -5,11 +5,13 @@
 """Unit tests for chunked_rs_uploader.py."""
 
 import json
+import pytest
 from typing import Any
 
 from requests_toolbelt.multipart.decoder import MultipartDecoder
 
 from merino.jobs.csv_rs_uploader import ChunkedRemoteSettingsSuggestionUploader
+from merino.jobs.utils.chunked_rs_uploader import DeletionNotAllowed
 
 TEST_UPLOADER_KWARGS: dict[str, Any] = {
     "auth": "Bearer auth",
@@ -344,8 +346,18 @@ def test_delete_records(requests_mock):
     for r in records:
         requests_mock.delete(r.url, json={"data": {}})  # nosec
 
+    # if allow_delete is False, then attempts to delete should error out
+    with pytest.raises(DeletionNotAllowed):
+        with ChunkedRemoteSettingsSuggestionUploader(
+            chunk_size=10, allow_delete=False, **TEST_UPLOADER_KWARGS
+        ) as uploader:
+            uploader.delete_records()
+    # There should be one request to the URL and no deletion requests
+    assert len(requests_mock.request_history) == 1
+    requests_mock.request_history.clear()
+
     with ChunkedRemoteSettingsSuggestionUploader(
-        chunk_size=10, **TEST_UPLOADER_KWARGS
+        chunk_size=10, allow_delete=True, **TEST_UPLOADER_KWARGS
     ) as uploader:
         uploader.delete_records()
 

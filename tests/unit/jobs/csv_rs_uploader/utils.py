@@ -26,6 +26,7 @@ def _do_csv_test(
     model_name: str,
     model_package: str,
     upload_callable: Callable[[dict[str, Any]], None],
+    allow_delete: bool,
     keep_existing_records: bool,
     record_type: str,
     score: float,
@@ -48,6 +49,7 @@ def _do_csv_test(
         "dry_run": False,
         "record_type": record_type,
         "server": "server",
+        "allow_delete": allow_delete,
     }
     upload_callable(
         {
@@ -84,6 +86,7 @@ def do_csv_test(
     expected_suggestions: list[dict[str, Any]],
     csv_path: str | None = None,
     csv_rows: list[dict[str, str]] | None = None,
+    allow_delete: bool = True,
     keep_existing_records: bool = True,
     record_type: str = "record_type",
     expected_record_type: str = "record_type",
@@ -106,6 +109,7 @@ def do_csv_test(
         model_name=model_name,
         model_package=model_package,
         upload_callable=uploader,
+        allow_delete=allow_delete,
         keep_existing_records=keep_existing_records,
         record_type=record_type,
         score=score,
@@ -134,6 +138,7 @@ def do_error_test(
                 chunk_size=99,
                 collection="collection",
                 keep_existing_records=True,
+                allow_delete=True,
                 dry_run=False,
                 file_object=file_object,
                 model_name=model_name,

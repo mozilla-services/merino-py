@@ -3,6 +3,7 @@
 import io
 import json
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 import kinto_http
@@ -28,6 +29,21 @@ class Chunk:
     def size(self) -> int:
         """Return the length of the data."""
         return len(self.data)
+
+
+@dataclass
+class KintoRecordUpdate:
+    """Represents a Kinto update we want to perform"""
+
+    record_data: Any
+    attachment_json: str
+    chunk_size: int
+
+
+class DeletionNotAllowed(Exception):
+    """Attempt to delete a record without the --allow-delete flag present"""
+
+    pass
 
 
 class ChunkedRemoteSettingsUploader:
@@ -91,6 +107,8 @@ class ChunkedRemoteSettingsUploader:
     kinto: kinto_http.Client
     record_type: str
     total_data_count: int | None
+    # Records to add/update/delete in Kinto.  Keyed by record ID.  None indicates deletion.
+    _kinto_changes: dict[str, KintoRecordUpdate | None]
 
     def __init__(
         self,
@@ -100,18 +118,21 @@ class ChunkedRemoteSettingsUploader:
         collection: str,
         record_type: str,
         server: str,
+        allow_delete: bool = False,
         dry_run: bool = False,
         total_data_count: int | None = None,
     ):
         """Initialize the uploader."""
         self.chunk_size = chunk_size
         self.current_chunk = Chunk(0)
+        self.allow_delete = allow_delete
         self.dry_run = dry_run
         self.record_type = record_type
         self.total_data_count = total_data_count
         self.kinto = kinto_http.Client(
             server_url=server, bucket=bucket, collection=collection, auth=auth
         )
+        self._kinto_changes = {}
 
     def add_data(self, data: dict[str, Any]) -> None:
         """Add data to the current_chunk. If the current chunk becomes full as a result, it
@@ -129,19 +150,61 @@ class ChunkedRemoteSettingsUploader:
         """
         self._finish_current_chunk()
 
+    def _execute_kinto_changes(self):
+        records_to_delete = [
+            record_id for (record_id, change) in self._kinto_changes.items() if change is None
+        ]
+        records_to_update = [
+            (record_id, change)
+            for (record_id, change) in self._kinto_changes.items()
+            if change is not None
+        ]
+
+        if not self.allow_delete and records_to_delete:
+            id_list = ", ".join(records_to_delete)
+            raise DeletionNotAllowed(f"Attempt to delete records: {id_list}")
+
+        for record_id in records_to_delete:
+            logger.info(f"Deleting record: {record_id}")
+            if not self.dry_run:
+                self.kinto.delete_record(id=record_id)
+
+        for record_id, change in records_to_update:
+            logger.info(f"Uploading record: {record_id}")
+            if not self.dry_run:
+                self.kinto.update_record(data=change.record_data)
+
+            logger.info(f"Uploading attachment json with {change.chunk_size} suggestions")
+            logger.debug(change.attachment_json)
+            if not self.dry_run:
+                self.kinto.session.request(
+                    "post",
+                    f"/buckets/{self.kinto.bucket_name}/collections/"
+                    f"{self.kinto.collection_name}/records/{record_id}/attachment",
+                    files={
+                        "attachment": (
+                            f"{record_id}.json",
+                            io.StringIO(change.attachment_json),
+                            "application/json",
+                        )
+                    },
+                )
+
+        if len(records_to_delete) > 0:
+            logger.info(f"Deleted {len(records_to_delete)} records")
+
+        if len(records_to_update) > 0:
+            logger.info(f"Updated {len(records_to_update)} records")
+        self._kinto_changes = {}
+
     def delete_records(self) -> None:
         """Delete records whose "type" is equal to the uploader's
         `record_type`.
         """
         logger.info(f"Deleting records with type: {self.record_type}")
-        count = 0
         for record in self.kinto.get_records():
             if record.get("type") == self.record_type:
-                logger.info(f"Deleting record: {record['id']}")
-                if not self.dry_run:
-                    self.kinto.delete_record(id=record["id"])
-                    count += 1
-        logger.info(f"Deleted {count} records")
+                self._kinto_changes[record["id"]] = None
 
     def _finish_current_chunk(self) -> None:
         """If the current chunk is not empty, upload it and create a new empty
@@ -165,28 +228,15 @@ class ChunkedRemoteSettingsUploader:
         }
         attachment_json = json.dumps(chunk.data)
 
-        logger.info(f"Uploading record: {record}")
-        if not self.dry_run:
-            self.kinto.update_record(data=record)
-
-        logger.info(f"Uploading attachment json with {chunk.size} suggestions")
-        logger.debug(attachment_json)
-        if not self.dry_run:
-            self.kinto.session.request(
-                "post",
-                f"/buckets/{self.kinto.bucket_name}/collections/"
-                f"{self.kinto.collection_name}/records/{record_id}/attachment",
-                files={
-                    "attachment": (
-                        f"{record_id}.json",
-                        io.StringIO(attachment_json),
-                        "application/json",
-                    )
-                },
-            )
+        self._kinto_changes[record_id] = KintoRecordUpdate(
+            record_data=record,
+            chunk_size=chunk.size,
+            attachment_json=attachment_json,
+        )
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.finish()
+        self._execute_kinto_changes()

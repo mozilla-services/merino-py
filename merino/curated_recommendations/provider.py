@@ -2,10 +2,12 @@
 
 import time
 import re
+from typing import cast
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     ScheduledSurfaceId,
+    Topic,
 )
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.protocol import (
@@ -133,9 +135,10 @@ class CuratedRecommendationsProvider:
 
         # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
         if curated_recommendations_request.topics:
-            recommendations = boost_preferred_topic(
-                recommendations, curated_recommendations_request.topics
+            validated_topics: list[Topic] = cast(
+                list[Topic], curated_recommendations_request.topics
             )
+            recommendations = boost_preferred_topic(recommendations, validated_topics)
 
         for rank, rec in enumerate(recommendations):
             # Update received_rank now that recommendations have been ranked.
