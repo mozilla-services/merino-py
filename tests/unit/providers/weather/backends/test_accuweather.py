@@ -1943,7 +1943,7 @@ def test_cache_key_for_accuweather_request(
 @pytest.mark.parametrize(
     ("url", "expected_request_type"),
     [
-        ("/forecasts/v1/daily/1day/39376.json", RequestType.FORCASTS),
+        ("/forecasts/v1/daily/1day/39376.json", RequestType.FORECASTS),
         (
             "/currentconditions/v1/39376.json",
             RequestType.CURRENT_CONDITIONS,
@@ -2039,7 +2039,7 @@ async def test_get_request_cache_store_errors(
         await accuweather.request_upstream(
             url,
             params={"apikey": "test"},
-            request_type=RequestType.FORCASTS,
+            request_type=RequestType.FORECASTS,
             process_api_response=lambda a: cast(Optional[dict[str, Any]], a),
             cache_ttl_sec=TEST_CACHE_TTL_SEC,
         )
@@ -2055,7 +2055,7 @@ async def test_get_request_cache_store_errors(
 
     increment_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
     assert [
-        f"accuweather.upstream.request.{RequestType.FORCASTS}.get",
+        f"accuweather.upstream.request.{RequestType.FORECASTS}.get",
         "accuweather.cache.store.set_error",
     ] == increment_called
 
