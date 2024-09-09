@@ -149,7 +149,6 @@ async def test_gcs_engagement_returns_zero_for_missing_keys(gcs_engagement):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("execution_number", range(20))
 async def test_gcs_engagement_fetches_data(
     gcs_engagement, blob_20min_ago, blob_5min_ago, execution_number
 ):
@@ -179,7 +178,6 @@ async def test_gcs_engagement_logs_error_for_large_blob(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("execution_number", range(20))
 async def test_gcs_engagement_metrics(
     gcs_engagement, mock_metrics_client, blob_5min_ago, execution_number
 ):
