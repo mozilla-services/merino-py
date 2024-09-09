@@ -93,6 +93,16 @@ def create_blob(bucket, updated_at, data):
     return blob
 
 
+async def wait_until_engagement_is_updated(backend: GcsEngagement):
+    """Wait for some time to pass to update engagement."""
+    max_wait_time_sec = 5
+    start_time = time.time()
+    while time.time() - start_time < max_wait_time_sec:
+        if backend.update_count > 0:
+            break
+        await asyncio.sleep(0.01)  # sleep for 10ms
+
+
 @pytest.fixture
 def blob_20min_ago(gcs_bucket):
     """Create a blob from 20 minutes ago."""
@@ -142,7 +152,7 @@ async def test_gcs_engagement_returns_zero_for_missing_keys(gcs_engagement):
 async def test_gcs_engagement_fetches_data(gcs_engagement, blob_20min_ago, blob_5min_ago):
     """Test that the backend fetches data from GCS and returns engagement data."""
     gcs_engagement.initialize()
-    await asyncio.sleep(0.02)  # Allow the cron job to fetch data.
+    await wait_until_engagement_is_updated(gcs_engagement)
 
     assert gcs_engagement.get("12345") == Engagement(
         scheduled_corpus_item_id="12345", click_count=30, impression_count=300
@@ -153,7 +163,6 @@ async def test_gcs_engagement_fetches_data(gcs_engagement, blob_20min_ago, blob_
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="Test failed in the main-workflow, but passes locally and in pr-workflow")
 async def test_gcs_engagement_logs_error_for_large_blob(
     gcs_engagement, large_blob_1min_ago, caplog
 ):
@@ -161,7 +170,7 @@ async def test_gcs_engagement_logs_error_for_large_blob(
     caplog.set_level(logging.ERROR)
 
     gcs_engagement.initialize()
-    await asyncio.sleep(0.01)  # Allow the cron job to fetch data.
+    await wait_until_engagement_is_updated(gcs_engagement)
 
     assert "Curated recommendations engagement size 1000003 exceeds 1000000" in caplog.text
 
@@ -170,7 +179,7 @@ async def test_gcs_engagement_logs_error_for_large_blob(
 async def test_gcs_engagement_metrics(gcs_engagement, mock_metrics_client, blob_5min_ago):
     """Test that the backend records the correct metrics."""
     gcs_engagement.initialize()
-    await asyncio.sleep(0.1)  # Give the cron job time to run
+    await wait_until_engagement_is_updated(gcs_engagement)
 
     # Verify the metrics are recorded correctly
     mock_metrics_client.gauge.assert_any_call(

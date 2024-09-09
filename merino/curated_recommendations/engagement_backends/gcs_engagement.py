@@ -18,7 +18,6 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 
 logger = logging.getLogger(__name__)
 
-
 LAST_UPDATED_INITIAL_VALUE = datetime.min.replace(tzinfo=timezone.utc)
 
 
@@ -57,7 +56,13 @@ class GcsEngagement(EngagementBackend):
         self.max_size = max_size
         self.cron_interval_seconds = cron_interval_seconds
         self.last_updated = LAST_UPDATED_INITIAL_VALUE
+        self._update_count = 0
         self._cache: Dict[str, Engagement] = {}
+
+    @property
+    def update_count(self) -> int:
+        """Return the number of times the engagement has been updated."""
+        return self._update_count
 
     def initialize(self) -> None:
         """Start the background cron job to get new data."""
@@ -117,6 +122,7 @@ class GcsEngagement(EngagementBackend):
         else:
             data = blob.download_as_text()
             engagement_data = self._parse_data(data)
+            self._update_count += 1  # Increment the update count
             self._cache = engagement_data
             self.last_updated = blob.updated
             self.metrics_client.gauge(
