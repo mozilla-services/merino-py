@@ -137,19 +137,19 @@ log inspection interfaces.
 
 The weather provider records additional metrics.
 
-- `accuweather.request.location.not_provided` - A counter to measure the number of times a query was send without a location being provided, and therefore unable to process a weather request. Sampled at 90%.
+- `accuweather.request.location.not_provided` - A counter to measure the number of times a query was send without a location being provided, and therefore unable to process a weather request. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.fetch` - A timer to measure the duration (in ms) of
-  looking up a weather report in the cache. Sampled at 90%.
-- `merino.providers.accuweather.query.cache.fetch.miss.locations` - A counter to measure the number of times weather location was not in the cache. Sampled at 90%.
-- `merino.providers.accuweather.query.cache.fetch.miss.currentconditions` - A counter to measure the number of times a current conditions was not in the cache. Sampled at 90%.
-- `merino.providers.accuweather.query.cache.fetch.miss.forecasts` - A counter to measure the number of times a forecast for a location was not in the cache. Sampled at 90%.
-- `merino.providers.accuweather.query.cache.fetch.miss.ttl` - A counter to measure the number of times a weather report was available but expired or had an invalid TTL. Sampled at 90%.
+  looking up a weather report in the cache. Sampled at 75%.
+- `merino.providers.accuweather.query.cache.fetch.miss.locations` - A counter to measure the number of times weather location was not in the cache. Sampled at 75%.
+- `merino.providers.accuweather.query.cache.fetch.miss.currentconditions` - A counter to measure the number of times a current conditions was not in the cache. Sampled at 75%.
+- `merino.providers.accuweather.query.cache.fetch.miss.forecasts` - A counter to measure the number of times a forecast for a location was not in the cache. Sampled at 75%.
+- `merino.providers.accuweather.query.cache.fetch.miss.ttl` - A counter to measure the number of times a weather report was available but expired or had an invalid TTL. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.fetch.hit.{locations | currentconditions | forecasts}` - A counter to measure the number of times a
-  requested value like a location or forecast is in the cache. We don't count TTL hits explicitly, just misses. Sampled at 90%.
+  requested value like a location or forecast is in the cache. We don't count TTL hits explicitly, just misses. Sampled at 75%.
 - `merino.providers.accuweather.query.backend.get` - A timer to measure the duration (in ms) of a
-  request for a weather report from the backend. This metric isn't recorded for cache hits. Sampled at 90%.
+  request for a weather report from the backend. This metric isn't recorded for cache hits. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.store` - A timer to measure the duration (in ms) of
-  saving a weather report from the backend to the cache. This metric isn't recorded for cache hits. Sampled at 90%.
+  saving a weather report from the backend to the cache. This metric isn't recorded for cache hits. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.error` - A counter to measure the number of times the
   cache store returned an error when fetching or storing a weather report. This should be 0 in
   normal operation. In case of an error, the logs will include a `WARNING` with the full error
