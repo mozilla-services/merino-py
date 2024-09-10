@@ -1,5 +1,5 @@
-# Social Contract for Merino
-
+# Merino Developer Guidelines and Social Contract
+This is an additional contractual document on top of [CONTRIBUTING](../CONTRIBUTING.md).
 ## Foster a Shared Ownership
 
 Not only do Merino developers build the service together, they also share the ownership of the service. That ownership is embodied in the following responsibilities:

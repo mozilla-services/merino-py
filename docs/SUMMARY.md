@@ -7,6 +7,7 @@
 - [Using the HTTP API](./api.md)
 - [Configuring Firefox and Merino Environments](./firefox.md)
 - [Data collection](./data.md)
+- [Social contract](./social-contract.md)
 - [Working on the Code](./dev/index.md)
   - [Content Moderation](./dev/content-moderation.md)
   - [Dependencies](./dev/dependencies.md)
