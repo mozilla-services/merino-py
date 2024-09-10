@@ -39,3 +39,4 @@
 - [Archive](./adr/index.md)
   - [Load Test Framework: Locust VS K6](./adr/0001-locust-vs-k6-merino-py-performance-test-framework.md)
   - [General API Response](./adr/0002-merino-general-response.md)
+  - [Adopt Testcontainers for Integration Testing](./adr/0003-test-containers.md)
