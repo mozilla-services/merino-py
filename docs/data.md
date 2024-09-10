@@ -137,6 +137,7 @@ log inspection interfaces.
 
 The weather provider records additional metrics.
 
+- `accuweather.upstream.request.<request_type>.get` - A counter to measure the number of times an upstream request to Accuweather was made.
 - `accuweather.request.location.not_provided` - A counter to measure the number of times a query was send without a location being provided, and therefore unable to process a weather request. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.fetch` - A timer to measure the duration (in ms) of
   looking up a weather report in the cache. Sampled at 75%.
