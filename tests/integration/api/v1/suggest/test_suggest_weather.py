@@ -207,7 +207,7 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
     ]
     backend_mock.get_weather_report.return_value = weather_report
 
-    response = client.get("/api/v1/suggest?q=weather")
+    response = client.get("/api/v1/suggest?q=weather&request_type=weather")
 
     assert response.status_code == 200
     assert response.headers["Cache-Control"] == "private, max-age=500"
@@ -224,7 +224,7 @@ def test_suggest_without_weather_report(client: TestClient, backend_mock: Any) -
     expected_suggestion: list[Suggestion] = []
     backend_mock.get_weather_report.return_value = None
 
-    response = client.get("/api/v1/suggest?q=weather")
+    response = client.get("/api/v1/suggest?q=weather&request_type=weather")
 
     assert response.status_code == 200
     assert (
@@ -233,6 +233,17 @@ def test_suggest_without_weather_report(client: TestClient, backend_mock: Any) -
     )
     result = response.json()
     assert result["suggestions"] == expected_suggestion
+
+
+def test_suggest_weather_with_missing_request_type_query_parameter(
+    client: TestClient, backend_mock: Any
+) -> None:
+    """Test that the suggest endpoint response for accuweather provider returns a 400 when `q`
+    is present but `request_type is missing
+    """
+    response = client.get("/api/v1/suggest?q=weather&providers=weather")
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid query parameters: `request_type` is missing"
 
 
 @freeze_time("1998-03-31")
