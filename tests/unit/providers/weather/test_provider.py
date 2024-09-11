@@ -142,13 +142,11 @@ async def test_query_no_weather_report_returned(
 
 @pytest.mark.asyncio
 async def test_query_with_no_request_type_param_returns_http_400(
-    backend_mock: Any, provider: Provider, geolocation: Location
+    provider: Provider, geolocation: Location
 ) -> None:
     """Test that the query method throws a http 400 error when `q` param is provided but no
     `request_type` param is provided
     """
-    backend_mock.get_weather_report.return_value = None
-
     with pytest.raises(HTTPException) as accuweather_error:
         await provider.query(SuggestionRequest(query="weather", geolocation=geolocation))
 

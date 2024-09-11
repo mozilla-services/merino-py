@@ -235,9 +235,7 @@ def test_suggest_without_weather_report(client: TestClient, backend_mock: Any) -
     assert result["suggestions"] == expected_suggestion
 
 
-def test_suggest_weather_with_missing_request_type_query_parameter(
-    client: TestClient, backend_mock: Any
-) -> None:
+def test_suggest_weather_with_missing_request_type_query_parameter(client: TestClient) -> None:
     """Test that the suggest endpoint response for accuweather provider returns a 400 when `q`
     is present but `request_type is missing
     """
