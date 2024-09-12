@@ -5,6 +5,7 @@ import logging
 from typing import Any
 
 import aiodogstatsd
+from fastapi import HTTPException
 from pydantic import HttpUrl
 
 from merino import cron
@@ -93,6 +94,12 @@ class Provider(BaseProvider):
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide weather suggestions."""
+        # early exit with 400 error if "q" query param is present without the "request_type" param
+        if srequest.query and not srequest.request_type:
+            raise HTTPException(
+                status_code=400, detail="Invalid query parameters: `request_type` is missing"
+            )
+
         geolocation: Location = srequest.geolocation
         is_location_completion_request = srequest.request_type == "location"
         weather_report: WeatherReport | None = None
