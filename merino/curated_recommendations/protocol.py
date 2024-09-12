@@ -93,6 +93,7 @@ class CuratedRecommendationsRequest(BaseModel):
     region: str | None = None
     count: int = 100
     topics: list[Topic | str] | None = None
+    include_experimental: bool | None = None
 
     @field_validator("topics", mode="before")
     def validate_topics(cls, values):
@@ -120,8 +121,21 @@ class CuratedRecommendationsRequest(BaseModel):
         return []
 
 
+class CuratedRecommendationsBucket(BaseModel):
+    """A ranked list of curated recommendations"""
+
+    recommendations: list[CuratedRecommendation]
+
+
+class CuratedRecommendationsFeed(BaseModel):
+    """Multiple lists of curated recommendations for the main New Tab feed and also for experiments"""
+
+    general: CuratedRecommendationsBucket
+    experimental: CuratedRecommendationsBucket
+
+
 class CuratedRecommendationsResponse(BaseModel):
     """Response schema for a list of curated recommendations"""
 
     recommendedAt: int
-    data: list[CuratedRecommendation]
+    data: CuratedRecommendationsFeed | list[CuratedRecommendation]

@@ -9,12 +9,16 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
     Topic,
 )
-from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.engagement_backends.protocol import (
+    EngagementBackend,
+)
 from merino.curated_recommendations.protocol import (
     Locale,
     CuratedRecommendation,
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
+    CuratedRecommendationsFeed,
+    CuratedRecommendationsBucket,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -113,7 +117,8 @@ class CuratedRecommendationsProvider:
         """Provide curated recommendations."""
         # Get the recommendation surface ID based on passed locale & region
         surface_id = CuratedRecommendationsProvider.get_recommendation_surface_id(
-            curated_recommendations_request.locale, curated_recommendations_request.region
+            curated_recommendations_request.locale,
+            curated_recommendations_request.region,
         )
 
         corpus_items = await self.corpus_backend.fetch(surface_id)
@@ -153,10 +158,21 @@ class CuratedRecommendationsProvider:
             ):
                 rec.topic = None
 
-        return CuratedRecommendationsResponse(
-            recommendedAt=self.time_ms(),
-            data=recommendations,
-        )
+        if curated_recommendations_request.include_experimental:
+            return CuratedRecommendationsResponse(
+                recommendedAt=self.time_ms(),
+                data=CuratedRecommendationsFeed(
+                    general=CuratedRecommendationsBucket(recommendations=recommendations),
+                    experimental=CuratedRecommendationsBucket(
+                        recommendations=list(reversed(recommendations))
+                    ),
+                ),
+            )
+        else:
+            return CuratedRecommendationsResponse(
+                recommendedAt=self.time_ms(),
+                data=recommendations,
+            )
 
     @staticmethod
     def time_ms() -> int:
