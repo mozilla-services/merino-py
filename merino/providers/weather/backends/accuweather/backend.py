@@ -303,7 +303,6 @@ class AccuweatherBackend:
         request_type: RequestType,
         process_api_response: Callable[[Any], Any | None],
         cache_ttl_sec: int = 0,
-        log_failure: bool = True,
         should_cache: bool = True,
     ) -> Any | None:
         """Request the AccuWeather API and process the response. Optionally, the processed
@@ -315,7 +314,6 @@ class AccuweatherBackend:
           - `request_type` {RequestType}: the request type used for metrics and logging
           - `process_api_response` {Callable}: the response processor, it returns None if the processing fails
           - `cache_ttl_sec` {int}: the cache TTL in seconds
-          - `log_failure` {bool}: whether or not to log the processing errors via metrics
           - `should_cache` {bool}: whether or not to cache the processed response
         Return:
           - The processed response or None if failed
@@ -334,10 +332,7 @@ class AccuweatherBackend:
             response.raise_for_status()
 
         if (response_dict := process_api_response(response.json())) is None:
-            if log_failure:
-                self.metrics_client.increment(
-                    f"accuweather.request.{request_type}.processor.error"
-                )
+            self.metrics_client.increment(f"accuweather.request.{request_type}.processor.error")
             return None
 
         if should_cache:
@@ -717,11 +712,9 @@ class AccuweatherBackend:
         if region:
             url_path = self.url_cities_admin_path.format(country_code=country, admin_code=region)
             processor = process_location_response_with_country_and_region
-            log_failure = False
         else:
             url_path = self.url_cities_path.format(country_code=country)
             processor = process_location_response_with_country
-            log_failure = True
 
         try:
             response: dict[str, Any] | None = await self.request_upstream(
@@ -730,7 +723,6 @@ class AccuweatherBackend:
                 request_type=RequestType.LOCATIONS,
                 process_api_response=processor,
                 cache_ttl_sec=self.cached_location_key_ttl_sec,
-                log_failure=log_failure,
             )
         except HTTPError as error:
             raise AccuweatherError(
