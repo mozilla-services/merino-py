@@ -121,10 +121,18 @@ class CuratedRecommendationsRequest(BaseModel):
         return []
 
 
+class LocalizedString(BaseModel):
+    """A string value for a given locale"""
+
+    value: str
+    locale: Locale
+
+
 class CuratedRecommendationsBucket(BaseModel):
     """A ranked list of curated recommendations"""
 
     recommendations: list[CuratedRecommendation]
+    title: LocalizedString | None = None
 
 
 class CuratedRecommendationsFeed(BaseModel):

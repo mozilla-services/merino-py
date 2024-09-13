@@ -19,6 +19,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsResponse,
     CuratedRecommendationsFeed,
     CuratedRecommendationsBucket,
+    LocalizedString,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -177,11 +178,17 @@ class CuratedRecommendationsProvider:
             ]
             general_feed = [r for r in recommendations if r not in experimental_feed]
 
+            title = LocalizedString(
+                value="Read this now!", locale=curated_recommendations_request.locale
+            )
+
             return CuratedRecommendationsResponse(
                 recommendedAt=self.time_ms(),
                 data=CuratedRecommendationsFeed(
                     general=CuratedRecommendationsBucket(recommendations=general_feed),
-                    experimental=CuratedRecommendationsBucket(recommendations=experimental_feed),
+                    experimental=CuratedRecommendationsBucket(
+                        recommendations=experimental_feed, title=title
+                    ),
                 ),
             )
         else:
