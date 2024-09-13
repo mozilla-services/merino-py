@@ -337,6 +337,7 @@ async def curated_content(
         then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 100.
     - `topics`: [Optional] A list of preferred [topics][curated-topics-doc].
+    - `feeds`: [Optional] A comma-separated list of additional data feeds.
 
     [curated-topics-doc]: https://mozilla-hub.atlassian.net/wiki/x/LQDaMg
     """

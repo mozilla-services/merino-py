@@ -158,14 +158,18 @@ class CuratedRecommendationsProvider:
             ):
                 rec.topic = None
 
-        if curated_recommendations_request.include_experimental:
+        # TODO: this will need to return feeds specified in the `feeds` parameter and not just anything
+        if curated_recommendations_request.feeds:
+            # TODO: while a filter on stories is being decided on, return all stories that have the word
+            # "Why" in the story title
+            experimental_feed = [r for r in recommendations if "Why" in r.title]
+            general_feed = [r for r in recommendations if r not in experimental_feed]
+
             return CuratedRecommendationsResponse(
                 recommendedAt=self.time_ms(),
                 data=CuratedRecommendationsFeed(
-                    general=CuratedRecommendationsBucket(recommendations=recommendations),
-                    experimental=CuratedRecommendationsBucket(
-                        recommendations=list(reversed(recommendations))
-                    ),
+                    general=CuratedRecommendationsBucket(recommendations=general_feed),
+                    experimental=CuratedRecommendationsBucket(recommendations=experimental_feed),
                 ),
             )
         else:
