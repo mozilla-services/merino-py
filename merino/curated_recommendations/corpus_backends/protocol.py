@@ -15,6 +15,7 @@ class Topic(str, Enum):
     ARTS = "arts"
     FOOD = "food"
     HEALTH_FITNESS = "health"
+    HOME = "home"
     PERSONAL_FINANCE = "finance"
     POLITICS = "government"
     SPORTS = "sports"
