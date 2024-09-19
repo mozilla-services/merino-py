@@ -97,7 +97,7 @@ def fixture_mock_corpus_backend(corpus_http_client: AsyncMock) -> CorpusApiBacke
 class MockEngagementBackend(EngagementBackend):
     """Mock class implementing the protocol for EngagementBackend."""
 
-    def get(self, scheduled_corpus_item_id: str) -> Engagement | None:
+    def get(self, scheduled_corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Return random click and impression counts based on the scheduled corpus id."""
         rng = np.random.default_rng(seed=int.from_bytes(scheduled_corpus_item_id.encode()))
 

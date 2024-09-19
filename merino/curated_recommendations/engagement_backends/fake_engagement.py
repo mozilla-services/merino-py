@@ -9,7 +9,7 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 class FakeEngagement(EngagementBackend):
     """Fallback backend that returns None for any engagement data."""
 
-    def get(self, scheduled_corpus_item_id: str) -> Engagement | None:
+    def get(self, scheduled_corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """No-op for getting engagement data."""
         return None
 
