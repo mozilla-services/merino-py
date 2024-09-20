@@ -355,3 +355,86 @@ def test_suggest_with_location_completion_with_incorrect_request_type_param(
     )
 
     assert response.status_code == 400
+
+
+
+
+def test_suggest_with_location_weather(
+    client: TestClient, backend_mock: Any, location_completion_sample_cities
+) -> None:
+    """Test that the suggest endpoint response is as expected when the Weather provider
+    supplies a suggestion.
+    """
+    location_completion: list[LocationCompletion] = [
+        LocationCompletion(
+            key=location["Key"],
+            rank=location["Rank"],
+            type=location["Type"],
+            localized_name=location["LocalizedName"],
+            country=LocationCompletionGeoDetails(
+                id=location["Country"]["ID"],
+                localized_name=location["Country"]["LocalizedName"],
+            ),
+            administrative_area=LocationCompletionGeoDetails(
+                id=location["AdministrativeArea"]["ID"],
+                localized_name=location["AdministrativeArea"]["LocalizedName"],
+            ),
+        )
+        for location in location_completion_sample_cities
+    ]
+
+    weather_report: WeatherReport = WeatherReport(
+        city_name="Milton",
+        current_conditions=CurrentConditions(
+            url=HttpUrl(
+                "http://www.accuweather.com/en/us/milton-wa/98354/current-weather/"
+                "41512_pc?lang=en-us"
+            ),
+            summary="Mostly sunny",
+            icon_id=2,
+            temperature=Temperature(c=-3.0, f=27.0),
+        ),
+        forecast=Forecast(
+            url=HttpUrl(
+                "http://www.accuweather.com/en/us/milton-wa/98354/"
+                "daily-weather-forecast/41512_pc?lang=en-us"
+            ),
+            summary=(
+                "Snow tomorrow evening accumulating 1-2 inches, then changing to ice "
+                "and continuing into Friday morning"
+            ),
+            high=Temperature(c=-1.7, f=29.0),
+            low=Temperature(c=-7.8, f=18.0),
+        ),
+        ttl=500,
+    )
+
+    expected_suggestion: list[Suggestion] = [
+        Suggestion(
+            title="Weather for Milton",
+            url=HttpUrl(
+                "http://www.accuweather.com/en/us/milton-wa/98354/current-weather/"
+                "41512_pc?lang=en-us"
+            ),
+            provider="weather",
+            is_sponsored=False,
+            score=0.3,
+            icon=None,
+            city_name=weather_report.city_name,
+            current_conditions=weather_report.current_conditions,
+            forecast=weather_report.forecast,
+        )
+    ]
+
+    backend_mock.get_location_completion.return_value = location_completion
+    backend_mock.get_weather_report.return_value = weather_report
+
+#     response = client.get("/api/v1/suggest?q=milton&request_type=location_weather")
+    response = client.get("/api/v1/suggest?q=xxx&request_type=location_weather")
+
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "private, max-age=500"
+    result = response.json()
+    assert expected_suggestion == TypeAdapter(list[Suggestion]).validate_python(
+        result["suggestions"]
+    )

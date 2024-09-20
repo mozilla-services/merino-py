@@ -71,7 +71,7 @@ async def suggest(
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
-    request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
+    request_type: Annotated[str | None, Query(pattern="^(location|weather|location_weather)$")] = None,
 ) -> ORJSONResponse:
     """Query Merino for suggestions.
 
@@ -99,10 +99,18 @@ async def suggest(
         value to the `providers` parameter will return suggestions from the default providers.
         You can then pass other providers that are not enabled after `default`,
         allowing for customization of the suggestion request.
-    - `request_type`: [Optional] For AccuWeather provider, the request type should be either a
-        "location" or "weather" string. For "location" it will get location completion
-        suggestion. For "weather" it will return weather suggestions. If omitted, it defaults
-        to weather suggestions.
+    - `request_type`: [Optional] For the AccuWeather provider, this should be
+        one of the following: "location", "weather", "location_weather".
+
+        "location" - Location completion suggestions matching the query will be
+        returned.
+
+        "weather" - A weather forecast will be returned. The query should be an
+        AccuWeather location key.
+
+        "location_weather" - A combination of the previous two types. First,
+        location completion suggestions matching the query will be fetched, and
+        then a forecast will be returned for the first matching location.
 
     **Headers:**
 
@@ -153,6 +161,7 @@ async def suggest(
     Responses will carry standard HTTP caching headers that indicate the validity of
     the suggestions. User agents should prefer to provide the user with cached
     results as indicated by these headers.
+
     """
     # Do you plan to release code behind a feature flag? Uncomment the following
     # line to get access to feature flags and then check if your feature flag is

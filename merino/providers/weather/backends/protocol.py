@@ -81,7 +81,7 @@ class WeatherBackend(Protocol):
     """
 
     async def get_weather_report(
-        self, geolocation: Location, location_key: str | None
+        self, geolocation: Location, location_key: str | None, location_search_term: str | None
     ) -> WeatherReport | None:  # pragma: no cover
         """Get weather information from partner.
 

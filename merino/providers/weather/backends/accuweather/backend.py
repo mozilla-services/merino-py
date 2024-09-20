@@ -481,15 +481,28 @@ class AccuweatherBackend:
         }
 
     async def get_weather_report(
-        self, geolocation: Location, location_key: str | None = None
+        self, geolocation: Location, location_key: str | None = None, location_search_term: str | None = None
     ) -> WeatherReport | None:
         """Get weather report either via location key or geolocation."""
         if location_key:
             return await self.get_weather_report_with_location_key(location_key)
-
+        if location_search_term:
+            return await self.get_weather_report_with_location_search_term(geolocation, location_search_term)
         return await self.get_weather_report_with_geolocation(geolocation)
 
-    async def get_weather_report_with_location_key(self, location_key) -> WeatherReport | None:
+    #XXXadw
+    async def get_weather_report_with_location_search_term(self, geolocation, search_term) -> WeatherReport | None:
+        """Get weather information from AccuWeather."""
+        locations = await self.get_location_completion(geolocation, search_term)
+        if not locations:
+            return None
+        # locations[1] has localized_name and country
+        location = locations[0]
+        return await self.get_weather_report_with_location_key(location.key, location.localized_name)
+#         return await self.get_weather_report_with_location_completion(locations[0])
+
+#     async def get_weather_report_with_location_key(self, location_key) -> WeatherReport | None:
+    async def get_weather_report_with_location_key(self, location_key: str, location_localized_name: str | None = None) -> WeatherReport | None:
         """Get weather information from AccuWeather.
 
         Firstly, it will look up the Redis cache for the current condition,
@@ -534,8 +547,65 @@ class AccuweatherBackend:
 
         self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)
         cached_report = self.parse_cached_data(cached_data)
+        #XXXadw can add name to this?
         location = Location(key=location_key)
-        return await self.make_weather_report(cached_report, location)
+        return await self.make_weather_report(cached_report, location, location_localized_name)
+
+
+
+#     async def get_weather_report_with_location_completion(self, location: LocationCompletion) -> WeatherReport | None:
+#         """Get weather information from AccuWeather.
+
+#         Firstly, it will look up the Redis cache for the current condition,
+#         and forecast. If all of them are found in the cache, then return them without
+#         requesting those from AccuWeather. Otherwise, it will issue API requests to
+#         AccuWeather for the missing data. Lastly, the API responses are stored in the
+#         cache for future uses.
+
+#         Note:
+#             - To avoid making excessive API requests to Accuweather in the event of
+#               "Cache Avalanche", it will *not* call AccuWeather for weather reports upon any
+#               cache errors such as timeouts or connection issues to Redis
+
+#         Raises:
+#             AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
+#         """
+
+#         self._get_weather_report_with_location_data(key=location.key, localized_name=location.localized_name)
+
+#         # Look up for all the weather data from the cache.
+#         try:
+#             with self.metrics_client.timeit(
+#                 "accuweather.cache.fetch-via-location-key", sample_rate=self.metrics_sample_rate
+#             ):
+#                 cached_data: list[bytes | None] = await self.cache.run_script(
+#                     sid=SCRIPT_LOCATION_KEY_ID,
+#                     keys=[],
+#                     # The order matters below.
+#                     # See `LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION` for details.
+#                     args=[
+#                         self.cache_key_template(WeatherDataType.CURRENT_CONDITIONS).format(
+#                             location_key=location_key
+#                         ),
+#                         self.cache_key_template(WeatherDataType.FORECAST).format(
+#                             location_key=location_key
+#                         ),
+#                     ],
+#                 )
+#                 if cached_data:
+#                     cached_data = [LOCATION_SENTINEL, *cached_data]
+#         except CacheAdapterError as exc:
+#             logger.error(f"Failed to fetch weather report from Redis: {exc}")
+#             self.metrics_client.increment("accuweather.cache.fetch-via-location-key.error")
+#             return None
+
+#         self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)
+#         cached_report = self.parse_cached_data(cached_data)
+#         #XXXadw can add name to this?
+#         location = Location(key=location_key)
+#         return await self.make_weather_report(cached_report, location)
+
+
 
     async def _fetch_from_cache(
         self, country: str | None, region: str | None, city: str | None
@@ -609,8 +679,11 @@ class AccuweatherBackend:
 
         return await self.make_weather_report(cached_report, geolocation)
 
+    #XXXadw
     async def make_weather_report(
-        self, cached_report: WeatherData, geolocation: Location
+#         self, cached_report: WeatherData, geolocation: Location
+#         self, cached_report: WeatherData, geolocation: Location, location_localized_name: str = "N/A"
+        self, cached_report: WeatherData, geolocation: Location, location_localized_name: str | None = None
     ) -> WeatherReport | None:
         """Make a `WeatherReport` either using the cached data or fetching from AccuWeather.
 
@@ -630,7 +703,8 @@ class AccuweatherBackend:
         if location_key and location is None:
             # request was made with location key rather than geolocation
             # so location info is not in the cache
-            location = AccuweatherLocation(localized_name="N/A", key=location_key)
+#             location = AccuweatherLocation(localized_name="N/A", key=location_key)
+            location = AccuweatherLocation(localized_name=location_localized_name or "N/A", key=location_key)
 
         # if all the other three values are present, ttl here would be a valid ttl value
         if location and current_conditions and forecast and ttl:

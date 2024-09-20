@@ -167,3 +167,58 @@ async def test_fetch_mapping(statsd_mock: Any, provider: Provider):
     assert statsd_mock.gauge.call_args_list == [
         call(name="providers.weather.pathfinder.mapping.size", value=1)
     ]
+
+
+
+
+@pytest.mark.asyncio
+async def test_query_location_weather(
+    backend_mock: Any, provider: Provider, geolocation: Location
+) -> None:
+    """Test that the query method provides a valid weather suggestion."""
+    report: WeatherReport = WeatherReport(
+        city_name="San Francisco",
+        current_conditions=CurrentConditions(
+            url=HttpUrl(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/current-weather/39376?lang=en-us"
+            ),
+            summary="Mostly cloudy",
+            icon_id=6,
+            temperature=Temperature(c=15.5, f=60.0),
+        ),
+        forecast=Forecast(
+            url=HttpUrl(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/daily-weather-forecast/39376?lang=en-us"
+            ),
+            summary="Pleasant Saturday",
+            high=Temperature(c=21.1, f=70.0),
+            low=Temperature(c=13.9, f=57.0),
+        ),
+        ttl=TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
+    )
+    expected_suggestions: list[Suggestion] = [
+        Suggestion(
+            title="Weather for San Francisco",
+            url=HttpUrl(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/current-weather/39376?lang=en-us"
+            ),
+            provider="weather",
+            is_sponsored=False,
+            score=settings.providers.accuweather.score,
+            icon=None,
+            city_name=report.city_name,
+            current_conditions=report.current_conditions,
+            forecast=report.forecast,
+            custom_details=CustomDetails(weather=WeatherDetails(weather_report_ttl=report.ttl)),
+        )
+    ]
+    backend_mock.get_weather_report.return_value = report
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(request_type="location_weather", query="xxx", geolocation=geolocation)
+    )
+
+    assert suggestions == expected_suggestions

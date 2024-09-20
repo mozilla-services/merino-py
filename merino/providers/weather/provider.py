@@ -101,20 +101,32 @@ class Provider(BaseProvider):
             )
 
         geolocation: Location = srequest.geolocation
-        is_location_completion_request = srequest.request_type == "location"
+#         is_location_completion_request = srequest.request_type == "location"
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
 
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
-                if is_location_completion_request:
-                    location_completions = await self.backend.get_location_completion(
-                        geolocation, search_term=srequest.query
-                    )
-                else:
-                    weather_report = await self.backend.get_weather_report(
-                        geolocation, srequest.query
-                    )
+                match srequest.request_type:
+                    case "location_weather":
+#                         locations = await self.backend.get_location_completion(
+#                             geolocation, search_term=srequest.query
+#                         )
+#                         if locations:
+#                             weather_report = await self.backend.get_weather_report(
+#                                 geolocation, locations[0].key
+#                             )
+                        weather_report = await self.backend.get_weather_report(
+                            geolocation, location_search_term=srequest.query
+                        )
+                    case "location":
+                        location_completions = await self.backend.get_location_completion(
+                            geolocation, search_term=srequest.query
+                        )
+                    case _:
+                        weather_report = await self.backend.get_weather_report(
+                            geolocation, srequest.query
+                        )
 
         except BackendError as backend_error:
             logger.warning(backend_error)

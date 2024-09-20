@@ -247,6 +247,31 @@ def fixture_location_completion_sample_cities() -> list[dict[str, Any]]:
     ]
 
 
+@pytest.fixture(name="location_completion_for_weather_report")
+def fixture_location_completion_for_weather_report() -> list[dict[str, Any]]:
+    """Create a list of sample location completions for the search term 'san'"""
+    return [
+        {
+            "Version": 1,
+            "Key": "39376",
+            "Type": "City",
+            "Rank": 35,
+            "LocalizedName": "San Francisco",
+            "Country": {"ID": "US", "LocalizedName": "United States"},
+            "AdministrativeArea": {"ID": "CA", "LocalizedName": "California"},
+        },
+#         {
+#             "Version": 1,
+#             "Key": "12345",
+#             "Type": "City",
+#             "Rank": 45,
+#             "LocalizedName": "Santa Barbara",
+#             "Country": {"ID": "US", "LocalizedName": "United States"},
+#             "AdministrativeArea": {"ID": "CA", "LocalizedName": "California"},
+#         },
+    ]
+
+
 @pytest.fixture(name="accuweather_parameters")
 def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> dict[str, Any]:
     """Create an Accuweather object for test."""
@@ -359,6 +384,14 @@ def fixture_accuweather_location_completion_response(
 ) -> bytes:
     """Return response content for AccuWeather location autocomplete endpoint."""
     return orjson.dumps(location_completion_sample_cities)
+
+
+@pytest.fixture(name="accuweather_location_completion_response_for_weather_report")
+def fixture_accuweather_location_completion_response_for_weather_report(
+    location_completion_for_weather_report,
+) -> bytes:
+    """Return response content for AccuWeather location autocomplete endpoint."""
+    return orjson.dumps(location_completion_for_weather_report)
 
 
 @pytest.fixture(name="response_header")
@@ -1527,6 +1560,111 @@ async def test_get_weather_report_invalid_location(
     assert metrics_called == [
         ("accuweather.request.location.not_provided", ACCUWEATHER_METRICS_SAMPLE_RATE)
     ]
+
+
+
+
+#XXXadw
+@pytest.mark.asyncio
+async def test_get_weather_report_with_location_search_term(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+#     accuweather_parameters: dict[str, Any],
+    expected_weather_report: WeatherReport,
+    geolocation: Location,
+    accuweather_location_completion_response_for_weather_report: bytes,
+    accuweather_location_response: bytes,
+    accuweather_current_conditions_response: bytes,
+    accuweather_forecast_response_fahrenheit: bytes,
+    response_header: dict[str, str],
+) -> None:
+    """Test that the get_weather_report method returns a WeatherReport."""
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+
+#     redis_mock = mocker.AsyncMock(spec=Redis)
+
+#     async def script_callable(keys, args) -> list:
+# #         raise RedisError("Failed to fetch")
+#         pass
+
+#     def mock_register_script(script) -> Callable[[list, list], Awaitable[list]]:
+#         return script_callable
+
+#     redis_mock.register_script.side_effect = mock_register_script
+
+#     accuweather: AccuweatherBackend = AccuweatherBackend(
+#         cache=RedisAdapter(redis_mock), **accuweather_parameters
+#     )
+#     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+
+
+    search_term = "san"
+    client_mock.get.side_effect = [
+        Response(
+            status_code=200,
+            content=accuweather_location_completion_response_for_weather_report,
+            request=Request(
+                method="GET",
+                url=(
+                    f"https://www.accuweather.com/locations/v1/"
+                    f"{geolocation.country}/autocomplete.json?apikey=test&q"
+                    f"={search_term}"
+                ),
+            ),
+        ),
+#         Response(
+#             status_code=200,
+#             headers=response_header,
+#             content=accuweather_location_response,
+#             request=Request(
+#                 method="GET",
+#                 url=(
+#                     "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
+#                     "apikey=test&q=94105"
+#                 ),
+#             ),
+#         ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_current_conditions_response,
+            request=Request(
+                method="GET",
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+            ),
+        ),
+        Response(
+            status_code=200,
+            headers=response_header,
+            content=accuweather_forecast_response_fahrenheit,
+            request=Request(
+                method="GET",
+                url=(
+                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
+                ),
+            ),
+        ),
+    ]
+
+    # This request flow hits the store_request_into_cache method that returns the ttl. Mocking
+    # that call to return the default weather report ttl
+    mocker.patch(
+        "merino.providers.weather.backends.accuweather.AccuweatherBackend"
+        ".store_request_into_cache"
+    ).return_value = TEST_CACHE_TTL_SEC
+
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, location_search_term="san")
+
+    assert report == expected_weather_report
+
+
+
+
+
+
+
 
 
 @pytest.mark.asyncio
