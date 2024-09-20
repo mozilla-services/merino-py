@@ -132,6 +132,32 @@ def blob_5min_ago(gcs_bucket):
 
 
 @pytest.fixture
+def blob_with_region_data(gcs_bucket):
+    """Create a blob from 5 minutes ago."""
+    datetime_5min_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
+    return create_blob(
+        gcs_bucket,
+        datetime_5min_ago,
+        [
+            {"scheduled_corpus_item_id": "1A", "click_count": 300, "impression_count": 3000},
+            {"scheduled_corpus_item_id": "6A", "click_count": 400, "impression_count": 4000},
+            {
+                "scheduled_corpus_item_id": "1A",
+                "region": "US",
+                "click_count": 3,
+                "impression_count": 9,
+            },
+            {
+                "scheduled_corpus_item_id": "6A",
+                "region": "US",
+                "click_count": 4,
+                "impression_count": 9,
+            },
+        ],
+    )
+
+
+@pytest.fixture
 def large_blob_1min_ago(gcs_bucket):
     """Create a large blob from 1 minute ago in the fake GCS server."""
     datetime_1min_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
@@ -160,6 +186,23 @@ async def test_gcs_engagement_fetches_data(gcs_engagement, blob_20min_ago, blob_
     assert gcs_engagement.get("67890") == Engagement(
         scheduled_corpus_item_id="67890", click_count=40, impression_count=400
     )
+
+
+@pytest.mark.asyncio
+async def test_gcs_engagement_fetches_region_data(gcs_engagement, blob_with_region_data):
+    """Test that the backend fetches data from GCS and returns engagement data."""
+    gcs_engagement.initialize()
+    await wait_until_engagement_is_updated(gcs_engagement)
+
+    assert gcs_engagement.get("6A") == Engagement(
+        scheduled_corpus_item_id="6A", click_count=400, impression_count=4000
+    )
+    assert gcs_engagement.get("6A", "US") == Engagement(
+        scheduled_corpus_item_id="6A", region="US", click_count=4, impression_count=9
+    )
+
+    # Fixture does not contain data for AU, so None should be returned.
+    assert gcs_engagement.get("6A", "AU") is None
 
 
 @pytest.mark.asyncio

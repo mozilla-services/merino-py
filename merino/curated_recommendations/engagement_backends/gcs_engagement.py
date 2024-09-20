@@ -5,7 +5,6 @@ import json
 import logging
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Dict
 
 from google.cloud.storage import Client
 from aiodogstatsd import Client as StatsdClient
@@ -19,6 +18,9 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 logger = logging.getLogger(__name__)
 
 LAST_UPDATED_INITIAL_VALUE = datetime.min.replace(tzinfo=timezone.utc)
+
+EngagementKeyType = tuple[str, str | None]  # Keyed on (scheduled_corpus_item_id, region)
+EngagementCacheType = dict[EngagementKeyType, Engagement]
 
 
 class GcsEngagement(EngagementBackend):
@@ -57,7 +59,7 @@ class GcsEngagement(EngagementBackend):
         self.cron_interval_seconds = cron_interval_seconds
         self.last_updated = LAST_UPDATED_INITIAL_VALUE
         self._update_count = 0
-        self._cache: Dict[str, Engagement] = {}
+        self._cache: EngagementCacheType = {}
 
     @property
     def update_count(self) -> int:
@@ -76,17 +78,18 @@ class GcsEngagement(EngagementBackend):
         # garbage collected because asyncio's runtime only holds a weak reference to it.
         self.cron_task = asyncio.create_task(cron_job())
 
-    def get(self, scheduled_corpus_item_id: str) -> Engagement | None:
+    def get(self, scheduled_corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Get cached click and impression counts from the last 24h for the scheduled corpus item id
 
         Args:
             scheduled_corpus_item_id: The id of the scheduled corpus item for which
                                       to return engagement data.
+            region: Return engagement for a given region (e.g. 'US'), or across all regions (None).
 
         Returns:
             Engagement: Engagement data for the specified id if it exists in cache, otherwise None.
         """
-        return self._cache.get(scheduled_corpus_item_id)
+        return self._cache.get((scheduled_corpus_item_id, region))
 
     async def _update_task_async(self) -> None:
         """Run _update_engagement_task in a thread to prevent blocking the event loop"""
@@ -137,7 +140,12 @@ class GcsEngagement(EngagementBackend):
             )
 
     @staticmethod
-    def _parse_data(data: str) -> Dict[str, Engagement]:
+    def _parse_data(data: str) -> EngagementCacheType:
         """Parse the raw JSON data into a dictionary of Engagement objects."""
         raw_data = json.loads(data)
-        return {item["scheduled_corpus_item_id"]: Engagement(**item) for item in raw_data}
+        engagement_dict = {}
+        for item in raw_data:
+            engagement = Engagement(**item)
+            engagement_dict[(engagement.scheduled_corpus_item_id, engagement.region)] = engagement
+
+        return engagement_dict
