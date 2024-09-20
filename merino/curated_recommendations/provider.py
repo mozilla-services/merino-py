@@ -19,7 +19,6 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsResponse,
     CuratedRecommendationsFeed,
     CuratedRecommendationsBucket,
-    LocalizedString,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -112,6 +111,42 @@ class CuratedRecommendationsProvider:
         else:
             return None
 
+    def process_recommendations(
+        self,
+        recommendations: list[CuratedRecommendation],
+        surface_id: str,
+        topics: list[Topic | str] | None = None,
+    ):
+        """Apply additional processing to the list of recommendations
+        received from Curated Corpus API
+        """
+        # 3. Apply Thompson sampling to rank recommendations by engagement
+        recommendations = thompson_sampling(recommendations, self.engagement_backend)
+
+        # 2. Perform publisher spread on the recommendation set
+        recommendations = spread_publishers(recommendations, spread_distance=3)
+
+        # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
+        if topics:
+            validated_topics: list[Topic] = cast(list[Topic], topics)
+            recommendations = boost_preferred_topic(recommendations, validated_topics)
+
+        # 0. Blast-off!
+        for rank, rec in enumerate(recommendations):
+            # Update received_rank now that recommendations have been ranked.
+            rec.receivedRank = rank
+
+            # Topic labels are enabled only for en-US in Fx130. We are unsure about the quality of
+            # localized topic strings in Firefox. As a workaround, we decided to only send topics
+            # for New Tab en-US. This workaround should be removed once Fx131 is released on Oct 1.
+            if surface_id not in (
+                ScheduledSurfaceId.NEW_TAB_EN_US,
+                ScheduledSurfaceId.NEW_TAB_EN_GB,
+            ):
+                rec.topic = None
+
+        return recommendations
+
     async def fetch(
         self, curated_recommendations_request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:  # noqa
@@ -133,65 +168,51 @@ class CuratedRecommendationsProvider:
             for rank, item in enumerate(corpus_items)
         ]
 
-        # 3. Apply Thompson sampling to rank recommendations by engagement
-        recommendations = thompson_sampling(recommendations, self.engagement_backend)
-
-        # 2. Perform publisher spread on the recommendation set
-        recommendations = spread_publishers(recommendations, spread_distance=3)
-
-        # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
-        if curated_recommendations_request.topics:
-            validated_topics: list[Topic] = cast(
-                list[Topic], curated_recommendations_request.topics
-            )
-            recommendations = boost_preferred_topic(recommendations, validated_topics)
-
-        for rank, rec in enumerate(recommendations):
-            # Update received_rank now that recommendations have been ranked.
-            rec.receivedRank = rank
-
-            # Topic labels are enabled only for en-US in Fx130. We are unsure about the quality of
-            # localized topic strings in Firefox. As a workaround, we decided to only send topics
-            # for New Tab en-US. This workaround should be removed once Fx131 is released on Oct 1.
-            if surface_id not in (
-                ScheduledSurfaceId.NEW_TAB_EN_US,
-                ScheduledSurfaceId.NEW_TAB_EN_GB,
-            ):
-                rec.topic = None
-
-        # TODO: this will need to return feeds specified in the `feeds` parameter
         if (
-            surface_id
+            curated_recommendations_request.feeds
+            and "need_to_know" in curated_recommendations_request.feeds
+            and surface_id
             in (
                 ScheduledSurfaceId.NEW_TAB_EN_US,
                 ScheduledSurfaceId.NEW_TAB_EN_GB,
                 ScheduledSurfaceId.NEW_TAB_DE_DE,
             )
-            and curated_recommendations_request.feeds
-        ):
-            # TODO: the single feed of stories needs to be split into the general feed and extra feed(s).
-            #  This will be filtered on a corpus item property, most likely `isTimeSensitive`.
-            #  While a filter on stories is being decided on, the extra feed contains all stories
-            #  that have the word "Why" or "Warum" in the story title
-            experimental_feed = [
-                r for r in recommendations if ("Why" in r.title or "Warum" in r.title)
-            ]
-            general_feed = [r for r in recommendations if r not in experimental_feed]
+        ):  # TODO: the "need_to_know" items will be filtered by a corpus item property `isTimeSensitive`.
+            #  While data is being prepared, take the bottom ten items from the original recommendations
+            #  list and use them instead for the prototype.
+            general_feed = recommendations[:-10]
+            need_to_know_feed = recommendations[-10:]
 
-            title = LocalizedString(
-                value="Read this now!", locale=curated_recommendations_request.locale
+            # Apply all the additional re-ranking and processing steps
+            # to the main recommendations feed
+            general_feed = self.process_recommendations(
+                general_feed, surface_id, curated_recommendations_request.topics
             )
+
+            # Provide a localized title string for the "Need to Know" feed.
+            localized_titles = {
+                ScheduledSurfaceId.NEW_TAB_EN_US: "Need to Know",
+                ScheduledSurfaceId.NEW_TAB_EN_GB: "Need to Know in British English",
+                ScheduledSurfaceId.NEW_TAB_DE_DE: "Need to Know auf Deutsch",
+            }
+            title = localized_titles[surface_id]
 
             return CuratedRecommendationsResponse(
                 recommendedAt=self.time_ms(),
-                data=CuratedRecommendationsFeed(
-                    general=CuratedRecommendationsBucket(recommendations=general_feed),
-                    experimental=CuratedRecommendationsBucket(
-                        recommendations=experimental_feed, title=title
+                data=general_feed,
+                feeds=CuratedRecommendationsFeed(
+                    need_to_know=CuratedRecommendationsBucket(
+                        recommendations=need_to_know_feed, title=title
                     ),
                 ),
             )
         else:
+            # Apply all the additional re-ranking and processing steps
+            # to the main recommendations feed
+            recommendations = self.process_recommendations(
+                recommendations, surface_id, curated_recommendations_request.topics
+            )
+
             return CuratedRecommendationsResponse(
                 recommendedAt=self.time_ms(),
                 data=recommendations,

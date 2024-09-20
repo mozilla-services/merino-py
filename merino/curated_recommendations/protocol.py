@@ -93,7 +93,7 @@ class CuratedRecommendationsRequest(BaseModel):
     region: str | None = None
     count: int = 100
     topics: list[Topic | str] | None = None
-    feeds: str | None = None
+    feeds: list[str] | None = None
 
     @field_validator("topics", mode="before")
     def validate_topics(cls, values):
@@ -121,29 +121,22 @@ class CuratedRecommendationsRequest(BaseModel):
         return []
 
 
-class LocalizedString(BaseModel):
-    """A string value for a given locale"""
-
-    value: str
-    locale: Locale
-
-
 class CuratedRecommendationsBucket(BaseModel):
     """A ranked list of curated recommendations"""
 
     recommendations: list[CuratedRecommendation]
-    title: LocalizedString | None = None
+    title: str | None = None
 
 
 class CuratedRecommendationsFeed(BaseModel):
     """Multiple lists of curated recommendations for the main New Tab feed and also for experiments"""
 
-    general: CuratedRecommendationsBucket
-    experimental: CuratedRecommendationsBucket
+    need_to_know: CuratedRecommendationsBucket
 
 
 class CuratedRecommendationsResponse(BaseModel):
     """Response schema for a list of curated recommendations"""
 
     recommendedAt: int
-    data: CuratedRecommendationsFeed | list[CuratedRecommendation]
+    data: list[CuratedRecommendation]
+    feeds: CuratedRecommendationsFeed | None = None
