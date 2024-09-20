@@ -129,7 +129,9 @@ class CuratedRecommendationsBucket(BaseModel):
 
 
 class CuratedRecommendationsFeed(BaseModel):
-    """Multiple lists of curated recommendations for the main New Tab feed and also for experiments"""
+    """Multiple lists of curated recommendations for experiments.
+    Currently limited to the 'need_to_know' feed only.
+    """
 
     need_to_know: CuratedRecommendationsBucket
 

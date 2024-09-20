@@ -154,6 +154,13 @@ async def fetch_en_us(client: AsyncClient) -> Response:
     )
 
 
+async def fetch_en_us_with_need_to_know(client: AsyncClient) -> Response:
+    """Make a curated recommendations request with en-US locale and feeds=["need_to_know"]"""
+    return await client.post(
+        "/api/v1/curated-recommendations", json={"locale": "en-US", "feeds": ["need_to_know"]}
+    )
+
+
 def get_max_total_retry_duration() -> float:
     """Compute the maximum retry duration for the exponential backoff and jitter strategy."""
     initial = settings.curated_recommendations.corpus_api.retry_wait_initial_seconds
@@ -205,6 +212,60 @@ async def test_curated_recommendations():
         # CTR (100%) than any other recommendations.
         actual_recommendation = CuratedRecommendation(**corpus_items[0])
         assert actual_recommendation == expected_recommendation
+
+
+@freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
+@pytest.mark.asyncio
+async def test_curated_recommendations_with_need_to_know_feed():
+    """Test the curated recommendations endpoint response is as expected
+    when requesting the 'need_to_know' feed.
+    """
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        # Mock the endpoint
+        response = await fetch_en_us_with_need_to_know(ac)
+        data = response.json()
+
+        # Check if the mock response is valid
+        assert response.status_code == 200
+
+        corpus_items = data["data"]
+        # assert total of 70 items returned (minus the 10 bottom ones from the original result
+        # list that are sent off to the need_to_know feed
+        assert len(corpus_items) == 70
+        # Assert all corpus_items have expected fields populated.
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["publisher"] for item in corpus_items)
+        assert all(item["imageUrl"] for item in corpus_items)
+        assert all(item["tileId"] for item in corpus_items)
+
+        # Assert that receivedRank equals 0, 1, 2, ...
+        for i, item in enumerate(corpus_items):
+            assert item["receivedRank"] == i
+
+        # Assert that the `need_to_know` feed has a localized title returned
+        title = data["feeds"]["need_to_know"]["title"]
+        assert title == "Need to Know"
+
+        # Assert that the `need_to_know` feed has 10 items
+        feed = data["feeds"]["need_to_know"]["recommendations"]
+        assert len(feed) == 10
+
+        # Assert all `need_to_know` stories have expected fields populated.
+        assert all(item["url"] for item in feed)
+        assert all(item["publisher"] for item in feed)
+        assert all(item["imageUrl"] for item in feed)
+        assert all(item["tileId"] for item in feed)
+
+        # Make sure the top item in the `need_to_know` feed is the one we expect
+        # (Currently, #71 in the test data. Once `isTimeSensitive` prop is in use,
+        # this should be the top item in the list with `isTimeSensitive`=true)
+        assert feed[0]["title"] == "How Does a Therapist Stay Neutral?"
+
+        # Assert `need_to_know` stories have the correct rank.
+        # Currently, these stories keep their original rank (70+).
+        # Should this change, this assertion will need an update.
+        for i, item in enumerate(feed, 70):
+            assert item["receivedRank"] == i
 
 
 @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
