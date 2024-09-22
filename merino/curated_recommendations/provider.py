@@ -15,6 +15,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
+    ExperimentName,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -108,12 +109,12 @@ class CuratedRecommendationsProvider:
             return None
 
     async def fetch(
-        self, curated_recommendations_request: CuratedRecommendationsRequest
-    ) -> CuratedRecommendationsResponse:  # noqa
+        self, request: CuratedRecommendationsRequest
+    ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
         # Get the recommendation surface ID based on passed locale & region
         surface_id = CuratedRecommendationsProvider.get_recommendation_surface_id(
-            curated_recommendations_request.locale, curated_recommendations_request.region
+            request.locale, request.region
         )
 
         corpus_items = await self.corpus_backend.fetch(surface_id)
@@ -128,16 +129,21 @@ class CuratedRecommendationsProvider:
         ]
 
         # 3. Apply Thompson sampling to rank recommendations by engagement
-        recommendations = thompson_sampling(recommendations, self.engagement_backend)
+        recommendations = thompson_sampling(
+            recommendations,
+            self.engagement_backend,
+            region=request.region,
+            enable_region_engagement=request.experimentName
+            == ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value
+            and request.experimentBranch == "treatment",
+        )
 
         # 2. Perform publisher spread on the recommendation set
         recommendations = spread_publishers(recommendations, spread_distance=3)
 
         # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
-        if curated_recommendations_request.topics:
-            validated_topics: list[Topic] = cast(
-                list[Topic], curated_recommendations_request.topics
-            )
+        if request.topics:
+            validated_topics: list[Topic] = cast(list[Topic], request.topics)
             recommendations = boost_preferred_topic(recommendations, validated_topics)
 
         for rank, rec in enumerate(recommendations):
