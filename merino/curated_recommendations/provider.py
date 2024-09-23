@@ -9,13 +9,17 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
     Topic,
 )
-from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.engagement_backends.protocol import (
+    EngagementBackend,
+)
 from merino.curated_recommendations.protocol import (
     Locale,
     CuratedRecommendation,
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
     ExperimentName,
+    CuratedRecommendationsFeed,
+    CuratedRecommendationsBucket,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -108,24 +112,15 @@ class CuratedRecommendationsProvider:
         else:
             return None
 
-    async def fetch(
-        self, request: CuratedRecommendationsRequest
-    ) -> CuratedRecommendationsResponse:
-        """Provide curated recommendations."""
-        # Get the recommendation surface ID based on passed locale & region
-        surface_id = self.get_recommendation_surface_id(request.locale, request.region)
-
-        corpus_items = await self.corpus_backend.fetch(surface_id)
-
-        # Convert the CorpusItem list to a CuratedRecommendation list.
-        recommendations = [
-            CuratedRecommendation(
-                **item.model_dump(),
-                receivedRank=rank,
-            )
-            for rank, item in enumerate(corpus_items)
-        ]
-
+    def process_recommendations(
+        self,
+        recommendations: list[CuratedRecommendation],
+        surface_id: str,
+        request: CuratedRecommendationsRequest,
+    ):
+        """Apply additional processing to the list of recommendations
+        received from Curated Corpus API
+        """
         # 3. Apply Thompson sampling to rank recommendations by engagement
         recommendations = thompson_sampling(
             recommendations,
@@ -144,6 +139,7 @@ class CuratedRecommendationsProvider:
             validated_topics: list[Topic] = cast(list[Topic], request.topics)
             recommendations = boost_preferred_topic(recommendations, validated_topics)
 
+        # 0. Blast-off!
         for rank, rec in enumerate(recommendations):
             # Update received_rank now that recommendations have been ranked.
             rec.receivedRank = rank
@@ -157,10 +153,78 @@ class CuratedRecommendationsProvider:
             ):
                 rec.topic = None
 
-        return CuratedRecommendationsResponse(
-            recommendedAt=self.time_ms(),
-            data=recommendations,
+        return recommendations
+
+    async def fetch(
+        self, curated_recommendations_request: CuratedRecommendationsRequest
+    ) -> CuratedRecommendationsResponse:
+        """Provide curated recommendations."""
+        # Get the recommendation surface ID based on passed locale & region
+        surface_id = CuratedRecommendationsProvider.get_recommendation_surface_id(
+            curated_recommendations_request.locale,
+            curated_recommendations_request.region,
         )
+
+        corpus_items = await self.corpus_backend.fetch(surface_id)
+
+        # Convert the CorpusItem list to a CuratedRecommendation list.
+        recommendations = [
+            CuratedRecommendation(
+                **item.model_dump(),
+                receivedRank=rank,
+            )
+            for rank, item in enumerate(corpus_items)
+        ]
+
+        if (
+            curated_recommendations_request.feeds
+            and "need_to_know" in curated_recommendations_request.feeds
+            and surface_id
+            in (
+                ScheduledSurfaceId.NEW_TAB_EN_US,
+                ScheduledSurfaceId.NEW_TAB_EN_GB,
+                ScheduledSurfaceId.NEW_TAB_DE_DE,
+            )
+        ):  # TODO: the "need_to_know" items will be filtered by a corpus item property `isTimeSensitive`.
+            #  While data is being prepared, take the bottom ten items from the original recommendations
+            #  list and use them instead for the prototype.
+            general_feed = recommendations[:-10]
+            need_to_know_feed = recommendations[-10:]
+
+            # Apply all the additional re-ranking and processing steps
+            # to the main recommendations feed
+            general_feed = self.process_recommendations(
+                general_feed, surface_id, curated_recommendations_request
+            )
+
+            # Provide a localized title string for the "Need to Know" feed.
+            localized_titles = {
+                ScheduledSurfaceId.NEW_TAB_EN_US: "Need to Know",
+                ScheduledSurfaceId.NEW_TAB_EN_GB: "Need to Know in British English",
+                ScheduledSurfaceId.NEW_TAB_DE_DE: "Need to Know auf Deutsch",
+            }
+            title = localized_titles[surface_id]
+
+            return CuratedRecommendationsResponse(
+                recommendedAt=self.time_ms(),
+                data=general_feed,
+                feeds=CuratedRecommendationsFeed(
+                    need_to_know=CuratedRecommendationsBucket(
+                        recommendations=need_to_know_feed, title=title
+                    ),
+                ),
+            )
+        else:
+            # Apply all the additional re-ranking and processing steps
+            # to the main recommendations feed
+            recommendations = self.process_recommendations(
+                recommendations, surface_id, curated_recommendations_request
+            )
+
+            return CuratedRecommendationsResponse(
+                recommendedAt=self.time_ms(),
+                data=recommendations,
+            )
 
     @staticmethod
     def time_ms() -> int:
