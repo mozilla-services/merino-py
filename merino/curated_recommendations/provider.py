@@ -112,6 +112,14 @@ class CuratedRecommendationsProvider:
         else:
             return None
 
+    @staticmethod
+    def is_enrolled_in_regional_engagement(request: CuratedRecommendationsRequest) -> bool:
+        """Return True if Thompson sampling should use regional engagement (treatment)"""
+        return (
+            request.experimentName == ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value
+            and request.experimentBranch == "treatment"
+        )
+
     def process_recommendations(
         self,
         recommendations: list[CuratedRecommendation],
@@ -126,9 +134,7 @@ class CuratedRecommendationsProvider:
             recommendations,
             self.engagement_backend,
             region=self.derive_region(request.locale, request.region),
-            enable_region_engagement=request.experimentName
-            == ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value
-            and request.experimentBranch == "treatment",
+            enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
         )
 
         # 2. Perform publisher spread on the recommendation set
