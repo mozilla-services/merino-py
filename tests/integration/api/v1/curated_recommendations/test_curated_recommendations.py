@@ -952,6 +952,14 @@ class TestCorpusApiRanking:
         ],
     )
     @pytest.mark.parametrize(
+        "locale,region,derived_region",
+        [
+            ("en-US", None, "US"),
+            ("en-US", "IN", "IN"),
+            ("fr-FR", "FR", "FR"),
+        ],
+    )
+    @pytest.mark.parametrize(
         "experiment_name, experiment_branch",
         [
             (None, None),  # No experiment
@@ -960,7 +968,14 @@ class TestCorpusApiRanking:
         ],
     )
     async def test_thompson_sampling_behavior(
-        self, topics, engagement_backend, experiment_name, experiment_branch
+        self,
+        topics,
+        engagement_backend,
+        experiment_name,
+        experiment_branch,
+        locale,
+        region,
+        derived_region,
     ):
         """Test that Thompson sampling produces different orders and favors higher CTRs."""
         n_iterations = 20  # Increase to 2000 when changing Thompson sampling to ensure reliability
@@ -971,7 +986,8 @@ class TestCorpusApiRanking:
                 response = await ac.post(
                     "/api/v1/curated-recommendations",
                     json={
-                        "locale": "en-US",
+                        "locale": locale,
+                        "region": region,
                         "topics": topics,
                         "experimentName": experiment_name,
                         "experimentBranch": experiment_branch,
@@ -986,7 +1002,7 @@ class TestCorpusApiRanking:
                 past_id_orders.append(id_order)  # a list of lists with all orders
 
                 engagement_region = (
-                    "US"
+                    derived_region
                     if experiment_name == ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value
                     and experiment_branch == "treatment"
                     else None

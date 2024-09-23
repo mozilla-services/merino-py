@@ -113,9 +113,7 @@ class CuratedRecommendationsProvider:
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
         # Get the recommendation surface ID based on passed locale & region
-        surface_id = CuratedRecommendationsProvider.get_recommendation_surface_id(
-            request.locale, request.region
-        )
+        surface_id = self.get_recommendation_surface_id(request.locale, request.region)
 
         corpus_items = await self.corpus_backend.fetch(surface_id)
 
@@ -132,7 +130,7 @@ class CuratedRecommendationsProvider:
         recommendations = thompson_sampling(
             recommendations,
             self.engagement_backend,
-            region=request.region,
+            region=self.derive_region(request.locale, request.region),
             enable_region_engagement=request.experimentName
             == ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value
             and request.experimentBranch == "treatment",
