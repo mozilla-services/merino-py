@@ -101,6 +101,7 @@ test_top_picks_1 = {
             "url": "https://example.com",
             "icon": "",
             "categories": ["web-browser"],
+            "serp_categories": [0],
             "similars": ["exxample", "exampple", "eexample"],
         },
         {
@@ -110,6 +111,7 @@ test_top_picks_1 = {
             "url": "https://firefox.com",
             "icon": "",
             "categories": ["web-browser"],
+            "serp_categories": [18],
             "similars": ["firefoxx", "foyerfox", "fiirefox", "firesfox", "firefoxes"],
         },
         {
@@ -119,6 +121,7 @@ test_top_picks_1 = {
             "url": "https://mozilla.org/en-US/",
             "icon": "",
             "categories": ["web-browser"],
+            "serp_categories": [18],
             "similars": ["mozzilla", "mozila"],
         },
     ]
@@ -133,6 +136,7 @@ test_top_picks_2 = {
             "url": "https://abc.test",
             "icon": "",
             "categories": ["web-browser"],
+            "serp_categories": [0],
             "similars": ["aa", "ab", "acb"],
         },
         {
@@ -142,6 +146,7 @@ test_top_picks_2 = {
             "url": "https://banana.test",
             "icon": "",
             "categories": ["web-browser"],
+            "serp_categories": [0],
             "similars": ["banan", "bannana", "banana"],
         },
     ]

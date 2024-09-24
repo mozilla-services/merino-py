@@ -105,6 +105,7 @@ class TopPicksBackend:
                 "is_top_pick": True,
                 "is_sponsored": False,
                 "icon": record["icon"],
+                "categories": record["serp_categories"],
             }
 
             # Insertion of short keys between Firefox limit of 2 and self.query_char_limit - 1
@@ -156,7 +157,7 @@ class TopPicksBackend:
             If data source has new data, return newest TopPicksData.
         None
             If backend source does not have new data, None is returned.
-            For `remote`, this is is the `generation` attribute has not changed.
+            For `remote`, this is the `generation` attribute has not changed.
         """
         domain_data_source: str = settings.providers.top_picks.domain_data_source
 

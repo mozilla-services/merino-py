@@ -9,6 +9,7 @@
             "categories": [
                 "web-browser"
             ],
+            "serp_categories": [0],
             "similars": [
                 "exxample",
                 "exampple",
@@ -24,6 +25,7 @@
             "categories": [
                 "web-browser"
             ],
+            "serp_categories": [18],
             "similars": [
                 "firefoxx",
                 "foyerfox",
@@ -41,6 +43,7 @@
             "categories": [
                 "web-browser"
             ],
+            "serp_categories": [18],
             "similars": [
                 "mozzilla",
                 "mozila"
@@ -55,6 +58,7 @@
             "categories": [
                 "web-browser"
             ],
+            "serp_categories": [0],
             "similars": [
                 "aa",
                 "ab",
@@ -72,6 +76,7 @@
             "categories": [
                 "web-browser"
             ],
+            "serp_categories": [0],
             "similars": [
                 "bad",
                 "badd"

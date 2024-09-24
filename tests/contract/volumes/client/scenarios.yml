@@ -127,6 +127,7 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                categories: [0]
               - block_id: 2
                 full_keyword: "banana"
                 title: "Banana"
@@ -168,6 +169,7 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                categories: [4, 18]
 
   - name: top_picks__characters
     description: >
@@ -198,6 +200,7 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                categories: [4, 18]
       - request:
           service: merino
           method: GET
@@ -222,6 +225,7 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                categories: [4, 18]
 
   - name: top_picks__secondary_similars_match
     description: >
@@ -252,6 +256,7 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                categories: [4, 18]
       - request:
           service: merino
           method: GET
@@ -276,6 +281,7 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                categories: [0]
 
   - name: top_picks__short_domain_match
     description: >
@@ -307,6 +313,7 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                categories: [0]
       - request:
           service: merino
           method: GET
@@ -331,6 +338,7 @@ scenarios:
                 is_top_pick: true
                 score: 0.25
                 icon: ""
+                categories: [0]
 
   - name: remote_settings__offline_expansion_orange
     description: Test that Merino successfully returns a Remote Settings suggestion for Offline Expansion
