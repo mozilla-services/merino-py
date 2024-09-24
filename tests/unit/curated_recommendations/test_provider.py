@@ -7,7 +7,12 @@ import uuid
 from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 
-from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId, Topic
+from merino.curated_recommendations import EngagementBackend
+from merino.curated_recommendations.corpus_backends.protocol import (
+    ScheduledSurfaceId,
+    Topic,
+    CorpusBackend,
+)
 from merino.curated_recommendations.provider import (
     CuratedRecommendationsProvider,
 )
@@ -295,7 +300,9 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         topics = ["business", "food"]
 
         # Call the method
-        provider = CuratedRecommendationsProvider()
+        provider = CuratedRecommendationsProvider(
+            mocker.patch.object(CorpusBackend), mocker.patch.object(EngagementBackend)
+        )
         general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
             recommendations, surface_id, topics
         )
@@ -328,7 +335,9 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         topics = None
 
         # Call the method
-        provider = CuratedRecommendationsProvider()
+        provider = CuratedRecommendationsProvider(
+            mocker.patch.object(CorpusBackend), mocker.patch.object(EngagementBackend)
+        )
         general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
             recommendations, surface_id, topics
         )
