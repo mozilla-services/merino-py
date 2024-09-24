@@ -51,6 +51,7 @@ class CorpusItem(BaseModel):
     excerpt: str
     topic: Topic | None = None
     publisher: str
+    isTimeSensitive: bool
     imageUrl: HttpUrl
 
 

@@ -10,6 +10,7 @@
             "excerpt": "Consider this pantry staple your secret ingredient for making more flavorful desserts.",
             "topic": "FOOD",
             "publisher": "Epicurious",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg"
           }
         },
@@ -21,6 +22,7 @@
             "excerpt": "A rigorous experiment revealed that on a hot, dry day, drinking a hot beverage can help your body stay cool.",
             "topic": "FOOD",
             "publisher": "Smithsonian Magazine",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/968a6566-df7a-4f7d-aefd-8678853544b1.jpeg"
           }
         },
@@ -32,6 +34,7 @@
             "excerpt": "Juneteenth isn’t the “other” Independence Day, it is THE Independence Day.",
             "topic": "CAREER",
             "publisher": "The Marginalian",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/87fd6901-5bf5-4b12-8bde-24b86be79003.jpeg"
           }
         },
@@ -43,6 +46,7 @@
             "excerpt": "Anne Helen Petersen and Jessica Calarco discuss how mothers are experiencing and responding to pandemic-related disruptions in their normal routines.",
             "topic": "PARENTING",
             "publisher": "Culture Study",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/3a4a6ed6-a1df-497d-8d31-f777534806ac.jpeg"
           }
         },
@@ -54,6 +58,7 @@
             "excerpt": "Your burger or tacos or pizza could be cooked anywhere by anyone — which is what makes the ghost kitchen concept so lucrative and appealing to owners and investors.",
             "topic": "BUSINESS",
             "publisher": "Eater",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/f5d9c5ff-aaa2-4c2a-ab2b-661f84126bf7.jpeg"
           }
         },
@@ -65,6 +70,7 @@
             "excerpt": "A physician’s gut instinct about a young woman led to a diagnosis that had been overlooked for years.",
             "topic": "SCIENCE",
             "publisher": "The Washington Post",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/93b368a5-a663-4d25-83e8-e2de4adbfea8.jpeg"
           }
         },
@@ -76,6 +82,7 @@
             "excerpt": "We explain the biological changes that begin with your morning tea or coffee.",
             "topic": "HEALTH_FITNESS",
             "publisher": "The Telegraph",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2aaffb04-80e0-4008-95af-7c65a213d191.jpeg"
           }
         },
@@ -87,6 +94,7 @@
             "excerpt": "These aren’t your run-of-the-mill skin-care tricks. Here, the experts share the rules they’ve learned and recommended throughout their careers.",
             "topic": "HEALTH_FITNESS",
             "publisher": "Allure",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/27386d38-3513-485c-8872-6f3d2c0ec5c8.jpeg"
           }
         },
@@ -98,6 +106,7 @@
             "excerpt": "Plant these beautiful blooms and watch butterflies flock to your garden.",
             "topic": "SCIENCE",
             "publisher": "Country Living",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7aaf09a4-b794-4455-b724-315c897b82cc.jpeg"
           }
         },
@@ -109,6 +118,7 @@
             "excerpt": "It’s almost like peppers were made to be stuffed with meat and cheese.",
             "topic": "FOOD",
             "publisher": "Delish",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/11249bb8-7d46-4f54-aca5-e7861669734b.jpeg"
           }
         },
@@ -120,6 +130,7 @@
             "excerpt": "In the age of Amazon and e-books, these bookstores have faced more challenges than ever, but many have been able to persevere and remain treasured parts of their communities.",
             "topic": "TRAVEL",
             "publisher": "Architectural Digest",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/52ebb1c9-3834-4378-812f-0bfcd2529357.jpeg"
           }
         },
@@ -131,6 +142,7 @@
             "excerpt": "One in four cowboys was black. So why aren’t they more present in popular culture?",
             "topic": "EDUCATION",
             "publisher": "Smithsonian Magazine",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/4b1e272f-dd05-4678-939d-22fbd6bde5e7.jpeg"
           }
         },
@@ -142,6 +154,7 @@
             "excerpt": "We’ve gone from denying Botox to celebrating our face-lifts. Welcome to the new era of living out loud.",
             "topic": "HEALTH_FITNESS",
             "publisher": "Town & Country Magazine",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/da9b38c6-2e48-4938-bf87-85a60bf85190.jpeg"
           }
         },
@@ -153,6 +166,7 @@
             "excerpt": "Jared Johns found out too late that swapping messages with the pretty girl from a dating site would mean serious trouble. If only he had known who she really was.",
             "topic": "TECHNOLOGY",
             "publisher": "WIRED",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/66ce2845-c410-48d2-b1df-450e69177692.jpeg"
           }
         },
@@ -164,6 +178,7 @@
             "excerpt": "Six historians weigh in on the biggest misconceptions about Black history, including the Tuskegee experiment and enslaved people’s finances.",
             "topic": "EDUCATION",
             "publisher": "Vox",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/c03326d1-bbfd-4654-a9db-ac431757b9f6.jpeg"
           }
         },
@@ -175,6 +190,7 @@
             "excerpt": "Here’s how we’ve defined adolescence throughout history - and why it’s time for a new category.",
             "topic": "EDUCATION",
             "publisher": "BBC Future",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1f11fb0d-3f0c-46a7-a667-cc2fcea6334e.jpeg"
           }
         },
@@ -186,6 +202,7 @@
             "excerpt": "Do you find yourself dwelling on the same worries, memories or regrets when you’re trying to drift off to sleep? Here’s how to break out of the rumination cycle.",
             "topic": "HEALTH_FITNESS",
             "publisher": "Stylist",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0421cd6c-4e2a-4d98-b648-040c1bf50ea1.jpeg"
           }
         },
@@ -197,6 +214,7 @@
             "excerpt": "The psychological phenomenon known as the overjustification effect explains why extrinsic motivation isn’t getting you to the gym.",
             "topic": "HEALTH_FITNESS",
             "publisher": "Stylist",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/043fc6f9-733a-4cc5-9539-0a98ba8266ba.jpeg"
           }
         },
@@ -208,6 +226,7 @@
             "excerpt": "In the late 19th century, William Dorsey Swann’s private parties attracted unwelcome attention from authorities and the press.",
             "topic": "POLITICS",
             "publisher": "Smithsonian Magazine",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/df6d9089-b587-468c-a976-1f2f4eb104a7.jpeg"
           }
         },
@@ -219,6 +238,7 @@
             "excerpt": "A look at the dizzying array of mattresses, bedding and gadgets designed to keep you from overheating at night",
             "topic": "PERSONAL_FINANCE",
             "publisher": "The Washington Post",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0177bba1-9597-4a0a-a6e1-1747a85eea93.jpeg"
           }
         },
@@ -230,6 +250,7 @@
             "excerpt": "Decision-making abilities are critical to a president’s performance.",
             "topic": "POLITICS",
             "publisher": "The Conversation",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ad9da37b-4375-4851-9fe4-5eef105dfb9a.jpeg"
           }
         },
@@ -241,6 +262,7 @@
             "excerpt": "Babies as young as six months respond to and enjoy being in groups with other babies.",
             "topic": "PARENTING",
             "publisher": "The Conversation",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b9182b66-5398-4fe2-a95d-8b9a46e5a05d.jpeg"
           }
         },
@@ -252,6 +274,7 @@
             "excerpt": "The Louisiana city has struggled to rebuild its tree canopy, devastated by storms and neglect. But an influx of federal aid and a new reforestation plan could offer hope.",
             "topic": "SCIENCE",
             "publisher": "CityLab",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1e4ad4d9-f33c-4d83-b8de-31aac076e35e.jpeg"
           }
         },
@@ -263,6 +286,7 @@
             "excerpt": "Here are the repair, maintenance, and car-care tips you need to know to keep your ride in top shape for years to come.",
             "topic": "PERSONAL_FINANCE",
             "publisher": "Car and Driver",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c5f5b8db-3798-4460-8185-41b26eac7ce6.jpeg"
           }
         },
@@ -274,6 +298,7 @@
             "excerpt": "What to do when there’s a toxic employee and the CEO or president is ignoring it.",
             "topic": "CAREER",
             "publisher": "Bloomberg Businessweek",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/67e39fa6-2ce9-4da9-be6e-95fdbfa08bcf.jpeg"
           }
         },
@@ -285,6 +310,7 @@
             "excerpt": "Ever since the TikTok “dance strike,” Black dancers looking for credit and compensation from social media face a complicated landscape.",
             "topic": "ENTERTAINMENT",
             "publisher": "Rolling Stone",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a47f7e6e-408c-449d-866d-00e36070b672.jpeg"
           }
         },
@@ -296,6 +322,7 @@
             "excerpt": "One woman spoke out, another listened. That helped put an end to the abuse that lasted for more than 20 years. Meet the survivors, detective, attorney, and judge who told the world: Believe women.",
             "topic": "SPORTS",
             "publisher": "Glamour",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b604bf49-89b5-491a-8542-b2aa7a7950e6.jpeg"
           }
         },
@@ -307,6 +334,7 @@
             "excerpt": "You might assume the clan tartans seen on kilts are several millennia old. You would be wrong.",
             "topic": "EDUCATION",
             "publisher": "Collectors Weekly",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7658ea46-a487-4afd-8306-44a7477b424a.jpeg"
           }
         },
@@ -318,6 +346,7 @@
             "excerpt": "This is one instance you don’t want to channel Angus “Mac” MacGyver.",
             "topic": "TECHNOLOGY",
             "publisher": "The Drive",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fe2764c9-a3b1-47f4-bc30-2f2b22ef6304.jpeg"
           }
         },
@@ -329,6 +358,7 @@
             "excerpt": "African techies pioneer AI tools in local languages to bridge the digital divide but data scarcity, ethical concerns are challenges",
             "topic": "TECHNOLOGY",
             "publisher": "Context",
+            "isTimeSensitive": false,
             "imageUrl": "https://ddc514qh7t05d.cloudfront.net/dA/0f6290ca16a4952dac171747534209b5/1200w/Jpeg"
           }
         },
@@ -340,6 +370,7 @@
             "excerpt": "Fathers are relatively new scientific subjects.",
             "topic": "PARENTING",
             "publisher": "Axios",
+            "isTimeSensitive": false,
             "imageUrl": "https://images.axios.com/1dNeIXqBMs40MPXo4qydevDYxok=/0x0:1920x1080/1366x768/2024/06/13/1718299823754.jpg"
           }
         },
@@ -351,6 +382,7 @@
             "excerpt": "Four games between the Boston Celtics and Dallas Mavericks have mostly come down to talent and strategy. But the mind-set of the players matters, too.",
             "topic": "SPORTS",
             "publisher": "The New Yorker",
+            "isTimeSensitive": false,
             "imageUrl": "https://media.newyorker.com/photos/666c732fc62d3122265f82a3/16:9/w_1280,c_limit/Thomas-Sporting-Scene1.jpg"
           }
         },
@@ -362,6 +394,7 @@
             "excerpt": "Padres prospect Tucupita Marcano was recently given a lifetime ban by MLB for betting on baseball games when he was playing with the Pirates.",
             "topic": "SPORTS",
             "publisher": "Sportico",
+            "isTimeSensitive": false,
             "imageUrl": "https://www.sportico.com/wp-content/uploads/2024/06/GettyImages-1526423533-e1718382312742.jpg?w=1024"
           }
         },
@@ -373,6 +406,7 @@
             "excerpt": "Let other people know when you’re going to show up while traveling. Whether you use Google, Apple, or another navigation app.",
             "topic": "TECHNOLOGY",
             "publisher": "Popular Science",
+            "isTimeSensitive": false,
             "imageUrl": "https://www.popsci.com/wp-content/uploads/2024/06/share-ETA-on-google-and-apple-maps.jpg"
           }
         },
@@ -384,6 +418,7 @@
             "excerpt": "He made rock history with the Velvet Underground and produced landmark albums for the likes of Patti Smith. At 82, his 18th solo outing proves he’s still at the bleeding edge",
             "topic": "ENTERTAINMENT",
             "publisher": "The Observer ",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c1164543-b082-4d66-afa1-71d913ab9fc4.jpeg"
           }
         },
@@ -395,6 +430,7 @@
             "excerpt": "The $1 billion production music business has begun licensing its works to AI companies. Could it spell the end of the business as a whole?",
             "topic": "TECHNOLOGY",
             "publisher": "Billboard",
+            "isTimeSensitive": false,
             "imageUrl": "https://www.billboard.com/wp-content/uploads/2024/05/ai-music-robot-2024-billboard-pro-1260.jpg?w=1024"
           }
         },
@@ -406,6 +442,7 @@
             "excerpt": "It’s so huge you can’t smell the chlorine.",
             "topic": "SPORTS",
             "publisher": "Sports Illustrated",
+            "isTimeSensitive": false,
             "imageUrl": "https://images2.minutemediacdn.com/image/upload/c_crop,w_6823,h_3837,x_0,y_210/c_fill,w_1440,ar_16:9,f_auto,q_auto,g_auto/images/ImagnImages/mmsport/si/01j08xqehhmtemqqfxz4.jpg"
           }
         },
@@ -417,6 +454,7 @@
             "excerpt": "How leaders can take actionable steps to turn psychological safety from a misguided weapon to a powerful tool.",
             "topic": "CAREER",
             "publisher": "Fast Company",
+            "isTimeSensitive": false,
             "imageUrl": "https://images.fastcompany.com/image/upload/f_auto,q_auto,c_fit,w_1024,h_1024/wp-cms-2/2024/06/p-91139325-Is-psychological-safety-being-weaponized.jpg"
           }
         },
@@ -428,6 +466,7 @@
             "excerpt": "Getting philosophical with the menswear’s favorite Instagram and TikTok star, Albert Muzquiz.",
             "topic": "ENTERTAINMENT",
             "publisher": "Esquire",
+            "isTimeSensitive": false,
             "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/jm-esquire-edgy-albert-11-001-664fbbbeca45e.jpg?crop=1.00xw:0.334xh;0,0.0326xh&resize=640:*"
           }
         },
@@ -439,6 +478,7 @@
             "excerpt": "In a dinner series called the Line Up, line cooks, sous-chefs, and chefs de cuisine from buzzy New York restaurants get to be executive chefs for a night.",
             "topic": "FOOD",
             "publisher": "The New Yorker",
+            "isTimeSensitive": false,
             "imageUrl": "https://media.newyorker.com/photos/666b2a7efa7b62b11e4ea308/16:9/w_1280,c_limit/r44443_rd.jpg"
           }
         },
@@ -450,6 +490,7 @@
             "excerpt": "In “The Light Eaters,” by Zoë Schlanger, the field of botany itself functions as a character—one in the process of undergoing a potentially radical transformation.",
             "topic": "SCIENCE",
             "publisher": "The New Yorker",
+            "isTimeSensitive": false,
             "imageUrl": "https://media.newyorker.com/photos/666736f33d68093e808d34c1/16:9/w_1280,c_limit/Riederer_Plants.jpg"
           }
         },
@@ -461,6 +502,7 @@
             "excerpt": "Tired of the same old sandals and slip-ons? Try one of these picks from a few of the balmiest—and most stylish—spots on Earth.",
             "topic": "ENTERTAINMENT",
             "publisher": "Esquire",
+            "isTimeSensitive": false,
             "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/esq060199digbbbshoes-001-664fa3f1556e9.jpg?crop=1.00xw:0.873xh;0,0.0737xh&resize=640:*"
           }
         },
@@ -472,6 +514,7 @@
             "excerpt": "A remote outpost of the Philippines in the South China Sea is on the front line of potential geopolitical conflict.",
             "topic": "POLITICS",
             "publisher": "The Atlantic",
+            "isTimeSensitive": false,
             "imageUrl": "https://cdn.theatlantic.com/thumbor/P6m-sR0G-YAB0sGbvHO4tGqflnY=/0x43:2000x1085/1200x625/media/img/mt/2024/06/Quiambao_1/original.jpg"
           }
         },
@@ -483,6 +526,7 @@
             "excerpt": "What happens when you combine franks, the Fourth of July, a sponsorship dispute, and a Netflix special?",
             "topic": "ENTERTAINMENT",
             "publisher": "The Atlantic",
+            "isTimeSensitive": false,
             "imageUrl": "https://cdn.theatlantic.com/thumbor/nX_7zXMqBrC47-fwu8YHvuvzgt8=/8x722:5759x3717/1200x625/media/img/mt/2024/06/GettyImages_991477622/original.jpg"
           }
         },
@@ -494,6 +538,7 @@
             "excerpt": "Olivia Cooke talks to ELLE.com about Alicent’s journey in “House of the Dragon” season 2, Rhaenicent, and going viral.",
             "topic": "ENTERTAINMENT",
             "publisher": "Elle",
+            "isTimeSensitive": false,
             "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/elm060124cooke-dig-01-666b1011d1665.jpg?crop=0.811xw:0.326xh;0,0.0664xh&resize=640:*"
           }
         },
@@ -505,6 +550,7 @@
             "excerpt": "Our human minds hold us back from truly understanding the many brilliant ways that other creatures solve their problems",
             "topic": "SCIENCE",
             "publisher": "Aeon",
+            "isTimeSensitive": false,
             "imageUrl": "https://images.aeonmedia.co/images/4a96e2d9-5ee7-4765-8325-8192d0757e0e/essay-final-naturepl_01590112.jpg?width=1200&quality=75&format=auto"
           }
         },
@@ -516,6 +562,7 @@
             "excerpt": "With warmer weather comes an explosion of growth – so make sure your plants get the ingredients they need to sustain it",
             "topic": "FOOD",
             "publisher": "The Guardian",
+            "isTimeSensitive": false,
             "imageUrl": "https://i.guim.co.uk/img/media/f90b3add281715b54d9d42f458f0a5e0ba1e2239/0_89_5138_3083/master/5138.jpg?width=1200&height=630&quality=85&auto=format&fit=crop&overlay-align=bottom%2Cleft&overlay-width=100p&overlay-base64=L2ltZy9zdGF0aWMvb3ZlcmxheXMvdGctZGVmYXVsdC5wbmc&enable=upscale&s=04aa577b776edbc76ce15ab86a70453d"
           }
         },
@@ -527,6 +574,7 @@
             "excerpt": "The five stages describe a grief that’s knowable and controlled. An accident in my kitchen helped me find a truer metaphor",
             "topic": "EDUCATION",
             "publisher": "Psyche",
+            "isTimeSensitive": false,
             "imageUrl": "https://images.aeonmedia.co/images/1aee7ed4-e453-437e-bf2a-85ac3aad8a3c/rt-final-gettyimages-820481530.jpg"
           }
         },
@@ -538,6 +586,7 @@
             "excerpt": "Despite increasing protection measures, these fish are among the world’s most endangered animals. New tests to detect species being traded, as well as population studies, aim to help save them.",
             "topic": "SCIENCE",
             "publisher": "Knowable Magazine",
+            "isTimeSensitive": false,
             "imageUrl": "https://knowablemagazine.org/docserver/fulltext/shark-fin-trade-2-1600x600.jpg"
           }
         },
@@ -549,6 +598,7 @@
             "excerpt": "In her new nonfiction graphic book, Caitlin Cass unpacks the active role that some White women played in suppressing voting rights for all — and the lessons today in the ongoing fight for universal ballot access.",
             "topic": "POLITICS",
             "publisher": "The 19th",
+            "isTimeSensitive": false,
             "imageUrl": "https://19thnews.org/wp-content/uploads/2024/06/caitlin-cass-book-1.jpg"
           }
         },
@@ -560,6 +610,7 @@
             "excerpt": "Gamification was always just behaviorism dressed up in pixels and point systems. Why did we fall for it?",
             "topic": "GAMING",
             "publisher": "MIT Technology Review",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f37feac7-4386-457b-9c83-1c330c6eaeaf.jpeg"
           }
         },
@@ -571,6 +622,7 @@
             "excerpt": "Which film camera should you get? Which films are the best? We demystify the world of analog photography to help you get started.",
             "topic": "TECHNOLOGY",
             "publisher": "WIRED",
+            "isTimeSensitive": false,
             "imageUrl": "https://media.wired.com/photos/665de99d4cef22c35a95a789/191:100/w_1280,c_limit/Film-Camera-Guide-collage-062024-SOURCE-Scott-Gilbertson.jpg"
           }
         },
@@ -582,6 +634,7 @@
             "excerpt": "The Stanford Internet Observatory studied how social media platforms are abused. Now, its top leaders are out and future funding is uncertain amid attacks on its work by conservatives.",
             "topic": "POLITICS",
             "publisher": "NPR",
+            "isTimeSensitive": false,
             "imageUrl": "https://npr.brightspotcdn.com/dims3/default/strip/false/crop/3000x1688+0+120/resize/1400/quality/100/format/jpeg/?url=http%3A%2F%2Fnpr-brightspot.s3.amazonaws.com%2F19%2F5d%2F256e4ff34f41902592a5899ba29e%2Fgettyimages-490832273.jpg"
           }
         },
@@ -593,6 +646,7 @@
             "excerpt": "Letting an amphibian take up residence in your dairy products may not seem like a good idea, but believe it or not ... it works! Here’s why.",
             "topic": "FOOD",
             "publisher": "The Takeout",
+            "isTimeSensitive": false,
             "imageUrl": "https://www.thetakeout.com/img/gallery/before-fridges-russians-used-to-keep-their-milk-fresh-with-frogs/l-intro-1715699240.jpg"
           }
         },
@@ -604,6 +658,7 @@
             "excerpt": "What I saw inside the government’s response to COVID-19",
             "topic": "HEALTH_FITNESS",
             "publisher": "The Atlantic",
+            "isTimeSensitive": false,
             "imageUrl": "https://cdn.theatlantic.com/thumbor/ss6K1O1wmbZPkNboU0YOM98ekEo=/0x43:2000x1085/1200x625/media/img/2024/05/FauciOpener-1/original.png"
           }
         },
@@ -615,6 +670,7 @@
             "excerpt": "Layal Liverpool on racist beauty standards and the hidden harms of hair relaxers.",
             "topic": "EDUCATION",
             "publisher": "Literary Hub",
+            "isTimeSensitive": false,
             "imageUrl": "https://s26162.pcdn.co/wp-content/uploads/2024/06/hair-relaxer.jpg"
           }
         },
@@ -626,6 +682,7 @@
             "excerpt": "Tinnitus is like a constant scream inside my head, depriving me of what I formerly treasured: the moments of serene quiet.",
             "topic": "HEALTH_FITNESS",
             "publisher": "Aeon",
+            "isTimeSensitive": false,
             "imageUrl": "https://images.aeonmedia.co/images/f6b4f986-a7f8-424c-9534-3060b996fdd8/essay-par377566.jpg?width=1200&quality=75&format=auto"
           }
         },
@@ -637,6 +694,7 @@
             "excerpt": "A new study finds levels of the carcinogen ethylene oxide that are nine times higher than those estimated by the EPA’s models.",
             "topic": "HEALTH_FITNESS",
             "publisher": "Gizmodo",
+            "isTimeSensitive": false,
             "imageUrl": "https://i.kinja-img.com/image/upload/c_fill,h_675,pg_1,q_80,w_1200/9509ed3e35428a6d7fff9e8a89349e58.jpg"
           }
         },
@@ -648,6 +706,7 @@
             "excerpt": "Retracted studies and new treatments reveal the confusing state of Alzheimer’s research.",
             "topic": "HEALTH_FITNESS",
             "publisher": "Vox",
+            "isTimeSensitive": false,
             "imageUrl": "https://platform.vox.com/wp-content/uploads/sites/2/2024/06/GettyImages-512298231.jpg?quality=90&strip=all&crop=0,10.732984293194,100,78.534031413613"
           }
         },
@@ -659,6 +718,7 @@
             "excerpt": "Extreme weather threatens the investment value of many properties, but financing for climate mitigation efforts are only just getting going.",
             "topic": "SCIENCE",
             "publisher": "WIRED",
+            "isTimeSensitive": false,
             "imageUrl": "https://media.wired.com/photos/666c9e38dac254cb00a3f0df/191:100/w_1280,c_limit/Science_Flood_housing_GettyImages-1699083412.jpg"
           }
         },
@@ -670,6 +730,7 @@
             "excerpt": "Geoff Palmer, Scotland’s first Black professor, now applies scientific rigour to researching slavery.",
             "topic": "SCIENCE",
             "publisher": "Nature",
+            "isTimeSensitive": false,
             "imageUrl": "https://media.nature.com/lw1200/magazine-assets/d41586-024-02038-9/d41586-024-02038-9_27181876.jpg"
           }
         },
@@ -681,6 +742,7 @@
             "excerpt": "At the end of her challenge, the 52-year-old says ultra-running is a good way to “get uncomfortable”.",
             "topic": "SPORTS",
             "publisher": "BBC",
+            "isTimeSensitive": false,
             "imageUrl": "https://ichef.bbci.co.uk/news/480/cpsprodpb/b497/live/ea3da2d0-2a21-11ef-a427-217fb9597453.jpg.webp"
           }
         },
@@ -692,6 +754,7 @@
             "excerpt": "The technology promised to make shopping easier. It has done the opposite",
             "topic": "BUSINESS",
             "publisher": "The Walrus",
+            "isTimeSensitive": false,
             "imageUrl": "https://walrus-assets.s3.amazonaws.com/img/CUSTOM-HORIZONTAL-SOCIAL-CARDS-Moscrop-SelfCheckout.png"
           }
         },
@@ -703,6 +766,7 @@
             "excerpt": "A steadily growing toolbox is giving researchers the ability to monitor and measure the physical forces that shape embryonic development.",
             "topic": "SCIENCE",
             "publisher": "Nature",
+            "isTimeSensitive": false,
             "imageUrl": "https://media.nature.com/lw1200/magazine-assets/d41586-024-02029-w/d41586-024-02029-w_27201134.jpg"
           }
         },
@@ -714,6 +778,7 @@
             "excerpt": "Cutting-edge therapies delivering treatment to foetuses diagnosed with neurological defects have the potential to change natal care as we know it.",
             "topic": "HEALTH_FITNESS",
             "publisher": "BBC",
+            "isTimeSensitive": false,
             "imageUrl": "https://ichef.bbci.co.uk/images/ic/480xn/p0j48gnj.jpg.webp"
           }
         },
@@ -725,6 +790,7 @@
             "excerpt": "Astronomers have started thinking about the potential conflicts between expanding knowledge of the universe and commercial gain.",
             "topic": "SCIENCE",
             "publisher": "Inverse",
+            "isTimeSensitive": false,
             "imageUrl": "https://imgix.bustle.com/uploads/image/2024/5/31/0c29afe0/file-20240516-21-amgccw.jpg?w=1200&h=630&fit=crop&crop=faces&fm=jpg"
           }
         },
@@ -736,6 +802,7 @@
             "excerpt": "A bold experiment to help tenants is advancing.",
             "topic": "POLITICS",
             "publisher": "Vox",
+            "isTimeSensitive": false,
             "imageUrl": "https://platform.vox.com/wp-content/uploads/sites/2/2024/06/gettyimages-1537696713.jpg?quality=90&strip=all&crop=0,10.732984293194,100,78.534031413613"
           }
         },
@@ -747,6 +814,7 @@
             "excerpt": "Challengers’ Tashi Duncan... I can save her",
             "topic": "GAMING",
             "publisher": "Polygon",
+            "isTimeSensitive": false,
             "imageUrl": "https://cdn.vox-cdn.com/thumbor/b1omDgEBHqIqhWi9dKd2QU50XFk=/0x0:1919x1005/fit-in/1200x630/cdn.vox-cdn.com/uploads/chorus_asset/file/25490372/Screenshot_2024_06_13_145720.png"
           }
         },
@@ -758,6 +826,7 @@
             "excerpt": "There is a form of being together that feels as easy and spacious as being alone, when your experience is not crowded out or eclipsed by the presence of the other but deepened and magnified. Such companionship is extremely rare and extremely precious.",
             "topic": "HEALTH_FITNESS",
             "publisher": "The Marginalian",
+            "isTimeSensitive": false,
             "imageUrl": "https://www.themarginalian.org/wp-content/uploads/2019/11/velocity_debbie_dasha.jpg?fit=600%2C315&ssl=1"
           }
         },
@@ -769,6 +838,7 @@
             "excerpt": "I’ve visited 107 countries, and these six places, from Iceland to Slovenia, are the most beautiful places I’ve seen. \n    ",
             "topic": "TRAVEL",
             "publisher": "Business Insider",
+            "isTimeSensitive": false,
             "imageUrl": "https://i.insider.com/6650af2da961b37edf39b243?width=1200&format=jpeg"
           }
         },
@@ -780,6 +850,7 @@
             "excerpt": "Counseling couples or families is about empathy, not objectivity.",
             "topic": "SELF_IMPROVEMENT",
             "publisher": "Zocalo Public Square",
+            "isTimeSensitive": false,
             "imageUrl": "https://www.zocalopublicsquare.org/wp-content/uploads/2024/06/Therapeutic-neutrality-l.jpg"
           }
         },
@@ -791,6 +862,7 @@
             "excerpt": "Fuel up on coffee at artist Takashi Murakami’s retro cafe, immerse yourself in a new digital art museum, and take a meditative walk in the heart of a forest.",
             "topic": "TRAVEL",
             "publisher": "Afar",
+            "isTimeSensitive": false,
             "imageUrl": "https://afar.brightspotcdn.com/dims4/default/4e20695/2147483647/strip/true/crop/3000x1500+0+0/resize/1440x720!/quality/90/?url=https%3A%2F%2Fk3-prod-afar-media.s3.us-west-2.amazonaws.com%2Fbrightspot%2Fe4%2F9f%2F3e7a0c934fa8aca7da05146bc497%2Fgeoff-haggray-tokyo-lede.jpg"
           }
         },
@@ -802,6 +874,7 @@
             "excerpt": "Scientists are testing new tools to spot the origin of cheetahs poached from the wild and smuggled for the pet trade.",
             "topic": "EDUCATION",
             "publisher": "Undark",
+            "isTimeSensitive": false,
             "imageUrl": "https://undark.org/wp-content/uploads/2024/06/trio-of-cubs_lede.jpeg"
           }
         },
@@ -813,6 +886,7 @@
             "excerpt": "Three women who have done long-term shopping bans share their advice.",
             "topic": "PERSONAL_FINANCE",
             "publisher": "The Cut",
+            "isTimeSensitive": false,
             "imageUrl": "https://pyxis.nymag.com/v1/imgs/72c/f78/8c5e661254f06ca6f6811e896a97b0662c-My2Cents-Treatment-june-12.1x.rsocial.w1200.jpg"
           }
         },
@@ -824,6 +898,7 @@
             "excerpt": "Practice grows progress.",
             "topic": "SELF_IMPROVEMENT",
             "publisher": "Architectural Digest",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/cbf91d32-792f-4ce6-a7b8-6270cbc43a7c.jpeg"
           }
         },
@@ -835,6 +910,7 @@
             "excerpt": "The tale of the Regina Music Box Company is one composed of innovation, initial success, perseverance, and the struggle to remain relevant in the capricious home music landscape of the US at the turn of the century.",
             "topic": "BUSINESS",
             "publisher": "Collectors Weekly",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/264c8cf0-3b8f-46a3-92d6-13ebddf9289c.jpeg"
           }
         },
@@ -846,6 +922,7 @@
             "excerpt": "​Cowboy Carter wasn’t Black music’s first foray into the country genre.",
             "topic": "ENTERTAINMENT",
             "publisher": "Okayplayer",
+            "isTimeSensitive": false,
             "imageUrl": "https://www.okayplayer.com/media-library/photo-of-darius-rucker-by-jason-kempin-getty-images-beyonce-by-kevin-mazur-getty-images-for-iheartradio-shaboozey-by-brett-ca.jpg?id=52453110&width=1200&height=600&coordinates=0%2C195%2C0%2C55"
           }
         },
@@ -857,6 +934,7 @@
             "excerpt": "Better lighting can increase your home’s safety—adding visibility will reduce trip hazards in dark hallways or stairwells, for example—and improve energy efficiency to save you money on your electricity bill. Upgraded lighting may also add value to your h",
             "topic": "SELF_IMPROVEMENT",
             "publisher": "Lifehacker",
+            "isTimeSensitive": false,
             "imageUrl": "https://lifehacker.com/imagery/articles/01J04FS8768RSV42Y3DHXZA3KW/hero-image.fill.size_1200x675.jpg"
           }
         },
@@ -868,6 +946,7 @@
             "excerpt": "The baffling, contradictory demands of being female in the party of Donald Trump.",
             "topic": "POLITICS",
             "publisher": "New York Magazine",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f0069eea-68dd-4536-be2e-bda6f1d87102.jpeg"
           }
         },
@@ -879,6 +958,7 @@
             "excerpt": "How to cook without cooking, find the sweet spot for your fan, and get to sleep when the temperatures just won’t drop.",
             "topic": "HEALTH_FITNESS",
             "publisher": "Pocket Collections",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f1b806a8-f0e0-48ff-885b-529a5d3af59e.jpeg"
           }
         }
