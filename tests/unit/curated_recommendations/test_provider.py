@@ -1,8 +1,11 @@
-"""Unit test for CuratedRecommendationsProvider."""
+"""Unit tests for CuratedRecommendationsProvider."""
 
 import pytest
+import random
+import uuid
 
 from pydantic import HttpUrl
+from pytest_mock import MockerFixture
 
 from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId, Topic
 from merino.curated_recommendations.provider import (
@@ -241,3 +244,94 @@ class TestCuratedRecommendationTileId:
                 tileId=invalid_tile_id,
                 **self.common_params,
             )
+
+
+class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
+    """Unit tests for rank_need_to_know_recommendations method"""
+
+    @staticmethod
+    def generate_recommendations(length: int) -> list[CuratedRecommendation]:
+        """Create dummy recommendations for the tests below.
+
+        @param length:
+        @return:
+        """
+        recs = []
+        for i in range(length):
+            rec = CuratedRecommendation(
+                tileId=MIN_TILE_ID + random.randint(0, 101),
+                receivedRank=i,
+                scheduledCorpusItemId=str(uuid.uuid4()),
+                url=HttpUrl("https://littlelarry.com/"),
+                title="little larry",
+                excerpt="is failing english",
+                topic=random.choice(list(Topic)),
+                publisher="cohens",
+                imageUrl=HttpUrl("https://placehold.co/600x400/"),
+            )
+
+            recs.append(rec)
+
+        return recs
+
+    def test_rank_need_to_know_recommendations(self, mocker: MockerFixture):
+        """Test the main flow of logic in the function
+
+        @param mocker: MockerFixture
+        """
+        # Create mock recommendations
+        recommendations = self.generate_recommendations(100)
+
+        # Mock bits and pieces of the provider class
+        mocker.patch.object(CuratedRecommendationsProvider, "__init__", return_value=None)
+        rank_recommendations = mocker.patch.object(
+            CuratedRecommendationsProvider,
+            "rank_recommendations",
+            return_value=recommendations[:-10],
+        )
+
+        # Define the surface ID and topics
+        surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
+        topics = ["business", "food"]
+
+        # Call the method
+        provider = CuratedRecommendationsProvider()
+        general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
+            recommendations, surface_id, topics
+        )
+
+        # Verify that the recommendations were split correctly
+        # TODO: update these assertions when the recs are split on the `isTimeSensitive` property
+        assert len(general_feed) == 90  # The first 90 items
+        assert len(need_to_know_feed) == 10  # The last 10 items
+
+        # Verify that the rank_recommendations method was called with the correct arguments
+        rank_recommendations.assert_called_once_with(general_feed, surface_id, topics)
+
+        # Verify that the localized title is correct
+        assert title == "Need to Know"
+
+    def test_rank_need_to_know_recommendations_different_surface(self, mocker: MockerFixture):
+        """Test localization with a non-English New Tab surface
+
+        @param mocker: MockerFixture
+        """
+        # Create mock recommendations
+        recommendations = self.generate_recommendations(20)
+
+        # Mock bits and pieces of the provider class
+        mocker.patch.object(CuratedRecommendationsProvider, "__init__", return_value=None)
+        mocker.patch.object(CuratedRecommendationsProvider, "rank_recommendations")
+
+        # Define the surface ID and topics
+        surface_id = ScheduledSurfaceId.NEW_TAB_DE_DE
+        topics = None
+
+        # Call the method
+        provider = CuratedRecommendationsProvider()
+        general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
+            recommendations, surface_id, topics
+        )
+
+        # Verify that the title is correct for the German New Tab surface
+        assert title == "Need to Know auf Deutsch"
