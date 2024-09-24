@@ -279,6 +279,29 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
         return recs
 
+    @staticmethod
+    def mock_curated_recommendations_provider(
+        mocker: MockerFixture,
+    ) -> CuratedRecommendationsProvider:
+        """Mock the necessary components of CuratedRecommendationsProvider.
+
+        @param mocker: MockerFixture
+        @return: A mocked CuratedRecommendationsProvider
+        """
+        # Mock the __init__ methods to prevent actual initialization
+        mocker.patch.object(CuratedRecommendationsProvider, "__init__", return_value=None)
+
+        # Mock the rank_recommendations method
+        mocker.patch.object(CuratedRecommendationsProvider, "rank_recommendations")
+
+        # Create and return the mocked provider instance
+        provider = CuratedRecommendationsProvider(
+            mocker.patch.object(CorpusBackend, "__init__", return_value=None),
+            mocker.patch.object(EngagementBackend, "__init__", return_value=None),
+        )
+
+        return provider
+
     def test_rank_need_to_know_recommendations(self, mocker: MockerFixture):
         """Test the main flow of logic in the function
 
@@ -287,23 +310,22 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         # Create mock recommendations
         recommendations = self.generate_recommendations(100)
 
-        # Mock bits and pieces of the provider class
-        mocker.patch.object(CuratedRecommendationsProvider, "__init__", return_value=None)
+        # Define the surface ID and topics
+        surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
+        topics = ["business", "food"]
+
+        # Instantiate the mocked class
+        provider = self.mock_curated_recommendations_provider(mocker)
+
+        # Mock the rank_recommendations method separately to make sure it returns
+        # the correct number of results, and we can make sure it was called later
         rank_recommendations = mocker.patch.object(
             CuratedRecommendationsProvider,
             "rank_recommendations",
             return_value=recommendations[:-10],
         )
 
-        # Define the surface ID and topics
-        surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
-        topics = ["business", "food"]
-
         # Call the method
-        provider = CuratedRecommendationsProvider(
-            mocker.patch.object(CorpusBackend, "__init__", return_value=None),
-            mocker.patch.object(EngagementBackend, "__init__", return_value=None),
-        )
         general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
             recommendations, surface_id, topics
         )
@@ -327,19 +349,14 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         # Create mock recommendations
         recommendations = self.generate_recommendations(20)
 
-        # Mock bits and pieces of the provider class
-        mocker.patch.object(CuratedRecommendationsProvider, "__init__", return_value=None)
-        mocker.patch.object(CuratedRecommendationsProvider, "rank_recommendations")
-
         # Define the surface ID and topics
         surface_id = ScheduledSurfaceId.NEW_TAB_DE_DE
         topics = None
 
+        # Instantiate the mocked class
+        provider = self.mock_curated_recommendations_provider(mocker)
+
         # Call the method
-        provider = CuratedRecommendationsProvider(
-            mocker.patch.object(CorpusBackend, "__init__", return_value=None),
-            mocker.patch.object(EngagementBackend, "__init__", return_value=None),
-        )
         general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
             recommendations, surface_id, topics
         )
