@@ -17,6 +17,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
+    ExperimentName,
     CuratedRecommendationsFeed,
     CuratedRecommendationsBucket,
 )
@@ -111,24 +112,37 @@ class CuratedRecommendationsProvider:
         else:
             return None
 
+    @staticmethod
+    def is_enrolled_in_regional_engagement(request: CuratedRecommendationsRequest) -> bool:
+        """Return True if Thompson sampling should use regional engagement (treatment)"""
+        return (
+            request.experimentName == ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value
+            and request.experimentBranch == "treatment"
+        )
+
     def process_recommendations(
         self,
         recommendations: list[CuratedRecommendation],
         surface_id: str,
-        topics: list[Topic | str] | None = None,
+        request: CuratedRecommendationsRequest,
     ):
         """Apply additional processing to the list of recommendations
         received from Curated Corpus API
         """
         # 3. Apply Thompson sampling to rank recommendations by engagement
-        recommendations = thompson_sampling(recommendations, self.engagement_backend)
+        recommendations = thompson_sampling(
+            recommendations,
+            self.engagement_backend,
+            region=self.derive_region(request.locale, request.region),
+            enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
+        )
 
         # 2. Perform publisher spread on the recommendation set
         recommendations = spread_publishers(recommendations, spread_distance=3)
 
         # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
-        if topics:
-            validated_topics: list[Topic] = cast(list[Topic], topics)
+        if request.topics:
+            validated_topics: list[Topic] = cast(list[Topic], request.topics)
             recommendations = boost_preferred_topic(recommendations, validated_topics)
 
         # 0. Blast-off!
@@ -149,7 +163,7 @@ class CuratedRecommendationsProvider:
 
     async def fetch(
         self, curated_recommendations_request: CuratedRecommendationsRequest
-    ) -> CuratedRecommendationsResponse:  # noqa
+    ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
         # Get the recommendation surface ID based on passed locale & region
         surface_id = CuratedRecommendationsProvider.get_recommendation_surface_id(
@@ -186,7 +200,7 @@ class CuratedRecommendationsProvider:
             # Apply all the additional re-ranking and processing steps
             # to the main recommendations feed
             general_feed = self.process_recommendations(
-                general_feed, surface_id, curated_recommendations_request.topics
+                general_feed, surface_id, curated_recommendations_request
             )
 
             # Provide a localized title string for the "Need to Know" feed.
@@ -210,7 +224,7 @@ class CuratedRecommendationsProvider:
             # Apply all the additional re-ranking and processing steps
             # to the main recommendations feed
             recommendations = self.process_recommendations(
-                recommendations, surface_id, curated_recommendations_request.topics
+                recommendations, surface_id, curated_recommendations_request
             )
 
             return CuratedRecommendationsResponse(

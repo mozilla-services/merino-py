@@ -26,7 +26,7 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
     Engagement,
 )
-from merino.curated_recommendations.protocol import CuratedRecommendation
+from merino.curated_recommendations.protocol import CuratedRecommendation, ExperimentName
 from merino.main import app
 from merino.metrics import get_metrics_client
 
@@ -98,8 +98,9 @@ class MockEngagementBackend(EngagementBackend):
     """Mock class implementing the protocol for EngagementBackend."""
 
     def get(self, scheduled_corpus_item_id: str, region: str | None = None) -> Engagement | None:
-        """Return random click and impression counts based on the scheduled corpus id."""
-        rng = np.random.default_rng(seed=int.from_bytes(scheduled_corpus_item_id.encode()))
+        """Return random click and impression counts based on the scheduled corpus id and region."""
+        seed_input = "_".join(filter(None, [scheduled_corpus_item_id, region]))
+        rng = np.random.default_rng(seed=int.from_bytes(seed_input.encode()))
 
         if scheduled_corpus_item_id == "50f86ebe-3f25-41d8-bd84-53ead7bdc76e":
             # Give the first item 100% click-through rate to put it on top with high certainty.
@@ -1011,7 +1012,32 @@ class TestCorpusApiRanking:
             None,
         ],
     )
-    async def test_thompson_sampling_behavior(self, topics, engagement_backend):
+    @pytest.mark.parametrize(
+        "locale,region,derived_region",
+        [
+            ("en-US", None, "US"),
+            ("en-US", "IN", "IN"),
+            ("fr-FR", "FR", "FR"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "experiment_name, experiment_branch",
+        [
+            (None, None),  # No experiment
+            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "control"),
+            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "treatment"),
+        ],
+    )
+    async def test_thompson_sampling_behavior(
+        self,
+        topics,
+        engagement_backend,
+        experiment_name,
+        experiment_branch,
+        locale,
+        region,
+        derived_region,
+    ):
         """Test that Thompson sampling produces different orders and favors higher CTRs."""
         n_iterations = 20  # Increase to 2000 when changing Thompson sampling to ensure reliability
         past_id_orders = []
@@ -1020,7 +1046,13 @@ class TestCorpusApiRanking:
             for i in range(n_iterations):
                 response = await ac.post(
                     "/api/v1/curated-recommendations",
-                    json={"locale": "en-US", "topics": topics},
+                    json={
+                        "locale": locale,
+                        "region": region,
+                        "topics": topics,
+                        "experimentName": experiment_name,
+                        "experimentBranch": experiment_branch,
+                    },
                 )
                 data = response.json()
                 corpus_items = data["data"]
@@ -1030,8 +1062,15 @@ class TestCorpusApiRanking:
                 assert id_order not in past_id_orders, f"Duplicate order at iteration {i}."
                 past_id_orders.append(id_order)  # a list of lists with all orders
 
+                engagement_region = (
+                    derived_region
+                    if experiment_name == ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value
+                    and experiment_branch == "treatment"
+                    else None
+                )
                 engagements = [
-                    engagement_backend.get(item["scheduledCorpusItemId"]) for item in corpus_items
+                    engagement_backend.get(item["scheduledCorpusItemId"], region=engagement_region)
+                    for item in corpus_items
                 ]
                 ctr_by_rank = [
                     (rank, e.click_count / e.impression_count)
