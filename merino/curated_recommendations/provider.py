@@ -114,7 +114,7 @@ class CuratedRecommendationsProvider:
     def rank_recommendations(
         self,
         recommendations: list[CuratedRecommendation],
-        surface_id: str,
+        surface_id: ScheduledSurfaceId,
         topics: list[Topic | str] | None = None,
     ) -> list[CuratedRecommendation]:
         """Apply additional processing to the list of recommendations
@@ -157,7 +157,7 @@ class CuratedRecommendationsProvider:
     def rank_need_to_know_recommendations(
         self,
         recommendations: list[CuratedRecommendation],
-        surface_id: str,
+        surface_id: ScheduledSurfaceId,
         topics: list[Topic | str] | None = None,
     ):
         """Apply additional processing to the list of recommendations

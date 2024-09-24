@@ -258,8 +258,8 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
     def generate_recommendations(length: int) -> list[CuratedRecommendation]:
         """Create dummy recommendations for the tests below.
 
-        @param length:
-        @return:
+        @param length: how many recommendations are needed for a test
+        @return: A list of curated recommendations
         """
         recs = []
         for i in range(length):
@@ -301,7 +301,8 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
         # Call the method
         provider = CuratedRecommendationsProvider(
-            mocker.patch.object(CorpusBackend), mocker.patch.object(EngagementBackend)
+            mocker.patch.object(CorpusBackend, "__init__", return_value=None),
+            mocker.patch.object(EngagementBackend, "__init__", return_value=None),
         )
         general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
             recommendations, surface_id, topics
@@ -336,7 +337,8 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
         # Call the method
         provider = CuratedRecommendationsProvider(
-            mocker.patch.object(CorpusBackend), mocker.patch.object(EngagementBackend)
+            mocker.patch.object(CorpusBackend, "__init__", return_value=None),
+            mocker.patch.object(EngagementBackend, "__init__", return_value=None),
         )
         general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
             recommendations, surface_id, topics
