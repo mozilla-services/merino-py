@@ -120,7 +120,7 @@ class CuratedRecommendationsProvider:
             and request.experimentBranch == "treatment"
         )
 
-    def process_recommendations(
+    def rank_recommendations(
         self,
         recommendations: list[CuratedRecommendation],
         surface_id: str,
@@ -128,6 +128,13 @@ class CuratedRecommendationsProvider:
     ):
         """Apply additional processing to the list of recommendations
         received from Curated Corpus API
+
+        @param recommendations: A list of CuratedRecommendation objects as they are received
+        from Curated Corpus API
+        @param surface_id: a string identifier for the New Tab surface these recommendations
+        are intended for
+        @param request: The full API request with all the data
+        @return: A re-ranked list of curated recommendations
         """
         # 3. Apply Thompson sampling to rank recommendations by engagement
         recommendations = thompson_sampling(
@@ -161,6 +168,44 @@ class CuratedRecommendationsProvider:
 
         return recommendations
 
+    def rank_need_to_know_recommendations(
+        self,
+        recommendations: list[CuratedRecommendation],
+        surface_id: ScheduledSurfaceId,
+        request: CuratedRecommendationsRequest,
+    ):
+        """Apply additional processing to the list of recommendations
+        received from Curated Corpus API, splitting the list in two:
+        the "general" feed and the "need to know" feed
+
+        @param recommendations: A list of CuratedRecommendation objects as they are received
+        from Curated Corpus API
+        @param surface_id: a string identifier for the New Tab surface these recommendations
+        are intended for
+        @param request: The full API request with all the data
+        @return: A tuple with two re-ranked lists of curated recommendations and a localised
+        title for the "Need to Know" heading
+        """
+        # TODO: the "need_to_know" items will be filtered by a corpus item property `isTimeSensitive`.
+        #  While data is being prepared, take the bottom ten items from the original recommendations
+        #  list and use them instead for the prototype.
+        general_feed = recommendations[:-10]
+        need_to_know_feed = recommendations[-10:]
+
+        # Apply all the additional re-ranking and processing steps
+        # to the main recommendations feed
+        general_feed = self.rank_recommendations(general_feed, surface_id, request)
+
+        # Provide a localized title string for the "Need to Know" feed.
+        localized_titles = {
+            ScheduledSurfaceId.NEW_TAB_EN_US: "Need to Know",
+            ScheduledSurfaceId.NEW_TAB_EN_GB: "Need to Know in British English",
+            ScheduledSurfaceId.NEW_TAB_DE_DE: "Need to Know auf Deutsch",
+        }
+        title = localized_titles[surface_id]
+
+        return general_feed, need_to_know_feed, title
+
     async def fetch(
         self, curated_recommendations_request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:
@@ -182,6 +227,8 @@ class CuratedRecommendationsProvider:
             for rank, item in enumerate(corpus_items)
         ]
 
+        # For users in the "Need to Know" experiment, separate recommendations into
+        # two different feeds: the "general" feed and the "need to know" feed.
         if (
             curated_recommendations_request.feeds
             and "need_to_know" in curated_recommendations_request.feeds
@@ -191,25 +238,10 @@ class CuratedRecommendationsProvider:
                 ScheduledSurfaceId.NEW_TAB_EN_GB,
                 ScheduledSurfaceId.NEW_TAB_DE_DE,
             )
-        ):  # TODO: the "need_to_know" items will be filtered by a corpus item property `isTimeSensitive`.
-            #  While data is being prepared, take the bottom ten items from the original recommendations
-            #  list and use them instead for the prototype.
-            general_feed = recommendations[:-10]
-            need_to_know_feed = recommendations[-10:]
-
-            # Apply all the additional re-ranking and processing steps
-            # to the main recommendations feed
-            general_feed = self.process_recommendations(
-                general_feed, surface_id, curated_recommendations_request
+        ):
+            general_feed, need_to_know_feed, title = self.rank_need_to_know_recommendations(
+                recommendations, surface_id, curated_recommendations_request
             )
-
-            # Provide a localized title string for the "Need to Know" feed.
-            localized_titles = {
-                ScheduledSurfaceId.NEW_TAB_EN_US: "Need to Know",
-                ScheduledSurfaceId.NEW_TAB_EN_GB: "Need to Know in British English",
-                ScheduledSurfaceId.NEW_TAB_DE_DE: "Need to Know auf Deutsch",
-            }
-            title = localized_titles[surface_id]
 
             return CuratedRecommendationsResponse(
                 recommendedAt=self.time_ms(),
@@ -220,10 +252,11 @@ class CuratedRecommendationsProvider:
                     ),
                 ),
             )
+        # For everyone else, return the "classic" New Tab list of recommendations
         else:
             # Apply all the additional re-ranking and processing steps
             # to the main recommendations feed
-            recommendations = self.process_recommendations(
+            recommendations = self.rank_recommendations(
                 recommendations, surface_id, curated_recommendations_request
             )
 
