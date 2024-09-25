@@ -186,6 +186,7 @@ async def test_curated_recommendations():
             excerpt="Consider this pantry staple your secret ingredient for making more flavorful desserts.",
             topic=Topic.FOOD,
             publisher="Epicurious",
+            isTimeSensitive=False,
             imageUrl="https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg",
             receivedRank=0,
         )
