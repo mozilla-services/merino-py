@@ -42,10 +42,6 @@ disabled_providers = []
 # MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
 default_suggestions_response_ttl_sec = 300 # 5 mins
 
-# MERINO_RUNTIME__DEFAULT_LANGUAGES
-default_languages  = ["de", "en-CA", "en-GB", "en-US", "es-ES", "fr", "it", "pl", "pt-BR", "ru", "zh-CN"]
-
-
 [default.logging]
 # MERINO_LOGGING__LEVEL
 # Minimum level of logs that should be reported.
@@ -291,6 +287,9 @@ metrics_sampling_rate = 0.75
 
 # MERINO_ACCUWEATHER__PARTNER_CODE - partner_code (Not currently defined)
 # The partner code to append to URLs in the current conditions and forecast responses.
+
+# MERINO_ACCUWEATHER__DEFAULT_LANGUAGES
+default_languages  = ["de", "en-CA", "en-GB", "en-US", "es-ES", "fr", "it", "pl", "pt-BR", "ru", "zh-CN"]
 
 
 [default.providers.adm]

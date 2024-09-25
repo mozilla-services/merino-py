@@ -1,5 +1,6 @@
 """Merino V1 API"""
 
+import functools
 import logging
 from asyncio import Task
 from collections import Counter
@@ -67,8 +68,8 @@ CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
 )
 async def suggest(
     request: Request,
-    q: str = Query(max_length=QUERY_CHARACTER_MAX),
-    accept_language: str = Header(None),
+    q: Annotated[str, Query(max_length=QUERY_CHARACTER_MAX)],
+    accept_language: Annotated[str | None, Header()] = None,
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
@@ -175,7 +176,6 @@ async def suggest(
         search_from = default_providers
 
     lookups: list[Task] = []
-    _ = get_accepted_languages(accept_language)
     for p in search_from:
         srequest = SuggestionRequest(
             query=p.normalize_query(q),
@@ -345,20 +345,23 @@ async def curated_content(
     return await provider.fetch(curated_recommendations_request)
 
 
+@functools.lru_cache(maxsize=1000)
 def get_accepted_languages(languages: str) -> list[str]:
     """Retrieve filtered list of languages that merino accepts."""
     if languages:
-        if languages == "*":
-            return ["en-US"]
-        default_languages = settings.runtime.default_languages
-        result = []
-        for lang in languages.split(","):
-            parts = lang.strip().split(";q=")
-            language = parts[0]
-            quality = float(parts[1]) if len(parts) > 1 else 1.0  # Default q-value is 1.0
-            result.append((language, quality))
+        try:
+            if languages == "*":
+                return ["en-US"]
+            result = []
+            for lang in languages.split(","):
+                parts = lang.strip().split(";q=")
+                language = parts[0]
+                quality = float(parts[1]) if len(parts) > 1 else 1.0  # Default q-value is 1.0
+                result.append((language, quality))
 
-        # Sort by quality in descending order
-        result.sort(key=lambda x: x[1], reverse=True)
-        return [language[0] for language in result if language[0] in default_languages]
-    return []
+            # Sort by quality in descending order
+            result.sort(key=lambda x: x[1], reverse=True)
+            return [language[0] for language in result]
+        except Exception:
+            return ["en-US"]
+    return ["en-US"]

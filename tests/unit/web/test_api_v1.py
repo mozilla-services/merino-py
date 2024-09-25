@@ -12,11 +12,11 @@ from merino.web.api_v1 import get_accepted_languages
 @pytest.mark.parametrize(
     ("languages", "expected_filtered_languages"),
     [
-        ("invalid", []),
         ("*", ["en-US"]),
         ("en-US", ["en-US"]),
-        ("en-US,en;q=0.5", ["en-US"]),
-        ("en-US,en;q=0.9,invalid;q=0.8,zh-CN;q=0.7", ["en-US", "zh-CN"]),
+        ("en-US,en;q=0.5", ["en-US", "en"]),
+        ("en-US,en;q=0.9,zh-CN;q=0.7", ["en-US", "en", "zh-CN"]),
+        ("en-CA;q=invalid", ["en-US"]),
     ],
 )
 def test_get_accepted_languages(languages, expected_filtered_languages):
