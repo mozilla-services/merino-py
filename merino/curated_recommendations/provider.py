@@ -133,7 +133,7 @@ class CuratedRecommendationsProvider:
         from Curated Corpus API
         @param surface_id: a string identifier for the New Tab surface these recommendations
         are intended for
-        @param topics: Optionally, a list of user-preferred topics
+        @param request: The full API request with all the data
         @return: A re-ranked list of curated recommendations
         """
         # 3. Apply Thompson sampling to rank recommendations by engagement
@@ -172,7 +172,7 @@ class CuratedRecommendationsProvider:
         self,
         recommendations: list[CuratedRecommendation],
         surface_id: ScheduledSurfaceId,
-        topics: list[Topic | str] | None = None,
+        request: CuratedRecommendationsRequest,
     ):
         """Apply additional processing to the list of recommendations
         received from Curated Corpus API, splitting the list in two:
@@ -182,7 +182,7 @@ class CuratedRecommendationsProvider:
         from Curated Corpus API
         @param surface_id: a string identifier for the New Tab surface these recommendations
         are intended for
-        @param topics: Optionally, a list of user-preferred topics
+        @param request: The full API request with all the data
         @return: A tuple with two re-ranked lists of curated recommendations and a localised
         title for the "Need to Know" heading
         """
@@ -194,7 +194,7 @@ class CuratedRecommendationsProvider:
 
         # Apply all the additional re-ranking and processing steps
         # to the main recommendations feed
-        general_feed = self.rank_recommendations(general_feed, surface_id, topics)
+        general_feed = self.rank_recommendations(general_feed, surface_id, request)
 
         # Provide a localized title string for the "Need to Know" feed.
         localized_titles = {
@@ -240,7 +240,7 @@ class CuratedRecommendationsProvider:
             )
         ):
             general_feed, need_to_know_feed, title = self.rank_need_to_know_recommendations(
-                recommendations, surface_id, curated_recommendations_request.topics
+                recommendations, surface_id, curated_recommendations_request
             )
 
             return CuratedRecommendationsResponse(

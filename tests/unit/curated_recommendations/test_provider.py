@@ -21,6 +21,7 @@ from merino.curated_recommendations.protocol import (
     MAX_TILE_ID,
     MIN_TILE_ID,
     CuratedRecommendation,
+    CuratedRecommendationsRequest,
 )
 
 
@@ -273,6 +274,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
                 excerpt="is failing english",
                 topic=random.choice(list(Topic)),
                 publisher="cohens",
+                isTimeSensitive=False,
                 imageUrl=HttpUrl("https://placehold.co/600x400/"),
             )
 
@@ -303,6 +305,23 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
         return provider
 
+    @staticmethod
+    def mock_curated_recommendations_request(
+        mocker: MockerFixture,
+    ) -> CuratedRecommendationsRequest:
+        """Mock the necessary components of CuratedRecommendationsRequest.
+
+        @param mocker: MockerFixture
+        @return: A mocked CuratedRecommendationsRequest
+        """
+        # Mock the __init__ methods to prevent actual initialization
+        mocker.patch.object(CuratedRecommendationsRequest, "__init__", return_value=None)
+
+        # Create and return the mocked provider instance
+        request = CuratedRecommendationsRequest(locale=Locale.EN_US)
+
+        return request
+
     def test_rank_need_to_know_recommendations(self, mocker: MockerFixture):
         """Test the main flow of logic in the function
 
@@ -311,12 +330,12 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         # Create mock recommendations
         recommendations = self.generate_recommendations(100)
 
-        # Define the surface ID and topics
+        # Define the surface ID
         surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
-        topics = ["business", "food"]
 
-        # Instantiate the mocked class
+        # Instantiate the mocked classes
         provider = self.mock_curated_recommendations_provider(mocker)
+        request = self.mock_curated_recommendations_request(mocker)
 
         # Mock the rank_recommendations method separately to make sure it returns
         # the correct number of results, and we can make sure it was called later
@@ -328,7 +347,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
         # Call the method
         general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
-            recommendations, surface_id, topics
+            recommendations, surface_id, request
         )
 
         # Verify that the recommendations were split correctly
@@ -337,7 +356,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         assert len(need_to_know_feed) == 10  # The last 10 items
 
         # Verify that the rank_recommendations method was called with the correct arguments
-        rank_recommendations.assert_called_once_with(general_feed, surface_id, topics)
+        rank_recommendations.assert_called_once_with(general_feed, surface_id, request)
 
         # Verify that the localized title is correct
         assert title == "Need to Know"
@@ -350,16 +369,16 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         # Create mock recommendations
         recommendations = self.generate_recommendations(20)
 
-        # Define the surface ID and topics
+        # Define the surface ID
         surface_id = ScheduledSurfaceId.NEW_TAB_DE_DE
-        topics = None
 
-        # Instantiate the mocked class
+        # Instantiate the mocked classes
         provider = self.mock_curated_recommendations_provider(mocker)
+        request = self.mock_curated_recommendations_request(mocker)
 
         # Call the method
         general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
-            recommendations, surface_id, topics
+            recommendations, surface_id, request
         )
 
         # Verify that the title is correct for the German New Tab surface
