@@ -173,7 +173,11 @@ def get_max_total_retry_duration() -> float:
 
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
 @pytest.mark.asyncio
-async def test_curated_recommendations():
+@pytest.mark.parametrize(
+    "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
+    range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
+)
+async def test_curated_recommendations(repeat):
     """Test the curated recommendations endpoint response is as expected."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
         # expected recommendation with topic = None
@@ -189,6 +193,7 @@ async def test_curated_recommendations():
             isTimeSensitive=False,
             imageUrl="https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg",
             receivedRank=0,
+            tileId=301455520317019,
         )
         # Mock the endpoint
         response = await fetch_en_us(ac)
@@ -210,10 +215,14 @@ async def test_curated_recommendations():
         for i, item in enumerate(corpus_items):
             assert item["receivedRank"] == i
 
-        # The first recommendation is guaranteed to be at the top because it has much higher
-        # CTR (100%) than any other recommendations.
-        actual_recommendation = CuratedRecommendation(**corpus_items[0])
-        assert actual_recommendation == expected_recommendation
+        # The expected recommendation has 100% CTR, and is always present in the response.
+        # In 97% of cases it's the first recommendation, but due to the random nature of
+        # Thompson sampling this is not always the case.
+        assert any(
+            CuratedRecommendation(**item)
+            == expected_recommendation.model_copy(update={"receivedRank": i})
+            for i, item in enumerate(corpus_items)
+        )
 
 
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
@@ -712,6 +721,10 @@ class TestCuratedRecommendationsRequestParameters:
             ),
         ],
     )
+    @pytest.mark.parametrize(
+        "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
+        range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
+    )
     async def test_curated_recommendations_invalid_topic_return_200(
         self,
         topics,
@@ -721,6 +734,7 @@ class TestCuratedRecommendationsRequestParameters:
         fixture_request_data,
         corpus_http_client,
         caplog,
+        repeat,
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
@@ -1029,6 +1043,10 @@ class TestCorpusApiRanking:
             (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "treatment"),
         ],
     )
+    @pytest.mark.parametrize(
+        "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
+        range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
+    )
     async def test_thompson_sampling_behavior(
         self,
         topics,
@@ -1038,9 +1056,10 @@ class TestCorpusApiRanking:
         locale,
         region,
         derived_region,
+        repeat,
     ):
         """Test that Thompson sampling produces different orders and favors higher CTRs."""
-        n_iterations = 20  # Increase to 2000 when changing Thompson sampling to ensure reliability
+        n_iterations = 20
         past_id_orders = []
 
         async with AsyncClient(app=app, base_url="http://test") as ac:

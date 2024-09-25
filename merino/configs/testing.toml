@@ -68,6 +68,18 @@ backend = "test"
 bucket_name = "test-bucket"
 gcp_project = "test-project"
 
+[testing.curated_recommendations.rankers.thompson_sampling]
+# MERINO__CURATED_RECOMMENDATIONS__RANKERS__THOMPSON_SAMPLING__TEST_REPEAT_COUNT
+# The number of times that Thompson sampling tests are repeated. When you change how recommendations
+# are ranked, put the config below in configs/testing.local.toml to ensure that tests pass reliably:
+#     ```
+#    [testing]
+#    dynaconf_merge = true
+#
+#    [testing.curated_recommendations.rankers.thompson_sampling]
+#    test_repeat_count = 100
+#    ```
+test_repeat_count = 1
 
 [testing.curated_recommendations.corpus_api]
 
