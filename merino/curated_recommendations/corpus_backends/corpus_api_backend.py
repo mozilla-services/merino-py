@@ -234,6 +234,7 @@ class CorpusApiBackend(CorpusBackend):
                     excerpt
                     topic
                     publisher
+                    isTimeSensitive
                     imageUrl
                   }
                 }

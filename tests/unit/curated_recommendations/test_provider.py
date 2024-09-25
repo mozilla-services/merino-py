@@ -205,6 +205,7 @@ class TestCuratedRecommendationTileId:
         "excerpt": "Example Excerpt",
         "topic": Topic.CAREER,
         "publisher": "Example Publisher",
+        "isTimeSensitive": False,
         "imageUrl": HttpUrl("https://example.com/image.jpg"),
         "receivedRank": 1,
     }

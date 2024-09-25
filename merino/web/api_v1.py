@@ -339,6 +339,13 @@ async def curated_content(
     - `topics`: [Optional] A list of preferred [topics][curated-topics-doc].
     - `feeds`: [Optional] A list of additional data feeds. Currently, accepts
        only one value: 'need_to_know'.
+    - `experimentName`: [Optional] The Nimbus New Tab experiment name that the user is enrolled in.
+        When an experiment _only_ requires backend changes, this allows us to run the experiments
+        without waiting on the Firefox release cycle. When an experiment _does_ require changes in
+        Firefox, other parameters can be changed, such as we did for topic preferences. The API
+        schema does not list all New Tab experiments; only those which the backend uses to change
+        its behavior. Any string or null is accepted.
+    - `experimentBranch`: [Optional] The branch name of the Nimbus experiment that the user is in.
 
     [curated-topics-doc]: https://mozilla-hub.atlassian.net/wiki/x/LQDaMg
     """

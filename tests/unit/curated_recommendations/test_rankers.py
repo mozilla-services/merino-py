@@ -26,6 +26,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
                 excerpt="is failing english",
                 topic=random.choice(list(Topic)),
                 publisher="cohens",
+                isTimeSensitive=False,
                 imageUrl=HttpUrl("https://placehold.co/600x400/"),
             )
 
@@ -185,6 +186,7 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
                 excerpt="is failing english",
                 topic=topic,
                 publisher="cohens",
+                isTimeSensitive=False,
                 imageUrl=HttpUrl("https://placehold.co/600x400/"),
             )
             recs.append(rec)
