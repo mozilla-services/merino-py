@@ -1,13 +1,17 @@
 """CLI commands for the navigational_suggestions module"""
 
+import base64
 import json
 import logging
+from hashlib import md5
 from typing import Optional
 
 import typer
+from httpx import URL
 
 from merino.config import settings as config
 from merino.content_handler.gcp_uploader import GcsUploader
+from merino.jobs.navigational_suggestions.domain_category_mapping import DOMAIN_MAPPING
 from merino.jobs.navigational_suggestions.domain_data_downloader import (
     DomainDataDownloader,
 )
@@ -21,6 +25,7 @@ from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
 from merino.jobs.navigational_suggestions.utils import (
     update_top_picks_with_firefox_favicons,
 )
+from merino.providers.base import Category
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 
 logger = logging.getLogger(__name__)
@@ -84,17 +89,32 @@ def _construct_top_picks(
     result = []
     for index, domain in enumerate(domain_data):
         if domain_metadata[index]["url"]:
+            domain_url = domain_metadata[index]["url"]
             result.append(
                 {
                     "rank": domain["rank"],
                     "domain": domain_metadata[index]["domain"],
                     "categories": domain["categories"],
-                    "url": domain_metadata[index]["url"],
+                    "serp_categories": _get_serp_categories(domain_url),
+                    "url": domain_url,
                     "title": domain_metadata[index]["title"],
                     "icon": favicons[index],
                 }
             )
     return {"domains": result}
+
+
+def _get_serp_categories(domain_url: str | None) -> list[int] | None:
+    if domain_url:
+        url = URL(domain_url)
+        md5_hash = md5(url.host.encode(), usedforsecurity=False).digest()
+        return [
+            category.value
+            for category in DOMAIN_MAPPING.get(
+                base64.b64encode(md5_hash).decode(), [Category.Inconclusive]
+            )
+        ]
+    return None
 
 
 def _write_xcom_file(xcom_data: dict):

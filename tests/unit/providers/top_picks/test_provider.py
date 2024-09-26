@@ -13,7 +13,7 @@ from pytest import LogCaptureFixture
 
 from merino.config import settings
 from merino.exceptions import BackendError
-from merino.providers.base import BaseSuggestion
+from merino.providers.base import BaseSuggestion, Category
 from merino.providers.top_picks.backends.filemanager import GetFileResultCode
 from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend
@@ -257,6 +257,7 @@ async def test_query(
             is_sponsored=False,
             icon="",
             score=settings.providers.top_picks.score,
+            categories=[Category.Inconclusive],
         )
     ]
 
@@ -309,6 +310,7 @@ async def test_short_domain_query(
             is_sponsored=False,
             icon="",
             score=settings.providers.top_picks.score,
+            categories=[Category.Inconclusive],
         )
     ]
     await top_picks.initialize()
@@ -360,6 +362,7 @@ async def test_short_domain_query_similars_longer_than_domain(
             is_sponsored=False,
             icon="",
             score=settings.providers.top_picks.score,
+            categories=[Category.Inconclusive],
         )
     ]
     await top_picks.initialize()

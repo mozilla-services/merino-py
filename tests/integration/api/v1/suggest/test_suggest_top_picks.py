@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from pydantic import HttpUrl
 
 from merino.config import settings
+from merino.providers.base import Category
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider, Suggestion
 from tests.integration.api.v1.types import Providers
@@ -77,6 +78,7 @@ def test_top_picks_query(client: TestClient, query: str) -> None:
             is_sponsored=False,
             score=settings.providers.top_picks.score,
             icon="",
+            categories=[Category.Inconclusive],
         )
     ]
 
@@ -125,6 +127,7 @@ def test_top_picks_short_domains(client: TestClient, query: str, title: str, url
             is_sponsored=False,
             icon="",
             score=settings.providers.top_picks.score,
+            categories=[Category.Inconclusive],
         )
     ]
 

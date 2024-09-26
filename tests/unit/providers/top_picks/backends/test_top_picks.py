@@ -65,6 +65,7 @@ def fixture_blob_json() -> str:
                     "url": "https://example.com",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": ["exxample", "exampple", "eexample"],
                 },
                 {
@@ -74,6 +75,7 @@ def fixture_blob_json() -> str:
                     "url": "https://firefox.com",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": [
                         "firefoxx",
                         "foyerfox",
@@ -89,6 +91,7 @@ def fixture_blob_json() -> str:
                     "url": "https://mozilla.org/en-US/",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": ["mozzilla", "mozila"],
                 },
                 {
@@ -98,6 +101,7 @@ def fixture_blob_json() -> str:
                     "url": "https://abc.test",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": ["aa", "ab", "acb", "acbc", "aecbc"],
                 },
                 {
@@ -107,6 +111,7 @@ def fixture_blob_json() -> str:
                     "url": "https://baddomain.test",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": ["bad", "badd"],
                 },
             ]
