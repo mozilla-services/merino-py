@@ -274,7 +274,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
                 excerpt="is failing english",
                 topic=random.choice(list(Topic)),
                 publisher="cohens",
-                isTimeSensitive=False,
+                isTimeSensitive=random.choice([True, False]),
                 imageUrl=HttpUrl("https://placehold.co/600x400/"),
             )
 
@@ -342,7 +342,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         rank_recommendations = mocker.patch.object(
             CuratedRecommendationsProvider,
             "rank_recommendations",
-            return_value=recommendations[:-10],
+            return_value=[r for r in recommendations if not r.isTimeSensitive],
         )
 
         # Call the method
@@ -351,12 +351,19 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         )
 
         # Verify that the recommendations were split correctly
-        # TODO: update these assertions when the recs are split on the `isTimeSensitive` property
-        assert len(general_feed) == 90  # The first 90 items
-        assert len(need_to_know_feed) == 10  # The last 10 items
+        assert len(need_to_know_feed) == len([r for r in recommendations if r.isTimeSensitive])
+        assert len(general_feed) == len([r for r in recommendations if not r.isTimeSensitive])
 
         # Verify that the rank_recommendations method was called with the correct arguments
         rank_recommendations.assert_called_once_with(general_feed, surface_id, request)
+
+        # Verify that receivedRank values were reset from zero for the General feed
+        for i, rec in enumerate(need_to_know_feed):
+            assert i == rec.receivedRank
+
+        # Verify that receivedRank values were reset from zero for the Need to Know feed
+        for i, rec in enumerate(need_to_know_feed):
+            assert i == rec.receivedRank
 
         # Verify that the localized title is correct
         assert title == "Need to Know"
