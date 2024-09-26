@@ -81,6 +81,21 @@
                 "bad",
                 "badd"
             ]
+        },
+        {
+            "rank": 6,
+            "title": "Pineapple",
+            "domain": "pineapple",
+            "url": "https://pineapple.test",
+            "icon": "",
+            "categories": [
+                "web-browser"
+            ],
+            "similars": [
+                "pineappel",
+                "pinnapple",
+                "pineapple"
+            ]
         }
     ]
 }

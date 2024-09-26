@@ -105,7 +105,7 @@ class TopPicksBackend:
                 "is_top_pick": True,
                 "is_sponsored": False,
                 "icon": record["icon"],
-                "categories": record["serp_categories"],
+                "categories": record.get("serp_categories"),
             }
 
             # Insertion of short keys between Firefox limit of 2 and self.query_char_limit - 1
