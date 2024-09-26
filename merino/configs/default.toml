@@ -76,6 +76,12 @@ client_variant_max = 10
 # in this case the total string length count for client variants.
 client_variant_character_max = 100
 
+
+# MERINO_WEB__API__V1__HEADER_CHARACTER_MAX
+# A non-negative integer that limits the string character length of a given header string,
+# in this case the total string length count for accept-language.
+header_character_max = 100
+
 # MERINO_WEB__API__V1__QUERY_CHARACTER_MAX
 # A non-negative integer that limits the string character length of a given query string,
 # in this case the total string length count for the suggestion query.

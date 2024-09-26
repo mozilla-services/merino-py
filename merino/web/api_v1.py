@@ -58,6 +58,7 @@ DEFAULT_CACHE_CONTROL_TTL: int = settings.runtime.default_suggestions_response_t
 CLIENT_VARIANT_MAX = settings.web.api.v1.client_variant_max
 QUERY_CHARACTER_MAX = settings.web.api.v1.query_character_max
 CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
+HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 
 
 @router.get(
