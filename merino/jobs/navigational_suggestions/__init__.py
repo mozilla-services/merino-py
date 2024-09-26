@@ -104,7 +104,7 @@ def _construct_top_picks(
     return {"domains": result}
 
 
-def _get_serp_categories(domain_url: str | None):
+def _get_serp_categories(domain_url: str | None) -> list[int] | None:
     if domain_url:
         url = URL(domain_url)
         md5_hash = md5(url.host.encode(), usedforsecurity=False).digest()
@@ -114,6 +114,7 @@ def _get_serp_categories(domain_url: str | None):
                 base64.b64encode(md5_hash).decode(), [Category.Inconclusive]
             )
         ]
+    return None
 
 
 def _write_xcom_file(xcom_data: dict):
