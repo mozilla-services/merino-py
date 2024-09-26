@@ -346,7 +346,7 @@ async def curated_content(
 
 
 @functools.lru_cache(maxsize=1000)
-def get_accepted_languages(languages: str) -> list[str]:
+def get_accepted_languages(languages: str | None) -> list[str]:
     """Retrieve filtered list of languages that merino accepts."""
     if languages:
         try:
