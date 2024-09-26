@@ -1,5 +1,6 @@
 """Merino V1 API"""
 
+import functools
 import logging
 from asyncio import Task
 from collections import Counter
@@ -8,7 +9,7 @@ from itertools import chain
 from typing import Annotated
 
 from asgi_correlation_id.context import correlation_id
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Header
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse
 from starlette.requests import Request
@@ -57,6 +58,7 @@ DEFAULT_CACHE_CONTROL_TTL: int = settings.runtime.default_suggestions_response_t
 CLIENT_VARIANT_MAX = settings.web.api.v1.client_variant_max
 QUERY_CHARACTER_MAX = settings.web.api.v1.query_character_max
 CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
+HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 
 
 @router.get(
@@ -67,7 +69,8 @@ CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
 )
 async def suggest(
     request: Request,
-    q: str = Query(max_length=QUERY_CHARACTER_MAX),
+    q: Annotated[str, Query(max_length=QUERY_CHARACTER_MAX)],
+    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
@@ -350,3 +353,25 @@ async def curated_content(
     [curated-topics-doc]: https://mozilla-hub.atlassian.net/wiki/x/LQDaMg
     """
     return await provider.fetch(curated_recommendations_request)
+
+
+@functools.lru_cache(maxsize=1000)
+def get_accepted_languages(languages: str | None) -> list[str]:
+    """Retrieve filtered list of languages that merino accepts."""
+    if languages:
+        try:
+            if languages == "*":
+                return ["en-US"]
+            result = []
+            for lang in languages.split(","):
+                parts = lang.strip().split(";q=")
+                language = parts[0]
+                quality = float(parts[1]) if len(parts) > 1 else 1.0  # Default q-value is 1.0
+                result.append((language, quality))
+
+            # Sort by quality in descending order
+            result.sort(key=lambda x: x[1], reverse=True)
+            return [language[0] for language in result]
+        except Exception:
+            return ["en-US"]
+    return ["en-US"]
