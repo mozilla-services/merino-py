@@ -138,13 +138,13 @@ def test_get_utm_source_return_none(scheduled_surface_id):
 @pytest.mark.parametrize(
     ("scheduled_surface_id", "expected_utm_source"),
     [
-        (ScheduledSurfaceId.NEW_TAB_EN_US, "pocket-newtab-en-us"),
-        (ScheduledSurfaceId.NEW_TAB_EN_GB, "pocket-newtab-en-gb"),
-        (ScheduledSurfaceId.NEW_TAB_EN_INTL, "pocket-newtab-en-intl"),
-        (ScheduledSurfaceId.NEW_TAB_DE_DE, "pocket-newtab-de-de"),
-        (ScheduledSurfaceId.NEW_TAB_ES_ES, "pocket-newtab-es-es"),
-        (ScheduledSurfaceId.NEW_TAB_FR_FR, "pocket-newtab-fr-fr"),
-        (ScheduledSurfaceId.NEW_TAB_IT_IT, "pocket-newtab-it-it"),
+        (ScheduledSurfaceId.NEW_TAB_EN_US, "firefox-newtab-en-us"),
+        (ScheduledSurfaceId.NEW_TAB_EN_GB, "firefox-newtab-en-gb"),
+        (ScheduledSurfaceId.NEW_TAB_EN_INTL, "firefox-newtab-en-intl"),
+        (ScheduledSurfaceId.NEW_TAB_DE_DE, "firefox-newtab-de-de"),
+        (ScheduledSurfaceId.NEW_TAB_ES_ES, "firefox-newtab-es-es"),
+        (ScheduledSurfaceId.NEW_TAB_FR_FR, "firefox-newtab-fr-fr"),
+        (ScheduledSurfaceId.NEW_TAB_IT_IT, "firefox-newtab-it-it"),
     ],
 )
 def test_get_utm_source(scheduled_surface_id, expected_utm_source):
@@ -160,26 +160,26 @@ def test_get_utm_source(scheduled_surface_id, expected_utm_source):
         # add new utm_source
         (
             "https://getpocket.com/explore/item/example-article",
-            "pocket-newtab-en-us",
-            "https://getpocket.com/explore/item/example-article?utm_source=pocket-newtab-en-us",
+            "firefox-newtab-en-us",
+            "https://getpocket.com/explore/item/example-article?utm_source=firefox-newtab-en-us",
         ),
         # add new utm_source with another query param present in url
         (
             "https://getpocket.com/explore/item/example-article?foo=bar",
-            "pocket-newtab-en-gb",
-            "https://getpocket.com/explore/item/example-article?foo=bar&utm_source=pocket-newtab-en-gb",
+            "firefox-newtab-en-gb",
+            "https://getpocket.com/explore/item/example-article?foo=bar&utm_source=firefox-newtab-en-gb",
         ),
         # replace old utm_source with new one
         (
             "https://getpocket.com/explore/item/example-article?utm_source=old_source",
-            "pocket-newtab-en-intl",
-            "https://getpocket.com/explore/item/example-article?utm_source=pocket-newtab-en-intl",
+            "firefox-newtab-en-intl",
+            "https://getpocket.com/explore/item/example-article?utm_source=firefox-newtab-en-intl",
         ),
         # replace old utm_source with new one & when another query param present in url
         (
             "https://getpocket.com/explore/item/example-article?utm_source=old_source&foo=bar",
-            "pocket-newtab-de-de",
-            "https://getpocket.com/explore/item/example-article?utm_source=pocket-newtab-de-de&foo=bar",
+            "firefox-newtab-de-de",
+            "https://getpocket.com/explore/item/example-article?utm_source=firefox-newtab-de-de&foo=bar",
         ),
         # pass empty utm_source (when no mapping is found)
         (
