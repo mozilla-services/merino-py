@@ -26,7 +26,7 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
     Engagement,
 )
-from merino.curated_recommendations.protocol import CuratedRecommendation
+from merino.curated_recommendations.protocol import CuratedRecommendation, ExperimentName
 from merino.main import app
 from merino.metrics import get_metrics_client
 
@@ -97,9 +97,10 @@ def fixture_mock_corpus_backend(corpus_http_client: AsyncMock) -> CorpusApiBacke
 class MockEngagementBackend(EngagementBackend):
     """Mock class implementing the protocol for EngagementBackend."""
 
-    def get(self, scheduled_corpus_item_id: str) -> Engagement | None:
-        """Return random click and impression counts based on the scheduled corpus id."""
-        rng = np.random.default_rng(seed=int.from_bytes(scheduled_corpus_item_id.encode()))
+    def get(self, scheduled_corpus_item_id: str, region: str | None = None) -> Engagement | None:
+        """Return random click and impression counts based on the scheduled corpus id and region."""
+        seed_input = "_".join(filter(None, [scheduled_corpus_item_id, region]))
+        rng = np.random.default_rng(seed=int.from_bytes(seed_input.encode()))
 
         if scheduled_corpus_item_id == "50f86ebe-3f25-41d8-bd84-53ead7bdc76e":
             # Give the first item 100% click-through rate to put it on top with high certainty.
@@ -154,6 +155,13 @@ async def fetch_en_us(client: AsyncClient) -> Response:
     )
 
 
+async def fetch_en_us_with_need_to_know(client: AsyncClient) -> Response:
+    """Make a curated recommendations request with en-US locale and feeds=["need_to_know"]"""
+    return await client.post(
+        "/api/v1/curated-recommendations", json={"locale": "en-US", "feeds": ["need_to_know"]}
+    )
+
+
 def get_max_total_retry_duration() -> float:
     """Compute the maximum retry duration for the exponential backoff and jitter strategy."""
     initial = settings.curated_recommendations.corpus_api.retry_wait_initial_seconds
@@ -165,7 +173,11 @@ def get_max_total_retry_duration() -> float:
 
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
 @pytest.mark.asyncio
-async def test_curated_recommendations():
+@pytest.mark.parametrize(
+    "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
+    range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
+)
+async def test_curated_recommendations(repeat):
     """Test the curated recommendations endpoint response is as expected."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
         # expected recommendation with topic = None
@@ -178,8 +190,10 @@ async def test_curated_recommendations():
             excerpt="Consider this pantry staple your secret ingredient for making more flavorful desserts.",
             topic=Topic.FOOD,
             publisher="Epicurious",
+            isTimeSensitive=False,
             imageUrl="https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg",
             receivedRank=0,
+            tileId=301455520317019,
         )
         # Mock the endpoint
         response = await fetch_en_us(ac)
@@ -201,10 +215,62 @@ async def test_curated_recommendations():
         for i, item in enumerate(corpus_items):
             assert item["receivedRank"] == i
 
-        # The first recommendation is guaranteed to be at the top because it has much higher
-        # CTR (100%) than any other recommendations.
-        actual_recommendation = CuratedRecommendation(**corpus_items[0])
-        assert actual_recommendation == expected_recommendation
+        # The expected recommendation has 100% CTR, and is always present in the response.
+        # In 97% of cases it's the first recommendation, but due to the random nature of
+        # Thompson sampling this is not always the case.
+        assert any(
+            CuratedRecommendation(**item)
+            == expected_recommendation.model_copy(update={"receivedRank": i})
+            for i, item in enumerate(corpus_items)
+        )
+
+
+@freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
+@pytest.mark.asyncio
+async def test_curated_recommendations_with_need_to_know_feed():
+    """Test the curated recommendations endpoint response is as expected
+    when requesting the 'need_to_know' feed.
+    """
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        # Mock the endpoint
+        response = await fetch_en_us_with_need_to_know(ac)
+        data = response.json()
+
+        # Check if the mock response is valid
+        assert response.status_code == 200
+
+        corpus_items = data["data"]
+
+        # Assert total of 70 items returned (minus the ten items marked as `isTimeSensitive` in the data
+        assert len(corpus_items) == 70
+
+        # Assert all corpus_items have expected fields populated.
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["publisher"] for item in corpus_items)
+        assert all(item["imageUrl"] for item in corpus_items)
+        assert all(item["tileId"] for item in corpus_items)
+
+        # Assert that receivedRank equals 0, 1, 2, ...
+        for i, item in enumerate(corpus_items):
+            assert item["receivedRank"] == i
+
+        # Assert that the `need_to_know` feed has a localized title returned
+        title = data["feeds"]["need_to_know"]["title"]
+        assert title == "Need to Know"
+
+        # Assert that the `need_to_know` feed has 10 items
+        feed = data["feeds"]["need_to_know"]["recommendations"]
+        assert len(feed) == 10
+
+        # Assert all `need_to_know` stories have expected fields populated.
+        assert all(item["url"] for item in feed)
+        assert all(item["publisher"] for item in feed)
+        assert all(item["imageUrl"] for item in feed)
+        assert all(item["tileId"] for item in feed)
+
+        # Make sure the top item in the `need_to_know` feed is the one we expect
+        # (the top item in the list with `isTimeSensitive`=true)
+        assert feed[0]["title"] == "A Hot Drink on a Hot Day Can Cool You Down"
 
 
 @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
@@ -669,6 +735,10 @@ class TestCuratedRecommendationsRequestParameters:
             ),
         ],
     )
+    @pytest.mark.parametrize(
+        "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
+        range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
+    )
     async def test_curated_recommendations_invalid_topic_return_200(
         self,
         topics,
@@ -678,6 +748,7 @@ class TestCuratedRecommendationsRequestParameters:
         fixture_request_data,
         corpus_http_client,
         caplog,
+        repeat,
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
@@ -970,16 +1041,52 @@ class TestCorpusApiRanking:
             None,
         ],
     )
-    async def test_thompson_sampling_behavior(self, topics, engagement_backend):
+    @pytest.mark.parametrize(
+        "locale,region,derived_region",
+        [
+            ("en-US", None, "US"),
+            ("en-US", "IN", "IN"),
+            ("fr-FR", "FR", "FR"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "experiment_name, experiment_branch",
+        [
+            (None, None),  # No experiment
+            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "control"),
+            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "treatment"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
+        range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
+    )
+    async def test_thompson_sampling_behavior(
+        self,
+        topics,
+        engagement_backend,
+        experiment_name,
+        experiment_branch,
+        locale,
+        region,
+        derived_region,
+        repeat,
+    ):
         """Test that Thompson sampling produces different orders and favors higher CTRs."""
-        n_iterations = 20  # Increase to 2000 when changing Thompson sampling to ensure reliability
+        n_iterations = 20
         past_id_orders = []
 
         async with AsyncClient(app=app, base_url="http://test") as ac:
             for i in range(n_iterations):
                 response = await ac.post(
                     "/api/v1/curated-recommendations",
-                    json={"locale": "en-US", "topics": topics},
+                    json={
+                        "locale": locale,
+                        "region": region,
+                        "topics": topics,
+                        "experimentName": experiment_name,
+                        "experimentBranch": experiment_branch,
+                    },
                 )
                 data = response.json()
                 corpus_items = data["data"]
@@ -989,8 +1096,15 @@ class TestCorpusApiRanking:
                 assert id_order not in past_id_orders, f"Duplicate order at iteration {i}."
                 past_id_orders.append(id_order)  # a list of lists with all orders
 
+                engagement_region = (
+                    derived_region
+                    if experiment_name == ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value
+                    and experiment_branch == "treatment"
+                    else None
+                )
                 engagements = [
-                    engagement_backend.get(item["scheduledCorpusItemId"]) for item in corpus_items
+                    engagement_backend.get(item["scheduledCorpusItemId"], region=engagement_region)
+                    for item in corpus_items
                 ]
                 ctr_by_rank = [
                     (rank, e.click_count / e.impression_count)

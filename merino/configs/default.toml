@@ -42,7 +42,6 @@ disabled_providers = []
 # MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
 default_suggestions_response_ttl_sec = 300 # 5 mins
 
-
 [default.logging]
 # MERINO_LOGGING__LEVEL
 # Minimum level of logs that should be reported.
@@ -76,6 +75,12 @@ client_variant_max = 10
 # A non-negative integer that limits the string character length of a given query string,
 # in this case the total string length count for client variants.
 client_variant_character_max = 100
+
+
+# MERINO_WEB__API__V1__HEADER_CHARACTER_MAX
+# A non-negative integer that limits the string character length of a given header string,
+# in this case the total string length count for accept-language.
+header_character_max = 100
 
 # MERINO_WEB__API__V1__QUERY_CHARACTER_MAX
 # A non-negative integer that limits the string character length of a given query string,
@@ -288,6 +293,9 @@ metrics_sampling_rate = 0.75
 
 # MERINO_ACCUWEATHER__PARTNER_CODE - partner_code (Not currently defined)
 # The partner code to append to URLs in the current conditions and forecast responses.
+
+# MERINO_ACCUWEATHER__DEFAULT_LANGUAGES
+default_languages  = ["de", "en-CA", "en-GB", "en-US", "es-ES", "fr", "it", "pl", "pt-BR", "ru", "zh-CN"]
 
 
 [default.providers.adm]

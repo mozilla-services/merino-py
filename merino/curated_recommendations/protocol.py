@@ -47,6 +47,16 @@ class Locale(str, Enum):
         return Locale._value2member_map_
 
 
+@unique
+class ExperimentName(str, Enum):
+    """List of Nimbus experiment names on New Tab. This list is NOT meant to be exhaustive.
+    This is simply intended to make it easier to reference experiment names in this codebase,
+    when Merino needs to change behavior depending on the experimentName request parameter.
+    """
+
+    REGION_SPECIFIC_CONTENT_EXPANSION = "new-tab-region-specific-content-expansion"
+
+
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
 # value of a Javascript number can be found using `Number.MAX_SAFE_INTEGER`. which is 2^53 - 1
 # because it uses a 64-bit IEEE 754 float.
@@ -93,6 +103,12 @@ class CuratedRecommendationsRequest(BaseModel):
     region: str | None = None
     count: int = 100
     topics: list[Topic | str] | None = None
+    feeds: list[str] | None = None
+    # Firefox sends the name and branch for Nimbus experiments on the "pocketNewtab" feature:
+    # https://searchfox.org/mozilla-central/source/browser/components/newtab/lib/DiscoveryStreamFeed.sys.mjs
+    # Allow any string value or null, because ExperimentName is not meant to be an exhaustive list.
+    experimentName: ExperimentName | str | None = None
+    experimentBranch: str | None = None
 
     @field_validator("topics", mode="before")
     def validate_topics(cls, values):
@@ -120,8 +136,24 @@ class CuratedRecommendationsRequest(BaseModel):
         return []
 
 
+class CuratedRecommendationsBucket(BaseModel):
+    """A ranked list of curated recommendations"""
+
+    recommendations: list[CuratedRecommendation]
+    title: str | None = None
+
+
+class CuratedRecommendationsFeed(BaseModel):
+    """Multiple lists of curated recommendations for experiments.
+    Currently limited to the 'need_to_know' feed only.
+    """
+
+    need_to_know: CuratedRecommendationsBucket
+
+
 class CuratedRecommendationsResponse(BaseModel):
     """Response schema for a list of curated recommendations"""
 
     recommendedAt: int
     data: list[CuratedRecommendation]
+    feeds: CuratedRecommendationsFeed | None = None

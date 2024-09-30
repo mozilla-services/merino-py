@@ -1,80 +1,111 @@
 {
-    "domains": [
-        {
-            "rank": 1,
-            "title": "Example",
-            "domain": "example",
-            "url": "https://example.com",
-            "icon": "",
-            "categories": [
-                "web-browser"
-            ],
-            "similars": [
-                "exxample",
-                "exampple",
-                "eexample"
-            ]
-        },
-        {
-            "rank": 2,
-            "title": "Firefox",
-            "domain": "firefox",
-            "url": "https://firefox.com",
-            "icon": "",
-            "categories": [
-                "web-browser"
-            ],
-            "similars": [
-                "firefoxx",
-                "foyerfox",
-                "fiirefox",
-                "firesfox",
-                "firefoxes"
-            ]
-        },
-        {
-            "rank": 3,
-            "title": "Mozilla",
-            "domain": "mozilla",
-            "url": "https://mozilla.org/en-US/",
-            "icon": "",
-            "categories": [
-                "web-browser"
-            ],
-            "similars": [
-                "mozzilla",
-                "mozila"
-            ]
-        },
-        {
-            "rank": 4,
-            "title": "Abc",
-            "domain": "abc",
-            "url": "https://abc.test",
-            "icon": "",
-            "categories": [
-                "web-browser"
-            ],
-            "similars": [
-                "aa",
-                "ab",
-                "acb"
-            ]
-        },
-        {
-            "rank": 5,
-            "title": "Banana",
-            "domain": "banana",
-            "url": "https://banana.test",
-            "icon": "",
-            "categories": [
-                "web-browser"
-            ],
-            "similars": [
-                "banan",
-                "bannana",
-                "banana"
-            ]
-        }
-    ]
+  "domains": [
+    {
+      "rank": 1,
+      "title": "Example",
+      "domain": "example",
+      "url": "https://example.com",
+      "icon": "",
+      "categories": [
+        "web-browser"
+      ],
+      "similars": [
+        "exxample",
+        "exampple",
+        "eexample"
+      ],
+      "serp_categories": [
+        0
+      ]
+    },
+    {
+      "rank": 2,
+      "title": "Firefox",
+      "domain": "firefox",
+      "url": "https://firefox.com",
+      "icon": "",
+      "categories": [
+        "web-browser"
+      ],
+      "similars": [
+        "firefoxx",
+        "foyerfox",
+        "fiirefox",
+        "firesfox",
+        "firefoxes"
+      ],
+      "serp_categories": [
+        0
+      ]
+    },
+    {
+      "rank": 3,
+      "title": "Mozilla",
+      "domain": "mozilla",
+      "url": "https://mozilla.org/en-US/",
+      "icon": "",
+      "categories": [
+        "web-browser"
+      ],
+      "similars": [
+        "mozzilla",
+        "mozila"
+      ],
+      "serp_categories": [
+        4,
+        18
+      ]
+    },
+    {
+      "rank": 4,
+      "title": "Abc",
+      "domain": "abc",
+      "url": "https://abc.test",
+      "icon": "",
+      "categories": [
+        "web-browser"
+      ],
+      "similars": [
+        "aa",
+        "ab",
+        "acb"
+      ],
+      "serp_categories": [
+        0
+      ]
+    },
+    {
+      "rank": 5,
+      "title": "Banana",
+      "domain": "banana",
+      "url": "https://banana.test",
+      "icon": "",
+      "categories": [
+        "web-browser"
+      ],
+      "similars": [
+        "banan",
+        "bannana",
+        "banana"
+      ],
+      "serp_categories": [
+        0
+      ]
+    },
+    {
+      "rank": 6,
+      "title": "Pineapple",
+      "domain": "pineapple",
+      "url": "https://pineapple.test",
+      "icon": "",
+      "categories": [
+        "web-browser"
+      ],
+      "similars": [
+        "pineappel",
+        "pinnapple",
+        "pineapple"
+      ]
+    }
+  ]
 }

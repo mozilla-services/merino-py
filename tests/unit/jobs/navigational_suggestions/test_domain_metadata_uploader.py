@@ -34,6 +34,7 @@ def fixture_json_domain_data() -> str:
                     "url": "https://example.com",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": ["exxample", "exampple", "eexample"],
                 },
                 {
@@ -43,6 +44,7 @@ def fixture_json_domain_data() -> str:
                     "url": "https://firefox.com",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [18],
                     "similars": [
                         "firefoxx",
                         "foyerfox",
@@ -58,6 +60,7 @@ def fixture_json_domain_data() -> str:
                     "url": "https://mozilla.org/en-US/",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [18],
                     "similars": ["mozzilla", "mozila"],
                 },
                 {
@@ -67,6 +70,7 @@ def fixture_json_domain_data() -> str:
                     "url": "https://abc.test",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": ["aa", "ab", "acb", "acbc", "aecbc"],
                 },
                 {
@@ -76,6 +80,7 @@ def fixture_json_domain_data() -> str:
                     "url": "https://baddomain.test",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": ["bad", "badd"],
                 },
                 {
@@ -85,6 +90,7 @@ def fixture_json_domain_data() -> str:
                     "url": "https://sub.subdomain.test",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": [
                         "sub",
                     ],
@@ -107,6 +113,7 @@ def fixture_json_domain_data_latest() -> str:
                     "url": "https://testexample.com",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": ["exxample", "exampple", "eexample"],
                 },
                 {
@@ -116,6 +123,7 @@ def fixture_json_domain_data_latest() -> str:
                     "url": "https://test.firefox.com",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": [
                         "firefoxx",
                         "foyerfox",
@@ -131,6 +139,7 @@ def fixture_json_domain_data_latest() -> str:
                     "url": "https://mozilla.org/en-US/",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": ["mozzilla", "mozila"],
                 },
                 {
@@ -140,6 +149,7 @@ def fixture_json_domain_data_latest() -> str:
                     "url": "https://abc.test",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": ["aa", "ab", "acb", "acbc", "aecbc"],
                 },
                 {
@@ -149,6 +159,7 @@ def fixture_json_domain_data_latest() -> str:
                     "url": "https://baddomain.test",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": ["bad", "badd"],
                 },
                 {
@@ -158,6 +169,7 @@ def fixture_json_domain_data_latest() -> str:
                     "url": "https://sub.subdomain.test",
                     "icon": "",
                     "categories": ["web-browser"],
+                    "serp_categories": [0],
                     "similars": [
                         "sub",
                     ],

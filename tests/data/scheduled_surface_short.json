@@ -10,6 +10,7 @@
             "excerpt": "Consider this pantry staple your secret ingredient for making more flavorful desserts.",
             "topic": "FOOD",
             "publisher": "Epicurious",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg"
           }
         },
@@ -21,6 +22,7 @@
             "excerpt": "A rigorous experiment revealed that on a hot, dry day, drinking a hot beverage can help your body stay cool.",
             "topic": "FOOD",
             "publisher": "Smithsonian Magazine",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/968a6566-df7a-4f7d-aefd-8678853544b1.jpeg"
           }
         },
@@ -32,6 +34,7 @@
             "excerpt": "Juneteenth isn’t the “other” Independence Day, it is THE Independence Day.",
             "topic": "CAREER",
             "publisher": "The Marginalian",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/87fd6901-5bf5-4b12-8bde-24b86be79003.jpeg"
           }
         },
@@ -43,6 +46,7 @@
             "excerpt": "Anne Helen Petersen and Jessica Calarco discuss how mothers are experiencing and responding to pandemic-related disruptions in their normal routines.",
             "topic": "PARENTING",
             "publisher": "Culture Study",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/3a4a6ed6-a1df-497d-8d31-f777534806ac.jpeg"
           }
         },
@@ -54,6 +58,7 @@
             "excerpt": "Babies as young as six months respond to and enjoy being in groups with other babies.",
             "topic": "PARENTING",
             "publisher": "The Conversation",
+            "isTimeSensitive": false,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b9182b66-5398-4fe2-a95d-8b9a46e5a05d.jpeg"
           }
         }
