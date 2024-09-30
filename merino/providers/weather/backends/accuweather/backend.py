@@ -390,18 +390,17 @@ class AccuweatherBackend:
               current_condition, forecast
             -  `skip_location_key` A boolean to determine whether location was looked up.
         """
-        location, current, forecast, ttl = False, False, False, False
+        location, current, forecast = False, False, False
         match cached_data:
             case []:
                 pass
             # the last variable is ttl but is omitted here since we don't need to use but need
             # it to satisfy this match case
-            case [location_cached, current_cached, forecast_cached, ttl_cached]:
-                location, current, forecast, ttl = (
+            case [location_cached, current_cached, forecast_cached, _]:
+                location, current, forecast = (
                     location_cached is not None,
                     current_cached is not None,
                     forecast_cached is not None,
-                    ttl_cached is not None,
                 )
             case _:  # pragma: no cover
                 pass
