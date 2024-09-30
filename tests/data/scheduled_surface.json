@@ -22,7 +22,7 @@
             "excerpt": "A rigorous experiment revealed that on a hot, dry day, drinking a hot beverage can help your body stay cool.",
             "topic": "FOOD",
             "publisher": "Smithsonian Magazine",
-            "isTimeSensitive": false,
+            "isTimeSensitive": true,
             "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/968a6566-df7a-4f7d-aefd-8678853544b1.jpeg"
           }
         },
@@ -46,7 +46,7 @@
             "excerpt": "Anne Helen Petersen and Jessica Calarco discuss how mothers are experiencing and responding to pandemic-related disruptions in their normal routines.",
             "topic": "PARENTING",
             "publisher": "Culture Study",
-            "isTimeSensitive": false,
+            "isTimeSensitive": true,
             "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/3a4a6ed6-a1df-497d-8d31-f777534806ac.jpeg"
           }
         },
@@ -82,7 +82,7 @@
             "excerpt": "We explain the biological changes that begin with your morning tea or coffee.",
             "topic": "HEALTH_FITNESS",
             "publisher": "The Telegraph",
-            "isTimeSensitive": false,
+            "isTimeSensitive": true,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2aaffb04-80e0-4008-95af-7c65a213d191.jpeg"
           }
         },
@@ -94,7 +94,7 @@
             "excerpt": "These aren’t your run-of-the-mill skin-care tricks. Here, the experts share the rules they’ve learned and recommended throughout their careers.",
             "topic": "HEALTH_FITNESS",
             "publisher": "Allure",
-            "isTimeSensitive": false,
+            "isTimeSensitive": true,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/27386d38-3513-485c-8872-6f3d2c0ec5c8.jpeg"
           }
         },
@@ -130,7 +130,7 @@
             "excerpt": "In the age of Amazon and e-books, these bookstores have faced more challenges than ever, but many have been able to persevere and remain treasured parts of their communities.",
             "topic": "TRAVEL",
             "publisher": "Architectural Digest",
-            "isTimeSensitive": false,
+            "isTimeSensitive": true,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/52ebb1c9-3834-4378-812f-0bfcd2529357.jpeg"
           }
         },
@@ -154,7 +154,7 @@
             "excerpt": "We’ve gone from denying Botox to celebrating our face-lifts. Welcome to the new era of living out loud.",
             "topic": "HEALTH_FITNESS",
             "publisher": "Town & Country Magazine",
-            "isTimeSensitive": false,
+            "isTimeSensitive": true,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/da9b38c6-2e48-4938-bf87-85a60bf85190.jpeg"
           }
         },
@@ -190,7 +190,7 @@
             "excerpt": "Here’s how we’ve defined adolescence throughout history - and why it’s time for a new category.",
             "topic": "EDUCATION",
             "publisher": "BBC Future",
-            "isTimeSensitive": false,
+            "isTimeSensitive": true,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1f11fb0d-3f0c-46a7-a667-cc2fcea6334e.jpeg"
           }
         },
@@ -466,7 +466,7 @@
             "excerpt": "Getting philosophical with the menswear’s favorite Instagram and TikTok star, Albert Muzquiz.",
             "topic": "ENTERTAINMENT",
             "publisher": "Esquire",
-            "isTimeSensitive": false,
+            "isTimeSensitive": true,
             "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/jm-esquire-edgy-albert-11-001-664fbbbeca45e.jpg?crop=1.00xw:0.334xh;0,0.0326xh&resize=640:*"
           }
         },
@@ -862,7 +862,7 @@
             "excerpt": "Fuel up on coffee at artist Takashi Murakami’s retro cafe, immerse yourself in a new digital art museum, and take a meditative walk in the heart of a forest.",
             "topic": "TRAVEL",
             "publisher": "Afar",
-            "isTimeSensitive": false,
+            "isTimeSensitive": true,
             "imageUrl": "https://afar.brightspotcdn.com/dims4/default/4e20695/2147483647/strip/true/crop/3000x1500+0+0/resize/1440x720!/quality/90/?url=https%3A%2F%2Fk3-prod-afar-media.s3.us-west-2.amazonaws.com%2Fbrightspot%2Fe4%2F9f%2F3e7a0c934fa8aca7da05146bc497%2Fgeoff-haggray-tokyo-lede.jpg"
           }
         },
@@ -946,7 +946,7 @@
             "excerpt": "The baffling, contradictory demands of being female in the party of Donald Trump.",
             "topic": "POLITICS",
             "publisher": "New York Magazine",
-            "isTimeSensitive": false,
+            "isTimeSensitive": true,
             "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f0069eea-68dd-4536-be2e-bda6f1d87102.jpeg"
           }
         },

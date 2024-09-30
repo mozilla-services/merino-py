@@ -186,11 +186,15 @@ class CuratedRecommendationsProvider:
         @return: A tuple with two re-ranked lists of curated recommendations and a localised
         title for the "Need to Know" heading
         """
-        # TODO: the "need_to_know" items will be filtered by a corpus item property `isTimeSensitive`.
-        #  While data is being prepared, take the bottom ten items from the original recommendations
-        #  list and use them instead for the prototype.
-        general_feed = recommendations[:-10]
-        need_to_know_feed = recommendations[-10:]
+        # Filter out all time-sensitive recommendations into the need_to_know feed
+        need_to_know_feed = [r for r in recommendations if r.isTimeSensitive]
+
+        # Update received_rank for need_to_know recommendations
+        for rank, rec in enumerate(need_to_know_feed):
+            rec.receivedRank = rank
+
+        # Place the remaining recommendations in the general feed
+        general_feed = [r for r in recommendations if r not in need_to_know_feed]
 
         # Apply all the additional re-ranking and processing steps
         # to the main recommendations feed

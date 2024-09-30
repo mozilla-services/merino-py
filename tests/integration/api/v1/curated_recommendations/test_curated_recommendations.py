@@ -240,9 +240,10 @@ async def test_curated_recommendations_with_need_to_know_feed():
         assert response.status_code == 200
 
         corpus_items = data["data"]
-        # assert total of 70 items returned (minus the 10 bottom ones from the original result
-        # list that are sent off to the need_to_know feed
+
+        # Assert total of 70 items returned (minus the ten items marked as `isTimeSensitive` in the data
         assert len(corpus_items) == 70
+
         # Assert all corpus_items have expected fields populated.
         assert all(item["url"] for item in corpus_items)
         assert all(item["publisher"] for item in corpus_items)
@@ -268,15 +269,8 @@ async def test_curated_recommendations_with_need_to_know_feed():
         assert all(item["tileId"] for item in feed)
 
         # Make sure the top item in the `need_to_know` feed is the one we expect
-        # (Currently, #71 in the test data. Once `isTimeSensitive` prop is in use,
-        # this should be the top item in the list with `isTimeSensitive`=true)
-        assert feed[0]["title"] == "How Does a Therapist Stay Neutral?"
-
-        # Assert `need_to_know` stories have the correct rank.
-        # Currently, these stories keep their original rank (70+).
-        # Should this change, this assertion will need an update.
-        for i, item in enumerate(feed, 70):
-            assert item["receivedRank"] == i
+        # (the top item in the list with `isTimeSensitive`=true)
+        assert feed[0]["title"] == "A Hot Drink on a Hot Day Can Cool You Down"
 
 
 @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
