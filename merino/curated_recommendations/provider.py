@@ -113,11 +113,21 @@ class CuratedRecommendationsProvider:
             return None
 
     @staticmethod
-    def is_enrolled_in_regional_engagement(request: CuratedRecommendationsRequest) -> bool:
-        """Return True if Thompson sampling should use regional engagement (treatment)"""
+    def is_enrolled_in_experiment(
+        request: CuratedRecommendationsRequest, name: str, branch: str
+    ) -> bool:
+        """Return True if the request's experimentName matches name or "optin-" + name, and the
+        experimentBranch matches the given branch. The optin- prefix signifies a forced enrollment.
+        """
         return (
-            request.experimentName == ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value
-            and request.experimentBranch == "treatment"
+            request.experimentName == name or request.experimentName == f"optin-{name}"
+        ) and request.experimentBranch == branch
+
+    @staticmethod
+    def is_enrolled_in_regional_engagement(request: CuratedRecommendationsRequest) -> bool:
+        """Return True if Thompson sampling should use regional engagement (treatment)."""
+        return CuratedRecommendationsProvider.is_enrolled_in_experiment(
+            request, ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "treatment"
         )
 
     def rank_recommendations(
