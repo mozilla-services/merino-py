@@ -1050,11 +1050,12 @@ class TestCorpusApiRanking:
         ],
     )
     @pytest.mark.parametrize(
-        "experiment_name, experiment_branch",
+        "experiment_name, experiment_branch, regional_ranking_is_expected",
         [
-            (None, None),  # No experiment
-            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "control"),
-            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "treatment"),
+            (None, None, False),  # No experiment
+            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "control", False),
+            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "treatment", True),
+            (f"optin-{ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value}", "treatment", True),
         ],
     )
     @pytest.mark.parametrize(
@@ -1070,6 +1071,7 @@ class TestCorpusApiRanking:
         locale,
         region,
         derived_region,
+        regional_ranking_is_expected,
         repeat,
     ):
         """Test that Thompson sampling produces different orders and favors higher CTRs."""
@@ -1096,12 +1098,7 @@ class TestCorpusApiRanking:
                 assert id_order not in past_id_orders, f"Duplicate order at iteration {i}."
                 past_id_orders.append(id_order)  # a list of lists with all orders
 
-                engagement_region = (
-                    derived_region
-                    if experiment_name == ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value
-                    and experiment_branch == "treatment"
-                    else None
-                )
+                engagement_region = derived_region if regional_ranking_is_expected else None
                 engagements = [
                     engagement_backend.get(item["scheduledCorpusItemId"], region=engagement_region)
                     for item in corpus_items
