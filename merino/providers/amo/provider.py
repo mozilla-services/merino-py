@@ -65,7 +65,7 @@ class Provider(BaseProvider):
         backend: AmoBackend,
         keywords: dict[SupportedAddon, set[str]],
         name: str = "amo",
-        enabled_by_default: bool = True,
+        enabled_by_default: bool = False,
         min_chars=settings.providers.amo.min_chars,
         score=settings.providers.amo.score,
         resync_interval_sec=settings.providers.amo.resync_interval_sec,
