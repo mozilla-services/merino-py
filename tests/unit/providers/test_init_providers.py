@@ -23,6 +23,7 @@ from tests.types import FilterCaplogFixture
 
 DISABLED_PROVIDERS = settings.runtime.disabled_providers
 
+
 @pytest.mark.asyncio
 async def test_init_providers() -> None:
     """Test for the `init_providers` method of the Merino providers module."""
@@ -30,8 +31,10 @@ async def test_init_providers() -> None:
 
     providers, default_providers = get_providers()
 
-    # a disabled provider should not be initialized 
-    assert providers.keys() == {provider.value for provider in ProviderType if provider.value not in DISABLED_PROVIDERS}
+    # a disabled provider should not be initialized
+    assert providers.keys() == {
+        provider.value for provider in ProviderType if provider.value not in DISABLED_PROVIDERS
+    }
 
     assert {provider.name for provider in default_providers} == {
         provider.name for provider in providers.values() if provider.enabled_by_default
@@ -84,4 +87,6 @@ async def test_shutdown_providers(
 
     providers = records[1].__dict__["providers"]
 
-    assert set(providers) == {provider.value for provider in ProviderType if provider.value not in DISABLED_PROVIDERS}
+    assert set(providers) == {
+        provider.value for provider in ProviderType if provider.value not in DISABLED_PROVIDERS
+    }
