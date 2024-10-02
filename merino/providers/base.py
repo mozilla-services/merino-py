@@ -16,6 +16,7 @@ class SuggestionRequest(BaseModel):
     query: str
     geolocation: Location
     request_type: str | None = None
+    region: str | None = None
 
 
 class Category(Enum):

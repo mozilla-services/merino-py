@@ -71,12 +71,16 @@ class GeolocationMiddleware:
         request = Request(scope=scope)
         record = None
         ip_address = CLIENT_IP_OVERRIDE or (request.client.host or "" if request.client else "")
+        logger.debug(f"XXXadw geolocation.py GeolocationMiddleware ip_address={ip_address}")
         try:
             record = reader.city(ip_address)
         except ValueError:
             logger.warning("Invalid IP address for geolocation parsing")
         except AddressNotFoundError:
+            logger.debug(f"XXXadw geolocation.py GeolocationMiddleware AddressNotFoundError")
             pass
+
+        logger.debug(f"XXXadw geolocation.py GeolocationMiddleware record={record}")
 
         scope[ScopeKey.GEOLOCATION] = (
             Location(

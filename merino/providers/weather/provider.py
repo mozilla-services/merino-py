@@ -105,6 +105,8 @@ class Provider(BaseProvider):
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
 
+        logger.warning("***XXXadw provider.py query")
+
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
                 match srequest.request_type:
@@ -116,8 +118,12 @@ class Provider(BaseProvider):
 #                             weather_report = await self.backend.get_weather_report(
 #                                 geolocation, locations[0].key
 #                             )
+#                         weather_report = await self.backend.get_weather_report(
+#                             geolocation, location_search_term=srequest.query
+#                         )
+                        logger.warning("***XXXadw provider.py query location_weather")
                         weather_report = await self.backend.get_weather_report(
-                            geolocation, location_search_term=srequest.query
+                            geolocation, region=srequest.region, city=srequest.query
                         )
                     case "location":
                         location_completions = await self.backend.get_location_completion(

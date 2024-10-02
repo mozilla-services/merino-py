@@ -68,6 +68,7 @@ CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
 async def suggest(
     request: Request,
     q: str = Query(max_length=QUERY_CHARACTER_MAX),
+    region: str | None = Query(default=None, max_length=QUERY_CHARACTER_MAX),
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
@@ -186,6 +187,7 @@ async def suggest(
     for p in search_from:
         srequest = SuggestionRequest(
             query=p.normalize_query(q),
+            region=p.normalize_query(region),
             geolocation=request.scope[ScopeKey.GEOLOCATION],
             request_type=request_type,
         )

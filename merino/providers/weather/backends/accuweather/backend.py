@@ -481,25 +481,39 @@ class AccuweatherBackend:
         }
 
     async def get_weather_report(
-        self, geolocation: Location, location_key: str | None = None, location_search_term: str | None = None
+#         self, geolocation: Location, location_key: str | None = None, location_search_term: str | None = None
+        self, geolocation: Location, location_key: str | None = None, region: str | None = None, city: str | None = None
     ) -> WeatherReport | None:
         """Get weather report either via location key or geolocation."""
+        logger.debug(f"XXXadw get_weather_report, location_key={location_key} region={region} city={city}")
         if location_key:
             return await self.get_weather_report_with_location_key(location_key)
-        if location_search_term:
-            return await self.get_weather_report_with_location_search_term(geolocation, location_search_term)
+        if city:
+            logger.debug(f"XXXadw get_weather_report, got city")
+            return await self.get_weather_report_with_location_search_term(geolocation, region, city)
+        logger.debug(f"XXXadw get_weather_report, get_weather_report_with_geolocation geolocation={geolocation}")
         return await self.get_weather_report_with_geolocation(geolocation)
 
     #XXXadw
-    async def get_weather_report_with_location_search_term(self, geolocation, search_term) -> WeatherReport | None:
+#     async def get_weather_report_with_location_search_term(self, geolocation, search_term) -> WeatherReport | None:
+    async def get_weather_report_with_location_search_term(self, geolocation, region, city) -> WeatherReport | None:
         """Get weather information from AccuWeather."""
-        locations = await self.get_location_completion(geolocation, search_term)
-        if not locations:
+#         locations = await self.get_location_completion(geolocation, search_term)
+#         if not locations:
+#             return None
+#         # locations[1] has localized_name and country
+#         location = locations[0]
+#         return await self.get_weather_report_with_location_key(location.key, location.localized_name)
+# #         return await self.get_weather_report_with_location_completion(locations[0])
+
+        # AccuweatherLocation
+        location = await self.get_location_by_geolocation("us", region, city)
+        if not location:
             return None
-        # locations[1] has localized_name and country
-        location = locations[0]
-        return await self.get_weather_report_with_location_key(location.key, location.localized_name)
-#         return await self.get_weather_report_with_location_completion(locations[0])
+        data = WeatherData(location, None, None, None)
+#         location = Location(key=location_key)
+#         return await self.make_weather_report(data, location, location_localized_name)
+        return await self.make_weather_report(data, geolocation)
 
 #     async def get_weather_report_with_location_key(self, location_key) -> WeatherReport | None:
     async def get_weather_report_with_location_key(self, location_key: str, location_localized_name: str | None = None) -> WeatherReport | None:
@@ -538,8 +552,10 @@ class AccuweatherBackend:
                         ),
                     ],
                 )
-                if cached_data:
-                    cached_data = [LOCATION_SENTINEL, *cached_data]
+                cached_data = [LOCATION_SENTINEL, *cached_data] if cached_data else []
+#                 if cached_data:
+#                     cached_data = [LOCATION_SENTINEL, *cached_data]
+#                 else
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.fetch-via-location-key.error")
@@ -783,17 +799,29 @@ class AccuweatherBackend:
         if country is None or city is None:
             return None
 
+#         #XXXadw this already does it...
+#         if region:
+#             url_path = self.url_cities_admin_path.format(country_code=country, admin_code=region)
+#             processor = process_location_response_with_country_and_region
+#         else:
+#             url_path = self.url_cities_path.format(country_code=country)
+#             processor = process_location_response_with_country
+
+#         logger.debug(f"XXXadw get_location_by_geolocation, region={region} city={city} url_path={url_path}")
+
+        url_path = self.url_cities_path.format(country_code=country)
+        processor = process_location_response_with_country
+        query = city
         if region:
-            url_path = self.url_cities_admin_path.format(country_code=country, admin_code=region)
-            processor = process_location_response_with_country_and_region
-        else:
-            url_path = self.url_cities_path.format(country_code=country)
-            processor = process_location_response_with_country
+            query += " " + region
+        logger.debug(f"XXXadw get_location_by_geolocation, region={region} city={city} query={query} url_path={url_path}")
+
 
         try:
             response: dict[str, Any] | None = await self.request_upstream(
                 url_path,
-                params=self.get_location_key_query_params(city),
+#                 params=self.get_location_key_query_params(city),
+                params=self.get_location_key_query_params(query),
                 request_type=RequestType.LOCATIONS,
                 process_api_response=processor,
                 cache_ttl_sec=self.cached_location_key_ttl_sec,
@@ -807,6 +835,8 @@ class AccuweatherBackend:
                 f"Unexpected error occurred when requesting location by geolocation from "
                 f"Accuweather: {exc.__class__.__name__}"
             ) from exc
+
+        logger.debug(f"XXXadw get_location_by_geolocation, response={response}")
 
         # record the region that gave a location
         if response and country and city:
@@ -944,6 +974,56 @@ class AccuweatherBackend:
             if response
             else None
         )
+
+
+
+    async def get_city_search(
+        self, geolocation: Location, search_term: str
+    ) -> list[LocationCompletion] | None:
+        """Fetch a list of locations from the Accuweather API given a search term and location."""
+        if not search_term:
+            return None
+
+        url_path = self.url_location_completion_path
+
+        # if unable to derive country code from client geolocation, remove it from the url
+        if not geolocation.country:
+            url_path = url_path.replace("/{country_code}", "")
+        else:
+            url_path = url_path.format(country_code=geolocation.country)
+
+        params = {
+            "q": search_term,
+            self.url_param_api_key: self.api_key,
+            LOCATION_COMPLETE_ALIAS_PARAM: LOCATION_COMPLETE_ALIAS_PARAM_VALUE,
+        }
+
+        try:
+            response: dict[str, Any] | None = await self.request_upstream(
+                url_path,
+                params=params,
+                request_type=RequestType.AUTOCOMPLETE,
+                process_api_response=process_location_completion_response,
+                should_cache=False,
+            )
+        except HTTPError as error:
+            raise AccuweatherError(
+                f"Failed to get location completion from Accuweather, http error occurred. "
+                f"url path: {url_path}, query: {search_term}"
+            ) from error
+        except Exception as exc:
+            raise AccuweatherError(
+                f"Unexpected error occurred when requesting location completion from "
+                f"Accuweather: {exc.__class__.__name__}"
+            ) from exc
+
+        return (
+            [LocationCompletion(**cast(dict[str, Any], item)) for item in response]
+            if response
+            else None
+        )
+
+
 
     async def shutdown(self) -> None:
         """Close out the cache during shutdown."""

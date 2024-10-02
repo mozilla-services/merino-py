@@ -10,6 +10,9 @@ from merino.config import settings
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
 PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class RequestType(StrEnum):
     """Enum for the request types to AccuWeather's API endpoints.
@@ -96,12 +99,14 @@ def process_location_response_with_country(response: Any) -> dict[str, Any] | No
     Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
     to reflect the change(s) here.
     """
+    logger.debug(f"XXXadw process_location_response_with_country, response={response}")
     match response:
         case [
             {
                 "Key": key,
                 "LocalizedName": localized_name,
             },
+            *_,
         ]:
             # `type: ignore` is necessary because mypy gets confused when
             # matching structures of type `Any` and reports the following
