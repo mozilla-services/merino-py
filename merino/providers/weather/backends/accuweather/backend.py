@@ -390,18 +390,17 @@ class AccuweatherBackend:
               current_condition, forecast
             -  `skip_location_key` A boolean to determine whether location was looked up.
         """
-        location, current, forecast, ttl = False, False, False, False
+        location, current, forecast = False, False, False
         match cached_data:
             case []:
                 pass
             # the last variable is ttl but is omitted here since we don't need to use but need
             # it to satisfy this match case
-            case [location_cached, current_cached, forecast_cached, ttl_cached]:
-                location, current, forecast, ttl = (
+            case [location_cached, current_cached, forecast_cached, _]:
+                location, current, forecast = (
                     location_cached is not None,
                     current_cached is not None,
                     forecast_cached is not None,
-                    ttl_cached is not None,
                 )
             case _:  # pragma: no cover
                 pass
@@ -426,14 +425,6 @@ class AccuweatherBackend:
             else "accuweather.cache.fetch.miss.forecasts",
             sample_rate=self.metrics_sample_rate,
         )
-
-        # We do a two-trip lookup on Redis. We first fetch the keys, and then, in a second lookup,
-        # check for the TTL for both keys. In a rare scenario, the TTL could have technically
-        # run out by the time we fetch it We register this with this counter.
-        if current and forecast and not ttl:
-            self.metrics_client.increment(
-                "accuweather.cache.fetch.miss.ttl", sample_rate=self.metrics_sample_rate
-            )
 
     def parse_cached_data(self, cached_data: list[bytes | None]) -> WeatherData:
         """Parse the weather data from cache.

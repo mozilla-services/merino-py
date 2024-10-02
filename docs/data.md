@@ -144,7 +144,6 @@ The weather provider records additional metrics.
 - `merino.providers.accuweather.query.cache.fetch.miss.locations` - A counter to measure the number of times weather location was not in the cache. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.fetch.miss.currentconditions` - A counter to measure the number of times a current conditions was not in the cache. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.fetch.miss.forecasts` - A counter to measure the number of times a forecast for a location was not in the cache. Sampled at 75%.
-- `merino.providers.accuweather.query.cache.fetch.miss.ttl` - A counter to measure the number of times a weather report was available but expired or had an invalid TTL. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.fetch.hit.{locations | currentconditions | forecasts}` - A counter to measure the number of times a
   requested value like a location or forecast is in the cache. We don't count TTL hits explicitly, just misses. Sampled at 75%.
 - `merino.providers.accuweather.query.backend.get` - A timer to measure the duration (in ms) of a

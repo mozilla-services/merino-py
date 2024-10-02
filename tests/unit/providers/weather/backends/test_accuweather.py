@@ -2122,10 +2122,6 @@ def test_add_partner_code(
             ("hit.locations", "fetch.miss.currentconditions", "fetch.miss.forecasts"),
         ),
         (
-            ["location", "current", "forecast", None],
-            ("hit.locations", "hit.currentconditions", "hit.forecasts", "fetch.miss.ttl"),
-        ),
-        (
             [None, None, None, None],
             (
                 "fetch.miss.locations",
@@ -2139,7 +2135,6 @@ def test_add_partner_code(
         "partial-hits-left",
         "partial-hits-right",
         "partial-hits-one",
-        "partial-miss-ttl",
         "cache-misses",
     ],
 )
