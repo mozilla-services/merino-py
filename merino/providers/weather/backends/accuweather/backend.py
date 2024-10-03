@@ -15,6 +15,7 @@ from httpx import AsyncClient, HTTPError, Response
 from pydantic import BaseModel, ValidationError
 
 from merino.cache.protocol import CacheAdapter
+from merino.config import settings
 from merino.exceptions import BackendError, CacheAdapterError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.accuweather.pathfinder import (
@@ -122,6 +123,7 @@ ALIAS_PARAM: str = "alias"
 ALIAS_PARAM_VALUE: str = "always"
 LOCATION_COMPLETE_ALIAS_PARAM: str = "includealiases"
 LOCATION_COMPLETE_ALIAS_PARAM_VALUE: str = "true"
+LANGUAGE_PARAM: str = "language"
 
 __all__ = [
     "AccuweatherBackend",
@@ -177,6 +179,14 @@ class WeatherDataType(Enum):
 
     CURRENT_CONDITIONS = 1
     FORECAST = 2
+
+
+def get_language(requested_languages) -> str | None:
+    """Get first language that is in default_languages."""
+    valid_languages = set(settings.accuweather.default_languages)
+    return next(
+        (language for language in requested_languages if language in valid_languages), None
+    )
 
 
 class AccuweatherBackend:
@@ -817,11 +827,13 @@ class AccuweatherBackend:
         )
 
     async def get_location_completion(
-        self, geolocation: Location, search_term: str
+        self, geolocation: Location, languages: list[str], search_term: str
     ) -> list[LocationCompletion] | None:
         """Fetch a list of locations from the Accuweather API given a search term and location."""
         if not search_term:
             return None
+
+        language = get_language(languages)
 
         url_path = self.url_location_completion_path
 
@@ -837,6 +849,9 @@ class AccuweatherBackend:
             LOCATION_COMPLETE_ALIAS_PARAM: LOCATION_COMPLETE_ALIAS_PARAM_VALUE,
         }
 
+        if language:
+            params[LANGUAGE_PARAM] = language
+
         try:
             response: dict[str, Any] | None = await self.request_upstream(
                 url_path,
@@ -848,7 +863,7 @@ class AccuweatherBackend:
         except HTTPError as error:
             raise AccuweatherError(
                 f"Failed to get location completion from Accuweather, http error occurred. "
-                f"url path: {url_path}, query: {search_term}"
+                f"url path: {url_path}, query: {search_term}, language: {language}"
             ) from error
         except Exception as exc:
             raise AccuweatherError(
