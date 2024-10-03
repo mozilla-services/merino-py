@@ -10,7 +10,7 @@ dynaconf_merge = true
 [testing.runtime]
 # Use a larger timeout for testing
 query_timeout_sec = 0.5
-disabled_providers = ["disabled_provider"]
+disabled_providers = ["disabled_provider", "amo"]
 
 
 [testing.metrics]

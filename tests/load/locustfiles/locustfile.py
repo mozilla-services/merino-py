@@ -354,7 +354,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=2)
+    @task(weight=0)
     def amo_suggestions(self) -> None:
         """Send a request for AMO. AMO matches work with matching the first keyword
         and then prefix on subsequent words.
@@ -399,7 +399,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=495)
+    @task(weight=497)
     def weather_suggestions(self) -> None:
         """Send multiple requests for Weather queries."""
         # Firefox will do local keyword matching to trigger weather suggestions
