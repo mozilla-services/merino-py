@@ -31,10 +31,10 @@ from merino.providers.weather.backends.accuweather import (
     CurrentConditionsWithTTL,
     ForecastWithTTL,
 )
-from merino.providers.weather.backends.accuweather.backend import get_language
 from merino.providers.weather.backends.accuweather.utils import (
     RequestType,
     add_partner_code,
+    get_language,
 )
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,

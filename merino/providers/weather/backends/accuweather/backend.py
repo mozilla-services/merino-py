@@ -15,7 +15,6 @@ from httpx import AsyncClient, HTTPError, Response
 from pydantic import BaseModel, ValidationError
 
 from merino.cache.protocol import CacheAdapter
-from merino.config import settings
 from merino.exceptions import BackendError, CacheAdapterError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.accuweather.pathfinder import (
@@ -36,6 +35,7 @@ from merino.providers.weather.backends.accuweather.utils import (
     process_current_condition_response,
     process_location_response_with_country,
     process_location_response_with_country_and_region,
+    get_language,
 )
 
 
@@ -179,14 +179,6 @@ class WeatherDataType(Enum):
 
     CURRENT_CONDITIONS = 1
     FORECAST = 2
-
-
-def get_language(requested_languages) -> str | None:
-    """Get first language that is in default_languages."""
-    valid_languages = set(settings.accuweather.default_languages)
-    return next(
-        (language for language in requested_languages if language in valid_languages), None
-    )
 
 
 class AccuweatherBackend:

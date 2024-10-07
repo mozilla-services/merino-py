@@ -185,3 +185,11 @@ def process_forecast_response(response: Any) -> dict[str, Any] | None:
             }
         case _:
             return None
+
+
+def get_language(requested_languages) -> str | None:
+    """Get first language that is in default_languages."""
+    valid_languages = set(settings.accuweather.default_languages)
+    return next(
+        (language for language in requested_languages if language in valid_languages), None
+    )
