@@ -839,10 +839,8 @@ class AccuweatherBackend:
             "q": search_term,
             self.url_param_api_key: self.api_key,
             LOCATION_COMPLETE_ALIAS_PARAM: LOCATION_COMPLETE_ALIAS_PARAM_VALUE,
+            LANGUAGE_PARAM: language,
         }
-
-        if language:
-            params[LANGUAGE_PARAM] = language
 
         try:
             response: dict[str, Any] | None = await self.request_upstream(

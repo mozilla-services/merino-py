@@ -2480,7 +2480,7 @@ async def test_fetch_from_cache_without_country_city(
     [
         (["en-US"], "en-US"),
         (["invalid", "de", "en-US"], "de"),
-        (["invalid", "bad-language"], None),
+        (["invalid", "bad-language"], "en-US"),
     ],
 )
 def test_get_languages(languages, expected_selected_language) -> None:
