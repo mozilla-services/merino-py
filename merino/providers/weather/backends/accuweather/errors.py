@@ -30,8 +30,8 @@ class AccuweatherErrorMessages(Enum):
 
 
 class AccuweatherError(BackendError):
-    """Accuweather error type which inherits the BackendError parent class. On the provider
-    level, this is caught as a BackendError type and logged.
+    """Error during interaction with the Accuweather api. Inherits the BackendError parent
+    class. On the provider level, this is caught as a BackendError type and logged.
     """
 
     def __init__(self, error_type: AccuweatherErrorMessages, **kwargs):
