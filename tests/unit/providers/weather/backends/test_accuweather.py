@@ -34,6 +34,7 @@ from merino.providers.weather.backends.accuweather import (
 from merino.providers.weather.backends.accuweather.utils import (
     RequestType,
     add_partner_code,
+    get_language,
 )
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -273,6 +274,12 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
 def fixture_accuweather_location_key() -> str:
     """Location key for the expected weather report."""
     return "39376"
+
+
+@pytest.fixture(name="languages")
+def fixture_languages() -> list[str]:
+    """Language list to get weather report."""
+    return ["en-US"]
 
 
 @pytest.fixture(name="expected_weather_report")
@@ -2247,6 +2254,7 @@ async def test_get_location_completion(
     accuweather: AccuweatherBackend,
     expected_location_completion: list[LocationCompletion],
     geolocation: Location,
+    languages: list[str],
     accuweather_location_completion_response: bytes,
 ) -> None:
     """Test that the get_location_completion method returns a list of LocationCompletion."""
@@ -2270,7 +2278,7 @@ async def test_get_location_completion(
 
     location_completions: Optional[
         list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, search_term)
+    ] = await accuweather.get_location_completion(geolocation, languages, search_term)
 
     assert location_completions == expected_location_completion
 
@@ -2279,6 +2287,7 @@ async def test_get_location_completion(
 async def test_get_location_completion_with_invalid_accuweather_response(
     accuweather: AccuweatherBackend,
     geolocation: Location,
+    languages: list[str],
     statsd_mock: Any,
 ) -> None:
     """Test that the get_location_completion method returns None
@@ -2304,7 +2313,7 @@ async def test_get_location_completion_with_invalid_accuweather_response(
 
     location_completions: Optional[
         list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, search_term)
+    ] = await accuweather.get_location_completion(geolocation, languages, search_term)
 
     metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
     assert [
@@ -2320,6 +2329,7 @@ async def test_get_location_completion_with_invalid_accuweather_response(
 async def test_get_location_completion_raises_accuweather_error_on_catching_generic_exception(
     accuweather: AccuweatherBackend,
     geolocation: Location,
+    languages: list[str],
 ) -> None:
     """Test that the get_location_completion catches a generic Exception and raises it as an
     AccuweatherError
@@ -2330,7 +2340,7 @@ async def test_get_location_completion_raises_accuweather_error_on_catching_gene
     client_mock.get.side_effect = SSLError
 
     with pytest.raises(AccuweatherError) as accuweather_error:
-        await accuweather.get_location_completion(geolocation, search_term)
+        await accuweather.get_location_completion(geolocation, languages, search_term)
 
     expected_error_message = (
         "Unexpected error occurred when requesting location completion "
@@ -2344,6 +2354,7 @@ async def test_get_location_completion_raises_accuweather_error_on_catching_gene
 async def test_get_location_completion_raises_accuweather_error_on_catching_http_error(
     accuweather: AccuweatherBackend,
     geolocation: Location,
+    languages: list[str],
 ) -> None:
     """Test that the get_location_completion catches an HTTPError and raises it as an
     AccuweatherError
@@ -2368,12 +2379,12 @@ async def test_get_location_completion_raises_accuweather_error_on_catching_http
     ]
 
     with pytest.raises(AccuweatherError) as accuweather_error:
-        await accuweather.get_location_completion(geolocation, search_term)
+        await accuweather.get_location_completion(geolocation, languages, search_term)
 
     url_path = f"/locations/v1/cities/{geolocation.country}/autocomplete.json"
     expected_error_message = (
         f"Failed to get location completion from Accuweather, http error occurred. "
-        f"url path: {url_path}, query: {search_term}"
+        f"url path: {url_path}, query: {search_term}, language: {languages[0]}"
     )
 
     assert expected_error_message == str(accuweather_error.value)
@@ -2383,6 +2394,7 @@ async def test_get_location_completion_raises_accuweather_error_on_catching_http
 async def test_get_location_completion_with_empty_search_term(
     accuweather: AccuweatherBackend,
     geolocation: Location,
+    languages: list[str],
     accuweather_location_completion_response: bytes,
 ) -> None:
     """Test that the get_location_completion method returns None when the search_term parameter
@@ -2408,7 +2420,7 @@ async def test_get_location_completion_with_empty_search_term(
 
     location_completions: Optional[
         list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, search_term)
+    ] = await accuweather.get_location_completion(geolocation, languages, search_term)
 
     assert location_completions is None
 
@@ -2417,6 +2429,7 @@ async def test_get_location_completion_with_empty_search_term(
 async def test_get_location_completion_with_no_geolocation_country_code(
     accuweather: AccuweatherBackend,
     expected_location_completion: list[LocationCompletion],
+    languages: list[str],
     geolocation: Location,
     accuweather_location_completion_response: bytes,
 ) -> None:
@@ -2443,7 +2456,7 @@ async def test_get_location_completion_with_no_geolocation_country_code(
 
     location_completions: Optional[
         list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, search_term)
+    ] = await accuweather.get_location_completion(geolocation, languages, search_term)
 
     assert location_completions == expected_location_completion
 
@@ -2460,3 +2473,16 @@ async def test_fetch_from_cache_without_country_city(
     cached_data = await accuweather._fetch_from_cache(None, None, None)
 
     assert cached_data is None
+
+
+@pytest.mark.parametrize(
+    ("languages", "expected_selected_language"),
+    [
+        (["en-US"], "en-US"),
+        (["invalid", "de", "en-US"], "de"),
+        (["invalid", "bad-language"], "en-US"),
+    ],
+)
+def test_get_languages(languages, expected_selected_language) -> None:
+    """Test return language returns the first valid language."""
+    assert get_language(languages) == expected_selected_language

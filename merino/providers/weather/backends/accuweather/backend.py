@@ -35,6 +35,7 @@ from merino.providers.weather.backends.accuweather.utils import (
     process_current_condition_response,
     process_location_response_with_country,
     process_location_response_with_country_and_region,
+    get_language,
 )
 
 
@@ -122,6 +123,7 @@ ALIAS_PARAM: str = "alias"
 ALIAS_PARAM_VALUE: str = "always"
 LOCATION_COMPLETE_ALIAS_PARAM: str = "includealiases"
 LOCATION_COMPLETE_ALIAS_PARAM_VALUE: str = "true"
+LANGUAGE_PARAM: str = "language"
 
 __all__ = [
     "AccuweatherBackend",
@@ -817,11 +819,13 @@ class AccuweatherBackend:
         )
 
     async def get_location_completion(
-        self, geolocation: Location, search_term: str
+        self, geolocation: Location, languages: list[str], search_term: str
     ) -> list[LocationCompletion] | None:
         """Fetch a list of locations from the Accuweather API given a search term and location."""
         if not search_term:
             return None
+
+        language = get_language(languages)
 
         url_path = self.url_location_completion_path
 
@@ -835,6 +839,7 @@ class AccuweatherBackend:
             "q": search_term,
             self.url_param_api_key: self.api_key,
             LOCATION_COMPLETE_ALIAS_PARAM: LOCATION_COMPLETE_ALIAS_PARAM_VALUE,
+            LANGUAGE_PARAM: language,
         }
 
         try:
@@ -848,7 +853,7 @@ class AccuweatherBackend:
         except HTTPError as error:
             raise AccuweatherError(
                 f"Failed to get location completion from Accuweather, http error occurred. "
-                f"url path: {url_path}, query: {search_term}"
+                f"url path: {url_path}, query: {search_term}, language: {language}"
             ) from error
         except Exception as exc:
             raise AccuweatherError(

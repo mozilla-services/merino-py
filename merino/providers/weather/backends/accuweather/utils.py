@@ -9,6 +9,7 @@ from merino.config import settings
 
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
 PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
+VALID_LANGUAGES: frozenset = frozenset(settings.accuweather.default_languages)
 
 
 class RequestType(StrEnum):
@@ -185,3 +186,10 @@ def process_forecast_response(response: Any) -> dict[str, Any] | None:
             }
         case _:
             return None
+
+
+def get_language(requested_languages: list[str]) -> str:
+    """Get first language that is in default_languages."""
+    return next(
+        (language for language in requested_languages if language in VALID_LANGUAGES), "en-US"
+    )
