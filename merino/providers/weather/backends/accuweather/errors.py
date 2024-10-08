@@ -11,7 +11,7 @@ class AccuweatherErrorMessages(Enum):
     CACHE_WRITE_ERROR = "Something went wrong with storing to cache. Did not update cache."
     FAILED_WEATHER_REPORT = "Failed to fetch weather report: {exceptions}"
     UNEXPECTED_LOCATION_RESPONSE = "Unexpected location response from: {url_path}, city: {city}"
-    UNEXPECTED_GEOLOCATION_REQUEST_ERROR = "Unexpected error occurred when requesting location byeolocation from Accuweather: {exception_class_name}"
+    UNEXPECTED_GEOLOCATION_REQUEST_ERROR = "Unexpected error occurred when requesting location by geolocation from Accuweather: {exception_class_name}"
     UNEXPECTED_CURRENT_CONDITIONS_RESPONSE = (
         "Unexpected current conditions response, Url: {current_conditions_url}"
     )

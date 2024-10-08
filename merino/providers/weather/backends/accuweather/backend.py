@@ -666,7 +666,7 @@ class AccuweatherBackend:
                 )
         except ExceptionGroup as e:
             raise AccuweatherError(
-                AccuweatherErrorMessages.FAILED_WEATHER_REPORT, exceptions={e.exceptions}
+                AccuweatherErrorMessages.FAILED_WEATHER_REPORT, exceptions=e.exceptions
             )
 
         if (current_conditions_response := await task_current) is not None and (
