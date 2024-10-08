@@ -1429,11 +1429,11 @@ async def test_get_weather_report_handles_non_http_exception_group_properly(
         forecast_error,
     ]
     accuweather_error_for_current_conditions = AccuweatherError(
-        AccuweatherErrorMessages.UNEXPECTED_CURRENT_CONDITIONS_REQUEST_ERROR,
+        AccuweatherErrorMessages.UNEXPECTED_CURRENT_CONDITIONS_ERROR,
         exception_class_name=current_conditions_error.__class__.__name__,
     )
     accuweather_error_for_forecast = AccuweatherError(
-        AccuweatherErrorMessages.UNEXPECTED_FORECAST_REQUEST_ERROR,
+        AccuweatherErrorMessages.UNEXPECTED_FORECAST_ERROR,
         exception_class_name=forecast_error.__class__.__name__,
     )
 
@@ -2385,7 +2385,7 @@ async def test_get_location_completion_raises_accuweather_error_on_catching_http
     url_path = f"/locations/v1/cities/{geolocation.country}/autocomplete.json"
     expected_error_message = (
         f"Failed to get location completion from Accuweather, http error occurred. "
-        f"url path: {url_path}, query: {search_term}, language: {languages[0]}"
+        f"Url path: {url_path}, query: {search_term}, language: {languages[0]}"
     )
 
     assert expected_error_message == str(accuweather_error.value)

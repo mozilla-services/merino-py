@@ -720,11 +720,13 @@ class AccuweatherBackend:
             )
         except HTTPError as error:
             raise AccuweatherError(
-                AccuweatherErrorMessages.UNEXPECTED_LOCATION_RESPONSE, url_path=url_path, city=city
+                AccuweatherErrorMessages.HTTP_UNEXPECTED_LOCATION_RESPONSE,
+                url_path=url_path,
+                city=city,
             ) from error
         except Exception as exc:
             raise AccuweatherError(
-                AccuweatherErrorMessages.UNEXPECTED_GEOLOCATION_REQUEST_ERROR,
+                AccuweatherErrorMessages.UNEXPECTED_GEOLOCATION_ERROR,
                 exception_class_name=exc.__class__.__name__,
             ) from exc
 
@@ -754,14 +756,14 @@ class AccuweatherBackend:
             )
         except HTTPError as error:
             raise AccuweatherError(
-                AccuweatherErrorMessages.UNEXPECTED_CURRENT_CONDITIONS_RESPONSE,
+                AccuweatherErrorMessages.HTTP_UNEXPECTED_CURRENT_CONDITIONS_RESPONSE,
                 current_conditions_url=self.url_current_conditions_path.format(
                     location_key=location_key
                 ),
             ) from error
         except Exception as exc:
             raise AccuweatherError(
-                AccuweatherErrorMessages.UNEXPECTED_CURRENT_CONDITIONS_REQUEST_ERROR,
+                AccuweatherErrorMessages.UNEXPECTED_CURRENT_CONDITIONS_ERROR,
                 exception_class_name=exc.__class__.__name__,
             ) from exc
 
@@ -800,12 +802,12 @@ class AccuweatherBackend:
             )
         except HTTPError as error:
             raise AccuweatherError(
-                AccuweatherErrorMessages.UNEXPECTED_FORECAST_RESPONSE,
+                AccuweatherErrorMessages.HTTP_UNEXPECTED_FORECAST_RESPONSE,
                 forecast_url=self.url_forecasts_path.format(location_key=location_key),
             ) from error
         except Exception as exc:
             raise AccuweatherError(
-                AccuweatherErrorMessages.UNEXPECTED_FORECAST_REQUEST_ERROR,
+                AccuweatherErrorMessages.UNEXPECTED_FORECAST_ERROR,
                 exception_class_name=exc.__class__.__name__,
             ) from exc
 
@@ -857,14 +859,14 @@ class AccuweatherBackend:
             )
         except HTTPError as error:
             raise AccuweatherError(
-                AccuweatherErrorMessages.FAILED_LOCATION_COMPLETION,
+                AccuweatherErrorMessages.HTTP_LOCATION_COMPLETION_ERROR,
                 url_path=url_path,
                 search_term=search_term,
                 language=language,
             ) from error
         except Exception as exc:
             raise AccuweatherError(
-                AccuweatherErrorMessages.UNEXPECTED_LOCATION_COMPLETION_REQUEST_ERROR,
+                AccuweatherErrorMessages.UNEXPECTED_LOCATION_COMPLETION_ERROR,
                 exception_class_name=exc.__class__.__name__,
             ) from exc
 
