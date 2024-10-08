@@ -31,6 +31,7 @@ from merino.providers.weather.backends.accuweather import (
     CurrentConditionsWithTTL,
     ForecastWithTTL,
 )
+from merino.providers.weather.backends.accuweather.errors import AccuweatherErrorMessages
 from merino.providers.weather.backends.accuweather.utils import (
     RequestType,
     add_partner_code,
@@ -1428,12 +1429,12 @@ async def test_get_weather_report_handles_non_http_exception_group_properly(
         forecast_error,
     ]
     accuweather_error_for_current_conditions = AccuweatherError(
-        f"Unexpected error occurred when requesting current conditions from "
-        f"Accuweather: {current_conditions_error.__class__.__name__}"
+        AccuweatherErrorMessages.UNEXPECTED_CURRENT_CONDITIONS_REQUEST_ERROR,
+        exception_class_name=current_conditions_error.__class__.__name__,
     )
     accuweather_error_for_forecast = AccuweatherError(
-        f"Unexpected error occurred when requesting forecast from "
-        f"Accuweather: {forecast_error.__class__.__name__}"
+        AccuweatherErrorMessages.UNEXPECTED_FORECAST_REQUEST_ERROR,
+        exception_class_name=forecast_error.__class__.__name__,
     )
 
     with pytest.raises(AccuweatherError) as accuweather_error:
