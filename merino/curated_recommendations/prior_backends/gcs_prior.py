@@ -10,15 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 class GcsPrior(PriorBackend):
-    """Backend that retrieves Thompson sampling priors from Google Cloud Storage.
+    """Backend that retrieves and caches Thompson sampling priors from Google Cloud Storage."""
 
-    This class periodically fetches prior data from Google Cloud Storage in the background.
-    """
-
-    def __init__(
-        self,
-        synced_gcs_blob: SyncedGcsBlob,
-    ) -> None:
+    def __init__(self, synced_gcs_blob: SyncedGcsBlob) -> None:
         """Initialize the GcsPrior backend.
 
         Args:
@@ -32,9 +26,9 @@ class GcsPrior(PriorBackend):
         """Process the raw blob data and update the cache.
 
         Args:
-            data: The raw blob data as a string.
+            data: The blob string data, with an array of Prior objects.
         """
-        parsed_data = [Prior(**item) for item in json.loads(data).values()]
+        parsed_data = [Prior(**item) for item in json.loads(data)]
         self._cache = {item.region: item for item in parsed_data}
 
     def get(self, region: str | None = None) -> Prior | None:

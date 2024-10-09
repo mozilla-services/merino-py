@@ -19,6 +19,7 @@ from merino.curated_recommendations import (
     CorpusApiBackend,
     CuratedRecommendationsProvider,
     get_provider,
+    ConstantPrior,
 )
 from merino.curated_recommendations.corpus_backends.corpus_api_backend import CorpusApiGraphConfig
 from merino.curated_recommendations.corpus_backends.protocol import Topic
@@ -26,6 +27,7 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
     Engagement,
 )
+from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import CuratedRecommendation, ExperimentName
 from merino.main import app
 from merino.metrics import get_metrics_client
@@ -131,14 +133,24 @@ def engagement_backend():
     return MockEngagementBackend()
 
 
+@pytest.fixture(name="prior_backend")
+def constant_prior_backend() -> PriorBackend:
+    """Mock constant prior backend."""
+    return ConstantPrior()
+
+
 @pytest.fixture(name="corpus_provider")
 def provider(
-    corpus_backend: CorpusApiBackend, engagement_backend: EngagementBackend
+    corpus_backend: CorpusApiBackend,
+    engagement_backend: EngagementBackend,
+    prior_backend: PriorBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
         corpus_backend=corpus_backend,
         engagement_backend=engagement_backend,
+        prior_backend=prior_backend,
+        fallback_prior_backend=prior_backend,
     )
 
 
