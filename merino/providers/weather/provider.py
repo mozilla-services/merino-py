@@ -112,6 +112,13 @@ class Provider(BaseProvider):
                         geolocation, search_term=srequest.query
                     )
                 else:
+                    # pass in city, region and country into geolation if they exist in the request
+                    geolocation = geolocation.model_copy(update={k: v for k, v in {
+                        'city': srequest.city,
+                        'regions': [srequest.region],
+                        'country': srequest.country
+                    }.items() if v is not None})
+                  
                     weather_report = await self.backend.get_weather_report(
                         geolocation, srequest.query
                     )
