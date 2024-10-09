@@ -76,3 +76,17 @@ class GcsEngagement(EngagementBackend):
         for region, count in region_counts.items():
             region_name = region.lower() if region is not None else "global"
             self.metrics_client.gauge(f"{self.metrics_namespace}.{region_name}.count", value=count)
+
+        clicks, impressions = Counter(), Counter()
+        for (item_id, region), eng in self._cache.items():
+            region_name = region.lower() if region is not None else "global"
+            clicks[region_name] += eng.clicks
+            impressions[region_name] += eng.impressions
+
+        for region, count in clicks.items():
+            self.metrics_client.gauge(f"{self.metrics_namespace}.{region}.clicks",
+                                      value=count)
+        for region, count in impressions.items():
+            self.metrics_client.gauge(f"{self.metrics_namespace}.{region}.impressions",
+                                      value=count)
+
