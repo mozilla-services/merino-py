@@ -476,9 +476,8 @@ class AccuweatherBackend:
     ) -> WeatherReport | None:
         """Get weather report either via location key or geolocation."""
         if location_key:
-            print("here")
             return await self.get_weather_report_with_location_key(location_key)
-        print("outt")
+    
         return await self.get_weather_report_with_geolocation(geolocation)
 
     async def get_weather_report_with_location_key(self, location_key) -> WeatherReport | None:
