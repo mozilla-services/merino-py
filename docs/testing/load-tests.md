@@ -29,7 +29,9 @@ Follow the steps bellow to execute the load tests locally:
 The following environment variables as well as
 [Locust environment variables][locust_environment_variables] can be set in
 `tests\load\docker-compose.yml`.
-Make sure any required API key is added but then not checked into source control (i.e. `WIKIPEDIA__ES_API_KEY`).
+Make sure any required API key is added but then not checked into source control.
+
+**WARNING**: if the `WIKIPEDIA__ES_API_KEY` is missing, the load tests will not execute.
 
 | Environment Variable                             | Node(s)         | Description                                                                               |
 |--------------------------------------------------|-----------------|-------------------------------------------------------------------------------------------|
@@ -168,7 +170,7 @@ a GKE cluster
   EXTERNAL_IP=$(kubectl get svc locust-master -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
   echo http://$EXTERNAL_IP:8089
   ```
-* Select the `MerinoLoadTestShape`, this option has pre-defined settings and will last 10 minutes
+* Select the `MerinoSmokeLoadTestShape`, this option has pre-defined settings and will last 10 minutes
 * Select "Start Swarming"
 
 #### 2. Stop Load Test
