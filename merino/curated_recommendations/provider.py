@@ -212,9 +212,9 @@ class CuratedRecommendationsProvider:
 
         # Provide a localized title string for the "Need to Know" feed.
         localized_titles = {
-            ScheduledSurfaceId.NEW_TAB_EN_US: "Need to Know",
-            ScheduledSurfaceId.NEW_TAB_EN_GB: "Need to Know in British English",
-            ScheduledSurfaceId.NEW_TAB_DE_DE: "Need to Know auf Deutsch",
+            ScheduledSurfaceId.NEW_TAB_EN_US: "In the news",
+            ScheduledSurfaceId.NEW_TAB_EN_GB: "In the news",
+            ScheduledSurfaceId.NEW_TAB_DE_DE: "In den news",
         }
         title = localized_titles[surface_id]
 
