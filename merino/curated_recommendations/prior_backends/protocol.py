@@ -7,9 +7,9 @@ from pydantic import BaseModel
 class Prior(BaseModel):
     """Represents the Thompson sampling prior data for a specific region."""
 
-    region: str
-    alpha_prior: float
-    beta_prior: float
+    region: str | None = None
+    alpha: float
+    beta: float
 
 
 class PriorBackend(Protocol):

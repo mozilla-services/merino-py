@@ -13,6 +13,8 @@ from typing import Callable
 from google.cloud.storage import Client
 from aiodogstatsd import Client as StatsdClient
 
+from merino import cron
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,6 +23,8 @@ class SyncedGcsBlob:
 
     This class periodically fetches data from a GCS blob in the background.
     """
+
+    cron_task: asyncio.Task
 
     def __init__(
         self,
@@ -53,7 +57,18 @@ class SyncedGcsBlob:
         self.fetch_callback: Callable[[str], None] | None = None
         self.last_updated = datetime.min.replace(tzinfo=timezone.utc)
         self._update_count = 0
-        self._background_task: asyncio.Task = asyncio.create_task(self._start_cron_job())
+
+    def initialize(self) -> None:
+        """Start the background cron job to get new data."""
+        cron_job = cron.Job(
+            name="fetch_recommendation_engagement",
+            interval=self.cron_interval_seconds,
+            condition=lambda: True,
+            task=self._update_task_async,
+        )
+        # Store the created task on the instance variable. Otherwise, it will get
+        # garbage collected because asyncio's runtime only holds a weak reference to it.
+        self.cron_task = asyncio.create_task(cron_job())
 
     @property
     def update_count(self) -> int:
@@ -98,9 +113,9 @@ class SyncedGcsBlob:
         self.metrics_client.gauge(f"{self.metrics_namespace}.size", value=blob.size)
 
         if blob.size > self.max_size:
-            logger.error(f"Synced GCS blob size {blob.size} exceeds {self.max_size}")
+            logger.error(f"{blob.name} size {blob.size} exceeds {self.max_size}")
         elif blob.updated <= self.last_updated:
-            logger.info(f"Synced GCS blob unchanged since {self.last_updated}.")
+            logger.info(f"{blob.name} unchanged since {self.last_updated}.")
         else:
             data = blob.download_as_text()
             if self.fetch_callback:
