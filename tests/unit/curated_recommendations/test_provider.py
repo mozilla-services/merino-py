@@ -366,7 +366,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
             assert i == rec.receivedRank
 
         # Verify that the localized title is correct
-        assert title == "Need to Know"
+        assert title == "In the news"
 
     def test_rank_need_to_know_recommendations_different_surface(self, mocker: MockerFixture):
         """Test localization with a non-English New Tab surface
@@ -389,4 +389,4 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         )
 
         # Verify that the title is correct for the German New Tab surface
-        assert title == "Need to Know auf Deutsch"
+        assert title == "In den news"
