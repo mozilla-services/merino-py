@@ -169,8 +169,12 @@ The following additional metrics are recorded when curated recommendations are r
  A timer to measure the duration (in ms) of updating the engagement data from GCS.
 - `recommendation.engagement.size` - A gauge to track the size of the engagement blob on GCS.
 - `recommendation.engagement.count` - A gauge to measure the total number of engagement records.
-- `recommendation.engagement.{region}.count` - A gauge to measure the number of scheduled corpus 
+- `recommendation.engagement.{country}.count` - A gauge to measure the number of scheduled corpus 
  items with engagement data per country.
+- `recommendation.engagement.{country}.clicks` - A gauge to measure the number of clicks per country 
+ in our GCS engagement blob.
+- `recommendation.engagement.{country}.impressions` - A gauge to measure the number of impressions
+ per country in our GCS engagement blob.
 - `recommendation.engagement.last_updated` -
  A gauge for the staleness (in seconds) of the engagement data, measured between when the data was
  updated in GCS and the current time.
