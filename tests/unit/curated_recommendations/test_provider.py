@@ -389,4 +389,4 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         )
 
         # Verify that the title is correct for the German New Tab surface
-        assert title == "In den news"
+        assert title == "In den News"

@@ -214,7 +214,7 @@ class CuratedRecommendationsProvider:
         localized_titles = {
             ScheduledSurfaceId.NEW_TAB_EN_US: "In the news",
             ScheduledSurfaceId.NEW_TAB_EN_GB: "In the news",
-            ScheduledSurfaceId.NEW_TAB_DE_DE: "In den news",
+            ScheduledSurfaceId.NEW_TAB_DE_DE: "In den News",
         }
         title = localized_titles[surface_id]
 
