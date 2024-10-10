@@ -9,9 +9,8 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
     Topic,
 )
-from merino.curated_recommendations.engagement_backends.protocol import (
-    EngagementBackend,
-)
+from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     Locale,
     CuratedRecommendation,
@@ -34,10 +33,14 @@ class CuratedRecommendationsProvider:
     corpus_backend: CorpusBackend
 
     def __init__(
-        self, corpus_backend: CorpusBackend, engagement_backend: EngagementBackend
+        self,
+        corpus_backend: CorpusBackend,
+        engagement_backend: EngagementBackend,
+        prior_backend: PriorBackend,
     ) -> None:
         self.corpus_backend = corpus_backend
         self.engagement_backend = engagement_backend
+        self.prior_backend = prior_backend
 
     @staticmethod
     def get_recommendation_surface_id(
@@ -149,7 +152,8 @@ class CuratedRecommendationsProvider:
         # 3. Apply Thompson sampling to rank recommendations by engagement
         recommendations = thompson_sampling(
             recommendations,
-            self.engagement_backend,
+            engagement_backend=self.engagement_backend,
+            prior_backend=self.prior_backend,
             region=self.derive_region(request.locale, request.region),
             enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
         )

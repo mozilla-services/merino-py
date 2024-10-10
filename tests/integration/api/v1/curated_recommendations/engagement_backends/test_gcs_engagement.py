@@ -17,6 +17,7 @@ from testcontainers.core.waiting_utils import wait_for_logs
 from merino.config import settings
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import Engagement
+from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 
 @pytest.fixture(scope="module")
@@ -66,19 +67,25 @@ def mock_metrics_client(mocker):
     return metrics_client
 
 
-MAX_SIZE = 1024 * 1024
-
-
 @pytest.fixture
-def gcs_engagement(gcs_client, gcs_bucket, mock_metrics_client):
-    """Return a GcsEngagement instance using the fake GCS server."""
-    return GcsEngagement(
+async def create_gcs_engagement(gcs_client, gcs_bucket, mock_metrics_client):
+    """Return an initialized GcsEngagement instance using the fake GCS server."""
+    synced_gcs_blob = SyncedGcsBlob(
         storage_client=gcs_client,
-        metrics_client=mock_metrics_client,
         bucket_name=gcs_bucket.name,
         blob_prefix=settings.curated_recommendations.gcs_engagement.blob_prefix,
+        metrics_client=mock_metrics_client,
+        metrics_namespace="recommendation.engagement",
         max_size=settings.curated_recommendations.gcs_engagement.max_size,
         cron_interval_seconds=0.01,
+    )
+    # Call initialize to start the cron job in the same event loop
+    synced_gcs_blob.initialize()
+
+    return GcsEngagement(
+        synced_gcs_blob=synced_gcs_blob,
+        metrics_client=mock_metrics_client,
+        metrics_namespace="recommendation.engagement",
     )
 
 
@@ -169,15 +176,16 @@ def large_blob_1min_ago(gcs_bucket):
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_returns_zero_for_missing_keys(gcs_engagement):
+async def test_gcs_engagement_returns_zero_for_missing_keys(create_gcs_engagement):
     """Test that the backend returns None for keys not in the GCS blobs."""
+    gcs_engagement = await create_gcs_engagement
     assert gcs_engagement.get("missing_key") is None
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_fetches_data(gcs_engagement, blob_20min_ago, blob_5min_ago):
+async def test_gcs_engagement_fetches_data(create_gcs_engagement, blob_20min_ago, blob_5min_ago):
     """Test that the backend fetches data from GCS and returns engagement data."""
-    gcs_engagement.initialize()
+    gcs_engagement = await create_gcs_engagement
     await wait_until_engagement_is_updated(gcs_engagement)
 
     assert gcs_engagement.get("12345") == Engagement(
@@ -189,9 +197,9 @@ async def test_gcs_engagement_fetches_data(gcs_engagement, blob_20min_ago, blob_
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_fetches_region_data(gcs_engagement, blob_with_region_data):
+async def test_gcs_engagement_fetches_region_data(create_gcs_engagement, blob_with_region_data):
     """Test that the backend fetches data from GCS and returns engagement data."""
-    gcs_engagement.initialize()
+    gcs_engagement = await create_gcs_engagement
     await wait_until_engagement_is_updated(gcs_engagement)
 
     assert gcs_engagement.get("6A") == Engagement(
@@ -207,28 +215,32 @@ async def test_gcs_engagement_fetches_region_data(gcs_engagement, blob_with_regi
 
 @pytest.mark.asyncio
 async def test_gcs_engagement_logs_error_for_large_blob(
-    gcs_engagement, large_blob_1min_ago, caplog
+    create_gcs_engagement, large_blob_1min_ago, caplog
 ):
     """Test that the backend logs an error if the blob size exceeds the max size."""
+    gcs_engagement = await create_gcs_engagement
     caplog.set_level(logging.ERROR)
 
-    gcs_engagement.initialize()
     await wait_until_engagement_is_updated(gcs_engagement)
 
-    assert "Curated recommendations engagement size 1000003 exceeds 1000000" in caplog.text
+    max_size = settings.curated_recommendations.gcs_engagement.max_size
+    assert f"{large_blob_1min_ago.name} size {max_size+3} exceeds {max_size}" in caplog.text
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_metrics(gcs_engagement, mock_metrics_client, blob_5min_ago):
+async def test_gcs_engagement_metrics(
+    create_gcs_engagement, mock_metrics_client, blob_with_region_data
+):
     """Test that the backend records the correct metrics."""
-    gcs_engagement.initialize()
+    gcs_engagement = await create_gcs_engagement
     await wait_until_engagement_is_updated(gcs_engagement)
 
     # Verify the metrics are recorded correctly
     mock_metrics_client.gauge.assert_any_call(
-        "recommendation.engagement.size", value=blob_5min_ago.size
+        "recommendation.engagement.size", value=blob_with_region_data.size
     )
-    mock_metrics_client.gauge.assert_any_call("recommendation.engagement.count", value=2)
+    mock_metrics_client.gauge.assert_any_call("recommendation.engagement.global.count", value=2)
+    mock_metrics_client.gauge.assert_any_call("recommendation.engagement.us.count", value=2)
     mock_metrics_client.timeit.assert_any_call("recommendation.engagement.update.timing")
 
     # Check the last_updated gauge value shows that the engagement was updated just now.
