@@ -37,12 +37,10 @@ class CuratedRecommendationsProvider:
         corpus_backend: CorpusBackend,
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
-        fallback_prior_backend: PriorBackend,
     ) -> None:
         self.corpus_backend = corpus_backend
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
-        self.fallback_prior_backend = prior_backend
 
     @staticmethod
     def get_recommendation_surface_id(
@@ -156,7 +154,6 @@ class CuratedRecommendationsProvider:
             recommendations,
             engagement_backend=self.engagement_backend,
             prior_backend=self.prior_backend,
-            fallback_prior_backend=self.fallback_prior_backend,
             region=self.derive_region(request.locale, request.region),
             enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
         )

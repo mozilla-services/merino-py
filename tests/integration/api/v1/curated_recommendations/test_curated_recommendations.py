@@ -150,7 +150,6 @@ def provider(
         corpus_backend=corpus_backend,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
-        fallback_prior_backend=prior_backend,
     )
 
 

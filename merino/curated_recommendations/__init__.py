@@ -88,7 +88,6 @@ def init_provider() -> None:
         ),
         engagement_backend=init_engagement_backend(),
         prior_backend=init_prior_backend(),
-        fallback_prior_backend=ConstantPrior(),
     )
 
 

@@ -2,9 +2,10 @@
 
 from copy import copy
 
+from merino.curated_recommendations import ConstantPrior
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.prior_backends.protocol import PriorBackend
+from merino.curated_recommendations.prior_backends.protocol import PriorBackend, Prior
 from merino.curated_recommendations.protocol import CuratedRecommendation
 from scipy.stats import beta
 
@@ -24,7 +25,6 @@ def thompson_sampling(
     recs: list[CuratedRecommendation],
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
-    fallback_prior_backend: PriorBackend,
     enable_region_engagement: bool = False,
     region: str | None = None,
     region_weight: float = REGION_ENGAGEMENT_WEIGHT,
@@ -35,7 +35,6 @@ def thompson_sampling(
     :param recs: A list of recommendations in the desired order (pre-publisher spread).
     :param engagement_backend: Provides aggregate click and impression engagement by scheduledCorpusItemId.
     :param prior_backend: Provides prior alpha and beta values for Thompson sampling.
-    :param fallback_prior_backend: Provides fallback prior values if prior_backend returns None.
     :param enable_region_engagement: If True, regional engagement weighs higher. False by default.
     :param region: Optionally, the client's region, e.g. 'US'.
     :param region_weight: In a weighted average, how much to weigh regional engagement.
@@ -44,6 +43,7 @@ def thompson_sampling(
 
     [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
     """
+    fallback_prior = ConstantPrior().get()
 
     def get_opens_no_opens(
         rec: CuratedRecommendation, region_query: str | None = None
@@ -58,7 +58,7 @@ def thompson_sampling(
     def sample_score(rec: CuratedRecommendation) -> float:
         """Sample beta distributed from weighted regional/global engagement for a recommendation."""
         opens, no_opens = get_opens_no_opens(rec)
-        prior = prior_backend.get() or fallback_prior_backend.get()
+        prior: Prior = prior_backend.get() or fallback_prior
         a_prior = prior.alpha
         b_prior = prior.beta
 
