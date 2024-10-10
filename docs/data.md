@@ -167,9 +167,16 @@ The following additional metrics are recorded when curated recommendations are r
  A counter to measure the number of GraphQL errors from the curated-corpus-api.
 - `recommendation.engagement.update.timing` -
  A timer to measure the duration (in ms) of updating the engagement data from GCS.
-- `recommendation.engagement.size` - A gauge to track the size of the blob on GCS.
-- `recommendation.engagement.count` - A gauge to measure the number of scheduled corpus items with
- engagement data.
+- `recommendation.engagement.size` - A gauge to track the size of the engagement blob on GCS.
+- `recommendation.engagement.count` - A gauge to measure the total number of engagement records.
+- `recommendation.engagement.{region}.count` - A gauge to measure the number of scheduled corpus 
+ items with engagement data per country.
 - `recommendation.engagement.last_updated` -
  A gauge for the staleness (in seconds) of the engagement data, measured between when the data was
+ updated in GCS and the current time.
+- `recommendation.prior.update.timing` -
+ A timer to measure the duration (in ms) of updating the prior data from GCS.
+- `recommendation.prior.size` - A gauge to track the size of the Thompson sampling priors blob on GCS.
+- `recommendation.prior.last_updated` -
+ A gauge for the staleness (in seconds) of the prior data, measured between when the data was
  updated in GCS and the current time.

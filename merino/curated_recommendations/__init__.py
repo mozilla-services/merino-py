@@ -31,15 +31,15 @@ _provider: CuratedRecommendationsProvider
 def init_engagement_backend() -> EngagementBackend:
     """Initialize the GCS Engagement Backend."""
     try:
-        metrics_namespace = "engagement_metrics_namespace"
+        metrics_namespace = "recommendation.engagement"
         synced_gcs_blob = SyncedGcsBlob(
-            storage_client=Client(settings.curated_recommendations.gcs_engagement.gcp_project),
+            storage_client=Client(settings.curated_recommendations.gcs.engagement.gcp_project),
             metrics_client=get_metrics_client(),
             metrics_namespace=metrics_namespace,
-            bucket_name=settings.curated_recommendations.gcs_engagement.bucket_name,
-            blob_prefix=settings.curated_recommendations.gcs_engagement.blob_prefix,
-            max_size=settings.curated_recommendations.gcs_engagement.max_size,
-            cron_interval_seconds=settings.curated_recommendations.gcs_engagement.cron_interval_seconds,
+            bucket_name=settings.curated_recommendations.gcs.engagement.bucket_name,
+            blob_name=settings.curated_recommendations.gcs.engagement.blob_name,
+            max_size=settings.curated_recommendations.gcs.engagement.max_size,
+            cron_interval_seconds=settings.curated_recommendations.gcs.engagement.cron_interval_seconds,
         )
         synced_gcs_blob.initialize()
 
@@ -59,19 +59,20 @@ def init_prior_backend() -> PriorBackend:
     """Initialize the GCS Prior Backend, falling back to ConstantPrior if GCS Prior cannot be initialized."""
     try:
         synced_gcs_blob = SyncedGcsBlob(
-            storage_client=Client(settings.curated_recommendations.gcs_prior.gcp_project),
+            storage_client=Client(settings.curated_recommendations.gcs.gcp_project),
             metrics_client=get_metrics_client(),
-            metrics_namespace="prior_metrics_namespace",
-            bucket_name=settings.curated_recommendations.gcs_prior.bucket_name,
-            blob_prefix=settings.curated_recommendations.gcs_prior.blob_prefix,
-            max_size=settings.curated_recommendations.gcs_prior.max_size,
-            cron_interval_seconds=settings.curated_recommendations.gcs_prior.cron_interval_seconds,
+            metrics_namespace="recommendation.prior",
+            bucket_name=settings.curated_recommendations.gcs.bucket_name,
+            blob_name=settings.curated_recommendations.gcs.prior.blob_name,
+            max_size=settings.curated_recommendations.gcs.prior.max_size,
+            cron_interval_seconds=settings.curated_recommendations.gcs.prior.cron_interval_seconds,
         )
         synced_gcs_blob.initialize()
         return GcsPrior(synced_gcs_blob=synced_gcs_blob)
     except Exception as e:
         logger.error(f"Failed to initialize GCS Prior Backend: {e}")
         # Fall back to a constant prior if GCS prior cannot be initialized.
+        # This happens in contract tests or when the developer isn't logged in with gcloud auth.
         return ConstantPrior()
 
 

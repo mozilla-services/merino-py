@@ -3,10 +3,20 @@
 import json
 import logging
 
+from pydantic import BaseModel
+
 from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 logger = logging.getLogger(__name__)
+
+
+class PriorStats(BaseModel):
+    """Represents statistics exported to GCS to derive priors from."""
+
+    region: str | None = None
+    average_ctr_top2_items: float
+    impressions_per_item: float
 
 
 class GcsPrior(PriorBackend):
@@ -22,14 +32,29 @@ class GcsPrior(PriorBackend):
         self.synced_blob = synced_gcs_blob
         self.synced_blob.set_fetch_callback(self._fetch_callback)
 
+    @staticmethod
+    def _derive_prior(prior_stats: PriorStats) -> Prior:
+        # We calculate the beta parameter for Thompson sampling based on the average number of
+        # impressions per item. Historically, beta was set to 15,600, which is approximately 10% of
+        # the average impressions per item in the US on 2024-10-08 (180,827 impressions per item).
+        # To maintain this proportion, we've chosen a weight of 0.1. A higher weight increases
+        # exploration. Since having more items reduces the number of impressions available per item,
+        # beta scales with the average impressions per item to adjust the level of exploration.
+        beta = 0.1 * prior_stats.impressions_per_item
+        # Set alpha to create an optimistic prior, ensuring every item has a chance to be seen
+        # in the top 2 curated recommendations of the New Tab page.
+        alpha = beta * prior_stats.average_ctr_top2_items
+
+        return Prior(region=prior_stats.region, alpha=alpha, beta=beta)
+
     def _fetch_callback(self, data: str) -> None:
         """Process the raw blob data and update the cache.
 
         Args:
             data: The blob string data, with an array of Prior objects.
         """
-        parsed_data = [Prior(**item) for item in json.loads(data)]
-        self._cache = {item.region: item for item in parsed_data}
+        prior_stats = [PriorStats(**item) for item in json.loads(data)]
+        self._cache = {p.region: self._derive_prior(p) for p in prior_stats}
 
     def get(self, region: str | None = None) -> Prior | None:
         """Get Thompson sampling priors for the given region, if available.

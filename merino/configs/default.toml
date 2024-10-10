@@ -476,26 +476,44 @@ query_timeout_sec = 5.0
 score = 0.23
 
 
-[default.curated_recommendations.gcs_engagement]
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__MAX_SIZE
-# The maximum size in bytes of the GCS engagement blob. If exceeded, an error will be logged.
-max_size = 2_000_000
-
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__BUCKET_NAME
-# GCS bucket that contains aggregate engagement data
+[production.curated_recommendations.gcs]
+# MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
+# GCS bucket that contains Airflow data for Merino
 bucket_name = ""
 
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__BLOB_PREFIX
-# GCS path. Combined bucket and object prefix (folders).
-blob_prefix = "newtab-merino-exports/engagement_"
-
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__GCP_PROJECT
+# MERINO__CURATED_RECOMMENDATIONS__GCS__GCP_PROJECT
 # GCP project name where the GCS bucket lives.
 gcp_project = ""
 
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__CRON_INTERVAL_SECONDS
+
+[default.curated_recommendations.gcs.engagement]
+# MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__MAX_SIZE
+# The maximum size in bytes of the GCS engagement blob. If exceeded, an error will be logged.
+max_size = 2_000_000
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__BLOB_PREFIX
+# GCS path of the priors JSON file.
+blob_name = "newtab-merino-exports/engagement/latest.json"
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__CRON_INTERVAL_SECONDS
 # Interval in seconds at which the cron job checks if GCS contains updated engagement data.
+# Engagement data is updated every 20 minutes. We want to import fresh data quickly to improve CTR.
 cron_interval_seconds = 30
+
+
+[default.curated_recommendations.gcs.prior]
+# MERINO__CURATED_RECOMMENDATIONS__GCS__PRIOR__MAX_SIZE
+# The maximum size in bytes of the GCS engagement blob. If exceeded, an error will be logged.
+max_size = 1_000_000
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__PRIOR__BLOB_PREFIX
+# GCS path of the priors JSON file.
+blob_name = "newtab-merino-exports/priors/latest.json"
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__PRIOR__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains updated prior data.
+# Prior data updates daily, so we don't need to check frequently for new data.
+cron_interval_seconds = 600
 
 
 [default.curated_recommendations.corpus_api]

@@ -7,7 +7,7 @@
 import asyncio
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Callable
 
 from google.cloud.storage import Client
@@ -16,6 +16,9 @@ from aiodogstatsd import Client as StatsdClient
 from merino import cron
 
 logger = logging.getLogger(__name__)
+
+
+LAST_UPDATED_INITIAL_VALUE = datetime.min.replace(tzinfo=timezone.utc)
 
 
 class SyncedGcsBlob:
@@ -32,7 +35,7 @@ class SyncedGcsBlob:
         metrics_client: StatsdClient,
         metrics_namespace: str,
         bucket_name: str,
-        blob_prefix: str,
+        blob_name: str,
         max_size: int,
         cron_interval_seconds: float,
     ) -> None:
@@ -43,19 +46,19 @@ class SyncedGcsBlob:
             metrics_client: aiodogstatsd client for recording metrics.
             metrics_namespace: Namespace for metrics to distinguish different instances.
             bucket_name: GCS bucket name.
-            blob_prefix: GCS blob prefix.
+            blob_name: Full path to the GCS blob.
             max_size: Maximum size in bytes of the GCS blob. If exceeded, an error will be logged.
             cron_interval_seconds: Interval at which to check GCS for updates in seconds.
         """
         self.storage_client = storage_client
         self.metrics_client = metrics_client
         self.bucket_name = bucket_name
-        self.blob_prefix = blob_prefix
+        self.blob_name = blob_name
         self.max_size = max_size
         self.cron_interval_seconds = cron_interval_seconds
         self.metrics_namespace = metrics_namespace
         self.fetch_callback: Callable[[str], None] | None = None
-        self.last_updated = datetime.min.replace(tzinfo=timezone.utc)
+        self.last_updated = LAST_UPDATED_INITIAL_VALUE
         self._update_count = 0
 
     def initialize(self) -> None:
@@ -97,23 +100,18 @@ class SyncedGcsBlob:
     def _update_task(self) -> None:
         """Task to update the data with the latest data from GCS."""
         bucket = self.storage_client.bucket(self.bucket_name)
+        blob = bucket.blob(self.blob_name)
 
-        # Only list files from the last day to reduce memory usage and requests to GCS.
-        start_date = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y%m%d%H")
-        start_offset = f"{self.blob_prefix}{start_date}"
-        blobs = list(bucket.list_blobs(start_offset=start_offset))
-
-        if not blobs:
-            logger.error("Synced GCS blob not found for start_offset")
+        if not blob.exists():
+            logger.error(f"Blob '{self.blob_name}' not found.")
             return
 
-        # Find the most recent blob by the last modified timestamp.
-        blob = max(blobs, key=lambda b: b.updated)
-
+        # reload() populates blob.size and blob.updated.
+        blob.reload()
         self.metrics_client.gauge(f"{self.metrics_namespace}.size", value=blob.size)
 
         if blob.size > self.max_size:
-            logger.error(f"{blob.name} size {blob.size} exceeds {self.max_size}")
+            logger.error(f"Blob '{blob.name}' size {blob.size} exceeds {self.max_size}")
         elif blob.updated <= self.last_updated:
             logger.info(f"{blob.name} unchanged since {self.last_updated}.")
         else:
@@ -126,7 +124,7 @@ class SyncedGcsBlob:
                 logger.warning("Fetch callback is not set. Ignoring fetched data.")
 
         # Report the staleness of the data in seconds.
-        if self.last_updated != datetime.min.replace(tzinfo=timezone.utc):
+        if self.last_updated != LAST_UPDATED_INITIAL_VALUE:
             self.metrics_client.gauge(
                 f"{self.metrics_namespace}.last_updated",
                 value=time.time() - self.last_updated.timestamp(),
