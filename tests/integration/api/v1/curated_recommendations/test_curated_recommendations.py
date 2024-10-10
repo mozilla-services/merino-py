@@ -256,7 +256,7 @@ async def test_curated_recommendations_with_need_to_know_feed():
 
         # Assert that the `need_to_know` feed has a localized title returned
         title = data["feeds"]["need_to_know"]["title"]
-        assert title == "Need to Know"
+        assert title == "In the news"
 
         # Assert that the `need_to_know` feed has 10 items
         feed = data["feeds"]["need_to_know"]["recommendations"]

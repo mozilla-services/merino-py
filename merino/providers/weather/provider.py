@@ -101,6 +101,7 @@ class Provider(BaseProvider):
             )
 
         geolocation: Location = srequest.geolocation
+        languages: list[str] = srequest.languages if srequest.languages else []
         is_location_completion_request = srequest.request_type == "location"
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
@@ -109,7 +110,7 @@ class Provider(BaseProvider):
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
                 if is_location_completion_request:
                     location_completions = await self.backend.get_location_completion(
-                        geolocation, search_term=srequest.query
+                        geolocation, languages, search_term=srequest.query
                     )
                 else:
                     # pass in city, region and country into geolation if they exist in the request

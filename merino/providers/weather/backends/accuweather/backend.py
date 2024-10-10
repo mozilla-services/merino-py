@@ -15,7 +15,7 @@ from httpx import AsyncClient, HTTPError, Response
 from pydantic import BaseModel, ValidationError
 
 from merino.cache.protocol import CacheAdapter
-from merino.exceptions import BackendError, CacheAdapterError
+from merino.exceptions import CacheAdapterError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
@@ -35,6 +35,12 @@ from merino.providers.weather.backends.accuweather.utils import (
     process_current_condition_response,
     process_location_response_with_country,
     process_location_response_with_country_and_region,
+    get_language,
+)
+
+from merino.providers.weather.backends.accuweather.errors import (
+    AccuweatherError,
+    AccuweatherErrorMessages,
 )
 
 
@@ -122,6 +128,7 @@ ALIAS_PARAM: str = "alias"
 ALIAS_PARAM_VALUE: str = "always"
 LOCATION_COMPLETE_ALIAS_PARAM: str = "includealiases"
 LOCATION_COMPLETE_ALIAS_PARAM_VALUE: str = "true"
+LANGUAGE_PARAM: str = "language"
 
 __all__ = [
     "AccuweatherBackend",
@@ -166,10 +173,6 @@ class ForecastWithTTL(NamedTuple):
 
     forecast: Forecast
     ttl: int
-
-
-class AccuweatherError(BackendError):
-    """Error during interaction with the AccuWeather API."""
 
 
 class WeatherDataType(Enum):
@@ -350,9 +353,7 @@ class AccuweatherBackend:
                     "set_error" if isinstance(exc, CacheAdapterError) else "ttl_date_error"
                 )
                 self.metrics_client.increment(f"accuweather.cache.store.{error_type}")
-                raise AccuweatherError(
-                    "Something went wrong with storing to cache. Did not update cache."
-                )
+                raise AccuweatherError(AccuweatherErrorMessages.CACHE_WRITE_ERROR)
 
         return response_dict
 
@@ -664,7 +665,9 @@ class AccuweatherBackend:
                     )
                 )
         except ExceptionGroup as e:
-            raise AccuweatherError(f"Failed to fetch weather report: {e.exceptions}")
+            raise AccuweatherError(
+                AccuweatherErrorMessages.FAILED_WEATHER_REPORT, exceptions=e.exceptions
+            )
 
         if (current_conditions_response := await task_current) is not None and (
             forecast_response := await task_forecast
@@ -717,12 +720,14 @@ class AccuweatherBackend:
             )
         except HTTPError as error:
             raise AccuweatherError(
-                f"Unexpected location response from: {url_path}, city: {city}"
+                AccuweatherErrorMessages.HTTP_UNEXPECTED_LOCATION_RESPONSE,
+                url_path=url_path,
+                city=city,
             ) from error
         except Exception as exc:
             raise AccuweatherError(
-                f"Unexpected error occurred when requesting location by geolocation from "
-                f"Accuweather: {exc.__class__.__name__}"
+                AccuweatherErrorMessages.UNEXPECTED_GEOLOCATION_ERROR,
+                exception_class_name=exc.__class__.__name__,
             ) from exc
 
         # record the region that gave a location
@@ -751,12 +756,15 @@ class AccuweatherBackend:
             )
         except HTTPError as error:
             raise AccuweatherError(
-                f"Unexpected current conditions response, Url: {self.url_current_conditions_path.format(location_key=location_key)}"
+                AccuweatherErrorMessages.HTTP_UNEXPECTED_CURRENT_CONDITIONS_RESPONSE,
+                current_conditions_url=self.url_current_conditions_path.format(
+                    location_key=location_key
+                ),
             ) from error
         except Exception as exc:
             raise AccuweatherError(
-                f"Unexpected error occurred when requesting current conditions from Accuweather:"
-                f" {exc.__class__.__name__}"
+                AccuweatherErrorMessages.UNEXPECTED_CURRENT_CONDITIONS_ERROR,
+                exception_class_name=exc.__class__.__name__,
             ) from exc
 
         return (
@@ -794,12 +802,13 @@ class AccuweatherBackend:
             )
         except HTTPError as error:
             raise AccuweatherError(
-                f"Unexpected forecast response, Url: {self.url_forecasts_path.format(location_key=location_key)}"
+                AccuweatherErrorMessages.HTTP_UNEXPECTED_FORECAST_RESPONSE,
+                forecast_url=self.url_forecasts_path.format(location_key=location_key),
             ) from error
         except Exception as exc:
             raise AccuweatherError(
-                f"Unexpected error occurred when requesting forecast from Accuweather: "
-                f"{exc.__class__.__name__}"
+                AccuweatherErrorMessages.UNEXPECTED_FORECAST_ERROR,
+                exception_class_name=exc.__class__.__name__,
             ) from exc
 
         return (
@@ -817,11 +826,13 @@ class AccuweatherBackend:
         )
 
     async def get_location_completion(
-        self, geolocation: Location, search_term: str
+        self, geolocation: Location, languages: list[str], search_term: str
     ) -> list[LocationCompletion] | None:
         """Fetch a list of locations from the Accuweather API given a search term and location."""
         if not search_term:
             return None
+
+        language = get_language(languages)
 
         url_path = self.url_location_completion_path
 
@@ -835,6 +846,7 @@ class AccuweatherBackend:
             "q": search_term,
             self.url_param_api_key: self.api_key,
             LOCATION_COMPLETE_ALIAS_PARAM: LOCATION_COMPLETE_ALIAS_PARAM_VALUE,
+            LANGUAGE_PARAM: language,
         }
 
         try:
@@ -847,13 +859,15 @@ class AccuweatherBackend:
             )
         except HTTPError as error:
             raise AccuweatherError(
-                f"Failed to get location completion from Accuweather, http error occurred. "
-                f"url path: {url_path}, query: {search_term}"
+                AccuweatherErrorMessages.HTTP_LOCATION_COMPLETION_ERROR,
+                url_path=url_path,
+                search_term=search_term,
+                language=language,
             ) from error
         except Exception as exc:
             raise AccuweatherError(
-                f"Unexpected error occurred when requesting location completion from "
-                f"Accuweather: {exc.__class__.__name__}"
+                AccuweatherErrorMessages.UNEXPECTED_LOCATION_COMPLETION_ERROR,
+                exception_class_name=exc.__class__.__name__,
             ) from exc
 
         return (
