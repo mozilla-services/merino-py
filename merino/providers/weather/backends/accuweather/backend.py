@@ -436,7 +436,7 @@ class AccuweatherBackend:
             - `cached_data` {list[bytes]} A list of bytes for location_key,
               current_conditions, forecast, ttl
         """
-        if not cached_data:
+        if len(cached_data) == 0:
             return WeatherData()
 
         location_cached, current_cached, forecast_cached, ttl_cached = cached_data
