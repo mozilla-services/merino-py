@@ -287,7 +287,7 @@ async def test_query_with_incomplete_city_region_country_params_fallback_to_init
 async def test_query_no_weather_report_returned(
     backend_mock: Any, provider: Provider, geolocation: Location
 ) -> None:
-    """Test that the query method provides a valid weather suggestion without a weather
+    """Test that the query method doesn't provide a weather suggestion without a weather
     report.
     """
     expected_suggestions: list[Suggestion] = []
