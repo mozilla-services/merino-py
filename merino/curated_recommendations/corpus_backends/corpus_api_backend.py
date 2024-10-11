@@ -6,6 +6,7 @@ import random
 from datetime import datetime, timedelta
 from urllib.parse import urlparse, urlencode, parse_qsl
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from dataclasses import dataclass
 
 import aiodogstatsd
 from httpx import AsyncClient, HTTPError
@@ -30,6 +31,23 @@ from merino.utils.version import fetch_app_version_from_file
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class CacheKey:
+    """Cache key for identifying cached items."""
+
+    surface_id: ScheduledSurfaceId
+    days_since_today: int = 0
+
+
+@dataclass
+class CacheEntry:
+    """Class to store cache-related data."""
+
+    items: list[CorpusItem]
+    expiration: datetime
+    lock: asyncio.Lock
+
+
 class CorpusGraphQLError(BackendError):
     """Error during interaction with the corpus GraphQL API."""
 
@@ -44,12 +62,12 @@ class CorpusApiGraphConfig:
         self._app_version = fetch_app_version_from_file().commit
 
     @property
-    def endpoint(self):
+    def endpoint(self) -> str:
         """Pocket GraphQL endpoint URL"""
         return self.CORPUS_API_PROD_ENDPOINT
 
     @property
-    def headers(self):
+    def headers(self) -> dict[str, str]:
         """Pocket GraphQL client headers"""
         return {
             "apollographql-client-name": "merino-py",
@@ -98,7 +116,7 @@ SCHEDULED_SURFACE_ID_TO_UTM_SOURCE: dict[ScheduledSurfaceId, str] = {
 
 class CorpusApiBackend(CorpusBackend):
     """Corpus API Backend hitting the curated corpus api
-    & returning recommendations for current date & locale/region.
+    & returning recommendations for a date & locale/region.
     Uses an in-memory cache and request coalescing to limit request rate to the backend.
     """
 
@@ -111,9 +129,7 @@ class CorpusApiBackend(CorpusBackend):
     # rate to the scheduledSurface query stays close to the historic rate of ~100 requests/minute.
     cache_time_to_live_min = timedelta(seconds=50)
     cache_time_to_live_max = timedelta(seconds=70)
-    _cache: dict[ScheduledSurfaceId, list[CorpusItem]]
-    _expirations: dict[ScheduledSurfaceId, datetime]
-    _locks: dict[ScheduledSurfaceId, asyncio.Lock]
+    _cache: dict[CacheKey, CacheEntry]
     _background_tasks: set[asyncio.Task]
 
     def __init__(
@@ -126,8 +142,6 @@ class CorpusApiBackend(CorpusBackend):
         self.graph_config = graph_config
         self.metrics_client = metrics_client
         self._cache = {}
-        self._expirations = {}
-        self._locks = {}
         self._background_tasks = set()
 
     @staticmethod
@@ -192,25 +206,28 @@ class CorpusApiBackend(CorpusBackend):
         """Return scheduled surface date based on timezone."""
         return datetime.now(tz=surface_timezone) - timedelta(hours=3)
 
-    async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
+    async def fetch(
+        self, surface_id: ScheduledSurfaceId, days_since_today: int = 0
+    ) -> list[CorpusItem]:
         """Fetch corpus items with stale-while-revalidate caching and request coalescing."""
         now = datetime.now()
-        cache_key = surface_id
+        cache_key = CacheKey(surface_id, days_since_today)
 
         # If we have expired cached data, revalidate asynchronously without waiting for the result.
         if cache_key in self._cache:
-            if now >= self._expirations[cache_key]:
+            cache_entry = self._cache[cache_key]
+            if now >= cache_entry.expiration:
+                task = asyncio.create_task(self._revalidate_cache(surface_id, days_since_today))
                 # Save a reference to the result of this function, to avoid a task disappearing
                 # mid-execution. The event loop only keeps weak references to tasks. A task that
                 # isn’t referenced elsewhere may get garbage collected, even before it’s done.
                 # https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
-                task = asyncio.create_task(self._revalidate_cache(surface_id))
                 self._background_tasks.add(task)
                 task.add_done_callback(self._background_tasks.discard)
-            return self._cache[cache_key]
+            return cache_entry.items
 
         # If no cache value exists, fetch new data and await the result.
-        return await self._revalidate_cache(surface_id)
+        return await self._revalidate_cache(surface_id, days_since_today)
 
     @retry(
         wait=wait_exponential_jitter(
@@ -222,7 +239,9 @@ class CorpusApiBackend(CorpusBackend):
         reraise=True,  # Raise the exception our code encountered, instead of a RetryError
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def _fetch_from_backend(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
+    async def _fetch_from_backend(
+        self, surface_id: ScheduledSurfaceId, days_since_today: int
+    ) -> list[CorpusItem]:
         """Issue a scheduledSurface query"""
         query = """
             query ScheduledSurface($scheduledSurfaceId: ID!, $date: Date!) {
@@ -243,17 +262,15 @@ class CorpusApiBackend(CorpusBackend):
             }
         """
 
-        # The date is supposed to progress at 3am local time,
-        # where 'local time' is based on the timezone associated with the scheduled surface.
-        # This requirement is documented in the NewTab slate spec:
-        # https://getpocket.atlassian.net/wiki/spaces/PE/pages/2927100008/Fx+NewTab+Slate+spec
+        # Calculate the base date and adjusted date based on days_since_today
         today = self.get_scheduled_surface_date(self.get_surface_timezone(surface_id))
+        adjusted_date = today - timedelta(days=days_since_today)
 
         body = {
             "query": query,
             "variables": {
                 "scheduledSurfaceId": surface_id,
-                "date": today.strftime("%Y-%m-%d"),
+                "date": adjusted_date.strftime("%Y-%m-%d"),
             },
         }
 
@@ -294,33 +311,36 @@ class CorpusApiBackend(CorpusBackend):
 
         return curated_recommendations
 
-    async def _revalidate_cache(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:
+    async def _revalidate_cache(
+        self, surface_id: ScheduledSurfaceId, days_since_today: int
+    ) -> list[CorpusItem]:
         """Update the cache for a specific surface and return the corpus items.
         If the API fails to respond successfully even after retries, return the latest cached data.
         Only a single "coalesced" request will be made to the backend per surface id.
         """
-        cache_key = surface_id
+        cache_key = CacheKey(surface_id, days_since_today)
 
-        if cache_key not in self._locks:
-            self._locks[cache_key] = asyncio.Lock()
+        if cache_key not in self._cache:
+            self._cache[cache_key] = CacheEntry([], datetime.min, asyncio.Lock())
 
-        async with self._locks[cache_key]:
+        async with self._cache[cache_key].lock:
             # Check if the cache was updated while waiting for the lock.
-            if cache_key in self._cache and datetime.now() < self._expirations[cache_key]:
-                return self._cache[cache_key]
+            if datetime.now() < self._cache[cache_key].expiration:
+                return self._cache[cache_key].items
 
             # Attempt to fetch new data from the backend
             try:
-                data = await self._fetch_from_backend(surface_id)
-                self._cache[cache_key] = data
-                self._expirations[cache_key] = self.get_expiration_time()
+                data = await self._fetch_from_backend(surface_id, days_since_today)
+                self._cache[cache_key] = CacheEntry(
+                    data, self.get_expiration_time(), asyncio.Lock()
+                )
                 return data
             except Exception as e:
-                if cache_key in self._cache:
+                if self._cache[cache_key].items:
                     logger.error(
                         f"Failed to update corpus cache: {e}. Returning stale cached data."
                     )
-                    return self._cache[cache_key]
+                    return self._cache[cache_key].items
                 else:
                     raise e
 
