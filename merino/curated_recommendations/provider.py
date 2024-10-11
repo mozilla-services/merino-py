@@ -176,7 +176,7 @@ class CuratedRecommendationsProvider:
             ):
                 rec.topic = None
 
-        return recommendations
+        return recommendations[: request.count]
 
     def rank_need_to_know_recommendations(
         self,
