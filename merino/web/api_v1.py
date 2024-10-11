@@ -177,11 +177,13 @@ async def suggest(
         search_from = default_providers
 
     lookups: list[Task] = []
+    languages = get_accepted_languages(accept_language)
     for p in search_from:
         srequest = SuggestionRequest(
             query=p.normalize_query(q),
             geolocation=request.scope[ScopeKey.GEOLOCATION],
             request_type=request_type,
+            languages=languages,
         )
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
         # `timeit_task()` doesn't support task naming, need to set the task name manually

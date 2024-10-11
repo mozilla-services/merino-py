@@ -91,7 +91,7 @@ class WeatherBackend(Protocol):
         ...
 
     async def get_location_completion(
-        self, geolocation: Location, search_term: str
+        self, geolocation: Location, languages: list[str], search_term: str
     ) -> list[LocationCompletion] | None:  # pragma: no cover
         """Get a list of locations (cities and country) from partner
         Raises:

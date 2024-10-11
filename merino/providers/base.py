@@ -15,6 +15,7 @@ class SuggestionRequest(BaseModel):
 
     query: str
     geolocation: Location
+    languages: list[str] | None = None
     request_type: str | None = None
 
 
