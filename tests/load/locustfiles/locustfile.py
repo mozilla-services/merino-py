@@ -399,7 +399,7 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=497)
+    @task(weight=642)
     def weather_suggestions(self) -> None:
         """Send multiple requests for Weather queries."""
         # Firefox will do local keyword matching to trigger weather suggestions
@@ -412,14 +412,14 @@ class MerinoUser(HttpUser):
 
         self._request_suggestions(query, providers, headers)
 
-    @task(weight=421)
+    @task(weight=298)
     def curated_recommendations_locale(self) -> None:
         """Send request to get curated recommendations, specifying random locale & 0 topics."""
         self._request_recommendations(
             CuratedRecommendationsRequest(locale=choice(list(Locale))), "locale"
         )
 
-    @task(weight=74)
+    @task(weight=52)
     def curated_recommendations_random_topics(self) -> None:
         """Send request to get curated recommendations with a random number of topics (between 1 & 4(max))."""
         num_topics = randint(1, 4)  # Randomly choose between 1 and 4 topics
