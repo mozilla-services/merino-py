@@ -94,11 +94,11 @@ async def suggest(
     - `q`: The query that the user has typed. This is expected to be a partial
         input, sent as fast as once per keystroke, though a slower period may be
         appropriate for the user agent.
-    - `city`: [Optional] City name. E.g. “New York”. If provided, 
+    - `city`: [Optional] City name. E.g. “New York”. If provided,
         Accuweather provider returns weather suggestions based on this city.
-    - `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided, 
+    - `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided,
         Accuweather provider returns weather suggestions based on this country.
-    - `region`: [Optional] Subdivision code / postal abbreviation. E.g. : “NY”. If provided, 
+    - `region`: [Optional] Subdivision code / postal abbreviation. E.g. : “NY”. If provided,
         Accuweather provider returns weather suggestions based on this region.
     - `client_variants`: [Optional] A comma-separated list of any experiments or
         rollouts that are affecting the client's Suggest experience. If Merino

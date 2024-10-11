@@ -105,7 +105,6 @@ async def test_query_weather_report_returned(
     weather_report: WeatherReport,
 ) -> None:
     """Test that the query method provides a valid weather suggestion."""
-
     expected_suggestions: list[Suggestion] = [
         Suggestion(
             title="Weather for San Francisco",
@@ -143,7 +142,6 @@ async def test_query_with_city_region_country_weather_report_returned(
     """Test that the query method provides a valid weather suggestion when city, region
     & country params are provided.
     """
-
     report: WeatherReport = WeatherReport(
         city_name="Boston",
         current_conditions=CurrentConditions(
@@ -250,7 +248,6 @@ async def test_query_with_incomplete_city_region_country_params_fallback_to_init
     """Test that the query method provides a weather suggestion without overwriting geolocation when city, region
     & country params are not all provided.
     """
-
     expected_suggestions: list[Suggestion] = [
         Suggestion(
             title="Weather for San Francisco",
@@ -311,9 +308,7 @@ async def test_query_with_no_request_type_param_returns_http_400(
     `request_type` param is provided
     """
     with pytest.raises(HTTPException) as accuweather_error:
-        await provider.query(
-            SuggestionRequest(query="weather", geolocation=geolocation)
-        )
+        await provider.query(SuggestionRequest(query="weather", geolocation=geolocation))
 
     expected_error_message = "400: Invalid query parameters: `request_type` is missing"
 

@@ -157,9 +157,7 @@ class Provider(BaseProvider):
                 city_name=data.city_name,
                 current_conditions=data.current_conditions,
                 forecast=data.forecast,
-                custom_details=CustomDetails(
-                    weather=WeatherDetails(weather_report_ttl=data.ttl)
-                ),
+                custom_details=CustomDetails(weather=WeatherDetails(weather_report_ttl=data.ttl)),
             )
         else:
             return LocationCompletionSuggestion(
