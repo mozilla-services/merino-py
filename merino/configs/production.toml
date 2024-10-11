@@ -29,7 +29,7 @@ domain_data_source = "local"
 
 [production.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
-# GCS bucket that contains aggregate engagement data
+# GCS bucket that contains aggregate engagement and prior data
 bucket_name = "merino-airflow-data-prodpy"
 
 # MERINO__CURATED_RECOMMENDATIONS__GCS__GCP_PROJECT

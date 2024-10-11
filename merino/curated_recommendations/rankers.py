@@ -72,7 +72,7 @@ def thompson_sampling(
                 a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
                 b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
 
-        # Add alpha and beta prior to open and no_opens, while ensuring that they're > 0.
+        # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
         opens += max(a_prior, 1e-18)
         no_opens += max(b_prior, 1e-18)
 

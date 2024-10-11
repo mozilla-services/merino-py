@@ -21,8 +21,7 @@ def gcs_bucket(gcs_storage_client):
     bucket.delete(force=True)
 
 
-@pytest.fixture
-async def create_gcs_prior(gcs_storage_client, gcs_bucket, metrics_client):
+def create_gcs_prior(gcs_storage_client, gcs_bucket, metrics_client) -> GcsPrior:
     """Return an initialized GcsPrior instance using the fake GCS server."""
     synced_gcs_blob = SyncedGcsBlob(
         storage_client=gcs_storage_client,
@@ -91,16 +90,18 @@ def large_blob(gcs_bucket):
 
 
 @pytest.mark.asyncio
-async def test_gcs_prior_returns_none_for_missing_keys(create_gcs_prior):
+async def test_gcs_prior_returns_none_for_missing_keys(
+    gcs_storage_client, gcs_bucket, metrics_client
+):
     """Test that the backend returns None for keys not in the GCS blobs."""
-    gcs_prior = await create_gcs_prior
+    gcs_prior = create_gcs_prior(gcs_storage_client, gcs_bucket, metrics_client)
     assert gcs_prior.get("missing_key") is None
 
 
 @pytest.mark.asyncio
-async def test_gcs_prior_fetches_data(create_gcs_prior, blob):
+async def test_gcs_prior_fetches_data(gcs_storage_client, gcs_bucket, metrics_client, blob):
     """Test that the backend fetches data from GCS and returns prior data."""
-    gcs_prior = await create_gcs_prior
+    gcs_prior = create_gcs_prior(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_prior_is_updated(gcs_prior)
 
     assert gcs_prior.get("US") == Prior(region="US", alpha=75.0, beta=1500.0)
@@ -109,9 +110,11 @@ async def test_gcs_prior_fetches_data(create_gcs_prior, blob):
 
 
 @pytest.mark.asyncio
-async def test_gcs_prior_logs_error_for_large_blob(create_gcs_prior, large_blob, caplog):
+async def test_gcs_prior_logs_error_for_large_blob(
+    gcs_storage_client, gcs_bucket, metrics_client, large_blob, caplog
+):
     """Test that the backend logs an error if the blob size exceeds the max size."""
-    gcs_prior = await create_gcs_prior
+    gcs_prior = create_gcs_prior(gcs_storage_client, gcs_bucket, metrics_client)
     caplog.set_level(logging.ERROR)
 
     await wait_until_prior_is_updated(gcs_prior)
@@ -121,9 +124,9 @@ async def test_gcs_prior_logs_error_for_large_blob(create_gcs_prior, large_blob,
 
 
 @pytest.mark.asyncio
-async def test_gcs_prior_metrics(create_gcs_prior, metrics_client, blob):
+async def test_gcs_prior_metrics(gcs_storage_client, gcs_bucket, metrics_client, blob):
     """Test that the backend records the correct metrics."""
-    gcs_prior = await create_gcs_prior
+    gcs_prior = create_gcs_prior(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_prior_is_updated(gcs_prior)
 
     # Verify the metrics are recorded correctly
