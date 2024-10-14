@@ -33,10 +33,10 @@ def init_engagement_backend() -> EngagementBackend:
     try:
         metrics_namespace = "recommendation.engagement"
         synced_gcs_blob = SyncedGcsBlob(
-            storage_client=Client(settings.curated_recommendations.gcs.engagement.gcp_project),
+            storage_client=Client(settings.curated_recommendations.gcs.gcp_project),
             metrics_client=get_metrics_client(),
             metrics_namespace=metrics_namespace,
-            bucket_name=settings.curated_recommendations.gcs.engagement.bucket_name,
+            bucket_name=settings.curated_recommendations.gcs.bucket_name,
             blob_name=settings.curated_recommendations.gcs.engagement.blob_name,
             max_size=settings.curated_recommendations.gcs.engagement.max_size,
             cron_interval_seconds=settings.curated_recommendations.gcs.engagement.cron_interval_seconds,
