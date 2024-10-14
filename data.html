@@ -309,11 +309,22 @@ A counter to measure the status codes of an HTTP request to the curated-corpus-a
 A counter to measure the number of GraphQL errors from the curated-corpus-api.</li>
 <li><code>recommendation.engagement.update.timing</code> -
 A timer to measure the duration (in ms) of updating the engagement data from GCS.</li>
-<li><code>recommendation.engagement.size</code> - A gauge to track the size of the blob on GCS.</li>
-<li><code>recommendation.engagement.count</code> - A gauge to measure the number of scheduled corpus items with
-engagement data.</li>
+<li><code>recommendation.engagement.size</code> - A gauge to track the size of the engagement blob on GCS.</li>
+<li><code>recommendation.engagement.count</code> - A gauge to measure the total number of engagement records.</li>
+<li><code>recommendation.engagement.{country}.count</code> - A gauge to measure the number of scheduled corpus 
+items with engagement data per country.</li>
+<li><code>recommendation.engagement.{country}.clicks</code> - A gauge to measure the number of clicks per country 
+in our GCS engagement blob.</li>
+<li><code>recommendation.engagement.{country}.impressions</code> - A gauge to measure the number of impressions
+per country in our GCS engagement blob.</li>
 <li><code>recommendation.engagement.last_updated</code> -
 A gauge for the staleness (in seconds) of the engagement data, measured between when the data was
+updated in GCS and the current time.</li>
+<li><code>recommendation.prior.update.timing</code> -
+A timer to measure the duration (in ms) of updating the prior data from GCS.</li>
+<li><code>recommendation.prior.size</code> - A gauge to track the size of the Thompson sampling priors blob on GCS.</li>
+<li><code>recommendation.prior.last_updated</code> -
+A gauge for the staleness (in seconds) of the prior data, measured between when the data was
 updated in GCS and the current time.</li>
 </ul>
 
