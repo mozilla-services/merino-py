@@ -410,13 +410,16 @@ class TestCuratedRecommendationsRequestParameters:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("count", [10, 50, 100])
-    async def test_curated_recommendations_count(self, count):
+    async def test_curated_recommendations_count(self, count, fixture_response_data):
         """Test the curated recommendations endpoint accepts valid count."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
                 "/api/v1/curated-recommendations", json={"locale": "en-US", "count": count}
             )
             assert response.status_code == 200
+            data = response.json()
+            schedule_count = len(fixture_response_data["data"]["scheduledSurface"]["items"])
+            assert len(data["data"]) == min(count, schedule_count)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("count", [None, 100.5])
