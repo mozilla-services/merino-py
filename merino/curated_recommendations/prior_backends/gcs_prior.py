@@ -41,8 +41,7 @@ class GcsPrior(PriorBackend):
         # exploration. Since having more items reduces the number of impressions available per item,
         # beta scales with the average impressions per item to adjust the level of exploration.
         beta = 0.1 * prior_stats.impressions_per_item
-        # Set alpha to create an optimistic prior, ensuring every item has a chance to be seen
-        # in the top 2 curated recommendations of the New Tab page.
+        # Set alpha to create an optimistic prior, so every item is explored to discover its CTR.
         alpha = beta * prior_stats.average_ctr_top2_items
 
         return Prior(region=prior_stats.region, alpha=alpha, beta=beta)
