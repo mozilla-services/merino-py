@@ -248,10 +248,8 @@ async def test_query_with_city_region_country_weather_report_returned(
 )
 @pytest.mark.asyncio
 async def test_query_with_incomplete_city_region_country_params_throw_400_error(
-    backend_mock: Any,
     provider: Provider,
     geolocation: Location,
-    weather_report: WeatherReport,
     city: str | None,
     region: str | None,
     country: str | None,
