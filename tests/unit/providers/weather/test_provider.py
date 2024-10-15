@@ -215,6 +215,14 @@ async def test_query_with_city_region_country_weather_report_returned(
         )
     )
 
+    backend_mock.get_weather_report.assert_called_with(Location(
+        country="US",
+        regions=["MA"],
+        city="Boston",
+        dma=807,
+        postal_code="94105",
+    ), '')
+
     assert suggestions == expected_suggestions
 
 
@@ -236,7 +244,7 @@ async def test_query_with_city_region_country_weather_report_returned(
     ],
 )
 @pytest.mark.asyncio
-async def test_query_with_incomplete_city_region_country_params_fallback_to_initial_geolocation(
+async def test_query_with_incomplete_city_region_country_params_throw_400_error(
     backend_mock: Any,
     provider: Provider,
     geolocation: Location,
@@ -245,42 +253,23 @@ async def test_query_with_incomplete_city_region_country_params_fallback_to_init
     region: str | None,
     country: str | None,
 ) -> None:
-    """Test that the query method provides a weather suggestion without overwriting geolocation when city, region
+    """Test that the query method throws a http 400 error when city, region
     & country params are not all provided.
     """
-    expected_suggestions: list[Suggestion] = [
-        Suggestion(
-            title="Weather for San Francisco",
-            url=HttpUrl(
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/current-weather/39376?lang=en-us"
-            ),
-            provider="weather",
-            is_sponsored=False,
-            score=settings.providers.accuweather.score,
-            icon=None,
-            city_name=weather_report.city_name,
-            current_conditions=weather_report.current_conditions,
-            forecast=weather_report.forecast,
-            custom_details=CustomDetails(
-                weather=WeatherDetails(weather_report_ttl=weather_report.ttl)
-            ),
-        )
-    ]
-    backend_mock.get_weather_report.return_value = weather_report
-
-    suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(
+    
+    with pytest.raises(HTTPException) as accuweather_error:
+        await provider.query(SuggestionRequest(
             query="",
             city=city,
             region=region,
             country=country,
             request_type="weather",
             geolocation=geolocation,
-        )
-    )
+        ))
 
-    assert suggestions == expected_suggestions
+    expected_error_message = "400: Invalid query parameters: `city`, `region`, and `country` are required, but one or more are missing in the request."
+
+    assert expected_error_message == str(accuweather_error.value)
 
 
 @pytest.mark.asyncio

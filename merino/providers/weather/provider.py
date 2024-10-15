@@ -126,6 +126,12 @@ class Provider(BaseProvider):
                                 "country": srequest.country,
                             }
                         )
+                    
+                    elif srequest.city or srequest.region or srequest.country:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Invalid query parameters: `city`, `region`, and `country` are required, but one or more are missing in the request.",
+                        )
 
                     weather_report = await self.backend.get_weather_report(
                         geolocation, srequest.query

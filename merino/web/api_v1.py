@@ -95,11 +95,14 @@ async def suggest(
         input, sent as fast as once per keystroke, though a slower period may be
         appropriate for the user agent.
     - `city`: [Optional] City name. E.g. “New York”. If provided,
-        Accuweather provider returns weather suggestions based on this city.
+        Accuweather provider returns weather suggestions based on this city. Note: If provided,
+        `region` and `country` must also be provided to successfully return weather suggestions.
     - `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided,
-        Accuweather provider returns weather suggestions based on this country.
-    - `region`: [Optional] Subdivision code / postal abbreviation. E.g. : “NY”. If provided,
-        Accuweather provider returns weather suggestions based on this region.
+        Accuweather provider returns weather suggestions based on this country. Note: If provided,
+        `city` and `region` must also be provided to successfully return weather suggestions.
+    - `region`: [Optional] Subdivision code. E.g. : “NY”. If provided,
+        Accuweather provider returns weather suggestions based on this region. Note: If provided,
+        `city` and `country` must also be provided to successfully return weather suggestions.
     - `client_variants`: [Optional] A comma-separated list of any experiments or
         rollouts that are affecting the client's Suggest experience. If Merino
         recognizes any of them it will modify its behavior accordingly.
