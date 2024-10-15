@@ -24,6 +24,32 @@ _validators = [
     ),
     Validator("accuweather.partner_code", is_type_of=str),
     Validator("amo.dynamic.api_url", is_type_of=str),
+    Validator(
+        "curated_recommendations.corpus_api.retry_wait_initial_seconds",
+        "curated_recommendations.corpus_api.retry_wait_jitter_seconds",
+        is_type_of=float,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "curated_recommendations.corpus_api.retry_count",
+        "curated_recommendations.gcs.engagement.max_size",
+        "curated_recommendations.gcs.engagement.cron_interval_seconds",
+        "curated_recommendations.gcs.prior.max_size",
+        "curated_recommendations.gcs.prior.cron_interval_seconds",
+        is_type_of=int,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "curated_recommendations.gcs.bucket_name",
+        "curated_recommendations.gcs.gcp_project",
+        "curated_recommendations.gcs.engagement.blob_name",
+        "curated_recommendations.gcs.prior.blob_name",
+        is_type_of=str,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
     Validator("providers.accuweather.enabled_by_default", is_type_of=bool),
     # The Redis server URL is required when at least one provider wants to use Redis for caching.
     Validator(
