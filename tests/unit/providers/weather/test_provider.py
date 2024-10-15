@@ -215,13 +215,16 @@ async def test_query_with_city_region_country_weather_report_returned(
         )
     )
 
-    backend_mock.get_weather_report.assert_called_with(Location(
-        country="US",
-        regions=["MA"],
-        city="Boston",
-        dma=807,
-        postal_code="94105",
-    ), '')
+    backend_mock.get_weather_report.assert_called_with(
+        Location(
+            country="US",
+            regions=["MA"],
+            city="Boston",
+            dma=807,
+            postal_code="94105",
+        ),
+        "",
+    )
 
     assert suggestions == expected_suggestions
 
@@ -256,16 +259,17 @@ async def test_query_with_incomplete_city_region_country_params_throw_400_error(
     """Test that the query method throws a http 400 error when city, region
     & country params are not all provided.
     """
-    
     with pytest.raises(HTTPException) as accuweather_error:
-        await provider.query(SuggestionRequest(
-            query="",
-            city=city,
-            region=region,
-            country=country,
-            request_type="weather",
-            geolocation=geolocation,
-        ))
+        await provider.query(
+            SuggestionRequest(
+                query="",
+                city=city,
+                region=region,
+                country=country,
+                request_type="weather",
+                geolocation=geolocation,
+            )
+        )
 
     expected_error_message = "400: Invalid query parameters: `city`, `region`, and `country` are required, but one or more are missing in the request."
 

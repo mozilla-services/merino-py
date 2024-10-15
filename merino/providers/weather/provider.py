@@ -126,7 +126,7 @@ class Provider(BaseProvider):
                                 "country": srequest.country,
                             }
                         )
-                    
+
                     elif srequest.city or srequest.region or srequest.country:
                         raise HTTPException(
                             status_code=400,
