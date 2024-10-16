@@ -78,7 +78,7 @@ def _do_csv_test(
     mock_chunked_uploader_ctor.assert_any_call(
         **common_kwargs,
         record_type="category_to_domains",
-        total_data_count=len(primary_category_data),
+        total_item_count=len(primary_category_data),
         category_name="Sports",
         category_code=17,
     )
@@ -86,7 +86,7 @@ def _do_csv_test(
     mock_chunked_uploader_ctor.assert_any_call(
         **common_kwargs,
         record_type="category_to_domains",
-        total_data_count=len(secondary_category_data),
+        total_item_count=len(secondary_category_data),
         category_name="News",
         category_code=14,
     )
@@ -94,7 +94,7 @@ def _do_csv_test(
     mock_chunked_uploader_ctor.assert_any_call(
         **common_kwargs,
         record_type="category_to_domains",
-        total_data_count=len(inconclusive_category_data),
+        total_item_count=len(inconclusive_category_data),
         category_name="Inconclusive",
         category_code=0,
     )
@@ -104,7 +104,7 @@ def _do_csv_test(
     else:
         mock_chunked_uploader.delete_records.assert_not_called()
 
-    mock_chunked_uploader.add_data.assert_has_calls(
+    mock_chunked_uploader.add_item.assert_has_calls(
         [
             *map(
                 mocker.call,

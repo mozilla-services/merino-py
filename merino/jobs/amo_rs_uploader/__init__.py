@@ -130,7 +130,7 @@ async def _upload(
         record_type=record_type,
         server=server,
         suggestion_score_fallback=score,
-        total_data_count=len(backend.dynamic_data),
+        total_item_count=len(backend.dynamic_data),
     ) as uploader:
         if not keep_existing_records:
             uploader.delete_records()

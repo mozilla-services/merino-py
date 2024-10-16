@@ -235,7 +235,7 @@ async def _upload_file_object(
         record_type=record_type,
         server=server,
         suggestion_score_fallback=score,
-        total_data_count=len(suggestions),
+        total_item_count=len(suggestions),
     ) as uploader:
         if not keep_existing_records:
             uploader.delete_records()

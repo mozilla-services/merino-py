@@ -19,7 +19,7 @@ class ChunkedRemoteSettingsSuggestionUploader(ChunkedRemoteSettingsUploader):
     kinto: kinto_http.Client
     record_type: str
     suggestion_score_fallback: float | None
-    total_data_count: int | None
+    total_item_count: int | None
 
     def __init__(
         self,
@@ -32,7 +32,7 @@ class ChunkedRemoteSettingsSuggestionUploader(ChunkedRemoteSettingsUploader):
         allow_delete: bool = False,
         dry_run: bool = False,
         suggestion_score_fallback: float | None = None,
-        total_data_count: int | None = None,
+        total_item_count: int | None = None,
     ):
         """Initialize the uploader."""
         super(ChunkedRemoteSettingsSuggestionUploader, self).__init__(
@@ -44,10 +44,10 @@ class ChunkedRemoteSettingsSuggestionUploader(ChunkedRemoteSettingsUploader):
             server,
             allow_delete,
             dry_run,
-            total_data_count,
+            total_item_count,
         )
         self.suggestion_score_fallback = suggestion_score_fallback
-        self.total_data_count = total_data_count
+        self.total_item_count = total_item_count
 
     def add_suggestion(self, suggestion: dict[str, Any]) -> None:
         """Add a suggestion. If the current chunk becomes full as a result, it
@@ -55,6 +55,6 @@ class ChunkedRemoteSettingsSuggestionUploader(ChunkedRemoteSettingsUploader):
         """
         if self.suggestion_score_fallback and "score" not in suggestion:
             suggestion |= {"score": self.suggestion_score_fallback}
-        self.current_chunk.add_data(suggestion)
+        self.current_chunk.add_item(suggestion)
         if self.current_chunk.size == self.chunk_size:
             self._finish_current_chunk()

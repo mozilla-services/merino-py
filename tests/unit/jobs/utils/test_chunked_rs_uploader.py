@@ -306,7 +306,7 @@ def test_suggestion_score_fallback_overridden(requests_mock):
     )
 
 
-def test_total_data_count(requests_mock):
+def test_total_item_count(requests_mock):
     """Tests passing a total suggestion count so record IDs contain zero-padded
     start and end indexes.
     """
@@ -316,7 +316,7 @@ def test_total_data_count(requests_mock):
         chunk_size=500,
         suggestion_count=1999,
         uploader_kwargs={
-            "total_data_count": 1999,
+            "total_item_count": 1999,
         },
         expected_records=[
             Record(0, 500, id=f"{record_type}-0000-0500"),

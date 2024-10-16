@@ -166,7 +166,7 @@ def do_upload_test(
     ) as uploader:
         for i in range(data_count):
             data: dict[str, Any] = {"i": i}
-            uploader.add_data(data)
+            uploader.add_item(data)
 
     check_upload_requests(requests_mock.request_history, expected_records)
 

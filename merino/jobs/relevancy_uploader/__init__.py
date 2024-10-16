@@ -290,13 +290,13 @@ async def _upload_file_object(
             dry_run=dry_run,
             record_type=RELEVANCY_RECORD_TYPE,
             server=server,
-            total_data_count=len(data[category]),
+            total_item_count=len(data[category]),
             category_name=category.name,
             category_code=category.value,
             version=version,
         ) as uploader:
             for domain in domains:
-                uploader.add_data(domain)
+                uploader.add_item(domain)
 
 
 def _read_categories_data(file_path) -> dict:

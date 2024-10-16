@@ -83,7 +83,7 @@ def test_upload_without_deleting(mocker):
 
 
 def test_delete_and_upload(mocker):
-    """upload(keep_existing_records=True) with the primary CSV test data"""
+    """upload(keep_existing_records=False) with the primary CSV test data"""
     do_csv_test(
         mocker=mocker,
         csv_path=PRIMARY_CSV_PATH,
