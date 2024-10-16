@@ -283,8 +283,12 @@ class CuratedRecommendationsProvider:
             for rank, item in enumerate(corpus_items)
         ]
 
-        feeds: dict[str, CuratedRecommendationsBucket | FakespotFeed] = {}
+        # Recommended articles for the "default" cards
         general_feed = None
+        # Recommended articles for the "need to know/TBR" experiment
+        need_to_know_feed = None
+        # Fakespot products for the Fakespot experiment
+        fakespot_feed = None
 
         # For users in the "Need to Know" experiment, separate recommendations into
         # two different feeds: the "general" feed and the "need to know" feed.
@@ -298,11 +302,18 @@ class CuratedRecommendationsProvider:
                 ScheduledSurfaceId.NEW_TAB_DE_DE,
             )
         ):
-            general_feed, need_to_know_feed, title = self.rank_need_to_know_recommendations(
+            # this applies ranking to the general_feed!
+            general_feed, need_to_know_recs, title = self.rank_need_to_know_recommendations(
                 recommendations, surface_id, curated_recommendations_request
             )
-            feeds["need_to_know"] = CuratedRecommendationsBucket(
-                recommendations=need_to_know_feed, title=title
+
+            need_to_know_feed = CuratedRecommendationsBucket(
+                recommendations=need_to_know_recs, title=title
+            )
+        else:
+            # Default construction of the general_feed
+            general_feed = self.rank_recommendations(
+                recommendations, surface_id, curated_recommendations_request
             )
 
         # Check for Fakespot feed experiment, currently, only for en-US
@@ -311,37 +322,19 @@ class CuratedRecommendationsProvider:
             and "fakespot" in curated_recommendations_request.feeds
             and surface_id == ScheduledSurfaceId.NEW_TAB_EN_US
         ):
-            feeds["fakespot"] = self.get_fakespot_feed()
+            fakespot_feed = self.get_fakespot_feed()            
 
-        # If any feeds were requested, return them
-        if feeds:
-            # extract feeds directly
-            # lint complains about types if unpacking the feeds dict directly in response.
-            need_to_know_feed = feeds.get("need_to_know", None)
-            fakespot_feed = feeds.get("fakespot", None)
+        # Contstruct the base response
+        response = CuratedRecommendationsResponse(
+            recommendedAt=self.time_ms(),
+            data=general_feed
+        )
 
-            return CuratedRecommendationsResponse(
-                recommendedAt=self.time_ms(),
-                data=general_feed
-                if "need_to_know" in feeds and general_feed is not None
-                else recommendations,
-                feeds=CuratedRecommendationsFeed(
-                    need_to_know=need_to_know_feed, fakespot=cast(FakespotFeed, fakespot_feed)
-                ),
-            )
+        # If we have feeds to return, add those to the response
+        if need_to_know_feed is not None or fakespot_feed is not None:
+            response.feeds = CuratedRecommendationsFeed(need_to_know=need_to_know_feed, fakespot=fakespot_feed)
 
-        # For everyone else, return the "classic" New Tab list of recommendations
-        else:
-            # Apply all the additional re-ranking and processing steps
-            # to the main recommendations feed
-            recommendations = self.rank_recommendations(
-                recommendations, surface_id, curated_recommendations_request
-            )
-
-            return CuratedRecommendationsResponse(
-                recommendedAt=self.time_ms(),
-                data=recommendations,
-            )
+        return response
 
     @staticmethod
     def time_ms() -> int:
