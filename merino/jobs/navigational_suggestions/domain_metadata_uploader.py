@@ -39,7 +39,9 @@ class DomainMetadataUploader:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         timestamp_file_name = f"{timestamp}_top_picks.json"
 
-        self.uploader.upload_content(top_picks, self.DESTINATION_TOP_PICK_FILE_NAME)
+        self.uploader.upload_content(
+            top_picks, self.DESTINATION_TOP_PICK_FILE_NAME, forced_upload=True
+        )
         dated_blob: Blob = self.uploader.upload_content(top_picks, timestamp_file_name)
 
         return dated_blob
