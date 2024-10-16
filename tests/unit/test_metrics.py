@@ -6,7 +6,6 @@
 
 import pytest
 
-from merino.featureflags import FeatureFlags
 from merino.metrics import Client
 
 
@@ -15,7 +14,6 @@ def fixture_metrics_client(statsd_mock):
     """Return a metrics client."""
     return Client(
         statsd_client=statsd_mock,
-        feature_flags=FeatureFlags(),
     )
 
 
