@@ -1,82 +1,42 @@
 """Wrapper for engagement data from Google Cloud Storage."""
 
-import asyncio
 import json
 import logging
-import time
-from datetime import datetime, timedelta, timezone
+from collections import Counter
 
-from google.cloud.storage import Client
 from aiodogstatsd import Client as StatsdClient
 
-from merino import cron
 from merino.curated_recommendations.engagement_backends.protocol import (
     Engagement,
     EngagementBackend,
 )
+from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 logger = logging.getLogger(__name__)
-
-LAST_UPDATED_INITIAL_VALUE = datetime.min.replace(tzinfo=timezone.utc)
 
 EngagementKeyType = tuple[str, str | None]  # Keyed on (scheduled_corpus_item_id, region)
 EngagementCacheType = dict[EngagementKeyType, Engagement]
 
 
 class GcsEngagement(EngagementBackend):
-    """Backend that retrieves engagement data from Google Cloud Storage.
-
-    This class periodically fetches engagement data from Google Cloud Storage in the background.
-    """
-
-    cron_task: asyncio.Task
+    """Backend that caches and periodically retrieves engagement data from Google Cloud Storage."""
 
     def __init__(
         self,
-        storage_client: Client,
+        synced_gcs_blob: SyncedGcsBlob,
         metrics_client: StatsdClient,
-        bucket_name: str,
-        blob_prefix: str,
-        max_size: int,
-        cron_interval_seconds: float,
+        metrics_namespace: str,
     ) -> None:
-        """Initialize the engagement backend but do not start the background task.
+        """Initialize the GcsEngagement backend.
 
         Args:
-            storage_client: GCS client initialized to the correct project
-            metrics_client: aiodogstatsd client for recording metrics
-            bucket_name: GCS bucket name
-            blob_prefix: GCS blob prefix
-            max_size: Maximum size in bytes of the GCS blob. If exceeded, an error will be logged.
-             and new engagement data will not be loaded. This guards against out-of-memory errors.
-            cron_interval_seconds: Interval at which to check GCS for updates in seconds.
+            synced_gcs_blob: Instance of SyncedGcsBlob that manages GCS synchronization.
         """
-        self.storage_client = storage_client
-        self.metrics_client = metrics_client
-        self.bucket_name = bucket_name
-        self.blob_prefix = blob_prefix
-        self.max_size = max_size
-        self.cron_interval_seconds = cron_interval_seconds
-        self.last_updated = LAST_UPDATED_INITIAL_VALUE
-        self._update_count = 0
         self._cache: EngagementCacheType = {}
-
-    @property
-    def update_count(self) -> int:
-        """Return the number of times the engagement has been updated."""
-        return self._update_count
-
-    def initialize(self) -> None:
-        """Start the background cron job to get new data."""
-        cron_job = cron.Job(
-            name="fetch_recommendation_engagement",
-            interval=self.cron_interval_seconds,
-            condition=lambda: True,
-            task=self._update_task_async,
-        )
-        # Store the created task on the instance variable. Otherwise, it will get
-        # garbage collected because asyncio's runtime only holds a weak reference to it.
-        self.cron_task = asyncio.create_task(cron_job())
+        self.synced_blob = synced_gcs_blob
+        self.synced_blob.set_fetch_callback(self._fetch_callback)
+        self.metrics_client = metrics_client
+        self.metrics_namespace = metrics_namespace
 
     def get(self, scheduled_corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Get cached click and impression counts from the last 24h for the scheduled corpus item id
@@ -91,61 +51,45 @@ class GcsEngagement(EngagementBackend):
         """
         return self._cache.get((scheduled_corpus_item_id, region))
 
-    async def _update_task_async(self) -> None:
-        """Run _update_engagement_task in a thread to prevent blocking the event loop"""
-        with self.metrics_client.timeit("recommendation.engagement.update.timing"):
-            await asyncio.to_thread(self._update_task)
+    @property
+    def update_count(self) -> int:
+        """Return the number of times the engagement data has been updated."""
+        return self.synced_blob.update_count
 
-    def _update_task(self):
-        """Task to update the cache with the latest engagement data from GCS."""
-        bucket = self.storage_client.bucket(self.bucket_name)
+    def _fetch_callback(self, data: str) -> None:
+        """Process the raw engagement blob data and update the cache.
 
-        # Only list files from the last day (about 100) to reduce memory usage and requests to GCS.
-        start_date = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y%m%d%H")
-        start_offset = f"{self.blob_prefix}{start_date}"
-        # Filter results to blobs whose names are lexicographically equal to or after start_offset.
-        # https://cloud.google.com/python/docs/reference/storage/latest/google.cloud.storage.bucket.Bucket#google_cloud_storage_bucket_Bucket_list_blobs
-        blobs = list(bucket.list_blobs(start_offset=start_offset))
+        Args:
+            data: The engagement blob string data, with an array of Engagement objects.
+        """
+        parsed_data = [Engagement(**item) for item in json.loads(data)]
+        self._cache = {(d.scheduled_corpus_item_id, d.region): d for d in parsed_data}
+        self._track_metrics()
 
-        if not blobs:
-            logger.error("Curated recommendations engagement blobs not found for start_offset")
-            return
+    def _track_metrics(self) -> None:
+        """Emit statistics about engagement"""
+        # Emit the total number of engagement records.
+        self.metrics_client.gauge(f"{self.metrics_namespace}.count", value=len(self._cache))
 
-        # Find the most recent blob by the last modified timestamp.
-        blob = max(blobs, key=lambda b: b.updated)
+        # Emit the number scheduled items by region for which we have engagement data.
+        region_counts = Counter(region for _, region in self._cache)
+        for region, count in region_counts.items():
+            region_name = region.lower() if region is not None else "global"
+            self.metrics_client.gauge(f"{self.metrics_namespace}.{region_name}.count", value=count)
 
-        self.metrics_client.gauge("recommendation.engagement.size", value=blob.size)
+        # Sum clicks and impressions by region.
+        clicks: Counter[str] = Counter()
+        impressions: Counter[str] = Counter()
+        for (item_id, region), eng in self._cache.items():
+            region_name = region.lower() if region is not None else "global"
+            clicks[region_name] += eng.click_count
+            impressions[region_name] += eng.impression_count
 
-        if blob.size > self.max_size:
-            logger.error(
-                f"Curated recommendations engagement size {blob.size} exceeds {self.max_size}"
-            )
-        elif blob.updated <= self.last_updated:
-            logger.info(f"Curated recommendations engagement unchanged since {self.last_updated}.")
-        else:
-            data = blob.download_as_text()
-            engagement_data = self._parse_data(data)
-            self._update_count += 1  # Increment the update count
-            self._cache = engagement_data
-            self.last_updated = blob.updated
+        # Emit clicks by region.
+        for region, count in clicks.items():
+            self.metrics_client.gauge(f"{self.metrics_namespace}.{region}.clicks", value=count)
+        # Emit impressions by region.
+        for region, count in impressions.items():
             self.metrics_client.gauge(
-                "recommendation.engagement.count", value=len(engagement_data)
+                f"{self.metrics_namespace}.{region}.impressions", value=count
             )
-
-        # Report the staleness of the engagement data in seconds.
-        if self.last_updated != LAST_UPDATED_INITIAL_VALUE:
-            self.metrics_client.gauge(
-                "recommendation.engagement.last_updated",
-                value=time.time() - self.last_updated.timestamp(),
-            )
-
-    @staticmethod
-    def _parse_data(data: str) -> EngagementCacheType:
-        """Parse the raw JSON data into a dictionary of Engagement objects."""
-        raw_data = json.loads(data)
-        engagement_dict = {}
-        for item in raw_data:
-            engagement = Engagement(**item)
-            engagement_dict[(engagement.scheduled_corpus_item_id, engagement.region)] = engagement
-
-        return engagement_dict

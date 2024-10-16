@@ -27,10 +27,6 @@ class EngagementBackend(Protocol):
         """Fetch engagement data for the given scheduled corpus item id and optionally region"""
         ...
 
-    def initialize(self) -> None:
-        """Start any background jobs"""
-        ...
-
     @property
     def update_count(self) -> int:
         """Returns the number of times the engagement has been updated."""

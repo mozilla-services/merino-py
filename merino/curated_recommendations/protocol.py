@@ -5,7 +5,7 @@ from enum import unique, Enum
 from typing import Annotated
 import logging
 
-from pydantic import Field, field_validator, model_validator, BaseModel, HttpUrl
+from pydantic import Field, field_validator, model_validator, BaseModel
 
 from merino.curated_recommendations.corpus_backends.protocol import CorpusItem, Topic
 
@@ -137,7 +137,9 @@ class CuratedRecommendationsRequest(BaseModel):
 
 
 # Fakespot header/footer cta copy hardcoded strings for now.
-FAKESPOT_HEADER_COPY = "Fakespot by Mozilla curates the chaos of online shopping into gift guides you can trust."
+FAKESPOT_HEADER_COPY = (
+    "Fakespot by Mozilla curates the chaos of online shopping into gift guides you can trust."
+)
 FAKESPOT_FOOTER_COPY = "Take the guesswork out of gifting with the Fakespot Gift Guide."
 FAKESPOT_CTA_COPY = "Explore More Gifts"
 FAKESPOT_CTA_URL = "https://fakespot-gifts.com/"
@@ -147,8 +149,8 @@ class FakespotProduct(BaseModel):
     """Fakespot product details"""
 
     title: str
-    imageUrl: HttpUrl
-    url: HttpUrl
+    imageUrl: str
+    url: str
 
 
 class FakespotProductCategory(BaseModel):
@@ -159,8 +161,10 @@ class FakespotProductCategory(BaseModel):
 
 
 class FakespotCTA(BaseModel):
-    copy: str
-    url: HttpUrl
+    """Fakespot CTA"""
+
+    cta_copy: str
+    url: str
 
 
 class FakespotFeed(BaseModel):

@@ -19,6 +19,7 @@ from merino.curated_recommendations import (
     CorpusApiBackend,
     CuratedRecommendationsProvider,
     get_provider,
+    ConstantPrior,
 )
 from merino.curated_recommendations.corpus_backends.corpus_api_backend import CorpusApiGraphConfig
 from merino.curated_recommendations.corpus_backends.protocol import Topic
@@ -26,8 +27,15 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
     Engagement,
 )
-from merino.curated_recommendations.protocol import CuratedRecommendation, ExperimentName, FAKESPOT_HEADER_COPY, \
-    FAKESPOT_FOOTER_COPY, FAKESPOT_CTA_COPY, FAKESPOT_CTA_URL
+from merino.curated_recommendations.prior_backends.protocol import PriorBackend
+from merino.curated_recommendations.protocol import (
+    ExperimentName,
+    FAKESPOT_HEADER_COPY,
+    FAKESPOT_FOOTER_COPY,
+    FAKESPOT_CTA_COPY,
+    FAKESPOT_CTA_URL,
+)
+from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
 from merino.metrics import get_metrics_client
 
@@ -132,14 +140,23 @@ def engagement_backend():
     return MockEngagementBackend()
 
 
+@pytest.fixture(name="prior_backend")
+def constant_prior_backend() -> PriorBackend:
+    """Mock constant prior backend."""
+    return ConstantPrior()
+
+
 @pytest.fixture(name="corpus_provider")
 def provider(
-        corpus_backend: CorpusApiBackend, engagement_backend: EngagementBackend
+    corpus_backend: CorpusApiBackend,
+    engagement_backend: EngagementBackend,
+    prior_backend: PriorBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
         corpus_backend=corpus_backend,
         engagement_backend=engagement_backend,
+        prior_backend=prior_backend,
     )
 
 
@@ -176,7 +193,7 @@ def get_max_total_retry_duration() -> float:
     jitter = settings.curated_recommendations.corpus_api.retry_wait_jitter_seconds
     retry_count = settings.curated_recommendations.corpus_api.retry_count
 
-    return float(initial * (2 ** retry_count - 1) + retry_count * jitter)
+    return float(initial * (2**retry_count - 1) + retry_count * jitter)
 
 
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
@@ -614,7 +631,7 @@ class TestCuratedRecommendationsRequestParameters:
     @pytest.mark.asyncio
     @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
     async def test_curated_recommendations_preferred_topic_no_reorder(
-            self, fixture_response_data_short, fixture_request_data, corpus_http_client
+        self, fixture_response_data_short, fixture_request_data, corpus_http_client
     ):
         """Test the curated recommendations endpoint accepts a preferred topic & does
         not reorder the list if preferred topics already in top 2 recs.
@@ -635,8 +652,8 @@ class TestCuratedRecommendationsRequestParameters:
             # assert that recs didn't need boosting so order remains the same
             for i in range(len(corpus_items)):
                 assert (
-                        fixture_response_data_short["data"]["scheduledSurface"]["items"][i]["id"]
-                        == corpus_items[i]["scheduledCorpusItemId"]
+                    fixture_response_data_short["data"]["scheduledSurface"]["items"][i]["id"]
+                    == corpus_items[i]["scheduledCorpusItemId"]
                 )
 
     @pytest.mark.asyncio
@@ -645,27 +662,27 @@ class TestCuratedRecommendationsRequestParameters:
         [
             # Valid topic, but must be wrapped in a list
             (
-                    "arts",
-                    [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                    "Topics not wrapped in a list: arts",
+                "arts",
+                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                "Topics not wrapped in a list: arts",
             ),
             # Invalid topic & must be wrapped in a list
             (
-                    "invalid-topic",
-                    [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                    "Topics not wrapped in a list: invalid-topic",
+                "invalid-topic",
+                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                "Topics not wrapped in a list: invalid-topic",
             ),
             # Invalid topic in a list
             (
-                    ["not-a-valid-topic"],
-                    [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                    "Invalid topic: not-a-valid-topic",
+                ["not-a-valid-topic"],
+                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                "Invalid topic: not-a-valid-topic",
             ),
             # 2 valid topics, 1 invalid topic
             (
-                    ["food", "invalid_topic", "society-parenting"],
-                    [Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD, Topic.CAREER],
-                    "Invalid topic: invalid_topic",
+                ["food", "invalid_topic", "society-parenting"],
+                [Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD, Topic.CAREER],
+                "Invalid topic: invalid_topic",
             ),
         ],
     )
@@ -674,15 +691,15 @@ class TestCuratedRecommendationsRequestParameters:
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
     async def test_curated_recommendations_invalid_topic_return_200(
-            self,
-            topics,
-            expected_topics,
-            expected_warning,
-            fixture_response_data_short,
-            fixture_request_data,
-            corpus_http_client,
-            caplog,
-            repeat,
+        self,
+        topics,
+        expected_topics,
+        expected_warning,
+        fixture_response_data_short,
+        fixture_request_data,
+        corpus_http_client,
+        caplog,
+        repeat,
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
@@ -724,7 +741,7 @@ class TestCuratedRecommendationsRequestFeeds:
 
     @staticmethod
     def assert_need_to_know_feed(need_to_know_feed):
-        """Helper function to assert the need_to_know feed is as expected."""
+        """Assert the need_to_know feed is as expected."""
         # Assert that the `need_to_know` feed has a localized title returned
         title = need_to_know_feed["title"]
         assert title == "In the news"
@@ -741,7 +758,7 @@ class TestCuratedRecommendationsRequestFeeds:
 
     @staticmethod
     def assert_fakespot_feed(fakespot_feed):
-        """Helper function to assert the fakespot feed is as expected."""
+        """Assert the fakespot feed is as expected."""
         fakespot_categories = fakespot_feed["categories"]
         assert len(fakespot_categories) == 5
         # Assert all fakespot products have expected fields populated.
@@ -752,7 +769,7 @@ class TestCuratedRecommendationsRequestFeeds:
         # Assert the header, footer, cta copy are present
         assert fakespot_feed["headerCopy"] == FAKESPOT_HEADER_COPY
         assert fakespot_feed["footerCopy"] == FAKESPOT_FOOTER_COPY
-        assert fakespot_feed["cta"]["copy"] == FAKESPOT_CTA_COPY
+        assert fakespot_feed["cta"]["cta_copy"] == FAKESPOT_CTA_COPY
         assert fakespot_feed["cta"]["url"] == FAKESPOT_CTA_URL
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
@@ -839,7 +856,9 @@ class TestCuratedRecommendationsRequestFeeds:
         requested. Fakespot feed should not be returned for non en-US locale.
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post("/api/v1/curated-recommendations", json={"locale": locale, "feeds": ["fakespot"]})
+            response = await ac.post(
+                "/api/v1/curated-recommendations", json={"locale": locale, "feeds": ["fakespot"]}
+            )
             assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
             data = response.json()
             # assert feeds is empty
@@ -854,8 +873,10 @@ class TestCuratedRecommendationsRequestFeeds:
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Mock the endpoint
-            response = await ac.post("/api/v1/curated-recommendations", json={"locale": "en-GB",
-                                                                              "feeds": ["need_to_know", "fakespot"]})
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "en-GB", "feeds": ["need_to_know", "fakespot"]},
+            )
             data = response.json()
 
             # Check if the mock response is valid
@@ -891,8 +912,10 @@ class TestCuratedRecommendationsRequestFeeds:
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Mock the endpoint
-            response = await ac.post("/api/v1/curated-recommendations", json={"locale": "en-US",
-                                                                              "feeds": ["need_to_know", "fakespot"]})
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "en-US", "feeds": ["need_to_know", "fakespot"]},
+            )
             data = response.json()
 
             # Check if the mock response is valid
@@ -946,14 +969,14 @@ class TestCorpusApiCaching:
     )
     @pytest.mark.asyncio
     async def test_single_request_multiple_failed_fetches(
-            self,
-            corpus_http_client,
-            fixture_request_data,
-            fixture_response_data,
-            fixture_graphql_200ok_with_error_response,
-            caplog,
-            error_type,
-            expected_warning,
+        self,
+        corpus_http_client,
+        fixture_request_data,
+        fixture_response_data,
+        fixture_graphql_200ok_with_error_response,
+        caplog,
+        error_type,
+        expected_warning,
     ):
         """Test that only a few requests are made to the curated-corpus-api when it is down.
         Additionally, test that if the backend returns a GraphQL error, it is handled correctly.
@@ -1005,7 +1028,7 @@ class TestCorpusApiCaching:
 
     @pytest.mark.asyncio
     async def test_cache_returned_on_subsequent_calls(
-            self, corpus_http_client, fixture_response_data, fixture_request_data
+        self, corpus_http_client, fixture_response_data, fixture_request_data
     ):
         """Test that the cache expires, and subsequent requests return new data."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -1040,7 +1063,7 @@ class TestCorpusApiCaching:
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.asyncio
     async def test_valid_cache_returned_on_error(
-            self, corpus_http_client, fixture_request_data, caplog
+        self, corpus_http_client, fixture_request_data, caplog
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -1070,8 +1093,8 @@ class TestCorpusApiCaching:
                 # assert that Corpus API was called the expected number of times
                 # 1 successful request from above, and retry_count number of retries.
                 assert (
-                        corpus_http_client.post.call_count
-                        == settings.curated_recommendations.corpus_api.retry_count + 1
+                    corpus_http_client.post.call_count
+                    == settings.curated_recommendations.corpus_api.retry_count + 1
                 )
 
                 assert new_response.status_code == 200
@@ -1121,11 +1144,11 @@ class TestCuratedRecommendationsMetrics:
 
     @pytest.mark.asyncio
     async def test_metrics_corpus_api_error(
-            self,
-            mocker: MockerFixture,
-            corpus_http_client,
-            fixture_request_data,
-            fixture_response_data,
+        self,
+        mocker: MockerFixture,
+        corpus_http_client,
+        fixture_request_data,
+        fixture_response_data,
     ) -> None:
         """Test that metrics are recorded when the curated-corpus-api returns a 500 error"""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
@@ -1152,16 +1175,16 @@ class TestCuratedRecommendationsMetrics:
             # TODO: Remove reliance on internal details of aiodogstatsd
             metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
             assert (
-                    metric_keys
-                    == [
-                        "corpus_api.request.timing",
-                        "corpus_api.request.status_codes.500",
-                        "corpus_api.request.timing",
-                        "corpus_api.request.status_codes.200",
-                        "post.api.v1.curated-recommendations.timing",
-                        "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
-                        "response.status_codes.200",
-                    ]
+                metric_keys
+                == [
+                    "corpus_api.request.timing",
+                    "corpus_api.request.status_codes.500",
+                    "corpus_api.request.timing",
+                    "corpus_api.request.status_codes.200",
+                    "post.api.v1.curated-recommendations.timing",
+                    "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
+                    "response.status_codes.200",
+                ]
             )
 
 
@@ -1198,16 +1221,16 @@ class TestCorpusApiRanking:
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
     async def test_thompson_sampling_behavior(
-            self,
-            topics,
-            engagement_backend,
-            experiment_name,
-            experiment_branch,
-            locale,
-            region,
-            derived_region,
-            regional_ranking_is_expected,
-            repeat,
+        self,
+        topics,
+        engagement_backend,
+        experiment_name,
+        experiment_branch,
+        locale,
+        region,
+        derived_region,
+        regional_ranking_is_expected,
+        repeat,
     ):
         """Test that Thompson sampling produces different orders and favors higher CTRs."""
         n_iterations = 20

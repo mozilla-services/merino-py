@@ -1,4 +1,5 @@
 """Provider for curated recommendations on New Tab."""
+
 import json
 import time
 import re
@@ -9,9 +10,8 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
     Topic,
 )
-from merino.curated_recommendations.engagement_backends.protocol import (
-    EngagementBackend,
-)
+from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     Locale,
     CuratedRecommendation,
@@ -19,8 +19,15 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsResponse,
     ExperimentName,
     CuratedRecommendationsFeed,
-    CuratedRecommendationsBucket, FakespotFeed, FakespotProductCategory, FakespotProduct, FAKESPOT_HEADER_COPY,
-    FAKESPOT_FOOTER_COPY, FAKESPOT_CTA_COPY, FAKESPOT_CTA_URL, FakespotCTA,
+    CuratedRecommendationsBucket,
+    FakespotFeed,
+    FakespotProductCategory,
+    FakespotProduct,
+    FAKESPOT_HEADER_COPY,
+    FAKESPOT_FOOTER_COPY,
+    FAKESPOT_CTA_COPY,
+    FAKESPOT_CTA_URL,
+    FakespotCTA,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -29,21 +36,24 @@ from merino.curated_recommendations.rankers import (
 )
 
 
-
 class CuratedRecommendationsProvider:
     """Provider for recommendations that have been reviewed by human curators."""
 
     corpus_backend: CorpusBackend
 
     def __init__(
-            self, corpus_backend: CorpusBackend, engagement_backend: EngagementBackend
+        self,
+        corpus_backend: CorpusBackend,
+        engagement_backend: EngagementBackend,
+        prior_backend: PriorBackend,
     ) -> None:
         self.corpus_backend = corpus_backend
         self.engagement_backend = engagement_backend
+        self.prior_backend = prior_backend
 
     @staticmethod
     def get_recommendation_surface_id(
-            locale: Locale, region: str | None = None
+        locale: Locale, region: str | None = None
     ) -> ScheduledSurfaceId:
         """Locale/region mapping is documented here:
         https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit
@@ -116,13 +126,13 @@ class CuratedRecommendationsProvider:
 
     @staticmethod
     def is_enrolled_in_experiment(
-            request: CuratedRecommendationsRequest, name: str, branch: str
+        request: CuratedRecommendationsRequest, name: str, branch: str
     ) -> bool:
         """Return True if the request's experimentName matches name or "optin-" + name, and the
         experimentBranch matches the given branch. The optin- prefix signifies a forced enrollment.
         """
         return (
-                request.experimentName == name or request.experimentName == f"optin-{name}"
+            request.experimentName == name or request.experimentName == f"optin-{name}"
         ) and request.experimentBranch == branch
 
     @staticmethod
@@ -135,7 +145,6 @@ class CuratedRecommendationsProvider:
     @staticmethod
     def get_fakespot_feed() -> FakespotFeed:
         """Construct & return the Fakespot feed. Currently, reading data from a mock JSON file."""
-
         fakespot_product_categories = []
         # TODO: https://mozilla-hub.atlassian.net/browse/MC-1566
         # retrieve fakespot products from JSON blob in GCS
@@ -145,31 +154,28 @@ class CuratedRecommendationsProvider:
             for data in json_data:
                 fakespot_products = []
                 for product in data["products"]:
-                    fakespot_products.append(FakespotProduct(
-                        title=product["title"],
-                        imageUrl=product["imageUrl"],
-                        url=product["url"]
-                    ))
+                    fakespot_products.append(
+                        FakespotProduct(
+                            title=product["title"],
+                            imageUrl=product["imageUrl"],
+                            url=product["url"],
+                        )
+                    )
                 fakespot_product_categories.append(
-                    FakespotProductCategory(
-                        name=data["name"],
-                        products=fakespot_products
-                    ))
+                    FakespotProductCategory(name=data["name"], products=fakespot_products)
+                )
         return FakespotFeed(
             categories=fakespot_product_categories,
             headerCopy=FAKESPOT_HEADER_COPY,
             footerCopy=FAKESPOT_FOOTER_COPY,
-            cta=FakespotCTA(
-                copy=FAKESPOT_CTA_COPY,
-                url=FAKESPOT_CTA_URL
-            )
+            cta=FakespotCTA(cta_copy=FAKESPOT_CTA_COPY, url=FAKESPOT_CTA_URL),
         )
 
     def rank_recommendations(
-            self,
-            recommendations: list[CuratedRecommendation],
-            surface_id: str,
-            request: CuratedRecommendationsRequest,
+        self,
+        recommendations: list[CuratedRecommendation],
+        surface_id: str,
+        request: CuratedRecommendationsRequest,
     ):
         """Apply additional processing to the list of recommendations
         received from Curated Corpus API
@@ -184,7 +190,8 @@ class CuratedRecommendationsProvider:
         # 3. Apply Thompson sampling to rank recommendations by engagement
         recommendations = thompson_sampling(
             recommendations,
-            self.engagement_backend,
+            engagement_backend=self.engagement_backend,
+            prior_backend=self.prior_backend,
             region=self.derive_region(request.locale, request.region),
             enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
         )
@@ -206,18 +213,18 @@ class CuratedRecommendationsProvider:
             # localized topic strings in Firefox. As a workaround, we decided to only send topics
             # for New Tab en-US. This workaround should be removed once Fx131 is released on Oct 1.
             if surface_id not in (
-                    ScheduledSurfaceId.NEW_TAB_EN_US,
-                    ScheduledSurfaceId.NEW_TAB_EN_GB,
+                ScheduledSurfaceId.NEW_TAB_EN_US,
+                ScheduledSurfaceId.NEW_TAB_EN_GB,
             ):
                 rec.topic = None
 
         return recommendations[: request.count]
 
     def rank_need_to_know_recommendations(
-            self,
-            recommendations: list[CuratedRecommendation],
-            surface_id: ScheduledSurfaceId,
-            request: CuratedRecommendationsRequest,
+        self,
+        recommendations: list[CuratedRecommendation],
+        surface_id: ScheduledSurfaceId,
+        request: CuratedRecommendationsRequest,
     ):
         """Apply additional processing to the list of recommendations
         received from Curated Corpus API, splitting the list in two:
@@ -256,7 +263,7 @@ class CuratedRecommendationsProvider:
         return general_feed, need_to_know_feed, title
 
     async def fetch(
-            self, curated_recommendations_request: CuratedRecommendationsRequest
+        self, curated_recommendations_request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
         # Get the recommendation surface ID based on passed locale & region
@@ -276,40 +283,51 @@ class CuratedRecommendationsProvider:
             for rank, item in enumerate(corpus_items)
         ]
 
-        feeds = {}
+        feeds: dict[str, CuratedRecommendationsBucket | FakespotFeed] = {}
         general_feed = None
 
         # For users in the "Need to Know" experiment, separate recommendations into
         # two different feeds: the "general" feed and the "need to know" feed.
         if (
-                curated_recommendations_request.feeds
-                and "need_to_know" in curated_recommendations_request.feeds
-                and surface_id
-                in (
+            curated_recommendations_request.feeds
+            and "need_to_know" in curated_recommendations_request.feeds
+            and surface_id
+            in (
                 ScheduledSurfaceId.NEW_TAB_EN_US,
                 ScheduledSurfaceId.NEW_TAB_EN_GB,
-                ScheduledSurfaceId.NEW_TAB_DE_DE,)
+                ScheduledSurfaceId.NEW_TAB_DE_DE,
+            )
         ):
             general_feed, need_to_know_feed, title = self.rank_need_to_know_recommendations(
                 recommendations, surface_id, curated_recommendations_request
             )
-            feeds['need_to_know'] = CuratedRecommendationsBucket(
+            feeds["need_to_know"] = CuratedRecommendationsBucket(
                 recommendations=need_to_know_feed, title=title
             )
 
         # Check for Fakespot feed experiment, currently, only for en-US
         if (
-                curated_recommendations_request.feeds and "fakespot" in curated_recommendations_request.feeds
-                and surface_id == ScheduledSurfaceId.NEW_TAB_EN_US
+            curated_recommendations_request.feeds
+            and "fakespot" in curated_recommendations_request.feeds
+            and surface_id == ScheduledSurfaceId.NEW_TAB_EN_US
         ):
-            feeds['fakespot'] = self.get_fakespot_feed()
+            feeds["fakespot"] = self.get_fakespot_feed()
 
         # If any feeds were requested, return them
         if feeds:
+            # extract feeds directly
+            # lint complains about types if unpacking the feeds dict directly in response.
+            need_to_know_feed = feeds.get("need_to_know", None)
+            fakespot_feed = feeds.get("fakespot", None)
+
             return CuratedRecommendationsResponse(
                 recommendedAt=self.time_ms(),
-                data=general_feed if 'need_to_know' in feeds else recommendations,
-                feeds=CuratedRecommendationsFeed(**feeds),
+                data=general_feed
+                if "need_to_know" in feeds and general_feed is not None
+                else recommendations,
+                feeds=CuratedRecommendationsFeed(
+                    need_to_know=need_to_know_feed, fakespot=cast(FakespotFeed, fakespot_feed)
+                ),
             )
 
         # For everyone else, return the "classic" New Tab list of recommendations

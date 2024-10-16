@@ -27,11 +27,11 @@ gcs_bucket = "merino-images-prodpy"
 # is remotely or locally acquired.
 domain_data_source = "local"
 
-[production.curated_recommendations.gcs_engagement]
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__BUCKET_NAME
-# GCS bucket that contains aggregate engagement data
+[production.curated_recommendations.gcs]
+# MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
+# GCS bucket that contains aggregate engagement and prior data
 bucket_name = "merino-airflow-data-prodpy"
 
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__GCP_PROJECT
+# MERINO__CURATED_RECOMMENDATIONS__GCS__GCP_PROJECT
 # GCP project name where the GCS bucket lives.
 gcp_project = "moz-fx-merino-prod-1c2f"
