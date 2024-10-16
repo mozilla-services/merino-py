@@ -25,7 +25,7 @@ gcs_bucket = "merino-images-prodpy"
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
 # Enum of either `remote` or `local` that defines whether domain data
 # is remotely or locally acquired.
-domain_data_source = "local"
+domain_data_source = "remote"
 
 [production.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
