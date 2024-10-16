@@ -150,15 +150,9 @@ class FakespotProduct(BaseModel):
 
     id: str
     title: str
+    category: str
     imageUrl: str
     url: str
-
-
-class FakespotProductCategory(BaseModel):
-    """Fakespot product category details"""
-
-    name: str
-    products: list[FakespotProduct]
 
 
 class FakespotCTA(BaseModel):
@@ -171,7 +165,7 @@ class FakespotCTA(BaseModel):
 class FakespotFeed(BaseModel):
     """Fakespot product recommendations"""
 
-    categories: list[FakespotProductCategory]
+    products: list[FakespotProduct]
     headerCopy: str
     footerCopy: str
     cta: FakespotCTA

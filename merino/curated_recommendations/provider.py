@@ -21,7 +21,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsFeed,
     CuratedRecommendationsBucket,
     FakespotFeed,
-    FakespotProductCategory,
+    # FakespotProductCategory,
     FakespotProduct,
     FAKESPOT_HEADER_COPY,
     FAKESPOT_FOOTER_COPY,
@@ -168,29 +168,26 @@ class CuratedRecommendationsProvider:
     @staticmethod
     def get_fakespot_feed() -> FakespotFeed:
         """Construct & return the Fakespot feed. Currently, reading data from a mock JSON file."""
-        fakespot_product_categories = []
         # TODO: https://mozilla-hub.atlassian.net/browse/MC-1566
         # retrieve fakespot products from JSON blob in GCS
         # add error/exception handling when reading from GCS
         with open("merino/curated_recommendations/fakespot_products.json", "rb") as f:
             json_data = orjson.loads(f.read())
 
+            fakespot_products = []
             for category in json_data:
-                fakespot_products = []
                 for product in category["products"]:
                     fakespot_products.append(
                         FakespotProduct(
                             id=product["id"],
                             title=product["title"],
+                            category=product["category"],
                             imageUrl=product["imageUrl"],
                             url=product["url"],
                         )
                     )
-                fakespot_product_categories.append(
-                    FakespotProductCategory(name=category["name"], products=fakespot_products)
-                )
         return FakespotFeed(
-            categories=fakespot_product_categories,
+            products=fakespot_products,
             headerCopy=FAKESPOT_HEADER_COPY,
             footerCopy=FAKESPOT_FOOTER_COPY,
             cta=FakespotCTA(ctaCopy=FAKESPOT_CTA_COPY, url=FAKESPOT_CTA_URL),

@@ -759,13 +759,13 @@ class TestCuratedRecommendationsRequestFeeds:
     @staticmethod
     def assert_fakespot_feed(fakespot_feed):
         """Assert the fakespot feed is as expected."""
-        fakespot_categories = fakespot_feed["categories"]
-        assert len(fakespot_categories) == 5
+        fakespot_products = fakespot_feed["products"]
+        # currently 291 products in mock JSON file
+        assert len(fakespot_products) == 291
         # Assert all fakespot products have expected fields populated.
-        required_fields = ["id", "title", "imageUrl", "url"]
-        for category in fakespot_categories:
-            for product in category["products"]:
-                assert all(product.get(field) for field in required_fields)
+        required_fields = ["id", "title", "category", "imageUrl", "url"]
+        for product in fakespot_products:
+            assert all(product.get(field) for field in required_fields)
         # Assert the header, footer, cta copy are present
         assert fakespot_feed["headerCopy"] == FAKESPOT_HEADER_COPY
         assert fakespot_feed["footerCopy"] == FAKESPOT_FOOTER_COPY
