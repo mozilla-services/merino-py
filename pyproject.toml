@@ -69,7 +69,7 @@ merino-jobs = "merino.jobs.cli:cli"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-fastapi = "^0.109.1"
+fastapi = "^0.115.2"
 uvicorn = {extras = ["standard"], version="^0.24.0"}
 dockerflow = "^2022.7.0"
 asgi-correlation-id = "^3.0.1"
