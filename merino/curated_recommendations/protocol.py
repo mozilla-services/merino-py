@@ -5,7 +5,7 @@ from enum import unique, Enum
 from typing import Annotated
 import logging
 
-from pydantic import Field, field_validator, model_validator, BaseModel
+from pydantic import Field, field_validator, model_validator, BaseModel, HttpUrl
 
 from merino.curated_recommendations.corpus_backends.protocol import CorpusItem, Topic
 
@@ -136,6 +136,42 @@ class CuratedRecommendationsRequest(BaseModel):
         return []
 
 
+# Fakespot header/footer cta copy hardcoded strings for now.
+FAKESPOT_HEADER_COPY = "Fakespot by Mozilla curates the chaos of online shopping into gift guides you can trust."
+FAKESPOT_FOOTER_COPY = "Take the guesswork out of gifting with the Fakespot Gift Guide."
+FAKESPOT_CTA_COPY = "Explore More Gifts"
+FAKESPOT_CTA_URL = "https://fakespot-gifts.com/"
+
+
+class FakespotProduct(BaseModel):
+    """Fakespot product details"""
+
+    title: str
+    imageUrl: HttpUrl
+    url: HttpUrl
+
+
+class FakespotProductCategory(BaseModel):
+    """Fakespot product category details"""
+
+    name: str
+    products: list[FakespotProduct]
+
+
+class FakespotCTA(BaseModel):
+    copy: str
+    url: HttpUrl
+
+
+class FakespotFeed(BaseModel):
+    """Fakespot product recommendations"""
+
+    categories: list[FakespotProductCategory]
+    headerCopy: str
+    footerCopy: str
+    cta: FakespotCTA
+
+
 class CuratedRecommendationsBucket(BaseModel):
     """A ranked list of curated recommendations"""
 
@@ -145,10 +181,11 @@ class CuratedRecommendationsBucket(BaseModel):
 
 class CuratedRecommendationsFeed(BaseModel):
     """Multiple lists of curated recommendations for experiments.
-    Currently limited to the 'need_to_know' feed only.
+    Currently limited to the 'need_to_know' & fakespot feed only.
     """
 
-    need_to_know: CuratedRecommendationsBucket
+    need_to_know: CuratedRecommendationsBucket | None = None
+    fakespot: FakespotFeed | None = None
 
 
 class CuratedRecommendationsResponse(BaseModel):
