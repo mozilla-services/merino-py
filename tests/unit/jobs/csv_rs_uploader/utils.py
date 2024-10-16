@@ -67,7 +67,7 @@ def _do_csv_test(
         **common_kwargs,
         record_type=expected_record_type,
         suggestion_score_fallback=score,
-        total_data_count=len(expected_suggestions),
+        total_item_count=len(expected_suggestions),
     )
 
     if not keep_existing_records:

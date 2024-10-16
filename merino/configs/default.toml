@@ -600,3 +600,34 @@ min_favicon_width = 48
 # MERINO_JOBS__AMO_RS_UPLOADER__RECORD_TYPE
 # The "type" of each remote settings record
 record_type = "amo-suggestions"
+
+
+[default.jobs.geonames_uploader]
+# MERINO_JOBS__GEONAMES_UPLOADER__BASE_URL
+# Base URL of the GeoNames server.
+base_url = "https://download.geonames.org"
+# MERINO_JOBS__GEONAMES_UPLOADER__GEONAMES_PATH
+# Full path on the GeoNames server of country-specific geonames files. Expected
+# to be an f-string with a `country_code` variable.
+geonames_path = "/export/dump/{country_code}.zip"
+# MERINO_JOBS__GEONAMES_UPLOADER__ALTERNATES_PATH
+# Full path on the GeoNames server of country-specific alternates files.
+# Expected to be an f-string with a `country_code` variable.
+alternates_path = "/export/dump/alternatenames/{country_code}.zip"
+# MERINO_JOBS__GEONAMES_UPLOADER__POPULATION_THRESHOLD
+# How large a geoname's population must be for it to be included in the output.
+# Geonames with populations at least this large will be included.
+population_threshold = 50_000
+# MERINO_JOBS__GEONAMES_UPLOADER__ALTERNATES_ISO_LANGUAGES
+# Which alternates of selected geonames to include in the output. Alternates are
+# categorized by language, like "en" and "en-US", plus a few other categories
+# like abbreviations ("abbr") and airport codes ("iata", "icao", "faac").
+alternates_iso_languages  = ["en", "en-US", "iata", "icao", "faac", "abbr"]
+# MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY_CODE
+# Which country's geonames to upload. If we expand to more countries, we should
+# probably remove this from the config and instead require `--country-code` to
+# be passed on the command line when running the job.
+country_code = "US"
+# MERINO_JOBS__GEONAMES_UPLOADER__RECORD_TYPE
+# The "type" of each geonames remote settings record.
+record_type = "geonames"
