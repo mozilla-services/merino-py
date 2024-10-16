@@ -20,12 +20,11 @@ numpy = "^1.26.2"
 locust = "^2.20.0"
 pydantic = "2.5.0"
 redis = "^5.0.1"
-starlette = "^0.36.2"
 wrapt = "^1.16.0"
 scipy = "^1.14.1"
 orjson = "^3.10.7"
 tenacity = "^9.0.0"
-fastapi = "^0.109.1"
+fastapi = "^0.115.2"
 
 [build-system]
 requires = ["poetry-core>=1.8.1"]
