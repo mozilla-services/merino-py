@@ -21,7 +21,6 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsFeed,
     CuratedRecommendationsBucket,
     FakespotFeed,
-    # FakespotProductCategory,
     FakespotProduct,
     FAKESPOT_HEADER_COPY,
     FAKESPOT_FOOTER_COPY,
@@ -172,20 +171,19 @@ class CuratedRecommendationsProvider:
         # retrieve fakespot products from JSON blob in GCS
         # add error/exception handling when reading from GCS
         with open("merino/curated_recommendations/fakespot_products.json", "rb") as f:
-            json_data = orjson.loads(f.read())
+            fakespot_products_json_data = orjson.loads(f.read())
 
             fakespot_products = []
-            for category in json_data:
-                for product in category["products"]:
-                    fakespot_products.append(
-                        FakespotProduct(
-                            id=product["id"],
-                            title=product["title"],
-                            category=product["category"],
-                            imageUrl=product["imageUrl"],
-                            url=product["url"],
-                        )
+            for product in fakespot_products_json_data:
+                fakespot_products.append(
+                    FakespotProduct(
+                        id=product["id"],
+                        title=product["title"],
+                        category=product["category"],
+                        imageUrl=product["imageUrl"],
+                        url=product["url"],
                     )
+                )
         return FakespotFeed(
             products=fakespot_products,
             headerCopy=FAKESPOT_HEADER_COPY,

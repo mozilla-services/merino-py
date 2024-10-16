@@ -760,8 +760,8 @@ class TestCuratedRecommendationsRequestFeeds:
     def assert_fakespot_feed(fakespot_feed):
         """Assert the fakespot feed is as expected."""
         fakespot_products = fakespot_feed["products"]
-        # currently 291 products in mock JSON file
-        assert len(fakespot_products) == 291
+        # currently 8 products in mock JSON file
+        assert len(fakespot_products) == 8
         # Assert all fakespot products have expected fields populated.
         required_fields = ["id", "title", "category", "imageUrl", "url"]
         for product in fakespot_products:
