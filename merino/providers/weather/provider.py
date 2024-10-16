@@ -13,7 +13,9 @@ from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import CustomDetails, WeatherDetails
-from merino.providers.weather.backends.accuweather.pathfinder import get_region_mapping_size
+from merino.providers.weather.backends.accuweather.pathfinder import (
+    get_region_mapping_size,
+)
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -89,7 +91,8 @@ class Provider(BaseProvider):
 
     async def _fetch_mapping_size(self) -> None:
         self.metrics_client.gauge(
-            name=f"providers.{self.name}.pathfinder.mapping.size", value=get_region_mapping_size()
+            name=f"providers.{self.name}.pathfinder.mapping.size",
+            value=get_region_mapping_size(),
         )
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
@@ -97,7 +100,8 @@ class Provider(BaseProvider):
         # early exit with 400 error if "q" query param is present without the "request_type" param
         if srequest.query and not srequest.request_type:
             raise HTTPException(
-                status_code=400, detail="Invalid query parameters: `request_type` is missing"
+                status_code=400,
+                detail="Invalid query parameters: `request_type` is missing",
             )
 
         geolocation: Location = srequest.geolocation
@@ -113,6 +117,22 @@ class Provider(BaseProvider):
                         geolocation, languages, search_term=srequest.query
                     )
                 else:
+                    # pass in city, region and country into geolocation ONLY if they all exist in the params
+                    if srequest.city and srequest.region and srequest.country:
+                        geolocation = geolocation.model_copy(
+                            update={
+                                "city": srequest.city,
+                                "regions": [srequest.region],
+                                "country": srequest.country,
+                            }
+                        )
+
+                    elif srequest.city or srequest.region or srequest.country:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Invalid query parameters: `city`, `region`, and `country` are required, but one or more are missing in the request.",
+                        )
+
                     weather_report = await self.backend.get_weather_report(
                         geolocation, srequest.query
                     )

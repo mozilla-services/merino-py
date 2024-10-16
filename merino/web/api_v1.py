@@ -70,6 +70,9 @@ HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 async def suggest(
     request: Request,
     q: Annotated[str, Query(max_length=QUERY_CHARACTER_MAX)],
+    city: str | None = None,
+    country: str | None = None,
+    region: str | None = None,
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
@@ -91,6 +94,15 @@ async def suggest(
     - `q`: The query that the user has typed. This is expected to be a partial
         input, sent as fast as once per keystroke, though a slower period may be
         appropriate for the user agent.
+    - `city`: [Optional] City name. E.g. “New York”. If provided,
+        Accuweather provider returns weather suggestions based on this city. Note: If provided,
+        `region` and `country` must also be provided to successfully return weather suggestions.
+    - `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided,
+        Accuweather provider returns weather suggestions based on this country. Note: If provided,
+        `city` and `region` must also be provided to successfully return weather suggestions.
+    - `region`: [Optional] Subdivision code. E.g. : “NY”. If provided,
+        Accuweather provider returns weather suggestions based on this region. Note: If provided,
+        `city` and `country` must also be provided to successfully return weather suggestions.
     - `client_variants`: [Optional] A comma-separated list of any experiments or
         rollouts that are affecting the client's Suggest experience. If Merino
         recognizes any of them it will modify its behavior accordingly.
@@ -183,6 +195,9 @@ async def suggest(
             query=p.normalize_query(q),
             geolocation=request.scope[ScopeKey.GEOLOCATION],
             request_type=request_type,
+            city=city,
+            country=country,
+            region=region,
             languages=languages,
         )
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
