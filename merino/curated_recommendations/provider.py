@@ -1,6 +1,6 @@
 """Provider for curated recommendations on New Tab."""
 
-import json
+import orjson
 import time
 import re
 from typing import cast
@@ -143,32 +143,57 @@ class CuratedRecommendationsProvider:
         )
 
     @staticmethod
+    def is_need_to_know_experiment(request, surface_id) -> bool:
+        """Check if the 'need_to_know' experiment is enabled."""
+        return (
+            request.feeds
+            and "need_to_know" in request.feeds
+            and surface_id
+            in (
+                ScheduledSurfaceId.NEW_TAB_EN_US,
+                ScheduledSurfaceId.NEW_TAB_EN_GB,
+                ScheduledSurfaceId.NEW_TAB_DE_DE,
+            )
+        )
+
+    @staticmethod
+    def is_fakespot_experiment(request, surface_id) -> bool:
+        """Check if the 'Fakespot' experiment is enabled."""
+        return (
+            request.feeds
+            and "fakespot" in request.feeds
+            and surface_id == ScheduledSurfaceId.NEW_TAB_EN_US
+        )
+
+    @staticmethod
     def get_fakespot_feed() -> FakespotFeed:
         """Construct & return the Fakespot feed. Currently, reading data from a mock JSON file."""
         fakespot_product_categories = []
         # TODO: https://mozilla-hub.atlassian.net/browse/MC-1566
         # retrieve fakespot products from JSON blob in GCS
         # add error/exception handling when reading from GCS
-        with open("merino/curated_recommendations/fakespot_products.json") as f:
-            json_data = json.load(f)
-            for data in json_data:
+        with open("merino/curated_recommendations/fakespot_products.json", "rb") as f:
+            json_data = orjson.loads(f.read())
+
+            for category in json_data:
                 fakespot_products = []
-                for product in data["products"]:
+                for product in category["products"]:
                     fakespot_products.append(
                         FakespotProduct(
+                            id=product["id"],
                             title=product["title"],
                             imageUrl=product["imageUrl"],
                             url=product["url"],
                         )
                     )
                 fakespot_product_categories.append(
-                    FakespotProductCategory(name=data["name"], products=fakespot_products)
+                    FakespotProductCategory(name=category["name"], products=fakespot_products)
                 )
         return FakespotFeed(
             categories=fakespot_product_categories,
             headerCopy=FAKESPOT_HEADER_COPY,
             footerCopy=FAKESPOT_FOOTER_COPY,
-            cta=FakespotCTA(cta_copy=FAKESPOT_CTA_COPY, url=FAKESPOT_CTA_URL),
+            cta=FakespotCTA(ctaCopy=FAKESPOT_CTA_COPY, url=FAKESPOT_CTA_URL),
         )
 
     def rank_recommendations(
@@ -283,65 +308,42 @@ class CuratedRecommendationsProvider:
             for rank, item in enumerate(corpus_items)
         ]
 
-        feeds: dict[str, CuratedRecommendationsBucket | FakespotFeed] = {}
-        general_feed = None
+        # Recommended articles for the "need to know/TBR" experiment
+        need_to_know_feed = None
+        # Fakespot products for the Fakespot experiment
+        fakespot_feed = None
 
         # For users in the "Need to Know" experiment, separate recommendations into
         # two different feeds: the "general" feed and the "need to know" feed.
-        if (
-            curated_recommendations_request.feeds
-            and "need_to_know" in curated_recommendations_request.feeds
-            and surface_id
-            in (
-                ScheduledSurfaceId.NEW_TAB_EN_US,
-                ScheduledSurfaceId.NEW_TAB_EN_GB,
-                ScheduledSurfaceId.NEW_TAB_DE_DE,
-            )
-        ):
-            general_feed, need_to_know_feed, title = self.rank_need_to_know_recommendations(
+        if self.is_need_to_know_experiment(curated_recommendations_request, surface_id):
+            # this applies ranking to the general_feed!
+            general_feed, need_to_know_recs, title = self.rank_need_to_know_recommendations(
                 recommendations, surface_id, curated_recommendations_request
             )
-            feeds["need_to_know"] = CuratedRecommendationsBucket(
-                recommendations=need_to_know_feed, title=title
+
+            need_to_know_feed = CuratedRecommendationsBucket(
+                recommendations=need_to_know_recs, title=title
+            )
+        else:
+            # Default ranking for general feed
+            general_feed = self.rank_recommendations(
+                recommendations, surface_id, curated_recommendations_request
             )
 
         # Check for Fakespot feed experiment, currently, only for en-US
-        if (
-            curated_recommendations_request.feeds
-            and "fakespot" in curated_recommendations_request.feeds
-            and surface_id == ScheduledSurfaceId.NEW_TAB_EN_US
-        ):
-            feeds["fakespot"] = self.get_fakespot_feed()
+        if self.is_fakespot_experiment(curated_recommendations_request, surface_id):
+            fakespot_feed = self.get_fakespot_feed()
 
-        # If any feeds were requested, return them
-        if feeds:
-            # extract feeds directly
-            # lint complains about types if unpacking the feeds dict directly in response.
-            need_to_know_feed = feeds.get("need_to_know", None)
-            fakespot_feed = feeds.get("fakespot", None)
+        # Construct the base response
+        response = CuratedRecommendationsResponse(recommendedAt=self.time_ms(), data=general_feed)
 
-            return CuratedRecommendationsResponse(
-                recommendedAt=self.time_ms(),
-                data=general_feed
-                if "need_to_know" in feeds and general_feed is not None
-                else recommendations,
-                feeds=CuratedRecommendationsFeed(
-                    need_to_know=need_to_know_feed, fakespot=cast(FakespotFeed, fakespot_feed)
-                ),
+        # If we have feeds to return, add those to the response
+        if need_to_know_feed is not None or fakespot_feed is not None:
+            response.feeds = CuratedRecommendationsFeed(
+                need_to_know=need_to_know_feed, fakespot=fakespot_feed
             )
 
-        # For everyone else, return the "classic" New Tab list of recommendations
-        else:
-            # Apply all the additional re-ranking and processing steps
-            # to the main recommendations feed
-            recommendations = self.rank_recommendations(
-                recommendations, surface_id, curated_recommendations_request
-            )
-
-            return CuratedRecommendationsResponse(
-                recommendedAt=self.time_ms(),
-                data=recommendations,
-            )
+        return response
 
     @staticmethod
     def time_ms() -> int:

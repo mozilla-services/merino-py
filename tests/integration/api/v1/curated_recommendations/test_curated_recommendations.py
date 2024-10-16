@@ -762,14 +762,14 @@ class TestCuratedRecommendationsRequestFeeds:
         fakespot_categories = fakespot_feed["categories"]
         assert len(fakespot_categories) == 5
         # Assert all fakespot products have expected fields populated.
-        required_fields = ["title", "imageUrl", "url"]
+        required_fields = ["id", "title", "imageUrl", "url"]
         for category in fakespot_categories:
             for product in category["products"]:
                 assert all(product.get(field) for field in required_fields)
         # Assert the header, footer, cta copy are present
         assert fakespot_feed["headerCopy"] == FAKESPOT_HEADER_COPY
         assert fakespot_feed["footerCopy"] == FAKESPOT_FOOTER_COPY
-        assert fakespot_feed["cta"]["cta_copy"] == FAKESPOT_CTA_COPY
+        assert fakespot_feed["cta"]["ctaCopy"] == FAKESPOT_CTA_COPY
         assert fakespot_feed["cta"]["url"] == FAKESPOT_CTA_URL
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)

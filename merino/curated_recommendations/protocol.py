@@ -148,6 +148,7 @@ FAKESPOT_CTA_URL = "https://fakespot-gifts.com/"
 class FakespotProduct(BaseModel):
     """Fakespot product details"""
 
+    id: str
     title: str
     imageUrl: str
     url: str
@@ -163,7 +164,7 @@ class FakespotProductCategory(BaseModel):
 class FakespotCTA(BaseModel):
     """Fakespot CTA"""
 
-    cta_copy: str
+    ctaCopy: str
     url: str
 
 
