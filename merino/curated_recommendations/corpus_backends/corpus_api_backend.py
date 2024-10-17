@@ -36,7 +36,7 @@ class CacheKey:
     """Cache key for identifying cached items."""
 
     surface_id: ScheduledSurfaceId
-    days_since_today: int = 0
+    days_offset: int = 0
 
 
 @dataclass
@@ -207,17 +207,34 @@ class CorpusApiBackend(CorpusBackend):
         return datetime.now(tz=surface_timezone) - timedelta(hours=3)
 
     async def fetch(
-        self, surface_id: ScheduledSurfaceId, days_since_today: int = 0
+        self, surface_id: ScheduledSurfaceId, days_offset: int = 0
     ) -> list[CorpusItem]:
-        """Fetch corpus items with stale-while-revalidate caching and request coalescing."""
+        """Fetch corpus items with stale-while-revalidate caching and request coalescing.
+
+        Stale-while-revalidate caching serves cached data while asynchronously refreshing it in the
+        background. This accepts slightly outdated data while the cache is being refreshed, to
+        ensures consistently quick responses without blocking the request.
+
+        Request coalescing merges multiple identical requests made concurrently, ensuring that only
+        one request is made, and thereby reducing load on the backend.
+
+        Args:
+            surface_id: Identifies the scheduled surface, for example NEW_TAB_EN_US.
+            days_offset: Optionally, the number of days relative to today for which items were
+                scheduled. A positive value indicates a future day, negative value indicates a past
+                day, and 0 refers to today. Defaults to 0.
+
+        Returns:
+            list[CorpusItem]: A list of fetched corpus items.
+        """
         now = datetime.now()
-        cache_key = CacheKey(surface_id, days_since_today)
+        cache_key = CacheKey(surface_id, days_offset)
 
         # If we have expired cached data, revalidate asynchronously without waiting for the result.
         if cache_key in self._cache:
             cache_entry = self._cache[cache_key]
             if now >= cache_entry.expiration:
-                task = asyncio.create_task(self._revalidate_cache(surface_id, days_since_today))
+                task = asyncio.create_task(self._revalidate_cache(surface_id, days_offset))
                 # Save a reference to the result of this function, to avoid a task disappearing
                 # mid-execution. The event loop only keeps weak references to tasks. A task that
                 # isn’t referenced elsewhere may get garbage collected, even before it’s done.
@@ -227,7 +244,7 @@ class CorpusApiBackend(CorpusBackend):
             return cache_entry.items
 
         # If no cache value exists, fetch new data and await the result.
-        return await self._revalidate_cache(surface_id, days_since_today)
+        return await self._revalidate_cache(surface_id, days_offset)
 
     @retry(
         wait=wait_exponential_jitter(
@@ -240,7 +257,7 @@ class CorpusApiBackend(CorpusBackend):
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _fetch_from_backend(
-        self, surface_id: ScheduledSurfaceId, days_since_today: int
+        self, surface_id: ScheduledSurfaceId, days_offset: int
     ) -> list[CorpusItem]:
         """Issue a scheduledSurface query"""
         query = """
@@ -264,7 +281,7 @@ class CorpusApiBackend(CorpusBackend):
 
         # Calculate the base date and adjusted date based on days_since_today
         today = self.get_scheduled_surface_date(self.get_surface_timezone(surface_id))
-        adjusted_date = today - timedelta(days=days_since_today)
+        adjusted_date = today + timedelta(days=days_offset)
 
         body = {
             "query": query,
@@ -312,13 +329,13 @@ class CorpusApiBackend(CorpusBackend):
         return curated_recommendations
 
     async def _revalidate_cache(
-        self, surface_id: ScheduledSurfaceId, days_since_today: int
+        self, surface_id: ScheduledSurfaceId, days_offset: int
     ) -> list[CorpusItem]:
         """Update the cache for a specific surface and return the corpus items.
         If the API fails to respond successfully even after retries, return the latest cached data.
         Only a single "coalesced" request will be made to the backend per surface id.
         """
-        cache_key = CacheKey(surface_id, days_since_today)
+        cache_key = CacheKey(surface_id, days_offset)
 
         if cache_key not in self._cache:
             self._cache[cache_key] = CacheEntry([], datetime.min, asyncio.Lock())
@@ -330,7 +347,7 @@ class CorpusApiBackend(CorpusBackend):
 
             # Attempt to fetch new data from the backend
             try:
-                data = await self._fetch_from_backend(surface_id, days_since_today)
+                data = await self._fetch_from_backend(surface_id, days_offset)
                 self._cache[cache_key] = CacheEntry(
                     data, self.get_expiration_time(), asyncio.Lock()
                 )
