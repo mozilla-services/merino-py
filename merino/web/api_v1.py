@@ -6,10 +6,10 @@ from asyncio import Task
 from collections import Counter
 from functools import partial
 from itertools import chain
-from typing import Annotated
+from typing import Annotated, Optional
 
 from asgi_correlation_id.context import correlation_id
-from fastapi import APIRouter, Depends, Query, Header
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse
 from starlette.requests import Request
@@ -70,9 +70,9 @@ HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 async def suggest(
     request: Request,
     q: Annotated[str, Query(max_length=QUERY_CHARACTER_MAX)],
-    city: str | None = None,
-    country: str | None = None,
-    region: str | None = None,
+    country: Annotated[str | None, Query(max_length=2, min_length=2)] = None,
+    region: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
+    city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
@@ -190,10 +190,21 @@ async def suggest(
 
     lookups: list[Task] = []
     languages = get_accepted_languages(accept_language)
+
+    validate_suggest_custom_location_params(city, region, country)
+
+    geolocation = request.scope[ScopeKey.GEOLOCATION].model_copy(
+        update={
+            "city_custom": city,
+            "regions_custom": [region],
+            "country_custom": country,
+        }
+    )
+
     for p in search_from:
         srequest = SuggestionRequest(
             query=p.normalize_query(q),
-            geolocation=request.scope[ScopeKey.GEOLOCATION],
+            geolocation=geolocation,
             request_type=request_type,
             city=city,
             country=country,
@@ -392,3 +403,14 @@ def get_accepted_languages(languages: str | None) -> list[str]:
         except Exception:
             return ["en-US"]
     return ["en-US"]
+
+
+def validate_suggest_custom_location_params(
+    city: Optional[str], region: Optional[str], country: Optional[str]
+):
+    """Validate that city, region & country params are either all present or all omitted."""
+    if any([country, region, city]) and not all([country, region, city]):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid query parameters: `city`, `region`, and `country` are required, but one or more are missing in the request.",
+        )
