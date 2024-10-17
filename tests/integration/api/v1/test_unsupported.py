@@ -74,20 +74,3 @@ def test_unsupported_endpoint_metrics(mocker: MockerFixture, client: TestClient)
     # TODO: Remove reliance on internal details of aiodogstatsd
     metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
     assert metric_keys == expected_metric_keys
-
-
-def test_unsupported_endpoint_flags(mocker: MockerFixture, client: TestClient) -> None:
-    """Test that feature flags are not added for unsupported endpoints
-    (status code 404).
-    """
-    expected_tags_per_metric: dict[str, list[str]] = {"response.status_codes.404": []}
-
-    report = mocker.patch.object(aiodogstatsd.Client, "_report")
-
-    client.get("/api/v1/unsupported")
-
-    # TODO: Remove reliance on internal details of aiodogstatsd
-    tags_per_metric: dict[str, list[str]] = {
-        call.args[0]: [*call.args[3].keys()] for call in report.call_args_list
-    }
-    assert tags_per_metric == expected_tags_per_metric

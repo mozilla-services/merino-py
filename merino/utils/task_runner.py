@@ -4,7 +4,7 @@ import logging
 from asyncio import ALL_COMPLETED, Task, wait
 from typing import Callable
 
-from merino.metrics import Client
+from aiodogstatsd import Client
 
 logger = logging.getLogger(__name__)
 
