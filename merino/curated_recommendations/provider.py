@@ -137,8 +137,13 @@ class CuratedRecommendationsProvider:
     @staticmethod
     def is_enrolled_in_regional_engagement(request: CuratedRecommendationsRequest) -> bool:
         """Return True if Thompson sampling should use regional engagement (treatment)."""
+        # Large and small countries need a different enrollment %, thus require separate experiments
         return CuratedRecommendationsProvider.is_enrolled_in_experiment(
             request, ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "treatment"
+        ) or CuratedRecommendationsProvider.is_enrolled_in_experiment(
+            request,
+            ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value,
+            "treatment",
         )
 
     @staticmethod

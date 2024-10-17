@@ -54,7 +54,10 @@ class ExperimentName(str, Enum):
     when Merino needs to change behavior depending on the experimentName request parameter.
     """
 
+    # Experiment where large countries receive region-specific ranking.
     REGION_SPECIFIC_CONTENT_EXPANSION = "new-tab-region-specific-content-expansion"
+    # Same as the above, but targeting small countries, which need a higher enrollment %.
+    REGION_SPECIFIC_CONTENT_EXPANSION_SMALL = "new-tab-region-specific-content-expansion-small"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
