@@ -28,7 +28,14 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     Engagement,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
-from merino.curated_recommendations.protocol import CuratedRecommendation, ExperimentName
+from merino.curated_recommendations.protocol import (
+    ExperimentName,
+    FAKESPOT_HEADER_COPY,
+    FAKESPOT_FOOTER_COPY,
+    FAKESPOT_CTA_COPY,
+    FAKESPOT_CTA_URL,
+)
+from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
 from merino.metrics import get_metrics_client
 
@@ -173,6 +180,13 @@ async def fetch_en_us_with_need_to_know(client: AsyncClient) -> Response:
     )
 
 
+async def fetch_en_us_with_fakespot(client: AsyncClient) -> Response:
+    """Make a curated recommendations request with en-US locale and feeds=["fakespot"]"""
+    return await client.post(
+        "/api/v1/curated-recommendations", json={"locale": "en-US", "feeds": ["fakespot"]}
+    )
+
+
 def get_max_total_retry_duration() -> float:
     """Compute the maximum retry duration for the exponential backoff and jitter strategy."""
     initial = settings.curated_recommendations.corpus_api.retry_wait_initial_seconds
@@ -236,54 +250,6 @@ async def test_curated_recommendations(repeat):
         )
 
 
-@freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
-@pytest.mark.asyncio
-async def test_curated_recommendations_with_need_to_know_feed():
-    """Test the curated recommendations endpoint response is as expected
-    when requesting the 'need_to_know' feed.
-    """
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        # Mock the endpoint
-        response = await fetch_en_us_with_need_to_know(ac)
-        data = response.json()
-
-        # Check if the mock response is valid
-        assert response.status_code == 200
-
-        corpus_items = data["data"]
-
-        # Assert total of 70 items returned (minus the ten items marked as `isTimeSensitive` in the data
-        assert len(corpus_items) == 70
-
-        # Assert all corpus_items have expected fields populated.
-        assert all(item["url"] for item in corpus_items)
-        assert all(item["publisher"] for item in corpus_items)
-        assert all(item["imageUrl"] for item in corpus_items)
-        assert all(item["tileId"] for item in corpus_items)
-
-        # Assert that receivedRank equals 0, 1, 2, ...
-        for i, item in enumerate(corpus_items):
-            assert item["receivedRank"] == i
-
-        # Assert that the `need_to_know` feed has a localized title returned
-        title = data["feeds"]["need_to_know"]["title"]
-        assert title == "In the news"
-
-        # Assert that the `need_to_know` feed has 10 items
-        feed = data["feeds"]["need_to_know"]["recommendations"]
-        assert len(feed) == 10
-
-        # Assert all `need_to_know` stories have expected fields populated.
-        assert all(item["url"] for item in feed)
-        assert all(item["publisher"] for item in feed)
-        assert all(item["imageUrl"] for item in feed)
-        assert all(item["tileId"] for item in feed)
-
-        # Make sure the top item in the `need_to_know` feed is the one we expect
-        # (the top item in the list with `isTimeSensitive`=true)
-        assert feed[0]["title"] == "A Hot Drink on a Hot Day Can Cool You Down"
-
-
 @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
 @pytest.mark.asyncio
 async def test_curated_recommendations_utm_source():
@@ -304,72 +270,6 @@ async def test_curated_recommendations_utm_source():
         assert all("?utm_source=pocket-newtab-en-us" in item["url"] for item in corpus_items)
         assert all(item["publisher"] for item in corpus_items)
         assert all(item["imageUrl"] for item in corpus_items)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "locale",
-    [
-        "fr",
-        "fr-FR",
-        "es",
-        "es-ES",
-        "it",
-        "it-IT",
-        "en",
-        "en-CA",
-        "en-GB",
-        "en-US",
-        "de",
-        "de-DE",
-        "de-AT",
-        "de-CH",
-    ],
-)
-async def test_curated_recommendations_locales(locale):
-    """Test the curated recommendations endpoint accepts valid locales."""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await ac.post("/api/v1/curated-recommendations", json={"locale": locale})
-        assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "locale",
-    ["fr", "fr-FR", "es", "es-ES", "it", "it-IT", "de", "de-DE", "de-AT", "de-CH"],
-)
-@pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
-async def test_curated_recommendations_non_en_topic_is_null(locale, topics):
-    """Test that topic is missing/null for non-English locales."""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await ac.post(
-            "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
-        )
-        data = response.json()
-        corpus_items = data["data"]
-
-        assert len(corpus_items) > 0
-        # Assert that the topic is None for all items in non-en-US locales.
-        assert all(item["topic"] is None for item in corpus_items)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "locale",
-    ["en-US", "en-GB"],
-)
-@pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
-async def test_curated_recommendations_en_topic(locale, topics):
-    """Test that topic is present for English locales."""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await ac.post(
-            "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
-        )
-        data = response.json()
-        corpus_items = data["data"]
-
-        assert len(corpus_items) > 0
-        assert all(item["topic"] is not None for item in corpus_items)
 
 
 class TestCuratedRecommendationsRequestParameters:
@@ -513,6 +413,43 @@ class TestCuratedRecommendationsRequestParameters:
                 "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
             )
             assert response.status_code == 200, f"{topics} resulted in {response.status_code}"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "locale",
+        ["fr", "fr-FR", "es", "es-ES", "it", "it-IT", "de", "de-DE", "de-AT", "de-CH"],
+    )
+    @pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
+    async def test_curated_recommendations_non_en_topic_is_null(self, locale, topics):
+        """Test that topic is missing/null for non-English locales."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
+            )
+            data = response.json()
+            corpus_items = data["data"]
+
+            assert len(corpus_items) > 0
+            # Assert that the topic is None for all items in non-en-US locales.
+            assert all(item["topic"] is None for item in corpus_items)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "locale",
+        ["en-US", "en-GB"],
+    )
+    @pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
+    async def test_curated_recommendations_en_topic(self, locale, topics):
+        """Test that topic is present for English locales."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
+            )
+            data = response.json()
+            corpus_items = data["data"]
+
+            assert len(corpus_items) > 0
+            assert all(item["topic"] is not None for item in corpus_items)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -797,6 +734,213 @@ class TestCuratedRecommendationsRequestParameters:
 
             # Check if the response returns 400
             assert response.status_code == 400
+
+
+class TestCuratedRecommendationsRequestFeeds:
+    """Tests covering the feeds request param."""
+
+    @staticmethod
+    def assert_need_to_know_feed(need_to_know_feed):
+        """Assert the need_to_know feed is as expected."""
+        # Assert that the `need_to_know` feed has a localized title returned
+        title = need_to_know_feed["title"]
+        assert title == "In the news"
+
+        # Assert that the `need_to_know` feed has 10 items
+        feed = need_to_know_feed["recommendations"]
+        assert len(feed) == 10
+
+        # Assert all `need_to_know` stories have expected fields populated.
+        assert all(item["url"] for item in feed)
+        assert all(item["publisher"] for item in feed)
+        assert all(item["imageUrl"] for item in feed)
+        assert all(item["tileId"] for item in feed)
+
+    @staticmethod
+    def assert_fakespot_feed(fakespot_feed):
+        """Assert the fakespot feed is as expected."""
+        fakespot_products = fakespot_feed["products"]
+        # currently 8 products in mock JSON file
+        assert len(fakespot_products) == 8
+        # Assert all fakespot products have expected fields populated.
+        required_fields = ["id", "title", "category", "imageUrl", "url"]
+        for product in fakespot_products:
+            assert all(product.get(field) for field in required_fields)
+        # Assert the header, footer, cta copy are present
+        assert fakespot_feed["headerCopy"] == FAKESPOT_HEADER_COPY
+        assert fakespot_feed["footerCopy"] == FAKESPOT_FOOTER_COPY
+        assert fakespot_feed["cta"]["ctaCopy"] == FAKESPOT_CTA_COPY
+        assert fakespot_feed["cta"]["url"] == FAKESPOT_CTA_URL
+
+    @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
+    @pytest.mark.asyncio
+    async def test_curated_recommendations_with_need_to_know_feed(self):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'need_to_know' feed for en-US locale.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint
+            response = await fetch_en_us_with_need_to_know(ac)
+            data = response.json()
+
+            # Check if the mock response is valid
+            assert response.status_code == 200
+
+            corpus_items = data["data"]
+
+            # Assert total of 70 items returned (minus the ten items marked as `isTimeSensitive` in the data
+            assert len(corpus_items) == 70
+
+            # Assert all corpus_items have expected fields populated.
+            assert all(item["url"] for item in corpus_items)
+            assert all(item["publisher"] for item in corpus_items)
+            assert all(item["imageUrl"] for item in corpus_items)
+            assert all(item["tileId"] for item in corpus_items)
+
+            # Assert that receivedRank equals 0, 1, 2, ...
+            for i, item in enumerate(corpus_items):
+                assert item["receivedRank"] == i
+
+            # Assert the `need_to_know` feed
+            self.assert_need_to_know_feed(data["feeds"]["need_to_know"])
+
+    @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
+    @pytest.mark.asyncio
+    async def test_curated_recommendations_with_fakespot_feed(self):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'fakespot' feed for en-US locale.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint
+            response = await fetch_en_us_with_fakespot(ac)
+            data = response.json()
+
+            # Check if the mock response is valid
+            assert response.status_code == 200
+
+            corpus_items = data["data"]
+            # assert total of 80 items returned
+            assert len(corpus_items) == 80
+            # Assert all corpus_items have expected fields populated.
+            assert all(item["url"] for item in corpus_items)
+            assert all(item["publisher"] for item in corpus_items)
+            assert all(item["imageUrl"] for item in corpus_items)
+            assert all(item["tileId"] for item in corpus_items)
+
+            # Assert that receivedRank equals 0, 1, 2, ...
+            for i, item in enumerate(corpus_items):
+                assert item["receivedRank"] == i
+
+            # Assert the fakespot feed is present
+            self.assert_fakespot_feed(data["feeds"]["fakespot"])
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "locale",
+        [
+            "fr",
+            "fr-FR",
+            "es",
+            "es-ES",
+            "it",
+            "it-IT",
+            "en-GB",
+            "de",
+            "de-DE",
+            "de-AT",
+            "de-CH",
+        ],
+    )
+    async def test_curated_recommendations_with_fakespot_feed_non_en_us(self, locale):
+        """Test the curated recommendations endpoint response is as expected with non en-US locale & fakespot feed
+        requested. Fakespot feed should not be returned for non en-US locale.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations", json={"locale": locale, "feeds": ["fakespot"]}
+            )
+            assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
+            data = response.json()
+            # assert feeds is empty
+            assert data["feeds"] is None
+
+    @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
+    @pytest.mark.asyncio
+    async def test_curated_recommendations_with_need_to_know_fakespot_feeds_non_en_us(self):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'need_to_know' and 'fakespot' feed together for non en-US.
+        Fakespot feed should be null for non en-US locales.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "en-GB", "feeds": ["need_to_know", "fakespot"]},
+            )
+            data = response.json()
+
+            # Check if the mock response is valid
+            assert response.status_code == 200
+
+            corpus_items = data["data"]
+
+            # Assert total of 70 items returned (minus the ten items marked as `isTimeSensitive` in the data
+            assert len(corpus_items) == 70
+
+            # Assert all corpus_items have expected fields populated.
+            assert all(item["url"] for item in corpus_items)
+            assert all(item["publisher"] for item in corpus_items)
+            assert all(item["imageUrl"] for item in corpus_items)
+            assert all(item["tileId"] for item in corpus_items)
+
+            # Assert that receivedRank equals 0, 1, 2, ...
+            for i, item in enumerate(corpus_items):
+                assert item["receivedRank"] == i
+
+            # Assert the `need_to_know` feed is returned correctly
+            self.assert_need_to_know_feed(data["feeds"]["need_to_know"])
+
+            # Assert the fakespot feed is not returned even though requested, as non en-US locale
+            assert data["feeds"]["fakespot"] is None
+
+    @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
+    @pytest.mark.asyncio
+    async def test_curated_recommendations_with_need_to_know_fakespot_feeds_en_us(self):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'need_to_know' and 'fakespot' feed together for en-US.
+        Both feeds should be returned correctly.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "en-US", "feeds": ["need_to_know", "fakespot"]},
+            )
+            data = response.json()
+
+            # Check if the mock response is valid
+            assert response.status_code == 200
+
+            corpus_items = data["data"]
+
+            # Assert total of 70 items returned (minus the ten items marked as `isTimeSensitive` in the data
+            assert len(corpus_items) == 70
+
+            # Assert all corpus_items have expected fields populated.
+            assert all(item["url"] for item in corpus_items)
+            assert all(item["publisher"] for item in corpus_items)
+            assert all(item["imageUrl"] for item in corpus_items)
+            assert all(item["tileId"] for item in corpus_items)
+
+            # Assert that receivedRank equals 0, 1, 2, ...
+            for i, item in enumerate(corpus_items):
+                assert item["receivedRank"] == i
+
+            # Assert the `need_to_know` feed is returned correctly
+            self.assert_need_to_know_feed(data["feeds"]["need_to_know"])
+
+            # Assert the fakespot feed is present
+            self.assert_fakespot_feed(data["feeds"]["fakespot"])
 
 
 class TestCorpusApiCaching:

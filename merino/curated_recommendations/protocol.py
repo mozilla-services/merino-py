@@ -136,6 +136,41 @@ class CuratedRecommendationsRequest(BaseModel):
         return []
 
 
+# Fakespot header/footer cta copy hardcoded strings for now.
+FAKESPOT_HEADER_COPY = (
+    "Fakespot by Mozilla curates the chaos of online shopping into gift guides you can trust."
+)
+FAKESPOT_FOOTER_COPY = "Take the guesswork out of gifting with the Fakespot Gift Guide."
+FAKESPOT_CTA_COPY = "Explore More Gifts"
+FAKESPOT_CTA_URL = "https://fakespot-gifts.com/"
+
+
+class FakespotProduct(BaseModel):
+    """Fakespot product details"""
+
+    id: str
+    title: str
+    category: str
+    imageUrl: str
+    url: str
+
+
+class FakespotCTA(BaseModel):
+    """Fakespot CTA"""
+
+    ctaCopy: str
+    url: str
+
+
+class FakespotFeed(BaseModel):
+    """Fakespot product recommendations"""
+
+    products: list[FakespotProduct]
+    headerCopy: str
+    footerCopy: str
+    cta: FakespotCTA
+
+
 class CuratedRecommendationsBucket(BaseModel):
     """A ranked list of curated recommendations"""
 
@@ -145,10 +180,11 @@ class CuratedRecommendationsBucket(BaseModel):
 
 class CuratedRecommendationsFeed(BaseModel):
     """Multiple lists of curated recommendations for experiments.
-    Currently limited to the 'need_to_know' feed only.
+    Currently limited to the 'need_to_know' & fakespot feed only.
     """
 
-    need_to_know: CuratedRecommendationsBucket
+    need_to_know: CuratedRecommendationsBucket | None = None
+    fakespot: FakespotFeed | None = None
 
 
 class CuratedRecommendationsResponse(BaseModel):
