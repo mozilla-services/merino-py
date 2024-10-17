@@ -24,13 +24,24 @@ class Location(BaseModel):
     """Data model for geolocation."""
 
     country: Optional[str] = None
+    country_custom: Optional[str] = None
     country_name: Optional[str] = None
     regions: Optional[list[str]] = None
+    regions_custom: Optional[list[str]] = None
     region_names: Optional[list[str]] = None
     city: Optional[str] = None
+    city_custom: Optional[str] = None
     dma: Optional[int] = None
     postal_code: Optional[str] = None
     key: Optional[str] = None
+
+    def prioritize_custom_location(self):
+        """Update city, region, and country with custom fields if all custom fields exist."""
+        if all([self.city_custom, self.regions_custom, self.country_custom]):
+            self.city = self.city_custom
+            self.regions = self.regions_custom
+            self.country = self.country_custom
+        return self
 
 
 def normalize_string(input_str) -> str:

@@ -355,3 +355,47 @@ def test_suggest_with_location_completion_with_incorrect_request_type_param(
     )
 
     assert response.status_code == 400
+
+
+@pytest.mark.parametrize(
+    ("city", "region", "country"),
+    [
+        (None, "MA", "US"),
+        ("Boston", None, None),
+        (None, "MA", None),
+        (None, None, "US"),
+        ("Boston", "MA", None),
+    ],
+    ids=[
+        "missing_city",
+        "missing_region_and_country",
+        "missing_city_and_country",
+        "missing_city_and_region",
+        "missing_country",
+    ],
+)
+@pytest.mark.asyncio
+async def test_suggest_weather_with_incomplete_city_region_country_params(
+    client: TestClient,
+    city: str | None,
+    region: str | None,
+    country: str | None,
+) -> None:
+    """Test that the suggest endpoint response for accuweather provider returns a 400 when city, region
+    & country params are not all provided.
+    """
+    base_url = "/api/v1/suggest?q=weather&providers=accuweather&request_type=weather"
+
+    if city is not None:
+        base_url += f"&city={city}"
+    if region is not None:
+        base_url += f"&region={region}"
+    if country is not None:
+        base_url += f"&country={country}"
+
+    response = client.get(base_url)
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Invalid query parameters: `city`, `region`, and `country` are required, but one or more are missing in the request."
+    )
