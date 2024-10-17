@@ -35,7 +35,7 @@ class Location(BaseModel):
     postal_code: Optional[str] = None
     key: Optional[str] = None
 
-    def prioritize_custom_location(self):
+    def prioritize_custom_location(self) -> "Location":
         """Update city, region, and country with custom fields if all custom fields exist."""
         if all([self.city_custom, self.regions_custom, self.country_custom]):
             self.city = self.city_custom
