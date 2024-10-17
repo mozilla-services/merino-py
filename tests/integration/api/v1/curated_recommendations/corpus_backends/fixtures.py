@@ -49,8 +49,8 @@ def fixture_request_data() -> Request:
     )
 
 
-@pytest.fixture(name="corpus_http_client")
-def fixture_mock_corpus_http_client(fixture_response_data, fixture_request_data) -> AsyncMock:
+@pytest.fixture()
+def corpus_http_client(fixture_response_data, fixture_request_data) -> AsyncMock:
     """Mock curated corpus api HTTP client."""
     # Create a mock HTTP client
     mock_http_client = AsyncMock(spec=AsyncClient)
@@ -64,8 +64,8 @@ def fixture_mock_corpus_http_client(fixture_response_data, fixture_request_data)
     return mock_http_client
 
 
-@pytest.fixture(name="corpus_backend")
-def fixture_mock_corpus_backend(corpus_http_client: AsyncMock) -> CorpusApiBackend:
+@pytest.fixture()
+def corpus_backend(corpus_http_client: AsyncMock) -> CorpusApiBackend:
     """Mock corpus api backend."""
     # Initialize the backend with the mock HTTP client
     return CorpusApiBackend(

@@ -14,6 +14,13 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
     Topic,
 )
+from tests.integration.api.v1.curated_recommendations.corpus_backends.fixtures import (
+    fixture_response_data,
+    fixture_response_data_short,
+    fixture_request_data,
+    corpus_http_client,
+    corpus_backend,
+)
 
 
 @pytest.mark.asyncio
