@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, Query, Header
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse
 from starlette.requests import Request
+from aiodogstatsd import Client
 
 from merino.config import settings
 from merino.curated_recommendations import get_provider as get_corpus_api_provider
@@ -23,7 +24,6 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
 )
-from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest

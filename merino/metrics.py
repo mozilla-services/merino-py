@@ -2,7 +2,7 @@
 
 import logging
 from functools import cache
-from typing import Final, Mapping, ParamSpec, TypeVar
+from typing import Mapping
 
 import aiodogstatsd
 
@@ -12,47 +12,6 @@ logger = logging.getLogger(__name__)
 
 # Type definition for tags in aiodogstatsd metrics
 MetricTags = Mapping[str, float | int | str]
-
-# Type definitions for the `calls` attribute on the `Client` class
-MetricCall = dict[str, str | tuple | dict]
-MetricCalls = list[MetricCall]
-
-# TypeVar for the `Client` class
-C = TypeVar("C", bound="Client")
-
-# ParamSpec for the client_method
-P = ParamSpec("P")
-
-# TypeVar for the return type of the StatsD client method
-R = TypeVar("R")
-
-# The following methods are added to the `Client` class by the meta class
-SUPPORTED_METHODS: Final[list[str]] = [
-    "gauge",
-    "increment",
-    "decrement",
-    "histogram",
-    "distribution",
-    "timing",
-    "timeit_task",
-]
-
-
-class Client:
-    """Proxy for a StatsD client"""
-
-    statsd_client: aiodogstatsd.Client
-    calls: MetricCalls
-
-    def __init__(self, statsd_client: aiodogstatsd.Client) -> None:
-        """Initialize the client instance."""
-        self.statsd_client = statsd_client
-        self.calls = []
-
-    def __getattr__(self, attr_name: str):
-        """Raise an exception when an unsupported attribute is requested."""
-        logger.warning(f"{attr_name} is not a supported method: {SUPPORTED_METHODS}")
-        raise AttributeError(f"attribute '{attr_name}' is not supported by metrics.Client class")
 
 
 @cache

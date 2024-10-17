@@ -29,7 +29,7 @@ class MetricsMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # We don't use the StatsD client directly TODO
+        # get the memoized StatsD client
         metrics_client = get_metrics_client()
 
         # Store `Client` instance in the request scope, so that it can be used by other
