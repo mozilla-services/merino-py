@@ -1214,6 +1214,13 @@ class TestCorpusApiRanking:
             (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "control", False),
             (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "treatment", True),
             (f"optin-{ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value}", "treatment", True),
+            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value, "control", False),
+            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value, "treatment", True),
+            (
+                f"optin-{ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value}",
+                "treatment",
+                True,
+            ),
         ],
     )
     @pytest.mark.parametrize(
