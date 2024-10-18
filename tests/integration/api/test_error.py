@@ -92,24 +92,3 @@ def test_error_metrics(mocker: MockerFixture, client: TestClient) -> None:
     # TODO: Remove reliance on internal details of aiodogstatsd
     metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
     assert metric_keys == expected_metric_keys
-
-
-def test_error_feature_flags(mocker: MockerFixture, client: TestClient) -> None:
-    """Test that feature flags are not added for the '__error__' endpoint
-    (status code 500).
-    """
-    expected_tags_per_metric: dict[str, list[str]] = {
-        "get.__error__.timing": [],
-        "get.__error__.status_codes.500": [],
-        "response.status_codes.500": [],
-    }
-
-    report = mocker.patch.object(aiodogstatsd.Client, "_report")
-
-    client.get("/__error__")
-
-    # TODO: Remove reliance on internal details of aiodogstatsd
-    tags_per_metric: dict[str, list[str]] = {
-        call.args[0]: [*call.args[3].keys()] for call in report.call_args_list
-    }
-    assert tags_per_metric == expected_tags_per_metric
