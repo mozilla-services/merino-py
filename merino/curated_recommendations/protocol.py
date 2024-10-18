@@ -139,7 +139,8 @@ class CuratedRecommendationsRequest(BaseModel):
         return []
 
 
-# Fakespot header/footer cta copy hardcoded strings for now.
+# Fakespot UI copy - hardcoded strings for now.
+FAKESPOT_DEFAULT_CATEGORY_NAME = "Holiday Gift Guide"
 FAKESPOT_HEADER_COPY = (
     "Fakespot by Mozilla curates the chaos of online shopping into gift guides you can trust."
 )
@@ -169,6 +170,7 @@ class FakespotFeed(BaseModel):
     """Fakespot product recommendations"""
 
     products: list[FakespotProduct]
+    defaultCategoryName: str
     headerCopy: str
     footerCopy: str
     cta: FakespotCTA
