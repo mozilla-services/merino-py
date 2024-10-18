@@ -35,13 +35,13 @@ from merino.jobs.geonames_uploader.downloader import (
 class GeonameAlternate:
     """Geoname alternate"""
 
-    geoname_id: str
+    geoname_id: int
     iso_language: str
     name: str
 
     def __init__(
         self,
-        geoname_id: str,
+        geoname_id: int,
         iso_language: str,
         name: str,
     ):
@@ -53,7 +53,7 @@ class GeonameAlternate:
 GEONAMES = [
     # Waterloo, AL
     Geoname(
-        id="1",
+        id=1,
         name="Waterloo",
         feature_class="P",
         feature_code="PPL",
@@ -63,7 +63,7 @@ GEONAMES = [
     ),
     # AL
     Geoname(
-        id="2",
+        id=2,
         name="Alabama",
         feature_class="A",
         feature_code="ADM1",
@@ -73,7 +73,7 @@ GEONAMES = [
     ),
     # Waterloo, IA
     Geoname(
-        id="3",
+        id=3,
         name="Waterloo",
         feature_class="P",
         feature_code="PPLA2",
@@ -83,7 +83,7 @@ GEONAMES = [
     ),
     # IA
     Geoname(
-        id="4",
+        id=4,
         name="Iowa",
         feature_class="A",
         feature_code="ADM1",
@@ -93,7 +93,7 @@ GEONAMES = [
     ),
     # Waterloo Lake (not a city or region)
     Geoname(
-        id="5",
+        id=5,
         name="Waterloo Lake",
         feature_class="H",
         feature_code="LK",
@@ -103,7 +103,7 @@ GEONAMES = [
     ),
     # New York City
     Geoname(
-        id="6",
+        id=6,
         name="New York City",
         feature_class="P",
         feature_code="PPL",
@@ -113,7 +113,7 @@ GEONAMES = [
     ),
     # NY State
     Geoname(
-        id="7",
+        id=7,
         name="New York",
         feature_class="A",
         feature_code="ADM1",
@@ -126,73 +126,73 @@ GEONAMES = [
 ALTERNATES = [
     # Waterloo, AL
     GeonameAlternate(
-        geoname_id="1",
+        geoname_id=1,
         name="Waterloo",
         iso_language="en",
     ),
     # AL
     GeonameAlternate(
-        geoname_id="2",
+        geoname_id=2,
         name="AL",
         iso_language="abbr",
     ),
     # Waterloo, IA
     GeonameAlternate(
-        geoname_id="3",
+        geoname_id=3,
         name="Waterloo",
         iso_language="en",
     ),
     # IA
     GeonameAlternate(
-        geoname_id="4",
+        geoname_id=4,
         name="IA",
         iso_language="abbr",
     ),
     # Waterloo Lake
     GeonameAlternate(
-        geoname_id="5",
+        geoname_id=5,
         name="Waterloo",
         iso_language="en",
     ),
     GeonameAlternate(
-        geoname_id="5",
+        geoname_id=5,
         name="W. Lake",
         iso_language="en-US",
     ),
     # New York City
     GeonameAlternate(
-        geoname_id="6",
+        geoname_id=6,
         name="New York",
         iso_language="en",
     ),
     GeonameAlternate(
-        geoname_id="6",
+        geoname_id=6,
         name="NY",
         iso_language="abbr",
     ),
     GeonameAlternate(
-        geoname_id="6",
+        geoname_id=6,
         name="NYC",
         iso_language="abbr",
     ),
     GeonameAlternate(
-        geoname_id="6",
+        geoname_id=6,
         name="LGA",
         iso_language="iata",
     ),
     GeonameAlternate(
-        geoname_id="6",
+        geoname_id=6,
         name="Nueva York",
         iso_language="es",
     ),
     # NY State
     GeonameAlternate(
-        geoname_id="7",
+        geoname_id=7,
         name="NY",
         iso_language="abbr",
     ),
     GeonameAlternate(
-        geoname_id="7",
+        geoname_id=7,
         name="Nueva York",
         iso_language="es",
     ),
@@ -253,7 +253,7 @@ class DownloaderTest:
         rows = []
         for g in geonames:
             row = [""] * (MAX_GEONAME_COL + 1)
-            row[GEONAME_COL_ID] = g.id
+            row[GEONAME_COL_ID] = str(g.id)
             row[GEONAME_COL_NAME] = g.name
             row[GEONAME_COL_FEATURE_CLASS] = g.feature_class
             row[GEONAME_COL_FEATURE_CODE] = g.feature_code
@@ -268,7 +268,7 @@ class DownloaderTest:
         rows = []
         for a in alternates:
             row = [""] * (MAX_ALTERNATES_COL + 1)
-            row[ALTERNATES_COL_GEONAME_ID] = a.geoname_id
+            row[ALTERNATES_COL_GEONAME_ID] = str(a.geoname_id)
             row[ALTERNATES_COL_ISO_LANGUAGE] = a.iso_language
             row[ALTERNATES_COL_NAME] = a.name
             rows.append(row)
@@ -316,7 +316,7 @@ def test_all_populations_and_iso_languages(
         alternates_iso_languages=["en", "abbr", "iata"],
         expected_geonames=[
             Geoname(
-                id="1",
+                id=1,
                 name="Waterloo",
                 feature_class="P",
                 feature_code="PPL",
@@ -326,7 +326,7 @@ def test_all_populations_and_iso_languages(
                 alternate_names=set(["waterloo"]),
             ),
             Geoname(
-                id="2",
+                id=2,
                 name="Alabama",
                 feature_class="A",
                 feature_code="ADM1",
@@ -336,7 +336,7 @@ def test_all_populations_and_iso_languages(
                 alternate_names=set(["alabama", "al"]),
             ),
             Geoname(
-                id="3",
+                id=3,
                 name="Waterloo",
                 feature_class="P",
                 feature_code="PPLA2",
@@ -346,7 +346,7 @@ def test_all_populations_and_iso_languages(
                 alternate_names=set(["waterloo"]),
             ),
             Geoname(
-                id="4",
+                id=4,
                 name="Iowa",
                 feature_class="A",
                 feature_code="ADM1",
@@ -356,7 +356,7 @@ def test_all_populations_and_iso_languages(
                 alternate_names=set(["iowa", "ia"]),
             ),
             Geoname(
-                id="6",
+                id=6,
                 name="New York City",
                 feature_class="P",
                 feature_code="PPL",
@@ -366,7 +366,7 @@ def test_all_populations_and_iso_languages(
                 alternate_names=set(["new york city", "new york", "ny", "nyc", "lga"]),
             ),
             Geoname(
-                id="7",
+                id=7,
                 name="New York",
                 feature_class="A",
                 feature_code="ADM1",
@@ -398,7 +398,7 @@ def test_one_million_population_and_all_iso_languages(
         alternates_iso_languages=["en", "abbr", "iata"],
         expected_geonames=[
             Geoname(
-                id="2",
+                id=2,
                 name="Alabama",
                 feature_class="A",
                 feature_code="ADM1",
@@ -408,7 +408,7 @@ def test_one_million_population_and_all_iso_languages(
                 alternate_names=set(["alabama", "al"]),
             ),
             Geoname(
-                id="4",
+                id=4,
                 name="Iowa",
                 feature_class="A",
                 feature_code="ADM1",
@@ -418,7 +418,7 @@ def test_one_million_population_and_all_iso_languages(
                 alternate_names=set(["iowa", "ia"]),
             ),
             Geoname(
-                id="6",
+                id=6,
                 name="New York City",
                 feature_class="P",
                 feature_code="PPL",
@@ -428,7 +428,7 @@ def test_one_million_population_and_all_iso_languages(
                 alternate_names=set(["new york city", "new york", "ny", "nyc", "lga"]),
             ),
             Geoname(
-                id="7",
+                id=7,
                 name="New York",
                 feature_class="A",
                 feature_code="ADM1",
@@ -457,7 +457,7 @@ def test_one_million_population_and_en_only(
         alternates_iso_languages=["en"],
         expected_geonames=[
             Geoname(
-                id="2",
+                id=2,
                 name="Alabama",
                 feature_class="A",
                 feature_code="ADM1",
@@ -467,7 +467,7 @@ def test_one_million_population_and_en_only(
                 alternate_names=set(["alabama"]),
             ),
             Geoname(
-                id="4",
+                id=4,
                 name="Iowa",
                 feature_class="A",
                 feature_code="ADM1",
@@ -477,7 +477,7 @@ def test_one_million_population_and_en_only(
                 alternate_names=set(["iowa"]),
             ),
             Geoname(
-                id="6",
+                id=6,
                 name="New York City",
                 feature_class="P",
                 feature_code="PPL",
@@ -487,7 +487,7 @@ def test_one_million_population_and_en_only(
                 alternate_names=set(["new york city", "new york"]),
             ),
             Geoname(
-                id="7",
+                id=7,
                 name="New York",
                 feature_class="A",
                 feature_code="ADM1",

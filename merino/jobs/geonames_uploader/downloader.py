@@ -54,7 +54,7 @@ class Geoname:
 
     """
 
-    id: str
+    id: int
     name: str
     feature_class: str
     feature_code: str
@@ -65,7 +65,7 @@ class Geoname:
 
     def __init__(
         self,
-        id: str,
+        id: int,
         name: str,
         feature_class: str,
         feature_code: str,
@@ -127,13 +127,13 @@ class DownloadState:
     """The result of a successful GeoNames download."""
 
     geonames: list[Geoname]
-    geonames_by_id: dict[str, Geoname]
+    geonames_by_id: dict[int, Geoname]
     metrics: DownloadMetrics
 
     def __init__(
         self,
         geonames: list[Geoname] | None = None,
-        geonames_by_id: dict[str, Geoname] | None = None,
+        geonames_by_id: dict[int, Geoname] | None = None,
         metrics: DownloadMetrics | None = None,
     ) -> None:
         """Initialize the state."""
@@ -236,7 +236,7 @@ class GeonamesDownloader:
         return self._download(url, state, self._process_alternate)
 
     def _process_geoname(self, line: list[str], state: DownloadState) -> None:
-        geoname_id = line[GEONAME_COL_ID]
+        geoname_id = int(line[GEONAME_COL_ID])
         feature_class = line[GEONAME_COL_FEATURE_CLASS]
         feature_code = line[GEONAME_COL_FEATURE_CODE]
         population = int(line[GEONAME_COL_POPULATION])
@@ -259,7 +259,7 @@ class GeonamesDownloader:
                 state.metrics.excluded_geonames_count += 1
 
     def _process_alternate(self, line: list[str], state: DownloadState) -> None:
-        geoname_id = line[ALTERNATES_COL_GEONAME_ID]
+        geoname_id = int(line[ALTERNATES_COL_GEONAME_ID])
         iso_language = line[ALTERNATES_COL_ISO_LANGUAGE]
         name = line[ALTERNATES_COL_NAME]
         geoname = state.geonames_by_id.get(geoname_id, None)
