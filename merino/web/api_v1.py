@@ -412,5 +412,5 @@ def validate_suggest_custom_location_params(
     if any([country, region, city]) and not all([country, region, city]):
         raise HTTPException(
             status_code=400,
-            detail="Invalid query parameters: `city`, `region`, and `country` are required, but one or more are missing in the request.",
+            detail="Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted.",
         )

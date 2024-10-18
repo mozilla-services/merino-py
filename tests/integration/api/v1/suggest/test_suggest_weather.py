@@ -397,5 +397,5 @@ async def test_suggest_weather_with_incomplete_city_region_country_params(
     assert response.status_code == 400
     assert (
         response.json()["detail"]
-        == "Invalid query parameters: `city`, `region`, and `country` are required, but one or more are missing in the request."
+        == "Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
     )
