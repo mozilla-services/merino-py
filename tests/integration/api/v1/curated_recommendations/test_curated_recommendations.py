@@ -28,14 +28,6 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import CuratedRecommendation, ExperimentName
 from merino.main import app
-from tests.integration.api.v1.curated_recommendations.corpus_backends.fixtures import (
-    fixture_response_data,
-    fixture_response_data_short,
-    fixture_request_data,
-    fixture_graphql_200ok_with_error_response,
-    corpus_http_client,
-    corpus_backend,
-)
 
 
 class MockEngagementBackend(EngagementBackend):
