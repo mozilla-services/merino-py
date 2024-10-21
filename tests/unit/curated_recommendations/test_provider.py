@@ -257,7 +257,9 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
     """Unit tests for rank_need_to_know_recommendations method"""
 
     @staticmethod
-    def generate_recommendations(length: int, include_time_sensitive: bool = True) -> list[CuratedRecommendation]:
+    def generate_recommendations(
+        length: int, include_time_sensitive: bool = True
+    ) -> list[CuratedRecommendation]:
         """Create dummy recommendations for the tests below.
 
         @param length: how many recommendations are needed for a test
@@ -285,22 +287,30 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
     @staticmethod
     def mock_curated_recommendations_provider(
-        mocker: MockerFixture,
+        mocker: MockerFixture, backup_recommendations: list[CuratedRecommendation] = []
     ) -> CuratedRecommendationsProvider:
         """Mock the necessary components of CuratedRecommendationsProvider.
 
         @param mocker: MockerFixture
+        @param backup_recommendations: a list of curated recommendations to use as backup if there are not enough
+        time-sensitive stories in the main feed
         @return: A mocked CuratedRecommendationsProvider
         """
         # Mock the __init__ methods to prevent actual initialization
         mocker.patch.object(CuratedRecommendationsProvider, "__init__", return_value=None)
+        mocker.patch.object(CorpusBackend, "__init__", return_value=None)
 
         # Mock the rank_recommendations method
         mocker.patch.object(CuratedRecommendationsProvider, "rank_recommendations")
 
+        # Mock the fetch method from CorpusBackend that fetches the backup recommendations
+        mocker.patch.object(CorpusBackend, "fetch", return_value=backup_recommendations)
+
+        corpus_backend = CorpusBackend()
+
         # Create and return the mocked provider instance
         provider = CuratedRecommendationsProvider(
-            mocker.patch.object(CorpusBackend, "__init__", return_value=None),
+            corpus_backend,
             mocker.patch.object(EngagementBackend, "__init__", return_value=None),
             mocker.patch.object(PriorBackend, "__init__", return_value=None),
         )
@@ -372,7 +382,9 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         assert title == "In the news"
 
     @pytest.mark.asyncio
-    async def test_rank_need_to_know_recommendations_different_surface(self, mocker: MockerFixture):
+    async def test_rank_need_to_know_recommendations_different_surface(
+        self, mocker: MockerFixture
+    ):
         """Test localization with a non-English New Tab surface
 
         @param mocker: MockerFixture
@@ -396,17 +408,16 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         assert title == "In den News"
 
     @pytest.mark.asyncio
-    def test_rank_need_to_know_recommendations_backup_stories(self, mocker: MockerFixture):
+    async def test_rank_need_to_know_recommendations_backup_stories(self, mocker: MockerFixture):
         """Test an edge case when today's stories for the 'Need to know' feed
         have not yet been curated and the feed specifically for these stories
         needs to fall back to yesterday's data.
 
         @param mocker: MockerFixture
         """
-
         # Create mock recommendations for today - this batch won't have any
         # time-sensitive stories available
-        recommendations = self.generate_recommendations(100, False)
+        recs = self.generate_recommendations(20, False)
 
         # Create backup recommendations - this batch WILL have a mix of normal
         # and time-sensitive stories
@@ -416,7 +427,16 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
 
         # Instantiate the mocked classes
-        provider = self.mock_curated_recommendations_provider(mocker)
+        provider = self.mock_curated_recommendations_provider(mocker, backup_recs)
         request = self.mock_curated_recommendations_request(mocker)
 
+        # Call the method
+        general_feed, need_to_know_feed, title = await provider.rank_need_to_know_recommendations(
+            recs, surface_id, request
+        )
 
+        # Double-check the initial recommendations don't have any time-sensitive items
+        assert len([r for r in recs if not r.isTimeSensitive]) == 0
+
+        # Make sure the items in the need_to_know feed came from the backup recommendations
+        assert len(need_to_know_feed) > 5
