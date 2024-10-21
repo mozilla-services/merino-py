@@ -245,7 +245,7 @@ class CuratedRecommendationsProvider:
 
         return recommendations[: request.count]
 
-    def rank_need_to_know_recommendations(
+    async def rank_need_to_know_recommendations(
         self,
         recommendations: list[CuratedRecommendation],
         surface_id: ScheduledSurfaceId,
@@ -265,6 +265,11 @@ class CuratedRecommendationsProvider:
         """
         # Filter out all time-sensitive recommendations into the need_to_know feed
         need_to_know_feed = [r for r in recommendations if r.isTimeSensitive]
+
+        # If fewer than five stories have been curated for this feed, use yesterday's data
+        if len(need_to_know_feed) < 5:
+            yesterdays_recs = await self.corpus_backend.fetch(surface_id, -1)
+            need_to_know_feed = [r for r in yesterdays_recs if r.isTimeSensitive]
 
         # Update received_rank for need_to_know recommendations
         for rank, rec in enumerate(need_to_know_feed):
@@ -317,7 +322,7 @@ class CuratedRecommendationsProvider:
         # two different feeds: the "general" feed and the "need to know" feed.
         if self.is_need_to_know_experiment(curated_recommendations_request, surface_id):
             # this applies ranking to the general_feed!
-            general_feed, need_to_know_recs, title = self.rank_need_to_know_recommendations(
+            general_feed, need_to_know_recs, title = await self.rank_need_to_know_recommendations(
                 recommendations, surface_id, curated_recommendations_request
             )
 

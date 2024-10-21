@@ -257,10 +257,11 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
     """Unit tests for rank_need_to_know_recommendations method"""
 
     @staticmethod
-    def generate_recommendations(length: int) -> list[CuratedRecommendation]:
+    def generate_recommendations(length: int, include_time_sensitive: bool = True) -> list[CuratedRecommendation]:
         """Create dummy recommendations for the tests below.
 
         @param length: how many recommendations are needed for a test
+        @param include_time_sensitive: whether the entries have the isTimeSensitive flag on randomly or not at all
         @return: A list of curated recommendations
         """
         recs = []
@@ -274,7 +275,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
                 excerpt="is failing english",
                 topic=random.choice(list(Topic)),
                 publisher="cohens",
-                isTimeSensitive=random.choice([True, False]),
+                isTimeSensitive=random.choice([True, False]) if include_time_sensitive else False,
                 imageUrl=HttpUrl("https://placehold.co/600x400/"),
             )
 
@@ -323,7 +324,8 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
         return request
 
-    def test_rank_need_to_know_recommendations(self, mocker: MockerFixture):
+    @pytest.mark.asyncio
+    async def test_rank_need_to_know_recommendations(self, mocker: MockerFixture):
         """Test the main flow of logic in the function
 
         @param mocker: MockerFixture
@@ -347,7 +349,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         )
 
         # Call the method
-        general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
+        general_feed, need_to_know_feed, title = await provider.rank_need_to_know_recommendations(
             recommendations, surface_id, request
         )
 
@@ -369,7 +371,8 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         # Verify that the localized title is correct
         assert title == "In the news"
 
-    def test_rank_need_to_know_recommendations_different_surface(self, mocker: MockerFixture):
+    @pytest.mark.asyncio
+    async def test_rank_need_to_know_recommendations_different_surface(self, mocker: MockerFixture):
         """Test localization with a non-English New Tab surface
 
         @param mocker: MockerFixture
@@ -385,9 +388,35 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         request = self.mock_curated_recommendations_request(mocker)
 
         # Call the method
-        general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
+        general_feed, need_to_know_feed, title = await provider.rank_need_to_know_recommendations(
             recommendations, surface_id, request
         )
 
         # Verify that the title is correct for the German New Tab surface
         assert title == "In den News"
+
+    @pytest.mark.asyncio
+    def test_rank_need_to_know_recommendations_backup_stories(self, mocker: MockerFixture):
+        """Test an edge case when today's stories for the 'Need to know' feed
+        have not yet been curated and the feed specifically for these stories
+        needs to fall back to yesterday's data.
+
+        @param mocker: MockerFixture
+        """
+
+        # Create mock recommendations for today - this batch won't have any
+        # time-sensitive stories available
+        recommendations = self.generate_recommendations(100, False)
+
+        # Create backup recommendations - this batch WILL have a mix of normal
+        # and time-sensitive stories
+        backup_recs = self.generate_recommendations(100, True)
+
+        # Define the surface ID
+        surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
+
+        # Instantiate the mocked classes
+        provider = self.mock_curated_recommendations_provider(mocker)
+        request = self.mock_curated_recommendations_request(mocker)
+
+
