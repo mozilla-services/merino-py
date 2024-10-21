@@ -10,6 +10,8 @@ import logging
 from datetime import datetime
 from logging import LogRecord
 from typing import Any
+from unittest.mock import AsyncMock
+from starlette.types import ASGIApp, Scope
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,6 +20,9 @@ from pydantic import HttpUrl, TypeAdapter
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
+from merino.middleware import ScopeKey
+from merino.middleware.geolocation import GeolocationMiddleware, Location
+from merino.providers.base import SuggestionRequest
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -47,6 +52,13 @@ def fixture_backend_mock(mocker: MockerFixture) -> Any:
     yield backend_mock
 
 
+@pytest.fixture(name="geolocation_middleware")
+def fixture_geolocation_middleware(mocker: MockerFixture) -> GeolocationMiddleware:
+    """Create a GeolocationMiddleware object for test."""
+    asgiapp_mock = mocker.AsyncMock(spec=ASGIApp)
+    return GeolocationMiddleware(asgiapp_mock)
+
+
 @pytest.fixture(name="providers")
 def fixture_providers(backend_mock: Any, statsd_mock: Any) -> Providers:
     """Define providers for this module which are injected automatically."""
@@ -60,6 +72,17 @@ def fixture_providers(backend_mock: Any, statsd_mock: Any) -> Providers:
             enabled_by_default=True,
             cron_interval_sec=100,
         )
+    }
+
+
+@pytest.fixture(name="geolocation_scope")
+def mock_scope() -> Scope:
+    """Create a Scope mock object for Geolocation Middleware"""
+    return {
+        "type": "http",
+        "method": "GET",
+        "path": "/api/v1/suggest",
+        "headers": [],
     }
 
 
@@ -355,3 +378,103 @@ def test_suggest_with_location_completion_with_incorrect_request_type_param(
     )
 
     assert response.status_code == 400
+
+
+@pytest.mark.parametrize(
+    ("city", "region", "country"),
+    [
+        (None, "MA", "US"),
+        ("Boston", None, None),
+        (None, "MA", None),
+        (None, None, "US"),
+        ("Boston", "MA", None),
+    ],
+    ids=[
+        "missing_city",
+        "missing_region_and_country",
+        "missing_city_and_country",
+        "missing_city_and_region",
+        "missing_country",
+    ],
+)
+@pytest.mark.asyncio
+async def test_suggest_weather_with_incomplete_city_region_country_params(
+    client: TestClient,
+    city: str | None,
+    region: str | None,
+    country: str | None,
+) -> None:
+    """Test that the suggest endpoint response for accuweather provider returns a 400 when city, region
+    & country params are not all provided.
+    """
+    base_url = "/api/v1/suggest?q=weather&providers=weather&request_type=weather"
+
+    if city is not None:
+        base_url += f"&city={city}"
+    if region is not None:
+        base_url += f"&region={region}"
+    if country is not None:
+        base_url += f"&country={country}"
+
+    response = client.get(base_url)
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
+    )
+
+
+@pytest.mark.asyncio
+async def test_suggest_weather_with_custom_location(
+    client: TestClient,
+    geolocation_middleware: GeolocationMiddleware,
+    geolocation_scope: Scope,
+    providers: Providers,
+    mocker: MockerFixture,
+) -> None:
+    """Test that the suggest endpoint returns a response using custom city, region & country params when provided."""
+    expected_initial_location: Location = Location(
+        country="US",
+        country_name="United States",
+        regions=["WA"],
+        region_names=["Washington"],
+        city="Milton",
+        dma=819,
+        postal_code="98354",
+    )
+
+    receive_mock = AsyncMock()
+    send_mock = AsyncMock()
+
+    mock_query = mocker.patch.object(providers["weather"], "query", autospec=True)
+
+    # IP points to city = Milton, region = WA, country = US
+    mocker.patch("merino.middleware.geolocation.CLIENT_IP_OVERRIDE", "216.160.83.56")
+
+    await geolocation_middleware(geolocation_scope, receive_mock, send_mock)
+
+    assert geolocation_scope[ScopeKey.GEOLOCATION] == expected_initial_location
+
+    response = client.get(
+        "/api/v1/suggest",
+        params={
+            "q": "",
+            "providers": "weather",
+            "request_type": "weather",
+            "city": "Boston",
+            "region": "MA",
+            "country": "US",
+        },
+    )
+
+    expected_geolocation = geolocation_scope[ScopeKey.GEOLOCATION].model_copy(
+        update={"city": "Boston", "regions": ["MA"], "country": "US"}
+    )
+
+    mock_query.assert_called_with(
+        SuggestionRequest(
+            query="", geolocation=expected_geolocation, request_type="weather", languages=["en-US"]
+        )
+    )
+
+    assert response.status_code == 200

@@ -117,22 +117,6 @@ class Provider(BaseProvider):
                         geolocation, languages, search_term=srequest.query
                     )
                 else:
-                    # pass in city, region and country into geolocation ONLY if they all exist in the params
-                    if srequest.city and srequest.region and srequest.country:
-                        geolocation = geolocation.model_copy(
-                            update={
-                                "city": srequest.city,
-                                "regions": [srequest.region],
-                                "country": srequest.country,
-                            }
-                        )
-
-                    elif srequest.city or srequest.region or srequest.country:
-                        raise HTTPException(
-                            status_code=400,
-                            detail="Invalid query parameters: `city`, `region`, and `country` are required, but one or more are missing in the request.",
-                        )
-
                     weather_report = await self.backend.get_weather_report(
                         geolocation, srequest.query
                     )
