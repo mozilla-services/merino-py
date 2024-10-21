@@ -193,22 +193,18 @@ async def suggest(
 
     validate_suggest_custom_location_params(city, region, country)
 
-    geolocation = request.scope[ScopeKey.GEOLOCATION].model_copy(
-        update={
-            "city_custom": city,
-            "regions_custom": [region],
-            "country_custom": country,
-        }
-    )
+    if country and region and city:
+        geolocation = request.scope[ScopeKey.GEOLOCATION].model_copy(
+            update={"city": city, "regions": [region], "country": country}
+        )
+    else:
+        geolocation = request.scope[ScopeKey.GEOLOCATION].model_copy()
 
     for p in search_from:
         srequest = SuggestionRequest(
             query=p.normalize_query(q),
             geolocation=geolocation,
             request_type=request_type,
-            city=city,
-            country=country,
-            region=region,
             languages=languages,
         )
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
