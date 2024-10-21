@@ -22,6 +22,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsBucket,
     FakespotFeed,
     FakespotProduct,
+    FAKESPOT_DEFAULT_CATEGORY_NAME,
     FAKESPOT_HEADER_COPY,
     FAKESPOT_FOOTER_COPY,
     FAKESPOT_CTA_COPY,
@@ -191,6 +192,7 @@ class CuratedRecommendationsProvider:
                 )
         return FakespotFeed(
             products=fakespot_products,
+            defaultCategoryName=FAKESPOT_DEFAULT_CATEGORY_NAME,
             headerCopy=FAKESPOT_HEADER_COPY,
             footerCopy=FAKESPOT_FOOTER_COPY,
             cta=FakespotCTA(ctaCopy=FAKESPOT_CTA_COPY, url=FAKESPOT_CTA_URL),

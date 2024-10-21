@@ -28,6 +28,7 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
+    FAKESPOT_DEFAULT_CATEGORY_NAME,
     FAKESPOT_HEADER_COPY,
     FAKESPOT_FOOTER_COPY,
     FAKESPOT_CTA_COPY,
@@ -700,7 +701,8 @@ class TestCuratedRecommendationsRequestFeeds:
         required_fields = ["id", "title", "category", "imageUrl", "url"]
         for product in fakespot_products:
             assert all(product.get(field) for field in required_fields)
-        # Assert the header, footer, cta copy are present
+        # Assert the default category name, header, footer, cta copy are present
+        assert fakespot_feed["defaultCategoryName"] == FAKESPOT_DEFAULT_CATEGORY_NAME
         assert fakespot_feed["headerCopy"] == FAKESPOT_HEADER_COPY
         assert fakespot_feed["footerCopy"] == FAKESPOT_FOOTER_COPY
         assert fakespot_feed["cta"]["ctaCopy"] == FAKESPOT_CTA_COPY
