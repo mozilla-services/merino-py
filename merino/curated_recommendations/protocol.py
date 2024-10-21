@@ -146,7 +146,7 @@ FAKESPOT_HEADER_COPY = (
 )
 FAKESPOT_FOOTER_COPY = "Take the guesswork out of gifting with the Fakespot Gift Guide."
 FAKESPOT_CTA_COPY = "Explore More Gifts"
-FAKESPOT_CTA_URL = "https://fakespot-gifts.com/"
+FAKESPOT_CTA_URL = "https://www.fakespot.com/giftguide/holidays2024/"
 
 
 class FakespotProduct(BaseModel):
