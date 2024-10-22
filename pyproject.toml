@@ -1,5 +1,5 @@
 [tool.coverage.run]
-source = ["src"]
+source = ["merino"]
 branch = true
 relative_files = true
 
@@ -52,7 +52,7 @@ warn_unreachable = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v -r s"
+addopts = "-v -r s --cov=merino"
 
 [tool.poetry]
 name = "merino-py"
