@@ -296,9 +296,8 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         time-sensitive stories in the main feed
         @return: A mocked CuratedRecommendationsProvider
         """
-        # Mock the __init__ methods to prevent actual initialization
+        # Mock the __init__ method to prevent actual initialization
         mocker.patch.object(CuratedRecommendationsProvider, "__init__", return_value=None)
-        mocker.patch.object(CorpusBackend, "__init__", return_value=None)
 
         # Mock the rank_recommendations method
         mocker.patch.object(CuratedRecommendationsProvider, "rank_recommendations")
@@ -310,11 +309,9 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
             return_value=backup_recommendations,
         )
 
-        corpus_backend = CorpusBackend()
-
         # Create and return the mocked provider instance
         provider = CuratedRecommendationsProvider(
-            corpus_backend,
+            mocker.patch.object(CorpusBackend, "__init__", return_value=None),
             mocker.patch.object(EngagementBackend, "__init__", return_value=None),
             mocker.patch.object(PriorBackend, "__init__", return_value=None),
         )

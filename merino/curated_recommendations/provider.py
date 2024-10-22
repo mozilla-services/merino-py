@@ -359,7 +359,18 @@ class CuratedRecommendationsProvider:
         @param: surface_id: a ScheduledSurfaceId
         @return: A re-ranked list of curated recommendations
         """
-        return await self.corpus_backend.fetch(surface_id, -1)
+        corpus_items = await self.corpus_backend.fetch(surface_id, -1)
+
+        # Convert the CorpusItem list to a CuratedRecommendation list.
+        recommendations = [
+            CuratedRecommendation(
+                **item.model_dump(),
+                receivedRank=rank,
+            )
+            for rank, item in enumerate(corpus_items)
+        ]
+
+        return recommendations
 
     @staticmethod
     def time_ms() -> int:
