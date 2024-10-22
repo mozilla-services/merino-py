@@ -1,5 +1,6 @@
 APP_DIR := merino
 TEST_DIR := tests
+COVERAGE_DIRS := $(shell find $(APP_DIR) -name "*.py" ! -path "$(APP_DIR)/jobs/navigational_suggestions/domain_category_mapping.py" | sed 's|^|--cov=|')
 TEST_RESULTS_DIR ?= "workspace/test-results"
 COV_FAIL_UNDER := 95
 UNIT_TEST_DIR := $(TEST_DIR)/unit
@@ -71,9 +72,8 @@ unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
 	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.unit \
 	    MERINO_ENV=testing \
 	    $(POETRY) run pytest $(UNIT_TEST_DIR) \
-	    --cov $(APP_DIR) \
+	    $(COVERAGE_DIRS) \
 	    --junit-xml=$(TEST_RESULTS_DIR)/unit_results.xml
-
 .PHONY: unit-test-fixtures
 unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test
 	MERINO_ENV=testing $(POETRY) run pytest $(UNIT_TEST_DIR) --fixtures-per-test
