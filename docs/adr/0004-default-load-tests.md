@@ -1,7 +1,7 @@
 # Assure Endpoint Functionality and Load Test Suite Integrity with Default Load Tests
 
 * **Status:** In progress
-* **Deciders:** Katrina Anderson _(& Nan Jiang)?_
+* **Deciders:** Katrina Anderson & Nan Jiang
 * **Date:** 2024-10-16
 
 ## Context and Problem Statement
@@ -14,13 +14,13 @@ message. The `abort` option prevents a production deployment if the load testing
 failure.
 
 This strategy has several drawbacks:
-* Load tests are executed infrequently, making it difficult to establish performance trends or trace
-  regressions to specific changes.
-* The assertion that contributors will have enough context to decide when load tests should run has
-  proven unreliable. Developers occasionally introduce changes that silently break the load testing
-  suite, particularly when new dependencies are added (Example [DISCO-3026][1])
-* The SRE team lacks the resources to implement a weekly load test build or integrate a smoke test
-  suite into the current CD pipeline, leaving gaps in coverage. (Example: [SCVC-2236][2] &
+* Load tests are run infrequently, making it difficult to establish performance trends or trace
+  regressions to specific changes
+* Relying on contributors to decide when to run load tests has proven unreliable. Developers
+  occasionally introduce changes that silently break the load testing suite, particularly when
+  new dependencies are added (Example: [DISCO-3026][1])
+* The SRE team currently lacks the capacity to implement a weekly load test build or integrate a
+  smoke test suite into the CD pipeline, leaving coverage gaps (Examples: [SVCSE-2236][2] &
   [DISCO-2861][3])
 
 Given these drawbacks, is there a way to provide greater consistency and more reliable feedback on
@@ -28,83 +28,112 @@ the performance of Merino's API endpoints and the health of its load test suite.
 
 ## Decision Drivers
 
+**Resource Consumption**\
+The solution should ensure API quotas with third-party providers, such as AccuWeather, are
+respected.
+
 **Load Test Break Detection**\
-The solution should provide a mechanism for contributors to be notified when they have broken the
-load tests.
+The solution should notify contributors when they introduce changes that break the load tests.
 
 **Performance Trending**\
 The solution should enable the establishment of consistent and reliable performance trends for
-Merino-py endpoints, allowing contributors to identify regressions quickly.
+Merino-py endpoints, allowing contributors to quickly identify regressions.
 
 **Deployment Efficiency**\
 The solution should minimize delays in the deployment process while ensuring that critical issues
-are flagged in a timely manner.
+are flagged promptly.
 
 ## Considered Options
 
 * A. Turn on `[load test: warn]` by default
 * B. Turn on `[load test: abort]` by default
-* C. Status quo: Keep current strategy
+* C. Weekly manual execution of load tests
+* D. Status quo: Keep current strategy
 
 ## Decision Outcome
 
 **Chosen option: A. Turn on `[load test: warn]` by default**
 
 Until the SRE team can prioritize implementing a weekly load test run and incorporating smoke tests
-into the CD pipeline, the decision is to turn on `[load test: warn]` by default. This will provide
-much-needed insight into the performance and health of Merino’s API endpoints while giving
-contributors early feedback on the integrity of the load test suite. Additionally, this approach
-will pave the way for the deprecation of Contract Tests, reducing overall test maintenance.
+into the CD pipeline, the decision is to turn on `[load test: warn]` by default and add an opt out
+option, `[load test: skip]`. This will provide much-needed insight into the performance and health
+of Merino’s API endpoints, while giving contributors early feedback on the integrity of the load
+test suite. Additionally, this approach will pave the way for the deprecation of Contract Tests,
+reducing overall test maintenance.
 
 ## Pros and Cons of the Options
 
-### A. Turn on `[load test: warn]` by default
+### A. Turn on `[load test: warn]` by default with opt-out option
 
 This option would ensure that load tests run automatically during deployments, with failures
-generating warnings but not blocking the deployment.
+generating warnings but not blocking the deployment. Contributors would have the ability to opt out
+of load tests using a new option, `[load test: skip]`.
 
 #### Pros
 
 * Load tests would run more frequently, providing consistent feedback on Merino API endpoints and
-  functioning as a lightweight smoke test.
+  acting as a lightweight smoke test
 * Contributors would receive early warnings if their changes break the load test suite, allowing
-  issues to be traced to specific pull requests.
-* The work required to implement this change is minimal, consisting of updating the CircleCI
-  configuration and documentation.
+  issues to be traced back to specific pull requests
+* The work required to implement this change is minimal and includes:
+  * Modifying the smoke load test curve to minimize runtime and API resource consumption
+  * Updating the CircleCI configuration
+  * Updating documentation
 
 #### Cons
-* This approach would increase deployment time by approximately 10 minutes.
+* This approach would increase deployment time by approximately 10-15 minutes
+* If production deployments were to increase dramatically, there is potential to exceed
+  3rd party API quotas
 
-### B. Turn on `[load test: abort]` by default
+
+### B. Turn on `[load test: abort]` by default with opt-out option
 
 This option would also ensure that load tests run automatically during deployments, but production
-deployments would be blocked if the load tests fail.
+deployments would be blocked if the load tests fail. Contributors would have the option to opt out
+of load tests with a new option, `[load test: skip]`.
 
 #### Pros
-_Includes the Pros from Option A, as well as:_
+_Includes the Pros from Option A, plus:_
 
 * Ensures that broken API endpoints are not deployed to users, maintaining the integrity of the
   service
 
 #### Cons
-_Includes the Cons from Option A, as well as:_
+_Includes the Cons from Option A, plus:_
 
-* Critical features and fixes might be delayed if the load tests themselves are broken, leading to
-  unnecessary blockages
+* Critical features and fixes may be delayed if the load tests themselves are broken, leading to
+  unnecessary deployment blockages
 
-### C. Status quo: Keep current strategy
+### C. Weekly manual execution of load tests
 
-This option involves continuing with the current opt-in approach, where load tests only run if
-developers explicitly include them in their deployment process, until SRE can prioritize test
-strategy changes in CD.
+This option involves a member of the DISCO team manually triggering a load test on a weekly basis.
+The load test could be triggered via PR or manually via a bash script.
+
+#### Pros
+* Regular load testing would allow the team to establish meaningful performance trends
+* Breaks in the load test suite would be detected within a reasonable timeframe, making them easier
+  to trace
+
+#### Cons
+* This approach does not address the coverage gap for API endpoint verification during deployment
+* It is time-consuming for the DISCO team, and depending on the trigger technique, it may be
+  error-prone
+  * For example, if a DISCO team member triggers the load test via bash script and forgets to tear
+    down the GCP cluster after use, unnecessary costs will be incurred
+
+### D. Status quo: Keep current strategy
+
+This option involves continuing with the current opt-in approach, where load tests are only run if
+contributors explicitly include them in their deployment process, until the SRE team can prioritize
+test strategy changes.
 
 #### Pros
 * Requires no additional work or changes to the current setup.
 
 #### Cons
 * Breakages in the load testing suite due to environmental, configuration, or dependency changes
-  will continue to go undetected.
-* The lack of regular load tests prevents contributors from collecting sufficient data to establish
+  will continue to go undetected
+* The lack of regular load tests prevents contributors from gathering sufficient data to establish
   meaningful performance trends
 
 <!-- References -->
