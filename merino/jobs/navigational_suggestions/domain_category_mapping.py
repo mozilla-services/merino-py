@@ -34154,4 +34154,4 @@ DOMAIN_MAPPING = {
     "qFidSVngTAXmOr5hJTW4uQ==": [Category.Hobbies],
     "WEx15bXkR7627I7kK0WfTQ==": [Category.Business],
     "wSUqisCPuYgiPI2lqvD0Ug==": [Category.Tech],
-}
+} # pragma: no cover
