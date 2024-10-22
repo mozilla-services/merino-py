@@ -268,7 +268,7 @@ class CuratedRecommendationsProvider:
 
         # If fewer than five stories have been curated for this feed, use yesterday's data
         if len(need_to_know_feed) < 5:
-            yesterdays_recs = await self.corpus_backend.fetch(surface_id, -1)
+            yesterdays_recs = await self.fetch_backup_recommendations(surface_id)
             need_to_know_feed = [r for r in yesterdays_recs if r.isTimeSensitive]
 
         # Update received_rank for need_to_know recommendations
@@ -349,6 +349,17 @@ class CuratedRecommendationsProvider:
             )
 
         return response
+
+    async def fetch_backup_recommendations(
+        self, surface_id: ScheduledSurfaceId
+    ) -> list[CuratedRecommendation]:
+        """Return recommended stories for yesterday's date
+        for a given New Tab surface
+
+        @param: surface_id: a ScheduledSurfaceId
+        @return: A re-ranked list of curated recommendations
+        """
+        return await self.corpus_backend.fetch(surface_id, -1)
 
     @staticmethod
     def time_ms() -> int:

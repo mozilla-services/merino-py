@@ -287,7 +287,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
     @staticmethod
     def mock_curated_recommendations_provider(
-        mocker: MockerFixture, backup_recommendations: list[CuratedRecommendation] = []
+        mocker: MockerFixture, backup_recommendations: list[CuratedRecommendation]
     ) -> CuratedRecommendationsProvider:
         """Mock the necessary components of CuratedRecommendationsProvider.
 
@@ -303,8 +303,12 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         # Mock the rank_recommendations method
         mocker.patch.object(CuratedRecommendationsProvider, "rank_recommendations")
 
-        # Mock the fetch method from CorpusBackend that fetches the backup recommendations
-        mocker.patch.object(CorpusBackend, "fetch", return_value=backup_recommendations)
+        # Mock backup recommendations with the data that was provided to this method
+        mocker.patch.object(
+            CuratedRecommendationsProvider,
+            "fetch_backup_recommendations",
+            return_value=backup_recommendations,
+        )
 
         corpus_backend = CorpusBackend()
 
@@ -347,7 +351,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
 
         # Instantiate the mocked classes
-        provider = self.mock_curated_recommendations_provider(mocker)
+        provider = self.mock_curated_recommendations_provider(mocker, [])
         request = self.mock_curated_recommendations_request(mocker)
 
         # Mock the rank_recommendations method separately to make sure it returns
@@ -396,7 +400,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         surface_id = ScheduledSurfaceId.NEW_TAB_DE_DE
 
         # Instantiate the mocked classes
-        provider = self.mock_curated_recommendations_provider(mocker)
+        provider = self.mock_curated_recommendations_provider(mocker, [])
         request = self.mock_curated_recommendations_request(mocker)
 
         # Call the method
@@ -436,7 +440,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         )
 
         # Double-check the initial recommendations don't have any time-sensitive items
-        assert len([r for r in recs if not r.isTimeSensitive]) == 0
+        assert len([r for r in recs if r.isTimeSensitive]) == 0
 
         # Make sure the items in the need_to_know feed came from the backup recommendations
         assert len(need_to_know_feed) > 5
