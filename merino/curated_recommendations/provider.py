@@ -1,6 +1,5 @@
 """Provider for curated recommendations on New Tab."""
 
-import orjson
 import time
 import re
 from typing import cast
@@ -11,6 +10,9 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     Topic,
 )
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.fakespot_backend.protocol import (
+    FakespotBackend,
+)
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     Locale,
@@ -21,13 +23,6 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsFeed,
     CuratedRecommendationsBucket,
     FakespotFeed,
-    FakespotProduct,
-    FAKESPOT_DEFAULT_CATEGORY_NAME,
-    FAKESPOT_HEADER_COPY,
-    FAKESPOT_FOOTER_COPY,
-    FAKESPOT_CTA_COPY,
-    FAKESPOT_CTA_URL,
-    FakespotCTA,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -46,10 +41,12 @@ class CuratedRecommendationsProvider:
         corpus_backend: CorpusBackend,
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
+        fakespot_backend: FakespotBackend,
     ) -> None:
         self.corpus_backend = corpus_backend
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
+        self.fakespot_backend = fakespot_backend
 
     @staticmethod
     def get_recommendation_surface_id(
@@ -171,32 +168,11 @@ class CuratedRecommendationsProvider:
         )
 
     @staticmethod
-    def get_fakespot_feed() -> FakespotFeed:
-        """Construct & return the Fakespot feed. Currently, reading data from a mock JSON file."""
-        # TODO: https://mozilla-hub.atlassian.net/browse/MC-1566
-        # retrieve fakespot products from JSON blob in GCS
-        # add error/exception handling when reading from GCS
-        with open("merino/curated_recommendations/fakespot_products.json", "rb") as f:
-            fakespot_products_json_data = orjson.loads(f.read())
-
-            fakespot_products = []
-            for product in fakespot_products_json_data:
-                fakespot_products.append(
-                    FakespotProduct(
-                        id=product["id"],
-                        title=product["title"],
-                        category=product["category"],
-                        imageUrl=product["imageUrl"],
-                        url=product["url"],
-                    )
-                )
-        return FakespotFeed(
-            products=fakespot_products,
-            defaultCategoryName=FAKESPOT_DEFAULT_CATEGORY_NAME,
-            headerCopy=FAKESPOT_HEADER_COPY,
-            footerCopy=FAKESPOT_FOOTER_COPY,
-            cta=FakespotCTA(ctaCopy=FAKESPOT_CTA_COPY, url=FAKESPOT_CTA_URL),
-        )
+    def get_fakespot_feed(
+        fakespot_backend: FakespotBackend, surface_id: ScheduledSurfaceId
+    ) -> FakespotFeed | None:
+        """Return the fakespot feed constructed in Fakespot Backend."""
+        return fakespot_backend.get(surface_id)
 
     def rank_recommendations(
         self,
@@ -334,7 +310,7 @@ class CuratedRecommendationsProvider:
 
         # Check for Fakespot feed experiment, currently, only for en-US
         if self.is_fakespot_experiment(curated_recommendations_request, surface_id):
-            fakespot_feed = self.get_fakespot_feed()
+            fakespot_feed = self.get_fakespot_feed(self.fakespot_backend, surface_id)
 
         # Construct the base response
         response = CuratedRecommendationsResponse(recommendedAt=self.time_ms(), data=general_feed)

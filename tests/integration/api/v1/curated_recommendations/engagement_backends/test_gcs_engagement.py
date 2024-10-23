@@ -35,6 +35,7 @@ def create_gcs_engagement(
         metrics_namespace="recommendation.engagement",
         max_size=settings.curated_recommendations.gcs.engagement.max_size,
         cron_interval_seconds=0.01,
+        cron_job_name="fetch_recommendation_engagement",
     )
     # Call initialize to start the cron job in the same event loop
     synced_gcs_blob.initialize()
