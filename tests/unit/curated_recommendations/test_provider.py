@@ -257,13 +257,25 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
     """Unit tests for rank_need_to_know_recommendations method"""
 
     @staticmethod
-    def generate_recommendations(length: int) -> list[CuratedRecommendation]:
+    def generate_recommendations(
+        length: int, time_sensitive_count: int | None = None
+    ) -> list[CuratedRecommendation]:
         """Create dummy recommendations for the tests below.
 
         @param length: how many recommendations are needed for a test
+        @param time_sensitive_count: the number of items to make time-sensitive.
+            If None (the default), then half of the recommendations will be time-sensitive.
         @return: A list of curated recommendations
         """
         recs = []
+
+        # If time_sensitive_count is not provided, default to half the length
+        if time_sensitive_count is None:
+            time_sensitive_count = length // 2
+
+        # Randomly choose indices that will be time-sensitive
+        time_sensitive_indices = random.sample(range(length), time_sensitive_count)
+
         for i in range(length):
             rec = CuratedRecommendation(
                 tileId=MIN_TILE_ID + random.randint(0, 101),
@@ -274,7 +286,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
                 excerpt="is failing english",
                 topic=random.choice(list(Topic)),
                 publisher="cohens",
-                isTimeSensitive=random.choice([True, False]),
+                isTimeSensitive=i in time_sensitive_indices,
                 imageUrl=HttpUrl("https://placehold.co/600x400/"),
             )
 
@@ -284,18 +296,28 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
     @staticmethod
     def mock_curated_recommendations_provider(
-        mocker: MockerFixture,
+        mocker: MockerFixture, backup_recommendations: list[CuratedRecommendation] | None = None
     ) -> CuratedRecommendationsProvider:
         """Mock the necessary components of CuratedRecommendationsProvider.
 
         @param mocker: MockerFixture
+        @param backup_recommendations: a list of curated recommendations to use as backup if there are not enough
+        time-sensitive stories in the main feed
         @return: A mocked CuratedRecommendationsProvider
         """
-        # Mock the __init__ methods to prevent actual initialization
+        # Mock the __init__ method to prevent actual initialization
         mocker.patch.object(CuratedRecommendationsProvider, "__init__", return_value=None)
 
         # Mock the rank_recommendations method
         mocker.patch.object(CuratedRecommendationsProvider, "rank_recommendations")
+
+        # Mock backup recommendations with the data that was provided to this method
+        if backup_recommendations:
+            mocker.patch.object(
+                CuratedRecommendationsProvider,
+                "fetch_backup_recommendations",
+                return_value=backup_recommendations,
+            )
 
         # Create and return the mocked provider instance
         provider = CuratedRecommendationsProvider(
@@ -324,7 +346,8 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
         return request
 
-    def test_rank_need_to_know_recommendations(self, mocker: MockerFixture):
+    @pytest.mark.asyncio
+    async def test_rank_need_to_know_recommendations(self, mocker: MockerFixture):
         """Test the main flow of logic in the function
 
         @param mocker: MockerFixture
@@ -348,7 +371,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         )
 
         # Call the method
-        general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
+        general_feed, need_to_know_feed, title = await provider.rank_need_to_know_recommendations(
             recommendations, surface_id, request
         )
 
@@ -370,7 +393,10 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         # Verify that the localized title is correct
         assert title == "In the news"
 
-    def test_rank_need_to_know_recommendations_different_surface(self, mocker: MockerFixture):
+    @pytest.mark.asyncio
+    async def test_rank_need_to_know_recommendations_different_surface(
+        self, mocker: MockerFixture
+    ):
         """Test localization with a non-English New Tab surface
 
         @param mocker: MockerFixture
@@ -386,9 +412,49 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         request = self.mock_curated_recommendations_request(mocker)
 
         # Call the method
-        general_feed, need_to_know_feed, title = provider.rank_need_to_know_recommendations(
+        general_feed, need_to_know_feed, title = await provider.rank_need_to_know_recommendations(
             recommendations, surface_id, request
         )
 
         # Verify that the title is correct for the German New Tab surface
         assert title == "In den News"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "time_sensitive_count_today",
+        list(range(5)),
+    )
+    async def test_rank_need_to_know_recommendations_backup_stories(
+        self, mocker: MockerFixture, time_sensitive_count_today
+    ):
+        """Test an edge case when today's stories for the 'Need to know' feed
+        have not yet been curated and the feed specifically for these stories
+        needs to fall back to yesterday's data.
+
+        @param mocker: MockerFixture
+        @param mocker: n_time_sensitive_today The number of time-sensitive items scheduled for today
+        """
+        # Create mock recommendations for today - this batch WON'T have a sufficient number of
+        # time-sensitive stories available
+        recs = self.generate_recommendations(20, time_sensitive_count_today)
+        # Double-check the initial recommendations don't have any time-sensitive items
+        assert len([r for r in recs if r.isTimeSensitive]) == time_sensitive_count_today
+
+        # Create backup recommendations - this batch WILL have a mix of normal
+        # and time-sensitive stories
+        backup_recs = self.generate_recommendations(100, 10)
+
+        # Define the surface ID
+        surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
+
+        # Instantiate the mocked classes
+        provider = self.mock_curated_recommendations_provider(mocker, backup_recs)
+        request = self.mock_curated_recommendations_request(mocker)
+
+        # Call the method
+        general_feed, need_to_know_feed, title = await provider.rank_need_to_know_recommendations(
+            recs, surface_id, request
+        )
+
+        # Make sure the items in the need_to_know feed came from the backup recommendations
+        assert len(need_to_know_feed) == 10

@@ -1243,3 +1243,53 @@ class TestCorpusApiRanking:
 
                 # Assert that the slope is negative, meaning higher ranks have higher CTRs
                 assert slope < 0, f"Thompson sampling did not favor higher CTR on iteration {i}."
+
+
+class TestNeedToKnow:
+    """Test the behavior of the NeedToKnow feed"""
+
+    @pytest.mark.asyncio
+    async def test_fetch_days_since_today(
+        self,
+        corpus_backend: CorpusApiBackend,
+        fixture_response_data,
+        fixture_response_data_short,
+        fixture_request_data,
+        corpus_http_client,
+    ):
+        """Test that the need_to_know feed falls back to yesterday's schedule when there are
+        insufficient time-sensitive items today.
+        """
+
+        def mock_post_by_date(*args, **kwargs):
+            """Mock scheduledSurface response to have no time-sensitive items today."""
+            variables = kwargs["json"]["variables"]
+            surface_timezone = corpus_backend.get_surface_timezone(variables["scheduledSurfaceId"])
+            date_today = corpus_backend.get_scheduled_surface_date(surface_timezone).date()
+            days_ago = (
+                datetime.strptime(variables.get("date"), "%Y-%m-%d").date() - date_today
+            ).days
+            response_json = {}
+            if days_ago == 0:
+                # requests for today (0) get a response fixture WITHOUT any time-sensitive items.
+                response_json = fixture_response_data_short
+            elif days_ago == -1:
+                # requests for yesterday (-1) get a response fixture WITH time-sensitive items.
+                response_json = fixture_response_data
+
+            return Response(
+                status_code=200,
+                json=response_json,
+                request=fixture_request_data,
+            )
+
+        corpus_http_client.post.side_effect = mock_post_by_date
+
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "en-US", "feeds": ["need_to_know"]},
+            )
+            data = response.json()
+            need_to_know = data["feeds"]["need_to_know"]["recommendations"]
+            assert len(need_to_know) == 10  # The number of time-sensitive items in the fixture.

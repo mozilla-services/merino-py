@@ -223,7 +223,7 @@ class CuratedRecommendationsProvider:
 
         return recommendations[: request.count]
 
-    def rank_need_to_know_recommendations(
+    async def rank_need_to_know_recommendations(
         self,
         recommendations: list[CuratedRecommendation],
         surface_id: ScheduledSurfaceId,
@@ -243,6 +243,11 @@ class CuratedRecommendationsProvider:
         """
         # Filter out all time-sensitive recommendations into the need_to_know feed
         need_to_know_feed = [r for r in recommendations if r.isTimeSensitive]
+
+        # If fewer than five stories have been curated for this feed, use yesterday's data
+        if len(need_to_know_feed) < 5:
+            yesterdays_recs = await self.fetch_backup_recommendations(surface_id)
+            need_to_know_feed = [r for r in yesterdays_recs if r.isTimeSensitive]
 
         # Update received_rank for need_to_know recommendations
         for rank, rec in enumerate(need_to_know_feed):
@@ -295,7 +300,7 @@ class CuratedRecommendationsProvider:
         # two different feeds: the "general" feed and the "need to know" feed.
         if self.is_need_to_know_experiment(curated_recommendations_request, surface_id):
             # this applies ranking to the general_feed!
-            general_feed, need_to_know_recs, title = self.rank_need_to_know_recommendations(
+            general_feed, need_to_know_recs, title = await self.rank_need_to_know_recommendations(
                 recommendations, surface_id, curated_recommendations_request
             )
 
@@ -322,6 +327,31 @@ class CuratedRecommendationsProvider:
             )
 
         return response
+
+    async def fetch_backup_recommendations(
+        self, surface_id: ScheduledSurfaceId
+    ) -> list[CuratedRecommendation]:
+        """Return recommended stories for yesterday's date for a given New Tab surface.
+
+        Note that there's no fallback for if no appropriate stories are available in
+        yesterday's data. We rely on the curators' commitment to always have this data
+        for the previous day.
+
+        @param: surface_id: a ScheduledSurfaceId
+        @return: A re-ranked list of curated recommendations
+        """
+        corpus_items = await self.corpus_backend.fetch(surface_id, -1)
+
+        # Convert the CorpusItem list to a CuratedRecommendation list.
+        recommendations = [
+            CuratedRecommendation(
+                **item.model_dump(),
+                receivedRank=rank,
+            )
+            for rank, item in enumerate(corpus_items)
+        ]
+
+        return recommendations
 
     @staticmethod
     def time_ms() -> int:
