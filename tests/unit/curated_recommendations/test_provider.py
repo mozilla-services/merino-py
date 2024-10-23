@@ -287,7 +287,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
     @staticmethod
     def mock_curated_recommendations_provider(
-        mocker: MockerFixture, backup_recommendations: list[CuratedRecommendation]
+        mocker: MockerFixture, backup_recommendations: list[CuratedRecommendation] | None = None
     ) -> CuratedRecommendationsProvider:
         """Mock the necessary components of CuratedRecommendationsProvider.
 
@@ -303,11 +303,12 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         mocker.patch.object(CuratedRecommendationsProvider, "rank_recommendations")
 
         # Mock backup recommendations with the data that was provided to this method
-        mocker.patch.object(
-            CuratedRecommendationsProvider,
-            "fetch_backup_recommendations",
-            return_value=backup_recommendations,
-        )
+        if backup_recommendations:
+            mocker.patch.object(
+                CuratedRecommendationsProvider,
+                "fetch_backup_recommendations",
+                return_value=backup_recommendations,
+            )
 
         # Create and return the mocked provider instance
         provider = CuratedRecommendationsProvider(
@@ -348,7 +349,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
 
         # Instantiate the mocked classes
-        provider = self.mock_curated_recommendations_provider(mocker, [])
+        provider = self.mock_curated_recommendations_provider(mocker)
         request = self.mock_curated_recommendations_request(mocker)
 
         # Mock the rank_recommendations method separately to make sure it returns
@@ -397,7 +398,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         surface_id = ScheduledSurfaceId.NEW_TAB_DE_DE
 
         # Instantiate the mocked classes
-        provider = self.mock_curated_recommendations_provider(mocker, [])
+        provider = self.mock_curated_recommendations_provider(mocker)
         request = self.mock_curated_recommendations_request(mocker)
 
         # Call the method
