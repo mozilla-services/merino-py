@@ -258,15 +258,24 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
     @staticmethod
     def generate_recommendations(
-        length: int, include_time_sensitive: bool = True
+        length: int, time_sensitive_count: int | None = None
     ) -> list[CuratedRecommendation]:
         """Create dummy recommendations for the tests below.
 
         @param length: how many recommendations are needed for a test
-        @param include_time_sensitive: whether the entries have the isTimeSensitive flag on randomly or not at all
+        @param time_sensitive_count: the number of items to make time-sensitive.
+            If None (the default), then half of the recommendations will be time-sensitive.
         @return: A list of curated recommendations
         """
         recs = []
+
+        # If time_sensitive_count is not provided, default to half the length
+        if time_sensitive_count is None:
+            time_sensitive_count = length // 2
+
+        # Randomly choose indices that will be time-sensitive
+        time_sensitive_indices = random.sample(range(length), time_sensitive_count)
+
         for i in range(length):
             rec = CuratedRecommendation(
                 tileId=MIN_TILE_ID + random.randint(0, 101),
@@ -277,7 +286,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
                 excerpt="is failing english",
                 topic=random.choice(list(Topic)),
                 publisher="cohens",
-                isTimeSensitive=random.choice([True, False]) if include_time_sensitive else False,
+                isTimeSensitive=i in time_sensitive_indices,
                 imageUrl=HttpUrl("https://placehold.co/600x400/"),
             )
 
@@ -410,20 +419,29 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         assert title == "In den News"
 
     @pytest.mark.asyncio
-    async def test_rank_need_to_know_recommendations_backup_stories(self, mocker: MockerFixture):
+    @pytest.mark.parametrize(
+        "time_sensitive_count_today",
+        list(range(5)),
+    )
+    async def test_rank_need_to_know_recommendations_backup_stories(
+        self, mocker: MockerFixture, time_sensitive_count_today
+    ):
         """Test an edge case when today's stories for the 'Need to know' feed
         have not yet been curated and the feed specifically for these stories
         needs to fall back to yesterday's data.
 
         @param mocker: MockerFixture
+        @param mocker: n_time_sensitive_today The number of time-sensitive items scheduled for today
         """
-        # Create mock recommendations for today - this batch won't have any
+        # Create mock recommendations for today - this batch WON'T have a sufficient number of
         # time-sensitive stories available
-        recs = self.generate_recommendations(20, False)
+        recs = self.generate_recommendations(20, time_sensitive_count_today)
+        # Double-check the initial recommendations don't have any time-sensitive items
+        assert len([r for r in recs if r.isTimeSensitive]) == time_sensitive_count_today
 
         # Create backup recommendations - this batch WILL have a mix of normal
         # and time-sensitive stories
-        backup_recs = self.generate_recommendations(100, True)
+        backup_recs = self.generate_recommendations(100, 10)
 
         # Define the surface ID
         surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
@@ -437,8 +455,5 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
             recs, surface_id, request
         )
 
-        # Double-check the initial recommendations don't have any time-sensitive items
-        assert len([r for r in recs if r.isTimeSensitive]) == 0
-
         # Make sure the items in the need_to_know feed came from the backup recommendations
-        assert len(need_to_know_feed) > 5
+        assert len(need_to_know_feed) == 10
