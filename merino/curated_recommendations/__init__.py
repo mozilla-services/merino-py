@@ -12,6 +12,9 @@ from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
     CorpusApiBackend,
     CorpusApiGraphConfig,
 )
+from merino.curated_recommendations.corpus_backends.extended_expiration_corpus_backend import (
+    ExtendedExpirationCorpusBackend,
+)
 from merino.curated_recommendations.engagement_backends.fake_engagement import FakeEngagement
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
@@ -112,13 +115,21 @@ def init_provider() -> None:
     """Initialize the curated recommendations provider."""
     global _provider
 
-    # Create the recommendations provider.
+    engagement_backend = init_engagement_backend()
+
+    corpus_backend = CorpusApiBackend(
+        http_client=create_http_client(base_url=""),
+        graph_config=CorpusApiGraphConfig(),
+        metrics_client=get_metrics_client(),
+    )
+
+    extended_expiration_corpus_backend = ExtendedExpirationCorpusBackend(
+        backend=corpus_backend, engagement_backend=engagement_backend
+    )
+
     _provider = CuratedRecommendationsProvider(
-        corpus_backend=CorpusApiBackend(
-            http_client=create_http_client(base_url=""),
-            graph_config=CorpusApiGraphConfig(),
-            metrics_client=get_metrics_client(),
-        ),
+        corpus_backend=corpus_backend,
+        extended_expiration_corpus_backend=extended_expiration_corpus_backend,
         engagement_backend=init_engagement_backend(),
         prior_backend=init_prior_backend(),
         fakespot_backend=init_fakespot_backend(),

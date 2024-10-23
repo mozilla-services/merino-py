@@ -7,7 +7,12 @@ import uuid
 from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 
-from merino.curated_recommendations import EngagementBackend, PriorBackend, FakespotBackend
+from merino.curated_recommendations import (
+    EngagementBackend,
+    PriorBackend,
+    FakespotBackend,
+    ExtendedExpirationCorpusBackend,
+)
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
     Topic,
@@ -322,6 +327,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         # Create and return the mocked provider instance
         provider = CuratedRecommendationsProvider(
             mocker.patch.object(CorpusBackend, "__init__", return_value=None),
+            mocker.patch.object(ExtendedExpirationCorpusBackend, "__init__", return_value=None),
             mocker.patch.object(EngagementBackend, "__init__", return_value=None),
             mocker.patch.object(PriorBackend, "__init__", return_value=None),
             mocker.patch.object(FakespotBackend, "__init__", return_value=None),

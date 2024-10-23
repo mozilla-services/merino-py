@@ -5,6 +5,7 @@ import re
 from datetime import datetime
 from typing import cast
 
+from merino.curated_recommendations import ExtendedExpirationCorpusBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     ScheduledSurfaceId,
@@ -41,11 +42,13 @@ class CuratedRecommendationsProvider:
     def __init__(
         self,
         corpus_backend: CorpusBackend,
+        extended_expiration_corpus_backend: ExtendedExpirationCorpusBackend,
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
         fakespot_backend: FakespotBackend,
     ) -> None:
         self.corpus_backend = corpus_backend
+        self.extended_expiration_corpus_backend = extended_expiration_corpus_backend
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
         self.fakespot_backend = fakespot_backend
@@ -144,6 +147,13 @@ class CuratedRecommendationsProvider:
             request,
             ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value,
             "treatment",
+        )
+
+    @staticmethod
+    def is_in_extended_expiration_experiment(request: CuratedRecommendationsRequest) -> bool:
+        """Return True if Thompson sampling should use regional engagement (treatment)."""
+        return CuratedRecommendationsProvider.is_enrolled_in_experiment(
+            request, ExperimentName.EXTENDED_EXPIRATION_EXPERIMENT.value, "treatment"
         )
 
     @staticmethod
@@ -345,7 +355,10 @@ class CuratedRecommendationsProvider:
             curated_recommendations_request.region,
         )
 
-        corpus_items = await self.corpus_backend.fetch(surface_id)
+        if self.is_in_extended_expiration_experiment(curated_recommendations_request):
+            corpus_items = await self.extended_expiration_corpus_backend.fetch(surface_id)
+        else:
+            corpus_items = await self.corpus_backend.fetch(surface_id)
 
         # Convert the CorpusItem list to a CuratedRecommendation list.
         recommendations = [
