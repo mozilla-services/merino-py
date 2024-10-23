@@ -2,6 +2,10 @@
 source = ["merino"]
 branch = true
 relative_files = true
+omit = [
+  # Data file only
+  "merino/jobs/navigational_suggestions/domain_category_mapping.py"
+]
 
 [tool.coverage.report]
 show_missing = true

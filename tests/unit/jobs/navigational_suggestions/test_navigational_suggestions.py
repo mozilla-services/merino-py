@@ -7,6 +7,7 @@
 import json
 
 from merino.jobs.navigational_suggestions import prepare_domain_metadata
+from merino.providers.base import Category
 
 
 def test_prepare_domain_metadata_top_picks_construction(mocker):
@@ -32,7 +33,6 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
             "origin": "https://www.dummy_domain.com",
             "suffix": "com",
             "categories": ["Search Engines"],
-            "serp_categories": [0],
         },
         {
             "rank": 2,
@@ -41,7 +41,6 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
             "origin": "https://www.dummy_unreachable_domain.com",
             "suffix": "com",
             "categories": ["Search Engines"],
-            "serp_categories": [0],
         },
     ]
 
@@ -67,6 +66,8 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
         {},
         [],
     )
+
+    mock_domain_metadata_uploader._get_serp_categories.return_value = Category.Inconclusive
 
     prepare_domain_metadata(
         "dummy_src_project", "dummy_destination_project", "dummy_destination_blob"
