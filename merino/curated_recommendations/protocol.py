@@ -8,6 +8,7 @@ import logging
 from pydantic import Field, field_validator, model_validator, BaseModel
 
 from merino.curated_recommendations.corpus_backends.protocol import CorpusItem, Topic
+from merino.curated_recommendations.fakespot_backend.protocol import FakespotFeed
 
 logger = logging.getLogger(__name__)
 
@@ -137,43 +138,6 @@ class CuratedRecommendationsRequest(BaseModel):
                 # Not wrapped in a list
                 logger.warning(f"Topics not wrapped in a list: {values}")
         return []
-
-
-# Fakespot UI copy - hardcoded strings for now.
-FAKESPOT_DEFAULT_CATEGORY_NAME = "Holiday Gift Guide"
-FAKESPOT_HEADER_COPY = (
-    "Fakespot by Mozilla curates the chaos of online shopping into gift guides you can trust."
-)
-FAKESPOT_FOOTER_COPY = "Take the guesswork out of gifting with the Fakespot Gift Guide."
-FAKESPOT_CTA_COPY = "Explore More Gifts"
-FAKESPOT_CTA_URL = "https://www.fakespot.com/giftguide/holidays2024/"
-
-
-class FakespotProduct(BaseModel):
-    """Fakespot product details"""
-
-    id: str
-    title: str
-    category: str
-    imageUrl: str
-    url: str
-
-
-class FakespotCTA(BaseModel):
-    """Fakespot CTA"""
-
-    ctaCopy: str
-    url: str
-
-
-class FakespotFeed(BaseModel):
-    """Fakespot product recommendations"""
-
-    products: list[FakespotProduct]
-    defaultCategoryName: str
-    headerCopy: str
-    footerCopy: str
-    cta: FakespotCTA
 
 
 class CuratedRecommendationsBucket(BaseModel):

@@ -31,6 +31,7 @@ def create_gcs_prior(gcs_storage_client, gcs_bucket, metrics_client) -> GcsPrior
         metrics_namespace="recommendation.prior",
         max_size=settings.curated_recommendations.gcs.prior.max_size,
         cron_interval_seconds=0.01,
+        cron_job_name="fetch_recommendation_engagement",
     )
     # Call initialize to start the cron job in the same event loop
     synced_gcs_blob.initialize()

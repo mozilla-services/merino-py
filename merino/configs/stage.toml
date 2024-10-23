@@ -31,3 +31,6 @@ bucket_name = "merino-airflow-data-stagepy"
 # MERINO__CURATED_RECOMMENDATIONS__GCS__GCP_PROJECT
 # GCP project name where the GCS bucket lives.
 gcp_project = "moz-fx-merino-nonprod-ee93"
+
+fakespot_bucket_name = "fakespot-nonprod-stage-newtab-products"
+fakespot_gcp_project = "moz-fx-fakespot-nonprod"

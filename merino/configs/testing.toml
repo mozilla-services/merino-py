@@ -67,6 +67,8 @@ backend = "test"
 [testing.curated_recommendations.gcs]
 bucket_name = "test-bucket"
 gcp_project = "test-project"
+fakespot_bucket_name = "fakespot-test-bucket"
+fakespot_gcp_project = "fakespot-test-project"
 
 [testing.curated_recommendations.rankers.thompson_sampling]
 # MERINO__CURATED_RECOMMENDATIONS__RANKERS__THOMPSON_SAMPLING__TEST_REPEAT_COUNT

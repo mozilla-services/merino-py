@@ -25,17 +25,22 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
     Engagement,
 )
+from merino.curated_recommendations.fakespot_backend.protocol import (
+    FAKESPOT_DEFAULT_CATEGORY_NAME,
+    FAKESPOT_FOOTER_COPY,
+    FAKESPOT_HEADER_COPY,
+    FAKESPOT_CTA_COPY,
+    FAKESPOT_CTA_URL,
+    FakespotBackend,
+    FakespotFeed,
+)
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
-    FAKESPOT_DEFAULT_CATEGORY_NAME,
-    FAKESPOT_HEADER_COPY,
-    FAKESPOT_FOOTER_COPY,
-    FAKESPOT_CTA_COPY,
-    FAKESPOT_CTA_URL,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
+from tests.integration.api.conftest import fakespot_feed
 
 
 class MockEngagementBackend(EngagementBackend):
@@ -69,6 +74,19 @@ class MockEngagementBackend(EngagementBackend):
         pass
 
 
+@pytest.mark.usefixtures("fakespot_feed")
+class MockFakespotBackend(FakespotBackend):
+    """Mock class implementing the protocol for FakespotBackend."""
+
+    def get(self, key: str) -> FakespotFeed | None:
+        """Return fakespot feed from mock JSON file."""
+        return fakespot_feed()
+
+    def initialize(self) -> None:
+        """Mock class must implement this method, but no initialization needs to happen."""
+        pass
+
+
 @pytest.fixture
 def engagement_backend():
     """Fixture for the MockEngagementBackend"""
@@ -81,17 +99,25 @@ def constant_prior_backend() -> PriorBackend:
     return ConstantPrior()
 
 
+@pytest.fixture(name="fakespot_backend")
+def fakespot_backend():
+    """Fixture for the FakespotBackend"""
+    return MockFakespotBackend()
+
+
 @pytest.fixture(name="corpus_provider")
 def provider(
     corpus_backend: CorpusApiBackend,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
+    fakespot_backend: FakespotBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
         corpus_backend=corpus_backend,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
+        fakespot_backend=fakespot_backend,
     )
 
 
@@ -692,9 +718,9 @@ class TestCuratedRecommendationsRequestFeeds:
         assert all(item["tileId"] for item in feed)
 
     @staticmethod
-    def assert_fakespot_feed(fakespot_feed):
+    def assert_fakespot_feed(_fakespot_feed):
         """Assert the fakespot feed is as expected."""
-        fakespot_products = fakespot_feed["products"]
+        fakespot_products = _fakespot_feed["products"]
         # currently 8 products in mock JSON file
         assert len(fakespot_products) == 8
         # Assert all fakespot products have expected fields populated.
@@ -702,11 +728,11 @@ class TestCuratedRecommendationsRequestFeeds:
         for product in fakespot_products:
             assert all(product.get(field) for field in required_fields)
         # Assert the default category name, header, footer, cta copy are present
-        assert fakespot_feed["defaultCategoryName"] == FAKESPOT_DEFAULT_CATEGORY_NAME
-        assert fakespot_feed["headerCopy"] == FAKESPOT_HEADER_COPY
-        assert fakespot_feed["footerCopy"] == FAKESPOT_FOOTER_COPY
-        assert fakespot_feed["cta"]["ctaCopy"] == FAKESPOT_CTA_COPY
-        assert fakespot_feed["cta"]["url"] == FAKESPOT_CTA_URL
+        assert _fakespot_feed["defaultCategoryName"] == FAKESPOT_DEFAULT_CATEGORY_NAME
+        assert _fakespot_feed["headerCopy"] == FAKESPOT_HEADER_COPY
+        assert _fakespot_feed["footerCopy"] == FAKESPOT_FOOTER_COPY
+        assert _fakespot_feed["cta"]["ctaCopy"] == FAKESPOT_CTA_COPY
+        assert _fakespot_feed["cta"]["url"] == FAKESPOT_CTA_URL
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
     @pytest.mark.asyncio

@@ -485,6 +485,23 @@ bucket_name = ""
 # GCP project name where the GCS bucket lives.
 gcp_project = ""
 
+fakespot_bucket_name = ""
+fakespot_gcp_project = ""
+
+
+[default.curated_recommendations.gcs.fakespot]
+# MERINO__CURATED_RECOMMENDATIONS__GCS__FAKESPOT__MAX_SIZE
+# The maximum size in bytes of the GCS fakespot products blob. If exceeded, an error will be logged.
+max_size = 2_000_000
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__FAKESPOT__BLOB_PREFIX
+# GCS path of the fakespot products JSON file.
+blob_name = "products.json"
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__FAKESPOT__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains updated fakespot products data.
+cron_interval_seconds = 3600 # 60 minutes
+
 
 [default.curated_recommendations.gcs.engagement]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__MAX_SIZE

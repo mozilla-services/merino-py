@@ -38,6 +38,7 @@ class SyncedGcsBlob:
         blob_name: str,
         max_size: int,
         cron_interval_seconds: float,
+        cron_job_name: str,
     ) -> None:
         """Initialize the SyncedGcsBlob instance.
 
@@ -56,6 +57,7 @@ class SyncedGcsBlob:
         self.blob_name = blob_name
         self.max_size = max_size
         self.cron_interval_seconds = cron_interval_seconds
+        self.cron_job_name = cron_job_name
         self.metrics_namespace = metrics_namespace
         self.fetch_callback: Callable[[str], None] | None = None
         self.last_updated = LAST_UPDATED_INITIAL_VALUE
@@ -64,7 +66,7 @@ class SyncedGcsBlob:
     def initialize(self) -> None:
         """Start the background cron job to get new data."""
         cron_job = cron.Job(
-            name="fetch_recommendation_engagement",
+            name=self.cron_job_name,
             interval=self.cron_interval_seconds,
             condition=lambda: True,
             task=self._update_task_async,
