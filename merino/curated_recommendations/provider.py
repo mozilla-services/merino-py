@@ -353,8 +353,11 @@ class CuratedRecommendationsProvider:
     async def fetch_backup_recommendations(
         self, surface_id: ScheduledSurfaceId
     ) -> list[CuratedRecommendation]:
-        """Return recommended stories for yesterday's date
-        for a given New Tab surface
+        """Return recommended stories for yesterday's date for a given New Tab surface.
+
+        Note that there's no fallback for if no appropriate stories are available in
+        yesterday's data. We rely on the curators' commitment to always have this data
+        for the previous day.
 
         @param: surface_id: a ScheduledSurfaceId
         @return: A re-ranked list of curated recommendations
