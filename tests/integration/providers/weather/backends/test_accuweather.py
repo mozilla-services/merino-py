@@ -880,23 +880,24 @@ async def test_get_weather_report_with_geolocation_when_cache_is_empty(
 
     assert report is None
 
-    @pytest.mark.asyncio
-    async def test_get_weather_report_with_location_key_when_cache_is_empty(
-        redis_client: Redis,
-        accuweather_parameters: dict[str, Any],
-        geolocation: Location,
-    ) -> None:
-        """Test that we get None when trying to get weather report with location key when the
-        cache
-        is empty
-        """
-        # set up the accuweather backend object with the testcontainer redis client
-        accuweather: AccuweatherBackend = AccuweatherBackend(
-            cache=RedisAdapter(redis_client), **accuweather_parameters
-        )
 
-        report: Optional[WeatherReport] = await accuweather.get_weather_report(
-            geolocation, ACCUWEATHER_LOCATION_KEY
-        )
+@pytest.mark.asyncio
+async def test_get_weather_report_with_location_key_when_cache_is_empty(
+    redis_client: Redis,
+    accuweather_parameters: dict[str, Any],
+    geolocation: Location,
+) -> None:
+    """Test that we get None when trying to get weather report with location key when the
+    cache
+    is empty
+    """
+    # set up the accuweather backend object with the testcontainer redis client
+    accuweather: AccuweatherBackend = AccuweatherBackend(
+        cache=RedisAdapter(redis_client), **accuweather_parameters
+    )
 
-        assert report is None
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        geolocation, ACCUWEATHER_LOCATION_KEY
+    )
+
+    assert report is None

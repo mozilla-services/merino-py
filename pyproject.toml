@@ -76,7 +76,7 @@ python = "^3.12"
 fastapi = "^0.115.2"
 uvicorn = {extras = ["standard"], version="^0.24.0"}
 dockerflow = "^2022.7.0"
-asgi-correlation-id = "^3.0.1"
+asgi-correlation-id = "^4.3.4"
 dynaconf = "^3.2.4"
 httpx = "^0.23.0"
 sentry-sdk = {extras = ["fastapi"], version = "^2.13.0"}
