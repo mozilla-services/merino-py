@@ -57,11 +57,13 @@ class Provider(BaseProvider):
                 custom_details=CustomDetails(
                     geolocation=GeolocationDetails(
                         country=srequest.geolocation.country_name,
-                        region=srequest.geolocation.region_names[0] if srequest.geolocation.region_names
+                        region=srequest.geolocation.region_names[0]
+                        if srequest.geolocation.region_names
                         else None,
-                        region_code=srequest.geolocation.regions[0] if srequest.geolocation.regions else None,
+                        region_code=srequest.geolocation.regions[0]
+                        if srequest.geolocation.regions
+                        else None,
                         country_code=srequest.geolocation.country,
-
                         city=srequest.geolocation.city,
                     )
                 ),
