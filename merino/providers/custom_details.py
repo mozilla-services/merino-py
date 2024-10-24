@@ -15,6 +15,8 @@ class GeolocationDetails(BaseModel):
     """Geolocation specific fields."""
 
     country: str | None = None
+    country_code: str | None = None
+    region_code: str | None = None
     region: str | None = None
     city: str | None = None
 
