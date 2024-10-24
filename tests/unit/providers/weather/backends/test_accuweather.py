@@ -1032,7 +1032,7 @@ async def test_get_weather_report_without_region(
         ".store_request_into_cache"
     ).return_value = TEST_CACHE_TTL_SEC
 
-    geolocation = geolocation.copy()
+    geolocation = geolocation.model_copy()
     geolocation.regions = None
     report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation)
 
