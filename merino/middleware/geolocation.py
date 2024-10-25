@@ -20,6 +20,14 @@ reader = geoip2.database.Reader(settings.location.maxmind_database)
 logger = logging.getLogger(__name__)
 
 
+class Coordinates(BaseModel):
+    """Data model for coordinates for geolocation."""
+
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    radius: Optional[int] = None
+
+
 class Location(BaseModel):
     """Data model for geolocation."""
 
@@ -31,6 +39,7 @@ class Location(BaseModel):
     dma: Optional[int] = None
     postal_code: Optional[str] = None
     key: Optional[str] = None
+    location: Optional[Coordinates] = None
 
 
 def normalize_string(input_str) -> str:
@@ -87,6 +96,11 @@ class GeolocationMiddleware:
                 city=normalize_string(city) if (city := record.city.names.get("en")) else None,
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,
+                location=Coordinates(
+                    latitude=record.location.latitude,
+                    longitude=record.location.longitude,
+                    radius=record.location.accuracy_radius,
+                ),
             )
             if record
             else Location()

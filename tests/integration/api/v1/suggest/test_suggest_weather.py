@@ -21,7 +21,7 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.middleware import ScopeKey
-from merino.middleware.geolocation import GeolocationMiddleware, Location
+from merino.middleware.geolocation import GeolocationMiddleware, Location, Coordinates
 from merino.providers.base import SuggestionRequest
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -441,6 +441,7 @@ async def test_suggest_weather_with_custom_location(
         city="Milton",
         dma=819,
         postal_code="98354",
+        location=Coordinates(latitude=47.2513, longitude=-122.3149, radius=22),
     )
 
     receive_mock = AsyncMock()
