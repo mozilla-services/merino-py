@@ -55,7 +55,6 @@ def create_blob(bucket, data):
     """Create a blob with given data."""
     blob = bucket.blob(settings.curated_recommendations.gcs.fakespot.blob_name)
     blob.upload_from_string(json.dumps(data))
-    time.sleep(1)
     return blob
 
 
@@ -81,7 +80,7 @@ def large_blob(gcs_bucket):
 
 async def wait_until_fakespot_is_updated(backend: GcsFakespot):
     """Wait for some time to pass to update fakespot."""
-    max_wait_time_sec = 5
+    max_wait_time_sec = 2
     start_time = time.time()
     while time.time() - start_time < max_wait_time_sec:
         if backend.update_count > 0:
