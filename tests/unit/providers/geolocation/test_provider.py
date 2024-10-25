@@ -65,6 +65,8 @@ async def test_query_geolocation(provider: Provider, geolocation: Location) -> N
                 geolocation=GeolocationDetails(
                     country="United States",
                     region="California",
+                    region_code="CA",
+                    country_code="US",
                     city="San Francisco",
                     location=Coordinates(latitude=37.7739, longitude=-122.4313, radius=22),
                 )
@@ -92,6 +94,7 @@ async def test_query_geolocation_empty_region(provider: Provider, empty_region: 
             custom_details=CustomDetails(
                 geolocation=GeolocationDetails(
                     country="United States",
+                    country_code="US",
                     city="San Francisco",
                     location=Coordinates(latitude=37.7739, longitude=-122.4313, radius=22),
                 )
