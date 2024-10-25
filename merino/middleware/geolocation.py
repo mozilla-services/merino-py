@@ -39,7 +39,7 @@ class Location(BaseModel):
     dma: Optional[int] = None
     postal_code: Optional[str] = None
     key: Optional[str] = None
-    location: Optional[Coordinates] = None
+    coordinates: Optional[Coordinates] = None
 
 
 def normalize_string(input_str) -> str:
@@ -96,7 +96,7 @@ class GeolocationMiddleware:
                 city=normalize_string(city) if (city := record.city.names.get("en")) else None,
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,
-                location=Coordinates(
+                coordinates=Coordinates(
                     latitude=record.location.latitude,
                     longitude=record.location.longitude,
                     radius=record.location.accuracy_radius,

@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from pydantic import HttpUrl
 
-from merino.middleware.geolocation import Location
+from merino.middleware.geolocation import Location, Coordinates
 from merino.providers.base import BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import CustomDetails, GeolocationDetails
 from merino.providers.geolocation.provider import Provider, Suggestion
@@ -26,6 +26,7 @@ def fixture_geolocation() -> Location:
         city="San Francisco",
         dma=807,
         postal_code="94105",
+        coordinates=Coordinates(latitude=37.7739, longitude=-122.4313, radius=22),
     )
 
 
@@ -40,6 +41,7 @@ def fixture_empty_region() -> Location:
         city="San Francisco",
         dma=807,
         postal_code="94105",
+        coordinates=Coordinates(latitude=37.7739, longitude=-122.4313, radius=22),
     )
 
 
@@ -64,6 +66,7 @@ async def test_query_geolocation(provider: Provider, geolocation: Location) -> N
                     country="United States",
                     region="California",
                     city="San Francisco",
+                    location=Coordinates(latitude=37.7739, longitude=-122.4313, radius=22),
                 )
             ),
         )
@@ -90,6 +93,7 @@ async def test_query_geolocation_empty_region(provider: Provider, empty_region: 
                 geolocation=GeolocationDetails(
                     country="United States",
                     city="San Francisco",
+                    location=Coordinates(latitude=37.7739, longitude=-122.4313, radius=22),
                 )
             ),
         )
