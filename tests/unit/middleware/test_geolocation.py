@@ -10,7 +10,12 @@ from pytest_mock import MockerFixture
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from merino.middleware import ScopeKey
-from merino.middleware.geolocation import GeolocationMiddleware, Location, normalize_string
+from merino.middleware.geolocation import (
+    GeolocationMiddleware,
+    Location,
+    normalize_string,
+    Coordinates,
+)
 
 
 @pytest.fixture(name="geolocation_middleware")
@@ -33,6 +38,7 @@ def fixture_geolocation_middleware(mocker: MockerFixture) -> GeolocationMiddlewa
                 city="Milton",
                 dma=819,
                 postal_code="98354",
+                coordinates=Coordinates(latitude=47.2513, longitude=-122.3149, radius=22),
             ),
             ["216.160.83.56", 50000],
         ),
@@ -44,6 +50,7 @@ def fixture_geolocation_middleware(mocker: MockerFixture) -> GeolocationMiddlewa
                 region_names=["West Berkshire", "England"],
                 city="Boxford",
                 postal_code="OX1",
+                coordinates=Coordinates(latitude=51.75, longitude=-1.25, radius=100),
             ),
             ["2.125.160.216", 50000],
         ),
@@ -112,6 +119,7 @@ async def test_geolocation_client_ip_override(
         city="Milton",
         dma=819,
         postal_code="98354",
+        coordinates=Coordinates(latitude=47.2513, longitude=-122.3149, radius=22),
     )
     mocker.patch("merino.middleware.geolocation.CLIENT_IP_OVERRIDE", "216.160.83.56")
 

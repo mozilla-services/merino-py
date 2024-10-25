@@ -65,6 +65,7 @@ class Provider(BaseProvider):
                         else None,
                         country_code=srequest.geolocation.country,
                         city=srequest.geolocation.city,
+                        location=srequest.geolocation.coordinates,
                     )
                 ),
             )

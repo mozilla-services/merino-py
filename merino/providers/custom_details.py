@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel
 
+from merino.middleware.geolocation import Coordinates
+
 
 class AmoDetails(BaseModel):
     """Addon specific fields."""
@@ -19,6 +21,7 @@ class GeolocationDetails(BaseModel):
     region_code: str | None = None
     region: str | None = None
     city: str | None = None
+    location: Coordinates | None = None
 
 
 class WeatherDetails(BaseModel):
