@@ -360,10 +360,9 @@ class CuratedRecommendationsProvider:
         need_to_know_feed = None
         # Fakespot products for the Fakespot experiment
         fakespot_feed = None
+        # The sections experiment organizes recommendations in many feeds
         sections_feeds = None
 
-        # For users in the "Need to Know" experiment, separate recommendations into
-        # two different feeds: the "general" feed and the "need to know" feed.
         if self.is_need_to_know_experiment(curated_recommendations_request, surface_id):
             # this applies ranking to the general_feed!
             general_feed, need_to_know_recs, title = await self.rank_need_to_know_recommendations(
@@ -375,7 +374,7 @@ class CuratedRecommendationsProvider:
             )
         elif self.is_sections_experiment(curated_recommendations_request):
             sections_feeds = self.get_sections(recommendations, curated_recommendations_request)
-            general_feed = []
+            general_feed = []  # Everything is organized into sections. There's no 'general' feed.
         else:
             # Default ranking for general feed
             general_feed = self.rank_recommendations(

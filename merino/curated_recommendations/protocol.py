@@ -157,9 +157,7 @@ class Section(BaseModel):
 
 
 class CuratedRecommendationsFeed(BaseModel):
-    """Multiple lists of curated recommendations for experiments.
-    Currently limited to the 'need_to_know' & fakespot feed only.
-    """
+    """Multiple lists of curated recommendations, that are currently in an experimental phase."""
 
     need_to_know: CuratedRecommendationsBucket | None = None
     fakespot: FakespotFeed | None = None
