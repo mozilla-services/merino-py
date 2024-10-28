@@ -365,7 +365,7 @@ async def curated_content(
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 100.
     - `topics`: [Optional] A list of preferred [topics][curated-topics-doc].
     - `feeds`: [Optional] A list of additional data feeds. Currently, accepts
-       only two values: 'need_to_know' & 'fakespot'.
+       only three values: 'need_to_know', 'fakespot', and 'sections'.
     - `experimentName`: [Optional] The Nimbus New Tab experiment name that the user is enrolled in.
         When an experiment _only_ requires backend changes, this allows us to run the experiments
         without waiting on the Firefox release cycle. When an experiment _does_ require changes in
