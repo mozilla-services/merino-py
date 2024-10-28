@@ -15,6 +15,8 @@ from zipfile import ZipFile
 from merino.jobs.geonames_uploader.downloader import (
     GEONAME_COL_ID,
     GEONAME_COL_NAME,
+    GEONAME_COL_LATITUDE,
+    GEONAME_COL_LONGITUDE,
     GEONAME_COL_FEATURE_CLASS,
     GEONAME_COL_FEATURE_CODE,
     GEONAME_COL_COUNTRY_CODE,
@@ -55,6 +57,8 @@ GEONAMES = [
     Geoname(
         id=1,
         name="Waterloo",
+        latitude="34.91814",
+        longitude="-88.0642",
         feature_class="P",
         feature_code="PPL",
         country_code="US",
@@ -65,6 +69,8 @@ GEONAMES = [
     Geoname(
         id=2,
         name="Alabama",
+        latitude="32.75041",
+        longitude="-86.75026",
         feature_class="A",
         feature_code="ADM1",
         country_code="US",
@@ -75,6 +81,8 @@ GEONAMES = [
     Geoname(
         id=3,
         name="Waterloo",
+        latitude="42.49276",
+        longitude="-92.34296",
         feature_class="P",
         feature_code="PPLA2",
         country_code="US",
@@ -85,6 +93,8 @@ GEONAMES = [
     Geoname(
         id=4,
         name="Iowa",
+        latitude="42.00027",
+        longitude="-93.50049",
         feature_class="A",
         feature_code="ADM1",
         country_code="US",
@@ -95,6 +105,8 @@ GEONAMES = [
     Geoname(
         id=5,
         name="Waterloo Lake",
+        latitude="31.25044",
+        longitude="-99.25061",
         feature_class="H",
         feature_code="LK",
         country_code="US",
@@ -105,6 +117,8 @@ GEONAMES = [
     Geoname(
         id=6,
         name="New York City",
+        latitude="40.71427",
+        longitude="-74.00597",
         feature_class="P",
         feature_code="PPL",
         country_code="US",
@@ -115,6 +129,8 @@ GEONAMES = [
     Geoname(
         id=7,
         name="New York",
+        latitude="43.00035",
+        longitude="-75.4999",
         feature_class="A",
         feature_code="ADM1",
         country_code="US",
@@ -255,6 +271,8 @@ class DownloaderTest:
             row = [""] * (MAX_GEONAME_COL + 1)
             row[GEONAME_COL_ID] = str(g.id)
             row[GEONAME_COL_NAME] = g.name
+            row[GEONAME_COL_LATITUDE] = g.latitude
+            row[GEONAME_COL_LONGITUDE] = g.longitude
             row[GEONAME_COL_FEATURE_CLASS] = g.feature_class
             row[GEONAME_COL_FEATURE_CODE] = g.feature_code
             row[GEONAME_COL_COUNTRY_CODE] = g.country_code
@@ -318,6 +336,8 @@ def test_all_populations_and_iso_languages(
             Geoname(
                 id=1,
                 name="Waterloo",
+                latitude="34.91814",
+                longitude="-88.0642",
                 feature_class="P",
                 feature_code="PPL",
                 country_code="US",
@@ -328,6 +348,8 @@ def test_all_populations_and_iso_languages(
             Geoname(
                 id=2,
                 name="Alabama",
+                latitude="32.75041",
+                longitude="-86.75026",
                 feature_class="A",
                 feature_code="ADM1",
                 country_code="US",
@@ -338,6 +360,8 @@ def test_all_populations_and_iso_languages(
             Geoname(
                 id=3,
                 name="Waterloo",
+                latitude="42.49276",
+                longitude="-92.34296",
                 feature_class="P",
                 feature_code="PPLA2",
                 country_code="US",
@@ -348,6 +372,8 @@ def test_all_populations_and_iso_languages(
             Geoname(
                 id=4,
                 name="Iowa",
+                latitude="42.00027",
+                longitude="-93.50049",
                 feature_class="A",
                 feature_code="ADM1",
                 country_code="US",
@@ -358,6 +384,8 @@ def test_all_populations_and_iso_languages(
             Geoname(
                 id=6,
                 name="New York City",
+                latitude="40.71427",
+                longitude="-74.00597",
                 feature_class="P",
                 feature_code="PPL",
                 country_code="US",
@@ -368,6 +396,8 @@ def test_all_populations_and_iso_languages(
             Geoname(
                 id=7,
                 name="New York",
+                latitude="43.00035",
+                longitude="-75.4999",
                 feature_class="A",
                 feature_code="ADM1",
                 country_code="US",
@@ -400,6 +430,8 @@ def test_one_million_population_and_all_iso_languages(
             Geoname(
                 id=2,
                 name="Alabama",
+                latitude="32.75041",
+                longitude="-86.75026",
                 feature_class="A",
                 feature_code="ADM1",
                 country_code="US",
@@ -410,6 +442,8 @@ def test_one_million_population_and_all_iso_languages(
             Geoname(
                 id=4,
                 name="Iowa",
+                latitude="42.00027",
+                longitude="-93.50049",
                 feature_class="A",
                 feature_code="ADM1",
                 country_code="US",
@@ -420,6 +454,8 @@ def test_one_million_population_and_all_iso_languages(
             Geoname(
                 id=6,
                 name="New York City",
+                latitude="40.71427",
+                longitude="-74.00597",
                 feature_class="P",
                 feature_code="PPL",
                 country_code="US",
@@ -430,6 +466,8 @@ def test_one_million_population_and_all_iso_languages(
             Geoname(
                 id=7,
                 name="New York",
+                latitude="43.00035",
+                longitude="-75.4999",
                 feature_class="A",
                 feature_code="ADM1",
                 country_code="US",
@@ -459,6 +497,8 @@ def test_one_million_population_and_en_only(
             Geoname(
                 id=2,
                 name="Alabama",
+                latitude="32.75041",
+                longitude="-86.75026",
                 feature_class="A",
                 feature_code="ADM1",
                 country_code="US",
@@ -469,6 +509,8 @@ def test_one_million_population_and_en_only(
             Geoname(
                 id=4,
                 name="Iowa",
+                latitude="42.00027",
+                longitude="-93.50049",
                 feature_class="A",
                 feature_code="ADM1",
                 country_code="US",
@@ -479,6 +521,8 @@ def test_one_million_population_and_en_only(
             Geoname(
                 id=6,
                 name="New York City",
+                latitude="40.71427",
+                longitude="-74.00597",
                 feature_class="P",
                 feature_code="PPL",
                 country_code="US",
@@ -489,6 +533,8 @@ def test_one_million_population_and_en_only(
             Geoname(
                 id=7,
                 name="New York",
+                latitude="43.00035",
+                longitude="-75.4999",
                 feature_class="A",
                 feature_code="ADM1",
                 country_code="US",
