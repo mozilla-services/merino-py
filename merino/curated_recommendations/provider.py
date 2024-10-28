@@ -2,6 +2,7 @@
 
 import time
 import re
+from datetime import datetime
 from typing import cast
 
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -23,6 +24,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsFeed,
     CuratedRecommendationsBucket,
     FakespotFeed,
+    Section,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -159,6 +161,11 @@ class CuratedRecommendationsProvider:
         )
 
     @staticmethod
+    def is_sections_experiment(request) -> bool:
+        """Check if the 'sections' experiment is enabled."""
+        return request.feeds and "sections" in request.feeds
+
+    @staticmethod
     def is_fakespot_experiment(request, surface_id) -> bool:
         """Check if the 'Fakespot' experiment is enabled."""
         return (
@@ -270,6 +277,64 @@ class CuratedRecommendationsProvider:
 
         return general_feed, need_to_know_feed, title
 
+    def get_sections(
+        self,
+        recommendations: list[CuratedRecommendation],
+        request: CuratedRecommendationsRequest,
+    ) -> CuratedRecommendationsFeed:
+        """Return a CuratedRecommendationsFeed with recommendations mapped to their topic."""
+        # Apply Thompson sampling to rank all recommendations by engagement
+        recommendations = thompson_sampling(
+            recommendations,
+            engagement_backend=self.engagement_backend,
+            prior_backend=self.prior_backend,
+            region=self.derive_region(request.locale, request.region),
+            enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
+        )
+
+        # HNT-243 will iron out schema changes. The following should probably become request params:
+        max_recs_per_section = 30
+        min_recs_per_section = 3
+        top_stories_count = 6
+
+        # Create "Today's top stories" section with the first 6 recommendations
+        top_stories = recommendations[:top_stories_count]
+        feeds = CuratedRecommendationsFeed(
+            top_stories_section=Section(
+                receivedRank=0,
+                recommendations=top_stories,
+                title="Today's top stories",
+                subtitle=datetime.now().strftime("%B %d, %Y"),  # e.g., "October 24, 2024"
+            )
+        )
+
+        # Group the remaining recommendations by topic, while preserving the Thompson sampling order
+        sections_by_topic: dict[str, Section] = dict()
+        remaining_recs = recommendations[top_stories_count:]
+        for rec in remaining_recs:
+            if rec.topic and rec.topic.value in CuratedRecommendationsFeed.model_fields:
+                topic = rec.topic
+                if topic in sections_by_topic:
+                    section = sections_by_topic[topic]
+                else:
+                    section = sections_by_topic[topic] = Section(
+                        receivedRank=len(sections_by_topic) + 1,  # add 1 for top_stories_section
+                        recommendations=[],
+                        title=rec.topic.replace("_", " ").capitalize(),
+                    )
+
+                if len(section.recommendations) < max_recs_per_section:
+                    rec.receivedRank = len(section.recommendations)
+                    section.recommendations.append(rec)
+
+        for topic_id, section in sections_by_topic.items():
+            # Only add sections that meet the minimum number of recommendations.
+            if len(section.recommendations) >= min_recs_per_section:
+                setattr(feeds, topic_id, section)
+
+        # Construct and return CuratedRecommendationsFeed with valid sections
+        return feeds
+
     async def fetch(
         self, curated_recommendations_request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:
@@ -295,9 +360,9 @@ class CuratedRecommendationsProvider:
         need_to_know_feed = None
         # Fakespot products for the Fakespot experiment
         fakespot_feed = None
+        # The sections experiment organizes recommendations in many feeds
+        sections_feeds = None
 
-        # For users in the "Need to Know" experiment, separate recommendations into
-        # two different feeds: the "general" feed and the "need to know" feed.
         if self.is_need_to_know_experiment(curated_recommendations_request, surface_id):
             # this applies ranking to the general_feed!
             general_feed, need_to_know_recs, title = await self.rank_need_to_know_recommendations(
@@ -307,6 +372,9 @@ class CuratedRecommendationsProvider:
             need_to_know_feed = CuratedRecommendationsBucket(
                 recommendations=need_to_know_recs, title=title
             )
+        elif self.is_sections_experiment(curated_recommendations_request):
+            sections_feeds = self.get_sections(recommendations, curated_recommendations_request)
+            general_feed = []  # Everything is organized into sections. There's no 'general' feed.
         else:
             # Default ranking for general feed
             general_feed = self.rank_recommendations(
@@ -321,10 +389,12 @@ class CuratedRecommendationsProvider:
         response = CuratedRecommendationsResponse(recommendedAt=self.time_ms(), data=general_feed)
 
         # If we have feeds to return, add those to the response
-        if need_to_know_feed is not None or fakespot_feed is not None:
+        if need_to_know_feed or fakespot_feed:
             response.feeds = CuratedRecommendationsFeed(
                 need_to_know=need_to_know_feed, fakespot=fakespot_feed
             )
+        elif sections_feeds:
+            response.feeds = sections_feeds
 
         return response
 

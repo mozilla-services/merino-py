@@ -147,13 +147,40 @@ class CuratedRecommendationsBucket(BaseModel):
     title: str | None = None
 
 
+class Section(BaseModel):
+    """A ranked list of curated recommendations"""
+
+    receivedRank: int
+    recommendations: list[CuratedRecommendation]
+    title: str
+    subtitle: str | None = None
+
+
 class CuratedRecommendationsFeed(BaseModel):
-    """Multiple lists of curated recommendations for experiments.
-    Currently limited to the 'need_to_know' & fakespot feed only.
-    """
+    """Multiple lists of curated recommendations, that are currently in an experimental phase."""
 
     need_to_know: CuratedRecommendationsBucket | None = None
     fakespot: FakespotFeed | None = None
+
+    # The following feeds are used as mock data for the 'sections' experiment.
+    # They should be removed when the sections are implemented that we'll actually launch with.
+    business: Section | None = None
+    career: Section | None = None
+    arts: Section | None = None
+    food: Section | None = None
+    health_fitness: Section | None = None
+    home: Section | None = None
+    personal_finance: Section | None = None
+    politics: Section | None = None
+    sports: Section | None = None
+    technology: Section | None = None
+    travel: Section | None = None
+    education: Section | None = None
+    gaming: Section | None = None
+    parenting: Section | None = None
+    science: Section | None = None
+    self_improvement: Section | None = None
+    top_stories_section: Section | None = None
 
 
 class CuratedRecommendationsResponse(BaseModel):

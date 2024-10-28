@@ -1293,3 +1293,38 @@ class TestNeedToKnow:
             data = response.json()
             need_to_know = data["feeds"]["need_to_know"]["recommendations"]
             assert len(need_to_know) == 10  # The number of time-sensitive items in the fixture.
+
+
+class TestSections:
+    """Test the behavior of the sections feeds"""
+
+    @pytest.mark.asyncio
+    async def test_curated_recommendations_with_sections_feed(self):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'sections' feed for en-US locale.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "en-US", "feeds": ["sections"]},
+            )
+            data = response.json()
+
+            # Check if the response is valid
+            assert response.status_code == 200
+
+            # Assert that an empty data array is returned. All recommendations are under "feeds".
+            assert len(data["data"]) == 0
+
+            # Check that all sections are present
+            feeds = data["feeds"]
+            assert (
+                len(feeds) > 5
+            )  # fixture data contains enough recommendations for many sections.
+
+            # Ensure "Today's top stories" is present with a valid date subtitle
+            top_stories_section = data["feeds"].get("top_stories_section")
+            assert top_stories_section is not None
+            assert top_stories_section["title"] == "Today's top stories"
+            assert top_stories_section["subtitle"] is not None
