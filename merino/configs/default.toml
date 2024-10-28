@@ -635,11 +635,18 @@ alternates_path = "/export/dump/alternatenames/{country_code}.zip"
 # How large a geoname's population must be for it to be included in the output.
 # Geonames with populations at least this large will be included.
 population_threshold = 50_000
-# MERINO_JOBS__GEONAMES_UPLOADER__ALTERNATES_ISO_LANGUAGES
-# Which alternates of selected geonames to include in the output. Alternates are
-# categorized by language, like "en" and "en-US", plus a few other categories
-# like abbreviations ("abbr") and airport codes ("iata", "icao", "faac").
-alternates_iso_languages  = ["en", "en-US", "iata", "icao", "faac", "abbr"]
+# MERINO_JOBS__GEONAMES_UPLOADER__CITY_ALTERNATES_ISO_LANGUAGES
+# Which alternates of selected cities to include in the output. Alternates are
+# categorized by language, like "en", plus a few other categories like
+# abbreviations ("abbr") and airport codes ("iata", "icao", "faac").
+city_alternates_iso_languages  = ["en", "en-US", "iata", "icao", "faac", "abbr"]
+# MERINO_JOBS__GEONAMES_UPLOADER__REGION_ALTERNATES_ISO_LANGUAGES
+# Which alternates of selected regions to include in the output. Takes the same
+# values as city alternates. For U.S. states, "en" alternates include verbose
+# names like "State of California" that people are unlikely type and that
+# interfere with prefix matching, so we only include "abbr". Note that full
+# names like "California" are always included in the output.
+region_alternates_iso_languages  = ["abbr"]
 # MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY_CODE
 # Which country's geonames to upload. If we expand to more countries, we should
 # probably remove this from the config and instead require `--country-code` to

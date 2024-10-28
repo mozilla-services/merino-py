@@ -167,7 +167,8 @@ class GeonamesDownloader:
         geonames_path="/export/dump/{country_code}.zip",
         alternates_path="/export/dump/alternatenames/{country_code}.zip",
         country_code="US",
-        alternates_iso_languages=["en", "en-US", "iata", "icao", "faac", "abbr"],
+        city_alternates_iso_languages=["en", "en-US", "iata", "icao", "faac", "abbr"],
+        region_alternates_iso_languages=["abbr"],
         population_threshold=100_000,
     )
     state = downloader.download()
@@ -181,7 +182,8 @@ class GeonamesDownloader:
     alternates_path: str
     country_code: str
     population_threshold: int
-    alternates_iso_languages: set[str]
+    city_alternates_iso_languages: set[str]
+    region_alternates_iso_languages: set[str]
 
     def __init__(
         self,
@@ -190,7 +192,8 @@ class GeonamesDownloader:
         alternates_path: str,
         country_code: str,
         population_threshold: int,
-        alternates_iso_languages: list[str],
+        city_alternates_iso_languages: list[str],
+        region_alternates_iso_languages: list[str],
     ):
         """Initialize the downloader for a given country.
 
@@ -207,12 +210,14 @@ class GeonamesDownloader:
         be for it to be included in the output. Geonames with populations at
         least this large will be included.
 
-        `alternates_iso_languages` specifies which alternates of selected
-        geonames to include in the output. Alternates are categorized by
-        language, like "en" and "en-US", plus a few other categories like
-        abbreviations ("abbr") and airport codes ("iata", "icao", "faac") (see
-        documentation link above). `alternates_iso_languages` should contain all
-        such categories you want to include in the output.
+        `city_alternates_iso_languages` specifies which alternates of selected
+        cities to include in the output. Alternates are categorized by language,
+        like "en", plus a few other categories like abbreviations ("abbr") and
+        airport codes ("iata", "icao", "faac") (see documentation link above).
+        `city_alternates_iso_languages` should contain all such categories you
+        want to include in the output for cities.
+
+        `region_alternates_iso_languages` is the same but for regions.
 
         """
         self.base_url = base_url
@@ -222,7 +227,8 @@ class GeonamesDownloader:
         self.population_threshold = population_threshold
         self.geonames = None
         self.geonames_ids = None
-        self.alternates_iso_languages = set(alternates_iso_languages)
+        self.city_alternates_iso_languages = set(city_alternates_iso_languages)
+        self.region_alternates_iso_languages = set(region_alternates_iso_languages)
 
     def download(self) -> DownloadState:
         """Download selected geonames and alternates."""
@@ -275,9 +281,15 @@ class GeonamesDownloader:
         iso_language = line[ALTERNATES_COL_ISO_LANGUAGE]
         name = line[ALTERNATES_COL_NAME]
         geoname = state.geonames_by_id.get(geoname_id, None)
-        if geoname and iso_language in self.alternates_iso_languages:
-            geoname.alternate_names.add(name.casefold())
-            state.metrics.included_alternates_count += 1
+        if geoname:
+            langs: set[str] | None = None
+            if geoname.feature_class == FEATURE_CLASS_CITY:
+                langs = self.city_alternates_iso_languages
+            elif geoname.feature_class == FEATURE_CLASS_REGION:
+                langs = self.region_alternates_iso_languages
+            if langs and iso_language in langs:
+                geoname.alternate_names.add(name.casefold())
+                state.metrics.included_alternates_count += 1
 
     def _download(
         self,

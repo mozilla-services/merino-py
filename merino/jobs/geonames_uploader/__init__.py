@@ -29,12 +29,6 @@ rs_settings = config.remote_settings
 job_settings = config.jobs.geonames_uploader
 
 # Options
-alternates_iso_languages_option = typer.Option(
-    job_settings.alternates_iso_languages,
-    "--alternates-iso-languages",
-    help="Alternate name languages and types to select",
-)
-
 alternates_path_option = typer.Option(
     job_settings.alternates_path,
     "--alternates-path",
@@ -63,6 +57,12 @@ chunk_size_option = typer.Option(
     rs_settings.chunk_size,
     "--chunk-size",
     help="The number of geonames to store in each attachment",
+)
+
+city_alternates_iso_languages_option = typer.Option(
+    job_settings.city_alternates_iso_languages,
+    "--city-alternates-iso-languages",
+    help="Alternate city name languages and types to select",
 )
 
 collection_option = typer.Option(
@@ -105,6 +105,12 @@ record_type_option = typer.Option(
     job_settings.record_type,
     "--record-type",
     help="The `type` of each remote settings record",
+)
+
+region_alternates_iso_languages_option = typer.Option(
+    job_settings.region_alternates_iso_languages,
+    "--region-alternates-iso-languages",
+    help="Alternate region name languages and types to select",
 )
 
 server_option = typer.Option(
@@ -168,10 +174,11 @@ def upload(
     country_code: str = country_code_option,
     dry_run: bool = dry_run_option,
     geonames_path: str = geonames_path_option,
-    alternates_iso_languages: list[str] = alternates_iso_languages_option,
+    city_alternates_iso_languages: list[str] = city_alternates_iso_languages_option,
     keep_existing_records: bool = keep_existing_records_option,
     population_threshold: int = population_threshold_option,
     record_type: str = record_type_option,
+    region_alternates_iso_languages: list[str] = region_alternates_iso_languages_option,
     server: str = server_option,
 ):
     """Download GeoNames data from the GeoNames server, apply some processing
@@ -181,10 +188,11 @@ def upload(
     downloader = GeonamesDownloader(
         alternates_path=alternates_path,
         base_url=base_url,
+        city_alternates_iso_languages=city_alternates_iso_languages,
         country_code=country_code,
         geonames_path=geonames_path,
-        alternates_iso_languages=alternates_iso_languages,
         population_threshold=population_threshold,
+        region_alternates_iso_languages=region_alternates_iso_languages,
     )
     state = downloader.download()
 

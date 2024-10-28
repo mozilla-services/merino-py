@@ -152,6 +152,11 @@ ALTERNATES = [
         name="AL",
         iso_language="abbr",
     ),
+    GeonameAlternate(
+        geoname_id=2,
+        name="State of Alabama",
+        iso_language="en",
+    ),
     # Waterloo, IA
     GeonameAlternate(
         geoname_id=3,
@@ -163,6 +168,11 @@ ALTERNATES = [
         geoname_id=4,
         name="IA",
         iso_language="abbr",
+    ),
+    GeonameAlternate(
+        geoname_id=4,
+        name="State of Iowa",
+        iso_language="en",
     ),
     # Waterloo Lake
     GeonameAlternate(
@@ -209,6 +219,11 @@ ALTERNATES = [
     ),
     GeonameAlternate(
         geoname_id=7,
+        name="State of New York",
+        iso_language="en",
+    ),
+    GeonameAlternate(
+        geoname_id=7,
         name="Nueva York",
         iso_language="es",
     ),
@@ -230,7 +245,8 @@ class DownloaderTest:
         self,
         requests_mock,
         population_threshold: int,
-        alternates_iso_languages: list[str],
+        city_alternates_iso_languages: list[str],
+        region_alternates_iso_languages: list[str],
         expected_geonames: list[Geoname],
         expected_metrics: DownloadMetrics,
     ) -> None:
@@ -243,7 +259,8 @@ class DownloaderTest:
             geonames_path="/{country_code}.zip",
             alternates_path="/alternates/{country_code}.zip",
             country_code="US",
-            alternates_iso_languages=alternates_iso_languages,
+            city_alternates_iso_languages=city_alternates_iso_languages,
+            region_alternates_iso_languages=region_alternates_iso_languages,
             population_threshold=population_threshold,
         )
         state = downloader.download()
@@ -331,7 +348,8 @@ def test_all_populations_and_iso_languages(
     downloader_test.run(
         requests_mock,
         population_threshold=1,
-        alternates_iso_languages=["en", "abbr", "iata"],
+        city_alternates_iso_languages=["en", "es", "abbr", "iata"],
+        region_alternates_iso_languages=["en", "es", "abbr"],
         expected_geonames=[
             Geoname(
                 id=1,
@@ -355,7 +373,7 @@ def test_all_populations_and_iso_languages(
                 country_code="US",
                 admin1_code="AL",
                 population=4530315,
-                alternate_names=set(["alabama", "al"]),
+                alternate_names=set(["alabama", "state of alabama", "al"]),
             ),
             Geoname(
                 id=3,
@@ -379,7 +397,7 @@ def test_all_populations_and_iso_languages(
                 country_code="US",
                 admin1_code="IA",
                 population=2955010,
-                alternate_names=set(["iowa", "ia"]),
+                alternate_names=set(["iowa", "state of iowa", "ia"]),
             ),
             Geoname(
                 id=6,
@@ -391,7 +409,9 @@ def test_all_populations_and_iso_languages(
                 country_code="US",
                 admin1_code="NY",
                 population=8804190,
-                alternate_names=set(["new york city", "new york", "ny", "nyc", "lga"]),
+                alternate_names=set(
+                    ["new york city", "new york", "nueva york", "ny", "nyc", "lga"]
+                ),
             ),
             Geoname(
                 id=7,
@@ -403,13 +423,13 @@ def test_all_populations_and_iso_languages(
                 country_code="US",
                 admin1_code="NY",
                 population=19274244,
-                alternate_names=set(["new york", "ny"]),
+                alternate_names=set(["new york", "state of new york", "nueva york", "ny"]),
             ),
         ],
         expected_metrics=DownloadMetrics(
             # No excluded cities or regions
             excluded_geonames_count=0,
-            included_alternates_count=9,
+            included_alternates_count=14,
         ),
     )
 
@@ -425,7 +445,78 @@ def test_one_million_population_and_all_iso_languages(
     downloader_test.run(
         requests_mock,
         population_threshold=1_000_000,
-        alternates_iso_languages=["en", "abbr", "iata"],
+        city_alternates_iso_languages=["en", "es", "abbr", "iata"],
+        region_alternates_iso_languages=["en", "es", "abbr"],
+        expected_geonames=[
+            Geoname(
+                id=2,
+                name="Alabama",
+                latitude="32.75041",
+                longitude="-86.75026",
+                feature_class="A",
+                feature_code="ADM1",
+                country_code="US",
+                admin1_code="AL",
+                population=4530315,
+                alternate_names=set(["alabama", "state of alabama", "al"]),
+            ),
+            Geoname(
+                id=4,
+                name="Iowa",
+                latitude="42.00027",
+                longitude="-93.50049",
+                feature_class="A",
+                feature_code="ADM1",
+                country_code="US",
+                admin1_code="IA",
+                population=2955010,
+                alternate_names=set(["iowa", "state of iowa", "ia"]),
+            ),
+            Geoname(
+                id=6,
+                name="New York City",
+                latitude="40.71427",
+                longitude="-74.00597",
+                feature_class="P",
+                feature_code="PPL",
+                country_code="US",
+                admin1_code="NY",
+                population=8804190,
+                alternate_names=set(
+                    ["new york city", "new york", "nueva york", "ny", "nyc", "lga"]
+                ),
+            ),
+            Geoname(
+                id=7,
+                name="New York",
+                latitude="43.00035",
+                longitude="-75.4999",
+                feature_class="A",
+                feature_code="ADM1",
+                country_code="US",
+                admin1_code="NY",
+                population=19274244,
+                alternate_names=set(["new york", "state of new york", "nueva york", "ny"]),
+            ),
+        ],
+        expected_metrics=DownloadMetrics(
+            # No Waterloo, AL or Waterloo, IA
+            excluded_geonames_count=2,
+            included_alternates_count=12,
+        ),
+    )
+
+
+def test_one_million_population_and_en_only(
+    requests_mock,
+    downloader_test: DownloaderTest,
+):
+    """Request geonames with populations > one million, "en" and "abbr" alternates only"""
+    downloader_test.run(
+        requests_mock,
+        population_threshold=1_000_000,
+        city_alternates_iso_languages=["en"],
+        region_alternates_iso_languages=["abbr"],
         expected_geonames=[
             Geoname(
                 id=2,
@@ -461,7 +552,7 @@ def test_one_million_population_and_all_iso_languages(
                 country_code="US",
                 admin1_code="NY",
                 population=8804190,
-                alternate_names=set(["new york city", "new york", "ny", "nyc", "lga"]),
+                alternate_names=set(["new york city", "new york"]),
             ),
             Geoname(
                 id=7,
@@ -479,75 +570,8 @@ def test_one_million_population_and_all_iso_languages(
         expected_metrics=DownloadMetrics(
             # No Waterloo, AL or Waterloo, IA
             excluded_geonames_count=2,
-            included_alternates_count=7,
-        ),
-    )
-
-
-def test_one_million_population_and_en_only(
-    requests_mock,
-    downloader_test: DownloaderTest,
-):
-    """Request geonames with populations > one million and "en" alternates only"""
-    downloader_test.run(
-        requests_mock,
-        population_threshold=1_000_000,
-        alternates_iso_languages=["en"],
-        expected_geonames=[
-            Geoname(
-                id=2,
-                name="Alabama",
-                latitude="32.75041",
-                longitude="-86.75026",
-                feature_class="A",
-                feature_code="ADM1",
-                country_code="US",
-                admin1_code="AL",
-                population=4530315,
-                alternate_names=set(["alabama"]),
-            ),
-            Geoname(
-                id=4,
-                name="Iowa",
-                latitude="42.00027",
-                longitude="-93.50049",
-                feature_class="A",
-                feature_code="ADM1",
-                country_code="US",
-                admin1_code="IA",
-                population=2955010,
-                alternate_names=set(["iowa"]),
-            ),
-            Geoname(
-                id=6,
-                name="New York City",
-                latitude="40.71427",
-                longitude="-74.00597",
-                feature_class="P",
-                feature_code="PPL",
-                country_code="US",
-                admin1_code="NY",
-                population=8804190,
-                alternate_names=set(["new york city", "new york"]),
-            ),
-            Geoname(
-                id=7,
-                name="New York",
-                latitude="43.00035",
-                longitude="-75.4999",
-                feature_class="A",
-                feature_code="ADM1",
-                country_code="US",
-                admin1_code="NY",
-                population=19274244,
-                alternate_names=set(["new york"]),
-            ),
-        ],
-        expected_metrics=DownloadMetrics(
-            # No Waterloo, AL or Waterloo, IA
-            excluded_geonames_count=2,
-            # Only "new york" for New York City, other values in
-            # `altername_names` are lowercased versions of `name`
-            included_alternates_count=1,
+            # Only "al", "ia", "new york" (city), and "ny" (state). Other
+            # values in `altername_names` are lowercased versions of `name`.
+            included_alternates_count=4,
         ),
     )
