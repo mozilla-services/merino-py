@@ -137,6 +137,18 @@ GEONAMES = [
         admin1_code="NY",
         population=19274244,
     ),
+    # A made-up city with diacritics in its name
+    Geoname(
+        id=8,
+        name="Àęí",
+        latitude="45.50884",
+        longitude="-73.58781",
+        feature_class="P",
+        feature_code="PPLA2",
+        country_code="CA",
+        admin1_code="10",
+        population=1,
+    ),
 ]
 
 ALTERNATES = [
@@ -226,6 +238,12 @@ ALTERNATES = [
         geoname_id=7,
         name="Nueva York",
         iso_language="es",
+    ),
+    # A made-up city with diacritics in its name
+    GeonameAlternate(
+        geoname_id=8,
+        name="Öũ",
+        iso_language="en",
     ),
 ]
 
@@ -425,11 +443,24 @@ def test_all_populations_and_iso_languages(
                 population=19274244,
                 alternate_names=set(["new york", "state of new york", "nueva york", "ny"]),
             ),
+            Geoname(
+                id=8,
+                name="Àęí",
+                latitude="45.50884",
+                longitude="-73.58781",
+                feature_class="P",
+                feature_code="PPLA2",
+                country_code="CA",
+                admin1_code="10",
+                population=1,
+                # Versions both with and without diacritics should be included.
+                alternate_names=set(["àęí", "öũ", "aei", "ou"]),
+            ),
         ],
         expected_metrics=DownloadMetrics(
             # No excluded cities or regions
             excluded_geonames_count=0,
-            included_alternates_count=14,
+            included_alternates_count=15,
         ),
     )
 
@@ -500,8 +531,8 @@ def test_one_million_population_and_all_iso_languages(
             ),
         ],
         expected_metrics=DownloadMetrics(
-            # No Waterloo, AL or Waterloo, IA
-            excluded_geonames_count=2,
+            # No Waterloo AL, Waterloo IA, or city with diacritics
+            excluded_geonames_count=3,
             included_alternates_count=12,
         ),
     )
@@ -568,8 +599,8 @@ def test_one_million_population_and_en_only(
             ),
         ],
         expected_metrics=DownloadMetrics(
-            # No Waterloo, AL or Waterloo, IA
-            excluded_geonames_count=2,
+            # No Waterloo AL, Waterloo IA, or city with diacritics
+            excluded_geonames_count=3,
             # Only "al", "ia", "new york" (city), and "ny" (state). Other
             # values in `altername_names` are lowercased versions of `name`.
             included_alternates_count=4,
