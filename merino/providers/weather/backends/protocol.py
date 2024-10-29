@@ -72,6 +72,14 @@ class LocationCompletion(BaseModel):
     administrative_area: LocationCompletionGeoDetails
 
 
+class WeatherContext:
+    """Class that contains context needed to make weather reports."""
+
+    def __init__(self, geolocation: Location, languages: list[str]):
+        self.geolocation = geolocation
+        self.languages = languages
+
+
 class WeatherBackend(Protocol):
     """Protocol for a weather backend that this provider depends on.
 
@@ -81,7 +89,7 @@ class WeatherBackend(Protocol):
     """
 
     async def get_weather_report(
-        self, geolocation: Location, languages: list[str], location_key: str | None
+        self, weather_context: WeatherContext
     ) -> WeatherReport | None:  # pragma: no cover
         """Get weather information from partner.
 
@@ -91,7 +99,7 @@ class WeatherBackend(Protocol):
         ...
 
     async def get_location_completion(
-        self, geolocation: Location, languages: list[str], search_term: str
+        self, weather_context: WeatherContext, search_term: str
     ) -> list[LocationCompletion] | None:  # pragma: no cover
         """Get a list of locations (cities and country) from partner
         Raises:

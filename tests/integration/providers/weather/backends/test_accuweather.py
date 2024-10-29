@@ -35,6 +35,7 @@ from merino.providers.weather.backends.protocol import (
     Forecast,
     Temperature,
     WeatherReport,
+    WeatherContext,
 )
 
 ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
@@ -146,22 +147,35 @@ def fixture_response_header() -> dict[str, str]:
     return {"Expires": expiry_time.strftime(ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT)}
 
 
-@pytest.fixture(name="geolocation")
-def fixture_geolocation() -> Location:
-    """Create a Location object for test."""
-    return Location(
-        country="US",
-        regions=["CA"],
-        city="San Francisco",
-        dma=807,
-        postal_code="94105",
+@pytest.fixture(name="weather_context_without_location_key")
+def fixture_weather_context_without_location_key() -> WeatherContext:
+    """Weather Context object for test."""
+    return WeatherContext(
+        Location(
+            country="US",
+            regions=["CA"],
+            city="San Francisco",
+            dma=807,
+            postal_code="94105",
+        ),
+        ["en-US", "fr"],
     )
 
 
-@pytest.fixture(name="languages")
-def fixture_languages() -> list[str]:
-    """Create a List of language strings for test."""
-    return ["en-US", "fr"]
+@pytest.fixture(name="weather_context_with_location_key")
+def fixture_weather_context_with_location_key() -> WeatherContext:
+    """Weather Context object for test."""
+    return WeatherContext(
+        Location(
+            country="US",
+            regions=["CA"],
+            city="San Francisco",
+            dma=807,
+            postal_code="94105",
+            key=ACCUWEATHER_LOCATION_KEY,
+        ),
+        ["en-US", "fr"],
+    )
 
 
 @pytest.fixture(name="accuweather_cached_location_key")
@@ -337,7 +351,7 @@ async def fixture_redis_client(
 def generate_accuweather_cache_keys(
     accuweather: AccuweatherBackend,
     geolocation: Location,
-    language: str,
+    language: str | None,
 ) -> CacheKeys:
     """Generate cache keys for accuweather location, forecast and current conditions using
     accuweather backend class
@@ -379,8 +393,7 @@ async def set_redis_keys(redis_client: Redis, keys_and_values: list[tuple]) -> N
 @pytest.mark.asyncio
 async def test_get_weather_report_from_cache_with_ttl(
     redis_client: Redis,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     statsd_mock: Any,
     expected_weather_report: WeatherReport,
     accuweather_parameters: dict[str, Any],
@@ -397,7 +410,11 @@ async def test_get_weather_report_from_cache_with_ttl(
     )
 
     # get cache keys
-    cache_keys = generate_accuweather_cache_keys(accuweather, geolocation, languages[0])
+    cache_keys = generate_accuweather_cache_keys(
+        accuweather,
+        weather_context_without_location_key.geolocation,
+        weather_context_without_location_key.languages[0],
+    )
 
     # set the above keys with their values as their corresponding fixtures
     keys_values_expiry = [
@@ -415,7 +432,9 @@ async def test_get_weather_report_from_cache_with_ttl(
     # called
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_without_location_key
+    )
 
     assert report == expected_weather_report
     client_mock.get.assert_not_called()
@@ -437,8 +456,7 @@ async def test_get_weather_report_from_cache_with_ttl(
 @pytest.mark.asyncio
 async def test_get_weather_report_with_both_current_conditions_and_forecast_cache_miss(
     redis_client: Redis,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     expected_weather_report: WeatherReport,
     accuweather_parameters: dict[str, Any],
     accuweather_cached_location_key: bytes,
@@ -454,7 +472,11 @@ async def test_get_weather_report_with_both_current_conditions_and_forecast_cach
 
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
-    cache_keys = generate_accuweather_cache_keys(accuweather, geolocation, languages[0])
+    cache_keys = generate_accuweather_cache_keys(
+        accuweather,
+        weather_context_without_location_key.geolocation,
+        weather_context_without_location_key.languages[0],
+    )
 
     await set_redis_keys(
         redis_client,
@@ -489,7 +511,9 @@ async def test_get_weather_report_with_both_current_conditions_and_forecast_cach
     ]
 
     client_mock.get.side_effect = responses
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_without_location_key
+    )
 
     assert report == expected_weather_report
     assert client_mock.get.call_count == 2
@@ -498,8 +522,7 @@ async def test_get_weather_report_with_both_current_conditions_and_forecast_cach
 @pytest.mark.asyncio
 async def test_get_weather_report_with_only_current_conditions_cache_miss(
     redis_client: Redis,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     expected_weather_report: WeatherReport,
     accuweather_parameters: dict[str, Any],
     accuweather_cached_location_key: bytes,
@@ -514,7 +537,11 @@ async def test_get_weather_report_with_only_current_conditions_cache_miss(
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
     # get and set cache keys
-    cache_keys = generate_accuweather_cache_keys(accuweather, geolocation, languages[0])
+    cache_keys = generate_accuweather_cache_keys(
+        accuweather,
+        weather_context_without_location_key.geolocation,
+        weather_context_without_location_key.languages[0],
+    )
 
     keys_values_expiry = [
         (cache_keys.location_key, accuweather_cached_location_key, LOCATION_KEY_TTL_SEC),
@@ -541,7 +568,9 @@ async def test_get_weather_report_with_only_current_conditions_cache_miss(
     ]
 
     client_mock.get.side_effect = responses
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_without_location_key
+    )
 
     assert report == expected_weather_report
     assert client_mock.get.call_count == 1
@@ -550,8 +579,7 @@ async def test_get_weather_report_with_only_current_conditions_cache_miss(
 @pytest.mark.asyncio
 async def test_get_weather_report_with_only_forecast_cache_miss(
     redis_client: Redis,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     expected_weather_report: WeatherReport,
     accuweather_parameters: dict[str, Any],
     accuweather_cached_location_key: bytes,
@@ -566,7 +594,11 @@ async def test_get_weather_report_with_only_forecast_cache_miss(
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
     # get and set cache keys
-    cache_keys = generate_accuweather_cache_keys(accuweather, geolocation, languages[0])
+    cache_keys = generate_accuweather_cache_keys(
+        accuweather,
+        weather_context_without_location_key.geolocation,
+        weather_context_without_location_key.languages[0],
+    )
 
     keys_values_expiry = [
         (cache_keys.location_key, accuweather_cached_location_key, LOCATION_KEY_TTL_SEC),
@@ -599,7 +631,9 @@ async def test_get_weather_report_with_only_forecast_cache_miss(
     ]
 
     client_mock.get.side_effect = responses
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_without_location_key
+    )
 
     assert report == expected_weather_report
     assert client_mock.get.call_count == 1
@@ -608,8 +642,7 @@ async def test_get_weather_report_with_only_forecast_cache_miss(
 @pytest.mark.asyncio
 async def test_get_weather_report_with_location_key_from_cache(
     redis_client: Redis,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_with_location_key: WeatherContext,
     statsd_mock: Any,
     expected_weather_report_via_location_key: WeatherReport,
     accuweather_parameters: dict[str, Any],
@@ -624,7 +657,11 @@ async def test_get_weather_report_with_location_key_from_cache(
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
     # get cache keys, omitting the location key here
-    cache_keys = generate_accuweather_cache_keys(accuweather, geolocation, languages[0])
+    cache_keys = generate_accuweather_cache_keys(
+        accuweather,
+        weather_context_with_location_key.geolocation,
+        weather_context_with_location_key.languages[0],
+    )
 
     # set the above keys with their values as their corresponding fixtures
     keys_and_values = [
@@ -638,7 +675,7 @@ async def test_get_weather_report_with_location_key_from_cache(
     await set_redis_keys(redis_client, keys_and_values)
 
     report: Optional[WeatherReport] = await accuweather.get_weather_report(
-        geolocation, languages, ACCUWEATHER_LOCATION_KEY
+        weather_context_with_location_key
     )
     assert report == expected_weather_report_via_location_key
     client_mock.get.assert_not_called()
@@ -659,8 +696,7 @@ async def test_get_weather_report_with_location_key_from_cache(
 @pytest.mark.asyncio
 async def test_get_weather_report_via_location_key_with_both_current_conditions_and_forecast_cache_miss(
     redis_client: Redis,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_with_location_key: WeatherContext,
     expected_weather_report_via_location_key: WeatherReport,
     accuweather_parameters: dict[str, Any],
     accuweather_cached_location_key: bytes,
@@ -707,7 +743,7 @@ async def test_get_weather_report_via_location_key_with_both_current_conditions_
 
     client_mock.get.side_effect = responses
     report: Optional[WeatherReport] = await accuweather.get_weather_report(
-        geolocation, languages, ACCUWEATHER_LOCATION_KEY
+        weather_context_with_location_key
     )
 
     assert report == expected_weather_report_via_location_key
@@ -717,8 +753,7 @@ async def test_get_weather_report_via_location_key_with_both_current_conditions_
 @pytest.mark.asyncio
 async def test_get_weather_report_via_location_key_with_only_current_conditions_cache_miss(
     redis_client: Redis,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_with_location_key: WeatherContext,
     expected_weather_report_via_location_key: WeatherReport,
     accuweather_parameters: dict[str, Any],
     accuweather_cached_location_key: bytes,
@@ -735,7 +770,11 @@ async def test_get_weather_report_via_location_key_with_only_current_conditions_
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
     # get and set cache keys
-    cache_keys = generate_accuweather_cache_keys(accuweather, geolocation, languages[0])
+    cache_keys = generate_accuweather_cache_keys(
+        accuweather,
+        weather_context_with_location_key.geolocation,
+        weather_context_with_location_key.languages[0],
+    )
 
     keys_values_expiry = [
         (cache_keys.forecast_key, accuweather_cached_forecast_fahrenheit, FORECAST_TTL_SEC),
@@ -762,7 +801,7 @@ async def test_get_weather_report_via_location_key_with_only_current_conditions_
 
     client_mock.get.side_effect = responses
     report: Optional[WeatherReport] = await accuweather.get_weather_report(
-        geolocation, languages, ACCUWEATHER_LOCATION_KEY
+        weather_context_with_location_key
     )
 
     assert report == expected_weather_report_via_location_key
@@ -772,8 +811,7 @@ async def test_get_weather_report_via_location_key_with_only_current_conditions_
 @pytest.mark.asyncio
 async def test_get_weather_report_via_location_key_with_only_forecast_cache_miss(
     redis_client: Redis,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_with_location_key: WeatherContext,
     expected_weather_report_via_location_key: WeatherReport,
     accuweather_parameters: dict[str, Any],
     accuweather_forecast_response_fahrenheit: bytes,
@@ -787,7 +825,11 @@ async def test_get_weather_report_via_location_key_with_only_forecast_cache_miss
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
     # get and set cache keys
-    cache_keys = generate_accuweather_cache_keys(accuweather, geolocation, languages[0])
+    cache_keys = generate_accuweather_cache_keys(
+        accuweather,
+        weather_context_with_location_key.geolocation,
+        weather_context_with_location_key.languages[0],
+    )
 
     keys_values_expiry = [
         (
@@ -820,7 +862,7 @@ async def test_get_weather_report_via_location_key_with_only_forecast_cache_miss
 
     client_mock.get.side_effect = responses
     report: Optional[WeatherReport] = await accuweather.get_weather_report(
-        geolocation, languages, ACCUWEATHER_LOCATION_KEY
+        weather_context_with_location_key
     )
 
     assert report == expected_weather_report_via_location_key
@@ -832,8 +874,7 @@ async def test_get_weather_report_with_location_key_with_cache_error(
     redis_client: Redis,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_with_location_key: WeatherContext,
     statsd_mock: Any,
     expected_weather_report_via_location_key: WeatherReport,
     accuweather_parameters: dict[str, Any],
@@ -855,7 +896,7 @@ async def test_get_weather_report_with_location_key_with_cache_error(
 
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
-    report = await accuweather.get_weather_report(geolocation, languages, ACCUWEATHER_LOCATION_KEY)
+    report = await accuweather.get_weather_report(weather_context_with_location_key)
     records: list[LogRecord] = filter_caplog(
         caplog.records, "merino.providers.weather.backends.accuweather.backend"
     )

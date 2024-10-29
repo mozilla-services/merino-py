@@ -22,6 +22,7 @@ from merino.providers.weather.backends.protocol import (
     LocationCompletion,
     WeatherBackend,
     WeatherReport,
+    WeatherContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -109,17 +110,16 @@ class Provider(BaseProvider):
         is_location_completion_request = srequest.request_type == "location"
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
-
+        weather_context = WeatherContext(geolocation, languages)
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
                 if is_location_completion_request:
                     location_completions = await self.backend.get_location_completion(
-                        geolocation, languages, search_term=srequest.query
+                        weather_context, search_term=srequest.query
                     )
                 else:
-                    weather_report = await self.backend.get_weather_report(
-                        geolocation, languages, srequest.query
-                    )
+                    weather_context.geolocation.key = srequest.query
+                    weather_report = await self.backend.get_weather_report(weather_context)
 
         except BackendError as backend_error:
             logger.warning(backend_error)

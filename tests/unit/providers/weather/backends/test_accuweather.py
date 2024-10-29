@@ -44,6 +44,7 @@ from merino.providers.weather.backends.protocol import (
     LocationCompletionGeoDetails,
     Temperature,
     WeatherReport,
+    WeatherContext,
 )
 from tests.types import FilterCaplogFixture
 
@@ -287,6 +288,37 @@ def fixture_languages() -> list[str]:
 def fixture_language() -> str:
     """Language list to get weather report."""
     return "en-US"
+
+
+@pytest.fixture(name="weather_context_with_location_key")
+def fixture_weather_context_with_location_key() -> WeatherContext:
+    """Weather Context Object with location key for tests."""
+    return WeatherContext(
+        Location(
+            country="US",
+            regions=["CA", "BC"],
+            city="San Francisco",
+            dma=807,
+            postal_code="94105",
+            key="39376",
+        ),
+        ["en-US", "fr"],
+    )
+
+
+@pytest.fixture(name="weather_context_without_location_key")
+def fixture_weather_context_without_location_key() -> WeatherContext:
+    """Weather Context Object with location key for tests."""
+    return WeatherContext(
+        Location(
+            country="US",
+            regions=["CA", "BC"],
+            city="San Francisco",
+            dma=807,
+            postal_code="94105",
+        ),
+        ["en-US", "fr"],
+    )
 
 
 @pytest.fixture(name="expected_weather_report")
@@ -927,8 +959,7 @@ async def test_get_weather_report(
     mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     expected_weather_report: WeatherReport,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     accuweather_location_response: bytes,
     accuweather_current_conditions_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
@@ -978,7 +1009,9 @@ async def test_get_weather_report(
         ".store_request_into_cache"
     ).return_value = TEST_CACHE_TTL_SEC
 
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_without_location_key
+    )
 
     assert report == expected_weather_report
 
@@ -988,8 +1021,7 @@ async def test_get_weather_report_without_region(
     mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     expected_weather_report: WeatherReport,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     accuweather_location_response: bytes,
     accuweather_current_conditions_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
@@ -1039,10 +1071,13 @@ async def test_get_weather_report_without_region(
         "merino.providers.weather.backends.accuweather.AccuweatherBackend"
         ".store_request_into_cache"
     ).return_value = TEST_CACHE_TTL_SEC
-
+    geolocation = weather_context_without_location_key.geolocation
     geolocation = geolocation.model_copy()
     geolocation.regions = None
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    weather_context_without_location_key.geolocation = geolocation
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_without_location_key
+    )
 
     assert report == expected_weather_report
 
@@ -1051,8 +1086,7 @@ async def test_get_weather_report_without_region(
 async def test_get_weather_report_with_fallback_city_endpoint_returns_none(
     mocker: MockerFixture,
     accuweather: AccuweatherBackend,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     accuweather_location_response: bytes,
     accuweather_current_conditions_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
@@ -1131,7 +1165,9 @@ async def test_get_weather_report_with_fallback_city_endpoint_returns_none(
         ".store_request_into_cache"
     ).return_value = TEST_CACHE_TTL_SEC
 
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_without_location_key
+    )
 
     assert report is None
 
@@ -1146,8 +1182,7 @@ async def test_get_weather_report_with_fallback_city_endpoint_returns_none(
 @pytest.mark.asyncio
 async def test_get_weather_report_location_key_fetch_failed(
     accuweather: AccuweatherBackend,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     response_header: dict[str, str],
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
@@ -1177,7 +1212,9 @@ async def test_get_weather_report_location_key_fetch_failed(
         ),
     ]
 
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_without_location_key
+    )
 
     assert report is None
 
@@ -1196,9 +1233,7 @@ async def test_get_weather_report_with_location_key(
     mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     expected_weather_report_via_location_key: WeatherReport,
-    geolocation: Location,
-    languages: list[str],
-    accuweather_location_key: str,
+    weather_context_with_location_key: WeatherContext,
     accuweather_location_response: bytes,
     accuweather_current_conditions_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
@@ -1236,9 +1271,7 @@ async def test_get_weather_report_with_location_key(
         ".store_request_into_cache"
     ).return_value = TEST_CACHE_TTL_SEC
     report: Optional[WeatherReport] = await accuweather.get_weather_report(
-        geolocation,
-        languages,
-        accuweather_location_key,
+        weather_context_with_location_key
     )
 
     assert report == expected_weather_report_via_location_key
@@ -1247,8 +1280,7 @@ async def test_get_weather_report_with_location_key(
 @pytest.mark.asyncio
 async def test_get_weather_report_with_cache_fetch_error(
     mocker: MockerFixture,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     accuweather_parameters: dict[str, Any],
     statsd_mock: Any,
     caplog: LogCaptureFixture,
@@ -1272,7 +1304,9 @@ async def test_get_weather_report_with_cache_fetch_error(
     )
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_without_location_key
+    )
 
     assert report is None
     client_mock.get.assert_not_called()
@@ -1291,8 +1325,7 @@ async def test_get_weather_report_with_cache_fetch_error(
 @pytest.mark.asyncio
 async def test_get_weather_report_failed_location_query(
     accuweather: AccuweatherBackend,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     response_header: dict[str, str],
 ) -> None:
     """Test that the get_weather_report method returns None if the AccuWeather
@@ -1312,7 +1345,9 @@ async def test_get_weather_report_failed_location_query(
         ),
     )
 
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_without_location_key
+    )
 
     assert report is None
 
@@ -1320,8 +1355,7 @@ async def test_get_weather_report_failed_location_query(
 @pytest.mark.asyncio
 async def test_get_weather_report_failed_current_conditions_query(
     accuweather: AccuweatherBackend,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_with_location_key: WeatherContext,
     accuweather_location_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
     response_header: dict[str, str],
@@ -1365,7 +1399,9 @@ async def test_get_weather_report_failed_current_conditions_query(
         ),
     ]
 
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_with_location_key
+    )
 
     assert report is None
 
@@ -1373,8 +1409,7 @@ async def test_get_weather_report_failed_current_conditions_query(
 @pytest.mark.asyncio
 async def test_get_weather_report_handles_exception_group_properly(
     accuweather: AccuweatherBackend,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     accuweather_location_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
     response_header: dict[str, str],
@@ -1407,7 +1442,7 @@ async def test_get_weather_report_handles_exception_group_properly(
     )
 
     with pytest.raises(AccuweatherError) as accuweather_error:
-        await accuweather.get_weather_report(geolocation, languages)
+        await accuweather.get_weather_report(weather_context_without_location_key)
 
     assert str(accuweather_error.value) == expected_error_value
 
@@ -1415,8 +1450,7 @@ async def test_get_weather_report_handles_exception_group_properly(
 @pytest.mark.asyncio
 async def test_get_weather_report_handles_non_http_exception_group_properly(
     accuweather: AccuweatherBackend,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     accuweather_location_response: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
     response_header: dict[str, str],
@@ -1456,7 +1490,7 @@ async def test_get_weather_report_handles_non_http_exception_group_properly(
     )
 
     with pytest.raises(AccuweatherError) as accuweather_error:
-        await accuweather.get_weather_report(geolocation, languages)
+        await accuweather.get_weather_report(weather_context_without_location_key)
 
     assert str(accuweather_error_for_current_conditions) in str(accuweather_error.value)
     assert str(accuweather_error_for_forecast) in str(accuweather_error.value)
@@ -1465,8 +1499,7 @@ async def test_get_weather_report_handles_non_http_exception_group_properly(
 @pytest.mark.asyncio
 async def test_get_weather_report_failed_forecast_query(
     accuweather: AccuweatherBackend,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     accuweather_location_response: bytes,
     accuweather_current_conditions_response: bytes,
     response_header: dict[str, str],
@@ -1510,24 +1543,32 @@ async def test_get_weather_report_failed_forecast_query(
         ),
     ]
 
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(geolocation, languages)
+    report: Optional[WeatherReport] = await accuweather.get_weather_report(
+        weather_context_without_location_key
+    )
 
     assert report is None
 
 
 @pytest.mark.parametrize(
-    "location",
+    "weather_context",
     [
-        Location(
-            country="US",
-            regions=["CA"],
-            dma=807,
+        WeatherContext(
+            Location(
+                country="US",
+                regions=["CA"],
+                dma=807,
+            ),
+            ["en-US"],
         ),
-        Location(
-            regions=["CA"],
-            city="San Francisco",
-            dma=807,
-            postal_code="94105",
+        WeatherContext(
+            Location(
+                regions=["CA"],
+                city="San Francisco",
+                dma=807,
+                postal_code="94105",
+            ),
+            ["en-US"],
         ),
     ],
     ids=["country", "city"],
@@ -1535,8 +1576,7 @@ async def test_get_weather_report_failed_forecast_query(
 @pytest.mark.asyncio
 async def test_get_weather_report_invalid_location(
     accuweather: AccuweatherBackend,
-    location: Location,
-    languages: list[str],
+    weather_context: WeatherContext,
     statsd_mock: Any,
 ) -> None:
     """Test that the get_weather_report method raises an error if location information
@@ -1544,7 +1584,7 @@ async def test_get_weather_report_invalid_location(
     """
     expected_result = None
 
-    result = await accuweather.get_weather_report(location, languages)
+    result = await accuweather.get_weather_report(weather_context)
 
     assert expected_result == result
 

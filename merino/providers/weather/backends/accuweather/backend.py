@@ -26,6 +26,7 @@ from merino.providers.weather.backends.protocol import (
     LocationCompletion,
     Temperature,
     WeatherReport,
+    WeatherContext,
 )
 from merino.providers.weather.backends.accuweather import pathfinder
 from merino.providers.weather.backends.accuweather.utils import (
@@ -475,18 +476,15 @@ class AccuweatherBackend:
             ALIAS_PARAM: ALIAS_PARAM_VALUE,
         }
 
-    async def get_weather_report(
-        self, geolocation: Location, languages: list[str], location_key: str | None = None
-    ) -> WeatherReport | None:
+    async def get_weather_report(self, weather_context: WeatherContext) -> WeatherReport | None:
         """Get weather report either via location key or geolocation."""
-        language = get_language(languages)
-        if location_key:
-            return await self.get_weather_report_with_location_key(location_key, language)
+        if weather_context.geolocation.key:
+            return await self.get_weather_report_with_location_key(weather_context)
 
-        return await self.get_weather_report_with_geolocation(geolocation, language)
+        return await self.get_weather_report_with_geolocation(weather_context)
 
     async def get_weather_report_with_location_key(
-        self, location_key: str, language: str
+        self, weather_context: WeatherContext
     ) -> WeatherReport | None:
         """Get weather information from AccuWeather.
 
@@ -504,6 +502,8 @@ class AccuweatherBackend:
         Raises:
             AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
         """
+        language = get_language(weather_context.languages)
+        location_key = weather_context.geolocation.key
         # Look up for all the weather data from the cache.
         try:
             with self.metrics_client.timeit(
@@ -532,8 +532,7 @@ class AccuweatherBackend:
 
         self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)
         cached_report = self.parse_cached_data(cached_data)
-        location = Location(key=location_key)
-        return await self.make_weather_report(cached_report, language, location)
+        return await self.make_weather_report(cached_report, weather_context)
 
     async def _fetch_from_cache(
         self, country: str | None, region: str | None, city: str | None, language: str
@@ -570,9 +569,7 @@ class AccuweatherBackend:
             return cached_data if cached_data else None
 
     async def get_weather_report_with_geolocation(
-        self,
-        geolocation: Location,
-        language: str,
+        self, weather_context: WeatherContext
     ) -> WeatherReport | None:
         """Get weather information from AccuWeather.
         Firstly, it will look up the Redis cache for the location key, current condition,
@@ -587,8 +584,10 @@ class AccuweatherBackend:
         Raises:
             AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
         """
+        geolocation: Location = weather_context.geolocation
         country: str | None = geolocation.country
         city: str | None = geolocation.city
+        language: str = get_language(weather_context.languages)
 
         if country is None or city is None:
             self.metrics_client.increment(
@@ -609,19 +608,21 @@ class AccuweatherBackend:
         self.emit_cache_fetch_metrics(cached_data)
         cached_report = self.parse_cached_data(cached_data)
 
-        return await self.make_weather_report(cached_report, language, geolocation)
+        return await self.make_weather_report(cached_report, weather_context)
 
     async def make_weather_report(
-        self, cached_report: WeatherData, language: str, geolocation: Location
+        self, cached_report: WeatherData, weather_context: WeatherContext
     ) -> WeatherReport | None:
         """Make a `WeatherReport` either using the cached data or fetching from AccuWeather.
 
         Raises:
             AccuWeatherError: Failed request or 4xx and 5xx response from AccuWeather.
         """
+        geolocation = weather_context.geolocation
         country = geolocation.country
         city = geolocation.city
         location_key = geolocation.key
+        language = get_language(weather_context.languages)
 
         async def as_awaitable(val: Any) -> Any:
             """Wrap a non-awaitable value into a coroutine and resolve it right away."""
