@@ -50,11 +50,12 @@ def do_uploader_test(
     }
     downloader_kwargs: dict[str, Any] = {
         "alternates_path": "/alternates/{country_code}.zip",
+        "city_alternates_iso_languages": ["en", "iata"],
         "base_url": "https://localhost",
         "country_code": "US",
         "geonames_path": "/{country_code}.zip",
-        "alternates_iso_languages": ["en", "abbr", "iata"],
         "population_threshold": 12345,
+        "region_alternates_iso_languages": ["abbr"],
     }
 
     upload(
