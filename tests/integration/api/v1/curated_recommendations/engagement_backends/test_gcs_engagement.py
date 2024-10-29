@@ -51,13 +51,12 @@ def create_blob(bucket, data):
     """Create a blob with given data."""
     blob = bucket.blob(settings.curated_recommendations.gcs.engagement.blob_name)
     blob.upload_from_string(json.dumps(data))
-    time.sleep(1)
     return blob
 
 
 async def wait_until_engagement_is_updated(backend: GcsEngagement):
     """Wait for some time to pass to update engagement."""
-    max_wait_time_sec = 5
+    max_wait_time_sec = 2
     start_time = time.time()
     while time.time() - start_time < max_wait_time_sec:
         if backend.update_count > 0:
