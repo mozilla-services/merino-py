@@ -71,10 +71,10 @@ collection_option = typer.Option(
     help="Remote settings collection ID",
 )
 
-country_code_option = typer.Option(
-    job_settings.country_code,
+country_codes_option = typer.Option(
+    job_settings.country_codes,
     "--country-code",
-    help="Country code of geonames to select",
+    help="Country codes of geonames to select",
 )
 
 dry_run_option = typer.Option(
@@ -171,7 +171,7 @@ def upload(
     bucket: str = bucket_option,
     chunk_size: int = chunk_size_option,
     collection: str = collection_option,
-    country_code: str = country_code_option,
+    country_codes: list[str] = country_codes_option,
     dry_run: bool = dry_run_option,
     geonames_path: str = geonames_path_option,
     city_alternates_iso_languages: list[str] = city_alternates_iso_languages_option,
@@ -185,16 +185,21 @@ def upload(
     and selection, and upload it to remote settings.
 
     """
-    downloader = GeonamesDownloader(
-        alternates_path=alternates_path,
-        base_url=base_url,
-        city_alternates_iso_languages=city_alternates_iso_languages,
-        country_code=country_code,
-        geonames_path=geonames_path,
-        population_threshold=population_threshold,
-        region_alternates_iso_languages=region_alternates_iso_languages,
-    )
-    state = downloader.download()
+    downloader_states = []
+    total_geoname_count = 0
+    for country_code in country_codes:
+        downloader = GeonamesDownloader(
+            alternates_path=alternates_path,
+            base_url=base_url,
+            city_alternates_iso_languages=city_alternates_iso_languages,
+            country_code=country_code,
+            geonames_path=geonames_path,
+            population_threshold=population_threshold,
+            region_alternates_iso_languages=region_alternates_iso_languages,
+        )
+        state = downloader.download()
+        total_geoname_count += len(state.geonames)
+        downloader_states.append(state)
 
     with ChunkedRemoteSettingsUploader(
         allow_delete=True,
@@ -211,5 +216,6 @@ def upload(
         if not keep_existing_records:
             uploader.delete_records()
 
-        for g in state.geonames:
-            uploader.add_item(g)
+        for state in downloader_states:
+            for g in state.geonames:
+                uploader.add_item(g)

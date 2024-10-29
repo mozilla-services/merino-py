@@ -4,6 +4,7 @@
 
 """Unit tests for __init__.py module."""
 
+from itertools import chain
 from typing import Any
 
 from merino.jobs.geonames_uploader.downloader import (
@@ -17,6 +18,7 @@ from merino.jobs.geonames_uploader import GeonamesChunk, upload
 def do_uploader_test(
     mocker,
     geonames: list[Geoname],
+    country_codes: list[str],
     keep_existing_records: bool = True,
 ) -> None:
     """Perform a geonames upload test."""
@@ -38,7 +40,7 @@ def do_uploader_test(
     )
     mock_chunked_uploader = mock_chunked_uploader_ctor.return_value.__enter__.return_value
 
-    # Do the upload.
+    # kwargs common to `upload()` and the chunked uploader.
     upload_kwargs: dict[str, Any] = {
         "auth": "auth",
         "bucket": "bucket",
@@ -48,25 +50,35 @@ def do_uploader_test(
         "record_type": "geonames",
         "server": "server",
     }
-    downloader_kwargs: dict[str, Any] = {
+
+    # kwargs common to `upload()` and `GeonamesDownloader`.
+    common_kwargs: dict[str, Any] = {
         "alternates_path": "/alternates/{country_code}.zip",
         "city_alternates_iso_languages": ["en", "iata"],
         "base_url": "https://localhost",
-        "country_code": "US",
         "geonames_path": "/{country_code}.zip",
         "population_threshold": 12345,
         "region_alternates_iso_languages": ["abbr"],
     }
 
+    # Do the upload.
     upload(
         **upload_kwargs,
-        **downloader_kwargs,
+        **common_kwargs,
+        country_codes=country_codes,
         keep_existing_records=keep_existing_records,
     )
 
     # Check geonames downloader calls.
-    mock_downloader_ctor.assert_called_once_with(**downloader_kwargs)
-    mock_downloader.download.assert_called_once()
+    mock_downloader_ctor.assert_has_calls(
+        list(
+            chain.from_iterable(
+                (mocker.call(country_code=c, **common_kwargs), mocker.call().download())
+                for c in country_codes
+            )
+        )
+    )
+    mock_downloader.download.assert_has_calls([mocker.call()] * len(country_codes))
 
     # Check chunked uploader calls.
     mock_chunked_uploader_ctor.assert_called_once_with(
@@ -88,6 +100,8 @@ def test_upload_without_deleting(mocker):
     """upload(keep_existing_records=True)"""
     do_uploader_test(
         mocker=mocker,
+        country_codes=["US"],
+        keep_existing_records=True,
         geonames=[
             Geoname(
                 id="1",
@@ -102,7 +116,6 @@ def test_upload_without_deleting(mocker):
                 alternate_names=set(["waterloo"]),
             ),
         ],
-        keep_existing_records=True,
     )
 
 
@@ -110,6 +123,8 @@ def test_delete_and_upload(mocker):
     """upload(keep_existing_records=False)"""
     do_uploader_test(
         mocker=mocker,
+        country_codes=["US"],
+        keep_existing_records=False,
         geonames=[
             Geoname(
                 id="1",
@@ -124,5 +139,27 @@ def test_delete_and_upload(mocker):
                 alternate_names=set(["waterloo"]),
             ),
         ],
-        keep_existing_records=False,
+    )
+
+
+def test_upload_multiple_countries(mocker):
+    """upload() with multiple countries"""
+    do_uploader_test(
+        mocker=mocker,
+        country_codes=["US", "CA"],
+        keep_existing_records=True,
+        geonames=[
+            Geoname(
+                id="1",
+                name="Waterloo",
+                latitude="34.91814",
+                longitude="-88.0642",
+                feature_class="P",
+                feature_code="PPL",
+                country_code="US",
+                admin1_code="AL",
+                population=200,
+                alternate_names=set(["waterloo"]),
+            ),
+        ],
     )

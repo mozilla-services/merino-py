@@ -9,6 +9,7 @@ regions, and countries [1]. See technical documentation at [2].
 
 import logging
 from typing import Any, Callable
+import unicodedata
 
 import csv
 import requests
@@ -93,7 +94,7 @@ class Geoname:
         self.alternate_names = alternate_names or set([])
         # Always make sure `name` is present as an alternate name. The client
         # implementation relies on this.
-        self.alternate_names.add(name.casefold())
+        self.alternate_names.update(_normalize_name(name))
 
     def to_json_serializable(self) -> dict[str, Any]:
         """Return a `dict` version of the geoname that is JSON serializable."""
@@ -288,7 +289,7 @@ class GeonamesDownloader:
             elif geoname.feature_class == FEATURE_CLASS_REGION:
                 langs = self.region_alternates_iso_languages
             if langs and iso_language in langs:
-                geoname.alternate_names.add(name.casefold())
+                geoname.alternate_names.update(_normalize_name(name))
                 state.metrics.included_alternates_count += 1
 
     def _download(
@@ -312,3 +313,18 @@ class GeonamesDownloader:
                 for line in reader:
                     process_item(line, state)
         return state
+
+
+def _remove_diacritics(value: str) -> str:
+    nfkd = unicodedata.normalize("NFKD", value)
+    return "".join([c for c in nfkd if not unicodedata.combining(c)])
+
+
+def _normalize_name(name: str) -> set[str]:
+    normalized = set()
+    casefolded = name.casefold()
+    normalized.add(casefolded)
+    without_diacritics = _remove_diacritics(casefolded)
+    if casefolded != without_diacritics:
+        normalized.add(without_diacritics)
+    return normalized

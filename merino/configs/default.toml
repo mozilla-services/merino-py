@@ -647,11 +647,13 @@ city_alternates_iso_languages  = ["en", "en-US", "iata", "icao", "faac", "abbr"]
 # interfere with prefix matching, so we only include "abbr". Note that full
 # names like "California" are always included in the output.
 region_alternates_iso_languages  = ["abbr"]
-# MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY_CODE
-# Which country's geonames to upload. If we expand to more countries, we should
-# probably remove this from the config and instead require `--country-code` to
-# be passed on the command line when running the job.
-country_code = "US"
+# MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY_CODES
+# List of countries whose geonames will be uploaded. All countries' data will be
+# uploaded together without any separation into different records, attachments,
+# collections, etc. This is only a short-term hack to opportunistically include
+# Canadian cities, since there are many Canadians Mozillians and relatively few
+# Canadian cities over the population threshold.
+country_codes = ["US", "CA"]
 # MERINO_JOBS__GEONAMES_UPLOADER__RECORD_TYPE
 # The "type" of each geonames remote settings record.
 record_type = "geonames"
