@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 # Column indexes in the `geoname` table described in the GeoNames documentation.
 GEONAME_COL_ID = 0
 GEONAME_COL_NAME = 1
+GEONAME_COL_LATITUDE = 4
+GEONAME_COL_LONGITUDE = 5
 GEONAME_COL_FEATURE_CLASS = 6
 GEONAME_COL_FEATURE_CODE = 7
 GEONAME_COL_COUNTRY_CODE = 8
@@ -56,6 +58,8 @@ class Geoname:
 
     id: int
     name: str
+    latitude: str
+    longitude: str
     feature_class: str
     feature_code: str
     country_code: str
@@ -67,6 +71,8 @@ class Geoname:
         self,
         id: int,
         name: str,
+        latitude: str,
+        longitude: str,
         feature_class: str,
         feature_code: str,
         country_code: str,
@@ -77,6 +83,8 @@ class Geoname:
         """Initialize the geoname."""
         self.id = id
         self.name = name
+        self.latitude = latitude
+        self.longitude = longitude
         self.feature_class = feature_class
         self.feature_code = feature_code
         self.country_code = country_code
@@ -237,6 +245,8 @@ class GeonamesDownloader:
 
     def _process_geoname(self, line: list[str], state: DownloadState) -> None:
         geoname_id = int(line[GEONAME_COL_ID])
+        latitude = line[GEONAME_COL_LATITUDE]
+        longitude = line[GEONAME_COL_LONGITUDE]
         feature_class = line[GEONAME_COL_FEATURE_CLASS]
         feature_code = line[GEONAME_COL_FEATURE_CODE]
         population = int(line[GEONAME_COL_POPULATION])
@@ -247,6 +257,8 @@ class GeonamesDownloader:
                 geoname = Geoname(
                     id=geoname_id,
                     name=line[GEONAME_COL_NAME],
+                    latitude=latitude,
+                    longitude=longitude,
                     feature_class=feature_class,
                     feature_code=feature_code,
                     country_code=line[GEONAME_COL_COUNTRY_CODE],

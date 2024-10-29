@@ -91,6 +91,8 @@ def test_upload_without_deleting(mocker):
             Geoname(
                 id="1",
                 name="Waterloo",
+                latitude="34.91814",
+                longitude="-88.0642",
                 feature_class="P",
                 feature_code="PPL",
                 country_code="US",
@@ -111,6 +113,8 @@ def test_delete_and_upload(mocker):
             Geoname(
                 id="1",
                 name="Waterloo",
+                latitude="34.91814",
+                longitude="-88.0642",
                 feature_class="P",
                 feature_code="PPL",
                 country_code="US",
