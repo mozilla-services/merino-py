@@ -2,17 +2,18 @@
 
 WIKIPEDIA_TITLE_BLOCKLIST: set[str] = set()
 TOP_PICKS_BLOCKLIST: set[str] = {
-    "furaffinity",
-    "worldstarhiphop",
-    "myvidster",
-    "urbandictionary",
-    "megapersonals",
     "4channel",
-    "thegatewaypundit",
-    "winloot",
-    "sniffies",
     "draftkings",
+    "furaffinity",
     "internalfb",
+    "megapersonals",
+    "myvidster",
+    "rt",
+    "sniffies",
+    "thegatewaypundit",
+    "urbandictionary",
+    "winloot",
+    "worldstarhiphop",
 }
 
 FAKESPOT_CSV_UPLOADER_BLOCKLIST: set[str] = set()
