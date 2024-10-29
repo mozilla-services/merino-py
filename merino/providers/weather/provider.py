@@ -118,7 +118,7 @@ class Provider(BaseProvider):
                     )
                 else:
                     weather_report = await self.backend.get_weather_report(
-                        geolocation, srequest.query
+                        geolocation, languages, srequest.query
                     )
 
         except BackendError as backend_error:
