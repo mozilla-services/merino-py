@@ -47,7 +47,7 @@ async def test_initialize(adm: Provider, adm_suggestion_content: SuggestionConte
         ("example   ", "example"),
         ("   example   ", "example"),
     ],
-    ids={
+    ids=[
         "normalized",
         "uppercase",
         "mixed-case",
@@ -56,7 +56,7 @@ async def test_initialize(adm: Provider, adm_suggestion_content: SuggestionConte
         "multi-leading space",
         "multi-tail space",
         "leading and trailing space",
-    },
+    ],
 )
 def test_normalize_query(adm: Provider, query: str, expected: str) -> None:
     """Test for the query normalization method to strip trailing space and
