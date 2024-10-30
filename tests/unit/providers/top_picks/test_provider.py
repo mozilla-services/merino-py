@@ -187,7 +187,7 @@ async def test_fetch_top_picks_data_fail(
         ("example   ", "example"),
         ("   example   ", "example"),
     ],
-    ids={
+    ids=[
         "normalized",
         "uppercase",
         "mixed-case",
@@ -196,7 +196,7 @@ async def test_fetch_top_picks_data_fail(
         "multi-leading space",
         "multi-tail space",
         "leading and trailing space",
-    },
+    ],
 )
 def test_normalize_query(top_picks: Provider, query: str, expected: str) -> None:
     """Test for the query normalization method to strip trailing space and

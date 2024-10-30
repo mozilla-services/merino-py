@@ -13,6 +13,13 @@ from pydantic import ValidationError
 from merino.featureflags import FeatureFlags, session_id_context
 
 
+@pytest.fixture(autouse=True)
+def reset_session_id_context():
+    """Automatically reset session_id_context after each test."""
+    yield
+    session_id_context.set(None)
+
+
 def test_missing():
     """Test that is_enabled will return False if a flag is undefined."""
     flags = FeatureFlags()

@@ -4,6 +4,8 @@
 
 """Unit tests for utils.py module."""
 
+import logging
+
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
@@ -104,6 +106,8 @@ def test_favicon_downloader_handles_exception(
     requests_mock, mocker: MockerFixture, caplog: LogCaptureFixture
 ):
     """Test FaviconDownloader using requests_mock"""
+    caplog.set_level(logging.INFO)
+
     requests_mock.register_uri(
         "GET",
         "http://icon",

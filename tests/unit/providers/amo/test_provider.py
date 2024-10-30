@@ -2,6 +2,7 @@
 
 import datetime
 import time
+from logging import ERROR, INFO
 from typing import Any
 
 import freezegun
@@ -151,6 +152,7 @@ async def test_query_return_match(
 @pytest.mark.asyncio
 async def test_query_error(caplog: LogCaptureFixture, keywords: dict[SupportedAddon, set[str]]):
     """Test that provider can handle query error."""
+    caplog.set_level(ERROR)
     provider = AddonsProvider(
         backend=AmoErrorBackend(),
         keywords=keywords,
@@ -173,6 +175,7 @@ async def test_fetch_addon_info_error(
     caplog: LogCaptureFixture, keywords: dict[SupportedAddon, set[str]]
 ):
     """Test that provider can handle fetch errors."""
+    caplog.set_level(INFO)
     provider = AddonsProvider(
         backend=AmoInitErrorBackend(),
         keywords=keywords,
