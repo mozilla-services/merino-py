@@ -6,6 +6,8 @@ from pydantic import BaseModel, HttpUrl
 
 from merino.middleware.geolocation import Location
 
+from dataclasses import dataclass
+
 
 class Temperature(BaseModel):
     """Model for temperature with C and F values."""
@@ -72,12 +74,12 @@ class LocationCompletion(BaseModel):
     administrative_area: LocationCompletionGeoDetails
 
 
+@dataclass
 class WeatherContext:
     """Class that contains context needed to make weather reports."""
 
-    def __init__(self, geolocation: Location, languages: list[str]):
-        self.geolocation = geolocation
-        self.languages = languages
+    geolocation: Location
+    languages: list[str]
 
 
 class WeatherBackend(Protocol):
