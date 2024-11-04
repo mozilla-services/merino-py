@@ -170,7 +170,7 @@ a GKE cluster
   EXTERNAL_IP=$(kubectl get svc locust-master -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
   echo http://$EXTERNAL_IP:8089
   ```
-* Select the `MerinoSmokeLoadTestShape`, this option has pre-defined settings and will last 10 minutes
+* Select the `MerinoSmokeLoadTestShape`, this option has pre-defined settings and will last 5 minutes
 * Select "Start Swarming"
 
 #### 2. Stop Load Test
