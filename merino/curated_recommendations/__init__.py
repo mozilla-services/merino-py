@@ -130,7 +130,7 @@ def init_provider() -> None:
     _provider = CuratedRecommendationsProvider(
         corpus_backend=corpus_backend,
         extended_expiration_corpus_backend=extended_expiration_corpus_backend,
-        engagement_backend=init_engagement_backend(),
+        engagement_backend=engagement_backend,
         prior_backend=init_prior_backend(),
         fakespot_backend=init_fakespot_backend(),
     )

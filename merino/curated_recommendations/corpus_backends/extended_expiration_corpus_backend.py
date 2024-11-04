@@ -10,10 +10,8 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 )
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 
-EXPIRATION_WINDOW = 3  # Default number of past schedule dates to fetch
 
-
-class ExtendedExpirationCorpusBackend(CorpusBackend):
+class ExtendedExpirationCorpusBackend:
     """ExpiringCorpusBackend class that wraps around an existing CorpusBackend instance.
     It fetches items scheduled for today and highly engaging items from the last days.
     """
@@ -25,21 +23,23 @@ class ExtendedExpirationCorpusBackend(CorpusBackend):
     async def fetch(
         self,
         surface_id: ScheduledSurfaceId,
-        days_offset: int = EXPIRATION_WINDOW,
+        window_start: int = -3,
     ) -> list[CorpusItem]:
         """Fetch corpus items for the specified `surface_id` from today and in the past.
 
         Args:
             surface_id: Identifies the scheduled surface, for example NEW_TAB_EN_US.
-            days_offset: The number of days to look back into the past scheduled dates.
+            window_start: Specifies how far back in days from today to fetch scheduled items.
+                A negative value indicates days in the past. The default value of -3 means that
+                items scheduled up to 3 days ago, from today up to now, will be included.
 
         Returns:
             list[CorpusItem]: A list of fetched corpus items from the backend, eligible to be shown.
         """
         tasks = [
-            # Note: if days_offset is 3, then range(-days_offset, 1) is [-3, -2, -1, 0].
             self.backend.fetch(surface_id, days_offset=offset)
-            for offset in range(-days_offset, 1)
+            # Note: if window_start is -3, then range(window_start, 1) is [-3, -2, -1, 0].
+            for offset in range(window_start, 1)
         ]
         results = await asyncio.gather(*tasks)
 
