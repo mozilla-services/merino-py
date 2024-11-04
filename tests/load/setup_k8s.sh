@@ -6,6 +6,8 @@ GCLOUD=$(which gcloud)
 SED=$(which sed)
 KUBECTL=$(which kubectl)
 GOOGLE_CLOUD_PROJECT=$(gcloud config get-value project)
+REPOSITORY_ID='merino'
+IMAGE_NAME='locust-merino'
 CLUSTER='merino-locust-load-test'
 TARGET='https://stagepy.merino.nonprod.cloudops.mozgcp.net'
 SCOPE='https://www.googleapis.com/auth/cloud-platform'
@@ -105,10 +107,10 @@ SetupGksCluster() {
     $GCLOUD container clusters get-credentials $CLUSTER --region $REGION --project "$GOOGLE_CLOUD_PROJECT"
 
     # Build Docker Images
-    echo -e "==================== Build the Docker image and store it in your project's container registry. Tag with the latest commit hash "
+    echo -e "==================== Build the Docker image and store it in your project's artifact registry. Tag with the latest commit hash "
     $GCLOUD builds submit --config=./tests/load/cloudbuild.yaml --substitutions=TAG_NAME="$LOCUST_IMAGE_TAG"
-    echo -e "==================== Verify that the Docker image is in your project's container repository"
-    $GCLOUD container images list | grep locust-merino
+    echo -e "==================== Verify that the Docker image is in your project's artifact registry repository"
+    $GCLOUD artifacts docker tags list "$REGION-docker.pkg.dev/$GOOGLE_CLOUD_PROJECT/$REPOSITORY_ID/$IMAGE_NAME" | grep $LOCUST_IMAGE_TAG
 
     # Deploying the Locust master and worker nodes
     echo -e "==================== Update Kubernetes Manifests "
@@ -117,7 +119,7 @@ SetupGksCluster() {
     $SED -i -e "s|replicas:.*|replicas: $WORKER_COUNT|" "$MERINO_DIRECTORY/$WORKER_FILE"
     for file in $MASTER_FILE $WORKER_FILE
     do
-        $SED -i -e "s|image:.*|image: gcr.io/$GOOGLE_CLOUD_PROJECT/locust-merino:$LOCUST_IMAGE_TAG|" "$MERINO_DIRECTORY/$file"
+        $SED -i -e "s|image:.*|image: $REGION-docker.pkg.dev/$GOOGLE_CLOUD_PROJECT/$REPOSITORY_ID/$IMAGE_NAME:$LOCUST_IMAGE_TAG|" "$MERINO_DIRECTORY/$file"
         SetEnvironmentVariables "$MERINO_DIRECTORY/$file"
     done
 

@@ -157,7 +157,7 @@ a GKE cluster
 * To apply new changes to an existing GCP Cluster, execute the `setup_k8s.sh` file and select the
   **setup** option.
     * This option will consider the local commit history, creating new containers and
-      deploying them (see [Container Registry][container_registry])
+      deploying them (see [Artifact Registry][artifact_registry])
 
 ### Run Test Session
 
@@ -507,11 +507,11 @@ updating the following:
 5. Documentation
     * [ ] [load test docs][load_test_docs]
 
+[artifact_registry]: https://console.cloud.google.com/artifacts/docker/spheric-keel-331521/us-west1/locust-merino?project=spheric-keel-331521
 [circle_ci]: https://circleci.com/docs/
 [circle_config_yml]: https://github.com/mozilla-services/merino-py/blob/main/.circleci/config.yml
 [cloud]: https://console.cloud.google.com/home/dashboard?q=search&referrer=search&project=spheric-keel-331521&cloudshell=false
 [conserv]: https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux
-[container_registry]: https://console.cloud.google.com/gcr/images/spheric-keel-331521/global/locust-merino?project=spheric-keel-331521
 [docker]: https://docs.docker.com/
 [docker_compose]:https://github.com/mozilla-services/merino-py/blob/main/tests/load/docker-compose.yml
 [dockerfile]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/Dockerfile
