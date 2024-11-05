@@ -2321,14 +2321,15 @@ def test_parse_cached_data_error(
 async def test_get_location_completion(
     accuweather: AccuweatherBackend,
     expected_location_completion: list[LocationCompletion],
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     accuweather_location_completion_response: bytes,
 ) -> None:
     """Test that the get_location_completion method returns a list of LocationCompletion."""
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
     search_term = "new"
+    geolocation = weather_context_without_location_key.geolocation
+
     client_mock.get.side_effect = [
         Response(
             status_code=200,
@@ -2346,7 +2347,9 @@ async def test_get_location_completion(
 
     location_completions: Optional[
         list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, languages, search_term)
+    ] = await accuweather.get_location_completion(
+        weather_context_without_location_key, search_term
+    )
 
     assert location_completions == expected_location_completion
 
@@ -2354,14 +2357,15 @@ async def test_get_location_completion(
 @pytest.mark.asyncio
 async def test_get_location_completion_with_invalid_accuweather_response(
     accuweather: AccuweatherBackend,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     statsd_mock: Any,
 ) -> None:
     """Test that the get_location_completion method returns None
     when the response json received by accuweather is of invalid shape
     """
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    geolocation = weather_context_without_location_key.geolocation
 
     search_term = "new"
     client_mock.get.side_effect = [
@@ -2381,7 +2385,9 @@ async def test_get_location_completion_with_invalid_accuweather_response(
 
     location_completions: Optional[
         list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, languages, search_term)
+    ] = await accuweather.get_location_completion(
+        weather_context_without_location_key, search_term
+    )
 
     metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
     assert [
@@ -2396,8 +2402,7 @@ async def test_get_location_completion_with_invalid_accuweather_response(
 @pytest.mark.asyncio
 async def test_get_location_completion_raises_accuweather_error_on_catching_generic_exception(
     accuweather: AccuweatherBackend,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
 ) -> None:
     """Test that the get_location_completion catches a generic Exception and raises it as an
     AccuweatherError
@@ -2408,7 +2413,9 @@ async def test_get_location_completion_raises_accuweather_error_on_catching_gene
     client_mock.get.side_effect = SSLError
 
     with pytest.raises(AccuweatherError) as accuweather_error:
-        await accuweather.get_location_completion(geolocation, languages, search_term)
+        await accuweather.get_location_completion(
+            weather_context_without_location_key, search_term
+        )
 
     expected_error_message = (
         "Unexpected error occurred when requesting location completion "
@@ -2421,14 +2428,16 @@ async def test_get_location_completion_raises_accuweather_error_on_catching_gene
 @pytest.mark.asyncio
 async def test_get_location_completion_raises_accuweather_error_on_catching_http_error(
     accuweather: AccuweatherBackend,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
 ) -> None:
     """Test that the get_location_completion catches an HTTPError and raises it as an
     AccuweatherError
     """
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     search_term = "new"
+
+    geolocation = weather_context_without_location_key.geolocation
+    languages = weather_context_without_location_key.languages
 
     # we are returning a 404 http response
     client_mock.get.side_effect = [
@@ -2447,7 +2456,9 @@ async def test_get_location_completion_raises_accuweather_error_on_catching_http
     ]
 
     with pytest.raises(AccuweatherError) as accuweather_error:
-        await accuweather.get_location_completion(geolocation, languages, search_term)
+        await accuweather.get_location_completion(
+            weather_context_without_location_key, search_term
+        )
 
     url_path = f"/locations/v1/cities/{geolocation.country}/autocomplete.json"
     expected_error_message = (
@@ -2461,8 +2472,7 @@ async def test_get_location_completion_raises_accuweather_error_on_catching_http
 @pytest.mark.asyncio
 async def test_get_location_completion_with_empty_search_term(
     accuweather: AccuweatherBackend,
-    geolocation: Location,
-    languages: list[str],
+    weather_context_without_location_key: WeatherContext,
     accuweather_location_completion_response: bytes,
 ) -> None:
     """Test that the get_location_completion method returns None when the search_term parameter
@@ -2471,6 +2481,7 @@ async def test_get_location_completion_with_empty_search_term(
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
     search_term = ""
+    geolocation = weather_context_without_location_key.geolocation
     client_mock.get.side_effect = [
         Response(
             status_code=200,
@@ -2488,7 +2499,9 @@ async def test_get_location_completion_with_empty_search_term(
 
     location_completions: Optional[
         list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, languages, search_term)
+    ] = await accuweather.get_location_completion(
+        weather_context_without_location_key, search_term
+    )
 
     assert location_completions is None
 
@@ -2497,8 +2510,7 @@ async def test_get_location_completion_with_empty_search_term(
 async def test_get_location_completion_with_no_geolocation_country_code(
     accuweather: AccuweatherBackend,
     expected_location_completion: list[LocationCompletion],
-    languages: list[str],
-    geolocation: Location,
+    weather_context_without_location_key: WeatherContext,
     accuweather_location_completion_response: bytes,
 ) -> None:
     """Test that the get_location_completion method returns a list of LocationCompletion
@@ -2507,6 +2519,7 @@ async def test_get_location_completion_with_no_geolocation_country_code(
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
     search_term = "new"
+    geolocation = weather_context_without_location_key.geolocation
     geolocation.country = None
     client_mock.get.side_effect = [
         Response(
@@ -2524,7 +2537,9 @@ async def test_get_location_completion_with_no_geolocation_country_code(
 
     location_completions: Optional[
         list[LocationCompletion]
-    ] = await accuweather.get_location_completion(geolocation, languages, search_term)
+    ] = await accuweather.get_location_completion(
+        weather_context_without_location_key, search_term
+    )
 
     assert location_completions == expected_location_completion
 

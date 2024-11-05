@@ -835,13 +835,13 @@ class AccuweatherBackend:
         )
 
     async def get_location_completion(
-        self, geolocation: Location, languages: list[str], search_term: str
+        self, weather_context: WeatherContext, search_term: str
     ) -> list[LocationCompletion] | None:
         """Fetch a list of locations from the Accuweather API given a search term and location."""
         if not search_term:
             return None
-
-        language = get_language(languages)
+        geolocation = weather_context.geolocation
+        language = get_language(weather_context.languages)
 
         url_path = self.url_location_completion_path
 
