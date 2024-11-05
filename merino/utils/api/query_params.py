@@ -1,23 +1,12 @@
-"""A utility module for Merino v1 API."""
+"""A utility module for merino API query params."""
 
-from collections import Counter
 import functools
 from typing import Optional
 
-from aiodogstatsd import Client
 from fastapi import HTTPException, Request
-
-from merino.config import settings
 
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
-from merino.providers.base import BaseProvider, BaseSuggestion
-from merino.providers.custom_details import CustomDetails, WeatherDetails
-from merino.providers.weather.provider import Provider as WeatherProvider
-from merino.providers.weather.provider import Suggestion as WeatherSuggestion
-
-# Default Cache-Control TTL value for /suggest endpoint responses
-DEFAULT_CACHE_CONTROL_TTL: int = settings.runtime.default_suggestions_response_ttl_sec
 
 
 @functools.lru_cache(maxsize=1000)
@@ -76,50 +65,3 @@ def refine_geolocation_for_suggestion(
         )
 
     return geolocation
-
-
-def emit_suggestions_per_metrics(
-    metrics_client: Client,
-    suggestions: list[BaseSuggestion],
-    searched_providers: list[BaseProvider],
-) -> None:
-    """Emit metrics for suggestions per request and suggestions per request by provider."""
-    metrics_client.histogram("suggestions-per.request", value=len(suggestions))
-
-    suggestion_counter = Counter(suggestion.provider for suggestion in suggestions)
-
-    for provider in searched_providers:
-        provider_name = provider.name
-        suggestion_count = suggestion_counter[provider_name]
-        metrics_client.histogram(
-            f"suggestions-per.provider.{provider_name}",
-            value=suggestion_count,
-        )
-
-
-def get_ttl_for_cache_control_header_for_suggestions(
-    request_providers: list[BaseProvider], suggestions: list[BaseSuggestion]
-) -> int:
-    """Retrieve the TTL value for the Cache-Control header based on provider and suggestions
-    type. Return the default suggestions response ttl sec otherwise.
-    """
-    match request_providers:
-        case [WeatherProvider()]:
-            match suggestions:
-                # this case targets accuweather suggestions and pulls out the ttl and then
-                # deletes the custom_details attribute to be not included in the response
-                case [
-                    WeatherSuggestion(
-                        custom_details=CustomDetails(
-                            weather=WeatherDetails(weather_report_ttl=ttl)
-                        )
-                    ) as suggestion
-                ]:
-                    delattr(suggestion, "custom_details")
-                    return ttl
-                case _:
-                    # can add a use case for some other type of suggestion
-                    return DEFAULT_CACHE_CONTROL_TTL
-        case _:
-            # can add a use case for some other type of provider
-            return DEFAULT_CACHE_CONTROL_TTL
