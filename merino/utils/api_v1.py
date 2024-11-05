@@ -1,4 +1,5 @@
 """A utility module for Merino v1 API."""
+
 from collections import Counter
 import functools
 from typing import Optional
@@ -51,7 +52,10 @@ def validate_suggest_custom_location_params(
             detail="Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted.",
         )
 
-def refine_geolocation_for_suggestion(request: Request, city: Optional[str], region: Optional[str], country: Optional[str]) -> Location:
+
+def refine_geolocation_for_suggestion(
+    request: Request, city: Optional[str], region: Optional[str], country: Optional[str]
+) -> Location:
     """Generate a refined geolocation object based on optional city, region, and country parameters
     for the suggest endpoint. If all parameters are provided, the geolocation data is updated
     with the specified city, region, and country. Otherwise, the original geolocation data is used.
@@ -72,6 +76,7 @@ def refine_geolocation_for_suggestion(request: Request, city: Optional[str], reg
         )
 
     return geolocation
+
 
 def emit_suggestions_per_metrics(
     metrics_client: Client,

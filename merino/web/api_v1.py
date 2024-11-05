@@ -27,7 +27,13 @@ from merino.providers import get_providers
 from merino.providers.base import BaseProvider, SuggestionRequest
 
 from merino.utils import task_runner
-from merino.utils.api_v1 import emit_suggestions_per_metrics, get_accepted_languages, get_ttl_for_cache_control_header_for_suggestions, refine_geolocation_for_suggestion, validate_suggest_custom_location_params
+from merino.utils.api_v1 import (
+    emit_suggestions_per_metrics,
+    get_accepted_languages,
+    get_ttl_for_cache_control_header_for_suggestions,
+    refine_geolocation_for_suggestion,
+    validate_suggest_custom_location_params,
+)
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 logger = logging.getLogger(__name__)

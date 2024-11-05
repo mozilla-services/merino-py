@@ -1,3 +1,8 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+"""Unit tests for the api_v1.py utility module."""
 
 from fastapi import HTTPException
 import pytest
@@ -6,7 +11,11 @@ from fastapi import Request
 
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
-from merino.utils.api_v1 import get_accepted_languages, refine_geolocation_for_suggestion, validate_suggest_custom_location_params
+from merino.utils.api_v1 import (
+    get_accepted_languages,
+    refine_geolocation_for_suggestion,
+    validate_suggest_custom_location_params,
+)
 
 
 @pytest.fixture(name="geolocation")
@@ -21,6 +30,7 @@ def fixture_geolocation() -> Location:
         dma=819,
         postal_code="98354",
     )
+
 
 @pytest.mark.parametrize(
     ("languages", "expected_filtered_languages"),
@@ -59,10 +69,14 @@ def test_validate_suggest_custom_location_params(city, region, country):
     with pytest.raises(HTTPException) as exc_info:
         validate_suggest_custom_location_params(city, region, country)
     assert exc_info.value.status_code == 400
-    assert exc_info.value.detail == "Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
+    assert (
+        exc_info.value.detail
+        == "Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
+    )
 
 
 def test_refine_geolocation_for_suggestion_with_all_params(geolocation: Location):
+    """Test that refine geolocation method returns correct geolocation with updated params when all params are provided"""
     mock_request = Mock(spec=Request)
 
     expected_location: Location = Location(
@@ -77,10 +91,14 @@ def test_refine_geolocation_for_suggestion_with_all_params(geolocation: Location
 
     mock_request.scope = {ScopeKey.GEOLOCATION: geolocation}
 
-    assert refine_geolocation_for_suggestion(mock_request, "New York", "NY", "US") == expected_location
+    assert (
+        refine_geolocation_for_suggestion(mock_request, "New York", "NY", "US")
+        == expected_location
+    )
 
 
 def test_refine_geolocation_for_suggestion_with_incomplete_params(geolocation: Location):
+    """Test that refine geolocation method returns original geolocation when incomplete params are provided"""
     mock_request = Mock(spec=Request)
 
     mock_request.scope = {ScopeKey.GEOLOCATION: geolocation}
