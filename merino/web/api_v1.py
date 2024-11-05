@@ -1,15 +1,13 @@
 """Merino V1 API"""
 
-import functools
 import logging
 from asyncio import Task
-from collections import Counter
 from functools import partial
 from itertools import chain
-from typing import Annotated, Optional
+from typing import Annotated
 
 from asgi_correlation_id.context import correlation_id
-from fastapi import APIRouter, Depends, HTTPException, Query, Header
+from fastapi import APIRouter, Depends, Query, Header
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse
 from starlette.requests import Request
@@ -26,31 +24,20 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
-from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.custom_details import CustomDetails, WeatherDetails
-from merino.providers.weather.provider import Provider as WeatherProvider
-from merino.providers.weather.provider import Suggestion as WeatherSuggestion
+from merino.providers.base import BaseProvider, SuggestionRequest
+
 from merino.utils import task_runner
+from merino.utils.api_v1 import emit_suggestions_per_metrics, get_accepted_languages, get_ttl_for_cache_control_header_for_suggestions, refine_geolocation_for_suggestion, validate_suggest_custom_location_params
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-SUGGEST_RESPONSE = {
-    "suggestions": [],
-    "client_variants": [],
-    "server_variants": [],
-    "request_id": "",
-}
 
 # Param to capture all enabled_by_default=True providers.
 DEFAULT_PROVIDERS_PARAM_NAME: str = "default"
 
 # Timeout for query tasks.
 QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
-
-# Default Cache-Control TTL value for /suggest endpoint responses
-DEFAULT_CACHE_CONTROL_TTL: int = settings.runtime.default_suggestions_response_ttl_sec
 
 # Client Variant Maximum - used to limit the number of
 # possible client variants for experiments.
@@ -193,17 +180,10 @@ async def suggest(
 
     validate_suggest_custom_location_params(city, region, country)
 
-    if country and region and city:
-        geolocation = request.scope[ScopeKey.GEOLOCATION].model_copy(
-            update={"city": city, "regions": [region], "country": country}
-        )
-    else:
-        geolocation = request.scope[ScopeKey.GEOLOCATION].model_copy()
-
     for p in search_from:
         srequest = SuggestionRequest(
             query=p.normalize_query(q),
-            geolocation=geolocation,
+            geolocation=refine_geolocation_for_suggestion(request, city, region, country),
             request_type=request_type,
             languages=languages,
         )
@@ -255,53 +235,6 @@ async def suggest(
         content=jsonable_encoder(response, exclude_none=True),
         headers=response_headers,
     )
-
-
-def emit_suggestions_per_metrics(
-    metrics_client: Client,
-    suggestions: list[BaseSuggestion],
-    searched_providers: list[BaseProvider],
-) -> None:
-    """Emit metrics for suggestions per request and suggestions per request by provider."""
-    metrics_client.histogram("suggestions-per.request", value=len(suggestions))
-
-    suggestion_counter = Counter(suggestion.provider for suggestion in suggestions)
-
-    for provider in searched_providers:
-        provider_name = provider.name
-        suggestion_count = suggestion_counter[provider_name]
-        metrics_client.histogram(
-            f"suggestions-per.provider.{provider_name}",
-            value=suggestion_count,
-        )
-
-
-def get_ttl_for_cache_control_header_for_suggestions(
-    request_providers: list[BaseProvider], suggestions: list[BaseSuggestion]
-) -> int:
-    """Retrieve the TTL value for the Cache-Control header based on provider and suggestions
-    type. Return the default suggestions response ttl sec otherwise.
-    """
-    match request_providers:
-        case [WeatherProvider()]:
-            match suggestions:
-                # this case targets accuweather suggestions and pulls out the ttl and then
-                # deletes the custom_details attribute to be not included in the response
-                case [
-                    WeatherSuggestion(
-                        custom_details=CustomDetails(
-                            weather=WeatherDetails(weather_report_ttl=ttl)
-                        )
-                    ) as suggestion
-                ]:
-                    delattr(suggestion, "custom_details")
-                    return ttl
-                case _:
-                    # can add a use case for some other type of suggestion
-                    return DEFAULT_CACHE_CONTROL_TTL
-        case _:
-            # can add a use case for some other type of provider
-            return DEFAULT_CACHE_CONTROL_TTL
 
 
 @router.get(
@@ -377,36 +310,3 @@ async def curated_content(
     [curated-topics-doc]: https://mozilla-hub.atlassian.net/wiki/x/LQDaMg
     """
     return await provider.fetch(curated_recommendations_request)
-
-
-@functools.lru_cache(maxsize=1000)
-def get_accepted_languages(languages: str | None) -> list[str]:
-    """Retrieve filtered list of languages that merino accepts."""
-    if languages:
-        try:
-            if languages == "*":
-                return ["en-US"]
-            result = []
-            for lang in languages.split(","):
-                parts = lang.strip().split(";q=")
-                language = parts[0]
-                quality = float(parts[1]) if len(parts) > 1 else 1.0  # Default q-value is 1.0
-                result.append((language, quality))
-
-            # Sort by quality in descending order
-            result.sort(key=lambda x: x[1], reverse=True)
-            return [language[0] for language in result]
-        except Exception:
-            return ["en-US"]
-    return ["en-US"]
-
-
-def validate_suggest_custom_location_params(
-    city: Optional[str], region: Optional[str], country: Optional[str]
-):
-    """Validate that city, region & country params are either all present or all omitted."""
-    if any([country, region, city]) and not all([country, region, city]):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted.",
-        )
