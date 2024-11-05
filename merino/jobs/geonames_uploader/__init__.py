@@ -144,10 +144,10 @@ class GeonamesChunk(Chunk):
     def add_item(self, geoname: Geoname) -> None:
         """Add a geoname to the chunk."""
         super().add_item(geoname)
-        for name in geoname.alternate_names:
-            if len(name) > self.max_alternate_name_length:
-                self.max_alternate_name_length = len(name)
-            word_count = len(name.split())
+        for alt in geoname.alternates:
+            if len(alt.name) > self.max_alternate_name_length:
+                self.max_alternate_name_length = len(alt.name)
+            word_count = len(alt.name.split())
             if word_count > self.max_alternate_name_word_count:
                 self.max_alternate_name_word_count = word_count
 

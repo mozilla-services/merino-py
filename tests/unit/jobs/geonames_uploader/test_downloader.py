@@ -30,26 +30,9 @@ from merino.jobs.geonames_uploader.downloader import (
     DownloadMetrics,
     DownloadState,
     Geoname,
+    GeonameAlternate,
     GeonamesDownloader,
 )
-
-
-class GeonameAlternate:
-    """Geoname alternate"""
-
-    geoname_id: int
-    iso_language: str
-    name: str
-
-    def __init__(
-        self,
-        geoname_id: int,
-        iso_language: str,
-        name: str,
-    ):
-        self.geoname_id = geoname_id
-        self.iso_language = iso_language
-        self.name = name
 
 
 GEONAMES = [
@@ -169,11 +152,17 @@ ALTERNATES = [
         name="State of Alabama",
         iso_language="en",
     ),
-    # Waterloo, IA
+    # Waterloo, IA -- Give it two alternates with the same `name` but different
+    # `iso_language` values to make sure only one of them is in the output.
     GeonameAlternate(
         geoname_id=3,
         name="Waterloo",
         iso_language="en",
+    ),
+    GeonameAlternate(
+        geoname_id=3,
+        name="Waterloo",
+        iso_language="es",
     ),
     # IA
     GeonameAlternate(
@@ -293,11 +282,17 @@ class DownloaderTest:
         expected_metrics: DownloadMetrics,
     ) -> None:
         """Assert download state is equal to expected state"""
-        state = DownloadState()
-        state.geonames = expected_geonames
-        state.geonames_by_id = {g.id: g for g in expected_geonames}
-        state.metrics = expected_metrics
-        assert actual_state == state
+        assert len(actual_state.geonames) == len(expected_geonames)
+        for i in range(len(expected_geonames)):
+            assert actual_state.geonames[i] == expected_geonames[i]
+
+        expected_geonames_by_id = {g.id: g for g in expected_geonames}
+        assert len(actual_state.geonames_by_id) == len(expected_geonames_by_id)
+        for k, v in expected_geonames_by_id.items():
+            assert k in actual_state.geonames_by_id
+            assert actual_state.geonames_by_id[k] == v
+
+        assert actual_state.metrics == expected_metrics
 
     def make_geonames_zip(self, geonames: list[Geoname]) -> BufferedReader:
         """Create a geonames zip file"""
@@ -322,7 +317,8 @@ class DownloaderTest:
         for a in alternates:
             row = [""] * (MAX_ALTERNATES_COL + 1)
             row[ALTERNATES_COL_GEONAME_ID] = str(a.geoname_id)
-            row[ALTERNATES_COL_ISO_LANGUAGE] = a.iso_language
+            if a.iso_language:
+                row[ALTERNATES_COL_ISO_LANGUAGE] = a.iso_language
             row[ALTERNATES_COL_NAME] = a.name
             rows.append(row)
         return self.make_zip(rows, "US.txt")
@@ -379,7 +375,7 @@ def test_all_populations_and_iso_languages(
                 country_code="US",
                 admin1_code="AL",
                 population=200,
-                alternate_names=set(["waterloo"]),
+                alternates=[GeonameAlternate(1, "waterloo")],
             ),
             Geoname(
                 id=2,
@@ -391,7 +387,11 @@ def test_all_populations_and_iso_languages(
                 country_code="US",
                 admin1_code="AL",
                 population=4530315,
-                alternate_names=set(["alabama", "state of alabama", "al"]),
+                alternates=[
+                    GeonameAlternate(2, "alabama"),
+                    GeonameAlternate(2, "al", "abbr"),
+                    GeonameAlternate(2, "state of alabama", "en"),
+                ],
             ),
             Geoname(
                 id=3,
@@ -403,7 +403,7 @@ def test_all_populations_and_iso_languages(
                 country_code="US",
                 admin1_code="IA",
                 population=68460,
-                alternate_names=set(["waterloo"]),
+                alternates=[GeonameAlternate(3, "waterloo")],
             ),
             Geoname(
                 id=4,
@@ -415,7 +415,11 @@ def test_all_populations_and_iso_languages(
                 country_code="US",
                 admin1_code="IA",
                 population=2955010,
-                alternate_names=set(["iowa", "state of iowa", "ia"]),
+                alternates=[
+                    GeonameAlternate(4, "iowa"),
+                    GeonameAlternate(4, "ia", "abbr"),
+                    GeonameAlternate(4, "state of iowa", "en"),
+                ],
             ),
             Geoname(
                 id=6,
@@ -427,9 +431,14 @@ def test_all_populations_and_iso_languages(
                 country_code="US",
                 admin1_code="NY",
                 population=8804190,
-                alternate_names=set(
-                    ["new york city", "new york", "nueva york", "ny", "nyc", "lga"]
-                ),
+                alternates=[
+                    GeonameAlternate(6, "new york city"),
+                    GeonameAlternate(6, "ny", "abbr"),
+                    GeonameAlternate(6, "nyc", "abbr"),
+                    GeonameAlternate(6, "new york", "en"),
+                    GeonameAlternate(6, "nueva york", "es"),
+                    GeonameAlternate(6, "lga", "iata"),
+                ],
             ),
             Geoname(
                 id=7,
@@ -441,7 +450,12 @@ def test_all_populations_and_iso_languages(
                 country_code="US",
                 admin1_code="NY",
                 population=19274244,
-                alternate_names=set(["new york", "state of new york", "nueva york", "ny"]),
+                alternates=[
+                    GeonameAlternate(7, "new york"),
+                    GeonameAlternate(7, "ny", "abbr"),
+                    GeonameAlternate(7, "state of new york", "en"),
+                    GeonameAlternate(7, "nueva york", "es"),
+                ],
             ),
             Geoname(
                 id=8,
@@ -454,13 +468,18 @@ def test_all_populations_and_iso_languages(
                 admin1_code="10",
                 population=1,
                 # Versions both with and without diacritics should be included.
-                alternate_names=set(["àęí", "öũ", "aei", "ou"]),
+                alternates=[
+                    GeonameAlternate(8, "aei"),
+                    GeonameAlternate(8, "àęí"),
+                    GeonameAlternate(8, "ou", "en"),
+                    GeonameAlternate(8, "öũ", "en"),
+                ],
             ),
         ],
         expected_metrics=DownloadMetrics(
             # No excluded cities or regions
             excluded_geonames_count=0,
-            included_alternates_count=15,
+            included_alternates_count=16,
         ),
     )
 
@@ -489,7 +508,11 @@ def test_one_million_population_and_all_iso_languages(
                 country_code="US",
                 admin1_code="AL",
                 population=4530315,
-                alternate_names=set(["alabama", "state of alabama", "al"]),
+                alternates=[
+                    GeonameAlternate(2, "alabama"),
+                    GeonameAlternate(2, "al", "abbr"),
+                    GeonameAlternate(2, "state of alabama", "en"),
+                ],
             ),
             Geoname(
                 id=4,
@@ -501,7 +524,11 @@ def test_one_million_population_and_all_iso_languages(
                 country_code="US",
                 admin1_code="IA",
                 population=2955010,
-                alternate_names=set(["iowa", "state of iowa", "ia"]),
+                alternates=[
+                    GeonameAlternate(4, "iowa"),
+                    GeonameAlternate(4, "ia", "abbr"),
+                    GeonameAlternate(4, "state of iowa", "en"),
+                ],
             ),
             Geoname(
                 id=6,
@@ -513,9 +540,14 @@ def test_one_million_population_and_all_iso_languages(
                 country_code="US",
                 admin1_code="NY",
                 population=8804190,
-                alternate_names=set(
-                    ["new york city", "new york", "nueva york", "ny", "nyc", "lga"]
-                ),
+                alternates=[
+                    GeonameAlternate(6, "new york city"),
+                    GeonameAlternate(6, "ny", "abbr"),
+                    GeonameAlternate(6, "nyc", "abbr"),
+                    GeonameAlternate(6, "new york", "en"),
+                    GeonameAlternate(6, "nueva york", "es"),
+                    GeonameAlternate(6, "lga", "iata"),
+                ],
             ),
             Geoname(
                 id=7,
@@ -527,7 +559,12 @@ def test_one_million_population_and_all_iso_languages(
                 country_code="US",
                 admin1_code="NY",
                 population=19274244,
-                alternate_names=set(["new york", "state of new york", "nueva york", "ny"]),
+                alternates=[
+                    GeonameAlternate(7, "new york"),
+                    GeonameAlternate(7, "ny", "abbr"),
+                    GeonameAlternate(7, "state of new york", "en"),
+                    GeonameAlternate(7, "nueva york", "es"),
+                ],
             ),
         ],
         expected_metrics=DownloadMetrics(
@@ -559,7 +596,7 @@ def test_one_million_population_and_en_only(
                 country_code="US",
                 admin1_code="AL",
                 population=4530315,
-                alternate_names=set(["alabama", "al"]),
+                alternates=[GeonameAlternate(2, "alabama"), GeonameAlternate(2, "al", "abbr")],
             ),
             Geoname(
                 id=4,
@@ -571,7 +608,7 @@ def test_one_million_population_and_en_only(
                 country_code="US",
                 admin1_code="IA",
                 population=2955010,
-                alternate_names=set(["iowa", "ia"]),
+                alternates=[GeonameAlternate(4, "iowa"), GeonameAlternate(4, "ia", "abbr")],
             ),
             Geoname(
                 id=6,
@@ -583,7 +620,10 @@ def test_one_million_population_and_en_only(
                 country_code="US",
                 admin1_code="NY",
                 population=8804190,
-                alternate_names=set(["new york city", "new york"]),
+                alternates=[
+                    GeonameAlternate(6, "new york city"),
+                    GeonameAlternate(6, "new york", "en"),
+                ],
             ),
             Geoname(
                 id=7,
@@ -595,7 +635,7 @@ def test_one_million_population_and_en_only(
                 country_code="US",
                 admin1_code="NY",
                 population=19274244,
-                alternate_names=set(["new york", "ny"]),
+                alternates=[GeonameAlternate(7, "new york"), GeonameAlternate(7, "ny", "abbr")],
             ),
         ],
         expected_metrics=DownloadMetrics(
@@ -606,3 +646,35 @@ def test_one_million_population_and_en_only(
             included_alternates_count=4,
         ),
     )
+
+
+def test_to_json_serializable():
+    """Test Geoname.to_json_serializable()"""
+    geoname = Geoname(
+        id=2,
+        name="Alabama",
+        latitude="32.75041",
+        longitude="-86.75026",
+        feature_class="A",
+        feature_code="ADM1",
+        country_code="US",
+        admin1_code="AL",
+        population=4530315,
+        alternates=[GeonameAlternate(2, "alabama"), GeonameAlternate(2, "al", "abbr")],
+    )
+    assert geoname.to_json_serializable() == {
+        "admin1_code": "AL",
+        "alternate_names": ["al", "alabama"],
+        "alternate_names_2": [
+            {"name": "al", "iso_language": "abbr"},
+            {"name": "alabama"},
+        ],
+        "country_code": "US",
+        "feature_class": "A",
+        "feature_code": "ADM1",
+        "id": 2,
+        "latitude": "32.75041",
+        "longitude": "-86.75026",
+        "name": "Alabama",
+        "population": 4530315,
+    }

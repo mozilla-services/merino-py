@@ -11,6 +11,7 @@ from merino.jobs.geonames_uploader.downloader import (
     DownloadMetrics,
     DownloadState,
     Geoname,
+    GeonameAlternate,
 )
 from merino.jobs.geonames_uploader import GeonamesChunk, upload
 
@@ -104,7 +105,7 @@ def test_upload_without_deleting(mocker):
         keep_existing_records=True,
         geonames=[
             Geoname(
-                id="1",
+                id=1,
                 name="Waterloo",
                 latitude="34.91814",
                 longitude="-88.0642",
@@ -113,7 +114,7 @@ def test_upload_without_deleting(mocker):
                 country_code="US",
                 admin1_code="AL",
                 population=200,
-                alternate_names=set(["waterloo"]),
+                alternates=[GeonameAlternate(1, "waterloo")],
             ),
         ],
     )
@@ -127,7 +128,7 @@ def test_delete_and_upload(mocker):
         keep_existing_records=False,
         geonames=[
             Geoname(
-                id="1",
+                id=1,
                 name="Waterloo",
                 latitude="34.91814",
                 longitude="-88.0642",
@@ -136,7 +137,7 @@ def test_delete_and_upload(mocker):
                 country_code="US",
                 admin1_code="AL",
                 population=200,
-                alternate_names=set(["waterloo"]),
+                alternates=[GeonameAlternate(1, "waterloo")],
             ),
         ],
     )
@@ -150,7 +151,7 @@ def test_upload_multiple_countries(mocker):
         keep_existing_records=True,
         geonames=[
             Geoname(
-                id="1",
+                id=1,
                 name="Waterloo",
                 latitude="34.91814",
                 longitude="-88.0642",
@@ -159,7 +160,110 @@ def test_upload_multiple_countries(mocker):
                 country_code="US",
                 admin1_code="AL",
                 population=200,
-                alternate_names=set(["waterloo"]),
+                alternates=[GeonameAlternate(1, "waterloo")],
             ),
         ],
     )
+
+
+def test_to_json_serializable():
+    """Test GeonamesChunk.to_json_serializable()"""
+    chunk = GeonamesChunk(0)
+    chunk.add_item(
+        Geoname(
+            id=1,
+            name="Waterloo",
+            latitude="34.91814",
+            longitude="-88.0642",
+            feature_class="P",
+            feature_code="PPL",
+            country_code="US",
+            admin1_code="AL",
+            population=200,
+            alternates=[GeonameAlternate(1, "waterloo")],
+        )
+    )
+    chunk.add_item(
+        Geoname(
+            id=2,
+            name="Alabama",
+            latitude="32.75041",
+            longitude="-86.75026",
+            feature_class="A",
+            feature_code="ADM1",
+            country_code="US",
+            admin1_code="AL",
+            population=4530315,
+            alternates=[GeonameAlternate(2, "alabama"), GeonameAlternate(2, "al", "abbr")],
+        )
+    )
+    # Add a geoname with a long name and many words *last* to make sure
+    # `max_alternate_name_length` and `max_alternate_name_word_count` are
+    # updated correctly.
+    long_name = "A very long name with a lot of different words"
+    chunk.add_item(
+        Geoname(
+            id=3,
+            name=long_name,
+            latitude="0.0",
+            longitude="0.0",
+            feature_class="P",
+            feature_code="PPL",
+            country_code="US",
+            admin1_code="CA",
+            population=2,
+            alternates=[GeonameAlternate(3, long_name.lower())],
+        )
+    )
+    assert chunk.to_json_serializable() == {
+        "geonames": [
+            {
+                "admin1_code": "AL",
+                "alternate_names": ["waterloo"],
+                "alternate_names_2": [
+                    {"name": "waterloo"},
+                ],
+                "country_code": "US",
+                "feature_class": "P",
+                "feature_code": "PPL",
+                "id": 1,
+                "latitude": "34.91814",
+                "longitude": "-88.0642",
+                "name": "Waterloo",
+                "population": 200,
+            },
+            {
+                "admin1_code": "AL",
+                "alternate_names": ["al", "alabama"],
+                "alternate_names_2": [
+                    {"name": "al", "iso_language": "abbr"},
+                    {"name": "alabama"},
+                ],
+                "country_code": "US",
+                "feature_class": "A",
+                "feature_code": "ADM1",
+                "id": 2,
+                "latitude": "32.75041",
+                "longitude": "-86.75026",
+                "name": "Alabama",
+                "population": 4530315,
+            },
+            {
+                "admin1_code": "CA",
+                "alternate_names": [long_name.lower()],
+                "alternate_names_2": [
+                    {"name": long_name.lower()},
+                ],
+                "country_code": "US",
+                "feature_class": "P",
+                "feature_code": "PPL",
+                "id": 3,
+                "latitude": "0.0",
+                "longitude": "0.0",
+                "name": long_name,
+                "population": 2,
+            },
+        ],
+        "max_alternate_name_length": len(long_name),
+        "max_alternate_name_word_count": 10,
+    }

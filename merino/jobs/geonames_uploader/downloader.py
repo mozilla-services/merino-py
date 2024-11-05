@@ -44,12 +44,57 @@ FEATURE_CLASS_REGION = "A"
 FEATURE_CODE_REGION = "ADM1"
 
 
+class GeonameAlternate:
+    """An alternate name for a geoname. Despite the word "alternate", a
+    geoname's alternates often include the place's proper name.
+
+    """
+
+    # This is only included for tests and isn't added to the JSON output.
+    geoname_id: int
+    # Casefolded alternate name.
+    name: str
+    # The value of the `iso_language` field for the alternate. This will be
+    # `None` for the alternate we artificially create for the `name` in the
+    # corresponding geoname record.
+    iso_language: str | None
+
+    @staticmethod
+    def normalize(
+        geoname_id: int, name: str, iso_language: str | None = None
+    ) -> list["GeonameAlternate"]:
+        """Return a new `GeonameAlternate` for each normalized version of the
+        name.
+
+        """
+        return [GeonameAlternate(geoname_id, n, iso_language) for n in _normalize_name(name)]
+
+    def __init__(self, geoname_id: int, name: str, iso_language: str | None = None):
+        """Initialize the alternate."""
+        self.geoname_id = geoname_id
+        self.name = name
+        self.iso_language = iso_language
+
+    def to_json_serializable(self) -> dict[str, Any]:
+        """Return a `dict` version of the alternate that is JSON serializable."""
+        d = dict(vars(self))
+        # `geoname_id` isn't included.
+        del d["geoname_id"]
+        return d
+
+    def __repr__(self) -> str:
+        return str(vars(self))
+
+    def __eq__(self, other) -> bool:
+        return isinstance(other, GeonameAlternate) and vars(self) == vars(other)
+
+
 class Geoname:
     """A geoname is a representation of a single place like a city, state, or
     region. An instance of this class corresponds to a single row in the
     `geoname` table described in the GeoNames documentation (see link above).
 
-    This class also includes a set of `alternate_names` containing lowercased
+    This class also includes a list of `alternates` containing casefolded
     versions of all the geoname's alternate names selected during the download
     process. A single geoname can have many alternate names since a place can
     have many different variations of its name. Alternate names can also include
@@ -66,7 +111,7 @@ class Geoname:
     country_code: str
     admin1_code: str
     population: int
-    alternate_names: set[str]
+    alternates: list[GeonameAlternate]
 
     def __init__(
         self,
@@ -79,7 +124,7 @@ class Geoname:
         country_code: str,
         admin1_code: str,
         population: int,
-        alternate_names: set[str] | None = None,
+        alternates: list[GeonameAlternate] | None = None,
     ):
         """Initialize the geoname."""
         self.id = id
@@ -91,18 +136,38 @@ class Geoname:
         self.country_code = country_code
         self.admin1_code = admin1_code
         self.population = population
-        self.alternate_names = alternate_names or set([])
+        self.alternates = alternates or []
         # Always make sure `name` is present as an alternate name. The client
         # implementation relies on this.
-        self.alternate_names.update(_normalize_name(name))
+        self.add_alternate(name)
+
+    def add_alternate(self, name: str, iso_language: str | None = None) -> None:
+        """Add an alternate for the geoname."""
+        for alt in GeonameAlternate.normalize(self.id, name, iso_language):
+            # The client database has a primary key on `(name, geoname_id)`, so
+            # names should be unique even if they have different `iso_language`
+            # values!
+            if alt.name not in [a.name for a in self.alternates]:
+                self.alternates.append(alt)
+        # The only reason for sorting is to provide a stable output for tests.
+        self.alternates.sort(key=lambda a: "-".join([a.name, a.iso_language or ""]))
 
     def to_json_serializable(self) -> dict[str, Any]:
         """Return a `dict` version of the geoname that is JSON serializable."""
-        self_dict = vars(self)
-        for k, v in self_dict.items():
-            if isinstance(v, set):
-                self_dict[k] = list(v)
-        return self_dict
+        d = dict(vars(self))
+        # alternate_names:
+        #   Array of name strings for older Firefoxes
+        # alternate_names_2:
+        #   Array of `{ name, iso_language }` objects for newer Firefoxes
+        del d["alternates"]
+        d["alternate_names"] = [a.name for a in self.alternates]
+        d["alternate_names_2"] = []
+        for alt in self.alternates:
+            a = {"name": alt.name}
+            if alt.iso_language:
+                a["iso_language"] = alt.iso_language
+            d["alternate_names_2"].append(a)
+        return d
 
     def __repr__(self) -> str:
         return str(vars(self))
@@ -289,7 +354,7 @@ class GeonamesDownloader:
             elif geoname.feature_class == FEATURE_CLASS_REGION:
                 langs = self.region_alternates_iso_languages
             if langs and iso_language in langs:
-                geoname.alternate_names.update(_normalize_name(name))
+                geoname.add_alternate(name, iso_language)
                 state.metrics.included_alternates_count += 1
 
     def _download(
