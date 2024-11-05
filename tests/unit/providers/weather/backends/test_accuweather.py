@@ -1989,16 +1989,16 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend, language: str
     [
         (
             {"q": "asdfg", "apikey": "filter_me_out"},
-            f"AccuweatherBackend:v4:localhost:"
+            f"AccuweatherBackend:v5:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
         (
             {},
-            "AccuweatherBackend:v4:localhost",
+            "AccuweatherBackend:v5:localhost",
         ),
         (
             {"q": "asdfg"},
-            f"AccuweatherBackend:v4:localhost:"
+            f"AccuweatherBackend:v5:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
     ],
