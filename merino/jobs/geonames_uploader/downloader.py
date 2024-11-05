@@ -43,6 +43,31 @@ FEATURE_CLASS_CITY = "P"
 FEATURE_CLASS_REGION = "A"
 FEATURE_CODE_REGION = "ADM1"
 
+# `admin1_code` values for Canadian provinces are two-digit numeric codes in the
+# GeoNames data. AccuWeather doesn't support those, and they're a little strange
+# anyway, so we convert them to the usual two-letter postal abbreviations.
+CA_PROVINCE_ABBR_BY_ADMIN1_CODE = {
+    "01": "AB",  # Alberta
+    "02": "BC",  # British Columbia
+    "03": "MB",  # Manitoba
+    "04": "NB",  # New Brunswick/Nouveau-Brunswick
+    "05": "NL",  # Newfoundland and Labrador
+    "07": "NS",  # Nova Scotia
+    "08": "ON",  # Ontario
+    "09": "PE",  # Prince Edward Island
+    "10": "QC",  # Québec
+    "11": "SK",  # Saskatchewan
+    "12": "YT",  # Yukon
+    "13": "NT",  # Northwest Territories
+    "14": "NU",  # Nunavut
+}
+
+
+class CaAdmin1CodeNotRecognized(Exception):
+    """An unrecognized Canadian admin1_code was encountered."""
+
+    pass
+
 
 class GeonameAlternate:
     """An alternate name for a geoname. Despite the word "alternate", a
@@ -134,9 +159,21 @@ class Geoname:
         self.feature_class = feature_class
         self.feature_code = feature_code
         self.country_code = country_code
-        self.admin1_code = admin1_code
         self.population = population
         self.alternates = alternates or []
+
+        # Convert Canadian `admin1_code` numeric values to postal abbreviations.
+        # Tests may pass in postal abbreviations directly.
+        if country_code == "CA" and admin1_code not in set(
+            CA_PROVINCE_ABBR_BY_ADMIN1_CODE.values()
+        ):
+            abbr = CA_PROVINCE_ABBR_BY_ADMIN1_CODE.get(admin1_code, None)
+            if not abbr:
+                raise CaAdmin1CodeNotRecognized(f"Unrecognized CA admin1_code: {admin1_code}")
+            self.admin1_code = abbr
+        else:
+            self.admin1_code = admin1_code
+
         # Always make sure `name` is present as an alternate name. The client
         # implementation relies on this.
         self.add_alternate(name)
