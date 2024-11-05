@@ -34,7 +34,7 @@ from merino.jobs.geonames_uploader.downloader import (
     GeonamesDownloader,
 )
 
-
+# Geonames that will populate the mock GeoNames files
 GEONAMES = [
     # Waterloo, AL
     Geoname(
@@ -120,7 +120,7 @@ GEONAMES = [
         admin1_code="NY",
         population=19274244,
     ),
-    # A made-up city with diacritics in its name
+    # A made-up Canadian city with diacritics in its name
     Geoname(
         id=8,
         name="Àęí",
@@ -134,6 +134,7 @@ GEONAMES = [
     ),
 ]
 
+# Alternates that will populate the mock GeoNames files
 ALTERNATES = [
     # Waterloo, AL
     GeonameAlternate(
@@ -465,7 +466,9 @@ def test_all_populations_and_iso_languages(
                 feature_class="P",
                 feature_code="PPLA2",
                 country_code="CA",
-                admin1_code="10",
+                # The raw `admin1_code` value of "10" in the dataset should be
+                # converted to "QC" in the returned geoname.
+                admin1_code="QC",
                 population=1,
                 # Versions both with and without diacritics should be included.
                 alternates=[
