@@ -1,4 +1,4 @@
 steps:
 - name: "gcr.io/cloud-builders/docker"
-  args: ["build", "-t", "gcr.io/$PROJECT_ID/locust-merino:$TAG_NAME", "-f", "./tests/load/Dockerfile", "."]
-images: ["gcr.io/$PROJECT_ID/locust-merino:$TAG_NAME"]
+  args: ["build", "-t", "us-west1-docker.pkg.dev/$PROJECT_ID/merino/locust-merino:$TAG_NAME", "-f", "./tests/load/Dockerfile", "."]
+images: ["us-west1-docker.pkg.dev/$PROJECT_ID/merino/locust-merino:$TAG_NAME"]
