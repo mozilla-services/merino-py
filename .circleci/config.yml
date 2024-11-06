@@ -222,7 +222,7 @@ jobs:
     # Pushing a new production Docker image to the Docker Hub registry triggers a
     # webhook that starts the Jenkins deployment workflow
     docker:
-      - image: cimg/base:2022.08
+      - image: cimg/base:2024.11
     steps:
       - checkout
       - attach_workspace:
@@ -236,16 +236,15 @@ jobs:
           name: Push to Docker Hub
           # The commit tag signals deployment and load test instructions to Jenkins by
           # modifying the Docker image tag name. The convention looks as follows:
-          #^(?P<environment>stage|prod)(?:-(?P<task>\w+)-(?P<onfailure>warn|abort))?-(?P<commit>[a-z0-9]+)$
+          #^(?P<environment>stage|prod)(?:-(?P<task>\w+)-(?P<action>abort|skip|warn))?-(?P<commit>[a-z0-9]+)$
           command: |
-            if git log -1 "$CIRCLE_SHA1" | grep -q '\[load test: warn\]'; then
-              echo "Load test requested. Slack warning will be output if test fails and deployment workflow for prod will proceed."
-              STAGE_DOCKER_TAG="stage-loadtest-warn-${CIRCLE_SHA1}"
-            elif git log -1 "$CIRCLE_SHA1" | grep -q '\[load test: abort\]'; then
-              echo "Load test requested. Deployment workflow for prod will abort if load test fails."
+            LOAD_TEST_ACTION=$(git log -1 "$CIRCLE_SHA1" | sed -n 's/.*\[load test: \([^]]*\)\].*/\1/p')
+            if [ "$LOAD_TEST_ACTION" = "abort" ]; then
               STAGE_DOCKER_TAG="stage-loadtest-abort-${CIRCLE_SHA1}"
-            else
+            elif [ "$LOAD_TEST_ACTION" = "skip" ]; then
               STAGE_DOCKER_TAG="stage-${CIRCLE_SHA1}"
+            else
+              STAGE_DOCKER_TAG="stage-loadtest-warn-${CIRCLE_SHA1}"
             fi
             echo "${DOCKERHUB_REPO}:${STAGE_DOCKER_TAG}"
             docker tag app:build "${DOCKERHUB_REPO}:${STAGE_DOCKER_TAG}"

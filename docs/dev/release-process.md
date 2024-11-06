@@ -40,13 +40,22 @@ retrieved locally via `git rev-parse HEAD`.
 
 ## Load Testing
 
-Load testing can be run locally or as a part of the deployment process. Local execution does not
-require any labeling in commit messages. For deployment, you have to add a label to the message of
-the commit that you wish to deploy in the form of: `[load test: (abort|warn)]`. In most cases this
-will be the merge commit created by merging a GitHub pull request.
+Load testing can be performed either locally or during the deployment process. During deployment,
+load tests are run against the staging environment before Merino-py is promoted to production.
 
-`abort` will prevent deployment should the load testing fail while `warn` will warn via Slack and
-continue deployment. For detailed specifics on load testing and this convention, please see the
+Load tests in continuous deployment are controlled by adding a specific label to the commit message
+being deployed. The format for the label is `[load test: (abort|skip|warn)]`. Typically, this label
+is added to the merge commit created when a GitHub pull request is integrated.
+
+- `abort`: Stops the deployment if the load test fails.
+- `skip`: Skips load testing entirely during deployment.
+- `warn`: Proceeds with the deployment even if the load test fails, but sends a warning notification
+  through Slack.
+
+If no label is included in the commit message, the default behavior is to run the load test and
+issue a warning if it fails.
+
+For more detailed information about load testing procedures and conventions, please refer to the
 [Load Test README][load_test_readme].
 
 Logs from load tests executed in continuous deployment are available in the `/data` volume of the

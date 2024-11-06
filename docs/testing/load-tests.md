@@ -247,29 +247,32 @@ Execute the `setup_k8s.sh` file and select the **delete** option
 The load tests are triggered in CI via [Jenkins][jenkins_load_test], which has a command overriding
 the load test Dockerfile entrypoint.
 
-Follow the steps bellow to execute the distributed load tests on GCP with a CI trigger:
+Follow the steps below to execute the distributed load tests on GCP with a CI trigger:
 
 ### Run Test Session
 
 #### 1. Execute Load Test
 
-To automatically kick off load testing in staging along with your pull request commit, you have to
-include a label in your git commit. This must be the merge commit on the `main` branch, since only
-the most recent commit is checked for the label. This label is in the form of:
-`[load test: (abort|warn)]`. Take careful note of correct syntax and spacing within the label. There
-are two options for load tests, being `abort` and `warn`.
+To modify the load testing behavior, you must include a label in your Git commit. This must be the
+merge commit on the main branch, since only the most recent commit is checked for the label. The
+label format is: `[load test: (abort|skip|warn)]`. Take careful note of correct syntax and spacing
+within the label. There are three options for load tests: `abort`, `skip`, and `warn`:
 
-The `abort` label will prevent a `prod` deployment should the load test fail.
-Ex. `feat: Add feature ABC [load test: abort]`.
+- The `abort` label will prevent a prod deployment if the load test fails\
+  Ex. `feat: Add feature ABC [load test: abort].`
+- The `skip` label will bypass load testing entirely during deployment\
+  Ex. `feat: Add feature LMN [load test: skip].`
+- The `warn` label will output a Slack warning if the load test fails but still allow for the
+  production deployment\
+  Ex. `feat: Add feature XYZ [load test: warn].`
 
-The `warn` label will output a Slack warning should the load test fail, but still allow for `prod`
-deployment.
-Ex. `feat: Add feature XYZ [load test: warn]`.
+If no label is included in the commit message, the load test will be executed with the `warn`
+action.
 
 The commit tag signals load test instructions to Jenkins by modifying the Docker image tag. The
 Jenkins deployment workflow first deploys to `stage` and then runs load tests if requested. The
 Docker image tag passed to Jenkins appears as follows:
-`^(?P<environment>stage|prod)(?:-(?P<task>\w+)-(?P<onfailure>warn|abort))?-(?P<commit>[a-z0-9]+)$`.
+`^(?P<environment>stage|prod)(?:-(?P<task>\w+)-(?P<action>abort|skip|warn))?-(?P<commit>[a-z0-9]+)$`
 
 #### 2. Analyse Results
 
@@ -277,10 +280,12 @@ See [Distributed GCP Execution (Manual Trigger) - Analyse Results](#3-analyse-re
 
 #### 3. Report Results
 
-* Results should be recorded in the [Merino Load Test Spreadsheet][merino_spreadsheet]
-* Optionally, the Locust reports can be saved and linked in the spreadsheet. The results are
-  persisted in the `/data` directory of the `locust-master-0` pod in the `locust-master` k8s cluster
-  in the GCP project of `merino-nonprod`. To access the Locust logs:
+* Optionally, results can be recorded in the [Merino Load Test Spreadsheet][merino_spreadsheet]. It
+  is recommended to do so if unusual behavior is observed during load test execution or if the load
+  tests fail.
+* The Locust reports can be saved and linked in the spreadsheet. The results are persisted in the
+  `/data` directory of the `locust-master-0` pod in the `locust-master` k8s cluster in the GCP
+  project of `merino-nonprod`. To access the Locust logs:
     * Open a cloud shell in the [Merino stage environment][merino_gcp_stage]
     * Authenticate by executing the following command:
       ```shell
