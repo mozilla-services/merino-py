@@ -1,8 +1,7 @@
 # What to do with test failures in CI?
 
 1. Investigate the cause of the test failure
-    - For functional tests (unit, integration or contract), logs can be found on
-      [CircleCI][circleci]
+    - For unit or integration, logs can be found on [CircleCI][circleci]
     - For performance tests (load), insights can be found on [Grafana][merino_app_info] and in the
       Locust logs. To access the Locust logs see the [Distributed GCP Exection - CI Trigger][load_tests]
       section of the load test documentation.

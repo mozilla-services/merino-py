@@ -4,7 +4,6 @@ TEST_RESULTS_DIR ?= "workspace/test-results"
 COV_FAIL_UNDER := 95
 UNIT_TEST_DIR := $(TEST_DIR)/unit
 INTEGRATION_TEST_DIR := $(TEST_DIR)/integration
-CONTRACT_TEST_DIR := $(TEST_DIR)/contract
 LOAD_TEST_DIR := $(TEST_DIR)/load
 APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR)
 INSTALL_STAMP := .install.stamp
@@ -95,24 +94,6 @@ docker-build:  ## Build the docker image for Merino named "app:build"
 .PHONY: docker-build-jobs
 docker-build-jobs:  ## Build the docker image for Merino job runner named "merino-jobs:build"
 	docker build --target job_runner -t merino-jobs:build .
-
-.PHONY: run-contract-tests
-run-contract-tests:  ##  Run contract tests using docker compose
-	TEST_RESULTS_DIR=$(TEST_RESULTS_DIR) docker-compose \
-      -f $(CONTRACT_TEST_DIR)/docker-compose.yml \
-      -p merino-py-contract-tests \
-      up --abort-on-container-exit
-
-.PHONY: contract-tests
-contract-tests: docker-build run-contract-tests  ## Run contract tests, with build step
-
-.PHONY: contract-tests-clean
-contract-tests-clean:  ##  Stop and remove containers and networks for contract tests, delete client
-	TEST_RESULTS_DIR=$(TEST_RESULTS_DIR) docker-compose \
-      -f $(CONTRACT_TEST_DIR)/docker-compose.yml \
-      -p merino-py-contract-tests \
-      down
-	  docker rmi client kinto-setup
 
 .PHONY: load-tests
 load-tests:  ##  Run local execution of (Locust) load tests
