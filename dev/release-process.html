@@ -166,12 +166,20 @@ down).</p>
 <p>The commit hash of the deployed code is considered its version identifier. The commit hash can be
 retrieved locally via <code>git rev-parse HEAD</code>.</p>
 <h2 id="load-testing"><a class="header" href="#load-testing">Load Testing</a></h2>
-<p>Load testing can be run locally or as a part of the deployment process. Local execution does not
-require any labeling in commit messages. For deployment, you have to add a label to the message of
-the commit that you wish to deploy in the form of: <code>[load test: (abort|warn)]</code>. In most cases this
-will be the merge commit created by merging a GitHub pull request.</p>
-<p><code>abort</code> will prevent deployment should the load testing fail while <code>warn</code> will warn via Slack and
-continue deployment. For detailed specifics on load testing and this convention, please see the
+<p>Load testing can be performed either locally or during the deployment process. During deployment,
+load tests are run against the staging environment before Merino-py is promoted to production.</p>
+<p>Load tests in continuous deployment are controlled by adding a specific label to the commit message
+being deployed. The format for the label is <code>[load test: (abort|skip|warn)]</code>. Typically, this label
+is added to the merge commit created when a GitHub pull request is integrated.</p>
+<ul>
+<li><code>abort</code>: Stops the deployment if the load test fails.</li>
+<li><code>skip</code>: Skips load testing entirely during deployment.</li>
+<li><code>warn</code>: Proceeds with the deployment even if the load test fails, but sends a warning notification
+through Slack.</li>
+</ul>
+<p>If no label is included in the commit message, the default behavior is to run the load test and
+issue a warning if it fails.</p>
+<p>For more detailed information about load testing procedures and conventions, please refer to the
 <a href="https://github.com/mozilla-services/merino-py/blob/main/tests/load/README.md">Load Test README</a>.</p>
 <p>Logs from load tests executed in continuous deployment are available in the <code>/data</code> volume of the
 Locust master kubernetes pod.</p>

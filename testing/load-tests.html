@@ -387,31 +387,38 @@ spreadsheet</li>
 <h2 id="distributed-gcp-execution---ci-trigger"><a class="header" href="#distributed-gcp-execution---ci-trigger">Distributed GCP Execution - CI Trigger</a></h2>
 <p>The load tests are triggered in CI via <a href="https://github.com/mozilla-services/cloudops-infra/blob/master/projects/merino/Jenkinsfile-stage-py">Jenkins</a>, which has a command overriding
 the load test Dockerfile entrypoint.</p>
-<p>Follow the steps bellow to execute the distributed load tests on GCP with a CI trigger:</p>
+<p>Follow the steps below to execute the distributed load tests on GCP with a CI trigger:</p>
 <h3 id="run-test-session-2"><a class="header" href="#run-test-session-2">Run Test Session</a></h3>
 <h4 id="1-execute-load-test"><a class="header" href="#1-execute-load-test">1. Execute Load Test</a></h4>
-<p>To automatically kick off load testing in staging along with your pull request commit, you have to
-include a label in your git commit. This must be the merge commit on the <code>main</code> branch, since only
-the most recent commit is checked for the label. This label is in the form of:
-<code>[load test: (abort|warn)]</code>. Take careful note of correct syntax and spacing within the label. There
-are two options for load tests, being <code>abort</code> and <code>warn</code>.</p>
-<p>The <code>abort</code> label will prevent a <code>prod</code> deployment should the load test fail.
-Ex. <code>feat: Add feature ABC [load test: abort]</code>.</p>
-<p>The <code>warn</code> label will output a Slack warning should the load test fail, but still allow for <code>prod</code>
-deployment.
-Ex. <code>feat: Add feature XYZ [load test: warn]</code>.</p>
+<p>To modify the load testing behavior, you must include a label in your Git commit. This must be the
+merge commit on the main branch, since only the most recent commit is checked for the label. The
+label format is: <code>[load test: (abort|skip|warn)]</code>. Take careful note of correct syntax and spacing
+within the label. There are three options for load tests: <code>abort</code>, <code>skip</code>, and <code>warn</code>:</p>
+<ul>
+<li>The <code>abort</code> label will prevent a prod deployment if the load test fails<br />
+Ex. <code>feat: Add feature ABC [load test: abort].</code></li>
+<li>The <code>skip</code> label will bypass load testing entirely during deployment<br />
+Ex. <code>feat: Add feature LMN [load test: skip].</code></li>
+<li>The <code>warn</code> label will output a Slack warning if the load test fails but still allow for the
+production deployment<br />
+Ex. <code>feat: Add feature XYZ [load test: warn].</code></li>
+</ul>
+<p>If no label is included in the commit message, the load test will be executed with the <code>warn</code>
+action.</p>
 <p>The commit tag signals load test instructions to Jenkins by modifying the Docker image tag. The
 Jenkins deployment workflow first deploys to <code>stage</code> and then runs load tests if requested. The
 Docker image tag passed to Jenkins appears as follows:
-<code>^(?P&lt;environment&gt;stage|prod)(?:-(?P&lt;task&gt;\w+)-(?P&lt;onfailure&gt;warn|abort))?-(?P&lt;commit&gt;[a-z0-9]+)$</code>.</p>
+<code>^(?P&lt;environment&gt;stage|prod)(?:-(?P&lt;task&gt;\w+)-(?P&lt;action&gt;abort|skip|warn))?-(?P&lt;commit&gt;[a-z0-9]+)$</code></p>
 <h4 id="2-analyse-results"><a class="header" href="#2-analyse-results">2. Analyse Results</a></h4>
 <p>See <a href="#3-analyse-results-1">Distributed GCP Execution (Manual Trigger) - Analyse Results</a></p>
 <h4 id="3-report-results"><a class="header" href="#3-report-results">3. Report Results</a></h4>
 <ul>
-<li>Results should be recorded in the <a href="https://docs.google.com/spreadsheets/d/1SAO3QYIrbxDRxzmYIab-ebZXA1dF06W1lT4I1h2R3a8/edit?usp=sharing">Merino Load Test Spreadsheet</a></li>
-<li>Optionally, the Locust reports can be saved and linked in the spreadsheet. The results are
-persisted in the <code>/data</code> directory of the <code>locust-master-0</code> pod in the <code>locust-master</code> k8s cluster
-in the GCP project of <code>merino-nonprod</code>. To access the Locust logs:
+<li>Optionally, results can be recorded in the <a href="https://docs.google.com/spreadsheets/d/1SAO3QYIrbxDRxzmYIab-ebZXA1dF06W1lT4I1h2R3a8/edit?usp=sharing">Merino Load Test Spreadsheet</a>. It
+is recommended to do so if unusual behavior is observed during load test execution or if the load
+tests fail.</li>
+<li>The Locust reports can be saved and linked in the spreadsheet. The results are persisted in the
+<code>/data</code> directory of the <code>locust-master-0</code> pod in the <code>locust-master</code> k8s cluster in the GCP
+project of <code>merino-nonprod</code>. To access the Locust logs:
 <ul>
 <li>Open a cloud shell in the <a href="https://console.cloud.google.com/kubernetes/list/overview?project=moz-fx-merino-nonprod-ee93">Merino stage environment</a></li>
 <li>Authenticate by executing the following command:
