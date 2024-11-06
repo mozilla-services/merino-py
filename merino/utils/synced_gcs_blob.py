@@ -14,6 +14,7 @@ from google.cloud.storage import Client
 from aiodogstatsd import Client as StatsdClient
 
 from merino import cron
+from merino.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +106,9 @@ class SyncedGcsBlob:
         blob = bucket.blob(self.blob_name)
 
         if not blob.exists():
-            logger.error(f"Blob '{self.blob_name}' not found.")
+            # The staging bucket is not expected to have data. We don't want to emit a Sentry error.
+            level = logging.INFO if settings.current_env.lower() == "staging" else logging.ERROR
+            logger.log(level, f"Blob '{self.blob_name}' not found.")
             return
 
         # reload() populates blob.size and blob.updated.
