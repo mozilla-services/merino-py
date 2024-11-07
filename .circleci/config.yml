@@ -64,6 +64,7 @@ workflows:
       - docker-image-publish:
           <<: *main-filters
           requires:
+            - docker-image-build
             - docker-image-publish-locust
 
 jobs:
