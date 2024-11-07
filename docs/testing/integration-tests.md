@@ -1,7 +1,7 @@
 # Integration Tests
 
 The integration layer of testing allows for verification of interactions between service components,
-with lower development, maintenance and execution costs compared with higher level tests, such as contract tests.
+with lower development, maintenance and execution costs compared with higher level tests.
 
 To execute integration tests, make sure you have Docker installed and a docker daemon running. Then use: `make integration-tests`
 

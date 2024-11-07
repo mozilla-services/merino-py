@@ -507,9 +507,7 @@ updating the following:
     * [ ] [locust-master-controller.yml][locust_master_controller]
     * [ ] [locust-master-service.yml][locust_master_service]
     * [ ] [locust-worker-controller.yml][locust_worker_controller]
-4. [CircleCI][circle_ci] contract test jobs
-    * [ ] [config.yml][circle_config_yml]
-5. Documentation
+4. Documentation
     * [ ] [load test docs][load_test_docs]
 
 [artifact_registry]: https://console.cloud.google.com/artifacts/docker/spheric-keel-331521/us-west1/locust-merino?project=spheric-keel-331521

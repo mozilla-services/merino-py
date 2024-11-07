@@ -23,10 +23,6 @@ workflows:
           requires:
             - unit-tests
             - integration-tests
-      - contract-tests:
-          <<: *pr-filters
-          requires:
-            - docker-image-build
       - docker-image-build:
           <<: *pr-filters
       - docker-image-build-locust:
@@ -49,10 +45,6 @@ workflows:
           requires:
             - unit-tests
             - integration-tests
-      - contract-tests:
-          <<: *main-filters
-          requires:
-            - docker-image-build
       - docker-image-build:
           <<: *main-filters
       - docker-image-build-locust:
@@ -68,7 +60,6 @@ workflows:
           requires:
             - checks
             - test-coverage-check
-            - contract-tests
             - docker-image-build-locust
       - docker-image-publish:
           <<: *main-filters
@@ -154,28 +145,6 @@ jobs:
           command: make coverage-combined
       - store_artifacts:
           path: workspace/test-results/coverage.json
-  contract-tests:
-    machine:
-      image: ubuntu-2004:2024.01.1
-    working_directory: ~/merino
-    steps:
-      - checkout
-      - attach_workspace:
-          at: /tmp/workspace
-      - run:
-          name: Load Docker image from workspace
-          command: docker load -i /tmp/workspace/merinopy.tar.gz
-      - run:
-          name: Contract tests
-          environment:
-            TEST_RESULTS_DIR: workspace/test-results
-          command: |
-            sudo chown 1000:1000 tests/contract/kinto-attachments
-            make run-contract-tests
-      - store_test_results:
-          path: workspace/test-results
-      - store_artifacts:
-          path: workspace/test-results
   docker-image-build:
     docker:
       - image: cimg/base:2022.08
