@@ -236,7 +236,7 @@ jobs:
       - run:
           name: Check for load test directive
           command: |
-            if ! git log -1 "$CIRCLE_SHA1" | grep -q '\[load test: abort\|warn\]'; then
+            if git log -1 "$CIRCLE_SHA1" | grep -q '\[load test: skip\]'; then
               echo "Skipping remaining steps in this job: load test not required."
               circleci-agent step halt
             fi
