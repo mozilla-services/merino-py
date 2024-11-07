@@ -60,7 +60,7 @@ class ExperimentName(str, Enum):
     # Same as the above, but targeting small countries, which need a higher enrollment %.
     REGION_SPECIFIC_CONTENT_EXPANSION_SMALL = "new-tab-region-specific-content-expansion-small"
     # Experiment where high-engaging items scheduled for past dates are included.
-    EXTENDED_EXPIRATION_EXPERIMENT = "new-tab-extended-expiration-experiment"
+    EXTENDED_EXPIRATION_EXPERIMENT = "new-tab-extend-content-duration"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
