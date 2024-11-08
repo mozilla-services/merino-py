@@ -15,6 +15,7 @@ from merino.config import settings as config
 from merino.jobs.relevancy_uploader.chunked_rs_uploader import (
     ChunkedRemoteSettingsRelevancyUploader,
 )
+from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
 
 CLASSIFICATION_CURRENT_VERSION = 1
 CATEGORY_SCORE_THRESHOLD = 0.3
@@ -84,16 +85,15 @@ class RelevancyData:
 
 def classify_domain(domain, upload_categories, data) -> bool:
     """Classify domain to its Category."""
-    categories = upload_categories.get(domain, {})
+    md5_hash = md5(domain.encode(), usedforsecurity=False).digest()
+    hashed_domain = base64.b64encode(md5_hash).decode()
+    categories = upload_categories.get(hashed_domain, [])
     classified = False
     if categories:
-        for category_name, score in categories.items():
+        for category_name in categories:
             try:
-                category = Category[category_name.title()]
-                if score > CATEGORY_SCORE_THRESHOLD:
-                    md5_hash = md5(domain.encode(), usedforsecurity=False).digest()
-                    data[category].append({"domain": base64.b64encode(md5_hash).decode()})
-                    classified = True
+                data[category_name].append({"domain": hashed_domain})
+                classified = True
             except KeyError:
                 pass
     return classified
@@ -253,13 +253,12 @@ async def _upload_file_object(
     server: str,
     version: int,
 ):
-    categories_mapping: dict = _read_categories_data(categories_path)
     csv_reader = csv.DictReader(file_object)
 
     # Generate the full list of domains before creating the chunked uploader
     # so we can validate the source data before deleting existing records and
     # starting the upload.
-    data = RelevancyData.csv_to_relevancy_data(csv_reader, categories_mapping)
+    data = RelevancyData.csv_to_relevancy_data(csv_reader, DOMAIN_MAPPING)
 
     # since we upload based on category not record type,
     # we need to delete records before iterating on categories
