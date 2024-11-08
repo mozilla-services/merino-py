@@ -4,7 +4,11 @@ from merino.config import settings
 from merino.providers.base import Category
 
 if settings.env_for_dynaconf in ["testing", "ci"]:
-    DOMAIN_MAPPING = {}
+    DOMAIN_MAPPING = {
+        "mqzeM3Cm0XLuAd0kKwCttg==": [Category.Sports],
+        "g01iNP2/b7ehY5hQXQRP1g==": [Category.Sports, Category.News],
+        "uQX8/1Xq/Q9wZOXXGogCaQ==": [Category.Inconclusive],
+    }
 else:
     DOMAIN_MAPPING = {
         "BPNrX9JDOSGaN/1l4qozIg==": [Category.Home],
