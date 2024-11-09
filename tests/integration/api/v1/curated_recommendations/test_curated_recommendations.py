@@ -39,6 +39,7 @@ from merino.curated_recommendations.fakespot_backend.protocol import (
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
+    Layout,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
@@ -1336,6 +1337,9 @@ class TestSections:
             assert (
                 len(feeds) > 5
             )  # fixture data contains enough recommendations for many sections.
+
+            # All sections have a layout
+            assert all(Layout(**feed["layout"]) for feed in feeds.values() if feed)
 
             # Ensure "Today's top stories" is present with a valid date subtitle
             top_stories_section = data["feeds"].get("top_stories_section")

@@ -149,13 +149,45 @@ class CuratedRecommendationsBucket(BaseModel):
     title: str | None = None
 
 
-class Section(BaseModel):
-    """A ranked list of curated recommendations"""
+@unique
+class TileSize(str, Enum):
+    """Defines possible sizes for a tile in the layout."""
 
-    receivedRank: int
+    SMALL = "small"
+    MEDIUM = "medium"
+    LARGE = "large"
+
+
+class Tile(BaseModel):
+    """Defines properties for a single tile in a responsive layout."""
+
+    size: TileSize
+    position: int
+    hasAd: bool
+
+
+class ResponsiveLayout(BaseModel):
+    """Defines layout properties for a specific column count."""
+
+    columnCount: int
+    tiles: list[Tile]
+
+
+class Layout(BaseModel):
+    """Defines a responsive layout configuration with multiple column layouts."""
+
+    name: str
+    responsiveLayouts: list[ResponsiveLayout]
+
+
+class Section(BaseModel):
+    """A ranked list of curated recommendations with responsive layout configurations."""
+
+    receivedFeedRank: int
     recommendations: list[CuratedRecommendation]
     title: str
     subtitle: str | None = None
+    layout: Layout
 
 
 class CuratedRecommendationsFeed(BaseModel):
