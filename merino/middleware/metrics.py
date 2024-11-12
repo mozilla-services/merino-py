@@ -8,7 +8,7 @@ from http import HTTPStatus
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from merino.metrics import get_metrics_client
+from merino.utils.metrics import get_metrics_client
 from merino.middleware import ScopeKey
 
 logger = logging.getLogger(__name__)

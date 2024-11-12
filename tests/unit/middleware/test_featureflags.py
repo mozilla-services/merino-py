@@ -8,7 +8,7 @@ import pytest
 from pytest_mock import MockerFixture
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from merino.featureflags import session_id_context
+from merino.utils.featureflags import session_id_context
 from merino.middleware.featureflags import FeatureFlagsMiddleware
 
 

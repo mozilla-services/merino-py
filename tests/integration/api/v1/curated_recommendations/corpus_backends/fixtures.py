@@ -10,7 +10,7 @@ from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
     CorpusApiGraphConfig,
     CorpusApiBackend,
 )
-from merino.metrics import get_metrics_client
+from merino.utils.metrics import get_metrics_client
 
 
 @pytest.fixture()
