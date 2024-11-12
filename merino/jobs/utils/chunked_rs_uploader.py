@@ -55,12 +55,6 @@ class KintoRecordUpdate:
     chunk_size: int
 
 
-class DeletionNotAllowed(Exception):
-    """Attempt to delete a record without the --allow-delete flag present"""
-
-    pass
-
-
 class ChunkedRemoteSettingsUploader:
     """A class that uploads items to remote settings. Items are uploaded and
     stored in chunks. Chunking is handled automatically, and the caller only
@@ -134,7 +128,6 @@ class ChunkedRemoteSettingsUploader:
         collection: str,
         record_type: str,
         server: str,
-        allow_delete: bool = False,
         dry_run: bool = False,
         total_item_count: int | None = None,
         chunk_cls: type[Chunk] = Chunk,
@@ -143,7 +136,6 @@ class ChunkedRemoteSettingsUploader:
         self.chunk_cls = chunk_cls
         self.chunk_size = chunk_size
         self.current_chunk = chunk_cls(0)
-        self.allow_delete = allow_delete
         self.dry_run = dry_run
         self.record_type = record_type
         self.total_item_count = total_item_count
@@ -181,10 +173,6 @@ class ChunkedRemoteSettingsUploader:
             for (record_id, change) in self._kinto_changes.items()
             if change is not None
         ]
-
-        if not self.allow_delete and records_to_delete:
-            id_list = ", ".join(records_to_delete)
-            raise DeletionNotAllowed(f"Attempt to delete records: {id_list}")
 
         for record_id in records_to_delete:
             logger.info(f"Deleting record: {record_id}")
