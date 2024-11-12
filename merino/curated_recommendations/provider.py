@@ -15,6 +15,11 @@ from merino.curated_recommendations.engagement_backends.protocol import Engageme
 from merino.curated_recommendations.fakespot_backend.protocol import (
     FakespotBackend,
 )
+from merino.curated_recommendations.layouts import (
+    layout_4_medium,
+    layout_4_small,
+    layout_large_medium_small,
+)
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     Locale,
@@ -302,25 +307,28 @@ class CuratedRecommendationsProvider:
             enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
         )
 
-        # HNT-243 will iron out schema changes. The following should probably become request params:
         max_recs_per_section = 30
-        min_recs_per_section = 3
+        min_recs_per_section = 5
         top_stories_count = 6
+        # Sections will cycle through the following layouts.
+        layout_order = [layout_4_medium, layout_4_small, layout_large_medium_small]
 
         # Create "Today's top stories" section with the first 6 recommendations
         top_stories = recommendations[:top_stories_count]
         feeds = CuratedRecommendationsFeed(
             top_stories_section=Section(
-                receivedRank=0,
+                receivedFeedRank=0,
                 recommendations=top_stories,
                 title="Today's top stories",
                 subtitle=datetime.now().strftime("%B %d, %Y"),  # e.g., "October 24, 2024"
+                layout=layout_order[0],
             )
         )
 
-        # Group the remaining recommendations by topic, while preserving the Thompson sampling order
-        sections_by_topic: dict[str, Section] = dict()
+        # Group the remaining recommendations by topic, preserving Thompson sampling order
+        sections_by_topic: dict[str, Section] = {}
         remaining_recs = recommendations[top_stories_count:]
+
         for rec in remaining_recs:
             if rec.topic and rec.topic.value in CuratedRecommendationsFeed.model_fields:
                 topic = rec.topic
@@ -328,21 +336,23 @@ class CuratedRecommendationsProvider:
                     section = sections_by_topic[topic]
                 else:
                     section = sections_by_topic[topic] = Section(
-                        receivedRank=len(sections_by_topic) + 1,  # add 1 for top_stories_section
+                        receivedFeedRank=len(sections_by_topic)
+                        + 1,  # add 1 for top_stories_section
                         recommendations=[],
                         title=rec.topic.replace("_", " ").capitalize(),
+                        layout=layout_order[len(sections_by_topic) % len(layout_order)],
                     )
 
                 if len(section.recommendations) < max_recs_per_section:
                     rec.receivedRank = len(section.recommendations)
                     section.recommendations.append(rec)
 
+        # Filter and assign sections with valid minimum recommendations
         for topic_id, section in sections_by_topic.items():
             # Only add sections that meet the minimum number of recommendations.
             if len(section.recommendations) >= min_recs_per_section:
                 setattr(feeds, topic_id, section)
 
-        # Construct and return CuratedRecommendationsFeed with valid sections
         return feeds
 
     async def fetch(
