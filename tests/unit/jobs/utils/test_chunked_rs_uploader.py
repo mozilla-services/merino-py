@@ -5,13 +5,11 @@
 """Unit tests for chunked_rs_uploader.py."""
 
 import json
-import pytest
 from typing import Any
 
 from requests_toolbelt.multipart.decoder import MultipartDecoder
 
 from merino.jobs.csv_rs_uploader import ChunkedRemoteSettingsSuggestionUploader
-from merino.jobs.utils.chunked_rs_uploader import DeletionNotAllowed
 
 TEST_UPLOADER_KWARGS: dict[str, Any] = {
     "auth": "Bearer auth",
@@ -325,53 +323,3 @@ def test_total_item_count(requests_mock):
             Record(1500, 1999, id=f"{record_type}-1500-1999"),
         ],
     )
-
-
-def test_delete_records(requests_mock):
-    """Tests deleting records."""
-    bucket = TEST_UPLOADER_KWARGS["bucket"]
-    collection = TEST_UPLOADER_KWARGS["collection"]
-    server = TEST_UPLOADER_KWARGS["server"]
-
-    records = [Record(10 * i, 10 * (i + 1)) for i in range(0, 10)]
-
-    # Mock the URL that returns all records. First add an unrelated record to
-    # make sure it's not deleted.
-    records_url = f"{server}/buckets/{bucket}/collections/{collection}/records"
-    records_data = [r.data for r in records]
-    records_data.append({"type": "some-other-type", "id": "some-other-id"})
-    requests_mock.get(records_url, json={"data": records_data})  # nosec
-
-    # Mock the URL for each individual record so it can be deleted.
-    for r in records:
-        requests_mock.delete(r.url, json={"data": {}})  # nosec
-
-    # if allow_delete is False, then attempts to delete should error out
-    with pytest.raises(DeletionNotAllowed):
-        with ChunkedRemoteSettingsSuggestionUploader(
-            chunk_size=10, allow_delete=False, **TEST_UPLOADER_KWARGS
-        ) as uploader:
-            uploader.delete_records()
-    # There should be one request to the URL and no deletion requests
-    assert len(requests_mock.request_history) == 1
-    requests_mock.request_history.clear()
-
-    with ChunkedRemoteSettingsSuggestionUploader(
-        chunk_size=10, allow_delete=True, **TEST_UPLOADER_KWARGS
-    ) as uploader:
-        uploader.delete_records()
-
-    # There should be one request to the URL that returns all records plus one
-    # request per record for each deletion.
-    assert len(requests_mock.request_history) == 1 + len(records)
-
-    check_request(
-        requests_mock.request_history.pop(0),
-        {
-            "method": "GET",
-            "url": records_url,
-        },
-    )
-
-    for r in records:
-        check_request(requests_mock.request_history.pop(0), r.expected_delete_request)

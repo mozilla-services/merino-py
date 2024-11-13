@@ -84,7 +84,6 @@ def do_uploader_test(
     # Check chunked uploader calls.
     mock_chunked_uploader_ctor.assert_called_once_with(
         **upload_kwargs,
-        allow_delete=True,
         chunk_cls=GeonamesChunk,
         total_item_count=len(geonames),
     )
