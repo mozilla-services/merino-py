@@ -29,7 +29,6 @@ class ChunkedRemoteSettingsSuggestionUploader(ChunkedRemoteSettingsUploader):
         collection: str,
         record_type: str,
         server: str,
-        allow_delete: bool = False,
         dry_run: bool = False,
         suggestion_score_fallback: float | None = None,
         total_item_count: int | None = None,
@@ -42,7 +41,6 @@ class ChunkedRemoteSettingsSuggestionUploader(ChunkedRemoteSettingsUploader):
             collection,
             record_type,
             server,
-            allow_delete,
             dry_run,
             total_item_count,
         )

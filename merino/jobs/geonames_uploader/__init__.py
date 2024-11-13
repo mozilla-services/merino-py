@@ -202,7 +202,6 @@ def upload(
         downloader_states.append(state)
 
     with ChunkedRemoteSettingsUploader(
-        allow_delete=True,
         auth=auth,
         bucket=bucket,
         chunk_cls=GeonamesChunk,
