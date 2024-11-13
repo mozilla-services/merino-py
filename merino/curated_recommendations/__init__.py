@@ -27,7 +27,7 @@ from merino.curated_recommendations.prior_backends.gcs_prior import GcsPrior
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.provider import CuratedRecommendationsProvider
-from merino.metrics import get_metrics_client
+from merino.utils.metrics import get_metrics_client
 from merino.utils.http_client import create_http_client
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 

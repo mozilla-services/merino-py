@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import HttpUrl
 
-from merino import cron
+from merino.utils import cron
 from merino.config import settings
 from merino.providers.amo.addons_data import SupportedAddon
 from merino.providers.amo.backends.protocol import Addon, AmoBackend, AmoBackendError

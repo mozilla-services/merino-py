@@ -8,7 +8,7 @@ from typing import Any, Final
 
 from pydantic import HttpUrl
 
-from merino import cron
+from merino.utils import cron
 from merino.providers.adm.backends.protocol import AdmBackend, SuggestionContent
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 

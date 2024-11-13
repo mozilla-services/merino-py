@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from merino import cron
+from merino.utils import cron
 
 
 @pytest.fixture(name="numbers")
@@ -70,12 +70,12 @@ async def test_cron(caplog: Any, cron_job: cron.Job, numbers: list[int]) -> None
     # Verify log messages for the different branches
     assert caplog.record_tuples == [
         (
-            "merino.cron",
+            "merino.utils.cron",
             logging.WARNING,
             "Cron: failed to run task create_numbers",
         ),
         (
-            "merino.cron",
+            "merino.utils.cron",
             logging.INFO,
             "Cron: successfully ran task create_numbers",
         ),

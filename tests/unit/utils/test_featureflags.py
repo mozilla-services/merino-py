@@ -10,7 +10,7 @@ This module depends on testing.toml.
 import pytest
 from pydantic import ValidationError
 
-from merino.featureflags import FeatureFlags, session_id_context
+from merino.utils.featureflags import FeatureFlags, session_id_context
 
 
 @pytest.fixture(autouse=True)

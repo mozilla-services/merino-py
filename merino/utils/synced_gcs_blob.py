@@ -13,7 +13,7 @@ from typing import Callable
 from google.cloud.storage import Client
 from aiodogstatsd import Client as StatsdClient
 
-from merino import cron
+from merino.utils import cron
 from merino.config import settings
 
 logger = logging.getLogger(__name__)
