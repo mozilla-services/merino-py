@@ -164,6 +164,7 @@ class Tile(BaseModel):
     size: TileSize
     position: int
     hasAd: bool
+    hasExcerpt: bool
 
 
 class ResponsiveLayout(BaseModel):
