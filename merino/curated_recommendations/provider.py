@@ -17,8 +17,8 @@ from merino.curated_recommendations.fakespot_backend.protocol import (
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
-    layout_4_small,
-    layout_large_medium_small,
+    layout_4_large,
+    layout_6_tiles,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
@@ -308,13 +308,15 @@ class CuratedRecommendationsProvider:
         )
 
         max_recs_per_section = 30
-        min_recs_per_section = 5
+        # Section must have some extra items in case one is dismissed, beyond what can be displayed.
+        min_fallback_recs_per_section = 1
         top_stories_count = 6
         # Sections will cycle through the following layouts.
-        layout_order = [layout_4_medium, layout_4_small, layout_large_medium_small]
+        layout_order = [layout_4_medium, layout_4_large, layout_6_tiles]
 
         # Create "Today's top stories" section with the first 6 recommendations
         top_stories = recommendations[:top_stories_count]
+        remaining_recs = recommendations[top_stories_count:]
         feeds = CuratedRecommendationsFeed(
             top_stories_section=Section(
                 receivedFeedRank=0,
@@ -327,7 +329,6 @@ class CuratedRecommendationsProvider:
 
         # Group the remaining recommendations by topic, preserving Thompson sampling order
         sections_by_topic: dict[str, Section] = {}
-        remaining_recs = recommendations[top_stories_count:]
 
         for rec in remaining_recs:
             if rec.topic and rec.topic.value in CuratedRecommendationsFeed.model_fields:
@@ -349,8 +350,10 @@ class CuratedRecommendationsProvider:
 
         # Filter and assign sections with valid minimum recommendations
         for topic_id, section in sections_by_topic.items():
+            # Find the maximum number of tiles in this section's responsive layouts.
+            max_tile_count = max(len(rl.tiles) for rl in section.layout.responsiveLayouts)
             # Only add sections that meet the minimum number of recommendations.
-            if len(section.recommendations) >= min_recs_per_section:
+            if len(section.recommendations) >= max_tile_count + min_fallback_recs_per_section:
                 setattr(feeds, topic_id, section)
 
         return feeds
