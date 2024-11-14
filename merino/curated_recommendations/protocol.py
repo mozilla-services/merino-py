@@ -5,7 +5,7 @@ from enum import unique, Enum
 from typing import Annotated
 import logging
 
-from pydantic import Field, field_validator, model_validator, BaseModel
+from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo
 
 from merino.curated_recommendations.corpus_backends.protocol import CorpusItem, Topic
 from merino.curated_recommendations.fakespot_backend.protocol import FakespotFeed
@@ -166,12 +166,33 @@ class Tile(BaseModel):
     hasAd: bool
     hasExcerpt: bool
 
+    @field_validator("hasExcerpt")
+    def no_excerpt_on_small_tiles(cls, hasExcerpt, info: ValidationInfo):
+        """Ensure small tiles do not have excerpts."""
+        if info.data.get("size") == TileSize.SMALL and hasExcerpt:
+            raise ValueError("Small tiles cannot have excerpts.")
+        return hasExcerpt
+
+    @field_validator("hasAd")
+    def no_ad_on_small_or_large_tiles(cls, hasAd, info: ValidationInfo):
+        """Ensure small and large tiles do not have ads."""
+        if info.data.get("size") in {TileSize.SMALL, TileSize.LARGE} and hasAd:
+            raise ValueError("Small or large tiles cannot have ads.")
+        return hasAd
+
 
 class ResponsiveLayout(BaseModel):
     """Defines layout properties for a specific column count."""
 
-    columnCount: int
+    columnCount: Annotated[int, Field(ge=1, le=4)]  # Restricts columnCount to integers from 1 to 4
     tiles: list[Tile]
+
+    @field_validator("tiles")
+    def validate_tile_positions(cls, tiles):
+        """Ensure tile positions form a contiguous range from 0 to len(tiles) - 1, in any order."""
+        if sorted(tile.position for tile in tiles) != list(range(len(tiles))):
+            raise ValueError("ResponsiveLayout should not have a duplicate or missing position")
+        return tiles
 
 
 class Layout(BaseModel):
@@ -179,6 +200,13 @@ class Layout(BaseModel):
 
     name: str
     responsiveLayouts: list[ResponsiveLayout]
+
+    @field_validator("responsiveLayouts")
+    def must_include_all_column_counts(cls, responsiveLayouts):
+        """Ensure layouts include exactly one configuration for column counts 1 through 4."""
+        if sorted(layout.columnCount for layout in responsiveLayouts) != [1, 2, 3, 4]:
+            raise ValueError("Layout must have responsive layouts for 1, 2, 3, and 4 columns.")
+        return responsiveLayouts
 
 
 class Section(BaseModel):
