@@ -1,5 +1,8 @@
 """The layouts below control how tiles are displayed in the sections experiment.
 
+Tile order should be based on horizontal stacking. You can try this our in the Mozilla Playground:
+https://developer.mozilla.org/en-US/play?id=zWYUe3xC5v60fEuN8USHE24l7Q7tR2Vghi08O6KT9DAZz9cv%2B%2F0s0H8F7vJBWRVCnQgSHYWR%2BadDY4zA
+
 TODO: HNT-252 will document the QA process for layout changes. PR review suffices while we're in nightly.
 """
 
@@ -59,27 +62,27 @@ layout_4_large = Layout(
             columnCount=4,
             tiles=[
                 Tile(size=TileSize.LARGE, position=0, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.SMALL, position=1, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.SMALL, position=2, hasAd=False, hasExcerpt=False),
-                Tile(size=TileSize.MEDIUM, position=3, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
             ],
         ),
         ResponsiveLayout(
             columnCount=3,
             tiles=[
                 Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.SMALL, position=1, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.SMALL, position=2, hasAd=False, hasExcerpt=False),
-                Tile(size=TileSize.MEDIUM, position=3, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
             ],
         ),
         ResponsiveLayout(
             columnCount=2,
             tiles=[
                 Tile(size=TileSize.LARGE, position=0, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.SMALL, position=1, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.SMALL, position=2, hasAd=False, hasExcerpt=False),
-                Tile(size=TileSize.MEDIUM, position=3, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
             ],
         ),
         ResponsiveLayout(
@@ -101,10 +104,10 @@ layout_6_tiles = Layout(
         ResponsiveLayout(
             columnCount=4,
             tiles=[
-                Tile(size=TileSize.SMALL, position=0, hasAd=False, hasExcerpt=False),
-                Tile(size=TileSize.SMALL, position=1, hasAd=False, hasExcerpt=False),
-                Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.MEDIUM, position=3, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=2, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.SMALL, position=4, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.SMALL, position=5, hasAd=False, hasExcerpt=False),
             ],
