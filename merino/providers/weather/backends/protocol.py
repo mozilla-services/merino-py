@@ -61,6 +61,7 @@ class WeatherReport(BaseModel):
     current_conditions: CurrentConditions
     forecast: Forecast
     ttl: int
+    region_code: str
 
 
 class LocationCompletion(BaseModel):

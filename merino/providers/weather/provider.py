@@ -32,6 +32,7 @@ class Suggestion(BaseSuggestion):
     """Model for weather suggestions."""
 
     city_name: str
+    region_code: str
     current_conditions: CurrentConditions
     forecast: Forecast
 
@@ -145,6 +146,7 @@ class Provider(BaseProvider):
                 score=self.score,
                 icon=None,
                 city_name=data.city_name,
+                region_code=data.region_code,
                 current_conditions=data.current_conditions,
                 forecast=data.forecast,
                 custom_details=CustomDetails(weather=WeatherDetails(weather_report_ttl=data.ttl)),

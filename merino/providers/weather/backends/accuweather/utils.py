@@ -76,6 +76,7 @@ def process_location_response_with_country_and_region(response: Any) -> dict[str
             {
                 "Key": key,
                 "LocalizedName": localized_name,
+                "AdministrativeArea": {"ID": administrative_area_id},
             },
             *_,
         ]:
@@ -86,6 +87,7 @@ def process_location_response_with_country_and_region(response: Any) -> dict[str
             return {  # type: ignore
                 "key": key,
                 "localized_name": localized_name,
+                "administrative_area_id": administrative_area_id,
             }
         case _:
             return None
@@ -102,6 +104,7 @@ def process_location_response_with_country(response: Any) -> dict[str, Any] | No
             {
                 "Key": key,
                 "LocalizedName": localized_name,
+                "AdministrativeArea": {"ID": administrative_area_id},
             },
         ]:
             # `type: ignore` is necessary because mypy gets confused when
@@ -111,6 +114,7 @@ def process_location_response_with_country(response: Any) -> dict[str, Any] | No
             return {  # type: ignore
                 "key": key,
                 "localized_name": localized_name,
+                "administrative_area_id": administrative_area_id,
             }
         case _:
             return None

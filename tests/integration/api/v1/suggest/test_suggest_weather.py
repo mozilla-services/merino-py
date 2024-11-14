@@ -189,6 +189,7 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
     """
     weather_report: WeatherReport = WeatherReport(
         city_name="Milton",
+        region_code="WA",
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "http://www.accuweather.com/en/us/milton-wa/98354/current-weather/"
@@ -224,6 +225,7 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
             score=0.3,
             icon=None,
             city_name=weather_report.city_name,
+            region_code=weather_report.region_code,
             current_conditions=weather_report.current_conditions,
             forecast=weather_report.forecast,
         )

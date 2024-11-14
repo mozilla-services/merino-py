@@ -81,6 +81,7 @@ def fixture_expected_weather_report() -> WeatherReport:
     """Create an `AccuWeatherReport` for assertions"""
     return WeatherReport(
         city_name="San Francisco",
+        region_code="CA",
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
@@ -108,6 +109,7 @@ def fixture_expected_weather_report_via_location_key() -> WeatherReport:
     """Create an `AccuWeatherReport` for assertions"""
     return WeatherReport(
         city_name="N/A",
+        region_code="N/A",
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
@@ -184,6 +186,7 @@ def fixture_accuweather_cached_location_key() -> bytes:
     location: dict[str, Any] = {
         "key": "39376",
         "localized_name": "San Francisco",
+        "administrative_area_id": "CA",
     }
     return json.dumps(location).encode("utf-8")
 
@@ -646,7 +649,6 @@ async def test_get_weather_report_with_location_key_from_cache(
     statsd_mock: Any,
     expected_weather_report_via_location_key: WeatherReport,
     accuweather_parameters: dict[str, Any],
-    accuweather_cached_location_key: bytes,
     accuweather_cached_current_conditions: bytes,
     accuweather_cached_forecast_fahrenheit: bytes,
 ) -> None:
@@ -699,9 +701,7 @@ async def test_get_weather_report_via_location_key_with_both_current_conditions_
     weather_context_with_location_key: WeatherContext,
     expected_weather_report_via_location_key: WeatherReport,
     accuweather_parameters: dict[str, Any],
-    accuweather_cached_location_key: bytes,
     accuweather_current_conditions_response: bytes,
-    accuweather_cached_forecast_fahrenheit: bytes,
     accuweather_forecast_response_fahrenheit: bytes,
 ) -> None:
     """Test that we can get weather report via location key with both current conditions and
@@ -756,7 +756,6 @@ async def test_get_weather_report_via_location_key_with_only_current_conditions_
     weather_context_with_location_key: WeatherContext,
     expected_weather_report_via_location_key: WeatherReport,
     accuweather_parameters: dict[str, Any],
-    accuweather_cached_location_key: bytes,
     accuweather_current_conditions_response: bytes,
     accuweather_cached_forecast_fahrenheit: bytes,
 ) -> None:
@@ -876,11 +875,7 @@ async def test_get_weather_report_with_location_key_with_cache_error(
     filter_caplog: FilterCaplogFixture,
     weather_context_with_location_key: WeatherContext,
     statsd_mock: Any,
-    expected_weather_report_via_location_key: WeatherReport,
     accuweather_parameters: dict[str, Any],
-    accuweather_cached_location_key: bytes,
-    accuweather_cached_current_conditions: bytes,
-    accuweather_cached_forecast_fahrenheit: bytes,
     mocker: MockerFixture,
 ) -> None:
     """Test that we catch the CacheAdapterError exception when running the script against the
