@@ -326,6 +326,7 @@ def fixture_expected_weather_report() -> WeatherReport:
     """Create an `AccuWeatherReport` for assertions"""
     return WeatherReport(
         city_name="San Francisco",
+        region_code="CA",
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
@@ -353,6 +354,7 @@ def fixture_expected_weather_report_via_location_key() -> WeatherReport:
     """Create an `AccuWeatherReport` for assertions"""
     return WeatherReport(
         city_name="N/A",
+        region_code="N/A",
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
@@ -588,6 +590,7 @@ def fixture_accuweather_cached_location_key() -> bytes:
     location: dict[str, Any] = {
         "key": "39376",
         "localized_name": "San Francisco",
+        "administrative_area_id": "CA",
     }
     return orjson.dumps(location)
 
@@ -1605,7 +1608,7 @@ async def test_get_location_by_geolocation(
 ) -> None:
     """Test that the get_location method returns an AccuweatherLocation."""
     expected_location: AccuweatherLocation = AccuweatherLocation(
-        key="39376", localized_name="San Francisco"
+        key="39376", localized_name="San Francisco", administrative_area_id="CA"
     )
     country: str = "US"
     region: str = "CA"

@@ -152,6 +152,9 @@ class AccuweatherLocation(BaseModel):
     # Default is US English (en-us).
     localized_name: str
 
+    # Unique Administrative Area ID for the Location.
+    administrative_area_id: str
+
 
 class WeatherData(NamedTuple):
     """The quartet for weather data used internally."""
@@ -633,13 +636,15 @@ class AccuweatherBackend:
         if location_key and location is None:
             # request was made with location key rather than geolocation
             # so location info is not in the cache
-            location = AccuweatherLocation(localized_name="N/A", key=location_key)
-
+            location = AccuweatherLocation(
+                localized_name="N/A", key=location_key, administrative_area_id="N/A"
+            )
         # if all the other three values are present, ttl here would be a valid ttl value
         if location and current_conditions and forecast and ttl:
             # Return the weather report with the values returned from the cache.
             return WeatherReport(
                 city_name=location.localized_name,
+                region_code=location.administrative_area_id,
                 current_conditions=current_conditions,
                 forecast=forecast,
                 ttl=ttl,
@@ -690,6 +695,7 @@ class AccuweatherBackend:
             return (
                 WeatherReport(
                     city_name=location.localized_name,
+                    region_code=location.administrative_area_id,
                     current_conditions=current_conditions,
                     forecast=forecast,
                     ttl=weather_report_ttl,

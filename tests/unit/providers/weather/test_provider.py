@@ -46,6 +46,7 @@ def fixture_weather_report() -> WeatherReport:
     """Return a test WeatherReport."""
     return WeatherReport(
         city_name="San Francisco",
+        region_code="CA",
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "http://www.accuweather.com/en/us/san-francisco-ca/"
@@ -117,6 +118,7 @@ async def test_query_weather_report_returned(
             score=settings.providers.accuweather.score,
             icon=None,
             city_name=weather_report.city_name,
+            region_code=weather_report.region_code,
             current_conditions=weather_report.current_conditions,
             forecast=weather_report.forecast,
             custom_details=CustomDetails(
