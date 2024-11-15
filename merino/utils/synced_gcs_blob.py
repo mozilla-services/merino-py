@@ -107,7 +107,7 @@ class SyncedGcsBlob:
 
         if not blob.exists():
             # The staging bucket is not expected to have data. We don't want to emit a Sentry error.
-            level = logging.INFO if settings.current_env.lower() == "staging" else logging.ERROR
+            level = logging.INFO if settings.current_env.lower() == "stage" else logging.ERROR
             logger.log(level, f"Blob '{self.blob_name}' not found.")
             return
 

@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import time
+from typing import Callable
 
 import pytest
 from aiodogstatsd import Client as StatsdClient
@@ -54,14 +55,19 @@ def create_blob(bucket, data):
     return blob
 
 
-async def wait_until_engagement_is_updated(backend: GcsEngagement):
-    """Wait for some time to pass to update engagement."""
+async def wait(until: Callable[[], bool]):
+    """Wait for some time to pass, until the given condition is true."""
     max_wait_time_sec = 2
     start_time = time.time()
     while time.time() - start_time < max_wait_time_sec:
-        if backend.update_count > 0:
+        if until():
             break
         await asyncio.sleep(0.01)  # sleep for 10ms
+
+
+async def wait_until_engagement_is_updated(backend: GcsEngagement):
+    """Wait for some time to pass to update engagement."""
+    await wait(until=lambda: backend.update_count > 0)
 
 
 @pytest.fixture
@@ -95,6 +101,19 @@ def large_blob(gcs_bucket):
         gcs_bucket,
         "a" * (settings.curated_recommendations.gcs.engagement.max_size + 1),
     )
+
+
+@pytest.fixture(params=["stage", "prod", "dev"])
+def setting_environment(request):
+    """Fixture to run a test in the staging, production, and development environment."""
+    original_env = settings.current_env
+
+    # Set the desired environment.
+    settings.configure(FORCE_ENV_FOR_DYNACONF=request.param)
+    yield request.param  # Yield to run the test
+
+    # Reset to the original environment after the test
+    settings.configure(FORCE_ENV_FOR_DYNACONF=original_env)
 
 
 @pytest.mark.asyncio
@@ -151,6 +170,31 @@ async def test_gcs_engagement_logs_error_for_large_blob(
 
     max_size = settings.curated_recommendations.gcs.engagement.max_size
     assert f"Blob '{large_blob.name}' size {max_size+3} exceeds {max_size}" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_gcs_engagement_logs_error_for_missing_blob(
+    gcs_storage_client, gcs_bucket, metrics_client, caplog, setting_environment
+):
+    """Test that the backend logs an error if the blob does not exist, outside 'stage'."""
+    # Set the environment for each test case
+    caplog.set_level(logging.INFO)
+    create_gcs_engagement(gcs_storage_client, gcs_bucket, metrics_client)
+
+    def expected_message_is_logged():
+        # Filter log records to only those with the expected log level
+        expected_level_name = "INFO" if setting_environment == "stage" else "ERROR"
+        log_records = [
+            record for record in caplog.records if record.levelname == expected_level_name
+        ]
+        # Assert that the expected message appears with the expected log level
+        expected_message = "Blob 'newtab-merino-exports/engagement/latest.json' not found."
+        return any(expected_message in record.message for record in log_records)
+
+    # Ensure that this test runs quickly, by waiting only until the expected message is logged.
+    await wait(until=expected_message_is_logged)
+
+    assert expected_message_is_logged()
 
 
 @pytest.mark.asyncio
