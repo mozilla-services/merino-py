@@ -161,3 +161,6 @@ workspace/
 
 # IntelliJ IDE local settings
 .idea
+
+# Zed editor workspace configs
+.zed
