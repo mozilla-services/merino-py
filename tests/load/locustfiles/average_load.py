@@ -84,12 +84,12 @@ class MerinoAverageLoadTestShape(LoadTestShape):
 
         None: Instruction to stop the load test
         """
-        run_time: int = int(self.get_run_time())
+        run_time: int = int(self.get_run_time()) # type: ignore [no-untyped-call]
         if run_time > self.MAX_RUN_TIME:
             return None
 
         users: int = self.trend.calculate_users(run_time)
         # The spawn_rate minimum value is 1
-        spawn_rate: float = max(abs(users - self.get_current_user_count()), 1)
+        spawn_rate: float = max(abs(users - self.get_current_user_count()), 1) # type: ignore [no-untyped-call]
 
         return users, spawn_rate, self.user_classes
