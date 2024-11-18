@@ -283,9 +283,9 @@ class AccuweatherBackend:
                     hasher.update(key.encode("utf-8") + value.encode("utf-8"))
             extra_identifiers = hasher.hexdigest()
 
-            return f"{self.__class__.__name__}:v5:{url}:{extra_identifiers}"
+            return f"{self.__class__.__name__}:v6:{url}:{extra_identifiers}"
 
-        return f"{self.__class__.__name__}:v5:{url}"
+        return f"{self.__class__.__name__}:v6:{url}"
 
     @functools.cache
     def cache_key_template(self, dt: WeatherDataType, language: str) -> str:
