@@ -28,7 +28,7 @@ async def test_fetch(corpus_backend: CorpusApiBackend, fixture_response_data):
     assert results[0] == CorpusItem(
         url=HttpUrl(
             "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-"
-            "brownies-and-cakes?utm_source=pocket-newtab-en-us"
+            "brownies-and-cakes?utm_source=firefox-newtab-en-us"
         ),
         title="Milk Powder Is the Key to Better Cookies, Brownies, and Cakes",
         excerpt="Consider this pantry staple your secret ingredient for making more flavorful "
