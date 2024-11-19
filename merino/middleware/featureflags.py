@@ -3,7 +3,7 @@
 from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from merino.featureflags import session_id_context
+from merino.utils.featureflags import session_id_context
 
 
 class FeatureFlagsMiddleware:

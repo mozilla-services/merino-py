@@ -6,6 +6,8 @@ from pydantic import BaseModel, HttpUrl
 
 from merino.middleware.geolocation import Location
 
+from dataclasses import dataclass
+
 
 class Temperature(BaseModel):
     """Model for temperature with C and F values."""
@@ -59,6 +61,7 @@ class WeatherReport(BaseModel):
     current_conditions: CurrentConditions
     forecast: Forecast
     ttl: int
+    region_code: str
 
 
 class LocationCompletion(BaseModel):
@@ -72,6 +75,14 @@ class LocationCompletion(BaseModel):
     administrative_area: LocationCompletionGeoDetails
 
 
+@dataclass
+class WeatherContext:
+    """Class that contains context needed to make weather reports."""
+
+    geolocation: Location
+    languages: list[str]
+
+
 class WeatherBackend(Protocol):
     """Protocol for a weather backend that this provider depends on.
 
@@ -81,7 +92,7 @@ class WeatherBackend(Protocol):
     """
 
     async def get_weather_report(
-        self, geolocation: Location, location_key: str | None
+        self, weather_context: WeatherContext
     ) -> WeatherReport | None:  # pragma: no cover
         """Get weather information from partner.
 
@@ -91,7 +102,7 @@ class WeatherBackend(Protocol):
         ...
 
     async def get_location_completion(
-        self, geolocation: Location, search_term: str
+        self, weather_context: WeatherContext, search_term: str
     ) -> list[LocationCompletion] | None:  # pragma: no cover
         """Get a list of locations (cities and country) from partner
         Raises:

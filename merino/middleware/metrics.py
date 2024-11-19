@@ -8,8 +8,7 @@ from http import HTTPStatus
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from merino.featureflags import FeatureFlags
-from merino.metrics import Client, get_metrics_client
+from merino.utils.metrics import get_metrics_client
 from merino.middleware import ScopeKey
 
 logger = logging.getLogger(__name__)
@@ -30,22 +29,12 @@ class MetricsMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # The metrics client needs to be able to read feature flags
-        feature_flags = FeatureFlags()
+        # get the memoized StatsD client
+        metrics_client = get_metrics_client()
 
-        # We don't use the StatsD client directly
-        statsd_client = get_metrics_client()
-
-        # Instead we use our own proxy client which adds feature flags to metrics
-        client = Client(
-            statsd_client=statsd_client,
-            feature_flags=feature_flags,
-        )
-
-        # Store the `FeatureFlags` instance and the `Client` instance in the
-        # request scope, so that it can be used by other middleware and endpoints.
-        scope[ScopeKey.FEATURE_FLAGS] = feature_flags
-        scope[ScopeKey.METRICS_CLIENT] = client
+        # Store `Client` instance in the request scope, so that it can be used by other
+        # middleware and endpoints.
+        scope[ScopeKey.METRICS_CLIENT] = metrics_client
 
         loop = get_event_loop()
         request = Request(scope=scope)
@@ -60,16 +49,16 @@ class MetricsMiddleware:
                 # Instead we will track those within a general `response.status_codes` metric.
                 if status_code != HTTPStatus.NOT_FOUND.value:
                     metric_name = self._build_metric_name(request.method, request.url.path)
-                    client.timing(
+                    metrics_client.timing(
                         f"{metric_name}.timing",
                         value=duration,
                     )
-                    client.increment(
+                    metrics_client.increment(
                         f"{metric_name}.status_codes.{status_code}",
                     )
 
                 # track all status codes here.
-                client.increment(f"response.status_codes.{status_code}")
+                metrics_client.increment(f"response.status_codes.{status_code}")
 
             await send(message)
 
@@ -79,9 +68,9 @@ class MetricsMiddleware:
             status_code = HTTPStatus.INTERNAL_SERVER_ERROR.value
             duration = (loop.time() - started_at) * 1000
             metric_name = self._build_metric_name(request.method, request.url.path)
-            client.timing(f"{metric_name}.timing", value=duration)
-            client.increment(f"{metric_name}.status_codes.{status_code}")
-            client.increment(f"response.status_codes.{status_code}")
+            metrics_client.timing(f"{metric_name}.timing", value=duration)
+            metrics_client.increment(f"{metric_name}.status_codes.{status_code}")
+            metrics_client.increment(f"response.status_codes.{status_code}")
             raise
 
     @cache

@@ -1,9 +1,7 @@
 """Merino V1 API"""
 
-import functools
 import logging
 from asyncio import Task
-from collections import Counter
 from functools import partial
 from itertools import chain
 from typing import Annotated
@@ -13,6 +11,7 @@ from fastapi import APIRouter, Depends, Query, Header
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse
 from starlette.requests import Request
+from aiodogstatsd import Client
 
 from merino.config import settings
 from merino.curated_recommendations import get_provider as get_corpus_api_provider
@@ -23,34 +22,29 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
 )
-from merino.metrics import Client
 from merino.middleware import ScopeKey
 from merino.providers import get_providers
-from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.custom_details import CustomDetails, WeatherDetails
-from merino.providers.weather.provider import Provider as WeatherProvider
-from merino.providers.weather.provider import Suggestion as WeatherSuggestion
+from merino.providers.base import BaseProvider, SuggestionRequest
+
 from merino.utils import task_runner
+
+from merino.utils.api.cache_control import get_ttl_for_cache_control_header_for_suggestions
+from merino.utils.api.metrics import emit_suggestions_per_metrics
+from merino.utils.api.query_params import (
+    get_accepted_languages,
+    refine_geolocation_for_suggestion,
+    validate_suggest_custom_location_params,
+)
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-SUGGEST_RESPONSE = {
-    "suggestions": [],
-    "client_variants": [],
-    "server_variants": [],
-    "request_id": "",
-}
 
 # Param to capture all enabled_by_default=True providers.
 DEFAULT_PROVIDERS_PARAM_NAME: str = "default"
 
 # Timeout for query tasks.
 QUERY_TIMEOUT_SEC = settings.runtime.query_timeout_sec
-
-# Default Cache-Control TTL value for /suggest endpoint responses
-DEFAULT_CACHE_CONTROL_TTL: int = settings.runtime.default_suggestions_response_ttl_sec
 
 # Client Variant Maximum - used to limit the number of
 # possible client variants for experiments.
@@ -70,6 +64,9 @@ HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 async def suggest(
     request: Request,
     q: Annotated[str, Query(max_length=QUERY_CHARACTER_MAX)],
+    country: Annotated[str | None, Query(max_length=2, min_length=2)] = None,
+    region: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
+    city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
@@ -91,6 +88,15 @@ async def suggest(
     - `q`: The query that the user has typed. This is expected to be a partial
         input, sent as fast as once per keystroke, though a slower period may be
         appropriate for the user agent.
+    - `city`: [Optional] City name. E.g. “New York”. If provided,
+        Accuweather provider returns weather suggestions based on this city. Note: If provided,
+        `region` and `country` must also be provided to successfully return weather suggestions.
+    - `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided,
+        Accuweather provider returns weather suggestions based on this country. Note: If provided,
+        `city` and `region` must also be provided to successfully return weather suggestions.
+    - `region`: [Optional] Subdivision code. E.g. : “NY”. If provided,
+        Accuweather provider returns weather suggestions based on this region. Note: If provided,
+        `city` and `country` must also be provided to successfully return weather suggestions.
     - `client_variants`: [Optional] A comma-separated list of any experiments or
         rollouts that are affecting the client's Suggest experience. If Merino
         recognizes any of them it will modify its behavior accordingly.
@@ -177,11 +183,16 @@ async def suggest(
         search_from = default_providers
 
     lookups: list[Task] = []
+    languages = get_accepted_languages(accept_language)
+
+    validate_suggest_custom_location_params(city, region, country)
+
     for p in search_from:
         srequest = SuggestionRequest(
             query=p.normalize_query(q),
-            geolocation=request.scope[ScopeKey.GEOLOCATION],
+            geolocation=refine_geolocation_for_suggestion(request, city, region, country),
             request_type=request_type,
+            languages=languages,
         )
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
         # `timeit_task()` doesn't support task naming, need to set the task name manually
@@ -231,53 +242,6 @@ async def suggest(
         content=jsonable_encoder(response, exclude_none=True),
         headers=response_headers,
     )
-
-
-def emit_suggestions_per_metrics(
-    metrics_client: Client,
-    suggestions: list[BaseSuggestion],
-    searched_providers: list[BaseProvider],
-) -> None:
-    """Emit metrics for suggestions per request and suggestions per request by provider."""
-    metrics_client.histogram("suggestions-per.request", value=len(suggestions))
-
-    suggestion_counter = Counter(suggestion.provider for suggestion in suggestions)
-
-    for provider in searched_providers:
-        provider_name = provider.name
-        suggestion_count = suggestion_counter[provider_name]
-        metrics_client.histogram(
-            f"suggestions-per.provider.{provider_name}",
-            value=suggestion_count,
-        )
-
-
-def get_ttl_for_cache_control_header_for_suggestions(
-    request_providers: list[BaseProvider], suggestions: list[BaseSuggestion]
-) -> int:
-    """Retrieve the TTL value for the Cache-Control header based on provider and suggestions
-    type. Return the default suggestions response ttl sec otherwise.
-    """
-    match request_providers:
-        case [WeatherProvider()]:
-            match suggestions:
-                # this case targets accuweather suggestions and pulls out the ttl and then
-                # deletes the custom_details attribute to be not included in the response
-                case [
-                    WeatherSuggestion(
-                        custom_details=CustomDetails(
-                            weather=WeatherDetails(weather_report_ttl=ttl)
-                        )
-                    ) as suggestion
-                ]:
-                    delattr(suggestion, "custom_details")
-                    return ttl
-                case _:
-                    # can add a use case for some other type of suggestion
-                    return DEFAULT_CACHE_CONTROL_TTL
-        case _:
-            # can add a use case for some other type of provider
-            return DEFAULT_CACHE_CONTROL_TTL
 
 
 @router.get(
@@ -341,7 +305,7 @@ async def curated_content(
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 100.
     - `topics`: [Optional] A list of preferred [topics][curated-topics-doc].
     - `feeds`: [Optional] A list of additional data feeds. Currently, accepts
-       only one value: 'need_to_know'.
+       only three values: 'need_to_know', 'fakespot', and 'sections'.
     - `experimentName`: [Optional] The Nimbus New Tab experiment name that the user is enrolled in.
         When an experiment _only_ requires backend changes, this allows us to run the experiments
         without waiting on the Firefox release cycle. When an experiment _does_ require changes in
@@ -353,25 +317,3 @@ async def curated_content(
     [curated-topics-doc]: https://mozilla-hub.atlassian.net/wiki/x/LQDaMg
     """
     return await provider.fetch(curated_recommendations_request)
-
-
-@functools.lru_cache(maxsize=1000)
-def get_accepted_languages(languages: str | None) -> list[str]:
-    """Retrieve filtered list of languages that merino accepts."""
-    if languages:
-        try:
-            if languages == "*":
-                return ["en-US"]
-            result = []
-            for lang in languages.split(","):
-                parts = lang.strip().split(";q=")
-                language = parts[0]
-                quality = float(parts[1]) if len(parts) > 1 else 1.0  # Default q-value is 1.0
-                result.append((language, quality))
-
-            # Sort by quality in descending order
-            result.sort(key=lambda x: x[1], reverse=True)
-            return [language[0] for language in result]
-        except Exception:
-            return ["en-US"]
-    return ["en-US"]

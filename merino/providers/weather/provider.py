@@ -8,18 +8,21 @@ import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
 
-from merino import cron
+from merino.utils import cron
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import CustomDetails, WeatherDetails
-from merino.providers.weather.backends.accuweather.pathfinder import get_region_mapping_size
+from merino.providers.weather.backends.accuweather.pathfinder import (
+    get_region_mapping_size,
+)
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
     LocationCompletion,
     WeatherBackend,
     WeatherReport,
+    WeatherContext,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,6 +32,7 @@ class Suggestion(BaseSuggestion):
     """Model for weather suggestions."""
 
     city_name: str
+    region_code: str
     current_conditions: CurrentConditions
     forecast: Forecast
 
@@ -89,7 +93,8 @@ class Provider(BaseProvider):
 
     async def _fetch_mapping_size(self) -> None:
         self.metrics_client.gauge(
-            name=f"providers.{self.name}.pathfinder.mapping.size", value=get_region_mapping_size()
+            name=f"providers.{self.name}.pathfinder.mapping.size",
+            value=get_region_mapping_size(),
         )
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
@@ -97,24 +102,25 @@ class Provider(BaseProvider):
         # early exit with 400 error if "q" query param is present without the "request_type" param
         if srequest.query and not srequest.request_type:
             raise HTTPException(
-                status_code=400, detail="Invalid query parameters: `request_type` is missing"
+                status_code=400,
+                detail="Invalid query parameters: `request_type` is missing",
             )
 
         geolocation: Location = srequest.geolocation
+        languages: list[str] = srequest.languages if srequest.languages else []
         is_location_completion_request = srequest.request_type == "location"
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
-
+        weather_context = WeatherContext(geolocation, languages)
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
                 if is_location_completion_request:
                     location_completions = await self.backend.get_location_completion(
-                        geolocation, search_term=srequest.query
+                        weather_context, search_term=srequest.query
                     )
                 else:
-                    weather_report = await self.backend.get_weather_report(
-                        geolocation, srequest.query
-                    )
+                    weather_context.geolocation.key = srequest.query
+                    weather_report = await self.backend.get_weather_report(weather_context)
 
         except BackendError as backend_error:
             logger.warning(backend_error)
@@ -140,6 +146,7 @@ class Provider(BaseProvider):
                 score=self.score,
                 icon=None,
                 city_name=data.city_name,
+                region_code=data.region_code,
                 current_conditions=data.current_conditions,
                 forecast=data.forecast,
                 custom_details=CustomDetails(weather=WeatherDetails(weather_report_ttl=data.ttl)),

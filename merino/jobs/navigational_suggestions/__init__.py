@@ -11,7 +11,7 @@ from httpx import URL
 
 from merino.config import settings as config
 from merino.content_handler.gcp_uploader import GcsUploader
-from merino.jobs.navigational_suggestions.domain_category_mapping import DOMAIN_MAPPING
+from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
 from merino.jobs.navigational_suggestions.domain_data_downloader import (
     DomainDataDownloader,
 )

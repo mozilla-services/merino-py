@@ -60,7 +60,12 @@ class Provider(BaseProvider):
                         region=srequest.geolocation.region_names[0]
                         if srequest.geolocation.region_names
                         else None,
+                        region_code=srequest.geolocation.regions[0]
+                        if srequest.geolocation.regions
+                        else None,
+                        country_code=srequest.geolocation.country,
                         city=srequest.geolocation.city,
+                        location=srequest.geolocation.coordinates,
                     )
                 ),
             )

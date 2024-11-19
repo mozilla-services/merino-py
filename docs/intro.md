@@ -25,7 +25,7 @@ dependencies required for Merino.
 
 [dev/release-process.md - Release Process][8] describes the release process of Merino in detail.
 
-[dev/testing.md - Testing][9] describes unit, integration, contract and load tests for Merino.
+[dev/testing.md - Testing][9] describes unit, integration and load tests for Merino.
 
 [dev/profiling.md - Profiling][10] describes how to profile Merino to address performance issues.
 

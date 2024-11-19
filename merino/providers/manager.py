@@ -9,7 +9,7 @@ from merino.cache.none import NoCacheAdapter
 from merino.cache.redis import RedisAdapter
 from merino.config import settings
 from merino.exceptions import InvalidProviderError
-from merino.metrics import get_metrics_client
+from merino.utils.metrics import get_metrics_client
 from merino.providers.adm.backends.fake_backends import FakeAdmBackend
 from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
 from merino.providers.adm.provider import Provider as AdmProvider

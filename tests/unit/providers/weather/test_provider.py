@@ -41,6 +41,34 @@ def fixture_geolocation() -> Location:
     )
 
 
+@pytest.fixture(name="weather_report")
+def fixture_weather_report() -> WeatherReport:
+    """Return a test WeatherReport."""
+    return WeatherReport(
+        city_name="San Francisco",
+        region_code="CA",
+        current_conditions=CurrentConditions(
+            url=HttpUrl(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/current-weather/39376?lang=en-us"
+            ),
+            summary="Mostly cloudy",
+            icon_id=6,
+            temperature=Temperature(c=15.5, f=60.0),
+        ),
+        forecast=Forecast(
+            url=HttpUrl(
+                "http://www.accuweather.com/en/us/san-francisco-ca/"
+                "94103/daily-weather-forecast/39376?lang=en-us"
+            ),
+            summary="Pleasant Saturday",
+            high=Temperature(c=21.1, f=70.0),
+            low=Temperature(c=13.9, f=57.0),
+        ),
+        ttl=TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
+    )
+
+
 @pytest.fixture(name="backend_mock")
 def fixture_backend_mock(mocker: MockerFixture) -> Any:
     """Create a WeatherBackend mock object for test."""
@@ -72,31 +100,12 @@ def test_not_hidden_by_default(provider: Provider) -> None:
 
 @pytest.mark.asyncio
 async def test_query_weather_report_returned(
-    backend_mock: Any, provider: Provider, geolocation: Location
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+    weather_report: WeatherReport,
 ) -> None:
     """Test that the query method provides a valid weather suggestion."""
-    report: WeatherReport = WeatherReport(
-        city_name="San Francisco",
-        current_conditions=CurrentConditions(
-            url=HttpUrl(
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/current-weather/39376?lang=en-us"
-            ),
-            summary="Mostly cloudy",
-            icon_id=6,
-            temperature=Temperature(c=15.5, f=60.0),
-        ),
-        forecast=Forecast(
-            url=HttpUrl(
-                "http://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/daily-weather-forecast/39376?lang=en-us"
-            ),
-            summary="Pleasant Saturday",
-            high=Temperature(c=21.1, f=70.0),
-            low=Temperature(c=13.9, f=57.0),
-        ),
-        ttl=TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
-    )
     expected_suggestions: list[Suggestion] = [
         Suggestion(
             title="Weather for San Francisco",
@@ -108,13 +117,16 @@ async def test_query_weather_report_returned(
             is_sponsored=False,
             score=settings.providers.accuweather.score,
             icon=None,
-            city_name=report.city_name,
-            current_conditions=report.current_conditions,
-            forecast=report.forecast,
-            custom_details=CustomDetails(weather=WeatherDetails(weather_report_ttl=report.ttl)),
+            city_name=weather_report.city_name,
+            region_code=weather_report.region_code,
+            current_conditions=weather_report.current_conditions,
+            forecast=weather_report.forecast,
+            custom_details=CustomDetails(
+                weather=WeatherDetails(weather_report_ttl=weather_report.ttl)
+            ),
         )
     ]
-    backend_mock.get_weather_report.return_value = report
+    backend_mock.get_weather_report.return_value = weather_report
 
     suggestions: list[BaseSuggestion] = await provider.query(
         SuggestionRequest(query="", geolocation=geolocation)

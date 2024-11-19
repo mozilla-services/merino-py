@@ -35,6 +35,7 @@ def test_map_corpus_to_serp_topic_return_none(topic):
         ("FOOD", "food"),
         ("POLITICS", "government"),
         ("HEALTH_FITNESS", "health"),
+        ("HOME", "home"),
         ("SELF_IMPROVEMENT", "society"),
         ("SPORTS", "sports"),
         ("TECHNOLOGY", "tech"),

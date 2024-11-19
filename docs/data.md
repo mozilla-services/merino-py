@@ -144,7 +144,6 @@ The weather provider records additional metrics.
 - `merino.providers.accuweather.query.cache.fetch.miss.locations` - A counter to measure the number of times weather location was not in the cache. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.fetch.miss.currentconditions` - A counter to measure the number of times a current conditions was not in the cache. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.fetch.miss.forecasts` - A counter to measure the number of times a forecast for a location was not in the cache. Sampled at 75%.
-- `merino.providers.accuweather.query.cache.fetch.miss.ttl` - A counter to measure the number of times a weather report was available but expired or had an invalid TTL. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.fetch.hit.{locations | currentconditions | forecasts}` - A counter to measure the number of times a
   requested value like a location or forecast is in the cache. We don't count TTL hits explicitly, just misses. Sampled at 75%.
 - `merino.providers.accuweather.query.backend.get` - A timer to measure the duration (in ms) of a
@@ -168,9 +167,20 @@ The following additional metrics are recorded when curated recommendations are r
  A counter to measure the number of GraphQL errors from the curated-corpus-api.
 - `recommendation.engagement.update.timing` -
  A timer to measure the duration (in ms) of updating the engagement data from GCS.
-- `recommendation.engagement.size` - A gauge to track the size of the blob on GCS.
-- `recommendation.engagement.count` - A gauge to measure the number of scheduled corpus items with
- engagement data.
+- `recommendation.engagement.size` - A gauge to track the size of the engagement blob on GCS.
+- `recommendation.engagement.count` - A gauge to measure the total number of engagement records.
+- `recommendation.engagement.{country}.count` - A gauge to measure the number of scheduled corpus 
+ items with engagement data per country.
+- `recommendation.engagement.{country}.clicks` - A gauge to measure the number of clicks per country 
+ in our GCS engagement blob.
+- `recommendation.engagement.{country}.impressions` - A gauge to measure the number of impressions
+ per country in our GCS engagement blob.
 - `recommendation.engagement.last_updated` -
  A gauge for the staleness (in seconds) of the engagement data, measured between when the data was
+ updated in GCS and the current time.
+- `recommendation.prior.update.timing` -
+ A timer to measure the duration (in ms) of updating the prior data from GCS.
+- `recommendation.prior.size` - A gauge to track the size of the Thompson sampling priors blob on GCS.
+- `recommendation.prior.last_updated` -
+ A gauge for the staleness (in seconds) of the prior data, measured between when the data was
  updated in GCS and the current time.

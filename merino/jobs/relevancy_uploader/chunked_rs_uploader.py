@@ -25,9 +25,8 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
         category_name: str,
         category_code: int,
         version: int,
-        allow_delete: bool = True,
         dry_run: bool = False,
-        total_data_count: int | None = None,
+        total_item_count: int | None = None,
     ):
         """Initialize the uploader."""
         super().__init__(
@@ -37,9 +36,8 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
             collection,
             record_type,
             server,
-            allow_delete,
             dry_run,
-            total_data_count,
+            total_item_count,
         )
         self.category_name = category_name
         self.category_code = category_code
@@ -65,7 +63,7 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
         """Create a record and attachment for a chunk."""
         # The record ID will be "{record_type}-{start}-{end}", where `start` and
         # `end` are zero-padded based on the total suggestion count.
-        places = 0 if not self.total_data_count else len(str(self.total_data_count))
+        places = 0 if not self.total_item_count else len(str(self.total_item_count))
         start = f"{chunk.start_index:0{places}}"
         end = f"{chunk.start_index + chunk.size:0{places}}"
         record_id = "-".join([self.category_name, start, end])
@@ -80,7 +78,7 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
                 }
             },
         }
-        attachment_json = json.dumps(chunk.data)
+        attachment_json = json.dumps(chunk.to_json_serializable())
 
         logger.info(f"Uploading record: {record}")
         if not self.dry_run:

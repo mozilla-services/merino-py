@@ -47,7 +47,9 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
 
 
 async def explore(
-    location: Location, probe: Callable[[MaybeStr, MaybeStr, MaybeStr], Awaitable[Optional[Any]]]
+    location: Location,
+    probe: Callable[..., Awaitable[Optional[Any]]],
+    language: str | None = None,
 ) -> Optional[Any]:
     """Repeatedly executes an async function (prober) for each candidate until a valid result (path) is found.
 
@@ -67,7 +69,10 @@ async def explore(
       - Any exception raised from `probe`.
     """
     for country, region, city in compass(location):
-        res = await probe(country, region, city)
+        if language:
+            res = await probe(country, region, city, language)
+        else:
+            res = await probe(country, region, city)
         if res is not None:
             return res
 

@@ -5,9 +5,10 @@ from enum import unique, Enum
 from typing import Annotated
 import logging
 
-from pydantic import Field, field_validator, model_validator, BaseModel
+from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo
 
 from merino.curated_recommendations.corpus_backends.protocol import CorpusItem, Topic
+from merino.curated_recommendations.fakespot_backend.protocol import FakespotFeed
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,12 @@ class ExperimentName(str, Enum):
     when Merino needs to change behavior depending on the experimentName request parameter.
     """
 
+    # Experiment where large countries receive region-specific ranking.
     REGION_SPECIFIC_CONTENT_EXPANSION = "new-tab-region-specific-content-expansion"
+    # Same as the above, but targeting small countries, which need a higher enrollment %.
+    REGION_SPECIFIC_CONTENT_EXPANSION_SMALL = "new-tab-region-specific-content-expansion-small"
+    # Experiment where high-engaging items scheduled for past dates are included.
+    EXTENDED_EXPIRATION_EXPERIMENT = "new-tab-extend-content-duration"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
@@ -143,12 +149,101 @@ class CuratedRecommendationsBucket(BaseModel):
     title: str | None = None
 
 
-class CuratedRecommendationsFeed(BaseModel):
-    """Multiple lists of curated recommendations for experiments.
-    Currently limited to the 'need_to_know' feed only.
-    """
+@unique
+class TileSize(str, Enum):
+    """Defines possible sizes for a tile in the layout."""
 
-    need_to_know: CuratedRecommendationsBucket
+    SMALL = "small"
+    MEDIUM = "medium"
+    LARGE = "large"
+
+
+class Tile(BaseModel):
+    """Defines properties for a single tile in a responsive layout."""
+
+    size: TileSize
+    position: int
+    hasAd: bool
+    hasExcerpt: bool
+
+    @field_validator("hasExcerpt")
+    def no_excerpt_on_small_tiles(cls, hasExcerpt, info: ValidationInfo):
+        """Ensure small tiles do not have excerpts."""
+        if info.data.get("size") == TileSize.SMALL and hasExcerpt:
+            raise ValueError("Small tiles cannot have excerpts.")
+        return hasExcerpt
+
+    @field_validator("hasAd")
+    def no_ad_on_small_or_large_tiles(cls, hasAd, info: ValidationInfo):
+        """Ensure small and large tiles do not have ads."""
+        if info.data.get("size") in {TileSize.SMALL, TileSize.LARGE} and hasAd:
+            raise ValueError("Small or large tiles cannot have ads.")
+        return hasAd
+
+
+class ResponsiveLayout(BaseModel):
+    """Defines layout properties for a specific column count."""
+
+    columnCount: Annotated[int, Field(ge=1, le=4)]  # Restricts columnCount to integers from 1 to 4
+    tiles: list[Tile]
+
+    @field_validator("tiles")
+    def validate_tile_positions(cls, tiles):
+        """Ensure tile positions form a contiguous range from 0 to len(tiles) - 1, in any order."""
+        if sorted(tile.position for tile in tiles) != list(range(len(tiles))):
+            raise ValueError("ResponsiveLayout should not have a duplicate or missing position")
+        return tiles
+
+
+class Layout(BaseModel):
+    """Defines a responsive layout configuration with multiple column layouts."""
+
+    name: str
+    responsiveLayouts: list[ResponsiveLayout]
+
+    @field_validator("responsiveLayouts")
+    def must_include_all_column_counts(cls, responsiveLayouts):
+        """Ensure layouts include exactly one configuration for column counts 1 through 4."""
+        if sorted(layout.columnCount for layout in responsiveLayouts) != [1, 2, 3, 4]:
+            raise ValueError("Layout must have responsive layouts for 1, 2, 3, and 4 columns.")
+        return responsiveLayouts
+
+
+class Section(BaseModel):
+    """A ranked list of curated recommendations with responsive layout configurations."""
+
+    receivedFeedRank: int
+    recommendations: list[CuratedRecommendation]
+    title: str
+    subtitle: str | None = None
+    layout: Layout
+
+
+class CuratedRecommendationsFeed(BaseModel):
+    """Multiple lists of curated recommendations, that are currently in an experimental phase."""
+
+    need_to_know: CuratedRecommendationsBucket | None = None
+    fakespot: FakespotFeed | None = None
+
+    # The following feeds are used as mock data for the 'sections' experiment.
+    # They should be removed when the sections are implemented that we'll actually launch with.
+    business: Section | None = None
+    career: Section | None = None
+    arts: Section | None = None
+    food: Section | None = None
+    health_fitness: Section | None = None
+    home: Section | None = None
+    personal_finance: Section | None = None
+    politics: Section | None = None
+    sports: Section | None = None
+    technology: Section | None = None
+    travel: Section | None = None
+    education: Section | None = None
+    gaming: Section | None = None
+    parenting: Section | None = None
+    science: Section | None = None
+    self_improvement: Section | None = None
+    top_stories_section: Section | None = None
 
 
 class CuratedRecommendationsResponse(BaseModel):

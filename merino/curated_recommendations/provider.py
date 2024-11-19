@@ -2,16 +2,25 @@
 
 import time
 import re
+from datetime import datetime
 from typing import cast
 
+from merino.curated_recommendations import ExtendedExpirationCorpusBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     ScheduledSurfaceId,
     Topic,
 )
-from merino.curated_recommendations.engagement_backends.protocol import (
-    EngagementBackend,
+from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.fakespot_backend.protocol import (
+    FakespotBackend,
 )
+from merino.curated_recommendations.layouts import (
+    layout_4_medium,
+    layout_4_large,
+    layout_6_tiles,
+)
+from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     Locale,
     CuratedRecommendation,
@@ -20,6 +29,8 @@ from merino.curated_recommendations.protocol import (
     ExperimentName,
     CuratedRecommendationsFeed,
     CuratedRecommendationsBucket,
+    FakespotFeed,
+    Section,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -34,10 +45,18 @@ class CuratedRecommendationsProvider:
     corpus_backend: CorpusBackend
 
     def __init__(
-        self, corpus_backend: CorpusBackend, engagement_backend: EngagementBackend
+        self,
+        corpus_backend: CorpusBackend,
+        extended_expiration_corpus_backend: ExtendedExpirationCorpusBackend,
+        engagement_backend: EngagementBackend,
+        prior_backend: PriorBackend,
+        fakespot_backend: FakespotBackend,
     ) -> None:
         self.corpus_backend = corpus_backend
+        self.extended_expiration_corpus_backend = extended_expiration_corpus_backend
         self.engagement_backend = engagement_backend
+        self.prior_backend = prior_backend
+        self.fakespot_backend = fakespot_backend
 
     @staticmethod
     def get_recommendation_surface_id(
@@ -113,12 +132,69 @@ class CuratedRecommendationsProvider:
             return None
 
     @staticmethod
-    def is_enrolled_in_regional_engagement(request: CuratedRecommendationsRequest) -> bool:
-        """Return True if Thompson sampling should use regional engagement (treatment)"""
+    def is_enrolled_in_experiment(
+        request: CuratedRecommendationsRequest, name: str, branch: str
+    ) -> bool:
+        """Return True if the request's experimentName matches name or "optin-" + name, and the
+        experimentBranch matches the given branch. The optin- prefix signifies a forced enrollment.
+        """
         return (
-            request.experimentName == ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value
-            and request.experimentBranch == "treatment"
+            request.experimentName == name or request.experimentName == f"optin-{name}"
+        ) and request.experimentBranch == branch
+
+    @staticmethod
+    def is_enrolled_in_regional_engagement(request: CuratedRecommendationsRequest) -> bool:
+        """Return True if Thompson sampling should use regional engagement (treatment)."""
+        # Large and small countries need a different enrollment %, thus require separate experiments
+        return CuratedRecommendationsProvider.is_enrolled_in_experiment(
+            request, ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "treatment"
+        ) or CuratedRecommendationsProvider.is_enrolled_in_experiment(
+            request,
+            ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value,
+            "treatment",
         )
+
+    @staticmethod
+    def is_in_extended_expiration_experiment(request: CuratedRecommendationsRequest) -> bool:
+        """Return True if Thompson sampling should use regional engagement (treatment)."""
+        return CuratedRecommendationsProvider.is_enrolled_in_experiment(
+            request, ExperimentName.EXTENDED_EXPIRATION_EXPERIMENT.value, "treatment"
+        )
+
+    @staticmethod
+    def is_need_to_know_experiment(request, surface_id) -> bool:
+        """Check if the 'need_to_know' experiment is enabled."""
+        return (
+            request.feeds
+            and "need_to_know" in request.feeds
+            and surface_id
+            in (
+                ScheduledSurfaceId.NEW_TAB_EN_US,
+                ScheduledSurfaceId.NEW_TAB_EN_GB,
+                ScheduledSurfaceId.NEW_TAB_DE_DE,
+            )
+        )
+
+    @staticmethod
+    def is_sections_experiment(request) -> bool:
+        """Check if the 'sections' experiment is enabled."""
+        return request.feeds and "sections" in request.feeds
+
+    @staticmethod
+    def is_fakespot_experiment(request, surface_id) -> bool:
+        """Check if the 'Fakespot' experiment is enabled."""
+        return (
+            request.feeds
+            and "fakespot" in request.feeds
+            and surface_id == ScheduledSurfaceId.NEW_TAB_EN_US
+        )
+
+    @staticmethod
+    def get_fakespot_feed(
+        fakespot_backend: FakespotBackend, surface_id: ScheduledSurfaceId
+    ) -> FakespotFeed | None:
+        """Return the fakespot feed constructed in Fakespot Backend."""
+        return fakespot_backend.get(surface_id)
 
     def rank_recommendations(
         self,
@@ -139,7 +215,8 @@ class CuratedRecommendationsProvider:
         # 3. Apply Thompson sampling to rank recommendations by engagement
         recommendations = thompson_sampling(
             recommendations,
-            self.engagement_backend,
+            engagement_backend=self.engagement_backend,
+            prior_backend=self.prior_backend,
             region=self.derive_region(request.locale, request.region),
             enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
         )
@@ -166,9 +243,9 @@ class CuratedRecommendationsProvider:
             ):
                 rec.topic = None
 
-        return recommendations
+        return recommendations[: request.count]
 
-    def rank_need_to_know_recommendations(
+    async def rank_need_to_know_recommendations(
         self,
         recommendations: list[CuratedRecommendation],
         surface_id: ScheduledSurfaceId,
@@ -186,11 +263,20 @@ class CuratedRecommendationsProvider:
         @return: A tuple with two re-ranked lists of curated recommendations and a localised
         title for the "Need to Know" heading
         """
-        # TODO: the "need_to_know" items will be filtered by a corpus item property `isTimeSensitive`.
-        #  While data is being prepared, take the bottom ten items from the original recommendations
-        #  list and use them instead for the prototype.
-        general_feed = recommendations[:-10]
-        need_to_know_feed = recommendations[-10:]
+        # Filter out all time-sensitive recommendations into the need_to_know feed
+        need_to_know_feed = [r for r in recommendations if r.isTimeSensitive]
+
+        # If fewer than five stories have been curated for this feed, use yesterday's data
+        if len(need_to_know_feed) < 5:
+            yesterdays_recs = await self.fetch_backup_recommendations(surface_id)
+            need_to_know_feed = [r for r in yesterdays_recs if r.isTimeSensitive]
+
+        # Update received_rank for need_to_know recommendations
+        for rank, rec in enumerate(need_to_know_feed):
+            rec.receivedRank = rank
+
+        # Place the remaining recommendations in the general feed
+        general_feed = [r for r in recommendations if r not in need_to_know_feed]
 
         # Apply all the additional re-ranking and processing steps
         # to the main recommendations feed
@@ -198,13 +284,79 @@ class CuratedRecommendationsProvider:
 
         # Provide a localized title string for the "Need to Know" feed.
         localized_titles = {
-            ScheduledSurfaceId.NEW_TAB_EN_US: "Need to Know",
-            ScheduledSurfaceId.NEW_TAB_EN_GB: "Need to Know in British English",
-            ScheduledSurfaceId.NEW_TAB_DE_DE: "Need to Know auf Deutsch",
+            ScheduledSurfaceId.NEW_TAB_EN_US: "In the news",
+            ScheduledSurfaceId.NEW_TAB_EN_GB: "In the news",
+            ScheduledSurfaceId.NEW_TAB_DE_DE: "In den News",
         }
         title = localized_titles[surface_id]
 
         return general_feed, need_to_know_feed, title
+
+    def get_sections(
+        self,
+        recommendations: list[CuratedRecommendation],
+        request: CuratedRecommendationsRequest,
+    ) -> CuratedRecommendationsFeed:
+        """Return a CuratedRecommendationsFeed with recommendations mapped to their topic."""
+        # Apply Thompson sampling to rank all recommendations by engagement
+        recommendations = thompson_sampling(
+            recommendations,
+            engagement_backend=self.engagement_backend,
+            prior_backend=self.prior_backend,
+            region=self.derive_region(request.locale, request.region),
+            enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
+        )
+
+        max_recs_per_section = 30
+        # Section must have some extra items in case one is dismissed, beyond what can be displayed.
+        min_fallback_recs_per_section = 1
+        top_stories_count = 6
+        # Sections will cycle through the following layouts.
+        layout_order = [layout_4_medium, layout_4_large, layout_6_tiles]
+
+        # Create "Today's top stories" section with the first 6 recommendations
+        top_stories = recommendations[:top_stories_count]
+        remaining_recs = recommendations[top_stories_count:]
+        feeds = CuratedRecommendationsFeed(
+            top_stories_section=Section(
+                receivedFeedRank=0,
+                recommendations=top_stories,
+                title="Today's top stories",
+                subtitle=datetime.now().strftime("%B %d, %Y"),  # e.g., "October 24, 2024"
+                layout=layout_order[0],
+            )
+        )
+
+        # Group the remaining recommendations by topic, preserving Thompson sampling order
+        sections_by_topic: dict[str, Section] = {}
+
+        for rec in remaining_recs:
+            if rec.topic and rec.topic.value in CuratedRecommendationsFeed.model_fields:
+                topic = rec.topic
+                if topic in sections_by_topic:
+                    section = sections_by_topic[topic]
+                else:
+                    section = sections_by_topic[topic] = Section(
+                        receivedFeedRank=len(sections_by_topic)
+                        + 1,  # add 1 for top_stories_section
+                        recommendations=[],
+                        title=rec.topic.replace("_", " ").capitalize(),
+                        layout=layout_order[len(sections_by_topic) % len(layout_order)],
+                    )
+
+                if len(section.recommendations) < max_recs_per_section:
+                    rec.receivedRank = len(section.recommendations)
+                    section.recommendations.append(rec)
+
+        # Filter and assign sections with valid minimum recommendations
+        for topic_id, section in sections_by_topic.items():
+            # Find the maximum number of tiles in this section's responsive layouts.
+            max_tile_count = max(len(rl.tiles) for rl in section.layout.responsiveLayouts)
+            # Only add sections that meet the minimum number of recommendations.
+            if len(section.recommendations) >= max_tile_count + min_fallback_recs_per_section:
+                setattr(feeds, topic_id, section)
+
+        return feeds
 
     async def fetch(
         self, curated_recommendations_request: CuratedRecommendationsRequest
@@ -216,7 +368,10 @@ class CuratedRecommendationsProvider:
             curated_recommendations_request.region,
         )
 
-        corpus_items = await self.corpus_backend.fetch(surface_id)
+        if self.is_in_extended_expiration_experiment(curated_recommendations_request):
+            corpus_items = await self.extended_expiration_corpus_backend.fetch(surface_id)
+        else:
+            corpus_items = await self.corpus_backend.fetch(surface_id)
 
         # Convert the CorpusItem list to a CuratedRecommendation list.
         recommendations = [
@@ -227,43 +382,72 @@ class CuratedRecommendationsProvider:
             for rank, item in enumerate(corpus_items)
         ]
 
-        # For users in the "Need to Know" experiment, separate recommendations into
-        # two different feeds: the "general" feed and the "need to know" feed.
-        if (
-            curated_recommendations_request.feeds
-            and "need_to_know" in curated_recommendations_request.feeds
-            and surface_id
-            in (
-                ScheduledSurfaceId.NEW_TAB_EN_US,
-                ScheduledSurfaceId.NEW_TAB_EN_GB,
-                ScheduledSurfaceId.NEW_TAB_DE_DE,
-            )
-        ):
-            general_feed, need_to_know_feed, title = self.rank_need_to_know_recommendations(
+        # Recommended articles for the "need to know/TBR" experiment
+        need_to_know_feed = None
+        # Fakespot products for the Fakespot experiment
+        fakespot_feed = None
+        # The sections experiment organizes recommendations in many feeds
+        sections_feeds = None
+
+        if self.is_need_to_know_experiment(curated_recommendations_request, surface_id):
+            # this applies ranking to the general_feed!
+            general_feed, need_to_know_recs, title = await self.rank_need_to_know_recommendations(
                 recommendations, surface_id, curated_recommendations_request
             )
 
-            return CuratedRecommendationsResponse(
-                recommendedAt=self.time_ms(),
-                data=general_feed,
-                feeds=CuratedRecommendationsFeed(
-                    need_to_know=CuratedRecommendationsBucket(
-                        recommendations=need_to_know_feed, title=title
-                    ),
-                ),
+            need_to_know_feed = CuratedRecommendationsBucket(
+                recommendations=need_to_know_recs, title=title
             )
-        # For everyone else, return the "classic" New Tab list of recommendations
+        elif self.is_sections_experiment(curated_recommendations_request):
+            sections_feeds = self.get_sections(recommendations, curated_recommendations_request)
+            general_feed = []  # Everything is organized into sections. There's no 'general' feed.
         else:
-            # Apply all the additional re-ranking and processing steps
-            # to the main recommendations feed
-            recommendations = self.rank_recommendations(
+            # Default ranking for general feed
+            general_feed = self.rank_recommendations(
                 recommendations, surface_id, curated_recommendations_request
             )
 
-            return CuratedRecommendationsResponse(
-                recommendedAt=self.time_ms(),
-                data=recommendations,
+        # Check for Fakespot feed experiment, currently, only for en-US
+        if self.is_fakespot_experiment(curated_recommendations_request, surface_id):
+            fakespot_feed = self.get_fakespot_feed(self.fakespot_backend, surface_id)
+
+        # Construct the base response
+        response = CuratedRecommendationsResponse(recommendedAt=self.time_ms(), data=general_feed)
+
+        # If we have feeds to return, add those to the response
+        if need_to_know_feed or fakespot_feed:
+            response.feeds = CuratedRecommendationsFeed(
+                need_to_know=need_to_know_feed, fakespot=fakespot_feed
             )
+        elif sections_feeds:
+            response.feeds = sections_feeds
+
+        return response
+
+    async def fetch_backup_recommendations(
+        self, surface_id: ScheduledSurfaceId
+    ) -> list[CuratedRecommendation]:
+        """Return recommended stories for yesterday's date for a given New Tab surface.
+
+        Note that there's no fallback for if no appropriate stories are available in
+        yesterday's data. We rely on the curators' commitment to always have this data
+        for the previous day.
+
+        @param: surface_id: a ScheduledSurfaceId
+        @return: A re-ranked list of curated recommendations
+        """
+        corpus_items = await self.corpus_backend.fetch(surface_id, -1)
+
+        # Convert the CorpusItem list to a CuratedRecommendation list.
+        recommendations = [
+            CuratedRecommendation(
+                **item.model_dump(),
+                receivedRank=rank,
+            )
+            for rank, item in enumerate(corpus_items)
+        ]
+
+        return recommendations
 
     @staticmethod
     def time_ms() -> int:

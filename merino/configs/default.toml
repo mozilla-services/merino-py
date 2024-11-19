@@ -37,7 +37,7 @@ query_timeout_sec = 0.2
 # MERINO_RUNTIME__DISABLED_PROVIDERS
 # List containing providers to disable at startup.
 # Prevents a provider from being instantiated.
-disabled_providers = []
+disabled_providers = ["amo"]
 
 # MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
 default_suggestions_response_ttl_sec = 300 # 5 mins
@@ -476,26 +476,61 @@ query_timeout_sec = 5.0
 score = 0.23
 
 
-[default.curated_recommendations.gcs_engagement]
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__MAX_SIZE
-# The maximum size in bytes of the GCS engagement blob. If exceeded, an error will be logged.
-max_size = 1_000_000
-
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__BUCKET_NAME
-# GCS bucket that contains aggregate engagement data
+[default.curated_recommendations.gcs]
+# MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
+# GCS bucket that contains Airflow data for Merino
 bucket_name = ""
 
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__BLOB_PREFIX
-# GCS path. Combined bucket and object prefix (folders).
-blob_prefix = "newtab-merino-exports/engagement_"
-
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__GCP_PROJECT
+# MERINO__CURATED_RECOMMENDATIONS__GCS__GCP_PROJECT
 # GCP project name where the GCS bucket lives.
 gcp_project = ""
 
-# MERINO__CURATED_RECOMMENDATIONS__GCS_ENGAGEMENT__CRON_INTERVAL_SECONDS
+fakespot_bucket_name = ""
+fakespot_gcp_project = ""
+
+
+[default.curated_recommendations.gcs.fakespot]
+# MERINO__CURATED_RECOMMENDATIONS__GCS__FAKESPOT__MAX_SIZE
+# The maximum size in bytes of the GCS fakespot products blob. If exceeded, an error will be logged.
+max_size = 2_000_000
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__FAKESPOT__BLOB_PREFIX
+# GCS path of the fakespot products JSON file.
+blob_name = "products.json"
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__FAKESPOT__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains updated fakespot products data.
+cron_interval_seconds = 3600 # 60 minutes
+
+
+[default.curated_recommendations.gcs.engagement]
+# MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__MAX_SIZE
+# The maximum size in bytes of the GCS engagement blob. If exceeded, an error will be logged.
+max_size = 2_000_000
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__BLOB_PREFIX
+# GCS path of the priors JSON file.
+blob_name = "newtab-merino-exports/engagement/latest.json"
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__CRON_INTERVAL_SECONDS
 # Interval in seconds at which the cron job checks if GCS contains updated engagement data.
+# Engagement data is updated every 20 minutes. We want to import fresh data quickly to improve CTR.
 cron_interval_seconds = 30
+
+
+[default.curated_recommendations.gcs.prior]
+# MERINO__CURATED_RECOMMENDATIONS__GCS__PRIOR__MAX_SIZE
+# The maximum size in bytes of the GCS prior blob. If exceeded, an error will be logged.
+max_size = 1_000_000
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__PRIOR__BLOB_PREFIX
+# GCS path of the priors JSON file.
+blob_name = "newtab-merino-exports/priors/latest.json"
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__PRIOR__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains updated prior data.
+# Prior data updates daily, so we don't need to check frequently for new data.
+cron_interval_seconds = 600
 
 
 [default.curated_recommendations.corpus_api]
@@ -582,3 +617,43 @@ min_favicon_width = 48
 # MERINO_JOBS__AMO_RS_UPLOADER__RECORD_TYPE
 # The "type" of each remote settings record
 record_type = "amo-suggestions"
+
+
+[default.jobs.geonames_uploader]
+# MERINO_JOBS__GEONAMES_UPLOADER__BASE_URL
+# Base URL of the GeoNames server.
+base_url = "https://download.geonames.org"
+# MERINO_JOBS__GEONAMES_UPLOADER__GEONAMES_PATH
+# Full path on the GeoNames server of country-specific geonames files. Expected
+# to be an f-string with a `country_code` variable.
+geonames_path = "/export/dump/{country_code}.zip"
+# MERINO_JOBS__GEONAMES_UPLOADER__ALTERNATES_PATH
+# Full path on the GeoNames server of country-specific alternates files.
+# Expected to be an f-string with a `country_code` variable.
+alternates_path = "/export/dump/alternatenames/{country_code}.zip"
+# MERINO_JOBS__GEONAMES_UPLOADER__POPULATION_THRESHOLD
+# How large a geoname's population must be for it to be included in the output.
+# Geonames with populations at least this large will be included.
+population_threshold = 50_000
+# MERINO_JOBS__GEONAMES_UPLOADER__CITY_ALTERNATES_ISO_LANGUAGES
+# Which alternates of selected cities to include in the output. Alternates are
+# categorized by language, like "en", plus a few other categories like
+# abbreviations ("abbr") and airport codes ("iata", "icao", "faac").
+city_alternates_iso_languages  = ["en", "en-US", "iata", "icao", "faac", "abbr"]
+# MERINO_JOBS__GEONAMES_UPLOADER__REGION_ALTERNATES_ISO_LANGUAGES
+# Which alternates of selected regions to include in the output. Takes the same
+# values as city alternates. For U.S. states, "en" alternates include verbose
+# names like "State of California" that people are unlikely type and that
+# interfere with prefix matching, so we only include "abbr". Note that full
+# names like "California" are always included in the output.
+region_alternates_iso_languages  = ["abbr"]
+# MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY_CODES
+# List of countries whose geonames will be uploaded. All countries' data will be
+# uploaded together without any separation into different records, attachments,
+# collections, etc. This is only a short-term hack to opportunistically include
+# Canadian cities, since there are many Canadians Mozillians and relatively few
+# Canadian cities over the population threshold.
+country_codes = ["US", "CA"]
+# MERINO_JOBS__GEONAMES_UPLOADER__RECORD_TYPE
+# The "type" of each geonames remote settings record.
+record_type = "geonames"

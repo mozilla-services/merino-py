@@ -119,7 +119,7 @@ def do_upload_test(
     mock_chunked_uploader_ctor.assert_called_once_with(
         **common_kwargs,
         suggestion_score_fallback=score,
-        total_data_count=TEST_ADDON_COUNT,
+        total_item_count=TEST_ADDON_COUNT,
     )
 
     if not keep_existing_records:

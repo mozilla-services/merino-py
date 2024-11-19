@@ -15,6 +15,7 @@ class Topic(str, Enum):
     ARTS = "arts"
     FOOD = "food"
     HEALTH_FITNESS = "health"
+    HOME = "home"
     PERSONAL_FINANCE = "finance"
     POLITICS = "government"
     SPORTS = "sports"
@@ -58,6 +59,20 @@ class CorpusItem(BaseModel):
 class CorpusBackend(Protocol):
     """Protocol for Curated Recommendation backend that the provider depends on."""
 
-    async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusItem]:  # pragma: no cover
-        """Fetch Curated Recommendations"""
+    async def fetch(
+        self,
+        surface_id: ScheduledSurfaceId,
+        days_offset: int = 0,
+    ) -> list[CorpusItem]:
+        """Fetch corpus items.
+
+        Args:
+            surface_id: Identifies the scheduled surface, for example NEW_TAB_EN_US.
+            days_offset: Optionally, the number of days relative to today for which items were
+                scheduled. A positive value indicates a future day, negative value indicates a past
+                day, and 0 refers to today. Defaults to 0.
+
+        Returns:
+        list[CorpusItem]: A list of fetched corpus items.
+        """
         ...

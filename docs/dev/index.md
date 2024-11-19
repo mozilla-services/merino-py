@@ -83,15 +83,6 @@ $ make integration-test-fixtures
 # Build the docker image for Merino named "app:build"
 $ make docker-build
 
-# Run contract tests on existing merino-py docker image
-$ make run-contract-tests
-
-# Run contract tests, with build step
-$ make contract-tests
-
-# Run contract tests cleanup
-$ make contract-tests-clean
-
 # Run local execution of (Locust) load tests
 $ make load-tests
 

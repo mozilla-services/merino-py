@@ -29,7 +29,9 @@ Follow the steps bellow to execute the load tests locally:
 The following environment variables as well as
 [Locust environment variables][locust_environment_variables] can be set in
 `tests\load\docker-compose.yml`.
-Make sure any required API key is added but then not checked into source control (i.e. `WIKIPEDIA__ES_API_KEY`).
+Make sure any required API key is added but then not checked into source control.
+
+**WARNING**: if the `WIKIPEDIA__ES_API_KEY` is missing, the load tests will not execute.
 
 | Environment Variable                             | Node(s)         | Description                                                                               |
 |--------------------------------------------------|-----------------|-------------------------------------------------------------------------------------------|
@@ -155,7 +157,7 @@ a GKE cluster
 * To apply new changes to an existing GCP Cluster, execute the `setup_k8s.sh` file and select the
   **setup** option.
     * This option will consider the local commit history, creating new containers and
-      deploying them (see [Container Registry][container_registry])
+      deploying them (see [Artifact Registry][artifact_registry])
 
 ### Run Test Session
 
@@ -168,7 +170,7 @@ a GKE cluster
   EXTERNAL_IP=$(kubectl get svc locust-master -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
   echo http://$EXTERNAL_IP:8089
   ```
-* Select the `MerinoLoadTestShape`, this option has pre-defined settings and will last 10 minutes
+* Select the `MerinoSmokeLoadTestShape`, this option has pre-defined settings and will last 5 minutes
 * Select "Start Swarming"
 
 #### 2. Stop Load Test
@@ -245,29 +247,32 @@ Execute the `setup_k8s.sh` file and select the **delete** option
 The load tests are triggered in CI via [Jenkins][jenkins_load_test], which has a command overriding
 the load test Dockerfile entrypoint.
 
-Follow the steps bellow to execute the distributed load tests on GCP with a CI trigger:
+Follow the steps below to execute the distributed load tests on GCP with a CI trigger:
 
 ### Run Test Session
 
 #### 1. Execute Load Test
 
-To automatically kick off load testing in staging along with your pull request commit, you have to
-include a label in your git commit. This must be the merge commit on the `main` branch, since only
-the most recent commit is checked for the label. This label is in the form of:
-`[load test: (abort|warn)]`. Take careful note of correct syntax and spacing within the label. There
-are two options for load tests, being `abort` and `warn`.
+To modify the load testing behavior, you must include a label in your Git commit. This must be the
+merge commit on the main branch, since only the most recent commit is checked for the label. The
+label format is: `[load test: (abort|skip|warn)]`. Take careful note of correct syntax and spacing
+within the label. There are three options for load tests: `abort`, `skip`, and `warn`:
 
-The `abort` label will prevent a `prod` deployment should the load test fail.
-Ex. `feat: Add feature ABC [load test: abort]`.
+- The `abort` label will prevent a prod deployment if the load test fails\
+  Ex. `feat: Add feature ABC [load test: abort].`
+- The `skip` label will bypass load testing entirely during deployment\
+  Ex. `feat: Add feature LMN [load test: skip].`
+- The `warn` label will output a Slack warning if the load test fails but still allow for the
+  production deployment\
+  Ex. `feat: Add feature XYZ [load test: warn].`
 
-The `warn` label will output a Slack warning should the load test fail, but still allow for `prod`
-deployment.
-Ex. `feat: Add feature XYZ [load test: warn]`.
+If no label is included in the commit message, the load test will be executed with the `warn`
+action.
 
 The commit tag signals load test instructions to Jenkins by modifying the Docker image tag. The
 Jenkins deployment workflow first deploys to `stage` and then runs load tests if requested. The
 Docker image tag passed to Jenkins appears as follows:
-`^(?P<environment>stage|prod)(?:-(?P<task>\w+)-(?P<onfailure>warn|abort))?-(?P<commit>[a-z0-9]+)$`.
+`^(?P<environment>stage|prod)(?:-(?P<task>\w+)-(?P<action>abort|skip|warn))?-(?P<commit>[a-z0-9]+)$`
 
 #### 2. Analyse Results
 
@@ -275,10 +280,12 @@ See [Distributed GCP Execution (Manual Trigger) - Analyse Results](#3-analyse-re
 
 #### 3. Report Results
 
-* Results should be recorded in the [Merino Load Test Spreadsheet][merino_spreadsheet]
-* Optionally, the Locust reports can be saved and linked in the spreadsheet. The results are
-  persisted in the `/data` directory of the `locust-master-0` pod in the `locust-master` k8s cluster
-  in the GCP project of `merino-nonprod`. To access the Locust logs:
+* Optionally, results can be recorded in the [Merino Load Test Spreadsheet][merino_spreadsheet]. It
+  is recommended to do so if unusual behavior is observed during load test execution or if the load
+  tests fail.
+* The Locust reports can be saved and linked in the spreadsheet. The results are persisted in the
+  `/data` directory of the `locust-master-0` pod in the `locust-master` k8s cluster in the GCP
+  project of `merino-nonprod`. To access the Locust logs:
     * Open a cloud shell in the [Merino stage environment][merino_gcp_stage]
     * Authenticate by executing the following command:
       ```shell
@@ -309,10 +316,12 @@ the performance test.
 
 | Parameter          | Description                                                                                                                                                                                                      |
 |--------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [WAIT TIME][13]    | - Changing this cadence will increase or decrease the number of channel subscriptions and notifications sent by a MerinoUser. <br/>- The default is currently in use for the MerinoUser class.                   |
-| [TASK WEIGHT][14]  | - Changing this weight impacts the probability of a task being chosen for execution. <br/>- This value is hardcoded in the task decorators of the MerinoUser class.                                              |
+| `WAIT TIME`        | - Changing this cadence will increase or decrease the number of channel subscriptions and notifications sent by a MerinoUser. <br/>- The default is currently in use for the MerinoUser class.                   |
+| `TASK WEIGHT`      | - Changing this weight impacts the probability of a task being chosen for execution. <br/>- This value is hardcoded in the task decorators of the MerinoUser class.                                              |
 | `USERS_PER_WORKER` | - This value should be set to the maximum number of users a Locust worker can support given CPU and memory constraints. <br/>- This value is hardcoded in the LoadTestShape classes.                             |
 | `WORKER_COUNT`     | - This value is derived by dividing the total number of users needed for the performance test by the `USERS_PER_WORKER`. <br>- This value is hardcoded in the LoadTestShape classes and the setup_k8s.sh script. |
+
+* Locust documentation is available for [WAIT TIME][13] and [TASK WEIGHT][14]
 
 ## Calibrating for USERS_PER_WORKER
 
@@ -498,16 +507,14 @@ updating the following:
     * [ ] [locust-master-controller.yml][locust_master_controller]
     * [ ] [locust-master-service.yml][locust_master_service]
     * [ ] [locust-worker-controller.yml][locust_worker_controller]
-4. [CircleCI][circle_ci] contract test jobs
-    * [ ] [config.yml][circle_config_yml]
-5. Documentation
+4. Documentation
     * [ ] [load test docs][load_test_docs]
 
+[artifact_registry]: https://console.cloud.google.com/artifacts/docker/spheric-keel-331521/us-west1/locust-merino?project=spheric-keel-331521
 [circle_ci]: https://circleci.com/docs/
 [circle_config_yml]: https://github.com/mozilla-services/merino-py/blob/main/.circleci/config.yml
 [cloud]: https://console.cloud.google.com/home/dashboard?q=search&referrer=search&project=spheric-keel-331521&cloudshell=false
 [conserv]: https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux
-[container_registry]: https://console.cloud.google.com/gcr/images/spheric-keel-331521/global/locust-merino?project=spheric-keel-331521
 [docker]: https://docs.docker.com/
 [docker_compose]:https://github.com/mozilla-services/merino-py/blob/main/tests/load/docker-compose.yml
 [dockerfile]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/Dockerfile

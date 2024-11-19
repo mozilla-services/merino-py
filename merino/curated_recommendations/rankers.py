@@ -2,15 +2,13 @@
 
 from copy import copy
 
+from merino.curated_recommendations import ConstantPrior
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.prior_backends.protocol import PriorBackend, Prior
 from merino.curated_recommendations.protocol import CuratedRecommendation
 from scipy.stats import beta
 
-DEFAULT_ALPHA_PRIOR = 188  # beta * P99 German NewTab CTR for 2023-03-28 to 2023-04-05 (1.5%)
-DEFAULT_BETA_PRIOR = (
-    12500  # 0.5% of median German NewTab item impressions for 2023-03-28 to 2023-04-05.
-)
 # In a weighted average, how much to weigh the metrics from the requested region. 0.95 was chosen
 # somewhat arbitrarily in the new-tab-region-specific-content experiment that only targeted Canada.
 # CA has about 9x fewer impressions than the total for NEW_TAB_EN_US. A value close to 1 boosts
@@ -26,8 +24,7 @@ NUM_RECS_PER_TOPIC = 2
 def thompson_sampling(
     recs: list[CuratedRecommendation],
     engagement_backend: EngagementBackend,
-    alpha_prior: float = DEFAULT_ALPHA_PRIOR,
-    beta_prior: float = DEFAULT_BETA_PRIOR,
+    prior_backend: PriorBackend,
     enable_region_engagement: bool = False,
     region: str | None = None,
     region_weight: float = REGION_ENGAGEMENT_WEIGHT,
@@ -37,8 +34,7 @@ def thompson_sampling(
 
     :param recs: A list of recommendations in the desired order (pre-publisher spread).
     :param engagement_backend: Provides aggregate click and impression engagement by scheduledCorpusItemId.
-    :param alpha_prior: Prior successes (e.g., clicks). Must be > 0.
-    :param beta_prior: Prior failures (e.g., non-click impressions). Must be > 0.
+    :param prior_backend: Provides prior alpha and beta values for Thompson sampling.
     :param enable_region_engagement: If True, regional engagement weighs higher. False by default.
     :param region: Optionally, the client's region, e.g. 'US'.
     :param region_weight: In a weighted average, how much to weigh regional engagement.
@@ -47,6 +43,7 @@ def thompson_sampling(
 
     [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
     """
+    fallback_prior = ConstantPrior().get()
 
     def get_opens_no_opens(
         rec: CuratedRecommendation, region_query: str | None = None
@@ -61,16 +58,23 @@ def thompson_sampling(
     def sample_score(rec: CuratedRecommendation) -> float:
         """Sample beta distributed from weighted regional/global engagement for a recommendation."""
         opens, no_opens = get_opens_no_opens(rec)
+        prior: Prior = prior_backend.get() or fallback_prior
+        a_prior = prior.alpha
+        b_prior = prior.beta
 
         # Use a weighted average of regional and global engagement, if that's enabled and available.
         if enable_region_engagement:
             region_opens, region_no_opens = get_opens_no_opens(rec, region)
-            if region_no_opens:
+            region_prior = prior_backend.get(region)
+            if region_no_opens and region_prior:
                 opens = (region_weight * region_opens) + ((1 - region_weight) * opens)
                 no_opens = (region_weight * region_no_opens) + ((1 - region_weight) * no_opens)
+                a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
+                b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
 
-        opens += alpha_prior
-        no_opens += beta_prior
+        # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
+        opens += max(a_prior, 1e-18)
+        no_opens += max(b_prior, 1e-18)
 
         return float(beta.rvs(opens, no_opens))
 

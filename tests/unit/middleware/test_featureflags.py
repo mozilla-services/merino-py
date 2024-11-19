@@ -8,7 +8,7 @@ import pytest
 from pytest_mock import MockerFixture
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from merino.featureflags import session_id_context
+from merino.utils.featureflags import session_id_context
 from merino.middleware.featureflags import FeatureFlagsMiddleware
 
 
@@ -61,4 +61,4 @@ async def test_featureflags_invalid_scope_type(
 
     await featureflags_middleware(scope, receive_mock, send_mock)
 
-    assert session_id_context.get() == "fff"
+    assert session_id_context.get() is None

@@ -1,7 +1,11 @@
 [tool.coverage.run]
-source = ["src"]
+source = ["merino"]
 branch = true
 relative_files = true
+omit = [
+  # Data file only
+  "merino/jobs/navigational_suggestions/domain_category_mapping.py"
+]
 
 [tool.coverage.report]
 show_missing = true
@@ -35,6 +39,10 @@ lint.pydocstyle = { convention = "pep257" }
 # B104: https://bandit.readthedocs.io/en/latest/plugins/b104_hardcoded_bind_all_interfaces.html
 # B104: https://bandit.readthedocs.io/en/latest/blacklists/blacklist_calls.html#b311-random
 skips = ["B101", "B104", "B311"]
+exclude_dirs = [
+  # Data file only
+  "merino/jobs/navigational_suggestions/domain_category_mapping.py"
+]
 
 [tool.mypy]
 python_version = "3.12"
@@ -52,7 +60,7 @@ warn_unreachable = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v -r s"
+addopts = "-v -r s --cov=merino"
 
 [tool.poetry]
 name = "merino-py"
@@ -69,10 +77,10 @@ merino-jobs = "merino.jobs.cli:cli"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-fastapi = "^0.109.1"
+fastapi = "^0.115.2"
 uvicorn = {extras = ["standard"], version="^0.24.0"}
 dockerflow = "^2022.7.0"
-asgi-correlation-id = "^3.0.1"
+asgi-correlation-id = "^4.3.4"
 dynaconf = "^3.2.4"
 httpx = "^0.23.0"
 sentry-sdk = {extras = ["fastapi"], version = "^2.13.0"}
