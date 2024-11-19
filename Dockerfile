@@ -10,8 +10,9 @@ RUN pip install --no-cache-dir --quiet poetry
 
 COPY ./pyproject.toml ./poetry.lock /tmp/
 
-# Just need the requirements.txt from Poetry
-RUN poetry export --no-interaction --output requirements.txt --without-hashes
+# Generating a requirements.txt from Poetry with the main and jobs dependencies i.e:
+# [tool.poetry.dependencies] and [tool.poetry.group.jobs.dependencies]
+RUN poetry export --no-interaction --with main,jobs --output requirements.txt --without-hashes
 
 FROM python:${PYTHON_VERSION}-slim AS app_base
 
@@ -26,7 +27,7 @@ ENV APP_HOME=/app
 WORKDIR $APP_HOME
 
 RUN groupadd --gid 10001 app \
-  && useradd -m -g app --uid 10001 -s /usr/sbin/nologin app
+    && useradd -m -g app --uid 10001 -s /usr/sbin/nologin app
 
 # Copy local code to the container image.
 COPY . $APP_HOME
@@ -35,14 +36,14 @@ COPY --from=build /tmp/requirements.txt $APP_HOME/requirements.txt
 
 # Install libmaxminddb* to build the MaxMindDB Python client with C extension.
 RUN apt-get update && \
-  apt-get install --yes build-essential libmaxminddb0 libmaxminddb-dev && \
-  pip install uv && \
-  uv venv $VIRTUAL_ENV && \
-  uv pip install --no-cache-dir --quiet --upgrade -r requirements.txt && \
-  apt-get remove --yes build-essential && \
-  apt-get -q --yes autoremove && \
-  apt-get clean && \
-  rm -rf /root/.cache
+    apt-get install --yes build-essential libmaxminddb0 libmaxminddb-dev && \
+    pip install uv && \
+    uv venv $VIRTUAL_ENV && \
+    uv pip install --no-cache-dir --quiet --upgrade -r requirements.txt && \
+    apt-get remove --yes build-essential && \
+    apt-get -q --yes autoremove && \
+    apt-get clean && \
+    rm -rf /root/.cache
 
 # Create a build context that can be used for running merino jobs
 FROM app_base AS job_runner
