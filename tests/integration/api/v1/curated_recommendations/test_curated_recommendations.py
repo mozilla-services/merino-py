@@ -185,7 +185,7 @@ async def test_curated_recommendations(repeat):
         expected_recommendation = CuratedRecommendation(
             scheduledCorpusItemId="de614b6b-6df6-470a-97f2-30344c56c1b3",
             url=HttpUrl(
-                "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-brownies-and-cakes?utm_source=pocket-newtab-en-us"
+                "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-brownies-and-cakes?utm_source=firefox-newtab-en-us"
             ),
             title="Milk Powder Is the Key to Better Cookies, Brownies, and Cakes",
             excerpt="Consider this pantry staple your secret ingredient for making more flavorful desserts.",
@@ -243,7 +243,7 @@ async def test_curated_recommendations_utm_source():
         assert len(corpus_items) == 80
         # Assert all corpus_items have expected fields populated.
         # check that utm_source is present and has the correct value in all urls
-        assert all("?utm_source=pocket-newtab-en-us" in item["url"] for item in corpus_items)
+        assert all("?utm_source=firefox-newtab-en-us" in item["url"] for item in corpus_items)
         assert all(item["publisher"] for item in corpus_items)
         assert all(item["imageUrl"] for item in corpus_items)
 

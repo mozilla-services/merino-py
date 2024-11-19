@@ -104,13 +104,13 @@ Set utm_source for specific ScheduledSurfaceId.
 For ids not in the table, null is returned.
 """
 SCHEDULED_SURFACE_ID_TO_UTM_SOURCE: dict[ScheduledSurfaceId, str] = {
-    ScheduledSurfaceId.NEW_TAB_EN_US: "pocket-newtab-en-us",
-    ScheduledSurfaceId.NEW_TAB_EN_GB: "pocket-newtab-en-gb",
-    ScheduledSurfaceId.NEW_TAB_EN_INTL: "pocket-newtab-en-intl",
-    ScheduledSurfaceId.NEW_TAB_DE_DE: "pocket-newtab-de-de",
-    ScheduledSurfaceId.NEW_TAB_ES_ES: "pocket-newtab-es-es",
-    ScheduledSurfaceId.NEW_TAB_FR_FR: "pocket-newtab-fr-fr",
-    ScheduledSurfaceId.NEW_TAB_IT_IT: "pocket-newtab-it-it",
+    ScheduledSurfaceId.NEW_TAB_EN_US: "firefox-newtab-en-us",
+    ScheduledSurfaceId.NEW_TAB_EN_GB: "firefox-newtab-en-gb",
+    ScheduledSurfaceId.NEW_TAB_EN_INTL: "firefox-newtab-en-intl",
+    ScheduledSurfaceId.NEW_TAB_DE_DE: "firefox-newtab-de-de",
+    ScheduledSurfaceId.NEW_TAB_ES_ES: "firefox-newtab-es-es",
+    ScheduledSurfaceId.NEW_TAB_FR_FR: "firefox-newtab-fr-fr",
+    ScheduledSurfaceId.NEW_TAB_IT_IT: "firefox-newtab-it-it",
 }
 
 
