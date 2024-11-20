@@ -10,8 +10,9 @@ RUN pip install --no-cache-dir --quiet poetry
 
 COPY ./pyproject.toml ./poetry.lock /tmp/
 
-# Just need the requirements.txt from Poetry
-RUN poetry export --no-interaction --output requirements.txt --without-hashes
+# Generating a requirements.txt from Poetry with the main and jobs dependencies i.e:
+# [tool.poetry.dependencies] and [tool.poetry.group.jobs.dependencies]
+RUN poetry export --no-interaction --with main,jobs --output requirements.txt --without-hashes
 
 FROM python:${PYTHON_VERSION}-slim AS app_base
 

@@ -78,7 +78,7 @@ merino-jobs = "merino.jobs.cli:cli"
 [tool.poetry.dependencies]
 python = "^3.12"
 fastapi = "^0.115.2"
-uvicorn = {extras = ["standard"], version="^0.24.0"}
+uvicorn = { extras = ["standard"], version = "^0.24.0" }
 dockerflow = "^2022.7.0"
 asgi-correlation-id = "^4.3.4"
 dynaconf = "^3.2.4"
@@ -94,14 +94,23 @@ elasticsearch = {extras = ["async"], version = "^8.5.0"}
 google-cloud-storage = "^2.16.0"
 google-cloud-bigquery = "^3.9.0"
 Pillow = "^10.2.0"
-robobro = "^0.5.3"
-typer = "^0.11.0"
 redis = "^4.5.4"
 types-python-dateutil = "^2.8.19.13"
 pydantic = "^2.1.0"
 scipy = "^1.14.1"
 orjson = "^3.10.7"
 tenacity = "^9.0.0"
+
+[tool.poetry.group.jobs.dependencies]
+# Jobs specific dependecies required on top of some of the main dependencies above
+robobro = "^0.5.3"
+typer = "^0.11.0"
+
+[tool.poetry.group.load.dependencies]
+# Load test specific dependecies required on top of some of the main dependencies above
+faker = "^20.0.0"
+numpy = "^1.26.2"
+locust = "^2.20.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.5"
