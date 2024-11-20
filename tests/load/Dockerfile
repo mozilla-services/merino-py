@@ -9,7 +9,7 @@ LABEL maintainer="Content Discovery Services (DISCO) Team <disco-team@mozilla.co
 # Add gcc since there are no wheels for some packages for arm64/aarch64
 # (g++/make for gevent on pypy)
 RUN apt-get update && apt-get install -y git && \
-    apt install -y --no-install-recommends build-essential python3-dev
+  apt install -y --no-install-recommends build-essential python3-dev
 
 ENV LANG=C.UTF-8
 ENV PYTHONUNBUFFERED=1
@@ -22,7 +22,7 @@ RUN python -m pip install --upgrade pip
 
 # Setup poetry and install requirements
 ENV POETRY_VIRTUALENVS_CREATE=false \
-    POETRY_VERSION=1.7.0
+  POETRY_VERSION=1.7.0
 RUN python -m pip install --no-cache-dir --quiet poetry
 COPY ./pyproject.toml ./poetry.lock ./
 RUN poetry install --no-interaction --no-ansi --no-root --with main,load
