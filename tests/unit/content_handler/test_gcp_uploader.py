@@ -90,9 +90,7 @@ def test_upload_image_with_non_https_cdn_host_name(
     result = gcp_uploader.upload_image(test_image, test_destination_name)
 
     # capture logger info output
-    log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.utils.gcs.gcp_uploader"
-    )
+    log_records: list[LogRecord] = filter_caplog(caplog.records, "merino.utils.gcs.gcp_uploader")
 
     assert result == f"https://{test_cdn_host_name}/{test_destination_name}"
     # assert on logger calls
@@ -120,9 +118,7 @@ def test_upload_image_with_https_cdn_host_name(
     result = gcp_uploader.upload_image(test_image, test_destination_name)
 
     # capture logger info output
-    log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.utils.gcs.gcp_uploader"
-    )
+    log_records: list[LogRecord] = filter_caplog(caplog.records, "merino.utils.gcs.gcp_uploader")
 
     assert result == f"{test_https_cdn_host_name}/{test_destination_name}"
     # assert on logger calls
@@ -206,9 +202,7 @@ def test_upload_content_with_forced_upload_false_and_existing_blob(
     result = gcp_uploader.upload_content(content, test_destination_name)
 
     # capture logger info output
-    log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.utils.gcs.gcp_uploader"
-    )
+    log_records: list[LogRecord] = filter_caplog(caplog.records, "merino.utils.gcs.gcp_uploader")
 
     assert result == mock_gcs_blob
     assert len(log_records) == 0
@@ -240,9 +234,7 @@ def test_upload_content_with_forced_upload_true_and_existing_blob(
     result = gcp_uploader.upload_content(content, test_destination_name, forced_upload=True)
 
     # capture logger info output
-    log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.utils.gcs.gcp_uploader"
-    )
+    log_records: list[LogRecord] = filter_caplog(caplog.records, "merino.utils.gcs.gcp_uploader")
 
     assert result == mock_gcs_blob
     assert len(log_records) == 1
@@ -280,9 +272,7 @@ def test_upload_content_with_exception_thrown(
     gcp_uploader.upload_content(content, test_destination_name, forced_upload=True)
 
     # capture logger error output
-    log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.utils.gcs.gcp_uploader"
-    )
+    log_records: list[LogRecord] = filter_caplog(caplog.records, "merino.utils.gcs.gcp_uploader")
 
     assert len(log_records) == 1
     assert log_records[0].message.startswith(
