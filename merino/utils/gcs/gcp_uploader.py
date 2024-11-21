@@ -6,7 +6,7 @@ from urllib.parse import urljoin
 
 from google.cloud.storage import Blob, Bucket, Client
 
-from merino.content_handler.models import BaseContentUploader, Image
+from merino.utils.gcs.models import BaseContentUploader, Image
 
 logger = logging.getLogger(__name__)
 

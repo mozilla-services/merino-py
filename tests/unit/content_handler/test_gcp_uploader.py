@@ -1,19 +1,19 @@
-"""Unit tests for merino.content_handler.gcp_uploader"""
+"""Unit tests for merino.gcs.gcp_uploader"""
 
 from logging import ERROR, INFO, LogRecord
 
 import pytest
 from pytest import LogCaptureFixture
 
-from merino.content_handler.gcp_uploader import GcsUploader
-from merino.content_handler.models import Image
+from merino.utils.gcs.gcp_uploader import GcsUploader
+from merino.utils.gcs.models import Image
 from tests.types import FilterCaplogFixture
 
 
 @pytest.fixture
 def mock_gcs_client(mocker, mock_gcs_bucket):
     """Return a mock GCS Client instance"""
-    mock_client = mocker.patch("merino.content_handler.gcp_uploader.Client").return_value
+    mock_client = mocker.patch("merino.utils.gcs.gcp_uploader.Client").return_value
     mock_client.get_bucket.return_value = mock_gcs_bucket
     return mock_client
 
@@ -21,13 +21,13 @@ def mock_gcs_client(mocker, mock_gcs_bucket):
 @pytest.fixture
 def mock_gcs_blob(mocker):
     """Return a mock GCS Blob instance"""
-    return mocker.patch("merino.content_handler.gcp_uploader.Blob").return_value
+    return mocker.patch("merino.utils.gcs.gcp_uploader.Blob").return_value
 
 
 @pytest.fixture
 def mock_most_recent_gcs_blob(mocker):
     """Return a mock GCS Blob instance"""
-    most_recent_blob = mocker.patch("merino.content_handler.gcp_uploader.Blob").return_value
+    most_recent_blob = mocker.patch("merino.utils.gcs.gcp_uploader.Blob").return_value
     most_recent_blob.name = "20220101120555_top_picks.json"
     return most_recent_blob
 
@@ -35,7 +35,7 @@ def mock_most_recent_gcs_blob(mocker):
 @pytest.fixture
 def mock_gcs_bucket(mocker):
     """Return a mock GCS Bucket instance"""
-    return mocker.patch("merino.content_handler.gcp_uploader.Bucket").return_value
+    return mocker.patch("merino.utils.gcs.gcp_uploader.Bucket").return_value
 
 
 @pytest.fixture
@@ -90,9 +90,7 @@ def test_upload_image_with_non_https_cdn_host_name(
     result = gcp_uploader.upload_image(test_image, test_destination_name)
 
     # capture logger info output
-    log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.content_handler.gcp_uploader"
-    )
+    log_records: list[LogRecord] = filter_caplog(caplog.records, "merino.utils.gcs.gcp_uploader")
 
     assert result == f"https://{test_cdn_host_name}/{test_destination_name}"
     # assert on logger calls
@@ -120,9 +118,7 @@ def test_upload_image_with_https_cdn_host_name(
     result = gcp_uploader.upload_image(test_image, test_destination_name)
 
     # capture logger info output
-    log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.content_handler.gcp_uploader"
-    )
+    log_records: list[LogRecord] = filter_caplog(caplog.records, "merino.utils.gcs.gcp_uploader")
 
     assert result == f"{test_https_cdn_host_name}/{test_destination_name}"
     # assert on logger calls
@@ -206,9 +202,7 @@ def test_upload_content_with_forced_upload_false_and_existing_blob(
     result = gcp_uploader.upload_content(content, test_destination_name)
 
     # capture logger info output
-    log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.content_handler.gcp_uploader"
-    )
+    log_records: list[LogRecord] = filter_caplog(caplog.records, "merino.utils.gcs.gcp_uploader")
 
     assert result == mock_gcs_blob
     assert len(log_records) == 0
@@ -240,9 +234,7 @@ def test_upload_content_with_forced_upload_true_and_existing_blob(
     result = gcp_uploader.upload_content(content, test_destination_name, forced_upload=True)
 
     # capture logger info output
-    log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.content_handler.gcp_uploader"
-    )
+    log_records: list[LogRecord] = filter_caplog(caplog.records, "merino.utils.gcs.gcp_uploader")
 
     assert result == mock_gcs_blob
     assert len(log_records) == 1
@@ -280,9 +272,7 @@ def test_upload_content_with_exception_thrown(
     gcp_uploader.upload_content(content, test_destination_name, forced_upload=True)
 
     # capture logger error output
-    log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.content_handler.gcp_uploader"
-    )
+    log_records: list[LogRecord] = filter_caplog(caplog.records, "merino.utils.gcs.gcp_uploader")
 
     assert len(log_records) == 1
     assert log_records[0].message.startswith(
