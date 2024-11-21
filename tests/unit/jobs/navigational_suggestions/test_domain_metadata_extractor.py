@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from pytest_mock import MockerFixture
 
-from merino.utils.content_handler.models import Image
+from merino.utils.gcs.models import Image
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
     FaviconData,
@@ -637,7 +637,7 @@ def test_get_domain_metadata(
 
     # mock the PIL module's Image.open method in our custom Image model
     mocker.patch(
-        "merino.utils.content_handler.models.PILImage.open"
+        "merino.utils.gcs.models.PILImage.open"
     ).return_value.__enter__.side_effect = images_mock
 
     metadata_extractor: DomainMetadataExtractor = DomainMetadataExtractor(

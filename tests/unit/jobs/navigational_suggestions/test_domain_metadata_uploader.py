@@ -13,7 +13,7 @@ from google.cloud.storage import Blob, Bucket, Client
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.utils.content_handler.models import BaseContentUploader, Image
+from merino.utils.gcs.models import BaseContentUploader, Image
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
@@ -182,13 +182,13 @@ def fixture_json_domain_data_latest() -> str:
 @pytest.fixture
 def mock_gcs_client(mocker):
     """Return a mock GCS Client instance"""
-    return mocker.patch("merino.utils.content_handler.gcp_uploader.Client").return_value
+    return mocker.patch("merino.utils.gcs.gcp_uploader.Client").return_value
 
 
 @pytest.fixture
 def mock_gcs_blob(mocker):
     """Return a mock GCS Bucket instance"""
-    return mocker.patch("merino.utils.content_handler.gcp_uploader.Blob").return_value
+    return mocker.patch("merino.utils.gcs.gcp_uploader.Blob").return_value
 
 
 @pytest.fixture(name="remote_blob", autouse=True)

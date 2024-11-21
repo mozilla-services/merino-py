@@ -4,7 +4,7 @@ import logging
 
 import requests
 
-from merino.utils.content_handler.models import Image
+from merino.utils.gcs.models import Image
 
 REQUEST_HEADERS: dict[str, str] = {
     "User-Agent": (
