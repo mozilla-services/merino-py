@@ -7,7 +7,7 @@ from datetime import datetime
 
 from google.cloud.storage import Blob
 
-from merino.content_handler.models import BaseContentUploader, Image
+from merino.utils.content_handler.models import BaseContentUploader, Image
 from merino.jobs.navigational_suggestions.utils import FaviconDownloader
 
 logger = logging.getLogger(__name__)

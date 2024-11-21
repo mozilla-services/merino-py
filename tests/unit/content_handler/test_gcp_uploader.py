@@ -5,15 +5,15 @@ from logging import ERROR, INFO, LogRecord
 import pytest
 from pytest import LogCaptureFixture
 
-from merino.content_handler.gcp_uploader import GcsUploader
-from merino.content_handler.models import Image
+from merino.utils.content_handler.gcp_uploader import GcsUploader
+from merino.utils.content_handler.models import Image
 from tests.types import FilterCaplogFixture
 
 
 @pytest.fixture
 def mock_gcs_client(mocker, mock_gcs_bucket):
     """Return a mock GCS Client instance"""
-    mock_client = mocker.patch("merino.content_handler.gcp_uploader.Client").return_value
+    mock_client = mocker.patch("merino.utils.content_handler.gcp_uploader.Client").return_value
     mock_client.get_bucket.return_value = mock_gcs_bucket
     return mock_client
 
@@ -21,13 +21,13 @@ def mock_gcs_client(mocker, mock_gcs_bucket):
 @pytest.fixture
 def mock_gcs_blob(mocker):
     """Return a mock GCS Blob instance"""
-    return mocker.patch("merino.content_handler.gcp_uploader.Blob").return_value
+    return mocker.patch("merino.utils.content_handler.gcp_uploader.Blob").return_value
 
 
 @pytest.fixture
 def mock_most_recent_gcs_blob(mocker):
     """Return a mock GCS Blob instance"""
-    most_recent_blob = mocker.patch("merino.content_handler.gcp_uploader.Blob").return_value
+    most_recent_blob = mocker.patch("merino.utils.content_handler.gcp_uploader.Blob").return_value
     most_recent_blob.name = "20220101120555_top_picks.json"
     return most_recent_blob
 
@@ -35,7 +35,7 @@ def mock_most_recent_gcs_blob(mocker):
 @pytest.fixture
 def mock_gcs_bucket(mocker):
     """Return a mock GCS Bucket instance"""
-    return mocker.patch("merino.content_handler.gcp_uploader.Bucket").return_value
+    return mocker.patch("merino.utils.content_handler.gcp_uploader.Bucket").return_value
 
 
 @pytest.fixture
@@ -91,7 +91,7 @@ def test_upload_image_with_non_https_cdn_host_name(
 
     # capture logger info output
     log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.content_handler.gcp_uploader"
+        caplog.records, "merino.utils.content_handler.gcp_uploader"
     )
 
     assert result == f"https://{test_cdn_host_name}/{test_destination_name}"
@@ -121,7 +121,7 @@ def test_upload_image_with_https_cdn_host_name(
 
     # capture logger info output
     log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.content_handler.gcp_uploader"
+        caplog.records, "merino.utils.content_handler.gcp_uploader"
     )
 
     assert result == f"{test_https_cdn_host_name}/{test_destination_name}"
@@ -207,7 +207,7 @@ def test_upload_content_with_forced_upload_false_and_existing_blob(
 
     # capture logger info output
     log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.content_handler.gcp_uploader"
+        caplog.records, "merino.utils.content_handler.gcp_uploader"
     )
 
     assert result == mock_gcs_blob
@@ -241,7 +241,7 @@ def test_upload_content_with_forced_upload_true_and_existing_blob(
 
     # capture logger info output
     log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.content_handler.gcp_uploader"
+        caplog.records, "merino.utils.content_handler.gcp_uploader"
     )
 
     assert result == mock_gcs_blob
@@ -281,7 +281,7 @@ def test_upload_content_with_exception_thrown(
 
     # capture logger error output
     log_records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.content_handler.gcp_uploader"
+        caplog.records, "merino.utils.content_handler.gcp_uploader"
     )
 
     assert len(log_records) == 1

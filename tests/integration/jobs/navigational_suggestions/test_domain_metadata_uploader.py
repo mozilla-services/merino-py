@@ -8,8 +8,8 @@ from datetime import datetime
 import pytest
 from google.cloud.storage import Bucket
 
-from merino.content_handler.gcp_uploader import GcsUploader
-from merino.content_handler.models import Image
+from merino.utils.content_handler.gcp_uploader import GcsUploader
+from merino.utils.content_handler.models import Image
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
