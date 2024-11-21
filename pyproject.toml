@@ -4,7 +4,7 @@ branch = true
 relative_files = true
 omit = [
   # Data file only
-  "merino/jobs/navigational_suggestions/domain_category_mapping.py"
+  "merino/jobs/utils/domain_category_mapping.py"
 ]
 
 [tool.coverage.report]
@@ -41,7 +41,7 @@ lint.pydocstyle = { convention = "pep257" }
 skips = ["B101", "B104", "B311"]
 exclude_dirs = [
   # Data file only
-  "merino/jobs/navigational_suggestions/domain_category_mapping.py"
+  "merino/jobs/utils/domain_category_mapping.py"
 ]
 
 [tool.mypy]
