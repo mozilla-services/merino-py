@@ -9,6 +9,12 @@ Triplet = tuple[MaybeStr, MaybeStr, MaybeStr]
 
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {}
 REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(["CA", "ES", "GR", "IT", "US"])
+CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
+    "La'ie": "Laie",
+    "Mitchell/Ontario": "Mitchell",
+    "Middlebury (village)": "Middlebury",
+    "TracadieSheila": "Tracadie Sheila",
+}
 
 
 def compass(location: Location) -> Generator[Triplet, None, None]:
@@ -28,6 +34,7 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
     city = location.city
 
     if regions and country and city:
+        city = CITY_NAME_CORRECTION_MAPPING.get(city, city)
         match (country, city):
             case ("US" | "CA", _):
                 yield country, regions[0], city  # use the most specific region

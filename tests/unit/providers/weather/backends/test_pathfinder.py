@@ -24,6 +24,10 @@ from merino.providers.weather.backends.accuweather.pathfinder import (
         (Location(country="GB", regions=["ENG", "HWT"], city="London"), ("GB", "LND", "London")),
         (Location(country="BR", regions=["DF"], city="Brasilia"), ("BR", "DF", "Brasilia")),
         (Location(country="IE", regions=None, city="Dublin"), ("IE", None, "Dublin")),
+        (
+            Location(country="CA", regions=["ON"], city="Mitchell/Ontario"),
+            ("CA", "ON", "Mitchell"),
+        ),
     ],
     ids=[
         "Specific Region Country",
@@ -31,6 +35,7 @@ from merino.providers.weather.backends.accuweather.pathfinder import (
         "Successful Region Mapping Pair",
         "Fallback with Region",
         "Fallback No Region",
+        "Corrected City Name",
     ],
 )
 def test_compass(location: Location, expected_tuple: Tuple) -> None:
