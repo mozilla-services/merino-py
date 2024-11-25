@@ -1601,6 +1601,37 @@ async def test_get_weather_report_invalid_location(
 
 
 @pytest.mark.asyncio
+async def test_get_weather_report_with_city_in_skip_list(
+    accuweather: AccuweatherBackend,
+    statsd_mock: Any,
+) -> None:
+    """Test that the get_weather_report method raises an error if location information
+    is missing.
+    """
+    expected_result = None
+
+    weather_context = WeatherContext(
+        Location(
+            regions=["ON"],
+            city="North Park",
+            country="CA",
+            dma=807,
+            postal_code="94105",
+        ),
+        ["en-US"],
+    )
+    result = await accuweather.get_weather_report(weather_context)
+
+    assert expected_result == result
+
+    metrics_called = [
+        (call_arg[0][0], call_arg[1]["sample_rate"])
+        for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_called == []
+
+
+@pytest.mark.asyncio
 async def test_get_location_by_geolocation(
     accuweather: AccuweatherBackend,
     accuweather_location_response: bytes,

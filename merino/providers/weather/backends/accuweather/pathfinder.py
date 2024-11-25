@@ -15,6 +15,18 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Middlebury (village)": "Middlebury",
     "TracadieSheila": "Tracadie Sheila",
 }
+SKIP_CITIES_LIST: frozenset = frozenset(
+    [
+        ("CA", "AB", "Sturgeon County"),
+        ("CA", "ON", "Kleinburg Station"),
+        ("CA", "ON", "North Park"),
+        ("CA", "QC", "Montreal West"),
+        ("US", "GA", "South Fulton"),
+        ("US", "KY", "Fort Campbell North"),
+        ("US", "TX", "Fort Cavazos"),
+        ("US", "WA", "Joint Base Lewis McChord"),
+    ]
+)
 
 
 def compass(location: Location) -> Generator[Triplet, None, None]:
@@ -37,7 +49,12 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
         city = CITY_NAME_CORRECTION_MAPPING.get(city, city)
         match (country, city):
             case ("US" | "CA", _):
-                yield country, regions[0], city  # use the most specific region
+                yield (
+                    (country, regions[0], city)
+                    if (country, regions[0], city) not in SKIP_CITIES_LIST
+                    else (None, None, None)
+                )
+                # use the most specific region
             case ("IT" | "ES" | "GR", _):
                 yield country, regions[-1], city  # use the least specific region
             case (country, city) if (
@@ -76,12 +93,13 @@ async def explore(
       - Any exception raised from `probe`.
     """
     for country, region, city in compass(location):
-        if language:
-            res = await probe(country, region, city, language)
-        else:
-            res = await probe(country, region, city)
-        if res is not None:
-            return res
+        if any((country, region, city)):
+            if language:
+                res = await probe(country, region, city, language)
+            else:
+                res = await probe(country, region, city)
+            if res is not None:
+                return res
 
     return None
 
@@ -107,3 +125,8 @@ def get_region_mapping_size() -> int:
 def clear_region_mapping() -> None:
     """Clear SUCCESSFUL_REGIONS_MAPPING."""
     SUCCESSFUL_REGIONS_MAPPING.clear()
+
+
+def is_in_skip_cities_list(country: str | None, city: str | None) -> bool:
+    """Check if country, city is in SKIP_CITIES_LIST."""
+    return len([t for t in SKIP_CITIES_LIST if (t[0], t[2]) == (country, city)]) == 1

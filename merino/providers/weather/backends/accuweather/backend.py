@@ -19,6 +19,7 @@ from merino.exceptions import CacheAdapterError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
+    is_in_skip_cities_list,
 )
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -608,7 +609,8 @@ class AccuweatherBackend:
             return None
 
         cached_data = cached_data if cached_data is not None else []
-        self.emit_cache_fetch_metrics(cached_data)
+        if not is_in_skip_cities_list(country, city):
+            self.emit_cache_fetch_metrics(cached_data)
         cached_report = self.parse_cached_data(cached_data)
 
         return await self.make_weather_report(cached_report, weather_context)
@@ -658,7 +660,8 @@ class AccuweatherBackend:
                 logger.warning(f"{exc}")
 
             if location is None:
-                logger.warning(f"Unable to find location for {country}/{city}")
+                if not is_in_skip_cities_list(country, city):
+                    logger.warning(f"Unable to find location for {country}/{city}")
                 return None
 
         try:
