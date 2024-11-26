@@ -99,8 +99,13 @@ def set_region_mapping(country: str, city: str, region: str | None):
         SUCCESSFUL_REGIONS_MAPPING[(country, city)] = region
 
 
+def get_region_mapping() -> dict[tuple[str, str], str | None]:
+    """Get SUCCESSFUL_REGIONS_MAPPING."""
+    return SUCCESSFUL_REGIONS_MAPPING
+
+
 def get_region_mapping_size() -> int:
-    """Get SUCCESSFUL_REGIONS_MAPPING size"""
+    """Get SUCCESSFUL_REGIONS_MAPPING size."""
     return len(SUCCESSFUL_REGIONS_MAPPING)
 
 

@@ -15,6 +15,7 @@ from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionReques
 from merino.providers.custom_details import CustomDetails, WeatherDetails
 from merino.providers.weather.backends.accuweather.pathfinder import (
     get_region_mapping_size,
+    get_region_mapping,
 )
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -81,7 +82,7 @@ class Provider(BaseProvider):
             name="fetch_pathfinder_size",
             interval=self.cron_interval_sec,
             condition=self._should_fetch,
-            task=self._fetch_mapping_size,
+            task=self._report_mapping,
         )
         self.cron_task = asyncio.create_task(cron_job())
 
@@ -91,11 +92,12 @@ class Provider(BaseProvider):
     def _should_fetch(self) -> bool:
         return True
 
-    async def _fetch_mapping_size(self) -> None:
+    async def _report_mapping(self) -> None:
         self.metrics_client.gauge(
             name=f"providers.{self.name}.pathfinder.mapping.size",
             value=get_region_mapping_size(),
         )
+        logger.info(f"Weather Successful Mapping Values: {get_region_mapping()}")
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide weather suggestions."""

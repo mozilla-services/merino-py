@@ -4,11 +4,13 @@
 
 """Unit tests for the weather provider module."""
 
+import logging
 from typing import Any
 from unittest.mock import call
 from fastapi import HTTPException
 
 import pytest
+from pytest import LogCaptureFixture
 from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 
@@ -25,6 +27,7 @@ from merino.providers.weather.backends.protocol import (
     WeatherReport,
 )
 from merino.providers.weather.provider import Provider, Suggestion
+from tests.types import FilterCaplogFixture
 
 TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC = 300
 
@@ -168,14 +171,27 @@ async def test_query_with_no_request_type_param_returns_http_400(
 
 
 @pytest.mark.asyncio
-async def test_fetch_mapping(statsd_mock: Any, provider: Provider):
+async def test_fetch_mapping(
+    statsd_mock: Any,
+    provider: Provider,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+):
     """Test that pathfinder metric is recorded properly."""
+    caplog.set_level(logging.INFO)
+
     assert len(statsd_mock.gauge.call_args_list) == 0
 
     set_region_mapping("Canada", "Vancouver", "BC")
-    await provider._fetch_mapping_size()
+    await provider._report_mapping()
 
     assert len(statsd_mock.gauge.call_args_list) == 1
     assert statsd_mock.gauge.call_args_list == [
         call(name="providers.weather.pathfinder.mapping.size", value=1)
     ]
+
+    records = filter_caplog(caplog.records, "merino.providers.weather.provider")
+    assert len(records) == 1
+    assert (
+        records[0].message == "Weather Successful Mapping Values: {('Canada', 'Vancouver'): 'BC'}"
+    )
