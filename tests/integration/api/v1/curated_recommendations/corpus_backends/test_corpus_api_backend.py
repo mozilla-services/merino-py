@@ -41,6 +41,7 @@ async def test_fetch(corpus_backend: CorpusApiBackend, fixture_response_data):
             "40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg"
         ),
         scheduledCorpusItemId="de614b6b-6df6-470a-97f2-30344c56c1b3",
+        corpusItemId="4095b364-02ff-402c-b58a-792a067fccf2",
     )
 
 
@@ -82,6 +83,7 @@ async def test_fetch_days_since_today(
                             {
                                 "id": "de614b6b-6df6-470a-97f2-30344c56c1b3",
                                 "corpusItem": {
+                                    "id": "f00ba411-6df6-470a-97f2-30344c56c1b3",
                                     "url": "https://example.com",
                                     "title": f"Scheduled items from day {days_ago}",
                                     "excerpt": "",
