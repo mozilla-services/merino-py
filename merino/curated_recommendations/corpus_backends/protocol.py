@@ -46,6 +46,7 @@ class CorpusItem(BaseModel):
     The corpus is the set of all curated items deemed recommendable.
     """
 
+    corpusItemId: str
     scheduledCorpusItemId: str
     url: HttpUrl
     title: str

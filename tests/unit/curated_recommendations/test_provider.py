@@ -206,6 +206,7 @@ class TestCuratedRecommendationTileId:
 
     # Common parameters for initializing CuratedRecommendation
     common_params = {
+        "corpusItemId": "00000000-0000-0000-0000-000000000000",
         "url": HttpUrl("https://example.com"),
         "title": "Example Title",
         "excerpt": "Example Excerpt",
@@ -283,6 +284,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
         for i in range(length):
             rec = CuratedRecommendation(
+                corpusItemId=str(uuid.uuid4()),
                 tileId=MIN_TILE_ID + random.randint(0, 101),
                 receivedRank=i,
                 scheduledCorpusItemId=str(uuid.uuid4()),

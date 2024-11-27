@@ -1,5 +1,7 @@
 """Unit test for ranker algorithms used to rank curated recommendations."""
 
+import uuid
+
 import pytest
 import random
 
@@ -18,6 +20,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
         recs = []
         for item_id in item_ids:
             rec = CuratedRecommendation(
+                corpusItemId=str(uuid.uuid4()),
                 tileId=MIN_TILE_ID + random.randint(0, 101),
                 receivedRank=random.randint(0, 101),
                 scheduledCorpusItemId=item_id,
@@ -178,6 +181,7 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
         i = 1
         for topic in topics:
             rec = CuratedRecommendation(
+                corpusItemId=str(uuid.uuid4()),
                 tileId=MIN_TILE_ID + random.randint(0, 101),
                 receivedRank=i,
                 scheduledCorpusItemId=str(i),

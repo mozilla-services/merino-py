@@ -184,6 +184,7 @@ async def test_curated_recommendations(repeat):
         # expected recommendation with topic = None
         expected_recommendation = CuratedRecommendation(
             scheduledCorpusItemId="de614b6b-6df6-470a-97f2-30344c56c1b3",
+            corpusItemId="4095b364-02ff-402c-b58a-792a067fccf2",
             url=HttpUrl(
                 "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-brownies-and-cakes?utm_source=firefox-newtab-en-us"
             ),

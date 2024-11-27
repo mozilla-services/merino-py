@@ -266,6 +266,7 @@ class CorpusApiBackend(CorpusBackend):
                 items: items(date: $date) {
                   id
                   corpusItem {
+                    id
                     url
                     title
                     excerpt
@@ -322,7 +323,11 @@ class CorpusApiBackend(CorpusBackend):
             )
 
         curated_recommendations = [
-            CorpusItem(**item["corpusItem"], scheduledCorpusItemId=item["id"])
+            CorpusItem(
+                **item["corpusItem"],
+                corpusItemId=item["corpusItem"]["id"],
+                scheduledCorpusItemId=item["id"],
+            )
             for item in data["data"]["scheduledSurface"]["items"]
         ]
 
