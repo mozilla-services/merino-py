@@ -3,6 +3,7 @@
 from typing import Any, Awaitable, Callable, Generator, Optional
 
 from merino.middleware.geolocation import Location
+from merino.providers.weather.backends.protocol import WeatherContext
 
 MaybeStr = Optional[str]
 Triplet = tuple[MaybeStr, MaybeStr, MaybeStr]
@@ -29,15 +30,15 @@ SKIP_CITIES_LIST: frozenset = frozenset(
 )
 
 
-def compass(location: Location) -> Generator[Triplet, None, None]:
-    """Generate all the "country, region, city" triplets based on a `Location`.
+def compass(location: Location) -> Generator[str | None, None, None]:
+    """Generate all the regions based on a `Location`.
 
     It will generate ones that are more likely to produce a valid result based on heuristics.
 
     Params:
       - location {Location}: a location object.
     Returns:
-      - A tuple of "country, region, city", with each element could be None.
+      - region string that could be None.
     """
     # TODO(nanj): add more heuristics to here.
 
@@ -52,28 +53,23 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
                 country,
                 city,
             ) in SUCCESSFUL_REGIONS_MAPPING:  # dynamic rules we've learned
-                yield country, SUCCESSFUL_REGIONS_MAPPING[(country, city)], city
+                yield SUCCESSFUL_REGIONS_MAPPING[(country, city)]
             case ("AU" | "CA" | "CN" | "DE" | "FR" | "GB" | "PL" | "PT" | "RU" | "US", _):
-                yield country, regions[0], city
+                yield regions[0]
                 # use the most specific region
             case ("IT" | "ES" | "GR", _):
-                yield (
-                    country,
-                    regions[-1],
-                    city,
-                )  # use the least specific region
-            case _:  # Fall back to try all triplets
+                yield regions[-1]  # use the least specific region
+            case _:  # Fall back to try all regions
                 regions_to_try = [*regions, None]
                 for region in regions_to_try:
-                    yield country, region, city
+                    yield region
     else:
-        yield country, None, city
+        yield None
 
 
 async def explore(
-    location: Location,
+    weather_context: WeatherContext,
     probe: Callable[..., Awaitable[Optional[Any]]],
-    language: str | None = None,
 ) -> tuple[Optional[Any], bool]:
     """Repeatedly executes an async function (prober) for each candidate until a valid result (path) is found.
 
@@ -93,13 +89,16 @@ async def explore(
       - Any exception raised from `probe`.
     """
     is_skipped = False
-    for country, region, city in compass(location):
+    geolocation = weather_context.geolocation
+    country = geolocation.country
+    city = geolocation.city
+    for region in compass(weather_context.geolocation):
         if (country, region, city) in SKIP_CITIES_LIST:
             return None, True
-        if language:
-            res = await probe(country, region, city, language)
-        else:
-            res = await probe(country, region, city)
+
+        weather_context.selected_region = region
+        res = await probe(weather_context)
+
         if res is not None:
             return res, is_skipped
 

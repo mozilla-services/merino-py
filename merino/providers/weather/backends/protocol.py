@@ -1,6 +1,6 @@
 """Protocol for weather provider backends."""
 
-from typing import Protocol
+from typing import Protocol, Optional
 
 from pydantic import BaseModel, HttpUrl
 
@@ -81,6 +81,7 @@ class WeatherContext:
 
     geolocation: Location
     languages: list[str]
+    selected_region: Optional[str] = None
 
 
 class WeatherBackend(Protocol):

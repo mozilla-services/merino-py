@@ -8,6 +8,7 @@ import orjson
 import logging
 from enum import Enum
 from typing import Any, Callable, NamedTuple, cast
+from functools import partial
 
 import aiodogstatsd
 from dateutil import parser
@@ -538,9 +539,16 @@ class AccuweatherBackend:
         return await self.make_weather_report(cached_report, weather_context)
 
     async def _fetch_from_cache(
-        self, country: str | None, region: str | None, city: str | None, language: str
+        self,
+        weather_context: WeatherContext,
     ) -> list[bytes | None] | None:
         """Fetch weather data from cache."""
+        geolocation = weather_context.geolocation
+        country = geolocation.country
+        city = geolocation.city
+        language = get_language(weather_context.languages)
+        region = weather_context.selected_region
+
         if country is None or city is None:
             return None
 
@@ -590,7 +598,6 @@ class AccuweatherBackend:
         geolocation: Location = weather_context.geolocation
         country: str | None = geolocation.country
         city: str | None = geolocation.city
-        language: str = get_language(weather_context.languages)
 
         if country is None or city is None:
             self.metrics_client.increment(
@@ -600,7 +607,7 @@ class AccuweatherBackend:
 
         try:
             cached_data, is_skipped = await pathfinder.explore(
-                geolocation, self._fetch_from_cache, language=language
+                weather_context, self._fetch_from_cache
             )
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
@@ -658,9 +665,8 @@ class AccuweatherBackend:
             skip_log = False
             try:
                 location, is_skipped = await pathfinder.explore(
-                    geolocation, self.get_location_by_geolocation
+                    weather_context, self.get_location_by_geolocation
                 )
-                skip_log = is_skipped
             except AccuweatherError as exc:
                 logger.warning(f"{exc}")
 
@@ -717,7 +723,7 @@ class AccuweatherBackend:
             return None
 
     async def get_location_by_geolocation(
-        self, country: str | None, region: str | None, city: str | None
+        self, weather_context: WeatherContext
     ) -> AccuweatherLocation | None:
         """Return location data for a specific country and city or None if
         location data is not found.
@@ -727,6 +733,11 @@ class AccuweatherBackend:
         Reference:
             https://developer.accuweather.com/accuweather-locations-api/apis/get/locations/v1/cities/{countryCode}/{adminCode}/search
         """
+        geolocation = weather_context.geolocation
+        country = geolocation.country
+        city = geolocation.city
+        region = weather_context.selected_region
+
         if country is None or city is None:
             return None
 
@@ -735,7 +746,10 @@ class AccuweatherBackend:
             processor = process_location_response_with_country_and_region
         else:
             url_path = self.url_cities_path.format(country_code=country)
-            processor = process_location_response_with_country
+            partial_process_func = partial(
+                process_location_response_with_country, geolocation.coordinates
+            )
+            processor = partial_process_func
 
         try:
             response: dict[str, Any] | None = await self.request_upstream(

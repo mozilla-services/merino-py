@@ -1633,14 +1633,13 @@ async def test_get_location_by_geolocation(
     accuweather: AccuweatherBackend,
     accuweather_location_response: bytes,
     response_header,
+    weather_context_without_location_key: WeatherContext,
 ) -> None:
     """Test that the get_location method returns an AccuweatherLocation."""
     expected_location: AccuweatherLocation = AccuweatherLocation(
         key="39376", localized_name="San Francisco", administrative_area_id="CA"
     )
-    country: str = "US"
-    region: str = "CA"
-    city: str = "San Francisco"
+    weather_context_without_location_key.selected_region = "CA"
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.return_value = Response(
         status_code=200,
@@ -1656,7 +1655,7 @@ async def test_get_location_by_geolocation(
     )
 
     location: Optional[AccuweatherLocation] = await accuweather.get_location_by_geolocation(
-        country, region, city
+        weather_context_without_location_key
     )
 
     assert location == expected_location
@@ -1664,14 +1663,14 @@ async def test_get_location_by_geolocation(
 
 @pytest.mark.asyncio
 async def test_get_location_no_location_returned(
-    accuweather: AccuweatherBackend, response_header: dict[str, str]
+    accuweather: AccuweatherBackend,
+    response_header: dict[str, str],
+    weather_context_without_location_key: WeatherContext,
 ) -> None:
     """Test that the get_location method returns None if the response content is not as
     expected.
     """
-    country: str = "US"
-    region: str = "CA"
-    city: str = "San Francisco"
+    weather_context_without_location_key.selected_region = "CA"
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.return_value = Response(
         status_code=200,
@@ -1687,41 +1686,41 @@ async def test_get_location_no_location_returned(
     )
 
     location: Optional[AccuweatherLocation] = await accuweather.get_location_by_geolocation(
-        country, region, city
+        weather_context_without_location_key
     )
 
     assert location is None
 
 
 @pytest.mark.parametrize(
-    ["country", "city"],
+    "weather_context",
     [
-        ("US", None),
-        (None, "N/A"),
+        WeatherContext(Location(country="US", city=None), languages=[]),
+        WeatherContext(Location(country="None", city="N/A"), languages=[]),
     ],
     ids=["no-city", "no-country"],
 )
 @pytest.mark.asyncio
 async def test_get_location_with_missing_country_city(
-    accuweather: AccuweatherBackend, country: str | None, city: str | None
+    accuweather: AccuweatherBackend, weather_context: WeatherContext
 ) -> None:
     """Test that the get_location method returns None without valid country and city."""
     location: Optional[AccuweatherLocation] = await accuweather.get_location_by_geolocation(
-        country, None, city
+        weather_context
     )
 
     assert location is None
 
 
 @pytest.mark.asyncio
-async def test_get_location_by_geolocation_error(accuweather: AccuweatherBackend) -> None:
+async def test_get_location_by_geolocation_error(
+    accuweather: AccuweatherBackend, weather_context_without_location_key: WeatherContext
+) -> None:
     """Test that the get_location method raises an appropriate exception in the event
     of an AccuWeather API error.
     """
     expected_error_value: str = "Unexpected location response from: /locations/v1/cities/US/CA/search.json, city: San Francisco"
-    country: str = "US"
-    region: str = "CA"
-    city: str = "San Francisco"
+    weather_context_without_location_key.selected_region = "CA"
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.return_value = Response(
         status_code=403,
@@ -1742,27 +1741,25 @@ async def test_get_location_by_geolocation_error(accuweather: AccuweatherBackend
     )
 
     with pytest.raises(AccuweatherError) as accuweather_error:
-        await accuweather.get_location_by_geolocation(country, region, city)
+        await accuweather.get_location_by_geolocation(weather_context_without_location_key)
 
     assert str(accuweather_error.value) == expected_error_value
 
 
 @pytest.mark.asyncio
 async def test_get_location_by_geolocation_raises_accuweather_error_on_generic_exception_error(
-    accuweather: AccuweatherBackend, geolocation: Location
+    accuweather: AccuweatherBackend,
+    weather_context_without_location_key: WeatherContext,
 ) -> None:
     """Test that the get_location_by_geolocation method raises an AccuweatherError when a generic
     exception happens.
     """
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.side_effect = ValueError
-
-    country: str = "US"
-    region: str = "CA"
-    city: str = "San Francisco"
+    weather_context_without_location_key.selected_region = "CA"
 
     with pytest.raises(AccuweatherError) as accuweather_error:
-        await accuweather.get_location_by_geolocation(country, region, city)
+        await accuweather.get_location_by_geolocation(weather_context_without_location_key)
     expected_error_value = (
         "Unexpected error occurred when requesting location by geolocation "
         "from Accuweather: ValueError"
@@ -2580,11 +2577,13 @@ async def test_fetch_from_cache_without_country_city(
     accuweather: AccuweatherBackend, language: str
 ) -> None:
     """Test that `_fetch_from_cache` returns None if country or city is missing."""
-    cached_data = await accuweather._fetch_from_cache("US", None, None, language)
+    weather_context = WeatherContext(Location(country="US"), languages=["en-US"])
+    cached_data = await accuweather._fetch_from_cache(weather_context)
 
     assert cached_data is None
 
-    cached_data = await accuweather._fetch_from_cache(None, None, None, language)
+    weather_context.geolocation.country = None
+    cached_data = await accuweather._fetch_from_cache(weather_context)
 
     assert cached_data is None
 

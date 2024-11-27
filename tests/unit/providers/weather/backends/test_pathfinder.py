@@ -21,21 +21,27 @@ from merino.providers.weather.backends.accuweather.pathfinder import (
     [
         (
             Location(country="CA", regions=["BC"], city="Vancouver"),
-            ("CA", "BC", "Vancouver"),
+            "BC",
         ),
         (
             Location(country="IT", regions=["MT", "77"], city="Matera"),
-            ("IT", "77", "Matera"),
+            "77",
         ),
         (
             Location(country="GB", regions=["ENG", "HWT"], city="London"),
-            ("GB", "LND", "London"),
+            "LND",
         ),
-        (Location(country="BR", regions=["DF"], city="Brasilia"), ("BR", "DF", "Brasilia")),
-        (Location(country="IE", regions=None, city="Dublin"), ("IE", None, "Dublin")),
+        (
+            Location(country="BR", regions=["DF"], city="Brasilia"),
+            "DF",
+        ),
+        (
+            Location(country="IE", regions=None, city="Dublin"),
+            None,
+        ),
         (
             Location(country="CA", regions=["ON"], city="Mitchell/Ontario"),
-            ("CA", "ON", "Mitchell"),
+            "ON",
         ),
     ],
     ids=[
