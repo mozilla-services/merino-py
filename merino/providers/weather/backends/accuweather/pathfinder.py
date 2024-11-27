@@ -5,7 +5,7 @@ from typing import Any, Awaitable, Callable, Generator, Optional
 from merino.middleware.geolocation import Location
 
 MaybeStr = Optional[str]
-Quadtuplet = tuple[MaybeStr, MaybeStr, MaybeStr, bool]
+Triplet = tuple[MaybeStr, MaybeStr, MaybeStr]
 
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {}
 REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(["CA", "ES", "GR", "IT", "US"])
@@ -29,7 +29,7 @@ SKIP_CITIES_LIST: frozenset = frozenset(
 )
 
 
-def compass(location: Location) -> Generator[Quadtuplet, None, None]:
+def compass(location: Location) -> Generator[Triplet, None, None]:
     """Generate all the "country, region, city" triplets based on a `Location`.
 
     It will generate ones that are more likely to produce a valid result based on heuristics.
@@ -44,29 +44,30 @@ def compass(location: Location) -> Generator[Quadtuplet, None, None]:
     country = location.country
     regions = location.regions
     city = location.city
-    is_skipped = False
 
     if regions and country and city:
         city = CITY_NAME_CORRECTION_MAPPING.get(city, city)
         match (country, city):
-            case ("US" | "CA", _) if (country, regions[0], city) not in SKIP_CITIES_LIST:
-                yield country, regions[0], city, is_skipped
             case ("US" | "CA", _):
-                yield None, None, None, True
+                yield country, regions[0], city
                 # use the most specific region
             case ("IT" | "ES" | "GR", _):
-                yield country, regions[-1], city, is_skipped  # use the least specific region
+                yield (
+                    country,
+                    regions[-1],
+                    city,
+                )  # use the least specific region
             case (country, city) if (
                 country,
                 city,
             ) in SUCCESSFUL_REGIONS_MAPPING:  # dynamic rules we've learned
-                yield country, SUCCESSFUL_REGIONS_MAPPING[(country, city)], city, is_skipped
+                yield country, SUCCESSFUL_REGIONS_MAPPING[(country, city)], city
             case _:  # Fall back to try all triplets
                 regions_to_try = [*regions, None]
                 for region in regions_to_try:
-                    yield country, region, city, is_skipped
+                    yield country, region, city
     else:
-        yield country, None, city, is_skipped
+        yield country, None, city
 
 
 async def explore(
@@ -91,8 +92,9 @@ async def explore(
     Raises:
       - Any exception raised from `probe`.
     """
-    for country, region, city, is_skipped in compass(location):
-        if is_skipped:
+    is_skipped = False
+    for country, region, city in compass(location):
+        if (country, region, city) in SKIP_CITIES_LIST:
             return None, True
         if language:
             res = await probe(country, region, city, language)
@@ -101,7 +103,7 @@ async def explore(
         if res is not None:
             return res, is_skipped
 
-    return None, False
+    return None, is_skipped
 
 
 def set_region_mapping(country: str, city: str, region: str | None):
@@ -125,8 +127,3 @@ def get_region_mapping_size() -> int:
 def clear_region_mapping() -> None:
     """Clear SUCCESSFUL_REGIONS_MAPPING."""
     SUCCESSFUL_REGIONS_MAPPING.clear()
-
-
-def is_in_skip_cities_list(country: str | None, city: str | None) -> bool:
-    """Check if country, city is in SKIP_CITIES_LIST."""
-    return len([t for t in SKIP_CITIES_LIST if (t[0], t[2]) == (country, city)]) == 1

@@ -611,7 +611,6 @@ class AccuweatherBackend:
             return None
 
         cached_data = cached_data if cached_data is not None else []
-
         self.emit_cache_fetch_metrics(cached_data)
         cached_report = self.parse_cached_data(cached_data)
 
@@ -656,15 +655,18 @@ class AccuweatherBackend:
 
         # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
+            skip_log = False
             try:
-                location, _ = await pathfinder.explore(
+                location, is_skipped = await pathfinder.explore(
                     geolocation, self.get_location_by_geolocation
                 )
+                skip_log = is_skipped
             except AccuweatherError as exc:
                 logger.warning(f"{exc}")
 
             if location is None:
-                logger.warning(f"Unable to find location for {country}/{city}")
+                if not skip_log:
+                    logger.warning(f"Unable to find location for {country}/{city}")
                 return None
 
         try:

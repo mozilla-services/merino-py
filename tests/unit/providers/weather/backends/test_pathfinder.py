@@ -21,23 +21,22 @@ from merino.providers.weather.backends.accuweather.pathfinder import (
     [
         (
             Location(country="CA", regions=["BC"], city="Vancouver"),
-            ("CA", "BC", "Vancouver", False),
+            ("CA", "BC", "Vancouver"),
         ),
         (
             Location(country="IT", regions=["MT", "77"], city="Matera"),
-            ("IT", "77", "Matera", False),
+            ("IT", "77", "Matera"),
         ),
         (
             Location(country="GB", regions=["ENG", "HWT"], city="London"),
-            ("GB", "LND", "London", False),
+            ("GB", "LND", "London"),
         ),
-        (Location(country="BR", regions=["DF"], city="Brasilia"), ("BR", "DF", "Brasilia", False)),
-        (Location(country="IE", regions=None, city="Dublin"), ("IE", None, "Dublin", False)),
+        (Location(country="BR", regions=["DF"], city="Brasilia"), ("BR", "DF", "Brasilia")),
+        (Location(country="IE", regions=None, city="Dublin"), ("IE", None, "Dublin")),
         (
             Location(country="CA", regions=["ON"], city="Mitchell/Ontario"),
-            ("CA", "ON", "Mitchell", False),
+            ("CA", "ON", "Mitchell"),
         ),
-        (Location(country="CA", regions=["ON"], city="North Park"), (None, None, None, True)),
     ],
     ids=[
         "Specific Region Country",
@@ -46,7 +45,6 @@ from merino.providers.weather.backends.accuweather.pathfinder import (
         "Fallback with Region",
         "Fallback No Region",
         "Corrected City Name",
-        "City in Skip List",
     ],
 )
 def test_compass(location: Location, expected_tuple: Tuple) -> None:

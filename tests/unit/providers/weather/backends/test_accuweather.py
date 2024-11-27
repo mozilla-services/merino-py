@@ -1624,10 +1624,7 @@ async def test_get_weather_report_with_city_in_skip_list(
 
     assert expected_result == result
 
-    metrics_called = [
-        (call_arg[0][0], call_arg[1]["sample_rate"])
-        for call_arg in statsd_mock.increment.call_args_list
-    ]
+    metrics_called = [call_arg for call_arg in statsd_mock.increment.call_args_list]
     assert metrics_called == []
 
 
