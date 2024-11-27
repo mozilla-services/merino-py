@@ -12,9 +12,21 @@ REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(["CA", "ES", "GR", "IT", "US"])
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "La'ie": "Laie",
     "Mitchell/Ontario": "Mitchell",
+    "Montreal West": "Montreal",
+    "Kleinburg Station": "Kleinburg",
     "Middlebury (village)": "Middlebury",
     "TracadieSheila": "Tracadie Sheila",
 }
+SKIP_CITIES_LIST: frozenset = frozenset(
+    [
+        ("CA", "AB", "Sturgeon County"),
+        ("CA", "ON", "North Park"),
+        ("US", "GA", "South Fulton"),
+        ("US", "KY", "Fort Campbell North"),
+        ("US", "TX", "Fort Cavazos"),
+        ("US", "WA", "Joint Base Lewis McChord"),
+    ]
+)
 
 
 def compass(location: Location) -> Generator[Triplet, None, None]:
@@ -37,9 +49,14 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
         city = CITY_NAME_CORRECTION_MAPPING.get(city, city)
         match (country, city):
             case ("US" | "CA", _):
-                yield country, regions[0], city  # use the most specific region
+                yield country, regions[0], city
+                # use the most specific region
             case ("IT" | "ES" | "GR", _):
-                yield country, regions[-1], city  # use the least specific region
+                yield (
+                    country,
+                    regions[-1],
+                    city,
+                )  # use the least specific region
             case (country, city) if (
                 country,
                 city,
@@ -57,7 +74,7 @@ async def explore(
     location: Location,
     probe: Callable[..., Awaitable[Optional[Any]]],
     language: str | None = None,
-) -> Optional[Any]:
+) -> tuple[Optional[Any], bool]:
     """Repeatedly executes an async function (prober) for each candidate until a valid result (path) is found.
 
     This can be used to find a result from various sources (cache or upstream API) for all possible location combinations.
@@ -75,15 +92,18 @@ async def explore(
     Raises:
       - Any exception raised from `probe`.
     """
+    is_skipped = False
     for country, region, city in compass(location):
+        if (country, region, city) in SKIP_CITIES_LIST:
+            return None, True
         if language:
             res = await probe(country, region, city, language)
         else:
             res = await probe(country, region, city)
         if res is not None:
-            return res
+            return res, is_skipped
 
-    return None
+    return None, is_skipped
 
 
 def set_region_mapping(country: str, city: str, region: str | None):

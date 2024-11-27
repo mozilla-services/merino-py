@@ -19,9 +19,18 @@ from merino.providers.weather.backends.accuweather.pathfinder import (
 @pytest.mark.parametrize(
     ("location", "expected_tuple"),
     [
-        (Location(country="CA", regions=["BC"], city="Vancouver"), ("CA", "BC", "Vancouver")),
-        (Location(country="IT", regions=["MT", "77"], city="Matera"), ("IT", "77", "Matera")),
-        (Location(country="GB", regions=["ENG", "HWT"], city="London"), ("GB", "LND", "London")),
+        (
+            Location(country="CA", regions=["BC"], city="Vancouver"),
+            ("CA", "BC", "Vancouver"),
+        ),
+        (
+            Location(country="IT", regions=["MT", "77"], city="Matera"),
+            ("IT", "77", "Matera"),
+        ),
+        (
+            Location(country="GB", regions=["ENG", "HWT"], city="London"),
+            ("GB", "LND", "London"),
+        ),
         (Location(country="BR", regions=["DF"], city="Brasilia"), ("BR", "DF", "Brasilia")),
         (Location(country="IE", regions=None, city="Dublin"), ("IE", None, "Dublin")),
         (

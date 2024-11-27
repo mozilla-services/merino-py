@@ -599,12 +599,15 @@ class AccuweatherBackend:
             return None
 
         try:
-            cached_data = await pathfinder.explore(
+            cached_data, is_skipped = await pathfinder.explore(
                 geolocation, self._fetch_from_cache, language=language
             )
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.fetch.error")
+            return None
+
+        if is_skipped:
             return None
 
         cached_data = cached_data if cached_data is not None else []
@@ -652,13 +655,18 @@ class AccuweatherBackend:
 
         # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
+            skip_log = False
             try:
-                location = await pathfinder.explore(geolocation, self.get_location_by_geolocation)
+                location, is_skipped = await pathfinder.explore(
+                    geolocation, self.get_location_by_geolocation
+                )
+                skip_log = is_skipped
             except AccuweatherError as exc:
                 logger.warning(f"{exc}")
 
             if location is None:
-                logger.warning(f"Unable to find location for {country}/{city}")
+                if not skip_log:
+                    logger.warning(f"Unable to find location for {country}/{city}")
                 return None
 
         try:
