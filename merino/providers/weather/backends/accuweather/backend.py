@@ -19,7 +19,6 @@ from merino.exceptions import CacheAdapterError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
-    is_in_skip_cities_list,
 )
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -600,7 +599,7 @@ class AccuweatherBackend:
             return None
 
         try:
-            cached_data = await pathfinder.explore(
+            cached_data, is_skipped = await pathfinder.explore(
                 geolocation, self._fetch_from_cache, language=language
             )
         except CacheAdapterError as exc:
@@ -608,9 +607,12 @@ class AccuweatherBackend:
             self.metrics_client.increment("accuweather.cache.fetch.error")
             return None
 
+        if is_skipped:
+            return None
+
         cached_data = cached_data if cached_data is not None else []
-        if not is_in_skip_cities_list(country, city):
-            self.emit_cache_fetch_metrics(cached_data)
+
+        self.emit_cache_fetch_metrics(cached_data)
         cached_report = self.parse_cached_data(cached_data)
 
         return await self.make_weather_report(cached_report, weather_context)
@@ -655,13 +657,14 @@ class AccuweatherBackend:
         # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
             try:
-                location = await pathfinder.explore(geolocation, self.get_location_by_geolocation)
+                location, _ = await pathfinder.explore(
+                    geolocation, self.get_location_by_geolocation
+                )
             except AccuweatherError as exc:
                 logger.warning(f"{exc}")
 
             if location is None:
-                if not is_in_skip_cities_list(country, city):
-                    logger.warning(f"Unable to find location for {country}/{city}")
+                logger.warning(f"Unable to find location for {country}/{city}")
                 return None
 
         try:
