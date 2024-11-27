@@ -1314,6 +1314,25 @@ class TestNeedToKnow:
 class TestSections:
     """Test the behavior of the sections feeds"""
 
+    @staticmethod
+    def assert_section_feed_helper(data):
+        """Help assert the section feed for correctness."""
+        # Assert that an empty data array is returned. All recommendations are under "feeds".
+        assert len(data["data"]) == 0
+
+        # Check that all sections are present
+        feeds = data["feeds"]
+        assert len(feeds) > 5  # fixture data contains enough recommendations for many sections.
+
+        # All sections have a layout
+        assert all(Layout(**feed["layout"]) for feed in feeds.values() if feed)
+
+        # Ensure "Today's top stories" is present with a valid date subtitle
+        top_stories_section = data["feeds"].get("top_stories_section")
+        assert top_stories_section is not None
+        assert top_stories_section["title"] == "Today's top stories"
+        assert top_stories_section["subtitle"] is not None
+
     @pytest.mark.asyncio
     async def test_curated_recommendations_with_sections_feed(self):
         """Test the curated recommendations endpoint response is as expected
@@ -1330,23 +1349,49 @@ class TestSections:
             # Check if the response is valid
             assert response.status_code == 200
 
-            # Assert that an empty data array is returned. All recommendations are under "feeds".
-            assert len(data["data"]) == 0
+            self.assert_section_feed_helper(data)
 
-            # Check that all sections are present
-            feeds = data["feeds"]
-            assert (
-                len(feeds) > 5
-            )  # fixture data contains enough recommendations for many sections.
+    @pytest.mark.asyncio
+    async def test_curated_recommendations_with_sections_feed_de(self):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'sections' feed for de-DE locale.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "de-DE", "feeds": ["sections"]},
+            )
+            data = response.json()
 
-            # All sections have a layout
-            assert all(Layout(**feed["layout"]) for feed in feeds.values() if feed)
+            # Check if the response is valid
+            assert response.status_code == 200
 
-            # Ensure "Today's top stories" is present with a valid date subtitle
-            top_stories_section = data["feeds"].get("top_stories_section")
-            assert top_stories_section is not None
-            assert top_stories_section["title"] == "Today's top stories"
-            assert top_stories_section["subtitle"] is not None
+            self.assert_section_feed_helper(data)
+
+            # Ensure that topic section titles are in German, check at least one topic translation
+            assert data["feeds"]["arts"]["title"] == "Unterhaltung"
+
+    @pytest.mark.asyncio
+    async def test_curated_recommendations_with_sections_feed_other_locale(self):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'sections' feed for any other locale besides en-US & de-DE.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "it-IT", "feeds": ["sections"]},
+            )
+            data = response.json()
+
+            # Check if the response is valid
+            assert response.status_code == 200
+
+            self.assert_section_feed_helper(data)
+
+            # Ensure that topic section titles fallback to English
+            assert data["feeds"]["arts"]["title"] == "Arts"
 
 
 class TestExtendedExpiration:

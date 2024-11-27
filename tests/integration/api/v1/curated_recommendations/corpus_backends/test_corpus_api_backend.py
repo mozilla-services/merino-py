@@ -58,8 +58,6 @@ async def test_fetch(corpus_backend: CorpusApiBackend, fixture_response_data):
 )
 async def test_fetch_days_since_today(
     corpus_backend: CorpusApiBackend,
-    fixture_response_data,
-    fixture_response_data_short,
     fixture_request_data,
     corpus_http_client,
     test_input,

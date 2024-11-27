@@ -10,6 +10,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     ScheduledSurfaceId,
     Topic,
+    LOCALIZED_TOPIC_SECTION_TITLES,
 )
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.fakespot_backend.protocol import (
@@ -296,6 +297,7 @@ class CuratedRecommendationsProvider:
         self,
         recommendations: list[CuratedRecommendation],
         request: CuratedRecommendationsRequest,
+        surface_id: ScheduledSurfaceId,
     ) -> CuratedRecommendationsFeed:
         """Return a CuratedRecommendationsFeed with recommendations mapped to their topic."""
         # Apply Thompson sampling to rank all recommendations by engagement
@@ -336,11 +338,16 @@ class CuratedRecommendationsProvider:
                 if topic in sections_by_topic:
                     section = sections_by_topic[topic]
                 else:
+                    formatted_topic = rec.topic.replace("_", " ")
                     section = sections_by_topic[topic] = Section(
                         receivedFeedRank=len(sections_by_topic)
                         + 1,  # add 1 for top_stories_section
                         recommendations=[],
-                        title=rec.topic.replace("_", " ").capitalize(),
+                        # return the hardcoded localized topic section title
+                        # fallback on en-US topic title
+                        title=LOCALIZED_TOPIC_SECTION_TITLES.get(surface_id, {}).get(
+                            formatted_topic, formatted_topic.capitalize()
+                        ),
                         layout=layout_order[len(sections_by_topic) % len(layout_order)],
                     )
 
@@ -399,7 +406,9 @@ class CuratedRecommendationsProvider:
                 recommendations=need_to_know_recs, title=title
             )
         elif self.is_sections_experiment(curated_recommendations_request):
-            sections_feeds = self.get_sections(recommendations, curated_recommendations_request)
+            sections_feeds = self.get_sections(
+                recommendations, curated_recommendations_request, surface_id
+            )
             general_feed = []  # Everything is organized into sections. There's no 'general' feed.
         else:
             # Default ranking for general feed
