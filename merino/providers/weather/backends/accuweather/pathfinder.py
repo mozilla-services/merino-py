@@ -7,7 +7,7 @@ from merino.middleware.geolocation import Location
 MaybeStr = Optional[str]
 Triplet = tuple[MaybeStr, MaybeStr, MaybeStr]
 
-SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {}
+SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {("GB", "London"): "LND"}
 REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(["CA", "ES", "GR", "IT", "US"])
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "La'ie": "Laie",
@@ -48,7 +48,12 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
     if regions and country and city:
         city = CITY_NAME_CORRECTION_MAPPING.get(city, city)
         match (country, city):
-            case ("US" | "CA", _):
+            case (country, city) if (
+                country,
+                city,
+            ) in SUCCESSFUL_REGIONS_MAPPING:  # dynamic rules we've learned
+                yield country, SUCCESSFUL_REGIONS_MAPPING[(country, city)], city
+            case ("AU" | "CA" | "CN" | "DE" | "FR" | "GB" | "PL" | "PT" | "RU" | "US", _):
                 yield country, regions[0], city
                 # use the most specific region
             case ("IT" | "ES" | "GR", _):
@@ -57,11 +62,6 @@ def compass(location: Location) -> Generator[Triplet, None, None]:
                     regions[-1],
                     city,
                 )  # use the least specific region
-            case (country, city) if (
-                country,
-                city,
-            ) in SUCCESSFUL_REGIONS_MAPPING:  # dynamic rules we've learned
-                yield country, SUCCESSFUL_REGIONS_MAPPING[(country, city)], city
             case _:  # Fall back to try all triplets
                 regions_to_try = [*regions, None]
                 for region in regions_to_try:
