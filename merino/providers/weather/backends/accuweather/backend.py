@@ -667,7 +667,7 @@ class AccuweatherBackend:
             if location is None:
                 if not skip_log:
                     logger.warning(
-                        f"Unable to find location for {country}/{city}/{geolocation.regions}"
+                        f"Unable to find location for {country}/{city}, regions: {geolocation.regions}"
                     )
                 return None
 
