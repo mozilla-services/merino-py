@@ -18,7 +18,10 @@ from merino.config import settings
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import CustomDetails, WeatherDetails
-from merino.providers.weather.backends.accuweather.pathfinder import set_region_mapping
+from merino.providers.weather.backends.accuweather.pathfinder import (
+    set_region_mapping,
+    clear_region_mapping,
+)
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -182,7 +185,9 @@ async def test_fetch_mapping(
 
     assert len(statsd_mock.gauge.call_args_list) == 0
 
-    set_region_mapping("Canada", "Vancouver", "BC")
+    clear_region_mapping()
+    set_region_mapping("NL", "Andel", "NB")
+
     await provider._report_mapping()
 
     assert len(statsd_mock.gauge.call_args_list) == 1
@@ -192,6 +197,4 @@ async def test_fetch_mapping(
 
     records = filter_caplog(caplog.records, "merino.providers.weather.provider")
     assert len(records) == 1
-    assert (
-        records[0].message == "Weather Successful Mapping Values: {('Canada', 'Vancouver'): 'BC'}"
-    )
+    assert records[0].message == "Weather Successful Mapping Values: {('NL', 'Andel'): 'NB'}"
