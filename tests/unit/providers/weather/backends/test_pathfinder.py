@@ -17,31 +17,31 @@ from merino.providers.weather.backends.accuweather.pathfinder import (
 
 
 @pytest.mark.parametrize(
-    ("location", "expected_tuple"),
+    ("location", "expected_region_and_city"),
     [
         (
             Location(country="CA", regions=["BC"], city="Vancouver"),
-            "BC",
+            ("BC", "Vancouver"),
         ),
         (
             Location(country="IT", regions=["MT", "77"], city="Matera"),
-            "77",
+            ("77", "Matera"),
         ),
         (
             Location(country="GB", regions=["ENG", "HWT"], city="London"),
-            "LND",
+            ("LND", "London"),
         ),
         (
             Location(country="BR", regions=["DF"], city="Brasilia"),
-            "DF",
+            ("DF", "Brasilia"),
         ),
         (
             Location(country="IE", regions=None, city="Dublin"),
-            None,
+            (None, "Dublin"),
         ),
         (
             Location(country="CA", regions=["ON"], city="Mitchell/Ontario"),
-            "ON",
+            ("ON", "Mitchell"),
         ),
     ],
     ids=[
@@ -53,10 +53,9 @@ from merino.providers.weather.backends.accuweather.pathfinder import (
         "Corrected City Name",
     ],
 )
-def test_compass(location: Location, expected_tuple: Tuple) -> None:
+def test_compass(location: Location, expected_region_and_city: Tuple) -> None:
     """Test country that returns the most specific region."""
     set_region_mapping("GB", "London", "LND")
-
-    assert next(compass(location)) == expected_tuple
+    assert next(compass(location)) == expected_region_and_city
 
     clear_region_mapping()
