@@ -6,7 +6,7 @@ from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.protocol import WeatherContext
 
 MaybeStr = Optional[str]
-Triplet = tuple[MaybeStr, MaybeStr, MaybeStr]
+Pair = tuple[MaybeStr, MaybeStr]
 
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {("GB", "London"): "LND"}
 REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(["CA", "ES", "GR", "IT", "US"])
@@ -30,7 +30,7 @@ SKIP_CITIES_LIST: frozenset = frozenset(
 )
 
 
-def compass(location: Location) -> Generator[str | None, None, None]:
+def compass(location: Location) -> Generator[Pair, None, None]:
     """Generate all the regions based on a `Location`.
 
     It will generate ones that are more likely to produce a valid result based on heuristics.
@@ -48,24 +48,23 @@ def compass(location: Location) -> Generator[str | None, None, None]:
 
     if regions and country and city:
         corrected_city = CITY_NAME_CORRECTION_MAPPING.get(city, city)
-        location.city = corrected_city
         match (country, corrected_city):
             case (country, city) if (
                 country,
                 city,
             ) in SUCCESSFUL_REGIONS_MAPPING:  # dynamic rules we've learned
-                yield SUCCESSFUL_REGIONS_MAPPING[(country, city)]
+                yield SUCCESSFUL_REGIONS_MAPPING[(country, city)], city
             case ("AU" | "CA" | "CN" | "DE" | "FR" | "GB" | "PL" | "PT" | "RU" | "US", _):
-                yield regions[0]
+                yield regions[0], city
                 # use the most specific region
             case ("IT" | "ES" | "GR", _):
-                yield regions[-1]  # use the least specific region
+                yield regions[-1], city  # use the least specific region
             case _:  # Fall back to try all regions
                 regions_to_try = [*regions, None]
                 for region in regions_to_try:
-                    yield region
+                    yield region, city
     else:
-        yield None
+        yield None, city
 
 
 async def explore(
@@ -92,12 +91,13 @@ async def explore(
     is_skipped = False
     geolocation = weather_context.geolocation
     country = geolocation.country
-    city = geolocation.city
-    for region in compass(weather_context.geolocation):
+    for region, city in compass(weather_context.geolocation):
         if (country, region, city) in SKIP_CITIES_LIST:
             return None, True
 
         weather_context.selected_region = region
+        geolocation.city = city
+
         res = await probe(weather_context)
 
         if res is not None:

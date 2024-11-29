@@ -56,7 +56,6 @@ from merino.providers.weather.backends.accuweather.pathfinder import (
 def test_compass(location: Location, expected_region_and_city: Tuple) -> None:
     """Test country that returns the most specific region."""
     set_region_mapping("GB", "London", "LND")
-    region = next(compass(location))
-    assert (region, location.city) == expected_region_and_city
+    assert next(compass(location)) == expected_region_and_city
 
     clear_region_mapping()
