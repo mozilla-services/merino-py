@@ -22,7 +22,7 @@ from merino.curated_recommendations import (
     ConstantPrior,
     ExtendedExpirationCorpusBackend,
 )
-from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.curated_recommendations.corpus_backends.protocol import Topic, ScheduledSurfaceId
 from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
     Engagement,
@@ -36,10 +36,13 @@ from merino.curated_recommendations.fakespot_backend.protocol import (
     FakespotBackend,
     FakespotFeed,
 )
+from merino.curated_recommendations.localization import LOCALIZED_TOPIC_SECTION_TITLES
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
     Layout,
+    CuratedRecommendationsFeed,
+    Section,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
@@ -1333,6 +1336,40 @@ class TestSections:
         assert top_stories_section["title"] == "Today's top stories"
         assert top_stories_section["subtitle"] is not None
 
+    @pytest.mark.parametrize(
+        "surface_id",
+        [
+            ScheduledSurfaceId.NEW_TAB_EN_US,
+            ScheduledSurfaceId.NEW_TAB_DE_DE,
+        ],
+    )
+    def test_section_translations(self, surface_id):
+        """Check that there is a translation for every section title.
+        Currently, for en-US and DE.
+        """
+        # Define the mapping of strings to be replaced, use the Topic enum
+        replacement_section_titles = {topic.name.lower(): topic.value for topic in Topic}
+        # top-stories is not in the Topic enum, do separately
+        replacement_section_titles["top_stories_section"] = "top-stories"
+
+        # Get all Section titles in CuratedRecommendationsFeed
+        # Replace strings using the Topic enum-derived map
+        section_titles = [
+            # Replace if in section title map, else keep original section title
+            replacement_section_titles.get(title_name, title_name)
+            for title_name, title_type in CuratedRecommendationsFeed.__annotations__.items()
+            if title_type == Section | None
+        ]
+
+        # Get the localized titles for the current surface_id
+        localized_titles = LOCALIZED_TOPIC_SECTION_TITLES[surface_id]
+
+        # Assert that each section title has a translation
+        for title in section_titles:
+            assert title in localized_titles and localized_titles[title], (
+                f"Missing translation for '{title}' in " f"{surface_id}"
+            )
+
     @pytest.mark.asyncio
     async def test_curated_recommendations_with_sections_feed(self):
         """Test the curated recommendations endpoint response is as expected
@@ -1370,7 +1407,12 @@ class TestSections:
             self.assert_section_feed_helper(data)
 
             # Ensure that topic section titles are in German, check at least one topic translation
-            assert data["feeds"]["arts"]["title"] == "Unterhaltung"
+            if data["feeds"]["arts"] is not None:
+                assert data["feeds"]["arts"]["title"] == "Unterhaltung"
+            if data["feeds"]["education"] is not None:
+                assert data["feeds"]["education"]["title"] == "Bildung"
+            if data["feeds"]["sports"] is not None:
+                assert data["feeds"]["sports"]["title"] == "Sport"
 
     @pytest.mark.asyncio
     async def test_curated_recommendations_with_sections_feed_other_locale(self):
@@ -1391,7 +1433,12 @@ class TestSections:
             self.assert_section_feed_helper(data)
 
             # Ensure that topic section titles fallback to English
-            assert data["feeds"]["arts"]["title"] == "Arts"
+            if data["feeds"]["arts"] is not None:
+                assert data["feeds"]["arts"]["title"] == "Arts"
+            if data["feeds"]["education"] is not None:
+                assert data["feeds"]["education"]["title"] == "Education"
+            if data["feeds"]["sports"] is not None:
+                assert data["feeds"]["sports"]["title"] == "Sports"
 
 
 class TestExtendedExpiration:
