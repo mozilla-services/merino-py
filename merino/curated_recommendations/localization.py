@@ -44,6 +44,6 @@ LOCALIZED_TOPIC_SECTION_TITLES: LocalizedTopicSectionTitles = {
         "tech": "Technik",
         "travel": "Reisen",
         "home": "Haus und Garten",
-        "top-stories": "Popular Today",
+        "top-stories": "Heute Beliebt",
     },
 }

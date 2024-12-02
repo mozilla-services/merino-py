@@ -1317,8 +1317,11 @@ class TestNeedToKnow:
 class TestSections:
     """Test the behavior of the sections feeds"""
 
+    en_us_section_title_top_stories = "Popular Today"
+    de_section_title_top_stories = "Heute Beliebt"
+
     @staticmethod
-    def assert_section_feed_helper(data):
+    def assert_section_feed_helper(data, top_stories_title):
         """Help assert the section feed for correctness."""
         # Assert that an empty data array is returned. All recommendations are under "feeds".
         assert len(data["data"]) == 0
@@ -1333,7 +1336,7 @@ class TestSections:
         # Ensure "Today's top stories" is present with a valid date subtitle
         top_stories_section = data["feeds"].get("top_stories_section")
         assert top_stories_section is not None
-        assert top_stories_section["title"] == "Today's top stories"
+        assert top_stories_section["title"] == top_stories_title
         assert top_stories_section["subtitle"] is not None
 
     @pytest.mark.parametrize(
@@ -1386,7 +1389,7 @@ class TestSections:
             # Check if the response is valid
             assert response.status_code == 200
 
-            self.assert_section_feed_helper(data)
+            self.assert_section_feed_helper(data, self.en_us_section_title_top_stories)
 
     @pytest.mark.asyncio
     async def test_curated_recommendations_with_sections_feed_de(self):
@@ -1404,7 +1407,7 @@ class TestSections:
             # Check if the response is valid
             assert response.status_code == 200
 
-            self.assert_section_feed_helper(data)
+            self.assert_section_feed_helper(data, self.de_section_title_top_stories)
 
             # Ensure that topic section titles are in German, check at least one topic translation
             if data["feeds"]["arts"] is not None:
@@ -1430,7 +1433,7 @@ class TestSections:
             # Check if the response is valid
             assert response.status_code == 200
 
-            self.assert_section_feed_helper(data)
+            self.assert_section_feed_helper(data, self.en_us_section_title_top_stories)
 
             # Ensure that topic section titles fallback to English
             if data["feeds"]["arts"] is not None:

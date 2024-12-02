@@ -323,7 +323,9 @@ class CuratedRecommendationsProvider:
             top_stories_section=Section(
                 receivedFeedRank=0,
                 recommendations=top_stories,
-                title="Today's top stories",
+                title=LOCALIZED_TOPIC_SECTION_TITLES.get(surface_id, {}).get(
+                    "top-stories", "Popular Today"
+                ),
                 subtitle=datetime.now().strftime("%B %d, %Y"),  # e.g., "October 24, 2024"
                 layout=layout_order[0],
             )
