@@ -8,6 +8,7 @@ regions, and countries [1]. See technical documentation at [2].
 """
 
 import logging
+import re
 from typing import Any, Callable
 import unicodedata
 
@@ -425,8 +426,9 @@ def _remove_diacritics(value: str) -> str:
 def _normalize_name(name: str) -> set[str]:
     normalized = set()
     casefolded = name.casefold()
-    normalized.add(casefolded)
     without_diacritics = _remove_diacritics(casefolded)
-    if casefolded != without_diacritics:
-        normalized.add(without_diacritics)
+    normalized.add(casefolded)
+    normalized.add(without_diacritics)
+    normalized.add(re.sub(r"\W+", " ", casefolded))
+    normalized.add(re.sub(r"\W+", " ", without_diacritics))
     return normalized
