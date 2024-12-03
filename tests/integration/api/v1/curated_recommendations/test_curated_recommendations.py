@@ -1374,7 +1374,7 @@ class TestSections:
             )
 
     @pytest.mark.asyncio
-    async def test_curated_recommendations_with_sections_feed(self):
+    async def test_curated_recommendations_with_sections_feed(self, caplog):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale.
         """
@@ -1391,8 +1391,12 @@ class TestSections:
 
             self.assert_section_feed_helper(data, self.en_us_section_title_top_stories)
 
+            # Assert no errors were logged
+            errors = [r for r in caplog.records if r.levelname == "ERROR"]
+            assert len(errors) == 0
+
     @pytest.mark.asyncio
-    async def test_curated_recommendations_with_sections_feed_de(self):
+    async def test_curated_recommendations_with_sections_feed_de(self, caplog):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for de-DE locale.
         """
@@ -1417,10 +1421,15 @@ class TestSections:
             if data["feeds"]["sports"] is not None:
                 assert data["feeds"]["sports"]["title"] == "Sport"
 
+            # Assert no errors were logged
+            errors = [r for r in caplog.records if r.levelname == "ERROR"]
+            assert len(errors) == 0
+
     @pytest.mark.asyncio
-    async def test_curated_recommendations_with_sections_feed_other_locale(self):
+    async def test_curated_recommendations_with_sections_feed_other_locale(self, caplog):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for any other locale besides en-US & de-DE.
+        Check that an error is logged for missing translations.
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Mock the endpoint to request the sections feed
@@ -1442,6 +1451,12 @@ class TestSections:
                 assert data["feeds"]["education"]["title"] == "Education"
             if data["feeds"]["sports"] is not None:
                 assert data["feeds"]["sports"]["title"] == "Sports"
+
+            # Assert that errors were logged with a descriptive message when missing translation
+            expected_error = "No translations found for surface 'ScheduledSurfaceId.NEW_TAB_IT_IT'"
+            errors = [r for r in caplog.records if r.levelname == "ERROR"]
+            assert len(errors) == 9
+            assert all(expected_error in error.message for error in errors)
 
 
 class TestExtendedExpiration:

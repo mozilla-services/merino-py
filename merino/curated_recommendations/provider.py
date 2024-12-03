@@ -20,7 +20,7 @@ from merino.curated_recommendations.layouts import (
     layout_4_large,
     layout_6_tiles,
 )
-from merino.curated_recommendations.localization import LOCALIZED_TOPIC_SECTION_TITLES
+from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     Locale,
@@ -323,9 +323,10 @@ class CuratedRecommendationsProvider:
             top_stories_section=Section(
                 receivedFeedRank=0,
                 recommendations=top_stories,
-                title=LOCALIZED_TOPIC_SECTION_TITLES.get(surface_id, {}).get(
-                    "top-stories", "Popular Today"
-                ),
+                title=get_translation(surface_id, "top-stories", "Popular Today"),
+                # title=LOCALIZED_TOPIC_SECTION_TITLES.get(surface_id, {}).get(
+                #     "top-stories", "Popular Today"
+                # ),
                 subtitle=datetime.now().strftime("%B %d, %Y"),  # e.g., "October 24, 2024"
                 layout=layout_order[0],
             )
@@ -340,16 +341,17 @@ class CuratedRecommendationsProvider:
                 if topic in sections_by_topic:
                     section = sections_by_topic[topic]
                 else:
-                    formatted_topic_en_us = rec.topic.replace("_", " ")
+                    formatted_topic_en_us = rec.topic.replace("_", " ").capitalize()
                     section = sections_by_topic[topic] = Section(
                         receivedFeedRank=len(sections_by_topic)
                         + 1,  # add 1 for top_stories_section
                         recommendations=[],
                         # return the hardcoded localized topic section title
                         # fallback on en-US topic title
-                        title=LOCALIZED_TOPIC_SECTION_TITLES.get(surface_id, {}).get(
-                            rec.topic, formatted_topic_en_us.capitalize()
-                        ),
+                        title=get_translation(surface_id, rec.topic, formatted_topic_en_us),
+                        # title=LOCALIZED_TOPIC_SECTION_TITLES.get(surface_id, {}).get(
+                        #     rec.topic, formatted_topic_en_us
+                        # ),
                         layout=layout_order[len(sections_by_topic) % len(layout_order)],
                     )
 

@@ -1,10 +1,14 @@
 """Hardcoded localized strings."""
 
-# Hardcoded localized topic section titles (for now) for en-US & de-DE
 from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 LocalizedTopicSectionTitles = dict[ScheduledSurfaceId, dict[str, str]]
 
+# Hardcoded localized topic section titles (for now) for en-US & de-DE
 LOCALIZED_TOPIC_SECTION_TITLES: LocalizedTopicSectionTitles = {
     # reference: https://searchfox.org/mozilla-central/source/browser/locales/en-US/browser/newtab/newtab.ftl#392
     ScheduledSurfaceId.NEW_TAB_EN_US: {
@@ -47,3 +51,22 @@ LOCALIZED_TOPIC_SECTION_TITLES: LocalizedTopicSectionTitles = {
         "top-stories": "Heute Beliebt",
     },
 }
+
+
+def get_translation(surface_id: ScheduledSurfaceId, topic: str, default_topic: str) -> str:
+    """Retrieve a translation and log an error if a translation doesn't exist."""
+    if surface_id not in LOCALIZED_TOPIC_SECTION_TITLES:
+        logger.error(
+            f"No translations found for surface '{surface_id}'. Defaulting to topic: '{default_topic}'"
+        )
+        return default_topic
+
+    translations = LOCALIZED_TOPIC_SECTION_TITLES.get(surface_id, {})
+    if topic not in translations or not translations[topic]:
+        logger.error(
+            f"Missing or empty translation for topic '{topic}' for surface '{surface_id}'. "
+            f"Defaulting to topic: '{default_topic}'"
+        )
+        return default_topic
+
+    return translations[topic]
