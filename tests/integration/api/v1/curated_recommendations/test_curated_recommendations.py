@@ -22,7 +22,7 @@ from merino.curated_recommendations import (
     ConstantPrior,
     ExtendedExpirationCorpusBackend,
 )
-from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.curated_recommendations.corpus_backends.protocol import Topic, ScheduledSurfaceId
 from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
     Engagement,
@@ -36,10 +36,13 @@ from merino.curated_recommendations.fakespot_backend.protocol import (
     FakespotBackend,
     FakespotFeed,
 )
+from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
     Layout,
+    CuratedRecommendationsFeed,
+    Section,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
@@ -1314,8 +1317,64 @@ class TestNeedToKnow:
 class TestSections:
     """Test the behavior of the sections feeds"""
 
+    en_us_section_title_top_stories = "Popular Today"
+    de_section_title_top_stories = "Meistgelesen"
+
+    @staticmethod
+    def assert_section_feed_helper(data, top_stories_title):
+        """Help assert the section feed for correctness."""
+        # Assert that an empty data array is returned. All recommendations are under "feeds".
+        assert len(data["data"]) == 0
+
+        # Check that all sections are present
+        feeds = data["feeds"]
+        assert len(feeds) > 5  # fixture data contains enough recommendations for many sections.
+
+        # All sections have a layout
+        assert all(Layout(**feed["layout"]) for feed in feeds.values() if feed)
+
+        # Ensure "Today's top stories" is present with a valid date subtitle
+        top_stories_section = data["feeds"].get("top_stories_section")
+        assert top_stories_section is not None
+        assert top_stories_section["title"] == top_stories_title
+        assert top_stories_section["subtitle"] is not None
+
+    @pytest.mark.parametrize(
+        "surface_id",
+        [
+            ScheduledSurfaceId.NEW_TAB_EN_US,
+            ScheduledSurfaceId.NEW_TAB_DE_DE,
+        ],
+    )
+    def test_section_translations(self, surface_id):
+        """Check that there is a translation for every section title.
+        Currently, for en-US and DE.
+        """
+        # Define the mapping of strings to be replaced, use the Topic enum
+        replacement_section_titles = {topic.name.lower(): topic.value for topic in Topic}
+        # top-stories is not in the Topic enum, do separately
+        replacement_section_titles["top_stories_section"] = "top-stories"
+
+        # Get all Section titles in CuratedRecommendationsFeed
+        # Replace strings using the Topic enum-derived map
+        section_titles = [
+            # Replace if in section title map, else keep original section title
+            replacement_section_titles.get(title_name, title_name)
+            for title_name, title_type in CuratedRecommendationsFeed.__annotations__.items()
+            if title_type == Section | None
+        ]
+
+        # Get the localized titles for the current surface_id
+        localized_titles = LOCALIZED_SECTION_TITLES[surface_id]
+
+        # Assert that each section title has a translation
+        for title in section_titles:
+            assert title in localized_titles and localized_titles[title], (
+                f"Missing translation for '{title}' in " f"{surface_id}"
+            )
+
     @pytest.mark.asyncio
-    async def test_curated_recommendations_with_sections_feed(self):
+    async def test_curated_recommendations_with_sections_feed(self, caplog):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale.
         """
@@ -1330,23 +1389,74 @@ class TestSections:
             # Check if the response is valid
             assert response.status_code == 200
 
-            # Assert that an empty data array is returned. All recommendations are under "feeds".
-            assert len(data["data"]) == 0
+            self.assert_section_feed_helper(data, self.en_us_section_title_top_stories)
 
-            # Check that all sections are present
-            feeds = data["feeds"]
-            assert (
-                len(feeds) > 5
-            )  # fixture data contains enough recommendations for many sections.
+            # Assert no errors were logged
+            errors = [r for r in caplog.records if r.levelname == "ERROR"]
+            assert len(errors) == 0
 
-            # All sections have a layout
-            assert all(Layout(**feed["layout"]) for feed in feeds.values() if feed)
+    @pytest.mark.asyncio
+    async def test_curated_recommendations_with_sections_feed_de(self, caplog):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'sections' feed for de-DE locale.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "de-DE", "feeds": ["sections"]},
+            )
+            data = response.json()
 
-            # Ensure "Today's top stories" is present with a valid date subtitle
-            top_stories_section = data["feeds"].get("top_stories_section")
-            assert top_stories_section is not None
-            assert top_stories_section["title"] == "Today's top stories"
-            assert top_stories_section["subtitle"] is not None
+            # Check if the response is valid
+            assert response.status_code == 200
+
+            self.assert_section_feed_helper(data, self.de_section_title_top_stories)
+
+            # Ensure that topic section titles are in German, check at least one topic translation
+            if data["feeds"]["arts"] is not None:
+                assert data["feeds"]["arts"]["title"] == "Unterhaltung"
+            if data["feeds"]["education"] is not None:
+                assert data["feeds"]["education"]["title"] == "Bildung"
+            if data["feeds"]["sports"] is not None:
+                assert data["feeds"]["sports"]["title"] == "Sport"
+
+            # Assert no errors were logged
+            errors = [r for r in caplog.records if r.levelname == "ERROR"]
+            assert len(errors) == 0
+
+    @pytest.mark.asyncio
+    async def test_curated_recommendations_with_sections_feed_other_locale(self, caplog):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'sections' feed for any other locale besides en-US & de-DE.
+        Check that an error is logged for missing translations.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "it-IT", "feeds": ["sections"]},
+            )
+            data = response.json()
+
+            # Check if the response is valid
+            assert response.status_code == 200
+
+            self.assert_section_feed_helper(data, self.en_us_section_title_top_stories)
+
+            # Ensure that topic section titles fallback to English
+            if data["feeds"]["arts"] is not None:
+                assert data["feeds"]["arts"]["title"] == "Arts"
+            if data["feeds"]["education"] is not None:
+                assert data["feeds"]["education"]["title"] == "Education"
+            if data["feeds"]["sports"] is not None:
+                assert data["feeds"]["sports"]["title"] == "Sports"
+
+            # Assert that errors were logged with a descriptive message when missing translation
+            expected_error = "No translations found for surface 'ScheduledSurfaceId.NEW_TAB_IT_IT'"
+            errors = [r for r in caplog.records if r.levelname == "ERROR"]
+            assert len(errors) == 9
+            assert all(expected_error in error.message for error in errors)
 
 
 class TestExtendedExpiration:
