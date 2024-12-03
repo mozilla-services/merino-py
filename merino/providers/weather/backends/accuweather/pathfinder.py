@@ -13,6 +13,7 @@ REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(["CA", "ES", "GR", "IT", "US"])
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "La'ie": "Laie",
     "Mitchell/Ontario": "Mitchell",
+    "Montreal East": "Montreal",
     "Montreal West": "Montreal",
     "Kleinburg Station": "Kleinburg",
     "Middlebury (village)": "Middlebury",
@@ -22,9 +23,14 @@ SKIP_CITIES_LIST: frozenset = frozenset(
     [
         ("CA", "AB", "Sturgeon County"),
         ("CA", "ON", "North Park"),
+        ("CA", "ON", "Ontario"),
+        ("US", "AL", "Fort Novosel"),
         ("US", "GA", "South Fulton"),
         ("US", "KY", "Fort Campbell North"),
+        ("US", "ND", "Minot Air Force Base"),
         ("US", "TX", "Fort Cavazos"),
+        ("US", "TX", "Lavaca"),
+        ("US", "UT", "Hill Air Force Base"),
         ("US", "WA", "Joint Base Lewis McChord"),
     ]
 )
