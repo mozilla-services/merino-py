@@ -36,7 +36,7 @@ from merino.curated_recommendations.fakespot_backend.protocol import (
     FakespotBackend,
     FakespotFeed,
 )
-from merino.curated_recommendations.localization import LOCALIZED_TOPIC_SECTION_TITLES
+from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
@@ -1318,7 +1318,7 @@ class TestSections:
     """Test the behavior of the sections feeds"""
 
     en_us_section_title_top_stories = "Popular Today"
-    de_section_title_top_stories = "Heute Beliebt"
+    de_section_title_top_stories = "Meistgelesen"
 
     @staticmethod
     def assert_section_feed_helper(data, top_stories_title):
@@ -1365,7 +1365,7 @@ class TestSections:
         ]
 
         # Get the localized titles for the current surface_id
-        localized_titles = LOCALIZED_TOPIC_SECTION_TITLES[surface_id]
+        localized_titles = LOCALIZED_SECTION_TITLES[surface_id]
 
         # Assert that each section title has a translation
         for title in section_titles:
