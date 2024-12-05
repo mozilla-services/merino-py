@@ -61,6 +61,8 @@ class ExperimentName(str, Enum):
     REGION_SPECIFIC_CONTENT_EXPANSION_SMALL = "new-tab-region-specific-content-expansion-small"
     # Experiment where high-engaging items scheduled for past dates are included.
     EXTENDED_EXPIRATION_EXPERIMENT = "new-tab-extend-content-duration"
+    # Experiment where we apply a modified prior to reduce exploration
+    MODIFIED_PRIOR_EXPERIMENT = "new-tab-feed-reduce-exploration"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
