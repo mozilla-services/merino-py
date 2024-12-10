@@ -1197,6 +1197,8 @@ class TestCorpusApiRanking:
             (f"optin-{ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value}", "treatment", True),
             (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value, "control", False),
             (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value, "treatment", True),
+            (ExperimentName.MODIFIED_PRIOR_EXPERIMENT.value, "control", False),
+            (ExperimentName.MODIFIED_PRIOR_EXPERIMENT.value, "treatment", False),
             (
                 f"optin-{ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value}",
                 "treatment",
