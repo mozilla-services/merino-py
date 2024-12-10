@@ -5,7 +5,14 @@ from enum import unique, Enum
 from typing import Annotated
 import logging
 
-from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo
+from pydantic import (
+    Field,
+    field_validator,
+    model_validator,
+    BaseModel,
+    ValidationInfo,
+    create_model,
+)
 
 from merino.curated_recommendations.corpus_backends.protocol import CorpusItem, Topic
 from merino.curated_recommendations.fakespot_backend.protocol import FakespotFeed
@@ -221,45 +228,30 @@ class Section(BaseModel):
     layout: Layout
 
 
-class CuratedRecommendationsFeed(BaseModel):
-    """Multiple lists of curated recommendations, that are currently in an experimental phase."""
+# Multiple lists of curated recommendations, that are currently in an experimental phase.
+# Sections are created dynamically because the Topic enum is only available at runtime.
+# Fields are defined by one of the following tuple forms:
+#     (<type>, <default value>)
+#     (<type>, Field(...))
+CuratedRecommendationsFeed = create_model(
+    "CuratedRecommendationsFeed",
+    **(
+        {
+            "need_to_know": (CuratedRecommendationsBucket | None, None),
+            "fakespot": (FakespotFeed | None, None),
+            "top_stories_section": (Section | None, None)
+        }
+        | {topic.name.lower(): (Section | None, Field(None, alias=topic.value)) for topic in Topic}
+    ),
+)
 
-    need_to_know: CuratedRecommendationsBucket | None = None
-    fakespot: FakespotFeed | None = None
 
-    # Topic sections are named according to the lowercase Topic enum name, and aliased to its value.
-    # The alias determines what's being returned in the JSON response.
-    business: Section | None = Field(None, alias="business")
-    career: Section | None = Field(None, alias="career")
-    arts: Section | None = Field(None, alias="arts")
-    food: Section | None = Field(None, alias="food")
-    health_fitness: Section | None = Field(None, alias="health")
-    home: Section | None = Field(None, alias="home")
-    personal_finance: Section | None = Field(None, alias="finance")
-    politics: Section | None = Field(None, alias="government")
-    sports: Section | None = Field(None, alias="sports")
-    technology: Section | None = Field(None, alias="tech")
-    travel: Section | None = Field(None, alias="travel")
-    education: Section | None = Field(None, alias="education")
-    gaming: Section | None = Field(None, alias="hobbies")
-    parenting: Section | None = Field(None, alias="society-parenting")
-    science: Section | None = Field(None, alias="education-science")
-    self_improvement: Section | None = Field(None, alias="society")
-    # Other sections
-    top_stories_section: Section | None = None  # Fx134+ shows topic labels for top_stories_section
-
-    class Config:
-        """Pydantic configs, as documented in https://docs.pydantic.dev/latest/api/config"""
-
-        populate_by_name = True  # Feeds are named according to their alias in the JSON response.
-
-    def has_topic_section(self, topic: Topic) -> bool:
-        """Check if a section for the given topic exists as an attribute."""
-        return hasattr(self, topic.name.lower())
-
-    def set_topic_section(self, topic: Topic, section: Section):
-        """Set a section for the given topic."""
-        setattr(self, topic.name.lower(), section)
+# def set_topic_section(self, topic: Topic, section: Section):
+#     """Set a section for the given topic."""
+#     setattr(self, topic.name.lower(), section)
+#
+#
+# CuratedRecommendationsFeed.set_topic_section = set_topic_section
 
 
 class CuratedRecommendationsResponse(BaseModel):
@@ -267,4 +259,4 @@ class CuratedRecommendationsResponse(BaseModel):
 
     recommendedAt: int
     data: list[CuratedRecommendation]
-    feeds: CuratedRecommendationsFeed | None = None
+    feeds: CuratedRecommendationsFeed | None = None  # type: ignore
