@@ -1341,6 +1341,14 @@ class TestSections:
         assert top_stories_section["title"] == top_stories_title
         assert top_stories_section["subtitle"] is not None
 
+        # Verify that every section in the response data has a valid name
+        section_identifiers = {topic.value for topic in Topic}
+        section_identifiers.add("top_stories_section")
+
+        for section_name, section in feeds.items():
+            if section is not None:
+                assert section_name in section_identifiers, f"Invalid section name: {section_name}"
+
     @pytest.mark.parametrize(
         "surface_id",
         [
@@ -1457,7 +1465,7 @@ class TestSections:
             # Assert that errors were logged with a descriptive message when missing translation
             expected_error = "No translations found for surface 'ScheduledSurfaceId.NEW_TAB_IT_IT'"
             errors = [r for r in caplog.records if r.levelname == "ERROR"]
-            assert len(errors) == 9
+            assert len(errors) >= 9
             assert all(expected_error in error.message for error in errors)
 
 

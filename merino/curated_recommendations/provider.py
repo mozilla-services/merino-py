@@ -338,18 +338,16 @@ class CuratedRecommendationsProvider:
         )
 
         # Group the remaining recommendations by topic, preserving Thompson sampling order
-        sections_by_topic: dict[str, Section] = {}
+        sections_by_topic: dict[Topic, Section] = {}
 
         for rec in remaining_recs:
-            if rec.topic and rec.topic.value in CuratedRecommendationsFeed.model_fields:
-                topic = rec.topic
-                if topic in sections_by_topic:
-                    section = sections_by_topic[topic]
+            if rec.topic:
+                if rec.topic in sections_by_topic:
+                    section = sections_by_topic[rec.topic]
                 else:
                     formatted_topic_en_us = rec.topic.replace("_", " ").capitalize()
-                    section = sections_by_topic[topic] = Section(
-                        receivedFeedRank=len(sections_by_topic)
-                        + 1,  # add 1 for top_stories_section
+                    section = sections_by_topic[rec.topic] = Section(
+                        receivedFeedRank=len(sections_by_topic) + 1,  # +1 for top_stories_section
                         recommendations=[],
                         # return the hardcoded localized topic section title
                         # fallback on en-US topic title
@@ -362,12 +360,12 @@ class CuratedRecommendationsProvider:
                     section.recommendations.append(rec)
 
         # Filter and assign sections with valid minimum recommendations
-        for topic_id, section in sections_by_topic.items():
+        for topic, section in sections_by_topic.items():
             # Find the maximum number of tiles in this section's responsive layouts.
             max_tile_count = max(len(rl.tiles) for rl in section.layout.responsiveLayouts)
             # Only add sections that meet the minimum number of recommendations.
             if len(section.recommendations) >= max_tile_count + min_fallback_recs_per_section:
-                setattr(feeds, topic_id, section)
+                feeds.set_topic_section(topic, section)
 
         return feeds
 

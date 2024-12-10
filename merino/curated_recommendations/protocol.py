@@ -227,25 +227,39 @@ class CuratedRecommendationsFeed(BaseModel):
     need_to_know: CuratedRecommendationsBucket | None = None
     fakespot: FakespotFeed | None = None
 
-    # The following feeds are used as mock data for the 'sections' experiment.
-    # They should be removed when the sections are implemented that we'll actually launch with.
-    business: Section | None = None
-    career: Section | None = None
-    arts: Section | None = None
-    food: Section | None = None
-    health_fitness: Section | None = None
-    home: Section | None = None
-    personal_finance: Section | None = None
-    politics: Section | None = None
-    sports: Section | None = None
-    technology: Section | None = None
-    travel: Section | None = None
-    education: Section | None = None
-    gaming: Section | None = None
-    parenting: Section | None = None
-    science: Section | None = None
-    self_improvement: Section | None = None
-    top_stories_section: Section | None = None
+    # Topic sections are named according to the lowercase Topic enum name, and aliased to its value.
+    # The alias determines what's being returned in the JSON response.
+    business: Section | None = Field(None, alias="business")
+    career: Section | None = Field(None, alias="career")
+    arts: Section | None = Field(None, alias="arts")
+    food: Section | None = Field(None, alias="food")
+    health_fitness: Section | None = Field(None, alias="health")
+    home: Section | None = Field(None, alias="home")
+    personal_finance: Section | None = Field(None, alias="finance")
+    politics: Section | None = Field(None, alias="government")
+    sports: Section | None = Field(None, alias="sports")
+    technology: Section | None = Field(None, alias="tech")
+    travel: Section | None = Field(None, alias="travel")
+    education: Section | None = Field(None, alias="education")
+    gaming: Section | None = Field(None, alias="hobbies")
+    parenting: Section | None = Field(None, alias="society-parenting")
+    science: Section | None = Field(None, alias="education-science")
+    self_improvement: Section | None = Field(None, alias="society")
+    # Other sections
+    top_stories_section: Section | None = None  # Fx134+ shows topic labels for top_stories_section
+
+    class Config:
+        """Pydantic configs, as documented in https://docs.pydantic.dev/latest/api/config"""
+
+        populate_by_name = True  # Feeds are named according to their alias in the JSON response.
+
+    def has_topic_section(self, topic: Topic) -> bool:
+        """Check if a section for the given topic exists as an attribute."""
+        return hasattr(self, topic.name.lower())
+
+    def set_topic_section(self, topic: Topic, section: Section):
+        """Set a section for the given topic."""
+        setattr(self, topic.name.lower(), section)
 
 
 class CuratedRecommendationsResponse(BaseModel):
