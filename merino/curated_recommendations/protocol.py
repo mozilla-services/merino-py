@@ -2,7 +2,7 @@
 
 import hashlib
 from enum import unique, Enum
-from typing import Annotated
+from typing import Annotated, Optional, Union
 import logging
 
 from pydantic import (
@@ -237,11 +237,15 @@ CuratedRecommendationsFeed = create_model(
     "CuratedRecommendationsFeed",
     **(
         {
-            "need_to_know": (CuratedRecommendationsBucket | None, None),
-            "fakespot": (FakespotFeed | None, None),
-            "top_stories_section": (Section | None, None)
+            "need_to_know": (Union[CuratedRecommendationsBucket, None], None),  # 'big rectangle' news
+            "fakespot": (Union[FakespotFeed, None], None),  # fakespot products in the 'big rectangle'
+            "top_stories_section": (Union[Section, None], None),  # 'Popular Today' section
         }
-        | {topic.name.lower(): (Section | None, Field(None, alias=topic.value)) for topic in Topic}
+        # topic sections
+        | {
+            topic.name.lower(): (Union[Section, None], Field(None, alias=topic.value))
+            for topic in Topic
+        }
     ),
 )
 
