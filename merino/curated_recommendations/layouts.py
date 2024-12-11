@@ -8,9 +8,6 @@ TODO: HNT-252 will document the QA process for layout changes. PR review suffice
 
 from merino.curated_recommendations.protocol import Layout, ResponsiveLayout, Tile, TileSize
 
-# The following layouts are based on work-in-progress designs. The goal is to get some mock data to
-# FE developers. Names and layouts will likely be changed.
-
 # Layout 1: 4 medium tiles on 4 columns. Small tiles are used on fewer columns to display all items.
 layout_4_medium = Layout(
     name="4-medium-small-1-ad",
