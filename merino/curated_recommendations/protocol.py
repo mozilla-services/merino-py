@@ -233,22 +233,22 @@ class CuratedRecommendationsFeed(BaseModel):
     top_stories_section: Section | None = None
     # Topic sections are named according to the lowercase Topic enum name, and aliased to the topic
     # id, suffixed with '-section'. The alias determines the section name in the JSON response.
-    business: Section | None = Field(None, alias="business-section")
-    career: Section | None = Field(None, alias="career-section")
-    arts: Section | None = Field(None, alias="arts-section")
-    food: Section | None = Field(None, alias="food-section")
-    health_fitness: Section | None = Field(None, alias="health-section")
-    home: Section | None = Field(None, alias="home-section")
-    personal_finance: Section | None = Field(None, alias="finance-section")
-    politics: Section | None = Field(None, alias="government-section")
-    sports: Section | None = Field(None, alias="sports-section")
-    technology: Section | None = Field(None, alias="tech-section")
-    travel: Section | None = Field(None, alias="travel-section")
-    education: Section | None = Field(None, alias="education-section")
-    gaming: Section | None = Field(None, alias="hobbies-section")
-    parenting: Section | None = Field(None, alias="society-parenting-section")
-    science: Section | None = Field(None, alias="education-science-section")
-    self_improvement: Section | None = Field(None, alias="society-section")
+    business: Section | None = Field(None, alias="business")
+    career: Section | None = Field(None, alias="career")
+    arts: Section | None = Field(None, alias="arts")
+    food: Section | None = Field(None, alias="food")
+    health_fitness: Section | None = Field(None, alias="health")
+    home: Section | None = Field(None, alias="home")
+    personal_finance: Section | None = Field(None, alias="finance")
+    politics: Section | None = Field(None, alias="government")
+    sports: Section | None = Field(None, alias="sports")
+    technology: Section | None = Field(None, alias="tech")
+    travel: Section | None = Field(None, alias="travel")
+    education: Section | None = Field(None, alias="education")
+    gaming: Section | None = Field(None, alias="hobbies")
+    parenting: Section | None = Field(None, alias="society-parenting")
+    science: Section | None = Field(None, alias="education-science")
+    self_improvement: Section | None = Field(None, alias="society")
 
     def has_topic_section(self, topic: Topic) -> bool:
         """Check if a section for the given topic exists as an attribute."""

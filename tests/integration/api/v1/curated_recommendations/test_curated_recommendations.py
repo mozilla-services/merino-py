@@ -1342,7 +1342,7 @@ class TestSections:
         assert top_stories_section["subtitle"] is not None
 
         # Verify that every section in the response data has a valid name
-        section_identifiers = {f"{topic.value}-section" for topic in Topic}
+        section_identifiers = {f"{topic.value}" for topic in Topic}
         section_identifiers.add("top_stories_section")
 
         for section_name, section in feeds.items():
@@ -1424,12 +1424,12 @@ class TestSections:
             self.assert_section_feed_helper(data, self.de_section_title_top_stories)
 
             # Ensure that topic section titles are in German, check at least one topic translation
-            if data["feeds"]["arts-section"] is not None:
-                assert data["feeds"]["arts-section"]["title"] == "Unterhaltung"
-            if data["feeds"]["education-section"] is not None:
-                assert data["feeds"]["education-section"]["title"] == "Bildung"
-            if data["feeds"]["sports-section"] is not None:
-                assert data["feeds"]["sports-section"]["title"] == "Sport"
+            if data["feeds"]["arts"] is not None:
+                assert data["feeds"]["arts"]["title"] == "Unterhaltung"
+            if data["feeds"]["education"] is not None:
+                assert data["feeds"]["education"]["title"] == "Bildung"
+            if data["feeds"]["sports"] is not None:
+                assert data["feeds"]["sports"]["title"] == "Sport"
 
             # Assert no errors were logged
             errors = [r for r in caplog.records if r.levelname == "ERROR"]
@@ -1455,12 +1455,12 @@ class TestSections:
             self.assert_section_feed_helper(data, self.en_us_section_title_top_stories)
 
             # Ensure that topic section titles fallback to English
-            if data["feeds"]["arts-section"] is not None:
-                assert data["feeds"]["arts-section"]["title"] == "Arts"
-            if data["feeds"]["education-section"] is not None:
-                assert data["feeds"]["education-section"]["title"] == "Education"
-            if data["feeds"]["sports-section"] is not None:
-                assert data["feeds"]["sports-section"]["title"] == "Sports"
+            if data["feeds"]["arts"] is not None:
+                assert data["feeds"]["arts"]["title"] == "Arts"
+            if data["feeds"]["education"] is not None:
+                assert data["feeds"]["education"]["title"] == "Education"
+            if data["feeds"]["sports"] is not None:
+                assert data["feeds"]["sports"]["title"] == "Sports"
 
             # Assert that errors were logged with a descriptive message when missing translation
             expected_error = "No translations found for surface 'ScheduledSurfaceId.NEW_TAB_IT_IT'"
