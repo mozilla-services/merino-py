@@ -1,5 +1,6 @@
 """Provider for curated recommendations on New Tab."""
 
+import logging
 import time
 import re
 from datetime import datetime
@@ -39,6 +40,8 @@ from merino.curated_recommendations.rankers import (
     thompson_sampling,
     boost_followed_sections,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class CuratedRecommendationsProvider:
@@ -267,7 +270,7 @@ class CuratedRecommendationsProvider:
         recommendations: list[CuratedRecommendation],
         surface_id: ScheduledSurfaceId,
         request: CuratedRecommendationsRequest,
-    ):
+    ) -> tuple[list[CuratedRecommendation], list[CuratedRecommendation], str]:
         """Apply additional processing to the list of recommendations
         received from Curated Corpus API, splitting the list in two:
         the "general" feed and the "need to know" feed
@@ -280,20 +283,9 @@ class CuratedRecommendationsProvider:
         @return: A tuple with two re-ranked lists of curated recommendations and a localised
         title for the "Need to Know" heading
         """
-        # Filter out all time-sensitive recommendations into the need_to_know feed
-        need_to_know_feed = [r for r in recommendations if r.isTimeSensitive]
-
-        # If fewer than five stories have been curated for this feed, use yesterday's data
-        if len(need_to_know_feed) < 5:
-            yesterdays_recs = await self.fetch_backup_recommendations(surface_id)
-            need_to_know_feed = [r for r in yesterdays_recs if r.isTimeSensitive]
-
-        # Update received_rank for need_to_know recommendations
-        for rank, rec in enumerate(need_to_know_feed):
-            rec.receivedRank = rank
-
-        # Place the remaining recommendations in the general feed
-        general_feed = [r for r in recommendations if r not in need_to_know_feed]
+        general_feed, need_to_know_feed = await self.get_time_sensitive_recommendations(
+            recommendations, surface_id
+        )
 
         # Apply all the additional re-ranking and processing steps
         # to the main recommendations feed
@@ -309,13 +301,42 @@ class CuratedRecommendationsProvider:
 
         return general_feed, need_to_know_feed, title
 
-    def get_sections(
+    async def get_time_sensitive_recommendations(
+        self, recommendations: list[CuratedRecommendation], surface_id: ScheduledSurfaceId
+    ) -> tuple[list[CuratedRecommendation], list[CuratedRecommendation]]:
+        """Split the recommendations in two: the "general" feed and "time-sensitive" feed
+
+        @param recommendations: A list of CuratedRecommendation objects as they are received
+        from Curated Corpus API
+        @param surface_id: a string identifier for the New Tab surface these recommendations
+        are intended for
+        @return: A tuple with two re-ranked lists: "general" and "time-sensitive" respectively.
+        """
+        # Filter out all time-sensitive recommendations into the need_to_know feed
+        need_to_know_feed = [r for r in recommendations if r.isTimeSensitive]
+        # If fewer than five stories have been curated for this feed, use yesterday's data
+        if len(need_to_know_feed) < 5:
+            yesterdays_recs = await self.fetch_backup_recommendations(surface_id)
+            need_to_know_feed = [r for r in yesterdays_recs if r.isTimeSensitive]
+        # Update received_rank for need_to_know recommendations
+        for rank, rec in enumerate(need_to_know_feed):
+            rec.receivedRank = rank
+        # Place the remaining recommendations in the general feed
+        general_feed = [r for r in recommendations if not r.isTimeSensitive]
+        return general_feed, need_to_know_feed
+
+    async def get_sections(
         self,
         recommendations: list[CuratedRecommendation],
         request: CuratedRecommendationsRequest,
         surface_id: ScheduledSurfaceId,
     ) -> CuratedRecommendationsFeed:
         """Return a CuratedRecommendationsFeed with recommendations mapped to their topic."""
+        max_recs_per_section = 30
+        # Section must have some extra items in case one is dismissed, beyond what can be displayed.
+        min_fallback_recs_per_section = 1
+        top_stories_count = 6
+
         # Apply Thompson sampling to rank all recommendations by engagement
         recommendations = thompson_sampling(
             recommendations,
@@ -325,28 +346,42 @@ class CuratedRecommendationsProvider:
             enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
         )
 
-        max_recs_per_section = 30
-        # Section must have some extra items in case one is dismissed, beyond what can be displayed.
-        min_fallback_recs_per_section = 1
-        top_stories_count = 6
-        # Sections will cycle through the following layouts.
-        layout_order = [layout_4_medium, layout_4_large, layout_6_tiles]
+        # Split recommendations into news (time-sensitive), top stories, and remaining recs.
+        # This preserves the Thompson sampling order in both lists.
+        general_recs, news_recs = await self.get_time_sensitive_recommendations(
+            recommendations, surface_id
+        )
+        if len(news_recs) < 4:
+            # The editorial team ensures that there are always
+            logging.error("'In the news' section has fewer than 4 items")
+        top_stories = general_recs[:top_stories_count]
+        remaining_recs = general_recs[top_stories_count:]
 
         # Create "Today's top stories" section with the first 6 recommendations
-        top_stories = recommendations[:top_stories_count]
-        remaining_recs = recommendations[top_stories_count:]
         feeds = CuratedRecommendationsFeed(
-            top_stories_section=Section(
+            news_section=Section(
                 receivedFeedRank=0,
+                recommendations=news_recs,
+                title=get_translation(surface_id, "news-section", "In the News"),
+                subtitle=datetime.now().strftime("%B %d, %Y"),  # e.g., "October 24, 2024"
+                layout=layout_4_large,
+            ),
+            top_stories_section=Section(
+                receivedFeedRank=1,
                 recommendations=top_stories,
                 title=get_translation(surface_id, "top-stories", "Popular Today"),
-                subtitle=datetime.now().strftime("%B %d, %Y"),  # e.g., "October 24, 2024"
-                layout=layout_order[0],
-            )
+                layout=layout_4_medium,
+            ),
         )
 
         # Group the remaining recommendations by topic, preserving Thompson sampling order
         sections_by_topic: dict[Topic, Section] = {}
+        # Sections will cycle through the following layouts.
+        topic_layout_order = [
+            layout_6_tiles,
+            layout_4_large,
+            layout_4_medium,
+        ]
 
         for rec in remaining_recs:
             if rec.topic:
@@ -355,12 +390,15 @@ class CuratedRecommendationsProvider:
                 else:
                     formatted_topic_en_us = rec.topic.replace("_", " ").capitalize()
                     section = sections_by_topic[rec.topic] = Section(
-                        receivedFeedRank=len(sections_by_topic) + 1,  # +1 for top_stories_section
+                        receivedFeedRank=len(sections_by_topic)
+                        + 2,  # add 2 for top_stories_section and news_section
                         recommendations=[],
                         # return the hardcoded localized topic section title
                         # fallback on en-US topic title
                         title=get_translation(surface_id, rec.topic, formatted_topic_en_us),
-                        layout=layout_order[len(sections_by_topic) % len(layout_order)],
+                        layout=topic_layout_order[
+                            len(sections_by_topic) % len(topic_layout_order)
+                        ],
                     )
 
                 if len(section.recommendations) < max_recs_per_section:
@@ -418,7 +456,7 @@ class CuratedRecommendationsProvider:
                 recommendations=need_to_know_recs, title=title
             )
         elif self.is_sections_experiment(curated_recommendations_request, surface_id):
-            sections_feeds = self.get_sections(
+            sections_feeds = await self.get_sections(
                 recommendations, curated_recommendations_request, surface_id
             )
             general_feed = []  # Everything is organized into sections. There's no 'general' feed.
