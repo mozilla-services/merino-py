@@ -1396,15 +1396,66 @@ class TestSections:
             assert len(errors) == 0
 
     @pytest.mark.asyncio
-    async def test_curated_recommendations_with_sections_feed_de(self, caplog):
+    async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
+        self, caplog
+    ):
         """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for de-DE locale.
+        when requesting the 'sections' feed for en-US locale. Sections requested to be boosted (followed)
+        should be boosted and isFollowed attribute set accordingly.
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Mock the endpoint to request the sections feed
             response = await ac.post(
                 "/api/v1/curated-recommendations",
-                json={"locale": "de-DE", "feeds": ["sections"]},
+                json={
+                    "locale": "en-US",
+                    "feeds": ["sections"],
+                    "sections": [
+                        {"sectionId": "sports", "isFollowed": True, "isBlocked": False},
+                        {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
+                        {"sectionId": "education", "isFollowed": False, "isBlocked": True},
+                    ],
+                },
+            )
+            data = response.json()
+
+            # Check if the response is valid
+            assert response.status_code == 200
+
+            self.assert_section_feed_helper(data, self.en_us_section_title_top_stories)
+
+            # assert isFollowed & isBlocked have been correctly set
+            if data["feeds"]["arts"] is not None:
+                assert data["feeds"]["arts"]["isFollowed"]
+            if data["feeds"]["education"] is not None:
+                assert not data["feeds"]["education"]["isFollowed"]
+                assert data["feeds"]["education"]["isBlocked"]
+            if data["feeds"]["sports"] is not None:
+                assert data["feeds"]["sports"]["isFollowed"]
+
+            # Assert no errors were logged
+            errors = [r for r in caplog.records if r.levelname == "ERROR"]
+            assert len(errors) == 0
+
+    @pytest.mark.asyncio
+    async def test_curated_recommendations_with_sections_feed_de(self, caplog):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'sections' feed for de-DE locale. The sections param in the request
+        should be ignored as follow/unfollow/block feature is only enabled for en-US for now.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": "de-DE",
+                    "feeds": ["sections"],
+                    "sections": [
+                        {"sectionId": "sports", "isFollowed": True, "isBlocked": False},
+                        {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
+                        {"sectionId": "education", "isFollowed": False, "isBlocked": True},
+                    ],
+                },
             )
             data = response.json()
 
@@ -1416,10 +1467,16 @@ class TestSections:
             # Ensure that topic section titles are in German, check at least one topic translation
             if data["feeds"]["arts"] is not None:
                 assert data["feeds"]["arts"]["title"] == "Unterhaltung"
+                assert not data["feeds"]["arts"]["isFollowed"]
+                assert not data["feeds"]["arts"]["isBlocked"]
             if data["feeds"]["education"] is not None:
                 assert data["feeds"]["education"]["title"] == "Bildung"
+                assert not data["feeds"]["education"]["isFollowed"]
+                assert not data["feeds"]["education"]["isBlocked"]
             if data["feeds"]["sports"] is not None:
                 assert data["feeds"]["sports"]["title"] == "Sport"
+                assert not data["feeds"]["sports"]["isFollowed"]
+                assert not data["feeds"]["sports"]["isBlocked"]
 
             # Assert no errors were logged
             errors = [r for r in caplog.records if r.levelname == "ERROR"]

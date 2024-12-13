@@ -73,6 +73,14 @@ MAX_TILE_ID = (1 << 53) - 1
 MIN_TILE_ID = 10000000
 
 
+class SectionConfiguration(BaseModel):
+    """Configuration settings for a Section"""
+
+    sectionId: str
+    isFollowed: bool
+    isBlocked: bool
+
+
 class CuratedRecommendation(CorpusItem):
     """Extends CorpusItem with additional fields for a curated recommendation"""
 
@@ -110,6 +118,7 @@ class CuratedRecommendationsRequest(BaseModel):
     count: int = 100
     topics: list[Topic | str] | None = None
     feeds: list[str] | None = None
+    sections: list[SectionConfiguration] | None = None
     # Firefox sends the name and branch for Nimbus experiments on the "pocketNewtab" feature:
     # https://searchfox.org/mozilla-central/source/browser/components/newtab/lib/DiscoveryStreamFeed.sys.mjs
     # Allow any string value or null, because ExperimentName is not meant to be an exhaustive list.
@@ -217,6 +226,8 @@ class Section(BaseModel):
     title: str
     subtitle: str | None = None
     layout: Layout
+    isFollowed: bool = False
+    isBlocked: bool = False
 
 
 class CuratedRecommendationsFeed(BaseModel):

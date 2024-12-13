@@ -37,6 +37,7 @@ from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
     spread_publishers,
     thompson_sampling,
+    boost_followed_sections,
 )
 
 
@@ -187,6 +188,16 @@ class CuratedRecommendationsProvider:
         return (
             request.feeds
             and "fakespot" in request.feeds
+            and surface_id == ScheduledSurfaceId.NEW_TAB_EN_US
+        )
+
+    @staticmethod
+    def is_follow_unfollow_block_section_experiment(request, surface_id) -> bool:
+        """Check if the Follow/Unfollow & Block Sections experiment is enabled."""
+        return (
+            request.feeds
+            and "sections" in request.feeds
+            and request.sections
             and surface_id == ScheduledSurfaceId.NEW_TAB_EN_US
         )
 
@@ -428,6 +439,17 @@ class CuratedRecommendationsProvider:
             )
         elif sections_feeds:
             response.feeds = sections_feeds
+
+        if (
+            curated_recommendations_request.sections
+            and response.feeds
+            and self.is_follow_unfollow_block_section_experiment(
+                curated_recommendations_request, surface_id
+            )
+        ):
+            response.feeds = boost_followed_sections(
+                curated_recommendations_request.sections, response.feeds
+            )
 
         return response
 
