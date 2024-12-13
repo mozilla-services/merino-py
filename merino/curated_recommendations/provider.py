@@ -20,7 +20,7 @@ from merino.curated_recommendations.layouts import (
     layout_4_large,
     layout_6_tiles,
 )
-from merino.curated_recommendations.localization import get_translation
+from merino.curated_recommendations.localization import get_translation, LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     Locale,
@@ -184,9 +184,16 @@ class CuratedRecommendationsProvider:
         )
 
     @staticmethod
-    def is_sections_experiment(request) -> bool:
+    def is_sections_experiment(
+        request: CuratedRecommendationsRequest,
+        surface_id: ScheduledSurfaceId,
+    ) -> bool:
         """Check if the 'sections' experiment is enabled."""
-        return request.feeds and "sections" in request.feeds
+        return (
+            request.feeds is not None
+            and "sections" in request.feeds  # Clients must request "feeds": ["sections"]
+            and surface_id in LOCALIZED_SECTION_TITLES  # The locale must be supported
+        )
 
     @staticmethod
     def is_fakespot_experiment(request, surface_id) -> bool:
@@ -409,7 +416,7 @@ class CuratedRecommendationsProvider:
             need_to_know_feed = CuratedRecommendationsBucket(
                 recommendations=need_to_know_recs, title=title
             )
-        elif self.is_sections_experiment(curated_recommendations_request):
+        elif self.is_sections_experiment(curated_recommendations_request, surface_id):
             sections_feeds = self.get_sections(
                 recommendations, curated_recommendations_request, surface_id
             )

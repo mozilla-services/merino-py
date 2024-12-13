@@ -1322,33 +1322,6 @@ class TestSections:
     en_us_section_title_top_stories = "Popular Today"
     de_section_title_top_stories = "Meistgelesen"
 
-    @staticmethod
-    def assert_section_feed_helper(data, top_stories_title):
-        """Help assert the section feed for correctness."""
-        # Assert that an empty data array is returned. All recommendations are under "feeds".
-        assert len(data["data"]) == 0
-
-        # Check that all sections are present
-        feeds = data["feeds"]
-        assert len(feeds) > 5  # fixture data contains enough recommendations for many sections.
-
-        # All sections have a layout
-        assert all(Layout(**feed["layout"]) for feed in feeds.values() if feed)
-
-        # Ensure "Today's top stories" is present with a valid date subtitle
-        top_stories_section = data["feeds"].get("top_stories_section")
-        assert top_stories_section is not None
-        assert top_stories_section["title"] == top_stories_title
-        assert top_stories_section["subtitle"] is not None
-
-        # Verify that every section in the response data has a valid name
-        section_identifiers = {f"{topic.value}" for topic in Topic}
-        section_identifiers.add("top_stories_section")
-
-        for section_name, section in feeds.items():
-            if section is not None:
-                assert section_name in section_identifiers, f"Invalid section name: {section_name}"
-
     @pytest.mark.parametrize(
         "surface_id",
         [
@@ -1384,89 +1357,85 @@ class TestSections:
             )
 
     @pytest.mark.asyncio
-    async def test_curated_recommendations_with_sections_feed(self, caplog):
+    @pytest.mark.parametrize("locale", ["en-US", "de-DE"])
+    async def test_sections_feed_content(self, locale, caplog):
         """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for en-US locale.
+        when requesting the 'sections' feed for different locales.
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Mock the endpoint to request the sections feed
             response = await ac.post(
                 "/api/v1/curated-recommendations",
-                json={"locale": "en-US", "feeds": ["sections"]},
+                json={"locale": locale, "feeds": ["sections"]},
             )
             data = response.json()
 
             # Check if the response is valid
             assert response.status_code == 200
-
-            self.assert_section_feed_helper(data, self.en_us_section_title_top_stories)
-
             # Assert no errors were logged
             errors = [r for r in caplog.records if r.levelname == "ERROR"]
             assert len(errors) == 0
 
+            # Assert that an empty data array is returned. All recommendations are under "feeds".
+            assert len(data["data"]) == 0
+
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # The fixture data contains enough recommendations for at least 4 sections. The number
+            # of sections varies because top_stories_section is determined by Thompson sampling,
+            # and therefore the number of recs per topics is non-deterministic.
+            assert len(sections) >= 4
+
+            # All sections have a layout
+            assert all(Layout(**section["layout"]) for section in sections.values())
+
+            # Ensure all topics are present and are named according to the Topic Enum value.
+            assert all(topic.value in feeds for topic in Topic)
+
     @pytest.mark.asyncio
-    async def test_curated_recommendations_with_sections_feed_de(self, caplog):
-        """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for de-DE locale.
-        """
+    @pytest.mark.parametrize(
+        "locale, expected_titles",
+        [
+            (
+                "en-US",
+                {
+                    "top_stories_section": "Popular Today",
+                    "arts": "Entertainment",
+                    "education": "Education",
+                    "sports": "Sports",
+                },
+            ),
+            (
+                "de-DE",
+                {
+                    "top_stories_section": "Meistgelesen",
+                    "arts": "Unterhaltung",
+                    "education": "Bildung",
+                    "sports": "Sport",
+                },
+            ),
+        ],
+    )
+    async def test_sections_feed_titles(self, locale, expected_titles):
+        """Test the curated recommendations endpoint 'sections' have the expected (sub)titles."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Mock the endpoint to request the sections feed
             response = await ac.post(
                 "/api/v1/curated-recommendations",
-                json={"locale": "de-DE", "feeds": ["sections"]},
+                json={"locale": locale, "feeds": ["sections"]},
             )
             data = response.json()
+            feeds = data["feeds"]
 
-            # Check if the response is valid
-            assert response.status_code == 200
+            # Sections have their expected, localized title
+            for section_name, expected_title in expected_titles.items():
+                section = feeds.get(section_name)
+                if section:
+                    assert section["title"] == expected_title
 
-            self.assert_section_feed_helper(data, self.de_section_title_top_stories)
-
-            # Ensure that topic section titles are in German, check at least one topic translation
-            if data["feeds"]["arts"] is not None:
-                assert data["feeds"]["arts"]["title"] == "Unterhaltung"
-            if data["feeds"]["education"] is not None:
-                assert data["feeds"]["education"]["title"] == "Bildung"
-            if data["feeds"]["sports"] is not None:
-                assert data["feeds"]["sports"]["title"] == "Sport"
-
-            # Assert no errors were logged
-            errors = [r for r in caplog.records if r.levelname == "ERROR"]
-            assert len(errors) == 0
-
-    @pytest.mark.asyncio
-    async def test_curated_recommendations_with_sections_feed_other_locale(self, caplog):
-        """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for any other locale besides en-US & de-DE.
-        Check that an error is logged for missing translations.
-        """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": "it-IT", "feeds": ["sections"]},
-            )
-            data = response.json()
-
-            # Check if the response is valid
-            assert response.status_code == 200
-
-            self.assert_section_feed_helper(data, self.en_us_section_title_top_stories)
-
-            # Ensure that topic section titles fallback to English
-            if data["feeds"]["arts"] is not None:
-                assert data["feeds"]["arts"]["title"] == "Arts"
-            if data["feeds"]["education"] is not None:
-                assert data["feeds"]["education"]["title"] == "Education"
-            if data["feeds"]["sports"] is not None:
-                assert data["feeds"]["sports"]["title"] == "Sports"
-
-            # Assert that errors were logged with a descriptive message when missing translation
-            expected_error = "No translations found for surface 'ScheduledSurfaceId.NEW_TAB_IT_IT'"
-            errors = [r for r in caplog.records if r.levelname == "ERROR"]
-            assert len(errors) >= 9
-            assert all(expected_error in error.message for error in errors)
+            # Ensure "Today's top stories" subtitle is present
+            assert feeds["top_stories_section"]["subtitle"] is not None
 
 
 class TestExtendedExpiration:
