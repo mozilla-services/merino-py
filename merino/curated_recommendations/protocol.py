@@ -55,10 +55,6 @@ class ExperimentName(str, Enum):
     when Merino needs to change behavior depending on the experimentName request parameter.
     """
 
-    # Experiment where large countries receive region-specific ranking.
-    REGION_SPECIFIC_CONTENT_EXPANSION = "new-tab-region-specific-content-expansion"
-    # Same as the above, but targeting small countries, which need a higher enrollment %.
-    REGION_SPECIFIC_CONTENT_EXPANSION_SMALL = "new-tab-region-specific-content-expansion-small"
     # Experiment where high-engaging items scheduled for past dates are included.
     EXTENDED_EXPIRATION_EXPERIMENT = "new-tab-extend-content-duration"
     # Experiment where we apply a modified prior to reduce exploration

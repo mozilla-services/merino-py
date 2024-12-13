@@ -144,18 +144,6 @@ class CuratedRecommendationsProvider:
         ) and request.experimentBranch == branch
 
     @staticmethod
-    def is_enrolled_in_regional_engagement(request: CuratedRecommendationsRequest) -> bool:
-        """Return True if Thompson sampling should use regional engagement (treatment)."""
-        # Large and small countries need a different enrollment %, thus require separate experiments
-        return CuratedRecommendationsProvider.is_enrolled_in_experiment(
-            request, ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "treatment"
-        ) or CuratedRecommendationsProvider.is_enrolled_in_experiment(
-            request,
-            ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value,
-            "treatment",
-        )
-
-    @staticmethod
     def is_in_extended_expiration_experiment(request: CuratedRecommendationsRequest) -> bool:
         """Return True if Thompson sampling should use regional engagement (treatment)."""
         return CuratedRecommendationsProvider.is_enrolled_in_experiment(
@@ -226,7 +214,6 @@ class CuratedRecommendationsProvider:
             engagement_backend=self.engagement_backend,
             prior_backend=self.prior_backend,
             region=self.derive_region(request.locale, request.region),
-            enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
             enable_prior_experiment=self.is_enrolled_in_prior_experiment(request),
         )
 
@@ -314,7 +301,6 @@ class CuratedRecommendationsProvider:
             engagement_backend=self.engagement_backend,
             prior_backend=self.prior_backend,
             region=self.derive_region(request.locale, request.region),
-            enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
         )
 
         max_recs_per_section = 30

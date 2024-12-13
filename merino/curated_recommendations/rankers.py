@@ -64,14 +64,13 @@ def thompson_sampling(
         b_prior = prior.beta
 
         # Use a weighted average of regional and global engagement, if that's enabled and available.
-        if enable_region_engagement:
-            region_opens, region_no_opens = get_opens_no_opens(rec, region)
-            region_prior = prior_backend.get(region)
-            if region_no_opens and region_prior:
-                opens = (region_weight * region_opens) + ((1 - region_weight) * opens)
-                no_opens = (region_weight * region_no_opens) + ((1 - region_weight) * no_opens)
-                a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
-                b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
+        region_opens, region_no_opens = get_opens_no_opens(rec, region)
+        region_prior = prior_backend.get(region)
+        if region_no_opens and region_prior:
+            opens = (region_weight * region_opens) + ((1 - region_weight) * opens)
+            no_opens = (region_weight * region_no_opens) + ((1 - region_weight) * no_opens)
+            a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
+            b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
 
         # the experiment scales the parameters describing the prior distribution for item CTR by 0.5
         # this reduces the approximate number of impressions over which the prior CTR will influence
