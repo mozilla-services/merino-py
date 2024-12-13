@@ -132,6 +132,42 @@ GEONAMES = [
         admin1_code="10",
         population=1,
     ),
+    # A made-up city with punctuation in its name
+    Geoname(
+        id=9,
+        name="St. Punctuation-on-the-Marsh",
+        latitude="45.50884",
+        longitude="-73.58781",
+        feature_class="P",
+        feature_code="PPLA2",
+        country_code="US",
+        admin1_code="NY",
+        population=1,
+    ),
+    # A made-up city with diacritics and punctuation in its name
+    Geoname(
+        id=10,
+        name="Öĩ-Guvnör-One",
+        latitude="45.50884",
+        longitude="-73.58781",
+        feature_class="P",
+        feature_code="PPLA2",
+        country_code="US",
+        admin1_code="NY",
+        population=1,
+    ),
+    # Another made-up city with diacritics and punctuation in its name
+    Geoname(
+        id=11,
+        name="Öĩ-Guvnör-Two",
+        latitude="45.50884",
+        longitude="-73.58781",
+        feature_class="P",
+        feature_code="PPLA2",
+        country_code="US",
+        admin1_code="NY",
+        population=1,
+    ),
 ]
 
 # Alternates that will populate the mock GeoNames files
@@ -233,6 +269,33 @@ ALTERNATES = [
     GeonameAlternate(
         geoname_id=8,
         name="Öũ",
+        iso_language="en",
+    ),
+    # Another made-up city with diacritics and punctuation in its name -- Add
+    # every normalized name as an explicit alternate to make sure they're not
+    # duplicated in the output.
+    GeonameAlternate(
+        geoname_id=11,
+        # casefolded
+        name="öĩ-guvnör-two",
+        iso_language="en",
+    ),
+    GeonameAlternate(
+        geoname_id=11,
+        # diacritics removed
+        name="oi-guvnor-two",
+        iso_language="en",
+    ),
+    GeonameAlternate(
+        geoname_id=11,
+        # punctuation removed
+        name="öĩ guvnör two",
+        iso_language="en",
+    ),
+    GeonameAlternate(
+        geoname_id=11,
+        # diacritics and punctuation removed
+        name="oi guvnor two",
         iso_language="en",
     ),
 ]
@@ -478,11 +541,60 @@ def test_all_populations_and_iso_languages(
                     GeonameAlternate(8, "öũ", "en"),
                 ],
             ),
+            Geoname(
+                id=9,
+                name="St. Punctuation-on-the-Marsh",
+                latitude="45.50884",
+                longitude="-73.58781",
+                feature_class="P",
+                feature_code="PPLA2",
+                country_code="US",
+                admin1_code="NY",
+                population=1,
+                alternates=[
+                    GeonameAlternate(9, "st. punctuation-on-the-marsh"),
+                    GeonameAlternate(9, "st punctuation on the marsh"),
+                ],
+            ),
+            Geoname(
+                id=10,
+                name="Öĩ-Guvnör-One",
+                latitude="45.50884",
+                longitude="-73.58781",
+                feature_class="P",
+                feature_code="PPLA2",
+                country_code="US",
+                admin1_code="NY",
+                population=1,
+                alternates=[
+                    GeonameAlternate(10, "öĩ-guvnör-one"),
+                    GeonameAlternate(10, "oi-guvnor-one"),
+                    GeonameAlternate(10, "oi guvnor one"),
+                    GeonameAlternate(10, "öĩ guvnör one"),
+                ],
+            ),
+            Geoname(
+                id=11,
+                name="Öĩ-Guvnör-Two",
+                latitude="45.50884",
+                longitude="-73.58781",
+                feature_class="P",
+                feature_code="PPLA2",
+                country_code="US",
+                admin1_code="NY",
+                population=1,
+                alternates=[
+                    GeonameAlternate(11, "öĩ-guvnör-two"),
+                    GeonameAlternate(11, "oi-guvnor-two"),
+                    GeonameAlternate(11, "oi guvnor two"),
+                    GeonameAlternate(11, "öĩ guvnör two"),
+                ],
+            ),
         ],
         expected_metrics=DownloadMetrics(
             # No excluded cities or regions
             excluded_geonames_count=0,
-            included_alternates_count=16,
+            included_alternates_count=20,
         ),
     )
 
@@ -572,7 +684,7 @@ def test_one_million_population_and_all_iso_languages(
         ],
         expected_metrics=DownloadMetrics(
             # No Waterloo AL, Waterloo IA, or city with diacritics
-            excluded_geonames_count=3,
+            excluded_geonames_count=6,
             included_alternates_count=12,
         ),
     )
@@ -643,7 +755,7 @@ def test_one_million_population_and_en_only(
         ],
         expected_metrics=DownloadMetrics(
             # No Waterloo AL, Waterloo IA, or city with diacritics
-            excluded_geonames_count=3,
+            excluded_geonames_count=6,
             # Only "al", "ia", "new york" (city), and "ny" (state). Other
             # values in `altername_names` are lowercased versions of `name`.
             included_alternates_count=4,

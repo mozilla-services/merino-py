@@ -164,6 +164,13 @@ class CuratedRecommendationsProvider:
         )
 
     @staticmethod
+    def is_enrolled_in_prior_experiment(request: CuratedRecommendationsRequest) -> bool:
+        """Return True if Thompson sampling should use modified prior with reduced beta (treatment)."""
+        return CuratedRecommendationsProvider.is_enrolled_in_experiment(
+            request, ExperimentName.MODIFIED_PRIOR_EXPERIMENT.value, "treatment"
+        )
+
+    @staticmethod
     def is_need_to_know_experiment(request, surface_id) -> bool:
         """Check if the 'need_to_know' experiment is enabled."""
         return (
@@ -231,6 +238,7 @@ class CuratedRecommendationsProvider:
             prior_backend=self.prior_backend,
             region=self.derive_region(request.locale, request.region),
             enable_region_engagement=self.is_enrolled_in_regional_engagement(request),
+            enable_prior_experiment=self.is_enrolled_in_prior_experiment(request),
         )
 
         # 2. Perform publisher spread on the recommendation set

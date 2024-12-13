@@ -31,6 +31,7 @@ def thompson_sampling(
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
     enable_region_engagement: bool = False,
+    enable_prior_experiment: bool = False,
     region: str | None = None,
     region_weight: float = REGION_ENGAGEMENT_WEIGHT,
 ) -> list[CuratedRecommendation]:
@@ -76,6 +77,13 @@ def thompson_sampling(
                 no_opens = (region_weight * region_no_opens) + ((1 - region_weight) * no_opens)
                 a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
                 b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
+
+        # the experiment scales the parameters describing the prior distribution for item CTR by 0.5
+        # this reduces the approximate number of impressions over which the prior CTR will influence
+        # the final CTR estimate used for ranking.  this in turn reduces the expected exploration period
+        if enable_prior_experiment and not enable_region_engagement:
+            a_prior *= 0.5
+            b_prior *= 0.5
 
         # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
         opens += max(a_prior, 1e-18)
