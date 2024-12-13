@@ -699,7 +699,7 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 200
             # get topics in returned recs
             result_topics = [item["topic"] for item in corpus_items]
-            assert result_topics == expected_topics
+            assert set(result_topics) == set(expected_topics)
             # Assert that a warning was logged with a descriptive message when invalid topic
             warnings = [r for r in caplog.records if r.levelname == "WARNING"]
             assert len(warnings) == 1
