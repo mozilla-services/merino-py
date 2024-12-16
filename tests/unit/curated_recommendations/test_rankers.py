@@ -397,26 +397,28 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         )
         # Let's first assert original feed received ranks
         assert feed.top_stories_section.receivedFeedRank == 0
-        assert feed.arts.receivedFeedRank == 5
-        assert feed.food.receivedFeedRank == 3
         assert feed.business.receivedFeedRank == 2
+        assert feed.food.receivedFeedRank == 3
+        assert feed.arts.receivedFeedRank == 5
         assert feed.travel.receivedFeedRank == 6
 
         # Get the updated feed with boosted followed sections
         new_feed = boost_followed_sections(req_sections, feed)
 
         # Now let's assert the updated feed and check that followed sections were boosted
+
+        # Assertions for receivedFeedRank
         assert new_feed.top_stories_section.receivedFeedRank == 0  # should always remain 0
-        assert feed.arts.receivedFeedRank == 2
-        assert feed.arts.isFollowed
-        assert feed.food.receivedFeedRank == 3
-        assert not feed.food.isFollowed
-        assert feed.business.receivedFeedRank == 1  # had a rank==2, should now be 1
-        assert feed.business.isFollowed
-        assert (
-            feed.travel.receivedFeedRank == 4
-        )  # was originally ranked after Food, should still be ranked after
-        assert not feed.travel.isFollowed
+        assert new_feed.business.receivedFeedRank == 1  # had a rank==2, should now be 1
+        assert new_feed.arts.receivedFeedRank == 2
+        assert new_feed.food.receivedFeedRank == 3
+        assert new_feed.travel.receivedFeedRank == 4  # originally ranked after Food, should still be after
+
+        # Assertions for isFollowed
+        assert new_feed.arts.isFollowed
+        assert new_feed.business.isFollowed
+        assert not new_feed.food.isFollowed
+        assert not new_feed.travel.isFollowed
 
     def test_boost_followed_sections_no_followed_sections_found_block_section(self):
         """Test boosting sections only boosts followed sections. If no followed sections found in request,
@@ -432,9 +434,9 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         )
         # Let's first assert original feed received ranks
         assert feed.top_stories_section.receivedFeedRank == 0
-        assert feed.arts.receivedFeedRank == 5
-        assert feed.food.receivedFeedRank == 3
         assert feed.business.receivedFeedRank == 2
+        assert feed.food.receivedFeedRank == 3
+        assert feed.arts.receivedFeedRank == 5
         assert not feed.business.isBlocked  # isBlocked should be false by default
         assert feed.travel.receivedFeedRank == 6
         assert not feed.travel.isBlocked  # isBlocked should be false by default
@@ -443,14 +445,18 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         new_feed = boost_followed_sections(req_sections, feed)
 
         # Now let's assert the updated feed and check that receivedFeedRank has not changed for sections
+
+        # Assertions for receivedFeedRank
         assert new_feed.top_stories_section.receivedFeedRank == 0
-        assert new_feed.arts.receivedFeedRank == 5
-        assert not new_feed.arts.isFollowed
-        assert new_feed.food.receivedFeedRank == 3
-        assert not new_feed.food.isFollowed
         assert new_feed.business.receivedFeedRank == 2
+        assert new_feed.food.receivedFeedRank == 3
+        assert new_feed.arts.receivedFeedRank == 5
+        assert new_feed.travel.receivedFeedRank == 6
+
+        # Assertions for isFollowed & isBlocked
+        assert not new_feed.arts.isFollowed
+        assert not new_feed.food.isFollowed
         assert not new_feed.business.isFollowed
         assert new_feed.business.isBlocked  # isBlocked should be now true
-        assert new_feed.travel.receivedFeedRank == 6
         assert not new_feed.travel.isFollowed
         assert new_feed.travel.isBlocked  # isBlocked should be now true

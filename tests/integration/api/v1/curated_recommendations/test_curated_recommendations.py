@@ -1424,16 +1424,20 @@ class TestSections:
             # Check if the response is valid
             assert response.status_code == 200
 
-            self.assert_section_feed_helper(data, self.en_us_section_title_top_stories)
-
             # assert isFollowed & isBlocked have been correctly set
             if data["feeds"]["arts"] is not None:
                 assert data["feeds"]["arts"]["isFollowed"]
+                # assert followed section ARTS has a lower receivedFeedRank than unfollowed section EDUCATION
+                if data["feeds"]["education"] is not None:
+                    assert data["feeds"]["arts"]["receivedFeedRank"] < data["feeds"]["education"]["receivedFeedRank"]
             if data["feeds"]["education"] is not None:
                 assert not data["feeds"]["education"]["isFollowed"]
                 assert data["feeds"]["education"]["isBlocked"]
             if data["feeds"]["sports"] is not None:
                 assert data["feeds"]["sports"]["isFollowed"]
+                # assert followed section SPORTS has a lower receivedFeedRank than unfollowed section EDUCATION
+                if data["feeds"]["education"] is not None:
+                    assert data["feeds"]["sports"]["receivedFeedRank"] < data["feeds"]["education"]["receivedFeedRank"]
 
             # Assert no errors were logged
             errors = [r for r in caplog.records if r.levelname == "ERROR"]
