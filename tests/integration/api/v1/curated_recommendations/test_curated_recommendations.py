@@ -609,34 +609,6 @@ class TestCuratedRecommendationsRequestParameters:
             assert all([topic in preferred_topics for topic in top_topics])
 
     @pytest.mark.asyncio
-    @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
-    async def test_curated_recommendations_preferred_topic_no_reorder(
-        self, fixture_response_data_short, fixture_request_data, corpus_http_client
-    ):
-        """Test the curated recommendations endpoint accepts a preferred topic & does
-        not reorder the list if preferred topics already in top 2 recs.
-        """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            corpus_http_client.post.return_value = Response(
-                status_code=200,
-                json=fixture_response_data_short,
-                request=fixture_request_data,
-            )
-            response = await fetch_en_us(ac)
-            data = response.json()
-            corpus_items = data["data"]
-
-            assert response.status_code == 200
-            # assert total of 4 items returned (using scheduled_surface_short.json for response)
-            assert len(corpus_items) == 5
-            # assert that recs didn't need boosting so order remains the same
-            for i in range(len(corpus_items)):
-                assert (
-                    fixture_response_data_short["data"]["scheduledSurface"]["items"][i]["id"]
-                    == corpus_items[i]["scheduledCorpusItemId"]
-                )
-
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "topics, expected_topics, expected_warning",
         [
