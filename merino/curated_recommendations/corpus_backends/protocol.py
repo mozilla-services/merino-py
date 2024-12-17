@@ -8,7 +8,13 @@ from pydantic import BaseModel, HttpUrl
 
 @unique
 class Topic(str, Enum):
-    """Topics supported for curated recommendations."""
+    """Topics supported for curated recommendations.
+
+    The section names must match the corresponding topic names in lowercase. Please update
+    merino/curated_recommendations/protocol.py if the enum names (e.g. BUSINESS) are changed.
+
+    The enum values correspond to the topic identifiers. Changing them would be a breaking change.
+    """
 
     BUSINESS = "business"
     CAREER = "career"

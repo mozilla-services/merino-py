@@ -20,7 +20,7 @@ from merino.curated_recommendations.layouts import (
     layout_4_large,
     layout_6_tiles,
 )
-from merino.curated_recommendations.localization import get_translation
+from merino.curated_recommendations.localization import get_translation, LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     Locale,
@@ -184,9 +184,16 @@ class CuratedRecommendationsProvider:
         )
 
     @staticmethod
-    def is_sections_experiment(request) -> bool:
+    def is_sections_experiment(
+        request: CuratedRecommendationsRequest,
+        surface_id: ScheduledSurfaceId,
+    ) -> bool:
         """Check if the 'sections' experiment is enabled."""
-        return request.feeds and "sections" in request.feeds
+        return (
+            request.feeds is not None
+            and "sections" in request.feeds  # Clients must request "feeds": ["sections"]
+            and surface_id in LOCALIZED_SECTION_TITLES  # The locale must be supported
+        )
 
     @staticmethod
     def is_fakespot_experiment(request, surface_id) -> bool:
@@ -338,18 +345,16 @@ class CuratedRecommendationsProvider:
         )
 
         # Group the remaining recommendations by topic, preserving Thompson sampling order
-        sections_by_topic: dict[str, Section] = {}
+        sections_by_topic: dict[Topic, Section] = {}
 
         for rec in remaining_recs:
-            if rec.topic and rec.topic.value in CuratedRecommendationsFeed.model_fields:
-                topic = rec.topic
-                if topic in sections_by_topic:
-                    section = sections_by_topic[topic]
+            if rec.topic:
+                if rec.topic in sections_by_topic:
+                    section = sections_by_topic[rec.topic]
                 else:
                     formatted_topic_en_us = rec.topic.replace("_", " ").capitalize()
-                    section = sections_by_topic[topic] = Section(
-                        receivedFeedRank=len(sections_by_topic)
-                        + 1,  # add 1 for top_stories_section
+                    section = sections_by_topic[rec.topic] = Section(
+                        receivedFeedRank=len(sections_by_topic) + 1,  # +1 for top_stories_section
                         recommendations=[],
                         # return the hardcoded localized topic section title
                         # fallback on en-US topic title
@@ -362,12 +367,12 @@ class CuratedRecommendationsProvider:
                     section.recommendations.append(rec)
 
         # Filter and assign sections with valid minimum recommendations
-        for topic_id, section in sections_by_topic.items():
+        for topic, section in sections_by_topic.items():
             # Find the maximum number of tiles in this section's responsive layouts.
             max_tile_count = max(len(rl.tiles) for rl in section.layout.responsiveLayouts)
             # Only add sections that meet the minimum number of recommendations.
             if len(section.recommendations) >= max_tile_count + min_fallback_recs_per_section:
-                setattr(feeds, topic_id, section)
+                feeds.set_topic_section(topic, section)
 
         return feeds
 
@@ -411,7 +416,7 @@ class CuratedRecommendationsProvider:
             need_to_know_feed = CuratedRecommendationsBucket(
                 recommendations=need_to_know_recs, title=title
             )
-        elif self.is_sections_experiment(curated_recommendations_request):
+        elif self.is_sections_experiment(curated_recommendations_request, surface_id):
             sections_feeds = self.get_sections(
                 recommendations, curated_recommendations_request, surface_id
             )
