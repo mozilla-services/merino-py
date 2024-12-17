@@ -14,6 +14,8 @@ from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionReques
 
 logger = logging.getLogger(__name__)
 
+CLOVER_UNICODE = "🍀"
+
 
 @unique
 class IABCategory(str, Enum):
@@ -134,18 +136,18 @@ class Provider(BaseProvider):
         """Provide suggestion for a given query."""
         q: str = srequest.query
         if (suggest_look_ups := self.suggestion_content.suggestions.get(q)) is not None:
-            results_id, fkw_id = suggest_look_ups
+            results_id, _ = suggest_look_ups
             res = self.suggestion_content.results[results_id]
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
 
             suggestion_dict: dict[str, Any] = {
                 "block_id": res.get("id"),
-                "full_keyword": self.suggestion_content.full_keywords[fkw_id],
-                "title": res.get("title"),
+                "full_keyword": "",  # Figure out in the client
+                "title": f'{CLOVER_UNICODE}{res.get("title")}',
                 "url": res.get("url"),
                 "impression_url": res.get("impression_url"),
                 "click_url": res.get("click_url"),
-                "provider": self.name,
+                "provider": "adm",  # Hardcode to "adm" for Firefox integration
                 "advertiser": res.get("advertiser"),
                 "is_sponsored": is_sponsored,
                 "icon": self.suggestion_content.icons.get(res.get("icon", MISSING_ICON_ID)),

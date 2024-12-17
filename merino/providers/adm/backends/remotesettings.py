@@ -214,3 +214,57 @@ class RemoteSettingsBackend:
             list[dict[str, Any]]: List of Remote Settings records filtered by type
         """
         return [record for record in records if record["type"] == record_type]
+
+
+class AdmHybridBackend(RemoteSettingsBackend):
+    """Backend that connects to a live Remote Settings server for Adm Hybrid."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        """Init the Remote Settings backend and create a new client.
+
+        Args:
+            server: the server address
+            collection: the collection name
+            bucket: the bucket name
+        Raises:
+            ValueError: If 'server', 'collection' or 'bucket' parameters are None or
+                        empty.
+        """
+        super().__init__(*args, **kwargs)
+
+    async def fetch(self) -> SuggestionContent:
+        """Fetch suggestions, keywords, and icons from Remote Settings.
+
+        Raises:
+            RemoteSettingsError: Failed request to Remote Settings.
+        """
+        suggestions: dict[
+            str, tuple[int, int]
+        ] = {}  # "block_id" => ("suggestion index", "fullkeyword index")
+        full_keywords: list[str] = []
+        results: list[dict[str, Any]] = []
+        icons: dict[str, str] = {}
+
+        records: list[dict[str, Any]] = await self.get_records()
+
+        attachment_host: str = await self.get_attachment_host()
+
+        rs_suggestions: list[KintoSuggestion] = await self.get_suggestions(
+            attachment_host, records
+        )
+
+        for suggestion in rs_suggestions:
+            result_id = len(results)
+            suggestions[str(suggestion.id)] = (result_id, -1)
+            results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
+        icon_record = self.filter_records(record_type="icon", records=records)
+        for icon in icon_record:
+            id = icon["id"].replace("icon-", "")
+            icons[id] = urljoin(base=attachment_host, url=icon["attachment"]["location"])
+
+        return SuggestionContent(
+            suggestions=suggestions,
+            full_keywords=full_keywords,
+            results=results,
+            icons=icons,
+        )

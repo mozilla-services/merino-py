@@ -37,7 +37,10 @@ query_timeout_sec = 0.2
 # MERINO_RUNTIME__DISABLED_PROVIDERS
 # List containing providers to disable at startup.
 # Prevents a provider from being instantiated.
-disabled_providers = ["amo"]
+disabled_providers = [
+  "amo",
+  "adm", # Disabled for prototyping
+]
 
 # MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
 default_suggestions_response_ttl_sec = 300 # 5 mins
@@ -325,6 +328,32 @@ resync_interval_sec = 10800
 # Ranking score for this provider as a floating point number. Defaults to 0.3.
 score = 0.3
 
+[default.providers.adm_hybrid]
+# MERINO_PROVIDERS__ADM__TYPE
+# The type of this provider, should be `adm_hybrid`.
+type = "adm_hybrid"
+
+# MERINO_PROVIDERS__ADM__ENABLED_BY_DEFAULT
+# Whether or not this provider is enabled by default.
+enabled_by_default = true
+
+# MERINO_PROVIDERS__ADM__BACKEND
+# The backend of the provider. Either "remote-settings" or "test".
+backend = "remote-settings"
+
+# MERINO_PROVIDERS__ADM__CRON_INTERVAL_SEC
+# The interval of the RemoteSettings cron job (in seconds)
+# The cron job should tick more frequently than `resync_interval_sec` so that
+# the resync failure can be retried soon.
+cron_interval_sec = 60
+
+# MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC
+# Time between re-syncs of Remote Settings data, in seconds. Defaults to 3 hours.
+resync_interval_sec = 10800
+
+# MERINO_PROVIDERS__ADM__SCORE
+# Ranking score for this provider as a floating point number. Defaults to 0.3.
+score = 0.5
 
 [default.amo.dynamic]
 # MERINO_AMO__DYNAMIC__API_URL

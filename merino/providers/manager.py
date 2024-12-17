@@ -11,7 +11,7 @@ from merino.config import settings
 from merino.exceptions import InvalidProviderError
 from merino.utils.metrics import get_metrics_client
 from merino.providers.adm.backends.fake_backends import FakeAdmBackend
-from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
+from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend, AdmHybridBackend
 from merino.providers.adm.provider import Provider as AdmProvider
 from merino.providers.amo.addons_data import ADDON_KEYWORDS as ADDON_KEYWORDS
 from merino.providers.amo.backends.dynamic import DynamicAmoBackend
@@ -38,6 +38,7 @@ class ProviderType(str, Enum):
     ACCUWEATHER = "accuweather"
     AMO = "amo"
     ADM = "adm"
+    ADM_HYBRID = "adm_hybrid"
     GEOLOCATION = "geolocation"
     TOP_PICKS = "top_picks"
     WIKIPEDIA = "wikipedia"
@@ -120,6 +121,21 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     )  # type: ignore [arg-type]
                     if setting.backend == "remote-settings"
                     else FakeAdmBackend()
+                ),
+                score=setting.score,
+                name=provider_id,
+                resync_interval_sec=setting.resync_interval_sec,
+                cron_interval_sec=setting.cron_interval_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.ADM_HYBRID:
+            return AdmProvider(
+                backend=(
+                    AdmHybridBackend(
+                        server=settings.remote_settings.server,
+                        collection=settings.remote_settings.collection,
+                        bucket=settings.remote_settings.bucket,
+                    )
                 ),
                 score=setting.score,
                 name=provider_id,
