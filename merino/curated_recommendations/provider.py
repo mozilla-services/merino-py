@@ -3,10 +3,9 @@
 import logging
 import time
 import re
-from datetime import datetime
 from typing import cast
 
-from merino.curated_recommendations import ExtendedExpirationCorpusBackend
+from merino.curated_recommendations import ExtendedExpirationCorpusBackend, CorpusApiBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     ScheduledSurfaceId,
@@ -21,7 +20,11 @@ from merino.curated_recommendations.layouts import (
     layout_4_large,
     layout_6_tiles,
 )
-from merino.curated_recommendations.localization import get_translation, LOCALIZED_SECTION_TITLES
+from merino.curated_recommendations.localization import (
+    get_translation,
+    LOCALIZED_SECTION_TITLES,
+    get_localized_date,
+)
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     Locale,
@@ -358,12 +361,15 @@ class CuratedRecommendationsProvider:
         remaining_recs = general_recs[top_stories_count:]
 
         # Create "Today's top stories" section with the first 6 recommendations
+        surface_date = CorpusApiBackend.get_scheduled_surface_date(
+            CorpusApiBackend.get_surface_timezone(surface_id)
+        )
         feeds = CuratedRecommendationsFeed(
             news_section=Section(
                 receivedFeedRank=0,
                 recommendations=news_recs,
                 title=get_translation(surface_id, "news-section", "In the News"),
-                subtitle=datetime.now().strftime("%B %d, %Y"),  # e.g., "October 24, 2024"
+                subtitle=get_localized_date(surface_id, surface_date),  # e.g., "October 24, 2024"
                 layout=layout_4_large,
             ),
             top_stories_section=Section(
