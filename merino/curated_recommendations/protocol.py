@@ -232,7 +232,7 @@ class CuratedRecommendationsFeed(BaseModel):
     # follow or block sections, and references 'top_stories_section' to show topic labels.
     top_stories_section: Section | None = None
     # Topic sections are named according to the lowercase Topic enum name, and aliased to the topic
-    # id, suffixed with '-section'. The alias determines the section name in the JSON response.
+    # id. The alias determines the section name in the JSON response.
     business: Section | None = Field(None, alias="business")
     career: Section | None = Field(None, alias="career")
     arts: Section | None = Field(None, alias="arts")
