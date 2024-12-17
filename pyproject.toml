@@ -46,6 +46,7 @@ exclude_dirs = [
 
 [tool.mypy]
 python_version = "3.12"
+plugins = ['pydantic.mypy']
 disallow_untyped_calls = true
 follow_imports = "normal"
 ignore_missing_imports = true
