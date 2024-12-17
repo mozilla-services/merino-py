@@ -1427,17 +1427,15 @@ class TestSections:
             # assert isFollowed & isBlocked have been correctly set
             if data["feeds"]["arts"] is not None:
                 assert data["feeds"]["arts"]["isFollowed"]
-                # assert followed section ARTS has a lower receivedFeedRank than unfollowed section EDUCATION
-                if data["feeds"]["education"] is not None:
-                    assert data["feeds"]["arts"]["receivedFeedRank"] < data["feeds"]["education"]["receivedFeedRank"]
+                # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
+                assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2]
             if data["feeds"]["education"] is not None:
                 assert not data["feeds"]["education"]["isFollowed"]
                 assert data["feeds"]["education"]["isBlocked"]
             if data["feeds"]["sports"] is not None:
                 assert data["feeds"]["sports"]["isFollowed"]
-                # assert followed section SPORTS has a lower receivedFeedRank than unfollowed section EDUCATION
-                if data["feeds"]["education"] is not None:
-                    assert data["feeds"]["sports"]["receivedFeedRank"] < data["feeds"]["education"]["receivedFeedRank"]
+                # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
+                assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2]
 
             # Assert no errors were logged
             errors = [r for r in caplog.records if r.levelname == "ERROR"]

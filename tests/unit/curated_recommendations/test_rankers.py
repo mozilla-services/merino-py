@@ -412,7 +412,9 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         assert new_feed.business.receivedFeedRank == 1  # had a rank==2, should now be 1
         assert new_feed.arts.receivedFeedRank == 2
         assert new_feed.food.receivedFeedRank == 3
-        assert new_feed.travel.receivedFeedRank == 4  # originally ranked after Food, should still be after
+        assert (
+            new_feed.travel.receivedFeedRank == 4
+        )  # originally ranked after Food, should still be after
 
         # Assertions for isFollowed
         assert new_feed.arts.isFollowed

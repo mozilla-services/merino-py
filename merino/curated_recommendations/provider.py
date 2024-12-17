@@ -199,16 +199,6 @@ class CuratedRecommendationsProvider:
         )
 
     @staticmethod
-    def is_follow_unfollow_block_section_experiment(request, surface_id) -> bool:
-        """Check if the Follow/Unfollow & Block Sections experiment is enabled."""
-        return (
-            request.feeds
-            and "sections" in request.feeds
-            and request.sections
-            and surface_id == ScheduledSurfaceId.NEW_TAB_EN_US
-        )
-
-    @staticmethod
     def get_fakespot_feed(
         fakespot_backend: FakespotBackend, surface_id: ScheduledSurfaceId
     ) -> FakespotFeed | None:
@@ -449,11 +439,10 @@ class CuratedRecommendationsProvider:
             response.feeds = sections_feeds
 
         if (
-            curated_recommendations_request.sections
+            sections_feeds
+            and curated_recommendations_request.sections
             and response.feeds
-            and self.is_follow_unfollow_block_section_experiment(
-                curated_recommendations_request, surface_id
-            )
+            and surface_id == ScheduledSurfaceId.NEW_TAB_EN_US
         ):
             response.feeds = boost_followed_sections(
                 curated_recommendations_request.sections, response.feeds
