@@ -37,6 +37,7 @@ from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
     spread_publishers,
     thompson_sampling,
+    boost_followed_sections,
 )
 
 
@@ -441,6 +442,11 @@ class CuratedRecommendationsProvider:
             )
         elif sections_feeds:
             response.feeds = sections_feeds
+
+        if sections_feeds and curated_recommendations_request.sections and response.feeds:
+            response.feeds = boost_followed_sections(
+                curated_recommendations_request.sections, response.feeds
+            )
 
         return response
 

@@ -1394,6 +1394,50 @@ class TestSections:
             assert all(topic.value in feeds for topic in Topic)
 
     @pytest.mark.asyncio
+    async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
+        self, caplog
+    ):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'sections' feed for en-US locale. Sections requested to be boosted (followed)
+        should be boosted and isFollowed attribute set accordingly.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": "en-US",
+                    "feeds": ["sections"],
+                    "sections": [
+                        {"sectionId": "sports", "isFollowed": True, "isBlocked": False},
+                        {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
+                        {"sectionId": "education", "isFollowed": False, "isBlocked": True},
+                    ],
+                },
+            )
+            data = response.json()
+
+            # Check if the response is valid
+            assert response.status_code == 200
+
+            # assert isFollowed & isBlocked have been correctly set
+            if data["feeds"]["arts"] is not None:
+                assert data["feeds"]["arts"]["isFollowed"]
+                # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
+                assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2]
+            if data["feeds"]["education"] is not None:
+                assert not data["feeds"]["education"]["isFollowed"]
+                assert data["feeds"]["education"]["isBlocked"]
+            if data["feeds"]["sports"] is not None:
+                assert data["feeds"]["sports"]["isFollowed"]
+                # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
+                assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2]
+
+            # Assert no errors were logged
+            errors = [r for r in caplog.records if r.levelname == "ERROR"]
+            assert len(errors) == 0
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "locale, expected_titles",
         [

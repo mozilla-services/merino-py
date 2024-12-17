@@ -6,7 +6,12 @@ from merino.curated_recommendations import ConstantPrior
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, Prior
-from merino.curated_recommendations.protocol import CuratedRecommendation
+from merino.curated_recommendations.protocol import (
+    CuratedRecommendation,
+    CuratedRecommendationsFeed,
+    SectionConfiguration,
+    Section,
+)
 from scipy.stats import beta
 
 # In a weighted average, how much to weigh the metrics from the requested region. 0.95 was chosen
@@ -154,3 +159,67 @@ def boost_preferred_topic(
             remaining_recs.append(rec)
 
     return boosted_recs + remaining_recs
+
+
+def boost_followed_sections(
+    req_sections: list[SectionConfiguration], feeds: CuratedRecommendationsFeed
+) -> CuratedRecommendationsFeed:
+    """Boost followed sections to the very top, right after top_stories_section.
+    Received feed rank for top_stories_section should always stay 0.
+    Received feed rank for followed_sections should follow top_stories_section.
+    Unfollowed sections should be ranked after followed_sections, and relative order should be preserved.
+
+    :param req_sections: List of Section configurations
+    :param feeds: CuratedRecommendationsFeed object
+    :return: updated CuratedRecommendationsFeed with boosted followed sections (if found)
+    """
+    followed_sections = []
+    unfollowed_sections = []
+
+    # 1. Extract followed section ids from req_sections param
+    followed_section_ids = [section.sectionId for section in req_sections if section.isFollowed]
+
+    # 2. Extract blocked section ids from req_sections param
+    blocked_section_ids = [section.sectionId for section in req_sections if section.isBlocked]
+
+    # 3. Update isBlocked based on blocked_section_ids
+    # For now, we will only update isBlocked value on a Section
+    # The client-side will handle the actual blocking action
+    for section_id in dir(feeds):
+        section = getattr(feeds, section_id, None)
+        if isinstance(section, Section):
+            section.isBlocked = section_id in blocked_section_ids
+
+    # 4. Update isFollowed based on followed_section_ids
+    # Extract followed sections & unfollowed sections
+    if followed_section_ids:
+        for section_id in dir(feeds):
+            section = getattr(feeds, section_id, None)
+            if isinstance(section, Section):
+                section.isFollowed = section_id in followed_section_ids
+                if section_id == "top_stories_section":
+                    # top_stories_section is always on the top
+                    section.receivedFeedRank = 0
+                elif section.isFollowed:
+                    followed_sections.append(section)
+                else:
+                    unfollowed_sections.append(section)
+
+        # 5. Sort followed & unfollowed sections by their rank (ascending)
+        # This is to ensure relative order is kept
+        followed_sections.sort(key=lambda section: section.receivedFeedRank)
+        unfollowed_sections.sort(key=lambda section: section.receivedFeedRank)
+
+        # 6. Assign new rank starting from 1 for followed sections.
+        current_received_feed_rank = 1
+        for section in followed_sections:
+            section.receivedFeedRank = current_received_feed_rank
+            current_received_feed_rank += 1
+
+        # 7. Assign new rank (starting from last rank value assigned to a followed section)
+        # to unfollowed sections. Keep relative order.
+        for section in unfollowed_sections:
+            section.receivedFeedRank = current_received_feed_rank
+            current_received_feed_rank += 1
+
+    return feeds
