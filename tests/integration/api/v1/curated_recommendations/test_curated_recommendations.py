@@ -1454,11 +1454,6 @@ class TestSections:
                 json={
                     "locale": "de-DE",
                     "feeds": ["sections"],
-                    "sections": [
-                        {"sectionId": "sports", "isFollowed": True, "isBlocked": False},
-                        {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
-                        {"sectionId": "education", "isFollowed": False, "isBlocked": True},
-                    ],
                 },
             )
             data = response.json()
@@ -1471,16 +1466,10 @@ class TestSections:
             # Ensure that topic section titles are in German, check at least one topic translation
             if data["feeds"]["arts"] is not None:
                 assert data["feeds"]["arts"]["title"] == "Unterhaltung"
-                assert not data["feeds"]["arts"]["isFollowed"]
-                assert not data["feeds"]["arts"]["isBlocked"]
             if data["feeds"]["education"] is not None:
                 assert data["feeds"]["education"]["title"] == "Bildung"
-                assert not data["feeds"]["education"]["isFollowed"]
-                assert not data["feeds"]["education"]["isBlocked"]
             if data["feeds"]["sports"] is not None:
                 assert data["feeds"]["sports"]["title"] == "Sport"
-                assert not data["feeds"]["sports"]["isFollowed"]
-                assert not data["feeds"]["sports"]["isBlocked"]
 
             # Assert no errors were logged
             errors = [r for r in caplog.records if r.levelname == "ERROR"]

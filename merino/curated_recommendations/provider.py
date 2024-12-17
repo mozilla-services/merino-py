@@ -438,12 +438,7 @@ class CuratedRecommendationsProvider:
         elif sections_feeds:
             response.feeds = sections_feeds
 
-        if (
-            sections_feeds
-            and curated_recommendations_request.sections
-            and response.feeds
-            and surface_id == ScheduledSurfaceId.NEW_TAB_EN_US
-        ):
+        if sections_feeds and curated_recommendations_request.sections and response.feeds:
             response.feeds = boost_followed_sections(
                 curated_recommendations_request.sections, response.feeds
             )
