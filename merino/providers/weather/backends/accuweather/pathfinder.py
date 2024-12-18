@@ -18,6 +18,7 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Kleinburg Station": "Kleinburg",
     "Middlebury (village)": "Middlebury",
     "TracadieSheila": "Tracadie Sheila",
+    "Queretaro City": "Querétaro",
 }
 SKIP_CITIES_LIST: frozenset = frozenset(
     [
