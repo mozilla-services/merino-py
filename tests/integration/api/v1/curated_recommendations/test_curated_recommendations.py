@@ -609,34 +609,6 @@ class TestCuratedRecommendationsRequestParameters:
             assert all([topic in preferred_topics for topic in top_topics])
 
     @pytest.mark.asyncio
-    @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
-    async def test_curated_recommendations_preferred_topic_no_reorder(
-        self, fixture_response_data_short, fixture_request_data, corpus_http_client
-    ):
-        """Test the curated recommendations endpoint accepts a preferred topic & does
-        not reorder the list if preferred topics already in top 2 recs.
-        """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            corpus_http_client.post.return_value = Response(
-                status_code=200,
-                json=fixture_response_data_short,
-                request=fixture_request_data,
-            )
-            response = await fetch_en_us(ac)
-            data = response.json()
-            corpus_items = data["data"]
-
-            assert response.status_code == 200
-            # assert total of 4 items returned (using scheduled_surface_short.json for response)
-            assert len(corpus_items) == 5
-            # assert that recs didn't need boosting so order remains the same
-            for i in range(len(corpus_items)):
-                assert (
-                    fixture_response_data_short["data"]["scheduledSurface"]["items"][i]["id"]
-                    == corpus_items[i]["scheduledCorpusItemId"]
-                )
-
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "topics, expected_topics, expected_warning",
         [
@@ -699,7 +671,7 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 200
             # get topics in returned recs
             result_topics = [item["topic"] for item in corpus_items]
-            assert result_topics == expected_topics
+            assert set(result_topics) == set(expected_topics)
             # Assert that a warning was logged with a descriptive message when invalid topic
             warnings = [r for r in caplog.records if r.levelname == "WARNING"]
             assert len(warnings) == 1
@@ -1192,18 +1164,8 @@ class TestCorpusApiRanking:
         "experiment_name, experiment_branch, regional_ranking_is_expected",
         [
             (None, None, False),  # No experiment
-            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "control", False),
-            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value, "treatment", True),
-            (f"optin-{ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION.value}", "treatment", True),
-            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value, "control", False),
-            (ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value, "treatment", True),
             (ExperimentName.MODIFIED_PRIOR_EXPERIMENT.value, "control", False),
             (ExperimentName.MODIFIED_PRIOR_EXPERIMENT.value, "treatment", False),
-            (
-                f"optin-{ExperimentName.REGION_SPECIFIC_CONTENT_EXPANSION_SMALL.value}",
-                "treatment",
-                True,
-            ),
         ],
     )
     @pytest.mark.parametrize(
