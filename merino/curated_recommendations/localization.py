@@ -29,6 +29,7 @@ LOCALIZED_SECTION_TITLES: LocalizedTopicSectionTitles = {
         "travel": "Travel",
         "home": "Home & Garden",
         "top-stories": "Popular Today",
+        "news-section": "In the News",
     },
     # reference: https://github.com/mozilla-l10n/firefox-l10n/blob/main/de/browser/browser/newtab/newtab.ftl#L407
     ScheduledSurfaceId.NEW_TAB_DE_DE: {
@@ -49,6 +50,7 @@ LOCALIZED_SECTION_TITLES: LocalizedTopicSectionTitles = {
         "travel": "Reisen",
         "home": "Haus und Garten",
         "top-stories": "Meistgelesen",
+        "news-section": "In den News",
     },
 }
 
