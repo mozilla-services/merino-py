@@ -1408,7 +1408,7 @@ class TestSections:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "locale, expected_titles",
+        "locale, expected_titles, expected_news_subtitle",
         [
             (
                 "en-US",
@@ -1419,6 +1419,7 @@ class TestSections:
                     "education": "Education",
                     "sports": "Sports",
                 },
+                "December 17, 2024",  # Frozen time 2024-12-18 6am UTC = 2024-12-17 10pm PST
             ),
             (
                 "de-DE",
@@ -1429,10 +1430,12 @@ class TestSections:
                     "education": "Bildung",
                     "sports": "Sport",
                 },
+                "18. Dezember 2024",  # Frozen time 2024-12-18 6am UTC = 2024-12-17 7am CET
             ),
         ],
     )
-    async def test_sections_feed_titles(self, locale, expected_titles):
+    @freezegun.freeze_time("2024-12-18 06:00:00", tz_offset=0)
+    async def test_sections_feed_titles(self, locale, expected_titles, expected_news_subtitle):
         """Test the curated recommendations endpoint 'sections' have the expected (sub)titles."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Mock the endpoint to request the sections feed
@@ -1457,7 +1460,7 @@ class TestSections:
             # Ensure "Today's top stories" is present with a valid date subtitle
             news_section = data["feeds"].get("news_section")
             assert news_section is not None
-            assert news_section["subtitle"] is not None
+            assert news_section["subtitle"] == expected_news_subtitle
 
 
 class TestExtendedExpiration:

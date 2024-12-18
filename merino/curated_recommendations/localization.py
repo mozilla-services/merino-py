@@ -1,5 +1,9 @@
 """Hardcoded localized strings."""
 
+from datetime import datetime
+
+from babel.dates import format_date
+
 from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId
 import logging
 
@@ -72,3 +76,28 @@ def get_translation(surface_id: ScheduledSurfaceId, topic: str, default_topic: s
         return default_topic
 
     return translations[topic]
+
+
+# Localization for Babel date formats based on surface_id.
+SURFACE_ID_TO_LOCALE = {
+    ScheduledSurfaceId.NEW_TAB_EN_US: "en_US",
+    ScheduledSurfaceId.NEW_TAB_EN_GB: "en_GB",
+    ScheduledSurfaceId.NEW_TAB_DE_DE: "de_DE",
+    ScheduledSurfaceId.NEW_TAB_FR_FR: "fr_FR",
+    ScheduledSurfaceId.NEW_TAB_ES_ES: "es_ES",
+    ScheduledSurfaceId.NEW_TAB_IT_IT: "it_IT",
+    ScheduledSurfaceId.NEW_TAB_EN_INTL: "en_IN",  # En-Intl is primarily used in India.
+}
+
+
+def get_localized_date(surface_id: ScheduledSurfaceId, date: datetime) -> str:
+    """Return a localized date string for the given ScheduledSurfaceId.
+
+    Args:
+        surface_id (ScheduledSurfaceId): The New Tab surface ID.
+        date (datetime): The date to be localized.
+
+    Returns:
+        str: Localized date string, for example "December 17, 2024".
+    """
+    return format_date(date, format="long", locale=SURFACE_ID_TO_LOCALE.get(surface_id, "en_US"))
