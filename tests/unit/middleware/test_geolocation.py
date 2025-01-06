@@ -13,7 +13,6 @@ from merino.middleware import ScopeKey
 from merino.middleware.geolocation import (
     GeolocationMiddleware,
     Location,
-    normalize_string,
     Coordinates,
 )
 
@@ -171,16 +170,3 @@ async def test_geolocation_invalid_scope_type(
 
     assert ScopeKey.GEOLOCATION not in scope
     assert len(caplog.messages) == 0
-
-
-@pytest.mark.parametrize(
-    "input_string, expected_output",
-    [
-        ("Kīhei", "Kihei"),
-        ("‘Aiea", "Aiea"),
-        ("Querétaro", "Queretaro"),
-    ],
-)
-def test_normalize_string(input_string, expected_output) -> None:
-    """Test the normalization of strings with special characters"""
-    assert normalize_string(input_string) == expected_output

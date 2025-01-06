@@ -9,16 +9,24 @@ MaybeStr = Optional[str]
 Pair = tuple[MaybeStr, MaybeStr]
 
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {("GB", "London"): "LND"}
-REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(["CA", "ES", "GR", "IT", "US"])
+REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
+    ["AU", "CA", "CN", "DE", "ES", "FR", "GB", "GR", "IT", "PL", "PT", "RU", "US"]
+)
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
+    "‘Aiea": "Aiea",
+    "Kīhei": "Kihei",
     "La'ie": "Laie",
+    "Kleinburg Station": "Kleinburg",
     "Mitchell/Ontario": "Mitchell",
     "Montreal East": "Montreal",
     "Montreal West": "Montreal",
-    "Kleinburg Station": "Kleinburg",
     "Middlebury (village)": "Middlebury",
-    "TracadieSheila": "Tracadie Sheila",
+    "Orléans": "Orleans",
+    "Pohénégamook": "Pohenegamook",
+    "Sainte-Clotilde-de-Châteauguay": "Sainte-Clotilde-de-Chateauguay",
+    "Sainte-Geneviève": "Sainte-Genevieve",
     "Queretaro City": "Querétaro",
+    "TracadieSheila": "Tracadie Sheila",
 }
 SKIP_CITIES_LIST: frozenset = frozenset(
     [

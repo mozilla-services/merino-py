@@ -1,7 +1,6 @@
 """The middleware that parses geolocation from the client IP address."""
 
 import logging
-import unicodedata
 from typing import Optional
 
 import geoip2.database
@@ -40,11 +39,6 @@ class Location(BaseModel):
     postal_code: Optional[str] = None
     key: Optional[str] = None
     coordinates: Optional[Coordinates] = None
-
-
-def normalize_string(input_str) -> str:
-    """Normalize string with special characters."""
-    return unicodedata.normalize("NFKD", input_str).encode("ascii", "ignore").decode("ascii")
 
 
 def get_regions(subdivisions) -> Optional[list[str]]:
@@ -93,7 +87,7 @@ class GeolocationMiddleware:
                 country_name=record.country.names.get("en"),
                 regions=get_regions(record.subdivisions),
                 region_names=get_region_names(record.subdivisions),
-                city=normalize_string(city) if (city := record.city.names.get("en")) else None,
+                city=city if (city := record.city.names.get("en")) else None,
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,
                 coordinates=Coordinates(
