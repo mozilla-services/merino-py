@@ -143,8 +143,6 @@ class FileManager:
                     logger.error(f"Failed to delete partial upload: {delete_error}")
             raise WikipediaFilemanagerError("Failed to stream dump to GCS") from e
 
-
-
     def stream_from_gcs(self, blob: Blob) -> Generator:
         """Streaming reader from GCS"""
         reader: BlobReader
