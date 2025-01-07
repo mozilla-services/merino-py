@@ -12,7 +12,10 @@ import requests
 from google.cloud.storage import Blob, Client
 from google.cloud.storage.fileio import BlobReader, BlobWriter
 
+from merino.exceptions import FilemanagerError
 from merino.jobs.wikipedia_indexer.utils import ProgressReporter
+from google.api_core.exceptions import GoogleAPIError
+
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +41,10 @@ class DirectoryParser(HTMLParser):
             self.file_paths.extend(hrefs)
 
 
+class WikipediaFilemanagerError(FilemanagerError):
+    """Error during interaction with Wikipedia data."""
+
+
 class FileManager:
     """Tools for managing files on Wikimedia export directory and copying into GCS"""
 
@@ -58,7 +65,7 @@ class FileManager:
             self.object_prefix = ""
 
     def get_latest_dump(self, latest_gcs: Blob) -> Optional[str]:
-        """Find the latest export that's older than the latest on gcs."""
+        """Find the latest export that's newer than the latest on gcs."""
         resp = requests.get(self.base_url)  # nosec
         parser = DirectoryParser(self.file_pattern)
         parser.feed(str(resp.content))
@@ -110,17 +117,33 @@ class FileManager:
         chunk_size = 40 * 1024 * 1024
         name = "{}/{}".format(self.object_prefix, dump_url.split("/")[-1])
         blob = self.client.bucket(self.gcs_bucket).blob(name, chunk_size=chunk_size)
-        with requests.get(dump_url, stream=True) as resp:  # nosec
-            content_len = int(resp.headers.get("Content-Length", 0))
-            resp.raise_for_status()
-            logger.info("Writing to GCS: gs://{}/{}".format(self.gcs_bucket, blob.name))
-            logger.info("Total File Size: {}".format(content_len))
-            reporter = ProgressReporter(logger, "Copy", dump_url, name, content_len)
-            writer: BlobWriter
-            with blob.open("wb") as writer:
-                for chunk in resp.iter_content(chunk_size=chunk_size):
-                    completed = writer.write(chunk)
-                    reporter.report(completed)
+        try:
+            with requests.get(dump_url, stream=True) as resp:  # nosec
+                content_len = int(resp.headers.get("Content-Length", 0))
+                resp.raise_for_status()
+                logger.info("Writing to GCS: gs://{}/{}".format(self.gcs_bucket, blob.name))
+                logger.info("Total File Size: {}".format(content_len))
+                reporter = ProgressReporter(logger, "Copy", dump_url, name, content_len)
+                writer: BlobWriter
+                with blob.open("wb") as writer:
+                    for chunk in resp.iter_content(chunk_size=chunk_size):
+                        completed = writer.write(chunk)
+                        reporter.report(completed)
+
+        except Exception as e:
+            logger.error(f"Unexpected error during GCS streaming for {name}: {e}")
+
+            if blob.exists():
+                try:
+                    logger.warning(f"Deleting partial upload: gs://{self.gcs_bucket}/{blob.name}")
+                    blob.delete()
+                    logger.warning(f"Deleted partial upload: gs://{self.gcs_bucket}/{blob.name}")
+
+                except GoogleAPIError as delete_error:
+                    logger.error(f"Failed to delete partial upload: {delete_error}")
+            raise WikipediaFilemanagerError("Failed to stream dump to GCS") from e
+
+
 
     def stream_from_gcs(self, blob: Blob) -> Generator:
         """Streaming reader from GCS"""
