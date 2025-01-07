@@ -87,7 +87,7 @@ class GeolocationMiddleware:
                 country_name=record.country.names.get("en"),
                 regions=get_regions(record.subdivisions),
                 region_names=get_region_names(record.subdivisions),
-                city=city if (city := record.city.names.get("en")) else None,
+                city=record.city.names.get("en"),
                 dma=record.location.metro_code,
                 postal_code=record.postal.code if record.postal else None,
                 coordinates=Coordinates(

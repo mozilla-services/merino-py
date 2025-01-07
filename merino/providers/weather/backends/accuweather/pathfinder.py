@@ -22,10 +22,10 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Montreal West": "Montreal",
     "Middlebury (village)": "Middlebury",
     "Orléans": "Orleans",
+    "Queretaro City": "Querétaro",
     "Pohénégamook": "Pohenegamook",
     "Sainte-Clotilde-de-Châteauguay": "Sainte-Clotilde-de-Chateauguay",
     "Sainte-Geneviève": "Sainte-Genevieve",
-    "Queretaro City": "Querétaro",
     "TracadieSheila": "Tracadie Sheila",
 }
 SKIP_CITIES_LIST: frozenset = frozenset(
