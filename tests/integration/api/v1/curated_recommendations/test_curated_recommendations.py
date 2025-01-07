@@ -1468,7 +1468,7 @@ class TestSections:
                     "education": "Bildung",
                     "sports": "Sport",
                 },
-                "18. Dezember 2024",  # Frozen time 2024-12-18 6am UTC = 2024-12-17 7am CET
+                "18. Dezember 2024",  # Frozen time 2024-12-18 6am UTC = 2024-12-18 7am CET
             ),
         ],
     )
