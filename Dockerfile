@@ -6,7 +6,7 @@ FROM python:${PYTHON_VERSION}-slim AS build
 WORKDIR /tmp
 
 # Pin Poetry to reduce image size
-RUN pip install --no-cache-dir --quiet poetry
+RUN pip install --no-cache-dir --quiet poetry-plugin-export
 
 COPY ./pyproject.toml ./poetry.lock /tmp/
 
