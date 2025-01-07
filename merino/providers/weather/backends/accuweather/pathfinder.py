@@ -13,20 +13,20 @@ REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
     ["AU", "CA", "CN", "DE", "ES", "FR", "GB", "GR", "IT", "PL", "PT", "RU", "US"]
 )
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
-    "‘Aiea": "Aiea",
+    "Kleinburg Station": "Kleinburg",
     "Kīhei": "Kihei",
     "La'ie": "Laie",
-    "Kleinburg Station": "Kleinburg",
+    "Middlebury (village)": "Middlebury",
     "Mitchell/Ontario": "Mitchell",
     "Montreal East": "Montreal",
     "Montreal West": "Montreal",
-    "Middlebury (village)": "Middlebury",
     "Orléans": "Orleans",
-    "Queretaro City": "Querétaro",
     "Pohénégamook": "Pohenegamook",
+    "Querétaro City": "Querétaro",
     "Sainte-Clotilde-de-Châteauguay": "Sainte-Clotilde-de-Chateauguay",
     "Sainte-Geneviève": "Sainte-Genevieve",
-    "TracadieSheila": "Tracadie Sheila",
+    "Tracadie–Sheila": "Tracadie Sheila",
+    "'Aiea": "Aiea",
 }
 SKIP_CITIES_LIST: frozenset = frozenset(
     [
