@@ -20,6 +20,7 @@ class Suggestion(RowMajorBaseSuggestion):
     product_id: str
     rating: float
     title: str
+    category: str
     product_type: str
     keywords: str
     total_reviews: int
@@ -57,6 +58,7 @@ class Suggestion(RowMajorBaseSuggestion):
             "product_id": "product_id",
             "rating": "rating",
             "title": "title",
+            "category": "category",
             "product_type": "product_type",
             "keywords": "keywords",
             "total_reviews": "total_reviews",
@@ -81,3 +83,9 @@ class Suggestion(RowMajorBaseSuggestion):
     def validate_title(cls, value):
         """Validate title"""
         return cls._validate_str(value, "title")
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def validate_category(cls, value):
+        """Validate category"""
+        return cls._validate_str(value, "category")

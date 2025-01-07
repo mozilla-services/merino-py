@@ -18,6 +18,7 @@ TEST_CSV_ROW = {
     "product_id": "test-ABCDEF",
     "rating": "3.6",
     "title": "Brand new widget",
+    "category": "doodads",
     "product_type": "widget",
     "keywords": "widget",
     "total_reviews": "10",
@@ -37,6 +38,7 @@ def test_upload(mocker):
                 "product_id": "test-ABCDEF",
                 "rating": "3.6",
                 "title": "Brand new widget",
+                "category": "doodads",
                 "product_type": "widget",
                 "keywords": "widget",
                 "total_reviews": "10",
@@ -48,6 +50,7 @@ def test_upload(mocker):
                 "product_id": "  test-XYZ  ",
                 "rating": "3.0",
                 "title": "  Refurbished widget  \n  ",
+                "category": "doodads",
                 "product_type": "widget",
                 "keywords": "",
                 "total_reviews": "15",
@@ -61,6 +64,7 @@ def test_upload(mocker):
                 "product_id": "test-ABCDEF",
                 "rating": 3.6,
                 "title": "Brand new widget",
+                "category": "doodads",
                 "product_type": "widget",
                 "keywords": "widget",
                 "total_reviews": 10,
@@ -72,6 +76,7 @@ def test_upload(mocker):
                 "product_id": "test-XYZ",
                 "rating": 3.0,
                 "title": "Refurbished widget",
+                "category": "doodads",
                 "product_type": "widget",
                 "keywords": "",
                 "total_reviews": 15,
@@ -95,6 +100,7 @@ def test_blocklist(mocker, monkeypatch):
                 "rating": "3.6",
                 "title": "Brand new widget",
                 "product_type": "widget",
+                "category": "doodads",
                 "keywords": "widget",
                 "total_reviews": "10",
                 "url": "https://example.com/new-widget",
@@ -106,6 +112,7 @@ def test_blocklist(mocker, monkeypatch):
                 "rating": "3.0",
                 "title": "  Refurbished widget  \n  ",
                 "product_type": "widget",
+                "category": "doodads",
                 "keywords": "",
                 "total_reviews": "15",
                 "url": "https://example.com/old-widget",
@@ -120,6 +127,7 @@ def test_blocklist(mocker, monkeypatch):
                 "rating": 3.0,
                 "title": "Refurbished widget",
                 "product_type": "widget",
+                "category": "doodads",
                 "keywords": "",
                 "total_reviews": 15,
                 "url": "https://example.com/old-widget",
@@ -206,3 +214,9 @@ def test_score(verify_field_validation_error, verify_field_required):
     verify_field_required("score")
     verify_field_validation_error("score", "")
     verify_field_validation_error("score", "five and a third")
+
+
+def test_category(verify_field_validation_error, verify_field_required):
+    """Test validation for the category field"""
+    verify_field_required("category")
+    verify_field_validation_error("category", "")
