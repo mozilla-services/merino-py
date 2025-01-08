@@ -6,7 +6,7 @@ from typing import cast
 
 from pydantic import HttpUrl, field_validator
 
-from merino.configs.config import settings
+from merino.configs import settings
 from merino.utils.blocklists import FAKESPOT_CSV_UPLOADER_BLOCKLIST
 from merino.jobs.csv_rs_uploader.row_major_base import RowMajorBaseSuggestion
 

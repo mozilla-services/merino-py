@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 
-from merino.configs.config import settings
+from merino.configs import settings
 from merino.providers.wikipedia.backends.fake_backends import (
     FakeEchoWikipediaBackend,
     FakeExceptionWikipediaBackend,

@@ -11,7 +11,7 @@ import pytest
 from pydantic import HttpUrl
 from pytest import LogCaptureFixture
 
-from merino.configs.config import settings
+from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.base import BaseSuggestion, Category
 from merino.providers.top_picks.backends.filemanager import GetFileResultCode
@@ -70,7 +70,7 @@ async def test_initialize_skip(
 ) -> None:
     """Test initialization of top pick provider when result_code enum value is skip"""
     mocker.patch(
-        "merino.configs.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
     mocker.patch(
         "merino.providers.top_picks.backends.top_picks.TopPicksBackend.fetch"
@@ -89,7 +89,7 @@ async def test_initialize_fail(
 ) -> None:
     """Test initialization of top pick provider when result_code enum value is fail"""
     mocker.patch(
-        "merino.configs.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
     mocker.patch(
         "merino.providers.top_picks.backends.top_picks.TopPicksBackend.fetch"
@@ -145,7 +145,7 @@ async def test_fetch_top_picks_data_skip(
 ) -> None:
     """Test _fetch_top_picks_data_skip when result_code enum value is skip."""
     mocker.patch(
-        "merino.configs.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
     mocker.patch(
         "merino.providers.top_picks.backends.top_picks.TopPicksBackend.fetch"
@@ -164,7 +164,7 @@ async def test_fetch_top_picks_data_fail(
 ) -> None:
     """Test _fetch_top_picks_data_skip when result_code enum value is fail."""
     mocker.patch(
-        "merino.configs.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
     mocker.patch(
         "merino.providers.top_picks.backends.top_picks.TopPicksBackend.fetch"

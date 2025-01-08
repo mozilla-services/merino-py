@@ -7,7 +7,7 @@ from redis.asyncio import Redis
 
 from merino.cache.none import NoCacheAdapter
 from merino.cache.redis import RedisAdapter
-from merino.configs.config import settings
+from merino.configs import settings
 from merino.exceptions import InvalidProviderError
 from merino.utils.metrics import get_metrics_client
 from merino.providers.adm.backends.fake_backends import FakeAdmBackend

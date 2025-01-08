@@ -16,7 +16,7 @@ from google.cloud.storage import Blob, Bucket, Client
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.configs.config import settings
+from merino.configs import settings
 from merino.providers.top_picks.backends.filemanager import (
     GetFileResultCode,
     TopPicksFilemanagerError,
@@ -160,7 +160,7 @@ def test_create_gcs_client(
 ) -> None:
     """Test that create_gcs_client returns the GCS client."""
     mocker.patch(
-        "merino.configs.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
 
     mocker.patch.object(
@@ -232,7 +232,7 @@ def test_get_file(
         "merino.providers.top_picks.backends.filemanager.Client"
     ).return_value = gcs_client_mock
     mocker.patch(
-        "merino.configs.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
     get_file_result_code, result = top_picks_remote_filemanager.get_file(client=gcs_client_mock)
     records: list[LogRecord] = filter_caplog(
@@ -266,7 +266,7 @@ def test_get_file_skip(
     mocker.patch.object(gcs_bucket_mock, "get_blob").return_value = None
 
     mocker.patch(
-        "merino.configs.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
 
     get_file_result_code, result = top_picks_remote_filemanager.get_file(client=gcs_client_mock)

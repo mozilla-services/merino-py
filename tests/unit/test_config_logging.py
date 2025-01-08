@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from merino.configs.config import settings
+from merino.configs import settings
 from merino.configs.app_configs.config_logging import configure_logging
 
 

@@ -5,7 +5,7 @@ import logging
 from timeit import default_timer as timer
 
 from merino.utils import metrics
-from merino.configs.config import settings
+from merino.configs import settings
 from merino.providers.base import BaseProvider
 from merino.providers.manager import load_providers
 

@@ -6,7 +6,7 @@ from typing import Mapping
 
 import aiodogstatsd
 
-from merino.configs.config import settings
+from merino.configs import settings
 
 logger = logging.getLogger(__name__)
 

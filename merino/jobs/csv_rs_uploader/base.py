@@ -7,7 +7,7 @@ from typing import cast, Self
 
 from pydantic import BaseModel
 
-from merino.configs.config import settings
+from merino.configs import settings
 
 
 class BaseSuggestion(BaseModel):

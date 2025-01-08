@@ -14,7 +14,7 @@ from freezegun import freeze_time
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.configs.config import settings
+from merino.configs import settings
 from merino.utils.log_data_creators import SuggestLogDataModel
 from tests.integration.api.v1.fake_providers import FakeProviderFactory
 from tests.integration.api.v1.types import Providers

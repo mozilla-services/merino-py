@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import Any, TypedDict
 
 from httpx import URL, InvalidURL
-from merino.configs.config import settings
+from merino.configs import settings
 from merino.middleware.geolocation import Coordinates
 
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
