@@ -135,9 +135,9 @@ class FileManager:
 
             if blob.exists():
                 try:
-                    logger.warning(f"Deleting partial upload: gs://{self.gcs_bucket}/{blob.name}")
+                    logger.info(f"Deleting partial upload: gs://{self.gcs_bucket}/{blob.name}")
                     blob.delete()
-                    logger.warning(f"Deleted partial upload: gs://{self.gcs_bucket}/{blob.name}")
+                    logger.info(f"Deleted partial upload: gs://{self.gcs_bucket}/{blob.name}")
 
                 except GoogleAPIError as delete_error:
                     logger.error(f"Failed to delete partial upload: {delete_error}")
