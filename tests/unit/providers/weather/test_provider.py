@@ -14,7 +14,7 @@ from pytest import LogCaptureFixture
 from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.middleware.geolocation import Location
 from merino.providers.base import BaseSuggestion, SuggestionRequest
 from merino.providers.custom_details import CustomDetails, WeatherDetails

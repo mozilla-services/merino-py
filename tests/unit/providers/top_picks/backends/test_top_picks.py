@@ -16,7 +16,7 @@ from google.cloud.storage import Blob, Bucket, Client
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.providers.top_picks.backends.filemanager import GetFileResultCode
 from merino.providers.top_picks.backends.protocol import TopPicksData
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
@@ -212,7 +212,7 @@ def test_maybe_build_indicies_local(
     """Test the local case for building indicies."""
     caplog.set_level(logging.INFO)
     mocker.patch(
-        "merino.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "local"
 
     get_file_result_code, result = top_picks_backend.maybe_build_indices()
@@ -240,7 +240,7 @@ def test_maybe_build_indicies_remote(
         "merino.providers.top_picks.backends.filemanager.Client"
     ).return_value = gcs_client_mock
     mocker.patch(
-        "merino.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
 
     get_file_result_code, result = top_picks_backend.maybe_build_indices()
@@ -266,7 +266,7 @@ def test_maybe_build_indicies_remote_fail(
     ).return_value = gcs_client_mock
 
     mocker.patch(
-        "merino.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
 
     mocker.patch(
@@ -292,7 +292,7 @@ def test_maybe_build_indicies_remote_skip(
     ).return_value = gcs_client_mock
 
     mocker.patch(
-        "merino.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
 
     mocker.patch(
@@ -314,7 +314,7 @@ def test_maybe_build_indicies_error(
     is not defined.
     """
     mocker.patch(
-        "merino.config.settings.providers.top_picks.domain_data_source"
+        "merino.configs.config.settings.providers.top_picks.domain_data_source"
     ).return_value = "invalid"
 
     with pytest.raises(ValueError):

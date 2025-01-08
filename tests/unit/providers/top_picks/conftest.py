@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider
 

@@ -8,7 +8,7 @@ import pytest
 from pytest_mock import MockerFixture
 from starlette.testclient import TestClient
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.exceptions import InvalidProviderError
 from merino.main import app
 

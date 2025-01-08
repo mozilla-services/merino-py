@@ -7,7 +7,7 @@ import pytest
 from elasticsearch import AsyncElasticsearch
 from pytest_mock import MockerFixture
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.exceptions import BackendError
 from merino.providers.wikipedia.backends.elastic import (
     SUGGEST_ID,

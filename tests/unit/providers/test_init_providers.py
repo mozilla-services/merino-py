@@ -10,7 +10,7 @@ import pytest
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.exceptions import InvalidProviderError
 from merino.providers import (
     get_providers,

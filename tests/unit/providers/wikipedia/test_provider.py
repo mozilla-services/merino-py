@@ -4,7 +4,7 @@ import pytest
 from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.exceptions import BackendError
 from merino.providers.base import Category
 from merino.providers.wikipedia.backends.fake_backends import FakeEchoWikipediaBackend
