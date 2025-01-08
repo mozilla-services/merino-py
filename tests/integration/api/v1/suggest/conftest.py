@@ -9,7 +9,7 @@ from typing import Any, Callable, Coroutine
 
 import pytest_asyncio
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.main import app
 from merino.providers import get_providers
 from merino.providers.base import BaseProvider

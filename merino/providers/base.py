@@ -5,7 +5,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, HttpUrl
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.middleware.geolocation import Location
 from merino.providers.custom_details import CustomDetails
 

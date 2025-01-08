@@ -9,7 +9,7 @@ from typing import Optional
 import typer
 from httpx import URL
 
-from merino.config import settings as config
+from merino.configs.config import settings as config
 from merino.utils.gcs.gcp_uploader import GcsUploader
 from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
 from merino.jobs.navigational_suggestions.domain_data_downloader import (

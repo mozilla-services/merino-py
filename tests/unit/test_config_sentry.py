@@ -10,7 +10,7 @@ import typing
 from pytest import LogCaptureFixture
 from sentry_sdk.types import Event
 
-from merino.config_sentry import REDACTED_TEXT, strip_sensitive_data
+from merino.configs.app_configs.config_sentry import REDACTED_TEXT, strip_sensitive_data
 from tests.types import FilterCaplogFixture
 
 mock_sentry_hint: dict[str, list] = {"exc_info": [RuntimeError, RuntimeError(), None]}

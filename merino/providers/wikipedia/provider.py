@@ -5,7 +5,7 @@ from typing import Any, Final
 
 from pydantic import HttpUrl
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.exceptions import BackendError
 from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest, Category
 from merino.providers.wikipedia.backends.protocol import WikipediaBackend

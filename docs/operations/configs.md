@@ -78,4 +78,4 @@ this issue.
 [toml]: https://toml.io/en/
 [config.py]: https://github.com/mozilla-services/merino-py/blob/main/merino/config.py
 [configs_dir]: https://github.com/mozilla-services/merino-py/tree/main/merino/configs
-[log]: https://github.com/mozilla-services/merino-py/blob/main/merino/config_logging.py
+[log]: https://github.com/mozilla-services/merino-py/blob/main/merino/configs/app_configs/config_logging.py

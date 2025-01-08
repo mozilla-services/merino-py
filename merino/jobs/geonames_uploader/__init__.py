@@ -16,7 +16,7 @@ import typer
 from urllib.parse import urljoin
 from tempfile import NamedTemporaryFile, TemporaryDirectory, TemporaryFile
 
-from merino.config import settings as config
+from merino.configs.config import settings as config
 from merino.jobs.csv_rs_uploader.chunked_rs_uploader import (
     ChunkedRemoteSettingsSuggestionUploader,
 )

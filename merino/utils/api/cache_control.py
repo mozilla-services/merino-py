@@ -6,7 +6,7 @@ from merino.providers.custom_details import CustomDetails, WeatherDetails
 from merino.providers.weather.provider import Provider as WeatherProvider
 from merino.providers.weather.provider import Suggestion as WeatherSuggestion
 
-from merino.config import settings
+from merino.configs.config import settings
 
 # Default Cache-Control TTL value for /suggest endpoint responses
 DEFAULT_CACHE_CONTROL_TTL: int = settings.runtime.default_suggestions_response_ttl_sec

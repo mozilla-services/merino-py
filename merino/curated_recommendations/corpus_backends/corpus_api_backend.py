@@ -18,7 +18,7 @@ from tenacity import (
     before_sleep_log,
 )
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     CorpusItem,

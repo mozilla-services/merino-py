@@ -7,7 +7,7 @@ from urllib.parse import quote
 
 from elasticsearch import AsyncElasticsearch
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.exceptions import BackendError
 
 # The Index ID in Elasticsearch cluster.

@@ -6,7 +6,7 @@ from typing import Any
 
 import typer
 
-from merino.config import settings as config
+from merino.configs.config import settings as config
 from merino.jobs.csv_rs_uploader import ChunkedRemoteSettingsSuggestionUploader
 from merino.providers.amo.addons_data import ADDON_DATA, ADDON_KEYWORDS
 from merino.providers.amo.backends.dynamic import DynamicAmoBackend

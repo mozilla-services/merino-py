@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from merino.config import settings
+from merino.configs.config import settings
 from merino.curated_recommendations.prior_backends.gcs_prior import GcsPrior
 from merino.curated_recommendations.prior_backends.protocol import Prior
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
