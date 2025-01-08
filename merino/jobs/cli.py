@@ -2,7 +2,7 @@
 
 import typer
 
-from merino.config_logging import configure_logging
+from merino.configs.app_configs.config_logging import configure_logging
 from merino.jobs.amo_rs_uploader import amo_rs_uploader_cmd
 from merino.jobs.csv_rs_uploader import csv_rs_uploader_cmd
 from merino.jobs.geonames_uploader import geonames_uploader_cmd

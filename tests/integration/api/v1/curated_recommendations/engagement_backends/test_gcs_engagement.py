@@ -10,7 +10,7 @@ import pytest
 from aiodogstatsd import Client as StatsdClient
 from google.cloud.storage import Client, Bucket
 
-from merino.config import settings
+from merino.configs import settings
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import Engagement
 from merino.utils.synced_gcs_blob import SyncedGcsBlob

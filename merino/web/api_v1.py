@@ -13,7 +13,7 @@ from fastapi.responses import ORJSONResponse
 from starlette.requests import Request
 from aiodogstatsd import Client
 
-from merino.config import settings
+from merino.configs import settings
 from merino.curated_recommendations import get_provider as get_corpus_api_provider
 from merino.curated_recommendations.provider import (
     CuratedRecommendationsProvider,

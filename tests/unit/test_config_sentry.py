@@ -10,7 +10,7 @@ import typing
 from pytest import LogCaptureFixture
 from sentry_sdk.types import Event
 
-from merino.config_sentry import REDACTED_TEXT, strip_sensitive_data
+from merino.configs.app_configs.config_sentry import REDACTED_TEXT, strip_sensitive_data
 from tests.types import FilterCaplogFixture
 
 mock_sentry_hint: dict[str, list] = {"exc_info": [RuntimeError, RuntimeError(), None]}
@@ -255,7 +255,7 @@ def test_strip_sensitive_data_lookup_error(
         hint=mock_sentry_hint,
     )
 
-    records = filter_caplog(caplog.records, "merino.config_sentry")
+    records = filter_caplog(caplog.records, "merino.configs.app_configs.config_sentry")
     assert (
         records[0].__dict__["msg"]
         == "Encountered KeyError or IndexError for value 'values' while filtering Sentry data."

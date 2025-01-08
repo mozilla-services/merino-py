@@ -9,8 +9,8 @@ from typing import Any
 
 import pytest
 
-from merino.config import settings
-from merino.config_logging import configure_logging
+from merino.configs import settings
+from merino.configs.app_configs.config_logging import configure_logging
 
 
 def test_configure_logging_invalid_format() -> None:

@@ -7,7 +7,7 @@ import logging
 
 from google.cloud.storage import Client
 
-from merino.config import settings
+from merino.configs import settings
 from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
     CorpusApiBackend,
     CorpusApiGraphConfig,

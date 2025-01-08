@@ -7,7 +7,7 @@ import io
 
 import typer
 
-from merino.config import settings as config
+from merino.configs import settings as config
 from merino.jobs.csv_rs_uploader.chunked_rs_uploader import (
     ChunkedRemoteSettingsSuggestionUploader,
 )

@@ -11,7 +11,7 @@ from hashlib import md5
 
 import typer
 
-from merino.config import settings as config
+from merino.configs import settings as config
 from merino.jobs.relevancy_uploader.chunked_rs_uploader import (
     ChunkedRemoteSettingsRelevancyUploader,
 )

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from merino.config import settings
+from merino.configs import settings
 from merino.middleware import ScopeKey
 
 CLIENT_IP_OVERRIDE: str = settings.location.client_ip_override

@@ -4,7 +4,7 @@ import logging
 
 import typer
 
-from merino.config import settings as config
+from merino.configs import settings as config
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.indexer import Indexer
 from merino.jobs.wikipedia_indexer.utils import (

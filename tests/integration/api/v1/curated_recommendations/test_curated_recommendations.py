@@ -14,7 +14,7 @@ from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 from scipy.stats import linregress
 
-from merino.config import settings
+from merino.configs import settings
 from merino.curated_recommendations import (
     CorpusApiBackend,
     CuratedRecommendationsProvider,

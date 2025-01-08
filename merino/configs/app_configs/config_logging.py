@@ -6,7 +6,7 @@ from logging.config import dictConfig
 
 from dockerflow import logging as dockerflow_logging
 
-from merino.config import settings
+from merino.configs import settings
 
 
 def configure_logging() -> None:
