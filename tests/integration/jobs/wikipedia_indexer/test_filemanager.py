@@ -2,17 +2,39 @@
 
 import re
 from datetime import datetime as dt
+from unittest.mock import MagicMock, patch
 
 import pytest
 from google.cloud.storage import Blob
 
-from merino.jobs.wikipedia_indexer.filemanager import DirectoryParser, FileManager
+from merino.jobs.wikipedia_indexer.filemanager import (
+    DirectoryParser,
+    FileManager,
+    WikipediaFilemanagerError,
+)
 
 
 @pytest.fixture
 def mock_gcs_client(mocker):
     """Return a mock GCS Client instance"""
     return mocker.patch("merino.jobs.wikipedia_indexer.filemanager.Client").return_value
+
+
+@pytest.fixture
+def mock_wiki_http_response():
+    """Fixture to create a mock HTTP response."""
+
+    def _mock_response(chunks, status_code=200):
+        mock_resp = MagicMock()
+        mock_resp.iter_content.return_value = chunks
+        mock_resp.headers = {"Content-Length": str(sum(len(c) for c in chunks))}
+        mock_resp.status_code = status_code
+        mock_resp.raise_for_status.return_value = (
+            None if status_code == 200 else Exception("HTTP Error")
+        )
+        return mock_resp
+
+    return _mock_response
 
 
 def test_directory_parser():
@@ -113,3 +135,72 @@ def test_get_latest_gcs(mock_gcs_client):
     latest_gcs = file_manager.get_latest_gcs()
 
     assert latest_gcs == blob1
+
+
+@patch("requests.get")
+def test_stream_dump_to_gcs_success(mock_requests, mock_gcs_client, mock_wiki_http_response):
+    """Test successful streaming of wiki dump to GCS"""
+    base_url = "http://test.com"
+    dump_url = "http://test.com/enwiki-20220101-cirrussearch-content.json.gz"
+
+    chunks = [b"chunk1", b"chunk2", b"chunk3"]
+
+    mock_resp = mock_wiki_http_response(chunks)
+    mock_requests.return_value.__enter__.return_value = mock_resp
+
+    mock_bucket = MagicMock()
+    mock_gcs_client.bucket.return_value = mock_bucket
+
+    mock_blob = MagicMock()
+    mock_blob.name = "wiki-upload"
+    mock_bucket.blob.return_value = mock_blob
+
+    mock_blob_writer = MagicMock()
+    mock_blob.open.return_value.__enter__.return_value = mock_blob_writer
+    mock_blob.open.return_value.__exit__.return_value = None
+
+    file_manager = FileManager(mock_bucket, "a-project", base_url)
+    file_manager._stream_dump_to_gcs(dump_url)
+
+    mock_blob.open.assert_called_once_with("wb")
+
+    mock_blob_writer.write.assert_any_call(b"chunk1")
+    mock_blob_writer.write.assert_any_call(b"chunk2")
+    mock_blob_writer.write.assert_any_call(b"chunk3")
+
+    assert mock_blob_writer.write.call_count == len(chunks)
+
+
+@patch("requests.get")
+def test_stream_dump_to_gcs_blob_deletion(mock_requests, mock_gcs_client, mock_wiki_http_response):
+    """Test deletion of partial upload on unsuccessful streaming of wiki dump to GCS"""
+    base_url = "http://test.com"
+    dump_url = "http://test.com/enwiki-20220101-cirrussearch-content.json.gz"
+
+    chunks = [b"chunk1", b"chunk2", b"chunk3"]
+    mock_resp = mock_wiki_http_response(chunks)
+    mock_requests.return_value.__enter__.return_value = mock_resp
+
+    mock_bucket = MagicMock()
+    mock_gcs_client.bucket.return_value = mock_bucket
+
+    mock_blob = MagicMock()
+    mock_blob.name = "wiki-upload"
+    mock_bucket.blob.return_value = mock_blob
+
+    mock_blob.exists.return_value = True
+    mock_blob.delete.return_value = None
+
+    mock_blob_writer = MagicMock()
+    mock_blob.open.return_value.__enter__.return_value = mock_blob_writer
+
+    # raise an exception during streaming
+    mock_blob_writer.write.side_effect = Exception("failed to write chunk")
+
+    file_manager = FileManager(mock_bucket, "a-project", base_url)
+
+    with pytest.raises(WikipediaFilemanagerError, match="Failed to stream dump to GCS"):
+        file_manager._stream_dump_to_gcs(dump_url)
+
+    mock_blob.exists.assert_called_once()
+    mock_blob.delete.assert_called_once()
