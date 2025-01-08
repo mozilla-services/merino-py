@@ -255,7 +255,7 @@ def test_strip_sensitive_data_lookup_error(
         hint=mock_sentry_hint,
     )
 
-    records = filter_caplog(caplog.records, "merino.config_sentry")
+    records = filter_caplog(caplog.records, "merino.configs.app_configs.config_sentry")
     assert (
         records[0].__dict__["msg"]
         == "Encountered KeyError or IndexError for value 'values' while filtering Sentry data."
