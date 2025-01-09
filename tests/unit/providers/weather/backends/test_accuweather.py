@@ -32,6 +32,11 @@ from merino.providers.weather.backends.accuweather import (
     ForecastWithTTL,
 )
 from merino.providers.weather.backends.accuweather.errors import AccuweatherErrorMessages
+from merino.providers.weather.backends.accuweather.pathfinder import (
+    clear_skip_cities_mapping,
+    increment_skip_cities_mapping,
+    get_skip_cities_mapping,
+)
 from merino.providers.weather.backends.accuweather.utils import (
     RequestType,
     add_partner_code,
@@ -918,6 +923,12 @@ def fixture_accuweather_parsed_data_misses() -> (
     return (None, None, None, None)
 
 
+@pytest.fixture(autouse=True)
+def run_before_each_test():
+    """Clear SKIP_CITIES_MAPPING."""
+    clear_skip_cities_mapping()
+
+
 def test_init_api_key_value_error(
     mocker: MockerFixture, accuweather_parameters: dict[str, Any]
 ) -> None:
@@ -1173,13 +1184,7 @@ async def test_get_weather_report_with_fallback_city_endpoint_returns_none(
     )
 
     assert report is None
-
-    records = filter_caplog(
-        caplog.records, "merino.providers.weather.backends.accuweather.backend"
-    )
-
-    assert len(caplog.records) == 1
-    assert records[0].message.startswith("Unable to find location for US/San Francisco")
+    assert len(get_skip_cities_mapping()) == 1
 
 
 @pytest.mark.asyncio
@@ -1225,10 +1230,9 @@ async def test_get_weather_report_location_key_fetch_failed(
         caplog.records, "merino.providers.weather.backends.accuweather.backend"
     )
 
-    assert len(caplog.records) == 2
+    assert len(caplog.records) == 1
 
     assert records[0].message.startswith("Unexpected location response from")
-    assert records[1].message.startswith("Unable to find location for US/San Francisco")
 
 
 @pytest.mark.asyncio
@@ -1609,6 +1613,7 @@ async def test_get_weather_report_with_city_in_skip_list(
     is missing.
     """
     expected_result = None
+    increment_skip_cities_mapping("CA", "ON", "North Park")
 
     weather_context = WeatherContext(
         Location(

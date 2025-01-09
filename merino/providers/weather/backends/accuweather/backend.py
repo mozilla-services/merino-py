@@ -20,6 +20,7 @@ from merino.exceptions import CacheAdapterError
 from merino.middleware.geolocation import Location
 from merino.providers.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
+    increment_skip_cities_mapping,
 )
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -632,8 +633,6 @@ class AccuweatherBackend:
             AccuWeatherError: Failed request or 4xx and 5xx response from AccuWeather.
         """
         geolocation = weather_context.geolocation
-        country = geolocation.country
-        city = geolocation.city
         location_key = geolocation.key
         language = get_language(weather_context.languages)
 
@@ -662,19 +661,14 @@ class AccuweatherBackend:
 
         # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
-            skip_log = False
             try:
-                location, is_skipped = await pathfinder.explore(
+                location, _ = await pathfinder.explore(
                     weather_context, self.get_location_by_geolocation
                 )
             except AccuweatherError as exc:
                 logger.warning(f"{exc}")
 
             if location is None:
-                if not skip_log:
-                    logger.warning(
-                        f"Unable to find location for {country}/{city}, regions: {geolocation.regions}"
-                    )
                 return None
 
         try:
@@ -771,9 +765,13 @@ class AccuweatherBackend:
                 exception_class_name=exc.__class__.__name__,
             ) from exc
 
-        # record the region that gave a location
-        if response and country and city:
-            set_region_mapping(country, city, region)
+        if country and city:
+            if response:
+                # record the region that gave a location
+                set_region_mapping(country, city, region)
+            else:
+                # record the country, region, city that did not provide a location
+                increment_skip_cities_mapping(country, region, city)
         return AccuweatherLocation(**response) if response else None
 
     async def get_current_conditions(

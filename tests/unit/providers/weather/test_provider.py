@@ -21,6 +21,8 @@ from merino.providers.custom_details import CustomDetails, WeatherDetails
 from merino.providers.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
     clear_region_mapping,
+    clear_skip_cities_mapping,
+    increment_skip_cities_mapping,
 )
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -188,13 +190,22 @@ async def test_fetch_mapping(
     clear_region_mapping()
     set_region_mapping("NL", "Andel", "NB")
 
-    await provider._report_mapping()
+    clear_skip_cities_mapping()
+    increment_skip_cities_mapping("CA", "BC", "Vancouver")
+    increment_skip_cities_mapping("CA", "BC", "Vancouver")
 
-    assert len(statsd_mock.gauge.call_args_list) == 1
+    await provider._fetch_mappings()
+
+    assert len(statsd_mock.gauge.call_args_list) == 3
     assert statsd_mock.gauge.call_args_list == [
-        call(name="providers.weather.pathfinder.mapping.size", value=1)
+        call(name="providers.weather.pathfinder.mapping.size", value=1),
+        call(name="providers.weather.skip_cities_mapping.total.size", value=2),
+        call(name="providers.weather.skip_cities_mapping.unique.size", value=1),
     ]
 
     records = filter_caplog(caplog.records, "merino.providers.weather.provider")
-    assert len(records) == 1
-    assert records[0].message == "Weather Successful Mapping Values: {('NL', 'Andel'): 'NB'}"
+    assert len(records) == 2
+    assert [record.message for record in records] == [
+        "Weather Successful Mapping Values: {('NL', 'Andel'): 'NB'}",
+        "Weather Skip Cities: {('CA', 'BC', 'Vancouver'): 2}",
+    ]

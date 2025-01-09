@@ -16,6 +16,9 @@ from merino.providers.custom_details import CustomDetails, WeatherDetails
 from merino.providers.weather.backends.accuweather.pathfinder import (
     get_region_mapping_size,
     get_region_mapping,
+    get_skip_cities_mapping_total,
+    get_skip_cities_mapping_size,
+    get_skip_cities_mapping,
 )
 from merino.providers.weather.backends.protocol import (
     CurrentConditions,
@@ -79,10 +82,10 @@ class Provider(BaseProvider):
     async def initialize(self) -> None:
         """Initialize the provider."""
         cron_job = cron.Job(
-            name="fetch_pathfinder_size",
+            name="fetch_location_info",
             interval=self.cron_interval_sec,
             condition=self._should_fetch,
-            task=self._report_mapping,
+            task=self._fetch_mappings,
         )
         self.cron_task = asyncio.create_task(cron_job())
 
@@ -92,12 +95,23 @@ class Provider(BaseProvider):
     def _should_fetch(self) -> bool:
         return True
 
-    async def _report_mapping(self) -> None:
+    async def _fetch_mappings(self) -> None:
         self.metrics_client.gauge(
             name=f"providers.{self.name}.pathfinder.mapping.size",
             value=get_region_mapping_size(),
         )
         logger.info(f"Weather Successful Mapping Values: {get_region_mapping()}")
+
+        self.metrics_client.gauge(
+            name=f"providers.{self.name}.skip_cities_mapping.total.size",
+            value=get_skip_cities_mapping_total(),
+        )
+        self.metrics_client.gauge(
+            name=f"providers.{self.name}.skip_cities_mapping.unique.size",
+            value=get_skip_cities_mapping_size(),
+        )
+
+        logger.info(f"Weather Skip Cities: {get_skip_cities_mapping()}")
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide weather suggestions."""

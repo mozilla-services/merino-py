@@ -13,9 +13,13 @@ REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
     ["AU", "CA", "CN", "DE", "ES", "FR", "GB", "GR", "IT", "PL", "PT", "RU", "US"]
 )
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
+    "Dawson City": "Dawson",
+    "Haʻikū": "Haiku",
+    "Hoʻolehua": "Hoolehua",
     "Kleinburg Station": "Kleinburg",
     "Kīhei": "Kihei",
     "La'ie": "Laie",
+    "Mendocino City": "Mendocino",
     "Middlebury (village)": "Middlebury",
     "Mitchell/Ontario": "Mitchell",
     "Montreal East": "Montreal",
@@ -26,23 +30,22 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Sainte-Clotilde-de-Châteauguay": "Sainte-Clotilde-de-Chateauguay",
     "Sainte-Geneviève": "Sainte-Genevieve",
     "Tracadie–Sheila": "Tracadie Sheila",
-    "'Aiea": "Aiea",
+    "‘Aiea": "Aiea",
 }
-SKIP_CITIES_LIST: frozenset = frozenset(
-    [
-        ("CA", "AB", "Sturgeon County"),
-        ("CA", "ON", "North Park"),
-        ("CA", "ON", "Ontario"),
-        ("US", "AL", "Fort Novosel"),
-        ("US", "GA", "South Fulton"),
-        ("US", "KY", "Fort Campbell North"),
-        ("US", "ND", "Minot Air Force Base"),
-        ("US", "TX", "Fort Cavazos"),
-        ("US", "TX", "Lavaca"),
-        ("US", "UT", "Hill Air Force Base"),
-        ("US", "WA", "Joint Base Lewis McChord"),
-    ]
-)
+
+SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
+    ("CA", "AB", "Sturgeon County"): 0,
+    ("CA", "ON", "North Park"): 0,
+    ("CA", "ON", "Ontario"): 0,
+    ("US", "AL", "Fort Novosel"): 0,
+    ("US", "GA", "South Fulton"): 0,
+    ("US", "KY", "Fort Campbell North"): 0,
+    ("US", "ND", "Minot Air Force Base"): 0,
+    ("US", "TX", "Fort Cavazos"): 0,
+    ("US", "TX", "Lavaca"): 0,
+    ("US", "UT", "Hill Air Force Base"): 0,
+    ("US", "WA", "Joint Base Lewis McChord"): 0,
+}
 
 
 def compass(location: Location) -> Generator[Pair, None, None]:
@@ -107,7 +110,7 @@ async def explore(
     geolocation = weather_context.geolocation
     country = geolocation.country
     for region, city in compass(weather_context.geolocation):
-        if (country, region, city) in SKIP_CITIES_LIST:
+        if (country, region, city) in SKIP_CITIES_MAPPING:
             return None, True
 
         weather_context.selected_region = region
@@ -147,3 +150,39 @@ def get_region_mapping_size() -> int:
 def clear_region_mapping() -> None:
     """Clear SUCCESSFUL_REGIONS_MAPPING."""
     SUCCESSFUL_REGIONS_MAPPING.clear()
+
+
+def increment_skip_cities_mapping(country: str, region: str | None, city: str) -> None:
+    """Increment the value of the (country, region, city) key or add it if not present.
+
+    Params:
+      - country {str}: country code
+      - region {str | None}: region code
+      - city {str}: city name
+
+    """
+    location = (country, region, city)
+    if location in SKIP_CITIES_MAPPING:
+        SKIP_CITIES_MAPPING[location] += 1
+    else:
+        SKIP_CITIES_MAPPING[location] = 1
+
+
+def get_skip_cities_mapping() -> dict[tuple[str, str | None, str], int]:
+    """Get SKIP_CITIES_MAPPING."""
+    return SKIP_CITIES_MAPPING
+
+
+def get_skip_cities_mapping_size() -> int:
+    """Get SKIP_CITIES_MAPPING size."""
+    return len(SKIP_CITIES_MAPPING)
+
+
+def get_skip_cities_mapping_total() -> int:
+    """Get the sum of the values of SKIP_CITIES_MAPPING"""
+    return sum(SKIP_CITIES_MAPPING.values())
+
+
+def clear_skip_cities_mapping() -> None:
+    """Clear SKIP_CITIES_MAPPING."""
+    SKIP_CITIES_MAPPING.clear()
