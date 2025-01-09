@@ -1,6 +1,7 @@
 """Merino V1 API"""
 
 import logging
+import json
 from asyncio import Task
 from functools import partial
 from itertools import chain
@@ -35,7 +36,8 @@ from merino.utils.api.query_params import (
     refine_geolocation_for_suggestion,
     validate_suggest_custom_location_params,
 )
-from merino.web.models_v1 import ProviderResponse, SuggestResponse
+from merino.utils.gcs.gcp_uploader import GcsUploader, get_gcs_uploader_for_manifest
+from merino.web.models_v1 import ProviderResponse, SuggestResponse, Manifest
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -317,3 +319,46 @@ async def curated_content(
     [curated-topics-doc]: https://mozilla-hub.atlassian.net/wiki/x/LQDaMg
     """
     return await provider.fetch(curated_recommendations_request)
+
+
+@router.get(
+    "/manifest",
+    tags=["manifest"],
+    summary="Get latest website favicons manifest",
+    response_model=Manifest,
+)
+async def get_manifest(
+    gcs_uploader: GcsUploader = Depends(get_gcs_uploader_for_manifest),
+) -> ORJSONResponse:
+    """Get latest website favicons manifest."""
+    logger.info("Attempting to get manifest")
+
+    try:
+        manifest_blob = gcs_uploader.get_most_recent_file(
+            exclusion="",
+            sort_key=lambda blob: blob.name,
+        )
+
+        if not manifest_blob:
+            logger.error("No manifest blob found")
+            return ORJSONResponse(content={"error": "Manifest not found"}, status_code=404)
+
+        # Load JSON and validate against Manifest
+        manifest_data_raw = json.loads(manifest_blob.download_as_text())
+        manifest_obj = Manifest(**manifest_data_raw)
+
+        return ORJSONResponse(
+            content=jsonable_encoder(manifest_obj),
+            headers={
+                "Cache-Control": (
+                    f"private, max-age={settings.runtime.default_suggestions_response_ttl_sec}"
+                )
+            },
+        )
+
+    except Exception as e:
+        logger.exception("Failed to get manifest")
+        return ORJSONResponse(
+            content={"error": "Failed to get manifest", "details": str(e)},
+            status_code=500,
+        )
