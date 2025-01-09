@@ -78,6 +78,7 @@ def blob(gcs_bucket):
         [
             {"scheduled_corpus_item_id": "1A", "click_count": 30, "impression_count": 300},
             {"scheduled_corpus_item_id": "6A", "click_count": 40, "impression_count": 400},
+            # Some records have a region
             {
                 "scheduled_corpus_item_id": "1A",
                 "region": "US",
@@ -89,6 +90,19 @@ def blob(gcs_bucket):
                 "region": "US",
                 "click_count": 4,
                 "impression_count": 9,
+            },
+            # Some records have a corpus_item_id
+            {
+                "corpus_item_id": "C1",
+                "click_count": 50,
+                "impression_count": 100,
+            },
+            {
+                "scheduled_corpus_item_id": "7A",
+                "corpus_item_id": "C1",
+                "region": "US",
+                "click_count": 1,
+                "impression_count": 5,
             },
         ],
     )
@@ -205,12 +219,12 @@ async def test_gcs_engagement_metrics(gcs_storage_client, gcs_bucket, metrics_cl
 
     # Verify the metrics are recorded correctly
     metrics_client.gauge.assert_any_call("recommendation.engagement.size", value=blob.size)
-    metrics_client.gauge.assert_any_call("recommendation.engagement.global.count", value=2)
-    metrics_client.gauge.assert_any_call("recommendation.engagement.global.clicks", value=70)
-    metrics_client.gauge.assert_any_call("recommendation.engagement.global.impressions", value=700)
-    metrics_client.gauge.assert_any_call("recommendation.engagement.us.count", value=2)
-    metrics_client.gauge.assert_any_call("recommendation.engagement.us.clicks", value=7)
-    metrics_client.gauge.assert_any_call("recommendation.engagement.us.impressions", value=18)
+    metrics_client.gauge.assert_any_call("recommendation.engagement.global.count", value=3)
+    metrics_client.gauge.assert_any_call("recommendation.engagement.global.clicks", value=120)
+    metrics_client.gauge.assert_any_call("recommendation.engagement.global.impressions", value=800)
+    metrics_client.gauge.assert_any_call("recommendation.engagement.us.count", value=3)
+    metrics_client.gauge.assert_any_call("recommendation.engagement.us.clicks", value=8)
+    metrics_client.gauge.assert_any_call("recommendation.engagement.us.impressions", value=23)
     metrics_client.timeit.assert_any_call("recommendation.engagement.update.timing")
 
     # Check the last_updated gauge value shows that the engagement was updated just now.

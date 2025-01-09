@@ -14,7 +14,7 @@ from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 logger = logging.getLogger(__name__)
 
-EngagementKeyType = tuple[str, str | None]  # Keyed on (scheduled_corpus_item_id, region)
+EngagementKeyType = tuple[str | None, str | None]  # Keyed on (scheduled_corpus_item_id, region)
 EngagementCacheType = dict[EngagementKeyType, Engagement]
 
 
