@@ -1625,12 +1625,14 @@ async def test_get_weather_report_with_city_in_skip_list(
         ),
         ["en-US"],
     )
+
+    assert get_skip_cities_mapping().get(("CA", "ON", "North Park")) == 1
+
     result = await accuweather.get_weather_report(weather_context)
 
     assert expected_result == result
 
-    metrics_called = [call_arg for call_arg in statsd_mock.increment.call_args_list]
-    assert metrics_called == []
+    assert get_skip_cities_mapping().get(("CA", "ON", "North Park")) == 2
 
 
 @pytest.mark.asyncio
