@@ -110,7 +110,9 @@ async def explore(
     geolocation = weather_context.geolocation
     country = geolocation.country
     for region, city in compass(weather_context.geolocation):
-        if (country, region, city) in SKIP_CITIES_MAPPING:
+        if country and city and (country, region, city) in SKIP_CITIES_MAPPING:
+            # increment since we tried to look up this combo again.
+            increment_skip_cities_mapping(country, region, city)
             return None, True
 
         weather_context.selected_region = region
