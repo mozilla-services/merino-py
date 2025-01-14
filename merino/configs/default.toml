@@ -434,6 +434,17 @@ gcs_project = ""
 # GCS bucket that contains domain data files
 gcs_bucket = ""
 
+[default.providers.manifest]
+# MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC
+# The interval of the ManifestFilemanager cron job (in seconds)
+# The cron job should tick more frequently than `resync_interval_sec` so that
+# the resync failure can be retried soon.
+cron_interval_sec = 60
+
+# MERINO_PROVIDERS__TOP_PICKS__RESYNC_INTERVAL_SEC
+# Time between re-syncs of the manifest file, in seconds. Defaults to 24 hours.
+resync_interval_sec = 86400
+
 [default.providers.wikipedia]
 # MERINO_PROVIDERS__WIKIPEDIA__TYPE
 # The type of this provider, should be `wikipedia`.
