@@ -3,7 +3,6 @@
 import logging
 import time
 import re
-from datetime import datetime
 from typing import cast
 
 from merino.curated_recommendations import ExtendedExpirationCorpusBackend
