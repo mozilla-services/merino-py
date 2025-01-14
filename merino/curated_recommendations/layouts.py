@@ -16,9 +16,9 @@ layout_4_medium = Layout(
             columnCount=4,
             tiles=[
                 Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=True, hasExcerpt=True),
             ],
         ),
         ResponsiveLayout(

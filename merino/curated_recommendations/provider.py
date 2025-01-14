@@ -345,18 +345,11 @@ class CuratedRecommendationsProvider:
 
         # Create "Today's top stories" section with the first 6 recommendations
         feeds = CuratedRecommendationsFeed(
-            news_section=Section(
-                receivedFeedRank=0,
-                recommendations=news_recs,
-                title=get_translation(surface_id, "news-section", "In the News"),
-                subtitle=datetime.now().strftime("%B %d, %Y"),  # e.g., "October 24, 2024"
-                layout=layout_4_large,
-            ),
             top_stories_section=Section(
-                receivedFeedRank=1,
+                receivedFeedRank=0,
                 recommendations=top_stories,
                 title=get_translation(surface_id, "top-stories", "Popular Today"),
-                layout=layout_4_medium,
+                layout=layout_4_large,
             ),
         )
 
