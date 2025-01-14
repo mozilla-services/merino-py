@@ -4,14 +4,11 @@
 
 """Unit tests for the config_sentry.py module."""
 
-import logging
 import typing
 
-from pytest import LogCaptureFixture
 from sentry_sdk.types import Event
 
 from merino.configs.app_configs.config_sentry import REDACTED_TEXT, strip_sensitive_data
-from tests.types import FilterCaplogFixture
 
 mock_sentry_hint: dict[str, list] = {"exc_info": [RuntimeError, RuntimeError(), None]}
 
@@ -229,6 +226,10 @@ def test_strip_sensitive_data() -> None:
     )
 
     assert (
+        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][2]["vars"]["query"]
+        == REDACTED_TEXT
+    )
+    assert (
         sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][4]["vars"]["q"]
         == REDACTED_TEXT
     )
@@ -239,24 +240,4 @@ def test_strip_sensitive_data() -> None:
     assert (
         sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][5]["vars"]["body"]
         == REDACTED_TEXT
-    )
-
-
-def test_strip_sensitive_data_lookup_error(
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
-) -> None:
-    """Test that KeyError or IndexError message is emitted through logger when invalid key
-    or index is detected.
-    """
-    caplog.set_level(logging.WARNING)
-    strip_sensitive_data(
-        event={"bad_request": {}, "exception": {"invalid_values": [{}]}},  # type: ignore
-        hint=mock_sentry_hint,
-    )
-
-    records = filter_caplog(caplog.records, "merino.configs.app_configs.config_sentry")
-    assert (
-        records[0].__dict__["msg"]
-        == "Encountered KeyError or IndexError for value 'values' while filtering Sentry data."
     )

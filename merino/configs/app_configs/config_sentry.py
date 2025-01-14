@@ -45,33 +45,33 @@ def strip_sensitive_data(event: Event, hint: Hint) -> Event | None:
     if event.get("request", {}).get("query_string", {}):
         event["request"]["query_string"] = REDACTED_TEXT
 
-    try:
-        for entry in event["exception"]["values"][0]["stacktrace"]["frames"]:
-            if entry["vars"].get("q"):
-                entry["vars"]["q"] = REDACTED_TEXT
-            if entry["vars"].get("query"):
-                entry["vars"]["query"] = REDACTED_TEXT
-            if entry["vars"].get("srequest"):
-                entry["vars"]["srequest"] = REDACTED_TEXT
-            if entry["vars"].get("values", {}).get("q"):
-                entry["vars"]["values"]["q"] = REDACTED_TEXT
-            if (
-                entry["vars"].get("solved_result", [])
-                and len(entry["vars"].get("solved_result", [])) > 0
-            ):
-                if entry["vars"]["solved_result"][0].get("q"):
-                    entry["vars"]["solved_result"][0]["q"] = REDACTED_TEXT
+        event_exception_values = event.get("exception", {}).get("values", [])
+        if len(event_exception_values):
+            for entry in event_exception_values[0].get("stacktrace", {}).get("frames", []):
+                vars = entry.get("vars", {})
 
-            # Redact the query sent to Elasticsearch.
-            # This just redacts all the variables that contains a part of the
-            # Elasticsearch query.
-            for key, value in entry["vars"].items():
-                if "suggest-on-title" in json.dumps(value):
-                    entry["vars"][key] = REDACTED_TEXT
+                match vars:
+                    case {"q": _}:
+                        vars["q"] = REDACTED_TEXT
+                    case {"srequest": _, "query": _}:
+                        vars["srequest"] = REDACTED_TEXT
+                        vars["query"] = REDACTED_TEXT
+                    case {"query": _}:
+                        vars["query"] = REDACTED_TEXT
 
-    except (KeyError, IndexError) as e:
-        logger.warning(
-            f"Encountered KeyError or IndexError for value {e} while filtering Sentry data."
-        )
+                    case {"values": {"q": _}}:
+                        vars["values"]["q"] = REDACTED_TEXT
+                    case {"solved_result": [{"q": _}, *_]}:
+                        # https://github.com/python/mypy/issues/12770
+                        vars["solved_result"][0]["q"] = REDACTED_TEXT  # type: ignore
+                    case _:
+                        pass
+
+                # Redact the query sent to Elasticsearch.
+                # This just redacts all the variables that contains a part of the
+                # Elasticsearch query.
+                for key, value in entry["vars"].items():
+                    if "suggest-on-title" in json.dumps(value):
+                        entry["vars"][key] = REDACTED_TEXT
 
     return event
