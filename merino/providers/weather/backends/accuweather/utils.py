@@ -6,7 +6,7 @@ from typing import Any, TypedDict
 
 from httpx import URL, InvalidURL
 from merino.configs import settings
-from merino.middleware.geolocation import Coordinates
+from merino.providers.weather.backends.protocol import WeatherContext
 
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
 PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
@@ -106,7 +106,7 @@ def process_location_response_with_country_and_region(
 
 
 def process_location_response_with_country(
-    coordinates: Coordinates | None, response: Any
+    weather_context: WeatherContext | None, response: Any
 ) -> ProcessedLocationResponse | None:
     """Process the API response for a single location key from country code endpoint.
 
@@ -131,7 +131,7 @@ def process_location_response_with_country(
                 "administrative_area_id": administrative_area_id,
             }
         case _:
-            return get_closest_location_by_distance(response, coordinates)  # type: ignore
+            return get_closest_location_by_distance(response, weather_context)  # type: ignore
 
 
 def process_current_condition_response(response: Any) -> dict[str, Any] | None:
@@ -214,11 +214,14 @@ def get_language(requested_languages: list[str]) -> str:
 
 
 def get_closest_location_by_distance(
-    locations: list[dict[str, Any]], coordinates: Coordinates
+    locations: list[dict[str, Any]], weather_context: WeatherContext
 ) -> ProcessedLocationResponse | None:
     """Get the closest location by distance within the DISTANCE THRESHOLD."""
+    weather_context.distance_calculation = False
+    coordinates = weather_context.geolocation.coordinates
     closest_location = None
     min_distance = math.inf
+
     if coordinates:
         lat1 = coordinates.latitude
         long1 = coordinates.longitude
@@ -240,12 +243,14 @@ def get_closest_location_by_distance(
 
     if closest_location:
         try:
+            weather_context.distance_calculation = True
             return {
                 "key": closest_location["Key"],
                 "localized_name": closest_location["LocalizedName"],
                 "administrative_area_id": closest_location["AdministrativeArea"]["ID"],
             }
         except KeyError:
+            weather_context.distance_calculation = False
             return None
     return None
 
