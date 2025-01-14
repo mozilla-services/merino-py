@@ -58,7 +58,7 @@ mock_sentry_event_data: Event = {
                             "function": "query",
                             "context_line": "raise BackendError()",
                             "vars": {
-                                "self": "<merino.providers.top_picks.provider>",
+                                "self": "<merino.providers.suggest.top_picks.provider>",
                                 "srequest": "SuggestionRequest(query='foobar')",
                                 "qlen": "6",
                                 "query": "foobar",
@@ -89,10 +89,10 @@ mock_sentry_event_data: Event = {
                                 "values": {
                                     "sources": [
                                         {
-                                            "accuweather": "<merino.providers.weather.provider>",
-                                            "adm": "<merino.providers.adm.provider.",
-                                            "top_picks": "<merino.providers.top_picks.provider>",
-                                            "wikipedia": "<merino.providers.wikipedia.provider>",
+                                            "accuweather": "<merino.providers.suggest.weather.provider>",
+                                            "adm": "<merino.providers.suggest.adm.provider.",
+                                            "top_picks": "<merino.providers.suggest.top_picks.provider>",
+                                            "wikipedia": "<merino.providers.suggest.wikipedia.provider>",
                                         },
                                     ],
                                     "q": "'foobar'",
@@ -103,7 +103,7 @@ mock_sentry_event_data: Event = {
                         },
                         {
                             "function": "search",
-                            "module": "merino.providers.wikipedia.backends.elastic",
+                            "module": "merino.providers.suggest.wikipedia.backends.elastic",
                             "filename": "merino/providers/wikipedia/backends/elastic.py",
                             "abs_path": "/app/merino/providers/wikipedia/backends/elastic.py",
                             "lineno": 69,
@@ -125,7 +125,7 @@ mock_sentry_event_data: Event = {
                             "in_app": True,
                             "vars": {
                                 "q": "what?",
-                                "self": "<merino.providers.wikipedia.backends."
+                                "self": "<merino.providers.suggest.wikipedia.backends."
                                 "elastic.ElasticBackend object at 0x7faaebfb0380>",
                                 "suggest": {
                                     "suggest-on-title": {

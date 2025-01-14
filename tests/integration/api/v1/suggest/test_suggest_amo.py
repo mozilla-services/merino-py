@@ -6,9 +6,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from merino.providers.amo.addons_data import ADDON_KEYWORDS
-from merino.providers.amo.backends.static import StaticAmoBackend
-from merino.providers.amo.provider import Provider
+from merino.providers.suggest.amo.addons_data import ADDON_KEYWORDS
+from merino.providers.suggest.amo.backends.static import StaticAmoBackend
+from merino.providers.suggest.amo.provider import Provider
 
 Scenario = namedtuple(
     "Scenario",

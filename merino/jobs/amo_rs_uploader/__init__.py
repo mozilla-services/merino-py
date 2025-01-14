@@ -8,8 +8,8 @@ import typer
 
 from merino.configs import settings as config
 from merino.jobs.csv_rs_uploader import ChunkedRemoteSettingsSuggestionUploader
-from merino.providers.amo.addons_data import ADDON_DATA, ADDON_KEYWORDS
-from merino.providers.amo.backends.dynamic import DynamicAmoBackend
+from merino.providers.suggest.amo.addons_data import ADDON_DATA, ADDON_KEYWORDS
+from merino.providers.suggest.amo.backends.dynamic import DynamicAmoBackend
 
 logger = logging.getLogger(__name__)
 

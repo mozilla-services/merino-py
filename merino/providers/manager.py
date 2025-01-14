@@ -10,23 +10,23 @@ from merino.cache.redis import RedisAdapter
 from merino.configs import settings
 from merino.exceptions import InvalidProviderError
 from merino.utils.metrics import get_metrics_client
-from merino.providers.adm.backends.fake_backends import FakeAdmBackend
-from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
-from merino.providers.adm.provider import Provider as AdmProvider
-from merino.providers.amo.addons_data import ADDON_KEYWORDS as ADDON_KEYWORDS
-from merino.providers.amo.backends.dynamic import DynamicAmoBackend
-from merino.providers.amo.backends.static import StaticAmoBackend
-from merino.providers.amo.provider import Provider as AmoProvider
+from merino.providers.suggest.adm.backends.fake_backends import FakeAdmBackend
+from merino.providers.suggest.adm.backends.remotesettings import RemoteSettingsBackend
+from merino.providers.suggest.adm.provider import Provider as AdmProvider
+from merino.providers.suggest.amo.addons_data import ADDON_KEYWORDS as ADDON_KEYWORDS
+from merino.providers.suggest.amo.backends.dynamic import DynamicAmoBackend
+from merino.providers.suggest.amo.backends.static import StaticAmoBackend
+from merino.providers.suggest.amo.provider import Provider as AmoProvider
 from merino.providers.base import BaseProvider
-from merino.providers.geolocation.provider import Provider as GeolocationProvider
-from merino.providers.top_picks.backends.top_picks import TopPicksBackend
-from merino.providers.top_picks.provider import Provider as TopPicksProvider
-from merino.providers.weather.backends.accuweather import AccuweatherBackend
-from merino.providers.weather.backends.fake_backends import FakeWeatherBackend
-from merino.providers.weather.provider import Provider as WeatherProvider
-from merino.providers.wikipedia.backends.elastic import ElasticBackend
-from merino.providers.wikipedia.backends.fake_backends import FakeWikipediaBackend
-from merino.providers.wikipedia.provider import Provider as WikipediaProvider
+from merino.providers.suggest.geolocation.provider import Provider as GeolocationProvider
+from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend
+from merino.providers.suggest.top_picks.provider import Provider as TopPicksProvider
+from merino.providers.suggest.weather.backends.accuweather import AccuweatherBackend
+from merino.providers.suggest.weather.backends.fake_backends import FakeWeatherBackend
+from merino.providers.suggest.weather.provider import Provider as WeatherProvider
+from merino.providers.suggest.wikipedia.backends.elastic import ElasticBackend
+from merino.providers.suggest.wikipedia.backends.fake_backends import FakeWikipediaBackend
+from merino.providers.suggest.wikipedia.provider import Provider as WikipediaProvider
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST, WIKIPEDIA_TITLE_BLOCKLIST
 from merino.utils.http_client import create_http_client
 

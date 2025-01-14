@@ -23,14 +23,14 @@ from locust.runners import MasterRunner
 from pydantic import BaseModel
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
-from merino.providers.adm.backends.protocol import SuggestionContent
-from merino.providers.adm.backends.remotesettings import (
+from merino.providers.suggest.adm.backends.protocol import SuggestionContent
+from merino.providers.suggest.adm.backends.remotesettings import (
     RemoteSettingsBackend,
     RemoteSettingsError,
 )
-from merino.providers.amo.addons_data import ADDON_KEYWORDS
-from merino.providers.top_picks.backends.filemanager import GetFileResultCode
-from merino.providers.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
+from merino.providers.suggest.amo.addons_data import ADDON_KEYWORDS
+from merino.providers.suggest.top_picks.backends.filemanager import GetFileResultCode
+from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 from merino.utils.version import Version
 from merino.web.models_v1 import SuggestResponse
