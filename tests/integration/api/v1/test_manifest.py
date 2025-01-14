@@ -34,6 +34,10 @@ class NoOpMetricsClient(Client):
         """Do nothing instead of sending a metric increment."""
         pass
 
+    def gauge(self, *args, **kwargs):
+        """Do nothing instead of sending a metric gauge."""
+        pass
+
     def timeit(self, *args, **kwargs):
         """Return a no-op context manager instead of timing anything."""
         from contextlib import nullcontext

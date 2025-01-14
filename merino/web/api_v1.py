@@ -338,6 +338,7 @@ async def get_manifest(
 
     try:
         metrics_client.increment("manifest.request.get")
+
         with metrics_client.timeit("manifest.request.timing"):
             with metrics_client.timeit("manifest.gcs.fetch_time"):
                 manifest_blob = gcs_uploader.get_most_recent_file(
@@ -350,9 +351,12 @@ async def get_manifest(
                 logger.error("No manifest blob found")
                 return ORJSONResponse(content={"error": "Manifest not found"}, status_code=404)
 
-            # Load JSON and validate against Manifest
             manifest_data_raw = json.loads(manifest_blob.download_as_text())
             manifest_obj = Manifest(**manifest_data_raw)
+
+            metrics_client.increment("manifest.request.success")
+
+            metrics_client.gauge("manifest.size.bytes", value=len(manifest_data_raw))
 
             return ORJSONResponse(
                 content=jsonable_encoder(manifest_obj),
