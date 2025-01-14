@@ -139,6 +139,8 @@ The weather provider records additional metrics.
 
 - `accuweather.upstream.request.<request_type>.get` - A counter to measure the number of times an upstream request to Accuweather was made.
 - `accuweather.request.location.not_provided` - A counter to measure the number of times a query was send without a location being provided, and therefore unable to process a weather request. Sampled at 75%.
+- `accuweather.request.location.dist_calculated.success` - A counter to measure the number of successful lat long distance calculations used to find location.
+- `accuweather.request.location.dist_calculated.fail` - A counter to measure the number of failed lat long distance calculations used to find location.
 - `merino.providers.accuweather.query.cache.fetch` - A timer to measure the duration (in ms) of
   looking up a weather report in the cache. Sampled at 75%.
 - `merino.providers.accuweather.query.cache.fetch.miss.locations` - A counter to measure the number of times weather location was not in the cache. Sampled at 75%.
@@ -154,6 +156,8 @@ The weather provider records additional metrics.
   cache store returned an error when fetching or storing a weather report. This should be 0 in
   normal operation. In case of an error, the logs will include a `WARNING` with the full error
   message.
+- `merino.providers.accuweather.skip_cities_mapping.total.size` - A counter to measure the total number of occurrences cities were skipped due to no location
+- `merino.providers.accuweather.skip_cities_mapping.unique.size` - A counter to measure the number of unique cities that are skipped due to no location
 
 ### Curated Recommendations
 
