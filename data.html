@@ -315,9 +315,9 @@ A counter to measure the number of GraphQL errors from the curated-corpus-api.</
 A timer to measure the duration (in ms) of updating the engagement data from GCS.</li>
 <li><code>recommendation.engagement.size</code> - A gauge to track the size of the engagement blob on GCS.</li>
 <li><code>recommendation.engagement.count</code> - A gauge to measure the total number of engagement records.</li>
-<li><code>recommendation.engagement.{country}.count</code> - A gauge to measure the number of scheduled corpus 
+<li><code>recommendation.engagement.{country}.count</code> - A gauge to measure the number of scheduled corpus
 items with engagement data per country.</li>
-<li><code>recommendation.engagement.{country}.clicks</code> - A gauge to measure the number of clicks per country 
+<li><code>recommendation.engagement.{country}.clicks</code> - A gauge to measure the number of clicks per country
 in our GCS engagement blob.</li>
 <li><code>recommendation.engagement.{country}.impressions</code> - A gauge to measure the number of impressions
 per country in our GCS engagement blob.</li>
@@ -330,6 +330,15 @@ A timer to measure the duration (in ms) of updating the prior data from GCS.</li
 <li><code>recommendation.prior.last_updated</code> -
 A gauge for the staleness (in seconds) of the prior data, measured between when the data was
 updated in GCS and the current time.</li>
+</ul>
+<h3 id="manifest"><a class="header" href="#manifest">Manifest</a></h3>
+<p>When requesting a manifest file, we record the following metrics.</p>
+<ul>
+<li><code>manifest.request.get</code> - A counter for how many requests against the <code>/manifest</code> endpoint where made.</li>
+<li><code>manifest.request.timing</code> - A timer for how long it took the endpoint to fulfill the request.</li>
+<li><code>manifest.gcs.fetch_time</code> - A timer for how long it took to download the latest manifest file from the Google Cloud bucket.</li>
+<li><code>manifest.request.no_manifest</code> - A counter to measure how many times we didn't find the latest manifest file.</li>
+<li><code>manifest.request.error</code> - A counter to measure how many times we could not provide a valid JSON manifest file.</li>
 </ul>
 
                     </main>
