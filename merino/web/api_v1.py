@@ -327,7 +327,9 @@ async def curated_content(
     summary="Get latest website favicons manifest",
     response_model=Manifest,
 )
-async def get_manifest(gcs_uploader: GcsUploader = Depends(get_gcs_uploader_for_manifest)) -> ORJSONResponse:
+async def get_manifest(
+    gcs_uploader: GcsUploader = Depends(get_gcs_uploader_for_manifest),
+) -> ORJSONResponse:
     """Get latest website favicons manifest.
 
     Returns:
