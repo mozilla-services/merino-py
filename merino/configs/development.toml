@@ -20,15 +20,6 @@ format = "pretty"
 [development.accuweather]
 api_key = "test"
 
-[development.providers.top_picks]
-# MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
-# GCS project name that contains domain data
-gcs_project = "moz-fx-merino-prod-1c2f"
-
-# MERINO_PROVIDERS__TOP_PICKS__GCS_BUCKET
-# GCS bucket that contains domain data files
-gcs_bucket = "merino-images-prodpy"
-
 [development.jobs.wikipedia_indexer]
 # GCS path. Combined bucket and object prefix (folders).
 gcs_path = "merino-jobs-dev/wikipedia-exports"

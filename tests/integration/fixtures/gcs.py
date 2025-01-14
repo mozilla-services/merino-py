@@ -9,7 +9,30 @@ from google.cloud.storage import Client
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 
+from merino.utils.gcs.gcp_uploader import GcsUploader
+
 logger = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="module")
+def gcs_uploader(gcs_storage_client) -> GcsUploader:
+    """Return a GcsUploader instance that uses the local GCS emulator client/bucket,
+    so no actual credentials are needed.
+    """
+    uploader = GcsUploader(
+        destination_gcp_project="test_project",
+        destination_bucket_name="test_bucket_name",
+        destination_cdn_hostname="test_cdn_hostname",
+    )
+    # Override the real client with the emulator client
+    uploader.storage_client = gcs_storage_client
+
+    # Optionally create the test bucket right away
+    test_bucket = gcs_storage_client.bucket("test_bucket_name")
+    if not test_bucket.exists():
+        test_bucket.create()
+
+    return uploader
 
 
 @pytest.fixture(scope="module")
@@ -45,7 +68,7 @@ def gcs_storage_client(gcs_storage_container) -> Client:
     after this test suite has finished running
     """
     client: Client = Client(
-        credentials=AnonymousCredentials(),  # type: ignore
+        credentials=AnonymousCredentials(),
         project="test_gcp_uploader_project",
     )
 

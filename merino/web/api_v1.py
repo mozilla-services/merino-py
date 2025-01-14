@@ -1,7 +1,7 @@
 """Merino V1 API"""
 
-import logging
 import json
+import logging
 from asyncio import Task
 from functools import partial
 from itertools import chain
@@ -36,7 +36,6 @@ from merino.utils.api.query_params import (
     refine_geolocation_for_suggestion,
     validate_suggest_custom_location_params,
 )
-from merino.utils.gcs.gcp_uploader import GcsUploader, get_gcs_uploader_for_manifest
 from merino.web.models_v1 import ProviderResponse, SuggestResponse, Manifest
 
 logger = logging.getLogger(__name__)
@@ -328,45 +327,39 @@ async def curated_content(
     response_model=Manifest,
 )
 async def get_manifest(
-    gcs_uploader: GcsUploader = Depends(get_gcs_uploader_for_manifest),
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
 ) -> ORJSONResponse:
-    """Get latest website favicons manifest.
-
-    Returns:
-        A JSON manifest containing icon mappings and metadata for website favicons.
+    """Return the manifest data from the in-memory 'manifest' provider. The provider
+    is responsible for fetching and refreshing the data in the background.
 
     Raises:
-        404: If no manifest is found
-        500: If there's an error accessing the storage or decoding the JSON
+        404: If no manifest data is currently loaded (e.g. fetch failed or not yet done).
+        500: If the 'manifest' provider itself is not found (misconfiguration).
     """
-    logger.info("Attempting to get manifest")
+    logger.info("Returning manifest data")
 
-    try:
-        manifest_blob = gcs_uploader.get_most_recent_file(
-            exclusion="",
-            sort_key=lambda blob: blob.name,
-        )
+    # Pull the manifest provider from the dictionary of active providers
+    manifest_provider = sources[0].get("manifest")
+    if not manifest_provider:
+        logger.error("Manifest provider not found in active providers.")
+        return ORJSONResponse(content={"error": "Manifest provider not found"}, status_code=500)
 
-        if not manifest_blob:
-            logger.error("No manifest blob found")
-            return ORJSONResponse(content={"error": "Manifest not found"}, status_code=404)
+    # The manifest provider stores data in a class attribute (self.manifest_data).
+    manifest_data = getattr(manifest_provider, "manifest_data", None)
+    if not manifest_data:
+        # If manifest_data is None or empty, we consider that "not found"
+        logger.error("Manifest data is empty or has not been fetched yet.")
+        return ORJSONResponse(content={"error": "Manifest data not available"}, status_code=404)
 
-        # Load JSON and validate against Manifest
-        manifest_data_raw = json.loads(manifest_blob.download_as_text())
-        manifest_obj = Manifest(**manifest_data_raw)
+    # Load JSON and validate against Manifest
+    manifest_data_raw = json.loads(manifest_data.download_as_text())
+    manifest_obj = Manifest(**manifest_data_raw)
 
-        return ORJSONResponse(
-            content=jsonable_encoder(manifest_obj),
-            headers={
-                "Cache-Control": (
-                    f"private, max-age={settings.runtime.default_suggestions_response_ttl_sec}"
-                )
-            },
-        )
-
-    except Exception as e:
-        logger.exception("Failed to get manifest")
-        return ORJSONResponse(
-            content={"error": "Failed to get manifest", "details": str(e)},
-            status_code=500,
-        )
+    return ORJSONResponse(
+        content=jsonable_encoder(manifest_obj),
+        headers={
+            "Cache-Control": (
+                f"private, max-age={settings.runtime.default_suggestions_response_ttl_sec}"
+            )
+        },
+    )

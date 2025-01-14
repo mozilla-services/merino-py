@@ -9,6 +9,7 @@ from merino.cache.none import NoCacheAdapter
 from merino.cache.redis import RedisAdapter
 from merino.configs import settings
 from merino.exceptions import InvalidProviderError
+from merino.providers.manifest.backends.manifest import ManifestBackend
 from merino.utils.metrics import get_metrics_client
 from merino.providers.adm.backends.fake_backends import FakeAdmBackend
 from merino.providers.adm.backends.remotesettings import RemoteSettingsBackend
@@ -18,6 +19,7 @@ from merino.providers.amo.backends.dynamic import DynamicAmoBackend
 from merino.providers.amo.backends.static import StaticAmoBackend
 from merino.providers.amo.provider import Provider as AmoProvider
 from merino.providers.base import BaseProvider
+from merino.providers.manifest.provider import Provider as ManifestProvider
 from merino.providers.geolocation.provider import Provider as GeolocationProvider
 from merino.providers.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.top_picks.provider import Provider as TopPicksProvider
@@ -39,6 +41,7 @@ class ProviderType(str, Enum):
     AMO = "amo"
     ADM = "adm"
     GEOLOCATION = "geolocation"
+    MANIFEST = "manifest"
     TOP_PICKS = "top_picks"
     WIKIPEDIA = "wikipedia"
 
@@ -131,6 +134,13 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             return GeolocationProvider(
                 name=provider_id,
                 enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.MANIFEST:
+            return ManifestProvider(
+                backend=ManifestBackend(),
+                name=provider_id,
+                resync_interval_sec=setting.manifest.resync_interval_sec,
+                cron_interval_sec=setting.manifest.cron_interval_sec,
             )
         case ProviderType.TOP_PICKS:
             return TopPicksProvider(
