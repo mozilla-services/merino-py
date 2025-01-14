@@ -173,9 +173,9 @@ The following additional metrics are recorded when curated recommendations are r
  A timer to measure the duration (in ms) of updating the engagement data from GCS.
 - `recommendation.engagement.size` - A gauge to track the size of the engagement blob on GCS.
 - `recommendation.engagement.count` - A gauge to measure the total number of engagement records.
-- `recommendation.engagement.{country}.count` - A gauge to measure the number of scheduled corpus 
+- `recommendation.engagement.{country}.count` - A gauge to measure the number of scheduled corpus
  items with engagement data per country.
-- `recommendation.engagement.{country}.clicks` - A gauge to measure the number of clicks per country 
+- `recommendation.engagement.{country}.clicks` - A gauge to measure the number of clicks per country
  in our GCS engagement blob.
 - `recommendation.engagement.{country}.impressions` - A gauge to measure the number of impressions
  per country in our GCS engagement blob.
@@ -188,3 +188,13 @@ The following additional metrics are recorded when curated recommendations are r
 - `recommendation.prior.last_updated` -
  A gauge for the staleness (in seconds) of the prior data, measured between when the data was
  updated in GCS and the current time.
+
+### Manifest
+
+When requesting a manifest file, we record the following metrics.
+
+- `manifest.request.get` - A counter for how many requests against the `/manifest` endpoint where made.
+- `manifest.request.timing` - A timer for how long it took the endpoint to fulfill the request.
+- `manifest.gcs.fetch_time` - A timer for how long it took to download the latest manifest file from the Google Cloud bucket.
+- `manifest.request.no_manifest` - A counter to measure how many times we didn't find the latest manifest file.
+- `manifest.request.error` - A counter to measure how many times we could not provide a valid JSON manifest file.
