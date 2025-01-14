@@ -8,12 +8,13 @@ from typing import Any
 
 import pytest
 
-from merino.middleware.geolocation import Coordinates
+from merino.middleware.geolocation import Coordinates, Location
 from merino.providers.weather.backends.accuweather.utils import (
     get_lat_long_distance,
     get_closest_location_by_distance,
     process_location_response_with_country,
 )
+from merino.providers.weather.backends.protocol import WeatherContext
 
 
 @pytest.fixture(name="location_response")
@@ -132,10 +133,13 @@ def fixture_location_response():
     ]
 
 
-@pytest.fixture(name="coordinates")
-def fixture_coordinates():
+@pytest.fixture(name="weather_context")
+def fixture_weather_context():
     """Coordinate object for testing."""
-    return Coordinates(latitude=48.4308, longitude=-123.3586)
+    return WeatherContext(
+        Location(coordinates=Coordinates(latitude=48.4308, longitude=-123.3586)),
+        languages=["en-US"],
+    )
 
 
 @pytest.fixture(name="expected_location_results")
@@ -158,22 +162,24 @@ def test_get_lat_long_distance():
 
 
 def test_get_closest_location_by_distance(
-    coordinates: Coordinates,
+    weather_context: WeatherContext,
     location_response: list[dict[str, Any]],
     expected_location_results: dict[str, Any],
 ):
     """Test retrieval of the closest location for a given Coordinate."""
     assert expected_location_results == get_closest_location_by_distance(
-        location_response, coordinates
+        location_response, weather_context
     )
+    assert weather_context.distance_calculation is True
 
 
 def test_process_location_response_with_country(
-    coordinates: Coordinates,
+    weather_context: WeatherContext,
     location_response: dict[str, Any],
     expected_location_results: dict[str, Any],
 ):
     """Test location response with multiple locations are handled correctly."""
     assert expected_location_results == process_location_response_with_country(
-        coordinates, location_response
+        weather_context, location_response
     )
+    assert weather_context.distance_calculation is True

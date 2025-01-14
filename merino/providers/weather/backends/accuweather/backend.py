@@ -740,9 +740,7 @@ class AccuweatherBackend:
             processor = process_location_response_with_country_and_region
         else:
             url_path = self.url_cities_path.format(country_code=country)
-            partial_process_func = partial(
-                process_location_response_with_country, geolocation.coordinates
-            )
+            partial_process_func = partial(process_location_response_with_country, weather_context)
             processor = partial_process_func
 
         try:
@@ -772,6 +770,14 @@ class AccuweatherBackend:
             else:
                 # record the country, region, city that did not provide a location
                 increment_skip_cities_mapping(country, region, city)
+
+        if weather_context.distance_calculation is not None:
+            self.metrics_client.increment(
+                "accuweather.request.location.dist_calculated.success"
+                if weather_context.distance_calculation
+                else "accuweather.request.location.dist_calculated.fail",
+            )
+
         return AccuweatherLocation(**response) if response else None
 
     async def get_current_conditions(
