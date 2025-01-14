@@ -1352,6 +1352,13 @@ class TestSections:
             # All sections have a layout
             assert all(Layout(**section["layout"]) for section in sections.values())
 
+            # Section receivedFeedRank should be numbered 0, 1, 2, ..., len(sections) - 1.
+            assert {s["receivedFeedRank"] for s in sections.values()} == set(range(len(sections)))
+            # Recommendation receivedRank should be numbered 0, 1, 2, ..., len(recommendations) - 1.
+            for section in sections.values():
+                recs = section["recommendations"]
+                assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
+
             # Ensure all topics are present and are named according to the Topic Enum value.
             assert all(topic.value in feeds for topic in Topic)
 

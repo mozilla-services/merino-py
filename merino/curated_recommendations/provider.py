@@ -331,16 +331,12 @@ class CuratedRecommendationsProvider:
             region=self.derive_region(request.locale, request.region),
         )
 
-        # Split recommendations into news (time-sensitive), top stories, and remaining recs.
-        # This preserves the Thompson sampling order in both lists.
-        general_recs, news_recs = await self.get_time_sensitive_recommendations(
-            recommendations, surface_id
-        )
-        if len(news_recs) < 4:
-            # The editorial team ensures that there are always
-            logging.error("'In the news' section has fewer than 4 items")
-        top_stories = general_recs[:top_stories_count]
-        remaining_recs = general_recs[top_stories_count:]
+        top_stories = recommendations[:top_stories_count]
+        remaining_recs = recommendations[top_stories_count:]
+
+        # Renumber receivedRank for top_stories recommendations
+        for rank, recommendation in enumerate(top_stories):
+            recommendation.receivedRank = rank
 
         # Create "Today's top stories" section with the first 6 recommendations
         feeds = CuratedRecommendationsFeed(
@@ -368,8 +364,7 @@ class CuratedRecommendationsProvider:
                 else:
                     formatted_topic_en_us = rec.topic.replace("_", " ").capitalize()
                     section = sections_by_topic[rec.topic] = Section(
-                        receivedFeedRank=len(sections_by_topic)
-                        + 2,  # add 2 for top_stories_section and news_section
+                        receivedFeedRank=len(sections_by_topic) + 1,  # +1 for top_stories_section
                         recommendations=[],
                         # return the hardcoded localized topic section title
                         # fallback on en-US topic title
@@ -383,13 +378,22 @@ class CuratedRecommendationsProvider:
                     rec.receivedRank = len(section.recommendations)
                     section.recommendations.append(rec)
 
-        # Filter and assign sections with valid minimum recommendations
+        # Only keep sections with enough recommendations.
+        valid_sections_by_topic = {}
         for topic, section in sections_by_topic.items():
-            # Find the maximum number of tiles in this section's responsive layouts.
+            # Find the number of tiles in the biggest responsive layout.
             max_tile_count = max(len(rl.tiles) for rl in section.layout.responsiveLayouts)
-            # Only add sections that meet the minimum number of recommendations.
+            # Keep the section if it has enough recs to fill its biggest layout, plus fallback recs.
             if len(section.recommendations) >= max_tile_count + min_fallback_recs_per_section:
-                feeds.set_topic_section(topic, section)
+                valid_sections_by_topic[topic] = section
+
+        # The above loop may have dropped some sections. Renumber receivedFeedRank to 0, 1, 2,...
+        sorted_sections = sorted(
+            valid_sections_by_topic.items(), key=lambda item: item[1].receivedFeedRank
+        )
+        for index, (topic, section) in enumerate(sorted_sections):
+            section.receivedFeedRank = index + 1  # +1 for top_stories_section
+            feeds.set_topic_section(topic, section)
 
         return feeds
 
