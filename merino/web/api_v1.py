@@ -351,12 +351,12 @@ async def get_manifest(
                 logger.error("No manifest blob found")
                 return ORJSONResponse(content={"error": "Manifest not found"}, status_code=404)
 
+            metrics_client.gauge("manifest.size", value=manifest_blob.size)
+
             manifest_data_raw = json.loads(manifest_blob.download_as_text())
             manifest_obj = Manifest(**manifest_data_raw)
 
             metrics_client.increment("manifest.request.success")
-
-            metrics_client.gauge("manifest.size.bytes", value=len(manifest_data_raw))
 
             return ORJSONResponse(
                 content=jsonable_encoder(manifest_obj),
