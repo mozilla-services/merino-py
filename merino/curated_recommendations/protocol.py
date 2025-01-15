@@ -238,7 +238,6 @@ class CuratedRecommendationsFeed(BaseModel):
     # Renaming an alias of a section is a breaking change. New Tab stores section names when users
     # follow or block sections, and references 'top_stories_section' to show topic labels.
     top_stories_section: Section | None = None
-    news_section: Section | None = None
     # Topic sections are named according to the lowercase Topic enum name, and aliased to the topic
     # id. The alias determines the section name in the JSON response.
     business: Section | None = Field(None, alias="business")

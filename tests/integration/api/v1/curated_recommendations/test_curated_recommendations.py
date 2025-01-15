@@ -1299,7 +1299,6 @@ class TestSections:
         replacement_section_titles = {topic.name.lower(): topic.value for topic in Topic}
         # top-stories is not in the Topic enum, do separately
         replacement_section_titles["top_stories_section"] = "top-stories"
-        replacement_section_titles["news_section"] = "news-section"
 
         # Get all Section titles in CuratedRecommendationsFeed
         # Replace strings using the Topic enum-derived map
@@ -1353,14 +1352,15 @@ class TestSections:
             # All sections have a layout
             assert all(Layout(**section["layout"]) for section in sections.values())
 
+            # Section receivedFeedRank should be numbered 0, 1, 2, ..., len(sections) - 1.
+            assert {s["receivedFeedRank"] for s in sections.values()} == set(range(len(sections)))
+            # Recommendation receivedRank should be numbered 0, 1, 2, ..., len(recommendations) - 1.
+            for section in sections.values():
+                recs = section["recommendations"]
+                assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
+
             # Ensure all topics are present and are named according to the Topic Enum value.
             assert all(topic.value in feeds for topic in Topic)
-
-            # Assert that news_section only has time sensitive items, and other sections do not.
-            for section_name, section in sections.items():
-                is_expected_time_sensitive = section_name == "news_section"
-                for recommendation in section["recommendations"]:
-                    assert recommendation["isTimeSensitive"] == is_expected_time_sensitive
 
     @pytest.mark.asyncio
     async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
@@ -1414,7 +1414,6 @@ class TestSections:
                 "en-US",
                 {
                     "top_stories_section": "Popular Today",
-                    "news_section": "In the News",
                     "arts": "Entertainment",
                     "education": "Education",
                     "sports": "Sports",
@@ -1424,7 +1423,6 @@ class TestSections:
                 "de-DE",
                 {
                     "top_stories_section": "Meistgelesen",
-                    "news_section": "In den News",
                     "arts": "Unterhaltung",
                     "education": "Bildung",
                     "sports": "Sport",
@@ -1453,11 +1451,6 @@ class TestSections:
             top_stories_section = data["feeds"].get("top_stories_section")
             assert top_stories_section is not None
             assert top_stories_section["subtitle"] is None
-
-            # Ensure "Today's top stories" is present with a valid date subtitle
-            news_section = data["feeds"].get("news_section")
-            assert news_section is not None
-            assert news_section["subtitle"] is not None
 
 
 class TestExtendedExpiration:
