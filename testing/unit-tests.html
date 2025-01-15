@@ -159,7 +159,7 @@ pytest's caplog by a given <code>logger_name</code>.</p>
 <pre><code class="language-python">def test_with_filter_caplog(
     caplog: LogCaptureFixture, filter_caplog: FilterCaplogFixture
 ) -&gt; None:
-    records: list[LogRecord] = filter_caplog(caplog.records, &quot;merino.providers.adm&quot;)
+    records: list[LogRecord] = filter_caplog(caplog.records, &quot;merino.providers.suggest.adm&quot;)
 </code></pre>
 <p>Note: This fixture is shared with integration tests.</p>
 <h3 id="suggestionrequestfixture"><a class="header" href="#suggestionrequestfixture">SuggestionRequestFixture</a></h3>
