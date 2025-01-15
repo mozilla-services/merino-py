@@ -8,11 +8,11 @@ from fastapi.testclient import TestClient
 from pytest import LogCaptureFixture
 
 from merino.configs import settings
-from merino.providers.wikipedia.backends.fake_backends import (
+from merino.providers.suggest.wikipedia.backends.fake_backends import (
     FakeEchoWikipediaBackend,
     FakeExceptionWikipediaBackend,
 )
-from merino.providers.wikipedia.provider import ADVERTISER, ICON, Provider
+from merino.providers.suggest.wikipedia.provider import ADVERTISER, ICON, Provider
 from tests.types import FilterCaplogFixture
 
 BLOCK_LIST: set[str] = {"Unsafe Content", "Blocked"}
@@ -108,6 +108,6 @@ def test_suggest_wikipedia(
         }
 
     # Check logs for the timed out query(-ies)
-    records = filter_caplog(caplog.records, "merino.providers.wikipedia.provider")
+    records = filter_caplog(caplog.records, "merino.providers.suggest.wikipedia.provider")
 
     assert {record.__dict__["msg"] for record in records} == expected_logs

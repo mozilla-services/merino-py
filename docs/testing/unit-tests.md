@@ -25,7 +25,7 @@ _**Usage:**_
 def test_with_filter_caplog(
     caplog: LogCaptureFixture, filter_caplog: FilterCaplogFixture
 ) -> None:
-    records: list[LogRecord] = filter_caplog(caplog.records, "merino.providers.adm")
+    records: list[LogRecord] = filter_caplog(caplog.records, "merino.providers.suggest.adm")
 ```
 Note: This fixture is shared with integration tests.
 

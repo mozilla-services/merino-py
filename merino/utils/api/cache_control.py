@@ -3,8 +3,8 @@
 from merino.providers.base import BaseProvider, BaseSuggestion
 
 from merino.providers.custom_details import CustomDetails, WeatherDetails
-from merino.providers.weather.provider import Provider as WeatherProvider
-from merino.providers.weather.provider import Suggestion as WeatherSuggestion
+from merino.providers.suggest.weather.provider import Provider as WeatherProvider
+from merino.providers.suggest.weather.provider import Suggestion as WeatherSuggestion
 
 from merino.configs import settings
 
