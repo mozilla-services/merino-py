@@ -1,5 +1,6 @@
 """Utilities for the AccuWeather backend."""
 
+import logging
 import math
 from enum import StrEnum
 from typing import Any, TypedDict
@@ -12,6 +13,8 @@ PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code"
 PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
 VALID_LANGUAGES: frozenset = frozenset(settings.accuweather.default_languages)
 DISTANCE_THRESHOLD = 50  # 50 km
+
+logger = logging.getLogger(__name__)
 
 
 class RequestType(StrEnum):
@@ -244,6 +247,9 @@ def get_closest_location_by_distance(
     if closest_location:
         try:
             weather_context.distance_calculation = True
+            logging.info(
+                f"Successful distance calculated for weather: {weather_context.geolocation.country}, {weather_context.geolocation.city} "
+            )
             return {
                 "key": closest_location["Key"],
                 "localized_name": closest_location["LocalizedName"],
@@ -252,6 +258,9 @@ def get_closest_location_by_distance(
         except KeyError:
             weather_context.distance_calculation = False
             return None
+    logger.warning(
+        f"Unable to calculate closest city: {weather_context.geolocation.country}, {weather_context.geolocation.city} "
+    )
     return None
 
 
