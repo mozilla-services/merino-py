@@ -264,7 +264,7 @@ def get_closest_location_by_distance(
     # temp for debugging
     if temp_min_distance < math.inf:
         logger.warning(
-            f"Unable to calculate closest city: {weather_context.geolocation.country}, {weather_context.geolocation.city}, dist:{temp_min_distance} "
+            f"Unable to calculate closest city: {weather_context.geolocation.country}, {weather_context.geolocation.city}, dist: {int(temp_min_distance)}"
         )
     return None
 
