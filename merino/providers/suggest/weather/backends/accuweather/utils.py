@@ -224,6 +224,7 @@ def get_closest_location_by_distance(
     coordinates = weather_context.geolocation.coordinates
     closest_location = None
     min_distance = math.inf
+    temp_min_distance = math.inf
 
     if coordinates:
         lat1 = coordinates.latitude
@@ -241,6 +242,8 @@ def get_closest_location_by_distance(
                 if d < min_distance and d <= DISTANCE_THRESHOLD:
                     closest_location = location
                     min_distance = d
+                if d < temp_min_distance:
+                    temp_min_distance = d
             except KeyError:
                 continue
 
@@ -248,7 +251,7 @@ def get_closest_location_by_distance(
         try:
             weather_context.distance_calculation = True
             logging.info(
-                f"Successful distance calculated for weather: {weather_context.geolocation.country}, {weather_context.geolocation.city} "
+                f"Successful distance calculated for weather: {weather_context.geolocation.country}, {weather_context.geolocation.city}, dist:{min_distance} "
             )
             return {
                 "key": closest_location["Key"],
@@ -259,7 +262,7 @@ def get_closest_location_by_distance(
             weather_context.distance_calculation = False
             return None
     logger.warning(
-        f"Unable to calculate closest city: {weather_context.geolocation.country}, {weather_context.geolocation.city} "
+        f"Unable to calculate closest city: {weather_context.geolocation.country}, {weather_context.geolocation.city}, dist:{temp_min_distance} "
     )
     return None
 
