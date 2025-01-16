@@ -322,8 +322,10 @@ cron_interval_sec = 60
 resync_interval_sec = 10800
 
 # MERINO_PROVIDERS__ADM__SCORE
-# Ranking score for this provider as a floating point number. Defaults to 0.3.
-score = 0.3
+# Ranking score for this provider as a floating point number. Defaults to 0.31.
+# This is intentionally set to be greater than the score in Remote Settings to fix
+# a reporting issue. See DISCO-3167.
+score = 0.31
 
 
 [default.amo.dynamic]
