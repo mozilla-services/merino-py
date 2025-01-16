@@ -25,7 +25,7 @@ from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
 from merino.jobs.navigational_suggestions.utils import (
     update_top_picks_with_firefox_favicons,
 )
-from merino.providers.base import Category
+from merino.providers.suggest.base import Category
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 
 logger = logging.getLogger(__name__)

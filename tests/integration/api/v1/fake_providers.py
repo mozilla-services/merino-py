@@ -10,8 +10,8 @@ from typing import Protocol
 from pydantic import HttpUrl
 
 from merino.configs import settings
-from merino.providers import BaseProvider
-from merino.providers.base import BaseSuggestion, SuggestionRequest
+from merino.providers.suggest import BaseProvider
+from merino.providers.suggest.base import BaseSuggestion, SuggestionRequest
 
 
 class QueryCallable(Protocol):

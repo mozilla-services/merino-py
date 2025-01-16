@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from merino.configs import settings
 from merino.middleware.geolocation import Location
-from merino.providers.custom_details import CustomDetails
+from merino.providers.suggest.custom_details import CustomDetails
 
 
 class SuggestionRequest(BaseModel):

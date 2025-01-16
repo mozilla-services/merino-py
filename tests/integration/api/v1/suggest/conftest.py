@@ -11,8 +11,8 @@ import pytest_asyncio
 
 from merino.configs import settings
 from merino.main import app
-from merino.providers import get_providers
-from merino.providers.base import BaseProvider
+from merino.providers.suggest import get_providers
+from merino.providers.suggest.base import BaseProvider
 from tests.integration.api.v1.types import (
     Providers,
     SetupProvidersFixture,

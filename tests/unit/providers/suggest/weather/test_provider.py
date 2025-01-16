@@ -16,8 +16,8 @@ from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.middleware.geolocation import Location
-from merino.providers.base import BaseSuggestion, SuggestionRequest
-from merino.providers.custom_details import CustomDetails, WeatherDetails
+from merino.providers.suggest.base import BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.custom_details import CustomDetails, WeatherDetails
 from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
     clear_region_mapping,

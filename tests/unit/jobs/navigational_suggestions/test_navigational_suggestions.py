@@ -7,7 +7,7 @@
 import json
 
 from merino.jobs.navigational_suggestions import prepare_domain_metadata
-from merino.providers.base import Category
+from merino.providers.suggest.base import Category
 
 
 def test_prepare_domain_metadata_top_picks_construction(mocker):

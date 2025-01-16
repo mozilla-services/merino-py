@@ -3,7 +3,6 @@
 import logging
 from typing import Callable
 from urllib.parse import urljoin
-from merino.configs import settings
 
 from google.cloud.storage import Blob, Bucket, Client
 
@@ -94,11 +93,10 @@ class GcsUploader(BaseContentUploader):
         else:
             return str(blob.public_url)
 
-
-def get_gcs_uploader_for_manifest() -> GcsUploader:
-    """Get GCS uploader instance for the manifest endpoint."""
-    return GcsUploader(
-        destination_gcp_project=settings.providers.top_picks.gcs_project,
-        destination_bucket_name=settings.providers.top_picks.gcs_bucket,
-        destination_cdn_hostname="",
-    )
+    def get_file_by_name(self, blob_name: str, blob_generation: int) -> Blob | None:
+        """Return blob from GCS if we have a new generation"""
+        bucket: Bucket = self.storage_client.get_bucket(self.bucket_name)
+        if blob_name:
+            most_recent = bucket.get_blob(blob_name, if_generation_not_match=blob_generation)
+            return most_recent
+        return None

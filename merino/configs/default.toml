@@ -238,6 +238,16 @@ current_condition_ttl_sec = 1800 # 1/2 hr
 # MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__FORECAST_TTL_SEC
 forecast_ttl_sec = 3600 # 1 hr
 
+[default.manifest]
+# MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC
+# The interval of the ManifestFilemanager cron job (in seconds)
+# The cron job should tick more frequently than `resync_interval_sec` so that
+# the resync failure can be retried soon.
+cron_interval_sec = 60
+
+# MERINO_PROVIDERS__MANIFEST__RESYNC_INTERVAL_SEC
+# Time between re-syncs of the manifest file, in seconds. Defaults to 24 hours.
+resync_interval_sec = 86400
 
 [default.accuweather]
 # MERINO_ACCUWEATHER__API_KEY
@@ -295,7 +305,19 @@ metrics_sampling_rate = 0.75
 # The partner code to append to URLs in the current conditions and forecast responses.
 
 # MERINO_ACCUWEATHER__DEFAULT_LANGUAGES
-default_languages  = ["de", "en-CA", "en-GB", "en-US", "es-ES", "fr", "it", "pl", "pt-BR", "ru", "zh-CN"]
+default_languages = [
+    "de",
+    "en-CA",
+    "en-GB",
+    "en-US",
+    "es-ES",
+    "fr",
+    "it",
+    "pl",
+    "pt-BR",
+    "ru",
+    "zh-CN",
+]
 
 
 [default.providers.adm]
@@ -641,14 +663,14 @@ population_threshold = 50_000
 # Which alternates of selected cities to include in the output. Alternates are
 # categorized by language, like "en", plus a few other categories like
 # abbreviations ("abbr") and airport codes ("iata", "icao", "faac").
-city_alternates_iso_languages  = ["en", "en-US", "iata", "icao", "faac", "abbr"]
+city_alternates_iso_languages = ["en", "en-US", "iata", "icao", "faac", "abbr"]
 # MERINO_JOBS__GEONAMES_UPLOADER__REGION_ALTERNATES_ISO_LANGUAGES
 # Which alternates of selected regions to include in the output. Takes the same
 # values as city alternates. For U.S. states, "en" alternates include verbose
 # names like "State of California" that people are unlikely type and that
 # interfere with prefix matching, so we only include "abbr". Note that full
 # names like "California" are always included in the output.
-region_alternates_iso_languages  = ["abbr"]
+region_alternates_iso_languages = ["abbr"]
 # MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY_CODES
 # List of countries whose geonames will be uploaded. All countries' data will be
 # uploaded together without any separation into different records, attachments,

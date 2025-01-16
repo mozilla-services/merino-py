@@ -10,8 +10,8 @@ import pytest
 from pydantic import HttpUrl
 
 from merino.middleware.geolocation import Location, Coordinates
-from merino.providers.base import BaseSuggestion, SuggestionRequest
-from merino.providers.custom_details import CustomDetails, GeolocationDetails
+from merino.providers.suggest.base import BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.custom_details import CustomDetails, GeolocationDetails
 from merino.providers.suggest.geolocation.provider import Provider, Suggestion
 
 
