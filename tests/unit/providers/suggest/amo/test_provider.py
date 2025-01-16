@@ -20,8 +20,8 @@ from merino.providers.suggest.amo.backends.static import (
 from merino.providers.suggest.amo.provider import AddonSuggestion
 from merino.providers.suggest.amo.provider import Provider as AddonsProvider
 from merino.providers.suggest.amo.provider import invert_and_expand_index_keywords
-from merino.providers.base import SuggestionRequest
-from merino.providers.custom_details import AmoDetails, CustomDetails
+from merino.providers.suggest.base import SuggestionRequest
+from merino.providers.suggest.custom_details import AmoDetails, CustomDetails
 
 
 class AmoErrorBackend:

@@ -10,7 +10,7 @@ from pydantic import HttpUrl
 
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
-from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 logger = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from pydantic import HttpUrl
 
 from merino.configs import settings
-from merino.providers.base import Category
+from merino.providers.suggest.base import Category
 from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.suggest.top_picks.provider import Provider, Suggestion
 from tests.integration.api.v1.types import Providers

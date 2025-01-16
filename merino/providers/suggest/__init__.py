@@ -6,8 +6,8 @@ from timeit import default_timer as timer
 
 from merino.utils import metrics
 from merino.configs import settings
-from merino.providers.base import BaseProvider
-from merino.providers.manager import load_providers
+from merino.providers.suggest.base import BaseProvider
+from merino.providers.suggest.manager import load_providers
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 async def init_providers() -> None:
-    """Initialize all suggestion providers.
+    """Initialize all providers
 
     This should only be called once at the startup of application.
     """
@@ -42,7 +42,7 @@ async def init_providers() -> None:
 
 
 async def shutdown_providers() -> None:
-    """Shut down all suggestion providers.
+    """Shut down all providers
 
     This should only be called once at the shutdown of application.
     """
@@ -57,5 +57,5 @@ async def shutdown_providers() -> None:
 
 
 def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
-    """Return a tuple of all the providers and default providers."""
+    """Return a tuple of all providers and default providers"""
     return providers, default_providers

@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Unit tests for the __init__ provider module."""
+"""Unit tests for the __init__ suggest provider module."""
 
 import logging
 
@@ -12,13 +12,13 @@ from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.exceptions import InvalidProviderError
-from merino.providers import (
+from merino.providers.suggest import (
     get_providers,
     init_providers,
     load_providers,
     shutdown_providers,
 )
-from merino.providers.manager import ProviderType
+from merino.providers.suggest.manager import ProviderType
 from tests.types import FilterCaplogFixture
 
 DISABLED_PROVIDERS = settings.runtime.disabled_providers
@@ -26,7 +26,7 @@ DISABLED_PROVIDERS = settings.runtime.disabled_providers
 
 @pytest.mark.asyncio
 async def test_init_providers() -> None:
-    """Test for the `init_providers` method of the Merino providers module."""
+    """Test for the `init_providers` method of the Merino suggest providers module."""
     await init_providers()
 
     providers, default_providers = get_providers()
@@ -79,7 +79,7 @@ async def test_shutdown_providers(
     await init_providers()
     await shutdown_providers()
 
-    records = filter_caplog(caplog.records, "merino.providers")
+    records = filter_caplog(caplog.records, "merino.providers.suggest")
 
     assert len(records) == 2
     assert records[0].message == "Provider initialization completed"

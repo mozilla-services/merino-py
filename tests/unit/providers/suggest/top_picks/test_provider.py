@@ -13,7 +13,7 @@ from pytest import LogCaptureFixture
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.base import BaseSuggestion, Category
+from merino.providers.suggest.base import BaseSuggestion, Category
 from merino.providers.suggest.top_picks.backends.filemanager import GetFileResultCode
 from merino.providers.suggest.top_picks.backends.protocol import TopPicksData
 from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend
@@ -65,7 +65,6 @@ async def test_initialize(top_picks: Provider, backend: TopPicksBackend) -> None
 async def test_initialize_skip(
     mocker,
     top_picks: Provider,
-    backend: TopPicksBackend,
     expected_empty_top_picks_data: TopPicksData,
 ) -> None:
     """Test initialization of top pick provider when result_code enum value is skip"""
@@ -84,7 +83,6 @@ async def test_initialize_skip(
 async def test_initialize_fail(
     mocker,
     top_picks: Provider,
-    backend: TopPicksBackend,
     expected_empty_top_picks_data: TopPicksData,
 ) -> None:
     """Test initialization of top pick provider when result_code enum value is fail"""
@@ -140,7 +138,6 @@ async def test_fetch_top_picks_data_fails(
 async def test_fetch_top_picks_data_skip(
     mocker,
     top_picks: Provider,
-    backend: TopPicksBackend,
     expected_empty_top_picks_data: TopPicksData,
 ) -> None:
     """Test _fetch_top_picks_data_skip when result_code enum value is skip."""
@@ -159,7 +156,6 @@ async def test_fetch_top_picks_data_skip(
 async def test_fetch_top_picks_data_fail(
     mocker,
     top_picks: Provider,
-    backend: TopPicksBackend,
     expected_empty_top_picks_data: TopPicksData,
 ) -> None:
     """Test _fetch_top_picks_data_skip when result_code enum value is fail."""

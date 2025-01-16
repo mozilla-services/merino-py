@@ -4,6 +4,7 @@
 
 """Module for test configurations for the Top Picks provider unit test directory."""
 
+import json
 from typing import Any
 
 import pytest
@@ -53,3 +54,70 @@ def fixture_top_picks_parameters() -> dict[str, Any]:
 def fixture_top_picks(backend: TopPicksBackend, top_picks_parameters: dict[str, Any]) -> Provider:
     """Create Top Pick Provider for test."""
     return Provider(backend=backend, **top_picks_parameters)  # type: ignore [arg-type]
+
+
+@pytest.fixture(name="blob_json")
+def fixture_blob_json() -> str:
+    """Return a JSON string for mocking."""
+    return json.dumps(
+        {
+            "domains": [
+                {
+                    "rank": 1,
+                    "title": "Example",
+                    "domain": "example",
+                    "url": "https://example.com",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "serp_categories": [0],
+                    "similars": ["exxample", "exampple", "eexample"],
+                },
+                {
+                    "rank": 2,
+                    "title": "Firefox",
+                    "domain": "firefox",
+                    "url": "https://firefox.com",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "serp_categories": [0],
+                    "similars": [
+                        "firefoxx",
+                        "foyerfox",
+                        "fiirefox",
+                        "firesfox",
+                        "firefoxes",
+                    ],
+                },
+                {
+                    "rank": 3,
+                    "title": "Mozilla",
+                    "domain": "mozilla",
+                    "url": "https://mozilla.org/en-US/",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "serp_categories": [0],
+                    "similars": ["mozzilla", "mozila"],
+                },
+                {
+                    "rank": 4,
+                    "title": "Abc",
+                    "domain": "abc",
+                    "url": "https://abc.test",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "serp_categories": [0],
+                    "similars": ["aa", "ab", "acb", "acbc", "aecbc"],
+                },
+                {
+                    "rank": 5,
+                    "title": "BadDomain",
+                    "domain": "baddomain",
+                    "url": "https://baddomain.test",
+                    "icon": "",
+                    "categories": ["web-browser"],
+                    "serp_categories": [0],
+                    "similars": ["bad", "badd"],
+                },
+            ]
+        }
+    )

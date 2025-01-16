@@ -7,7 +7,7 @@ from pydantic import HttpUrl
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest, Category
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest, Category
 from merino.providers.suggest.wikipedia.backends.protocol import WikipediaBackend
 
 # The packaged Wikipedia icon

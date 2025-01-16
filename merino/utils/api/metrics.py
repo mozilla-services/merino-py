@@ -3,7 +3,7 @@
 from collections import Counter
 from aiodogstatsd import Client
 
-from merino.providers.base import BaseProvider, BaseSuggestion
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion
 
 
 def emit_suggestions_per_metrics(

@@ -22,7 +22,7 @@ from pytest_mock import MockerFixture
 
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import GeolocationMiddleware, Location, Coordinates
-from merino.providers.base import SuggestionRequest
+from merino.providers.suggest.base import SuggestionRequest
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,

@@ -17,7 +17,7 @@ from merino.providers.suggest.amo.addons_data import ADDON_KEYWORDS as ADDON_KEY
 from merino.providers.suggest.amo.backends.dynamic import DynamicAmoBackend
 from merino.providers.suggest.amo.backends.static import StaticAmoBackend
 from merino.providers.suggest.amo.provider import Provider as AmoProvider
-from merino.providers.base import BaseProvider
+from merino.providers.suggest.base import BaseProvider
 from merino.providers.suggest.geolocation.provider import Provider as GeolocationProvider
 from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.suggest.top_picks.provider import Provider as TopPicksProvider

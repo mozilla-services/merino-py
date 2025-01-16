@@ -9,9 +9,10 @@ from fastapi.responses import ORJSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
-from merino import curated_recommendations, providers
+from merino import curated_recommendations
 from merino.configs.app_configs.config_logging import configure_logging
 from merino.configs.app_configs.config_sentry import configure_sentry
+from merino.providers import suggest, manifest
 from merino.utils.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging, metrics, user_agent
 from merino.web import api_v1, dockerflow
@@ -38,11 +39,12 @@ async def lifespan(app: FastAPI):
     configure_logging()
     configure_sentry()
     await configure_metrics()
-    await providers.init_providers()
+    await suggest.init_providers()
+    await manifest.init_provider()
     curated_recommendations.init_provider()
     yield
     # Shut down providers and clean up.
-    await providers.shutdown_providers()
+    await suggest.shutdown_providers()
     await get_metrics_client().close()
 
 
