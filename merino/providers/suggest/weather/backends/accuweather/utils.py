@@ -220,7 +220,7 @@ def get_closest_location_by_distance(
     locations: list[dict[str, Any]], weather_context: WeatherContext
 ) -> ProcessedLocationResponse | None:
     """Get the closest location by distance within the DISTANCE THRESHOLD."""
-    weather_context.distance_calculation = False
+    weather_context.distance_calculation = False if locations else None
     coordinates = weather_context.geolocation.coordinates
     closest_location = None
     min_distance = math.inf
@@ -261,9 +261,11 @@ def get_closest_location_by_distance(
         except KeyError:
             weather_context.distance_calculation = False
             return None
-    logger.warning(
-        f"Unable to calculate closest city: {weather_context.geolocation.country}, {weather_context.geolocation.city}, dist:{temp_min_distance} "
-    )
+    # temp for debugging
+    if temp_min_distance < math.inf:
+        logger.warning(
+            f"Unable to calculate closest city: {weather_context.geolocation.country}, {weather_context.geolocation.city}, dist:{temp_min_distance} "
+        )
     return None
 
 

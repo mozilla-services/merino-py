@@ -173,6 +173,15 @@ def test_get_closest_location_by_distance(
     assert weather_context.distance_calculation is True
 
 
+def test_get_closest_location_by_distance_does_not_update_distance_calc_when_no_location(
+    weather_context: WeatherContext,
+    expected_location_results: dict[str, Any],
+):
+    """When no locations are provided, distance_calculation should stay Nqone."""
+    get_closest_location_by_distance([], weather_context)
+    assert weather_context.distance_calculation is None
+
+
 def test_process_location_response_with_country(
     weather_context: WeatherContext,
     location_response: dict[str, Any],
