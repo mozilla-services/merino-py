@@ -1,8 +1,12 @@
 """Download domain data from BigQuery tables"""
 
 from typing import Any
+from urllib.parse import urlparse
 
 from google.cloud.bigquery import Client
+
+from merino.jobs.navigational_suggestions.custom_domains import CUSTOM_DOMAINS
+from merino.utils.metrics import logger
 
 
 class DomainDataDownloader:
@@ -80,9 +84,45 @@ limit 1000
     def __init__(self, source_gcp_project: str) -> None:
         self.client = Client(source_gcp_project)
 
+    def _parse_custom_domain(self, domain_entry: dict, rank: int) -> dict[str, Any]:
+        """Parse a custom domain entry into the required format."""
+        url = domain_entry["url"]
+        parsed = urlparse(url)
+
+        # Extract domain parts
+        hostname = parsed.netloc
+        if hostname.startswith("www."):
+            hostname = hostname[4:]
+
+        # Get suffix (TLD)
+        parts = hostname.split(".")
+        suffix = ".".join(parts[-2:]) if len(parts) > 2 else parts[-1]
+
+        return {
+            "rank": rank,
+            "domain": hostname,
+            "host": hostname,
+            "origin": f"{parsed.scheme}://{hostname}",
+            "suffix": suffix,
+            "categories": domain_entry["categories"],
+        }
+
     def download_data(self) -> list[dict[str, Any]]:
-        """Download domain data from bigquery tables"""
+        """Download domain data from bigquery tables and custom domains file"""
+        # Get domains from BigQuery
         query_job = self.client.query(self.DOMAIN_DATA_QUERY)
         results = query_job.result()
         domains = [dict(result) for result in results]
+
+        try:
+            # Add custom domains
+            start_rank = max(d["rank"] for d in domains) + 1 if domains else 1
+            for i, custom_domain in enumerate(CUSTOM_DOMAINS):
+                domain_data = self._parse_custom_domain(custom_domain, start_rank + i)
+                domains.append(domain_data)
+
+            logger.info(f"Successfully added {len(CUSTOM_DOMAINS)} custom domains")
+        except Exception as e:
+            logger.error(f"Unexpected error processing custom domains: {e}")
+
         return domains
