@@ -12,7 +12,11 @@ from merino.providers.suggest.weather.backends.protocol import WeatherContext
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
 PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
 VALID_LANGUAGES: frozenset = frozenset(settings.accuweather.default_languages)
-DISTANCE_THRESHOLD = 70  # 70 km
+
+# Max distance threshold used for distance calculation
+DISTANCE_THRESHOLD = (
+    70  # 70 km based on logging data, either distances were ~60, or much greater than 60
+)
 
 logger = logging.getLogger(__name__)
 
