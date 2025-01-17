@@ -5,7 +5,7 @@ import os
 
 import pytest
 from google.auth.credentials import AnonymousCredentials
-from google.cloud.storage import Client
+from google.cloud.storage import Client, Bucket
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 
@@ -52,3 +52,17 @@ def gcs_storage_client(gcs_storage_container) -> Client:
     yield client
 
     client.close()
+
+
+@pytest.fixture(scope="function")
+def gcs_storage_bucket(gcs_storage_client) -> Bucket:
+    """Return a test google storage bucket object to be used by all tests. Delete it
+    after each test run to ensure isolation
+    """
+    bucket: Bucket = gcs_storage_client.create_bucket("test_gcp_uploader_bucket")
+
+    # Yield the bucket object for the test to use
+    yield bucket
+
+    # Force delete allows us to delete the bucket even if it has blobs in it
+    bucket.delete(force=True)
