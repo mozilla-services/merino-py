@@ -136,7 +136,7 @@ class Provider(BaseProvider):
                     )
                 else:
                     weather_context.geolocation.key = srequest.query
-                    self.metrics_client.increment(f"providers.{self.name}.weather_report.request")
+                    self.metrics_client.increment(f"providers.{self.name}.query.weather_report")
                     weather_report = await self.backend.get_weather_report(weather_context)
 
         except BackendError as backend_error:

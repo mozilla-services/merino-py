@@ -156,6 +156,7 @@ The weather provider records additional metrics.
   cache store returned an error when fetching or storing a weather report. This should be 0 in
   normal operation. In case of an error, the logs will include a `WARNING` with the full error
   message.
+- `merino.providers.accuweather.query.weather_report` - A counter to measure the number of queries that are for weather
 - `merino.providers.accuweather.skip_cities_mapping.total.size` - A counter to measure the total number of occurrences cities were skipped due to no location
 - `merino.providers.accuweather.skip_cities_mapping.unique.size` - A counter to measure the number of unique cities that are skipped due to no location
 
