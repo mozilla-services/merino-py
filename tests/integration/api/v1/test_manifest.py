@@ -19,8 +19,8 @@ from merino.web.models_v1 import Manifest
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-test_app = FastAPI()
-test_app.include_router(router, prefix="/api/v1")
+app = FastAPI()
+app.include_router(router, prefix="/api/v1")
 
 
 class NoOpMetricsClient(Client):
@@ -47,7 +47,7 @@ class NoOpMetricsClient(Client):
 
 @pytest.fixture
 def client_with_metrics() -> Generator[TestClient, None, None]:
-    """Wrap `test_app` in an ASGI function that inserts a
+    """Wrap `app` in an ASGI function that inserts a
     NoOpMetricsClient into the request scope, so that any endpoint referencing
     `request.scope[ScopeKey.METRICS_CLIENT]` won't crash.
     """
@@ -55,7 +55,7 @@ def client_with_metrics() -> Generator[TestClient, None, None]:
     async def asgi_wrapper(scope, receive, send):
         """Insert NoOpMetricsClient into the scope, then call the real app."""
         scope[ScopeKey.METRICS_CLIENT] = NoOpMetricsClient()
-        await test_app(scope, receive, send)
+        await app(scope, receive, send)
 
     with TestClient(asgi_wrapper) as client:
         yield client
@@ -86,7 +86,7 @@ def test_get_manifest_success(client_with_metrics):
     mock_blob.download_as_text.return_value = json.dumps(mock_manifest)
     mock_uploader.get_most_recent_file.return_value = mock_blob
 
-    test_app.dependency_overrides[get_gcs_uploader_for_manifest] = lambda: mock_uploader
+    app.dependency_overrides[get_gcs_uploader_for_manifest] = lambda: mock_uploader
 
     try:
         response = client_with_metrics.get("/api/v1/manifest")
@@ -99,4 +99,4 @@ def test_get_manifest_success(client_with_metrics):
         assert "Cache-Control" in response.headers
 
     finally:
-        test_app.dependency_overrides.clear()
+        app.dependency_overrides.clear()

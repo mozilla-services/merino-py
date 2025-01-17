@@ -1703,7 +1703,7 @@ async def test_get_location_no_location_returned(
     "weather_context",
     [
         WeatherContext(Location(country="US", city=None), languages=[]),
-        WeatherContext(Location(country="None", city="N/A"), languages=[]),
+        WeatherContext(Location(country=None, city="N/A"), languages=[]),
     ],
     ids=["no-city", "no-country"],
 )
