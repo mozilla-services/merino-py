@@ -12,7 +12,11 @@ from merino.providers.suggest.weather.backends.protocol import WeatherContext
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
 PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
 VALID_LANGUAGES: frozenset = frozenset(settings.accuweather.default_languages)
-DISTANCE_THRESHOLD = 50  # 50 km
+
+# Max distance threshold used for distance calculation
+DISTANCE_THRESHOLD = (
+    70  # 70 km based on logging data, either distances were ~60, or much greater than 60
+)
 
 logger = logging.getLogger(__name__)
 
@@ -224,7 +228,6 @@ def get_closest_location_by_distance(
     coordinates = weather_context.geolocation.coordinates
     closest_location = None
     min_distance = math.inf
-    temp_min_distance = math.inf
 
     if coordinates:
         lat1 = coordinates.latitude
@@ -242,17 +245,12 @@ def get_closest_location_by_distance(
                 if d < min_distance and d <= DISTANCE_THRESHOLD:
                     closest_location = location
                     min_distance = d
-                if d < temp_min_distance:
-                    temp_min_distance = d
             except KeyError:
                 continue
 
     if closest_location:
         try:
             weather_context.distance_calculation = True
-            logging.info(
-                f"Successful distance calculated for weather: {weather_context.geolocation.country}, {weather_context.geolocation.city}, dist:{min_distance} "
-            )
             return {
                 "key": closest_location["Key"],
                 "localized_name": closest_location["LocalizedName"],
@@ -261,11 +259,6 @@ def get_closest_location_by_distance(
         except KeyError:
             weather_context.distance_calculation = False
             return None
-    # temp for debugging
-    if not math.isinf(temp_min_distance):
-        logger.warning(
-            f"Unable to calculate closest city: {weather_context.geolocation.country}, {weather_context.geolocation.city}, dist: {int(temp_min_distance)}"
-        )
     return None
 
 
