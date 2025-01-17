@@ -10,7 +10,6 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsFeed,
     SectionConfiguration,
-    Section,
 )
 from scipy.stats import beta
 
@@ -184,25 +183,23 @@ def boost_followed_sections(
     # 3. Update isBlocked based on blocked_section_ids
     # For now, we will only update isBlocked value on a Section
     # The client-side will handle the actual blocking action
-    for section_id in dir(feeds):
-        section = getattr(feeds, section_id, None)
-        if isinstance(section, Section):
-            section.isBlocked = section_id in blocked_section_ids
+    for section_id in feeds.model_fields_set:
+        section = getattr(feeds, section_id)
+        section.isBlocked = section_id in blocked_section_ids
 
     # 4. Update isFollowed based on followed_section_ids
     # Extract followed sections & unfollowed sections
     if followed_section_ids:
-        for section_id in dir(feeds):
-            section = getattr(feeds, section_id, None)
-            if isinstance(section, Section):
-                section.isFollowed = section_id in followed_section_ids
-                if section_id == "top_stories_section":
-                    # top_stories_section is always on the top
-                    section.receivedFeedRank = 0
-                elif section.isFollowed:
-                    followed_sections.append(section)
-                else:
-                    unfollowed_sections.append(section)
+        for section_id in feeds.model_fields_set:
+            section = getattr(feeds, section_id)
+            section.isFollowed = section_id in followed_section_ids
+            if section_id == "top_stories_section":
+                # top_stories_section is always on the top
+                section.receivedFeedRank = 0
+            elif section.isFollowed:
+                followed_sections.append(section)
+            else:
+                unfollowed_sections.append(section)
 
         # 5. Sort followed & unfollowed sections by their rank (ascending)
         # This is to ensure relative order is kept
