@@ -3,14 +3,14 @@
 import asyncio
 import csv
 import io
-from typing import Any, Callable
+from typing import cast, Any, Callable
 
 import pytest
 
 from merino.jobs.relevancy_uploader import _upload_file_object, upload
 
 
-def _make_csv_file_object(csv_rows: list[dict[str, str]]) -> io.TextIOWrapper:
+def _make_csv_file_object(csv_rows: list[dict[str, str]]) -> io.StringIO:
     """Return a StringIO that encodes the given CSV rows."""
     f = io.StringIO()
     csv_writer = csv.DictWriter(f, fieldnames=[*csv_rows[0].keys()])
@@ -132,7 +132,9 @@ def do_csv_test(
 
     def uploader(kwargs):
         if csv_rows:
-            asyncio.run(_upload_file_object(**kwargs, file_object=file_object))
+            asyncio.run(
+                _upload_file_object(**kwargs, file_object=cast(io.TextIOWrapper, file_object))
+            )
         else:
             upload(**kwargs, csv_path=csv_path)
 
@@ -173,7 +175,7 @@ def do_error_test(
                 collection="collection",
                 keep_existing_records=True,
                 dry_run=False,
-                file_object=file_object,
+                file_object=cast(io.TextIOWrapper, file_object),
                 server="server",
                 categories_path="test/mapping.json",
                 version=1,

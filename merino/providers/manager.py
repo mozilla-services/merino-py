@@ -100,7 +100,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
         case ProviderType.AMO:
             return AmoProvider(
                 backend=(
-                    DynamicAmoBackend(api_url=settings.amo.dynamic.api_url)  # type: ignore [arg-type]
+                    DynamicAmoBackend(api_url=settings.amo.dynamic.api_url)
                     if setting.backend == "dynamic"
                     else StaticAmoBackend()
                 ),
@@ -117,7 +117,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         server=settings.remote_settings.server,
                         collection=settings.remote_settings.collection,
                         bucket=settings.remote_settings.bucket,
-                    )  # type: ignore [arg-type]
+                    )
                     if setting.backend == "remote-settings"
                     else FakeAdmBackend()
                 ),
@@ -152,7 +152,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                             api_key=setting.es_api_key,
                             url=setting.es_url,
                         )
-                    )  # type: ignore [arg-type]
+                    )
                     if setting.backend == "elasticsearch"
                     else FakeWikipediaBackend()
                 ),
