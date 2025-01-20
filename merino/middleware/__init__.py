@@ -9,5 +9,5 @@ class ScopeKey(str, Enum):
 
     GEOLOCATION = "merino_geolocation"
     USER_AGENT = "merino_user_agent"
-    FEATURE_FLAGS: str = "merino_feature_flags"
-    METRICS_CLIENT: str = "merino_metrics_client"
+    FEATURE_FLAGS = "merino_feature_flags"
+    METRICS_CLIENT = "merino_metrics_client"
