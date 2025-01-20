@@ -68,7 +68,9 @@ filterwarnings = [
   # to exempt from this transformation, which should be very rare for Merino.
   "error",
   # Ignored due to https://github.com/encode/starlette/discussions/2603
-  "ignore::pytest.PytestUnraisableExceptionWarning"
+  "ignore::pytest.PytestUnraisableExceptionWarning",
+  # Ignored as `robobro` still uses an old version of `werkzeug`
+  "ignore:'OrderedMultiDict' is deprecated",
 ]
 
 [tool.poetry]
