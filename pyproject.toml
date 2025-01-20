@@ -67,6 +67,8 @@ filterwarnings = [
   # Reference https://docs.pytest.org/en/stable/how-to/capture-warnings.html
   # to exempt from this transformation, which should be very rare for Merino.
   "error",
+  # Ignored due to https://github.com/encode/starlette/discussions/2603
+  "ignore::pytest.PytestUnraisableExceptionWarning"
 ]
 
 [tool.poetry]

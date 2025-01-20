@@ -94,7 +94,6 @@ def test_delete_and_upload(mocker):
     )
 
 
-@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 def test_upload_with_score(mocker):
     """upload(score=float) with the primary CSV test data"""
     do_csv_test(
