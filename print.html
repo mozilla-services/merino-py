@@ -443,6 +443,7 @@ saving a weather report from the backend to the cache. This metric isn't recorde
 cache store returned an error when fetching or storing a weather report. This should be 0 in
 normal operation. In case of an error, the logs will include a <code>WARNING</code> with the full error
 message.</li>
+<li><code>merino.providers.accuweather.query.weather_report</code> - A counter to measure the number of queries that are for weather</li>
 <li><code>merino.providers.accuweather.skip_cities_mapping.total.size</code> - A counter to measure the total number of occurrences cities were skipped due to no location</li>
 <li><code>merino.providers.accuweather.skip_cities_mapping.unique.size</code> - A counter to measure the number of unique cities that are skipped due to no location</li>
 </ul>
