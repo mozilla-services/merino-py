@@ -4,7 +4,8 @@ branch = true
 relative_files = true
 omit = [
   # Data file only
-  "merino/jobs/utils/domain_category_mapping.py"
+  "merino/jobs/utils/domain_category_mapping.py",
+  "merino/jobs/utils/domain_tester.py"
 ]
 
 [tool.coverage.report]
@@ -75,6 +76,7 @@ packages = [
 
 [tool.poetry.scripts]
 merino-jobs = "merino.jobs.cli:cli"
+probe-images = "merino.jobs.utils.domain_tester:main"
 
 [tool.poetry.dependencies]
 python = "^3.12"
