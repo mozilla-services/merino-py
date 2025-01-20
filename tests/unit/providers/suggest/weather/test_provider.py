@@ -108,6 +108,7 @@ def test_not_hidden_by_default(provider: Provider) -> None:
 
 @pytest.mark.asyncio
 async def test_query_weather_report_returned(
+    statsd_mock: Any,
     backend_mock: Any,
     provider: Provider,
     geolocation: Location,
@@ -141,6 +142,9 @@ async def test_query_weather_report_returned(
     )
 
     assert suggestions == expected_suggestions
+
+    assert len(statsd_mock.increment.call_args_list) == 1
+    assert statsd_mock.increment.call_args_list == [call("providers.weather.query.weather_report")]
 
 
 @pytest.mark.asyncio
