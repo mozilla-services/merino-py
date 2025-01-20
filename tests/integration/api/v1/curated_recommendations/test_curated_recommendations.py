@@ -181,6 +181,7 @@ def get_max_total_retry_duration() -> float:
     "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
     range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
 )
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 async def test_curated_recommendations(repeat):
     """Test the curated recommendations endpoint response is as expected."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
