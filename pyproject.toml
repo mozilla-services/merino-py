@@ -62,6 +62,12 @@ warn_unreachable = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v -r s --cov=merino"
+filterwarnings = [
+  # Transform warnings into errors.
+  # Reference https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+  # to exempt from this transformation, which should be very rare for Merino.
+  "error",
+]
 
 [tool.poetry]
 name = "merino-py"
