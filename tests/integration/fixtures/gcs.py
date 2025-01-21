@@ -44,9 +44,8 @@ def gcs_storage_client(gcs_storage_container) -> Client:
     """Return a test google storage client object to be used by all tests and close it
     after this test suite has finished running
     """
-    credentials = AnonymousCredentials()
     client: Client = Client(
-        credentials=credentials),  # type: ignore
+        credentials=AnonymousCredentials(),  # type: ignore
         project="test_gcp_uploader_project",
     )
 
