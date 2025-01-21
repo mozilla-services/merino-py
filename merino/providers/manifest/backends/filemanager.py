@@ -5,7 +5,6 @@ import logging
 
 from json import JSONDecodeError
 
-from google.auth.credentials import AnonymousCredentials
 from google.cloud.storage import Bucket, Client
 from pydantic import ValidationError
 
@@ -36,7 +35,7 @@ class ManifestRemoteFilemanager:
         self.gcs_project_path = gcs_project_path
         self.gcs_bucket_path = gcs_bucket_path
         self.blob_name = blob_name
-        self.client = Client(self.gcs_project_path, credentials=AnonymousCredentials())
+        self.client = Client(self.gcs_project_path)
 
         # Track the last blob generation we downloaded.
         # If unchanged, we return SKIP to indicate no new data.
