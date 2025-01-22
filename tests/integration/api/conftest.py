@@ -5,12 +5,14 @@
 """Module for test configurations for the integration test directory."""
 
 from logging import LogRecord
-from typing import Iterator
+from typing import Iterator, Generator
 
 import pytest
 import orjson
 from starlette.testclient import TestClient
-
+from aiodogstatsd import Client as AioDogstatsdClient
+from merino.utils.gcs.gcp_uploader import GcsUploader
+from contextlib import nullcontext
 from merino.curated_recommendations.fakespot_backend.protocol import (
     FakespotFeed,
     FakespotProduct,
@@ -23,7 +25,34 @@ from merino.curated_recommendations.fakespot_backend.protocol import (
 )
 from merino.main import app
 from merino.utils.log_data_creators import RequestSummaryLogDataModel
+from merino.middleware import ScopeKey
 from tests.integration.api.types import RequestSummaryLogDataFixture
+
+
+class NoOpMetricsClient(AioDogstatsdClient):
+    """No-op metrics client for test usage that inherits from aiodogstatsd.Client."""
+
+    def increment(self, *args, **kwargs):
+        """Do nothing instead of sending a metric increment."""
+        pass
+
+    def gauge(self, *args, **kwargs):
+        """Do nothing instead of sending a metric gauge."""
+        pass
+
+    def timeit(self, *args, **kwargs):
+        """Return a no-op context manager instead of timing."""
+        return nullcontext()
+
+
+@pytest.fixture(scope="function")
+def gcp_uploader(gcs_storage_client, gcs_storage_bucket) -> GcsUploader:
+    """Return a custom test gcs uploader"""
+    return GcsUploader(
+        destination_gcp_project=gcs_storage_client.project,
+        destination_bucket_name=gcs_storage_bucket.name,
+        destination_cdn_hostname="",
+    )
 
 
 @pytest.fixture(name="client")
@@ -34,6 +63,18 @@ def fixture_test_client() -> TestClient:
     the app, see: https://fastapi.tiangolo.com/advanced/testing-events/
     """
     return TestClient(app)
+
+
+@pytest.fixture(name="client_with_metrics")
+def fixture_client_with_metrics() -> Generator[TestClient, None, None]:
+    """Create test client with NoOpMetricsClient in request scope."""
+
+    async def asgi_wrapper(scope, receive, send):
+        scope[ScopeKey.METRICS_CLIENT] = NoOpMetricsClient()
+        await app(scope, receive, send)
+
+    with TestClient(asgi_wrapper) as client:
+        yield client
 
 
 @pytest.fixture(name="client_with_events")
