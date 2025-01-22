@@ -38,5 +38,6 @@ class AsyncGcsClient:
         logger.info("Succussfully downloaded manifest blob via async client")
         return manifest
 
-    async def close_client(self):
+    async def close_client(self) -> None:
+        """Close the async client"""
         await self.storage.close()
