@@ -1867,6 +1867,29 @@ There may be instances you need to manually re-run the job from the Airflow dash
 <p>See Airflow's <a href="https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html#re-run-dag">documentation on re-running DAGs</a> for more information and implementation details.</p>
 <p>To see the code for the <code>merino_jobs</code> DAG, visit the <a href="https://github.com/mozilla/telemetry-airflow/blob/main/dags/merino_jobs.py">telemetry-airflow repo</a>. The source for the job is also in the <a href="https://workflow.telemetry.mozilla.org/dags/merino_jobs/code?root=">'code' tab</a> in the airflow console.</p>
 <p>To see the navigational suggestions code that is run when the job is invoked, visit <a href="https://github.com/mozilla-services/merino-py/tree/main/merino/jobs/navigational_suggestions">Merino <code>jobs/navigational_suggestions</code></a>.</p>
+<h2 id="running-the-favicon-extractor-locally"><a class="header" href="#running-the-favicon-extractor-locally">Running the favicon extractor locally</a></h2>
+<pre><code class="language-bash">$ poetry run probe-images mozilla.org wikipedia.org
+</code></pre>
+<p>There is a Python script (<code>domain_tester.py</code>) which imports the <code>DomainMetadataExtractor</code>,  <code>Scraper</code> and <code>FaviconDownloader</code> and runs them locally, without saving the results to the cloud.</p>
+<p>This is meant to troubleshoot domains locally and iterate over the functionality in a contained environment.</p>
+<p>Example output:</p>
+<pre><code class="language-bash">$ poetry run probe-images mozilla.org
+
+Testing domain: mozilla.org
+✅ Success!
+ Title           Mozilla - Internet for people, not profit (UK)
+ Best Icon       https://www.mozilla.org/media/img/favicons/mozilla/m24/favicon-196x196.e143075360ea.png
+ Total Favicons  3
+
+All favicons found:
+- https://www.mozilla.org/media/img/favicons/mozilla/m24/apple-touch-icon.05aa000f6748.png (rel=apple-touch-icon
+size=180x180 type=image/png)
+- https://www.mozilla.org/media/img/favicons/mozilla/m24/favicon-196x196.e143075360ea.png (rel=icon size=196x196
+type=image/png)
+- https://www.mozilla.org/media/img/favicons/mozilla/m24/favicon.d0be64e474b1.ico (rel=shortcut,icon)
+
+Summary: 1/1 domains processed successfully
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="merino-jobs-operations-1"><a class="header" href="#merino-jobs-operations-1">Merino Jobs Operations</a></h1>
 <h2 id="dynamic-wikipedia-indexer-job"><a class="header" href="#dynamic-wikipedia-indexer-job">Dynamic Wikipedia Indexer Job</a></h2>
 <p>Merino currently builds the Elasticsearch indexing job that runs in Airflow.
