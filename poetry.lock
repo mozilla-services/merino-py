@@ -16,6 +16,17 @@ aiohttp = ["aiohttp (>=3.0)"]
 starlette = ["starlette (>=0.13)"]
 
 [[package]]
+name = "aiofiles"
+version = "23.2.1"
+description = "File support for asyncio."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "aiofiles-23.2.1-py3-none-any.whl", hash = "sha256:19297512c647d4b27a2cf7c34caa7e405c0d60b5560618a29a9fe027b18b0107"},
+    {file = "aiofiles-23.2.1.tar.gz", hash = "sha256:84ec2218d8419404abcb9f0c02df3f34c6e0a68ed41072acfb1cef5cbc29051a"},
+]
+
+[[package]]
 name = "aiohappyeyeballs"
 version = "2.4.4"
 description = "Happy Eyeballs for asyncio"
@@ -475,6 +486,17 @@ python-versions = ">=3.8"
 files = [
     {file = "cfgv-3.4.0-py2.py3-none-any.whl", hash = "sha256:b7265b1f29fd3316bfcd2b330d63d024f2bfd8bcb8b0272f8e19a504856c48f9"},
     {file = "cfgv-3.4.0.tar.gz", hash = "sha256:e52591d4c5f5dead8e0f673fb16db7949d2cfb3f7da4582893288f0ded8fe560"},
+]
+
+[[package]]
+name = "chardet"
+version = "5.2.0"
+description = "Universal encoding detector for Python 3"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "chardet-5.2.0-py3-none-any.whl", hash = "sha256:e1cf59446890a00105fe7b7912492ea04b6e6f06d4b742b2c788469e34c82970"},
+    {file = "chardet-5.2.0.tar.gz", hash = "sha256:1b3b6ff479a8c414bc3fa2c0852995695c4a026dcd6d0633b2dd092ca39c1cf7"},
 ]
 
 [[package]]
@@ -1093,6 +1115,41 @@ files = [
     {file = "frozenlist-1.5.0-py3-none-any.whl", hash = "sha256:d994863bba198a4a518b467bb971c56e1db3f180a25c6cf7bb1949c267f748c3"},
     {file = "frozenlist-1.5.0.tar.gz", hash = "sha256:81d5af29e61b9c8348e876d442253723928dce6433e0e76cd925cd83f1b4b817"},
 ]
+
+[[package]]
+name = "gcloud-aio-auth"
+version = "5.3.2"
+description = "Python Client for Google Cloud Auth"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "gcloud_aio_auth-5.3.2-py3-none-any.whl", hash = "sha256:78b318ca90228df5f0883d36215e8f102daeb7c08aa09ba6e857a5e6ca3cf321"},
+    {file = "gcloud_aio_auth-5.3.2.tar.gz", hash = "sha256:860a79de6f1a692b5fadcf27e4243d4128fa81823f177aeff926eba00b5c2255"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.9.0,<4.0.0"
+backoff = ">=1.0.0,<3.0.0"
+chardet = ">=2.0,<6.0"
+cryptography = ">=2.0.0,<45.0.0"
+pyjwt = ">=1.5.3,<3.0.0"
+
+[[package]]
+name = "gcloud-aio-storage"
+version = "9.3.0"
+description = "Python Client for Google Cloud Storage"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "gcloud_aio_storage-9.3.0-py3-none-any.whl", hash = "sha256:2ef9bd22eb3545a912a495b551aa58c1c2a177e72e4ed03a64665fceb02cf650"},
+    {file = "gcloud_aio_storage-9.3.0.tar.gz", hash = "sha256:23664a36b2c3ff9135035b3e9bcf512e0a0c17b874e305985098f000de4de399"},
+]
+
+[package.dependencies]
+aiofiles = ">=0.6.0,<24.0.0"
+gcloud-aio-auth = ">=5.3.0,<6.0.0"
+pyasn1-modules = ">=0.2.1,<0.4.1"
+rsa = ">=3.1.4,<5.0.0"
 
 [[package]]
 name = "geoip2"
@@ -2929,6 +2986,23 @@ files = [
 windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
+name = "pyjwt"
+version = "2.10.1"
+description = "JSON Web Token implementation in Python"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "PyJWT-2.10.1-py3-none-any.whl", hash = "sha256:dcdd193e30abefd5debf142f9adfcdd2b58004e644f25406ffaebd50bd98dacb"},
+    {file = "pyjwt-2.10.1.tar.gz", hash = "sha256:3cc5772eb20009233caf06e9d8a0577824723b44e6648ee0a2aedb6cf9381953"},
+]
+
+[package.extras]
+crypto = ["cryptography (>=3.4.0)"]
+dev = ["coverage[toml] (==5.0.4)", "cryptography (>=3.4.0)", "pre-commit", "pytest (>=6.0.0,<7.0.0)", "sphinx", "sphinx-rtd-theme", "zope.interface"]
+docs = ["sphinx", "sphinx-rtd-theme", "zope.interface"]
+tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
+
+[[package]]
 name = "pytest"
 version = "7.4.4"
 description = "pytest: simple powerful testing with Python"
@@ -4458,4 +4532,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "f2c1b934c19dc93b60327f5be32db8e158d71d3c26e1f6029be5cfe3be4bbeae"
+content-hash = "f69e6d4a7dc0635cb1913f20393a0d1bdc5a4fda679832db4d6964159c584db9"

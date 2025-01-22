@@ -37,6 +37,7 @@ from merino.utils.api.query_params import (
     validate_suggest_custom_location_params,
 )
 from merino.utils.gcs.gcp_uploader import GcsUploader, get_gcs_uploader_for_manifest
+from merino.utils.gcs.async_gcs_client import AsyncGcsClient
 from merino.web.models_v1 import ProviderResponse, SuggestResponse, Manifest
 
 logger = logging.getLogger(__name__)
@@ -358,8 +359,16 @@ async def get_manifest(
 
             metrics_client.increment("manifest.request.success")
 
+            # create an async gcs client and download the same manifest blob
+            # this is temporary redundant logic just to test out the async client downloads from gcs
+            # to mainly test if auth is working properly with this client
+            async_gcs_client = AsyncGcsClient()
+            manifest_via_async = await async_gcs_client.get_manifest_from_blob(
+                bucket_name=gcs_uploader.bucket_name, blob_name=manifest_blob.name
+            )
+
             return ORJSONResponse(
-                content=jsonable_encoder(manifest_obj),
+                content=jsonable_encoder(manifest_via_async if not None else manifest_obj),
                 headers={
                     "Cache-Control": (
                         f"private, max-age={settings.runtime.default_suggestions_response_ttl_sec}"
