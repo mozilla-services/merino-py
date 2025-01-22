@@ -48,3 +48,33 @@ To see the navigational suggestions code that is run when the job is invoked, vi
 [merino_jobs_code]: https://workflow.telemetry.mozilla.org/dags/merino_jobs/code?root=
 [merino_jobs-grid]: https://workflow.telemetry.mozilla.org/dags/merino_jobs/grid
 [merino_jobs-graph]: https://workflow.telemetry.mozilla.org/dags/merino_jobs/graph?root=
+
+## Running the favicon extractor locally
+
+```bash
+$ poetry run probe-images mozilla.org wikipedia.org
+```
+
+There is a Python script (`domain_tester.py`) which imports the `DomainMetadataExtractor`,  `Scraper` and `FaviconDownloader` and runs them locally, without saving the results to the cloud.
+
+This is meant to troubleshoot domains locally and iterate over the functionality in a contained environment.
+
+Example output:
+```bash
+$ poetry run probe-images mozilla.org
+
+Testing domain: mozilla.org
+✅ Success!
+ Title           Mozilla - Internet for people, not profit (UK)
+ Best Icon       https://www.mozilla.org/media/img/favicons/mozilla/m24/favicon-196x196.e143075360ea.png
+ Total Favicons  3
+
+All favicons found:
+- https://www.mozilla.org/media/img/favicons/mozilla/m24/apple-touch-icon.05aa000f6748.png (rel=apple-touch-icon
+size=180x180 type=image/png)
+- https://www.mozilla.org/media/img/favicons/mozilla/m24/favicon-196x196.e143075360ea.png (rel=icon size=196x196
+type=image/png)
+- https://www.mozilla.org/media/img/favicons/mozilla/m24/favicon.d0be64e474b1.ico (rel=shortcut,icon)
+
+Summary: 1/1 domains processed successfully
+```
