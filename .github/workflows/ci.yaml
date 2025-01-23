@@ -1,0 +1,38 @@
+name: CI Workflow
+
+on: pull_request
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "poetry"
+      - name: Run code linting
+        run: make -k lint
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "poetry"
+      - name: Create workspace
+        run: mkdir -p workspace
+      - name: Run code linting
+        run: make unit-tests
+        env:
+          TEST_RESULTS_DIR: workspace/test-results
+      - name: Generate test coverage
+        run: make coverage-unit
+      - uses: actions/upload-artifact@v2
+        with: 
+          path: workspace/test-results/
