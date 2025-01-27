@@ -1,0 +1,19 @@
+name: Set Up to Run Merino
+inputs:
+  workspace-path:
+    description: "The directory path to store test results"
+    required: true
+    default: "workspace"
+runs:
+  using: "composite"
+  steps:
+    - name: Install poetry
+      run: pipx install poetry
+      shell: bash
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        cache: "poetry"
+    - name: Create Workspace
+      run: mkdir -p ${{ inputs.workspace-path }}
+      shell: bash
