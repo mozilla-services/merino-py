@@ -5,6 +5,7 @@
 # General Documentation
 
 - [Using the HTTP API](./api.md)
+- [Working with the Manifest file](./manifest.md)
 - [Configuring Firefox and Merino Environments](./firefox.md)
 - [Data collection](./data.md)
 - [Social contract](./social-contract.md)
