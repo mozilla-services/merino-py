@@ -1,8 +1,8 @@
 """A utility module for merino API cache control."""
 
-from merino.providers.base import BaseProvider, BaseSuggestion
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion
 
-from merino.providers.custom_details import CustomDetails, WeatherDetails
+from merino.providers.suggest.custom_details import CustomDetails, WeatherDetails
 from merino.providers.suggest.weather.provider import Provider as WeatherProvider
 from merino.providers.suggest.weather.provider import Suggestion as WeatherSuggestion
 

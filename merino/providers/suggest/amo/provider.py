@@ -11,8 +11,8 @@ from merino.utils import cron
 from merino.configs import settings
 from merino.providers.suggest.amo.addons_data import SupportedAddon
 from merino.providers.suggest.amo.backends.protocol import Addon, AmoBackend, AmoBackendError
-from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.custom_details import AmoDetails, CustomDetails
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.custom_details import AmoDetails, CustomDetails
 
 logger = logging.getLogger(__name__)
 

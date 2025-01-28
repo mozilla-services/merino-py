@@ -4,7 +4,6 @@
 
 """Unit tests for the Top Picks backend module."""
 
-import json
 import logging
 import os
 from json import JSONDecodeError
@@ -12,9 +11,8 @@ from logging import LogRecord
 from typing import Any
 
 import pytest
-from google.cloud.storage import Blob, Bucket, Client
+from google.cloud.storage import Client
 from pytest import LogCaptureFixture
-from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.providers.suggest.top_picks.backends.filemanager import (
@@ -24,100 +22,6 @@ from merino.providers.suggest.top_picks.backends.filemanager import (
     TopPicksRemoteFilemanager,
 )
 from tests.types import FilterCaplogFixture
-
-
-@pytest.fixture(name="expected_timestamp")
-def fixture_expected_timestamp() -> int:
-    """Return a unix timestamp for metadata mocking."""
-    return 16818664520924621
-
-
-@pytest.fixture(name="blob_json")
-def fixture_blob_json() -> str:
-    """Return a JSON string for mocking."""
-    return json.dumps(
-        {
-            "domains": [
-                {
-                    "rank": 1,
-                    "title": "Example",
-                    "domain": "example",
-                    "url": "https://example.com",
-                    "icon": "",
-                    "categories": ["web-browser"],
-                    "similars": ["exxample", "exampple", "eexample"],
-                },
-                {
-                    "rank": 2,
-                    "title": "Firefox",
-                    "domain": "firefox",
-                    "url": "https://firefox.com",
-                    "icon": "",
-                    "categories": ["web-browser"],
-                    "similars": [
-                        "firefoxx",
-                        "foyerfox",
-                        "fiirefox",
-                        "firesfox",
-                        "firefoxes",
-                    ],
-                },
-                {
-                    "rank": 3,
-                    "title": "Mozilla",
-                    "domain": "mozilla",
-                    "url": "https://mozilla.org/en-US/",
-                    "icon": "",
-                    "categories": ["web-browser"],
-                    "similars": ["mozzilla", "mozila"],
-                },
-                {
-                    "rank": 4,
-                    "title": "Abc",
-                    "domain": "abc",
-                    "url": "https://abc.test",
-                    "icon": "",
-                    "categories": ["web-browser"],
-                    "similars": ["aa", "ab", "acb", "acbc", "aecbc"],
-                },
-                {
-                    "rank": 5,
-                    "title": "BadDomain",
-                    "domain": "baddomain",
-                    "url": "https://baddomain.test",
-                    "icon": "",
-                    "categories": ["web-browser"],
-                    "similars": ["bad", "badd"],
-                },
-            ]
-        }
-    )
-
-
-@pytest.fixture(name="gcs_blob_mock", autouse=True)
-def fixture_gcs_blob_mock(mocker: MockerFixture, expected_timestamp: int, blob_json: str) -> Any:
-    """Create a GCS Blob mock object for testing."""
-    mock_blob = mocker.MagicMock(spec=Blob)
-    mock_blob.name = "20220101120555_top_picks.json"
-    mock_blob.generation = expected_timestamp
-    mock_blob.download_as_text.return_value = blob_json
-    return mock_blob
-
-
-@pytest.fixture(name="gcs_bucket_mock", autouse=True)
-def fixture_gcs_bucket_mock(mocker: MockerFixture, gcs_blob_mock) -> Any:
-    """Create a GCS Bucket mock object for testing."""
-    mock_bucket = mocker.MagicMock(spec=Bucket)
-    mock_bucket.get_blob.return_value = gcs_blob_mock
-    return mock_bucket
-
-
-@pytest.fixture(name="gcs_client_mock", autouse=True)
-def mock_gcs_client(mocker: MockerFixture, gcs_bucket_mock):
-    """Return a mock GCS Client instance"""
-    mock_client = mocker.MagicMock(spec=Client)
-    mock_client.get_bucket.return_value = gcs_bucket_mock
-    return mock_client
 
 
 @pytest.fixture(name="top_picks_local_filemanager_parameters")
@@ -156,12 +60,22 @@ def fixture_top_picks_remote_filemanager(
 
 
 def test_create_gcs_client(
-    top_picks_remote_filemanager: TopPicksRemoteFilemanager, mocker, gcs_client_mock
+    top_picks_remote_filemanager: TopPicksRemoteFilemanager,
+    mocker,
+    gcs_client_mock,
+    gcs_bucket_mock,
+    gcs_blob_mock,
+    blob_json,
 ) -> None:
     """Test that create_gcs_client returns the GCS client."""
     mocker.patch(
         "merino.configs.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
+
+    gcs_bucket_mock.get_blob.return_value = gcs_blob_mock(
+        blob_json, "20220101120555_top_picks.json"
+    )
+    gcs_client_mock.get_bucket.return_value = gcs_bucket_mock
 
     mocker.patch.object(
         top_picks_remote_filemanager, "create_gcs_client"
@@ -225,8 +139,16 @@ def test_get_file(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     gcs_client_mock,
+    gcs_bucket_mock,
+    gcs_blob_mock,
+    blob_json,
 ) -> None:
     """Test that the Remote Filemanger get_file method returns domain data."""
+    gcs_blob_mock.download_as_text.return_value = blob_json
+
+    gcs_bucket_mock.get_blob.return_value = gcs_blob_mock
+    gcs_client_mock.get_bucket.return_value = gcs_bucket_mock
+
     caplog.set_level(logging.INFO)
     mocker.patch(
         "merino.providers.suggest.top_picks.backends.filemanager.Client"
@@ -255,6 +177,8 @@ def test_get_file_skip(
     gcs_bucket_mock,
 ) -> None:
     """Test that the Remote Filemanger get_file method returns None and proper skip code."""
+    gcs_client_mock.get_bucket.return_value = gcs_bucket_mock
+
     mocker.patch(
         "merino.providers.suggest.top_picks.backends.filemanager.Client"
     ).return_value = gcs_client_mock

@@ -141,6 +141,10 @@ _validators = [
     Validator("sentry.env", is_in=["prod", "stage", "dev"]),
     Validator("sentry.mode", is_in=["disabled", "release", "debug"]),
     Validator("sentry.traces_sample_rate", gte=0, lte=1),
+    Validator("manifest.resync_interval_sec", gt=0),
+    Validator("manifest.cron_interval_sec", gt=0),
+    Validator("manifest.gcs_project", is_type_of=str),
+    Validator("manifest.gcs_bucket", is_type_of=str),
 ]
 
 # `root_path` = The root path for Dynaconf, DO NOT CHANGE.

@@ -6,7 +6,7 @@
 
 from typing import Awaitable, Callable
 
-from merino.providers import BaseProvider
+from merino.providers.suggest import BaseProvider
 
 Providers = dict[str, BaseProvider]
 SetupProvidersFixture = Callable[[Providers], None]

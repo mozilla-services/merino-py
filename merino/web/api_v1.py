@@ -1,7 +1,6 @@
 """Merino V1 API"""
 
 import logging
-import json
 from asyncio import Task
 from functools import partial
 from itertools import chain
@@ -24,9 +23,11 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsResponse,
 )
 from merino.middleware import ScopeKey
-from merino.providers import get_providers
-from merino.providers.base import BaseProvider, SuggestionRequest
+from merino.providers.suggest import get_providers as get_suggest_providers
+from merino.providers.manifest import get_provider as get_manifest_provider
+from merino.providers.suggest.base import BaseProvider, SuggestionRequest
 
+from merino.providers.manifest.backends.protocol import ManifestData
 from merino.utils import task_runner
 
 from merino.utils.api.cache_control import get_ttl_for_cache_control_header_for_suggestions
@@ -36,8 +37,9 @@ from merino.utils.api.query_params import (
     refine_geolocation_for_suggestion,
     validate_suggest_custom_location_params,
 )
-from merino.utils.gcs.gcp_uploader import GcsUploader, get_gcs_uploader_for_manifest
-from merino.web.models_v1 import ProviderResponse, SuggestResponse, Manifest
+
+from merino.web.models_v1 import ProviderResponse, SuggestResponse
+from merino.providers.manifest.provider import Provider as ManifestProvider
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -72,7 +74,7 @@ async def suggest(
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
-    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
     request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
 ) -> ORJSONResponse:
     """Query Merino for suggestions.
@@ -253,7 +255,7 @@ async def suggest(
     response_model=list[ProviderResponse],
 )
 async def providers(
-    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_providers),
+    sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
 ) -> ORJSONResponse:
     """Query Merino for suggestion providers.
 
@@ -325,41 +327,26 @@ async def curated_content(
     "/manifest",
     tags=["manifest"],
     summary="Get latest website favicons manifest",
-    response_model=Manifest,
+    response_model=ManifestData,
 )
 async def get_manifest(
-    request: Request,
-    gcs_uploader: GcsUploader = Depends(get_gcs_uploader_for_manifest),
+    request: Request, provider: ManifestProvider = Depends(get_manifest_provider)
 ) -> ORJSONResponse:
-    """Get latest website favicons manifest."""
+    """Query merino for manifest data."""
     logger.info("Attempting to get manifest")
 
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
 
-    try:
-        metrics_client.increment("manifest.request.get")
+    metrics_client.increment("manifest.request.get")
 
-        with metrics_client.timeit("manifest.request.timing"):
-            with metrics_client.timeit("manifest.gcs.fetch_time"):
-                manifest_blob = gcs_uploader.get_most_recent_file(
-                    exclusion="",
-                    sort_key=lambda blob: blob.name,
-                )
+    with metrics_client.timeit("manifest.request.timing"):
+        manifest_data = provider.get_manifest_data()
 
-            if not manifest_blob:
-                metrics_client.increment("manifest.request.no_manifest")
-                logger.error("No manifest blob found")
-                return ORJSONResponse(content={"error": "Manifest not found"}, status_code=404)
-
-            metrics_client.gauge("manifest.size", value=manifest_blob.size)
-
-            manifest_data_raw = json.loads(manifest_blob.download_as_text())
-            manifest_obj = Manifest(**manifest_data_raw)
-
+        if manifest_data and manifest_data.domains:
             metrics_client.increment("manifest.request.success")
 
             return ORJSONResponse(
-                content=jsonable_encoder(manifest_obj),
+                content=jsonable_encoder(manifest_data),
                 headers={
                     "Cache-Control": (
                         f"private, max-age={settings.runtime.default_suggestions_response_ttl_sec}"
@@ -367,10 +354,9 @@ async def get_manifest(
                 },
             )
 
-    except Exception as e:
         metrics_client.increment("manifest.request.error")
-        logger.exception("Failed to get manifest")
+        logger.error("Manifest file not found")
         return ORJSONResponse(
-            content={"error": "Failed to get manifest", "details": str(e)},
-            status_code=500,
+            content=jsonable_encoder(manifest_data),
+            status_code=404,
         )

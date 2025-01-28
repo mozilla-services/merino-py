@@ -27,6 +27,15 @@ gcs_bucket = "merino-images-prodpy"
 # is remotely or locally acquired.
 domain_data_source = "remote"
 
+[production.manifest]
+# MERINO_PROVIDERS__MANIFEST__GCS_PROJECT
+# GCS project name that contains domain data
+gcs_project = "moz-fx-merino-prod-1c2f"
+
+# MERINO_PROVIDERS__MANIFEST__GCS_BUCKET
+# GCS bucket that contains domain data files
+gcs_bucket = "merino-images-prodpy"
+
 [production.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
 # GCS bucket that contains aggregate engagement and prior data

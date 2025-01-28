@@ -11,8 +11,8 @@ from pydantic import HttpUrl
 from merino.utils import cron
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
-from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.custom_details import CustomDetails, WeatherDetails
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.custom_details import CustomDetails, WeatherDetails
 from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     get_region_mapping_size,
     get_region_mapping,

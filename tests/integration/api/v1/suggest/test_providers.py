@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from freezegun import freeze_time
 from pytest import LogCaptureFixture
 
-from merino.providers import BaseProvider
+from merino.providers.suggest import BaseProvider
 from merino.utils.log_data_creators import RequestSummaryLogDataModel
 from tests.integration.api.types import RequestSummaryLogDataFixture
 from tests.integration.api.v1.fake_providers import FakeProviderFactory

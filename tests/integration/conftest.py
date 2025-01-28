@@ -4,6 +4,5 @@
 pytest_plugins = [
     "tests.integration.fixtures.gcs",
     "tests.integration.fixtures.metrics",
-    "tests.integration.fixtures.image_manifest",
     "tests.integration.api.v1.curated_recommendations.corpus_backends.fixtures",
 ]

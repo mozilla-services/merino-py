@@ -8,8 +8,8 @@ from typing import Any
 
 from pydantic import HttpUrl
 
-from merino.providers.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.custom_details import CustomDetails, GeolocationDetails
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.custom_details import CustomDetails, GeolocationDetails
 
 logger = logging.getLogger(__name__)
 
