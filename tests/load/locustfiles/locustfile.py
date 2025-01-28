@@ -23,6 +23,7 @@ from locust.runners import MasterRunner
 from pydantic import BaseModel
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.suggest.adm.backends.protocol import SuggestionContent
 from merino.providers.suggest.adm.backends.remotesettings import (
     RemoteSettingsBackend,
@@ -53,6 +54,7 @@ logger.setLevel(int(LOGGING_LEVEL))
 
 # See https://mozilla-services.github.io/merino/api.html#suggest
 SUGGEST_API: str = "/api/v1/suggest"
+MANIFEST_API: str = "/api/v1/manifest"
 VERSION_API: str = "/__version__"
 CURATED_RECOMMENDATIONS_API = "/api/v1/curated-recommendations"
 
@@ -302,7 +304,9 @@ def store_suggestions(environment, msg, **kwargs) -> None:
 def on_locust_init(environment, **kwargs):
     """Register a message on worker nodes."""
     if not isinstance(environment.runner, MasterRunner):
-        environment.runner.register_message("store_suggestions", store_suggestions)
+        if not hasattr(environment.runner, "_store_suggestions_registered"):
+            environment.runner.register_message("store_suggestions", store_suggestions)
+            environment.runner._store_suggestions_registered = True
 
 
 class QueryData(BaseModel):
@@ -399,7 +403,41 @@ class MerinoUser(HttpUser):
         for query in queries:
             self._request_suggestions(query, providers)
 
-    @task(weight=642)
+    @task(weight=2)
+    def manifest(self) -> None:
+        """Send a request to get the latest website favicons manifest."""
+        default_headers: dict[str, str] = {
+            "Accept-Language": choice(LOCALES),  # nosec
+            "User-Agent": choice(DESKTOP_FIREFOX),  # nosec
+        }
+
+        with self.client.get(
+            url=MANIFEST_API,
+            headers=default_headers,
+            catch_response=True,
+            name=MANIFEST_API,
+        ) as response:
+            if response.status_code == 0:
+                # Do not classify as failure
+                #
+                # 0: The HttpSession catches any requests.RequestException thrown by
+                #    Session (caused by connection errors, timeouts or similar), instead
+                #    returning a dummy Response object with status_code set to 0 and
+                #    content set to None.
+                logger.warning("Received a response with a status code of 0.")
+                response.success()
+                return
+
+            if response.status_code != 200:
+                response.failure(f"{response.status_code=}, expected 200, {response.text=}")
+                return
+
+            # Create a pydantic model instance for validating the response content
+            # from Merino. This will raise a ValidationError if the response is missing
+            # fields which will be reported as a failure in Locust's statistics.
+            ManifestData(**response.json())
+
+    @task(weight=640)
     def weather_suggestions(self) -> None:
         """Send multiple requests for Weather queries."""
         # Firefox will do local keyword matching to trigger weather suggestions
