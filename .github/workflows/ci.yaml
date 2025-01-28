@@ -63,11 +63,3 @@ jobs:
         run: make test-coverage-check
         env:
           TEST_RESULTS_DIR: workspace/test-results
-      - name: Generate Coverage
-        run: make coverage-combined
-      - uses: actions/upload-artifact@v4
-        with:
-          name: overall-test-coverage
-          include-hidden-files: true
-          path: |
-            workspace/test-results/coverage.json
