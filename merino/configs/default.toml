@@ -249,6 +249,14 @@ cron_interval_sec = 60
 # Time between re-syncs of the manifest file, in seconds. Defaults to 24 hours.
 resync_interval_sec = 86400
 
+# MERINO_PROVIDERS__MANIFEST__GCS_PROJECT
+# GCS project name that contains domain data
+gcs_project = ""
+
+# MERINO_PROVIDERS__MANIFEST__GCS_BUCKET
+# GCS bucket that contains domain data files
+gcs_bucket = ""
+
 [default.accuweather]
 # MERINO_ACCUWEATHER__API_KEY
 # The API key to AccuWeather's API endpoint.
