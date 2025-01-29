@@ -349,7 +349,7 @@ async def get_manifest(
                 content=jsonable_encoder(manifest_data),
                 headers={
                     "Cache-Control": (
-                        f"private, max-age={settings.runtime.default_suggestions_response_ttl_sec}"
+                        f"private, max-age={settings.runtime.default_manifest_response_ttl_sec}"
                     )
                 },
             )

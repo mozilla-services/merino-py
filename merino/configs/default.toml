@@ -42,6 +42,15 @@ disabled_providers = ["amo"]
 # MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
 default_suggestions_response_ttl_sec = 300 # 5 mins
 
+
+# MERINO_RUNTIME__DEFAULT_MANIFEST_RESPONSE_TTL_SEC
+# 8 hours ensures that clients reuse cached data
+# for up to 8 hours before making a new request.
+# Since the manifest file updates once per day via a cron job, this
+# provides a balance between reducing unnecessary API requests and
+# ensuring reasonably fresh data.
+default_manifest_response_ttl_sec = 28800 # 8 hours
+
 [default.logging]
 # MERINO_LOGGING__LEVEL
 # Minimum level of logs that should be reported.
