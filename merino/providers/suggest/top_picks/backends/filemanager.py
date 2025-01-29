@@ -7,7 +7,7 @@ from json import JSONDecodeError
 from typing import Any
 
 from merino.exceptions import FilemanagerError
-from merino.utils.gcs.gcp_uploader import GcsUploader
+from merino.utils.gcs.gcs_uploader import GcsUploader
 
 logger = logging.getLogger(__name__)
 

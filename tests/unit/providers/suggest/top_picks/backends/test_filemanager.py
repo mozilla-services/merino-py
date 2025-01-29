@@ -56,7 +56,7 @@ def fixture_top_picks_remote_filemanager(
     top_picks_remote_filemanager_parameters: dict[str, Any], gcs_client_mock
 ) -> TopPicksRemoteFilemanager:
     """Create a TopPicksRemoteFilemanager object for test."""
-    with patch("merino.utils.gcs.gcp_uploader.Client") as mock_client, patch(
+    with patch("merino.utils.gcs.gcs_uploader.Client") as mock_client, patch(
         "google.auth.default"
     ) as mock_auth_default:
         creds = AnonymousCredentials()  # type: ignore
@@ -116,15 +116,11 @@ def test_get_file(
     top_picks_remote_filemanager: TopPicksRemoteFilemanager,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
-    gcs_client_mock,
-    gcs_bucket_mock,
     gcs_blob_mock,
-    blob_json,
 ) -> None:
     """Test that the Remote Filemanager get_file method returns domain data."""
     top_picks_remote_filemanager.gcs_client = MagicMock()
     top_picks_remote_filemanager.gcs_client.get_file_by_name.return_value = gcs_blob_mock
-    gcs_blob_mock.download_as_text.return_value = blob_json
 
     caplog.set_level(logging.INFO)
     get_file_result_code, result = top_picks_remote_filemanager.get_file()

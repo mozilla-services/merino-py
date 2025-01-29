@@ -14,10 +14,7 @@ from merino.providers.manifest.backends.manifest import ManifestBackend
 def test_fetch_manifest_data(
     manifest_remote_filemanager: ManifestRemoteFilemanager,
     backend: ManifestBackend,
-    gcs_client_mock,
-    gcs_bucket_mock,
     gcs_blob_mock,
-    blob_json,
 ) -> None:
     """Verify that the fetch_manifest_data method returns manifest data on success"""
     manifest_remote_filemanager.gcs_client = MagicMock()
@@ -38,9 +35,6 @@ def test_fetch_manifest_data(
 
 def test_fetch_manifest_data_skip(
     manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_client_mock,
-    gcs_bucket_mock,
-    gcs_blob_mock,
     backend: ManifestBackend,
 ) -> None:
     """Verify that the fetch_manifest_data method returns SKIP code for no new blob generation"""
@@ -59,8 +53,6 @@ def test_fetch_manifest_data_skip(
 
 def test_fetch_manifest_data_fail(
     manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_client_mock,
-    gcs_bucket_mock,
     backend: ManifestBackend,
 ) -> None:
     """Verify that the fetch_manifest_data method returns FAIL code when an error occurs"""
@@ -88,10 +80,7 @@ def test_fetch_manifest_data_fail(
 async def test_fetch(
     manifest_remote_filemanager: ManifestRemoteFilemanager,
     backend: ManifestBackend,
-    gcs_client_mock,
-    gcs_bucket_mock,
     gcs_blob_mock,
-    blob_json,
 ) -> None:
     """Verify that the fetch method returns manifest data"""
     manifest_remote_filemanager.gcs_client = MagicMock()
