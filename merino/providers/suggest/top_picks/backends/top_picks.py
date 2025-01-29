@@ -164,8 +164,8 @@ class TopPicksBackend:
         match DomainDataSource(domain_data_source):
             case DomainDataSource.REMOTE:
                 remote_filemanager = TopPicksRemoteFilemanager(
-                    gcs_project_path=settings.providers.top_picks.gcs_project,
-                    gcs_bucket_path=settings.providers.top_picks.gcs_bucket,
+                    gcs_project_path=settings.image_manifest.gcs_project,
+                    gcs_bucket_path=settings.image_manifest.gcs_bucket,
                 )
                 client = remote_filemanager.create_gcs_client()
                 get_file_result_code, remote_domains = remote_filemanager.get_file(client)

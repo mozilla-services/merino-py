@@ -13,22 +13,17 @@ dynaconf_merge = true
 [stage.accuweather]
 url_base = "https://api.accuweather.com"
 
-[stage.providers.top_picks]
+[stage.image_manifest]
 # MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
 gcs_project = "moz-fx-merino-nonprod-ee93"
 
 # MERINO_PROVIDERS__TOP_PICKS__GCS_BUCKET
 gcs_bucket = "merino-images-stagepy"
 
+
+[stage.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
 domain_data_source = "remote"
-
-[stage.manifest]
-# MERINO_PROVIDERS__MANIFEST__GCS_PROJECT
-gcs_project = "moz-fx-merino-nonprod-ee93"
-
-# MERINO_PROVIDERS__MANIFEST__GCS_BUCKET
-gcs_bucket = "merino-images-stagepy"
 
 [stage.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME

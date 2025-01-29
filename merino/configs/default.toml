@@ -185,6 +185,14 @@ env = "dev"
 # If set to `debug`, the DSN will be set to a testing value recommended by Sentry,
 # and extra output will be included in the logs.
 
+[default.image_manifest]
+# MERINO_IMAGE_MANIFEST__GCS_PROJECT
+# GCS project name that contains domain data
+gcs_project = ""
+
+# MERINO_IMAGE_MANIFEST__GCS_BUCKET
+# GCS bucket that contains domain data files
+gcs_bucket = ""
 
 [default.providers.accuweather]
 # MERINO_PROVIDERS__ACCUWEATHER__TYPE
@@ -248,14 +256,6 @@ cron_interval_sec = 60
 # MERINO_PROVIDERS__MANIFEST__RESYNC_INTERVAL_SEC
 # Time between re-syncs of the manifest file, in seconds. Defaults to 24 hours.
 resync_interval_sec = 86400
-
-# MERINO_PROVIDERS__MANIFEST__GCS_PROJECT
-# GCS project name that contains domain data
-gcs_project = ""
-
-# MERINO_PROVIDERS__MANIFEST__GCS_BUCKET
-# GCS bucket that contains domain data files
-gcs_bucket = ""
 
 [default.accuweather]
 # MERINO_ACCUWEATHER__API_KEY
@@ -457,14 +457,6 @@ resync_interval_sec = 43200
 # Enum of either `remote` or `local` that defines whether domain data
 # is remotely or locally acquired.
 domain_data_source = "local"
-
-# MERINO_PROVIDERS__TOP_PICKS__GCS_PROJECT
-# GCS project name that contains domain data
-gcs_project = ""
-
-# MERINO_PROVIDERS__TOP_PICKS__GCS_BUCKET
-# GCS bucket that contains domain data files
-gcs_bucket = ""
 
 [default.providers.wikipedia]
 # MERINO_PROVIDERS__WIKIPEDIA__TYPE
