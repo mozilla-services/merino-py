@@ -8,7 +8,7 @@ from json import JSONDecodeError
 from pydantic import ValidationError
 
 from merino.providers.manifest.backends.protocol import ManifestData, GetManifestResultCode
-from merino.utils.gcs.gcp_uploader import GcsUploader
+from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.metrics import get_metrics_client
 
 logger = logging.getLogger(__name__)
