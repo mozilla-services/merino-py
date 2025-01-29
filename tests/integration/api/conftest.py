@@ -11,7 +11,7 @@ import pytest
 import orjson
 from starlette.testclient import TestClient
 from aiodogstatsd import Client as AioDogstatsdClient
-from merino.utils.gcs.gcp_uploader import GcsUploader
+from merino.utils.gcs.gcs_uploader import GcsUploader
 from contextlib import nullcontext
 from merino.curated_recommendations.fakespot_backend.protocol import (
     FakespotFeed,
