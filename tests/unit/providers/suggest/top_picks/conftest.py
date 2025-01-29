@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from merino.configs import settings
+from merino.providers.suggest.top_picks.backends.filemanager import TopPicksRemoteFilemanager
 from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.suggest.top_picks.provider import Provider
 
@@ -18,6 +19,32 @@ from merino.providers.suggest.top_picks.provider import Provider
 def fixture_top_picks_domain_blocklist() -> set[str]:
     """Create domain_blocklist."""
     return {"baddomain"}
+
+
+@pytest.fixture(name="top_picks_remote_filemanager_parameters")
+def fixture_top_picks_remote_filemanager_parameters() -> dict[str, Any]:
+    """Define TopPicksRemoteFilemanager parameters for test."""
+    return {
+        "gcs_project_path": settings.image_manifest.gcs_project,
+        "gcs_bucket_path": settings.image_manifest.gcs_bucket,
+    }
+
+
+@pytest.fixture(name="top_picks_remote_filemanager")
+def fixture_top_picks_remote_filemanager(
+    top_picks_remote_filemanager_parameters: dict[str, Any], gcs_client_mock
+) -> TopPicksRemoteFilemanager:
+    """Create a TopPicksRemoteFilemanager object for test."""
+    from unittest.mock import patch
+    from google.auth.credentials import AnonymousCredentials
+
+    with patch("google.cloud.storage.Client") as mock_client, patch(
+        "google.auth.default"
+    ) as mock_auth_default:
+        creds = AnonymousCredentials()  # type: ignore
+        mock_auth_default.return_value = (creds, "test-project")
+        mock_client.return_value = gcs_client_mock
+        return TopPicksRemoteFilemanager(**top_picks_remote_filemanager_parameters)
 
 
 @pytest.fixture(name="top_picks_backend_parameters")

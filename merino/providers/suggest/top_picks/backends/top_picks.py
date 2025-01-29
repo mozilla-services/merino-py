@@ -167,8 +167,8 @@ class TopPicksBackend:
                     gcs_project_path=settings.image_manifest.gcs_project,
                     gcs_bucket_path=settings.image_manifest.gcs_bucket,
                 )
-                client = remote_filemanager.create_gcs_client()
-                get_file_result_code, remote_domains = remote_filemanager.get_file(client)
+
+                get_file_result_code, remote_domains = remote_filemanager.get_file()
 
                 match GetFileResultCode(get_file_result_code):
                     case GetFileResultCode.SUCCESS:

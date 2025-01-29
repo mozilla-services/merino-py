@@ -9,6 +9,7 @@ import os
 from json import JSONDecodeError
 from logging import LogRecord
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from google.cloud.storage import Blob, Bucket, Client
@@ -160,22 +161,29 @@ def test_maybe_build_indicies_local(
 
 def test_maybe_build_indicies_remote(
     top_picks_backend: TopPicksBackend,
+    top_picks_remote_filemanager,
     mocker,
-    gcs_client_mock,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     gcs_blob_mock,
 ) -> None:
     """Test remote build indicies method."""
     caplog.set_level(logging.INFO)
-    mocker.patch(
-        "merino.providers.suggest.top_picks.backends.filemanager.Client"
-    ).return_value = gcs_client_mock
+
+    top_picks_remote_filemanager.gcs_client = MagicMock()
+    top_picks_remote_filemanager.gcs_client.get_file_by_name.return_value = gcs_blob_mock
+
     mocker.patch(
         "merino.configs.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
 
+    mocker.patch(
+        "merino.providers.suggest.top_picks.backends.top_picks.TopPicksRemoteFilemanager",
+        return_value=top_picks_remote_filemanager,
+    )
+
     get_file_result_code, result = top_picks_backend.maybe_build_indices()
+
     records: list[LogRecord] = filter_caplog(
         caplog.records, "merino.providers.suggest.top_picks.backends.top_picks"
     )
@@ -187,19 +195,24 @@ def test_maybe_build_indicies_remote(
 
 def test_maybe_build_indicies_remote_fail(
     top_picks_backend: TopPicksBackend,
+    top_picks_remote_filemanager,
     mocker,
-    gcs_client_mock,
+    gcs_blob_mock,
 ) -> None:
     """Test the catchall case when a source for building indicies
     is not defined.
     """
-    mocker.patch(
-        "merino.providers.suggest.top_picks.backends.filemanager.Client"
-    ).return_value = gcs_client_mock
+    top_picks_remote_filemanager.gcs_client = MagicMock()
+    top_picks_remote_filemanager.gcs_client.get_file_by_name.return_value = None
 
     mocker.patch(
         "merino.configs.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
+
+    mocker.patch(
+        "merino.providers.suggest.top_picks.backends.top_picks.TopPicksRemoteFilemanager",
+        return_value=top_picks_remote_filemanager,
+    )
 
     mocker.patch(
         "merino.providers.suggest.top_picks.backends.filemanager.TopPicksRemoteFilemanager.get_file"
@@ -213,19 +226,24 @@ def test_maybe_build_indicies_remote_fail(
 
 def test_maybe_build_indicies_remote_skip(
     top_picks_backend: TopPicksBackend,
+    top_picks_remote_filemanager,
     mocker,
-    gcs_client_mock,
+    gcs_blob_mock,
 ) -> None:
     """Test the catchall case when a source for building indicies
     is not defined.
     """
-    mocker.patch(
-        "merino.providers.suggest.top_picks.backends.filemanager.Client"
-    ).return_value = gcs_client_mock
+    top_picks_remote_filemanager.gcs_client = MagicMock()
+    top_picks_remote_filemanager.gcs_client.get_file_by_name.return_value = None
 
     mocker.patch(
         "merino.configs.settings.providers.top_picks.domain_data_source"
     ).return_value = "remote"
+
+    mocker.patch(
+        "merino.providers.suggest.top_picks.backends.top_picks.TopPicksRemoteFilemanager",
+        return_value=top_picks_remote_filemanager,
+    )
 
     mocker.patch(
         "merino.providers.suggest.top_picks.backends.filemanager.TopPicksRemoteFilemanager.get_file"
