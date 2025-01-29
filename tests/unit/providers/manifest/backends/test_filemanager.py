@@ -21,6 +21,7 @@ def test_get_file(
     """Test that the get_file method returns manifest data."""
     manifest_remote_filemanager.gcs_client = MagicMock()
     manifest_remote_filemanager.gcs_client.get_file_by_name.return_value = gcs_blob_mock
+    gcs_blob_mock.download_as_text.return_value = blob_json
 
     get_file_result_code, result = manifest_remote_filemanager.get_file()
 

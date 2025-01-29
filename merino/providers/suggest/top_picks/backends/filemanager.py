@@ -6,9 +6,8 @@ from enum import Enum
 from json import JSONDecodeError
 from typing import Any
 
-from google.cloud.storage import Bucket, Client
-
 from merino.exceptions import FilemanagerError
+from merino.utils.gcs.gcp_uploader import GcsUploader
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +62,7 @@ class TopPicksLocalFilemanager:
 class TopPicksRemoteFilemanager:
     """Filemanager for processing local Top Picks data."""
 
-    client: Client
-    gcs_project_path: str
-    gcs_bucket_path: str
+    gcs_client: GcsUploader
     blob_generation: int
 
     def __init__(
@@ -73,15 +70,16 @@ class TopPicksRemoteFilemanager:
         gcs_project_path: str,
         gcs_bucket_path: str,
     ) -> None:
-        self.gcs_project_path = gcs_project_path
-        self.gcs_bucket_path = gcs_bucket_path
+        """Initialize the filemanager with GCS configuration.
+
+        Args:
+            gcs_project_path: Google Cloud project
+            gcs_bucket_path: GCS bucket name to fetch from
+        """
+        self.gcs_client = GcsUploader(gcs_project_path, gcs_bucket_path, "")
         self.blob_generation = 0
 
-    def create_gcs_client(self) -> Client:
-        """Initialize the GCS Client connection."""
-        return Client(self.gcs_project_path)
-
-    def get_file(self, client: Client) -> tuple[Enum, dict[str, Any] | None]:
+    def get_file(self) -> tuple[Enum, dict[str, Any] | None]:
         """Read remote domain list file.
 
         Raises:
@@ -90,19 +88,17 @@ class TopPicksRemoteFilemanager:
             Dictionary containing domain list
         """
         try:
-            bucket: Bucket = client.get_bucket(self.gcs_bucket_path)
-            if (
-                blob := bucket.get_blob(
-                    "top_picks_latest.json",
-                    if_generation_not_match=self.blob_generation,
-                )
-            ) is not None:
+            blob = self.gcs_client.get_file_by_name("top_picks_latest.json", self.blob_generation)
+
+            if blob is not None:
                 self.blob_generation = blob.generation
                 blob_data = blob.download_as_text()
                 file_contents: dict = json.loads(blob_data)
                 logger.info("Successfully loaded remote domain file.")
-                return (GetFileResultCode.SUCCESS, file_contents)
-            return (GetFileResultCode.SKIP, None)
+                return GetFileResultCode.SUCCESS, file_contents
+
+            return GetFileResultCode.SKIP, None
+
         except Exception as e:
             logger.error(f"Error with getting remote domain file. {e}")
-            return (GetFileResultCode.FAIL, None)
+            return GetFileResultCode.FAIL, None
