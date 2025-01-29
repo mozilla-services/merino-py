@@ -46,8 +46,8 @@ def fixture_top_picks_remote_filemanager_parameters() -> dict[str, Any]:
     """Define TopPicksRemoteFilemanager parameters for test."""
     # These settings read from testing.toml, not default.toml.
     return {
-        "gcs_project_path": settings.providers.top_picks.gcs_project,
-        "gcs_bucket_path": settings.providers.top_picks.gcs_bucket,
+        "gcs_project_path": settings.image_manifest.gcs_project,
+        "gcs_bucket_path": settings.image_manifest.gcs_bucket,
     }
 
 

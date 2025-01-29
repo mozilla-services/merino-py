@@ -64,7 +64,7 @@ domain_data_source = "local"
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "test"
 
-[testing.manifest]
+[testing.image_manifest]
 gcs_project = "test_gcp_uploader_project"
 gcs_bucket = "test_gcp_uploader_bucket"
 
