@@ -45,12 +45,12 @@ class ManifestBackend:
         match GetManifestResultCode(result_code):
             case GetManifestResultCode.SUCCESS:
                 logger.info("Manifest data loaded remotely from GCS.")
-                return (result_code, manifest_data)
+                return result_code, manifest_data
 
             case GetManifestResultCode.SKIP:
                 logger.info("Manifest data was not updated (SKIP).")
-                return (result_code, None)
+                return result_code, None
 
             case GetManifestResultCode.FAIL:
                 logger.error("Failed to fetch manifest from GCS (FAIL).")
-                return (result_code, None)
+                return result_code, None
