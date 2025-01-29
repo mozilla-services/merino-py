@@ -13,8 +13,6 @@ from merino.providers.manifest.backends.protocol import GetManifestResultCode, M
 
 def test_get_file(
     manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_client_mock,
-    gcs_bucket_mock,
     gcs_blob_mock,
     blob_json,
 ) -> None:
@@ -25,6 +23,7 @@ def test_get_file(
 
     get_file_result_code, result = manifest_remote_filemanager.get_file()
 
+    assert get_file_result_code is GetManifestResultCode.SUCCESS
     assert isinstance(result, ManifestData)
     assert result.domains
     assert len(result.domains) == 3
@@ -33,8 +32,6 @@ def test_get_file(
 
 def test_get_file_skip(
     manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_client_mock,
-    gcs_bucket_mock,
 ) -> None:
     """Test that the get_file method returns the SKIP code when there's no new generation."""
     manifest_remote_filemanager.gcs_client = MagicMock()
@@ -49,7 +46,6 @@ def test_get_file_skip(
 def test_get_file_fail(
     manifest_remote_filemanager: ManifestRemoteFilemanager,
     gcs_client_mock,
-    gcs_bucket_mock,
 ) -> None:
     """Test that the get_file method returns the FAIL code on failure."""
     gcs_client_mock.get_bucket.side_effect = Exception("Test error")
@@ -65,15 +61,12 @@ def test_get_file_fail_validation_error(
     gcs_client_mock,
     gcs_bucket_mock,
     gcs_blob_mock,
-    blob_json,
 ) -> None:
     """Test that the get_file method returns the FAIL code when a validation error occurs."""
-    mock_blob = gcs_blob_mock(blob_json, "manifest.json")
-
-    gcs_bucket_mock.get_blob.return_value = mock_blob
+    gcs_bucket_mock.get_blob.return_value = gcs_blob_mock
     gcs_client_mock.get_bucket.return_value = gcs_bucket_mock
 
-    mock_blob.download_as_text.return_value = '{"invalid": "data"}'
+    gcs_blob_mock.download_as_text.return_value = '{"invalid": "data"}'
 
     with patch(
         "merino.providers.manifest.backends.filemanager.ManifestData.model_validate",
@@ -90,10 +83,9 @@ def test_get_file_fail_json_decoder_error(
     gcs_client_mock,
     gcs_bucket_mock,
     gcs_blob_mock,
-    blob_json,
 ) -> None:
     """Test that the get_file method returns the FAIL code when a JSON decoder occurs."""
-    gcs_bucket_mock.get_blob.return_value = gcs_blob_mock(blob_json, "manifest.json")
+    gcs_bucket_mock.get_blob.return_value = gcs_blob_mock
     gcs_client_mock.get_bucket.return_value = gcs_bucket_mock
 
     with patch(

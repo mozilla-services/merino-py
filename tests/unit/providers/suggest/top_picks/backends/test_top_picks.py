@@ -12,9 +12,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from google.cloud.storage import Blob, Bucket, Client
 from pytest import LogCaptureFixture
-from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.providers.suggest.top_picks.backends.filemanager import GetFileResultCode
@@ -44,38 +42,6 @@ def fixture_top_picks_backend_parameters(domain_blocklist: set[str]) -> dict[str
 def fixture_top_picks(top_picks_backend_parameters: dict[str, Any]) -> TopPicksBackend:
     """Create a Top Picks object for test."""
     return TopPicksBackend(**top_picks_backend_parameters)
-
-
-@pytest.fixture(name="expected_timestamp")
-def fixture_expected_timestamp() -> int:
-    """Return a unix timestamp for metadata mocking."""
-    return 16818664520924621
-
-
-@pytest.fixture(name="gcs_blob_mock", autouse=True)
-def fixture_gcs_blob_mock(mocker: MockerFixture, expected_timestamp: int, blob_json: str) -> Any:
-    """Create a GCS Blob mock object for testing."""
-    mock_blob = mocker.MagicMock(spec=Blob)
-    mock_blob.name = "20220101120555_top_picks.json"
-    mock_blob.generation = expected_timestamp
-    mock_blob.download_as_text.return_value = blob_json
-    return mock_blob
-
-
-@pytest.fixture(name="gcs_bucket_mock", autouse=True)
-def fixture_gcs_bucket_mock(mocker: MockerFixture, gcs_blob_mock) -> Any:
-    """Create a GCS Bucket mock object for testing."""
-    mock_bucket = mocker.MagicMock(spec=Bucket)
-    mock_bucket.get_blob.return_value = gcs_blob_mock
-    return mock_bucket
-
-
-@pytest.fixture(name="gcs_client_mock", autouse=True)
-def mock_gcs_client(mocker: MockerFixture, gcs_bucket_mock):
-    """Return a mock GCS Client instance"""
-    mock_client = mocker.MagicMock(spec=Client)
-    mock_client.get_bucket.return_value = gcs_bucket_mock
-    return mock_client
 
 
 def test_init_failure_no_domain_file(
@@ -162,10 +128,10 @@ def test_maybe_build_indicies_local(
 def test_maybe_build_indicies_remote(
     top_picks_backend: TopPicksBackend,
     top_picks_remote_filemanager,
+    gcs_blob_mock,
     mocker,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
-    gcs_blob_mock,
 ) -> None:
     """Test remote build indicies method."""
     caplog.set_level(logging.INFO)
