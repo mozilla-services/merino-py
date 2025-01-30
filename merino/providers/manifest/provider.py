@@ -86,3 +86,7 @@ class Provider:
     def get_manifest_data(self) -> ManifestData | None:
         """Return manifest data"""
         return self.manifest_data
+
+    async def get_manifest_data_via_async_client(self) -> ManifestData | None:
+        """Return manifest data"""
+        return await self.backend.fetch_via_async_gcs_client()

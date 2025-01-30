@@ -113,6 +113,7 @@ pydantic = "^2.1.0"
 scipy = "^1.14.1"
 orjson = "^3.10.7"
 tenacity = "^9.0.0"
+gcloud-aio-storage = "^9.3.0"
 
 [tool.poetry.group.jobs.dependencies]
 # Jobs specific dependecies required on top of some of the main dependencies above
