@@ -67,8 +67,11 @@ async def test_cron(caplog: Any, cron_job: cron.Job, numbers: list[int]) -> None
 
     assert numbers == [1, 3, 4]
 
+    # filter logs to only include "merino.utils.cron"
+    cron_logs = [record for record in caplog.record_tuples if record[0] == "merino.utils.cron"]
+
     # Verify log messages for the different branches
-    assert caplog.record_tuples == [
+    assert cron_logs == [
         (
             "merino.utils.cron",
             logging.WARNING,
