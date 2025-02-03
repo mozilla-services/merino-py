@@ -52,8 +52,10 @@ class ManifestBackend(Protocol):
         ...
 
     async def fetch_via_async_gcs_client(self) -> ManifestData | None:
-        """Use an async GCS client to fetch the manifest from storage and return it as a tuple.
+        """Use an async GCS client to fetch the manifest from bucket.
         Returns:
-            A tuple of (GetManifestResultCode, dict or None)
+            ManifestData or None
+        Raises:
+            RuntimeError: If the async storage client fails to initialize
         """
         ...

@@ -38,11 +38,8 @@ class AsyncGcsClient:
             logger.error(f"Unexpected error when downloading blob: {ex}")
             return manifest
 
-        await self.close_client()
+        # close the client connection
+        await self.storage.close()
 
         logger.info("Succussfully downloaded manifest blob via async client")
         return manifest
-
-    async def close_client(self) -> None:
-        """Close the async client"""
-        await self.storage.close()

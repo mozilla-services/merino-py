@@ -89,4 +89,11 @@ class Provider:
 
     async def get_manifest_data_via_async_client(self) -> ManifestData | None:
         """Return manifest data"""
-        return await self.backend.fetch_via_async_gcs_client()
+        manifest_via_async = None
+
+        try:
+            manifest_via_async = await self.backend.fetch_via_async_gcs_client()
+        except Exception:
+            # We don't want our provider to blow up in case a RuntimeError is thrown by async_gcs_client module
+            return None
+        return manifest_via_async
