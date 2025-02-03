@@ -26,20 +26,22 @@ class AsyncGcsClient:
         self, bucket_name: str, blob_name: str
     ) -> ManifestData | None:
         """Download the top pick blob from the bucket and return as Manifest object"""
-        manifest = None
         try:
             top_picks_blob = await self.storage.download(bucket_name, blob_name)
+
             if top_picks_blob is not None:
                 manifest = ManifestData(**orjson.loads(top_picks_blob))
+
+                # close the client connection
+                await self.storage.close()
+                logger.info("Succussfully downloaded manifest blob via async client")
+
+                return manifest
         except JSONDecodeError:
+            await self.storage.close()
             logger.error(f"Tried to load invalid json for blob: {blob_name}")
-            return manifest
+            return None
         except Exception as ex:
+            await self.storage.close()
             logger.error(f"Unexpected error when downloading blob: {ex}")
-            return manifest
-
-        # close the client connection
-        await self.storage.close()
-
-        logger.info("Succussfully downloaded manifest blob via async client")
-        return manifest
+            return None
