@@ -22,9 +22,6 @@ from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
-from merino.jobs.navigational_suggestions.utils import (
-    update_top_picks_with_firefox_favicons,
-)
 from merino.providers.suggest.base import Category
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 
@@ -158,9 +155,8 @@ def prepare_domain_metadata(
     uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
     logger.info("domain favicons uploaded to GCS")
 
-    # construct top pick contents, update them with firefox packaged favicons and upload to gcs
+    # construct top pick contents
     top_picks = _construct_top_picks(domain_data, uploaded_favicons, domain_metadata)
-    update_top_picks_with_firefox_favicons(top_picks)
 
     # Create diff class for comparison of Top Picks Files
     old_top_picks: dict[str, list[dict[str, str]]] | None = (

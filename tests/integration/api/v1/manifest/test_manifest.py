@@ -23,7 +23,7 @@ def mock_manifest_2025() -> dict:
                 "serp_categories": [0],
                 "url": "https://www.spotify.com",
                 "title": "Spotify",
-                "icon": "chrome://activity-stream/content/data/content/tippytop/images/google-com@2x.png",
+                "icon": "",
             }
         ]
     }

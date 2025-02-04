@@ -24,7 +24,7 @@ The `/manifest` endpoint returns a curated list of websites with associated meta
       ],
       "url": "https://www.google.com/",
       "title": "Google",
-      "icon": "chrome://activity-stream/content/data/content/tippytop/images/google-com@2x.png"
+      "icon": ""
     },
     {
       "rank": 2,
