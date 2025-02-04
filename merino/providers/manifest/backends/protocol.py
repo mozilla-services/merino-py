@@ -50,3 +50,12 @@ class ManifestBackend(Protocol):
             ManifestBackendError: If the manifest is unavailable or there is an error reading it.
         """
         ...
+
+    async def fetch_via_async_gcs_client(self) -> ManifestData | None:
+        """Use an async GCS client to fetch the manifest from bucket.
+        Returns:
+            ManifestData or None
+        Raises:
+            RuntimeError: If the async storage client fails to initialize
+        """
+        ...
