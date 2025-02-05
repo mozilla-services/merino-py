@@ -341,12 +341,15 @@ async def get_manifest(
 
     with metrics_client.timeit("manifest.request.timing"):
         manifest_data = provider.get_manifest_data()
+        manifest_data_via_async_client = await provider.get_manifest_data_via_async_client()
 
         if manifest_data and manifest_data.domains:
             metrics_client.increment("manifest.request.success")
 
             return ORJSONResponse(
-                content=jsonable_encoder(manifest_data),
+                content=jsonable_encoder(
+                    manifest_data_via_async_client if not None else manifest_data
+                ),
                 headers={
                     "Cache-Control": (
                         f"private, max-age={settings.runtime.default_manifest_response_ttl_sec}"

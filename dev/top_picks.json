@@ -8,7 +8,7 @@
       ],
       "url": "https://www.google.com",
       "title": "Google",
-      "icon": "chrome://activity-stream/content/data/content/tippytop/images/google-com@2x.png",
+      "icon": "",
       "serp_categories": [
         18
       ]
@@ -62,7 +62,7 @@
       ],
       "url": "https://www.youtube.com",
       "title": "YouTube",
-      "icon": "chrome://activity-stream/content/data/content/tippytop/images/youtube-com@2x.png",
+      "icon": "",
       "serp_categories": [
         0
       ]
@@ -75,7 +75,7 @@
       ],
       "url": "https://twitter.com",
       "title": "Twitter",
-      "icon": "chrome://activity-stream/content/data/content/tippytop/images/twitter-com@2x.png",
+      "icon": "",
       "serp_categories": [
         16
       ]
@@ -182,7 +182,7 @@
       ],
       "url": "https://www.bing.com",
       "title": "Bing",
-      "icon": "chrome://activity-stream/content/data/content/tippytop/images/bing-com@2x.svg",
+      "icon": "",
       "serp_categories": [
         18
       ]

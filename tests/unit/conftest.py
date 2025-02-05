@@ -79,7 +79,7 @@ def fixture_blob_json() -> str:
                     "serp_categories": [0],
                     "url": "https://www.google.com/",
                     "title": "Google",
-                    "icon": "chrome://activity-stream/content/data/content/tippytop/images/google-com@2x.png",
+                    "icon": "",
                 },
                 {
                     "rank": 2,

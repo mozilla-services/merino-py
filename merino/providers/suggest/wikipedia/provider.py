@@ -10,9 +10,11 @@ from merino.exceptions import BackendError
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest, Category
 from merino.providers.suggest.wikipedia.backends.protocol import WikipediaBackend
 
-# The packaged Wikipedia icon
+# The Wikipedia icon backed by Merino's image CDN.
+# TODO: Use a better way to fetch this icon URL instead of hardcoding it here.
 ICON: Final[str] = (
-    "chrome://activity-stream/content/data/content/tippytop/favicons/wikipedia-org.ico"
+    "https://merino-images.services.mozilla.com/favicons/"
+    "4c8bf96d667fa2e9f072bdd8e9f25c8ba6ba2ad55df1af7d9ea0dd575c12abee_1313.png"
 )
 ADVERTISER: Final[str] = "dynamic-wikipedia"
 BLOCK_ID: Final[int] = 0
