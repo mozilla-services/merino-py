@@ -6,11 +6,16 @@
 
 from logging import LogRecord
 from typing import Iterator, Generator
+from unittest.mock import AsyncMock
 
 import pytest
 import orjson
 from starlette.testclient import TestClient
 from aiodogstatsd import Client as AioDogstatsdClient
+
+from merino.providers.manifest import Provider
+from merino.providers.manifest.backends.manifest import ManifestBackend
+from merino.providers.manifest.backends.protocol import GetManifestResultCode, ManifestData
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from contextlib import nullcontext
 from merino.curated_recommendations.fakespot_backend.protocol import (
@@ -134,3 +139,42 @@ def fakespot_feed() -> FakespotFeed:
         footerCopy=FAKESPOT_FOOTER_COPY,
         cta=FakespotCTA(ctaCopy=FAKESPOT_CTA_COPY, url=FAKESPOT_CTA_URL),
     )
+
+
+@pytest.fixture
+def mock_manifest():
+    """Mock manifest data with a known icon URL."""
+    return {
+        "domains": [
+            {
+                "rank": 1,
+                "domain": "spotify",
+                "categories": ["Entertainment"],
+                "serp_categories": [0],
+                "url": "https://www.spotify.com",
+                "title": "Spotify",
+                "icon": "https://test.com/spotify-favicon.ico",
+            }
+        ]
+    }
+
+
+@pytest.fixture
+def mock_manifest_backend(mock_manifest):
+    """Mock ManifestBackend that returns our test data."""
+    backend = ManifestBackend()
+    backend.fetch = AsyncMock(
+        return_value=(GetManifestResultCode.SUCCESS, ManifestData(**mock_manifest))
+    )
+    return backend
+
+
+@pytest.fixture
+def manifest_provider(mock_manifest_backend):
+    """Override the manifest provider fixture with our mocked data."""
+    provider = Provider(
+        backend=mock_manifest_backend,
+        resync_interval_sec=86400,
+        cron_interval_sec=3600,
+    )
+    return provider

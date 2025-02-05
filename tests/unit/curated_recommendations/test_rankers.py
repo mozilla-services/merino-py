@@ -42,6 +42,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
                 publisher="cohens",
                 isTimeSensitive=False,
                 imageUrl=HttpUrl("https://placehold.co/600x400/"),
+                iconUrl=None,
             )
 
             recs.append(rec)
@@ -203,6 +204,7 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
                 publisher="cohens",
                 isTimeSensitive=False,
                 imageUrl=HttpUrl("https://placehold.co/600x400/"),
+                iconUrl=None,
             )
             recs.append(rec)
             i += 1

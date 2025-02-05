@@ -46,6 +46,8 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
+from merino.providers.manifest import get_provider as get_manifest_provider
+from merino.providers.manifest.backends.protocol import Domain
 from tests.integration.api.conftest import fakespot_feed
 
 
@@ -121,6 +123,15 @@ def extended_expiration_corpus_backend(
     )
 
 
+@pytest.fixture(autouse=True)
+def setup_manifest_provider(manifest_provider):
+    """Set up the manifest provider dependency"""
+    app.dependency_overrides[get_manifest_provider] = lambda: manifest_provider
+    yield
+    if get_manifest_provider in app.dependency_overrides:
+        del app.dependency_overrides[get_manifest_provider]
+
+
 @pytest.fixture(name="corpus_provider")
 def provider(
     corpus_backend: CorpusApiBackend,
@@ -140,7 +151,7 @@ def provider(
 
 
 @pytest.fixture(autouse=True)
-def setup_providers(corpus_provider):
+def setup_suggest_providers(corpus_provider):
     """Set up the curated recommendations provider"""
     app.dependency_overrides[get_provider] = lambda: corpus_provider
 
@@ -1529,3 +1540,75 @@ class TestExtendedExpiration:
             else:
                 # Check that only today's items are returned if in control or not in the experiment.
                 assert set(days_ago_counter.keys()) == {0}
+
+
+@pytest.mark.asyncio
+async def test_curated_recommendations_enriched_with_icons(
+    manifest_provider,
+    corpus_http_client,
+    fixture_request_data,
+):
+    """Test the enrichment of a curated recommendation with an added icon-url."""
+    # Set up the manifest data first
+    manifest_provider.manifest_data.domains = [
+        Domain(
+            rank=2,
+            title="Microsoft – AI, Cloud, Productivity, Computing, Gaming & Apps",
+            url="https://www.microsoft.com",
+            domain="microsoft",
+            icon="https://merino-images.services.mozilla.com/favicons/microsoft-icon.png",
+            categories=["Business", "Information Technology"],
+            serp_categories=[0],
+        )
+    ]
+    manifest_provider.domain_lookup_table = {"microsoft": 0}
+
+    mocked_response = {
+        "data": {
+            "scheduledSurface": {
+                "items": [
+                    {
+                        "id": "scheduledSurfaceItemId-ABC",
+                        "corpusItem": {
+                            "id": "corpusItemId-XYZ",
+                            "url": "https://www.microsoft.com/some-article?utm_source=firefox-newtab-en-us",
+                            "title": "Some MS Article",
+                            "excerpt": "All about Microsoft something",
+                            "topic": "tech",
+                            "publisher": "ExamplePublisher",
+                            "isTimeSensitive": False,
+                            "imageUrl": "https://somewhere.com/test.jpg",
+                        },
+                    }
+                ]
+            }
+        }
+    }
+    corpus_http_client.post.return_value = Response(
+        status_code=200,
+        json=mocked_response,
+        request=fixture_request_data,
+    )
+
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-US"},
+        )
+        assert response.status_code == 200
+
+    data = response.json()
+    items = data["data"]
+    assert len(items) == 1
+
+    item = items[0]
+    assert item["url"] == "https://www.microsoft.com/some-article?utm_source=firefox-newtab-en-us"
+
+    assert "iconUrl" in item
+    assert (
+        item["iconUrl"] == "https://merino-images.services.mozilla.com/favicons/microsoft-icon.png"
+    )
+
+    # Clean up
+    if get_provider in app.dependency_overrides:
+        del app.dependency_overrides[get_provider]

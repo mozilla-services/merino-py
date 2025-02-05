@@ -31,6 +31,8 @@ from merino.utils.metrics import get_metrics_client
 from merino.utils.http_client import create_http_client
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
+from merino.providers.manifest import get_provider as get_manifest_provider
+
 logger = logging.getLogger(__name__)
 
 _provider: CuratedRecommendationsProvider
@@ -121,6 +123,7 @@ def init_provider() -> None:
         http_client=create_http_client(base_url=""),
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
+        manifest_provider=get_manifest_provider(),
     )
 
     extended_expiration_corpus_backend = ExtendedExpirationCorpusBackend(

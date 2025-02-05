@@ -7,8 +7,7 @@
 from unittest.mock import patch
 import pytest
 
-from merino.providers.manifest import get_provider, init_provider
-from merino.providers.manifest.provider import Provider as ManifestProvider
+from merino.providers.manifest import get_provider, init_provider, Provider as ManifestProvider
 
 
 @pytest.mark.asyncio

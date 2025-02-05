@@ -65,11 +65,12 @@ def corpus_http_client(fixture_response_data, fixture_request_data) -> AsyncMock
 
 
 @pytest.fixture()
-def corpus_backend(corpus_http_client: AsyncMock) -> CorpusApiBackend:
+def corpus_backend(corpus_http_client: AsyncMock, manifest_provider) -> CorpusApiBackend:
     """Mock corpus api backend."""
     # Initialize the backend with the mock HTTP client
     return CorpusApiBackend(
         http_client=corpus_http_client,
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
+        manifest_provider=manifest_provider,
     )

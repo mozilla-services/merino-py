@@ -61,6 +61,7 @@ class CorpusItem(BaseModel):
     publisher: str
     isTimeSensitive: bool
     imageUrl: HttpUrl
+    iconUrl: HttpUrl | None = None
 
 
 class CorpusBackend(Protocol):
