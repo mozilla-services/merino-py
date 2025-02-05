@@ -2,7 +2,7 @@
 
 import hashlib
 from enum import unique, Enum
-from typing import Annotated
+from typing import Annotated, cast
 import logging
 
 from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo
@@ -260,6 +260,13 @@ class CuratedRecommendationsFeed(BaseModel):
     def has_topic_section(self, topic: Topic) -> bool:
         """Check if a section for the given topic exists as an attribute."""
         return hasattr(self, topic.name.lower())
+
+    def get_section_by_topic_id(self, serp_topic_id: str) -> Section | None:
+        """Get a section for the given SERP topic ID."""
+        for field_name, model_field in self.model_fields.items():
+            if model_field.alias == serp_topic_id:
+                return cast(Section, getattr(self, field_name, None))
+        return None
 
     def set_topic_section(self, topic: Topic, section: Section):
         """Set a section for the given topic."""
