@@ -323,17 +323,41 @@ metrics_sampling_rate = 0.75
 
 # MERINO_ACCUWEATHER__DEFAULT_LANGUAGES
 default_languages = [
+    "ar",
+    "bn",
     "de",
     "en-CA",
     "en-GB",
     "en-US",
+    "es",
+    "es-AR",
+    "es-CO",
+    "es-CL",
+    "es-EC",
     "es-ES",
+    "es-MX",
     "fr",
+    "fr-CA",
+    "hi-IN",
+    "id",
     "it",
+    "ja",
+    "kn",
+    "mr",
+    "ms",
+    "pa-IN",
     "pl",
     "pt-BR",
     "ru",
+    "ta",
+    "te",
+    "th",
+    "tl",
+    "tr",
+    "ur",
+    "vi",
     "zh-CN",
+    "zh-TW"
 ]
 
 
