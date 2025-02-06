@@ -187,7 +187,7 @@ def boost_followed_sections(
         for section_id in blocked_section_ids:
             section = feeds.get_section_by_topic_id(section_id)
             if section:
-                section.isBlocked = section_id in blocked_section_ids
+                section.isBlocked = True
 
     # 4. Update isFollowed based on followed_section_ids
     if followed_section_ids:
@@ -195,7 +195,7 @@ def boost_followed_sections(
             # lookup the followed section using the SERP topic from client
             section = feeds.get_section_by_topic_id(section_id)
             if section:
-                section.isFollowed = section_id in followed_section_ids
+                section.isFollowed = True
 
         # 5. Collect followed & unfollowed sections
         for section_id in feeds.model_fields_set:
