@@ -183,36 +183,44 @@ def boost_followed_sections(
     # 3. Update isBlocked based on blocked_section_ids
     # For now, we will only update isBlocked value on a Section
     # The client-side will handle the actual blocking action
-    for section_id in feeds.model_fields_set:
-        section = getattr(feeds, section_id)
-        section.isBlocked = section_id in blocked_section_ids
+    if blocked_section_ids:
+        for section_id in blocked_section_ids:
+            section = feeds.get_section_by_topic_id(section_id)
+            if section:
+                section.isBlocked = True
 
     # 4. Update isFollowed based on followed_section_ids
-    # Extract followed sections & unfollowed sections
     if followed_section_ids:
+        for section_id in followed_section_ids:
+            # lookup the followed section using the SERP topic from client
+            section = feeds.get_section_by_topic_id(section_id)
+            if section:
+                section.isFollowed = True
+
+        # 5. Collect followed & unfollowed sections
         for section_id in feeds.model_fields_set:
             section = getattr(feeds, section_id)
-            section.isFollowed = section_id in followed_section_ids
-            if section_id == "top_stories_section":
-                # top_stories_section is always on the top
-                section.receivedFeedRank = 0
-            elif section.isFollowed:
-                followed_sections.append(section)
-            else:
-                unfollowed_sections.append(section)
+            if section:
+                if section_id == "top_stories_section":
+                    # top_stories_section is always on the top
+                    section.receivedFeedRank = 0
+                elif section.isFollowed:
+                    followed_sections.append(section)
+                else:
+                    unfollowed_sections.append(section)
 
-        # 5. Sort followed & unfollowed sections by their rank (ascending)
+        # 6. Sort followed & unfollowed sections by their rank (ascending)
         # This is to ensure relative order is kept
         followed_sections.sort(key=lambda section: section.receivedFeedRank)
         unfollowed_sections.sort(key=lambda section: section.receivedFeedRank)
 
-        # 6. Assign new rank starting from 1 for followed sections.
+        # 7. Assign new rank starting from 1 for followed sections.
         current_received_feed_rank = 1
         for section in followed_sections:
             section.receivedFeedRank = current_received_feed_rank
             current_received_feed_rank += 1
 
-        # 7. Assign new rank (starting from last rank value assigned to a followed section)
+        # 8. Assign new rank (starting from last rank value assigned to a followed section)
         # to unfollowed sections. Keep relative order.
         for section in unfollowed_sections:
             section.receivedFeedRank = current_received_feed_rank

@@ -383,23 +383,107 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
 
         return feed
 
-    def test_boost_followed_sections(self):
-        """Test boosting sections works properly. Followed & unfollowed sections should
-        maintain their relative order.
-        """
-        req_sections = [
-            SectionConfiguration(sectionId="arts", isFollowed=True, isBlocked=False),
-            SectionConfiguration(sectionId="business", isFollowed=True, isBlocked=False),
-            SectionConfiguration(sectionId="travel", isFollowed=False, isBlocked=True),
-        ]
+    @pytest.mark.parametrize(
+        ("followed_section", "original_received_feed_rank"),
+        [
+            (SectionConfiguration(sectionId="business", isFollowed=True, isBlocked=False), 1),
+            (SectionConfiguration(sectionId="career", isFollowed=True, isBlocked=False), 2),
+            (SectionConfiguration(sectionId="arts", isFollowed=True, isBlocked=False), 3),
+            (SectionConfiguration(sectionId="food", isFollowed=True, isBlocked=False), 4),
+            (SectionConfiguration(sectionId="health", isFollowed=True, isBlocked=False), 5),
+            (SectionConfiguration(sectionId="home", isFollowed=True, isBlocked=False), 6),
+            (SectionConfiguration(sectionId="finance", isFollowed=True, isBlocked=False), 7),
+            (SectionConfiguration(sectionId="government", isFollowed=True, isBlocked=False), 8),
+            (SectionConfiguration(sectionId="sports", isFollowed=True, isBlocked=False), 9),
+            (SectionConfiguration(sectionId="tech", isFollowed=True, isBlocked=False), 10),
+            (SectionConfiguration(sectionId="travel", isFollowed=True, isBlocked=False), 11),
+            (SectionConfiguration(sectionId="education", isFollowed=True, isBlocked=False), 12),
+            (SectionConfiguration(sectionId="hobbies", isFollowed=True, isBlocked=False), 13),
+            (
+                SectionConfiguration(
+                    sectionId="society-parenting", isFollowed=True, isBlocked=False
+                ),
+                14,
+            ),
+            (
+                SectionConfiguration(
+                    sectionId="education-science", isFollowed=True, isBlocked=False
+                ),
+                15,
+            ),
+            (SectionConfiguration(sectionId="society", isFollowed=True, isBlocked=False), 16),
+        ],
+    )
+    def test_boost_followed_section_for_every_section(
+        self, followed_section, original_received_feed_rank
+    ):
+        """Test boosting sections works properly for each section."""
+        req_sections = [followed_section]
+
+        # Generate feed with all sections
         feed = self.generate_curated_recommendations_feed_sections(
-            [0, 5, 3, 2, 6], ["top_stories_section", "arts", "food", "business", "travel"]
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            [
+                "top_stories_section",  # 0
+                "business",  # 1
+                "career",  # 2
+                "arts",  # 3
+                "food",  # 4
+                "health_fitness",  # 5
+                "home",  # 6
+                "personal_finance",  # 7
+                "politics",  # 8
+                "sports",  # 9
+                "technology",  # 10
+                "travel",  # 11
+                "education",  # 12
+                "gaming",  # 13
+                "parenting",  # 14
+                "science",  # 15
+                "self_improvement",  # 16
+            ],
         )
         # Let's first assert original feed received ranks
         assert feed.top_stories_section.receivedFeedRank == 0
-        assert feed.business.receivedFeedRank == 2
+        assert (
+            feed.get_section_by_topic_id(followed_section.sectionId).receivedFeedRank
+            == original_received_feed_rank
+        )
+
+        # Get the updated feed with boosted followed sections
+        new_feed = boost_followed_sections(req_sections, feed)
+
+        # Assertions for receivedFeedRank
+        assert new_feed.top_stories_section.receivedFeedRank == 0  # should always remain 0
+        # Followed section should have receivedFeedRank == 1
+        assert new_feed.get_section_by_topic_id(followed_section.sectionId).receivedFeedRank == 1
+
+        # Assertions for isFollowed
+        assert new_feed.get_section_by_topic_id(followed_section.sectionId).isFollowed
+
+    def test_boost_followed_sections(self):
+        """Test boosting sections works properly when following more than 1 section. Followed & unfollowed sections
+        should maintain their relative order.
+        """
+        req_sections = [
+            SectionConfiguration(
+                sectionId="hobbies", isFollowed=True, isBlocked=False
+            ),  # maps to gaming section
+            SectionConfiguration(
+                sectionId="tech", isFollowed=True, isBlocked=False
+            ),  # maps to technology section
+            SectionConfiguration(
+                sectionId="travel", isFollowed=False, isBlocked=True
+            ),  # maps to travel section
+        ]
+        feed = self.generate_curated_recommendations_feed_sections(
+            [0, 5, 3, 2, 6], ["top_stories_section", "gaming", "food", "technology", "travel"]
+        )
+        # Let's first assert original feed received ranks
+        assert feed.top_stories_section.receivedFeedRank == 0
+        assert feed.technology.receivedFeedRank == 2
         assert feed.food.receivedFeedRank == 3
-        assert feed.arts.receivedFeedRank == 5
+        assert feed.gaming.receivedFeedRank == 5
         assert feed.travel.receivedFeedRank == 6
 
         # Get the updated feed with boosted followed sections
@@ -409,16 +493,16 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
 
         # Assertions for receivedFeedRank
         assert new_feed.top_stories_section.receivedFeedRank == 0  # should always remain 0
-        assert new_feed.business.receivedFeedRank == 1  # had a rank==2, should now be 1
-        assert new_feed.arts.receivedFeedRank == 2
+        assert new_feed.technology.receivedFeedRank == 1  # had a rank==2, should now be 1
+        assert new_feed.gaming.receivedFeedRank == 2
         assert new_feed.food.receivedFeedRank == 3
         assert (
             new_feed.travel.receivedFeedRank == 4
         )  # originally ranked after Food, should still be after
 
         # Assertions for isFollowed
-        assert new_feed.arts.isFollowed
-        assert new_feed.business.isFollowed
+        assert new_feed.gaming.isFollowed
+        assert new_feed.technology.isFollowed
         assert not new_feed.food.isFollowed
         assert not new_feed.travel.isFollowed
 
