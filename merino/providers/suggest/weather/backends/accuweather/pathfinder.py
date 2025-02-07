@@ -1,6 +1,8 @@
 """Pathfinder - a utility to reconcile geolocation distinctions between MaxmindDB and AccuWeather."""
 
 import unicodedata
+import re
+
 from typing import Any, Awaitable, Callable, Generator, Optional
 
 from merino.middleware.geolocation import Location
@@ -15,39 +17,30 @@ REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Baie Ste. Anne": "Baie-Sainte-Anne",
     "Bogota D.C.": "Bogota",
-    "Centro Municipality": "Centro",
-    "Chihuahua City": "Chihuahua",
     "Collingwood": "Collingwood Corner",
-    "Dawson City": "Dawson",
     "Délı̨ne": "Deline",
     "Đồng Nại": "Dong Nai",
     "Ejido Culiacán (Culiacancito)": "Ejido Culiacán",
     "Gharroli": "Gharoli",
     "Grand Bay–Westfield": "Grand Bay Westfield",
-    "Guanajuato City": "Guanajuato",
     "Gustavo Adolfo Madero": "Gustavo A. Madero",
     "Ixtapa-Zihuatanejo": "Zihuatanejo",
     "Kleinburg Station": "Kleinburg",
     "Lake Shasta": "Shasta Lake",
     "La'ie": "Laie",
     "Magnesia on the Maeander": "Manisa",
-    "Mendocino City": "Mendocino",
     "Middlebury (village)": "Middlebury",
     "Mitchell/Ontario": "Mitchell",
     "Montreal East": "Montreal",
     "Montreal West": "Montreal",
-    "Napier City": "Napier",
     "Naucalpan": "Naucalpan de Juárez",
     "Ōkubo-naka": "Okubo naka",
     "Panjim": "Panaji",
     "Pilāni": "Pilani",
-    "Puebla City": "Puebla",
-    "Querétaro City": "Querétaro",
     "Sainte-Clotilde-de-Châteauguay": "Sainte-Clotilde-de-Chateauguay",
     "Sainte-Geneviève": "Sainte-Genevieve",
     "Saint-Barnabe": "Saint-Barnabé",
     "Saint-Raymond-de-Portneuf": "Saint-Raymond",
-    "San Luis Potosí City": "San Luis Potosí",
     "Santiago de Cali": "Cali",
     "Sōsa": "Sosa-shi",
     "Tracadie–Sheila": "Tracadie Sheila",
@@ -75,6 +68,11 @@ def normalize_string(input_str) -> str:
     return unicodedata.normalize("NFKD", input_str).encode("ascii", "ignore").decode("ascii")
 
 
+def remove_locality_suffix(city: str) -> str:
+    """Remove either city or municipality suffix from a city name"""
+    return re.sub(r"\s*(city|municipality)$", "", city, flags=re.IGNORECASE).strip()
+
+
 def compass(location: Location) -> Generator[MaybeStr, None, None]:
     """Generate all the regions based on a `Location`.
 
@@ -85,13 +83,12 @@ def compass(location: Location) -> Generator[MaybeStr, None, None]:
     Returns:
       - region string that could be None.
     """
-
     country = location.country
     regions = location.regions
     city = location.city
 
     if regions and country and city:
-        corrected_city = CITY_NAME_CORRECTION_MAPPING.get(city, city)
+        corrected_city = CITY_NAME_CORRECTION_MAPPING.get(city, remove_locality_suffix(city))
         match (country, corrected_city):
             case (country, city) if (
                 country,

@@ -4,8 +4,6 @@
 
 """Unit tests for the Accuweather pathfinder module."""
 
-from typing import Tuple
-
 import pytest
 
 from merino.middleware.geolocation import Location
@@ -14,6 +12,7 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
     clear_region_mapping,
     normalize_string,
+    remove_locality_suffix,
 )
 
 
@@ -77,3 +76,16 @@ def test_compass(location: Location, expected_region_and_city: str) -> None:
 def test_normalize_string(input_string, expected_output) -> None:
     """Test the normalization of strings with special characters"""
     assert normalize_string(input_string) == expected_output
+
+
+@pytest.mark.parametrize(
+    "input_string, expected_output",
+    [
+        ("Querétaro City", "Querétaro"),
+        ("Centro Municipality", "Centro"),
+        ("Burnaby", "Burnaby"),
+    ],
+)
+def test_remove_locality_suffix(input_string, expected_output) -> None:
+    """Test locality suffix is removed"""
+    assert remove_locality_suffix(input_string) == expected_output
