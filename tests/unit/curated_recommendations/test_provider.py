@@ -295,6 +295,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
                 publisher="cohens",
                 isTimeSensitive=i in time_sensitive_indices,
                 imageUrl=HttpUrl("https://placehold.co/600x400/"),
+                iconUrl=None,
             )
 
             recs.append(rec)

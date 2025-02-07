@@ -4,6 +4,7 @@
 
 """Module for test configurations for the Manifest provider unit test directory."""
 
+import asyncio
 from typing import Any
 from unittest.mock import patch
 
@@ -14,6 +15,25 @@ from merino.configs import settings
 from merino.providers.manifest.backends.filemanager import ManifestRemoteFilemanager
 from merino.providers.manifest.backends.manifest import ManifestBackend
 from merino.providers.manifest.provider import Provider
+
+
+@pytest.fixture(autouse=True, name="cleanup")
+def cleanup_tasks_fixture():
+    """Return a method that cleans up existing cron tasks after initialization"""
+
+    async def cleanup_tasks(manifest_provider: Provider):
+        """Cleanup cron tasks after initialization"""
+        assert manifest_provider.cron_task is not None
+        assert not manifest_provider.cron_task.done()
+
+        # Clean up the task
+        manifest_provider.cron_task.cancel()
+        try:
+            await manifest_provider.cron_task
+        except asyncio.CancelledError:
+            pass
+
+    return cleanup_tasks
 
 
 @pytest.fixture(name="manifest_remote_filemanager_parameters")

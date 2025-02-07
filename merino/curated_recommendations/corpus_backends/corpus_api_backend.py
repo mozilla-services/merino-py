@@ -26,6 +26,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
 )
 from merino.exceptions import BackendError
+from merino.providers.manifest import Provider as ManifestProvider
 from merino.utils.version import fetch_app_version_from_file
 
 logger = logging.getLogger(__name__)
@@ -123,6 +124,7 @@ class CorpusApiBackend(CorpusBackend):
     http_client: AsyncClient
     graph_config: CorpusApiGraphConfig
     metrics_client: aiodogstatsd.Client
+    manifest_provider: ManifestProvider
 
     # time-to-live was chosen because 1 minute (+/- 10 s) is short enough that updates by curators
     # such as breaking news or editorial corrections propagate fast enough, and that the request
@@ -137,10 +139,12 @@ class CorpusApiBackend(CorpusBackend):
         http_client: AsyncClient,
         graph_config: CorpusApiGraphConfig,
         metrics_client: aiodogstatsd.Client,
+        manifest_provider: ManifestProvider,
     ):
         self.http_client = http_client
         self.graph_config = graph_config
         self.metrics_client = metrics_client
+        self.manifest_provider = manifest_provider
         self._cache = {}
         self._background_tasks = set()
 
@@ -257,7 +261,9 @@ class CorpusApiBackend(CorpusBackend):
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _fetch_from_backend(
-        self, surface_id: ScheduledSurfaceId, days_offset: int
+        self,
+        surface_id: ScheduledSurfaceId,
+        days_offset: int,
     ) -> list[CorpusItem]:
         """Issue a scheduledSurface query"""
         query = """
@@ -321,6 +327,9 @@ class CorpusApiBackend(CorpusBackend):
             item["corpusItem"]["url"] = self.update_url_utm_source(
                 item["corpusItem"]["url"], str(utm_source)
             )
+            # Add icon URL if available
+            if icon_url := self.manifest_provider.get_icon_url(item["corpusItem"]["url"]):
+                item["corpusItem"]["iconUrl"] = icon_url
 
         curated_recommendations = [
             CorpusItem(

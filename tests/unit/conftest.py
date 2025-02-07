@@ -13,6 +13,7 @@ from google.auth.credentials import AnonymousCredentials
 from pytest_mock import MockerFixture
 
 from merino.middleware.geolocation import Location
+from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.suggest.base import SuggestionRequest
 from tests.unit.types import SuggestionRequestFixture
 from google.cloud.storage import Blob, Bucket, Client
@@ -88,7 +89,8 @@ def fixture_blob_json() -> str:
                     "serp_categories": [0],
                     "url": "https://www.microsoft.com/",
                     "title": "Microsoft – AI, Cloud, Productivity, Computing, Gaming & Apps",
-                    "icon": "https://merino-images.services.mozilla.com/favicons/90cdaf487716184e4034000935c605d1633926d348116d198f355a98b8c6cd21_17174.oct",
+                    "icon": "https://merino-images.services.mozilla.com/favicons"
+                    "/90cdaf487716184e4034000935c605d1633926d348116d198f355a98b8c6cd21_17174.oct",
                 },
                 {
                     "rank": 3,
@@ -97,8 +99,15 @@ def fixture_blob_json() -> str:
                     "serp_categories": [0],
                     "url": "https://www.facebook.com/",
                     "title": "Log in to Facebook",
-                    "icon": "https://merino-images.services.mozilla.com/favicons/e673f8818103a583c9a98ee38aa7892d58969ec2a8387deaa46ef6d94e8a3796_4535.png",
+                    "icon": "https://merino-images.services.mozilla.com/favicons"
+                    "/e673f8818103a583c9a98ee38aa7892d58969ec2a8387deaa46ef6d94e8a3796_4535.png",
                 },
             ]
         }
     )
+
+
+@pytest.fixture(name="manifest_data")
+def fixture_manifest_data(blob_json: str) -> ManifestData:
+    """Return parsed ManifestData object for testing."""
+    return ManifestData.model_validate_json(blob_json)

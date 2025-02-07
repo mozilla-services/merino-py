@@ -4,7 +4,6 @@
 
 """Unit tests for the manifest provider module."""
 
-import asyncio
 from unittest.mock import patch
 import pytest
 
@@ -16,36 +15,15 @@ from merino.providers.manifest.backends.protocol import (
 from merino.providers.manifest.provider import Provider
 from merino.providers.manifest.backends.manifest import ManifestBackend
 
-# NOTE: manifest provider fixtures in conftest.py.
-
-
-@pytest.fixture(autouse=True, name="cleanup")
-def cleanup_tasks_fixture():
-    """Return a method that cleans up existing cron tasks after initialization"""
-
-    async def cleanup_tasks(manifest_provider: Provider):
-        """Cleanup cron tasks after initialization"""
-        assert manifest_provider.cron_task is not None
-        assert not manifest_provider.cron_task.done()
-
-        # Clean up the task
-        manifest_provider.cron_task.cancel()
-        try:
-            await manifest_provider.cron_task
-        except asyncio.CancelledError:
-            pass
-
-    return cleanup_tasks
-
 
 @pytest.mark.asyncio
 async def test_initialize(
-    manifest_provider: Provider, backend: ManifestBackend, blob_json: ManifestData, cleanup
+    manifest_provider: Provider, backend: ManifestBackend, manifest_data: ManifestData, cleanup
 ) -> None:
     """Test initialization of manifest provider"""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, blob_json),
+        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
@@ -53,26 +31,26 @@ async def test_initialize(
         result_code, _ = await backend.fetch()
 
         assert result_code is GetManifestResultCode.SUCCESS
-        assert manifest_provider.manifest_data == blob_json
+        assert manifest_provider.manifest_data == manifest_data
         assert manifest_provider.last_fetch_at > 0
 
 
 @pytest.mark.asyncio
 async def test_get_manifest_data(
-    manifest_provider: Provider, blob_json: ManifestData, cleanup
+    manifest_provider: Provider, manifest_data: ManifestData, cleanup
 ) -> None:
     """Test get_manifest_data method returns manifest data"""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, blob_json),
+        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
 
-        manifest_data = manifest_provider.get_manifest_data()
-
-        assert manifest_data == manifest_provider.manifest_data
-        assert manifest_provider.manifest_data == blob_json
+        result = manifest_provider.get_manifest_data()
+        assert result is not None
+        assert result == manifest_provider.manifest_data
+        assert manifest_provider.manifest_data == manifest_data
 
 
 @pytest.mark.asyncio
@@ -93,15 +71,17 @@ async def test_get_manifest_data_empty_data(manifest_provider: Provider, cleanup
 
 @pytest.mark.asyncio
 async def test_should_fetch_true(
-    manifest_provider: Provider, blob_json: ManifestData, cleanup
+    manifest_provider: Provider, manifest_data: ManifestData, cleanup
 ) -> None:
     """Test should_fetch method returns true based on the resync interval"""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, blob_json),
+        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
     ):
         # difference between last fetch and current time is 100000 (greater than 86400)
-        with patch("merino.providers.manifest.provider.time.time", side_effect=[100000, 200000]):
+        with patch(
+            "merino.providers.manifest.provider.time.time", side_effect=[100000, 200000, 300000]
+        ):
             await manifest_provider.initialize()
             await cleanup(manifest_provider)
 
@@ -112,15 +92,17 @@ async def test_should_fetch_true(
 
 @pytest.mark.asyncio
 async def test_should_fetch_false(
-    manifest_provider: Provider, blob_json: ManifestData, cleanup
+    manifest_provider: Provider, manifest_data: ManifestData, cleanup
 ) -> None:
     """Test should_fetch method returns false based on the resync interval"""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, blob_json),
+        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
     ):
         # difference between last fetch and current time is 40000 (less than 86400)
-        with patch("merino.providers.manifest.provider.time.time", side_effect=[100000, 140000]):
+        with patch(
+            "merino.providers.manifest.provider.time.time", side_effect=[100000, 140000, 200000]
+        ):
             await manifest_provider.initialize()
             await cleanup(manifest_provider)
 
@@ -131,12 +113,12 @@ async def test_should_fetch_false(
 
 @pytest.mark.asyncio
 async def test_fetch_data_success(
-    manifest_provider: Provider, blob_json: ManifestData, cleanup
+    manifest_provider: Provider, manifest_data: ManifestData, cleanup
 ) -> None:
     """Test fetch_data method sets manifest data on SUCCESS"""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, blob_json),
+        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
@@ -144,7 +126,7 @@ async def test_fetch_data_success(
         await manifest_provider._fetch_data()
 
         assert manifest_provider.manifest_data is not None
-        assert manifest_provider.manifest_data == blob_json
+        assert manifest_provider.manifest_data == manifest_data
 
 
 @pytest.mark.asyncio

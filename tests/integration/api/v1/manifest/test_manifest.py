@@ -11,24 +11,6 @@ from merino.providers.manifest import get_provider, init_provider
 from merino.web.api_v1 import router
 
 
-@pytest.fixture(scope="module")
-def mock_manifest_2025() -> dict:
-    """Mock manifest json for the year 2025"""
-    return {
-        "domains": [
-            {
-                "rank": 1,
-                "domain": "spotify",
-                "categories": ["Entertainment"],
-                "serp_categories": [0],
-                "url": "https://www.spotify.com",
-                "title": "Spotify",
-                "icon": "",
-            }
-        ]
-    }
-
-
 @pytest.fixture(autouse=True, name="cleanup")
 def cleanup_tasks_fixture():
     """Return a method that cleans up existing cron tasks after initialization"""
@@ -46,9 +28,7 @@ def cleanup_tasks_fixture():
 
 
 @pytest.mark.asyncio
-async def test_get_manifest_success(
-    client_with_metrics, gcp_uploader, mock_manifest_2025, cleanup
-):
+async def test_get_manifest_success(client_with_metrics, gcp_uploader, mock_manifest, cleanup):
     """Uploads a manifest to the gcs bucket and verifies that the endpoint returns the uploaded file."""
     # initialize provider on startup
     await init_provider()
@@ -57,7 +37,7 @@ async def test_get_manifest_success(
     app.include_router(router, prefix="/api/v1")
 
     # upload a manifest file to GCS test container
-    gcp_uploader.upload_content(orjson.dumps(mock_manifest_2025), "top_picks_latest.json")
+    gcp_uploader.upload_content(orjson.dumps(mock_manifest), "top_picks_latest.json")
 
     provider = get_provider()
     await provider.data_fetched_event.wait()

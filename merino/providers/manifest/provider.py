@@ -3,6 +3,9 @@
 import asyncio
 import time
 import logging
+from urllib.parse import urlparse
+
+from pydantic import HttpUrl
 
 from merino.providers.manifest.backends.filemanager import GetManifestResultCode
 from merino.utils import cron
@@ -20,6 +23,7 @@ class Provider:
     """Provide access to in-memory manifest data fetched from GCS."""
 
     manifest_data: ManifestData | None
+    domain_lookup_table: dict[str, int]
     cron_task: asyncio.Task
     resync_interval_sec: int
     cron_interval_sec: int
@@ -39,6 +43,7 @@ class Provider:
         self.cron_interval_sec = cron_interval_sec
         self.last_fetch_at = 0.0
         self.manifest_data = ManifestData(domains=[])
+        self.domain_lookup_table = {}
         self.data_fetched_event = asyncio.Event()
 
         super().__init__()
@@ -63,8 +68,11 @@ class Provider:
             result_code, data = await self.backend.fetch()
 
             match GetManifestResultCode(result_code):
-                case GetManifestResultCode.SUCCESS:
+                case GetManifestResultCode.SUCCESS if data is not None:
                     self.manifest_data = data
+                    self.domain_lookup_table = {
+                        domain.domain: idx for idx, domain in enumerate(data.domains)
+                    }
                     self.last_fetch_at = time.time()
 
                 case GetManifestResultCode.SKIP:
@@ -86,3 +94,27 @@ class Provider:
     def get_manifest_data(self) -> ManifestData | None:
         """Return manifest data"""
         return self.manifest_data
+
+    def get_icon_url(self, url: str | HttpUrl) -> str | None:
+        """Get icon URL for a domain.
+
+        Args:
+            url: Full URL to extract domain from (string or HttpUrl)
+
+        Returns:
+            Icon URL if found, None otherwise
+        """
+        try:
+            url_str = str(url)
+            # Remove www. and get the domain
+            domain = urlparse(url_str).netloc.replace("www.", "")
+            # Strip TLD by taking first part of domain
+            base_domain = domain.split(".")[0] if "." in domain else domain
+
+            idx = self.domain_lookup_table.get(base_domain, -1)
+            if idx >= 0 and self.manifest_data is not None:
+                return self.manifest_data.domains[idx].icon
+
+        except Exception as e:
+            logger.warning(f"Error getting icon for URL {url}: {e}")
+        return None
