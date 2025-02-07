@@ -13,6 +13,7 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     compass,
     set_region_mapping,
     clear_region_mapping,
+    normalize_string,
 )
 
 
@@ -21,27 +22,27 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     [
         (
             Location(country="CA", regions=["BC"], city="Vancouver"),
-            ("BC", "Vancouver"),
+            "BC",
         ),
         (
             Location(country="IT", regions=["MT", "77"], city="Matera"),
-            ("77", "Matera"),
+            "77",
         ),
         (
             Location(country="AR", regions=["B", "5"], city="La Plata"),
-            ("STE", "La Plata"),
+            "STE",
         ),
         (
             Location(country="BR", regions=["DF"], city="Brasilia"),
-            ("DF", "Brasilia"),
+            "DF",
         ),
         (
             Location(country="IE", regions=None, city="Dublin"),
-            (None, "Dublin"),
+            None,
         ),
         (
             Location(country="CA", regions=["ON"], city="Mitchell/Ontario"),
-            ("ON", "Mitchell"),
+            "ON",
         ),
     ],
     ids=[
@@ -53,9 +54,26 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
         "Corrected City Name",
     ],
 )
-def test_compass(location: Location, expected_region_and_city: Tuple) -> None:
+def test_compass(location: Location, expected_region_and_city: str) -> None:
     """Test country that returns the most specific region."""
     set_region_mapping("AR", "La Plata", "STE")
     assert next(compass(location)) == expected_region_and_city
 
     clear_region_mapping()
+
+
+@pytest.mark.parametrize(
+    "input_string, expected_output",
+    [
+        ("Köseköy", "Kosekoy"),
+        ("Kīhei", "Kihei"),
+        ("Llambí Campbell", "Llambi Campbell"),
+        ("Luis Eduardo Magalhães", "Luis Eduardo Magalhaes"),
+        ("México", "Mexico"),
+        ("Minamirokugō", "Minamirokugo"),
+        ("Orléans", "Orleans"),
+    ],
+)
+def test_normalize_string(input_string, expected_output) -> None:
+    """Test the normalization of strings with special characters"""
+    assert normalize_string(input_string) == expected_output

@@ -1,12 +1,12 @@
 """Pathfinder - a utility to reconcile geolocation distinctions between MaxmindDB and AccuWeather."""
 
+import unicodedata
 from typing import Any, Awaitable, Callable, Generator, Optional
 
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.weather.backends.protocol import WeatherContext
 
 MaybeStr = Optional[str]
-Pair = tuple[MaybeStr, MaybeStr]
 
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {("GB", "London"): "LND"}
 REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
@@ -14,11 +14,9 @@ REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
 )
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Baie Ste. Anne": "Baie-Sainte-Anne",
-    "Banhā": "Banha",
     "Bogota D.C.": "Bogota",
     "Centro Municipality": "Centro",
     "Chihuahua City": "Chihuahua",
-    "Chūōku": "Chuoku",
     "Collingwood": "Collingwood Corner",
     "Dawson City": "Dawson",
     "Délı̨ne": "Deline",
@@ -28,36 +26,21 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Grand Bay–Westfield": "Grand Bay Westfield",
     "Guanajuato City": "Guanajuato",
     "Gustavo Adolfo Madero": "Gustavo A. Madero",
-    "Gāndhīdhām": "Gandhidham",
-    "Hājīpur": "Hajipur",
-    "Haʻikū": "Haiku",
-    "Hoʻolehua": "Hoolehua",
     "Ixtapa-Zihuatanejo": "Zihuatanejo",
-    "Jingūmae": "Jingumae",
     "Kleinburg Station": "Kleinburg",
-    "Köseköy": "Kosekoy",
-    "Kīhei": "Kihei",
     "Lake Shasta": "Shasta Lake",
     "La'ie": "Laie",
-    "Llambí Campbell": "Llambi Campbell",
-    "Luis Eduardo Magalhães": "Luis Eduardo Magalhaes",
     "Magnesia on the Maeander": "Manisa",
     "Mendocino City": "Mendocino",
-    "México": "Mexico",
     "Middlebury (village)": "Middlebury",
-    "Minamirokugō": "Minamirokugo",
     "Mitchell/Ontario": "Mitchell",
     "Montreal East": "Montreal",
     "Montreal West": "Montreal",
     "Napier City": "Napier",
     "Naucalpan": "Naucalpan de Juárez",
-    "Nishiōizumi": "Nishioizumi",
     "Ōkubo-naka": "Okubo naka",
-    "Ōmorikita": "Omorikita",
-    "Orléans": "Orleans",
     "Panjim": "Panaji",
     "Pilāni": "Pilani",
-    "Pohénégamook": "Pohenegamook",
     "Puebla City": "Puebla",
     "Querétaro City": "Querétaro",
     "Sainte-Clotilde-de-Châteauguay": "Sainte-Clotilde-de-Chateauguay",
@@ -70,7 +53,6 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Tracadie–Sheila": "Tracadie Sheila",
     "Yunderup": "South Yunderup",
     "Zacoalco": "Zacoalco de Torres",
-    "‘Aiea": "Aiea",
 }
 
 SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
@@ -88,7 +70,12 @@ SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
 }
 
 
-def compass(location: Location) -> Generator[Pair, None, None]:
+def normalize_string(input_str) -> str:
+    """Normalize string with special chcarcters"""
+    return unicodedata.normalize("NFKD", input_str).encode("ascii", "ignore").decode("ascii")
+
+
+def compass(location: Location) -> Generator[MaybeStr, None, None]:
     """Generate all the regions based on a `Location`.
 
     It will generate ones that are more likely to produce a valid result based on heuristics.
@@ -98,7 +85,6 @@ def compass(location: Location) -> Generator[Pair, None, None]:
     Returns:
       - region string that could be None.
     """
-    # TODO(nanj): add more heuristics to here.
 
     country = location.country
     regions = location.regions
@@ -111,18 +97,18 @@ def compass(location: Location) -> Generator[Pair, None, None]:
                 country,
                 city,
             ) in SUCCESSFUL_REGIONS_MAPPING:  # dynamic rules we've learned
-                yield SUCCESSFUL_REGIONS_MAPPING[(country, city)], city
+                yield SUCCESSFUL_REGIONS_MAPPING[(country, city)]
             case ("AU" | "CA" | "CN" | "DE" | "FR" | "GB" | "PL" | "PT" | "RU" | "US", _):
-                yield regions[0], city
+                yield regions[0]
                 # use the most specific region
             case ("IT" | "ES" | "GR", _):
-                yield regions[-1], city  # use the least specific region
+                yield regions[-1]  # use the least specific region
             case _:  # Fall back to try all regions
                 regions_to_try = [*regions, None]
                 for region in regions_to_try:
-                    yield region, city
+                    yield region
     else:
-        yield None, city
+        yield None
 
 
 async def explore(
@@ -149,19 +135,23 @@ async def explore(
     is_skipped = False
     geolocation = weather_context.geolocation
     country = geolocation.country
-    for region, city in compass(weather_context.geolocation):
-        if country and city and (country, region, city) in SKIP_CITIES_MAPPING:
-            # increment since we tried to look up this combo again.
-            increment_skip_cities_mapping(country, region, city)
-            return None, True
+    city = geolocation.city
+    normalized_city = normalize_string(city)
+    cities = [city, normalized_city] if city != normalized_city else [city]
+    for region in compass(weather_context.geolocation):
+        for city in cities:
+            if country and city and (country, region, city) in SKIP_CITIES_MAPPING:
+                # increment since we tried to look up this combo again.
+                increment_skip_cities_mapping(country, region, city)
+                return None, True
 
-        weather_context.selected_region = region
-        geolocation.city = city
+            weather_context.selected_region = region
+            geolocation.city = city
 
-        res = await probe(weather_context)
+            res = await probe(weather_context)
 
-        if res is not None:
-            return res, is_skipped
+            if res is not None:
+                return res, is_skipped
 
     return None, is_skipped
 
