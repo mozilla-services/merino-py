@@ -10,6 +10,7 @@ from merino.providers.suggest.weather.backends.protocol import WeatherContext
 
 MaybeStr = Optional[str]
 
+LOCALITY_SUFFIX_PATTERN = re.compile(r"\s*(city|municipality)$", re.IGNORECASE)
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {("GB", "London"): "LND"}
 REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
     ["AU", "CA", "CN", "DE", "ES", "FR", "GB", "GR", "IT", "PL", "PT", "RU", "US"]
@@ -63,14 +64,14 @@ SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
 }
 
 
-def normalize_string(input_str) -> str:
+def normalize_string(input_str: str) -> str:
     """Normalize string with special chcarcters"""
     return unicodedata.normalize("NFKD", input_str).encode("ascii", "ignore").decode("ascii")
 
 
 def remove_locality_suffix(city: str) -> str:
     """Remove either city or municipality suffix from a city name"""
-    return re.sub(r"\s*(city|municipality)$", "", city, flags=re.IGNORECASE).strip()
+    return LOCALITY_SUFFIX_PATTERN.sub("", city).strip()
 
 
 def compass(location: Location) -> Generator[MaybeStr, None, None]:
@@ -133,8 +134,11 @@ async def explore(
     geolocation = weather_context.geolocation
     country = geolocation.country
     city = geolocation.city
-    normalized_city = normalize_string(city)
-    cities = [city, normalized_city] if city != normalized_city else [city]
+    normalized_city = normalize_string(city) if city else None
+    suffix_remove = remove_locality_suffix(city) if city else None
+    # remove duplicates but maintain order
+    cities = list(dict.fromkeys([city, normalized_city, suffix_remove]))
+
     for region in compass(weather_context.geolocation):
         for city in cities:
             if country and city and (country, region, city) in SKIP_CITIES_MAPPING:
