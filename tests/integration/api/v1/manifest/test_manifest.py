@@ -28,7 +28,7 @@ def cleanup_tasks_fixture():
 
 
 @pytest.mark.asyncio
-async def test_get_manifest_success(client_with_metrics, gcp_uploader, mock_manifest, cleanup):
+async def test_get_manifest_success(client, gcp_uploader, mock_manifest, cleanup):
     """Uploads a manifest to the gcs bucket and verifies that the endpoint returns the uploaded file."""
     # initialize provider on startup
     await init_provider()
@@ -44,7 +44,7 @@ async def test_get_manifest_success(client_with_metrics, gcp_uploader, mock_mani
 
     cleanup(provider)
 
-    response = client_with_metrics.get("/api/v1/manifest")
+    response = client.get("/api/v1/manifest")
     assert response.status_code == 200
 
     manifest = ManifestData(**response.json())
@@ -55,9 +55,7 @@ async def test_get_manifest_success(client_with_metrics, gcp_uploader, mock_mani
 
 
 @pytest.mark.asyncio
-async def test_get_manifest_from_gcs_bucket_should_return_empty_manifest_file(
-    client_with_metrics, cleanup
-):
+async def test_get_manifest_from_gcs_bucket_should_return_empty_manifest_file(client, cleanup):
     """Does not upload any manifests to the gcs bucket. Should return none and a 404."""
     await init_provider()
 
@@ -69,7 +67,7 @@ async def test_get_manifest_from_gcs_bucket_should_return_empty_manifest_file(
 
     cleanup(provider)
 
-    response = client_with_metrics.get("/api/v1/manifest")
+    response = client.get("/api/v1/manifest")
     assert response.status_code == 404
 
     assert response.json()["domains"] == []
