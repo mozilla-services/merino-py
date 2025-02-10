@@ -174,92 +174,102 @@ this phrase refers to feeling, but it can be punned to refer to the
 <a href="https://en.wikipedia.org/wiki/Felt">textile</a>. Felt is often made of wool, and
 Merino wool (from Merino sheep) produces exceptionally smooth felt.</p>
 <h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre class="mermaid">flowchart TD
-    User[\fa:fa-user User/]
-
-    subgraph Firefox [fa:fa-firefox Firefox]
-        online(Online Search and Suggest)
-        offline(Offline Search and Suggest&lt;br/&gt;fetches adMarketplace, static Wikipedia, &lt;br/&gt;and other suggestions.&lt;br/&gt; Offline mode is fallback if Merino times out.)
-    end
-
-    User --&gt; |Accessing the Firefox URL bar| Firefox
-
-    subgraph Merino [fa:fa-leaf Merino]
-        srh(fa:fa-gears Suggest Request Handler)
-
-        subgraph middleware [fa:fa-paperclip Middleware]
-            Geolocation
-            Logging
-            UserAgent
-            Metrics
-        end
-
-        maxmind[(MaxmindDB)]
-        Geolocation --&gt; maxmind
-
-        srh -..- middleware
-
-        subgraph providers [fa:fa-truck Providers]
-            adm(adm)
-            amo(amo)
-            geolocation(geolocation)
-            toppicks(top-picks)
-            weather(weather)
-            wikipedia(wikipedia)
-        end
-
-        srh --&gt; adm
-        srh --&gt; amo
-        srh --&gt; geolocation
-        srh --&gt; toppicks
-        srh --&gt; weather
-        srh --&gt; wikipedia
-
-        subgraph backends [fa:fa-server Backends]
-            rsb(remote settings)
-            accuweather(accuweather)
-            elastic(elastic)
-            toppicks_back(top picks)
-            dynamic_amo(dynamic addons)
-
-        end
-
-        adm --&gt; rsb
-        amo --&gt; dynamic_amo
-        toppicks --&gt; toppicks_back
-        weather --&gt; accuweather
-        wikipedia --&gt; elastic
-    end
-
-
-    subgraph &quot;Airflow (Merino Jobs)&quot;
-        wikipedia_sync(Wikipedia Sync)
-        toppicks_sync(Top Picks Sync)
-        addons_sync(Addons Remote Settings Upload)
-    end
-
-    addons_api(Addons API)
-    dynamic_amo --&gt; addons_api
-
-    elastico[(Elasticsearch)]
-    elastic --&gt; elastico
-    wikipedia_sync ..- |Syncs Wikipedia entries weekly| elastico
-
-    accuweather_api(Accuweather API)
-    accuweather ..-&gt; accuweather_api
-
-    redis[(Redis Cache)]
-    accuweather ..-&gt; |tries to query cache first| redis
-
-    kinto[(Remote Settings)]
-    rsb --- kinto
-    addons_sync ..- |Add Addons Suggestions to Remote Settings| kinto
-
-    toppicks_data[(GCS Top Picks Data,&lt;br/&gt;a list of Mozilla curated popular sites and metadata to be &lt;br/&gt;displayed on browser)]
-    toppicks_sync ..-&gt; toppicks_data
-
-    online --&gt; |/api/v1/suggest| srh
-    offline ..- kinto
+<pre class="mermaid">---
+config:
+  look: neo
+  layout: elk
+  theme: default
+---
+flowchart TD
+subgraph Firefox[&quot;fa:fa-firefox-browser Firefox&quot;]
+        NewTab
+        UrlBar
+end
+subgraph NewTab[&quot;fa:fa-plus New Tab&quot;]
+        CuratedRecommendations(&quot;Curated Recommendations&quot;)
+        WeatherWidget(&quot;Weather Widget&quot;)
+end
+subgraph UrlBar[&quot;fa:fa-magnifying-glass Url Bar&quot;]
+        online(&quot;Online Search and Suggest&quot;)
+        offline(&quot;Offline Search and Suggest&lt;br&gt;fetches adMarketplace, static Wikipedia, &lt;br&gt;and other suggestions.&lt;br&gt; Offline mode is fallback if Merino times out.&quot;)
+end
+subgraph middleware[&quot;fa:fa-layer-group Middleware&quot;]
+        Geolocation[&quot;Geolocation&quot;]
+        Logging[&quot;Logging&quot;]
+        UserAgent[&quot;UserAgent&quot;]
+        Metrics[&quot;Metrics&quot;]
+end
+subgraph suggestProviders[&quot;fa:fa-truck Suggest Providers&quot;]
+        admProvider(&quot;adm&quot;)
+        amoProvider(&quot;amo&quot;)
+        geolocationProvider(&quot;geolocation&quot;)
+        toppicksProvider(&quot;top-picks&quot;)
+        weatherProvider(&quot;weather&quot;)
+        wikipediaProvider(&quot;wikipedia&quot;)
+end
+subgraph suggestBackends[&quot;fa:fa-microchip Suggest Backends&quot;]
+        remoteSettingsBackend(&quot;remote settings&quot;)
+        accuweatherBackend(&quot;accuweather&quot;)
+        elasticBackend(&quot;elastic&quot;)
+        toppicksBackend(&quot;top picks&quot;)
+        dynamicAmoBackend(&quot;dynamic addons&quot;)
+end
+subgraph curatedRecommendationsBackends[&quot;fa:fa-microchip Curated Recommendations Backends&quot;]
+        corpusBackend(&quot;corpus&quot;)
+        extendedExpirationCorpusBackend(&quot;corpus extended expiration&quot;)
+        gcsEngagementBackend(&quot;gcs engagement&quot;)
+        fakespotBackend(&quot;fakespot&quot;)
+        gcsPriorBackend(&quot;gcs prior&quot;)
+end
+subgraph Merino[&quot;fa:fa-server Merino&quot;]
+        srh(&quot;fa:fa-gears Suggest Request Handler&quot;)
+        crh(&quot;fa:fa-gears Curated Recommendations Handler&quot;)
+        mrh(&quot;fa:fa-gears Manifest Handler&quot;)
+        middleware
+        maxmind[(&quot;fa:fa-database MaxmindDB&quot;)]
+        suggestProviders
+        curatedRecommendationsProvider[&quot;fa:fa-truck Curated Recommendations Provider&quot;]
+        manifestProvider[&quot;fa:fa-truck Manifest Provider&quot;]
+        suggestBackends
+        curatedRecommendationsBackends
+        manifestBackend[&quot;Manifest Backend&quot;]
+end
+subgraph Jobs[&quot;fa:fa-rotate Airflow (Merino Jobs)&quot;]
+        wikipediaSyncJob(&quot;Wikipedia Sync&quot;)
+        toppicksSyncJob(&quot;Top Picks Sync&quot;)
+end
+    User[\&quot;fa:fa-user User&quot;/] -- Accessing the Firefox URL bar --&gt; Firefox
+    online -- /api/v1/suggest --&gt; srh
+    CuratedRecommendations -- &quot;/api/v1/curated-recommendations&quot; --&gt; crh
+    manifest[&quot;manifest&quot;] -- /api/v1/manifest --&gt; mrh
+    WeatherWidget --&gt; srh
+    srh -..- middleware
+    crh -..- middleware
+    mrh -..- middleware
+    srh --&gt; suggestProviders
+    crh --&gt; curatedRecommendationsProvider
+    mrh --&gt; manifestProvider
+    curatedRecommendationsProvider --&gt; curatedRecommendationsBackends
+    manifestProvider --&gt; manifestBackend
+    admProvider --&gt; remoteSettingsBackend
+    amoProvider --&gt; dynamicAmoBackend
+    toppicksProvider --&gt; toppicksBackend
+    weatherProvider --&gt; accuweatherBackend
+    wikipediaProvider --&gt; elasticBackend
+    Geolocation --&gt; maxmind
+    dynamicAmoBackend --&gt; addonsAPI(&quot;fa:fa-globe Addons API&quot;)
+    elasticBackend --&gt; elasticSearch[(&quot;Elasticsearch&quot;)]
+    manifestBackend -..-&gt; toppicksData[(&quot;fa:fa-database GCS Top Picks Data,&lt;br&gt;a list of Mozilla curated popular sites and metadata to be &lt;br&gt;displayed on browser&quot;)]
+    toppicksSyncJob -..-&gt; toppicksData
+    accuweatherBackend -..-&gt; accuweatherAPI(&quot;fa:fa-globe Accuweather API&quot;)
+    accuweatherAPI -. tries to query cache first ..-&gt; redis[(&quot;fa:fa-memory Redis Cache&quot;)]
+    gcsEngagementBackend --&gt; gcsMerinoAirflowData[(&quot;fa:fa-database GCS Merino Airflow Data&quot;)]
+    gcsPriorBackend --&gt; gcsMerinoAirflowData
+    fakespotBackend --&gt; gcsFakespotNewTabProducts[(&quot;fa:fa-database GCS Fakespot NewTab Products&quot;)]
+    corpusBackend -..-&gt; curatedCorpusAPI(&quot;fa:fa-globe Curated Corpus API&quot;)
+    offline -..- kinto[(&quot;Remote Settings&quot;)]
+    remoteSettingsBackend --- kinto
+    wikipediaSyncJob -. Syncs Wikipedia entries weekly ..- elasticSearch
 </pre>
 
                     </main>
