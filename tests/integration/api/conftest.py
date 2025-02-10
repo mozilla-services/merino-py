@@ -5,7 +5,7 @@
 """Module for test configurations for the integration test directory."""
 
 from logging import LogRecord
-from typing import Iterator, Generator
+from typing import Iterator
 from unittest.mock import AsyncMock
 
 import pytest
@@ -30,7 +30,6 @@ from merino.curated_recommendations.fakespot_backend.protocol import (
 )
 from merino.main import app
 from merino.utils.log_data_creators import RequestSummaryLogDataModel
-from merino.middleware import ScopeKey
 from tests.integration.api.types import RequestSummaryLogDataFixture
 
 
@@ -68,18 +67,6 @@ def fixture_test_client() -> TestClient:
     the app, see: https://fastapi.tiangolo.com/advanced/testing-events/
     """
     return TestClient(app)
-
-
-@pytest.fixture(name="client_with_metrics")
-def fixture_client_with_metrics() -> Generator[TestClient, None, None]:
-    """Create test client with NoOpMetricsClient in request scope."""
-
-    async def asgi_wrapper(scope, receive, send):
-        scope[ScopeKey.METRICS_CLIENT] = NoOpMetricsClient()
-        await app(scope, receive, send)
-
-    with TestClient(asgi_wrapper) as client:
-        yield client
 
 
 @pytest.fixture(name="client_with_events")
