@@ -97,7 +97,8 @@ def compass(location: Location) -> Generator[MaybeStr, None, None]:
     city = location.city
 
     if regions and country and city:
-        match (country, city):
+        corrected_city = CITY_NAME_CORRECTION_MAPPING.get(city, city)
+        match (country, corrected_city):
             case (country, city) if (
                 country,
                 city,
