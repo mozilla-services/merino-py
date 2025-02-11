@@ -58,7 +58,10 @@ async def test_fetch_addons_succeed(mocker: MockerFixture, dynamic_backend: Dyna
 
 @pytest.mark.asyncio
 async def test_fetch_addons_skipped_api_failure(
-    mocker: MockerFixture, caplog: LogCaptureFixture, dynamic_backend: DynamicAmoBackend, filter_caplog: FilterCaplogFixture
+    mocker: MockerFixture,
+    caplog: LogCaptureFixture,
+    dynamic_backend: DynamicAmoBackend,
+    filter_caplog: FilterCaplogFixture,
 ):
     """Test that fetch fails raises error when Addon requests fails before it
     returns a response.
@@ -68,14 +71,19 @@ async def test_fetch_addons_skipped_api_failure(
 
     # Ensure that all the messages are errors due to the timeout.
     with caplog.at_level(logging.ERROR):
-        records: list[LogRecord] = filter_caplog(caplog.records, "merino.providers.suggest.amo.backends.dynamic")
+        records: list[LogRecord] = filter_caplog(
+            caplog.records, "merino.providers.suggest.amo.backends.dynamic"
+        )
         for record in records:
             assert record.message.startswith("Addons API failed request to fetch addon")
 
 
 @pytest.mark.asyncio
 async def test_fetch_addons_skipped_api_request_failure(
-    mocker: MockerFixture, caplog: LogCaptureFixture, dynamic_backend: DynamicAmoBackend, filter_caplog: FilterCaplogFixture
+    mocker: MockerFixture,
+    caplog: LogCaptureFixture,
+    dynamic_backend: DynamicAmoBackend,
+    filter_caplog: FilterCaplogFixture,
 ):
     """Test that fetch fails raises error when Addon request fails."""
     sample_addon_resp = json.dumps(
@@ -110,7 +118,9 @@ async def test_fetch_addons_skipped_api_request_failure(
     await dynamic_backend.fetch_and_cache_addons_info()
 
     with caplog.at_level(logging.ERROR):
-        records: list[LogRecord] = filter_caplog(caplog.records, "merino.providers.suggest.amo.backends.dynamic")
+        records: list[LogRecord] = filter_caplog(
+            caplog.records, "merino.providers.suggest.amo.backends.dynamic"
+        )
 
         assert len(dynamic_backend.dynamic_data) == len(SupportedAddon) - 1
         assert len(records) == 1
