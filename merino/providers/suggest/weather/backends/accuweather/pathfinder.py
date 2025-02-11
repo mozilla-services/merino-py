@@ -1,5 +1,6 @@
 """Pathfinder - a utility to reconcile geolocation distinctions between MaxmindDB and AccuWeather."""
 
+import typing
 import unicodedata
 import re
 
@@ -10,7 +11,7 @@ from merino.providers.suggest.weather.backends.protocol import WeatherContext
 
 MaybeStr = Optional[str]
 
-LOCALITY_SUFFIX_PATTERN = re.compile(r"\s*(city|municipality)$", re.IGNORECASE)
+LOCALITY_SUFFIX_PATTERN: re.Pattern = re.compile(r"\s+(city|municipality)$", re.IGNORECASE)
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {("GB", "London"): "LND"}
 REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
     ["AU", "CA", "CN", "DE", "ES", "FR", "GB", "GR", "IT", "PL", "PT", "RU", "US"]
@@ -71,7 +72,14 @@ def normalize_string(input_str: str) -> str:
 
 def remove_locality_suffix(city: str) -> str:
     """Remove either city or municipality suffix from a city name"""
-    return LOCALITY_SUFFIX_PATTERN.sub("", city).strip()
+    return LOCALITY_SUFFIX_PATTERN.sub("", city)
+
+
+CITY_NAME_NORMALIZERS: list[Callable[[str], str]] = [
+    lambda a: a,
+    normalize_string,
+    remove_locality_suffix,
+]
 
 
 def compass(location: Location) -> Generator[MaybeStr, None, None]:
@@ -89,8 +97,7 @@ def compass(location: Location) -> Generator[MaybeStr, None, None]:
     city = location.city
 
     if regions and country and city:
-        corrected_city = CITY_NAME_CORRECTION_MAPPING.get(city, remove_locality_suffix(city))
-        match (country, corrected_city):
+        match (country, city):
             case (country, city) if (
                 country,
                 city,
@@ -133,15 +140,18 @@ async def explore(
     is_skipped = False
     geolocation = weather_context.geolocation
     country = geolocation.country
-    city = geolocation.city
-    normalized_city = normalize_string(city) if city else None
-    suffix_remove = remove_locality_suffix(city) if city else None
-    # remove duplicates but maintain order
-    cities = list(dict.fromkeys([city, normalized_city, suffix_remove]))
+    city: str = typing.cast(str, geolocation.city)  # tell the type checker it's truly not None
+    # map is lazy, so items of `cities` would only be evaluated one by one if needed
+    cities = map(lambda fn: fn(city), CITY_NAME_NORMALIZERS)
+    explored_cities: list[str] = []  # store the explored cities to avoid duplicates
 
     for region in compass(weather_context.geolocation):
         for city in cities:
-            if country and city and (country, region, city) in SKIP_CITIES_MAPPING:
+            if city in explored_cities:
+                continue
+            else:
+                explored_cities.append(city)
+            if country and (country, region, city) in SKIP_CITIES_MAPPING:
                 # increment since we tried to look up this combo again.
                 increment_skip_cities_mapping(country, region, city)
                 return None, True
