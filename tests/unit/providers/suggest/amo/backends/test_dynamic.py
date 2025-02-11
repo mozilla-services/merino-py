@@ -1,10 +1,10 @@
 """Unit tests for the Addon API provider backend"""
 
 import json
-
+import logging
 import httpx
 import pytest
-from _pytest.logging import LogCaptureFixture
+from pytest import LogCaptureFixture
 from httpx import AsyncClient, Request, Response
 from pytest_mock import MockerFixture
 
@@ -14,6 +14,8 @@ from merino.providers.suggest.amo.backends.dynamic import (
     DynamicAmoBackendException,
 )
 from merino.providers.suggest.amo.backends.protocol import Addon, AmoBackendError
+from logging import LogRecord
+from tests.types import FilterCaplogFixture
 
 
 @pytest.fixture(name="dynamic_backend")
@@ -56,7 +58,7 @@ async def test_fetch_addons_succeed(mocker: MockerFixture, dynamic_backend: Dyna
 
 @pytest.mark.asyncio
 async def test_fetch_addons_skipped_api_failure(
-    mocker: MockerFixture, caplog: LogCaptureFixture, dynamic_backend: DynamicAmoBackend
+    mocker: MockerFixture, caplog: LogCaptureFixture, dynamic_backend: DynamicAmoBackend, filter_caplog: FilterCaplogFixture
 ):
     """Test that fetch fails raises error when Addon requests fails before it
     returns a response.
@@ -65,13 +67,15 @@ async def test_fetch_addons_skipped_api_failure(
     await dynamic_backend.fetch_and_cache_addons_info()
 
     # Ensure that all the messages are errors due to the timeout.
-    for msg in caplog.messages:
-        assert msg.startswith("Addons API failed request to fetch addon")
+    with caplog.at_level(logging.ERROR):
+        records: list[LogRecord] = filter_caplog(caplog.records, "merino.providers.suggest.amo.backends.dynamic")
+        for record in records:
+            assert record.message.startswith("Addons API failed request to fetch addon")
 
 
 @pytest.mark.asyncio
 async def test_fetch_addons_skipped_api_request_failure(
-    mocker: MockerFixture, caplog: LogCaptureFixture, dynamic_backend: DynamicAmoBackend
+    mocker: MockerFixture, caplog: LogCaptureFixture, dynamic_backend: DynamicAmoBackend, filter_caplog: FilterCaplogFixture
 ):
     """Test that fetch fails raises error when Addon request fails."""
     sample_addon_resp = json.dumps(
@@ -105,9 +109,12 @@ async def test_fetch_addons_skipped_api_request_failure(
 
     await dynamic_backend.fetch_and_cache_addons_info()
 
-    assert len(dynamic_backend.dynamic_data) == len(SupportedAddon) - 1
-    assert len(caplog.messages) == 1
-    assert caplog.messages[0].startswith("Addons API could not find key: video-downloadhelper")
+    with caplog.at_level(logging.ERROR):
+        records: list[LogRecord] = filter_caplog(caplog.records, "merino.providers.suggest.amo.backends.dynamic")
+
+        assert len(dynamic_backend.dynamic_data) == len(SupportedAddon) - 1
+        assert len(records) == 1
+        assert records[0].message.startswith("Addons API could not find key: video-downloadhelper")
 
 
 @pytest.mark.asyncio
