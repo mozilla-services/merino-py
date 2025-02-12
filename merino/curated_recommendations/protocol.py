@@ -273,7 +273,7 @@ class CuratedRecommendationsFeed(BaseModel):
     def get_sections(self) -> list[tuple[Section, str]]:
         """Get a list of all sections as tuples, where each tuple is a Section and its ID."""
         return [
-            (feed, model_field.alias)  # alias defines the section id
+            (feed, str(model_field.alias))  # alias defines the section id
             for field_name, model_field in self.model_fields.items()
             if (feed := getattr(self, field_name)) is not None and type(feed) is Section
         ]
