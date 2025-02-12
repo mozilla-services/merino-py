@@ -26,8 +26,6 @@ def generate_feed(section_count: int, followed_count: int = 0) -> CuratedRecomme
         CuratedRecommendationsFeed: A feed instance containing the generated sections.
     """
     feed = CuratedRecommendationsFeed()
-    if section_count == 0:
-        return feed
 
     # Set top_stories_section first.
     feed.top_stories_section = Section(
@@ -52,9 +50,6 @@ def generate_feed(section_count: int, followed_count: int = 0) -> CuratedRecomme
     return feed
 
 
-# --- Pytest Fixture --- #
-
-
 @pytest.fixture
 def response():
     """Fixture for CuratedRecommendationsResponse"""
@@ -69,10 +64,8 @@ def test_no_feeds(response):
     assert response.interestPicker is None
 
 
-def test_not_enough_hidden_sections(response):
-    """Test that when there are fewer than MIN_INTEREST_PICKER_COUNT hidden sections,
-    the function sets all sections to be visible and does not attach an interest picker.
-    """
+def test_not_enough_sections(response):
+    """Test that the interest picker is not shown if insufficient sections are available."""
     # Create 10 sections. With MIN_INITIALLY_VISIBLE_SECTION_COUNT = 3, there will be 7 sections
     # eligible for the interest picker, which is less than the min of 8.
     section_count = MIN_INTEREST_PICKER_COUNT + MIN_INITIALLY_VISIBLE_SECTION_COUNT - 1
@@ -88,10 +81,8 @@ def test_not_enough_hidden_sections(response):
 
 
 @pytest.mark.parametrize("followed_count", list(range(7)))
-def test_enough_hidden_sections_no_followed(response, followed_count: int):
-    """Test that when there are enough hidden sections (>= MIN_INTEREST_PICKER_COUNT) the interest
-    picker is created as expected, and sections are ranked incrementally.
-    """
+def test_interest_picker_is_created(response, followed_count: int):
+    """Test that the interest picker is created as expected, if enough sections are available."""
     section_count = 15
     response.feeds = generate_feed(section_count, followed_count=followed_count)
     apply_interest_picker(response)
@@ -113,16 +104,14 @@ def test_enough_hidden_sections_no_followed(response, followed_count: int):
         if section.isFollowed:
             assert section.isInitiallyVisible is True
 
-    # Verify renumbering: there should be no section with rank equal to the interest picker rank (2),
-    # and the smallest rank greater than 2 should be 3.
+    # Verify that receivedFeedRank (including on interestPicker) is numbered 0, 1, 2, etc.
     ranks = [section.receivedFeedRank for section, _ in sections]
     assert sorted(ranks) == [
         i for i in range(section_count + 1) if i != response.interestPicker.receivedFeedRank
     ]
 
-    # Verify that the interest picker's sections include all hidden sections.
+    # Verify that the interest picker's sections include all sections not visible by default.
     hidden_section_ids = [
         section_id for section, section_id in sections if not section.isInitiallyVisible
     ]
-    picker_ids = [s.sectionId for s in response.interestPicker.sections]
-    assert set(picker_ids) == set(hidden_section_ids)
+    assert set([s.sectionId for s in response.interestPicker.sections]) == set(hidden_section_ids)
