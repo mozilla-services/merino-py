@@ -323,6 +323,13 @@ class CuratedRecommendationsProvider:
         min_fallback_recs_per_section = 1
         top_stories_count = 6
 
+        # Recommendations whose topic matches a blocked section should not be shown.
+        if request.sections:
+            blocked_section_ids = {rs.sectionId for rs in request.sections if rs.isBlocked}
+            recommendations = [
+                r for r in recommendations if r.topic and r.topic.value not in blocked_section_ids
+            ]
+
         # Apply Thompson sampling to rank all recommendations by engagement
         recommendations = thompson_sampling(
             recommendations,
