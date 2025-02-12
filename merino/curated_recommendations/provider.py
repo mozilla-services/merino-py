@@ -469,10 +469,10 @@ class CuratedRecommendationsProvider:
                 curated_recommendations_request.sections, response.feeds
             )
 
-        if curated_recommendations_request.enableInterestPicker:
+        if curated_recommendations_request.enableInterestPicker and response.feeds:
             feeds, interest_picker = create_interest_picker(response.feeds)
             response.feeds = feeds
-            response.interest_picker = interest_picker
+            response.interestPicker = interest_picker
 
         return response
 

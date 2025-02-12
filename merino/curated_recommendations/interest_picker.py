@@ -12,8 +12,9 @@ from merino.curated_recommendations.protocol import (
 MIN_INITIALLY_VISIBLE_SECTION_COUNT = 3  # Minimum number of sections that are shown by default.
 MIN_INTEREST_PICKER_COUNT = 8  # Minimum number of items in the interest picker.
 
+
 def create_interest_picker(
-        feed: CuratedRecommendationsFeed
+    feed: CuratedRecommendationsFeed,
 ) -> tuple[CuratedRecommendationsFeed, InterestPicker | None]:
     """Set the interest picker on the given feed.
 

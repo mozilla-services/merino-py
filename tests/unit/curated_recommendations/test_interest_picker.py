@@ -11,6 +11,7 @@ from merino.curated_recommendations.interest_picker import (
 from merino.curated_recommendations.layouts import layout_4_medium
 from merino.curated_recommendations.protocol import Section, CuratedRecommendationsFeed
 
+
 def generate_feed(section_count: int, followed_count: int = 0) -> CuratedRecommendationsFeed:
     """Create a CuratedRecommendationsFeed populated with sections.
 
@@ -45,10 +46,12 @@ def generate_feed(section_count: int, followed_count: int = 0) -> CuratedRecomme
 
     return feed
 
+
 def test_no_sections():
     """Test that if the feed has no sections, no interest picker is created."""
     feed, interest_picker = create_interest_picker(CuratedRecommendationsFeed())
     assert interest_picker is None
+
 
 def test_not_enough_sections():
     """Test that the interest picker is not shown if insufficient sections are available."""
@@ -63,6 +66,7 @@ def test_not_enough_sections():
     # All sections must be visible.
     for section, _ in feed.get_sections():
         assert section.isInitiallyVisible is True
+
 
 @pytest.mark.parametrize("followed_count", list(range(7)))
 def test_interest_picker_is_created(followed_count: int):
@@ -94,6 +98,8 @@ def test_interest_picker_is_created(followed_count: int):
     assert sorted(ranks) == expected_ranks
 
     # Verify that the interest picker's sections include all sections not visible by default.
-    hidden_section_ids: list[str | None] = [section_id for section, section_id in sections if not section.isInitiallyVisible]
+    hidden_section_ids: list[str | None] = [
+        section_id for section, section_id in sections if not section.isInitiallyVisible
+    ]
     picker_ids = [s.sectionId for s in interest_picker.sections]
     assert set(picker_ids) == set(hidden_section_ids)
