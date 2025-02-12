@@ -37,16 +37,8 @@ def create_interest_picker(
     # Get all available sections sorted by the order in which they should be shown.
     sections = sorted(feed.get_sections(), key=lambda tup: tup[0].receivedFeedRank)
 
-    # The first MIN_INITIALLY_VISIBLE_SECTION_COUNT and followed sections must be visible.
-    visible_count = 0
-    for section, _ in sections:
-        if section.isFollowed or visible_count < MIN_INITIALLY_VISIBLE_SECTION_COUNT:
-            section.isInitiallyVisible = True
-            visible_count += 1
-        else:
-            section.isInitiallyVisible = False
+    _set_is_initially_visible(sections)
 
-    # The interest pick may only have sections that are not visible by default.
     picker_sections = [
         (section, section_id)
         for (section, section_id) in sections
@@ -59,24 +51,9 @@ def create_interest_picker(
             section.isInitiallyVisible = True
         return feed, None
 
-    # Randomize the positioning of the interest picker within a range. If any section is followed,
-    # then this range shifts down by 1. Note that the rank is 0-indexed, so rank 1 is the 2nd row.
-    if any(section.isFollowed for section, _ in sections):
-        interest_picker_rank = random.randint(2, 4)
-    else:
-        interest_picker_rank = random.randint(1, 3)
+    interest_picker_rank = _get_interest_picker_rank(sections)
+    _renumber_sections(sections, interest_picker_rank)
 
-    # Renumber the receivedFeedRank of all sections such that they increment by 1,
-    # and that the section following the picker has a rank equal to interest_picker_rank + 1.
-    new_rank = 0
-    for section, _ in sections:
-        if new_rank == interest_picker_rank:
-            # Skip the rank for the interest picker.
-            new_rank += 1
-        section.receivedFeedRank = new_rank
-        new_rank += 1
-
-    # Create and attach the interestPicker.
     interest_picker = InterestPicker(
         receivedFeedRank=interest_picker_rank,
         title="Follow topics to personalize your feed",
@@ -88,5 +65,43 @@ def create_interest_picker(
             InterestPickerSection(sectionId=section_id) for _, section_id in picker_sections
         ],
     )
-
     return feed, interest_picker
+
+
+def _set_is_initially_visible(sections: list[tuple]) -> None:
+    """Set initial visibility for sections.
+
+    Marks the first MIN_INITIALLY_VISIBLE_SECTION_COUNT and followed sections as visible;
+    others are hidden.
+    """
+    visible_count = 0
+    for section, _ in sections:
+        if section.isFollowed or visible_count < MIN_INITIALLY_VISIBLE_SECTION_COUNT:
+            section.isInitiallyVisible = True
+            visible_count += 1
+        else:
+            section.isInitiallyVisible = False
+
+
+def _get_interest_picker_rank(sections: list[tuple]) -> int:
+    """Return a randomized rank for the interest picker.
+
+    If any section is followed, choose a random int in [2, 4]; otherwise, in [1, 3].
+    """
+    if any(section.isFollowed for section, _ in sections):
+        return random.randint(2, 4)
+    return random.randint(1, 3)
+
+
+def _renumber_sections(sections: list[tuple], picker_rank: int) -> None:
+    """Renumber section ranks, leaving a gap for the interest picker.
+
+    Increments ranks by 1 so that the section after the picker has rank picker_rank+1.
+    """
+    new_rank = 0
+    for section, _ in sections:
+        if new_rank == picker_rank:
+            # Skip the rank for the interest picker.
+            new_rank += 1
+        section.receivedFeedRank = new_rank
+        new_rank += 1
