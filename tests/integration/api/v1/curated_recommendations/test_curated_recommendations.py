@@ -1465,7 +1465,6 @@ class TestSections:
             assert top_stories_section["subtitle"] is None
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("repeat", list(range(1000)))
     @pytest.mark.parametrize("enable_interest_picker", [True, False, None])
     async def test_sections_interest_picker(self, enable_interest_picker, monkeypatch, repeat):
         """Test the curated recommendations endpoint returns an interest picker when enabled"""
