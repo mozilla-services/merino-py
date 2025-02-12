@@ -3,7 +3,7 @@
 import random
 
 from merino.curated_recommendations.protocol import (
-    CuratedRecommendationsResponse,
+    CuratedRecommendationsFeed,
     InterestPickerSection,
     InterestPicker,
 )
@@ -12,26 +12,29 @@ from merino.curated_recommendations.protocol import (
 MIN_INITIALLY_VISIBLE_SECTION_COUNT = 3  # Minimum number of sections that are shown by default.
 MIN_INTEREST_PICKER_COUNT = 8  # Minimum number of items in the interest picker.
 
+def create_interest_picker(
+        feed: CuratedRecommendationsFeed
+) -> tuple[CuratedRecommendationsFeed, InterestPicker | None]:
+    """Set the interest picker on the given feed.
 
-def apply_interest_picker(response: CuratedRecommendationsResponse) -> None:
-    """Set the interest picker on the given response.
-
-    This method processes the sections in the response's feeds to determine which sections
+    This method processes the sections in the feed to determine which sections
     should be initially visible and which should be hidden. It sets `isInitiallyVisible` to True
-    for the first `MIN_INITIALLY_VISIBLE_SECTION_COUNT` sections and for follows sections.
+    for the first `MIN_INITIALLY_VISIBLE_SECTION_COUNT` sections and for followed sections.
     It then checks if there are at least MIN_INTEREST_PICKER_COUNT hidden sections available.
     If there are not enough hidden sections, all sections are made visible and no interest
     picker is created. Otherwise, the hidden sections are added to the interestPicker.sections.
 
     Args:
-        response (CuratedRecommendationsResponse): The API response containing sections.
-    """
-    # If there are no feeds in the response, nothing to do.
-    if not response.feeds:
-        return
+        feed (CuratedRecommendationsFeed): The feed containing sections.
 
+    Returns:
+        tuple[CuratedRecommendationsFeed, InterestPicker | None]:
+            A tuple where the first element is the updated feed and the second element is the
+            constructed InterestPicker. If there are not enough hidden sections, the InterestPicker
+            is not created and None is returned as the second element.
+    """
     # Get all available sections sorted by the order in which they should be shown.
-    sections = sorted(response.feeds.get_sections(), key=lambda tup: tup[0].receivedFeedRank)
+    sections = sorted(feed.get_sections(), key=lambda tup: tup[0].receivedFeedRank)
 
     # The first MIN_INITIALLY_VISIBLE_SECTION_COUNT and followed sections must be visible.
     visible_count = 0
@@ -53,7 +56,7 @@ def apply_interest_picker(response: CuratedRecommendationsResponse) -> None:
     if len(picker_sections) < MIN_INTEREST_PICKER_COUNT:
         for section, _ in sections:
             section.isInitiallyVisible = True
-        return
+        return feed, None
 
     # Randomize the positioning of the interest picker within a range. If any section is followed,
     # then this range shifts down by 1. Note that the rank is 0-indexed, so rank 1 is the 2nd row.
@@ -65,15 +68,15 @@ def apply_interest_picker(response: CuratedRecommendationsResponse) -> None:
     # Renumber the receivedFeedRank of all sections such that they increment by 1,
     # and that the section following the picker has a rank equal to interest_picker_rank + 1.
     new_rank = 0
-    for section, section_id in sections:
+    for section, _ in sections:
         if new_rank == interest_picker_rank:
             # Skip the rank for the interest picker.
             new_rank += 1
         section.receivedFeedRank = new_rank
         new_rank += 1
 
-    # Create and attach the interestPicker to the response.
-    response.interestPicker = InterestPicker(
+    # Create and attach the interestPicker.
+    interest_picker = InterestPicker(
         receivedFeedRank=interest_picker_rank,
         title="Follow topics to personalize your feed",
         subtitle=(
@@ -84,3 +87,5 @@ def apply_interest_picker(response: CuratedRecommendationsResponse) -> None:
             InterestPickerSection(sectionId=section_id) for _, section_id in picker_sections
         ],
     )
+
+    return feed, interest_picker

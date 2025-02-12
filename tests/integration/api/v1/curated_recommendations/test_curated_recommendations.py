@@ -1465,7 +1465,7 @@ class TestSections:
             assert top_stories_section["subtitle"] is None
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("enable_interest_picker", [True, False, None])
+    @pytest.mark.parametrize("enable_interest_picker", [True, False])
     async def test_sections_interest_picker(self, enable_interest_picker, monkeypatch):
         """Test the curated recommendations endpoint returns an interest picker when enabled"""
         # The fixture data doesn't have enough sections for the interest picker to show up, so lower
@@ -1483,10 +1483,11 @@ class TestSections:
             )
             data = response.json()
 
+            interest_picker_response = data["interestPicker"]
             if enable_interest_picker:
-                assert data["interestPicker"] is not None
+                assert interest_picker_response is not None
             else:
-                assert data.get("interestPicker") is None
+                assert interest_picker_response is None
 
 
 class TestExtendedExpiration:

@@ -15,7 +15,7 @@ from merino.curated_recommendations.engagement_backends.protocol import Engageme
 from merino.curated_recommendations.fakespot_backend.protocol import (
     FakespotBackend,
 )
-from merino.curated_recommendations.interest_picker import apply_interest_picker
+from merino.curated_recommendations.interest_picker import create_interest_picker
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_4_large,
@@ -470,7 +470,9 @@ class CuratedRecommendationsProvider:
             )
 
         if curated_recommendations_request.enableInterestPicker:
-            apply_interest_picker(response)
+            feeds, interest_picker = create_interest_picker(response.feeds)
+            response.feeds = feeds
+            response.interest_picker = interest_picker
 
         return response
 
