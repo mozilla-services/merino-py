@@ -21,6 +21,7 @@ from merino.curated_recommendations import (
     get_provider,
     ConstantPrior,
     ExtendedExpirationCorpusBackend,
+    interest_picker,
 )
 from merino.curated_recommendations.corpus_backends.protocol import Topic, ScheduledSurfaceId
 from merino.curated_recommendations.engagement_backends.protocol import (
@@ -1462,6 +1463,31 @@ class TestSections:
             top_stories_section = data["feeds"].get("top_stories_section")
             assert top_stories_section is not None
             assert top_stories_section["subtitle"] is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("repeat", list(range(1000)))
+    @pytest.mark.parametrize("enable_interest_picker", [True, False, None])
+    async def test_sections_interest_picker(self, enable_interest_picker, monkeypatch, repeat):
+        """Test the curated recommendations endpoint returns an interest picker when enabled"""
+        # The fixture data doesn't have enough sections for the interest picker to show up, so lower
+        # the minimum number of sections that it needs to have to 1.
+        monkeypatch.setattr(interest_picker, "MIN_INTEREST_PICKER_COUNT", 1)
+
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": "en-US",
+                    "feeds": ["sections"],
+                    "enableInterestPicker": enable_interest_picker,
+                },
+            )
+            data = response.json()
+
+            if enable_interest_picker:
+                assert data["interestPicker"] is not None
+            else:
+                assert data.get("interestPicker") is None
 
 
 class TestExtendedExpiration:
