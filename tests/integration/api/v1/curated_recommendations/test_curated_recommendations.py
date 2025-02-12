@@ -1466,7 +1466,7 @@ class TestSections:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("enable_interest_picker", [True, False, None])
-    async def test_sections_interest_picker(self, enable_interest_picker, monkeypatch, repeat):
+    async def test_sections_interest_picker(self, enable_interest_picker, monkeypatch):
         """Test the curated recommendations endpoint returns an interest picker when enabled"""
         # The fixture data doesn't have enough sections for the interest picker to show up, so lower
         # the minimum number of sections that it needs to have to 1.
