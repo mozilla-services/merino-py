@@ -1,6 +1,7 @@
 """Curated Recommendations provider top-level request and response models"""
 
 import hashlib
+from collections import namedtuple
 from enum import unique, Enum
 from typing import Annotated, cast
 import logging
@@ -230,6 +231,9 @@ class Section(BaseModel):
     isInitiallyVisible: bool = True
 
 
+SectionWithID = namedtuple("SectionWithID", ["section", "ID"])
+
+
 class CuratedRecommendationsFeed(BaseModel):
     """Multiple lists of curated recommendations, that are currently in an experimental phase."""
 
@@ -270,10 +274,10 @@ class CuratedRecommendationsFeed(BaseModel):
                 return cast(Section, getattr(self, field_name, None))
         return None
 
-    def get_sections(self) -> list[tuple[Section, str]]:
+    def get_sections(self) -> list[SectionWithID]:
         """Get a list of all sections as tuples, where each tuple is a Section and its ID."""
         return [
-            (feed, str(model_field.alias))  # alias defines the section id
+            SectionWithID(feed, str(model_field.alias))  # alias defines the section id
             for field_name, model_field in self.model_fields.items()
             if (feed := getattr(self, field_name)) is not None and type(feed) is Section
         ]

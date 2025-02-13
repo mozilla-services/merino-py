@@ -470,8 +470,7 @@ class CuratedRecommendationsProvider:
             )
 
         if curated_recommendations_request.enableInterestPicker and response.feeds:
-            feeds, interest_picker = create_interest_picker(response.feeds)
-            response.feeds = feeds
+            interest_picker = create_interest_picker(response.feeds.get_sections())
             response.interestPicker = interest_picker
 
         return response
