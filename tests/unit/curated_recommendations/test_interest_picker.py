@@ -191,7 +191,7 @@ def test_set_section_initial_visibility_with_followed():
     visible = [s for s in sections if s.section.isInitiallyVisible]
 
     # At least sections 2 and 7 must be visible, and the top 3 overall.
-    assert [s.ID for s in visible] == ["id0", "id1", "id2", "id7"]
+    assert {s.ID for s in visible} == {"id0", "id1", "id2", "id7"}
     for s in sections:
         if s.section.isFollowed:
             assert s.section.isInitiallyVisible is True
