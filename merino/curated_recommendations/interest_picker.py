@@ -18,7 +18,6 @@ def create_interest_picker(sections: list[SectionWithID]) -> InterestPicker | No
 
     Returns a tuple of the updated feed and the constructed InterestPicker, or None.
     """
-    sections = sorted(sections, key=lambda s: s.section.receivedFeedRank)
     _set_section_initial_visibility(
         sections, MIN_INITIALLY_VISIBLE_SECTION_COUNT, MIN_INTEREST_PICKER_COUNT
     )
@@ -33,7 +32,9 @@ def _set_section_initial_visibility(
     min_visible: int,
     min_picker: int,
 ) -> None:
-    """Mark first min_visible and followed sections as visible; else hide."""
+    """Make the first min_visible and followed sections by receivedFeedRank visible; else hide."""
+    sections = sorted(sections, key=lambda s: s.section.receivedFeedRank)
+
     visible_count = 0
     for s in sections:
         if s.section.isFollowed or visible_count < min_visible:

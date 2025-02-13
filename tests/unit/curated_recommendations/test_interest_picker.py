@@ -1,6 +1,8 @@
 """Tests covering merino/curated_recommendations/interest_picker.py"""
+from random import shuffle
 
 import pytest
+from coverage.cmdline import original_main
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.interest_picker import (
@@ -78,32 +80,43 @@ def test_not_enough_sections():
 
 @pytest.mark.parametrize("followed_count", list(range(7)))
 def test_interest_picker_is_created(followed_count: int):
-    """Test that an interest picker is created when enough sections are available."""
+    """Test that an interest picker is created as expected, if enough sections are available."""
     total = 15
     feed = generate_feed(total, followed_count=followed_count)
     sections = feed.get_sections()
+    original_order = [s.ID for s in sections]
+
     picker = create_interest_picker(sections)
     assert picker is not None
+
     # Picker rank range depends on followed sections.
     min_picker_rank = 1 if followed_count == 0 else 2
     max_picker_rank = min_picker_rank + 2
     assert min_picker_rank <= picker.receivedFeedRank <= max_picker_rank
+
     # Check that first MIN_INITIALLY_VISIBLE_SECTION_COUNT sections are visible.
     visible = [s for s in sections if s.section.isInitiallyVisible]
     expected_vis = max(MIN_INITIALLY_VISIBLE_SECTION_COUNT, 1 + followed_count)
     assert len(visible) == expected_vis
+
     # All followed sections must be visible.
     for s in sections:
         if s.section.isFollowed:
             assert s.section.isInitiallyVisible is True
+
     # Check renumbering: ranks should be sequential and skip the picker rank.
     ranks = [s.section.receivedFeedRank for s in sections]
     expected = [i for i in range(total + 1) if i != picker.receivedFeedRank]
     assert sorted(ranks) == expected
+
     # Check picker sections: they must include all sections not initially visible.
     hidden_ids = {s.ID for s in sections if not s.section.isInitiallyVisible}
     picker_ids = {ps.sectionId for ps in picker.sections}
     assert picker_ids == hidden_ids
+
+    # Assert that the order of sections is preserved from before calling create_interest_picker.
+    new_order = [s.ID for s in sorted(sections, key=lambda s: s.section.receivedFeedRank)]
+    assert new_order == original_order
 
 
 def test_renumber_sections_preserves_order():
@@ -181,8 +194,11 @@ def test_set_section_initial_visibility_with_followed():
         sec.isFollowed = i in [2, 7]
         sec.isInitiallyVisible = False
         sections.append(SectionWithID(section=sec, ID=f"id{i}"))
+    shuffle(sections)  # Randomize the order to ensure receivedFeedRank is respected.
+
     _set_section_initial_visibility(sections, 3, 8)
     visible = [s for s in sections if s.section.isInitiallyVisible]
+
     # At least sections 2 and 7 must be visible, and the top 3 overall.
     assert [s.ID for s in visible] == ["id0", "id1", "id2", "id7"]
     for s in sections:
