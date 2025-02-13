@@ -1,6 +1,4 @@
-"""Module for the New Tab 'interest picker' component that allows users to follow
-sections.
-"""
+"""Module for the New Tab 'interest picker' component that allows users to follow sections."""
 
 import random
 from merino.curated_recommendations.protocol import (
