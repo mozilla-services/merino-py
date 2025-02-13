@@ -1,8 +1,8 @@
 """Tests covering merino/curated_recommendations/interest_picker.py"""
+
 from random import shuffle
 
 import pytest
-from coverage.cmdline import original_main
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.interest_picker import (
@@ -136,33 +136,24 @@ def test_renumber_sections_preserves_order():
     assert new_ranks == [0, 1, 3, 4, 5]
 
 
-def test_get_interest_picker_rank_no_followed():
-    """Test _get_interest_picker_rank returns values in [1, 3] when no section is followed."""
+@pytest.mark.parametrize(
+    "followed, expected_ranks",
+    [
+        (False, {1, 2, 3}),
+        (True, {2, 3, 4}),
+    ],
+)
+def test_get_interest_picker_rank_param(followed: bool, expected_ranks: set[int]):
+    """Test _get_interest_picker_rank returns proper values based on followed status."""
     sections = []
     for i in range(10):
         sec = Section(
             receivedFeedRank=i, recommendations=[], title=f"S{i}", layout=layout_4_medium
         )
-        sec.isFollowed = False
+        sec.isFollowed = (i == 5) if followed else False
         sections.append(SectionWithID(section=sec, ID=f"id{i}"))
-    results = {_get_interest_picker_rank(sections) for _ in range(100)}
-    # All values must be in the range [1,3]
-    for r in results:
-        assert 1 <= r <= 3
-
-
-def test_get_interest_picker_rank_with_followed():
-    """Test _get_interest_picker_rank returns values in [2, 4] when at least one section is followed."""
-    sections = []
-    for i in range(10):
-        sec = Section(
-            receivedFeedRank=i, recommendations=[], title=f"S{i}", layout=layout_4_medium
-        )
-        sec.isFollowed = i == 5
-        sections.append(SectionWithID(section=sec, ID=f"id{i}"))
-    results = {_get_interest_picker_rank(sections) for _ in range(100)}
-    for r in results:
-        assert 2 <= r <= 4
+    actual_ranks = {_get_interest_picker_rank(sections) for _ in range(100)}
+    assert actual_ranks == expected_ranks
 
 
 def test_set_section_initial_visibility_without_enough_sections():
