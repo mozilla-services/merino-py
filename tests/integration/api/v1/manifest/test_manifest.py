@@ -27,7 +27,6 @@ def cleanup_tasks_fixture():
     return cleanup_tasks
 
 
-# TODO fix BUCKET URL IS EMPTY
 @pytest.mark.asyncio
 async def test_get_manifest_success(client, gcp_uploader, mock_manifest, cleanup):
     """Uploads a manifest to the gcs bucket and verifies that the endpoint returns the uploaded file."""
@@ -39,9 +38,6 @@ async def test_get_manifest_success(client, gcp_uploader, mock_manifest, cleanup
 
     # upload a manifest file to GCS test container
     gcp_uploader.upload_content(orjson.dumps(mock_manifest), "top_picks_latest.json")
-    # http://localhost:4443/storage/v1/b//o/top_picks_latest.json
-    # test_gcp_uploader_bucket
-    print(f"@@@@@@@@@@@ gcp_uploader_bucket: {gcp_uploader.bucket_name}")
 
     provider = get_provider()
     await provider.data_fetched_event.wait()
