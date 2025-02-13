@@ -1,6 +1,7 @@
 """Curated Recommendations provider top-level request and response models"""
 
 import hashlib
+from collections import namedtuple
 from enum import unique, Enum
 from typing import Annotated, cast
 import logging
@@ -122,6 +123,7 @@ class CuratedRecommendationsRequest(BaseModel):
     # Allow any string value or null, because ExperimentName is not meant to be an exhaustive list.
     experimentName: ExperimentName | str | None = None
     experimentBranch: str | None = None
+    enableInterestPicker: bool = False
 
     @field_validator("topics", mode="before")
     def validate_topics(cls, values):
@@ -226,6 +228,10 @@ class Section(BaseModel):
     layout: Layout
     isFollowed: bool = False
     isBlocked: bool = False
+    isInitiallyVisible: bool = True
+
+
+SectionWithID = namedtuple("SectionWithID", ["section", "ID"])
 
 
 class CuratedRecommendationsFeed(BaseModel):
@@ -268,9 +274,32 @@ class CuratedRecommendationsFeed(BaseModel):
                 return cast(Section, getattr(self, field_name, None))
         return None
 
+    def get_sections(self) -> list[SectionWithID]:
+        """Get a list of all sections as tuples, where each tuple is a Section and its ID."""
+        return [
+            SectionWithID(feed, str(model_field.alias))  # alias defines the section id
+            for field_name, model_field in self.model_fields.items()
+            if (feed := getattr(self, field_name)) is not None and type(feed) is Section
+        ]
+
     def set_topic_section(self, topic: Topic, section: Section):
         """Set a section for the given topic."""
         setattr(self, topic.name.lower(), section)
+
+
+class InterestPickerSection(BaseModel):
+    """Model representing a single section entry in the interest picker."""
+
+    sectionId: str
+
+
+class InterestPicker(BaseModel):
+    """Model representing the interest picker component for following sections."""
+
+    receivedFeedRank: int
+    title: str
+    subtitle: str
+    sections: list[InterestPickerSection]
 
 
 class CuratedRecommendationsResponse(BaseModel):
@@ -279,3 +308,4 @@ class CuratedRecommendationsResponse(BaseModel):
     recommendedAt: int
     data: list[CuratedRecommendation]
     feeds: CuratedRecommendationsFeed | None = None
+    interestPicker: InterestPicker | None = None
