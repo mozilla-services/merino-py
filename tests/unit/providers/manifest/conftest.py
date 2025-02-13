@@ -40,7 +40,6 @@ def cleanup_tasks_fixture():
 def fixture_manifest_remote_filemanager_parameters() -> dict[str, Any]:
     """Define ManifestRemoteFilemanager parameters for test."""
     return {
-        "gcs_project_path": "test_gcp_uploader_project",
         "gcs_bucket_path": "test_gcp_uploader_bucket",
         "blob_name": "test_blob_name",
     }
