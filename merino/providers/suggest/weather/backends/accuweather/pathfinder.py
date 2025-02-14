@@ -138,32 +138,32 @@ async def explore(
     is_skipped = False
     geolocation = weather_context.geolocation
     country = geolocation.country
-    city = geolocation.city
 
-    if city:
-        city = CITY_NAME_CORRECTION_MAPPING.get(city, city)
+    if geolocation.city is None:
+        return None, is_skipped
+
+    city = CITY_NAME_CORRECTION_MAPPING.get(geolocation.city, geolocation.city)
     # map is lazy, so items of `cities` would only be evaluated one by one if needed
-    cities = map(lambda fn: fn(city) if city else None, CITY_NAME_NORMALIZERS)
+    cities = map(lambda fn: fn(city), CITY_NAME_NORMALIZERS)
     for region in compass(weather_context.geolocation):
         # store the explored cities to avoid duplicates
         explored_cities: list[str] = []
         for city in cities:
-            if city:
-                if city in explored_cities:
-                    continue
-                else:
-                    explored_cities.append(city)
-                if country and city and (country, region, city) in SKIP_CITIES_MAPPING:
-                    # increment since we tried to look up this combo again.
-                    increment_skip_cities_mapping(country, region, city)
-                    return None, True
+            if city in explored_cities:
+                continue
+            else:
+                explored_cities.append(city)
+            if country and city and (country, region, city) in SKIP_CITIES_MAPPING:
+                # increment since we tried to look up this combo again.
+                increment_skip_cities_mapping(country, region, city)
+                return None, True
 
-                weather_context.selected_region = region
-                geolocation.city = city
-                res = await probe(weather_context)
+            weather_context.selected_region = region
+            geolocation.city = city
+            res = await probe(weather_context)
 
-                if res is not None:
-                    return res, is_skipped
+            if res is not None:
+                return res, is_skipped
 
     return None, is_skipped
 
