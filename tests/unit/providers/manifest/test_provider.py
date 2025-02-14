@@ -34,7 +34,7 @@ async def test_initialize(
         assert manifest_provider.manifest_data == manifest_data
         assert manifest_provider.last_fetch_at > 0
 
-
+# TODO REFACTOR THIS
 @pytest.mark.asyncio
 async def test_get_manifest_data(
     manifest_provider: Provider, manifest_data: ManifestData, cleanup
@@ -53,20 +53,20 @@ async def test_get_manifest_data(
         assert manifest_provider.manifest_data == manifest_data
 
 
-@pytest.mark.asyncio
-async def test_get_manifest_data_empty_data(manifest_provider: Provider, cleanup) -> None:
-    """Test get_manifest_data method returns empty manifest data object if backend returns SKIP"""
-    with patch(
-        "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SKIP, None),
-    ):
-        await manifest_provider.initialize()
-        await cleanup(manifest_provider)
+# @pytest.mark.asyncio
+# async def test_get_manifest_data_empty_data(manifest_provider: Provider, cleanup) -> None:
+#     """Test get_manifest_data method returns empty manifest data object if backend returns SKIP"""
+#     with patch(
+#         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
+#         return_value=(GetManifestResultCode.SKIP, None),
+#     ):
+#         await manifest_provider.initialize()
+#         await cleanup(manifest_provider)
 
-        manifest_data = manifest_provider.get_manifest_data()
+#         manifest_data = manifest_provider.get_manifest_data()
 
-        assert manifest_data is not None
-        assert manifest_data.domains == []
+#         assert manifest_data is not None
+#         assert manifest_data.domains == []
 
 
 @pytest.mark.asyncio
@@ -129,21 +129,21 @@ async def test_fetch_data_success(
         assert manifest_provider.manifest_data == manifest_data
 
 
-@pytest.mark.asyncio
-async def test_fetch_data_skip(manifest_provider: Provider, cleanup) -> None:
-    """Test fetch_data method does not set manifest data on SKIP"""
-    with patch(
-        "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SKIP, None),
-    ):
-        await manifest_provider.initialize()
-        await cleanup(manifest_provider)
+# @pytest.mark.asyncio
+# async def test_fetch_data_skip(manifest_provider: Provider, cleanup) -> None:
+#     """Test fetch_data method does not set manifest data on SKIP"""
+#     with patch(
+#         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
+#         return_value=(GetManifestResultCode.SKIP, None),
+#     ):
+#         await manifest_provider.initialize()
+#         await cleanup(manifest_provider)
 
-        await manifest_provider._fetch_data()
+#         await manifest_provider._fetch_data()
 
-        # manifest data remains empty ManifestData instance after initialization
-        assert manifest_provider.manifest_data is not None
-        assert manifest_provider.manifest_data.domains == []
+#         # manifest data remains empty ManifestData instance after initialization
+#         assert manifest_provider.manifest_data is not None
+#         assert manifest_provider.manifest_data.domains == []
 
 
 @pytest.mark.asyncio

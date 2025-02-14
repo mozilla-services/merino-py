@@ -4,95 +4,101 @@
 
 """Unit tests for the manifest backend filemanager module."""
 
-import json
-from unittest.mock import patch, MagicMock
+import orjson
+import pytest
+from unittest.mock import patch, MagicMock, AsyncMock
 from pydantic import ValidationError
 from merino.providers.manifest.backends.filemanager import ManifestRemoteFilemanager
 from merino.providers.manifest.backends.protocol import GetManifestResultCode, ManifestData
 
 
-def test_get_file(
-    manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_blob_mock,
-    blob_json,
-) -> None:
-    """Test that the get_file method returns manifest data."""
-    manifest_remote_filemanager.gcs_client = MagicMock()
-    manifest_remote_filemanager.gcs_client.get_file_by_name.return_value = gcs_blob_mock
-    gcs_blob_mock.download_as_text.return_value = blob_json
+@pytest.mark.asyncio
+async def test_get_file_async(blob_json):
+    """Test that the async get_file method returns manifest data."""
+    # Mocking blob response
+    mock_blob = AsyncMock()
+    mock_blob.download.return_value = blob_json
+    mock_blob.size = 1234
 
-    get_file_result_code, result = manifest_remote_filemanager.get_file()
+    # Mocking bucket
+    mock_bucket = AsyncMock()
+    mock_bucket.get_blob.return_value = mock_blob
 
+    # Mocking storage client
+    mock_storage = AsyncMock()
+    mock_storage.bucket.return_value = mock_bucket
+
+    # Instantiating the filemanager with mocks
+    filemanager = ManifestRemoteFilemanager("test-bucket", "test-blob")
+    filemanager.gcs_client = mock_storage
+    filemanager.bucket = mock_bucket
+
+    # Run test
+    get_file_result_code, result = await filemanager.get_file()
+
+    # Assertions
     assert get_file_result_code is GetManifestResultCode.SUCCESS
     assert isinstance(result, ManifestData)
     assert result.domains
     assert len(result.domains) == 3
     assert result.domains[0].domain == "google"
 
+@pytest.mark.asyncio
+async def test_get_file_json_decode_error():
+    """Test that the async get_file method handles JSON decode errors."""
+    mock_blob = AsyncMock()
+    mock_blob.download.return_value = b"invalid json"
 
-def test_get_file_skip(
-    manifest_remote_filemanager: ManifestRemoteFilemanager,
-) -> None:
-    """Test that the get_file method returns the SKIP code when there's no new generation."""
-    manifest_remote_filemanager.gcs_client = MagicMock()
-    manifest_remote_filemanager.gcs_client.get_file_by_name.return_value = None
+    mock_bucket = AsyncMock()
+    mock_bucket.get_blob.return_value = mock_blob
 
-    get_file_result_code, result = manifest_remote_filemanager.get_file()
+    mock_storage = AsyncMock()
+    mock_storage.bucket.return_value = mock_bucket
 
-    assert get_file_result_code is GetManifestResultCode.SKIP
-    assert result is None
+    filemanager = ManifestRemoteFilemanager("test-bucket", "test-blob")
+    filemanager.gcs_client = mock_storage
+    filemanager.bucket = mock_bucket
 
-
-def test_get_file_fail(
-    manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_client_mock,
-) -> None:
-    """Test that the get_file method returns the FAIL code on failure."""
-    gcs_client_mock.get_bucket.side_effect = Exception("Test error")
-
-    get_file_result_code, result = manifest_remote_filemanager.get_file()
+    get_file_result_code, result = await filemanager.get_file()
 
     assert get_file_result_code is GetManifestResultCode.FAIL
     assert result is None
 
+@pytest.mark.asyncio
+async def test_get_file_validation_error():
+    """Test that the async get_file method handles validation errors."""
+    mock_blob = AsyncMock()
+    mock_blob.download.return_value = orjson.dumps({"invalid_field": "data"})
 
-def test_get_file_fail_validation_error(
-    manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_client_mock,
-    gcs_bucket_mock,
-    gcs_blob_mock,
-) -> None:
-    """Test that the get_file method returns the FAIL code when a validation error occurs."""
-    gcs_bucket_mock.get_blob.return_value = gcs_blob_mock
-    gcs_client_mock.get_bucket.return_value = gcs_bucket_mock
+    mock_bucket = AsyncMock()
+    mock_bucket.get_blob.return_value = mock_blob
 
-    gcs_blob_mock.download_as_text.return_value = '{"invalid": "data"}'
+    mock_storage = AsyncMock()
+    mock_storage.bucket.return_value = mock_bucket
 
-    with patch(
-        "merino.providers.manifest.backends.filemanager.ManifestData.model_validate",
-        side_effect=ValidationError,
-    ):
-        get_file_result_code, result = manifest_remote_filemanager.get_file()
+    filemanager = ManifestRemoteFilemanager("test-bucket", "test-blob")
+    filemanager.gcs_client = mock_storage
+    filemanager.bucket = mock_bucket
+
+    get_file_result_code, result = await filemanager.get_file()
 
     assert get_file_result_code is GetManifestResultCode.FAIL
     assert result is None
 
+@pytest.mark.asyncio
+async def test_get_file_exception():
+    """Test that the async get_file method handles unexpected exceptions."""
+    mock_bucket = AsyncMock()
+    mock_bucket.get_blob.side_effect = Exception("Unexpected error")
 
-def test_get_file_fail_json_decoder_error(
-    manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_client_mock,
-    gcs_bucket_mock,
-    gcs_blob_mock,
-) -> None:
-    """Test that the get_file method returns the FAIL code when a JSON decoder occurs."""
-    gcs_bucket_mock.get_blob.return_value = gcs_blob_mock
-    gcs_client_mock.get_bucket.return_value = gcs_bucket_mock
+    mock_storage = AsyncMock()
+    mock_storage.bucket.return_value = mock_bucket
 
-    with patch(
-        "merino.providers.manifest.backends.filemanager.json.loads",
-        side_effect=json.JSONDecodeError,
-    ):
-        get_file_result_code, result = manifest_remote_filemanager.get_file()
+    filemanager = ManifestRemoteFilemanager("test-bucket", "test-blob")
+    filemanager.gcs_client = mock_storage
+    filemanager.bucket = mock_bucket
+
+    get_file_result_code, result = await filemanager.get_file()
 
     assert get_file_result_code is GetManifestResultCode.FAIL
     assert result is None
