@@ -311,6 +311,14 @@ class CuratedRecommendationsProvider:
         general_feed = [r for r in recommendations if not r.isTimeSensitive]
         return general_feed, need_to_know_feed
 
+    @staticmethod
+    def exclude_recommendations_from_blocked_sections(recommendations, requested_sections):
+        """Return recommendations which topic doesn't match any blocked section"""
+        blocked_section_ids = {rs.sectionId for rs in requested_sections if rs.isBlocked}
+        return [
+            r for r in recommendations if not r.topic or r.topic.value not in blocked_section_ids
+        ]
+
     async def get_sections(
         self,
         recommendations: list[CuratedRecommendation],
@@ -325,10 +333,9 @@ class CuratedRecommendationsProvider:
 
         # Recommendations whose topic matches a blocked section should not be shown.
         if request.sections:
-            blocked_section_ids = {rs.sectionId for rs in request.sections if rs.isBlocked}
-            recommendations = [
-                r for r in recommendations if r.topic and r.topic.value not in blocked_section_ids
-            ]
+            recommendations = self.exclude_recommendations_from_blocked_sections(
+                recommendations, request.sections
+            )
 
         # Apply Thompson sampling to rank all recommendations by engagement
         recommendations = thompson_sampling(

@@ -27,7 +27,48 @@ from merino.curated_recommendations.protocol import (
     MIN_TILE_ID,
     CuratedRecommendation,
     CuratedRecommendationsRequest,
+    SectionConfiguration,
 )
+
+
+def generate_recommendations(
+    length: int, time_sensitive_count: int | None = None
+) -> list[CuratedRecommendation]:
+    """Create dummy recommendations for the tests below.
+
+    @param length: how many recommendations are needed for a test
+    @param time_sensitive_count: the number of items to make time-sensitive.
+        If None (the default), then half of the recommendations will be time-sensitive.
+    @return: A list of curated recommendations
+    """
+    recs = []
+
+    # If time_sensitive_count is not provided, default to half the length
+    if time_sensitive_count is None:
+        time_sensitive_count = length // 2
+
+    # Randomly choose indices that will be time-sensitive
+    time_sensitive_indices = random.sample(range(length), time_sensitive_count)
+
+    for i in range(length):
+        rec = CuratedRecommendation(
+            corpusItemId=str(uuid.uuid4()),
+            tileId=MIN_TILE_ID + random.randint(0, 101),
+            receivedRank=i,
+            scheduledCorpusItemId=str(uuid.uuid4()),
+            url=HttpUrl("https://littlelarry.com/"),
+            title="little larry",
+            excerpt="is failing english",
+            topic=random.choice(list(Topic)),
+            publisher="cohens",
+            isTimeSensitive=i in time_sensitive_indices,
+            imageUrl=HttpUrl("https://placehold.co/600x400/"),
+            iconUrl=None,
+        )
+
+        recs.append(rec)
+
+    return recs
 
 
 class TestCuratedRecommendationsProviderExtractLanguageFromLocale:
@@ -263,46 +304,6 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
     """Unit tests for rank_need_to_know_recommendations method"""
 
     @staticmethod
-    def generate_recommendations(
-        length: int, time_sensitive_count: int | None = None
-    ) -> list[CuratedRecommendation]:
-        """Create dummy recommendations for the tests below.
-
-        @param length: how many recommendations are needed for a test
-        @param time_sensitive_count: the number of items to make time-sensitive.
-            If None (the default), then half of the recommendations will be time-sensitive.
-        @return: A list of curated recommendations
-        """
-        recs = []
-
-        # If time_sensitive_count is not provided, default to half the length
-        if time_sensitive_count is None:
-            time_sensitive_count = length // 2
-
-        # Randomly choose indices that will be time-sensitive
-        time_sensitive_indices = random.sample(range(length), time_sensitive_count)
-
-        for i in range(length):
-            rec = CuratedRecommendation(
-                corpusItemId=str(uuid.uuid4()),
-                tileId=MIN_TILE_ID + random.randint(0, 101),
-                receivedRank=i,
-                scheduledCorpusItemId=str(uuid.uuid4()),
-                url=HttpUrl("https://littlelarry.com/"),
-                title="little larry",
-                excerpt="is failing english",
-                topic=random.choice(list(Topic)),
-                publisher="cohens",
-                isTimeSensitive=i in time_sensitive_indices,
-                imageUrl=HttpUrl("https://placehold.co/600x400/"),
-                iconUrl=None,
-            )
-
-            recs.append(rec)
-
-        return recs
-
-    @staticmethod
     def mock_curated_recommendations_provider(
         mocker: MockerFixture, backup_recommendations: list[CuratedRecommendation] | None = None
     ) -> CuratedRecommendationsProvider:
@@ -362,7 +363,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         @param mocker: MockerFixture
         """
         # Create mock recommendations
-        recommendations = self.generate_recommendations(100)
+        recommendations = generate_recommendations(100)
 
         # Define the surface ID
         surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
@@ -411,7 +412,7 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         @param mocker: MockerFixture
         """
         # Create mock recommendations
-        recommendations = self.generate_recommendations(20)
+        recommendations = generate_recommendations(20)
 
         # Define the surface ID
         surface_id = ScheduledSurfaceId.NEW_TAB_DE_DE
@@ -445,13 +446,13 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
         """
         # Create mock recommendations for today - this batch WON'T have a sufficient number of
         # time-sensitive stories available
-        recs = self.generate_recommendations(20, time_sensitive_count_today)
+        recs = generate_recommendations(20, time_sensitive_count_today)
         # Double-check the initial recommendations don't have any time-sensitive items
         assert len([r for r in recs if r.isTimeSensitive]) == time_sensitive_count_today
 
         # Create backup recommendations - this batch WILL have a mix of normal
         # and time-sensitive stories
-        backup_recs = self.generate_recommendations(100, 10)
+        backup_recs = generate_recommendations(100, 10)
 
         # Define the surface ID
         surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
@@ -467,3 +468,76 @@ class TestCuratedRecommendationsProviderRankNeedToKnowRecommendations:
 
         # Make sure the items in the need_to_know feed came from the backup recommendations
         assert len(need_to_know_feed) == 10
+
+
+class TestExcludeRecommendationsFromBlockedSections:
+    """Tests covering Provider.exclude_recommendations_from_blocked_sections"""
+
+    def test_removes_only_blocked_recommendations(self):
+        """Test that blocked (and only blocked) sections are removed"""
+        original_recs = generate_recommendations(3)
+        original_recs[0].topic = Topic.SPORTS
+        original_recs[1].topic = Topic.SCIENCE
+        original_recs[2].topic = Topic.FOOD
+
+        # Science is blocked, food is followed.
+        requested_sections = [
+            SectionConfiguration(
+                sectionId=Topic.SCIENCE.value,
+                isFollowed=False,
+                isBlocked=True,
+            ),
+            SectionConfiguration(
+                sectionId=Topic.FOOD.value,
+                isFollowed=True,
+                isBlocked=False,
+            ),
+        ]
+
+        result_recs = CuratedRecommendationsProvider.exclude_recommendations_from_blocked_sections(
+            original_recs, requested_sections
+        )
+
+        # Only the sports and food recommendation remain, in this order.
+        assert len(result_recs) == 2
+        assert result_recs[0].topic == Topic.SPORTS
+        assert result_recs[1].topic == Topic.FOOD
+
+    def test_handles_non_topic_sections(self):
+        """Test that blocked sections not corresponding to a topic are ignored"""
+        original_recs = generate_recommendations(2)
+        requested_sections = [
+            SectionConfiguration(sectionId="top_stories_section", isFollowed=False, isBlocked=True)
+        ]
+
+        result_recs = CuratedRecommendationsProvider.exclude_recommendations_from_blocked_sections(
+            original_recs, requested_sections
+        )
+
+        # Call should output should match the input.
+        assert result_recs == original_recs
+
+    def test_accepts_empty_sections_list(self):
+        """Test that the function accepts an empty list of requested sections"""
+        original_recs = generate_recommendations(2)
+        requested_sections = []
+
+        result_recs = CuratedRecommendationsProvider.exclude_recommendations_from_blocked_sections(
+            original_recs, requested_sections
+        )
+
+        # Call should output should match the input.
+        assert result_recs == original_recs
+
+    def test_keeps_recommendations_without_topics(self):
+        """Test that the function keeps recommendations without topics"""
+        original_recs = generate_recommendations(2)
+        original_recs[0].topic = None
+
+        requested_sections = []
+
+        result_recs = CuratedRecommendationsProvider.exclude_recommendations_from_blocked_sections(
+            original_recs, requested_sections
+        )
+
+        assert result_recs == original_recs
