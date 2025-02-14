@@ -1,6 +1,5 @@
 """Pathfinder - a utility to reconcile geolocation distinctions between MaxmindDB and AccuWeather."""
 
-import typing
 import unicodedata
 import re
 
@@ -19,7 +18,6 @@ REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Baie Ste. Anne": "Baie-Sainte-Anne",
     "Bogota D.C.": "Bogota",
-    "Collingwood": "Collingwood Corner",
     "Délı̨ne": "Deline",
     "Đồng Nại": "Dong Nai",
     "Ejido Culiacán (Culiacancito)": "Ejido Culiacán",
@@ -97,8 +95,7 @@ def compass(location: Location) -> Generator[MaybeStr, None, None]:
     city = location.city
 
     if regions and country and city:
-        corrected_city = CITY_NAME_CORRECTION_MAPPING.get(city, city)
-        match (country, corrected_city):
+        match (country, city):
             case (country, city) if (
                 country,
                 city,
@@ -141,29 +138,32 @@ async def explore(
     is_skipped = False
     geolocation = weather_context.geolocation
     country = geolocation.country
-    city: str = typing.cast(str, geolocation.city)  # tell the type checker it's truly not None
+    city = geolocation.city
+
+    if city:
+        city = CITY_NAME_CORRECTION_MAPPING.get(city, city)
     # map is lazy, so items of `cities` would only be evaluated one by one if needed
-    cities = map(lambda fn: fn(city), CITY_NAME_NORMALIZERS)
-    explored_cities: list[str] = []  # store the explored cities to avoid duplicates
-
+    cities = map(lambda fn: fn(city) if city else None, CITY_NAME_NORMALIZERS)
     for region in compass(weather_context.geolocation):
+        # store the explored cities to avoid duplicates
+        explored_cities: list[str] = []
         for city in cities:
-            if city in explored_cities:
-                continue
-            else:
-                explored_cities.append(city)
-            if country and (country, region, city) in SKIP_CITIES_MAPPING:
-                # increment since we tried to look up this combo again.
-                increment_skip_cities_mapping(country, region, city)
-                return None, True
+            if city:
+                if city in explored_cities:
+                    continue
+                else:
+                    explored_cities.append(city)
+                if country and city and (country, region, city) in SKIP_CITIES_MAPPING:
+                    # increment since we tried to look up this combo again.
+                    increment_skip_cities_mapping(country, region, city)
+                    return None, True
 
-            weather_context.selected_region = region
-            geolocation.city = city
+                weather_context.selected_region = region
+                geolocation.city = city
+                res = await probe(weather_context)
 
-            res = await probe(weather_context)
-
-            if res is not None:
-                return res, is_skipped
+                if res is not None:
+                    return res, is_skipped
 
     return None, is_skipped
 
