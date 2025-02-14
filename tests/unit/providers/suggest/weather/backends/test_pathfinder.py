@@ -4,6 +4,8 @@
 
 """Unit tests for the Accuweather pathfinder module."""
 
+from unittest.mock import AsyncMock
+
 import pytest
 
 from merino.middleware.geolocation import Location
@@ -13,7 +15,9 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     clear_region_mapping,
     normalize_string,
     remove_locality_suffix,
+    explore,
 )
+from merino.providers.suggest.weather.backends.protocol import WeatherContext
 
 
 @pytest.mark.parametrize(
@@ -59,6 +63,34 @@ def test_compass(location: Location, expected_region_and_city: str) -> None:
     assert next(compass(location)) == expected_region_and_city
 
     clear_region_mapping()
+
+
+@pytest.mark.parametrize(
+    ("weather_context", "expected_probes"),
+    [
+        (
+            WeatherContext(
+                Location(country="CA", regions=["BC"], city="Accènted City"), languages=["en-US"]
+            ),
+            3,
+        ),
+        (
+            WeatherContext(
+                Location(country="CA", regions=["BC"], city="Plain"), languages=["en-US"]
+            ),
+            1,
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_explore_uses_all_the_right_city_combos(
+    weather_context: WeatherContext, expected_probes: int
+) -> None:
+    """Test we try the number of right cities."""
+    mock_probe = AsyncMock(return_value=None)
+
+    _ = await explore(weather_context, mock_probe)
+    assert mock_probe.call_count == expected_probes
 
 
 @pytest.mark.parametrize(
