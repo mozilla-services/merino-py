@@ -62,12 +62,6 @@ Merino wool (from Merino sheep) produces exceptionally smooth felt.
 ## Architecture
 
 ```mermaid
----
-config:
-  look: neo
-  layout: elk
-  theme: default
----
 flowchart TD
 subgraph Firefox["fa:fa-firefox-browser Firefox"]
         NewTab
