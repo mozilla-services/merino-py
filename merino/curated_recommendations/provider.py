@@ -312,7 +312,9 @@ class CuratedRecommendationsProvider:
         return general_feed, need_to_know_feed
 
     @staticmethod
-    def exclude_recommendations_from_blocked_sections(recommendations, requested_sections):
+    def exclude_recommendations_from_blocked_sections(
+        recommendations, requested_sections
+    ) -> list[CuratedRecommendation]:
         """Return recommendations which topic doesn't match any blocked section"""
         blocked_section_ids = {rs.sectionId for rs in requested_sections if rs.isBlocked}
         return [
