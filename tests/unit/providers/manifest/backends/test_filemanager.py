@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock
 from merino.providers.manifest.backends.filemanager import ManifestRemoteFilemanager
 from merino.providers.manifest.backends.protocol import GetManifestResultCode, ManifestData
 
+
 # TODO ADD the new fixture here
 @pytest.mark.asyncio
 async def test_get_file_async(fixture_filemanager):

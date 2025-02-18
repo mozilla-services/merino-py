@@ -43,6 +43,7 @@ async def test_fetch_manifest_data_skip(backend: ManifestBackend, fixture_filema
         assert get_file_result_code is GetManifestResultCode.FAIL
         assert result is None
 
+
 # TODO
 # @pytest.mark.asyncio
 # async def test_fetch_manifest_data_fail(backend: ManifestBackend, fixture_filemanager) -> None:
