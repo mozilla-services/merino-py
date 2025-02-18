@@ -1419,6 +1419,34 @@ class TestSections:
             assert len(errors) == 0
 
     @pytest.mark.asyncio
+    async def test_curated_recommendations_with_sections_feed_removes_blocked_topics(self, caplog):
+        """Test that when topic sections are blocked, those recommendations don't show up, not even
+        in other sections like Popular Today.
+        """
+        blocked_topics = [Topic.CAREER.value, Topic.SCIENCE.value, Topic.HEALTH_FITNESS.value]
+
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": "en-US",
+                    "feeds": ["sections"],
+                    "sections": [
+                        {"sectionId": topic_id, "isFollowed": False, "isBlocked": True}
+                        for topic_id in blocked_topics
+                    ],
+                },
+            )
+            data = response.json()
+
+            # assert that none of the recommendations has a blocked topic.
+            for _, feed in data["feeds"].items():
+                if feed:
+                    for recommendation in feed["recommendations"]:
+                        assert recommendation["topic"] not in blocked_topics
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "locale, expected_titles",
         [
