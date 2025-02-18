@@ -6,35 +6,15 @@
 
 import orjson
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
-from pydantic import ValidationError
+from unittest.mock import AsyncMock
 from merino.providers.manifest.backends.filemanager import ManifestRemoteFilemanager
 from merino.providers.manifest.backends.protocol import GetManifestResultCode, ManifestData
 
-
+# TODO ADD the new fixture here
 @pytest.mark.asyncio
-async def test_get_file_async(blob_json):
+async def test_get_file_async(fixture_filemanager):
     """Test that the async get_file method returns manifest data."""
-    # Mocking blob response
-    mock_blob = AsyncMock()
-    mock_blob.download.return_value = blob_json
-    mock_blob.size = 1234
-
-    # Mocking bucket
-    mock_bucket = AsyncMock()
-    mock_bucket.get_blob.return_value = mock_blob
-
-    # Mocking storage client
-    mock_storage = AsyncMock()
-    mock_storage.bucket.return_value = mock_bucket
-
-    # Instantiating the filemanager with mocks
-    filemanager = ManifestRemoteFilemanager("test-bucket", "test-blob")
-    filemanager.gcs_client = mock_storage
-    filemanager.bucket = mock_bucket
-
-    # Run test
-    get_file_result_code, result = await filemanager.get_file()
+    get_file_result_code, result = await fixture_filemanager.get_file()
 
     # Assertions
     assert get_file_result_code is GetManifestResultCode.SUCCESS
@@ -42,6 +22,7 @@ async def test_get_file_async(blob_json):
     assert result.domains
     assert len(result.domains) == 3
     assert result.domains[0].domain == "google"
+
 
 @pytest.mark.asyncio
 async def test_get_file_json_decode_error():
@@ -64,6 +45,7 @@ async def test_get_file_json_decode_error():
     assert get_file_result_code is GetManifestResultCode.FAIL
     assert result is None
 
+
 @pytest.mark.asyncio
 async def test_get_file_validation_error():
     """Test that the async get_file method handles validation errors."""
@@ -84,6 +66,7 @@ async def test_get_file_validation_error():
 
     assert get_file_result_code is GetManifestResultCode.FAIL
     assert result is None
+
 
 @pytest.mark.asyncio
 async def test_get_file_exception():

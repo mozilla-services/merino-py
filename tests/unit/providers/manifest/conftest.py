@@ -6,10 +6,10 @@
 
 import asyncio
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock
+import pytest_asyncio
 
 import pytest
-from google.auth.credentials import AnonymousCredentials
 
 from merino.configs import settings
 from merino.providers.manifest.backends.filemanager import ManifestRemoteFilemanager
@@ -44,19 +44,39 @@ def fixture_manifest_remote_filemanager_parameters() -> dict[str, Any]:
         "blob_name": "test_blob_name",
     }
 
-# TODO REFACTOR THIS
-@pytest.fixture(name="manifest_remote_filemanager")
-def fixture_manifest_remote_filemanager(
-    manifest_remote_filemanager_parameters: dict[str, Any], gcs_client_mock
-) -> ManifestRemoteFilemanager:
-    """Create a ManifestRemoteFilemanager object for test."""
-    with patch("google.cloud.storage.Client") as mock_client, patch(
-        "google.auth.default"
-    ) as mock_auth_default:
-        creds = AnonymousCredentials()  # type: ignore
-        mock_auth_default.return_value = (creds, "test-project")
-        mock_client.return_value = gcs_client_mock
-        return ManifestRemoteFilemanager(**manifest_remote_filemanager_parameters)
+
+@pytest_asyncio.fixture
+async def fixture_filemanager_blob(blob_json):
+    """Fixture for a mocked blob."""
+    blob = AsyncMock()
+    blob.download.return_value = blob_json
+    blob.size = 1234
+    return blob
+
+
+@pytest_asyncio.fixture
+async def fixture_filemanager_bucket(fixture_filemanager_blob):
+    """Fixture for a mocked bucket."""
+    bucket = AsyncMock()
+    bucket.get_blob.return_value = fixture_filemanager_blob
+    return bucket
+
+
+@pytest_asyncio.fixture
+async def fixture_filemanager_storage(fixture_filemanager_bucket):
+    """Fixture for a mocked storage client."""
+    storage = AsyncMock()
+    storage.bucket.return_value = fixture_filemanager_bucket
+    return storage
+
+
+@pytest_asyncio.fixture
+async def fixture_filemanager(fixture_filemanager_storage, fixture_filemanager_bucket):
+    """Fixture for an instantiated filemanager with mocked GCS client and bucket."""
+    file_manager = ManifestRemoteFilemanager("test-bucket", "test-blob")
+    file_manager.gcs_client = fixture_filemanager_storage
+    file_manager.bucket = fixture_filemanager_bucket
+    return file_manager
 
 
 @pytest.fixture(name="backend")

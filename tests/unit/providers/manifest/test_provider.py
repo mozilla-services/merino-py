@@ -34,6 +34,7 @@ async def test_initialize(
         assert manifest_provider.manifest_data == manifest_data
         assert manifest_provider.last_fetch_at > 0
 
+
 # TODO REFACTOR THIS
 @pytest.mark.asyncio
 async def test_get_manifest_data(
