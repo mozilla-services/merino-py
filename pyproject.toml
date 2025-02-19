@@ -3,9 +3,9 @@ source = ["merino"]
 branch = true
 relative_files = true
 omit = [
-    # Data file only
-    "merino/jobs/utils/domain_category_mapping.py",
-    "merino/jobs/utils/domain_tester.py",
+  # Data file only
+  "merino/jobs/utils/domain_category_mapping.py",
+  "merino/jobs/utils/domain_tester.py",
 ]
 
 [tool.coverage.report]
@@ -19,19 +19,19 @@ lint.select = ["D", "E4", "E7", "E9", "F"]
 # D212 Multi-line docstring summary should start at the first line
 lint.extend-select = ["D212"]
 lint.ignore = [
-    # D105 Docstrings for magic methods
-    "D105",
-    # D107 Docstrings for __init__
-    "D107",
-    # D203 as it conflicts with D211 https://github.com/PyCQA/pydocstyle/issues/141
-    "D203",
-    # D205 1 blank line required between summary line and description, awkward spacing
-    "D205",
-    # D400 First line should end with a period, doesn't work when sentence spans 2 lines
-    "D400",
+  # D105 Docstrings for magic methods
+  "D105",
+  # D107 Docstrings for __init__
+  "D107",
+  # D203 as it conflicts with D211 https://github.com/PyCQA/pydocstyle/issues/141
+  "D203",
+  # D205 1 blank line required between summary line and description, awkward spacing
+  "D205",
+  # D400 First line should end with a period, doesn't work when sentence spans 2 lines
+  "D400",
 ]
 lint.extend-ignore = ["E203"]
-lint.per-file-ignores = { "__init__.py" = ["F401"] }
+lint.per-file-ignores = {"__init__.py" = ["F401"]}
 lint.pydocstyle = { convention = "pep257" }
 
 [tool.bandit]
@@ -41,8 +41,8 @@ lint.pydocstyle = { convention = "pep257" }
 # B104: https://bandit.readthedocs.io/en/latest/blacklists/blacklist_calls.html#b311-random
 skips = ["B101", "B104", "B311"]
 exclude_dirs = [
-    # Data file only
-    "merino/jobs/utils/domain_category_mapping.py",
+  # Data file only
+  "merino/jobs/utils/domain_category_mapping.py",
 ]
 
 [tool.mypy]
@@ -64,14 +64,14 @@ warn_unreachable = true
 testpaths = ["tests"]
 addopts = "-v -r s --cov=merino"
 filterwarnings = [
-    # Transform warnings into errors.
-    # Reference https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-    # to exempt from this transformation, which should be very rare for Merino.
-    "error",
-    # Ignored due to https://github.com/encode/starlette/discussions/2603
-    "ignore::pytest.PytestUnraisableExceptionWarning",
-    # Ignored as `robobro` still uses an old version of `werkzeug`
-    "ignore:'OrderedMultiDict' is deprecated",
+  # Transform warnings into errors.
+  # Reference https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+  # to exempt from this transformation, which should be very rare for Merino.
+  "error",
+  # Ignored due to https://github.com/encode/starlette/discussions/2603
+  "ignore::pytest.PytestUnraisableExceptionWarning",
+  # Ignored as `robobro` still uses an old version of `werkzeug`
+  "ignore:'OrderedMultiDict' is deprecated",
 ]
 
 [tool.poetry]
@@ -80,7 +80,9 @@ version = "0.1.0"
 description = "Service for Firefox Suggest at Mozilla"
 authors = ["Mozilla"]
 license = "Mozilla Public License Version 2.0"
-packages = [{ include = "merino" }]
+packages = [
+  { include = "merino" }
+]
 
 [tool.poetry.scripts]
 merino-jobs = "merino.jobs.cli:cli"
@@ -89,19 +91,19 @@ probe-images = "merino.jobs.utils.domain_tester:main"
 [tool.poetry.dependencies]
 python = "^3.13"
 fastapi = "^0.115.2"
-uvicorn = { extras = ["standard"], version = "^0.24.0" }
+uvicorn = {extras = ["standard"], version = "^0.24.0"}
 dockerflow = "^2022.7.0"
 asgi-correlation-id = "^4.3.4"
 dynaconf = "^3.2.4"
 httpx = "^0.23.0"
-sentry-sdk = { extras = ["fastapi"], version = "^2.13.0" }
+sentry-sdk = {extras = ["fastapi"], version = "^2.13.0"}
 kinto-http = "^11.0.0"
 aiodogstatsd = "^0.16.0"
 ua-parser = "^0.16.1"
 geoip2 = "^4.6.0"
 rich = "^12.5.1"
 wrapt = "^1.14.1"
-elasticsearch = { extras = ["async"], version = "^8.5.0" }
+elasticsearch = {extras = ["async"], version = "^8.5.0"}
 google-cloud-storage = "^2.16.0"
 google-cloud-bigquery = "^3.9.0"
 Pillow = "^10.2.0"
