@@ -38,7 +38,7 @@ def thompson_sampling(
     CTR with exploration of new items using a prior.
 
     :param recs: A list of recommendations in the desired order (pre-publisher spread).
-    :param engagement_backend: Provides aggregate click and impression engagement by scheduledCorpusItemId.
+    :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.
     :param prior_backend: Provides prior alpha and beta values for Thompson sampling.
     :param enable_region_engagement: If True, regional engagement weighs higher. False by default.
     :param region: Optionally, the client's region, e.g. 'US'.
@@ -54,7 +54,7 @@ def thompson_sampling(
         rec: CuratedRecommendation, region_query: str | None = None
     ) -> tuple[float, float]:
         """Get opens and no-opens counts for a recommendation, optionally in a region."""
-        engagement = engagement_backend.get(rec.scheduledCorpusItemId, region_query)
+        engagement = engagement_backend.get(rec.corpusItemId, region_query)
         if engagement:
             return engagement.click_count, engagement.impression_count - engagement.click_count
         else:

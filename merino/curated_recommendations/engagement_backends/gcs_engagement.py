@@ -14,7 +14,7 @@ from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 logger = logging.getLogger(__name__)
 
-EngagementKeyType = tuple[str | None, str | None]  # Keyed on (scheduled_corpus_item_id, region)
+EngagementKeyType = tuple[str | None, str | None]  # Keyed on (corpus_item_id, region)
 EngagementCacheType = dict[EngagementKeyType, Engagement]
 
 
@@ -38,18 +38,17 @@ class GcsEngagement(EngagementBackend):
         self.metrics_client = metrics_client
         self.metrics_namespace = metrics_namespace
 
-    def get(self, scheduled_corpus_item_id: str, region: str | None = None) -> Engagement | None:
-        """Get cached click and impression counts from the last 24h for the scheduled corpus item id
+    def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
+        """Get cached click and impression counts from the last 24h for the corpus item id
 
         Args:
-            scheduled_corpus_item_id: The id of the scheduled corpus item for which
-                                      to return engagement data.
+            corpus_item_id: The id of the corpus item for which to return engagement data.
             region: Return engagement for a given region (e.g. 'US'), or across all regions (None).
 
         Returns:
             Engagement: Engagement data for the specified id if it exists in cache, otherwise None.
         """
-        return self._cache.get((scheduled_corpus_item_id, region))
+        return self._cache.get((corpus_item_id, region))
 
     @property
     def update_count(self) -> int:
@@ -63,7 +62,7 @@ class GcsEngagement(EngagementBackend):
             data: The engagement blob string data, with an array of Engagement objects.
         """
         parsed_data = [Engagement(**item) for item in json.loads(data)]
-        self._cache = {(d.scheduled_corpus_item_id, d.region): d for d in parsed_data}
+        self._cache = {(d.corpus_item_id, d.region): d for d in parsed_data}
         self._track_metrics()
 
     def _track_metrics(self) -> None:
@@ -71,7 +70,7 @@ class GcsEngagement(EngagementBackend):
         # Emit the total number of engagement records.
         self.metrics_client.gauge(f"{self.metrics_namespace}.count", value=len(self._cache))
 
-        # Emit the number scheduled items by region for which we have engagement data.
+        # Emit the number corpus items by region for which we have engagement data.
         region_counts = Counter(region for _, region in self._cache)
         for region, count in region_counts.items():
             region_name = region.lower() if region is not None else "global"

@@ -76,24 +76,24 @@ def blob(gcs_bucket):
     return create_blob(
         gcs_bucket,
         [
-            {"scheduled_corpus_item_id": "1A", "click_count": 30, "impression_count": 300},
-            {"scheduled_corpus_item_id": "6A", "click_count": 40, "impression_count": 400},
+            {"corpus_item_id": "1A", "click_count": 30, "impression_count": 300},
+            {"corpus_item_id": "6A", "click_count": 40, "impression_count": 400},
             # Some records have a region
             {
-                "scheduled_corpus_item_id": "1A",
+                "corpus_item_id": "1A",
                 "region": "US",
                 "click_count": 3,
                 "impression_count": 9,
             },
             {
-                "scheduled_corpus_item_id": "6A",
+                "corpus_item_id": "6A",
                 "region": "US",
                 "click_count": 4,
                 "impression_count": 9,
             },
-            # Some records have a corpus_item_id
+            # Some records have a scheduled_corpus_item_id
             {
-                "corpus_item_id": "C1",
+                "scheduled_corpus_item_id": "C1",
                 "click_count": 50,
                 "impression_count": 100,
             },
@@ -146,10 +146,10 @@ async def test_gcs_engagement_fetches_data(gcs_storage_client, gcs_bucket, metri
     await wait_until_engagement_is_updated(gcs_engagement)
 
     assert gcs_engagement.get("1A") == Engagement(
-        scheduled_corpus_item_id="1A", click_count=30, impression_count=300
+        corpus_item_id="1A", click_count=30, impression_count=300
     )
     assert gcs_engagement.get("6A") == Engagement(
-        scheduled_corpus_item_id="6A", click_count=40, impression_count=400
+        corpus_item_id="6A", click_count=40, impression_count=400
     )
 
 
@@ -162,10 +162,10 @@ async def test_gcs_engagement_fetches_region_data(
     await wait_until_engagement_is_updated(gcs_engagement)
 
     assert gcs_engagement.get("6A") == Engagement(
-        scheduled_corpus_item_id="6A", click_count=40, impression_count=400
+        corpus_item_id="6A", click_count=40, impression_count=400
     )
     assert gcs_engagement.get("6A", "US") == Engagement(
-        scheduled_corpus_item_id="6A", region="US", click_count=4, impression_count=9
+        corpus_item_id="6A", region="US", click_count=4, impression_count=9
     )
 
     # Fixture does not contain data for AU, so None should be returned.

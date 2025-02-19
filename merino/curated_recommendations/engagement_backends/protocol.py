@@ -30,7 +30,7 @@ class Engagement(BaseModel):
 class EngagementBackend(Protocol):
     """Protocol for Engagement backend that the provider depends on."""
 
-    def get(self, scheduled_corpus_item_id: str, region: str | None = None) -> Engagement | None:
+    def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Fetch engagement data for the given scheduled corpus item id and optionally region"""
         ...
 

@@ -55,15 +55,15 @@ from tests.integration.api.conftest import fakespot_feed
 class MockEngagementBackend(EngagementBackend):
     """Mock class implementing the protocol for EngagementBackend."""
 
-    def get(self, scheduled_corpus_item_id: str, region: str | None = None) -> Engagement | None:
+    def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Return random click and impression counts based on the scheduled corpus id and region."""
-        seed_input = "_".join(filter(None, [scheduled_corpus_item_id, region]))
+        seed_input = "_".join(filter(None, [corpus_item_id, region]))
         rng = np.random.default_rng(seed=int.from_bytes(seed_input.encode()))
 
-        if scheduled_corpus_item_id == "50f86ebe-3f25-41d8-bd84-53ead7bdc76e":
+        if corpus_item_id == "0d186d8b-9b81-4447-926c-0dcecbd6e95f":
             # Give the first item 100% click-through rate to put it on top with high certainty.
             return Engagement(
-                scheduled_corpus_item_id=scheduled_corpus_item_id,
+                corpus_item_id=corpus_item_id,
                 click_count=1000000,
                 impression_count=1000000,
             )
@@ -73,7 +73,7 @@ class MockEngagementBackend(EngagementBackend):
         else:
             # Uniformly random clicks (10k-50k) and impressions (1M-5M)
             return Engagement(
-                scheduled_corpus_item_id=scheduled_corpus_item_id,
+                corpus_item_id=corpus_item_id,
                 click_count=rng.integers(10_000, 50_000),
                 impression_count=rng.integers(1_000_000, 5_000_000),
             )
@@ -1216,13 +1216,13 @@ class TestCorpusApiRanking:
                 corpus_items = data["data"]
 
                 # Assert that no response was ranked in the same way before.
-                id_order = [item["scheduledCorpusItemId"] for item in corpus_items]
+                id_order = [item["corpusItemId"] for item in corpus_items]
                 assert id_order not in past_id_orders, f"Duplicate order at iteration {i}."
                 past_id_orders.append(id_order)  # a list of lists with all orders
 
                 engagement_region = derived_region if regional_ranking_is_expected else None
                 engagements = [
-                    engagement_backend.get(item["scheduledCorpusItemId"], region=engagement_region)
+                    engagement_backend.get(item["corpusItemId"], region=engagement_region)
                     for item in corpus_items
                 ]
                 ctr_by_rank = [
