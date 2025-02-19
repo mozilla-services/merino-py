@@ -9,6 +9,16 @@ APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR)
 INSTALL_STAMP := .install.stamp
 POETRY := $(shell command -v poetry 2> /dev/null)
 
+# In order to be consumed by the ETE Test Metric Pipeline, files need to follow a strict naming
+# convention: {job_number}__{utc_epoch_datetime}__{workflow}__{test_suite}__results{-index}.xml
+WORKFLOW := main-workflow
+EPOCH_TIME := $(shell date +%s)
+TEST_FILE_PREFIX := $(if $(CIRCLECI),$(CIRCLE_BUILD_NUM)__$(EPOCH_TIME)__$(CIRCLE_PROJECT_REPONAME)__$(WORKFLOW)__)
+UNIT_JUNIT_XML := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)unit__results.xml
+UNIT_COVERAGE_JSON := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)unit__coverage.json
+INTEGRATION_JUNIT_XML := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)integration__results.xml
+INTEGRATION_COVERAGE_JSON := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)integration__coverage.json
+
 # This will be run if no target is provided
 .DEFAULT_GOAL := help
 
@@ -70,7 +80,7 @@ unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
 	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.unit \
 	    MERINO_ENV=testing \
 	    $(POETRY) run pytest $(UNIT_TEST_DIR) \
-	    --junit-xml=$(TEST_RESULTS_DIR)/unit_results.xml
+	    --junit-xml=$(UNIT_JUNIT_XML)
 
 .PHONY: unit-test-fixtures
 unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test
@@ -81,7 +91,7 @@ integration-tests: $(INSTALL_STAMP)  ##  Run integration tests
 	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.integration \
 	    MERINO_ENV=testing \
 	    $(POETRY) run pytest $(INTEGRATION_TEST_DIR) \
-	    --junit-xml=$(TEST_RESULTS_DIR)/integration_results.xml
+	    --junit-xml=$(INTEGRATION_JUNIT_XML)
 
 .PHONY: integration-test-fixtures
 integration-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per integration test
@@ -159,16 +169,10 @@ health-check-staging:  ##  Check the staging suggest endpoint with some test que
 coverage-unit:
 	$(POETRY) run coverage json \
 		--data-file=$(TEST_RESULTS_DIR)/.coverage.unit \
-		-o $(TEST_RESULTS_DIR)/coverage_unit.json
+		-o $(UNIT_COVERAGE_JSON)
 
 .PHONY: coverage-integration
 coverage-integration:
 	$(POETRY) run coverage json \
 		--data-file=$(TEST_RESULTS_DIR)/.coverage.integration \
-		-o $(TEST_RESULTS_DIR)/coverage_integration.json
-
-.PHONY: coverage-combined
-coverage-combined:
-	$(POETRY) run coverage json \
-		--data-file=$(TEST_RESULTS_DIR)/.coverage \
-		-o $(TEST_RESULTS_DIR)/coverage.json
+		-o $(INTEGRATION_COVERAGE_JSON)
