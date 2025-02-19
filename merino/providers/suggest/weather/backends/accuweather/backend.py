@@ -546,7 +546,7 @@ class AccuweatherBackend:
         """Fetch weather data from cache."""
         geolocation = weather_context.geolocation
         country = geolocation.country
-        city = geolocation.city
+        city = weather_context.selected_city
         language = get_language(weather_context.languages)
         region = weather_context.selected_region
 
