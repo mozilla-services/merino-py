@@ -29,10 +29,11 @@ async def test_fetch_manifest_data(backend: ManifestBackend, fixture_filemanager
         assert result.domains[1].domain == "microsoft"
 
 
+# TODO re-evaluate after blob generation logic figured out
 @pytest.mark.asyncio
 async def test_fetch_manifest_data_skip(backend: ManifestBackend, fixture_filemanager) -> None:
     # TODO fix comment
-    """Verify that the fetch_manifest_data method returns SKIP code for no new blob generation"""
+    """Verify that the fetch_manifest_data method returns FAIL code for no new blob generation"""
     fixture_filemanager.bucket.get_blob.return_value = None
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestRemoteFilemanager",
@@ -44,21 +45,25 @@ async def test_fetch_manifest_data_skip(backend: ManifestBackend, fixture_filema
         assert result is None
 
 
-# TODO
-# @pytest.mark.asyncio
-# async def test_fetch_manifest_data_fail(backend: ManifestBackend, fixture_filemanager) -> None:
-#     """Verify that the fetch_manifest_data method returns FAIL code when an error occurs"""
-#     with patch.object(
-#         fixture_filemanager,
-#         "get_file",
-#         return_value=(GetManifestResultCode.FAIL, None),
-#     ) as mock_get_file:
-#         get_file_result_code, result = await backend.fetch_manifest_data()
+# TODO do we need this?
+@pytest.mark.asyncio
+async def test_fetch_manifest_data_fail(backend: ManifestBackend, fixture_filemanager) -> None:
+    """Verify that the fetch_manifest_data method returns FAIL code when an error occurs"""
+    with patch(
+        "merino.providers.manifest.backends.manifest.ManifestRemoteFilemanager",
+        return_value=fixture_filemanager,
+    ):
+        with patch.object(
+            fixture_filemanager,
+            "get_file",
+            return_value=(GetManifestResultCode.FAIL, None),
+        ) as mock_get_file:
+            get_file_result_code, result = await backend.fetch_manifest_data()
 
-#         assert get_file_result_code is GetManifestResultCode.FAIL
-#         assert result is None
+            assert get_file_result_code is GetManifestResultCode.FAIL
+            assert result is None
 
-#         mock_get_file.assert_called_once()
+            mock_get_file.assert_called_once()
 
 
 # TODO duplicate test except last assert
