@@ -82,6 +82,7 @@ class WeatherContext:
     geolocation: Location
     languages: list[str]
     selected_region: Optional[str] = None
+    selected_city: Optional[str] = None
     distance_calculation: Optional[bool] = None
 
 
