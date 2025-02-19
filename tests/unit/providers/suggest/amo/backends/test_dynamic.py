@@ -132,6 +132,7 @@ async def test_fetch_addons_skipped_bad_response(
     mocker: MockerFixture, caplog: LogCaptureFixture, dynamic_backend: DynamicAmoBackend
 ):
     """Test that fetch fails raises error when Addon request fails."""
+    caplog.set_level(logging.ERROR, logger="merino.providers.suggest.amo.backends.dynamic")
     sample_addon_resp = json.dumps(
         {
             "icon_url": "https://this.is.image",
