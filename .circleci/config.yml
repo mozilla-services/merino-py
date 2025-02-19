@@ -104,7 +104,7 @@ jobs:
             - test-results
   integration-tests:
     machine:
-      image: ubuntu-2004:edge
+      image: ubuntu-2004:current
     steps:
       - checkout
       - run:
