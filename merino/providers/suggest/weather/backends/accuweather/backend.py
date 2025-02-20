@@ -729,7 +729,7 @@ class AccuweatherBackend:
         """
         geolocation = weather_context.geolocation
         country = geolocation.country
-        city = geolocation.city
+        city = weather_context.selected_city
         region = weather_context.selected_region
 
         if country is None or city is None:

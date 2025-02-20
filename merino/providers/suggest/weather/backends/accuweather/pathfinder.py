@@ -155,21 +155,19 @@ async def explore(
     for city in cities:
         if city in explored_cities:
             continue
-        else:
-            explored_cities.append(city)
-            for region in compass(weather_context.geolocation):
-                if country and city and (country, region, city) in SKIP_CITIES_MAPPING:
-                    # increment since we tried to look up this combo again.
-                    increment_skip_cities_mapping(country, region, city)
+        explored_cities.append(city)
+        for region in compass(weather_context.geolocation):
+            if country and city and (country, region, city) in SKIP_CITIES_MAPPING:
+                # increment since we tried to look up this combo again.
+                increment_skip_cities_mapping(country, region, city)
+                return None, True
 
-                    return None, True
+            weather_context.selected_region = region
+            weather_context.selected_city = city
+            res = await probe(weather_context)
 
-                weather_context.selected_region = region
-                weather_context.selected_city = city
-                res = await probe(weather_context)
-
-                if res is not None:
-                    return res, is_skipped
+            if res is not None:
+                return res, is_skipped
 
     return None, is_skipped
 
