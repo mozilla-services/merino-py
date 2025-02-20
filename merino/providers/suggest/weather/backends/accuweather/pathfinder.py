@@ -150,18 +150,16 @@ async def explore(
     city = CITY_NAME_CORRECTION_MAPPING.get(geolocation.city, geolocation.city)
     # map is lazy, so items of `cities` would only be evaluated one by one if needed
     cities = map(lambda fn: fn(city), CITY_NAME_NORMALIZERS)
-    for region in compass(weather_context.geolocation):
-        # store the explored cities to avoid duplicates
-        explored_cities: list[str] = []
-        for city in cities:
-            if city in explored_cities:
-                continue
-            else:
-                explored_cities.append(city)
+    # store the explored cities to avoid duplicates
+    explored_cities: list[str] = []
+    for city in cities:
+        if city in explored_cities:
+            continue
+        explored_cities.append(city)
+        for region in compass(weather_context.geolocation):
             if country and city and (country, region, city) in SKIP_CITIES_MAPPING:
                 # increment since we tried to look up this combo again.
                 increment_skip_cities_mapping(country, region, city)
-
                 return None, True
 
             weather_context.selected_region = region

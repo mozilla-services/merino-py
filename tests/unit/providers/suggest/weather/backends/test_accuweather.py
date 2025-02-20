@@ -1647,6 +1647,7 @@ async def test_get_location_by_geolocation(
         key="39376", localized_name="San Francisco", administrative_area_id="CA"
     )
     weather_context_without_location_key.selected_region = "CA"
+    weather_context_without_location_key.selected_city = "San Francisco"
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.return_value = Response(
         status_code=200,
@@ -1728,6 +1729,7 @@ async def test_get_location_by_geolocation_error(
     """
     expected_error_value: str = "Unexpected location response from: /locations/v1/cities/US/CA/search.json, city: San Francisco"
     weather_context_without_location_key.selected_region = "CA"
+    weather_context_without_location_key.selected_city = "San Francisco"
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.return_value = Response(
         status_code=403,
@@ -1764,6 +1766,7 @@ async def test_get_location_by_geolocation_raises_accuweather_error_on_generic_e
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.side_effect = ValueError
     weather_context_without_location_key.selected_region = "CA"
+    weather_context_without_location_key.selected_city = "San Francisco"
 
     with pytest.raises(AccuweatherError) as accuweather_error:
         await accuweather.get_location_by_geolocation(weather_context_without_location_key)
