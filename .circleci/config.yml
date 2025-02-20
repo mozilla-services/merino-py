@@ -7,6 +7,23 @@
 
 version: 2.1
 
+orbs:
+  gcp-cli: circleci/gcp-cli@3.3.0
+
+executors:
+  image-build-executor:
+    docker:
+      - image: cimg/base:2025.02
+  node-executor:
+    docker:
+      - image: cimg/node:16.18.1
+  python-executor:
+    docker:
+      - image: cimg/python:3.12
+  ubuntu-executor:
+    machine:
+      image: ubuntu-2004:2024.08.1
+
 workflows:
   pr-workflow:
     jobs:
@@ -45,6 +62,11 @@ workflows:
           requires:
             - unit-tests
             - integration-tests
+      - upload-test-artifacts:
+          <<: *main-filters
+          requires:
+            - unit-tests
+            - integration-tests
       - docker-image-build:
           <<: *main-filters
       - docker-image-build-locust:
@@ -69,16 +91,14 @@ workflows:
 
 jobs:
   checks:
-    docker:
-      - image: cimg/python:3.12
+    executor: python-executor
     steps:
       - checkout
       - run:
           name: Code linting
           command: make -k lint
   unit-tests:
-    docker:
-      - image: cimg/python:3.12
+    executor: python-executor
     steps:
       - checkout
       - run:
@@ -94,17 +114,12 @@ jobs:
           command: make coverage-unit
       - store_test_results:
           path: workspace/test-results
-      - store_artifacts:
-          path: workspace/test-results/coverage_unit.json
-      - store_artifacts:
-          path: workspace/test-results/unit_results.xml
       - persist_to_workspace:
           root: workspace
           paths:
             - test-results
   integration-tests:
-    machine:
-      image: ubuntu-2004:2024.01.1
+    executor: ubuntu-executor
     steps:
       - checkout
       - run:
@@ -121,17 +136,12 @@ jobs:
           command: make coverage-integration
       - store_test_results:
           path: workspace/test-results
-      - store_artifacts:
-          path: workspace/test-results/integration_results.xml
-      - store_artifacts:
-          path: workspace/test-results/coverage_integration.json
       - persist_to_workspace:
           root: workspace
           paths:
             - test-results
   test-coverage-check:
-    docker:
-      - image: cimg/python:3.12
+    executor: python-executor
     steps:
       - checkout
       - attach_workspace:
@@ -141,14 +151,23 @@ jobs:
           command: make test-coverage-check
           environment:
             TEST_RESULTS_DIR: workspace/test-results
-      - run:
-          name: Generate Coverage
-          command: make coverage-combined
-      - store_artifacts:
-          path: workspace/test-results/coverage.json
+  upload-test-artifacts:
+    executor: gcp-cli/default
+    steps:
+      - attach_workspace:
+          at: workspace
+      - gcp-cli/setup:
+          version: 404.0.0
+      - upload_to_gcs:
+          source: workspace/test-results
+          destination: gs://ecosystem-test-eng-metrics/merino-py/junit
+          extension: xml
+      - upload_to_gcs:
+          source: workspace/test-results
+          destination: gs://ecosystem-test-eng-metrics/merino-py/coverage
+          extension: json
   docker-image-build:
-    docker:
-      - image: cimg/base:2022.08
+    executor: image-build-executor
     steps:
       - checkout
       - setup_remote_docker:
@@ -170,8 +189,7 @@ jobs:
           paths:
             - merinopy.tar.gz
   docker-image-build-locust:
-    docker:
-      - image: cimg/base:2024.02
+    executor: image-build-executor
     steps:
       - checkout
       - setup_remote_docker:
@@ -191,8 +209,7 @@ jobs:
   docker-image-publish:
     # Pushing a new production Docker image to the Docker Hub registry triggers a
     # webhook that starts the Jenkins deployment workflow
-    docker:
-      - image: cimg/base:2024.11
+    executor: image-build-executor
     steps:
       - checkout
       - attach_workspace:
@@ -229,8 +246,7 @@ jobs:
             docker push "${DOCKERHUB_REPO}:${PROD_DOCKER_TAG}"
             docker push "${DOCKERHUB_REPO}:latest"
   docker-image-publish-locust:
-    docker:
-      - image: cimg/base:2023.11
+    executor: image-build-executor
     steps:
       - checkout
       - run:
@@ -259,8 +275,7 @@ jobs:
             docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}"
             docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:latest"
   docs-build:
-    docker:
-      - image: cimg/base:2022.08
+    executor: image-build-executor
     steps:
       - checkout
       - run:
@@ -287,8 +302,7 @@ jobs:
           paths:
             - doc
   docs-publish-github-pages:
-    docker:
-      - image: cimg/node:16.18.1
+    executor: node-executor
     steps:
       - checkout
       - attach_workspace:
@@ -300,7 +314,7 @@ jobs:
           fingerprints:
             - "af:ac:a0:85:b4:a1:af:4d:e1:08:42:b5:16:e3:67:2d"
       - run:
-          name: Set remote orgin if needed
+          name: Set remote origin if needed
           command: |
             git remote add origin git@github.com:mozilla-services/merino-py.git || true
       - run:
@@ -342,6 +356,26 @@ commands:
           command: |
             python3.12 --version
             poetry --version
+
+  upload_to_gcs:
+    parameters:
+      source:
+        type: string
+      destination:
+        type: string
+      extension:
+        type: enum
+        enum: ["xml", "json"]
+    steps:
+      - run:
+          name: Upload << parameters.source >> << parameters.extension >> Files to GCS
+          command: |
+            FILES=$(find << parameters.source >> -maxdepth 1 -type f -name "*.<< parameters.extension >>")
+            if [ -z "$FILES" ]; then
+              echo "No << parameters.extension >> files found in << parameters.source >>/"
+              exit 1
+            fi
+            gsutil cp $FILES << parameters.destination >>
 
   write-version:
     steps:
