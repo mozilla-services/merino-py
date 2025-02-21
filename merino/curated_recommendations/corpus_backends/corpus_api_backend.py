@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse, urlencode, parse_qsl
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from dataclasses import dataclass
+from pydantic import HttpUrl
 
 import aiodogstatsd
 from httpx import AsyncClient, HTTPError
@@ -318,6 +319,9 @@ class CorpusApiBackend(CorpusBackend):
         # get the utm_source based on scheduled surface id
         utm_source = self.get_utm_source(surface_id)
 
+        # list that holds urls of corpus items that don't have an icon url in the favicon manifest file
+        corpus_items_no_icons: list[HttpUrl] = []
+
         for item in data["data"]["scheduledSurface"]["items"]:
             # Map Corpus topic to SERP topic
             item["corpusItem"]["topic"] = self.map_corpus_topic_to_serp_topic(
@@ -330,6 +334,14 @@ class CorpusApiBackend(CorpusBackend):
             # Add icon URL if available
             if icon_url := self.manifest_provider.get_icon_url(item["corpusItem"]["url"]):
                 item["corpusItem"]["iconUrl"] = icon_url
+                self.metrics_client.increment("corpus_item.manifest_provider.icon_url.hit")
+            else:
+                corpus_items_no_icons.append(item["corpusItem"]["url"])
+                self.metrics_client.increment("corpus_item.manifest_provider.icon_url.miss")
+
+        logger.info(
+            f"Curated Recommendations with missing icon urls: {len(corpus_items_no_icons)}, {corpus_items_no_icons}"
+        )
 
         curated_recommendations = [
             CorpusItem(
