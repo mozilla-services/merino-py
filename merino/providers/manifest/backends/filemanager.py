@@ -13,7 +13,18 @@ from merino.utils.metrics import get_metrics_client
 
 logger = logging.getLogger(__name__)
 
-
+## TODO use this probably for blob generation logic
+""" async def download(
+    self, bucket: str, object_name: str, *,
+    headers: Optional[Dict[str, Any]] = None,
+    timeout: int = DEFAULT_TIMEOUT,
+    session: Optional[Session] = None,
+) -> bytes:
+    return await self._download(
+        bucket, object_name, headers=headers,
+        timeout=timeout, params={'alt': 'media'},
+        session=session,
+    )"""
 class ManifestRemoteFilemanager:
     """Filemanager for fetching manifest data from GCS and storing only in memory."""
 
