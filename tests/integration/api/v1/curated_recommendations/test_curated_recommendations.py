@@ -152,7 +152,7 @@ def provider(
 
 
 @pytest.fixture(autouse=True)
-def setup_suggest_providers(corpus_provider):
+def setup_curated_recommendations_provider(corpus_provider):
     """Set up the curated recommendations provider"""
     app.dependency_overrides[get_provider] = lambda: corpus_provider
 
