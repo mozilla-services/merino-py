@@ -62,11 +62,6 @@ workflows:
           requires:
             - unit-tests
             - integration-tests
-      - upload-test-artifacts:
-          <<: *main-filters
-          requires:
-            - unit-tests
-            - integration-tests
       - docker-image-build:
           <<: *main-filters
       - docker-image-build-locust:
@@ -101,6 +96,7 @@ jobs:
     executor: python-executor
     steps:
       - checkout
+      - gcp-cli/setup
       - run:
           name: Create Workspace
           command: mkdir -p workspace
@@ -118,6 +114,14 @@ jobs:
           root: workspace
           paths:
             - test-results
+      - upload_to_gcs:
+          source: workspace/test-results
+          destination: gs://ecosystem-test-eng-metrics/merino-py/junit
+          extension: xml
+      - upload_to_gcs:
+          source: workspace/test-results
+          destination: gs://ecosystem-test-eng-metrics/merino-py/coverage
+          extension: json
   integration-tests:
     executor: ubuntu-executor
     steps:
@@ -125,6 +129,7 @@ jobs:
       - run:
           name: Create Workspace
           command: mkdir -p workspace
+      - gcp-cli/setup
       - setup-python-on-machine
       - run:
           name: Integration tests
@@ -140,6 +145,14 @@ jobs:
           root: workspace
           paths:
             - test-results
+      - upload_to_gcs:
+          source: workspace/test-results
+          destination: gs://ecosystem-test-eng-metrics/merino-py/junit
+          extension: xml
+      - upload_to_gcs:
+          source: workspace/test-results
+          destination: gs://ecosystem-test-eng-metrics/merino-py/coverage
+          extension: json
   test-coverage-check:
     executor: python-executor
     steps:
@@ -151,21 +164,6 @@ jobs:
           command: make test-coverage-check
           environment:
             TEST_RESULTS_DIR: workspace/test-results
-  upload-test-artifacts:
-    executor: gcp-cli/default
-    steps:
-      - attach_workspace:
-          at: workspace
-      - gcp-cli/setup:
-          version: 404.0.0
-      - upload_to_gcs:
-          source: workspace/test-results
-          destination: gs://ecosystem-test-eng-metrics/merino-py/junit
-          extension: xml
-      - upload_to_gcs:
-          source: workspace/test-results
-          destination: gs://ecosystem-test-eng-metrics/merino-py/coverage
-          extension: json
   docker-image-build:
     executor: image-build-executor
     steps:
@@ -369,13 +367,18 @@ commands:
     steps:
       - run:
           name: Upload << parameters.source >> << parameters.extension >> Files to GCS
+          when: always  # Ensure the step runs even if previous steps, like test runs, fail
           command: |
-            FILES=$(find << parameters.source >> -maxdepth 1 -type f -name "*.<< parameters.extension >>")
-            if [ -z "$FILES" ]; then
-              echo "No << parameters.extension >> files found in << parameters.source >>/"
-              exit 1
+            if [ "$CIRCLE_BRANCH" = "main" ]; then
+              FILES=$(ls -1 << parameters.source>>/*.<< parameters.extension>> )
+              if [ -z "$FILES" ]; then
+                echo "No << parameters.extension >> files found in << parameters.source >>/"
+                exit 1
+              fi
+              gsutil cp $FILES << parameters.destination >>
+            else
+              echo "Skipping artifact upload, not on 'main' branch."
             fi
-            gsutil cp $FILES << parameters.destination >>
 
   write-version:
     steps:
