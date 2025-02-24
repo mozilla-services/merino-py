@@ -1622,7 +1622,7 @@ async def test_curated_recommendations_enriched_with_icons(
         Domain(
             rank=2,
             title="Microsoft – AI, Cloud, Productivity, Computing, Gaming & Apps",
-            url="https://www.microsoft.com",
+            url=HttpUrl("https://www.microsoft.com"),
             domain="microsoft",
             icon="https://merino-images.services.mozilla.com/favicons/microsoft-icon.png",
             categories=["Business", "Information Technology"],
@@ -1664,6 +1664,13 @@ async def test_curated_recommendations_enriched_with_icons(
             json={"locale": "en-US"},
         )
         assert response.status_code == 200
+
+        # metrics_increment_called = [
+        #     call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+        # ]
+        # assert metrics_increment_called == [
+        #     "corpus_item.manifest_provider.icon_url.hit",
+        # ]
 
     data = response.json()
     items = data["data"]

@@ -26,8 +26,7 @@
             "topic": "FOOD",
             "publisher": "Smithsonian Magazine",
             "isTimeSensitive": true,
-            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/968a6566-df7a-4f7d-aefd-8678853544b1.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/968a6566-df7a-4f7d-aefd-8678853544b1.jpeg"
           }
         },
         {
@@ -40,8 +39,7 @@
             "topic": "CAREER",
             "publisher": "The Marginalian",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/87fd6901-5bf5-4b12-8bde-24b86be79003.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/87fd6901-5bf5-4b12-8bde-24b86be79003.jpeg"
           }
         },
         {
@@ -54,8 +52,7 @@
             "topic": "PARENTING",
             "publisher": "Culture Study",
             "isTimeSensitive": true,
-            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/3a4a6ed6-a1df-497d-8d31-f777534806ac.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/3a4a6ed6-a1df-497d-8d31-f777534806ac.jpeg"
           }
         },
         {
@@ -68,8 +65,7 @@
             "topic": "BUSINESS",
             "publisher": "Eater",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/f5d9c5ff-aaa2-4c2a-ab2b-661f84126bf7.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/f5d9c5ff-aaa2-4c2a-ab2b-661f84126bf7.jpeg"
           }
         },
         {
@@ -82,8 +78,7 @@
             "topic": "SCIENCE",
             "publisher": "The Washington Post",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/93b368a5-a663-4d25-83e8-e2de4adbfea8.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/93b368a5-a663-4d25-83e8-e2de4adbfea8.jpeg"
           }
         },
         {
@@ -96,8 +91,7 @@
             "topic": "HEALTH_FITNESS",
             "publisher": "The Telegraph",
             "isTimeSensitive": true,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2aaffb04-80e0-4008-95af-7c65a213d191.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2aaffb04-80e0-4008-95af-7c65a213d191.jpeg"
           }
         },
         {
@@ -110,8 +104,7 @@
             "topic": "HEALTH_FITNESS",
             "publisher": "Allure",
             "isTimeSensitive": true,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/27386d38-3513-485c-8872-6f3d2c0ec5c8.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/27386d38-3513-485c-8872-6f3d2c0ec5c8.jpeg"
           }
         },
         {
@@ -124,8 +117,7 @@
             "topic": "SCIENCE",
             "publisher": "Country Living",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7aaf09a4-b794-4455-b724-315c897b82cc.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7aaf09a4-b794-4455-b724-315c897b82cc.jpeg"
           }
         },
         {
@@ -138,8 +130,7 @@
             "topic": "FOOD",
             "publisher": "Delish",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/11249bb8-7d46-4f54-aca5-e7861669734b.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/11249bb8-7d46-4f54-aca5-e7861669734b.jpeg"
           }
         },
         {
@@ -152,8 +143,7 @@
             "topic": "TRAVEL",
             "publisher": "Architectural Digest",
             "isTimeSensitive": true,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/52ebb1c9-3834-4378-812f-0bfcd2529357.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/52ebb1c9-3834-4378-812f-0bfcd2529357.jpeg"
           }
         },
         {
@@ -166,8 +156,7 @@
             "topic": "EDUCATION",
             "publisher": "Smithsonian Magazine",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/4b1e272f-dd05-4678-939d-22fbd6bde5e7.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/4b1e272f-dd05-4678-939d-22fbd6bde5e7.jpeg"
           }
         },
         {
@@ -180,8 +169,7 @@
             "topic": "HEALTH_FITNESS",
             "publisher": "Town & Country Magazine",
             "isTimeSensitive": true,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/da9b38c6-2e48-4938-bf87-85a60bf85190.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/da9b38c6-2e48-4938-bf87-85a60bf85190.jpeg"
           }
         },
         {
@@ -194,8 +182,7 @@
             "topic": "TECHNOLOGY",
             "publisher": "WIRED",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/66ce2845-c410-48d2-b1df-450e69177692.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/66ce2845-c410-48d2-b1df-450e69177692.jpeg"
           }
         },
         {
@@ -208,8 +195,7 @@
             "topic": "EDUCATION",
             "publisher": "Vox",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/c03326d1-bbfd-4654-a9db-ac431757b9f6.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/c03326d1-bbfd-4654-a9db-ac431757b9f6.jpeg"
           }
         },
         {
@@ -222,8 +208,7 @@
             "topic": "EDUCATION",
             "publisher": "BBC Future",
             "isTimeSensitive": true,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1f11fb0d-3f0c-46a7-a667-cc2fcea6334e.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1f11fb0d-3f0c-46a7-a667-cc2fcea6334e.jpeg"
           }
         },
         {
@@ -236,8 +221,7 @@
             "topic": "HEALTH_FITNESS",
             "publisher": "Stylist",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0421cd6c-4e2a-4d98-b648-040c1bf50ea1.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0421cd6c-4e2a-4d98-b648-040c1bf50ea1.jpeg"
           }
         },
         {
@@ -250,8 +234,7 @@
             "topic": "HEALTH_FITNESS",
             "publisher": "Stylist",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/043fc6f9-733a-4cc5-9539-0a98ba8266ba.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/043fc6f9-733a-4cc5-9539-0a98ba8266ba.jpeg"
           }
         },
         {
@@ -264,8 +247,7 @@
             "topic": "POLITICS",
             "publisher": "Smithsonian Magazine",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/df6d9089-b587-468c-a976-1f2f4eb104a7.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/df6d9089-b587-468c-a976-1f2f4eb104a7.jpeg"
           }
         },
         {
@@ -278,8 +260,7 @@
             "topic": "PERSONAL_FINANCE",
             "publisher": "The Washington Post",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0177bba1-9597-4a0a-a6e1-1747a85eea93.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0177bba1-9597-4a0a-a6e1-1747a85eea93.jpeg"
           }
         },
         {
@@ -292,8 +273,7 @@
             "topic": "POLITICS",
             "publisher": "The Conversation",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ad9da37b-4375-4851-9fe4-5eef105dfb9a.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ad9da37b-4375-4851-9fe4-5eef105dfb9a.jpeg"
           }
         },
         {
@@ -306,8 +286,7 @@
             "topic": "PARENTING",
             "publisher": "The Conversation",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b9182b66-5398-4fe2-a95d-8b9a46e5a05d.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b9182b66-5398-4fe2-a95d-8b9a46e5a05d.jpeg"
           }
         },
         {
@@ -320,8 +299,7 @@
             "topic": "SCIENCE",
             "publisher": "CityLab",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1e4ad4d9-f33c-4d83-b8de-31aac076e35e.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1e4ad4d9-f33c-4d83-b8de-31aac076e35e.jpeg"
           }
         },
         {
@@ -334,8 +312,7 @@
             "topic": "HOME",
             "publisher": "Car and Driver",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c5f5b8db-3798-4460-8185-41b26eac7ce6.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c5f5b8db-3798-4460-8185-41b26eac7ce6.jpeg"
           }
         },
         {
@@ -348,8 +325,7 @@
             "topic": "CAREER",
             "publisher": "Bloomberg Businessweek",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/67e39fa6-2ce9-4da9-be6e-95fdbfa08bcf.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/67e39fa6-2ce9-4da9-be6e-95fdbfa08bcf.jpeg"
           }
         },
         {
@@ -362,8 +338,7 @@
             "topic": "ENTERTAINMENT",
             "publisher": "Rolling Stone",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a47f7e6e-408c-449d-866d-00e36070b672.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a47f7e6e-408c-449d-866d-00e36070b672.jpeg"
           }
         },
         {
@@ -376,8 +351,7 @@
             "topic": "SPORTS",
             "publisher": "Glamour",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b604bf49-89b5-491a-8542-b2aa7a7950e6.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b604bf49-89b5-491a-8542-b2aa7a7950e6.jpeg"
           }
         },
         {
@@ -390,8 +364,7 @@
             "topic": "EDUCATION",
             "publisher": "Collectors Weekly",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7658ea46-a487-4afd-8306-44a7477b424a.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7658ea46-a487-4afd-8306-44a7477b424a.jpeg"
           }
         },
         {
@@ -404,8 +377,7 @@
             "topic": "SELF_IMPROVEMENT",
             "publisher": "The Drive",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fe2764c9-a3b1-47f4-bc30-2f2b22ef6304.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fe2764c9-a3b1-47f4-bc30-2f2b22ef6304.jpeg"
           }
         },
         {
@@ -418,8 +390,7 @@
             "topic": "TECHNOLOGY",
             "publisher": "Context",
             "isTimeSensitive": false,
-            "imageUrl": "https://ddc514qh7t05d.cloudfront.net/dA/0f6290ca16a4952dac171747534209b5/1200w/Jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://ddc514qh7t05d.cloudfront.net/dA/0f6290ca16a4952dac171747534209b5/1200w/Jpeg"
           }
         },
         {
@@ -432,8 +403,7 @@
             "topic": "PARENTING",
             "publisher": "Axios",
             "isTimeSensitive": false,
-            "imageUrl": "https://images.axios.com/1dNeIXqBMs40MPXo4qydevDYxok=/0x0:1920x1080/1366x768/2024/06/13/1718299823754.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://images.axios.com/1dNeIXqBMs40MPXo4qydevDYxok=/0x0:1920x1080/1366x768/2024/06/13/1718299823754.jpg"
           }
         },
         {
@@ -446,8 +416,7 @@
             "topic": "SPORTS",
             "publisher": "The New Yorker",
             "isTimeSensitive": false,
-            "imageUrl": "https://media.newyorker.com/photos/666c732fc62d3122265f82a3/16:9/w_1280,c_limit/Thomas-Sporting-Scene1.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://media.newyorker.com/photos/666c732fc62d3122265f82a3/16:9/w_1280,c_limit/Thomas-Sporting-Scene1.jpg"
           }
         },
         {
@@ -460,8 +429,7 @@
             "topic": "SPORTS",
             "publisher": "Sportico",
             "isTimeSensitive": false,
-            "imageUrl": "https://www.sportico.com/wp-content/uploads/2024/06/GettyImages-1526423533-e1718382312742.jpg?w=1024",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://www.sportico.com/wp-content/uploads/2024/06/GettyImages-1526423533-e1718382312742.jpg?w=1024"
           }
         },
         {
@@ -474,8 +442,7 @@
             "topic": "TECHNOLOGY",
             "publisher": "Popular Science",
             "isTimeSensitive": false,
-            "imageUrl": "https://www.popsci.com/wp-content/uploads/2024/06/share-ETA-on-google-and-apple-maps.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://www.popsci.com/wp-content/uploads/2024/06/share-ETA-on-google-and-apple-maps.jpg"
           }
         },
         {
@@ -488,8 +455,7 @@
             "topic": "ENTERTAINMENT",
             "publisher": "The Observer ",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c1164543-b082-4d66-afa1-71d913ab9fc4.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c1164543-b082-4d66-afa1-71d913ab9fc4.jpeg"
           }
         },
         {
@@ -502,8 +468,7 @@
             "topic": "TECHNOLOGY",
             "publisher": "Billboard",
             "isTimeSensitive": false,
-            "imageUrl": "https://www.billboard.com/wp-content/uploads/2024/05/ai-music-robot-2024-billboard-pro-1260.jpg?w=1024",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://www.billboard.com/wp-content/uploads/2024/05/ai-music-robot-2024-billboard-pro-1260.jpg?w=1024"
           }
         },
         {
@@ -516,8 +481,7 @@
             "topic": "SPORTS",
             "publisher": "Sports Illustrated",
             "isTimeSensitive": false,
-            "imageUrl": "https://images2.minutemediacdn.com/image/upload/c_crop,w_6823,h_3837,x_0,y_210/c_fill,w_1440,ar_16:9,f_auto,q_auto,g_auto/images/ImagnImages/mmsport/si/01j08xqehhmtemqqfxz4.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://images2.minutemediacdn.com/image/upload/c_crop,w_6823,h_3837,x_0,y_210/c_fill,w_1440,ar_16:9,f_auto,q_auto,g_auto/images/ImagnImages/mmsport/si/01j08xqehhmtemqqfxz4.jpg"
           }
         },
         {
@@ -530,8 +494,7 @@
             "topic": "CAREER",
             "publisher": "Fast Company",
             "isTimeSensitive": false,
-            "imageUrl": "https://images.fastcompany.com/image/upload/f_auto,q_auto,c_fit,w_1024,h_1024/wp-cms-2/2024/06/p-91139325-Is-psychological-safety-being-weaponized.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://images.fastcompany.com/image/upload/f_auto,q_auto,c_fit,w_1024,h_1024/wp-cms-2/2024/06/p-91139325-Is-psychological-safety-being-weaponized.jpg"
           }
         },
         {
@@ -544,8 +507,7 @@
             "topic": "ENTERTAINMENT",
             "publisher": "Esquire",
             "isTimeSensitive": true,
-            "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/jm-esquire-edgy-albert-11-001-664fbbbeca45e.jpg?crop=1.00xw:0.334xh;0,0.0326xh&resize=640:*",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/jm-esquire-edgy-albert-11-001-664fbbbeca45e.jpg?crop=1.00xw:0.334xh;0,0.0326xh&resize=640:*"
           }
         },
         {
@@ -558,8 +520,7 @@
             "topic": "FOOD",
             "publisher": "The New Yorker",
             "isTimeSensitive": false,
-            "imageUrl": "https://media.newyorker.com/photos/666b2a7efa7b62b11e4ea308/16:9/w_1280,c_limit/r44443_rd.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://media.newyorker.com/photos/666b2a7efa7b62b11e4ea308/16:9/w_1280,c_limit/r44443_rd.jpg"
           }
         },
         {
@@ -572,8 +533,7 @@
             "topic": "SCIENCE",
             "publisher": "The New Yorker",
             "isTimeSensitive": false,
-            "imageUrl": "https://media.newyorker.com/photos/666736f33d68093e808d34c1/16:9/w_1280,c_limit/Riederer_Plants.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://media.newyorker.com/photos/666736f33d68093e808d34c1/16:9/w_1280,c_limit/Riederer_Plants.jpg"
           }
         },
         {
@@ -586,8 +546,7 @@
             "topic": "ENTERTAINMENT",
             "publisher": "Esquire",
             "isTimeSensitive": false,
-            "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/esq060199digbbbshoes-001-664fa3f1556e9.jpg?crop=1.00xw:0.873xh;0,0.0737xh&resize=640:*",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/esq060199digbbbshoes-001-664fa3f1556e9.jpg?crop=1.00xw:0.873xh;0,0.0737xh&resize=640:*"
           }
         },
         {
@@ -600,8 +559,7 @@
             "topic": "POLITICS",
             "publisher": "The Atlantic",
             "isTimeSensitive": false,
-            "imageUrl": "https://cdn.theatlantic.com/thumbor/P6m-sR0G-YAB0sGbvHO4tGqflnY=/0x43:2000x1085/1200x625/media/img/mt/2024/06/Quiambao_1/original.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://cdn.theatlantic.com/thumbor/P6m-sR0G-YAB0sGbvHO4tGqflnY=/0x43:2000x1085/1200x625/media/img/mt/2024/06/Quiambao_1/original.jpg"
           }
         },
         {
@@ -614,8 +572,7 @@
             "topic": "ENTERTAINMENT",
             "publisher": "The Atlantic",
             "isTimeSensitive": false,
-            "imageUrl": "https://cdn.theatlantic.com/thumbor/nX_7zXMqBrC47-fwu8YHvuvzgt8=/8x722:5759x3717/1200x625/media/img/mt/2024/06/GettyImages_991477622/original.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://cdn.theatlantic.com/thumbor/nX_7zXMqBrC47-fwu8YHvuvzgt8=/8x722:5759x3717/1200x625/media/img/mt/2024/06/GettyImages_991477622/original.jpg"
           }
         },
         {
@@ -628,8 +585,7 @@
             "topic": "ENTERTAINMENT",
             "publisher": "Elle",
             "isTimeSensitive": false,
-            "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/elm060124cooke-dig-01-666b1011d1665.jpg?crop=0.811xw:0.326xh;0,0.0664xh&resize=640:*",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/elm060124cooke-dig-01-666b1011d1665.jpg?crop=0.811xw:0.326xh;0,0.0664xh&resize=640:*"
           }
         },
         {
@@ -642,8 +598,7 @@
             "topic": "SCIENCE",
             "publisher": "Aeon",
             "isTimeSensitive": false,
-            "imageUrl": "https://images.aeonmedia.co/images/4a96e2d9-5ee7-4765-8325-8192d0757e0e/essay-final-naturepl_01590112.jpg?width=1200&quality=75&format=auto",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://images.aeonmedia.co/images/4a96e2d9-5ee7-4765-8325-8192d0757e0e/essay-final-naturepl_01590112.jpg?width=1200&quality=75&format=auto"
           }
         },
         {
@@ -656,8 +611,7 @@
             "topic": "FOOD",
             "publisher": "The Guardian",
             "isTimeSensitive": false,
-            "imageUrl": "https://i.guim.co.uk/img/media/f90b3add281715b54d9d42f458f0a5e0ba1e2239/0_89_5138_3083/master/5138.jpg?width=1200&height=630&quality=85&auto=format&fit=crop&overlay-align=bottom%2Cleft&overlay-width=100p&overlay-base64=L2ltZy9zdGF0aWMvb3ZlcmxheXMvdGctZGVmYXVsdC5wbmc&enable=upscale&s=04aa577b776edbc76ce15ab86a70453d",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://i.guim.co.uk/img/media/f90b3add281715b54d9d42f458f0a5e0ba1e2239/0_89_5138_3083/master/5138.jpg?width=1200&height=630&quality=85&auto=format&fit=crop&overlay-align=bottom%2Cleft&overlay-width=100p&overlay-base64=L2ltZy9zdGF0aWMvb3ZlcmxheXMvdGctZGVmYXVsdC5wbmc&enable=upscale&s=04aa577b776edbc76ce15ab86a70453d"
           }
         },
         {
@@ -670,8 +624,7 @@
             "topic": "EDUCATION",
             "publisher": "Psyche",
             "isTimeSensitive": false,
-            "imageUrl": "https://images.aeonmedia.co/images/1aee7ed4-e453-437e-bf2a-85ac3aad8a3c/rt-final-gettyimages-820481530.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://images.aeonmedia.co/images/1aee7ed4-e453-437e-bf2a-85ac3aad8a3c/rt-final-gettyimages-820481530.jpg"
           }
         },
         {
@@ -684,8 +637,7 @@
             "topic": "SCIENCE",
             "publisher": "Knowable Magazine",
             "isTimeSensitive": false,
-            "imageUrl": "https://knowablemagazine.org/docserver/fulltext/shark-fin-trade-2-1600x600.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://knowablemagazine.org/docserver/fulltext/shark-fin-trade-2-1600x600.jpg"
           }
         },
         {
@@ -698,8 +650,7 @@
             "topic": "POLITICS",
             "publisher": "The 19th",
             "isTimeSensitive": false,
-            "imageUrl": "https://19thnews.org/wp-content/uploads/2024/06/caitlin-cass-book-1.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://19thnews.org/wp-content/uploads/2024/06/caitlin-cass-book-1.jpg"
           }
         },
         {
@@ -712,8 +663,7 @@
             "topic": "GAMING",
             "publisher": "MIT Technology Review",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f37feac7-4386-457b-9c83-1c330c6eaeaf.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f37feac7-4386-457b-9c83-1c330c6eaeaf.jpeg"
           }
         },
         {
@@ -726,8 +676,7 @@
             "topic": "TECHNOLOGY",
             "publisher": "WIRED",
             "isTimeSensitive": false,
-            "imageUrl": "https://media.wired.com/photos/665de99d4cef22c35a95a789/191:100/w_1280,c_limit/Film-Camera-Guide-collage-062024-SOURCE-Scott-Gilbertson.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://media.wired.com/photos/665de99d4cef22c35a95a789/191:100/w_1280,c_limit/Film-Camera-Guide-collage-062024-SOURCE-Scott-Gilbertson.jpg"
           }
         },
         {
@@ -740,8 +689,7 @@
             "topic": "POLITICS",
             "publisher": "NPR",
             "isTimeSensitive": false,
-            "imageUrl": "https://npr.brightspotcdn.com/dims3/default/strip/false/crop/3000x1688+0+120/resize/1400/quality/100/format/jpeg/?url=http%3A%2F%2Fnpr-brightspot.s3.amazonaws.com%2F19%2F5d%2F256e4ff34f41902592a5899ba29e%2Fgettyimages-490832273.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://npr.brightspotcdn.com/dims3/default/strip/false/crop/3000x1688+0+120/resize/1400/quality/100/format/jpeg/?url=http%3A%2F%2Fnpr-brightspot.s3.amazonaws.com%2F19%2F5d%2F256e4ff34f41902592a5899ba29e%2Fgettyimages-490832273.jpg"
           }
         },
         {
@@ -754,8 +702,7 @@
             "topic": "FOOD",
             "publisher": "The Takeout",
             "isTimeSensitive": false,
-            "imageUrl": "https://www.thetakeout.com/img/gallery/before-fridges-russians-used-to-keep-their-milk-fresh-with-frogs/l-intro-1715699240.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://www.thetakeout.com/img/gallery/before-fridges-russians-used-to-keep-their-milk-fresh-with-frogs/l-intro-1715699240.jpg"
           }
         },
         {
@@ -768,8 +715,7 @@
             "topic": "HEALTH_FITNESS",
             "publisher": "The Atlantic",
             "isTimeSensitive": false,
-            "imageUrl": "https://cdn.theatlantic.com/thumbor/ss6K1O1wmbZPkNboU0YOM98ekEo=/0x43:2000x1085/1200x625/media/img/2024/05/FauciOpener-1/original.png",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://cdn.theatlantic.com/thumbor/ss6K1O1wmbZPkNboU0YOM98ekEo=/0x43:2000x1085/1200x625/media/img/2024/05/FauciOpener-1/original.png"
           }
         },
         {
@@ -782,8 +728,7 @@
             "topic": "EDUCATION",
             "publisher": "Literary Hub",
             "isTimeSensitive": false,
-            "imageUrl": "https://s26162.pcdn.co/wp-content/uploads/2024/06/hair-relaxer.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s26162.pcdn.co/wp-content/uploads/2024/06/hair-relaxer.jpg"
           }
         },
         {
@@ -796,8 +741,7 @@
             "topic": "HEALTH_FITNESS",
             "publisher": "Aeon",
             "isTimeSensitive": false,
-            "imageUrl": "https://images.aeonmedia.co/images/f6b4f986-a7f8-424c-9534-3060b996fdd8/essay-par377566.jpg?width=1200&quality=75&format=auto",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://images.aeonmedia.co/images/f6b4f986-a7f8-424c-9534-3060b996fdd8/essay-par377566.jpg?width=1200&quality=75&format=auto"
           }
         },
         {
@@ -810,8 +754,7 @@
             "topic": "HOME",
             "publisher": "Gizmodo",
             "isTimeSensitive": false,
-            "imageUrl": "https://i.kinja-img.com/image/upload/c_fill,h_675,pg_1,q_80,w_1200/9509ed3e35428a6d7fff9e8a89349e58.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://i.kinja-img.com/image/upload/c_fill,h_675,pg_1,q_80,w_1200/9509ed3e35428a6d7fff9e8a89349e58.jpg"
           }
         },
         {
@@ -824,8 +767,7 @@
             "topic": "HEALTH_FITNESS",
             "publisher": "Vox",
             "isTimeSensitive": false,
-            "imageUrl": "https://platform.vox.com/wp-content/uploads/sites/2/2024/06/GettyImages-512298231.jpg?quality=90&strip=all&crop=0,10.732984293194,100,78.534031413613",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://platform.vox.com/wp-content/uploads/sites/2/2024/06/GettyImages-512298231.jpg?quality=90&strip=all&crop=0,10.732984293194,100,78.534031413613"
           }
         },
         {
@@ -838,8 +780,7 @@
             "topic": "SCIENCE",
             "publisher": "WIRED",
             "isTimeSensitive": false,
-            "imageUrl": "https://media.wired.com/photos/666c9e38dac254cb00a3f0df/191:100/w_1280,c_limit/Science_Flood_housing_GettyImages-1699083412.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://media.wired.com/photos/666c9e38dac254cb00a3f0df/191:100/w_1280,c_limit/Science_Flood_housing_GettyImages-1699083412.jpg"
           }
         },
         {
@@ -852,8 +793,7 @@
             "topic": "SCIENCE",
             "publisher": "Nature",
             "isTimeSensitive": false,
-            "imageUrl": "https://media.nature.com/lw1200/magazine-assets/d41586-024-02038-9/d41586-024-02038-9_27181876.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://media.nature.com/lw1200/magazine-assets/d41586-024-02038-9/d41586-024-02038-9_27181876.jpg"
           }
         },
         {
@@ -866,8 +806,7 @@
             "topic": "SPORTS",
             "publisher": "BBC",
             "isTimeSensitive": false,
-            "imageUrl": "https://ichef.bbci.co.uk/news/480/cpsprodpb/b497/live/ea3da2d0-2a21-11ef-a427-217fb9597453.jpg.webp",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://ichef.bbci.co.uk/news/480/cpsprodpb/b497/live/ea3da2d0-2a21-11ef-a427-217fb9597453.jpg.webp"
           }
         },
         {
@@ -880,8 +819,7 @@
             "topic": "BUSINESS",
             "publisher": "The Walrus",
             "isTimeSensitive": false,
-            "imageUrl": "https://walrus-assets.s3.amazonaws.com/img/CUSTOM-HORIZONTAL-SOCIAL-CARDS-Moscrop-SelfCheckout.png",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://walrus-assets.s3.amazonaws.com/img/CUSTOM-HORIZONTAL-SOCIAL-CARDS-Moscrop-SelfCheckout.png"
           }
         },
         {
@@ -894,8 +832,7 @@
             "topic": "SCIENCE",
             "publisher": "Nature",
             "isTimeSensitive": false,
-            "imageUrl": "https://media.nature.com/lw1200/magazine-assets/d41586-024-02029-w/d41586-024-02029-w_27201134.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://media.nature.com/lw1200/magazine-assets/d41586-024-02029-w/d41586-024-02029-w_27201134.jpg"
           }
         },
         {
@@ -908,8 +845,7 @@
             "topic": "HEALTH_FITNESS",
             "publisher": "BBC",
             "isTimeSensitive": false,
-            "imageUrl": "https://ichef.bbci.co.uk/images/ic/480xn/p0j48gnj.jpg.webp",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://ichef.bbci.co.uk/images/ic/480xn/p0j48gnj.jpg.webp"
           }
         },
         {
@@ -922,8 +858,7 @@
             "topic": "SCIENCE",
             "publisher": "Inverse",
             "isTimeSensitive": false,
-            "imageUrl": "https://imgix.bustle.com/uploads/image/2024/5/31/0c29afe0/file-20240516-21-amgccw.jpg?w=1200&h=630&fit=crop&crop=faces&fm=jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://imgix.bustle.com/uploads/image/2024/5/31/0c29afe0/file-20240516-21-amgccw.jpg?w=1200&h=630&fit=crop&crop=faces&fm=jpg"
           }
         },
         {
@@ -936,8 +871,7 @@
             "topic": "POLITICS",
             "publisher": "Vox",
             "isTimeSensitive": false,
-            "imageUrl": "https://platform.vox.com/wp-content/uploads/sites/2/2024/06/gettyimages-1537696713.jpg?quality=90&strip=all&crop=0,10.732984293194,100,78.534031413613",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://platform.vox.com/wp-content/uploads/sites/2/2024/06/gettyimages-1537696713.jpg?quality=90&strip=all&crop=0,10.732984293194,100,78.534031413613"
           }
         },
         {
@@ -950,8 +884,7 @@
             "topic": "GAMING",
             "publisher": "Polygon",
             "isTimeSensitive": false,
-            "imageUrl": "https://cdn.vox-cdn.com/thumbor/b1omDgEBHqIqhWi9dKd2QU50XFk=/0x0:1919x1005/fit-in/1200x630/cdn.vox-cdn.com/uploads/chorus_asset/file/25490372/Screenshot_2024_06_13_145720.png",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://cdn.vox-cdn.com/thumbor/b1omDgEBHqIqhWi9dKd2QU50XFk=/0x0:1919x1005/fit-in/1200x630/cdn.vox-cdn.com/uploads/chorus_asset/file/25490372/Screenshot_2024_06_13_145720.png"
           }
         },
         {
@@ -964,8 +897,7 @@
             "topic": "HEALTH_FITNESS",
             "publisher": "The Marginalian",
             "isTimeSensitive": false,
-            "imageUrl": "https://www.themarginalian.org/wp-content/uploads/2019/11/velocity_debbie_dasha.jpg?fit=600%2C315&ssl=1",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://www.themarginalian.org/wp-content/uploads/2019/11/velocity_debbie_dasha.jpg?fit=600%2C315&ssl=1"
           }
         },
         {
@@ -978,8 +910,7 @@
             "topic": "TRAVEL",
             "publisher": "Business Insider",
             "isTimeSensitive": false,
-            "imageUrl": "https://i.insider.com/6650af2da961b37edf39b243?width=1200&format=jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://i.insider.com/6650af2da961b37edf39b243?width=1200&format=jpeg"
           }
         },
         {
@@ -992,8 +923,7 @@
             "topic": "SELF_IMPROVEMENT",
             "publisher": "Zocalo Public Square",
             "isTimeSensitive": false,
-            "imageUrl": "https://www.zocalopublicsquare.org/wp-content/uploads/2024/06/Therapeutic-neutrality-l.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://www.zocalopublicsquare.org/wp-content/uploads/2024/06/Therapeutic-neutrality-l.jpg"
           }
         },
         {
@@ -1006,8 +936,7 @@
             "topic": "TRAVEL",
             "publisher": "Afar",
             "isTimeSensitive": true,
-            "imageUrl": "https://afar.brightspotcdn.com/dims4/default/4e20695/2147483647/strip/true/crop/3000x1500+0+0/resize/1440x720!/quality/90/?url=https%3A%2F%2Fk3-prod-afar-media.s3.us-west-2.amazonaws.com%2Fbrightspot%2Fe4%2F9f%2F3e7a0c934fa8aca7da05146bc497%2Fgeoff-haggray-tokyo-lede.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://afar.brightspotcdn.com/dims4/default/4e20695/2147483647/strip/true/crop/3000x1500+0+0/resize/1440x720!/quality/90/?url=https%3A%2F%2Fk3-prod-afar-media.s3.us-west-2.amazonaws.com%2Fbrightspot%2Fe4%2F9f%2F3e7a0c934fa8aca7da05146bc497%2Fgeoff-haggray-tokyo-lede.jpg"
           }
         },
         {
@@ -1020,8 +949,7 @@
             "topic": "EDUCATION",
             "publisher": "Undark",
             "isTimeSensitive": false,
-            "imageUrl": "https://undark.org/wp-content/uploads/2024/06/trio-of-cubs_lede.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://undark.org/wp-content/uploads/2024/06/trio-of-cubs_lede.jpeg"
           }
         },
         {
@@ -1034,8 +962,7 @@
             "topic": "PERSONAL_FINANCE",
             "publisher": "The Cut",
             "isTimeSensitive": false,
-            "imageUrl": "https://pyxis.nymag.com/v1/imgs/72c/f78/8c5e661254f06ca6f6811e896a97b0662c-My2Cents-Treatment-june-12.1x.rsocial.w1200.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://pyxis.nymag.com/v1/imgs/72c/f78/8c5e661254f06ca6f6811e896a97b0662c-My2Cents-Treatment-june-12.1x.rsocial.w1200.jpg"
           }
         },
         {
@@ -1048,8 +975,7 @@
             "topic": "SELF_IMPROVEMENT",
             "publisher": "Architectural Digest",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/cbf91d32-792f-4ce6-a7b8-6270cbc43a7c.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/cbf91d32-792f-4ce6-a7b8-6270cbc43a7c.jpeg"
           }
         },
         {
@@ -1062,8 +988,7 @@
             "topic": "BUSINESS",
             "publisher": "Collectors Weekly",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/264c8cf0-3b8f-46a3-92d6-13ebddf9289c.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/264c8cf0-3b8f-46a3-92d6-13ebddf9289c.jpeg"
           }
         },
         {
@@ -1076,8 +1001,7 @@
             "topic": "ENTERTAINMENT",
             "publisher": "Okayplayer",
             "isTimeSensitive": false,
-            "imageUrl": "https://www.okayplayer.com/media-library/photo-of-darius-rucker-by-jason-kempin-getty-images-beyonce-by-kevin-mazur-getty-images-for-iheartradio-shaboozey-by-brett-ca.jpg?id=52453110&width=1200&height=600&coordinates=0%2C195%2C0%2C55",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://www.okayplayer.com/media-library/photo-of-darius-rucker-by-jason-kempin-getty-images-beyonce-by-kevin-mazur-getty-images-for-iheartradio-shaboozey-by-brett-ca.jpg?id=52453110&width=1200&height=600&coordinates=0%2C195%2C0%2C55"
           }
         },
         {
@@ -1090,8 +1014,7 @@
             "topic": "SELF_IMPROVEMENT",
             "publisher": "Lifehacker",
             "isTimeSensitive": false,
-            "imageUrl": "https://lifehacker.com/imagery/articles/01J04FS8768RSV42Y3DHXZA3KW/hero-image.fill.size_1200x675.jpg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://lifehacker.com/imagery/articles/01J04FS8768RSV42Y3DHXZA3KW/hero-image.fill.size_1200x675.jpg"
           }
         },
         {
@@ -1104,8 +1027,7 @@
             "topic": "POLITICS",
             "publisher": "New York Magazine",
             "isTimeSensitive": true,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f0069eea-68dd-4536-be2e-bda6f1d87102.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f0069eea-68dd-4536-be2e-bda6f1d87102.jpeg"
           }
         },
         {
@@ -1118,8 +1040,7 @@
             "topic": "HEALTH_FITNESS",
             "publisher": "Pocket Collections",
             "isTimeSensitive": false,
-            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f1b806a8-f0e0-48ff-885b-529a5d3af59e.jpeg",
-            "iconUrl": "https://example.com/icon.png"
+            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f1b806a8-f0e0-48ff-885b-529a5d3af59e.jpeg"
           }
         }
       ]
