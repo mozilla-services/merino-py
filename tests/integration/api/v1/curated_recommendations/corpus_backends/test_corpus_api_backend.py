@@ -42,7 +42,7 @@ async def test_fetch(corpus_backend: CorpusApiBackend, fixture_response_data):
         ),
         scheduledCorpusItemId="de614b6b-6df6-470a-97f2-30344c56c1b3",
         corpusItemId="4095b364-02ff-402c-b58a-792a067fccf2",
-        iconUrl=None,
+        iconUrl="https://example.com/icon.png",
     )
 
 
