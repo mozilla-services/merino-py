@@ -208,7 +208,9 @@ async def test_curated_recommendations(repeat):
             topic=Topic.FOOD,
             publisher="Epicurious",
             isTimeSensitive=False,
-            imageUrl=HttpUrl("https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg"),
+            imageUrl=HttpUrl(
+                "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg"
+            ),
             receivedRank=0,
             tileId=301455520317019,
             iconUrl=HttpUrl("https://example.com/icon.png"),

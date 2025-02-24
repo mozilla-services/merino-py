@@ -90,7 +90,7 @@ async def test_fetch_days_since_today(
                                     "publisher": "Mozilla",
                                     "isTimeSensitive": True,
                                     "imageUrl": "https://example.com/image.jpg",
-                                    "iconUrl": None
+                                    "iconUrl": None,
                                 },
                             },
                         ]
