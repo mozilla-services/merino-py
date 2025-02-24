@@ -208,10 +208,10 @@ async def test_curated_recommendations(repeat):
             topic=Topic.FOOD,
             publisher="Epicurious",
             isTimeSensitive=False,
-            imageUrl="https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg",
+            imageUrl=HttpUrl("https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg"),
             receivedRank=0,
             tileId=301455520317019,
-            iconUrl="https://example.com/icon.png",
+            iconUrl=HttpUrl("https://example.com/icon.png"),
         )
         # Mock the endpoint
         response = await fetch_en_us(ac)
@@ -1664,13 +1664,6 @@ async def test_curated_recommendations_enriched_with_icons(
             json={"locale": "en-US"},
         )
         assert response.status_code == 200
-
-        # metrics_increment_called = [
-        #     call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
-        # ]
-        # assert metrics_increment_called == [
-        #     "corpus_item.manifest_provider.icon_url.hit",
-        # ]
 
     data = response.json()
     items = data["data"]
