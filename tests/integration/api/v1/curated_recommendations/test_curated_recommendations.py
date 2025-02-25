@@ -1617,8 +1617,12 @@ async def test_curated_recommendations_enriched_with_icons(
     manifest_provider,
     corpus_http_client,
     fixture_request_data,
+    mocker: MockerFixture,
 ):
     """Test the enrichment of a curated recommendation with an added icon-url."""
+    # mock the statsd client so that we can assert on the increment metric below
+    report = mocker.patch.object(aiodogstatsd.Client, "_report")
+
     # Set up the manifest data first
     manifest_provider.manifest_data.domains = [
         Domain(
@@ -1678,6 +1682,10 @@ async def test_curated_recommendations_enriched_with_icons(
     assert (
         item["iconUrl"] == "https://merino-images.services.mozilla.com/favicons/microsoft-icon.png"
     )
+
+    # pull out all the metric keys
+    metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
+    assert "corpus_item.manifest_provider.icon_url.hit" in metric_keys
 
     # Clean up
     if get_provider in app.dependency_overrides:
