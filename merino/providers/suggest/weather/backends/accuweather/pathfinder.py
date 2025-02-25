@@ -21,15 +21,24 @@ REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
     ["AU", "CA", "CN", "DE", "ES", "FR", "GB", "GR", "IT", "PL", "PT", "RU", "US"]
 )
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
+    # 3 km away
+    "Adrogué": "José Marmol",
     "Baie Ste. Anne": "Baie-Sainte-Anne",
+    "Belem": "Belém",
     "Bogota D.C.": "Bogota",
+    "Ciudad de Huajuapan de León": "Heroica Ciudad de Huajuapan de León",
     "Délı̨ne": "Deline",
     "Đồng Nại": "Dong Nai",
     "Ejido Culiacán (Culiacancito)": "Ejido Culiacán",
+    "Fort Cavazos": "Killeen",
     "Gharroli": "Gharoli",
     "Grand Bay–Westfield": "Grand Bay Westfield",
     "Gustavo Adolfo Madero": "Gustavo A. Madero",
+    "Huatulco": "Santa María Huatulco",
     "Ixtapa-Zihuatanejo": "Zihuatanejo",
+    "Juchitán de Zaragoza": "Heroica Ciudad de Juchitán de Zaragoza",
+    # 12 km away
+    "Joint Base Lewis McChord": "Lakewood",
     "Kleinburg Station": "Kleinburg",
     "Lake Shasta": "Shasta Lake",
     "La'ie": "Laie",
@@ -38,10 +47,15 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Mitchell/Ontario": "Mitchell",
     "Montreal East": "Montreal",
     "Montreal West": "Montreal",
+    "Mossel Bay": "Mosselbaai",
     "Naucalpan": "Naucalpan de Juárez",
     "Ōkubo-naka": "Okubo naka",
+    "Oaxaca City": "Oaxaca de Juárez",
     "Panjim": "Panaji",
     "Pilāni": "Pilani",
+    "Port Montt": "Puerto Montt",
+    # 13 km away
+    "Research Triangle Park": "Durham",
     "Sainte-Clotilde-de-Châteauguay": "Sainte-Clotilde-de-Chateauguay",
     "Sainte-Geneviève": "Sainte-Genevieve",
     "Saint-Barnabe": "Saint-Barnabé",
@@ -64,7 +78,6 @@ SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
     ("US", "TX", "Fort Cavazos"): 0,
     ("US", "TX", "Lavaca"): 0,
     ("US", "UT", "Hill Air Force Base"): 0,
-    ("US", "WA", "Joint Base Lewis McChord"): 0,
 }
 
 
