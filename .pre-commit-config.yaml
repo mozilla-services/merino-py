@@ -1,5 +1,5 @@
 default_language_version:
-  python: python3.12
+  python: python3.13
 repos:
   - repo: "https://github.com/pre-commit/pre-commit-hooks"
     rev: v4.6.0
@@ -34,7 +34,7 @@ repos:
         files: "^merino|^tests"
         args:
           [
-            --python-version=3.12,
+            --python-version=3.13,
             --disallow-untyped-calls,
             --follow-imports=normal,
             --ignore-missing-imports,

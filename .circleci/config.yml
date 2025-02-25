@@ -19,10 +19,10 @@ executors:
       - image: cimg/node:16.18.1
   python-executor:
     docker:
-      - image: cimg/python:3.12
+      - image: cimg/python:3.13
   ubuntu-executor:
     machine:
-      image: ubuntu-2004:2024.08.1
+      image: ubuntu-2004:current
 
 workflows:
   pr-workflow:
@@ -336,23 +336,23 @@ commands:
               echo "${DOCKER_PASS}" | docker login -u="${DOCKER_USER}" --password-stdin
             fi
 
-  # set up python3.12 and poetry on the ubuntu machine used to run integration tests
+  # set up python3.13 and poetry on the ubuntu machine used to run integration tests
   setup-python-on-machine:
     steps:
       - run:
           # the ubuntu machine image we are using comes with python and pyenv
-          name: Set python version to 3.12
-          command: pyenv global 3.12
+          name: Set python version to 3.13
+          command: pyenv global 3.13
       - run:
           name: Install poetry
-          command: curl -sSL https://install.python-poetry.org | python3.12 -
+          command: curl -sSL https://install.python-poetry.org | python3.13 -
       - run:
           name: Add poetry to PATH
           command: echo 'export PATH="$HOME/.local/bin:$PATH"' >> $BASH_ENV
       - run:
           name: Verify Python and poetry installation
           command: |
-            python3.12 --version
+            python3.13 --version
             poetry --version
 
   upload_to_gcs:
