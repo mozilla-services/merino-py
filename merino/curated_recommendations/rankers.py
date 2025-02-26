@@ -29,7 +29,6 @@ def thompson_sampling(
     recs: list[CuratedRecommendation],
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
-    enable_region_engagement: bool = False,
     region: str | None = None,
     region_weight: float = REGION_ENGAGEMENT_WEIGHT,
 ) -> list[CuratedRecommendation]:
@@ -39,7 +38,6 @@ def thompson_sampling(
     :param recs: A list of recommendations in the desired order (pre-publisher spread).
     :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.
     :param prior_backend: Provides prior alpha and beta values for Thompson sampling.
-    :param enable_region_engagement: If True, regional engagement weighs higher. False by default.
     :param region: Optionally, the client's region, e.g. 'US'.
     :param region_weight: In a weighted average, how much to weigh regional engagement.
 
