@@ -208,12 +208,9 @@ async def test_curated_recommendations(repeat):
             topic=Topic.FOOD,
             publisher="Epicurious",
             isTimeSensitive=False,
-            imageUrl=HttpUrl(
-                "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg"
-            ),
+            imageUrl="https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg",
             receivedRank=0,
             tileId=301455520317019,
-            iconUrl=HttpUrl("https://example.com/icon.png"),
         )
         # Mock the endpoint
         response = await fetch_en_us(ac)
@@ -1083,18 +1080,13 @@ class TestCuratedRecommendationsMetrics:
 
             # TODO: Remove reliance on internal details of aiodogstatsd
             metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
-            # fetch_en_us loads scheduled_surface.json from a fixture, generating this metric 80 times for its 80 items.
-            icon_url_miss_metric_keys = ["corpus_item.manifest_provider.icon_url.miss"] * 80
-
-            assert metric_keys == (
-                ["corpus_api.request.timing", "corpus_api.request.status_codes.200"]
-                + icon_url_miss_metric_keys
-                + [
-                    "post.api.v1.curated-recommendations.timing",
-                    "post.api.v1.curated-recommendations.status_codes.200",
-                    "response.status_codes.200",
-                ]
-            )
+            assert metric_keys == [
+                "corpus_api.request.timing",
+                "corpus_api.request.status_codes.200",
+                "post.api.v1.curated-recommendations.timing",
+                "post.api.v1.curated-recommendations.status_codes.200",
+                "response.status_codes.200",
+            ]
 
     @pytest.mark.asyncio
     async def test_metrics_cache_hit(self, mocker: MockerFixture) -> None:
@@ -1147,25 +1139,17 @@ class TestCuratedRecommendationsMetrics:
 
             # TODO: Remove reliance on internal details of aiodogstatsd
             metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
-            # fetch_en_us loads scheduled_surface.json from a fixture, generating this metric 80 times for its 80 items.
-            icon_url_miss_metric_keys = ["corpus_item.manifest_provider.icon_url.miss"] * 80
-
             assert (
                 metric_keys
-                == (
-                    [
-                        "corpus_api.request.timing",
-                        "corpus_api.request.status_codes.500",
-                        "corpus_api.request.timing",
-                        "corpus_api.request.status_codes.200",
-                    ]
-                    + icon_url_miss_metric_keys
-                    + [
-                        "post.api.v1.curated-recommendations.timing",
-                        "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
-                        "response.status_codes.200",
-                    ]
-                )
+                == [
+                    "corpus_api.request.timing",
+                    "corpus_api.request.status_codes.500",
+                    "corpus_api.request.timing",
+                    "corpus_api.request.status_codes.200",
+                    "post.api.v1.curated-recommendations.timing",
+                    "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
+                    "response.status_codes.200",
+                ]
             )
 
 
@@ -1617,18 +1601,14 @@ async def test_curated_recommendations_enriched_with_icons(
     manifest_provider,
     corpus_http_client,
     fixture_request_data,
-    mocker: MockerFixture,
 ):
     """Test the enrichment of a curated recommendation with an added icon-url."""
-    # mock the statsd client so that we can assert on the increment metric below
-    report = mocker.patch.object(aiodogstatsd.Client, "_report")
-
     # Set up the manifest data first
     manifest_provider.manifest_data.domains = [
         Domain(
             rank=2,
             title="Microsoft – AI, Cloud, Productivity, Computing, Gaming & Apps",
-            url=HttpUrl("https://www.microsoft.com"),
+            url="https://www.microsoft.com",
             domain="microsoft",
             icon="https://merino-images.services.mozilla.com/favicons/microsoft-icon.png",
             categories=["Business", "Information Technology"],
@@ -1682,10 +1662,6 @@ async def test_curated_recommendations_enriched_with_icons(
     assert (
         item["iconUrl"] == "https://merino-images.services.mozilla.com/favicons/microsoft-icon.png"
     )
-
-    # pull out all the metric keys
-    metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
-    assert "corpus_item.manifest_provider.icon_url.hit" in metric_keys
 
     # Clean up
     if get_provider in app.dependency_overrides:
