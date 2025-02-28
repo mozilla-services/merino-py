@@ -25,29 +25,24 @@ async def test_fetch(corpus_backend: CorpusApiBackend, fixture_response_data):
     results = await corpus_backend.fetch(surface_id)
 
     assert len(results) == 80
-    assert (
-        results[0]
-        == CorpusItem(
-            url=HttpUrl(
-                "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-"
-                "brownies-and-cakes?utm_source=firefox-newtab-en-us"
-            ),
-            title="Milk Powder Is the Key to Better Cookies, Brownies, and Cakes",
-            excerpt="Consider this pantry staple your secret ingredient for making more flavorful "
-            "desserts.",
-            topic=Topic.FOOD,
-            publisher="Epicurious",
-            isTimeSensitive=False,
-            imageUrl=HttpUrl(
-                "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/"
-                "40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg"
-            ),
-            scheduledCorpusItemId="de614b6b-6df6-470a-97f2-30344c56c1b3",
-            corpusItemId="4095b364-02ff-402c-b58a-792a067fccf2",
-            iconUrl=HttpUrl(
-                "https://example.com/icon.png"
-            ),  # in the test data file, schedule_surface.json, only the item with this corpusItemId has the iconUrl property
-        )
+    assert results[0] == CorpusItem(
+        url=HttpUrl(
+            "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-"
+            "brownies-and-cakes?utm_source=firefox-newtab-en-us"
+        ),
+        title="Milk Powder Is the Key to Better Cookies, Brownies, and Cakes",
+        excerpt="Consider this pantry staple your secret ingredient for making more flavorful "
+        "desserts.",
+        topic=Topic.FOOD,
+        publisher="Epicurious",
+        isTimeSensitive=False,
+        imageUrl=HttpUrl(
+            "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/"
+            "40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg"
+        ),
+        scheduledCorpusItemId="de614b6b-6df6-470a-97f2-30344c56c1b3",
+        corpusItemId="4095b364-02ff-402c-b58a-792a067fccf2",
+        iconUrl=None,
     )
 
 
@@ -95,7 +90,6 @@ async def test_fetch_days_since_today(
                                     "publisher": "Mozilla",
                                     "isTimeSensitive": True,
                                     "imageUrl": "https://example.com/image.jpg",
-                                    "iconUrl": None,
                                 },
                             },
                         ]
