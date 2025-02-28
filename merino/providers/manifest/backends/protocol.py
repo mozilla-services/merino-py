@@ -18,7 +18,6 @@ class GetManifestResultCode(Enum):
 
     SUCCESS = 0
     FAIL = 1
-    SKIP = 2
 
 
 class Domain(BaseModel):
