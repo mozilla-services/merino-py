@@ -10,7 +10,7 @@ from merino.providers.suggest.weather.backends.protocol import WeatherContext
 
 MaybeStr = Optional[str]
 
-LOCALITY_SUFFIX_PATTERN: re.Pattern = re.compile(r"\s+(city|municipality)$", re.IGNORECASE)
+LOCALITY_SUFFIX_PATTERN: re.Pattern = re.compile(r"\s+(city|municipality|town)$", re.IGNORECASE)
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {
     ("GB", "London"): "LND",
     ("PH", "Manila"): None,
@@ -24,10 +24,12 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     # 3 km away
     "Adrogué": "José Marmol",
     "Baie Ste. Anne": "Baie-Sainte-Anne",
+    "Barishal": "Barisal",
     "Belem": "Belém",
     "Bogota D.C.": "Bogota",
     "Ciudad de Huajuapan de León": "Heroica Ciudad de Huajuapan de León",
     "Délı̨ne": "Deline",
+    "Dombivali": "Dombivli",
     "Đồng Nại": "Dong Nai",
     "Ejido Culiacán (Culiacancito)": "Ejido Culiacán",
     "Fort Cavazos": "Killeen",
@@ -39,7 +41,9 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Juchitán de Zaragoza": "Heroica Ciudad de Juchitán de Zaragoza",
     # 12 km away
     "Joint Base Lewis McChord": "Lakewood",
+    "Kayapınar": "Kayapinar",
     "Kleinburg Station": "Kleinburg",
+    "Kushi Nagar": "Kushinagar",
     "Lake Shasta": "Shasta Lake",
     "La'ie": "Laie",
     "Magnesia on the Maeander": "Manisa",
@@ -48,21 +52,26 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Montreal East": "Montreal",
     "Montreal West": "Montreal",
     "Mossel Bay": "Mosselbaai",
+    "Municipality of Strathfield": "Strathfield",
     "Naucalpan": "Naucalpan de Juárez",
     "Ōkubo-naka": "Okubo naka",
     "Oaxaca City": "Oaxaca de Juárez",
+    "Panderma": "Bandırma",
     "Panjim": "Panaji",
     "Pilāni": "Pilani",
     "Port Montt": "Puerto Montt",
+    "Rahim Yar Khan": "Rahimyar Khan",
     # 13 km away
     "Research Triangle Park": "Durham",
     "Sainte-Clotilde-de-Châteauguay": "Sainte-Clotilde-de-Chateauguay",
     "Sainte-Geneviève": "Sainte-Genevieve",
     "Saint-Barnabe": "Saint-Barnabé",
     "Saint-Raymond-de-Portneuf": "Saint-Raymond",
+    "Santa María Chimalhuacán": "Chimalhuacán",
     "Santiago de Cali": "Cali",
     "Sōsa": "Sosa-shi",
     "Tracadie–Sheila": "Tracadie Sheila",
+    "Vatakara": "Vadakara",
     "Yunderup": "South Yunderup",
     "Zacoalco": "Zacoalco de Torres",
 }
