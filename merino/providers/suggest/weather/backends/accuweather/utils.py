@@ -99,11 +99,7 @@ def process_location_response_with_country_and_region(
             },
             *_,
         ]:
-            # `type: ignore` is necessary because mypy gets confused when
-            # matching structures of type `Any` and reports the following
-            # line as unreachable. See
-            # https://github.com/python/mypy/issues/12770
-            return {  # type: ignore
+            return {
                 "key": key,
                 "localized_name": localized_name,
                 "administrative_area_id": administrative_area_id,
@@ -128,11 +124,7 @@ def process_location_response_with_country(
                 "AdministrativeArea": {"ID": administrative_area_id},
             },
         ]:
-            # `type: ignore` is necessary because mypy gets confused when
-            # matching structures of type `Any` and reports the following
-            # line as unreachable. See
-            # https://github.com/python/mypy/issues/12770
-            return {  # type: ignore
+            return {
                 "key": key,
                 "localized_name": localized_name,
                 "administrative_area_id": administrative_area_id,
@@ -159,11 +151,7 @@ def process_current_condition_response(response: Any) -> dict[str, Any] | None:
                 },
             }
         ]:
-            # `type: ignore` is necessary because mypy gets confused when
-            # matching structures of type `Any` and reports the following
-            # lines as unreachable. See
-            # https://github.com/python/mypy/issues/12770
-            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)  # type: ignore
+            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)
             return {
                 "url": url,
                 "summary": summary,
@@ -197,11 +185,7 @@ def process_forecast_response(response: Any) -> dict[str, Any] | None:
                 }
             ],
         }:
-            # `type: ignore` is necessary because mypy gets confused when
-            # matching structures of type `Any` and reports the following
-            # lines as unreachable. See
-            # https://github.com/python/mypy/issues/12770
-            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)  # type: ignore
+            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)
 
             return {
                 "url": url,

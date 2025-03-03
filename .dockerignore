@@ -9,7 +9,11 @@
 .mypy_cache
 .pytest_cache
 .venv
+.ruff_cache
 **/__pycache__
+**/.mypy_cache
+**/.pytest_cache
+**/.ruff_cache
 env
 pyrightconfig.json
 venv
