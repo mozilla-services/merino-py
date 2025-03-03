@@ -15,8 +15,8 @@ _validators = [
     Validator("metrics.dev_logger", is_type_of=bool),
     Validator("metrics.host", is_type_of=str),
     Validator("metrics.port", gte=0, is_type_of=int),
-    Validator("image_manifest.gcs_project", is_type_of=str),
-    Validator("image_manifest.gcs_bucket", is_type_of=str),
+    Validator("image_gcs.gcs_project", is_type_of=str),
+    Validator("image_gcs.gcs_bucket", is_type_of=str),
     Validator("accuweather.url_location_key_placeholder", is_type_of=str, must_exist=True),
     Validator(
         "accuweather.url_param_partner_code",

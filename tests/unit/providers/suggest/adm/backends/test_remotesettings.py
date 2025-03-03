@@ -20,6 +20,7 @@ from merino.providers.suggest.adm.backends.remotesettings import (
     KintoSuggestion,
     RemoteSettingsBackend,
 )
+from merino.utils.icon_processor import IconProcessor
 
 
 @pytest.fixture(name="rs_parameters")
@@ -32,10 +33,29 @@ def fixture_rs_parameters() -> dict[str, str]:
     }
 
 
+@pytest.fixture(name="mock_icon_processor")
+def fixture_mock_icon_processor(mocker: MockerFixture) -> IconProcessor:
+    """Create a mock IconProcessor for testing."""
+    mock_processor: IconProcessor = mocker.create_autospec(IconProcessor, instance=True)
+
+    async def mock_process(url: str, fallback_url: str | None = None) -> str:
+        return url
+
+    mock_processor.process_icon_url.side_effect = mock_process  # type: ignore
+    return mock_processor
+
+
 @pytest.fixture(name="rs_backend")
-def fixture_rs_backend(rs_parameters: dict[str, str]) -> RemoteSettingsBackend:
+def fixture_rs_backend(
+    rs_parameters: dict[str, str], mock_icon_processor: IconProcessor
+) -> RemoteSettingsBackend:
     """Create a RemoteSettingsBackend object for test."""
-    return RemoteSettingsBackend(**rs_parameters)
+    return RemoteSettingsBackend(
+        server=rs_parameters["server"],
+        collection=rs_parameters["collection"],
+        bucket=rs_parameters["bucket"],
+        icon_processor=mock_icon_processor,
+    )
 
 
 @pytest.fixture(name="rs_records")
@@ -221,7 +241,7 @@ def fixture_rs_wiki_attachment_response(
     ["server", "collection", "bucket"],
 )
 def test_init_invalid_remote_settings_parameter_error(
-    rs_parameters: dict[str, str], parameter: str
+    rs_parameters: dict[str, str], parameter: str, mock_icon_processor: IconProcessor
 ) -> None:
     """Test that a ValueError is raised if initializing with empty Remote Settings
     values.
@@ -232,7 +252,12 @@ def test_init_invalid_remote_settings_parameter_error(
     rs_parameters[parameter] = ""
 
     with pytest.raises(ValueError) as error:
-        RemoteSettingsBackend(**rs_parameters)
+        RemoteSettingsBackend(
+            server=rs_parameters.get("server"),
+            collection=rs_parameters.get("collection"),
+            bucket=rs_parameters.get("bucket"),
+            icon_processor=mock_icon_processor,
+        )
 
     assert str(error.value) == expected_error_value
 

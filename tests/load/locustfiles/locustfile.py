@@ -41,6 +41,8 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
 )
+from merino.utils.icon_processor import IconProcessor
+from merino.configs import settings
 
 # Type definitions
 KintoRecords = list[dict[str, Any]]
@@ -178,7 +180,13 @@ def get_adm_queries(server: str | None, collection: str | None, bucket: str | No
                     empty.
         BackendError: Failed request to Remote Settings.
     """
-    backend: RemoteSettingsBackend = RemoteSettingsBackend(server, collection, bucket)
+    icon_processor = IconProcessor(
+        gcs_project=settings.image_gcs.gcs_project,
+        gcs_bucket=settings.image_gcs.gcs_bucket,
+    )
+    backend: RemoteSettingsBackend = RemoteSettingsBackend(
+        server, collection, bucket, icon_processor
+    )
     content: SuggestionContent = asyncio.run(backend.fetch())
 
     adm_query_dict: dict[int, list[str]] = {}

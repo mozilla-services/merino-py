@@ -194,14 +194,23 @@ env = "dev"
 # If set to `debug`, the DSN will be set to a testing value recommended by Sentry,
 # and extra output will be included in the logs.
 
-[default.image_manifest]
-# MERINO_IMAGE_MANIFEST__GCS_PROJECT
+[default.image_gcs]
+# MERINO_IMAGE_GCS__GCS_PROJECT
 # GCS project name that contains domain data
 gcs_project = ""
 
-# MERINO_IMAGE_MANIFEST__GCS_BUCKET
+# MERINO_IMAGE_GCS__GCS_BUCKET
 # GCS bucket that contains domain data files
 gcs_bucket = ""
+
+
+[default.icon]
+# Subdirectory within bucket for favicons
+favicons_root = "favicons"
+# Maximum size of files to process (in bytes)
+max_size = 16777216  # 16MB
+# HTTP timeout for favicon downloads (in seconds)
+http_timeout = 5
 
 [default.providers.accuweather]
 # MERINO_PROVIDERS__ACCUWEATHER__TYPE
