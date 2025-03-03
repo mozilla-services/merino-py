@@ -1,16 +1,15 @@
 name: CI Workflow - PR
 
 on:
+  workflow_dispatch:
   pull_request:
     types:
       - opened
       - synchronize
       - reopened
       - ready_for_review
-    # branches-ignore:
-    #   - main
-    branches:
-      - DISCO-3148
+    branches-ignore:
+      - main
 
 jobs:
   checks:
