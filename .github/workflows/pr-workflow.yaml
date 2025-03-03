@@ -1,0 +1,100 @@
+name: CI Workflow - PR
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+    branches-ignore:
+      - main
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up to run
+        uses: ./.github/actions/weave
+      - name: Run Code Linting
+        run: make -k lint
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up to run
+        uses: ./.github/actions/weave
+      - name: Run unit tests
+        run: make unit-tests
+        env:
+          TEST_RESULTS_DIR: workspace/test-results
+      - name: Generate Test Coverage
+        run: make coverage-unit
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          include-hidden-files: true
+          path: |
+            workspace/test-results
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up to run
+        uses: ./.github/actions/weave
+      - name: Run Integration Tests
+        run: make integration-tests
+        env:
+          TEST_RESULTS_DIR: workspace/test-results
+      - name: Generate Test Coverage
+        run: make coverage-integration
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          include-hidden-files: true
+          path: |
+            workspace/test-results
+  test-coverage-checks:
+    needs: [unit-tests, integration-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up to run
+        uses: ./.github/actions/weave
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: workspace/test-results/
+          merge-multiple: true
+      - name: Evaluate Minimum Test Coverage
+        run: make test-coverage-check
+        env:
+          TEST_RESULTS_DIR: workspace/test-results
+  docs-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Build docs
+        run: |
+          mkdir bin
+          echo 'export PATH=$(pwd)/bin:"$PATH"' >> "$BASH_ENV"
+          source "$BASH_ENV"
+          curl -sSL \
+            https://github.com/rust-lang/mdBook/releases/download/v0.4.24/mdbook-v0.4.24-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=bin
+          curl -sSL \
+            https://github.com/badboy/mdbook-mermaid/releases/download/v0.12.6/mdbook-mermaid-v0.12.6-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=bin
+      - name: Build docs
+        run: |
+          mdbook-mermaid install ./
+          ./dev/make-all-docs.sh
+          mkdir workspace
+          cp -r ./book workspace/doc
+      - name: Upload documentation as an artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs
+          path: workspace/doc
