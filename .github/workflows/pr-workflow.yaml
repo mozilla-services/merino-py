@@ -91,7 +91,6 @@ jobs:
           mkdir workspace
           cp -r ./book workspace/doc
       - name: Upload documentation as an artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: docs
           path: workspace/doc
