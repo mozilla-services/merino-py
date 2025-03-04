@@ -261,6 +261,7 @@ jobs:
             docker images
             docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}"
             docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:latest"
+
 commands:
   dockerhub-login:
     steps:
