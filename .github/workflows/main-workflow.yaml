@@ -93,16 +93,14 @@ jobs:
   docs-publish-github-pages:
     needs: docs-build
     runs-on: ubuntu-latest
+    environment: github-pages
     permissions:
       pages: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
-      - name: Download built docs
-        uses: actions/download-artifact@v4
-        with:
-          name: github-pages
-          path: workspace/doc
+      - name: Ensure workspace directory exists
+        run: mkdir -p workspace/doc
       - name: Disable Jekyll builds
         run: touch workspace/doc/.nojekyll
       - name: Deploy docs to GitHub Pages
