@@ -98,6 +98,11 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
+      - name: Download built docs
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: workspace/doc
       - name: Disable Jekyll builds
         run: touch workspace/doc/.nojekyll
       - name: Deploy docs to GitHub Pages
