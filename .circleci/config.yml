@@ -14,9 +14,6 @@ executors:
   image-build-executor:
     docker:
       - image: cimg/base:2025.02
-  node-executor:
-    docker:
-      - image: cimg/node:16.18.1
   python-executor:
     docker:
       - image: cimg/python:3.12
@@ -44,8 +41,6 @@ workflows:
           <<: *pr-filters
       - docker-image-build-locust:
           <<: *pr-filters
-      - docs-build:
-          <<: *pr-filters
 
   main-workflow:
     jobs:
@@ -66,12 +61,6 @@ workflows:
           <<: *main-filters
       - docker-image-build-locust:
           <<: *main-filters
-      - docs-build:
-          <<: *main-filters
-      - docs-publish-github-pages:
-          <<: *main-filters
-          requires:
-            - docs-build
       - docker-image-publish-locust:
           <<: *main-filters
           requires:
@@ -272,57 +261,6 @@ jobs:
             docker images
             docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:${DOCKER_TAG}"
             docker push "${DOCKERHUB_MERINO_LOCUST_REPO}:latest"
-  docs-build:
-    executor: image-build-executor
-    steps:
-      - checkout
-      - run:
-          name: Setup Build docs
-          command: |
-            mkdir bin
-            echo 'export PATH=$(pwd)/bin:"$PATH"' >> "$BASH_ENV"
-            source "$BASH_ENV"
-            curl -sSL \
-              https://github.com/rust-lang/mdBook/releases/download/v0.4.24/mdbook-v0.4.24-x86_64-unknown-linux-gnu.tar.gz \
-              | tar -xz --directory=bin
-            curl -sSL \
-              https://github.com/badboy/mdbook-mermaid/releases/download/v0.12.6/mdbook-mermaid-v0.12.6-x86_64-unknown-linux-gnu.tar.gz \
-              | tar -xz --directory=bin
-      - run:
-          name: Build docs
-          command: |
-            mdbook-mermaid install ./
-            ./dev/make-all-docs.sh
-            mkdir workspace
-            cp -r ./book workspace/doc
-      - persist_to_workspace:
-          root: workspace
-          paths:
-            - doc
-  docs-publish-github-pages:
-    executor: node-executor
-    steps:
-      - checkout
-      - attach_workspace:
-          at: workspace
-      - run:
-          name: Disable jekyll builds
-          command: touch workspace/doc/.nojekyll
-      - add_ssh_keys:
-          fingerprints:
-            - "af:ac:a0:85:b4:a1:af:4d:e1:08:42:b5:16:e3:67:2d"
-      - run:
-          name: Set remote origin if needed
-          command: |
-            git remote add origin git@github.com:mozilla-services/merino-py.git || true
-      - run:
-          name: Deploy docs to gh-pages
-          command: |
-            npx --yes gh-pages@3.0.0 \
-              --user "ci-build <ci-build@merino.mozilla.org>" \
-              --message "[skip ci] Docs updates" \
-              --repo "git@github.com:mozilla-services/merino-py.git" \
-              --dist workspace/doc
 
 commands:
   dockerhub-login:
@@ -367,7 +305,7 @@ commands:
     steps:
       - run:
           name: Upload << parameters.source >> << parameters.extension >> Files to GCS
-          when: always  # Ensure the step runs even if previous steps, like test runs, fail
+          when: always # Ensure the step runs even if previous steps, like test runs, fail
           command: |
             if [ "$CIRCLE_BRANCH" = "main" ]; then
               FILES=$(ls -1 << parameters.source>>/*.<< parameters.extension>> )
