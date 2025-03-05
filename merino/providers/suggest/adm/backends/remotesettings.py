@@ -5,6 +5,7 @@ from asyncio import Task
 from typing import Any, Literal, cast
 from urllib.parse import urljoin
 
+import logging
 import httpx
 import kinto_http
 from pydantic import BaseModel
@@ -12,6 +13,9 @@ from pydantic import BaseModel
 from merino.exceptions import BackendError
 from merino.providers.suggest.adm.backends.protocol import SuggestionContent
 from merino.utils.http_client import create_http_client
+from merino.utils.icon_processor import IconProcessor
+
+logger = logging.getLogger(__name__)
 
 RS_CONNECT_TIMEOUT: float = 5.0
 
@@ -41,14 +45,22 @@ class RemoteSettingsBackend:
     """Backend that connects to a live Remote Settings server."""
 
     kinto_http_client: kinto_http.AsyncClient
+    icon_processor: IconProcessor
 
-    def __init__(self, server: str | None, collection: str | None, bucket: str | None) -> None:
+    def __init__(
+        self,
+        server: str | None,
+        collection: str | None,
+        bucket: str | None,
+        icon_processor: IconProcessor,
+    ) -> None:
         """Init the Remote Settings backend and create a new client.
 
         Args:
             server: the server address
             collection: the collection name
             bucket: the bucket name
+            icon_processor: the icon processor for handling favicons
         Raises:
             ValueError: If 'server', 'collection' or 'bucket' parameters are None or
                         empty.
@@ -62,6 +74,8 @@ class RemoteSettingsBackend:
         self.kinto_http_client = kinto_http.AsyncClient(
             server_url=server, bucket=bucket, collection=collection
         )
+
+        self.icon_processor = icon_processor
 
     async def fetch(self) -> SuggestionContent:
         """Fetch suggestions, keywords, and icons from Remote Settings.
@@ -101,7 +115,11 @@ class RemoteSettingsBackend:
         icon_record = self.filter_records(record_type="icon", records=records)
         for icon in icon_record:
             id = icon["id"].replace("icon-", "")
-            icons[id] = urljoin(base=attachment_host, url=icon["attachment"]["location"])
+            original_icon_url = urljoin(base=attachment_host, url=icon["attachment"]["location"])
+
+            # Process the icon URL to convert from remote settings to merino GCS
+            processed_url = await self.icon_processor.process_icon_url(original_icon_url)
+            icons[id] = processed_url
 
         return SuggestionContent(
             suggestions=suggestions,

@@ -22,6 +22,9 @@ level = "DEBUG"
 format = "pretty"
 can_propagate = true
 
+[testing.image_gcs]
+gcs_project = "test_gcp_uploader_project"
+gcs_bucket = "test_gcp_uploader_bucket"
 
 [testing.web.api.v1]
 # Setting to contol the limit on optional client variants passed
@@ -63,10 +66,6 @@ domain_data_source = "local"
 [testing.providers.wikipedia]
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "test"
-
-[testing.image_manifest]
-gcs_project = "test_gcp_uploader_project"
-gcs_bucket = "test_gcp_uploader_bucket"
 
 cron_interval_sec = 60
 resync_interval_sec = 86400

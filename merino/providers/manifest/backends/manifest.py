@@ -35,8 +35,8 @@ class ManifestBackend:
     def fetch_manifest_data(self) -> tuple[GetManifestResultCode, ManifestData | None]:
         """Fetch manifest data from GCS through the remote filemanager."""
         remote_filemanager = ManifestRemoteFilemanager(
-            gcs_project_path=settings.image_manifest.gcs_project,
-            gcs_bucket_path=settings.image_manifest.gcs_bucket,
+            gcs_project_path=settings.image_gcs.gcs_project,
+            gcs_bucket_path=settings.image_gcs.gcs_bucket,
             blob_name=GCS_BLOB_NAME,
         )
 
