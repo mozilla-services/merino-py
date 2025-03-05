@@ -12,14 +12,19 @@ MaybeStr = Optional[str]
 
 LOCALITY_SUFFIX_PATTERN: re.Pattern = re.compile(r"\s+(city|municipality|town)$", re.IGNORECASE)
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {
+    ("AR", "El Sombrero"): None,
+    ("BR", "Barcellos"): None,
     ("GB", "London"): "LND",
-    ("PH", "Manila"): None,
     ("IE", "Dublin"): None,
+    ("IN", "Angul"): None,
+    ("IN", "Bhadrāchalam"): None,
+    ("IN", "Hanamkonda"): None,
+    ("IN", "Secunderabad"): None,
     ("IN", "Hyderabad"): None,
+    ("MX", "Comalapa"): None,
+    ("PH", "Manila"): None,
 }
-REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
-    ["AU", "CA", "CN", "DE", "ES", "FR", "GB", "GR", "IT", "PL", "PT", "RU", "US"]
-)
+
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     # 3 km away
     "Adrogué": "José Marmol",
@@ -33,6 +38,7 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Đồng Nại": "Dong Nai",
     "Ejido Culiacán (Culiacancito)": "Ejido Culiacán",
     "Fort Cavazos": "Killeen",
+    "Gaibandhas": "Gaibanda",
     "Gharroli": "Gharoli",
     "Grand Bay–Westfield": "Grand Bay Westfield",
     "Gustavo Adolfo Madero": "Gustavo A. Madero",
@@ -69,6 +75,7 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Saint-Raymond-de-Portneuf": "Saint-Raymond",
     "Santa María Chimalhuacán": "Chimalhuacán",
     "Santiago de Cali": "Cali",
+    "Santiago Metropolitan": "Santiago",
     "Sōsa": "Sosa-shi",
     "Tracadie–Sheila": "Tracadie Sheila",
     "Vatakara": "Vadakara",
@@ -88,6 +95,13 @@ SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
     ("US", "TX", "Lavaca"): 0,
     ("US", "UT", "Hill Air Force Base"): 0,
 }
+
+# Countries that use the most specific region to retrieve weather
+KNOWN_SPECIFIC_REGION_COUNTRIES: frozenset = frozenset(
+    ["AR", "AU", "BR", "CA", "CN", "DE", "FR", "GB", "IN", "MX", "NZ", "PL", "PT", "RU", "US"]
+)
+# Countries that use the least specific region to retrieve weather
+KNOWN_REGION_COUNTRIES: frozenset = frozenset(["IT", "ES", "GR"])
 
 
 def normalize_string(input_str: str) -> str:
@@ -128,10 +142,10 @@ def compass(location: Location) -> Generator[MaybeStr, None, None]:
                 city,
             ) in SUCCESSFUL_REGIONS_MAPPING:  # dynamic rules we've learned
                 yield SUCCESSFUL_REGIONS_MAPPING[(country, city)]
-            case ("AU" | "CA" | "CN" | "DE" | "FR" | "GB" | "PL" | "PT" | "RU" | "US", _):
-                yield regions[0]
+            case (country_code, _) if country_code in KNOWN_SPECIFIC_REGION_COUNTRIES:
                 # use the most specific region
-            case ("IT" | "ES" | "GR", _):
+                yield regions[0]
+            case (country_code, _) if country_code in KNOWN_REGION_COUNTRIES:
                 yield regions[-1]  # use the least specific region
             case _:  # Fall back to try all regions
                 regions_to_try = [*regions, None]
@@ -203,7 +217,7 @@ def set_region_mapping(country: str, city: str, region: str | None):
       - city {str}: city name
       - region {str | None}: region code
     """
-    if country not in REGION_MAPPING_EXCLUSIONS:
+    if country not in KNOWN_REGION_COUNTRIES and country not in KNOWN_SPECIFIC_REGION_COUNTRIES:
         SUCCESSFUL_REGIONS_MAPPING[(country, city)] = region
 
 
