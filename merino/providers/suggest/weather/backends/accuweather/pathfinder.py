@@ -96,9 +96,11 @@ SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
     ("US", "UT", "Hill Air Force Base"): 0,
 }
 
+# Countries that use the most specific region to retrieve weather
 KNOWN_SPECIFIC_REGION_COUNTRIES: frozenset = frozenset(
     ["AR", "AU", "BR", "CA", "CN", "DE", "FR", "GB", "IN", "MX", "NZ", "PL", "PT", "RU", "US"]
 )
+# Countries that use the least specific region to retrieve weather
 KNOWN_REGION_COUNTRIES: frozenset = frozenset(["IT", "ES", "GR"])
 
 

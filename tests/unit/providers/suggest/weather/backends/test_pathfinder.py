@@ -59,6 +59,8 @@ from merino.providers.suggest.weather.backends.protocol import WeatherContext
 )
 def test_compass(location: Location, expected_region_and_city: str) -> None:
     """Test country that returns the most specific region."""
+    # Changed this to a fake country code, as we add more countries
+    # this test will fail, with a real country code
     set_region_mapping("AA", "La Plata", "STE")
     assert next(compass(location)) == expected_region_and_city
 
