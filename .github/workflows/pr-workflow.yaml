@@ -1,13 +1,6 @@
 name: PR Checks Workflow
 
-on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-    branches-ignore:
-      - main
+on: pull_request
 
 jobs:
   checks:
