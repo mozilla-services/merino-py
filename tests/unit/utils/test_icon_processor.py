@@ -2,11 +2,13 @@
 
 import hashlib
 from unittest.mock import MagicMock, patch, AsyncMock
+from urllib.parse import urljoin
 
 import pytest
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
+from merino.providers.suggest.adm.backends.remotesettings import RemoteSettingsBackend
 from merino.utils.gcs.models import Image
 from merino.utils.icon_processor import IconProcessor
 
@@ -405,3 +407,55 @@ def test_custom_favicons_root(icon_processor, mock_image, mocker):
 
     # Should use custom root
     assert dest_path == f"custom_icons/{content_hex}_{content_len}.png"
+
+
+@pytest.mark.asyncio
+async def test_fetch_with_icon_processing_errors():
+    """Test handling of exceptions during icon processing."""
+    # Mock data
+    mock_records = [
+        {"id": "icon-123", "attachment": {"location": "/path/to/icon1.png"}},
+        {"id": "icon-456", "attachment": {"location": "/path/to/icon2.png"}},
+        {"id": "icon-789", "attachment": {"location": "/path/to/icon3.png"}},
+    ]
+
+    attachment_host = "https://example.com"
+
+    # Create instance with mock icon processor
+    icon_processor_mock = MagicMock(spec=IconProcessor)
+    backend = RemoteSettingsBackend("server", "collection", "bucket", icon_processor_mock)
+
+    # Mock the methods directly on the instance
+    backend.get_records = AsyncMock(return_value=[])
+    backend.get_attachment_host = AsyncMock(return_value=attachment_host)
+    backend.get_suggestions = AsyncMock(return_value=[])
+    backend.filter_records = MagicMock(return_value=mock_records)
+
+    # Mock icon processor's process_icon_url method with different behaviors
+    async def mock_process_side_effect(url):
+        if "icon1" in url:
+            return "https://processed.example.com/icon1.png"
+        elif "icon2" in url:
+            raise ValueError("Processing failed")
+        elif "icon3" in url:
+            raise Exception("Connection error")
+
+    backend.icon_processor.process_icon_url = AsyncMock(side_effect=mock_process_side_effect)
+
+    # Call the method we're testing
+    result = await backend.fetch()
+
+    # Assertions
+    assert "123" in result.icons
+    assert "456" in result.icons
+    assert "789" in result.icons
+
+    # Check successful processing
+    assert result.icons["123"] == "https://processed.example.com/icon1.png"
+
+    # Check fallback URLs for failed processing
+    expected_fallback_url = urljoin(base=attachment_host, url="/path/to/icon2.png")
+    assert result.icons["456"] == expected_fallback_url
+
+    expected_fallback_url = urljoin(base=attachment_host, url="/path/to/icon3.png")
+    assert result.icons["789"] == expected_fallback_url
