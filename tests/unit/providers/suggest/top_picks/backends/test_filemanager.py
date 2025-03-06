@@ -56,9 +56,10 @@ def fixture_top_picks_remote_filemanager(
     top_picks_remote_filemanager_parameters: dict[str, Any], gcs_client_mock
 ) -> TopPicksRemoteFilemanager:
     """Create a TopPicksRemoteFilemanager object for test."""
-    with patch("merino.utils.gcs.gcs_uploader.Client") as mock_client, patch(
-        "google.auth.default"
-    ) as mock_auth_default:
+    with (
+        patch("merino.utils.gcs.gcs_uploader.Client") as mock_client,
+        patch("google.auth.default") as mock_auth_default,
+    ):
         creds = AnonymousCredentials()  # type: ignore
         mock_auth_default.return_value = (creds, "test-project")
         mock_client.return_value = gcs_client_mock
