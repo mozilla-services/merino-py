@@ -1,0 +1,20 @@
+name: Publish Documentation
+
+on:
+  workflow_call:
+
+jobs:
+  docs-publish-github-pages:
+    runs-on: ubuntu-latest
+    environment: github-pages
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure workspace directory exists
+        run: mkdir -p workspace/doc
+      - name: Disable Jekyll builds
+        run: touch workspace/doc/.nojekyll
+      - name: Deploy docs to GitHub Pages
+        uses: actions/deploy-pages@v4

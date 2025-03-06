@@ -1,0 +1,14 @@
+name: Checks
+
+on:
+  workflow_call:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up to run
+        uses: ./.github/actions/weave
+      - name: Run Code Linting
+        run: make -k lint

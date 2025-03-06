@@ -1,0 +1,30 @@
+name: Build Documentation
+
+on:
+  workflow_call:
+
+jobs:
+  docs-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Build docs
+        run: |
+          mkdir -p bin
+          echo "PATH=$(pwd)/bin:$PATH" >> $GITHUB_ENV
+          curl -sSL \
+            https://github.com/rust-lang/mdBook/releases/download/v0.4.24/mdbook-v0.4.24-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=bin
+          curl -sSL \
+            https://github.com/badboy/mdbook-mermaid/releases/download/v0.12.6/mdbook-mermaid-v0.12.6-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=bin
+      - name: Build docs
+        run: |
+          mdbook-mermaid install ./
+          ./dev/make-all-docs.sh
+          mkdir workspace
+          cp -r ./book workspace/doc
+      - name: Upload documentation as an artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: workspace/doc
