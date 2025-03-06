@@ -113,13 +113,31 @@ class RemoteSettingsBackend:
                 fkw_index = len(full_keywords)
             results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
         icon_record = self.filter_records(record_type="icon", records=records)
+
+        icon_tasks = []
+        icon_ids = []
+
         for icon in icon_record:
             id = icon["id"].replace("icon-", "")
             original_icon_url = urljoin(base=attachment_host, url=icon["attachment"]["location"])
 
-            # Process the icon URL to convert from remote settings to merino GCS
-            processed_url = await self.icon_processor.process_icon_url(original_icon_url)
-            icons[id] = processed_url
+            # Collect all tasks without awaiting them yet
+            icon_tasks.append(self.icon_processor.process_icon_url(original_icon_url))
+            icon_ids.append(id)
+
+        # Process all icons concurrently with gather
+        processed_urls = await asyncio.gather(*icon_tasks, return_exceptions=True)
+
+        # Map results back to their IDs
+        for id, result in zip(icon_ids, processed_urls):
+            if isinstance(result, Exception):
+                logger.error(f"Error processing icon {id}: {result}")
+                # Find the original URL as fallback
+                icon = next((i for i in icon_record if i["id"].replace("icon-", "") == id), {})
+                if icon:
+                    icons[id] = urljoin(base=attachment_host, url=icon["attachment"]["location"])
+            else:
+                icons[id] = str(result)
 
         return SuggestionContent(
             suggestions=suggestions,
