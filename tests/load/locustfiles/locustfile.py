@@ -183,6 +183,7 @@ def get_adm_queries(server: str | None, collection: str | None, bucket: str | No
     icon_processor = IconProcessor(
         gcs_project=settings.image_gcs.gcs_project,
         gcs_bucket=settings.image_gcs.gcs_bucket,
+        cdn_hostname=settings.image_gcs.cdn_hostname,
     )
     backend: RemoteSettingsBackend = RemoteSettingsBackend(
         server, collection, bucket, icon_processor

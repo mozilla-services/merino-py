@@ -18,9 +18,9 @@ class IconProcessor:
     uploader: GcsUploader
     content_hash_cache: Dict[str, str]
 
-    def __init__(self, gcs_project: str, gcs_bucket: str) -> None:
+    def __init__(self, gcs_project: str, gcs_bucket: str, cdn_hostname: str) -> None:
         """Initialize the icon processor."""
-        self.uploader = GcsUploader(gcs_project, gcs_bucket, "")
+        self.uploader = GcsUploader(gcs_project, gcs_bucket, cdn_hostname)
 
         # Content hash cache: {content_hash: gcs_url}
         self.content_hash_cache = {}

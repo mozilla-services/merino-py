@@ -22,6 +22,10 @@ gcs_project = "moz-fx-merino-prod-1c2f"
 # GCS bucket that contains domain data files
 gcs_bucket = "merino-images-prodpy"
 
+# MERINO_IMAGE_GCS__CDN_HOSTNAME
+# CDN hostname used for public URLs of stored images
+cdn_hostname = "merino-images.services.mozilla.com"
+
 [production.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
 # Enum of either `remote` or `local` that defines whether domain data
