@@ -17,9 +17,12 @@ def icon_processor(mocker):
     # Mock the GcsUploader to avoid connecting to Google Cloud
     mocker.patch("merino.utils.gcs.gcs_uploader.Client")
 
+    mocker.patch.object(settings, "_wrapped", settings._wrapped)
+
     return IconProcessor(
-        gcs_project="test-project",
-        gcs_bucket="test-bucket",
+        gcs_project=settings.image_gcs.gcs_project,
+        gcs_bucket=settings.image_gcs.gcs_bucket,
+        cdn_hostname=settings.image_gcs.cdn_hostname,
     )
 
 
@@ -39,12 +42,14 @@ def test_init(mocker):
     mocker.patch("merino.utils.gcs.gcs_uploader.Client")
 
     processor = IconProcessor(
-        gcs_project="test-project",
-        gcs_bucket="test-bucket",
+        gcs_project=settings.image_gcs.gcs_project,
+        gcs_bucket=settings.image_gcs.gcs_bucket,
+        cdn_hostname=settings.image_gcs.cdn_hostname,
     )
 
     assert processor.uploader is not None
     assert processor.content_hash_cache == {}
+    assert processor.uploader.cdn_hostname == settings.image_gcs.cdn_hostname
 
 
 @pytest.mark.asyncio

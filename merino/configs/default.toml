@@ -203,6 +203,10 @@ gcs_project = ""
 # GCS bucket that contains domain data files
 gcs_bucket = ""
 
+# MERINO_IMAGE_GCS__CDN_HOSTNAME
+# CDN hostname used for public URLs of stored images
+cdn_hostname = ""
+
 
 [default.icon]
 # Subdirectory within bucket for favicons

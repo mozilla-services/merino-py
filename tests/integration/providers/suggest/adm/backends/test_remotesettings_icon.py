@@ -16,6 +16,7 @@ from merino.providers.suggest.adm.backends.remotesettings import (
 )
 from merino.utils.gcs.models import Image
 from merino.utils.icon_processor import IconProcessor
+from merino.configs import settings
 
 
 @pytest.fixture(name="rs_parameters")
@@ -155,6 +156,7 @@ class MockImageProcessor(IconProcessor):
         super().__init__(
             gcs_project="test-project",
             gcs_bucket="test-bucket",
+            cdn_hostname="test-cdn.mozilla.net",
         )
 
         # Override uploader with a mock
@@ -279,6 +281,7 @@ async def test_remotesettings_with_gcs_integration(
         icon_processor = IconProcessor(
             gcs_project=gcs_storage_client.project,
             gcs_bucket=gcs_storage_bucket.name,
+            cdn_hostname=settings.image_gcs.cdn_hostname,
         )
 
         # Replace the GCS client with our test client
@@ -312,4 +315,5 @@ async def test_remotesettings_with_gcs_integration(
 
         # Check that each icon URL points to expected location
         for icon_url in suggestion_content.icons.values():
-            assert "localhost:4443/test_gcp_uploader_bucket/favicons/" in icon_url
+            # The CDN hostname is configured in testing.toml as 'test-cdn.mozilla.net'
+            assert "https://test-cdn.mozilla.net/favicons/" in icon_url
