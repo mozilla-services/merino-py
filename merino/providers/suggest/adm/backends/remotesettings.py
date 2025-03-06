@@ -1,6 +1,7 @@
 """A thin wrapper around the Remote Settings client."""
 
 import asyncio
+import time
 from asyncio import Task
 from typing import Any, Literal, cast
 from urllib.parse import urljoin
@@ -14,6 +15,7 @@ from merino.exceptions import BackendError
 from merino.providers.suggest.adm.backends.protocol import SuggestionContent
 from merino.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
+from merino.utils.metrics import get_metrics_client
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +78,7 @@ class RemoteSettingsBackend:
         )
 
         self.icon_processor = icon_processor
+        self.metrics_client = get_metrics_client()
 
     async def fetch(self) -> SuggestionContent:
         """Fetch suggestions, keywords, and icons from Remote Settings.
@@ -83,18 +86,23 @@ class RemoteSettingsBackend:
         Raises:
             RemoteSettingsError: Failed request to Remote Settings.
         """
+        fetch_start_time = time.time()
+        self.metrics_client.increment("remotesettings.fetch.calls")
+
         suggestions: dict[str, tuple[int, int]] = {}
         full_keywords: list[str] = []
         results: list[dict[str, Any]] = []
         icons: dict[str, str] = {}
 
         records: list[dict[str, Any]] = await self.get_records()
+        self.metrics_client.gauge("remotesettings.records.count", value=len(records))
 
         attachment_host: str = await self.get_attachment_host()
 
         rs_suggestions: list[KintoSuggestion] = await self.get_suggestions(
             attachment_host, records
         )
+        self.metrics_client.gauge("remotesettings.suggestions.count", value=len(rs_suggestions))
 
         fkw_index = 0
 
@@ -112,7 +120,12 @@ class RemoteSettingsBackend:
                 full_keywords.append(full_keyword)
                 fkw_index = len(full_keywords)
             results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
+
+        # Process icons as a batch - track only batch-level metrics here
+        icon_processing_start = time.time()
         icon_record = self.filter_records(record_type="icon", records=records)
+        self.metrics_client.gauge("remotesettings.icons.count", value=len(icon_record))
+
         for icon in icon_record:
             id = icon["id"].replace("icon-", "")
             original_icon_url = urljoin(base=attachment_host, url=icon["attachment"]["location"])
@@ -120,6 +133,16 @@ class RemoteSettingsBackend:
             # Process the icon URL to convert from remote settings to merino GCS
             processed_url = await self.icon_processor.process_icon_url(original_icon_url)
             icons[id] = processed_url
+
+        # Track total batch processing time for icons
+        icon_processing_duration = (time.time() - icon_processing_start) * 1000
+        self.metrics_client.timing(
+            "remotesettings.icon_batch_processing.time", value=icon_processing_duration
+        )
+
+        # Track total fetch time
+        total_duration = (time.time() - fetch_start_time) * 1000
+        self.metrics_client.timing("remotesettings.fetch.total_time", value=total_duration)
 
         return SuggestionContent(
             suggestions=suggestions,

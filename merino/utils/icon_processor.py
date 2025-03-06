@@ -2,12 +2,14 @@
 
 import hashlib
 import logging
+import time
 from typing import Dict, Optional
 
 from merino.configs import settings
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
 from merino.utils.http_client import create_http_client
+from merino.utils.metrics import get_metrics_client
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +27,17 @@ class IconProcessor:
         # Content hash cache: {content_hash: gcs_url}
         self.content_hash_cache = {}
 
+        # Metrics
+        self.metrics_client = get_metrics_client()
+        self.request_count = 0
+        self.processed_count = 0
+
     async def process_icon_url(self, url: str) -> str:
         """Process an external icon URL and return a GCS-hosted URL."""
+        start_time = time.time()
+        self.request_count += 1
+        self.metrics_client.increment("icon_processor.requests")
+
         # Skip URLs that are already from our CDN
         cdn_hostname = self.uploader.cdn_hostname
         if cdn_hostname and url.startswith(f"https://{cdn_hostname}"):
@@ -34,14 +45,20 @@ class IconProcessor:
 
         try:
             # Download favicon
+            favicon_start = time.time()
             favicon_image = await self._download_favicon(url)
+            favicon_duration = (time.time() - favicon_start) * 1000
+            self.metrics_client.timing("icon_processor.download_time", value=favicon_duration)
+
             if not favicon_image:
                 logger.info(f"Failed to download favicon from {url}")
+                self.metrics_client.increment("icon_processor.download_failures")
                 return url
 
             # Check if the image is valid
             if not self._is_valid_image(favicon_image):
                 logger.info(f"Invalid image from {url}")
+                self.metrics_client.increment("icon_processor.invalid_images")
                 return url
 
             # Generate content hash
@@ -49,22 +66,37 @@ class IconProcessor:
 
             # Check content hash cache - this avoids re-uploading identical content
             if content_hash in self.content_hash_cache:
+                self.metrics_client.increment("icon_processor.cache_hits")
                 return self.content_hash_cache[content_hash]
+
+            self.metrics_client.increment("icon_processor.cache_misses")
 
             # Generate destination path based on content hash
             destination = self._get_destination_path(favicon_image, content_hash)
 
             # GcsUploader already checks if the file exists before uploading
+            upload_start = time.time()
             gcs_url = self.uploader.upload_image(favicon_image, destination, forced_upload=False)
+            upload_duration = (time.time() - upload_start) * 1000
+            self.metrics_client.timing("icon_processor.upload_time", value=upload_duration)
 
             # Cache the result
             self.content_hash_cache[content_hash] = gcs_url
+
+            # Track successful processing
+            self.processed_count += 1
+            self.metrics_client.increment("icon_processor.processed")
 
             return gcs_url
 
         except Exception as e:
             logger.warning(f"Error processing icon {url}: {e}")
+            self.metrics_client.increment("icon_processor.errors")
             return url
+        finally:
+            # Record total processing time
+            total_duration = (time.time() - start_time) * 1000
+            self.metrics_client.timing("icon_processor.processing_time", value=total_duration)
 
     async def _download_favicon(self, url: str) -> Optional[Image]:
         """Download the favicon from the given URL.
