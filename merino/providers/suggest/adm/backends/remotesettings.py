@@ -87,6 +87,7 @@ class RemoteSettingsBackend:
         full_keywords: list[str] = []
         results: list[dict[str, Any]] = []
         icons: dict[str, str] = {}
+        icons_in_use: set[str] = set()
 
         records: list[dict[str, Any]] = await self.get_records()
         attachment_host: str = await self.get_attachment_host()
@@ -99,6 +100,7 @@ class RemoteSettingsBackend:
         for suggestion in rs_suggestions:
             result_id = len(results)
             keywords = suggestion.keywords
+            icons_in_use.add(suggestion.icon)
             full_keywords_tuples = suggestion.full_keywords
             begin = 0
             for full_keyword, n in full_keywords_tuples:
@@ -118,6 +120,8 @@ class RemoteSettingsBackend:
 
         for icon in icon_record:
             id = icon["id"].replace("icon-", "")
+            if id not in icons_in_use:
+                continue
             original_icon_url = urljoin(base=attachment_host, url=icon["attachment"]["location"])
             icon_data.append((id, original_icon_url))
 

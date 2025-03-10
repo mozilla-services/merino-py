@@ -46,6 +46,7 @@ def fixture_rs_records() -> list[dict]:
             "id": "data-01",
             "last_modified": 123,
         },
+        # This icon is in use.
         {
             "type": "icon",
             "schema": 456,
@@ -60,6 +61,7 @@ def fixture_rs_records() -> list[dict]:
             "id": "icon-01",
             "last_modified": 123,
         },
+        # This icon is not in use.
         {
             "type": "icon",
             "schema": 789,
@@ -196,8 +198,8 @@ async def test_remotesettings_with_icon_processor(
     # Fetch the suggestions
     suggestion_content: SuggestionContent = await rs_backend.fetch()
 
-    # Verify that the icon URLs were processed
-    assert len(suggestion_content.icons) == 2  # Should have 2 icons from rs_records
+    # Verify that the in-use icon URLs were processed, the not-in-use one shouldn't be processed.
+    assert len(suggestion_content.icons) == 1
 
     # Check that each icon URL was processed
     for icon_id, icon_url in suggestion_content.icons.items():
@@ -246,7 +248,7 @@ async def test_remotesettings_icon_processor_error_handling(
     suggestion_content: SuggestionContent = await rs_backend.fetch()
 
     # Verify that the icon URLs defaulted to original URLs due to error
-    assert len(suggestion_content.icons) == 2  # Should have 2 icons from rs_records
+    assert len(suggestion_content.icons) == 1
 
     # Check that each icon URL is the original attachment URL
     for icon_id, icon_url in suggestion_content.icons.items():
@@ -310,8 +312,8 @@ async def test_remotesettings_with_gcs_integration(
         # Fetch the suggestions
         suggestion_content: SuggestionContent = await rs_backend.fetch()
 
-        # Verify that the icon URLs were processed
-        assert len(suggestion_content.icons) == 2  # Should have 2 icons from rs_records
+        # Verify that the in-use icon URLs were processed, the not-in-use one shouldn't be processed.
+        assert len(suggestion_content.icons) == 1
 
         # Check that each icon URL points to expected location
         for icon_url in suggestion_content.icons.values():
