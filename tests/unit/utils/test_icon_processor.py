@@ -8,7 +8,10 @@ import pytest
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
-from merino.providers.suggest.adm.backends.remotesettings import RemoteSettingsBackend
+from merino.providers.suggest.adm.backends.remotesettings import (
+    RemoteSettingsBackend,
+    KintoSuggestion,
+)
 from merino.utils.gcs.models import Image
 from merino.utils.icon_processor import IconProcessor
 
@@ -418,7 +421,17 @@ async def test_fetch_with_icon_processing_errors():
         {"id": "icon-456", "attachment": {"location": "/path/to/icon2.png"}},
         {"id": "icon-789", "attachment": {"location": "/path/to/icon3.png"}},
     ]
-
+    mock_suggestions = [
+        KintoSuggestion(
+            id=id,
+            advertiser="Example.org",
+            iab_category="5 - Education",
+            icon=icon_id,
+            title="Test Suggestion",
+            url="https://example.org/test",
+        )
+        for id, icon_id in enumerate(["123", "456", "789"])
+    ]
     attachment_host = "https://example.com"
 
     # Create instance with mock icon processor
@@ -428,7 +441,7 @@ async def test_fetch_with_icon_processing_errors():
     # Mock the methods directly on the instance
     backend.get_records = AsyncMock(return_value=[])
     backend.get_attachment_host = AsyncMock(return_value=attachment_host)
-    backend.get_suggestions = AsyncMock(return_value=[])
+    backend.get_suggestions = AsyncMock(return_value=mock_suggestions)
     backend.filter_records = MagicMock(return_value=mock_records)
 
     # Mock icon processor's process_icon_url method with different behaviors
