@@ -81,7 +81,6 @@ dev = [
 [tool.coverage.report]
 show_missing = true
 
-
 [tool.ruff]
 line-length = 99
 exclude = ["build", "dist", "__pycache__", ".git"]
