@@ -83,6 +83,7 @@ jobs:
     steps:
       - checkout
       - gcp-cli/setup
+      - setup-python-on-machine
       - run:
           name: Create Workspace
           command: mkdir -p workspace
@@ -143,6 +144,7 @@ jobs:
     executor: ubuntu-executor
     steps:
       - checkout
+      - setup-python-on-machine
       - attach_workspace:
           at: workspace
       - run:
