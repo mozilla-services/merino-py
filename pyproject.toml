@@ -5,7 +5,7 @@ relative_files = true
 omit = [
   # Data file only
   "merino/jobs/utils/domain_category_mapping.py",
-  "merino/jobs/utils/domain_tester.py"
+  "merino/jobs/utils/domain_tester.py",
 ]
 
 [tool.coverage.report]
@@ -42,11 +42,11 @@ lint.pydocstyle = { convention = "pep257" }
 skips = ["B101", "B104", "B311"]
 exclude_dirs = [
   # Data file only
-  "merino/jobs/utils/domain_category_mapping.py"
+  "merino/jobs/utils/domain_category_mapping.py",
 ]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 plugins = ['pydantic.mypy']
 disallow_untyped_calls = true
 follow_imports = "normal"
@@ -89,7 +89,7 @@ merino-jobs = "merino.jobs.cli:cli"
 probe-images = "merino.jobs.utils.domain_tester:main"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.13"
 fastapi = "^0.115.2"
 uvicorn = { extras = ["standard"], version = "^0.24.0" }
 dockerflow = "^2022.7.0"
