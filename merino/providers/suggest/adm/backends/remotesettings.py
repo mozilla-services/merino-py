@@ -89,9 +89,7 @@ class RemoteSettingsBackend:
         icons: dict[str, str] = {}
 
         records: list[dict[str, Any]] = await self.get_records()
-
         attachment_host: str = await self.get_attachment_host()
-
         rs_suggestions: list[KintoSuggestion] = await self.get_suggestions(
             attachment_host, records
         )
@@ -112,14 +110,34 @@ class RemoteSettingsBackend:
                 full_keywords.append(full_keyword)
                 fkw_index = len(full_keywords)
             results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
+
         icon_record = self.filter_records(record_type="icon", records=records)
+
+        icon_data = []
+        tasks = []
+
         for icon in icon_record:
             id = icon["id"].replace("icon-", "")
             original_icon_url = urljoin(base=attachment_host, url=icon["attachment"]["location"])
+            icon_data.append((id, original_icon_url))
 
-            # Process the icon URL to convert from remote settings to merino GCS
-            processed_url = await self.icon_processor.process_icon_url(original_icon_url)
-            icons[id] = processed_url
+        # Process all icons concurrently using TaskGroup
+        try:
+            async with asyncio.TaskGroup() as task_group:
+                for _, url in icon_data:
+                    tasks.append(task_group.create_task(self.icon_processor.process_icon_url(url)))
+        except ExceptionGroup as eg:
+            # If an unhandled exception occurs in TaskGroup
+            logger.error(f"Errors during icon processing: {eg}")
+
+        # Map results back to their IDs, handling any exceptions
+        for (id, original_url), task in zip(icon_data, tasks):
+            try:
+                result = task.result()
+                icons[id] = result
+            except Exception as e:
+                logger.error(f"Error processing icon {id}: {e}")
+                icons[id] = original_url
 
         return SuggestionContent(
             suggestions=suggestions,
