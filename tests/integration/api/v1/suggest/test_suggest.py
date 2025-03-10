@@ -341,22 +341,34 @@ def test_suggest_with_invalid_geolocation_ip(
         (
             "/api/v1/suggest?q=none",
             [
-                "providers.sponsored.query",
-                "providers.non-sponsored.query",
-                "suggestions-per.request",
-                "suggestions-per.provider.sponsored",
-                "suggestions-per.provider.non-sponsored",
-                "get.api.v1.suggest.timing",
-                "get.api.v1.suggest.status_codes.200",
-                "response.status_codes.200",
+                ("providers.sponsored.query", None),
+                ("providers.non-sponsored.query", None),
+                ("suggestions-per.request", None),
+                ("suggestions-per.provider.sponsored", None),
+                ("suggestions-per.provider.non-sponsored", None),
+                ("get.api.v1.suggest.timing", None),
+                (
+                    "get.api.v1.suggest.status_codes.200",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
+                (
+                    "response.status_codes.200",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
             ],
         ),
         (
             "/api/v1/suggest",
             [
-                "get.api.v1.suggest.timing",
-                "get.api.v1.suggest.status_codes.400",
-                "response.status_codes.400",
+                ("get.api.v1.suggest.timing", None),
+                (
+                    "get.api.v1.suggest.status_codes.400",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
+                (
+                    "response.status_codes.400",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
             ],
         ),
     ],
@@ -373,10 +385,20 @@ def test_suggest_metrics(
     """
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
-    client.get(url)
+    client.get(
+        url=url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0) "
+                "Gecko/20100101 Firefox/103.0"
+            ),
+        },
+    )
 
     # TODO: Remove reliance on internal details of aiodogstatsd
-    metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
+    metric_keys: list[tuple[str, dict]] = [
+        (call.args[0], call.args[3]) for call in report.call_args_list
+    ]
     assert metric_keys == expected_metric_keys
 
 

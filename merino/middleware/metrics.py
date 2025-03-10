@@ -39,6 +39,7 @@ class MetricsMiddleware:
         loop = get_event_loop()
         request = Request(scope=scope)
         started_at = loop.time()
+        user_agent = scope[ScopeKey.USER_AGENT]
 
         async def send_wrapper(message: Message) -> None:
             if message["type"] == "http.response.start":
@@ -54,11 +55,13 @@ class MetricsMiddleware:
                         value=duration,
                     )
                     metrics_client.increment(
-                        f"{metric_name}.status_codes.{status_code}",
+                        f"{metric_name}.status_codes.{status_code}", tags=user_agent.model_dump()
                     )
 
                 # track all status codes here.
-                metrics_client.increment(f"response.status_codes.{status_code}")
+                metrics_client.increment(
+                    f"response.status_codes.{status_code}", tags=user_agent.model_dump()
+                )
 
             await send(message)
 
@@ -68,9 +71,15 @@ class MetricsMiddleware:
             status_code = HTTPStatus.INTERNAL_SERVER_ERROR.value
             duration = (loop.time() - started_at) * 1000
             metric_name = self._build_metric_name(request.method, request.url.path)
-            metrics_client.timing(f"{metric_name}.timing", value=duration)
-            metrics_client.increment(f"{metric_name}.status_codes.{status_code}")
-            metrics_client.increment(f"response.status_codes.{status_code}")
+            metrics_client.timing(
+                f"{metric_name}.timing", value=duration, tags=user_agent.model_dump()
+            )
+            metrics_client.increment(
+                f"{metric_name}.status_codes.{status_code}", tags=user_agent.model_dump()
+            )
+            metrics_client.increment(
+                f"response.status_codes.{status_code}", tags=user_agent.model_dump()
+            )
             raise
 
     @cache
