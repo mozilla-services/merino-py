@@ -14,9 +14,6 @@ executors:
   image-build-executor:
     docker:
       - image: cimg/base:2025.02
-  python-executor:
-    docker:
-      - image: cimg/python:3.12
   ubuntu-executor:
     machine:
       image: ubuntu-2004:2024.08.1
@@ -75,14 +72,14 @@ workflows:
 
 jobs:
   checks:
-    executor: python-executor
+    executor: ubuntu-executor
     steps:
       - checkout
       - run:
           name: Code linting
           command: make -k lint
   unit-tests:
-    executor: python-executor
+    executor: ubuntu-executor
     steps:
       - checkout
       - gcp-cli/setup
@@ -143,7 +140,7 @@ jobs:
           destination: gs://ecosystem-test-eng-metrics/merino-py/coverage
           extension: json
   test-coverage-check:
-    executor: python-executor
+    executor: ubuntu-executor
     steps:
       - checkout
       - attach_workspace:
