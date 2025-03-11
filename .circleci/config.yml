@@ -7,9 +7,6 @@
 
 version: 2.1
 
-orbs:
-  gcp-cli: circleci/gcp-cli@3.3.0
-
 executors:
   image-build-executor:
     docker:
@@ -85,7 +82,6 @@ jobs:
     executor: python-executor
     steps:
       - checkout
-      - gcp-cli/setup
       - run:
           name: Create Workspace
           command: mkdir -p workspace
@@ -103,14 +99,6 @@ jobs:
           root: workspace
           paths:
             - test-results
-      - upload_to_gcs:
-          source: workspace/test-results
-          destination: gs://ecosystem-test-eng-metrics/merino-py/junit
-          extension: xml
-      - upload_to_gcs:
-          source: workspace/test-results
-          destination: gs://ecosystem-test-eng-metrics/merino-py/coverage
-          extension: json
   integration-tests:
     executor: ubuntu-executor
     steps:
@@ -118,7 +106,6 @@ jobs:
       - run:
           name: Create Workspace
           command: mkdir -p workspace
-      - gcp-cli/setup
       - setup-python-on-machine
       - run:
           name: Integration tests
@@ -134,14 +121,6 @@ jobs:
           root: workspace
           paths:
             - test-results
-      - upload_to_gcs:
-          source: workspace/test-results
-          destination: gs://ecosystem-test-eng-metrics/merino-py/junit
-          extension: xml
-      - upload_to_gcs:
-          source: workspace/test-results
-          destination: gs://ecosystem-test-eng-metrics/merino-py/coverage
-          extension: json
   test-coverage-check:
     executor: python-executor
     steps:
@@ -292,31 +271,6 @@ commands:
           command: |
             python3.12 --version
             poetry --version
-
-  upload_to_gcs:
-    parameters:
-      source:
-        type: string
-      destination:
-        type: string
-      extension:
-        type: enum
-        enum: ["xml", "json"]
-    steps:
-      - run:
-          name: Upload << parameters.source >> << parameters.extension >> Files to GCS
-          when: always # Ensure the step runs even if previous steps, like test runs, fail
-          command: |
-            if [ "$CIRCLE_BRANCH" = "main" ]; then
-              FILES=$(ls -1 << parameters.source>>/*.<< parameters.extension>> )
-              if [ -z "$FILES" ]; then
-                echo "No << parameters.extension >> files found in << parameters.source >>/"
-                exit 1
-              fi
-              gsutil cp $FILES << parameters.destination >>
-            else
-              echo "Skipping artifact upload, not on 'main' branch."
-            fi
 
   write-version:
     steps:
