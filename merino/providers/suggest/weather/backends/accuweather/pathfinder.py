@@ -37,13 +37,18 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Dombivali": "Dombivli",
     "Đồng Nại": "Dong Nai",
     "Ejido Culiacán (Culiacancito)": "Ejido Culiacán",
+    "Ecatepec": "Ecatepec de Morelos",
+    "Faridpurāhāti": "Faridpur",
     "Fort Cavazos": "Killeen",
-    "Gaibandhas": "Gaibanda",
+    "Gaibandha": "Gaibanda",
     "Gharroli": "Gharoli",
     "Grand Bay–Westfield": "Grand Bay Westfield",
     "Gustavo Adolfo Madero": "Gustavo A. Madero",
     "Huatulco": "Santa María Huatulco",
+    # Santiago is a metropolitan city which contains Huechuraba
+    "Huechuraba": "Santiago",
     "Ixtapa-Zihuatanejo": "Zihuatanejo",
+    "Jīnd": "Jind",
     "Juchitán de Zaragoza": "Heroica Ciudad de Juchitán de Zaragoza",
     # 12 km away
     "Joint Base Lewis McChord": "Lakewood",
@@ -62,6 +67,9 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Naucalpan": "Naucalpan de Juárez",
     "Ōkubo-naka": "Okubo naka",
     "Oaxaca City": "Oaxaca de Juárez",
+    # Odunpazari is an area within the city Eskişehir
+    "Odunpazari": "Eskişehir",
+    "Pachuca": "Pachuca de Soto",
     "Panderma": "Bandırma",
     "Panjim": "Panaji",
     "Pilāni": "Pilani",
@@ -76,6 +84,7 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Santa María Chimalhuacán": "Chimalhuacán",
     "Santiago de Cali": "Cali",
     "Santiago Metropolitan": "Santiago",
+    "Silao": "Silao de la Victoria",
     "Sōsa": "Sosa-shi",
     "Tracadie–Sheila": "Tracadie Sheila",
     "Vatakara": "Vadakara",
@@ -98,7 +107,7 @@ SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
 
 # Countries that use the most specific region to retrieve weather
 KNOWN_SPECIFIC_REGION_COUNTRIES: frozenset = frozenset(
-    ["AR", "AU", "BR", "CA", "CN", "DE", "FR", "GB", "IN", "MX", "NZ", "PL", "PT", "RU", "US"]
+    ["AR", "AU", "BR", "CA", "CN", "DE", "FR", "GB", "MX", "NZ", "PL", "PT", "RU", "US"]
 )
 # Countries that use the least specific region to retrieve weather
 KNOWN_REGION_COUNTRIES: frozenset = frozenset(["IT", "ES", "GR"])
