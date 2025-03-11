@@ -4,10 +4,10 @@ import hashlib
 import logging
 from typing import Dict, Optional
 
+from httpx import AsyncClient
 from merino.configs import settings
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
-from merino.utils.http_client import create_http_client
 from merino.utils import metrics
 
 logger = logging.getLogger(__name__)
@@ -18,13 +18,19 @@ class IconProcessor:
 
     uploader: GcsUploader
     content_hash_cache: Dict[str, str]
+    http_client: AsyncClient
 
-    def __init__(self, gcs_project: str, gcs_bucket: str, cdn_hostname: str) -> None:
+    def __init__(
+        self, gcs_project: str, gcs_bucket: str, cdn_hostname: str, http_client: AsyncClient
+    ) -> None:
         """Initialize the icon processor."""
         self.uploader = GcsUploader(gcs_project, gcs_bucket, cdn_hostname)
 
         # Content hash cache: {content_hash: gcs_url}
         self.content_hash_cache = {}
+
+        # Use a single instance of an async HTTP client
+        self.http_client = http_client
 
         # Metrics
         self.metrics_client = metrics.get_metrics_client()
@@ -96,15 +102,12 @@ class IconProcessor:
         try:
             headers = {"User-Agent": "Merino"}
 
-            async with create_http_client(
-                request_timeout=settings.icon.http_timeout, max_connections=1
-            ) as client:
-                response = await client.get(url, headers=headers)
-                response.raise_for_status()
-                return Image(
-                    content=response.content,
-                    content_type=str(response.headers.get("Content-Type", "image/unknown")),
-                )
+            response = await self.http_client.get(url, headers=headers)
+            response.raise_for_status()
+            return Image(
+                content=response.content,
+                content_type=str(response.headers.get("Content-Type", "image/unknown")),
+            )
         except Exception as e:
             logger.info(f"Exception {e} while downloading favicon {url}")
             return None

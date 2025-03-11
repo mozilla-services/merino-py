@@ -24,11 +24,17 @@ def icon_processor(mocker):
 
     mocker.patch.object(settings, "_wrapped", settings._wrapped)
 
-    return IconProcessor(
+    # Create a mock HTTP client for testing
+    mock_http_client = AsyncMock()
+
+    processor = IconProcessor(
         gcs_project=settings.image_gcs.gcs_project,
         gcs_bucket=settings.image_gcs.gcs_bucket,
         cdn_hostname=settings.image_gcs.cdn_hostname,
+        http_client=mock_http_client,
     )
+
+    return processor
 
 
 @pytest.fixture
@@ -46,15 +52,20 @@ def test_init(mocker):
     # Mock the GcsUploader to avoid connecting to Google Cloud
     mocker.patch("merino.utils.gcs.gcs_uploader.Client")
 
+    # Create a mock HTTP client
+    mock_client = AsyncMock()
+
     processor = IconProcessor(
         gcs_project=settings.image_gcs.gcs_project,
         gcs_bucket=settings.image_gcs.gcs_bucket,
         cdn_hostname=settings.image_gcs.cdn_hostname,
+        http_client=mock_client,
     )
 
     assert processor.uploader is not None
     assert processor.content_hash_cache == {}
     assert processor.uploader.cdn_hostname == settings.image_gcs.cdn_hostname
+    assert processor.http_client is mock_client
 
 
 @pytest.mark.asyncio
@@ -81,20 +92,21 @@ async def test_download_favicon_success(icon_processor):
     mock_response.status_code = 200
     mock_response.content = b"image_content"
     mock_response.headers = {"Content-Type": "image/png"}
+    mock_response.raise_for_status = MagicMock()
 
-    # Create mock client with AsyncMock
-    mock_client = AsyncMock()
-    mock_client.__aenter__.return_value = mock_client
-    mock_client.get.return_value = mock_response
+    # Configure the mock client (already created in the fixture)
+    icon_processor.http_client.get.return_value = mock_response
 
-    # Mock http client creation
-    with patch("merino.utils.icon_processor.create_http_client", return_value=mock_client):
-        result = await icon_processor._download_favicon(url)
+    # Call the method
+    result = await icon_processor._download_favicon(url)
 
-        # Verify the result
-        assert result is not None
-        assert result.content == b"image_content"
-        assert result.content_type == "image/png"
+    # Verify the result
+    assert result is not None
+    assert result.content == b"image_content"
+    assert result.content_type == "image/png"
+
+    # Verify client was called with correct parameters
+    icon_processor.http_client.get.assert_called_once_with(url, headers={"User-Agent": "Merino"})
 
 
 @pytest.mark.asyncio
@@ -105,18 +117,19 @@ async def test_download_favicon_failure(icon_processor):
     # Create mock response with error status
     mock_response = MagicMock()
     mock_response.status_code = 404
+    mock_response.raise_for_status = MagicMock(side_effect=Exception("404 Not Found"))
 
-    # Create mock client
-    mock_client = AsyncMock()
-    mock_client.__aenter__.return_value = mock_client
-    mock_client.get.return_value = mock_response
+    # Configure the mock client
+    icon_processor.http_client.get.return_value = mock_response
 
-    # Mock http client creation
-    with patch("merino.utils.icon_processor.create_http_client", return_value=mock_client):
-        result = await icon_processor._download_favicon(url)
+    # Call the method
+    result = await icon_processor._download_favicon(url)
 
-        # Should return None on failure
-        assert result is None
+    # Should return None on failure
+    assert result is None
+
+    # Verify client was called
+    icon_processor.http_client.get.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -124,17 +137,17 @@ async def test_download_favicon_exception(icon_processor):
     """Test favicon download exception handling."""
     url = "https://example.com/favicon.ico"
 
-    # Create mock client that raises an exception
-    mock_client = MagicMock()
-    mock_client.__aenter__.return_value = mock_client
-    mock_client.get.side_effect = Exception("Connection error")
+    # Configure mock client to raise an exception
+    icon_processor.http_client.get.side_effect = Exception("Connection error")
 
-    # Mock http client creation
-    with patch("merino.utils.http_client.create_http_client", return_value=mock_client):
-        result = await icon_processor._download_favicon(url)
+    # Call the method
+    result = await icon_processor._download_favicon(url)
 
-        # Should return None on exception
-        assert result is None
+    # Should return None on exception
+    assert result is None
+
+    # Verify client was called
+    icon_processor.http_client.get.assert_called_once()
 
 
 def test_is_valid_image(icon_processor, mock_image):

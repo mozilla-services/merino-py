@@ -122,6 +122,9 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                             gcs_project=settings.image_gcs.gcs_project,
                             gcs_bucket=settings.image_gcs.gcs_bucket,
                             cdn_hostname=settings.image_gcs.cdn_hostname,
+                            http_client=create_http_client(
+                                request_timeout=settings.icon.http_timeout,
+                            ),
                         ),
                     )
                     if setting.backend == "remote-settings"
