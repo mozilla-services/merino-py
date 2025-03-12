@@ -15,7 +15,7 @@ from scipy.stats import linregress
 
 from merino.configs import settings
 from merino.curated_recommendations import (
-    CorpusApiBackend,
+    ScheduledCorpusBackend,
     CuratedRecommendationsProvider,
     get_provider,
     ConstantPrior,
@@ -95,7 +95,7 @@ def setup_manifest_provider(manifest_provider):
 
 @pytest.fixture(name="corpus_provider")
 def provider(
-    corpus_backend: CorpusApiBackend,
+    corpus_backend: ScheduledCorpusBackend,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
 ) -> CuratedRecommendationsProvider:
@@ -757,7 +757,7 @@ class TestCorpusApiCaching:
                 )
 
                 # Progress time to after the cache expires.
-                frozen_datetime.tick(delta=CorpusApiBackend.cache_time_to_live_max)
+                frozen_datetime.tick(delta=ScheduledCorpusBackend.cache_time_to_live_max)
                 frozen_datetime.tick(delta=timedelta(seconds=1))
 
                 # When the cache is expired, the first fetch may return stale data.
@@ -792,7 +792,7 @@ class TestCorpusApiCaching:
                 )
 
                 # Progress time to after the cache expires.
-                frozen_datetime.tick(delta=CorpusApiBackend.cache_time_to_live_max)
+                frozen_datetime.tick(delta=ScheduledCorpusBackend.cache_time_to_live_max)
                 frozen_datetime.tick(delta=timedelta(seconds=1))
 
                 # Try to fetch data when cache expired

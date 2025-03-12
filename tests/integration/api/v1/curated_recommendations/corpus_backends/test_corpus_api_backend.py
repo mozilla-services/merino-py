@@ -1,4 +1,4 @@
-"""Integration tests for merino/curated_recommendations/corpus_backends/corpus_api_backend.py"""
+"""Integration tests for merino/curated_recommendations/corpus_backends/scheduled_corpus_backend.py"""
 
 from datetime import datetime
 
@@ -6,8 +6,8 @@ import pytest
 from httpx import Response
 from pydantic import HttpUrl
 
-from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
-    CorpusApiBackend,
+from merino.curated_recommendations.corpus_backends.scheduled_corpus_backend import (
+    ScheduledCorpusBackend,
 )
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
@@ -17,7 +17,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 
 
 @pytest.mark.asyncio
-async def test_fetch(corpus_backend: CorpusApiBackend, fixture_response_data):
+async def test_fetch(corpus_backend: ScheduledCorpusBackend, fixture_response_data):
     """Test if the fetch method returns data from cache if available."""
     surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
 
@@ -58,7 +58,7 @@ async def test_fetch(corpus_backend: CorpusApiBackend, fixture_response_data):
     ],
 )
 async def test_fetch_days_since_today(
-    corpus_backend: CorpusApiBackend,
+    corpus_backend: ScheduledCorpusBackend,
     fixture_request_data,
     corpus_http_client,
     test_input,

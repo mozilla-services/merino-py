@@ -6,7 +6,7 @@ import re
 from typing import cast
 
 from merino.curated_recommendations.corpus_backends.protocol import (
-    CorpusBackend,
+    DatedCorpusBackend,
     ScheduledSurfaceId,
     Topic,
 )
@@ -41,11 +41,11 @@ logger = logging.getLogger(__name__)
 class CuratedRecommendationsProvider:
     """Provider for recommendations that have been reviewed by human curators."""
 
-    corpus_backend: CorpusBackend
+    corpus_backend: DatedCorpusBackend
 
     def __init__(
         self,
-        corpus_backend: CorpusBackend,
+        corpus_backend: DatedCorpusBackend,
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
     ) -> None:

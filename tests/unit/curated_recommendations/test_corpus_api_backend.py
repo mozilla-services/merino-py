@@ -5,8 +5,8 @@ from datetime import datetime
 import pytest
 from freezegun import freeze_time
 
-from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
-    CorpusApiBackend,
+from merino.curated_recommendations.corpus_backends.scheduled_corpus_backend import (
+    ScheduledCorpusBackend,
 )
 from pytest import LogCaptureFixture
 
@@ -19,7 +19,7 @@ def test_map_corpus_to_serp_topic_return_none(topic):
     & ensuring topics that don't have a mapping return None.
     See for reference mapped topics: https://docs.google.com/document/d/1ICCHi1haxR-jIi_uZ3xQfPmphZm39MOmwQh0BRTXLHA/edit # noqa
     """
-    assert CorpusApiBackend.map_corpus_topic_to_serp_topic(topic) is None
+    assert ScheduledCorpusBackend.map_corpus_topic_to_serp_topic(topic) is None
 
 
 @pytest.mark.parametrize(
@@ -47,7 +47,7 @@ def test_map_corpus_to_serp_topic(topic, mapped_topic):
     See for reference mapped topics:
     https://docs.google.com/document/d/1ICCHi1haxR-jIi_uZ3xQfPmphZm39MOmwQh0BRTXLHA/edit
     """
-    assert CorpusApiBackend.map_corpus_topic_to_serp_topic(topic).value == mapped_topic
+    assert ScheduledCorpusBackend.map_corpus_topic_to_serp_topic(topic).value == mapped_topic
 
 
 @pytest.mark.parametrize(
@@ -66,7 +66,7 @@ def test_get_surface_timezone(surface_id, timezone, caplog: LogCaptureFixture):
     """Testing get_surface_timezone method & ensuring correct
     timezone is returned for a scheduled surface.
     """
-    tz = CorpusApiBackend.get_surface_timezone(surface_id)
+    tz = ScheduledCorpusBackend.get_surface_timezone(surface_id)
     assert timezone == tz.key
     # No warnings or errors were logged.
     assert not any(r for r in caplog.records if r.levelname in ("WARNING", "ERROR", "CRITICAL"))
@@ -77,7 +77,7 @@ def test_get_surface_timezone_bad_input(caplog: LogCaptureFixture):
     a bad input is provided, UTC is returned.
     """
     # Should default to UTC if bad input
-    tz = CorpusApiBackend.get_surface_timezone("foobar")  # type: ignore
+    tz = ScheduledCorpusBackend.get_surface_timezone("foobar")  # type: ignore
     assert tz.key == "UTC"
     # Error was logged
     error_logs = [r for r in caplog.records if r.levelname == "ERROR"]
@@ -110,14 +110,16 @@ def test_get_scheduled_surface_date(time_zone, time_to_freeze, expected_date):
     the correct date is returned for a scheduled surface.
     """
     with freeze_time(time_to_freeze, tz_offset=0):
-        scheduled_surface_date = CorpusApiBackend.get_scheduled_surface_date(ZoneInfo(time_zone))
+        scheduled_surface_date = ScheduledCorpusBackend.get_scheduled_surface_date(
+            ZoneInfo(time_zone)
+        )
         assert scheduled_surface_date.strftime("%Y-%m-%d") == expected_date
 
 
 @freeze_time("2012-01-14 00:00:00", tz_offset=0)
 def test_get_expiration_time():
     """Testing the generation of expiration times"""
-    times = [CorpusApiBackend.get_expiration_time() for _ in range(10)]
+    times = [ScheduledCorpusBackend.get_expiration_time() for _ in range(10)]
 
     # Assert that times are within the expected range
     min_expected_time = datetime(2012, 1, 14, 0, 0, 50)
@@ -133,7 +135,7 @@ def test_get_utm_source_return_none(scheduled_surface_id):
     """Testing the get_utm_source() method
     & ensuring ids that don't have utm_source return None.
     """
-    assert CorpusApiBackend.get_utm_source(scheduled_surface_id) is None
+    assert ScheduledCorpusBackend.get_utm_source(scheduled_surface_id) is None
 
 
 @pytest.mark.parametrize(
@@ -152,7 +154,7 @@ def test_get_utm_source(scheduled_surface_id, expected_utm_source):
     """Testing the get_utm_source() method
     & ensuring correct utm_source is returned for a scheduled surface id.
     """
-    assert CorpusApiBackend.get_utm_source(scheduled_surface_id) == expected_utm_source
+    assert ScheduledCorpusBackend.get_utm_source(scheduled_surface_id) == expected_utm_source
 
 
 @pytest.mark.parametrize(
@@ -194,4 +196,4 @@ def test_update_url_utm_source(url, utm_source, expected_url):
     """Testing the update_url_utm_source() method
     & ensuring url is updated correctly.
     """
-    assert CorpusApiBackend.update_url_utm_source(url, utm_source) == expected_url
+    assert ScheduledCorpusBackend.update_url_utm_source(url, utm_source) == expected_url

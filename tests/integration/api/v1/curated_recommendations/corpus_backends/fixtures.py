@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock
 import pytest
 from httpx import AsyncClient, Request, Response
 
-from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
+from merino.curated_recommendations.corpus_backends.scheduled_corpus_backend import (
     CorpusApiGraphConfig,
-    CorpusApiBackend,
+    ScheduledCorpusBackend,
 )
 from merino.utils.metrics import get_metrics_client
 
@@ -65,10 +65,10 @@ def corpus_http_client(fixture_response_data, fixture_request_data) -> AsyncMock
 
 
 @pytest.fixture()
-def corpus_backend(corpus_http_client: AsyncMock, manifest_provider) -> CorpusApiBackend:
+def corpus_backend(corpus_http_client: AsyncMock, manifest_provider) -> ScheduledCorpusBackend:
     """Mock corpus api backend."""
     # Initialize the backend with the mock HTTP client
-    return CorpusApiBackend(
+    return ScheduledCorpusBackend(
         http_client=corpus_http_client,
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),

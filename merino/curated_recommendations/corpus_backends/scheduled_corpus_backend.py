@@ -4,12 +4,25 @@ import asyncio
 import logging
 import random
 from datetime import datetime, timedelta
-from urllib.parse import urlparse, urlencode, parse_qsl
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-from dataclasses import dataclass
 
 import aiodogstatsd
 from httpx import AsyncClient, HTTPError
+from merino.configs import settings
+from merino.curated_recommendations.corpus_backends.protocol import (
+    DatedCorpusBackend,
+    CorpusItem,
+    ScheduledSurfaceId,
+)
+from merino.curated_recommendations.corpus_backends.utils import (
+    CacheKey,
+    CacheEntry,
+    get_utm_source,
+    CorpusGraphQLError,
+    CorpusApiGraphConfig,
+    build_corpus_item,
+)
+from merino.providers.manifest import Provider as ManifestProvider
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -18,104 +31,10 @@ from tenacity import (
     before_sleep_log,
 )
 
-from merino.configs import settings
-from merino.curated_recommendations.corpus_backends.protocol import (
-    CorpusBackend,
-    CorpusItem,
-    Topic,
-    ScheduledSurfaceId,
-)
-from merino.exceptions import BackendError
-from merino.providers.manifest import Provider as ManifestProvider
-from merino.utils.version import fetch_app_version_from_file
-
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
-class CacheKey:
-    """Cache key for identifying cached items."""
-
-    surface_id: ScheduledSurfaceId
-    days_offset: int = 0
-
-
-@dataclass
-class CacheEntry:
-    """Class to store cache-related data."""
-
-    items: list[CorpusItem]
-    expiration: datetime
-    lock: asyncio.Lock
-
-
-class CorpusGraphQLError(BackendError):
-    """Error during interaction with the corpus GraphQL API."""
-
-
-class CorpusApiGraphConfig:
-    """Corpus API Graph Config."""
-
-    CORPUS_API_PROD_ENDPOINT = "https://client-api.getpocket.com"
-    CORPUS_API_DEV_ENDPOINT = "https://client-api.getpocket.dev"
-
-    def __init__(self) -> None:
-        self._app_version = fetch_app_version_from_file().commit
-
-    @property
-    def endpoint(self) -> str:
-        """Pocket GraphQL endpoint URL"""
-        return self.CORPUS_API_PROD_ENDPOINT
-
-    @property
-    def headers(self) -> dict[str, str]:
-        """Pocket GraphQL client headers"""
-        return {
-            "apollographql-client-name": "merino-py",
-            "apollographql-client-version": self._app_version,
-        }
-
-
-"""
-Map Corpus topic to a SERP topic.
-Note: Not all Corpus topics map to a SERP topic. For unmapped topics, null is returned.
-See: https://mozilla-hub.atlassian.net/wiki/spaces/MozSocial/pages/735248385/Topic+Selection+Tech+Spec+Draft#Topics  # noqa
-"""
-CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING = {
-    "BUSINESS": Topic.BUSINESS,
-    "CAREER": Topic.CAREER,
-    "EDUCATION": Topic.EDUCATION,
-    "ENTERTAINMENT": Topic.ARTS,
-    "FOOD": Topic.FOOD,
-    "GAMING": Topic.GAMING,
-    "HEALTH_FITNESS": Topic.HEALTH_FITNESS,
-    "HOME": Topic.HOME,
-    "PARENTING": Topic.PARENTING,
-    "PERSONAL_FINANCE": Topic.PERSONAL_FINANCE,
-    "POLITICS": Topic.POLITICS,
-    "SCIENCE": Topic.SCIENCE,
-    "SELF_IMPROVEMENT": Topic.SELF_IMPROVEMENT,
-    "SPORTS": Topic.SPORTS,
-    "TECHNOLOGY": Topic.TECHNOLOGY,
-    "TRAVEL": Topic.TRAVEL,
-}
-
-"""
-Set utm_source for specific ScheduledSurfaceId.
-For ids not in the table, null is returned.
-"""
-SCHEDULED_SURFACE_ID_TO_UTM_SOURCE: dict[ScheduledSurfaceId, str] = {
-    ScheduledSurfaceId.NEW_TAB_EN_US: "firefox-newtab-en-us",
-    ScheduledSurfaceId.NEW_TAB_EN_GB: "firefox-newtab-en-gb",
-    ScheduledSurfaceId.NEW_TAB_EN_INTL: "firefox-newtab-en-intl",
-    ScheduledSurfaceId.NEW_TAB_DE_DE: "firefox-newtab-de-de",
-    ScheduledSurfaceId.NEW_TAB_ES_ES: "firefox-newtab-es-es",
-    ScheduledSurfaceId.NEW_TAB_FR_FR: "firefox-newtab-fr-fr",
-    ScheduledSurfaceId.NEW_TAB_IT_IT: "firefox-newtab-it-it",
-}
-
-
-class CorpusApiBackend(CorpusBackend):
+class ScheduledCorpusBackend(DatedCorpusBackend):
     """Corpus API Backend hitting the curated corpus api
     & returning recommendations for a date & locale/region.
     Uses an in-memory cache and request coalescing to limit request rate to the backend.
@@ -126,7 +45,7 @@ class CorpusApiBackend(CorpusBackend):
     metrics_client: aiodogstatsd.Client
     manifest_provider: ManifestProvider
 
-    # time-to-live was chosen because 1 minute (+/- 10 s) is short enough that updates by curators
+    # Time-to-live was chosen because 1 minute (+/- 10 s) is short enough that updates by curators
     # such as breaking news or editorial corrections propagate fast enough, and that the request
     # rate to the scheduledSurface query stays close to the historic rate of ~100 requests/minute.
     cache_time_to_live_min = timedelta(seconds=50)
@@ -147,34 +66,6 @@ class CorpusApiBackend(CorpusBackend):
         self.manifest_provider = manifest_provider
         self._cache = {}
         self._background_tasks = set()
-
-    @staticmethod
-    def map_corpus_topic_to_serp_topic(topic: str) -> Topic | None:
-        """Map the corpus topic to the SERP topic."""
-        return CORPUS_TOPIC_TO_SERP_TOPIC_MAPPING.get(topic.upper())
-
-    @staticmethod
-    def get_utm_source(scheduled_surface_id: ScheduledSurfaceId) -> str | None:
-        """Return utm_source value to attribute curated recommendations to, based on the
-        scheduled_surface_id.
-        https://github.com/Pocket/recommendation-api/blob/main/app/data_providers/slate_providers/slate_provider.py#L95C5-L100C46
-        """
-        return SCHEDULED_SURFACE_ID_TO_UTM_SOURCE.get(scheduled_surface_id)
-
-    @staticmethod
-    def update_url_utm_source(url: str, utm_source: str) -> str:
-        """Return an updated url where utm_source query param was added or replaced."""
-        utm_source_param = {"utm_source": utm_source}
-
-        # parse url into 6 parts
-        parsed_url = urlparse(url)
-        # get the query params as a dict
-        query = dict(parse_qsl(parsed_url.query))
-        # add the utm_source param to query
-        query.update(utm_source_param)
-        # add / replace utm_source with new utm_source param & return updated url
-        updated_url = parsed_url._replace(query=urlencode(query)).geturl()
-        return updated_url
 
     @staticmethod
     def get_surface_timezone(scheduled_surface_id: ScheduledSurfaceId) -> ZoneInfo:
@@ -257,13 +148,11 @@ class CorpusApiBackend(CorpusBackend):
         ),
         stop=stop_after_attempt(settings.curated_recommendations.corpus_api.retry_count),
         retry=retry_if_exception_type((CorpusGraphQLError, HTTPError, ValueError)),
-        reraise=True,  # Raise the exception our code encountered, instead of a RetryError
+        reraise=True,
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _fetch_from_backend(
-        self,
-        surface_id: ScheduledSurfaceId,
-        days_offset: int,
+        self, surface_id: ScheduledSurfaceId, days_offset: int
     ) -> list[CorpusItem]:
         """Issue a scheduledSurface query"""
         query = """
@@ -297,48 +186,35 @@ class CorpusApiBackend(CorpusBackend):
                 "date": adjusted_date.strftime("%Y-%m-%d"),
             },
         }
-
-        with self.metrics_client.timeit("corpus_api.request.timing"):
+        with self.metrics_client.timeit("corpus_api.scheduled_surface.timing"):
             res = await self.http_client.post(
                 self.graph_config.endpoint,
                 json=body,
                 headers=self.graph_config.headers,
             )
-        self.metrics_client.increment(f"corpus_api.request.status_codes.{res.status_code}")
 
+        self.metrics_client.increment(
+            f"corpus_api.scheduled_surface.status_codes.{res.status_code}"
+        )
         res.raise_for_status()
         data = res.json()
 
-        if res.status_code == 200 and "errors" in data:
-            self.metrics_client.increment("corpus_api.request.graphql_error")
+        if "errors" in data:
+            self.metrics_client.increment("corpus_api.scheduled_surface.graphql_error")
             raise CorpusGraphQLError(
                 f"curated-corpus-api returned GraphQL errors {data['errors']}"
             )
 
-        # get the utm_source based on scheduled surface id
-        utm_source = self.get_utm_source(surface_id)
-
-        for item in data["data"]["scheduledSurface"]["items"]:
-            # Map Corpus topic to SERP topic
-            item["corpusItem"]["topic"] = self.map_corpus_topic_to_serp_topic(
-                item["corpusItem"]["topic"]
+        utm_source = get_utm_source(surface_id)
+        curated_recommendations = []
+        for scheduled_item in data["data"]["scheduledSurface"]["items"]:
+            corpus_item = build_corpus_item(
+                corpus_item=scheduled_item["corpusItem"],
+                manifest_provider=self.manifest_provider,
+                utm_source=utm_source,
             )
-            # Update url (add / replace utm_source query param)
-            item["corpusItem"]["url"] = self.update_url_utm_source(
-                item["corpusItem"]["url"], str(utm_source)
-            )
-            # Add icon URL if available
-            if icon_url := self.manifest_provider.get_icon_url(item["corpusItem"]["url"]):
-                item["corpusItem"]["iconUrl"] = icon_url
-
-        curated_recommendations = [
-            CorpusItem(
-                **item["corpusItem"],
-                corpusItemId=item["corpusItem"]["id"],
-                scheduledCorpusItemId=item["id"],
-            )
-            for item in data["data"]["scheduledSurface"]["items"]
-        ]
+            corpus_item = corpus_item.copy(update={"scheduledCorpusItemId": scheduled_item["id"]})
+            curated_recommendations.append(corpus_item)
 
         return curated_recommendations
 
@@ -380,7 +256,7 @@ class CorpusApiBackend(CorpusBackend):
         """Return the date & time when a cached value should be expired."""
         # Random jitter ensures that backend requests don't all happen at the same time.
         time_to_live_seconds = random.uniform(
-            CorpusApiBackend.cache_time_to_live_min.total_seconds(),
-            CorpusApiBackend.cache_time_to_live_max.total_seconds(),
+            ScheduledCorpusBackend.cache_time_to_live_min.total_seconds(),
+            ScheduledCorpusBackend.cache_time_to_live_max.total_seconds(),
         )
         return datetime.now() + timedelta(seconds=time_to_live_seconds)

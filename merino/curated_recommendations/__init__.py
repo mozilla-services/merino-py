@@ -8,8 +8,8 @@ import logging
 from google.cloud.storage import Client
 
 from merino.configs import settings
-from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
-    CorpusApiBackend,
+from merino.curated_recommendations.corpus_backends.scheduled_corpus_backend import (
+    ScheduledCorpusBackend,
     CorpusApiGraphConfig,
 )
 from merino.curated_recommendations.engagement_backends.fake_engagement import FakeEngagement
@@ -86,7 +86,7 @@ def init_provider() -> None:
 
     engagement_backend = init_engagement_backend()
 
-    corpus_backend = CorpusApiBackend(
+    corpus_backend = ScheduledCorpusBackend(
         http_client=create_http_client(base_url=""),
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
