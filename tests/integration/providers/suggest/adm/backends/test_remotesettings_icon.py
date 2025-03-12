@@ -2,7 +2,7 @@
 
 import hashlib
 from typing import Optional
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import httpx
 import kinto_http
@@ -154,11 +154,15 @@ class MockImageProcessor(IconProcessor):
 
     def __init__(self) -> None:
         """Initialize the mock processor."""
+        # Create a mock http client
+        mock_http_client = MagicMock()
+
         # Call parent constructor with dummy values
         super().__init__(
             gcs_project="test-project",
             gcs_bucket="test-bucket",
             cdn_hostname="test-cdn.mozilla.net",
+            http_client=mock_http_client,
         )
 
         # Override uploader with a mock
@@ -279,11 +283,15 @@ async def test_remotesettings_with_gcs_integration(
         mock_settings.icon.favicons_root = "favicons"
         mock_settings.icon.http_timeout = 5
 
+        # Create a mock HTTP client
+        mock_http_client = AsyncMock()
+
         # Create a real IconProcessor using the test GCS client/bucket
         icon_processor = IconProcessor(
             gcs_project=gcs_storage_client.project,
             gcs_bucket=gcs_storage_bucket.name,
             cdn_hostname=settings.image_gcs.cdn_hostname,
+            http_client=mock_http_client,
         )
 
         # Replace the GCS client with our test client

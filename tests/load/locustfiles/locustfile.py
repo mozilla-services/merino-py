@@ -42,6 +42,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsResponse,
 )
 from merino.utils.icon_processor import IconProcessor
+from merino.utils.http_client import create_http_client
 from merino.configs import settings
 
 # Type definitions
@@ -180,10 +181,16 @@ def get_adm_queries(server: str | None, collection: str | None, bucket: str | No
                     empty.
         BackendError: Failed request to Remote Settings.
     """
+    # Create HTTP client for IconProcessor
+    http_client = create_http_client(
+        request_timeout=settings.icon.http_timeout,
+    )
+
     icon_processor = IconProcessor(
         gcs_project=settings.image_gcs.gcs_project,
         gcs_bucket=settings.image_gcs.gcs_bucket,
         cdn_hostname=settings.image_gcs.cdn_hostname,
+        http_client=http_client,
     )
     backend: RemoteSettingsBackend = RemoteSettingsBackend(
         server, collection, bucket, icon_processor
