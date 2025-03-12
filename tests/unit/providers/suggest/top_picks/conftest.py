@@ -24,8 +24,8 @@ def fixture_top_picks_domain_blocklist() -> set[str]:
 def fixture_top_picks_remote_filemanager_parameters() -> dict[str, Any]:
     """Define TopPicksRemoteFilemanager parameters for test."""
     return {
-        "gcs_project_path": settings.image_manifest.gcs_project,
-        "gcs_bucket_path": settings.image_manifest.gcs_bucket,
+        "gcs_project_path": settings.image_gcs.gcs_project,
+        "gcs_bucket_path": settings.image_gcs.gcs_bucket,
     }
 
 

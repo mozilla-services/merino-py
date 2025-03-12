@@ -29,6 +29,7 @@ from merino.providers.suggest.wikipedia.backends.fake_backends import FakeWikipe
 from merino.providers.suggest.wikipedia.provider import Provider as WikipediaProvider
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST, WIKIPEDIA_TITLE_BLOCKLIST
 from merino.utils.http_client import create_http_client
+from merino.utils.icon_processor import IconProcessor
 
 
 @unique
@@ -117,6 +118,14 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         server=settings.remote_settings.server,
                         collection=settings.remote_settings.collection,
                         bucket=settings.remote_settings.bucket,
+                        icon_processor=IconProcessor(
+                            gcs_project=settings.image_gcs.gcs_project,
+                            gcs_bucket=settings.image_gcs.gcs_bucket,
+                            cdn_hostname=settings.image_gcs.cdn_hostname,
+                            http_client=create_http_client(
+                                request_timeout=settings.icon.http_timeout,
+                            ),
+                        ),
                     )
                     if setting.backend == "remote-settings"
                     else FakeAdmBackend()

@@ -10,36 +10,51 @@ from merino.providers.suggest.weather.backends.protocol import WeatherContext
 
 MaybeStr = Optional[str]
 
-LOCALITY_SUFFIX_PATTERN: re.Pattern = re.compile(r"\s+(city|municipality)$", re.IGNORECASE)
+LOCALITY_SUFFIX_PATTERN: re.Pattern = re.compile(r"\s+(city|municipality|town)$", re.IGNORECASE)
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {
+    ("AR", "El Sombrero"): None,
+    ("BR", "Barcellos"): None,
     ("GB", "London"): "LND",
-    ("PH", "Manila"): None,
     ("IE", "Dublin"): None,
+    ("IN", "Angul"): None,
+    ("IN", "Bhadrāchalam"): None,
+    ("IN", "Hanamkonda"): None,
+    ("IN", "Secunderabad"): None,
     ("IN", "Hyderabad"): None,
+    ("MX", "Comalapa"): None,
+    ("PH", "Manila"): None,
 }
-REGION_MAPPING_EXCLUSIONS: frozenset = frozenset(
-    ["AU", "CA", "CN", "DE", "ES", "FR", "GB", "GR", "IT", "PL", "PT", "RU", "US"]
-)
+
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     # 3 km away
     "Adrogué": "José Marmol",
     "Baie Ste. Anne": "Baie-Sainte-Anne",
+    "Barishal": "Barisal",
     "Belem": "Belém",
     "Bogota D.C.": "Bogota",
     "Ciudad de Huajuapan de León": "Heroica Ciudad de Huajuapan de León",
     "Délı̨ne": "Deline",
+    "Dombivali": "Dombivli",
     "Đồng Nại": "Dong Nai",
     "Ejido Culiacán (Culiacancito)": "Ejido Culiacán",
+    "Ecatepec": "Ecatepec de Morelos",
+    "Faridpurāhāti": "Faridpur",
     "Fort Cavazos": "Killeen",
+    "Gaibandha": "Gaibanda",
     "Gharroli": "Gharoli",
     "Grand Bay–Westfield": "Grand Bay Westfield",
     "Gustavo Adolfo Madero": "Gustavo A. Madero",
     "Huatulco": "Santa María Huatulco",
+    # Santiago is a metropolitan city which contains Huechuraba
+    "Huechuraba": "Santiago",
     "Ixtapa-Zihuatanejo": "Zihuatanejo",
+    "Jīnd": "Jind",
     "Juchitán de Zaragoza": "Heroica Ciudad de Juchitán de Zaragoza",
     # 12 km away
     "Joint Base Lewis McChord": "Lakewood",
+    "Kayapınar": "Kayapinar",
     "Kleinburg Station": "Kleinburg",
+    "Kushi Nagar": "Kushinagar",
     "Lake Shasta": "Shasta Lake",
     "La'ie": "Laie",
     "Magnesia on the Maeander": "Manisa",
@@ -48,21 +63,31 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Montreal East": "Montreal",
     "Montreal West": "Montreal",
     "Mossel Bay": "Mosselbaai",
+    "Municipality of Strathfield": "Strathfield",
     "Naucalpan": "Naucalpan de Juárez",
     "Ōkubo-naka": "Okubo naka",
     "Oaxaca City": "Oaxaca de Juárez",
+    # Odunpazari is an area within the city Eskişehir
+    "Odunpazari": "Eskişehir",
+    "Pachuca": "Pachuca de Soto",
+    "Panderma": "Bandırma",
     "Panjim": "Panaji",
     "Pilāni": "Pilani",
     "Port Montt": "Puerto Montt",
+    "Rahim Yar Khan": "Rahimyar Khan",
     # 13 km away
     "Research Triangle Park": "Durham",
     "Sainte-Clotilde-de-Châteauguay": "Sainte-Clotilde-de-Chateauguay",
     "Sainte-Geneviève": "Sainte-Genevieve",
     "Saint-Barnabe": "Saint-Barnabé",
     "Saint-Raymond-de-Portneuf": "Saint-Raymond",
+    "Santa María Chimalhuacán": "Chimalhuacán",
     "Santiago de Cali": "Cali",
+    "Santiago Metropolitan": "Santiago",
+    "Silao": "Silao de la Victoria",
     "Sōsa": "Sosa-shi",
     "Tracadie–Sheila": "Tracadie Sheila",
+    "Vatakara": "Vadakara",
     "Yunderup": "South Yunderup",
     "Zacoalco": "Zacoalco de Torres",
 }
@@ -79,6 +104,13 @@ SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
     ("US", "TX", "Lavaca"): 0,
     ("US", "UT", "Hill Air Force Base"): 0,
 }
+
+# Countries that use the most specific region to retrieve weather
+KNOWN_SPECIFIC_REGION_COUNTRIES: frozenset = frozenset(
+    ["AR", "AU", "BR", "CA", "CN", "DE", "FR", "GB", "MX", "NZ", "PL", "PT", "RU", "US"]
+)
+# Countries that use the least specific region to retrieve weather
+KNOWN_REGION_COUNTRIES: frozenset = frozenset(["IT", "ES", "GR"])
 
 
 def normalize_string(input_str: str) -> str:
@@ -119,10 +151,10 @@ def compass(location: Location) -> Generator[MaybeStr, None, None]:
                 city,
             ) in SUCCESSFUL_REGIONS_MAPPING:  # dynamic rules we've learned
                 yield SUCCESSFUL_REGIONS_MAPPING[(country, city)]
-            case ("AU" | "CA" | "CN" | "DE" | "FR" | "GB" | "PL" | "PT" | "RU" | "US", _):
-                yield regions[0]
+            case (country_code, _) if country_code in KNOWN_SPECIFIC_REGION_COUNTRIES:
                 # use the most specific region
-            case ("IT" | "ES" | "GR", _):
+                yield regions[0]
+            case (country_code, _) if country_code in KNOWN_REGION_COUNTRIES:
                 yield regions[-1]  # use the least specific region
             case _:  # Fall back to try all regions
                 regions_to_try = [*regions, None]
@@ -194,7 +226,7 @@ def set_region_mapping(country: str, city: str, region: str | None):
       - city {str}: city name
       - region {str | None}: region code
     """
-    if country not in REGION_MAPPING_EXCLUSIONS:
+    if country not in KNOWN_REGION_COUNTRIES and country not in KNOWN_SPECIFIC_REGION_COUNTRIES:
         SUCCESSFUL_REGIONS_MAPPING[(country, city)] = region
 
 

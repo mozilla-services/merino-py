@@ -5,6 +5,7 @@ from asyncio import Task
 from typing import Any, Literal, cast
 from urllib.parse import urljoin
 
+import logging
 import httpx
 import kinto_http
 from pydantic import BaseModel
@@ -12,6 +13,9 @@ from pydantic import BaseModel
 from merino.exceptions import BackendError
 from merino.providers.suggest.adm.backends.protocol import SuggestionContent
 from merino.utils.http_client import create_http_client
+from merino.utils.icon_processor import IconProcessor
+
+logger = logging.getLogger(__name__)
 
 RS_CONNECT_TIMEOUT: float = 5.0
 
@@ -41,14 +45,22 @@ class RemoteSettingsBackend:
     """Backend that connects to a live Remote Settings server."""
 
     kinto_http_client: kinto_http.AsyncClient
+    icon_processor: IconProcessor
 
-    def __init__(self, server: str | None, collection: str | None, bucket: str | None) -> None:
+    def __init__(
+        self,
+        server: str | None,
+        collection: str | None,
+        bucket: str | None,
+        icon_processor: IconProcessor,
+    ) -> None:
         """Init the Remote Settings backend and create a new client.
 
         Args:
             server: the server address
             collection: the collection name
             bucket: the bucket name
+            icon_processor: the icon processor for handling favicons
         Raises:
             ValueError: If 'server', 'collection' or 'bucket' parameters are None or
                         empty.
@@ -63,6 +75,8 @@ class RemoteSettingsBackend:
             server_url=server, bucket=bucket, collection=collection
         )
 
+        self.icon_processor = icon_processor
+
     async def fetch(self) -> SuggestionContent:
         """Fetch suggestions, keywords, and icons from Remote Settings.
 
@@ -73,11 +87,10 @@ class RemoteSettingsBackend:
         full_keywords: list[str] = []
         results: list[dict[str, Any]] = []
         icons: dict[str, str] = {}
+        icons_in_use: set[str] = set()
 
         records: list[dict[str, Any]] = await self.get_records()
-
         attachment_host: str = await self.get_attachment_host()
-
         rs_suggestions: list[KintoSuggestion] = await self.get_suggestions(
             attachment_host, records
         )
@@ -87,6 +100,7 @@ class RemoteSettingsBackend:
         for suggestion in rs_suggestions:
             result_id = len(results)
             keywords = suggestion.keywords
+            icons_in_use.add(suggestion.icon)
             full_keywords_tuples = suggestion.full_keywords
             begin = 0
             for full_keyword, n in full_keywords_tuples:
@@ -98,10 +112,36 @@ class RemoteSettingsBackend:
                 full_keywords.append(full_keyword)
                 fkw_index = len(full_keywords)
             results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
+
         icon_record = self.filter_records(record_type="icon", records=records)
+
+        icon_data = []
+        tasks = []
+
         for icon in icon_record:
             id = icon["id"].replace("icon-", "")
-            icons[id] = urljoin(base=attachment_host, url=icon["attachment"]["location"])
+            if id not in icons_in_use:
+                continue
+            original_icon_url = urljoin(base=attachment_host, url=icon["attachment"]["location"])
+            icon_data.append((id, original_icon_url))
+
+        # Process all icons concurrently using TaskGroup
+        try:
+            async with asyncio.TaskGroup() as task_group:
+                for _, url in icon_data:
+                    tasks.append(task_group.create_task(self.icon_processor.process_icon_url(url)))
+        except ExceptionGroup as eg:
+            # If an unhandled exception occurs in TaskGroup
+            logger.error(f"Errors during icon processing: {eg}")
+
+        # Map results back to their IDs, handling any exceptions
+        for (id, original_url), task in zip(icon_data, tasks):
+            try:
+                result = task.result()
+                icons[id] = result
+            except Exception as e:
+                logger.error(f"Error processing icon {id}: {e}")
+                icons[id] = original_url
 
         return SuggestionContent(
             suggestions=suggestions,
