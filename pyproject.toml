@@ -127,7 +127,7 @@ numpy = "^1.26.2"
 locust = "^2.20.0"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.5"
+mypy = "1.14.1"
 pre-commit = "^2.20.0"
 bandit = {extras = ["toml"], version = "^1.7.5"}
 types-PyYAML = "^6.0.11"

@@ -15,15 +15,12 @@ from merino.utils.version import Version, fetch_app_version_from_file
 
 def test_fetch_app_version_from_file() -> None:
     """Happy path test for fetch_app_version_from_file()."""
-    expected_information: dict = {
-        "source": "https://github.com/mozilla-services/merino-py",
-        "version": "dev",
-        "commit": "TBD",
-        "build": "TBD",
-    }
-
     version: Version = fetch_app_version_from_file()
-    assert version.model_dump() == expected_information
+
+    assert str(version.source) == "https://github.com/mozilla-services/merino-py"
+    assert version.version == "dev"
+    assert version.commit == "TBD"
+    assert version.build == "TBD"
 
 
 def test_fetch_app_version_from_file_invalid_path() -> None:
