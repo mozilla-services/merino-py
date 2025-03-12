@@ -34,17 +34,8 @@ repos:
         files: "^merino|^tests"
         args:
           [
-            --python-version=3.12,
-            --disallow-untyped-calls,
-            --follow-imports=normal,
-            --ignore-missing-imports,
-            --pretty,
-            --show-error-codes,
-            --strict-optional,
-            --warn-no-return,
-            --warn-redundant-casts,
-            --warn-return-any,
-            --warn-unused-ignores,
+            --config-file=pyproject.toml,
+            --no-warn-unused-ignores
           ]
         additional_dependencies:
           [

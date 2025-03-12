@@ -1,8 +1,8 @@
-"""Merino provider manager."""
+"""Merino provider manager for Suggest."""
 
 from enum import Enum, unique
 
-from dynaconf.base import Settings
+from dynaconf.base import Settings  # type: ignore[import-untyped]
 from redis.asyncio import Redis
 
 from merino.cache.none import NoCacheAdapter
@@ -101,7 +101,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
         case ProviderType.AMO:
             return AmoProvider(
                 backend=(
-                    DynamicAmoBackend(api_url=settings.amo.dynamic.api_url)
+                    DynamicAmoBackend(api_url=settings.amo.dynamic.api_url)  # type: ignore[arg-type]
                     if setting.backend == "dynamic"
                     else StaticAmoBackend()
                 ),
@@ -114,7 +114,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
         case ProviderType.ADM:
             return AdmProvider(
                 backend=(
-                    RemoteSettingsBackend(
+                    RemoteSettingsBackend(  # type: ignore[arg-type]
                         server=settings.remote_settings.server,
                         collection=settings.remote_settings.collection,
                         bucket=settings.remote_settings.bucket,
@@ -157,7 +157,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             return WikipediaProvider(
                 backend=(
                     (
-                        ElasticBackend(
+                        ElasticBackend(  # type: ignore[arg-type]
                             api_key=setting.es_api_key,
                             url=setting.es_url,
                         )
