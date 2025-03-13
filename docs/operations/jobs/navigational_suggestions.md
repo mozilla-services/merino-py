@@ -78,3 +78,18 @@ type=image/png)
 
 Summary: 1/1 domains processed successfully
 ```
+
+## Adding new domains
+
+- You can add new domains to the job by adding them to the `/merino/jobs/navigational_suggestions/custom_domains.py` file.
+- Either manually, or you can use a script inside the `/scripts` folder.
+- The script is called `import_domains.sh` and it works with a CSV file with a `REGISTERED_DOMAIN` header, and starting from the second row, the firsts column is the domain name (e.g `getpocket.com`)
+
+This step was introduced to give the HNT team an easy way of importing their updated domains.
+
+Execute the script like this:
+```bash
+$ ./scripts/import_domains.sh DOWNLOADED_FILE.csv
+```
+
+This will add the domains to the `custom_domains.py` file, check if the domain exists, and if not, it adds it. Afterwards, all domains are getting alphabetically sorted.
