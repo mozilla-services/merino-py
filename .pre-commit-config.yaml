@@ -28,23 +28,13 @@ repos:
           - "--skip"
           - "B101,B104,B311"
   - repo: "https://github.com/pre-commit/mirrors-mypy"
-    rev: v1.10.0
+    rev: v1.14.1
     hooks:
       - id: mypy
         files: "^merino|^tests"
         args:
           [
-            --python-version=3.12,
-            --disallow-untyped-calls,
-            --follow-imports=normal,
-            --ignore-missing-imports,
-            --pretty,
-            --show-error-codes,
-            --strict-optional,
-            --warn-no-return,
-            --warn-redundant-casts,
-            --warn-return-any,
-            --warn-unused-ignores,
+            --config-file=pyproject.toml
           ]
         additional_dependencies:
           [
