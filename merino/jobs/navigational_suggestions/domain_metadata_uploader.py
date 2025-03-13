@@ -7,7 +7,8 @@ from datetime import datetime
 
 from google.cloud.storage import Blob
 
-from merino.utils.gcs.models import BaseContentUploader, Image
+from merino.utils.gcs.gcs_uploader import GcsUploader
+from merino.utils.gcs.models import Image
 from merino.jobs.navigational_suggestions.utils import FaviconDownloader
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ class DomainMetadataUploader:
     def __init__(
         self,
         force_upload: bool,
-        uploader: BaseContentUploader,
+        uploader: GcsUploader,
         favicon_downloader: FaviconDownloader = FaviconDownloader(),
     ) -> None:
         self.uploader = uploader
@@ -71,6 +72,11 @@ class DomainMetadataUploader:
         """
         dst_favicons: list = []
         for src_favicon in src_favicons:
+            # Skip URLs that are already from our CDN
+            if src_favicon.startswith(f"https://{self.uploader.cdn_hostname}"):
+                dst_favicons.append(src_favicon)
+                continue
+
             dst_favicon_public_url: str = ""
             favicon_image: Image | None = self.favicon_downloader.download_favicon(src_favicon)
             if favicon_image:

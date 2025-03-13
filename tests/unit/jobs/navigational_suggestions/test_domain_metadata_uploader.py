@@ -13,7 +13,8 @@ from google.cloud.storage import Blob, Bucket, Client
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.utils.gcs.models import BaseContentUploader, Image
+from merino.utils.gcs.gcs_uploader import GcsUploader
+from merino.utils.gcs.models import Image
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
@@ -240,8 +241,9 @@ def mock_favicon_downloader(mocker) -> Any:
 @pytest.fixture
 def mock_gcs_uploader(mocker, remote_blob_newest) -> Any:
     """Return a mock GcsUploader instance"""
-    uploader_mock: Any = mocker.Mock(spec=BaseContentUploader)
+    uploader_mock: Any = mocker.Mock(spec=GcsUploader)
     uploader_mock.get_most_recent_file.return_value = remote_blob_newest
+    uploader_mock.cdn_hostname = "test_cdn_hostname"
     return uploader_mock
 
 
@@ -359,6 +361,28 @@ def test_upload_favicons_return_empty_url_for_failed_favicon_download(
 
     for uploaded_favicon in uploaded_favicons:
         assert uploaded_favicon == ""
+
+
+def test_upload_favicons_return_same_url_for_urls_from_our_cdn(
+    mock_gcs_client, mock_favicon_downloader, mock_gcs_uploader, mocker
+) -> None:
+    """Test that upload is skipped when the src favicon URL is from our CDN."""
+    mock_favicon_downloader.download_favicon.return_value = None
+
+    mock_upload_image = mocker.patch.object(mock_gcs_uploader, "upload_image")
+
+    domain_metadata_uploader = DomainMetadataUploader(
+        uploader=mock_gcs_uploader,
+        force_upload=False,
+        favicon_downloader=mock_favicon_downloader,
+    )
+
+    src_favicon_url = f"https://{mock_gcs_uploader.cdn_hostname}/favicon1.png"
+    uploaded_favicons = domain_metadata_uploader.upload_favicons([src_favicon_url])
+
+    assert uploaded_favicons == [src_favicon_url]
+
+    mock_upload_image.assert_not_called()
 
 
 def test_get_latest_file_for_diff(
