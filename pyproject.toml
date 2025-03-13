@@ -119,6 +119,7 @@ gcloud-aio-storage = "^9.3.0"
 # Jobs specific dependecies required on top of some of the main dependencies above
 robobro = "^0.5.3"
 typer = "^0.11.0"
+tldextract = "^3.4.4"
 
 [tool.poetry.group.load.dependencies]
 # Load test specific dependecies required on top of some of the main dependencies above

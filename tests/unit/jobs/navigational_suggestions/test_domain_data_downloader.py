@@ -20,6 +20,12 @@ def mock_bigquery_client(mocker):
     ).return_value
 
 
+@pytest.fixture
+def domain_data_downloader(mock_bigquery_client):
+    """Return a DomainDataDownloader instance with a mock BigQuery client"""
+    return DomainDataDownloader("dummy_gcp_project")
+
+
 def test_download_data(mock_bigquery_client):
     """Test if download data returns domain data as expected"""
     mock_bigquery_client.query.return_value.result.return_value = [
@@ -66,3 +72,152 @@ def test_custom_domains(mock_bigquery_client):
         assert all(
             isinstance(cat, str) for cat in domain["categories"]
         ), f"All categories should be strings in {domain}"
+
+
+def test_normalize_domain_empty(domain_data_downloader):
+    """Test normalizing an empty domain"""
+    assert domain_data_downloader._normalize_domain("") == ""
+
+
+def test_normalize_domain_without_scheme(domain_data_downloader):
+    """Test normalizing a domain without scheme"""
+    assert domain_data_downloader._normalize_domain("example.com") == "example.com"
+
+
+def test_normalize_domain_with_scheme(domain_data_downloader):
+    """Test normalizing a domain with scheme"""
+    assert domain_data_downloader._normalize_domain("http://example.com") == "example.com"
+
+
+def test_normalize_domain_with_subdomain(domain_data_downloader):
+    """Test normalizing a domain with subdomain"""
+    assert domain_data_downloader._normalize_domain("www.example.com") == "example.com"
+    assert domain_data_downloader._normalize_domain("sub.example.com") == "example.com"
+
+
+def test_normalize_domain_with_path(domain_data_downloader):
+    """Test normalizing a domain with path"""
+    assert domain_data_downloader._normalize_domain("example.com/path") == "example.com"
+
+
+def test_normalize_domain_complex_tld(domain_data_downloader):
+    """Test normalizing a domain with complex TLD"""
+    assert domain_data_downloader._normalize_domain("example.co.uk") == "example.co.uk"
+    assert domain_data_downloader._normalize_domain("www.bbc.co.uk") == "bbc.co.uk"
+
+
+def test_normalize_domain_with_port(domain_data_downloader):
+    """Test normalizing a domain with port"""
+    assert domain_data_downloader._normalize_domain("example.com:8080") == "example.com"
+
+
+def test_parse_custom_domain_basic(domain_data_downloader):
+    """Test parsing a basic custom domain"""
+    result = domain_data_downloader._parse_custom_domain("example.com", 10)
+    assert result["domain"] == "example.com"
+    assert result["host"] == "example.com"
+    assert result["origin"] == "http://example.com"
+    assert result["suffix"] == "com"
+    assert result["rank"] == 10
+    assert result["categories"] == ["Inconclusive"]
+
+
+def test_parse_custom_domain_with_scheme(domain_data_downloader):
+    """Test parsing a custom domain with scheme"""
+    result = domain_data_downloader._parse_custom_domain("http://example.com", 10)
+    assert result["domain"] == "example.com"
+    assert result["host"] == "example.com"
+    assert result["origin"] == "http://example.com"
+    assert result["suffix"] == "com"
+
+
+def test_parse_custom_domain_with_subdomain(domain_data_downloader):
+    """Test parsing a custom domain with subdomain"""
+    result = domain_data_downloader._parse_custom_domain("sub.example.com", 10)
+    assert result["domain"] == "sub.example.com"
+    assert result["host"] == "sub.example.com"
+    assert result["origin"] == "http://sub.example.com"
+    assert result["suffix"] == "com"
+
+
+def test_parse_custom_domain_with_www(domain_data_downloader):
+    """Test parsing a custom domain with www subdomain"""
+    result = domain_data_downloader._parse_custom_domain("www.example.com", 10)
+    assert result["domain"] == "example.com"
+    assert result["host"] == "example.com"
+    assert result["origin"] == "http://example.com"
+    assert result["suffix"] == "com"
+
+
+def test_parse_custom_domain_with_path(domain_data_downloader):
+    """Test parsing a custom domain with path"""
+    result = domain_data_downloader._parse_custom_domain("startsiden.no/sok", 10)
+    assert result["domain"] == "startsiden.no/sok"
+    assert result["host"] == "startsiden.no/sok"
+    assert result["origin"] == "http://startsiden.no/sok"
+    assert result["suffix"] == "no"
+
+
+def test_download_data_with_duplicates(mock_bigquery_client, mocker):
+    """Test download_data with duplicates between BigQuery and custom domains"""
+    # Create mock BigQuery results with domains that will conflict with custom domains
+    mock_bigquery_client.query.return_value.result.return_value = [
+        Row(
+            (1, "amazon.com", "amazon.com", "http://amazon.com", "com", ["Shopping"]),
+            {"rank": 0, "domain": 1, "host": 2, "origin": 3, "suffix": 4, "categories": 5},
+        )
+    ]
+
+    # Patch the logger
+    mock_logger = mocker.patch(
+        "merino.jobs.navigational_suggestions.domain_data_downloader.logger"
+    )
+
+    # Patch CUSTOM_DOMAINS to include a duplicate
+    mocker.patch(
+        "merino.jobs.navigational_suggestions.domain_data_downloader.CUSTOM_DOMAINS",
+        ["amazon.com", "newdomain.com"],
+    )
+
+    domain_data_downloader = DomainDataDownloader("dummy_gcp_project")
+    domains = domain_data_downloader.download_data()
+
+    # Check that logger was called with info about duplicates
+    mock_logger.info.assert_any_call(mocker.ANY)
+
+    # Verify only unique domains were added
+    domain_names = [d["domain"] for d in domains]
+    assert "amazon.com" in domain_names
+    assert domain_names.count("amazon.com") == 1  # Should only appear once
+    assert "newdomain.com" in domain_names
+
+
+def test_download_data_exception_handling(mock_bigquery_client, mocker):
+    """Test exception handling in download_data method"""
+    mock_bigquery_client.query.return_value.result.return_value = [
+        Row(
+            (1, "example.com", "example.com", "http://example.com", "com", ["Technology"]),
+            {"rank": 0, "domain": 1, "host": 2, "origin": 3, "suffix": 4, "categories": 5},
+        )
+    ]
+
+    # Mock the _normalize_domain method to raise an exception
+    mocker.patch.object(
+        DomainDataDownloader, "_normalize_domain", side_effect=Exception("Test exception")
+    )
+
+    # Patch the logger
+    mock_logger = mocker.patch(
+        "merino.jobs.navigational_suggestions.domain_data_downloader.logger"
+    )
+
+    domain_data_downloader = DomainDataDownloader("dummy_gcp_project")
+    domains = domain_data_downloader.download_data()
+
+    # Check that logger.error was called for the exception
+    mock_logger.error.assert_called_once()
+    assert "Test exception" in mock_logger.error.call_args[0][0]
+
+    # Should still return the domains from BigQuery
+    assert len(domains) == 1
+    assert domains[0]["domain"] == "example.com"
