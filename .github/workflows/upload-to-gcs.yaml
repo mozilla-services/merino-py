@@ -32,7 +32,7 @@ jobs:
       - name: Set up Google Cloud Authentication
         uses: google-github-actions/auth@v2
         with:
-          service_account: ${{ inputs.service_account }
+          service_account: ${{ inputs.service_account }}
           workload_identity_provider: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
