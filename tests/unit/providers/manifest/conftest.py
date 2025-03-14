@@ -51,9 +51,10 @@ def fixture_manifest_remote_filemanager(
     manifest_remote_filemanager_parameters: dict[str, Any], gcs_client_mock
 ) -> ManifestRemoteFilemanager:
     """Create a ManifestRemoteFilemanager object for test."""
-    with patch("google.cloud.storage.Client") as mock_client, patch(
-        "google.auth.default"
-    ) as mock_auth_default:
+    with (
+        patch("google.cloud.storage.Client") as mock_client,
+        patch("google.auth.default") as mock_auth_default,
+    ):
         creds = AnonymousCredentials()  # type: ignore
         mock_auth_default.return_value = (creds, "test-project")
         mock_client.return_value = gcs_client_mock
