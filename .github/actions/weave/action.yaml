@@ -7,13 +7,14 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install poetry
-      run: pipx install poetry
-      shell: bash
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+          enable-cache: true
     - uses: actions/setup-python@v5
       with:
-        python-version: "3.12"
-        cache: "poetry"
+        python-version-file: "pyproject.toml"
     - name: Create Workspace
       run: mkdir -p ${{ inputs.workspace-path }}
       shell: bash

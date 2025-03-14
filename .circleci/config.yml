@@ -14,9 +14,6 @@ executors:
   image-build-executor:
     docker:
       - image: cimg/base:2025.02
-  python-executor:
-    docker:
-      - image: cimg/python:3.12
   ubuntu-executor:
     machine:
       image: ubuntu-2004:2024.08.1
@@ -75,17 +72,19 @@ workflows:
 
 jobs:
   checks:
-    executor: python-executor
+    executor: ubuntu-executor
     steps:
       - checkout
+      - setup-python-on-machine
       - run:
           name: Code linting
           command: make -k lint
   unit-tests:
-    executor: python-executor
+    executor: ubuntu-executor
     steps:
       - checkout
       - gcp-cli/setup
+      - setup-python-on-machine
       - run:
           name: Create Workspace
           command: mkdir -p workspace
@@ -143,9 +142,10 @@ jobs:
           destination: gs://ecosystem-test-eng-metrics/merino-py/coverage
           extension: json
   test-coverage-check:
-    executor: python-executor
+    executor: ubuntu-executor
     steps:
       - checkout
+      - setup-python-on-machine
       - attach_workspace:
           at: workspace
       - run:
@@ -274,7 +274,7 @@ commands:
               echo "${DOCKER_PASS}" | docker login -u="${DOCKER_USER}" --password-stdin
             fi
 
-  # set up python3.12 and poetry on the ubuntu machine used to run integration tests
+  # set up python3.12 and uv on the ubuntu machine used to run integration tests
   setup-python-on-machine:
     steps:
       - run:
@@ -282,16 +282,16 @@ commands:
           name: Set python version to 3.12
           command: pyenv global 3.12
       - run:
-          name: Install poetry
-          command: curl -sSL https://install.python-poetry.org | python3.12 -
+          name: Install uv
+          command: curl -LsSf https://astral.sh/uv/install.sh | sh
       - run:
-          name: Add poetry to PATH
+          name: Add uv to PATH
           command: echo 'export PATH="$HOME/.local/bin:$PATH"' >> $BASH_ENV
       - run:
-          name: Verify Python and poetry installation
+          name: Verify Python and uv installation
           command: |
             python3.12 --version
-            poetry --version
+            uv --version
 
   upload_to_gcs:
     parameters:
