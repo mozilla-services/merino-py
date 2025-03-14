@@ -144,6 +144,7 @@ jobs:
     executor: ubuntu-executor
     steps:
       - checkout
+      - setup-python-on-machine
       - attach_workspace:
           at: workspace
       - run:
