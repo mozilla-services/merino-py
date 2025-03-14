@@ -7,7 +7,6 @@ requires-python = "~=3.12"
 license = { text = "MPL-2.0" }
 dependencies = [
     "fastapi[standard]>=0.115.2,<0.116",
-    "uvicorn[standard]>=0.24.0,<0.25",
     "dockerflow>=2022.7.0,<2023",
     "asgi-correlation-id>=4.3.4,<5",
     "dynaconf>=3.2.4,<4",
@@ -151,3 +150,12 @@ filterwarnings = [
   # Ignored as `robobro` still uses an old version of `werkzeug`
   "ignore:'OrderedMultiDict' is deprecated",
 ]
+[tool.hatch.build.targets.sdist]
+include = ["merino"]
+
+[tool.hatch.build.targets.wheel]
+include = ["merino"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
