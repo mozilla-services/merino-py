@@ -75,6 +75,7 @@ jobs:
     executor: ubuntu-executor
     steps:
       - checkout
+      - setup-python-on-machine
       - run:
           name: Code linting
           command: make -k lint
