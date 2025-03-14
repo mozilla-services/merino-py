@@ -6,22 +6,24 @@ Here are some useful commands when working on Merino.
 
 ### Run the main app
 
-This project uses [Poetry][1] for dependency management.
-See [dependencies](./dependencies.md) for how to install Poetry on your machine.
+This project uses [uv][1] for dependency management.
+See [dependencies](./dependencies.md) for how to install uv on your machine.
 
 Install all the dependencies:
 
 ```
-$ poetry install
+$ uv sync --all-groups
 ```
 
 Run Merino:
 
 ```
-$ poetry run uvicorn merino.main:app --reload
+$ uv run fastapi run merino/main.py --reload
 
 # Or you can use a shortcut
 $ make run
+# To run in hot reload mode
+$ make dev
 ```
 
 ### General commands
@@ -29,7 +31,6 @@ $ make run
 # List all available make commands with descriptions
 $ make help
 
-# Just like `poetry install`
 $ make install
 
 # Run linter
@@ -162,4 +163,4 @@ and only use them locally.
 
 See the [Dynaconf Documentation](https://www.dynaconf.com/) for more details.
 
-[1]: https://python-poetry.org/
+[1]: https://docs.astral.sh/uv/

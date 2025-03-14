@@ -37,9 +37,10 @@ def fixture_top_picks_remote_filemanager(
     from unittest.mock import patch
     from google.auth.credentials import AnonymousCredentials
 
-    with patch("google.cloud.storage.Client") as mock_client, patch(
-        "google.auth.default"
-    ) as mock_auth_default:
+    with (
+        patch("google.cloud.storage.Client") as mock_client,
+        patch("google.auth.default") as mock_auth_default,
+    ):
         creds = AnonymousCredentials()  # type: ignore
         mock_auth_default.return_value = (creds, "test-project")
         mock_client.return_value = gcs_client_mock

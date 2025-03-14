@@ -2,35 +2,54 @@
 
 ## Package Dependencies
 
-This project uses [Poetry][1] for dependency management. While you can use the
-vanilla virtualenv to set up the dev environment, we highly recommend to check
-out [pyenv][2] and [pyenv-virtualenv][3], as they work nicely with Poetry.
-Follow the instructions to install [pyenv][4], [pyenv-virtualenv][5], and
-[poetry][6].
+This project uses `uv` for dependency management, virtual environment management and running scripts and commands.
+While you can use the vanilla virtualenv to set up the dev environment, we highly recommend to check
+out [uv][1].
 
-Feel free to browse the [pyproject.toml][7] file for a listing of dependencies
+To install `uv`, run:
+```
+pipx install uv
+```
+Or [install][2] via your preferred method.
+
+Feel free to browse the [pyproject.toml][3] file for a listing of dependencies
 and their versions.
 
-Once Poetry is installed, install all the dependencies:
+First, lets make sure you have a virtual environment set up with the right Python version. This service uses Python 3.12.
+```
+uv venv
+```
+See [more][4] about setting up virtual envs and Python version with uv.
 
+Once uv is installed, and a virtual environment is created with the correct Python version, install all the dependencies:
 ```
-$ poetry install
+$ uv sync --all-groups
 ```
 
-Add packages to project via poetry
+Add packages to project via uv
 ```
-$ poetry add <package_name>
+$ uv add <package_name>
 ```
 
 After that you should be to run Merino as follows:
 
 ```
-$ poetry run uvicorn merino.main:app --reload
-
-# Or you can fire up a poetry shell to make it shorter
-$ poetry shell
-$ uvicorn merino.main:app --reload
+$ uv run fastapi run merino/main.py --reload
 ```
+
+## Moving from the Poetry & Pyenv Set up
+If you had your environment previously set up via poetry and pyenv, here are the steps to move to `uv`. This would be a nice clean up and reset.
+```
+# Remove your previous virtual environment. If you set up using pyenv, then:
+rm .python-version
+pyenv uninstall merino-py
+
+# Uninstall pyenv
+rm -rf $(pyenv root)
+# or if you installed it via your OS package manager
+brew uninstall pyenv
+```
+
 
 ## Service Dependencies
 
@@ -73,10 +92,7 @@ development.
   above.
 
 
-[1]: https://python-poetry.org/
-[2]: https://github.com/pyenv/pyenv
-[3]: https://github.com/pyenv/pyenv-virtualenv
-[4]: https://github.com/pyenv/pyenv#installation
-[5]: https://github.com/pyenv/pyenv-virtualenv#installation
-[6]: https://python-poetry.org/docs/#installation
-[7]: /pyproject.toml
+[1]: https://docs.astral.sh/uv/
+[2]: https://docs.astral.sh/uv/getting-started/installation/
+[3]: /pyproject.toml
+[4]: https://docs.astral.sh/uv/concepts/python-versions/
