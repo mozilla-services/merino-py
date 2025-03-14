@@ -22,6 +22,8 @@ RUN apt-get update && \
 
 ENV LANG=C.UTF-8
 ENV PYTHONUNBUFFERED=1
+ENV PYTHON_VENV=/.venv
+ENV PATH="${PYTHON_VENV}/bin:${PATH}"
 
 # Add locust as a non-root user
 RUN useradd --create-home locust
