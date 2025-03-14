@@ -16,7 +16,7 @@ WORKDIR $APP_HOME
 RUN groupadd --gid 10001 app \
   && useradd -m -g app --uid 10001 -s /usr/sbin/nologin app
 
-# Copy the project into the image
+# Copy local code to the container image
 COPY . $APP_HOME
 
 # Install maxmind db and app dependencies. Clean up build tools after
