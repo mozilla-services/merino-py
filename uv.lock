@@ -460,6 +460,15 @@ wheels = [
 ]
 
 [[package]]
+name = "dnspython"
+version = "2.7.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/4a/263763cb2ba3816dd94b08ad3a33d5fdae34ecb856678773cc40a3605829/dnspython-2.7.0.tar.gz", hash = "sha256:ce9c432eda0dc91cf618a5cedf1a4e142651196bbcd2c80e89ed5a907e5cfaf1", size = 345197 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/68/1b/e0a87d256e40e8c888847551b20a017a6b98139178505dc7ffb96f04e954/dnspython-2.7.0-py3-none-any.whl", hash = "sha256:b4c34b7d10b51bcc3a5071e7b8dee77939f1e878477eeecc965e9835f63c6c86", size = 313632 },
+]
+
+[[package]]
 name = "docker"
 version = "7.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -522,6 +531,19 @@ async = [
 ]
 
 [[package]]
+name = "email-validator"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dnspython" },
+    { name = "idna" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/48/ce/13508a1ec3f8bb981ae4ca79ea40384becc868bfae97fd1c942bb3a001b1/email_validator-2.2.0.tar.gz", hash = "sha256:cb690f344c617a714f22e66ae771445a1ceb46821152df8e165c5f9a364582b7", size = 48967 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/ee/bf0adb559ad3c786f12bcbc9296b3f5675f529199bef03e2df281fa1fadb/email_validator-2.2.0-py3-none-any.whl", hash = "sha256:561977c2d73ce3611850a06fa56b414621e0c8faa9d66f2611407d87465da631", size = 33521 },
+]
+
+[[package]]
 name = "faker"
 version = "20.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -545,6 +567,34 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b5/28/c5d26e5860df807241909a961a37d45e10533acef95fc368066c7dd186cd/fastapi-0.115.11.tar.gz", hash = "sha256:cc81f03f688678b92600a65a5e618b93592c65005db37157147204d8924bf94f", size = 294441 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/5d/4d8bbb94f0dbc22732350c06965e40740f4a92ca560e90bb566f4f73af41/fastapi-0.115.11-py3-none-any.whl", hash = "sha256:32e1541b7b74602e4ef4a0260ecaf3aadf9d4f19590bba3e1bf2ac4666aa2c64", size = 94926 },
+]
+
+[package.optional-dependencies]
+standard = [
+    { name = "email-validator" },
+    { name = "fastapi-cli", extra = ["standard"] },
+    { name = "httpx" },
+    { name = "jinja2" },
+    { name = "python-multipart" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[[package]]
+name = "fastapi-cli"
+version = "0.0.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typer" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c5/f8/1ad5ce32d029aeb9117e9a5a9b3e314a8477525d60c12a9b7730a3c186ec/fastapi_cli-0.0.5.tar.gz", hash = "sha256:d30e1239c6f46fcb95e606f02cdda59a1e2fa778a54b64686b3ff27f6211ff9f", size = 15571 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/24/ea/4b5011012ac925fe2f83b19d0e09cee9d324141ec7bf5e78bb2817f96513/fastapi_cli-0.0.5-py3-none-any.whl", hash = "sha256:e94d847524648c748a5350673546bbf9bcaeb086b33c24f2e82e021436866a46", size = 9489 },
+]
+
+[package.optional-dependencies]
+standard = [
+    { name = "uvicorn", extra = ["standard"] },
 ]
 
 [[package]]
@@ -1183,7 +1233,7 @@ dependencies = [
     { name = "dockerflow" },
     { name = "dynaconf" },
     { name = "elasticsearch", extra = ["async"] },
-    { name = "fastapi" },
+    { name = "fastapi", extra = ["standard"] },
     { name = "gcloud-aio-storage" },
     { name = "geoip2" },
     { name = "google-cloud-bigquery" },
@@ -1244,7 +1294,7 @@ requires-dist = [
     { name = "dockerflow", specifier = ">=2022.7.0,<2023" },
     { name = "dynaconf", specifier = ">=3.2.4,<4" },
     { name = "elasticsearch", extras = ["async"], specifier = ">=8.5.0,<9" },
-    { name = "fastapi", specifier = ">=0.115.2,<0.116" },
+    { name = "fastapi", extras = ["standard"], specifier = ">=0.115.2,<0.116" },
     { name = "gcloud-aio-storage", specifier = ">=9.3.0,<10" },
     { name = "geoip2", specifier = ">=4.6.0,<5" },
     { name = "google-cloud-bigquery", specifier = ">=3.9.0,<4" },
@@ -1290,7 +1340,7 @@ dev = [
 jobs = [
     { name = "robobro", specifier = ">=0.5.3,<0.6" },
     { name = "tldextract", specifier = ">=3.4.4,<4" },
-    { name = "typer", specifier = ">=0.11.0,<0.12" },
+    { name = "typer", specifier = ">=0.11.0,<0.15" },
 ]
 load = [
     { name = "faker", specifier = ">=20.0.0,<21" },
@@ -1827,6 +1877,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-multipart"
+version = "0.0.20"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/87/f44d7c9f274c7ee665a29b885ec97089ec5dc034c7f3fafa03da9e39a09e/python_multipart-0.0.20.tar.gz", hash = "sha256:8dd0cab45b8e23064ae09147625994d090fa46f5b0d1e13af944c331a7fa9d13", size = 37158 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/45/58/38b5afbc1a800eeea951b9285d3912613f2603bdf897a4ab0f4bd7f405fc/python_multipart-0.0.20-py3-none-any.whl", hash = "sha256:8a62d3a8335e06589fe01f2a3e178cdcc632f3fbe0d492ad9ee0ec35aab1f104", size = 24546 },
+]
+
+[[package]]
 name = "pywin32"
 version = "309"
 source = { registry = "https://pypi.org/simple" }
@@ -2136,6 +2195,15 @@ wheels = [
 ]
 
 [[package]]
+name = "shellingham"
+version = "1.5.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/58/15/8b3609fd3830ef7b27b655beb4b4e9c62313a4e8da8c676e142cc210d58e/shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de", size = 10310 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686", size = 9755 },
+]
+
+[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2228,15 +2296,17 @@ wheels = [
 
 [[package]]
 name = "typer"
-version = "0.11.1"
+version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
+    { name = "rich" },
+    { name = "shellingham" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/54/99/610ff2ca9c62cfb1ebfd40b2f509295d5992b51fba3684c9eaf465df54d5/typer-0.11.1.tar.gz", hash = "sha256:f5ae987b97ebbbd59182f8e84407bbc925bc636867fa007bce87a7a71ac81d5c", size = 87143 }
+sdist = { url = "https://files.pythonhosted.org/packages/0d/7e/24af5b9aaa0872f9f6dc5dcf789dc3e57ceb23b4c570b852cd4db0d98f14/typer-0.14.0.tar.gz", hash = "sha256:af58f737f8d0c0c37b9f955a6d39000b9ff97813afcbeef56af5e37cf743b45a", size = 98836 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cc/14/6c702faa2b1105a8d74ae3f5c6045d4fb88e85bb9dd219f4d8ec10a479d4/typer-0.11.1-py3-none-any.whl", hash = "sha256:4ce7b2a60b8543816ca97d5ec016026cbe95d1a7a931083b988c1d3682548fe7", size = 43579 },
+    { url = "https://files.pythonhosted.org/packages/bb/d8/a3ab71d5587b42b832a7ef2e65b3e51a18f8da32b6ce169637d4d21995ed/typer-0.14.0-py3-none-any.whl", hash = "sha256:f476233a25770ab3e7b2eebf7c68f3bc702031681a008b20167573a4b7018f09", size = 44707 },
 ]
 
 [[package]]

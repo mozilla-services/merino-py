@@ -63,7 +63,7 @@ dev: $(INSTALL_STAMP)  ##  Run merino locally and reload automatically
 
 .PHONY: run
 run: $(INSTALL_STAMP)  ##  Run merino locally
-	$(UV) run fastpi run $(APP_DIR)/main.py
+	$(UV) run fastapi run $(APP_DIR)/main.py
 
 .PHONY: test
 test: unit-tests integration-tests test-coverage-check  ##  Run unit and integration tests and evaluate combined coverage
