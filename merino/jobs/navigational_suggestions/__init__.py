@@ -10,6 +10,7 @@ import typer
 from httpx import URL
 
 from merino.configs import settings as config
+from merino.jobs.navigational_suggestions.partner_favicons import PARTNER_FAVICONS
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
 from merino.jobs.navigational_suggestions.domain_data_downloader import (
@@ -101,6 +102,27 @@ def _construct_top_picks(
     return {"domains": result}
 
 
+def _construct_partner_manifest(
+    partner_favicon_source: list[dict[str, str]],
+    uploaded_favicons: list[str],
+) -> dict[str, list[dict[str, str]]]:
+    """Construct a list of processed partner favicons with their original and uploaded GCS URLs."""
+    if len(partner_favicon_source) != len(uploaded_favicons):
+        raise ValueError("Mismatch: The number of favicons and GCS URLs must be the same.")
+
+    result = [
+        {
+            "domain": item["domain"],
+            "url": item["url"],
+            "original_icon_url": item["icon"],
+            "gcs_icon_url": gcs_url,
+        }
+        for item, gcs_url in zip(partner_favicon_source, uploaded_favicons)
+    ]
+
+    return {"partners": result}
+
+
 def _get_serp_categories(domain_url: str | None) -> list[int] | None:
     if domain_url:
         url = URL(domain_url)
@@ -151,12 +173,21 @@ def prepare_domain_metadata(
             destination_cdn_hostname,
         ),
     )
-    favicons = [str(metadata["icon"]) for metadata in domain_metadata]
-    uploaded_favicons = domain_metadata_uploader.upload_favicons(favicons)
-    logger.info("domain favicons uploaded to GCS")
+    top_picks_favicons = [str(metadata["icon"]) for metadata in domain_metadata]
+    uploaded_top_picks_favicons = domain_metadata_uploader.upload_favicons(top_picks_favicons)
+    logger.info("top picks favicons uploaded to GCS")
+
+    partner_favicons = [item["icon"] for item in PARTNER_FAVICONS]
+    uploaded_partner_favicons = domain_metadata_uploader.upload_favicons(partner_favicons)
+    logger.info("partner favicons uploaded to GCS")
 
     # construct top pick contents
-    top_picks = _construct_top_picks(domain_data, uploaded_favicons, domain_metadata)
+    top_picks = _construct_top_picks(domain_data, uploaded_top_picks_favicons, domain_metadata)
+
+    # construct partner contents
+    partner_manifest = _construct_partner_manifest(PARTNER_FAVICONS, uploaded_partner_favicons)
+
+    final_top_picks = {**top_picks, **partner_manifest}
 
     # Create diff class for comparison of Top Picks Files
     old_top_picks: dict[str, list[dict[str, str]]] | None = (
@@ -166,18 +197,20 @@ def prepare_domain_metadata(
     if old_top_picks is None:
         old_top_picks = {}
 
-    domain_diff = DomainDiff(latest_domain_data=top_picks, old_domain_data=old_top_picks)
+    domain_diff = DomainDiff(latest_domain_data=final_top_picks, old_domain_data=old_top_picks)
     (
         unchanged,
         added_domains,
         added_urls,
     ) = domain_diff.compare_top_picks(
-        new_top_picks=top_picks,
+        new_top_picks=final_top_picks,
         old_top_picks=old_top_picks,
     )
 
     # Upload new domain file to replace old now that data is acquired for compare.
-    top_pick_blob = domain_metadata_uploader.upload_top_picks(json.dumps(top_picks, indent=4))
+    top_pick_blob = domain_metadata_uploader.upload_top_picks(
+        json.dumps(final_top_picks, indent=4)
+    )
     diff: dict = domain_diff.create_diff(
         file_name=top_pick_blob.name,
         unchanged=unchanged,
