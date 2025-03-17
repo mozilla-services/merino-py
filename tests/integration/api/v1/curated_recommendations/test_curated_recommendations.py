@@ -44,6 +44,7 @@ from merino.curated_recommendations.protocol import (
     Layout,
     CuratedRecommendationsFeed,
     Section,
+    Locale,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
@@ -219,6 +220,9 @@ async def test_curated_recommendations(repeat):
         # Check if the mock response is valid
         assert response.status_code == 200
 
+        # Check surfaceId is returned (should be NEW_TAB_EN_US for en-US locale)
+        assert data["surfaceId"] == ScheduledSurfaceId.NEW_TAB_EN_US
+
         corpus_items = data["data"]
         # assert total of 80 items returned
         assert len(corpus_items) == 80
@@ -269,29 +273,31 @@ class TestCuratedRecommendationsRequestParameters:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "locale",
+        "locale,surface_id",
         [
-            "fr",
-            "fr-FR",
-            "es",
-            "es-ES",
-            "it",
-            "it-IT",
-            "en",
-            "en-CA",
-            "en-GB",
-            "en-US",
-            "de",
-            "de-DE",
-            "de-AT",
-            "de-CH",
+            (Locale.EN, ScheduledSurfaceId.NEW_TAB_EN_US),
+            (Locale.EN_CA, ScheduledSurfaceId.NEW_TAB_EN_US),
+            (Locale.EN_US, ScheduledSurfaceId.NEW_TAB_EN_US),
+            (Locale.EN_GB, ScheduledSurfaceId.NEW_TAB_EN_GB),
+            (Locale.DE, ScheduledSurfaceId.NEW_TAB_DE_DE),
+            (Locale.DE_DE, ScheduledSurfaceId.NEW_TAB_DE_DE),
+            (Locale.DE_AT, ScheduledSurfaceId.NEW_TAB_DE_DE),
+            (Locale.DE_CH, ScheduledSurfaceId.NEW_TAB_DE_DE),
+            (Locale.FR, ScheduledSurfaceId.NEW_TAB_FR_FR),
+            (Locale.FR_FR, ScheduledSurfaceId.NEW_TAB_FR_FR),
+            (Locale.ES, ScheduledSurfaceId.NEW_TAB_ES_ES),
+            (Locale.ES_ES, ScheduledSurfaceId.NEW_TAB_ES_ES),
+            (Locale.IT, ScheduledSurfaceId.NEW_TAB_IT_IT),
+            (Locale.IT_IT, ScheduledSurfaceId.NEW_TAB_IT_IT),
         ],
     )
-    async def test_curated_recommendations_locales(self, locale):
-        """Test the curated recommendations endpoint accepts valid locales."""
+    async def test_curated_recommendations_locales(self, locale, surface_id):
+        """Test the curated recommendations endpoint accepts valid locales & returns correct surfaceId."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post("/api/v1/curated-recommendations", json={"locale": locale})
             assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
+            data = response.json()
+            assert data["surfaceId"] == surface_id
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(

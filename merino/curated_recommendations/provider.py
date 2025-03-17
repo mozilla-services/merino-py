@@ -470,7 +470,9 @@ class CuratedRecommendationsProvider:
             fakespot_feed = self.get_fakespot_feed(self.fakespot_backend, surface_id)
 
         # Construct the base response
-        response = CuratedRecommendationsResponse(recommendedAt=self.time_ms(), data=general_feed)
+        response = CuratedRecommendationsResponse(
+            recommendedAt=self.time_ms(), surfaceId=surface_id, data=general_feed
+        )
 
         # If we have feeds to return, add those to the response
         if need_to_know_feed or fakespot_feed:
