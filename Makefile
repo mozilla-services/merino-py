@@ -10,10 +10,9 @@ INSTALL_STAMP := .install.stamp
 POETRY := $(shell command -v poetry 2> /dev/null)
 
 # In order to be consumed by the ETE Test Metric Pipeline, files need to follow a strict naming
-# convention: {job_number}__{utc_epoch_datetime}__{workflow}__{test_suite}__results{-index}.xml
-WORKFLOW := main-workflow
+# convention: {job_number}__{utc_epoch_datetime}__{repository}__{workflow}__{test_suite}__results{-index}.xml
 EPOCH_TIME := $(shell date +"%s")
-TEST_FILE_PREFIX := $(if $(CIRCLECI),$(CIRCLE_BUILD_NUM)__$(EPOCH_TIME)__$(CIRCLE_PROJECT_REPONAME)__$(WORKFLOW)__)
+TEST_FILE_PREFIX := $(if $(GITHUB_ACTIONS),$(GITHUB_RUN_NUMBER)__$(EPOCH_TIME)__$(GITHUB_REPONAME)__$(GITHUB_WORKFLOW)__)
 UNIT_JUNIT_XML := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)unit__results.xml
 UNIT_COVERAGE_JSON := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)unit__coverage.json
 INTEGRATION_JUNIT_XML := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)integration__results.xml

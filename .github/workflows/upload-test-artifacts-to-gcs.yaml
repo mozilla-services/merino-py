@@ -1,0 +1,59 @@
+name: upload-test-artifacts-to-gcs
+
+on:
+  workflow_call:
+    inputs:
+      service_account:
+        description: "Service account to use for authentication"
+        required: false
+        type: string
+        default: "merinopy-github@ecosystem-test-eng.iam.gserviceaccount.com"
+      source:
+        description: "Source directory containing test artifacts"
+        required: false
+        type: string
+        default: "workspace/test-results"
+      destination:
+        description: "GCS bucket destination for uploaded artifacts"
+        required: true
+        type: string
+      extension:
+        description: "File extension filter for artifacts"
+        required: false
+        type: string
+
+jobs:
+  upload-to-gcs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Set up Google Cloud Authentication
+        uses: google-github-actions/auth@v2
+        with:
+          service_account: ${{ inputs.service_account }}
+          workload_identity_provider: ${{ vars.GCPV2_GITHUB_WORKLOAD_IDENTITY_PROVIDER }}
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Download Unit Test Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: unit-test-results
+          path: ${{ inputs.source }}
+      - name: Download Integration Test Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: integration-test-results
+          path: ${{ inputs.source }}
+      - name: Upload Artifacts to GCS
+        run: |
+          FILES="${{ inputs.source }}/*"
+          if [ -n "${{ inputs.extension }}" ]; then
+            FILES="${{ inputs.source }}/*.${{ inputs.extension }}"
+          fi
+          if ! ls -1 $FILES >/dev/null 2>&1; then
+            echo "No ${{ inputs.extension }} files found in ${{ inputs.source }}/"
+            exit 1
+          fi
+          gcloud storage cp $FILES ${{ inputs.destination }}/
