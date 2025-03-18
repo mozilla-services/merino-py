@@ -64,6 +64,8 @@ class ExperimentName(str, Enum):
     EXTENDED_EXPIRATION_EXPERIMENT = "new-tab-extend-content-duration"
     # Experiment where we apply a modified prior to reduce exploration
     MODIFIED_PRIOR_EXPERIMENT = "new-tab-feed-reduce-exploration"
+    # Experiment where the layout of the second section has two rows.
+    DOUBLE_ROW_LAYOUT_EXPERIMENT = "new-tab-double-row-layout"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
