@@ -41,4 +41,4 @@ COPY ./tests/load/locustfiles ./tests/load/locustfiles
 EXPOSE 8089 5557
 
 USER locust
-ENTRYPOINT ["uv", "run", "locust", "-f", "tests/load/locustfiles/"]
+ENTRYPOINT ["uv", "run", "--no-project", "locust", "-f", "tests/load/locustfiles/"]

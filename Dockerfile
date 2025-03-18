@@ -35,7 +35,7 @@ ENV PATH="$APP_HOME/.venv/bin:$PATH"
 FROM app_base AS job_runner
 
 # Set entrypoint to use uv
-ENTRYPOINT ["uv", "run", "python", "-m", "merino.jobs.cli"]
+ENTRYPOINT ["uv", "run", "--no-project", "python", "-m", "merino.jobs.cli"]
 
 # Now create the final context that runs the web api
 FROM app_base AS web_api
@@ -44,7 +44,7 @@ EXPOSE 8000
 
 USER app
 
-ENTRYPOINT ["uv", "run", "fastapi", "run"]
+ENTRYPOINT ["uv", "run", "--no-project", "fastapi", "run"]
 # Note:
 #   * `--proxy-headers` is used as Merino will be running behind an load balancer.
 #   * Only use one Uvicorn worker process per container. Replication and container
