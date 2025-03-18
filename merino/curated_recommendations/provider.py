@@ -19,7 +19,8 @@ from merino.curated_recommendations.interest_picker import create_interest_picke
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_4_large,
-    layout_6_tiles, layout_3_ads,
+    layout_6_tiles,
+    layout_3_ads,
 )
 from merino.curated_recommendations.localization import get_translation, LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
@@ -425,7 +426,9 @@ class CuratedRecommendationsProvider:
 
         # Set the layout of the second section to have 3 ads, to match the number of ads in control.
         if self.is_double_row_layout_experiment(request):
-            second_section = next((s for s, _ in feeds.get_sections() if s.receivedFeedRank == 1), None)
+            second_section = next(
+                (s for s, _ in feeds.get_sections() if s.receivedFeedRank == 1), None
+            )
             if second_section:
                 second_section.layout = layout_3_ads
 

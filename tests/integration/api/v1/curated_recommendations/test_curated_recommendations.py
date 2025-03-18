@@ -1401,7 +1401,9 @@ class TestSections:
             assert all(Layout(**section["layout"]) for section in sections.values())
 
             # Find the first section by their receivedFeedRank.
-            first_section = next((s for s in sections.values() if s["receivedFeedRank"] == 0), None)
+            first_section = next(
+                (s for s in sections.values() if s["receivedFeedRank"] == 0), None
+            )
             assert first_section is not None
 
             # Assert layout of the first section.
@@ -1439,8 +1441,12 @@ class TestSections:
             assert all(Layout(**section["layout"]) for section in sections.values())
 
             # Find the first and second sections by their receivedFeedRank.
-            first_section = next((s for s in sections.values() if s["receivedFeedRank"] == 0), None)
-            second_section = next((s for s in sections.values() if s["receivedFeedRank"] == 1), None)
+            first_section = next(
+                (s for s in sections.values() if s["receivedFeedRank"] == 0), None
+            )
+            second_section = next(
+                (s for s in sections.values() if s["receivedFeedRank"] == 1), None
+            )
             assert first_section is not None
             assert second_section is not None
 
