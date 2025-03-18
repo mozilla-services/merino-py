@@ -1367,9 +1367,6 @@ class TestSections:
             # and therefore the number of recs per topics is non-deterministic.
             assert len(sections) >= 4
 
-            # All sections have a layout
-            assert all(Layout(**section["layout"]) for section in sections.values())
-
             # Section receivedFeedRank should be numbered 0, 1, 2, ..., len(sections) - 1.
             assert {s["receivedFeedRank"] for s in sections.values()} == set(range(len(sections)))
             # Recommendation receivedRank should be numbered 0, 1, 2, ..., len(recommendations) - 1.
@@ -1379,6 +1376,88 @@ class TestSections:
 
             # Ensure all topics are present and are named according to the Topic Enum value.
             assert all(topic.value in feeds for topic in Topic)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "sections_payload",
+        [
+            None,
+            [{"sectionId": "sports", "isFollowed": True, "isBlocked": False}],
+        ],
+    )
+    async def test_sections_layouts(self, sections_payload):
+        """Test that the correct layout are returned along with sections."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            payload = {"locale": "en-US", "feeds": ["sections"]}
+            if sections_payload is not None:
+                payload["sections"] = sections_payload
+            response = await ac.post("/api/v1/curated-recommendations", json=payload)
+            assert response.status_code == 200
+            data = response.json()
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # All sections have a layout.
+            assert all(Layout(**section["layout"]) for section in sections.values())
+
+            # Find the first section by their receivedFeedRank.
+            first_section = next(
+                (s for s in sections.values() if s["receivedFeedRank"] == 0), None
+            )
+            assert first_section is not None
+
+            # Assert layout of the first section.
+            assert first_section["layout"]["name"] == "4-large-small-medium-1-ad"
+            # Assert that none of the sections have the layout "7-double-row-3-ad".
+            for section in sections.values():
+                assert section["layout"]["name"] != "7-double-row-3-ad"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "sections_payload",
+        [
+            None,
+            [{"sectionId": "sports", "isFollowed": True, "isBlocked": False}],
+        ],
+    )
+    async def test_sections_layouts_double_row_experiment(self, sections_payload):
+        """Test that the correct layout are returned along with sections."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            payload = {
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": "new-tab-double-row-layout",
+                "experimentBranch": "treatment",
+            }
+            if sections_payload is not None:
+                payload["sections"] = sections_payload
+            response = await ac.post("/api/v1/curated-recommendations", json=payload)
+            assert response.status_code == 200
+            data = response.json()
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # All sections have a layout.
+            assert all(Layout(**section["layout"]) for section in sections.values())
+
+            # Find the first and second sections by their receivedFeedRank.
+            first_section = next(
+                (s for s in sections.values() if s["receivedFeedRank"] == 0), None
+            )
+            second_section = next(
+                (s for s in sections.values() if s["receivedFeedRank"] == 1), None
+            )
+            assert first_section is not None
+            assert second_section is not None
+
+            # Assert layout of the first section.
+            assert first_section["layout"]["name"] == "4-large-small-medium-1-ad"
+            # Assert layout of the second section.
+            assert second_section["layout"]["name"] == "7-double-row-3-ad"
+            # Assert that none of the other sections have the layout "7-double-row-3-ad".
+            for section in sections.values():
+                if section["receivedFeedRank"] != 1:
+                    assert section["layout"]["name"] != "7-double-row-3-ad"
 
     @pytest.mark.asyncio
     async def test_curated_recommendations_with_sections_feed_boost_followed_sections(

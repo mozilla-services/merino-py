@@ -1,9 +1,10 @@
 """The layouts below control how tiles are displayed in the sections experiment.
 
+When changing or adding a new layout, put the change behind a Nimbus experiment, such that
+front-end engineering, product, and design can QA the layout before it reaches users.
+
 Tile order should be based on horizontal stacking. You can try this our in the Mozilla Playground:
 https://developer.mozilla.org/en-US/play?id=zWYUe3xC5v60fEuN8USHE24l7Q7tR2Vghi08O6KT9DAZz9cv%2B%2F0s0H8F7vJBWRVCnQgSHYWR%2BadDY4zA
-
-TODO: HNT-252 will document the QA process for layout changes. PR review suffices while we're in nightly.
 """
 
 from merino.curated_recommendations.protocol import Layout, ResponsiveLayout, Tile, TileSize
@@ -140,6 +141,61 @@ layout_6_tiles = Layout(
                 Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.SMALL, position=4, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.SMALL, position=5, hasAd=False, hasExcerpt=False),
+            ],
+        ),
+    ],
+)
+
+# Layout 4: Layout with 7 tiles, intended to show the same number of ads as in the control branch.
+layout_3_ads = Layout(
+    name="7-double-row-3-ad",
+    responsiveLayouts=[
+        ResponsiveLayout(
+            columnCount=4,
+            tiles=[
+                Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.LARGE, position=4, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
+            ],
+        ),
+        ResponsiveLayout(
+            columnCount=3,
+            tiles=[
+                Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=2, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.SMALL, position=4, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+            ],
+        ),
+        ResponsiveLayout(
+            columnCount=2,
+            tiles=[
+                Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.LARGE, position=4, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
+            ],
+        ),
+        ResponsiveLayout(
+            columnCount=1,
+            tiles=[
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=0, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.SMALL, position=2, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
             ],
         ),
     ],
