@@ -1,3 +1,40 @@
+[project]
+name = "merino-py"
+version = "0.1.0"
+description = "Service for Firefox Suggest at Mozilla"
+authors = [{ name = "Mozilla" }]
+requires-python = "~=3.12"
+license = { text = "MPL-2.0" }
+dependencies = [
+    "fastapi[standard]>=0.115.2,<0.116",
+    "dockerflow>=2022.7.0,<2023",
+    "asgi-correlation-id>=4.3.4,<5",
+    "dynaconf>=3.2.4,<4",
+    "httpx>=0.23.0,<0.24",
+    "sentry-sdk[fastapi]>=2.13.0,<3",
+    "kinto-http>=11.0.0,<12",
+    "aiodogstatsd>=0.16.0,<0.17",
+    "ua-parser>=0.16.1,<0.17",
+    "geoip2>=4.6.0,<5",
+    "rich>=12.5.1,<13",
+    "wrapt>=1.14.1,<2",
+    "elasticsearch[async]>=8.5.0,<9",
+    "google-cloud-storage>=2.16.0,<3",
+    "google-cloud-bigquery>=3.9.0,<4",
+    "Pillow>=10.2.0,<11",
+    "redis>=4.5.4,<5",
+    "types-python-dateutil>=2.8.19.13,<3",
+    "pydantic>=2.1.0,<3",
+    "scipy>=1.14.1,<2",
+    "orjson>=3.10.7,<4",
+    "tenacity>=9.0.0,<10",
+    "gcloud-aio-storage>=9.3.0,<10",
+]
+
+[project.scripts]
+merino-jobs = "merino.jobs.cli:cli"
+probe-images = "merino.jobs.utils.domain_tester:main"
+
 [tool.coverage.run]
 source = ["merino"]
 branch = true
@@ -8,8 +45,48 @@ omit = [
   "merino/jobs/utils/domain_tester.py"
 ]
 
+[dependency-groups]
+jobs = [
+    "robobro>=0.5.3,<0.6",
+    "typer>=0.11.0,<0.15",
+    "tldextract>=3.4.4,<4",
+]
+load = [
+    "faker>=20.0.0,<21",
+    "numpy>=1.26.2,<2",
+    "locust>=2.20.0,<3",
+]
+dev = [
+    "mypy==1.14.1",
+    "pre-commit>=2.20.0,<3",
+    "bandit[toml]>=1.7.5,<2",
+    "types-PyYAML>=6.0.11,<7",
+    "types-requests>=2.28.10,<3",
+    "types-geoip2>=3.0.0,<4",
+    "scalene>=1.5.13,<2",
+    "pytest>=7.2.0,<8",
+    "pytest-asyncio>=0.20.3,<0.21",
+    "pytest-cov>=4.0.0,<5",
+    "pytest-mock>=3.10.0,<4",
+    "freezegun>=1.2.2,<2",
+    "requests-mock>=1.10.0,<2",
+    "requests-toolbelt>=1.0.0,<2",
+    "ruff>=0.4.10,<0.5",
+    "types-redis>=4.5.1.1,<5",
+    "testcontainers>=4.0.1,<5",
+    "types-pillow>=10.2.0.20240520,<11",
+    "coverage>=7.5.4,<8",
+]
+
 [tool.coverage.report]
 show_missing = true
+
+[tool.uv]
+default-groups = [
+    "jobs",
+    "load",
+    "dev",
+]
 
 [tool.ruff]
 line-length = 99
@@ -73,80 +150,12 @@ filterwarnings = [
   # Ignored as `robobro` still uses an old version of `werkzeug`
   "ignore:'OrderedMultiDict' is deprecated",
 ]
+[tool.hatch.build.targets.sdist]
+include = ["merino"]
 
-[tool.poetry]
-name = "merino-py"
-version = "0.1.0"
-description = "Service for Firefox Suggest at Mozilla"
-authors = ["Mozilla"]
-license = "Mozilla Public License Version 2.0"
-packages = [
-  { include = "merino" }
-]
-
-[tool.poetry.scripts]
-merino-jobs = "merino.jobs.cli:cli"
-probe-images = "merino.jobs.utils.domain_tester:main"
-
-[tool.poetry.dependencies]
-python = "^3.12"
-fastapi = "^0.115.2"
-uvicorn = { extras = ["standard"], version = "^0.24.0" }
-dockerflow = "^2022.7.0"
-asgi-correlation-id = "^4.3.4"
-dynaconf = "^3.2.4"
-httpx = "^0.23.0"
-sentry-sdk = {extras = ["fastapi"], version = "^2.13.0"}
-kinto-http = "^11.0.0"
-aiodogstatsd = "^0.16.0"
-ua-parser = "^0.16.1"
-geoip2 = "^4.6.0"
-rich = "^12.5.1"
-wrapt = "^1.14.1"
-elasticsearch = {extras = ["async"], version = "^8.5.0"}
-google-cloud-storage = "^2.16.0"
-google-cloud-bigquery = "^3.9.0"
-Pillow = "^10.2.0"
-redis = "^4.5.4"
-types-python-dateutil = "^2.8.19.13"
-pydantic = "^2.1.0"
-scipy = "^1.14.1"
-orjson = "^3.10.7"
-tenacity = "^9.0.0"
-gcloud-aio-storage = "^9.3.0"
-
-[tool.poetry.group.jobs.dependencies]
-# Jobs specific dependecies required on top of some of the main dependencies above
-robobro = "^0.5.3"
-typer = "^0.11.0"
-
-[tool.poetry.group.load.dependencies]
-# Load test specific dependecies required on top of some of the main dependencies above
-faker = "^20.0.0"
-numpy = "^1.26.2"
-locust = "^2.20.0"
-
-[tool.poetry.group.dev.dependencies]
-mypy = "^1.5"
-pre-commit = "^2.20.0"
-bandit = {extras = ["toml"], version = "^1.7.5"}
-types-PyYAML = "^6.0.11"
-types-requests = "^2.28.10"
-types-geoip2 = "^3.0.0"
-scalene = "^1.5.13"
-pytest = "^7.2.0"
-pytest-asyncio = "^0.20.3"
-pytest-cov = "^4.0.0"
-pytest-mock = "^3.10.0"
-freezegun = "^1.2.2"
-requests-mock = "^1.10.0"
-requests-toolbelt = "^1.0.0"
-ruff = "^0.4.10"
-types-redis = "^4.5.1.1"
-testcontainers = "^4.0.1"
-types-pillow = "^10.2.0.20240520"
-coverage = "^7.5.4"
+[tool.hatch.build.targets.wheel]
+include = ["merino"]
 
 [build-system]
-requires = ["poetry-core>=1.8.1"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

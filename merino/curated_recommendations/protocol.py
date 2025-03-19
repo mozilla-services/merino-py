@@ -8,7 +8,11 @@ import logging
 
 from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo
 
-from merino.curated_recommendations.corpus_backends.protocol import CorpusItem, Topic
+from merino.curated_recommendations.corpus_backends.protocol import (
+    CorpusItem,
+    Topic,
+    ScheduledSurfaceId,
+)
 from merino.curated_recommendations.fakespot_backend.protocol import FakespotFeed
 
 logger = logging.getLogger(__name__)
@@ -60,6 +64,8 @@ class ExperimentName(str, Enum):
     EXTENDED_EXPIRATION_EXPERIMENT = "new-tab-extend-content-duration"
     # Experiment where we apply a modified prior to reduce exploration
     MODIFIED_PRIOR_EXPERIMENT = "new-tab-feed-reduce-exploration"
+    # Experiment where the layout of the second section has two rows.
+    DOUBLE_ROW_LAYOUT_EXPERIMENT = "new-tab-double-row-layout"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
@@ -306,6 +312,7 @@ class CuratedRecommendationsResponse(BaseModel):
     """Response schema for a list of curated recommendations"""
 
     recommendedAt: int
+    surfaceId: ScheduledSurfaceId
     data: list[CuratedRecommendation]
     feeds: CuratedRecommendationsFeed | None = None
     interestPicker: InterestPicker | None = None

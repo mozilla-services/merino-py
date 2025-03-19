@@ -146,6 +146,7 @@ mermaid.min.js
 
 # Scalene profile artifacts
 profile.json
+profile.html
 
 # CircleCI workspace artifacts
 workspace/
