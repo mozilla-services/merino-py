@@ -1,10 +1,13 @@
 """Utilities for navigational suggestions job"""
 
+import asyncio
 import logging
+from typing import Optional, List
 
-import requests
+import httpx
 
 from merino.utils.gcs.models import Image
+from merino.utils.http_client import create_http_client
 
 REQUEST_HEADERS: dict[str, str] = {
     "User-Agent": (
@@ -26,11 +29,32 @@ TIMEOUT: int = 10
 logger = logging.getLogger(__name__)
 
 
-class FaviconDownloader:
-    """Download favicon from the web"""
+class AsyncFaviconDownloader:
+    """Download favicon from the web asynchronously"""
 
-    def download_favicon(self, url: str) -> Image | None:
-        """Download the favicon from the given url.
+    def __init__(self) -> None:
+        self.session = create_http_client(
+            request_timeout=float(TIMEOUT),
+            connect_timeout=float(TIMEOUT),
+        )
+
+    async def requests_get(self, url: str) -> Optional[httpx.Response]:
+        """Open a given url and return the response asynchronously.
+
+        Args:
+            url: URL to open
+        Returns:
+            Optional[httpx.Response]: Response object
+        """
+        try:
+            response = await self.session.get(url, headers=REQUEST_HEADERS, follow_redirects=True)
+            return response if response.status_code == 200 else None
+        except Exception as e:
+            logger.info(f"Exception {e} while getting response from {url}")
+            return None
+
+    async def download_favicon(self, url: str) -> Optional[Image]:
+        """Download the favicon from the given url asynchronously.
 
         Args:
             url: favicon URL
@@ -38,31 +62,28 @@ class FaviconDownloader:
             Image: favicon image content and associated metadata
         """
         try:
-            response = requests_get(url)
-            return (
-                Image(
-                    content=response.content,
-                    content_type=str(response.headers.get("Content-Type")),
+            response = await self.session.get(url, headers=REQUEST_HEADERS, follow_redirects=True)
+            if response.status_code == 200:
+                content = response.content
+                content_type = response.headers.get("Content-Type", "image/unknown")
+                return Image(
+                    content=content,
+                    content_type=str(content_type),
                 )
-                if response
-                else None
-            )
+            return None
         except Exception as e:
             logger.info(f"Exception {e} while downloading favicon {url}")
             return None
 
+    async def download_multiple_favicons(self, urls: List[str]) -> List[Optional[Image]]:
+        """Download multiple favicons concurrently.
 
-def requests_get(url: str) -> requests.Response | None:
-    """Open a given url and return the response.
-
-    Args:
-        url: URL to open
-    Returns:
-        requests.Response | None: Response object
-    """
-    response: requests.Response = requests.get(
-        url,
-        headers=REQUEST_HEADERS,
-        timeout=TIMEOUT,
-    )
-    return response if response.status_code == 200 else None
+        Args:
+            urls: List of favicon URLs
+        Returns:
+            List of favicon images
+        """
+        tasks = [self.download_favicon(url) for url in urls]
+        # Handle the exceptions internally to maintain return type consistency
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        return [None if isinstance(r, BaseException) else r for r in results]

@@ -11,6 +11,7 @@ from httpx import URL
 
 from merino.configs import settings as config
 from merino.jobs.navigational_suggestions.partner_favicons import PARTNER_FAVICONS
+from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
 from merino.jobs.navigational_suggestions.domain_data_downloader import (
@@ -172,6 +173,7 @@ def prepare_domain_metadata(
             destination_gcs_bucket,
             destination_cdn_hostname,
         ),
+        AsyncFaviconDownloader(),
     )
     top_picks_favicons = [str(metadata["icon"]) for metadata in domain_metadata]
     uploaded_top_picks_favicons = domain_metadata_uploader.upload_favicons(top_picks_favicons)
