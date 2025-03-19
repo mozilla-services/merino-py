@@ -3,7 +3,7 @@ name = "merino-py"
 version = "0.1.0"
 description = "Service for Firefox Suggest at Mozilla"
 authors = [{ name = "Mozilla" }]
-requires-python = "~=3.12"
+requires-python = "~=3.13"
 license = { text = "MPL-2.0" }
 dependencies = [
     "fastapi[standard]>=0.115.2,<0.116",
@@ -123,7 +123,7 @@ exclude_dirs = [
 ]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 plugins = ['pydantic.mypy']
 disallow_untyped_calls = true
 follow_imports = "normal"
