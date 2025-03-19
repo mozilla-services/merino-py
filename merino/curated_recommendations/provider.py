@@ -406,11 +406,9 @@ class CuratedRecommendationsProvider:
         # Only keep sections with enough recommendations.
         valid_sections_by_topic = {}
         for topic, section in sections_by_topic.items():
+            max_tile_count = section.layout.max_tile_count
             # Keep the section if it has enough recs to fill its biggest layout, plus fallback recs.
-            if (
-                len(section.recommendations)
-                >= section.layout.max_tile_count + min_fallback_recs_per_section
-            ):
+            if len(section.recommendations) >= max_tile_count + min_fallback_recs_per_section:
                 valid_sections_by_topic[topic] = section
 
         # The above loop may have dropped some sections. Renumber receivedFeedRank to 0, 1, 2,...
