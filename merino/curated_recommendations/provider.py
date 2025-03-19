@@ -398,8 +398,7 @@ class CuratedRecommendationsProvider:
         # Only keep sections with enough recommendations.
         valid_sections_by_topic = {}
         for topic, section in sections_by_topic.items():
-            # Find the number of tiles in the biggest responsive layout.
-            max_tile_count = max(len(rl.tiles) for rl in section.layout.responsiveLayouts)
+            max_tile_count = section.layout.max_tile_count
             # Keep the section if it has enough recs to fill its biggest layout, plus fallback recs.
             if len(section.recommendations) >= max_tile_count + min_fallback_recs_per_section:
                 valid_sections_by_topic[topic] = section
@@ -418,13 +417,19 @@ class CuratedRecommendationsProvider:
 
         # Set the layout of the second section to have 3 ads, to match the number of ads in control.
         if self.is_double_row_layout_experiment(request):
-            second_section = next(
-                (s for s, _ in feeds.get_sections() if s.receivedFeedRank == 1), None
-            )
-            if second_section:
-                second_section.layout = layout_3_ads
+            self.set_double_row_layout(feeds)
 
         return feeds
+
+    @staticmethod
+    def set_double_row_layout(feeds: CuratedRecommendationsFeed):
+        """Set the layout of the second section to the double row layout with 3 ads."""
+        second_section = next(
+            (s for s, _ in feeds.get_sections() if s.receivedFeedRank == 1), None
+        )
+        # Only change the layout if there is a second section, and if it contains enough recommendations.
+        if second_section and len(second_section.recommendations) >= layout_3_ads.max_tile_count:
+            second_section.layout = layout_3_ads
 
     async def fetch(
         self, curated_recommendations_request: CuratedRecommendationsRequest
