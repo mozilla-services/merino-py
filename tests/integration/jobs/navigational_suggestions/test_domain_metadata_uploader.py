@@ -31,15 +31,28 @@ def gcs_storage_bucket(gcs_storage_client) -> Bucket:
 
 @pytest.fixture
 def mock_favicon_downloader(mocker):
-    """Return a Favicon downloader instance"""
-    favicon_downloader = mocker.patch(
-        "merino.jobs.navigational_suggestions.utils.FaviconDownloader"
-    ).return_value
+    """Return an AsyncFaviconDownloader instance with proper async mocks"""
+    # Create the base mock
+    favicon_downloader = mocker.AsyncMock()
 
-    # mocking the download method to return a Image type instead of making an actual get request
-    favicon_downloader.download_favicon.return_value = Image(
-        content=bytes(255), content_type="image/jpeg"
-    )
+    # Mock the single download method to return an awaitable that resolves to an Image
+    async def mock_download_favicon(*args, **kwargs):
+        return Image(content=bytes(255), content_type="image/jpeg")
+
+    favicon_downloader.download_favicon.side_effect = mock_download_favicon
+
+    # Mock the multiple downloads method to return an awaitable that resolves to a list of Images
+    async def mock_download_multiple_favicons(*args, **kwargs):
+        return [Image(content=bytes(255), content_type="image/jpeg")] * 4
+
+    favicon_downloader.download_multiple_favicons.side_effect = mock_download_multiple_favicons
+
+    # Mock the close_session method
+    async def mock_close_session(*args, **kwargs):
+        return None
+
+    favicon_downloader.close_session.side_effect = mock_close_session
+
     return favicon_downloader
 
 
@@ -104,7 +117,7 @@ test_top_picks_2 = {
 }
 
 
-def test_upload_top_picks(gcs_storage_client, gcs_storage_bucket):
+def test_upload_top_picks(gcs_storage_client, gcs_storage_bucket, mock_favicon_downloader):
     """Test upload_top_picks method of DomainMetaDataUploader. This test also implicitly tests
     the underlying gcs uploader methods.
     """
@@ -116,7 +129,9 @@ def test_upload_top_picks(gcs_storage_client, gcs_storage_bucket):
     )
 
     # create a DomainMetadataUploader instance
-    domain_metadata_uploader = DomainMetadataUploader(uploader=gcp_uploader, force_upload=False)
+    domain_metadata_uploader = DomainMetadataUploader(
+        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+    )
 
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
@@ -147,7 +162,7 @@ def test_upload_favicons(gcs_storage_client, gcs_storage_bucket, mock_favicon_do
     domain_metadata_uploader = DomainMetadataUploader(
         uploader=gcp_uploader,
         force_upload=False,
-        favicon_downloader=mock_favicon_downloader,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     test_favicons = ["favicon1.jpg", "favicon2.jpg", "favicon3.jpg", "favicon4.jpg"]
@@ -167,7 +182,7 @@ def test_upload_favicons(gcs_storage_client, gcs_storage_bucket, mock_favicon_do
         assert favicon.download_as_bytes() == bytes(255)
 
 
-def test_get_latest_file_for_diff(gcs_storage_client, gcs_storage_bucket):
+def test_get_latest_file_for_diff(gcs_storage_client, gcs_storage_bucket, mock_favicon_downloader):
     """Test get_latest_file_for_diff method of DomainMetaDataUploader. This test also tests
     implicitly the get_latest_file_for_diff method on the GcsUploader
     """
@@ -179,7 +194,9 @@ def test_get_latest_file_for_diff(gcs_storage_client, gcs_storage_bucket):
     )
 
     # create a DomainMetadataUploader instance
-    domain_metadata_uploader = DomainMetadataUploader(uploader=gcp_uploader, force_upload=False)
+    domain_metadata_uploader = DomainMetadataUploader(
+        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+    )
 
     # upload test_top_picks_1 for the 2024... file
     gcp_uploader.upload_content(json.dumps(test_top_picks_1), "20240101120555_top_picks.json")
@@ -193,7 +210,9 @@ def test_get_latest_file_for_diff(gcs_storage_client, gcs_storage_bucket):
     assert latest_file == test_top_picks_1
 
 
-def test_get_latest_file_for_diff_when_no_file_is_found(gcs_storage_client, gcs_storage_bucket):
+def test_get_latest_file_for_diff_when_no_file_is_found(
+    gcs_storage_client, gcs_storage_bucket, mock_favicon_downloader
+):
     """Test get_latest_file_for_diff method of DomainMetaDataUploader. This test also tests
     implicitly the get_latest_file_for_diff method on the GcsUploader
     """
@@ -205,7 +224,9 @@ def test_get_latest_file_for_diff_when_no_file_is_found(gcs_storage_client, gcs_
     )
 
     # create a DomainMetadataUploader instance
-    domain_metadata_uploader = DomainMetadataUploader(uploader=gcp_uploader, force_upload=False)
+    domain_metadata_uploader = DomainMetadataUploader(
+        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+    )
 
     # this should return None since we didn't upload anything to our gcs bucket
     latest_file = domain_metadata_uploader.get_latest_file_for_diff()

@@ -11,6 +11,7 @@ from httpx import URL
 
 from merino.configs import settings as config
 from merino.jobs.navigational_suggestions.partner_favicons import PARTNER_FAVICONS
+from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
 from merino.jobs.navigational_suggestions.domain_data_downloader import (
@@ -172,11 +173,15 @@ def prepare_domain_metadata(
             destination_gcs_bucket,
             destination_cdn_hostname,
         ),
+        AsyncFaviconDownloader(),
     )
+
+    # Process top picks favicons
     top_picks_favicons = [str(metadata["icon"]) for metadata in domain_metadata]
     uploaded_top_picks_favicons = domain_metadata_uploader.upload_favicons(top_picks_favicons)
     logger.info("top picks favicons uploaded to GCS")
 
+    # Process partner favicons
     partner_favicons = [item["icon"] for item in PARTNER_FAVICONS]
     uploaded_partner_favicons = domain_metadata_uploader.upload_favicons(partner_favicons)
     logger.info("partner favicons uploaded to GCS")
@@ -186,7 +191,6 @@ def prepare_domain_metadata(
 
     # construct partner contents
     partner_manifest = _construct_partner_manifest(PARTNER_FAVICONS, uploaded_partner_favicons)
-
     final_top_picks = {**top_picks, **partner_manifest}
 
     # Create diff class for comparison of Top Picks Files
@@ -221,5 +225,6 @@ def prepare_domain_metadata(
         "top pick contents uploaded to GCS",
         extra={"public_url": top_pick_blob.public_url},
     )
+
     if write_xcom is True:
         _write_xcom_file({"top_pick_url": top_pick_blob.public_url, "diff": diff})
