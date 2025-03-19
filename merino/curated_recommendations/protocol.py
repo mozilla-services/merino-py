@@ -223,6 +223,11 @@ class Layout(BaseModel):
             raise ValueError("Layout must have responsive layouts for 1, 2, 3, and 4 columns.")
         return responsiveLayouts
 
+    @property
+    def max_tile_count(self) -> int:
+        """Get the maximum number of tiles in any responsive layout in this layout."""
+        return max(len(rl.tiles) for rl in self.responsiveLayouts)
+
 
 class Section(BaseModel):
     """A ranked list of curated recommendations with responsive layout configurations."""

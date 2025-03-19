@@ -406,10 +406,11 @@ class CuratedRecommendationsProvider:
         # Only keep sections with enough recommendations.
         valid_sections_by_topic = {}
         for topic, section in sections_by_topic.items():
-            # Find the number of tiles in the biggest responsive layout.
-            max_tile_count = max(len(rl.tiles) for rl in section.layout.responsiveLayouts)
             # Keep the section if it has enough recs to fill its biggest layout, plus fallback recs.
-            if len(section.recommendations) >= max_tile_count + min_fallback_recs_per_section:
+            if (
+                len(section.recommendations)
+                >= section.layout.max_tile_count + min_fallback_recs_per_section
+            ):
                 valid_sections_by_topic[topic] = section
 
         # The above loop may have dropped some sections. Renumber receivedFeedRank to 0, 1, 2,...
@@ -429,7 +430,11 @@ class CuratedRecommendationsProvider:
             second_section = next(
                 (s for s, _ in feeds.get_sections() if s.receivedFeedRank == 1), None
             )
-            if second_section:
+            # Only change the layout if there is a second section, and if it contains enough recommendations.
+            if (
+                second_section
+                and len(second_section.recommendations) >= layout_3_ads.max_tile_count
+            ):
                 second_section.layout = layout_3_ads
 
         return feeds
