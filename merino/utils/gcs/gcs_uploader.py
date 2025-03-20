@@ -1,7 +1,7 @@
 """Uploads Content to GCS"""
 
 import logging
-from merino.configs import settings as config
+from merino.configs import settings
 from typing import Callable
 from urllib.parse import urljoin
 
@@ -104,10 +104,11 @@ class GcsUploader(BaseContentUploader):
         return None
 
     def _initialize_storage_client(self, destination_gcp_project: str) -> Client:
-        """Initialize a Google Cloud Storage client with production or anonymous credentials if in non-production environment"""
-        if config.current_env == "production":
-            # for production env we don't have to explicitly pass the credentials as it picks up the ADC file automatically
+        """Initialize a Google Cloud Storage client with production or anonymous credentials if in non-production/staging environment"""
+        if settings.runtime.skip_gcp_client_auth:
+            # for production and staging envs we don't have to explicitly pass the credentials
+            #  as it picks up the ADC file automatically
             return Client(destination_gcp_project)
         else:
-            # if not using anonymous credentials in non-prod env, this will throw
+            # if not using anonymous credentials in dev & testing envs, this will throw
             return Client(destination_gcp_project, credentials=AnonymousCredentials())  # type: ignore
