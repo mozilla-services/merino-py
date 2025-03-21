@@ -224,7 +224,7 @@ async def test_curated_recommendations(repeat):
         assert data["surfaceId"] == ScheduledSurfaceId.NEW_TAB_EN_US
 
         corpus_items = data["data"]
-        # assert total of 100 items returned, which is the default limit
+        # assert total of 100 items returned, which is the default maximum number of recommendations in the response.
         assert len(corpus_items) == 100
         # Assert all corpus_items have expected fields populated.
         assert all(item["url"] for item in corpus_items)
@@ -260,7 +260,7 @@ async def test_curated_recommendations_utm_source():
 
         corpus_items = data["data"]
         # assert items returned, otherwise the following assertions would not test anything.
-        assert len(corpus_items) >= 80
+        assert len(corpus_items) == 100
         # Assert all corpus_items have expected fields populated.
         # check that utm_source is present and has the correct value in all urls
         assert all("utm_source=firefox-newtab-en-us" in item["url"] for item in corpus_items)
@@ -616,7 +616,7 @@ class TestCuratedRecommendationsRequestParameters:
 
             assert response.status_code == 200
             # assert items are returned
-            assert len(corpus_items) >= 80
+            assert len(corpus_items) == 100
 
             # determine the number of recs that are expected to be preferred
             # based on number of preferred topics
@@ -759,7 +759,7 @@ class TestCuratedRecommendationsRequestFeeds:
 
             # Assert non-time-sensitive items are not returned in the general feed
             corpus_items = data["data"]
-            assert len(corpus_items) >= 80
+            assert len(corpus_items) == 100
             assert all(not item["isTimeSensitive"] for item in corpus_items)
 
             # Assert the `need_to_know` feed
@@ -781,7 +781,7 @@ class TestCuratedRecommendationsRequestFeeds:
 
             # assert non-Fakespot items are returned
             corpus_items = data["data"]
-            assert len(corpus_items) >= 80
+            assert len(corpus_items) == 100
 
             # Assert the fakespot feed is present
             self.assert_fakespot_feed(data["feeds"]["fakespot"])
@@ -836,7 +836,7 @@ class TestCuratedRecommendationsRequestFeeds:
 
             # Assert `isTimeSensitive` items are not returned in the general feed.
             corpus_items = data["data"]
-            assert len(corpus_items) >= 70
+            assert len(corpus_items) == 100
             assert all(not item["isTimeSensitive"] for item in corpus_items)
 
             # Assert the `need_to_know` feed is returned correctly
@@ -865,7 +865,7 @@ class TestCuratedRecommendationsRequestFeeds:
 
             # Assert `isTimeSensitive` items are not returned in the general feed.
             corpus_items = data["data"]
-            assert len(corpus_items) >= 70
+            assert len(corpus_items) == 100
             assert all(not item["isTimeSensitive"] for item in corpus_items)
 
             # Assert the `need_to_know` feed is returned correctly
