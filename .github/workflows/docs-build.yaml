@@ -1,4 +1,4 @@
-name: Build Documentation
+name: docs-build
 
 on:
   workflow_call:

@@ -10,6 +10,13 @@
 # settings. This enables merge for the entire `production` environment.
 dynaconf_merge = true
 
+[production.runtime]
+# MERINO_RUNTIME__SKIP_GCP_CLIENT_AUTH
+# Skip providing explicit `credentials` parameter to the gcp Client instance constructor.
+# In production and staging environments, the auth credentials are automatically picked up
+# from the ADC file in the GCP Project. For dev & testing envs, we use anonymous credentials.
+skip_gcp_client_auth = true
+
 [production.accuweather]
 url_base = "https://api.accuweather.com"
 

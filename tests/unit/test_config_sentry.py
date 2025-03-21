@@ -142,7 +142,7 @@ mock_sentry_event_data: Event = {
                             "function": "perform_request",
                             "module": "elasticsearch._async.client._base",
                             "filename": "elasticsearch/_async/client/_base.py",
-                            "abs_path": "/usr/local/lib/python3.12/site-packages"
+                            "abs_path": "/usr/local/lib/python3.13/site-packages"
                             "/elasticsearch/_async/client/_base.py",
                             "lineno": 285,
                             "pre_context": [

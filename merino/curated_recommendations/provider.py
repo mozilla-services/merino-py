@@ -20,6 +20,7 @@ from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_4_large,
     layout_6_tiles,
+    layout_3_ads,
 )
 from merino.curated_recommendations.localization import get_translation, LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
@@ -155,13 +156,6 @@ class CuratedRecommendationsProvider:
         )
 
     @staticmethod
-    def is_enrolled_in_prior_experiment(request: CuratedRecommendationsRequest) -> bool:
-        """Return True if Thompson sampling should use modified prior with reduced beta (treatment)."""
-        return CuratedRecommendationsProvider.is_enrolled_in_experiment(
-            request, ExperimentName.MODIFIED_PRIOR_EXPERIMENT.value, "treatment"
-        )
-
-    @staticmethod
     def is_need_to_know_experiment(request, surface_id) -> bool:
         """Check if the 'need_to_know' experiment is enabled."""
         return (
@@ -185,6 +179,13 @@ class CuratedRecommendationsProvider:
             request.feeds is not None
             and "sections" in request.feeds  # Clients must request "feeds": ["sections"]
             and surface_id in LOCALIZED_SECTION_TITLES  # The locale must be supported
+        )
+
+    @staticmethod
+    def is_double_row_layout_experiment(request: CuratedRecommendationsRequest) -> bool:
+        """Check if the double row layout experiment is enabled."""
+        return CuratedRecommendationsProvider.is_enrolled_in_experiment(
+            request, ExperimentName.DOUBLE_ROW_LAYOUT_EXPERIMENT.value, "treatment"
         )
 
     @staticmethod
@@ -225,7 +226,6 @@ class CuratedRecommendationsProvider:
             engagement_backend=self.engagement_backend,
             prior_backend=self.prior_backend,
             region=self.derive_region(request.locale, request.region),
-            enable_prior_experiment=self.is_enrolled_in_prior_experiment(request),
         )
 
         # 2. Perform publisher spread on the recommendation set
@@ -412,6 +412,18 @@ class CuratedRecommendationsProvider:
             section.receivedFeedRank = index + 1  # +1 for top_stories_section
             feeds.set_topic_section(topic, section)
 
+        # Boost followed sections, if any are provided with the request.
+        if request.sections and feeds:
+            feeds = boost_followed_sections(request.sections, feeds)
+
+        # Set the layout of the second section to have 3 ads, to match the number of ads in control.
+        if self.is_double_row_layout_experiment(request):
+            second_section = next(
+                (s for s, _ in feeds.get_sections() if s.receivedFeedRank == 1), None
+            )
+            if second_section:
+                second_section.layout = layout_3_ads
+
         return feeds
 
     async def fetch(
@@ -470,7 +482,9 @@ class CuratedRecommendationsProvider:
             fakespot_feed = self.get_fakespot_feed(self.fakespot_backend, surface_id)
 
         # Construct the base response
-        response = CuratedRecommendationsResponse(recommendedAt=self.time_ms(), data=general_feed)
+        response = CuratedRecommendationsResponse(
+            recommendedAt=self.time_ms(), surfaceId=surface_id, data=general_feed
+        )
 
         # If we have feeds to return, add those to the response
         if need_to_know_feed or fakespot_feed:
@@ -479,11 +493,6 @@ class CuratedRecommendationsProvider:
             )
         elif sections_feeds:
             response.feeds = sections_feeds
-
-        if sections_feeds and curated_recommendations_request.sections and response.feeds:
-            response.feeds = boost_followed_sections(
-                curated_recommendations_request.sections, response.feeds
-            )
 
         if curated_recommendations_request.enableInterestPicker and response.feeds:
             interest_picker = create_interest_picker(response.feeds.get_sections())

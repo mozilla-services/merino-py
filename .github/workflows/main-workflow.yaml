@@ -1,4 +1,4 @@
-name: Production Deployment
+name: main-workflow  # The ETE Pipeline integration depends on this name
 
 on:
   push:
@@ -10,6 +10,20 @@ jobs:
     uses: ./.github/workflows/checks.yaml
   run-tests:
     uses: ./.github/workflows/tests.yaml
+  upload-test-artifacts:
+    needs: run-tests
+    if: always()  # Ensure the job runs even if previous jobs, like test runs, fail
+    uses: ./.github/workflows/upload-test-artifacts-to-gcs.yaml
+    with:
+      destination: "gs://ecosystem-test-eng-metrics/merino-py/junit"
+      extension: "xml"
+  upload-coverage-artifacts:
+    needs: run-tests
+    if: always()  # Ensure the job runs even if previous jobs, like test runs, fail
+    uses: ./.github/workflows/upload-test-artifacts-to-gcs.yaml
+    with:
+      destination: "gs://ecosystem-test-eng-metrics/merino-py/coverage"
+      extension: "json"
   run-docs-build:
     uses: ./.github/workflows/docs-build.yaml
   run-docs-publish-github-pages:

@@ -40,7 +40,12 @@ class GcsPrior(PriorBackend):
         # To maintain this proportion, we've chosen a weight of 0.1. A higher weight increases
         # exploration. Since having more items reduces the number of impressions available per item,
         # beta scales with the average impressions per item to adjust the level of exploration.
-        beta = 0.1 * prior_stats.impressions_per_item
+
+        # [02.24.2025] Following the conclusion of an experiment that reduced the prior
+        # hyperparameters and demonstrated lift in total clicks, we changed the weight
+        # from 0.1 to 0.05
+
+        beta = 0.05 * prior_stats.impressions_per_item
         # Set alpha to create an optimistic prior, so every item is explored to discover its CTR.
         alpha = beta * prior_stats.average_ctr_top2_items
 

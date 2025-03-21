@@ -51,6 +51,12 @@ default_suggestions_response_ttl_sec = 300 # 5 mins
 # ensuring reasonably fresh data.
 default_manifest_response_ttl_sec = 28800 # 8 hours
 
+# MERINO_RUNTIME__SKIP_GCP_CLIENT_AUTH
+# Skip providing explicit `credentials` parameter to the gcp Client instance constructor.
+# In production and staging environments, the auth credentials are automatically picked up
+# from the ADC file in the GCP Project. For dev & testing envs, we use anonymous credentials.
+skip_gcp_client_auth = false
+
 [default.logging]
 # MERINO_LOGGING__LEVEL
 # Minimum level of logs that should be reported.

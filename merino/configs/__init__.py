@@ -8,6 +8,13 @@ _validators = [
         "runtime.disabled_providers",
         is_type_of=list,
     ),
+    Validator(
+        "runtime.skip_gcp_client_auth",
+        is_type_of=bool,
+        must_exist=True,
+        eq=True,
+        env=["production", "stage"],
+    ),
     Validator("deployment.canary", is_type_of=bool),
     Validator("logging.format", is_in=["mozlog", "pretty"]),
     Validator("logging.level", is_in=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
