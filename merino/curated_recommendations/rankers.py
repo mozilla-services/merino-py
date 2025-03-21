@@ -9,8 +9,8 @@ from merino.curated_recommendations.engagement_backends.protocol import Engageme
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, Prior
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
-    CuratedRecommendationsFeed,
     SectionConfiguration,
+    Section,
 )
 from scipy.stats import beta
 
@@ -192,8 +192,8 @@ def section_boosting_composite_sorting_key(section):
 
 
 def boost_followed_sections(
-    req_sections: list[SectionConfiguration], feeds: CuratedRecommendationsFeed
-) -> CuratedRecommendationsFeed:
+    req_sections: list[SectionConfiguration], feeds: dict[str, Section]
+) -> dict[str, Section]:
     """Boost followed sections to the very top, right after top_stories_section.
     Received feed rank for top_stories_section should always stay 0.
     Received feed rank for followed_sections should follow top_stories_section.
@@ -201,8 +201,8 @@ def boost_followed_sections(
     Unfollowed sections should be ranked after followed_sections, and relative order should be preserved.
 
     :param req_sections: List of Section configurations
-    :param feeds: CuratedRecommendationsFeed object
-    :return: updated CuratedRecommendationsFeed with boosted followed sections (if found)
+    :param feeds: Dictionary with section ids as keys and Section objects as values.
+    :return: Updated dictionary with boosted followed sections (if found)
     """
     # 1. Extract section ids from the section request
     initial_section_ids = [section.sectionId for section in req_sections]
@@ -218,7 +218,7 @@ def boost_followed_sections(
     # 4. Update section attributes for sections in the request
     for section_id in initial_section_ids:
         # lookup the section using the SERP topic from client
-        section = feeds.get_section_by_topic_id(section_id)
+        section = feeds.get(section_id)
         if not section:
             continue  # skip sections that did not map
 
@@ -235,7 +235,7 @@ def boost_followed_sections(
 
     # 5. Collect all followed, unfollowed, blocked sections into a single array
     sorted_sections = []
-    for section_id in feeds.model_fields_set:
+    for section_id, section in feeds.items():
         section = getattr(feeds, section_id)
         if section:
             if section_id == "top_stories_section":

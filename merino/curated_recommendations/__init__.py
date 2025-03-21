@@ -12,6 +12,9 @@ from merino.curated_recommendations.corpus_backends.scheduled_corpus_backend imp
     ScheduledCorpusBackend,
     CorpusApiGraphConfig,
 )
+from merino.curated_recommendations.corpus_backends.sections_corpus_backend import (
+    SectionsCorpusBackend,
+)
 from merino.curated_recommendations.engagement_backends.fake_engagement import FakeEngagement
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
@@ -93,10 +96,18 @@ def init_provider() -> None:
         manifest_provider=get_manifest_provider(),
     )
 
+    sections_backend = SectionsCorpusBackend(
+        http_client=create_http_client(base_url=""),
+        graph_config=CorpusApiGraphConfig(),
+        metrics_client=get_metrics_client(),
+        manifest_provider=get_manifest_provider(),
+    )
+
     _provider = CuratedRecommendationsProvider(
         corpus_backend=corpus_backend,
         engagement_backend=engagement_backend,
         prior_backend=init_prior_backend(),
+        sections_backend=sections_backend,
     )
 
 

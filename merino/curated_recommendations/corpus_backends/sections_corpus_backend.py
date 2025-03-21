@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -24,7 +25,6 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 from merino.providers.manifest import Provider as ManifestProvider
 from merino.curated_recommendations.corpus_backends.utils import (
     get_utm_source,
-    get_expiration_time,
     build_corpus_item,
     CorpusGraphQLError,
     CorpusApiGraphConfig,
@@ -103,7 +103,7 @@ class SectionsCorpusBackend(SectionsCorpusProtocol):
                 sections = await self._fetch_from_backend(surface_id)
                 self._cache[cache_key] = CacheEntry(
                     sections,
-                    get_expiration_time(self.cache_time_to_live_min, self.cache_time_to_live_max),
+                    self.get_expiration_time(),
                     asyncio.Lock(),
                 )
                 return sections
@@ -185,3 +185,13 @@ class SectionsCorpusBackend(SectionsCorpusProtocol):
             sections_list.append(section)
 
         return sections_list
+
+    @staticmethod
+    def get_expiration_time() -> datetime:
+        """Return the date & time when a cached value should be expired."""
+        # Random jitter ensures that backend requests don't all happen at the same time.
+        time_to_live_seconds = random.uniform(
+            SectionsCorpusBackend.cache_time_to_live_min.total_seconds(),
+            SectionsCorpusBackend.cache_time_to_live_max.total_seconds(),
+        )
+        return datetime.now() + timedelta(seconds=time_to_live_seconds)
