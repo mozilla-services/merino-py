@@ -15,7 +15,7 @@ Or [install][2] via your preferred method.
 Feel free to browse the [pyproject.toml][3] file for a listing of dependencies
 and their versions.
 
-First, lets make sure you have a virtual environment set up with the right Python version. This service uses Python 3.12.
+First, lets make sure you have a virtual environment set up with the right Python version. This service uses Python 3.13.
 ```
 uv venv
 ```

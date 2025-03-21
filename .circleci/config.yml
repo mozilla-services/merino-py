@@ -13,7 +13,7 @@ executors:
       - image: cimg/base:2025.02
   ubuntu-executor:
     machine:
-      image: ubuntu-2004:2024.08.1
+      image: ubuntu-2004:current
 
 workflows:
   pr-workflow:
@@ -253,13 +253,13 @@ commands:
               echo "${DOCKER_PASS}" | docker login -u="${DOCKER_USER}" --password-stdin
             fi
 
-  # set up python3.12 and uv on the ubuntu machine used to run integration tests
+  # set up python3.13 and uv on the ubuntu machine used to run integration tests
   setup-python-on-machine:
     steps:
       - run:
           # the ubuntu machine image we are using comes with python and pyenv
-          name: Set python version to 3.12
-          command: pyenv global 3.12
+          name: Set python version to 3.13
+          command: pyenv global 3.13
       - run:
           name: Install uv
           command: curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -269,7 +269,7 @@ commands:
       - run:
           name: Verify Python and uv installation
           command: |
-            python3.12 --version
+            python3.13 --version
             uv --version
 
   write-version:
