@@ -1,6 +1,7 @@
 """Algorithms for ranking curated recommendations."""
 
 from copy import copy
+from datetime import datetime, timedelta, timezone
 
 from merino.curated_recommendations import ConstantPrior
 from merino.curated_recommendations.corpus_backends.protocol import Topic
@@ -149,12 +150,35 @@ def boost_preferred_topic(
     return boosted_recs + remaining_recs
 
 
+def is_section_recently_followed(followed_at: datetime | None) -> bool:
+    """Check if a section was followed within the last 7 days. Use UTC timezone.
+
+    :param followed_at: the date a section was followed on
+    :return: boolean
+    """
+    # If no timestamp provided, consider as not recently followed
+    if not followed_at:
+        return False
+
+    # Return followed_at in UTC timezone (in case client sent in different timezone)
+    followed_at = followed_at.astimezone(timezone.utc)
+
+    # Get current UTC time with dropping the microseconds
+    current_time = datetime.now(timezone.utc).replace(microsecond=0)
+    # drop microseconds from followed_at for accurate comparison
+    followed_at = followed_at.replace(microsecond=0)
+
+    # Return true if recently followed (<=7) false if > 7
+    return current_time - followed_at <= timedelta(days=7)
+
+
 def boost_followed_sections(
     req_sections: list[SectionConfiguration], feeds: CuratedRecommendationsFeed
 ) -> CuratedRecommendationsFeed:
     """Boost followed sections to the very top, right after top_stories_section.
     Received feed rank for top_stories_section should always stay 0.
     Received feed rank for followed_sections should follow top_stories_section.
+    Most recently followed sections (followed within 1 week) should be boosted higher.
     Unfollowed sections should be ranked after followed_sections, and relative order should be preserved.
 
     :param req_sections: List of Section configurations
@@ -164,8 +188,10 @@ def boost_followed_sections(
     followed_sections = []
     unfollowed_sections = []
 
-    # 1. Extract followed section ids from req_sections param
-    followed_section_ids = [section.sectionId for section in req_sections if section.isFollowed]
+    # 1. Extract followed section ids & followedAt from req_sections param & store in a dict for quick lookup
+    followed_sections_info = {
+        section.sectionId: section.followedAt for section in req_sections if section.isFollowed
+    }
 
     # 2. Extract blocked section ids from req_sections param
     blocked_section_ids = [section.sectionId for section in req_sections if section.isBlocked]
@@ -179,13 +205,14 @@ def boost_followed_sections(
             if section:
                 section.isBlocked = True
 
-    # 4. Update isFollowed based on followed_section_ids
-    if followed_section_ids:
-        for section_id in followed_section_ids:
+    # 4. Update isFollowed & followedAt based on followed_sections_info
+    if followed_sections_info:
+        for section_id, followed_at in followed_sections_info.items():
             # lookup the followed section using the SERP topic from client
             section = feeds.get_section_by_topic_id(section_id)
             if section:
                 section.isFollowed = True
+                section.followedAt = followed_at
 
         # 5. Collect followed & unfollowed sections
         for section_id in feeds.model_fields_set:
@@ -199,18 +226,38 @@ def boost_followed_sections(
                 else:
                     unfollowed_sections.append(section)
 
-        # 6. Sort followed & unfollowed sections by their rank (ascending)
+        # 6. Sort unfollowed sections by their rank (ascending)
         # This is to ensure relative order is kept
-        followed_sections.sort(key=lambda section: section.receivedFeedRank)
         unfollowed_sections.sort(key=lambda section: section.receivedFeedRank)
 
-        # 7. Assign new rank starting from 1 for followed sections.
-        current_received_feed_rank = 1
+        # 7. Determine most recently followed sections
+        recently_followed_sections = []
+        other_followed_sections = []
+
         for section in followed_sections:
+            if is_section_recently_followed(section.followedAt):
+                recently_followed_sections.append(section)
+            else:
+                other_followed_sections.append(section)
+
+        # 8. Sort recently_followed_sections by followedAt to assign a higher rank to the most recently followed
+        # lint complains about followedAt possibly being None, so fallback to datetime.min
+        recently_followed_sections.sort(
+            key=lambda section: section.followedAt or datetime.min, reverse=True
+        )
+
+        # 9. Assign new rank starting from 1 for followed sections.
+        # Maintain relative order but boost most recently followed sections first
+        current_received_feed_rank = 1
+        for section in recently_followed_sections:
             section.receivedFeedRank = current_received_feed_rank
             current_received_feed_rank += 1
 
-        # 8. Assign new rank (starting from last rank value assigned to a followed section)
+        for section in other_followed_sections:
+            section.receivedFeedRank = current_received_feed_rank
+            current_received_feed_rank += 1
+
+        # 10. Assign new rank (starting from last rank value assigned to a followed section)
         # to unfollowed sections. Keep relative order.
         for section in unfollowed_sections:
             section.receivedFeedRank = current_received_feed_rank

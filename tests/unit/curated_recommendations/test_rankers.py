@@ -4,6 +4,9 @@ import uuid
 
 import pytest
 import random
+from datetime import datetime, timezone
+import freezegun
+from freezegun import freeze_time
 
 from pydantic import HttpUrl
 from merino.curated_recommendations.corpus_backends.protocol import Topic
@@ -19,6 +22,7 @@ from merino.curated_recommendations.rankers import (
     spread_publishers,
     boost_preferred_topic,
     boost_followed_sections,
+    is_section_recently_followed,
 )
 
 
@@ -356,6 +360,36 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
         assert recs == not_reordered_recs
 
 
+class TestIsSectionRecentlyFollowed:
+    """Unit tests for is_section_recently_followed"""
+
+    @freezegun.freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
+    def test_is_section_recently_followed_one_week_ago(self):
+        """Should return True if section was followed exactly 1 week ago"""
+        # Followed exactly 7 days ago
+        followed_at = datetime(2025, 3, 13, 12, 0, 0, tzinfo=timezone.utc)
+        assert is_section_recently_followed(followed_at) is True
+
+    @freezegun.freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
+    def test_is_section_recently_followed_now(self):
+        """Should return True if section is followed right now"""
+        # Followed now
+        followed_at = datetime(2025, 3, 20, 12, 0, 0, tzinfo=timezone.utc)
+        assert is_section_recently_followed(followed_at) is True
+
+    @freezegun.freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
+    def test_is_section_recently_followed_more_than_one_week_ago(self):
+        """Should return False if section was followed more than 1 week ago"""
+        # Followed now
+        followed_at = datetime(2025, 3, 12, 12, 0, 0, tzinfo=timezone.utc)
+        assert is_section_recently_followed(followed_at) is False
+
+    @freezegun.freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
+    def test_is_section_recently_followed_none(self):
+        """Should return False if followed_at is None"""
+        assert is_section_recently_followed(None) is False
+
+
 class TestCuratedRecommendationsProviderBoostFollowedSections:
     """Unit tests for boost_followed_sections"""
 
@@ -463,16 +497,23 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         # Assertions for isFollowed
         assert new_feed.get_section_by_topic_id(followed_section.sectionId).isFollowed
 
-    def test_boost_followed_sections(self):
-        """Test boosting sections works properly when following more than 1 section. Followed & unfollowed sections
-        should maintain their relative order.
+    @freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
+    def test_boost_followed_sections_with_followed_at(self):
+        """Test boosting sections works properly when following more than 1 section. Followed sections should be ranked
+        based on followed_at. Followed & unfollowed sections should maintain their relative order.
         """
         req_sections = [
             SectionConfiguration(
-                sectionId="hobbies", isFollowed=True, isBlocked=False
+                sectionId="hobbies",
+                isFollowed=True,
+                isBlocked=False,
+                followedAt=datetime(2025, 3, 18, tzinfo=timezone.utc),  # Followed on 03/18
             ),  # maps to gaming section
             SectionConfiguration(
-                sectionId="tech", isFollowed=True, isBlocked=False
+                sectionId="tech",
+                isFollowed=True,
+                isBlocked=False,
+                followedAt=datetime(2025, 3, 10, tzinfo=timezone.utc),  # Followed on 3/10
             ),  # maps to technology section
             SectionConfiguration(
                 sectionId="travel", isFollowed=False, isBlocked=True
@@ -495,8 +536,10 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
 
         # Assertions for receivedFeedRank
         assert new_feed.top_stories_section.receivedFeedRank == 0  # should always remain 0
-        assert new_feed.technology.receivedFeedRank == 1  # had a rank==2, should now be 1
-        assert new_feed.gaming.receivedFeedRank == 2
+        # gaming had a rank==5, should be now 1 as this topic was followed 2 days ago & is "recently followed"
+        assert new_feed.gaming.receivedFeedRank == 1
+        # technology had a rank==2, should stay 2 as this topic was followed 10 days ago so not "recently followed"
+        assert new_feed.technology.receivedFeedRank == 2
         assert new_feed.food.receivedFeedRank == 3
         assert (
             new_feed.travel.receivedFeedRank == 4
@@ -507,6 +550,12 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         assert new_feed.technology.isFollowed
         assert not new_feed.food.isFollowed
         assert not new_feed.travel.isFollowed
+
+        # Assertions for `isFollowed`
+        assert new_feed.gaming.isFollowed
+        assert new_feed.technology.isFollowed
+        assert not new_feed.travel.isFollowed
+        assert not new_feed.food.isFollowed
 
     def test_boost_followed_sections_no_followed_sections_found_block_section(self):
         """Test boosting sections only boosts followed sections. If no followed sections found in request,

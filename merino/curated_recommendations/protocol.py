@@ -5,6 +5,7 @@ from collections import namedtuple
 from enum import unique, Enum
 from typing import Annotated, cast
 import logging
+from datetime import datetime
 
 from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo
 
@@ -84,6 +85,7 @@ class SectionConfiguration(BaseModel):
     sectionId: str
     isFollowed: bool
     isBlocked: bool
+    followedAt: datetime | None = None
 
 
 class CuratedRecommendation(CorpusItem):
@@ -234,6 +236,7 @@ class Section(BaseModel):
     layout: Layout
     isFollowed: bool = False
     isBlocked: bool = False
+    followedAt: datetime | None = None
     isInitiallyVisible: bool = True
 
 

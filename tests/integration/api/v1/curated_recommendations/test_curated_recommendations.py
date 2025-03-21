@@ -9,6 +9,7 @@ import aiodogstatsd
 import freezegun
 import numpy as np
 import pytest
+from freezegun import freeze_time
 from httpx import AsyncClient, Response, HTTPStatusError
 from pydantic import HttpUrl
 from pytest_mock import MockerFixture
@@ -1460,12 +1461,13 @@ class TestSections:
                     assert section["layout"]["name"] != "7-double-row-3-ad"
 
     @pytest.mark.asyncio
+    @freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
     async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
         self, caplog
     ):
         """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for en-US locale. Sections requested to be boosted (followed)
-        should be boosted and isFollowed attribute set accordingly.
+        when requesting the 'sections' feed for en-US locale. Recently followed
+        sections are boosted higher and response fields are set correctly.
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Mock the endpoint to request the sections feed
@@ -1475,8 +1477,18 @@ class TestSections:
                     "locale": "en-US",
                     "feeds": ["sections"],
                     "sections": [
-                        {"sectionId": "sports", "isFollowed": True, "isBlocked": False},
-                        {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
+                        {
+                            "sectionId": "sports",
+                            "isFollowed": True,
+                            "isBlocked": False,
+                            "followedAt": "2025-03-17T12" ":00:00Z",
+                        },
+                        {
+                            "sectionId": "arts",
+                            "isFollowed": True,
+                            "isBlocked": False,
+                            "followedAt": "2025-03-10T12:00" ":00Z",
+                        },
                         {"sectionId": "education", "isFollowed": False, "isBlocked": True},
                     ],
                 },
@@ -1486,18 +1498,26 @@ class TestSections:
             # Check if the response is valid
             assert response.status_code == 200
 
-            # assert isFollowed & isBlocked have been correctly set
+            # assert isFollowed & isBlocked & followedAt have been correctly set
             if data["feeds"]["arts"] is not None:
                 assert data["feeds"]["arts"]["isFollowed"]
                 # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2]
+                assert data["feeds"]["arts"]["followedAt"]
             if data["feeds"]["education"] is not None:
                 assert not data["feeds"]["education"]["isFollowed"]
+                assert not data["feeds"]["education"]["followedAt"]
                 assert data["feeds"]["education"]["isBlocked"]
             if data["feeds"]["sports"] is not None:
                 assert data["feeds"]["sports"]["isFollowed"]
                 # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2]
+                assert data["feeds"]["sports"]["followedAt"]
+
+            # in the case both sections are present, sports is recently followed & needs to have higher rank
+            if data["feeds"]["arts"] is not None and data["feeds"]["sports"] is not None:
+                assert data["feeds"]["sports"]["receivedFeedRank"] == 1
+                assert data["feeds"]["arts"]["receivedFeedRank"] == 2
 
             # Assert no errors were logged
             errors = [r for r in caplog.records if r.levelname == "ERROR"]
