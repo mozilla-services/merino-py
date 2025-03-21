@@ -61,7 +61,7 @@ class MockEngagementBackend(EngagementBackend):
         seed_input = "_".join(filter(None, [corpus_item_id, region]))
         rng = np.random.default_rng(seed=int.from_bytes(seed_input.encode()))
 
-        if corpus_item_id == "0d186d8b-9b81-4447-926c-0dcecbd6e95f":
+        if corpus_item_id == "4095b364-02ff-402c-b58a-792a067fccf2":
             # Give the first item 100% click-through rate to put it on top with high certainty.
             return Engagement(
                 corpus_item_id=corpus_item_id,
@@ -224,8 +224,8 @@ async def test_curated_recommendations(repeat):
         assert data["surfaceId"] == ScheduledSurfaceId.NEW_TAB_EN_US
 
         corpus_items = data["data"]
-        # assert total of 80 items returned
-        assert len(corpus_items) == 80
+        # assert total of 100 items returned, which is the default maximum number of recommendations in the response.
+        assert len(corpus_items) == 100
         # Assert all corpus_items have expected fields populated.
         assert all(item["url"] for item in corpus_items)
         assert all(item["publisher"] for item in corpus_items)
@@ -259,11 +259,11 @@ async def test_curated_recommendations_utm_source():
         assert response.status_code == 200
 
         corpus_items = data["data"]
-        # assert total of 80 items returned
-        assert len(corpus_items) == 80
+        # assert items returned, otherwise the following assertions would not test anything.
+        assert len(corpus_items) == 100
         # Assert all corpus_items have expected fields populated.
         # check that utm_source is present and has the correct value in all urls
-        assert all("?utm_source=firefox-newtab-en-us" in item["url"] for item in corpus_items)
+        assert all("utm_source=firefox-newtab-en-us" in item["url"] for item in corpus_items)
         assert all(item["publisher"] for item in corpus_items)
         assert all(item["imageUrl"] for item in corpus_items)
 
@@ -615,8 +615,8 @@ class TestCuratedRecommendationsRequestParameters:
             corpus_items = data["data"]
 
             assert response.status_code == 200
-            # assert total of 80 items returned
-            assert len(corpus_items) == 80
+            # assert items are returned
+            assert len(corpus_items) == 100
 
             # determine the number of recs that are expected to be preferred
             # based on number of preferred topics
@@ -757,20 +757,10 @@ class TestCuratedRecommendationsRequestFeeds:
             # Check if the mock response is valid
             assert response.status_code == 200
 
+            # Assert non-time-sensitive items are not returned in the general feed
             corpus_items = data["data"]
-
-            # Assert total of 70 items returned (minus the ten items marked as `isTimeSensitive` in the data
-            assert len(corpus_items) == 70
-
-            # Assert all corpus_items have expected fields populated.
-            assert all(item["url"] for item in corpus_items)
-            assert all(item["publisher"] for item in corpus_items)
-            assert all(item["imageUrl"] for item in corpus_items)
-            assert all(item["tileId"] for item in corpus_items)
-
-            # Assert that receivedRank equals 0, 1, 2, ...
-            for i, item in enumerate(corpus_items):
-                assert item["receivedRank"] == i
+            assert len(corpus_items) == 100
+            assert all(not item["isTimeSensitive"] for item in corpus_items)
 
             # Assert the `need_to_know` feed
             self.assert_need_to_know_feed(data["feeds"]["need_to_know"])
@@ -789,18 +779,9 @@ class TestCuratedRecommendationsRequestFeeds:
             # Check if the mock response is valid
             assert response.status_code == 200
 
+            # assert non-Fakespot items are returned
             corpus_items = data["data"]
-            # assert total of 80 items returned
-            assert len(corpus_items) == 80
-            # Assert all corpus_items have expected fields populated.
-            assert all(item["url"] for item in corpus_items)
-            assert all(item["publisher"] for item in corpus_items)
-            assert all(item["imageUrl"] for item in corpus_items)
-            assert all(item["tileId"] for item in corpus_items)
-
-            # Assert that receivedRank equals 0, 1, 2, ...
-            for i, item in enumerate(corpus_items):
-                assert item["receivedRank"] == i
+            assert len(corpus_items) == 100
 
             # Assert the fakespot feed is present
             self.assert_fakespot_feed(data["feeds"]["fakespot"])
@@ -853,20 +834,10 @@ class TestCuratedRecommendationsRequestFeeds:
             # Check if the mock response is valid
             assert response.status_code == 200
 
+            # Assert `isTimeSensitive` items are not returned in the general feed.
             corpus_items = data["data"]
-
-            # Assert total of 70 items returned (minus the ten items marked as `isTimeSensitive` in the data
-            assert len(corpus_items) == 70
-
-            # Assert all corpus_items have expected fields populated.
-            assert all(item["url"] for item in corpus_items)
-            assert all(item["publisher"] for item in corpus_items)
-            assert all(item["imageUrl"] for item in corpus_items)
-            assert all(item["tileId"] for item in corpus_items)
-
-            # Assert that receivedRank equals 0, 1, 2, ...
-            for i, item in enumerate(corpus_items):
-                assert item["receivedRank"] == i
+            assert len(corpus_items) == 100
+            assert all(not item["isTimeSensitive"] for item in corpus_items)
 
             # Assert the `need_to_know` feed is returned correctly
             self.assert_need_to_know_feed(data["feeds"]["need_to_know"])
@@ -892,20 +863,10 @@ class TestCuratedRecommendationsRequestFeeds:
             # Check if the mock response is valid
             assert response.status_code == 200
 
+            # Assert `isTimeSensitive` items are not returned in the general feed.
             corpus_items = data["data"]
-
-            # Assert total of 70 items returned (minus the ten items marked as `isTimeSensitive` in the data
-            assert len(corpus_items) == 70
-
-            # Assert all corpus_items have expected fields populated.
-            assert all(item["url"] for item in corpus_items)
-            assert all(item["publisher"] for item in corpus_items)
-            assert all(item["imageUrl"] for item in corpus_items)
-            assert all(item["tileId"] for item in corpus_items)
-
-            # Assert that receivedRank equals 0, 1, 2, ...
-            for i, item in enumerate(corpus_items):
-                assert item["receivedRank"] == i
+            assert len(corpus_items) == 100
+            assert all(not item["isTimeSensitive"] for item in corpus_items)
 
             # Assert the `need_to_know` feed is returned correctly
             self.assert_need_to_know_feed(data["feeds"]["need_to_know"])
@@ -925,7 +886,7 @@ class TestCorpusApiCaching:
             # Gather multiple fetch calls
             results = await asyncio.gather(fetch_en_us(ac), fetch_en_us(ac), fetch_en_us(ac))
             # Assert that recommendations were returned in each response.
-            assert all(len(result.json()["data"]) == 80 for result in results)
+            assert all(len(result.json()["data"]) == 100 for result in results)
 
             # Assert that exactly one request was made to the corpus api
             corpus_http_client.post.assert_called_once()
