@@ -423,7 +423,9 @@ class CuratedRecommendationsProvider:
 
     @staticmethod
     def set_double_row_layout(feeds: CuratedRecommendationsFeed):
-        """Set the layout of the second section to the double row layout with 3 ads."""
+        """Apply the double row layout with 3 ads on the second section in the feed,
+        only if the second section exists and has enough recommendations.
+        """
         second_section = next(
             (s for s, _ in feeds.get_sections() if s.receivedFeedRank == 1), None
         )
