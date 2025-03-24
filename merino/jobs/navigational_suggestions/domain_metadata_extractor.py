@@ -1,5 +1,7 @@
 """Extract domain metadata from domain data"""
 
+import asyncio
+import itertools
 import logging
 from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
@@ -7,13 +9,13 @@ from urllib.parse import urljoin, urlparse
 import requests
 from pydantic import BaseModel
 from robobrowser import RoboBrowser
+from typing import cast
 
 from merino.utils.gcs.models import Image
 from merino.jobs.navigational_suggestions.utils import (
     REQUEST_HEADERS,
     TIMEOUT,
-    FaviconDownloader,
-    requests_get,
+    AsyncFaviconDownloader,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,11 +42,13 @@ class Scraper:
     MANIFEST_SELECTOR: str = 'link[rel="manifest"]'
 
     browser: RoboBrowser
+    request_client: AsyncFaviconDownloader
 
     def __init__(self) -> None:
         session: requests.Session = requests.Session()
         session.headers.update(REQUEST_HEADERS)
         self.browser = RoboBrowser(session=session, parser="html.parser", allow_redirects=True)
+        self.request_client = AsyncFaviconDownloader()
 
     def open(self, url: str) -> Optional[str]:
         """Open the given url for scraping.
@@ -78,8 +82,8 @@ class Scraper:
             ],
         )
 
-    def scrape_favicons_from_manifest(self, manifest_url: str) -> list[dict[str, Any]]:
-        """Scrape favicons from manifest of an already opened URL.
+    async def scrape_favicons_from_manifest(self, manifest_url: str) -> list[dict[str, Any]]:
+        """Scrape favicons from manifest of an already opened URL asynchronously.
 
         Args:
             manifest_url: URL of the manifest file
@@ -88,15 +92,19 @@ class Scraper:
         """
         result = []
         try:
-            response: Optional[requests.Response] = requests_get(manifest_url)
+            response = await self.request_client.requests_get(manifest_url)
             if response:
-                result = response.json().get("icons")
+                try:
+                    json_data = await response.json()
+                    result = json_data.get("icons", [])
+                except AttributeError as e:
+                    logger.info(f"Exception: {e} while parsing icons from manifest {manifest_url}")
         except Exception as e:
             logger.info(f"Exception: {e} while parsing icons from manifest {manifest_url}")
         return result
 
-    def get_default_favicon(self, url: str) -> Optional[str]:
-        """Return the default favicon for the given url.
+    async def get_default_favicon(self, url: str) -> Optional[str]:
+        """Return the default favicon for the given url asynchronously.
 
         Args:
             url: URL to scrape for favicon at default location
@@ -105,8 +113,11 @@ class Scraper:
         """
         try:
             default_favicon_url: str = urljoin(url, "favicon.ico")
-            response: Optional[requests.Response] = requests_get(default_favicon_url)
-            return response.url if response else None
+            response = await self.request_client.requests_get(default_favicon_url)
+            return str(response.url) if response else None
+        except AttributeError as e:
+            logger.info(f"Exception: {e} while getting default favicon {default_favicon_url}")
+            return None
         except Exception as e:
             logger.info(f"Exception: {e} while getting default favicon {default_favicon_url}")
             return None
@@ -162,13 +173,13 @@ class DomainMetadataExtractor:
     # List of blocked (second level) domains
     blocked_domains: set[str]
     scraper: Scraper
-    favicon_downloader: FaviconDownloader
+    favicon_downloader: AsyncFaviconDownloader
 
     def __init__(
         self,
         blocked_domains: set[str],
         scraper: Scraper = Scraper(),
-        favicon_downloader: FaviconDownloader = FaviconDownloader(),
+        favicon_downloader: AsyncFaviconDownloader = AsyncFaviconDownloader(),
     ) -> None:
         self.scraper = scraper
         self.favicon_downloader = favicon_downloader
@@ -190,8 +201,8 @@ class DomainMetadataExtractor:
         width, height = image.open().size
         return int(min(width, height))
 
-    def _extract_favicons(self, scraped_url: str) -> list[dict[str, Any]]:
-        """Extract all favicons for an already opened url"""
+    async def _extract_favicons(self, scraped_url: str) -> list[dict[str, Any]]:
+        """Extract all favicons for an already opened url asynchronously"""
         logger.info(f"Extracting all favicons for {scraped_url}")
         favicons: list[dict[str, Any]] = []
         try:
@@ -215,18 +226,53 @@ class DomainMetadataExtractor:
                     favicon["href"] = favicon_url
                 favicons.append(favicon)
 
+            # Process manifests concurrently
+            manifest_tasks = []
+            manifest_urls = []
+
             for manifest in favicon_data.manifests:
                 manifest_url: str = str(manifest.get("href"))
                 manifest_absolute_url: str = urljoin(scraped_url, manifest_url)
-                scraped_favicons: list[dict[str, Any]] = (
+                manifest_tasks.append(
                     self.scraper.scrape_favicons_from_manifest(manifest_absolute_url)
                 )
-                for scraped_favicon in scraped_favicons:
-                    favicon_url = urljoin(manifest_absolute_url, scraped_favicon.get("src"))
-                    favicons.append({"href": favicon_url})
+                manifest_urls.append(manifest_absolute_url)
+
+            if manifest_tasks:
+                # Use smaller chunk size for manifest tasks to limit resource usage
+                chunk_size = 10
+                for i in range(0, len(manifest_tasks), chunk_size):
+                    chunk = manifest_tasks[i : i + chunk_size]
+                    chunk_urls = manifest_urls[i : i + chunk_size]
+
+                    scraped_favicons_list = await asyncio.gather(*chunk, return_exceptions=True)
+
+                    # Filter out exceptions from results with explicit cast
+                    filtered_scraped_favicons_list: list[list[dict[str, Any]]] = []
+                    for result in scraped_favicons_list:
+                        if isinstance(result, Exception):
+                            # Log the specific exception that occurred during manifest processing
+                            logger.warning(f"Exception during manifest processing: {result}")
+                            filtered_scraped_favicons_list.append([])
+                        else:
+                            filtered_scraped_favicons_list.append(
+                                cast(list[dict[str, Any]], result)
+                            )
+
+                    for manifest_absolute_url, scraped_favicons_result in zip(
+                        chunk_urls, filtered_scraped_favicons_list
+                    ):
+                        for scraped_favicon in scraped_favicons_result:
+                            # Check if the favicon URL already contains a scheme
+                            favicon_src = scraped_favicon.get("src", "")
+                            if favicon_src.startswith(("http://", "https://")):
+                                favicon_url = favicon_src
+                            else:
+                                favicon_url = urljoin(manifest_absolute_url, favicon_src)
+                            favicons.append({"href": favicon_url})
 
             # Include the default "favicon.ico" if it exists in domain root
-            default_favicon_url = self.scraper.get_default_favicon(scraped_url)
+            default_favicon_url = await self.scraper.get_default_favicon(scraped_url)
             if default_favicon_url is not None:
                 favicons.append({"href": default_favicon_url})
 
@@ -236,56 +282,61 @@ class DomainMetadataExtractor:
 
         return favicons
 
-    def _get_best_favicon(self, favicons: list[dict[str, Any]], min_width: int) -> str:
-        """Return the favicon with the highest resolution that satisfies the minimum width
-        criteria from a list of favicons.
-        """
+    async def _get_best_favicon(self, favicons: list[dict[str, Any]], min_width: int) -> str:
+        """Asynchronous method to find the best favicon"""
+        urls = [self._fix_url(favicon["href"]) for favicon in favicons]
+        masked_svg_indices = [i for i, favicon in enumerate(favicons) if "mask" in favicon]
+
         best_favicon_url = ""
         best_favicon_width = 0
-        for favicon in favicons:
-            url = self._fix_url(favicon["href"])
-            width = None
-            favicon_image: Image | None = self.favicon_downloader.download_favicon(url)
-            if favicon_image is None:
+
+        # Process favicons in chunks to limit concurrent connections
+        chunk_size = 20
+        all_favicon_images = []
+
+        for chunk_urls in itertools.batched(urls, chunk_size):
+            chunk_images = await self.favicon_downloader.download_multiple_favicons(
+                list(chunk_urls)
+            )
+            all_favicon_images.extend(chunk_images)
+
+        favicon_images = all_favicon_images
+
+        # First pass: Look for SVG favicons (they are priority)
+        for i, (favicon, image) in enumerate(zip(favicons, favicon_images)):
+            if image is None or "image/" not in image.content_type:
                 continue
 
-            if "image/" not in favicon_image.content_type:
-                # If favicon mime type is not "image" then skip it
+            # If favicon is an SVG and not masked, return it immediately
+            if image.content_type == "image/svg+xml" and i not in masked_svg_indices:
+                return urls[i]
+
+        # Second pass: Look for the highest resolution bitmap favicon
+        for i, (favicon, image) in enumerate(zip(favicons, favicon_images)):
+            if image is None or "image/" not in image.content_type:
                 continue
 
-            # If favicon is an SVG, then return this as the best favicon because SVG favicons
-            # are scalable, can be printed with high quality at any resolution and SVG
-            # graphics do NOT lose any quality if they are zoomed or resized.
-            if favicon_image.content_type == "image/svg+xml":
-                # Firefox doesn't support masked favicons yet. Return if not masked.
-                if "mask" not in favicon:
-                    return url
-                else:
-                    logger.info(f"Masked SVG favicon {favicon} found; skipping it")
-                    continue
             try:
-                width = self._get_favicon_smallest_dimension(favicon_image)
+                width = self._get_favicon_smallest_dimension(image)
+                if width > best_favicon_width:
+                    best_favicon_url = urls[i]
+                    best_favicon_width = width
             except Exception as e:
-                logger.info(f"Exception {e} for favicon {favicon}")
+                logger.warning(f"Exception {e} for favicon {favicon}")
 
-            if width and width > best_favicon_width:
-                best_favicon_url = url
-                best_favicon_width = width
-
-        logger.debug(f"best favicon url:{best_favicon_url}, width:{best_favicon_width}")
-
+        logger.debug(f"Best favicon url: {best_favicon_url}, width: {best_favicon_width}")
         return best_favicon_url if best_favicon_width >= min_width else ""
 
-    def _get_favicon(self, scraped_url: str, min_width: int) -> str:
+    async def _get_favicon(self, scraped_url: str, min_width: int) -> str:
         """Extract all favicons for an already opened URL and return the one that satisfies the
         minimum width criteria. If multiple favicons satisfy the criteria then return the one
         with the highest resolution.
         """
-        favicons: list[dict[str, Any]] = self._extract_favicons(scraped_url)
+        favicons: list[dict[str, Any]] = await self._extract_favicons(scraped_url)
         logger.info(
             f"{len(favicons)} favicons extracted for {scraped_url}. Favicons are: {favicons}"
         )
-        return self._get_best_favicon(favicons, min_width)
+        return await self._get_best_favicon(favicons, min_width)
 
     def _extract_title(self) -> Optional[str]:
         """Extract title for a url"""
@@ -316,9 +367,44 @@ class DomainMetadataExtractor:
     def get_domain_metadata(
         self, domains_data: list[dict[str, Any]], favicon_min_width: int
     ) -> list[dict[str, Optional[str]]]:
-        """Extract domain metadata for each domain"""
-        result: list[dict[str, Optional[str]]] = []
-        for domain_data in domains_data:
+        """Extract domain metadata for each domain, processing all concurrently"""
+        return asyncio.run(self._process_domains_async(domains_data, favicon_min_width))
+
+    async def _process_domains_async(
+        self, domains_data: list[dict[str, Any]], favicon_min_width: int
+    ) -> list[dict[str, Optional[str]]]:
+        """Process domains in chunks to limit resource consumption."""
+        chunk_size = 100
+        filtered_results: list[dict[str, Optional[str]]] = []
+
+        for i in range(0, len(domains_data), chunk_size):
+            chunk = domains_data[i : i + chunk_size]
+            tasks = [
+                self._process_single_domain(domain_data, favicon_min_width)
+                for domain_data in chunk
+            ]
+            logger.info(
+                f"Processing chunk of {len(chunk)} domains concurrently "
+                f"({i + 1}-{min(i + chunk_size, len(domains_data))} of {len(domains_data)})"
+            )
+            chunk_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for result in chunk_results:
+                if isinstance(result, Exception):
+                    logger.error(f"Error processing domain: {result}")
+                else:
+                    if not isinstance(result, dict):
+                        logger.error(f"Unexpected result type: {result}")
+                        continue
+                    filtered_results.append(result)
+
+        return filtered_results
+
+    async def _process_single_domain(
+        self, domain_data: dict[str, Any], favicon_min_width: int
+    ) -> dict[str, Optional[str]]:
+        """Process a single domain asynchronously and always return a valid dict."""
+        try:
             scraped_base_url: Optional[str] = None
             favicon: str = ""
             title: str = ""
@@ -326,6 +412,7 @@ class DomainMetadataExtractor:
 
             domain: str = domain_data["domain"]
             suffix: str = domain_data["suffix"]
+
             if not self._is_domain_blocked(domain, suffix):
                 url: str = f"https://{domain}"
                 full_url: Optional[str] = self.scraper.open(url)
@@ -337,16 +424,17 @@ class DomainMetadataExtractor:
 
                 if full_url and domain in full_url:
                     scraped_base_url = self._get_base_url(full_url)
-                    favicon = self._get_favicon(scraped_base_url, favicon_min_width)
+                    favicon = await self._get_favicon(scraped_base_url, favicon_min_width)
                     second_level_domain = self._get_second_level_domain(domain, suffix)
                     title = self._get_title(second_level_domain)
 
-            result.append(
-                {
-                    "url": scraped_base_url,
-                    "title": title,
-                    "icon": favicon,
-                    "domain": second_level_domain,
-                }
-            )
-        return result
+            return {
+                "url": scraped_base_url,
+                "title": title,
+                "icon": favicon,
+                "domain": second_level_domain,
+            }
+        except Exception as e:
+            logger.error(f"Error processing domain {domain_data.get('domain', 'unknown')}: {e}")
+            # Return a default dict in case of error.
+            return {"url": None, "title": None, "icon": None, "domain": None}

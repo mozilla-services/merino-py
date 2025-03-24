@@ -10,8 +10,8 @@ from pydantic import BaseModel
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
     Scraper,
-    FaviconDownloader,
 )
+from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
 
 cli = typer.Typer(no_args_is_help=True)
 console = Console()
@@ -44,7 +44,7 @@ def test_domain(domain: str, min_width: int) -> DomainTestResult:
         }
 
         scraper = Scraper()
-        favicon_downloader = FaviconDownloader()
+        favicon_downloader = AsyncFaviconDownloader()
         extractor = DomainMetadataExtractor(
             blocked_domains=set(), scraper=scraper, favicon_downloader=favicon_downloader
         )

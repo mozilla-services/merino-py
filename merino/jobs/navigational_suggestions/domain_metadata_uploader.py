@@ -1,15 +1,17 @@
 """Upload the domain metadata to GCS"""
 
+import asyncio
 import hashlib
 import json
 import logging
 from datetime import datetime
+from typing import List
 
 from google.cloud.storage import Blob
 
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
-from merino.jobs.navigational_suggestions.utils import FaviconDownloader
+from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
 
 logger = logging.getLogger(__name__)
 
@@ -20,17 +22,17 @@ class DomainMetadataUploader:
     DESTINATION_FAVICONS_ROOT: str = "favicons"
     DESTINATION_TOP_PICK_FILE_NAME: str = "top_picks_latest.json"
 
-    favicon_downloader: FaviconDownloader
+    async_favicon_downloader: AsyncFaviconDownloader
 
     def __init__(
         self,
         force_upload: bool,
         uploader: GcsUploader,
-        favicon_downloader: FaviconDownloader = FaviconDownloader(),
+        async_favicon_downloader: AsyncFaviconDownloader,
     ) -> None:
         self.uploader = uploader
         self.force_upload = force_upload
-        self.favicon_downloader = favicon_downloader
+        self.async_favicon_downloader = async_favicon_downloader
 
     def upload_top_picks(self, top_picks: str) -> Blob:
         """Upload the top pick contents to GCS.
@@ -70,28 +72,48 @@ class DomainMetadataUploader:
         """Upload the domain favicons to gcs using their source url and
         return the public urls of the uploaded ones.
         """
-        dst_favicons: list = []
-        for src_favicon in src_favicons:
-            # Skip URLs that are already from our CDN
-            if src_favicon.startswith(f"https://{self.uploader.cdn_hostname}"):
-                dst_favicons.append(src_favicon)
-                continue
+        return asyncio.run(self.upload_favicons_async(src_favicons))
 
-            dst_favicon_public_url: str = ""
-            favicon_image: Image | None = self.favicon_downloader.download_favicon(src_favicon)
+    async def upload_favicons_async(self, src_favicons: List[str]) -> List[str]:
+        """Upload the domain favicons to GCS asynchronously"""
+        # Filter out URLs that are already from our CDN
+        cdn_urls = []
+        urls_to_download = []
+        indices = []
+
+        for i, url in enumerate(src_favicons):
+            if url and url.startswith(f"https://{self.uploader.cdn_hostname}"):
+                cdn_urls.append((i, url))
+            else:
+                urls_to_download.append(url)
+                indices.append(i)
+
+        # Download favicons in parallel
+        favicon_images = await self.async_favicon_downloader.download_multiple_favicons(
+            urls_to_download
+        )
+
+        # Process results and upload to GCS
+        results = [""] * len(src_favicons)  # Initialize with empty strings
+
+        # Add CDN URLs directly
+        for idx, url in cdn_urls:
+            results[idx] = url
+
+        # Process downloaded images
+        for local_idx, (orig_idx, favicon_image) in enumerate(zip(indices, favicon_images)):
             if favicon_image:
                 try:
                     dst_favicon_name = self.destination_favicon_name(favicon_image)
                     dst_favicon_public_url = self.uploader.upload_image(
                         favicon_image, dst_favicon_name, forced_upload=self.force_upload
                     )
-                    logger.info(f"favicon public url: {dst_favicon_public_url}")
+                    results[orig_idx] = dst_favicon_public_url
+                    logger.info(f"Favicon {orig_idx} uploaded: {dst_favicon_public_url}")
                 except Exception as e:
-                    logger.info(f"Exception {e} occurred while uploading {src_favicon}")
+                    logger.info(f"Exception {e} occurred while uploading favicon {orig_idx}")
 
-            dst_favicons.append(dst_favicon_public_url)
-
-        return dst_favicons
+        return results
 
     def destination_favicon_name(self, favicon_image: Image) -> str:
         """Return the name of the favicon to be used for uploading to GCS"""
@@ -107,6 +129,10 @@ class DomainMetadataUploader:
                 extension = ".svg"
             case "image/x-icon":
                 extension = ".ico"
+            case "image/webp":
+                extension = ".webp"
+            case "image/gif":
+                extension = ".gif"
             case _:
                 logger.info(f"Couldn't find a match for {favicon_image.content_type}")
                 extension = ".oct"
