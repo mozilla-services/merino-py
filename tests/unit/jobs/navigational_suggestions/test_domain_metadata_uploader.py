@@ -18,7 +18,7 @@ from merino.utils.gcs.models import Image
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
-from merino.jobs.navigational_suggestions.utils import FaviconDownloader
+from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
 from tests.types import FilterCaplogFixture
 
 
@@ -230,11 +230,11 @@ def mock_remote_client(mocker: MockerFixture, remote_bucket):
 
 @pytest.fixture
 def mock_favicon_downloader(mocker) -> Any:
-    """Return a mock FaviconDownloader instance"""
-    favicon_downloader_mock: Any = mocker.Mock(spec=FaviconDownloader)
-    favicon_downloader_mock.download_favicon.return_value = Image(
-        content=bytes(255), content_type="image/png"
-    )
+    """Return a mock AsyncFaviconDownloader instance"""
+    favicon_downloader_mock: Any = mocker.AsyncMock(spec=AsyncFaviconDownloader)
+    favicon_downloader_mock.download_multiple_favicons.return_value = [
+        Image(content=bytes(255), content_type="image/png")
+    ]
     return favicon_downloader_mock
 
 
@@ -263,7 +263,7 @@ def test_upload_top_picks(
     domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
         force_upload=False,
-        favicon_downloader=mock_favicon_downloader,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     result = domain_metadata_uploader.upload_top_picks(DUMMY_TOP_PICKS)
@@ -285,7 +285,7 @@ def test_upload_favicons_upload_if_not_present(mock_favicon_downloader, mock_gcs
     domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
         force_upload=FORCE_UPLOAD,
-        favicon_downloader=mock_favicon_downloader,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
@@ -310,7 +310,7 @@ def test_upload_favicons_upload_if_force_upload_set(
     domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
         force_upload=FORCE_UPLOAD,
-        favicon_downloader=mock_favicon_downloader,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
@@ -335,7 +335,7 @@ def test_upload_favicons_return_favicon_with_cdn_hostname_when_provided(
     domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
         force_upload=False,
-        favicon_downloader=mock_favicon_downloader,
+        async_favicon_downloader=mock_favicon_downloader,
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
 
@@ -350,12 +350,12 @@ def test_upload_favicons_return_empty_url_for_failed_favicon_download(
     """Test if a failure in downloading favicon from the scraped url returns an empty uploaded
     favicon url
     """
-    mock_favicon_downloader.download_favicon.return_value = None
+    mock_favicon_downloader.download_multiple_favicons.return_value = [None]
 
     domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
         force_upload=False,
-        favicon_downloader=mock_favicon_downloader,
+        async_favicon_downloader=mock_favicon_downloader,
     )
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
 
@@ -367,14 +367,14 @@ def test_upload_favicons_return_same_url_for_urls_from_our_cdn(
     mock_gcs_client, mock_favicon_downloader, mock_gcs_uploader, mocker
 ) -> None:
     """Test that upload is skipped when the src favicon URL is from our CDN."""
-    mock_favicon_downloader.download_favicon.return_value = None
+    mock_favicon_downloader.download_multiple_favicons.return_value = [None]
 
     mock_upload_image = mocker.patch.object(mock_gcs_uploader, "upload_image")
 
     domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
         force_upload=False,
-        favicon_downloader=mock_favicon_downloader,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     src_favicon_url = f"https://{mock_gcs_uploader.cdn_hostname}/favicon1.png"
@@ -399,7 +399,7 @@ def test_get_latest_file_for_diff(
     default_domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
         force_upload=False,
-        favicon_downloader=mock_favicon_downloader,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     result = default_domain_metadata_uploader.get_latest_file_for_diff()
@@ -424,7 +424,7 @@ def test_get_latest_file_for_diff_when_no_file_is_returned_by_the_uploader(
     default_domain_metadata_uploader = DomainMetadataUploader(
         uploader=mock_gcs_uploader,
         force_upload=False,
-        favicon_downloader=mock_favicon_downloader,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     result = default_domain_metadata_uploader.get_latest_file_for_diff()
