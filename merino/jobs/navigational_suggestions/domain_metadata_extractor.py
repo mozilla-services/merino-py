@@ -95,12 +95,18 @@ class Scraper:
             response = await self.request_client.requests_get(manifest_url)
             if response:
                 try:
-                    json_data = await response.json()
+                    json_data = response.json()
                     result = json_data.get("icons", [])
                 except AttributeError as e:
-                    logger.info(f"Exception: {e} while parsing icons from manifest {manifest_url}")
+                    logger.warning(
+                        f"Exception: {e} while parsing icons from manifest {manifest_url}"
+                    )
+                except ValueError as e:
+                    logger.warning(
+                        f"Exception: {e} while parsing JSON from manifest {manifest_url}"
+                    )
         except Exception as e:
-            logger.info(f"Exception: {e} while parsing icons from manifest {manifest_url}")
+            logger.warning(f"Exception: {e} while parsing icons from manifest {manifest_url}")
         return result
 
     async def get_default_favicon(self, url: str) -> Optional[str]:
@@ -192,8 +198,17 @@ class DomainMetadataExtractor:
 
     def _fix_url(self, url: str) -> str:
         """Return a url with https scheme if the scheme is originally missing from it"""
-        if not url.startswith("http"):
+        # Handle protocol-relative URLs (starting with //)
+        if url.startswith("//"):
             return f"https:{url}"
+        # Handle URLs without protocol but with domain name structure
+        elif not url.startswith(("http://", "https://")) and not url.startswith("/"):
+            return f"https://{url}"
+        # Handle absolute paths without domain by keeping the format consistent
+        # with how the calling code expects it
+        elif not url.startswith(("http://", "https://")) and url.startswith("/"):
+            return f"https:{url}"
+        # Return unchanged URLs that already have a protocol
         return url
 
     def _get_favicon_smallest_dimension(self, image: Image) -> int:
