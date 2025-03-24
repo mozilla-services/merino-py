@@ -4,7 +4,6 @@ from random import shuffle
 
 import pytest
 
-from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.interest_picker import (
     create_interest_picker,
     _set_section_initial_visibility,
@@ -19,41 +18,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsFeed,
     SectionWithID,
 )
-
-
-def generate_feed(section_count: int, followed_count: int = 0) -> CuratedRecommendationsFeed:
-    """Create a CuratedRecommendationsFeed populated with sections.
-
-    Args:
-        section_count (int): Number of sections to create.
-        followed_count (int, optional): Number of sections to follow. Defaults to 0.
-
-    Returns:
-        CuratedRecommendationsFeed: A feed with generated sections.
-    """
-    feed = CuratedRecommendationsFeed()
-
-    # Set top_stories_section first.
-    feed.top_stories_section = Section(
-        receivedFeedRank=0,
-        recommendations=[],  # Dummy recommendations.
-        title="Top Stories",
-        layout=layout_4_medium,
-    )
-
-    # Use topics to generate remaining sections.
-    topics = list(Topic)[: section_count - 1]
-    for i, topic in enumerate(topics):
-        section = Section(
-            receivedFeedRank=i + 1,  # Ranks start after top_stories_section.
-            recommendations=[],
-            title=f"{topic.value.title()} Section",
-            layout=layout_4_medium,
-            isFollowed=(i < followed_count),
-        )
-        feed.set_topic_section(topic, section)
-
-    return feed
+from tests.unit.curated_recommendations.fixtures import generate_sections_feed
 
 
 def test_no_sections():
@@ -68,7 +33,7 @@ def test_not_enough_sections():
     """Test that no interest picker is created if insufficient sections are eligible."""
     # Create feed such that hidden sections = total - MIN_INITIALLY_VISIBLE_SECTION_COUNT
     total = MIN_INTEREST_PICKER_COUNT + MIN_INITIALLY_VISIBLE_SECTION_COUNT - 1
-    feed = generate_feed(total)
+    feed = generate_sections_feed(total)
     sections = feed.get_sections()
     picker = create_interest_picker(sections)
     # Not enough hidden sections -> no picker.
@@ -82,7 +47,7 @@ def test_not_enough_sections():
 def test_interest_picker_is_created(followed_count: int):
     """Test that an interest picker is created as expected, if enough sections are available."""
     total = 15
-    feed = generate_feed(total, followed_count=followed_count)
+    feed = generate_sections_feed(total, followed_count=followed_count)
     sections = feed.get_sections()
     original_order = [s.ID for s in sections]
 

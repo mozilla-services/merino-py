@@ -24,7 +24,7 @@ async def test_fetch(corpus_backend: CorpusApiBackend, fixture_response_data):
     # Populate the cache by calling the fetch method
     results = await corpus_backend.fetch(surface_id)
 
-    assert len(results) == 80
+    assert len(results) == 160
     assert results[0] == CorpusItem(
         url=HttpUrl(
             "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-"
