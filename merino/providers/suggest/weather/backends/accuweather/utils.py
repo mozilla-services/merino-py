@@ -1,22 +1,15 @@
 """Utilities for the AccuWeather backend."""
 
 import logging
-import math
 from enum import StrEnum
 from typing import Any, TypedDict
 
 from httpx import URL, InvalidURL
 from merino.configs import settings
-from merino.providers.suggest.weather.backends.protocol import WeatherContext
 
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
 PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
 VALID_LANGUAGES: frozenset = frozenset(settings.accuweather.default_languages)
-
-# Max distance threshold used for distance calculation
-DISTANCE_THRESHOLD = (
-    70  # 70 km based on logging data, either distances were ~60, or much greater than 60
-)
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +75,7 @@ def process_location_completion_response(response: Any) -> list[dict[str, Any]] 
     ]
 
 
-def process_location_response_with_country_and_region(
+def process_location_response(
     response: Any,
 ) -> ProcessedLocationResponse | None:
     """Process the API response for location keys.
@@ -110,35 +103,6 @@ def process_location_response_with_country_and_region(
             }
         case _:
             return None
-
-
-def process_location_response_with_country(
-    weather_context: WeatherContext | None, response: Any
-) -> ProcessedLocationResponse | None:
-    """Process the API response for a single location key from country code endpoint.
-
-    Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
-    to reflect the change(s) here.
-    """
-    match response:
-        case [
-            {
-                "Key": key,
-                "LocalizedName": localized_name,
-                "AdministrativeArea": {"ID": administrative_area_id},
-            },
-        ]:
-            # `type: ignore` is necessary because mypy gets confused when
-            # matching structures of type `Any` and reports the following
-            # line as unreachable. See
-            # https://github.com/python/mypy/issues/12770
-            return {  # type: ignore
-                "key": key,
-                "localized_name": localized_name,
-                "administrative_area_id": administrative_area_id,
-            }
-        case _:
-            return get_closest_location_by_distance(response, weather_context)  # type: ignore
 
 
 def process_current_condition_response(response: Any) -> dict[str, Any] | None:
@@ -218,75 +182,3 @@ def get_language(requested_languages: list[str]) -> str:
     return next(
         (language for language in requested_languages if language in VALID_LANGUAGES), "en-US"
     )
-
-
-def get_closest_location_by_distance(
-    locations: list[dict[str, Any]], weather_context: WeatherContext
-) -> ProcessedLocationResponse | None:
-    """Get the closest location by distance within the DISTANCE THRESHOLD."""
-    weather_context.distance_calculation = False if locations else None
-    coordinates = weather_context.geolocation.coordinates
-    closest_location = None
-    min_distance = math.inf
-    temp_min_distance = math.inf
-
-    if coordinates:
-        lat1 = coordinates.latitude
-        long1 = coordinates.longitude
-
-        if not lat1 or not long1:
-            return None
-
-        for location in locations:
-            try:
-                lat2 = location["GeoPosition"]["Latitude"]
-                long2 = location["GeoPosition"]["Longitude"]
-
-                d = get_lat_long_distance(lat1, long1, lat2, long2)
-                if d < min_distance and d <= DISTANCE_THRESHOLD:
-                    closest_location = location
-                    min_distance = d
-                if d < temp_min_distance:
-                    temp_min_distance = d
-            except KeyError:
-                continue
-
-    if closest_location:
-        try:
-            weather_context.distance_calculation = True
-            logging.info(
-                f"Successful distance calculated for weather: {weather_context.geolocation.country}, {weather_context.geolocation.city}, dist:{min_distance} "
-            )
-            return {
-                "key": closest_location["Key"],
-                "localized_name": closest_location["LocalizedName"],
-                "administrative_area_id": closest_location["AdministrativeArea"]["ID"],
-            }
-        except KeyError:
-            weather_context.distance_calculation = False
-            return None
-        # temp for debugging
-    if not math.isinf(temp_min_distance):
-        logger.warning(
-            f"Unable to calculate closest city: {weather_context.geolocation.country}, {weather_context.geolocation.city}, dist: {int(temp_min_distance)}"
-        )
-    return None
-
-
-def get_lat_long_distance(lat1: float, long1: float, lat2: float, long2: float) -> float:
-    """Calculate distance between two coordinates via the Haversine formula."""
-    lat1 = math.radians(lat1)
-    long1 = math.radians(long1)
-
-    lat2 = math.radians(lat2)
-    long2 = math.radians(long2)
-
-    d_lat = lat2 - lat1
-    d_long = long2 - long1
-
-    radicand = 1 - math.cos(d_lat) + (math.cos(lat1) * math.cos(lat2) * (1 - math.cos(d_long)))
-    s9rt = math.sqrt(radicand / 2)
-    # radius of the earth
-    r = 6371
-
-    return 2 * r * math.asin(s9rt)
