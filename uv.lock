@@ -1090,7 +1090,7 @@ dependencies = [
     { name = "sentry-sdk", extra = ["fastapi"] },
     { name = "tenacity" },
     { name = "types-python-dateutil" },
-    { name = "ua-parser", extra = ["regex"] },
+    { name = "ua-parser" },
     { name = "wrapt" },
 ]
 
@@ -1150,7 +1150,7 @@ requires-dist = [
     { name = "sentry-sdk", extras = ["fastapi"], specifier = ">=2.13.0,<3" },
     { name = "tenacity", specifier = ">=9.0.0,<10" },
     { name = "types-python-dateutil", specifier = ">=2.8.19.13,<3" },
-    { name = "ua-parser", extras = ["regex"], specifier = ">=1.0,<2.0" },
+    { name = "ua-parser", specifier = ">=1.0,<2.0" },
     { name = "wrapt", specifier = ">=1.14.1,<2" },
 ]
 
@@ -2159,32 +2159,12 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/94/37/be6dfbfa45719aa82c008fb4772cfe5c46db765a2ca4b6f524a1fdfee4d7/ua_parser-1.0.1-py3-none-any.whl", hash = "sha256:b059f2cb0935addea7e551251cbbf42e9a8872f86134163bc1a4f79e0945ffea", size = 31410 },
 ]
 
-[package.optional-dependencies]
-regex = [
-    { name = "ua-parser-rs" },
-]
-
 [[package]]
 name = "ua-parser-builtins"
 version = "0.18.0.post1"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6f/d3/13adff37f15489c784cc7669c35a6c3bf94b87540229eedf52ef2a1d0175/ua_parser_builtins-0.18.0.post1-py3-none-any.whl", hash = "sha256:eb4f93504040c3a990a6b0742a2afd540d87d7f9f05fd66e94c101db1564674d", size = 86077 },
-]
-
-[[package]]
-name = "ua-parser-rs"
-version = "0.1.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a5/8b/6a3322c792b379b6928f881fe04e1353b98bcaec290352ce6ddfeff020e4/ua_parser_rs-0.1.2.tar.gz", hash = "sha256:8da38878f81c4d15b3a4815327e81117aa91c1efc148a74f0cc18dfada98fdbc", size = 762645 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/fd/089dec30b65da91b69f6684659e869799c67d102a9f11285696af35f887e/ua_parser_rs-0.1.2-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:3f7393faff686d80acba6d8952878e1a36c8f9e6db06863c7bd30b73bcb7c5e2", size = 1027451 },
-    { url = "https://files.pythonhosted.org/packages/62/1f/14e2211620c86ad05dcdfc48f12d498625609fba2c7496167b5833286f81/ua_parser_rs-0.1.2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:25504abadef8c741c7730c4505f7983b84a156370ab2dc80170f89cd056b4dcb", size = 968417 },
-    { url = "https://files.pythonhosted.org/packages/93/8c/be59ce5516a39f37ed5bfa044162edbbd9e9031889ece8849bc729feb91c/ua_parser_rs-0.1.2-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6bfd3a78b0cf4cf842c76c1135f3a5a91807cac218a7a5b0bfcb936388d0ee91", size = 7878169 },
-    { url = "https://files.pythonhosted.org/packages/00/74/f1cb5c2c4b2df2eb7b4e7a8e3a8a302e9e9a5b2e5a13082620c2c1b60abe/ua_parser_rs-0.1.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a4e193a2f9dd4c96674abd9ff15dd4483a4e09262937a0e5ee9569eec4646ba4", size = 8274614 },
-    { url = "https://files.pythonhosted.org/packages/61/30/4ce95582bcc5bf7cbaeba5b60e88b32d88b578a27d13c316eaf25befd37a/ua_parser_rs-0.1.2-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:862ecf7eac9ebdf266eac6c684ecef74c60cb0636d4f894f80e6c380aece02de", size = 7509317 },
-    { url = "https://files.pythonhosted.org/packages/73/ee/1085f5b0d075378a329bda04c73ec345235d8e43a512f703a8f84a14d9f5/ua_parser_rs-0.1.2-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:c5e93f491f5ea909755a1ecb57e33ca766799f2bb50ef1dcfa504db1e45f1d0b", size = 7918569 },
-    { url = "https://files.pythonhosted.org/packages/b5/10/1107ba0e6c0089c9ef8b01b55279dbcef6c07923a1e4ebb2b0fdd41a8232/ua_parser_rs-0.1.2-cp39-abi3-win_amd64.whl", hash = "sha256:cd7b789070af0572f3aa7ff13cb2d1900e8cff44f4ec406063a38a0a75af11dc", size = 816964 },
 ]
 
 [[package]]
