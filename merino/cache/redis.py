@@ -49,7 +49,8 @@ class RedisAdapter:
 
     async def close(self) -> None:
         """Close the Redis connection."""
-        await self.redis.close()
+        # "type: ignore" was added to suppress a false alarm.
+        await self.redis.aclose()  # type: ignore
 
     def register_script(self, sid: str, script: str) -> None:
         """Register a Lua script in Redis. Regist multiple scripts using the same `sid`
