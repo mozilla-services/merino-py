@@ -88,6 +88,10 @@ class TopPicksBackend:
         query_max: int = self.query_char_limit
 
         for record in domain_list["domains"]:
+            # Filter to only include domains with source="top-picks"
+            if record.get("source") != "top-picks":
+                continue
+
             index_key: int = len(results)
             domain: str = record["domain"].strip().lower()
 
