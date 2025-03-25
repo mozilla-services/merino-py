@@ -182,13 +182,6 @@ class CuratedRecommendationsProvider:
         )
 
     @staticmethod
-    def is_double_row_layout_experiment(request: CuratedRecommendationsRequest) -> bool:
-        """Check if the double row layout experiment is enabled."""
-        return CuratedRecommendationsProvider.is_enrolled_in_experiment(
-            request, ExperimentName.DOUBLE_ROW_LAYOUT_EXPERIMENT.value, "treatment"
-        )
-
-    @staticmethod
     def is_fakespot_experiment(request, surface_id) -> bool:
         """Check if the 'Fakespot' experiment is enabled."""
         return (
@@ -416,8 +409,7 @@ class CuratedRecommendationsProvider:
             feeds = boost_followed_sections(request.sections, feeds)
 
         # Set the layout of the second section to have 3 ads, to match the number of ads in control.
-        if self.is_double_row_layout_experiment(request):
-            self.set_double_row_layout(feeds)
+        self.set_double_row_layout(feeds)
 
         return feeds
 
