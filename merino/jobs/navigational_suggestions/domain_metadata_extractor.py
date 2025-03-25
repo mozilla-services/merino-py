@@ -254,8 +254,8 @@ class DomainMetadataExtractor:
                 manifest_urls.append(manifest_absolute_url)
 
             if manifest_tasks:
-                # Use smaller chunk size for manifest tasks to limit resource usage
-                chunk_size = 10
+                # Increase chunk size for manifest tasks for better efficiency
+                chunk_size = 15
                 for i in range(0, len(manifest_tasks), chunk_size):
                     chunk = manifest_tasks[i : i + chunk_size]
                     chunk_urls = manifest_urls[i : i + chunk_size]
@@ -314,6 +314,8 @@ class DomainMetadataExtractor:
                 list(chunk_urls)
             )
             all_favicon_images.extend(chunk_images)
+            # Add a small delay between batches to prevent network resource exhaustion
+            await asyncio.sleep(0.2)
 
         favicon_images = all_favicon_images
 
@@ -389,7 +391,8 @@ class DomainMetadataExtractor:
         self, domains_data: list[dict[str, Any]], favicon_min_width: int
     ) -> list[dict[str, Optional[str]]]:
         """Process domains in chunks to limit resource consumption."""
-        chunk_size = 100
+        # Reduce batch size to decrease memory consumption and network load
+        chunk_size = 50
         filtered_results: list[dict[str, Optional[str]]] = []
 
         for i in range(0, len(domains_data), chunk_size):
@@ -402,7 +405,12 @@ class DomainMetadataExtractor:
                 f"Processing chunk of {len(chunk)} domains concurrently "
                 f"({i + 1}-{min(i + chunk_size, len(domains_data))} of {len(domains_data)})"
             )
+            # Process current chunk with gather
             chunk_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Add a delay between chunks to allow system resources to recover
+            if i + chunk_size < len(domains_data):
+                await asyncio.sleep(1.0)
 
             for result in chunk_results:
                 if isinstance(result, Exception):
