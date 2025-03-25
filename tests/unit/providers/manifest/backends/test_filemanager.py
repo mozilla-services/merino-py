@@ -4,24 +4,21 @@
 
 """Unit tests for the manifest backend filemanager module."""
 
-import json
-from unittest.mock import patch, MagicMock
-from pydantic import ValidationError
+import orjson
+import pytest
+import logging
+from unittest.mock import AsyncMock
+from tests.types import FilterCaplogFixture
 from merino.providers.manifest.backends.filemanager import ManifestRemoteFilemanager
 from merino.providers.manifest.backends.protocol import GetManifestResultCode, ManifestData
 
 
-def test_get_file(
-    manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_blob_mock,
-    blob_json,
-) -> None:
-    """Test that the get_file method returns manifest data."""
-    manifest_remote_filemanager.gcs_client = MagicMock()
-    manifest_remote_filemanager.gcs_client.get_file_by_name.return_value = gcs_blob_mock
-    gcs_blob_mock.download_as_text.return_value = blob_json
-
-    get_file_result_code, result = manifest_remote_filemanager.get_file()
+@pytest.mark.asyncio
+async def test_get_file_async(
+    fixture_filemanager, caplog: pytest.LogCaptureFixture, filter_caplog: FilterCaplogFixture
+):
+    """Test that the async get_file method returns manifest data."""
+    get_file_result_code, result = await fixture_filemanager.get_file()
 
     assert get_file_result_code is GetManifestResultCode.SUCCESS
     assert isinstance(result, ManifestData)
@@ -29,70 +26,105 @@ def test_get_file(
     assert len(result.domains) == 3
     assert result.domains[0].domain == "google"
 
+    # assert correct success log is emitted
+    with caplog.at_level(logging.INFO):
+        records: list[logging.LogRecord] = filter_caplog(
+            caplog.records, "merino.providers.manifest.backends.filemanager"
+        )
+        for record in records:
+            assert record.message.startswith("Successfully loaded remote manifest file")
 
-def test_get_file_skip(
-    manifest_remote_filemanager: ManifestRemoteFilemanager,
-) -> None:
-    """Test that the get_file method returns the SKIP code when there's no new generation."""
-    manifest_remote_filemanager.gcs_client = MagicMock()
-    manifest_remote_filemanager.gcs_client.get_file_by_name.return_value = None
 
-    get_file_result_code, result = manifest_remote_filemanager.get_file()
+@pytest.mark.asyncio
+async def test_get_file_json_decode_error(
+    caplog: pytest.LogCaptureFixture, filter_caplog: FilterCaplogFixture
+):
+    """Test that the async get_file method handles JSON decode errors."""
+    mock_blob = AsyncMock()
+    # returns a non json value
+    mock_blob.download.return_value = b"invalid json"
 
-    assert get_file_result_code is GetManifestResultCode.SKIP
+    mock_bucket = AsyncMock()
+    mock_bucket.get_blob.return_value = mock_blob
+
+    mock_storage = AsyncMock()
+    mock_storage.bucket.return_value = mock_bucket
+
+    filemanager = ManifestRemoteFilemanager("test-bucket", "test-blob")
+    filemanager.gcs_client = mock_storage
+    filemanager.bucket = mock_bucket
+
+    get_file_result_code, result = await filemanager.get_file()
+    assert get_file_result_code is GetManifestResultCode.FAIL
     assert result is None
 
+    # assert correct error log is emitted
+    with caplog.at_level(logging.ERROR):
+        records: list[logging.LogRecord] = filter_caplog(
+            caplog.records, "merino.providers.manifest.backends.filemanager"
+        )
+        for record in records:
+            assert record.message.startswith("Failed to decode manifest JSON")
 
-def test_get_file_fail(
-    manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_client_mock,
-) -> None:
-    """Test that the get_file method returns the FAIL code on failure."""
-    gcs_client_mock.get_bucket.side_effect = Exception("Test error")
 
-    get_file_result_code, result = manifest_remote_filemanager.get_file()
+@pytest.mark.asyncio
+async def test_get_file_validation_error(
+    caplog: pytest.LogCaptureFixture, filter_caplog: FilterCaplogFixture
+):
+    """Test that the async get_file method handles validation errors for invalid content."""
+    mock_blob = AsyncMock()
+    # returns invalid field
+    mock_blob.download.return_value = orjson.dumps({"invalid_field": "data"})
+
+    mock_bucket = AsyncMock()
+    mock_bucket.get_blob.return_value = mock_blob
+
+    mock_storage = AsyncMock()
+    mock_storage.bucket.return_value = mock_bucket
+
+    filemanager = ManifestRemoteFilemanager("test-bucket", "test-blob")
+    filemanager.gcs_client = mock_storage
+    filemanager.bucket = mock_bucket
+
+    get_file_result_code, result = await filemanager.get_file()
 
     assert get_file_result_code is GetManifestResultCode.FAIL
     assert result is None
 
-
-def test_get_file_fail_validation_error(
-    manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_client_mock,
-    gcs_bucket_mock,
-    gcs_blob_mock,
-) -> None:
-    """Test that the get_file method returns the FAIL code when a validation error occurs."""
-    gcs_bucket_mock.get_blob.return_value = gcs_blob_mock
-    gcs_client_mock.get_bucket.return_value = gcs_bucket_mock
-
-    gcs_blob_mock.download_as_text.return_value = '{"invalid": "data"}'
-
-    with patch(
-        "merino.providers.manifest.backends.filemanager.ManifestData.model_validate",
-        side_effect=ValidationError,
-    ):
-        get_file_result_code, result = manifest_remote_filemanager.get_file()
-
-    assert get_file_result_code is GetManifestResultCode.FAIL
-    assert result is None
+    # assert correct error log is emitted
+    with caplog.at_level(logging.ERROR):
+        records: list[logging.LogRecord] = filter_caplog(
+            caplog.records, "merino.providers.manifest.backends.filemanager"
+        )
+        for record in records:
+            assert record.message.startswith("Invalid manifest content")
 
 
-def test_get_file_fail_json_decoder_error(
-    manifest_remote_filemanager: ManifestRemoteFilemanager,
-    gcs_client_mock,
-    gcs_bucket_mock,
-    gcs_blob_mock,
-) -> None:
-    """Test that the get_file method returns the FAIL code when a JSON decoder occurs."""
-    gcs_bucket_mock.get_blob.return_value = gcs_blob_mock
-    gcs_client_mock.get_bucket.return_value = gcs_bucket_mock
+@pytest.mark.asyncio
+async def test_get_file_exception(
+    caplog: pytest.LogCaptureFixture, filter_caplog: FilterCaplogFixture
+):
+    """Test that the async get_file method handles unexpected exceptions."""
+    mock_bucket = AsyncMock()
+    # throws an exception
+    mock_bucket.get_blob.side_effect = Exception("Unexpected error")
 
-    with patch(
-        "merino.providers.manifest.backends.filemanager.json.loads",
-        side_effect=json.JSONDecodeError,
-    ):
-        get_file_result_code, result = manifest_remote_filemanager.get_file()
+    mock_storage = AsyncMock()
+    mock_storage.bucket.return_value = mock_bucket
+
+    filemanager = ManifestRemoteFilemanager("test-bucket", "test-blob")
+    filemanager.gcs_client = mock_storage
+    filemanager.bucket = mock_bucket
+
+    get_file_result_code, result = await filemanager.get_file()
 
     assert get_file_result_code is GetManifestResultCode.FAIL
     assert result is None
+
+    # assert correct error log is emitted
+    with caplog.at_level(logging.ERROR):
+        records: list[logging.LogRecord] = filter_caplog(
+            caplog.records, "merino.providers.manifest.backends.filemanager"
+        )
+        for record in records:
+            assert record.message.startswith("Error fetching remote manifest file")
