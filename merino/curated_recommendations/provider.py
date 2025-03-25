@@ -5,7 +5,6 @@ import time
 import re
 from typing import cast
 
-from merino.curated_recommendations import ExtendedExpirationCorpusBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusBackend,
     ScheduledSurfaceId,
@@ -26,7 +25,6 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
-    ExperimentName,
     CuratedRecommendationsFeed,
     Section,
 )
@@ -48,12 +46,10 @@ class CuratedRecommendationsProvider:
     def __init__(
         self,
         corpus_backend: CorpusBackend,
-        extended_expiration_corpus_backend: ExtendedExpirationCorpusBackend,
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
     ) -> None:
         self.corpus_backend = corpus_backend
-        self.extended_expiration_corpus_backend = extended_expiration_corpus_backend
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
 
@@ -140,13 +136,6 @@ class CuratedRecommendationsProvider:
         return (
             request.experimentName == name or request.experimentName == f"optin-{name}"
         ) and request.experimentBranch == branch
-
-    @staticmethod
-    def is_in_extended_expiration_experiment(request: CuratedRecommendationsRequest) -> bool:
-        """Return True if Thompson sampling should use regional engagement (treatment)."""
-        return CuratedRecommendationsProvider.is_enrolled_in_experiment(
-            request, ExperimentName.EXTENDED_EXPIRATION_EXPERIMENT.value, "treatment"
-        )
 
     @staticmethod
     def is_sections_experiment(
@@ -338,10 +327,7 @@ class CuratedRecommendationsProvider:
             curated_recommendations_request.region,
         )
 
-        if self.is_in_extended_expiration_experiment(curated_recommendations_request):
-            corpus_items = await self.extended_expiration_corpus_backend.fetch(surface_id)
-        else:
-            corpus_items = await self.corpus_backend.fetch(surface_id)
+        corpus_items = await self.corpus_backend.fetch(surface_id)
 
         # Convert the CorpusItem list to a CuratedRecommendation list.
         recommendations = [

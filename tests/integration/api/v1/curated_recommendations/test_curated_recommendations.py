@@ -1,7 +1,6 @@
 """Tests the curated recommendation endpoint /api/v1/curated-recommendations"""
 
 import asyncio
-from collections import Counter
 from datetime import timedelta, datetime
 from unittest.mock import AsyncMock
 
@@ -20,7 +19,6 @@ from merino.curated_recommendations import (
     CuratedRecommendationsProvider,
     get_provider,
     ConstantPrior,
-    ExtendedExpirationCorpusBackend,
     interest_picker,
 )
 from merino.curated_recommendations.corpus_backends.protocol import Topic, ScheduledSurfaceId
@@ -86,16 +84,6 @@ def constant_prior_backend() -> PriorBackend:
     return ConstantPrior()
 
 
-@pytest.fixture()
-def extended_expiration_corpus_backend(
-    corpus_backend: CorpusApiBackend, engagement_backend: EngagementBackend
-) -> ExtendedExpirationCorpusBackend:
-    """Mock extended expiration corpus api backend."""
-    return ExtendedExpirationCorpusBackend(
-        backend=corpus_backend, engagement_backend=engagement_backend
-    )
-
-
 @pytest.fixture(autouse=True)
 def setup_manifest_provider(manifest_provider):
     """Set up the manifest provider dependency"""
@@ -108,14 +96,12 @@ def setup_manifest_provider(manifest_provider):
 @pytest.fixture(name="corpus_provider")
 def provider(
     corpus_backend: CorpusApiBackend,
-    extended_expiration_corpus_backend: ExtendedExpirationCorpusBackend,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
         corpus_backend=corpus_backend,
-        extended_expiration_corpus_backend=extended_expiration_corpus_backend,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
     )
@@ -1265,84 +1251,6 @@ class TestSections:
                 assert interest_picker_response is not None
             else:
                 assert interest_picker_response is None
-
-
-class TestExtendedExpiration:
-    """Test the behavior of the ExtendedExpiration experiment functionality."""
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        "experiment_name, experiment_branch, is_in_experiment",
-        [
-            (None, None, False),
-            (ExperimentName.EXTENDED_EXPIRATION_EXPERIMENT.value, "control", False),
-            (ExperimentName.EXTENDED_EXPIRATION_EXPERIMENT.value, "treatment", True),
-            (f"optin-{ExperimentName.EXTENDED_EXPIRATION_EXPERIMENT.value}", "treatment", True),
-        ],
-    )
-    async def test_extended_expiration_experiment(
-        self,
-        corpus_backend: CorpusApiBackend,
-        experiment_name,
-        experiment_branch,
-        is_in_experiment,
-        fixture_response_data,
-        fixture_request_data,
-        corpus_http_client,
-    ):
-        """Test that older items are fetched in the extended expiration experiment."""
-
-        def mock_post_by_days_ago(*args, **kwargs):
-            """Mock Corpus API response to simulate fetching data from different days."""
-            variables = kwargs["json"]["variables"]
-            surface_timezone = corpus_backend.get_surface_timezone(variables["scheduledSurfaceId"])
-            date_today = corpus_backend.get_scheduled_surface_date(surface_timezone).date()
-            days_ago = (
-                datetime.strptime(variables.get("date"), "%Y-%m-%d").date() - date_today
-            ).days
-
-            # Modify IDs and titles in response data to indicate the number of days ago
-            modified_response = {
-                "data": {
-                    "scheduledSurface": {
-                        "items": [
-                            {
-                                "id": f"{item['id']}_days_ago_{days_ago}",
-                                "corpusItem": {
-                                    **item["corpusItem"],
-                                    "title": f"{item['corpusItem']['title']} days ago:{days_ago}",
-                                },
-                            }
-                            for item in fixture_response_data["data"]["scheduledSurface"]["items"]
-                        ]
-                    }
-                }
-            }
-            return Response(status_code=200, json=modified_response, request=fixture_request_data)
-
-        corpus_http_client.post.side_effect = mock_post_by_days_ago
-
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": "en-US",
-                    "experimentName": experiment_name,
-                    "experimentBranch": experiment_branch,
-                },
-            )
-            data = response.json()
-            items = data["data"]
-
-            # Count the number of items by the days_ago value in the title
-            days_ago_counter = Counter(int(item["title"].split("days ago:")[-1]) for item in items)
-
-            if is_in_experiment:
-                # Assert that items from 3 days ago were included in the experiment.
-                assert set(days_ago_counter.keys()) == {-3, -2, -1, 0}
-            else:
-                # Check that only today's items are returned if in control or not in the experiment.
-                assert set(days_ago_counter.keys()) == {0}
 
 
 @pytest.mark.asyncio
