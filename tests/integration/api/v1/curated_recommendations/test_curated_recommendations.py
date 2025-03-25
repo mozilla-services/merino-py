@@ -28,15 +28,6 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
     Engagement,
 )
-from merino.curated_recommendations.fakespot_backend.protocol import (
-    FAKESPOT_DEFAULT_CATEGORY_NAME,
-    FAKESPOT_FOOTER_COPY,
-    FAKESPOT_HEADER_COPY,
-    FAKESPOT_CTA_COPY,
-    FAKESPOT_CTA_URL,
-    FakespotBackend,
-    FakespotFeed,
-)
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
@@ -50,7 +41,6 @@ from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
-from tests.integration.api.conftest import fakespot_feed
 
 
 class MockEngagementBackend(EngagementBackend):
@@ -84,19 +74,6 @@ class MockEngagementBackend(EngagementBackend):
         pass
 
 
-@pytest.mark.usefixtures("fakespot_feed")
-class MockFakespotBackend(FakespotBackend):
-    """Mock class implementing the protocol for FakespotBackend."""
-
-    def get(self, key: str) -> FakespotFeed | None:
-        """Return fakespot feed from mock JSON file."""
-        return fakespot_feed()
-
-    def initialize(self) -> None:
-        """Mock class must implement this method, but no initialization needs to happen."""
-        pass
-
-
 @pytest.fixture
 def engagement_backend():
     """Fixture for the MockEngagementBackend"""
@@ -107,12 +84,6 @@ def engagement_backend():
 def constant_prior_backend() -> PriorBackend:
     """Mock constant prior backend."""
     return ConstantPrior()
-
-
-@pytest.fixture(name="fakespot_backend")
-def fakespot_backend():
-    """Fixture for the FakespotBackend"""
-    return MockFakespotBackend()
 
 
 @pytest.fixture()
@@ -140,7 +111,6 @@ def provider(
     extended_expiration_corpus_backend: ExtendedExpirationCorpusBackend,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
-    fakespot_backend: FakespotBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
@@ -148,7 +118,6 @@ def provider(
         extended_expiration_corpus_backend=extended_expiration_corpus_backend,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
-        fakespot_backend=fakespot_backend,
     )
 
 
@@ -169,13 +138,6 @@ async def fetch_en_us_with_need_to_know(client: AsyncClient) -> Response:
     """Make a curated recommendations request with en-US locale and feeds=["need_to_know"]"""
     return await client.post(
         "/api/v1/curated-recommendations", json={"locale": "en-US", "feeds": ["need_to_know"]}
-    )
-
-
-async def fetch_en_us_with_fakespot(client: AsyncClient) -> Response:
-    """Make a curated recommendations request with en-US locale and feeds=["fakespot"]"""
-    return await client.post(
-        "/api/v1/curated-recommendations", json={"locale": "en-US", "feeds": ["fakespot"]}
     )
 
 
@@ -706,175 +668,6 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 400
 
 
-class TestCuratedRecommendationsRequestFeeds:
-    """Tests covering the feeds request param."""
-
-    @staticmethod
-    def assert_need_to_know_feed(need_to_know_feed):
-        """Assert the need_to_know feed is as expected."""
-        # Assert that the `need_to_know` feed has a localized title returned
-        title = need_to_know_feed["title"]
-        assert title == "In the news"
-
-        # Assert that the `need_to_know` feed has 10 items
-        feed = need_to_know_feed["recommendations"]
-        assert len(feed) == 10
-
-        # Assert all `need_to_know` stories have expected fields populated.
-        assert all(item["url"] for item in feed)
-        assert all(item["publisher"] for item in feed)
-        assert all(item["imageUrl"] for item in feed)
-        assert all(item["tileId"] for item in feed)
-
-    @staticmethod
-    def assert_fakespot_feed(_fakespot_feed):
-        """Assert the fakespot feed is as expected."""
-        fakespot_products = _fakespot_feed["products"]
-        # currently 8 products in mock JSON file
-        assert len(fakespot_products) == 8
-        # Assert all fakespot products have expected fields populated.
-        required_fields = ["id", "title", "category", "imageUrl", "url"]
-        for product in fakespot_products:
-            assert all(product.get(field) for field in required_fields)
-        # Assert the default category name, header, footer, cta copy are present
-        assert _fakespot_feed["defaultCategoryName"] == FAKESPOT_DEFAULT_CATEGORY_NAME
-        assert _fakespot_feed["headerCopy"] == FAKESPOT_HEADER_COPY
-        assert _fakespot_feed["footerCopy"] == FAKESPOT_FOOTER_COPY
-        assert _fakespot_feed["cta"]["ctaCopy"] == FAKESPOT_CTA_COPY
-        assert _fakespot_feed["cta"]["url"] == FAKESPOT_CTA_URL
-
-    @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
-    @pytest.mark.asyncio
-    async def test_curated_recommendations_with_need_to_know_feed(self):
-        """Test the curated recommendations endpoint response is as expected
-        when requesting the 'need_to_know' feed for en-US locale.
-        """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint
-            response = await fetch_en_us_with_need_to_know(ac)
-            data = response.json()
-
-            # Check if the mock response is valid
-            assert response.status_code == 200
-
-            # Assert non-time-sensitive items are not returned in the general feed
-            corpus_items = data["data"]
-            assert len(corpus_items) == 100
-            assert all(not item["isTimeSensitive"] for item in corpus_items)
-
-            # Assert the `need_to_know` feed
-            self.assert_need_to_know_feed(data["feeds"]["need_to_know"])
-
-    @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
-    @pytest.mark.asyncio
-    async def test_curated_recommendations_with_fakespot_feed(self):
-        """Test the curated recommendations endpoint response is as expected
-        when requesting the 'fakespot' feed for en-US locale.
-        """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint
-            response = await fetch_en_us_with_fakespot(ac)
-            data = response.json()
-
-            # Check if the mock response is valid
-            assert response.status_code == 200
-
-            # assert non-Fakespot items are returned
-            corpus_items = data["data"]
-            assert len(corpus_items) == 100
-
-            # Assert the fakespot feed is present
-            self.assert_fakespot_feed(data["feeds"]["fakespot"])
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        "locale",
-        [
-            "fr",
-            "fr-FR",
-            "es",
-            "es-ES",
-            "it",
-            "it-IT",
-            "en-GB",
-            "de",
-            "de-DE",
-            "de-AT",
-            "de-CH",
-        ],
-    )
-    async def test_curated_recommendations_with_fakespot_feed_non_en_us(self, locale):
-        """Test the curated recommendations endpoint response is as expected with non en-US locale & fakespot feed
-        requested. Fakespot feed should not be returned for non en-US locale.
-        """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations", json={"locale": locale, "feeds": ["fakespot"]}
-            )
-            assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
-            data = response.json()
-            # assert feeds is empty
-            assert data["feeds"] is None
-
-    @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
-    @pytest.mark.asyncio
-    async def test_curated_recommendations_with_need_to_know_fakespot_feeds_non_en_us(self):
-        """Test the curated recommendations endpoint response is as expected
-        when requesting the 'need_to_know' and 'fakespot' feed together for non en-US.
-        Fakespot feed should be null for non en-US locales.
-        """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": "en-GB", "feeds": ["need_to_know", "fakespot"]},
-            )
-            data = response.json()
-
-            # Check if the mock response is valid
-            assert response.status_code == 200
-
-            # Assert `isTimeSensitive` items are not returned in the general feed.
-            corpus_items = data["data"]
-            assert len(corpus_items) == 100
-            assert all(not item["isTimeSensitive"] for item in corpus_items)
-
-            # Assert the `need_to_know` feed is returned correctly
-            self.assert_need_to_know_feed(data["feeds"]["need_to_know"])
-
-            # Assert the fakespot feed is not returned even though requested, as non en-US locale
-            assert data["feeds"]["fakespot"] is None
-
-    @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
-    @pytest.mark.asyncio
-    async def test_curated_recommendations_with_need_to_know_fakespot_feeds_en_us(self):
-        """Test the curated recommendations endpoint response is as expected
-        when requesting the 'need_to_know' and 'fakespot' feed together for en-US.
-        Both feeds should be returned correctly.
-        """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": "en-US", "feeds": ["need_to_know", "fakespot"]},
-            )
-            data = response.json()
-
-            # Check if the mock response is valid
-            assert response.status_code == 200
-
-            # Assert `isTimeSensitive` items are not returned in the general feed.
-            corpus_items = data["data"]
-            assert len(corpus_items) == 100
-            assert all(not item["isTimeSensitive"] for item in corpus_items)
-
-            # Assert the `need_to_know` feed is returned correctly
-            self.assert_need_to_know_feed(data["feeds"]["need_to_know"])
-
-            # Assert the fakespot feed is present
-            self.assert_fakespot_feed(data["feeds"]["fakespot"])
-
-
 class TestCorpusApiCaching:
     """Tests covering the caching behavior of the Corpus backend"""
 
@@ -1205,56 +998,6 @@ class TestCorpusApiRanking:
 
                 # Assert that the slope is negative, meaning higher ranks have higher CTRs
                 assert slope < 0, f"Thompson sampling did not favor higher CTR on iteration {i}."
-
-
-class TestNeedToKnow:
-    """Test the behavior of the NeedToKnow feed"""
-
-    @pytest.mark.asyncio
-    async def test_fetch_days_since_today(
-        self,
-        corpus_backend: CorpusApiBackend,
-        fixture_response_data,
-        fixture_response_data_short,
-        fixture_request_data,
-        corpus_http_client,
-    ):
-        """Test that the need_to_know feed falls back to yesterday's schedule when there are
-        insufficient time-sensitive items today.
-        """
-
-        def mock_post_by_date(*args, **kwargs):
-            """Mock scheduledSurface response to have no time-sensitive items today."""
-            variables = kwargs["json"]["variables"]
-            surface_timezone = corpus_backend.get_surface_timezone(variables["scheduledSurfaceId"])
-            date_today = corpus_backend.get_scheduled_surface_date(surface_timezone).date()
-            days_ago = (
-                datetime.strptime(variables.get("date"), "%Y-%m-%d").date() - date_today
-            ).days
-            response_json = {}
-            if days_ago == 0:
-                # requests for today (0) get a response fixture WITHOUT any time-sensitive items.
-                response_json = fixture_response_data_short
-            elif days_ago == -1:
-                # requests for yesterday (-1) get a response fixture WITH time-sensitive items.
-                response_json = fixture_response_data
-
-            return Response(
-                status_code=200,
-                json=response_json,
-                request=fixture_request_data,
-            )
-
-        corpus_http_client.post.side_effect = mock_post_by_date
-
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": "en-US", "feeds": ["need_to_know"]},
-            )
-            data = response.json()
-            need_to_know = data["feeds"]["need_to_know"]["recommendations"]
-            assert len(need_to_know) == 10  # The number of time-sensitive items in the fixture.
 
 
 class TestSections:

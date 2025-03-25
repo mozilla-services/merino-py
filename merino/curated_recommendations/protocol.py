@@ -13,7 +13,6 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     Topic,
     ScheduledSurfaceId,
 )
-from merino.curated_recommendations.fakespot_backend.protocol import FakespotFeed
 
 logger = logging.getLogger(__name__)
 
@@ -155,13 +154,6 @@ class CuratedRecommendationsRequest(BaseModel):
         return []
 
 
-class CuratedRecommendationsBucket(BaseModel):
-    """A ranked list of curated recommendations"""
-
-    recommendations: list[CuratedRecommendation]
-    title: str | None = None
-
-
 @unique
 class TileSize(str, Enum):
     """Defines possible sizes for a tile in the layout."""
@@ -244,10 +236,7 @@ SectionWithID = namedtuple("SectionWithID", ["section", "ID"])
 
 
 class CuratedRecommendationsFeed(BaseModel):
-    """Multiple lists of curated recommendations, that are currently in an experimental phase."""
-
-    need_to_know: CuratedRecommendationsBucket | None = None
-    fakespot: FakespotFeed | None = None
+    """Multiple sections, that are currently in an experimental phase."""
 
     # Sections
     # Renaming an alias of a section is a breaking change. New Tab stores section names when users
