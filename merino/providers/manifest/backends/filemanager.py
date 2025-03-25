@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class ManifestRemoteFilemanager:
-    """Filemanager for fetching manifest data from GCS and storing only in memory."""
+    """Filemanager for fetching manifest data from GCS asynchronously and storing only in memory."""
 
     gcs_client: Storage
     blob_name: str

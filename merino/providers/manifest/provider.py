@@ -1,4 +1,4 @@
-"""Provider for the Manifest data, fetched from GCS and stored in memory."""
+"""Provider for the Manifest data, fetched from GCS asynchronously and stored in memory."""
 
 import asyncio
 import time

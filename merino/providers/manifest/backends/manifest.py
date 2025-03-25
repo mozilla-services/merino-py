@@ -15,15 +15,14 @@ GCS_BLOB_NAME = "top_picks_latest.json"
 
 
 class ManifestBackend:
-    """A remote-only backend that fetches the manifest file from GCS, unmodified."""
+    """A remote-only backend that fetches the manifest file from GCS asynchronously, unmodified."""
 
     def __init__(self) -> None:
         """Initialize the Manifest backend."""
         pass
 
     async def fetch(self) -> tuple[GetManifestResultCode, ManifestData | None]:
-        """Fetch the manifest data from GCS, offloading the synchronous I/O
-        to a background thread.
+        """Fetch the manifest data from GCS asynchronously.
         Returns:
             (SUCCESS, ManifestData): If new data is fetched from GCS.
             (FAIL, None): If there's an error with fetching or parsing.
