@@ -75,9 +75,6 @@ class Provider:
                     }
                     self.last_fetch_at = time.time()
 
-                case GetManifestResultCode.SKIP:
-                    return None
-
                 case GetManifestResultCode.FAIL:
                     logger.error("Failed to fetch data from Manifest backend.")
                     return None
