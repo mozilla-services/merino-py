@@ -176,6 +176,9 @@ class DomainMetadataExtractor:
         "Service unavailable",
     ]
 
+    # Constants for favicon URL validation
+    MANIFEST_JSON_BASE64_MARKER = "/application/manifest+json;base64,"
+
     # List of blocked (second level) domains
     blocked_domains: set[str]
     scraper: Scraper
@@ -225,7 +228,7 @@ class DomainMetadataExtractor:
 
             for favicon in favicon_data.links:
                 favicon_url = favicon["href"]
-                if favicon_url.startswith("data:"):
+                if self._is_problematic_favicon_url(favicon_url):
                     continue
                 if not favicon_url.startswith("http") and not favicon_url.startswith("//"):
                     favicon["href"] = urljoin(scraped_url, favicon_url)
@@ -233,7 +236,7 @@ class DomainMetadataExtractor:
 
             for favicon in favicon_data.metas:
                 favicon_url = favicon["content"]
-                if favicon_url.startswith("data:"):
+                if self._is_problematic_favicon_url(favicon_url):
                     continue
                 if not favicon_url.startswith("http") and not favicon_url.startswith("//"):
                     favicon["href"] = urljoin(scraped_url, favicon_url)
@@ -254,8 +257,8 @@ class DomainMetadataExtractor:
                 manifest_urls.append(manifest_absolute_url)
 
             if manifest_tasks:
-                # Increase chunk size for manifest tasks for better efficiency
-                chunk_size = 15
+                # Reduce chunk size for manifest tasks to limit resource consumption
+                chunk_size = 5
                 for i in range(0, len(manifest_tasks), chunk_size):
                     chunk = manifest_tasks[i : i + chunk_size]
                     chunk_urls = manifest_urls[i : i + chunk_size]
@@ -280,6 +283,11 @@ class DomainMetadataExtractor:
                         for scraped_favicon in scraped_favicons_result:
                             # Check if the favicon URL already contains a scheme
                             favicon_src = scraped_favicon.get("src", "")
+
+                            # Skip problematic data URLs or invalid formats
+                            if self._is_problematic_favicon_url(favicon_src):
+                                continue
+
                             if favicon_src.startswith(("http://", "https://")):
                                 favicon_url = favicon_src
                             else:
@@ -305,41 +313,47 @@ class DomainMetadataExtractor:
         best_favicon_url = ""
         best_favicon_width = 0
 
-        # Process favicons in chunks to limit concurrent connections
-        chunk_size = 20
-        all_favicon_images = []
+        # Process favicons in smaller chunks to limit concurrent connections and memory usage
+        chunk_size = 10
 
-        for chunk_urls in itertools.batched(urls, chunk_size):
+        for chunk_idx, chunk_urls in enumerate(itertools.batched(urls, chunk_size)):
             chunk_images = await self.favicon_downloader.download_multiple_favicons(
                 list(chunk_urls)
             )
-            all_favicon_images.extend(chunk_images)
-            # Add a small delay between batches to prevent network resource exhaustion
-            await asyncio.sleep(0.2)
 
-        favicon_images = all_favicon_images
+            # Calculate the offset in the favicons list for this chunk
+            favicon_offset = chunk_idx * chunk_size
 
-        # First pass: Look for SVG favicons (they are priority)
-        for i, (favicon, image) in enumerate(zip(favicons, favicon_images)):
-            if image is None or "image/" not in image.content_type:
-                continue
+            # Process this chunk immediately
+            for i, (image, url) in enumerate(zip(chunk_images, chunk_urls)):
+                if image is None or "image/" not in image.content_type:
+                    continue
 
-            # If favicon is an SVG and not masked, return it immediately
-            if image.content_type == "image/svg+xml" and i not in masked_svg_indices:
-                return urls[i]
+                # First priority: If favicon is an SVG and not masked, select it immediately
+                if (
+                    image.content_type == "image/svg+xml"
+                    and (i + favicon_offset) not in masked_svg_indices
+                ):
+                    # Clear variables to help with garbage collection
+                    del chunk_images
 
-        # Second pass: Look for the highest resolution bitmap favicon
-        for i, (favicon, image) in enumerate(zip(favicons, favicon_images)):
-            if image is None or "image/" not in image.content_type:
-                continue
+                    # Return immediately on finding a good SVG
+                    return url
 
-            try:
-                width = self._get_favicon_smallest_dimension(image)
-                if width > best_favicon_width:
-                    best_favicon_url = urls[i]
-                    best_favicon_width = width
-            except Exception as e:
-                logger.warning(f"Exception {e} for favicon {favicon}")
+                # Second priority: Track the highest resolution bitmap favicon
+                try:
+                    width = self._get_favicon_smallest_dimension(image)
+                    if width > best_favicon_width:
+                        best_favicon_url = url
+                        best_favicon_width = width
+                except Exception as e:
+                    logger.warning(f"Exception {e} for favicon at position {i+favicon_offset}")
+
+            # Explicitly clear chunk_images to free memory immediately
+            del chunk_images
+
+            # Add a delay between batches to prevent network resource exhaustion
+            await asyncio.sleep(0.5)
 
         logger.debug(f"Best favicon url: {best_favicon_url}, width: {best_favicon_width}")
         return best_favicon_url if best_favicon_width >= min_width else ""
@@ -350,10 +364,15 @@ class DomainMetadataExtractor:
         with the highest resolution.
         """
         favicons: list[dict[str, Any]] = await self._extract_favicons(scraped_url)
-        logger.info(
-            f"{len(favicons)} favicons extracted for {scraped_url}. Favicons are: {favicons}"
-        )
-        return await self._get_best_favicon(favicons, min_width)
+        logger.info(f"{len(favicons)} favicons extracted for {scraped_url}")
+
+        # Get the best favicon
+        result = await self._get_best_favicon(favicons, min_width)
+
+        # Explicitly clear the favicons list to free memory
+        favicons.clear()
+
+        return result
 
     def _extract_title(self) -> Optional[str]:
         """Extract title for a url"""
@@ -381,6 +400,10 @@ class DomainMetadataExtractor:
         second_level_domain: str = self._get_second_level_domain(domain, suffix)
         return second_level_domain in self.blocked_domains
 
+    def _is_problematic_favicon_url(self, favicon_url: str) -> bool:
+        """Check if a favicon URL is problematic (data URL or base64 manifest)"""
+        return favicon_url.startswith("data:") or self.MANIFEST_JSON_BASE64_MARKER in favicon_url
+
     def get_domain_metadata(
         self, domains_data: list[dict[str, Any]], favicon_min_width: int
     ) -> list[dict[str, Optional[str]]]:
@@ -392,26 +415,29 @@ class DomainMetadataExtractor:
     ) -> list[dict[str, Optional[str]]]:
         """Process domains in chunks to limit resource consumption."""
         # Reduce batch size to decrease memory consumption and network load
-        chunk_size = 50
+        chunk_size = 25
         filtered_results: list[dict[str, Optional[str]]] = []
 
         for i in range(0, len(domains_data), chunk_size):
-            chunk = domains_data[i : i + chunk_size]
+            end_idx = min(i + chunk_size, len(domains_data))
+            chunk = domains_data[i:end_idx]
             tasks = [
                 self._process_single_domain(domain_data, favicon_min_width)
                 for domain_data in chunk
             ]
             logger.info(
                 f"Processing chunk of {len(chunk)} domains concurrently "
-                f"({i + 1}-{min(i + chunk_size, len(domains_data))} of {len(domains_data)})"
+                f"({i + 1}-{end_idx} of {len(domains_data)})"
             )
+
             # Process current chunk with gather
             chunk_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Add a delay between chunks to allow system resources to recover
-            if i + chunk_size < len(domains_data):
-                await asyncio.sleep(1.0)
+            # Add a longer delay between chunks to allow system resources to recover
+            if end_idx < len(domains_data):
+                await asyncio.sleep(2.0)
 
+            # Process results
             for result in chunk_results:
                 if isinstance(result, Exception):
                     logger.error(f"Error processing domain: {result}")

@@ -83,12 +83,16 @@ class AsyncFaviconDownloader:
         Returns:
             List of favicon images
         """
-        # Implement semaphore to limit concurrent connections
-        semaphore = asyncio.Semaphore(10)
+        # Implement stricter semaphore to limit concurrent connections
+        semaphore = asyncio.Semaphore(5)
 
         async def download_with_semaphore(url: str) -> Optional[Image]:
-            async with semaphore:
-                return await self.download_favicon(url)
+            try:
+                async with semaphore:
+                    return await self.download_favicon(url)
+            except Exception as e:
+                logger.warning(f"Unhandled exception in download_with_semaphore: {e}")
+                return None
 
         # Create tasks with semaphore control
         controlled_tasks = [download_with_semaphore(url) for url in urls]
