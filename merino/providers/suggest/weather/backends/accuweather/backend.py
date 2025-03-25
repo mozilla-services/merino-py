@@ -8,7 +8,6 @@ import orjson
 import logging
 from enum import Enum
 from typing import Any, Callable, NamedTuple, cast
-from functools import partial
 
 import aiodogstatsd
 from dateutil import parser
@@ -36,8 +35,7 @@ from merino.providers.suggest.weather.backends.accuweather.utils import (
     process_location_completion_response,
     process_forecast_response,
     process_current_condition_response,
-    process_location_response_with_country,
-    process_location_response_with_country_and_region,
+    process_location_response,
     get_language,
 )
 
@@ -737,18 +735,15 @@ class AccuweatherBackend:
 
         if region:
             url_path = self.url_cities_admin_path.format(country_code=country, admin_code=region)
-            processor = process_location_response_with_country_and_region
         else:
             url_path = self.url_cities_path.format(country_code=country)
-            partial_process_func = partial(process_location_response_with_country, weather_context)
-            processor = partial_process_func
 
         try:
             response: dict[str, Any] | None = await self.request_upstream(
                 url_path,
                 params=self.get_location_key_query_params(city),
                 request_type=RequestType.LOCATIONS,
-                process_api_response=processor,
+                process_api_response=process_location_response,
                 cache_ttl_sec=self.cached_location_key_ttl_sec,
             )
         except HTTPError as error:
