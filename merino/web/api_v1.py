@@ -224,6 +224,9 @@ async def suggest(
 
     emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 
+    if request_type == "weather" and len(suggestions) == 0:
+        return ORJSONResponse(content=None, status_code=204)
+
     response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),
