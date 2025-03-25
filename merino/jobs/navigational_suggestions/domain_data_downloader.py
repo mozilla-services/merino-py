@@ -1,6 +1,6 @@
 """Download domain data from BigQuery tables"""
 
-from typing import Any
+from typing import Any, List
 from urllib.parse import urlparse
 
 import tldextract
@@ -175,34 +175,39 @@ limit 1000
         results = query_job.result()
         domains = [dict(result) for result in results]
 
+        # Add source field to BigQuery domains
+        for domain in domains:
+            domain["source"] = "top-picks"
+
         try:
             # Create a set of existing domains for fast lookup
             existing_domains = {self._normalize_domain(d["domain"]) for d in domains}
 
             # Track which domains are duplicates for logging
-            unique_custom_domains = []
-            duplicates = []
-            duplicate_mapping = {}  # To show what each custom domain matched with
+            unique_custom_domains: List[str] = []
+            duplicates: List[str] = []
+            duplicate_mapping: dict[str, str] = {}  # To show what each custom domain matched with
 
             # Process each custom domain
-            for domain in CUSTOM_DOMAINS:
-                normalized = self._normalize_domain(domain)
+            for domain_str in CUSTOM_DOMAINS:
+                normalized = self._normalize_domain(domain_str)
                 if normalized not in existing_domains:
-                    unique_custom_domains.append(domain)
+                    unique_custom_domains.append(domain_str)
                     # Add to existing domains to prevent duplicates within custom domains too
                     existing_domains.add(normalized)
                 else:
-                    duplicates.append(domain)
+                    duplicates.append(domain_str)
                     # Find what this domain matched with from BigQuery
                     for d in domains:
                         if self._normalize_domain(d["domain"]) == normalized:
-                            duplicate_mapping[domain] = d["domain"]
+                            duplicate_mapping[domain_str] = d["domain"]
                             break
 
             # Add unique custom domains
             start_rank = max(d["rank"] for d in domains) + 1 if domains else 1
             for i, custom_domain in enumerate(unique_custom_domains):
                 domain_data = self._parse_custom_domain(custom_domain, start_rank + i)
+                domain_data["source"] = "custom-domains"  # Add source field to custom domains
                 domains.append(domain_data)
 
             logger.info(

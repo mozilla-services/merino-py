@@ -98,6 +98,7 @@ def _construct_top_picks(
                     "url": domain_url,
                     "title": domain_metadata[index]["title"],
                     "icon": favicons[index],
+                    "source": domain.get("source", "top-picks"),
                 }
             )
     return {"domains": result}

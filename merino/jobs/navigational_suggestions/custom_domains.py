@@ -1,6 +1,6 @@
 """Custom domains data for navigational suggestions"""
 
-CUSTOM_DOMAINS = [
+CUSTOM_DOMAINS: list[str] = [
     # "01net.com",
     # "11freunde.de",
     # "19thnews.org",
