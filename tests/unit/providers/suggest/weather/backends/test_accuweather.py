@@ -69,10 +69,10 @@ def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
     async def mock_set(key, value, **kwargs) -> Any:
         return None
 
-    async def script_callable(keys, args) -> list:
+    async def script_callable(keys, args, readonly) -> list:
         return []
 
-    def mock_register_script(script) -> Callable[[list, list], Awaitable[list]]:
+    def mock_register_script(script) -> Callable[[list, list, bool], Awaitable[list]]:
         return script_callable
 
     mock = mocker.AsyncMock(spec=Redis)
@@ -1298,10 +1298,10 @@ async def test_get_weather_report_with_cache_fetch_error(
 
     redis_mock = mocker.AsyncMock(spec=Redis)
 
-    async def script_callable(keys, args) -> list:
+    async def script_callable(keys, args, readonly) -> list:
         raise RedisError("Failed to fetch")
 
-    def mock_register_script(script) -> Callable[[list, list], Awaitable[list]]:
+    def mock_register_script(script) -> Callable[[list, list, bool], Awaitable[list]]:
         return script_callable
 
     redis_mock.register_script.side_effect = mock_register_script

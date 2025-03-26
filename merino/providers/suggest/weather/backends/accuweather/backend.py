@@ -525,6 +525,7 @@ class AccuweatherBackend:
                             location_key=location_key
                         ),
                     ],
+                    readonly=True,
                 )
                 if cached_data:
                     cached_data = [LOCATION_SENTINEL, *cached_data]
@@ -575,6 +576,7 @@ class AccuweatherBackend:
                     self.cache_key_template(WeatherDataType.FORECAST, language),
                     self.url_location_key_placeholder,
                 ],
+                readonly=True,
             )
             return cached_data if cached_data else None
 

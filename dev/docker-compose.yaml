@@ -1,14 +1,30 @@
-version: "3"
 services:
-  redis:
+  redis-primary:
     image: redis:7.2
+    container_name: redis-primary
+    restart: always
+    volumes:
+      - redis_primary:/data
     ports:
-      - "6379:6379"
+      - 6379:6379
+
+  redis-replica:
+    image: redis:7.2
+    container_name: redis-replica
+    restart: always
+    volumes:
+      - redis_replica:/data
+    ports:
+      - 6380:6379
+    command: redis-server --replicaof redis-primary 6379
 
   redis-commander:
     image: ghcr.io/joeferner/redis-commander:latest
     restart: always
     environment:
-      - REDIS_HOSTS=local:redis:6379
+      - REDIS_HOSTS=local:redis-primary:6379
     ports:
-      - "8081:8081"
+      - 8081:8081
+volumes:
+  redis_primary:
+  redis_replica:

@@ -174,6 +174,20 @@ dry_run = false
 # Default score to set in suggestions uploaded to remote settings.
 score = 0.25
 
+# Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
+[default.redis]
+# MERINO_REDIS__SERVER - URI to the Redis primary endpoint.
+# In the form of `redis://localhost:6379`.
+server = "redis://localhost:6379"
+
+# MERINO_REDIS__REPLICA - URI to the Redis replica endpoint.
+# Can be set to the primary endpoint for the development environemnts.
+replica = "redis://localhost:6379"
+
+# MERINO_REDIS__MAX_CONNECTIONS - The maximum connections allowed for the connection pool.
+# To override the default max_conns of Redis-py: 2 ** 31.
+max_connections = 500
+
 
 [default.sentry]
 # MERINO_SENTRY__MODE
@@ -253,11 +267,6 @@ query_timeout_sec = 5.0
 # A floating point (in seconds) indicating the maximum waiting period for the
 # accuweather backend http client to establish a connection to the host.
 connect_timeout_sec = 3.0
-
-
-# MERINO_REDIS__SERVER - redis.server (Currently not configured here)
-# Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
-# In the form of `redis://localhost:6379`.
 
 # MERINO_PROVIDERS__ACCUWEATHER__CRON_INTERVAL_SEC
 cron_interval_sec = 21600 # 6 hours

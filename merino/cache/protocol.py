@@ -47,6 +47,7 @@ class CacheAdapter(Protocol):
         sid: str,
         keys: list,
         args: list,
+        readonly: bool = False,
     ) -> Any:  # pragma: no cover
         """Run a given script with keys and arguments.
 
@@ -54,6 +55,7 @@ class CacheAdapter(Protocol):
             - `sid` {str}, a script identifier
             - `keys` list[str], a list of keys used as the global `KEYS` in Redis scripting
             - `args` list[str], a list of arguments used as the global `ARGV` in Redis scripting
+            - `readonly` bool, whether or not the script is readonly. Readonly scripts can be run on replica servers.
         Returns:
             A Redis value based on the return value of the specified script
         Raises:
