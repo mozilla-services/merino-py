@@ -21,7 +21,6 @@ dependencies = [
     "google-cloud-storage>=2.16.0,<3",
     "google-cloud-bigquery>=3.9.0,<4",
     "Pillow>=10.2.0,<11",
-    "redis>=4.5.4,<5",
     "types-python-dateutil>=2.8.19.13,<3",
     "pydantic>=2.1.0,<3",
     "scipy>=1.14.1,<2",
@@ -29,6 +28,7 @@ dependencies = [
     "tenacity>=9.0.0,<10",
     "gcloud-aio-storage>=9.3.0,<10",
     "ua-parser>=1.0,<2.0",
+    "redis[hiredis]>=5.2.1,<6",
 ]
 
 [project.scripts]
