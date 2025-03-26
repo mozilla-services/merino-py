@@ -9,7 +9,6 @@ from typing import Iterator
 from unittest.mock import AsyncMock
 
 import pytest
-import orjson
 from starlette.testclient import TestClient
 from aiodogstatsd import Client as AioDogstatsdClient
 
@@ -18,16 +17,6 @@ from merino.providers.manifest.backends.manifest import ManifestBackend
 from merino.providers.manifest.backends.protocol import GetManifestResultCode, ManifestData
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from contextlib import nullcontext
-from merino.curated_recommendations.fakespot_backend.protocol import (
-    FakespotFeed,
-    FakespotProduct,
-    FAKESPOT_DEFAULT_CATEGORY_NAME,
-    FAKESPOT_HEADER_COPY,
-    FAKESPOT_FOOTER_COPY,
-    FakespotCTA,
-    FAKESPOT_CTA_COPY,
-    FAKESPOT_CTA_URL,
-)
 from merino.main import app
 from merino.utils.log_data_creators import RequestSummaryLogDataModel
 from tests.integration.api.types import RequestSummaryLogDataFixture
@@ -101,31 +90,6 @@ def fixture_extract_request_summary_log_data() -> RequestSummaryLogDataFixture:
         )
 
     return extract_request_summary_log_data
-
-
-def fakespot_feed() -> FakespotFeed:
-    """Open JSON file for mocked fakespot products & return constructed Fakespot feed"""
-    with open("tests/data/fakespot_products.json", "rb") as f:
-        fakespot_products_json_data = orjson.loads(f.read())
-
-        fakespot_products = []
-        for product in fakespot_products_json_data:
-            fakespot_products.append(
-                FakespotProduct(
-                    id=product["id"],
-                    title=product["title"],
-                    category=product["category"],
-                    imageUrl=product["imageUrl"],
-                    url=product["url"],
-                )
-            )
-    return FakespotFeed(
-        products=fakespot_products,
-        defaultCategoryName=FAKESPOT_DEFAULT_CATEGORY_NAME,
-        headerCopy=FAKESPOT_HEADER_COPY,
-        footerCopy=FAKESPOT_FOOTER_COPY,
-        cta=FakespotCTA(ctaCopy=FAKESPOT_CTA_COPY, url=FAKESPOT_CTA_URL),
-    )
 
 
 @pytest.fixture
