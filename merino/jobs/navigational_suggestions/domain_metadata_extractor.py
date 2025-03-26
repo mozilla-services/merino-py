@@ -200,17 +200,23 @@ class DomainMetadataExtractor:
         return f"{parsed_url.scheme}://{parsed_url.hostname}"
 
     def _fix_url(self, url: str) -> str:
-        """Return a url with https scheme if the scheme is originally missing from it"""
-        # Handle protocol-relative URLs (starting with //)
+        # Skip empty URLs or single slash
+        if not url or url == "/":
+            return ""
+
+        # Handle protocol-relative URLs
         if url.startswith("//"):
             return f"https:{url}"
-        # Handle URLs without protocol but with domain name structure
+        # Handle URLs without protocol
         elif not url.startswith(("http://", "https://")) and not url.startswith("/"):
             return f"https://{url}"
-        # Handle absolute paths without domain by keeping the format consistent
-        # with how the calling code expects it
+        # Handle absolute paths with base URL context
         elif not url.startswith(("http://", "https://")) and url.startswith("/"):
-            return f"https:{url}"
+            # We need real URL joining here, not string concatenation
+            if hasattr(self, "_current_base_url") and self._current_base_url:
+                return urljoin(self._current_base_url, url)
+            else:
+                return ""
         # Return unchanged URLs that already have a protocol
         return url
 
@@ -222,6 +228,8 @@ class DomainMetadataExtractor:
     async def _extract_favicons(self, scraped_url: str) -> list[dict[str, Any]]:
         """Extract all favicons for an already opened url asynchronously"""
         logger.info(f"Extracting all favicons for {scraped_url}")
+        # Store the base URL for resolving relative paths
+        self._current_base_url = scraped_url
         favicons: list[dict[str, Any]] = []
         try:
             favicon_data: FaviconData = self.scraper.scrape_favicon_data(scraped_url)
