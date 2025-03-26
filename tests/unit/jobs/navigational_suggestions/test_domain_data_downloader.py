@@ -36,7 +36,9 @@ def test_download_data(mock_bigquery_client):
 
     mock_bigquery_client.query.assert_called_once()
     mock_bigquery_client.query.return_value.result.assert_called_once()
-    assert domains == [{"x": "a", "y": "b"}]
+    assert domains[0]["x"] == "a"
+    assert domains[0]["y"] == "b"
+    assert domains[0]["source"] == "top-picks"  # Test source field for BigQuery domains
 
 
 def test_custom_domains(mock_bigquery_client):
@@ -68,6 +70,10 @@ def test_custom_domains(mock_bigquery_client):
         assert isinstance(domain, dict), f"Domain should be a dict, got {type(domain)}"
         assert "domain" in domain, f"Missing 'domain' in {domain}"
         assert "categories" in domain, f"Missing 'categories' in {domain}"
+        assert "source" in domain, f"Missing 'source' in {domain}"
+        assert (
+            domain["source"] == "custom-domains"
+        ), f"Expected source to be 'custom-domains', got {domain['source']}"
         assert isinstance(domain["categories"], list), f"Categories should be a list in {domain}"
         assert all(
             isinstance(cat, str) for cat in domain["categories"]

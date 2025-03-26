@@ -872,13 +872,25 @@ def test_fix_url() -> None:
         favicon_downloader=Mock(),
     )
 
-    # Test with URLs with and without scheme
+    # Test with URLs with proper scheme - should remain unchanged
     assert extractor._fix_url("https://example.com/icon.ico") == "https://example.com/icon.ico"
     assert extractor._fix_url("http://example.com/icon.ico") == "http://example.com/icon.ico"
+
+    # Test with protocol-relative URLs - should add https: prefix (keeping // intact)
     assert extractor._fix_url("//example.com/icon.ico") == "https://example.com/icon.ico"
-    assert (
-        extractor._fix_url("/icon.ico") == "https:/icon.ico"
-    )  # This is how the current code behaves
+
+    # Test with absolute paths - when no _current_base_url is set, should return empty string
+    assert extractor._fix_url("/icon.ico") == ""
+
+    # Test with domain names without protocol - should add https:// prefix
+    assert extractor._fix_url("example.com/icon.ico") == "https://example.com/icon.ico"
+    assert extractor._fix_url("www.example.com/icon.ico") == "https://www.example.com/icon.ico"
+
+    # Check real-world examples from logs
+    assert extractor._fix_url("vancouversun.com") == "https://vancouversun.com"
+    assert extractor._fix_url("washingtonpost.com") == "https://washingtonpost.com"
+    assert extractor._fix_url("wsj.com") == "https://wsj.com"
+    assert extractor._fix_url("yahoo.com") == "https://yahoo.com"
 
 
 def test_get_second_level_domain() -> None:
@@ -1051,11 +1063,7 @@ async def test_scraper_scrape_favicons_from_manifest() -> None:
 
     # Test successful response with icons
     mock_json_response = MagicMock()
-
-    async def mock_json():
-        return {"icons": [{"src": "icon1.png"}, {"src": "icon2.png"}]}
-
-    mock_json_response.json = mock_json
+    mock_json_response.json.return_value = {"icons": [{"src": "icon1.png"}, {"src": "icon2.png"}]}
 
     # Return the mock response directly
     scraper.request_client.requests_get.return_value = mock_json_response
@@ -1069,11 +1077,7 @@ async def test_scraper_scrape_favicons_from_manifest() -> None:
     # Test successful response without icons
     scraper.request_client.requests_get.reset_mock()
     mock_json_response = MagicMock()
-
-    async def mock_empty_json():
-        return {}  # No icons key
-
-    mock_json_response.json = mock_empty_json
+    mock_json_response.json.return_value = {}  # No icons key
     scraper.request_client.requests_get.return_value = mock_json_response
 
     result = await scraper.scrape_favicons_from_manifest("https://example.com/manifest.json")
@@ -1096,19 +1100,15 @@ async def test_scraper_scrape_favicons_from_manifest() -> None:
         result = await scraper.scrape_favicons_from_manifest("https://example.com/manifest.json")
 
         assert result == []
-        mock_logger.info.assert_called_once()
-        assert "Connection error" in mock_logger.info.call_args[0][0]
+        mock_logger.warning.assert_called_once()
+        assert "Connection error" in mock_logger.warning.call_args[0][0]
 
     # Test exception during JSON parsing
     scraper.request_client.requests_get.reset_mock()
     scraper.request_client.requests_get.side_effect = None
 
     mock_json_response = MagicMock()
-
-    async def mock_json_error():
-        raise Exception("Invalid JSON")
-
-    mock_json_response.json = mock_json_error
+    mock_json_response.json.side_effect = ValueError("Invalid JSON")
     scraper.request_client.requests_get.return_value = mock_json_response
 
     with patch(
@@ -1117,8 +1117,8 @@ async def test_scraper_scrape_favicons_from_manifest() -> None:
         result = await scraper.scrape_favicons_from_manifest("https://example.com/manifest.json")
 
         assert result == []
-        mock_logger.info.assert_called_once()
-        assert "Invalid JSON" in mock_logger.info.call_args[0][0]
+        mock_logger.warning.assert_called_once()
+        assert "Invalid JSON" in mock_logger.warning.call_args[0][0]
 
 
 def test_scraper_scrape_title() -> None:

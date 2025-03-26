@@ -1,4 +1,4 @@
-"""Provider for the Manifest data, fetched from GCS and stored in memory."""
+"""Provider for the Manifest data, fetched from GCS asynchronously and stored in memory."""
 
 import asyncio
 import time
@@ -74,9 +74,6 @@ class Provider:
                         domain.domain: idx for idx, domain in enumerate(data.domains)
                     }
                     self.last_fetch_at = time.time()
-
-                case GetManifestResultCode.SKIP:
-                    return None
 
                 case GetManifestResultCode.FAIL:
                     logger.error("Failed to fetch data from Manifest backend.")

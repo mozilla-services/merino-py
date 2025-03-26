@@ -33,6 +33,7 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
             "origin": "https://www.dummy_domain.com",
             "suffix": "com",
             "categories": ["Search Engines"],
+            "source": "top-picks",
         },
         {
             "rank": 2,
@@ -41,6 +42,7 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
             "origin": "https://www.dummy_unreachable_domain.com",
             "suffix": "com",
             "categories": ["Search Engines"],
+            "source": "top-picks",
         },
     ]
 
@@ -85,6 +87,7 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
                 "url": "dummy_url.com",
                 "title": "dummy_title",
                 "icon": "dummy_uploaded_favicon_url",
+                "source": "top-picks",
             }
         ]
     }
@@ -114,6 +117,7 @@ def test_prepare_domain_metadata_partner_manifest(mocker):
             "origin": "https://www.dummy_domain.com",
             "suffix": "com",
             "categories": ["Search Engines"],
+            "source": "top-picks",
         }
     ]
 
@@ -206,6 +210,7 @@ def test_prepare_domain_metadata_partner_manifest(mocker):
                 "url": "dummy_url.com",
                 "title": "dummy_title",
                 "icon": "dummy_uploaded_favicon_url",
+                "source": "top-picks",
             }
         ],
         "partners": expected_partner_manifest["partners"],

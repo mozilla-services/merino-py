@@ -24,7 +24,7 @@ REQUEST_HEADERS: dict[str, str] = {
     "Sec-Fetch-User": "?1",
 }
 
-TIMEOUT: int = 10
+TIMEOUT: int = 15
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,20 @@ class AsyncFaviconDownloader:
         Returns:
             List of favicon images
         """
-        tasks = [self.download_favicon(url) for url in urls]
+        # Implement stricter semaphore to limit concurrent connections
+        semaphore = asyncio.Semaphore(5)
+
+        async def download_with_semaphore(url: str) -> Optional[Image]:
+            try:
+                async with semaphore:
+                    return await self.download_favicon(url)
+            except Exception as e:
+                logger.warning(f"Unhandled exception in download_with_semaphore: {e}")
+                return None
+
+        # Create tasks with semaphore control
+        controlled_tasks = [download_with_semaphore(url) for url in urls]
+
         # Handle the exceptions internally to maintain return type consistency
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await asyncio.gather(*controlled_tasks, return_exceptions=True)
         return [None if isinstance(r, BaseException) else r for r in results]

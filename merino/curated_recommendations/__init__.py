@@ -12,17 +12,9 @@ from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
     CorpusApiBackend,
     CorpusApiGraphConfig,
 )
-from merino.curated_recommendations.corpus_backends.extended_expiration_corpus_backend import (
-    ExtendedExpirationCorpusBackend,
-)
 from merino.curated_recommendations.engagement_backends.fake_engagement import FakeEngagement
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.fakespot_backend.fake_fakespot_backend import (
-    FakeFakespotBackend,
-)
-from merino.curated_recommendations.fakespot_backend.fakespot_backend import GcsFakespot
-from merino.curated_recommendations.fakespot_backend.protocol import FakespotBackend
 from merino.curated_recommendations.prior_backends.gcs_prior import GcsPrior
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
@@ -88,31 +80,6 @@ def init_prior_backend() -> PriorBackend:
         return ConstantPrior()
 
 
-def init_fakespot_backend() -> FakespotBackend:
-    """Initialize the GCS Fakespot Backend."""
-    try:
-        metrics_namespace = "recommendation.fakespot"
-        synced_gcs_blob = SyncedGcsBlob(
-            storage_client=Client(settings.curated_recommendations.gcs.fakespot_gcp_project),
-            metrics_client=get_metrics_client(),
-            metrics_namespace=metrics_namespace,
-            bucket_name=settings.curated_recommendations.gcs.fakespot_bucket_name,
-            blob_name=settings.curated_recommendations.gcs.fakespot.blob_name,
-            max_size=settings.curated_recommendations.gcs.fakespot.max_size,
-            cron_interval_seconds=settings.curated_recommendations.gcs.fakespot.cron_interval_seconds,
-            cron_job_name="fetch_recommendation_fakespot",
-        )
-        synced_gcs_blob.initialize()
-        return GcsFakespot(
-            synced_gcs_blob=synced_gcs_blob,
-            metrics_client=get_metrics_client(),
-            metrics_namespace=metrics_namespace,
-        )
-    except Exception as e:
-        logger.error(f"Failed to initialize GCS Fakespot Backend: {e}")
-        return FakeFakespotBackend()
-
-
 def init_provider() -> None:
     """Initialize the curated recommendations provider."""
     global _provider
@@ -126,16 +93,10 @@ def init_provider() -> None:
         manifest_provider=get_manifest_provider(),
     )
 
-    extended_expiration_corpus_backend = ExtendedExpirationCorpusBackend(
-        backend=corpus_backend, engagement_backend=engagement_backend
-    )
-
     _provider = CuratedRecommendationsProvider(
         corpus_backend=corpus_backend,
-        extended_expiration_corpus_backend=extended_expiration_corpus_backend,
         engagement_backend=engagement_backend,
         prior_backend=init_prior_backend(),
-        fakespot_backend=init_fakespot_backend(),
     )
 
 

@@ -258,3 +258,48 @@ def test_domain_blocklist(top_picks_backend: TopPicksBackend, domain_blocklist: 
         assert blocked_domain not in top_picks_data.primary_index.keys()  # type: ignore
         assert blocked_domain not in top_picks_data.secondary_index.keys()  # type: ignore
         assert blocked_domain not in top_picks_data.short_domain_index.keys()  # type: ignore
+
+
+def test_source_field_filtering(top_picks_backend: TopPicksBackend, mocker) -> None:
+    """Test that domains with source='custom-domains' are filtered out in build_index."""
+    # Create mock domain list with both sources
+    mock_domain_list = {
+        "domains": [
+            {
+                "domain": "toppick.com",
+                "title": "Top Pick Domain",
+                "url": "https://toppick.com",
+                "icon": "icon1",
+                "source": "top-picks",
+                "categories": ["web"],
+                "serp_categories": [1],
+            },
+            {
+                "domain": "custom.com",
+                "title": "Custom Domain",
+                "url": "https://custom.com",
+                "icon": "icon2",
+                "source": "custom-domains",
+                "categories": ["web"],
+                "serp_categories": [1],
+            },
+        ]
+    }
+
+    # Use the real build_index method with our mock data
+    result = top_picks_backend.build_index(mock_domain_list)
+
+    # Check that only the top-picks domain was included
+    all_domains = []
+    for index_value in result.results:
+        all_domains.append(index_value["url"])
+
+    assert "https://toppick.com" in all_domains
+    assert "https://custom.com" not in all_domains
+
+    # Verify the domain appears in the indices
+    top_pick_prefix = "toppick"[: top_picks_backend.query_char_limit]
+    custom_prefix = "custom"[: top_picks_backend.query_char_limit]
+
+    assert top_pick_prefix in result.primary_index
+    assert custom_prefix not in result.primary_index
