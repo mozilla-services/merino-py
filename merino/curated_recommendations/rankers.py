@@ -27,11 +27,11 @@ NUM_RECS_PER_TOPIC = 2
 
 
 def thompson_sampling(
-        recs: list[CuratedRecommendation],
-        engagement_backend: EngagementBackend,
-        prior_backend: PriorBackend,
-        region: str | None = None,
-        region_weight: float = REGION_ENGAGEMENT_WEIGHT,
+    recs: list[CuratedRecommendation],
+    engagement_backend: EngagementBackend,
+    prior_backend: PriorBackend,
+    region: str | None = None,
+    region_weight: float = REGION_ENGAGEMENT_WEIGHT,
 ) -> list[CuratedRecommendation]:
     """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
     CTR with exploration of new items using a prior.
@@ -49,7 +49,7 @@ def thompson_sampling(
     fallback_prior = ConstantPrior().get()
 
     def get_opens_no_opens(
-            rec: CuratedRecommendation, region_query: str | None = None
+        rec: CuratedRecommendation, region_query: str | None = None
     ) -> tuple[float, float]:
         """Get opens and no-opens counts for a recommendation, optionally in a region."""
         engagement = engagement_backend.get(rec.corpusItemId, region_query)
@@ -85,7 +85,7 @@ def thompson_sampling(
 
 
 def spread_publishers(
-        recs: list[CuratedRecommendation], spread_distance: int
+    recs: list[CuratedRecommendation], spread_distance: int
 ) -> list[CuratedRecommendation]:
     """Spread a list of CuratedRecommendations by the publisher attribute to avoid encountering the same publisher
     in sequence.
@@ -114,8 +114,8 @@ def spread_publishers(
 
 
 def boost_preferred_topic(
-        recs: list[CuratedRecommendation],
-        preferred_topics: list[Topic],
+    recs: list[CuratedRecommendation],
+    preferred_topics: list[Topic],
 ) -> list[CuratedRecommendation]:
     """Boost recommendations into top N slots based on preferred topics.
     2 recs per topic (for now).
@@ -138,9 +138,9 @@ def boost_preferred_topic(
         # Boost if slots (e.g. 10) remain and its topic hasn't been boosted too often (e.g. 2).
         # It relies on get() returning None for missing keys, and None and 0 being falsy.
         if (
-                topic in remaining_num_topic_boosts
-                and len(boosted_recs) < MAX_TOP_REC_SLOTS
-                and remaining_num_topic_boosts.get(topic)
+            topic in remaining_num_topic_boosts
+            and len(boosted_recs) < MAX_TOP_REC_SLOTS
+            and remaining_num_topic_boosts.get(topic)
         ):
             boosted_recs.append(rec)
             remaining_num_topic_boosts[topic] -= 1  # decrement remaining # of topics to boost
@@ -171,8 +171,7 @@ def is_section_recently_followed(followed_at: datetime | None) -> bool:
 
 
 def section_boosting_composite_sorting_key(section):
-    """
-    Returns a composite sort key for boosting sections.
+    """Return a composite sort key for boosting sections.
 
     - 1st sort order: Followed sections get higher rank
     - 2nd sort order: Recently followed sections get a higher rank among followed sections
@@ -193,7 +192,7 @@ def section_boosting_composite_sorting_key(section):
 
 
 def boost_followed_sections(
-        req_sections: list[SectionConfiguration], feeds: CuratedRecommendationsFeed
+    req_sections: list[SectionConfiguration], feeds: CuratedRecommendationsFeed
 ) -> CuratedRecommendationsFeed:
     """Boost followed sections to the very top, right after top_stories_section.
     Received feed rank for top_stories_section should always stay 0.

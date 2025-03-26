@@ -407,7 +407,7 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
             section = Section(
                 receivedFeedRank=rank,
                 recommendations=[],
-                title=section_ids[i-1],
+                title=section_ids[i - 1],
                 layout=layout_order[0],
             )
             sections.append(section)

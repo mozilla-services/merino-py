@@ -83,12 +83,12 @@ class SectionConfiguration(BaseModel):
     followedAt: datetime | None = Field(
         default=None,
         description="Timestamp when the section was followed. Must be in ISO 8601 format with timezone, "
-                    "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'."
+        "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
     )
 
     @field_validator("followedAt", mode="before")
     def validate_followed_at(cls, followedAt):
-        """Validates the followedAt param & ensures the timestamp is in the correct format."""
+        """Validate the followedAt param & ensures the timestamp is in the correct format."""
         if followedAt is None:
             return followedAt
         if isinstance(followedAt, str):
@@ -251,7 +251,7 @@ class Section(BaseModel):
     followedAt: datetime | None = Field(
         default=None,
         description="Timestamp when the section was followed. Must be in ISO 8601 format with timezone, "
-                    "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'."
+        "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
     )
 
     isInitiallyVisible: bool = True

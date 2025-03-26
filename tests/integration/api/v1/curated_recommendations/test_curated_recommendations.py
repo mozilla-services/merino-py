@@ -1183,12 +1183,10 @@ class TestSections:
 
     @pytest.mark.asyncio
     @freezegun.freeze_time("2025-03-20 12:00:00", tz_offset=0)
-    async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
-            self, caplog
-    ):
+    async def test_curated_recommendations_with_sections_feed_followed_at(self, caplog):
         """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for en-US locale. Recently followed
-        sections are boosted higher and response fields are set correctly.
+        when requesting the 'sections' feed for en-US locale & providing followedAt.
+        Most recently followed sections are boosted higher and response fields are set correctly.
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Mock the endpoint to request the sections feed
@@ -1283,8 +1281,10 @@ class TestSections:
             ],
         ],
     )
-    async def test_curated_recommendations_with_invalid_followed_at_formats(self, sections_payload):
-        """Test how the API handles invalid followedAt time formats:
+    async def test_curated_recommendations_with_invalid_followed_at_formats(
+        self, sections_payload
+    ):
+        """Test the curated recommendations endpoint response when providing invalid followedAt time formats:
         - missing timezone
         - not ISO format
         - Unix timestamp as integer
