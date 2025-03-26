@@ -363,28 +363,28 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
 class TestIsSectionRecentlyFollowed:
     """Unit tests for is_section_recently_followed"""
 
-    @freezegun.freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
+    @freezegun.freeze_time("2025-03-20 12:00:00", tz_offset=0)
     def test_is_section_recently_followed_one_week_ago(self):
         """Should return True if section was followed exactly 1 week ago"""
         # Followed exactly 7 days ago
         followed_at = datetime(2025, 3, 13, 12, 0, 0, tzinfo=timezone.utc)
         assert is_section_recently_followed(followed_at) is True
 
-    @freezegun.freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
+    @freezegun.freeze_time("2025-03-20 12:00:00", tz_offset=0)
     def test_is_section_recently_followed_now(self):
         """Should return True if section is followed right now"""
         # Followed now
         followed_at = datetime(2025, 3, 20, 12, 0, 0, tzinfo=timezone.utc)
         assert is_section_recently_followed(followed_at) is True
 
-    @freezegun.freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
+    @freezegun.freeze_time("2025-03-20 12:00:00", tz_offset=0)
     def test_is_section_recently_followed_more_than_one_week_ago(self):
         """Should return False if section was followed more than 1 week ago"""
         # Followed now
         followed_at = datetime(2025, 3, 12, 12, 0, 0, tzinfo=timezone.utc)
         assert is_section_recently_followed(followed_at) is False
 
-    @freezegun.freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
+    @freezegun.freeze_time("2025-03-20 12:00:00", tz_offset=0)
     def test_is_section_recently_followed_none(self):
         """Should return False if followed_at is None"""
         assert is_section_recently_followed(None) is False
@@ -407,7 +407,7 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
             section = Section(
                 receivedFeedRank=rank,
                 recommendations=[],
-                title="Fake Section Title " + str(i),
+                title=section_ids[i-1],
                 layout=layout_order[0],
             )
             sections.append(section)
@@ -419,6 +419,7 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
 
         return feed
 
+    @freeze_time("2025-03-20 12:00:00", tz_offset=0)
     @pytest.mark.parametrize(
         ("followed_section", "original_received_feed_rank"),
         [
@@ -497,7 +498,7 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         # Assertions for isFollowed
         assert new_feed.get_section_by_topic_id(followed_section.sectionId).isFollowed
 
-    @freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
+    @freeze_time("2025-03-20 12:00:00", tz_offset=0)
     def test_boost_followed_sections_with_followed_at(self):
         """Test boosting sections works properly when following more than 1 section. Followed sections should be ranked
         based on followed_at. Followed & unfollowed sections should maintain their relative order.
@@ -585,10 +586,10 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
 
         # Assertions for receivedFeedRank
         assert new_feed.top_stories_section.receivedFeedRank == 0
-        assert new_feed.business.receivedFeedRank == 2
-        assert new_feed.food.receivedFeedRank == 3
-        assert new_feed.arts.receivedFeedRank == 5
-        assert new_feed.travel.receivedFeedRank == 6
+        assert new_feed.business.receivedFeedRank == 1
+        assert new_feed.food.receivedFeedRank == 2
+        assert new_feed.arts.receivedFeedRank == 3
+        assert new_feed.travel.receivedFeedRank == 4
 
         # Assertions for isFollowed & isBlocked
         assert not new_feed.arts.isFollowed

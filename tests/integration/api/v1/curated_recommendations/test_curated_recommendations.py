@@ -118,7 +118,7 @@ def fakespot_backend():
 
 @pytest.fixture()
 def extended_expiration_corpus_backend(
-    corpus_backend: CorpusApiBackend, engagement_backend: EngagementBackend
+        corpus_backend: CorpusApiBackend, engagement_backend: EngagementBackend
 ) -> ExtendedExpirationCorpusBackend:
     """Mock extended expiration corpus api backend."""
     return ExtendedExpirationCorpusBackend(
@@ -137,11 +137,11 @@ def setup_manifest_provider(manifest_provider):
 
 @pytest.fixture(name="corpus_provider")
 def provider(
-    corpus_backend: CorpusApiBackend,
-    extended_expiration_corpus_backend: ExtendedExpirationCorpusBackend,
-    engagement_backend: EngagementBackend,
-    prior_backend: PriorBackend,
-    fakespot_backend: FakespotBackend,
+        corpus_backend: CorpusApiBackend,
+        extended_expiration_corpus_backend: ExtendedExpirationCorpusBackend,
+        engagement_backend: EngagementBackend,
+        prior_backend: PriorBackend,
+        fakespot_backend: FakespotBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
@@ -186,7 +186,7 @@ def get_max_total_retry_duration() -> float:
     jitter = settings.curated_recommendations.corpus_api.retry_wait_jitter_seconds
     retry_count = settings.curated_recommendations.corpus_api.retry_count
 
-    return float(initial * (2**retry_count - 1) + retry_count * jitter)
+    return float(initial * (2 ** retry_count - 1) + retry_count * jitter)
 
 
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
@@ -633,27 +633,27 @@ class TestCuratedRecommendationsRequestParameters:
         [
             # Valid topic, but must be wrapped in a list
             (
-                "arts",
-                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                "Topics not wrapped in a list: arts",
+                    "arts",
+                    [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                    "Topics not wrapped in a list: arts",
             ),
             # Invalid topic & must be wrapped in a list
             (
-                "invalid-topic",
-                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                "Topics not wrapped in a list: invalid-topic",
+                    "invalid-topic",
+                    [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                    "Topics not wrapped in a list: invalid-topic",
             ),
             # Invalid topic in a list
             (
-                ["not-a-valid-topic"],
-                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                "Invalid topic: not-a-valid-topic",
+                    ["not-a-valid-topic"],
+                    [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                    "Invalid topic: not-a-valid-topic",
             ),
             # 2 valid topics, 1 invalid topic
             (
-                ["food", "invalid_topic", "society-parenting"],
-                [Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD, Topic.CAREER],
-                "Invalid topic: invalid_topic",
+                    ["food", "invalid_topic", "society-parenting"],
+                    [Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD, Topic.CAREER],
+                    "Invalid topic: invalid_topic",
             ),
         ],
     )
@@ -662,15 +662,15 @@ class TestCuratedRecommendationsRequestParameters:
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
     async def test_curated_recommendations_invalid_topic_return_200(
-        self,
-        topics,
-        expected_topics,
-        expected_warning,
-        fixture_response_data_short,
-        fixture_request_data,
-        corpus_http_client,
-        caplog,
-        repeat,
+            self,
+            topics,
+            expected_topics,
+            expected_warning,
+            fixture_response_data_short,
+            fixture_request_data,
+            corpus_http_client,
+            caplog,
+            repeat,
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
@@ -902,14 +902,14 @@ class TestCorpusApiCaching:
     )
     @pytest.mark.asyncio
     async def test_single_request_multiple_failed_fetches(
-        self,
-        corpus_http_client,
-        fixture_request_data,
-        fixture_response_data,
-        fixture_graphql_200ok_with_error_response,
-        caplog,
-        error_type,
-        expected_warning,
+            self,
+            corpus_http_client,
+            fixture_request_data,
+            fixture_response_data,
+            fixture_graphql_200ok_with_error_response,
+            caplog,
+            error_type,
+            expected_warning,
     ):
         """Test that only a few requests are made to the curated-corpus-api when it is down.
         Additionally, test that if the backend returns a GraphQL error, it is handled correctly.
@@ -961,7 +961,7 @@ class TestCorpusApiCaching:
 
     @pytest.mark.asyncio
     async def test_cache_returned_on_subsequent_calls(
-        self, corpus_http_client, fixture_response_data, fixture_request_data
+            self, corpus_http_client, fixture_response_data, fixture_request_data
     ):
         """Test that the cache expires, and subsequent requests return new data."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -996,7 +996,7 @@ class TestCorpusApiCaching:
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.asyncio
     async def test_valid_cache_returned_on_error(
-        self, corpus_http_client, fixture_request_data, caplog
+            self, corpus_http_client, fixture_request_data, caplog
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -1026,8 +1026,8 @@ class TestCorpusApiCaching:
                 # assert that Corpus API was called the expected number of times
                 # 1 successful request from above, and retry_count number of retries.
                 assert (
-                    corpus_http_client.post.call_count
-                    == settings.curated_recommendations.corpus_api.retry_count + 1
+                        corpus_http_client.post.call_count
+                        == settings.curated_recommendations.corpus_api.retry_count + 1
                 )
 
                 assert new_response.status_code == 200
@@ -1077,11 +1077,11 @@ class TestCuratedRecommendationsMetrics:
 
     @pytest.mark.asyncio
     async def test_metrics_corpus_api_error(
-        self,
-        mocker: MockerFixture,
-        corpus_http_client,
-        fixture_request_data,
-        fixture_response_data,
+            self,
+            mocker: MockerFixture,
+            corpus_http_client,
+            fixture_request_data,
+            fixture_response_data,
     ) -> None:
         """Test that metrics are recorded when the curated-corpus-api returns a 500 error"""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
@@ -1108,16 +1108,16 @@ class TestCuratedRecommendationsMetrics:
             # TODO: Remove reliance on internal details of aiodogstatsd
             metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
             assert (
-                metric_keys
-                == [
-                    "corpus_api.request.timing",
-                    "corpus_api.request.status_codes.500",
-                    "corpus_api.request.timing",
-                    "corpus_api.request.status_codes.200",
-                    "post.api.v1.curated-recommendations.timing",
-                    "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
-                    "response.status_codes.200",
-                ]
+                    metric_keys
+                    == [
+                        "corpus_api.request.timing",
+                        "corpus_api.request.status_codes.500",
+                        "corpus_api.request.timing",
+                        "corpus_api.request.status_codes.200",
+                        "post.api.v1.curated-recommendations.timing",
+                        "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
+                        "response.status_codes.200",
+                    ]
             )
 
 
@@ -1153,16 +1153,16 @@ class TestCorpusApiRanking:
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
     async def test_thompson_sampling_behavior(
-        self,
-        topics,
-        engagement_backend,
-        experiment_name,
-        experiment_branch,
-        locale,
-        region,
-        derived_region,
-        regional_ranking_is_expected,
-        repeat,
+            self,
+            topics,
+            engagement_backend,
+            experiment_name,
+            experiment_branch,
+            locale,
+            region,
+            derived_region,
+            regional_ranking_is_expected,
+            repeat,
     ):
         """Test that Thompson sampling produces different orders and favors higher CTRs."""
         n_iterations = 20
@@ -1213,12 +1213,12 @@ class TestNeedToKnow:
 
     @pytest.mark.asyncio
     async def test_fetch_days_since_today(
-        self,
-        corpus_backend: CorpusApiBackend,
-        fixture_response_data,
-        fixture_response_data_short,
-        fixture_request_data,
-        corpus_http_client,
+            self,
+            corpus_backend: CorpusApiBackend,
+            fixture_response_data,
+            fixture_response_data_short,
+            fixture_request_data,
+            corpus_http_client,
     ):
         """Test that the need_to_know feed falls back to yesterday's schedule when there are
         insufficient time-sensitive items today.
@@ -1230,7 +1230,7 @@ class TestNeedToKnow:
             surface_timezone = corpus_backend.get_surface_timezone(variables["scheduledSurfaceId"])
             date_today = corpus_backend.get_scheduled_surface_date(surface_timezone).date()
             days_ago = (
-                datetime.strptime(variables.get("date"), "%Y-%m-%d").date() - date_today
+                    datetime.strptime(variables.get("date"), "%Y-%m-%d").date() - date_today
             ).days
             response_json = {}
             if days_ago == 0:
@@ -1422,9 +1422,9 @@ class TestSections:
                     assert section["layout"]["name"] != "7-double-row-3-ad"
 
     @pytest.mark.asyncio
-    @freeze_time("2025-03-20 12:00:00", tick=True, tz_offset=0)
+    @freeze_time("2025-03-20 12:00:00", tz_offset=0)
     async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
-        self, caplog
+            self, caplog
     ):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale. Recently followed
@@ -1442,13 +1442,13 @@ class TestSections:
                             "sectionId": "sports",
                             "isFollowed": True,
                             "isBlocked": False,
-                            "followedAt": "2025-03-17T12" ":00:00Z",
+                            "followedAt": "2025-03-17T12:00:00Z",
                         },
                         {
                             "sectionId": "arts",
                             "isFollowed": True,
                             "isBlocked": False,
-                            "followedAt": "2025-03-10T12:00" ":00Z",
+                            "followedAt": "2025-03-10T14:34:56+02:00",
                         },
                         {"sectionId": "education", "isFollowed": False, "isBlocked": True},
                     ],
@@ -1485,6 +1485,62 @@ class TestSections:
             assert len(errors) == 0
 
     @pytest.mark.asyncio
+    @freeze_time("2025-03-20 12:00:00", tz_offset=0)
+    @pytest.mark.parametrize(
+        "sections_payload",
+        [
+            [
+                {
+                    "sectionId": "arts",
+                    "isFollowed": True,
+                    "isBlocked": False,
+                    "followedAt": "2025-03-17T12:00:00",  # Missing timezone
+                },
+            ],
+            [
+                {
+                    "sectionId": "health",
+                    "isFollowed": True,
+                    "isBlocked": False,
+                    "followedAt": "March 17, 2025 12:00 PM",  # Not ISO format
+                },
+            ],
+            [
+                {
+                    "sectionId": "business",
+                    "isFollowed": True,
+                    "isBlocked": False,
+                    "followedAt": 1742500800,  # Unix timestamp as int
+                },
+            ],
+            [
+                {
+                    "sectionId": "business",
+                    "isFollowed": True,
+                    "isBlocked": False,
+                    "followedAt": "invalid string",  # bad string
+                },
+            ],
+        ],
+    )
+    async def test_curated_recommendations_with_invalid_followed_at_formats(self, sections_payload):
+        """Test how the API handles invalid followedAt time formats:
+        - missing timezone
+        - not ISO format
+        - Unix timestamp as integer
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            payload = {
+                "locale": "en-US",
+                "feeds": ["sections"],
+            }
+            if sections_payload is not None:
+                payload["sections"] = sections_payload
+            response = await ac.post("/api/v1/curated-recommendations", json=payload)
+            # assert 400 is returned for invalid followedAt
+            assert response.status_code == 400
+
+    @pytest.mark.asyncio
     async def test_curated_recommendations_with_sections_feed_removes_blocked_topics(self, caplog):
         """Test that when topic sections are blocked, those recommendations don't show up, not even
         in other sections like Popular Today.
@@ -1517,22 +1573,22 @@ class TestSections:
         "locale, expected_titles",
         [
             (
-                "en-US",
-                {
-                    "top_stories_section": "Popular Today",
-                    "arts": "Entertainment",
-                    "education": "Education",
-                    "sports": "Sports",
-                },
+                    "en-US",
+                    {
+                        "top_stories_section": "Popular Today",
+                        "arts": "Entertainment",
+                        "education": "Education",
+                        "sports": "Sports",
+                    },
             ),
             (
-                "de-DE",
-                {
-                    "top_stories_section": "Meistgelesen",
-                    "arts": "Unterhaltung",
-                    "education": "Bildung",
-                    "sports": "Sport",
-                },
+                    "de-DE",
+                    {
+                        "top_stories_section": "Meistgelesen",
+                        "arts": "Unterhaltung",
+                        "education": "Bildung",
+                        "sports": "Sport",
+                    },
             ),
         ],
     )
@@ -1598,14 +1654,14 @@ class TestExtendedExpiration:
         ],
     )
     async def test_extended_expiration_experiment(
-        self,
-        corpus_backend: CorpusApiBackend,
-        experiment_name,
-        experiment_branch,
-        is_in_experiment,
-        fixture_response_data,
-        fixture_request_data,
-        corpus_http_client,
+            self,
+            corpus_backend: CorpusApiBackend,
+            experiment_name,
+            experiment_branch,
+            is_in_experiment,
+            fixture_response_data,
+            fixture_request_data,
+            corpus_http_client,
     ):
         """Test that older items are fetched in the extended expiration experiment."""
 
@@ -1615,7 +1671,7 @@ class TestExtendedExpiration:
             surface_timezone = corpus_backend.get_surface_timezone(variables["scheduledSurfaceId"])
             date_today = corpus_backend.get_scheduled_surface_date(surface_timezone).date()
             days_ago = (
-                datetime.strptime(variables.get("date"), "%Y-%m-%d").date() - date_today
+                    datetime.strptime(variables.get("date"), "%Y-%m-%d").date() - date_today
             ).days
 
             # Modify IDs and titles in response data to indicate the number of days ago
@@ -1664,9 +1720,9 @@ class TestExtendedExpiration:
 
 @pytest.mark.asyncio
 async def test_curated_recommendations_enriched_with_icons(
-    manifest_provider,
-    corpus_http_client,
-    fixture_request_data,
+        manifest_provider,
+        corpus_http_client,
+        fixture_request_data,
 ):
     """Test the enrichment of a curated recommendation with an added icon-url."""
     # Set up the manifest data first
@@ -1726,7 +1782,7 @@ async def test_curated_recommendations_enriched_with_icons(
 
     assert "iconUrl" in item
     assert (
-        item["iconUrl"] == "https://merino-images.services.mozilla.com/favicons/microsoft-icon.png"
+            item["iconUrl"] == "https://merino-images.services.mozilla.com/favicons/microsoft-icon.png"
     )
 
     # Clean up

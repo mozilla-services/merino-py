@@ -27,11 +27,11 @@ NUM_RECS_PER_TOPIC = 2
 
 
 def thompson_sampling(
-    recs: list[CuratedRecommendation],
-    engagement_backend: EngagementBackend,
-    prior_backend: PriorBackend,
-    region: str | None = None,
-    region_weight: float = REGION_ENGAGEMENT_WEIGHT,
+        recs: list[CuratedRecommendation],
+        engagement_backend: EngagementBackend,
+        prior_backend: PriorBackend,
+        region: str | None = None,
+        region_weight: float = REGION_ENGAGEMENT_WEIGHT,
 ) -> list[CuratedRecommendation]:
     """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
     CTR with exploration of new items using a prior.
@@ -49,7 +49,7 @@ def thompson_sampling(
     fallback_prior = ConstantPrior().get()
 
     def get_opens_no_opens(
-        rec: CuratedRecommendation, region_query: str | None = None
+            rec: CuratedRecommendation, region_query: str | None = None
     ) -> tuple[float, float]:
         """Get opens and no-opens counts for a recommendation, optionally in a region."""
         engagement = engagement_backend.get(rec.corpusItemId, region_query)
@@ -85,7 +85,7 @@ def thompson_sampling(
 
 
 def spread_publishers(
-    recs: list[CuratedRecommendation], spread_distance: int
+        recs: list[CuratedRecommendation], spread_distance: int
 ) -> list[CuratedRecommendation]:
     """Spread a list of CuratedRecommendations by the publisher attribute to avoid encountering the same publisher
     in sequence.
@@ -114,8 +114,8 @@ def spread_publishers(
 
 
 def boost_preferred_topic(
-    recs: list[CuratedRecommendation],
-    preferred_topics: list[Topic],
+        recs: list[CuratedRecommendation],
+        preferred_topics: list[Topic],
 ) -> list[CuratedRecommendation]:
     """Boost recommendations into top N slots based on preferred topics.
     2 recs per topic (for now).
@@ -138,9 +138,9 @@ def boost_preferred_topic(
         # Boost if slots (e.g. 10) remain and its topic hasn't been boosted too often (e.g. 2).
         # It relies on get() returning None for missing keys, and None and 0 being falsy.
         if (
-            topic in remaining_num_topic_boosts
-            and len(boosted_recs) < MAX_TOP_REC_SLOTS
-            and remaining_num_topic_boosts.get(topic)
+                topic in remaining_num_topic_boosts
+                and len(boosted_recs) < MAX_TOP_REC_SLOTS
+                and remaining_num_topic_boosts.get(topic)
         ):
             boosted_recs.append(rec)
             remaining_num_topic_boosts[topic] -= 1  # decrement remaining # of topics to boost
@@ -163,17 +163,37 @@ def is_section_recently_followed(followed_at: datetime | None) -> bool:
     # Return followed_at in UTC timezone (in case client sent in different timezone)
     followed_at = followed_at.astimezone(timezone.utc)
 
-    # Get current UTC time with dropping the microseconds
-    current_time = datetime.now(timezone.utc).replace(microsecond=0)
-    # drop microseconds from followed_at for accurate comparison
-    followed_at = followed_at.replace(microsecond=0)
+    # Get current UTC time
+    current_time = datetime.now(timezone.utc)
 
     # Return true if recently followed (<=7) false if > 7
     return current_time - followed_at <= timedelta(days=7)
 
 
+def section_boosting_composite_sorting_key(section):
+    """
+    Returns a composite sort key for boosting sections.
+
+    - 1st sort order: Followed sections get higher rank
+    - 2nd sort order: Recently followed sections get a higher rank among followed sections
+    - 3rd sort order: Most recent sections among recently followed sections get a higher rank
+    - 4th sort order: Unfollowed / blocked sections are pushed to the very end, relative order is preserved
+    """
+    section_followed = section.isFollowed
+    section_recent = is_section_recently_followed(section.followedAt)
+    section_followed_at = section.followedAt.timestamp() if section.followedAt else 0
+    existing_rank = section.receivedFeedRank or 0
+
+    return (
+        0 if section_followed else 1,  # 1st sort order
+        0 if section_recent else 1,  # 2nd sort order
+        -section_followed_at,  # 3rd sort order
+        existing_rank,  # 4th sort order
+    )
+
+
 def boost_followed_sections(
-    req_sections: list[SectionConfiguration], feeds: CuratedRecommendationsFeed
+        req_sections: list[SectionConfiguration], feeds: CuratedRecommendationsFeed
 ) -> CuratedRecommendationsFeed:
     """Boost followed sections to the very top, right after top_stories_section.
     Received feed rank for top_stories_section should always stay 0.
@@ -185,82 +205,53 @@ def boost_followed_sections(
     :param feeds: CuratedRecommendationsFeed object
     :return: updated CuratedRecommendationsFeed with boosted followed sections (if found)
     """
-    followed_sections = []
-    unfollowed_sections = []
+    # 1. Extract section ids from the section request
+    initial_section_ids = [section.sectionId for section in req_sections]
 
-    # 1. Extract followed section ids & followedAt from req_sections param & store in a dict for quick lookup
+    # 2. Extract followed section ids & followedAt from req_sections param & store in a dict for quick lookup
     followed_sections_info = {
         section.sectionId: section.followedAt for section in req_sections if section.isFollowed
     }
 
-    # 2. Extract blocked section ids from req_sections param
+    # 3. Extract blocked section ids from req_sections param
     blocked_section_ids = [section.sectionId for section in req_sections if section.isBlocked]
 
-    # 3. Update isBlocked based on blocked_section_ids
-    # For now, we will only update isBlocked value on a Section
-    # The client-side will handle the actual blocking action
-    if blocked_section_ids:
-        for section_id in blocked_section_ids:
-            section = feeds.get_section_by_topic_id(section_id)
-            if section:
+    # 4. Update section attributes for sections in the request
+    for section_id in initial_section_ids:
+        # lookup the section using the SERP topic from client
+        section = feeds.get_section_by_topic_id(section_id)
+        if not section:
+            continue  # skip sections that did not map
+
+        if section_id == "top_stories_section":
+            section.receivedFeedRank = 0
+        else:
+            # set follow attributes if section is followed
+            if section_id in followed_sections_info:
+                section.isFollowed = True
+                section.followedAt = followed_sections_info[section_id]
+            # if section is blocked, set isBlocked
+            if section_id in blocked_section_ids:
                 section.isBlocked = True
 
-    # 4. Update isFollowed & followedAt based on followed_sections_info
-    if followed_sections_info:
-        for section_id, followed_at in followed_sections_info.items():
-            # lookup the followed section using the SERP topic from client
-            section = feeds.get_section_by_topic_id(section_id)
-            if section:
-                section.isFollowed = True
-                section.followedAt = followed_at
+    # 5. Collect all followed, unfollowed, blocked sections into a single array
+    sorted_sections = []
+    for section_id in feeds.model_fields_set:
+        section = getattr(feeds, section_id)
+        if section:
+            if section_id == "top_stories_section":
+                # top_stories_section is always ranked first
+                section.receivedFeedRank = 0
+                continue
+            sorted_sections.append(section)
 
-        # 5. Collect followed & unfollowed sections
-        for section_id in feeds.model_fields_set:
-            section = getattr(feeds, section_id)
-            if section:
-                if section_id == "top_stories_section":
-                    # top_stories_section is always on the top
-                    section.receivedFeedRank = 0
-                elif section.isFollowed:
-                    followed_sections.append(section)
-                else:
-                    unfollowed_sections.append(section)
+    # 6. Sort the sections using lambda composite key
+    sorted_sections.sort(key=section_boosting_composite_sorting_key)
 
-        # 6. Sort unfollowed sections by their rank (ascending)
-        # This is to ensure relative order is kept
-        unfollowed_sections.sort(key=lambda section: section.receivedFeedRank)
-
-        # 7. Determine most recently followed sections
-        recently_followed_sections = []
-        other_followed_sections = []
-
-        for section in followed_sections:
-            if is_section_recently_followed(section.followedAt):
-                recently_followed_sections.append(section)
-            else:
-                other_followed_sections.append(section)
-
-        # 8. Sort recently_followed_sections by followedAt to assign a higher rank to the most recently followed
-        # lint complains about followedAt possibly being None, so fallback to datetime.min
-        recently_followed_sections.sort(
-            key=lambda section: section.followedAt or datetime.min, reverse=True
-        )
-
-        # 9. Assign new rank starting from 1 for followed sections.
-        # Maintain relative order but boost most recently followed sections first
-        current_received_feed_rank = 1
-        for section in recently_followed_sections:
-            section.receivedFeedRank = current_received_feed_rank
-            current_received_feed_rank += 1
-
-        for section in other_followed_sections:
-            section.receivedFeedRank = current_received_feed_rank
-            current_received_feed_rank += 1
-
-        # 10. Assign new rank (starting from last rank value assigned to a followed section)
-        # to unfollowed sections. Keep relative order.
-        for section in unfollowed_sections:
-            section.receivedFeedRank = current_received_feed_rank
-            current_received_feed_rank += 1
+    # 7. Assign new rank starting from 1 for the sorted sections
+    current_received_feed_rank = 1
+    for section in sorted_sections:
+        section.receivedFeedRank = current_received_feed_rank
+        current_received_feed_rank += 1
 
     return feeds
