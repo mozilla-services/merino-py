@@ -879,8 +879,8 @@ def test_fix_url() -> None:
     # Test with protocol-relative URLs - should add https: prefix (keeping // intact)
     assert extractor._fix_url("//example.com/icon.ico") == "https://example.com/icon.ico"
 
-    # Test with absolute paths - should add https: prefix (keeping / intact)
-    assert extractor._fix_url("/icon.ico") == "https:/icon.ico"
+    # Test with absolute paths - when no _current_base_url is set, should return empty string
+    assert extractor._fix_url("/icon.ico") == ""
 
     # Test with domain names without protocol - should add https:// prefix
     assert extractor._fix_url("example.com/icon.ico") == "https://example.com/icon.ico"
