@@ -5,6 +5,7 @@ from collections import namedtuple
 from enum import unique, Enum
 from typing import Annotated, cast
 import logging
+from datetime import datetime
 
 from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo
 
@@ -79,6 +80,32 @@ class SectionConfiguration(BaseModel):
     sectionId: str
     isFollowed: bool
     isBlocked: bool
+    followedAt: datetime | None = Field(
+        default=None,
+        description="Timestamp when the section was followed. Must be in ISO 8601 format with timezone, "
+        "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
+    )
+
+    @field_validator("followedAt", mode="before")
+    def validate_followed_at(cls, followedAt):
+        """Validate the followedAt param & ensures the timestamp is in the correct format."""
+        if followedAt is None:
+            return followedAt
+        if isinstance(followedAt, datetime):
+            if followedAt.tzinfo is None:
+                raise ValueError("followedAt must have a timezone (e.g. 'Z' or '+02:00')")
+            return followedAt
+        if isinstance(followedAt, str):
+            try:
+                followed_at_iso = datetime.fromisoformat(followedAt)
+            except ValueError:
+                raise ValueError("followedAt must be a valid ISO 8601 datetime with timezone")
+            if followed_at_iso.tzinfo is None:
+                raise ValueError("followedAt must have a timezone (e.g. 'Z' or '+02:00')")
+            return followed_at_iso
+        raise ValueError(
+            "followedAt must be a datetime or string in ISO 8601 format with timezone"
+        )
 
 
 class CuratedRecommendation(CorpusItem):
@@ -227,6 +254,12 @@ class Section(BaseModel):
     layout: Layout
     isFollowed: bool = False
     isBlocked: bool = False
+    followedAt: datetime | None = Field(
+        default=None,
+        description="Timestamp when the section was followed. Must be in ISO 8601 format with timezone, "
+        "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
+    )
+
     isInitiallyVisible: bool = True
 
 
