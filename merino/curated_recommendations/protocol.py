@@ -91,6 +91,10 @@ class SectionConfiguration(BaseModel):
         """Validate the followedAt param & ensures the timestamp is in the correct format."""
         if followedAt is None:
             return followedAt
+        if isinstance(followedAt, datetime):
+            if followedAt.tzinfo is None:
+                raise ValueError("followedAt must have a timezone (e.g. 'Z' or '+02:00')")
+            return followedAt
         if isinstance(followedAt, str):
             try:
                 followed_at_iso = datetime.fromisoformat(followedAt)
@@ -99,7 +103,9 @@ class SectionConfiguration(BaseModel):
             if followed_at_iso.tzinfo is None:
                 raise ValueError("followedAt must have a timezone (e.g. 'Z' or '+02:00')")
             return followed_at_iso
-        raise ValueError("followedAt must be a string in ISO 8601 format with timezone")
+        raise ValueError(
+            "followedAt must be a datetime or string in ISO 8601 format with timezone"
+        )
 
 
 class CuratedRecommendation(CorpusItem):
