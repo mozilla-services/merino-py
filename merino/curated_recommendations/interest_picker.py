@@ -80,10 +80,6 @@ def _build_picker(
     picker_rank = _get_interest_picker_rank(sections)
     return InterestPicker(
         receivedFeedRank=picker_rank,
-        title="Follow topics to personalize your feed",
-        subtitle=(
-            "We will bring you personalized content, all while respecting your privacy. "
-            "You'll have powerful control over what content you see and what you don't."
-        ),
+        title="Follow topics to fine-tune your feed",
         sections=[InterestPickerSection(sectionId=s.ID) for s in picker_sections],
     )

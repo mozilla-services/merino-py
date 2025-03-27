@@ -327,7 +327,7 @@ class InterestPicker(BaseModel):
 
     receivedFeedRank: int
     title: str
-    subtitle: str
+    subtitle: str | None = None
     sections: list[InterestPickerSection]
 
 
