@@ -181,7 +181,7 @@ score = 0.25
 server = "redis://localhost:6379"
 
 # MERINO_REDIS__REPLICA - URI to the Redis replica endpoint.
-# Can be set to the primary endpoint for the development environemnts.
+# Set to the primary endpoint for development and testing environemnts.
 replica = "redis://localhost:6379"
 
 # MERINO_REDIS__MAX_CONNECTIONS - The maximum connections allowed for the connection pool.
