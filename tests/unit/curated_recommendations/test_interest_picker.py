@@ -54,7 +54,7 @@ def test_interest_picker_is_created(followed_count: int):
     picker = create_interest_picker(sections)
     assert picker is not None
 
-    # Picker has expected title and subtitle strings.
+    # Picker has expected title string and no subtitle.
     assert picker.title == "Follow topics to fine-tune your feed"
     assert picker.subtitle is None
 
