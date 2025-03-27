@@ -640,7 +640,7 @@ async def test_extract_favicons() -> None:
 
 
 @pytest.mark.asyncio
-async def test_process_single_domain() -> None:
+async def test_process_single_domain(mock_domain_metadata_uploader) -> None:
     """Test the _process_single_domain method."""
     # Create a mock scraper and favicon downloader
     scraper = AsyncMock(spec=Scraper)
@@ -658,12 +658,14 @@ async def test_process_single_domain() -> None:
 
     # Use patch to mock the internal methods that we're testing in other tests
     with patch.object(
-        extractor, "_get_favicon", AsyncMock(return_value="https://example.com/favicon.ico")
+        extractor, "_process_favicon", AsyncMock(return_value="https://example.com/favicon.ico")
     ):
         # Test a successful domain
         domain_data = {"domain": "example.com", "suffix": "com", "categories": ["Technology"]}
 
-        result = await extractor._process_single_domain(domain_data, 32)
+        result = await extractor._process_single_domain(
+            domain_data, 32, mock_domain_metadata_uploader
+        )
     assert result["url"] == "https://example.com"
     assert result["title"] == "Example Website"
     assert result["icon"] == "https://example.com/favicon.ico"
@@ -672,9 +674,11 @@ async def test_process_single_domain() -> None:
     # Test a blocked domain
     extractor.blocked_domains = {"example"}
     with patch.object(
-        extractor, "_get_favicon", AsyncMock(return_value="https://example.com/favicon.ico")
+        extractor, "_process_favicon", AsyncMock(return_value="https://example.com/favicon.ico")
     ):
-        result = await extractor._process_single_domain(domain_data, 32)
+        result = await extractor._process_single_domain(
+            domain_data, 32, mock_domain_metadata_uploader
+        )
         assert result["url"] is None
         assert result["title"] == ""
         assert result["icon"] == ""
@@ -684,9 +688,11 @@ async def test_process_single_domain() -> None:
     extractor.blocked_domains = set()
     scraper.open.return_value = None
     with patch.object(
-        extractor, "_get_favicon", AsyncMock(return_value="https://example.com/favicon.ico")
+        extractor, "_process_favicon", AsyncMock(return_value="https://example.com/favicon.ico")
     ):
-        result = await extractor._process_single_domain(domain_data, 32)
+        result = await extractor._process_single_domain(
+            domain_data, 32, mock_domain_metadata_uploader
+        )
         assert result["url"] is None
         assert result["title"] == ""
         assert result["icon"] == ""
@@ -695,9 +701,11 @@ async def test_process_single_domain() -> None:
     # Test URL not containing domain
     scraper.open.return_value = "https://otherdomain.com"
     with patch.object(
-        extractor, "_get_favicon", AsyncMock(return_value="https://example.com/favicon.ico")
+        extractor, "_process_favicon", AsyncMock(return_value="https://example.com/favicon.ico")
     ):
-        result = await extractor._process_single_domain(domain_data, 32)
+        result = await extractor._process_single_domain(
+            domain_data, 32, mock_domain_metadata_uploader
+        )
         assert result["url"] is None
         assert result["title"] == ""
         assert result["icon"] == ""
@@ -707,17 +715,21 @@ async def test_process_single_domain() -> None:
     scraper.open.reset_mock()  # Reset the call count
     scraper.open.side_effect = [None, "https://www.example.com"]
     with patch.object(
-        extractor, "_get_favicon", AsyncMock(return_value="https://www.example.com/favicon.ico")
+        extractor,
+        "_process_favicon",
+        AsyncMock(return_value="https://www.example.com/favicon.ico"),
     ):
-        result = await extractor._process_single_domain(domain_data, 32)
+        result = await extractor._process_single_domain(
+            domain_data, 32, mock_domain_metadata_uploader
+        )
         assert result["url"] == "https://www.example.com"
         # Should be called twice, first with example.com then with www.example.com
         assert scraper.open.call_count == 2
 
 
 @pytest.mark.asyncio
-async def test_process_domains_async() -> None:
-    """Test the _process_domains_async method."""
+async def test_process_domains(mock_domain_metadata_uploader) -> None:
+    """Test the _process_domains method."""
     extractor = DomainMetadataExtractor(
         blocked_domains=set(),
         scraper=AsyncMock(),
@@ -750,7 +762,7 @@ async def test_process_domains_async() -> None:
             {"domain": "example2.com", "suffix": "com"},
         ]
 
-        results = await extractor._process_domains_async(domains_data, 32)
+        results = await extractor._process_domains(domains_data, 32, mock_domain_metadata_uploader)
 
         # Verify the results
         assert len(results) == 2
@@ -759,13 +771,13 @@ async def test_process_domains_async() -> None:
 
         # Verify _process_single_domain was called twice with correct arguments
         assert mock_process.call_count == 2
-        mock_process.assert_any_call(domains_data[0], 32)
-        mock_process.assert_any_call(domains_data[1], 32)
+        mock_process.assert_any_call(domains_data[0], 32, mock_domain_metadata_uploader)
+        mock_process.assert_any_call(domains_data[1], 32, mock_domain_metadata_uploader)
 
 
 @pytest.mark.asyncio
-async def test_get_favicon() -> None:
-    """Test the _get_favicon method."""
+async def test_get_favicon(mock_domain_metadata_uploader) -> None:
+    """Test the _process_favicon method."""
     # Create a mock scraper and favicon downloader
     scraper = AsyncMock(spec=Scraper)
     favicon_downloader = AsyncMock(spec=AsyncFaviconDownloader)
@@ -789,65 +801,21 @@ async def test_get_favicon() -> None:
         ) as mock_extract,
         patch.object(
             extractor,
-            "_get_best_favicon",
+            "_upload_best_favicon",
             AsyncMock(return_value="https://example.com/favicon1.ico"),
-        ) as mock_best,
+        ) as mock_upload,
     ):
         # Test the method
-        result = await extractor._get_favicon("https://example.com", 32)
+        result = await extractor._process_favicon(
+            "https://example.com", 32, mock_domain_metadata_uploader
+        )
 
         # Verify the result
         assert result == "https://example.com/favicon1.ico"
 
         # Verify the methods were called correctly
-        mock_extract.assert_called_once_with("https://example.com")
-        mock_best.assert_called_once_with(mock_favicons, 32)
-
-
-@pytest.mark.asyncio
-async def test_get_best_favicon() -> None:
-    """Test the _get_best_favicon method."""
-    favicon_downloader = AsyncMock(spec=AsyncFaviconDownloader)
-
-    # Mock the favicon downloads with individual image objects
-    favicon_images = [
-        # Regular PNG
-        Mock(content_type="image/png"),
-        # SVG with mask (should be skipped)
-        Mock(content_type="image/svg+xml"),
-        # SVG without mask (should be returned immediately)
-        Mock(content_type="image/svg+xml"),
-        # Non-image type (should be skipped)
-        Mock(content_type="text/html"),
-    ]
-
-    favicon_downloader.download_multiple_favicons.return_value = favicon_images
-
-    extractor = DomainMetadataExtractor(
-        blocked_domains=set(),
-        scraper=AsyncMock(),
-        favicon_downloader=favicon_downloader,
-    )
-
-    # Create a simplified test for one scenario
-    favicons = [
-        {"href": "http://example.com/favicon1.png"},
-        {"href": "http://example.com/favicon2.svg", "mask": "true"},
-        {
-            "href": "http://example.com/favicon3.svg"
-        },  # This SVG has no mask and should be prioritized
-        {"href": "http://example.com/favicon4.html"},
-    ]
-
-    # Simply mock the entire method for testing purposes
-    async def get_test_favicon(favs: list[dict[str, Any]], min_width: int) -> str:
-        # For our test case, just return the SVG without mask
-        return "http://example.com/favicon3.svg"
-
-    # Replace the method with our mock version
-    with patch.object(extractor, "_get_best_favicon", side_effect=get_test_favicon):
-        result = await extractor._get_best_favicon(favicons, 32)
-        assert result == "http://example.com/favicon3.svg"
+        mock_extract.assert_called_once_with("https://example.com", max_icons=5)
+        mock_upload.assert_called_once_with(mock_favicons, 32, mock_domain_metadata_uploader)
 
 
 def test_get_base_url() -> None:
@@ -1214,8 +1182,8 @@ async def test_extract_favicons_with_data_url() -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_best_favicon_with_exception() -> None:
-    """Test the _get_best_favicon method with an exception during image dimension calculation."""
+async def test_upload_best_favicon_with_exception(mock_domain_metadata_uploader) -> None:
+    """Test the _upload_best_favicon method with an exception during image dimension calculation."""
     extractor = DomainMetadataExtractor(set())
 
     # Create a mock favicon downloader
@@ -1236,7 +1204,9 @@ async def test_get_best_favicon_with_exception() -> None:
         with patch(
             "merino.jobs.navigational_suggestions.domain_metadata_extractor.logger"
         ) as mock_logger:
-            result = await extractor._get_best_favicon(favicons, 16)
+            result = await extractor._upload_best_favicon(
+                favicons, 16, mock_domain_metadata_uploader
+            )
 
             # Should not raise exception but return empty string
             assert result == ""
@@ -1249,30 +1219,39 @@ async def test_extract_favicons_with_manifests() -> None:
     """Test the _extract_favicons method with manifests."""
     extractor = DomainMetadataExtractor(set())
 
-    # Mock favicon data with manifests
-    links: list[dict[str, Any]] = []
-    metas: list[dict[str, Any]] = []
-    manifests: list[dict[str, str]] = [{"href": "manifest.json"}]
+    # Create mock data with different cases to test
+    manifest_icons = [
+        {"src": "icon1.png"},  # Relative URL
+        {"src": "https://cdn.example.com/icon2.png"},  # Absolute URL
+        {"src": "data:image/png;base64,abc123"},  # Problematic URL (should be filtered)
+    ]
 
-    # Setup the scraper mock
     extractor.scraper = Mock()
     extractor.scraper.scrape_favicon_data.return_value = FaviconData(
-        links=links, metas=metas, manifests=manifests
+        links=[], metas=[], manifests=[{"href": "manifest.json"}]
     )
-    extractor.scraper.get_default_favicon.return_value = None
 
-    # Mock the scrape_favicons_from_manifest method
-    manifest_future: asyncio.Future[list[dict[str, Any]]] = asyncio.Future()
-    manifest_future.set_result([{"src": "icon1.png"}, {"src": "icon2.png"}])
-    extractor.scraper.scrape_favicons_from_manifest.return_value = manifest_future
+    extractor.scraper.get_default_favicon = AsyncMock(return_value=None)
+    extractor.scraper.scrape_favicons_from_manifest = AsyncMock(return_value=manifest_icons)
 
-    # Call the method
-    result = await extractor._extract_favicons("https://example.com")
+    # Mock URL joining to verify it's called correctly
+    with patch(
+        "merino.jobs.navigational_suggestions.domain_metadata_extractor.urljoin",
+        side_effect=lambda base, url: f"{base}/{url}"
+        if not url.startswith(("http://", "https://"))
+        else url,
+    ) as mock_urljoin:
+        result = await extractor._extract_favicons("https://example.com")
 
-    # Should have processed the manifests and extracted the icons
-    assert len(result) == 2
-    assert result[0]["href"] == "https://example.com/icon1.png"
-    assert result[1]["href"] == "https://example.com/icon2.png"
+    # Verify results
+    assert len(result) == 2, "Should have 2 valid icons (problematic one filtered)"
+    assert "icon1.png" in result[0]["href"], "First icon should be the relative URL"
+    assert (
+        "https://cdn.example.com/icon2.png" == result[1]["href"]
+    ), "Second icon should be the absolute URL"
+
+    # Verify URL joining was called for relative URL only
+    mock_urljoin.assert_any_call("https://example.com/manifest.json", "icon1.png")
 
 
 @pytest.mark.asyncio
@@ -1363,7 +1342,7 @@ def test_get_title_with_fallback() -> None:
 
 
 @pytest.mark.asyncio
-async def test_process_single_domain_success() -> None:
+async def test_process_single_domain_success(mock_domain_metadata_uploader) -> None:
     """Test the _process_single_domain method with a successful domain."""
     extractor = DomainMetadataExtractor(set())
 
@@ -1375,13 +1354,17 @@ async def test_process_single_domain_success() -> None:
     with (
         patch.object(extractor, "_get_base_url", Mock(return_value="https://example.com")),
         patch.object(
-            extractor, "_get_favicon", AsyncMock(return_value="https://example.com/favicon.ico")
+            extractor,
+            "_process_favicon",
+            AsyncMock(return_value="https://example.com/favicon.ico"),
         ),
         patch.object(extractor, "_get_second_level_domain", Mock(return_value="example")),
         patch.object(extractor, "_get_title", Mock(return_value="Example Website")),
     ):
         domain_data = {"domain": "example.com", "suffix": "com"}
-        result = await extractor._process_single_domain(domain_data, 16)
+        result = await extractor._process_single_domain(
+            domain_data, 16, mock_domain_metadata_uploader
+        )
 
         assert result == {
             "url": "https://example.com",
@@ -1392,7 +1375,7 @@ async def test_process_single_domain_success() -> None:
 
 
 @pytest.mark.asyncio
-async def test_process_single_domain_with_www_fallback() -> None:
+async def test_process_single_domain_with_www_fallback(mock_domain_metadata_uploader) -> None:
     """Test the _process_single_domain method with www fallback."""
     extractor = DomainMetadataExtractor(set())
 
@@ -1403,14 +1386,16 @@ async def test_process_single_domain_with_www_fallback() -> None:
         patch.object(extractor, "_get_base_url", Mock(return_value="https://www.example.com")),
         patch.object(
             extractor,
-            "_get_favicon",
+            "_process_favicon",
             AsyncMock(return_value="https://www.example.com/favicon.ico"),
         ),
         patch.object(extractor, "_get_second_level_domain", Mock(return_value="example")),
         patch.object(extractor, "_get_title", Mock(return_value="Example Website")),
     ):
         domain_data = {"domain": "example.com", "suffix": "com"}
-        result = await extractor._process_single_domain(domain_data, 16)
+        result = await extractor._process_single_domain(
+            domain_data, 16, mock_domain_metadata_uploader
+        )
 
         # Should try both URLs
         assert extractor.scraper.open.call_count == 2
@@ -1426,21 +1411,23 @@ async def test_process_single_domain_with_www_fallback() -> None:
 
 
 @pytest.mark.asyncio
-async def test_process_single_domain_blocked() -> None:
+async def test_process_single_domain_blocked(mock_domain_metadata_uploader) -> None:
     """Test the _process_single_domain method with a blocked domain."""
     blocked_domains = {"example"}
     extractor = DomainMetadataExtractor(blocked_domains)
 
     with patch.object(extractor, "_is_domain_blocked", Mock(return_value=True)):
         domain_data = {"domain": "example.com", "suffix": "com"}
-        result = await extractor._process_single_domain(domain_data, 16)
+        result = await extractor._process_single_domain(
+            domain_data, 16, mock_domain_metadata_uploader
+        )
 
         # Should return empty metadata for blocked domains
         assert result == {"url": None, "title": "", "icon": "", "domain": ""}
 
 
 @pytest.mark.asyncio
-async def test_process_single_domain_unreachable() -> None:
+async def test_process_single_domain_unreachable(mock_domain_metadata_uploader) -> None:
     """Test the _process_single_domain method with an unreachable domain."""
     extractor = DomainMetadataExtractor(set())
 
@@ -1449,7 +1436,7 @@ async def test_process_single_domain_unreachable() -> None:
     extractor.scraper.open.side_effect = [None, None]
 
     domain_data = {"domain": "example.com", "suffix": "com"}
-    result = await extractor._process_single_domain(domain_data, 16)
+    result = await extractor._process_single_domain(domain_data, 16, mock_domain_metadata_uploader)
 
     # Should return empty metadata for unreachable domains
     assert result == {"url": None, "title": "", "icon": "", "domain": ""}
@@ -1499,6 +1486,7 @@ async def test_get_domain_metadata(
     domains_data: list[dict[str, Any]],
     expected_domain_metadata: list[dict[str, str | None]],
     domain_blocklist: set[str],
+    mock_domain_metadata_uploader,
 ) -> None:
     """Test that DomainMetadataExtractor returns favicons as expected"""
     scraper_mock: Any = mocker.AsyncMock(spec=Scraper)
@@ -1543,7 +1531,7 @@ async def test_get_domain_metadata(
         metadata_extractor, "_extract_favicons", mocker.AsyncMock(return_value=mock_favicons)
     )
 
-    def get_icon_from_metadata(favs: list[dict[str, Any]], width: int) -> str:
+    def get_icon_from_metadata(favs: list[dict[str, Any]], width: int, uploader) -> str:
         return (
             ""
             if not expected_domain_metadata
@@ -1552,20 +1540,20 @@ async def test_get_domain_metadata(
 
     mocker.patch.object(
         metadata_extractor,
-        "_get_best_favicon",
+        "_upload_best_favicon",
         mocker.AsyncMock(side_effect=get_icon_from_metadata),
     )
 
-    domain_metadata: list[dict[str, str | None]] = await metadata_extractor._process_domains_async(
-        domains_data, favicon_min_width=32
+    domain_metadata: list[dict[str, str | None]] = await metadata_extractor._process_domains(
+        domains_data, favicon_min_width=32, uploader=mock_domain_metadata_uploader
     )
 
     assert domain_metadata == expected_domain_metadata
 
 
 @pytest.mark.asyncio
-async def test_process_domains_with_exceptions(mocker):
-    """Test that _process_domains_async properly handles exceptions in the processing"""
+async def test_process_domains_with_exceptions(mocker, mock_domain_metadata_uploader):
+    """Test that _process_domains properly handles exceptions in the processing"""
     # Mock data
     domain_data = [
         {"domain": "example1.com", "suffix": "com"},
@@ -1577,7 +1565,7 @@ async def test_process_domains_with_exceptions(mocker):
     metadata_extractor = DomainMetadataExtractor(blocked_domains=set())
 
     # Mock _process_single_domain to raise an exception for example2.com
-    async def mock_process_domain(domain_data, min_width):
+    async def mock_process_domain(domain_data, min_width, mock_domain_metadata_uploader):
         if domain_data["domain"] == "example2.com":
             raise Exception("Test exception")
         return {
@@ -1592,7 +1580,9 @@ async def test_process_domains_with_exceptions(mocker):
     )
 
     # Execute
-    result = await metadata_extractor._process_domains_async(domain_data, 32)
+    result = await metadata_extractor._process_domains(
+        domain_data, 32, mock_domain_metadata_uploader
+    )
 
     # Verify that we get results for the two domains that didn't throw exceptions
     assert len(result) == 2
@@ -1605,12 +1595,12 @@ async def test_process_domains_with_exceptions(mocker):
 
 @pytest.mark.asyncio
 async def test_extract_favicons_with_manifest_chunk_processing(mocker):
-    """Test that _extract_favicons correctly processes manifests in chunks"""
+    """Test that _extract_favicons correctly processes the first manifest"""
     # Create a DomainMetadataExtractor with minimal mocking
     metadata_extractor = DomainMetadataExtractor(blocked_domains=set())
 
     # Create mock favicon data with many manifests
-    manifests = [{"href": f"manifest{i}.json"} for i in range(15)]  # 15 manifests
+    manifests = [{"href": "manifest0.json"}, {"href": "manifest1.json"}]  # Multiple manifests
     favicon_data = FaviconData(links=[], metas=[], manifests=manifests)
 
     # Mock the scraper's scrape_favicon_data method
@@ -1618,23 +1608,25 @@ async def test_extract_favicons_with_manifest_chunk_processing(mocker):
         metadata_extractor.scraper, "scrape_favicon_data", return_value=favicon_data
     )
 
-    # Mock scrape_favicons_from_manifest to return different results for each manifest
-    async def mock_scrape_manifest(url):
-        manifest_num = url.split("manifest")[1].split(".")[0]
-        return [{"src": f"https://icon-from-manifest{manifest_num}.png"}]
-
+    # Mock scrape_favicons_from_manifest to return results
     mocker.patch.object(
         metadata_extractor.scraper,
         "scrape_favicons_from_manifest",
-        side_effect=mock_scrape_manifest,
+        return_value=[{"src": "https://icon-from-manifest0.png"}],
     )
 
-    # Execute
-    results = await metadata_extractor._extract_favicons("https://example.com")
+    # Mock default favicon to return None
+    mocker.patch.object(
+        metadata_extractor.scraper, "get_default_favicon", AsyncMock(return_value=None)
+    )
 
-    # We should get results from all 15 manifests
-    assert len(results) == 15
+    # Mock URL joining
+    with patch(
+        "merino.jobs.navigational_suggestions.domain_metadata_extractor.urljoin",
+        return_value="https://icon-from-manifest0.png",
+    ):
+        results = await metadata_extractor._extract_favicons("https://example.com")
 
-    # Verify all expected manifest icons are present
-    for i in range(15):
-        assert any(r.get("href") == f"https://icon-from-manifest{i}.png" for r in results)
+    # Should only process the first manifest in the list
+    assert len(results) == 1
+    assert results[0]["href"] == "https://icon-from-manifest0.png"

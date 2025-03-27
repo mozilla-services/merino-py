@@ -15,14 +15,17 @@ def test_construct_top_picks_source_field():
         {"rank": 2, "categories": ["shopping"], "source": "custom-domains"},
     ]
 
-    favicons = ["icon1", "icon2"]
-
     domain_metadata = [
-        {"domain": "example.com", "url": "https://example.com", "title": "Example"},
-        {"domain": "amazon.ca", "url": "https://amazon.ca", "title": "Amazon"},
+        {
+            "domain": "example.com",
+            "url": "https://example.com",
+            "title": "Example",
+            "icon": "icon1",
+        },
+        {"domain": "amazon.ca", "url": "https://amazon.ca", "title": "Amazon", "icon": "icon2"},
     ]
 
-    result = _construct_top_picks(domain_data, favicons, domain_metadata)
+    result = _construct_top_picks(domain_data, domain_metadata)
 
     # Check if source field is included correctly in the results
     assert "domains" in result

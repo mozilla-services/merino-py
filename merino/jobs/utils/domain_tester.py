@@ -1,17 +1,22 @@
 """Domain metadata extraction testing tool."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, cast
 import typer
 from rich.console import Console
 from rich.table import Table
 from pydantic import BaseModel
+from google.cloud.storage import Blob
 
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
     Scraper,
 )
 from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
+from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
+    DomainMetadataUploader,
+)
+from merino.utils.gcs.models import BaseContentUploader
 
 cli = typer.Typer(no_args_is_help=True)
 console = Console()
@@ -49,15 +54,65 @@ def test_domain(domain: str, min_width: int) -> DomainTestResult:
             blocked_domains=set(), scraper=scraper, favicon_downloader=favicon_downloader
         )
 
-        metadata = extractor.get_domain_metadata([domain_data], min_width)[0]
+        # Create a mock uploader that doesn't actually upload to GCS
+        class MockUploader(BaseContentUploader):
+            def upload_content(
+                self, content, destination_name, content_type="text/plain", forced_upload=False
+            ):
+                mock_blob = Blob(name=destination_name, bucket=None)
+                return mock_blob
+
+            def upload_image(self, image, destination_name, forced_upload=False):
+                # Just return a dummy URL instead of uploading
+                return f"https://dummy-cdn.example.com/{destination_name}"
+
+            def get_most_recent_file(self, exclusion, sort_key):
+                return None
+
+        # Create a domain metadata uploader with our mock uploader
+        dummy_uploader = DomainMetadataUploader(
+            force_upload=False,
+            uploader=cast(Any, MockUploader()),  # Use cast to satisfy the type checker
+            async_favicon_downloader=favicon_downloader,
+        )
+
+        # Process the domain data using the standard method
+        # We have a single domain, so take the first result
+        metadata = extractor.process_domain_metadata(
+            [domain_data], favicon_min_width=min_width, uploader=dummy_uploader
+        )[0]
 
         favicon_data = None
         total_favicons = 0
         if metadata["url"]:
-            raw_favicon_data = scraper.scrape_favicon_data(metadata["url"])
+            base_url = metadata["url"]
+
+            # Get raw favicon data for displaying all favicons
+            raw_favicon_data = scraper.scrape_favicon_data()
+
+            # Use the same _extract_favicons method that production uses
+            # to process the favicon URLs and convert relative URLs to absolute
+            import asyncio
+
+            processed_favicons = asyncio.run(
+                extractor._extract_favicons(base_url, max_icons=100)  # Use high max to get all
+            )
+
+            # Create processed version of favicon data
+            processed_links = []
+            for favicon in processed_favicons:
+                # Only include link-type favicons that have href
+                if "href" in favicon:
+                    processed_links.append(favicon)
+
+            # Replace the original links with processed ones to ensure
+            # all URLs are absolute, just like in production
+            raw_favicon_data.links = processed_links
+
             favicon_data = raw_favicon_data.model_dump()
             favicon_urls = set()
 
+            # Collect unique favicon URLs
             for link in raw_favicon_data.links:
                 if "href" in link:
                     favicon_urls.add(link["href"])

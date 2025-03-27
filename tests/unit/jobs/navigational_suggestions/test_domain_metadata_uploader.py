@@ -232,9 +232,13 @@ def mock_remote_client(mocker: MockerFixture, remote_bucket):
 def mock_favicon_downloader(mocker) -> Any:
     """Return a mock AsyncFaviconDownloader instance"""
     favicon_downloader_mock: Any = mocker.AsyncMock(spec=AsyncFaviconDownloader)
+    # Return a real Image object that can be properly used
     favicon_downloader_mock.download_multiple_favicons.return_value = [
-        Image(content=bytes(255), content_type="image/png")
+        Image(content=b"\xff", content_type="image/png")  # Use valid bytes
     ]
+    favicon_downloader_mock.download_favicon.return_value = Image(
+        content=b"\xff", content_type="image/png"
+    )
     return favicon_downloader_mock
 
 
@@ -278,7 +282,6 @@ def test_upload_favicons_upload_if_not_present(mock_favicon_downloader, mock_gcs
     """
     FORCE_UPLOAD: bool = False
     UPLOADED_FAVICON_PUBLIC_URL = "DUMMY_PUBLIC_URL"
-    dummy_favicon = Image(content=bytes(255), content_type="image/png")
 
     mock_gcs_uploader.upload_image.return_value = UPLOADED_FAVICON_PUBLIC_URL
 
@@ -288,12 +291,15 @@ def test_upload_favicons_upload_if_not_present(mock_favicon_downloader, mock_gcs
         async_favicon_downloader=mock_favicon_downloader,
     )
 
+    # Use the same image that the mock downloader will return
+    expected_image = Image(content=b"\xff", content_type="image/png")
+    expected_destination = domain_metadata_uploader.destination_favicon_name(expected_image)
+
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
-    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(dummy_favicon)
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(
-        dummy_favicon, destination_favicon_name, forced_upload=FORCE_UPLOAD
+        expected_image, expected_destination, forced_upload=FORCE_UPLOAD
     )
 
 
@@ -303,7 +309,6 @@ def test_upload_favicons_upload_if_force_upload_set(
     """Test that favicons are uploaded always when force upload is set"""
     FORCE_UPLOAD: bool = True
     UPLOADED_FAVICON_PUBLIC_URL = "DUMMY_PUBLIC_URL"
-    dummy_favicon = Image(content=bytes(255), content_type="image/png")
 
     mock_gcs_uploader.upload_image.return_value = UPLOADED_FAVICON_PUBLIC_URL
 
@@ -313,12 +318,15 @@ def test_upload_favicons_upload_if_force_upload_set(
         async_favicon_downloader=mock_favicon_downloader,
     )
 
+    # Use the same image that the mock downloader will return
+    expected_image = Image(content=b"\xff", content_type="image/png")
+    expected_destination = domain_metadata_uploader.destination_favicon_name(expected_image)
+
     uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
-    destination_favicon_name = domain_metadata_uploader.destination_favicon_name(dummy_favicon)
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(
-        dummy_favicon, destination_favicon_name, forced_upload=FORCE_UPLOAD
+        expected_image, expected_destination, forced_upload=FORCE_UPLOAD
     )
 
 

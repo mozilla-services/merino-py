@@ -61,22 +61,32 @@ This is meant to troubleshoot domains locally and iterate over the functionality
 
 Example output:
 ```bash
-$ poetry run probe-images mozilla.org
+$ uv run probe-images mozilla.org wikipedia.org
 
 Testing domain: mozilla.org
 ✅ Success!
  Title           Mozilla - Internet for people, not profit (UK)
- Best Icon       https://www.mozilla.org/media/img/favicons/mozilla/m24/favicon-196x196.e143075360ea.png
+ Best Icon       https://dummy-cdn.example.com/favicons/bd67680f7da3564bace91b2be87feab16d5e9e6266355b8f082e21f8159…
+ Total Favicons  4
+
+All favicons found:
+- https://www.mozilla.org/media/img/favicons/mozilla/apple-touch-icon.05aa000f6748.png (rel=apple-touch-icon
+size=180x180 type=image/png)
+- https://www.mozilla.org/media/img/favicons/mozilla/favicon-196x196.e143075360ea.png (rel=icon size=196x196
+type=image/png)
+- https://www.mozilla.org/media/img/favicons/mozilla/favicon.d0be64e474b1.ico (rel=shortcut,icon)
+
+Testing domain: wikipedia.org
+✅ Success!
+ Title           Wikipedia
+ Best Icon       https://dummy-cdn.example.com/favicons/4c8bf96d667fa2e9f072bdd8e9f25c8ba6ba2ad55df1af7d9ea0dd575c1…
  Total Favicons  3
 
 All favicons found:
-- https://www.mozilla.org/media/img/favicons/mozilla/m24/apple-touch-icon.05aa000f6748.png (rel=apple-touch-icon
-size=180x180 type=image/png)
-- https://www.mozilla.org/media/img/favicons/mozilla/m24/favicon-196x196.e143075360ea.png (rel=icon size=196x196
-type=image/png)
-- https://www.mozilla.org/media/img/favicons/mozilla/m24/favicon.d0be64e474b1.ico (rel=shortcut,icon)
+- https://www.wikipedia.org/static/apple-touch/wikipedia.png (rel=apple-touch-icon)
+- https://www.wikipedia.org/static/favicon/wikipedia.ico (rel=shortcut,icon)
 
-Summary: 1/1 domains processed successfully
+Summary: 2/2 domains processed successfully
 ```
 
 ## Adding new domains

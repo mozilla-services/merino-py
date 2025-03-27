@@ -82,7 +82,6 @@ navigational_suggestions_cmd = typer.Typer(
 
 def _construct_top_picks(
     domain_data: list[dict],
-    favicons: list[str],
     domain_metadata: list[dict[str, Optional[str]]],
 ) -> dict[str, list[dict[str, str]]]:
     result = []
@@ -97,7 +96,7 @@ def _construct_top_picks(
                     "serp_categories": _get_serp_categories(domain_url),
                     "url": domain_url,
                     "title": domain_metadata[index]["title"],
-                    "icon": favicons[index],
+                    "icon": domain_metadata[index]["icon"],
                     "source": domain.get("source", "top-picks"),
                 }
             )
@@ -159,14 +158,7 @@ def prepare_domain_metadata(
     domain_data = domain_data_downloader.download_data()
     logger.info("domain data download complete")
 
-    # extract domain metadata of top domains
-    domain_metadata_extractor = DomainMetadataExtractor(blocked_domains=TOP_PICKS_BLOCKLIST)
-    domain_metadata: list[dict[str, Optional[str]]] = (
-        domain_metadata_extractor.get_domain_metadata(domain_data, min_favicon_width)
-    )
-    logger.info("domain metadata extraction complete")
-
-    # upload favicons and get their public urls
+    # Create uploader to download favicons and upload  them to Google Cloud afterwards
     domain_metadata_uploader = DomainMetadataUploader(
         force_upload,
         GcsUploader(
@@ -177,18 +169,22 @@ def prepare_domain_metadata(
         AsyncFaviconDownloader(),
     )
 
-    # Process top picks favicons
-    top_picks_favicons = [str(metadata["icon"]) for metadata in domain_metadata]
-    uploaded_top_picks_favicons = domain_metadata_uploader.upload_favicons(top_picks_favicons)
-    logger.info("top picks favicons uploaded to GCS")
+    # extract domain metadata of top domains and upload the best favicon for each immediately
+    domain_metadata_extractor = DomainMetadataExtractor(blocked_domains=TOP_PICKS_BLOCKLIST)
+    domain_metadata: list[dict[str, Optional[str]]] = (
+        domain_metadata_extractor.process_domain_metadata(
+            domain_data, min_favicon_width, uploader=domain_metadata_uploader
+        )
+    )
+    logger.info("domain metadata extraction complete")
 
     # Process partner favicons
     partner_favicons = [item["icon"] for item in PARTNER_FAVICONS]
     uploaded_partner_favicons = domain_metadata_uploader.upload_favicons(partner_favicons)
     logger.info("partner favicons uploaded to GCS")
 
-    # construct top pick contents
-    top_picks = _construct_top_picks(domain_data, uploaded_top_picks_favicons, domain_metadata)
+    # construct top pick contents. The `domain_metadata` already has the uploaded favicon URL in it
+    top_picks = _construct_top_picks(domain_data, domain_metadata)
 
     # construct partner contents
     partner_manifest = _construct_partner_manifest(PARTNER_FAVICONS, uploaded_partner_favicons)

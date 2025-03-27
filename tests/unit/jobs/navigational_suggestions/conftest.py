@@ -116,3 +116,14 @@ def mock_favicon_downloader(mocker, mock_async_client_session):
         return downloader
 
     return _create_downloader
+
+
+@pytest.fixture
+def mock_domain_metadata_uploader(mocker):
+    """Create a mock DomainMetadataUploader for testing."""
+    uploader = mocker.MagicMock()
+
+    uploader.upload_image.return_value = "https://cnd.mozilla.com/uploaded-favicon.ico"
+    uploader.destination_favicon_name.return_value = "favicons/12345_100.ico"
+
+    return uploader
