@@ -54,6 +54,10 @@ def test_interest_picker_is_created(followed_count: int):
     picker = create_interest_picker(sections)
     assert picker is not None
 
+    # Picker has expected title and subtitle strings.
+    assert picker.title == "Follow topics to fine-tune your feed"
+    assert picker.subtitle is None
+
     # Picker rank range depends on followed sections.
     min_picker_rank = 1 if followed_count == 0 else 2
     max_picker_rank = min_picker_rank + 2
