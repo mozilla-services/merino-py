@@ -24,5 +24,5 @@ class NoCacheAdapter:  # pragma: no cover
     def register_script(self, sid: str, script: str) -> None:  # noqa: D102
         pass
 
-    async def run_script(self, sid: str, keys: list, args: list) -> Any:  # noqa: D102
+    async def run_script(self, sid: str, keys: list, args: list, readonly: bool = False) -> Any:  # noqa: D102
         pass

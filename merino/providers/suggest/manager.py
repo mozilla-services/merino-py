@@ -3,10 +3,9 @@
 from enum import Enum, unique
 
 from dynaconf.base import Settings
-from redis.asyncio import Redis
 
 from merino.cache.none import NoCacheAdapter
-from merino.cache.redis import RedisAdapter
+from merino.cache.redis import RedisAdapter, create_redis_clients
 from merino.configs import settings
 from merino.exceptions import InvalidProviderError
 from merino.utils.metrics import get_metrics_client
@@ -53,7 +52,13 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
     match setting.type:
         case ProviderType.ACCUWEATHER:
             cache = (
-                RedisAdapter(Redis.from_url(settings.redis.server))
+                RedisAdapter(
+                    *create_redis_clients(
+                        settings.redis.server,
+                        settings.redis.replica,
+                        settings.redis.max_connections,
+                    )
+                )
                 if setting.cache == "redis"
                 else NoCacheAdapter()
             )
