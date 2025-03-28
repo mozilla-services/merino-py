@@ -88,8 +88,11 @@ class TopPicksBackend:
         query_max: int = self.query_char_limit
 
         for record in domain_list["domains"]:
-            # Filter to only include domains with source="top-picks"
-            if record.get("source") != "top-picks":
+            # Filter to only include domains with source="top-picks" (if exists)
+            # if the source field is not present, ignore and add the record
+            # TODO: Once the updated manifest is published, remove "is not None"
+            source = record.get("source")
+            if source is not None and source != "top-picks":
                 continue
 
             index_key: int = len(results)
