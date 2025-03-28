@@ -46,7 +46,7 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
         },
     ]
 
-    mock_domain_metadata_extractor.get_domain_metadata.return_value = [
+    mock_domain_metadata_extractor.process_domain_metadata.return_value = [
         {
             "url": "dummy_url.com",
             "title": "dummy_title",
@@ -86,7 +86,7 @@ def test_prepare_domain_metadata_top_picks_construction(mocker):
                 "serp_categories": [0],
                 "url": "dummy_url.com",
                 "title": "dummy_title",
-                "icon": "dummy_uploaded_favicon_url",
+                "icon": "dummy_icon",
                 "source": "top-picks",
             }
         ]
@@ -121,7 +121,7 @@ def test_prepare_domain_metadata_partner_manifest(mocker):
         }
     ]
 
-    mock_domain_metadata_extractor.get_domain_metadata.return_value = [
+    mock_domain_metadata_extractor.process_domain_metadata.return_value = [
         {
             "url": "dummy_url.com",
             "title": "dummy_title",
@@ -209,7 +209,7 @@ def test_prepare_domain_metadata_partner_manifest(mocker):
                 "serp_categories": [0],
                 "url": "dummy_url.com",
                 "title": "dummy_title",
-                "icon": "dummy_uploaded_favicon_url",
+                "icon": "dummy_icon",
                 "source": "top-picks",
             }
         ],

@@ -5,7 +5,6 @@ import hashlib
 import json
 import logging
 from datetime import datetime
-from typing import List
 
 from google.cloud.storage import Blob
 
@@ -68,51 +67,69 @@ class DomainMetadataUploader:
         logger.info(f"Domain file {most_recent.name} acquired.")
         return file_contents
 
-    def upload_favicons(self, src_favicons: list[str]) -> list[str]:
-        """Upload the domain favicons to gcs using their source url and
-        return the public urls of the uploaded ones.
+    def upload_favicon(self, favicon_url: str) -> str:
+        """Upload a single favicon to GCS and return its public URL.
+
+        Args:
+            favicon_url: URL of the favicon to upload
+
+        Returns:
+            Public URL of the uploaded favicon or empty string if upload failed
         """
-        return asyncio.run(self.upload_favicons_async(src_favicons))
+        # If URL is already from our CDN, return it directly
+        if favicon_url and favicon_url.startswith(f"https://{self.uploader.cdn_hostname}"):
+            return favicon_url
 
-    async def upload_favicons_async(self, src_favicons: List[str]) -> List[str]:
-        """Upload the domain favicons to GCS asynchronously"""
-        # Filter out URLs that are already from our CDN
-        cdn_urls = []
-        urls_to_download = []
-        indices = []
+        # Download the favicon
+        favicon_image = asyncio.run(self.async_favicon_downloader.download_favicon(favicon_url))
 
-        for i, url in enumerate(src_favicons):
-            if url and url.startswith(f"https://{self.uploader.cdn_hostname}"):
-                cdn_urls.append((i, url))
-            else:
-                urls_to_download.append(url)
-                indices.append(i)
+        # Process and upload the favicon
+        if favicon_image:
+            try:
+                dst_favicon_name = self.destination_favicon_name(favicon_image)
+                dst_favicon_public_url = self.uploader.upload_image(
+                    favicon_image, dst_favicon_name, forced_upload=self.force_upload
+                )
+                logger.info(f"Favicon uploaded: {dst_favicon_public_url}")
+                return dst_favicon_public_url
+            except Exception as e:
+                logger.info(f"Exception {e} occurred while uploading favicon")
 
-        # Download favicons in parallel
-        favicon_images = await self.async_favicon_downloader.download_multiple_favicons(
-            urls_to_download
+        return ""
+
+    def upload_image(
+        self, favicon_image: Image, dst_favicon_name: str, forced_upload: bool
+    ) -> str:
+        """Upload an already downloaded favicon image to GCS and return its public URL.
+
+        Args:
+            favicon_image: The Image object to upload
+            dst_favicon_name: The destination filename to use
+            forced_upload: Whether to force upload even if file exists
+
+        Returns:
+            Public URL of the uploaded favicon
+        """
+        return self.uploader.upload_image(
+            favicon_image, dst_favicon_name, forced_upload=forced_upload
         )
 
-        # Process results and upload to GCS
-        results = [""] * len(src_favicons)  # Initialize with empty strings
+    def upload_favicons(self, src_favicons: list[str]) -> list[str]:
+        """Upload multiple domain favicons to GCS using their source URLs.
 
-        # Add CDN URLs directly
-        for idx, url in cdn_urls:
-            results[idx] = url
+        For backward compatibility with partner favicons.
 
-        # Process downloaded images
-        for local_idx, (orig_idx, favicon_image) in enumerate(zip(indices, favicon_images)):
-            if favicon_image:
-                try:
-                    dst_favicon_name = self.destination_favicon_name(favicon_image)
-                    dst_favicon_public_url = self.uploader.upload_image(
-                        favicon_image, dst_favicon_name, forced_upload=self.force_upload
-                    )
-                    results[orig_idx] = dst_favicon_public_url
-                    logger.info(f"Favicon {orig_idx} uploaded: {dst_favicon_public_url}")
-                except Exception as e:
-                    logger.info(f"Exception {e} occurred while uploading favicon {orig_idx}")
+        Args:
+            src_favicons: List of favicon URLs to upload
 
+        Returns:
+            List of public URLs of the uploaded favicons
+        """
+        results = []
+        for favicon_url in src_favicons:
+            result = self.upload_favicon(favicon_url)
+            # Ensure we always return a string, even for None or failed uploads
+            results.append(result if isinstance(result, str) else "")
         return results
 
     def destination_favicon_name(self, favicon_image: Image) -> str:
