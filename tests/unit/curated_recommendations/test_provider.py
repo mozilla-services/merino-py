@@ -18,7 +18,7 @@ from merino.curated_recommendations.protocol import (
     MIN_TILE_ID,
     CuratedRecommendation,
     SectionConfiguration,
-    CuratedRecommendationsFeed,
+    Section,
 )
 from merino.curated_recommendations.provider import CuratedRecommendationsProvider
 from tests.unit.curated_recommendations.fixtures import generate_sections_feed
@@ -370,7 +370,7 @@ class TestSetDoubleRowLayout:
     """Tests covering CuratedRecommendationsProvider.set_double_row_layout"""
 
     @pytest.fixture
-    def sample_feed(self) -> CuratedRecommendationsFeed:
+    def sample_feed(self) -> dict[str, Section]:
         """Return a feed with a top stories section (rank 0) and two additional sections."""
         return generate_sections_feed(section_count=3)
 
@@ -382,13 +382,13 @@ class TestSetDoubleRowLayout:
         original_feed = copy.deepcopy(feed)
         CuratedRecommendationsProvider.set_double_row_layout(feed)
         # Verify that top_stories_section remains unchanged.
-        assert feed.top_stories_section.layout == original_feed.top_stories_section.layout
+        assert feed["top_stories_section"].layout == original_feed["top_stories_section"].layout
 
     @pytest.mark.asyncio
-    async def test_insufficient_recommendations(self, sample_feed: CuratedRecommendationsFeed):
+    async def test_insufficient_recommendations(self, sample_feed: dict[str, Section]):
         """Test that second section layout remains unchanged if this section doesn't have enough recommendations."""
         # Find the second section (receivedFeedRank == 1)
-        second_section = next(s for s, _ in sample_feed.get_sections() if s.receivedFeedRank == 1)
+        second_section = next(s for s in sample_feed.values() if s.receivedFeedRank == 1)
         # Set 1 less recommendation than is required for layout_3_ads
         second_section.recommendations = generate_recommendations(layout_3_ads.max_tile_count - 1)
         original_layout = second_section.layout
@@ -398,10 +398,10 @@ class TestSetDoubleRowLayout:
         assert second_section.layout == original_layout
 
     @pytest.mark.asyncio
-    async def test_sufficient_recommendations(self, sample_feed: CuratedRecommendationsFeed):
+    async def test_sufficient_recommendations(self, sample_feed: dict[str, Section]):
         """Test that second section layout remains unchanged if this section doesn't have enough recommendations."""
         # Find the second section (receivedFeedRank == 1)
-        second_section = next(s for s, _ in sample_feed.get_sections() if s.receivedFeedRank == 1)
+        second_section = next(s for s in sample_feed.values() if s.receivedFeedRank == 1)
         # Set enough recommendations for layout_3_ads
         second_section.recommendations = generate_recommendations(layout_3_ads.max_tile_count)
 

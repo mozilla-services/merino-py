@@ -31,7 +31,7 @@ def _set_section_initial_visibility(
     min_picker: int,
 ) -> None:
     """Make the first min_visible and followed sections by receivedFeedRank visible; else hide."""
-    sorted_sections = sorted(sections.values(), key=lambda s: s.section.receivedFeedRank)
+    sorted_sections = sorted(sections.values(), key=lambda s: s.receivedFeedRank)
 
     visible_count = 0
     for section in sorted_sections:
@@ -65,7 +65,7 @@ def _renumber_sections(
         if new_rank == picker_rank:
             # Skip the rank for the interest picker.
             new_rank += 1
-        s.section.receivedFeedRank = new_rank
+        s.receivedFeedRank = new_rank
         new_rank += 1
 
 
@@ -74,14 +74,14 @@ def _build_picker(
     min_picker_sections: int,
 ) -> InterestPicker | None:
     """Create an InterestPicker if enough sections are eligible, by not being visible initially."""
-    picker_sections = {key: section for key, section in sections if not section.isInitiallyVisible}
-    if len(picker_sections) < min_picker_sections:
+    section_ids = [
+        section_id for section_id, section in sections.items() if not section.isInitiallyVisible
+    ]
+    if len(section_ids) < min_picker_sections:
         return None
     picker_rank = _get_interest_picker_rank(sections)
     return InterestPicker(
         receivedFeedRank=picker_rank,
         title="Follow topics to fine-tune your feed",
-        sections=[
-            InterestPickerSection(sectionId=section_id) for section_id, _ in picker_sections
-        ],
+        sections=[InterestPickerSection(sectionId=section_id) for section_id in section_ids],
     )

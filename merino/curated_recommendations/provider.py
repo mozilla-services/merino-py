@@ -347,18 +347,14 @@ class CuratedRecommendationsProvider:
             second_section.layout = layout_3_ads
 
     async def fetch(
-        self, curated_recommendations_request: CuratedRecommendationsRequest
+        self, request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
-        # Get the recommendation surface ID based on passed locale & region
         surface_id = CuratedRecommendationsProvider.get_recommendation_surface_id(
-            curated_recommendations_request.locale,
-            curated_recommendations_request.region,
+            locale=request.locale, region=request.region
         )
 
         corpus_items = await self.corpus_backend.fetch(surface_id)
-
-        # Convert the CorpusItem list to a CuratedRecommendation list.
         recommendations = [
             CuratedRecommendation(
                 **item.model_dump(),
@@ -367,35 +363,21 @@ class CuratedRecommendationsProvider:
             for rank, item in enumerate(corpus_items)
         ]
 
-        # The sections experiment organizes recommendations in many feeds
         sections_feeds = None
-
-        if self.is_sections_experiment(curated_recommendations_request, surface_id):
-            sections_feeds = await self.get_sections(
-                recommendations, curated_recommendations_request, surface_id
-            )
-            general_feed = []  # Everything is organized into sections. There's no 'general' feed.
+        general_feed = []
+        if self.is_sections_experiment(request, surface_id):
+            sections_feeds = await self.get_sections(recommendations, request, surface_id)
         else:
-            # Default ranking for general feed
-            general_feed = self.rank_recommendations(
-                recommendations, surface_id, curated_recommendations_request
-            )
+            general_feed = self.rank_recommendations(recommendations, surface_id, request)
 
-        # Construct the base response
         response = CuratedRecommendationsResponse(
-            recommendedAt=self.time_ms(), surfaceId=surface_id, data=general_feed
+            recommendedAt=self.time_ms(),
+            surfaceId=surface_id,
+            data=general_feed,
+            feeds=sections_feeds,
         )
 
-        # If we have feeds to return, add those to the response
-        if sections_feeds:
-            response.feeds = sections_feeds
-
-            if curated_recommendations_request.sections:
-                response.feeds = boost_followed_sections(
-                    curated_recommendations_request.sections, response.feeds
-                )
-
-        if curated_recommendations_request.enableInterestPicker and response.feeds:
+        if request.enableInterestPicker and response.feeds:
             response.interestPicker = create_interest_picker(response.feeds)
 
         return response

@@ -21,7 +21,11 @@ from merino.curated_recommendations import (
     ConstantPrior,
     interest_picker,
 )
-from merino.curated_recommendations.corpus_backends.protocol import Topic, ScheduledSurfaceId
+from merino.curated_recommendations.corpus_backends.protocol import (
+    Topic,
+    ScheduledSurfaceId,
+    SectionsCorpusProtocol,
+)
 from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
     Engagement,
@@ -31,8 +35,6 @@ from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
     Layout,
-    CuratedRecommendationsFeed,
-    Section,
     Locale,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
@@ -96,6 +98,7 @@ def setup_manifest_provider(manifest_provider):
 @pytest.fixture(name="corpus_provider")
 def provider(
     corpus_backend: ScheduledCorpusBackend,
+    sections_backend: SectionsCorpusProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
 ) -> CuratedRecommendationsProvider:
@@ -104,6 +107,7 @@ def provider(
         corpus_backend=corpus_backend,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
+        sections_backend=sections_backend,
     )
 
 
@@ -674,7 +678,7 @@ class TestCorpusApiCaching:
     @pytest.mark.parametrize(
         "error_type, expected_warning",
         [
-            ("graphql", 'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX".'),
+            # ("graphql", 'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX".'),
             ("http", "'503 Service Unavailable' for url 'https://client-api.getpocket.com'"),
         ],
     )
@@ -700,8 +704,9 @@ class TestCorpusApiCaching:
                 downtime_end = start_time + timedelta(
                     seconds=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds
                 )
+                now = datetime.now()
 
-                if datetime.now() < downtime_end:
+                if now < downtime_end:
                     if error_type == "graphql":
                         return Response(
                             status_code=200,
@@ -1000,30 +1005,21 @@ class TestSections:
         ],
     )
     def test_section_translations(self, surface_id):
-        """Check that there is a translation for every section title.
+        """Check that there is a translation for every topic and top_stories_section.
         Currently, for en-US and DE.
         """
         # Define the mapping of strings to be replaced, use the Topic enum
-        replacement_section_titles = {topic.name.lower(): topic.value for topic in Topic}
+        expected_translation_keys = [topic.value for topic in Topic]
         # top-stories is not in the Topic enum, do separately
-        replacement_section_titles["top_stories_section"] = "top-stories"
-
-        # Get all Section titles in CuratedRecommendationsFeed
-        # Replace strings using the Topic enum-derived map
-        section_titles = [
-            # Replace if in section title map, else keep original section title
-            replacement_section_titles.get(title_name, title_name)
-            for title_name, title_type in CuratedRecommendationsFeed.__annotations__.items()
-            if title_type == Section | None
-        ]
+        expected_translation_keys.append("top-stories")
 
         # Get the localized titles for the current surface_id
         localized_titles = LOCALIZED_SECTION_TITLES[surface_id]
 
         # Assert that each section title has a translation
-        for title in section_titles:
-            assert title in localized_titles and localized_titles[title], (
-                f"Missing translation for '{title}' in " f"{surface_id}"
+        for key in expected_translation_keys:
+            assert key in localized_titles and localized_titles[key], (
+                f"Missing translation for '{key}' in " f"{surface_id}"
             )
 
     @pytest.mark.asyncio

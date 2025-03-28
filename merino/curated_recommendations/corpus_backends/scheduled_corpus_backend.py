@@ -213,7 +213,7 @@ class ScheduledCorpusBackend(DatedCorpusBackend):
                 manifest_provider=self.manifest_provider,
                 utm_source=utm_source,
             )
-            corpus_item = corpus_item.copy(update={"scheduledCorpusItemId": scheduled_item["id"]})
+            corpus_item = corpus_item.model_copy(update={"scheduledCorpusItemId": scheduled_item["id"]})
             curated_recommendations.append(corpus_item)
 
         return curated_recommendations

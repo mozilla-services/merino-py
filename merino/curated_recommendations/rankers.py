@@ -192,7 +192,7 @@ def section_boosting_composite_sorting_key(section):
 
 
 def boost_followed_sections(
-    req_sections: list[SectionConfiguration], feeds: dict[str, Section]
+    req_sections: list[SectionConfiguration], sections: dict[str, Section]
 ) -> dict[str, Section]:
     """Boost followed sections to the very top, right after top_stories_section.
     Received feed rank for top_stories_section should always stay 0.
@@ -201,7 +201,7 @@ def boost_followed_sections(
     Unfollowed sections should be ranked after followed_sections, and relative order should be preserved.
 
     :param req_sections: List of Section configurations
-    :param feeds: Dictionary with section ids as keys and Section objects as values.
+    :param sections: Dictionary with section ids as keys and Section objects as values.
     :return: Updated dictionary with boosted followed sections (if found)
     """
     # 1. Extract section ids from the section request
@@ -218,7 +218,7 @@ def boost_followed_sections(
     # 4. Update section attributes for sections in the request
     for section_id in initial_section_ids:
         # lookup the section using the SERP topic from client
-        section = feeds.get(section_id)
+        section = sections.get(section_id)
         if not section:
             continue  # skip sections that did not map
 
@@ -235,14 +235,11 @@ def boost_followed_sections(
 
     # 5. Collect all followed, unfollowed, blocked sections into a single array
     sorted_sections = []
-    for section_id, section in feeds.items():
-        section = getattr(feeds, section_id)
-        if section:
-            if section_id == "top_stories_section":
-                # top_stories_section is always ranked first
-                section.receivedFeedRank = 0
-                continue
-            sorted_sections.append(section)
+    for section_id, section in sections.items():
+        if section_id == "top_stories_section":
+            section.receivedFeedRank = 0
+            continue
+        sorted_sections.append(section)
 
     # 6. Sort the sections using lambda composite key
     sorted_sections.sort(key=section_boosting_composite_sorting_key)
@@ -253,4 +250,4 @@ def boost_followed_sections(
         section.receivedFeedRank = current_received_feed_rank
         current_received_feed_rank += 1
 
-    return feeds
+    return sections

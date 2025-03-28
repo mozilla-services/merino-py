@@ -1,7 +1,6 @@
 """Curated Recommendations provider top-level request and response models"""
 
 import hashlib
-from collections import namedtuple
 from enum import unique, Enum
 from typing import Annotated
 import logging
@@ -263,36 +262,6 @@ class Section(BaseModel):
     )
 
     isInitiallyVisible: bool = True
-
-
-SectionWithID = namedtuple("SectionWithID", ["section", "ID"])
-
-
-class CuratedRecommendationsFeed(BaseModel):
-    """Multiple sections, that are currently in an experimental phase."""
-
-    # Private dictionary to hold section feeds.
-    _sections: dict[str, Section] = {}
-
-    def has_topic_section(self, topic: Topic) -> bool:
-        """Check if a section for the given topic exists in _sections."""
-        return topic.name.lower() in self._sections
-
-    def get_section_by_topic_id(self, serp_topic_id: str) -> Section | None:
-        """Get a section for the given SERP topic ID from _sections."""
-        return self._sections.get(serp_topic_id)
-
-    def get_sections(self) -> list[SectionWithID]:
-        """Get a list of all sections as tuples, where each tuple is a Section and its key."""
-        return [SectionWithID(section, key) for key, section in self._sections.items()]
-
-    def set_topic_section(self, topic: Topic, section: Section):
-        """Set a section for the given topic in _sections."""
-        self._sections[topic.name.lower()] = section
-
-    def getFeeds(self) -> dict[str, Section]:
-        """Return all feeds as a dictionary."""
-        return self._sections
 
 
 class InterestPickerSection(BaseModel):
