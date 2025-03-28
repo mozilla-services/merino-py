@@ -64,7 +64,6 @@ class DomainMetadataUploader:
 
         data = most_recent.download_as_text()
         file_contents: dict = json.loads(data)
-        logger.info(f"Domain file {most_recent.name} acquired.")
         return file_contents
 
     def upload_favicon(self, favicon_url: str) -> str:
@@ -90,10 +89,9 @@ class DomainMetadataUploader:
                 dst_favicon_public_url = self.uploader.upload_image(
                     favicon_image, dst_favicon_name, forced_upload=self.force_upload
                 )
-                logger.info(f"Favicon uploaded: {dst_favicon_public_url}")
                 return dst_favicon_public_url
             except Exception as e:
-                logger.info(f"Exception {e} occurred while uploading favicon")
+                logger.debug(f"Failed to upload favicon: {e}")
 
         return ""
 
@@ -151,7 +149,6 @@ class DomainMetadataUploader:
             case "image/gif":
                 extension = ".gif"
             case _:
-                logger.info(f"Couldn't find a match for {favicon_image.content_type}")
                 extension = ".oct"
 
         return f"{self.DESTINATION_FAVICONS_ROOT}/{content_hex_digest}_{content_len}{extension}"

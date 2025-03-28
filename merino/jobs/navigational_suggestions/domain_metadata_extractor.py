@@ -61,8 +61,7 @@ class Scraper:
         try:
             self.browser.open(url, timeout=TIMEOUT)
             return str(self.browser.url)
-        except Exception as e:
-            logger.info(f"Exception: {e} while opening url {url}")
+        except Exception:
             return None
 
     def scrape_favicon_data(self) -> FaviconData:
@@ -95,16 +94,10 @@ class Scraper:
                 try:
                     json_data = response.json()
                     result = json_data.get("icons", [])
-                except AttributeError as e:
-                    logger.warning(
-                        f"Exception: {e} while parsing icons from manifest {manifest_url}"
-                    )
-                except ValueError as e:
-                    logger.warning(
-                        f"Exception: {e} while parsing JSON from manifest {manifest_url}"
-                    )
+                except (AttributeError, ValueError):
+                    logger.debug(f"Failed to parse manifest JSON from {manifest_url}")
         except Exception as e:
-            logger.warning(f"Exception: {e} while parsing icons from manifest {manifest_url}")
+            logger.debug(f"Exception getting manifest from {manifest_url}: {e}")
         return result
 
     async def get_default_favicon(self, url: str) -> Optional[str]:
@@ -119,11 +112,7 @@ class Scraper:
             default_favicon_url: str = urljoin(url, "favicon.ico")
             response = await self.request_client.requests_get(default_favicon_url)
             return str(response.url) if response else None
-        except AttributeError as e:
-            logger.info(f"Exception: {e} while getting default favicon {default_favicon_url}")
-            return None
-        except Exception as e:
-            logger.info(f"Exception: {e} while getting default favicon {default_favicon_url}")
+        except Exception:
             return None
 
     def scrape_title(self) -> Optional[str]:
@@ -134,8 +123,7 @@ class Scraper:
         """
         try:
             return str(self.browser.find("head").find("title").get_text())
-        except Exception as e:
-            logger.info(f"Exception: {e} while scraping title")
+        except Exception:
             return None
 
 
@@ -227,7 +215,6 @@ class DomainMetadataExtractor:
         self, scraped_url: str, max_icons: int = 5
     ) -> list[dict[str, Any]]:
         """Extract a limited number of favicons for an already opened url"""
-        logger.info(f"Extracting favicons for {scraped_url} (max: {max_icons})")
         self._current_base_url = scraped_url
         favicons: list[dict[str, Any]] = []
 
@@ -246,7 +233,6 @@ class DomainMetadataExtractor:
 
                 # Early stopping if we've reached our limit
                 if len(favicons) >= max_icons:
-                    logger.info(f"Reached max icons ({max_icons}) from links for {scraped_url}")
                     return favicons
 
             # If we still need more, try meta tags next
@@ -263,7 +249,6 @@ class DomainMetadataExtractor:
 
                 # Check if we've reached our limit
                 if len(favicons) >= max_icons:
-                    logger.info(f"Reached max icons ({max_icons}) from metas for {scraped_url}")
                     return favicons
 
             # If still below max, try the default favicon
@@ -274,9 +259,6 @@ class DomainMetadataExtractor:
 
                     # Check if we've reached our limit
                     if len(favicons) >= max_icons:
-                        logger.info(
-                            f"Reached max icons ({max_icons}) with default favicon for {scraped_url}"
-                        )
                         return favicons
 
             # Only process manifests if we still need more icons
@@ -309,18 +291,14 @@ class DomainMetadataExtractor:
 
                         # Check if we've reached our limit
                         if len(favicons) >= max_icons:
-                            logger.info(
-                                f"Reached max icons ({max_icons}) from manifest for {scraped_url}"
-                            )
                             break
 
                 except Exception as e:
                     logger.warning(f"Error processing manifest: {e}")
 
         except Exception as e:
-            logger.info(f"Exception {e} while extracting favicons for {scraped_url}")
+            logger.error(f"Exception extracting favicons: {e}")
 
-        logger.info(f"Extracted {len(favicons)} favicons for {scraped_url}")
         return favicons
 
     async def _process_favicon(
@@ -403,8 +381,8 @@ class DomainMetadataExtractor:
                             logger.warning(f"Failed to upload bitmap favicon: {e}")
                             best_favicon_url = url
                             best_favicon_width = width
-                except Exception as e:
-                    logger.warning(f"Exception {e} for favicon at position {i+favicon_offset}")
+                except Exception:
+                    logger.warning(f"Exception for favicon at position {i+favicon_offset}")
 
             # Explicitly clear chunk_images to free memory immediately
             del chunk_images
@@ -412,7 +390,6 @@ class DomainMetadataExtractor:
             # Add a longer delay between batches to prevent network resource exhaustion
             await asyncio.sleep(1.0)
 
-        logger.debug(f"Best favicon url: {best_favicon_url}, width: {best_favicon_width}")
         return best_favicon_url if best_favicon_width >= min_width else ""
 
     def _extract_title(self) -> Optional[str]:
@@ -454,7 +431,13 @@ class DomainMetadataExtractor:
         """Extract domain metadata for each domain, processing all concurrently and upload the
         favicons directly to the Google Cloud bucket
         """
-        return asyncio.run(self._process_domains(domains_data, favicon_min_width, uploader))
+        logger.info(f"Starting to process {len(domains_data)} domains")
+        results = asyncio.run(self._process_domains(domains_data, favicon_min_width, uploader))
+        successful_domains = sum(1 for result in results if result.get("icon"))
+        logger.info(
+            f"Completed processing: {len(results)} domains, found favicons for {successful_domains}"
+        )
+        return results
 
     async def _process_domains(
         self,
@@ -466,10 +449,16 @@ class DomainMetadataExtractor:
         # Reduce batch size to decrease memory consumption and network load
         chunk_size = 10
         filtered_results: list[dict[str, Optional[str]]] = []
+        total_chunks = (len(domains_data) + chunk_size - 1) // chunk_size
 
         for i in range(0, len(domains_data), chunk_size):
             end_idx = min(i + chunk_size, len(domains_data))
             chunk = domains_data[i:end_idx]
+            chunk_num = i // chunk_size + 1
+
+            logger.info(
+                f"Processing chunk {chunk_num}/{total_chunks} ({i+1}-{end_idx} of {len(domains_data)})"
+            )
 
             tasks = [
                 self._process_single_domain(domain_data, favicon_min_width, uploader)
@@ -481,7 +470,6 @@ class DomainMetadataExtractor:
 
             # Add a longer delay between chunks to allow system resources to recover
             if end_idx < len(domains_data):
-                logger.info("Sleeping between chunks to allow resource recovery")
                 await asyncio.sleep(2.0)
 
             # Process results
@@ -526,13 +514,15 @@ class DomainMetadataExtractor:
                     second_level_domain = self._get_second_level_domain(domain, suffix)
                     title = self._get_title(second_level_domain)
 
+                    if favicon:
+                        logger.info(f"Found favicon for domain: {domain}")
+
             return {
                 "url": scraped_base_url,
                 "title": title,
                 "icon": favicon,
                 "domain": second_level_domain,
             }
-        except Exception as e:
-            logger.error(f"Error processing domain {domain_data.get('domain', 'unknown')}: {e}")
+        except Exception:
             # Return a default dict in case of error.
             return {"url": None, "title": None, "icon": None, "domain": None}

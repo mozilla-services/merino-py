@@ -418,8 +418,7 @@ def test_get_latest_file_for_diff(
     assert result["domains"]
     assert len(result["domains"]) == 6
 
-    assert len(records) == 1
-    assert records[0].message.startswith(f"Domain file {remote_blob_newest.name} acquired.")
+    assert len(records) == 0
 
 
 def test_get_latest_file_for_diff_when_no_file_is_returned_by_the_uploader(

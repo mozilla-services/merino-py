@@ -99,7 +99,6 @@ async def test_requests_get_exception(mocker, caplog):
 
     # Verify the result
     assert response is None
-    assert "Exception Test error while getting response from http://example.com" in caplog.text
 
 
 @pytest.mark.asyncio
@@ -183,5 +182,4 @@ async def test_favicon_downloader_handles_exception(
     favicon = await downloader.download_favicon("http://icon")
 
     assert favicon is None
-    assert len(caplog.messages) == 1
-    assert caplog.messages[0] == "Exception Bad Request while downloading favicon http://icon"
+    assert len(caplog.messages) == 0

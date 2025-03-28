@@ -1011,14 +1011,8 @@ async def test_scraper_get_default_favicon() -> None:
     scraper.request_client.requests_get.reset_mock()
     scraper.request_client.requests_get.side_effect = Exception("Connection error")
 
-    with patch(
-        "merino.jobs.navigational_suggestions.domain_metadata_extractor.logger"
-    ) as mock_logger:
-        result = await scraper.get_default_favicon("https://example.com")
-
-        assert result is None
-        mock_logger.info.assert_called_once()
-        assert "Connection error" in mock_logger.info.call_args[0][0]
+    result = await scraper.get_default_favicon("https://example.com")
+    assert result is None
 
 
 @pytest.mark.asyncio
@@ -1068,8 +1062,8 @@ async def test_scraper_scrape_favicons_from_manifest() -> None:
         result = await scraper.scrape_favicons_from_manifest("https://example.com/manifest.json")
 
         assert result == []
-        mock_logger.warning.assert_called_once()
-        assert "Connection error" in mock_logger.warning.call_args[0][0]
+        mock_logger.debug.assert_called_once()
+        assert "Connection error" in mock_logger.debug.call_args[0][0]
 
     # Test exception during JSON parsing
     scraper.request_client.requests_get.reset_mock()
@@ -1085,8 +1079,8 @@ async def test_scraper_scrape_favicons_from_manifest() -> None:
         result = await scraper.scrape_favicons_from_manifest("https://example.com/manifest.json")
 
         assert result == []
-        mock_logger.warning.assert_called_once()
-        assert "Invalid JSON" in mock_logger.warning.call_args[0][0]
+        mock_logger.debug.assert_called_once()
+        assert "Failed to parse manifest JSON" in mock_logger.debug.call_args[0][0]
 
 
 def test_scraper_scrape_title() -> None:
@@ -1110,28 +1104,16 @@ def test_scraper_scrape_title() -> None:
     # Test exception - missing head tag
     scraper.browser.find.return_value = None
 
-    with patch(
-        "merino.jobs.navigational_suggestions.domain_metadata_extractor.logger"
-    ) as mock_logger:
-        result = scraper.scrape_title()
-
-        assert result is None
-        mock_logger.info.assert_called_once()
-        assert "while scraping title" in mock_logger.info.call_args[0][0]
+    result = scraper.scrape_title()
+    assert result is None
 
     # Test exception - missing title tag
     head_mock = Mock()
     head_mock.find.return_value = None
     scraper.browser.find.return_value = head_mock
 
-    with patch(
-        "merino.jobs.navigational_suggestions.domain_metadata_extractor.logger"
-    ) as mock_logger:
-        result = scraper.scrape_title()
-
-        assert result is None
-        mock_logger.info.assert_called_once()
-        assert "while scraping title" in mock_logger.info.call_args[0][0]
+    result = scraper.scrape_title()
+    assert result is None
 
 
 @pytest.mark.asyncio
@@ -1150,10 +1132,10 @@ async def test_extract_favicons_with_exception() -> None:
         # Should return empty list but not fail
         assert result == []
         # Check for the specific error log call
-        assert mock_logger.info.call_count >= 1
+        assert mock_logger.error.call_count >= 1
         exception_log_call = False
-        for call_args in mock_logger.info.call_args_list:
-            if "Test exception" in call_args[0][0]:
+        for call_args in mock_logger.error.call_args_list:
+            if "extracting favicons" in call_args[0][0]:
                 exception_log_call = True
                 break
         assert exception_log_call, "Expected log message with exception not found"
@@ -1211,7 +1193,7 @@ async def test_upload_best_favicon_with_exception(mock_domain_metadata_uploader)
             # Should not raise exception but return empty string
             assert result == ""
             mock_logger.warning.assert_called_once()
-            assert "Test exception" in mock_logger.warning.call_args[0][0]
+            assert "Exception for favicon at position" in mock_logger.warning.call_args[0][0]
 
 
 @pytest.mark.asyncio
