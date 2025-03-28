@@ -49,8 +49,7 @@ class AsyncFaviconDownloader:
         try:
             response = await self.session.get(url, headers=REQUEST_HEADERS, follow_redirects=True)
             return response if response.status_code == 200 else None
-        except Exception as e:
-            logger.info(f"Exception {e} while getting response from {url}")
+        except Exception:
             return None
 
     async def download_favicon(self, url: str) -> Optional[Image]:
@@ -71,8 +70,7 @@ class AsyncFaviconDownloader:
                     content_type=str(content_type),
                 )
             return None
-        except Exception as e:
-            logger.info(f"Exception {e} while downloading favicon {url}")
+        except Exception:
             return None
 
     async def download_multiple_favicons(self, urls: List[str]) -> List[Optional[Image]]:
@@ -90,8 +88,7 @@ class AsyncFaviconDownloader:
             try:
                 async with semaphore:
                     return await self.download_favicon(url)
-            except Exception as e:
-                logger.warning(f"Unhandled exception in download_with_semaphore: {e}")
+            except Exception:
                 return None
 
         # Create tasks with semaphore control
