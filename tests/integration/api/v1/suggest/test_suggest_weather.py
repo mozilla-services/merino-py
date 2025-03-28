@@ -246,13 +246,18 @@ def test_suggest_without_weather_report(client: TestClient, backend_mock: Any) -
     """Test that the suggest endpoint response is as expected when the Weather provider
     cannot supply a suggestion.
     """
+    expected_suggestion: list[Suggestion] = []
     backend_mock.get_weather_report.return_value = None
 
     response = client.get("/api/v1/suggest?q=weather&request_type=weather")
 
-    assert response.status_code == 204
+    assert response.status_code == 200
+    assert (
+        response.headers["Cache-Control"]
+        == f"private, max-age={DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC}"
+    )
     result = response.json()
-    assert result is None
+    assert result["suggestions"] == expected_suggestion
 
 
 def test_suggest_weather_with_missing_request_type_query_parameter(client: TestClient) -> None:
@@ -453,7 +458,7 @@ async def test_suggest_weather_with_custom_location(
 
     assert geolocation_scope[ScopeKey.GEOLOCATION] == expected_initial_location
 
-    client.get(
+    response = client.get(
         "/api/v1/suggest",
         params={
             "q": "",
@@ -474,3 +479,5 @@ async def test_suggest_weather_with_custom_location(
             query="", geolocation=expected_geolocation, request_type="weather", languages=["en-US"]
         )
     )
+
+    assert response.status_code == 200
