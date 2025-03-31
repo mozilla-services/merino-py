@@ -697,6 +697,10 @@ class TestCorpusApiCaching:
         Additionally, test that if the backend returns a GraphQL error, it is handled correctly.
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Pre-warm the backend via an arbitrary API request. Without this, the initial UserAgentMiddleware call
+            # incurs ~2-second latency, distorting the simulated downtime of `retry_wait_initial_seconds` seconds.
+            await ac.get("/__heartbeat__")
+
             start_time = datetime.now()
 
             def temporary_downtime(*args, **kwargs):
