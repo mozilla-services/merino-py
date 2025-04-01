@@ -24,6 +24,7 @@ from merino.exceptions import BackendError
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import GeolocationMiddleware, Location, Coordinates
 from merino.providers.suggest.base import SuggestionRequest
+from merino.providers.suggest.weather.backends.accuweather.errors import MissingLocationKeyError
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -251,10 +252,12 @@ def test_suggest_without_weather_report(client: TestClient, backend_mock: Any) -
 
     response = client.get("/api/v1/suggest?q=weather&request_type=weather")
 
-    assert response.status_code == 204
+    assert response.status_code == 200
 
 
-def test_suggest_error_weather_report_returns_empty(client: TestClient, backend_mock: Any) -> None:
+def test_suggest_backend_error_weather_report_returns_empty(
+    client: TestClient, backend_mock: Any
+) -> None:
     """Test that the suggest endpoint response is as expected when the Weather provider
     cannot supply a suggestion.
     """
@@ -266,6 +269,19 @@ def test_suggest_error_weather_report_returns_empty(client: TestClient, backend_
     assert response.status_code == 200
     result = response.json()
     assert result["suggestions"] == expected_suggestion
+
+
+def test_suggest_location_error_weather_report_returns_empty(
+    client: TestClient, backend_mock: Any
+) -> None:
+    """Test that the suggest endpoint response is as expected when the Weather provider
+    cannot supply a suggestion.
+    """
+    backend_mock.get_weather_report.side_effect = MissingLocationKeyError()
+
+    response = client.get("/api/v1/suggest?q=weather&request_type=weather")
+
+    assert response.status_code == 204
 
 
 def test_suggest_weather_with_missing_request_type_query_parameter(client: TestClient) -> None:
@@ -488,4 +504,4 @@ async def test_suggest_weather_with_custom_location(
         )
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200

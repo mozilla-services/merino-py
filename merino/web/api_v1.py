@@ -29,6 +29,7 @@ from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.suggest.base import BaseProvider, SuggestionRequest
 
 from merino.providers.manifest.backends.protocol import ManifestData
+from merino.providers.suggest.weather.provider import NO_LOCATION_KEY_SUGGESTION
 from merino.utils import task_runner
 
 from merino.utils.api.cache_control import get_ttl_for_cache_control_header_for_suggestions
@@ -223,16 +224,14 @@ async def suggest(
             for task in completed_tasks
         )
     )
-    if request_type == "weather" and not suggestions:
+    if (
+        request_type == "weather"
+        and len(suggestions) == 1
+        and suggestions[0] is NO_LOCATION_KEY_SUGGESTION
+    ):
         return Response(status_code=204)
 
-    if request_type == "weather":
-        # remove placeholder weather suggestion
-        suggestions = [
-            s
-            for s in suggestions
-            if not (s.provider == WEATHER_PROVIDER and hasattr(s, "placeholder") and s.placeholder)
-        ]
+    suggestions = [s for s in suggestions if s is not NO_LOCATION_KEY_SUGGESTION]
 
     emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 

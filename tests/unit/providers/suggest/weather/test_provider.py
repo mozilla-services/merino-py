@@ -15,10 +15,10 @@ from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
-from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.custom_details import CustomDetails, WeatherDetails
+from merino.providers.suggest.weather.backends.accuweather.errors import MissingLocationKeyError
 from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
     clear_region_mapping,
@@ -32,7 +32,11 @@ from merino.providers.suggest.weather.backends.protocol import (
     WeatherBackend,
     WeatherReport,
 )
-from merino.providers.suggest.weather.provider import Provider, Suggestion
+from merino.providers.suggest.weather.provider import (
+    Provider,
+    Suggestion,
+    NO_LOCATION_KEY_SUGGESTION,
+)
 from tests.types import FilterCaplogFixture
 
 TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC = 300
@@ -155,37 +159,13 @@ async def test_query_placeholder_weather_report_returned(
     """Test that the query method doesn't provide a weather suggestion without a weather
     report.
     """
-    expected_suggestions: list[Suggestion] = [
-        Suggestion(
-            title="N/A",
-            url="https://merino.services.mozilla.com/",
-            city_name="",
-            region_code="",
-            current_conditions=CurrentConditions(
-                url="https://merino.services.mozilla.com/",
-                icon_id=0,
-                summary="",
-                temperature=Temperature(),
-            ),
-            forecast=Forecast(
-                url="https://merino.services.mozilla.com/",
-                summary="",
-                high=Temperature(),
-                low=Temperature(),
-            ),
-            provider="weather",
-            is_sponsored=False,
-            score=0.3,
-            placeholder=True,
-        )
-    ]
-    backend_mock.get_weather_report.side_effect = BackendError()
+    backend_mock.get_weather_report.side_effect = MissingLocationKeyError()
 
     suggestions: list[BaseSuggestion] = await provider.query(
         SuggestionRequest(query="", geolocation=geolocation)
     )
 
-    assert suggestions == expected_suggestions
+    assert suggestions == [NO_LOCATION_KEY_SUGGESTION]
 
 
 @pytest.mark.asyncio

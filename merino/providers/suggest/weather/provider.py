@@ -8,6 +8,7 @@ import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
 
+from merino.providers.suggest.weather.backends.accuweather.errors import MissingLocationKeyError
 from merino.utils import cron
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
@@ -41,6 +42,31 @@ class Suggestion(BaseSuggestion):
     current_conditions: CurrentConditions
     forecast: Forecast
     placeholder: Optional[bool] = None
+
+
+# A sentinel suggestion indicating that no location key was found for the given location.
+NO_LOCATION_KEY_SUGGESTION: Suggestion = Suggestion(
+    title="N/A",
+    url=HttpUrl("https://merino.services.mozilla.com"),
+    city_name="",
+    region_code="",
+    current_conditions=CurrentConditions(
+        url=HttpUrl("https://merino.services.mozilla.com"),
+        icon_id=0,
+        summary="",
+        temperature=Temperature(),
+    ),
+    forecast=Forecast(
+        url=HttpUrl("https://merino.services.mozilla.com"),
+        summary="",
+        high=Temperature(),
+        low=Temperature(),
+    ),
+    provider="",
+    is_sponsored=False,
+    score=0,
+    placeholder=True,
+)
 
 
 class LocationCompletionSuggestion(BaseSuggestion):
@@ -130,7 +156,6 @@ class Provider(BaseProvider):
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
         weather_context = WeatherContext(geolocation, languages)
-        has_error = False
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
                 if is_location_completion_request:
@@ -141,15 +166,13 @@ class Provider(BaseProvider):
                     weather_context.geolocation.key = srequest.query
                     self.metrics_client.increment(f"providers.{self.name}.query.weather_report")
                     weather_report = await self.backend.get_weather_report(weather_context)
+        except MissingLocationKeyError:
+            return [NO_LOCATION_KEY_SUGGESTION]
 
         except BackendError as backend_error:
             logger.warning(backend_error)
-            if not is_location_completion_request:
-                has_error = True
 
         # for this provider, the request can be either for weather or location completion
-        if has_error:
-            return [self.build_placeholder_error_weather_suggestion()]
         if weather_report:
             return [self.build_suggestion(weather_report)]
         if location_completions:
@@ -184,25 +207,6 @@ class Provider(BaseProvider):
                 icon=None,
                 locations=data,
             )
-
-    def build_placeholder_error_weather_suggestion(self) -> Suggestion:
-        """Build a placeholder weather suggestion."""
-        return Suggestion(
-            title="N/A",
-            url=self.dummy_url,
-            city_name="",
-            region_code="",
-            current_conditions=CurrentConditions(
-                url=self.dummy_url, icon_id=0, summary="", temperature=Temperature()
-            ),
-            forecast=Forecast(
-                url=self.dummy_url, summary="", high=Temperature(), low=Temperature()
-            ),
-            provider=self.name,
-            is_sponsored=False,
-            score=self.score,
-            placeholder=True,
-        )
 
     async def shutdown(self) -> None:
         """Shut down the provider."""

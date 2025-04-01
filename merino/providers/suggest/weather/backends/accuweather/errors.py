@@ -4,6 +4,7 @@ AccuweatherError class to format and wrap them as a BackendError child object
 
 from enum import Enum
 from merino.exceptions import BackendError
+from merino.middleware.geolocation import Location
 
 
 class AccuweatherErrorMessages(Enum):
@@ -38,3 +39,10 @@ class AccuweatherError(BackendError):
         # Use the `format_message` method to get the formatted error message
         message = error_type.format_message(**kwargs)
         super().__init__(message)
+
+
+class MissingLocationKeyError(BackendError):
+    """Error when Accuweather api does not find a location key."""
+
+    def __init__(self, location: Location | None = None):
+        super().__init__(f"AccuWeatherError.missing_location_key for location: {location}")
