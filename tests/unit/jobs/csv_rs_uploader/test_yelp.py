@@ -5,7 +5,6 @@
 """Unit tests for the yelp.py model."""
 
 from merino.jobs.csv_rs_uploader.yelp import (
-    FIELD_LOCATION_MODIFIERS,
     FIELD_LOCATION_SIGNS,
     FIELD_POST_MODIFIERS,
     FIELD_PRE_MODIFIERS,
@@ -28,7 +27,6 @@ def test_upload(mocker):
                 FIELD_SUBJECTS: "subject-1",
                 FIELD_PRE_MODIFIERS: "pre-modifier-1",
                 FIELD_POST_MODIFIERS: "post-modifier-1",
-                FIELD_LOCATION_MODIFIERS: "location-modifier-1",
                 FIELD_LOCATION_SIGNS: "location-sign-1",
                 FIELD_YELP_MODIFIERS: "yelp-modifier-1",
             },
@@ -36,7 +34,6 @@ def test_upload(mocker):
                 FIELD_SUBJECTS: "subject-2",
                 FIELD_PRE_MODIFIERS: "pre-modifier-2",
                 FIELD_POST_MODIFIERS: "post-modifier-2",
-                FIELD_LOCATION_MODIFIERS: "location-modifier-2",
                 FIELD_LOCATION_SIGNS: "location-sign-2",
                 FIELD_YELP_MODIFIERS: "yelp-modifier-2",
             },
@@ -44,7 +41,6 @@ def test_upload(mocker):
                 FIELD_SUBJECTS: "subject-3",
                 FIELD_PRE_MODIFIERS: "pre-modifier-3",
                 FIELD_POST_MODIFIERS: "post-modifier-3",
-                FIELD_LOCATION_MODIFIERS: "location-modifier-3",
                 FIELD_LOCATION_SIGNS: "location-sign-3",
                 FIELD_YELP_MODIFIERS: "",
             },
@@ -52,7 +48,6 @@ def test_upload(mocker):
                 FIELD_SUBJECTS: "subject-4",
                 FIELD_PRE_MODIFIERS: "pre-modifier-4",
                 FIELD_POST_MODIFIERS: "post-modifier-4",
-                FIELD_LOCATION_MODIFIERS: "location-modifier-4",
                 FIELD_LOCATION_SIGNS: "",
                 FIELD_YELP_MODIFIERS: "",
             },
@@ -60,7 +55,6 @@ def test_upload(mocker):
                 FIELD_SUBJECTS: "subject-5",
                 FIELD_PRE_MODIFIERS: "pre-modifier-5",
                 FIELD_POST_MODIFIERS: "post-modifier-5",
-                FIELD_LOCATION_MODIFIERS: "",
                 FIELD_LOCATION_SIGNS: "",
                 FIELD_YELP_MODIFIERS: "",
             },
@@ -68,7 +62,6 @@ def test_upload(mocker):
                 FIELD_SUBJECTS: "subject-6",
                 FIELD_PRE_MODIFIERS: "pre-modifier-6",
                 FIELD_POST_MODIFIERS: "",
-                FIELD_LOCATION_MODIFIERS: "",
                 FIELD_LOCATION_SIGNS: "",
                 FIELD_YELP_MODIFIERS: "",
             },
@@ -76,7 +69,6 @@ def test_upload(mocker):
                 FIELD_SUBJECTS: "subject-7",
                 FIELD_PRE_MODIFIERS: "",
                 FIELD_POST_MODIFIERS: "",
-                FIELD_LOCATION_MODIFIERS: "",
                 FIELD_LOCATION_SIGNS: "",
                 FIELD_YELP_MODIFIERS: "",
             },
@@ -84,7 +76,6 @@ def test_upload(mocker):
                 FIELD_SUBJECTS: "",
                 FIELD_PRE_MODIFIERS: "",
                 FIELD_POST_MODIFIERS: "",
-                FIELD_LOCATION_MODIFIERS: "",
                 FIELD_LOCATION_SIGNS: "",
                 FIELD_YELP_MODIFIERS: "",
             },
@@ -117,31 +108,15 @@ def test_upload(mocker):
                 ],
                 "locationSigns": [
                     {
-                        "keyword": "location-modifier-1",
-                        "needLocation": False,
-                    },
-                    {
                         "keyword": "location-sign-1",
-                        "needLocation": True,
-                    },
-                    {
-                        "keyword": "location-modifier-2",
                         "needLocation": False,
                     },
                     {
                         "keyword": "location-sign-2",
-                        "needLocation": True,
-                    },
-                    {
-                        "keyword": "location-modifier-3",
                         "needLocation": False,
                     },
                     {
                         "keyword": "location-sign-3",
-                        "needLocation": True,
-                    },
-                    {
-                        "keyword": "location-modifier-4",
                         "needLocation": False,
                     },
                 ],
