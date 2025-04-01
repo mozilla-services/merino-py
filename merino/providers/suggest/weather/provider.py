@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import aiodogstatsd
 from fastapi import HTTPException
@@ -27,6 +27,7 @@ from merino.providers.suggest.weather.backends.protocol import (
     WeatherBackend,
     WeatherReport,
     WeatherContext,
+    Temperature,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ class Suggestion(BaseSuggestion):
     region_code: str
     current_conditions: CurrentConditions
     forecast: Forecast
+    placeholder: Optional[bool] = None
 
 
 class LocationCompletionSuggestion(BaseSuggestion):
@@ -128,6 +130,7 @@ class Provider(BaseProvider):
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
         weather_context = WeatherContext(geolocation, languages)
+        has_error = False
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
                 if is_location_completion_request:
@@ -141,14 +144,17 @@ class Provider(BaseProvider):
 
         except BackendError as backend_error:
             logger.warning(backend_error)
+            if not is_location_completion_request:
+                has_error = True
 
         # for this provider, the request can be either for weather or location completion
+        if has_error:
+            return [self.build_placeholder_error_weather_suggestion()]
         if weather_report:
             return [self.build_suggestion(weather_report)]
         if location_completions:
             return [self.build_suggestion(location_completions)]
-        else:
-            return []
+        return []
 
     def build_suggestion(
         self, data: WeatherReport | list[LocationCompletion]
@@ -178,6 +184,25 @@ class Provider(BaseProvider):
                 icon=None,
                 locations=data,
             )
+
+    def build_placeholder_error_weather_suggestion(self) -> Suggestion:
+        """Build a placeholder weather suggestion."""
+        return Suggestion(
+            title="N/A",
+            url=self.dummy_url,
+            city_name="",
+            region_code="",
+            current_conditions=CurrentConditions(
+                url=self.dummy_url, icon_id=0, summary="", temperature=Temperature()
+            ),
+            forecast=Forecast(
+                url=self.dummy_url, summary="", high=Temperature(), low=Temperature()
+            ),
+            provider=self.name,
+            is_sponsored=False,
+            score=self.score,
+            placeholder=True,
+        )
 
     async def shutdown(self) -> None:
         """Shut down the provider."""

@@ -12,6 +12,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse
 from starlette.requests import Request
 from aiodogstatsd import Client
+from starlette.responses import Response
 
 from merino.configs import settings
 from merino.curated_recommendations import get_provider as get_corpus_api_provider
@@ -57,6 +58,7 @@ CLIENT_VARIANT_MAX = settings.web.api.v1.client_variant_max
 QUERY_CHARACTER_MAX = settings.web.api.v1.query_character_max
 CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
 HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
+WEATHER_PROVIDER = settings.providers.accuweather.backend
 
 
 @router.get(
@@ -76,7 +78,7 @@ async def suggest(
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
     request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
-) -> ORJSONResponse:
+) -> Response:
     """Query Merino for suggestions.
 
     This is the primary endpoint that consumes user input and suggests
@@ -221,6 +223,16 @@ async def suggest(
             for task in completed_tasks
         )
     )
+    if request_type == "weather" and not suggestions:
+        return Response(status_code=204)
+
+    if request_type == "weather":
+        # remove placeholder weather suggestion
+        suggestions = [
+            s
+            for s in suggestions
+            if not (s.provider == WEATHER_PROVIDER and hasattr(s, "placeholder") and s.placeholder)
+        ]
 
     emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 

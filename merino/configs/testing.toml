@@ -45,6 +45,7 @@ url_base = "test://test"
 
 [testing.providers.accuweather]
 enabled_by_default = false
+backend="test_weather"
 
 [testing.providers.adm]
 # Whether or not this provider is enabled by default.

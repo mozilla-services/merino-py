@@ -15,6 +15,7 @@ from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
+from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.custom_details import CustomDetails, WeatherDetails
@@ -145,6 +146,46 @@ async def test_query_weather_report_returned(
 
     assert len(statsd_mock.increment.call_args_list) == 1
     assert statsd_mock.increment.call_args_list == [call("providers.weather.query.weather_report")]
+
+
+@pytest.mark.asyncio
+async def test_query_placeholder_weather_report_returned(
+    backend_mock: Any, provider: Provider, geolocation: Location
+) -> None:
+    """Test that the query method doesn't provide a weather suggestion without a weather
+    report.
+    """
+    expected_suggestions: list[Suggestion] = [
+        Suggestion(
+            title="N/A",
+            url="https://merino.services.mozilla.com/",
+            city_name="",
+            region_code="",
+            current_conditions=CurrentConditions(
+                url="https://merino.services.mozilla.com/",
+                icon_id=0,
+                summary="",
+                temperature=Temperature(),
+            ),
+            forecast=Forecast(
+                url="https://merino.services.mozilla.com/",
+                summary="",
+                high=Temperature(),
+                low=Temperature(),
+            ),
+            provider="weather",
+            is_sponsored=False,
+            score=0.3,
+            placeholder=True,
+        )
+    ]
+    backend_mock.get_weather_report.side_effect = BackendError()
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation)
+    )
+
+    assert suggestions == expected_suggestions
 
 
 @pytest.mark.asyncio
