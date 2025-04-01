@@ -9,7 +9,6 @@ from urllib.parse import urljoin, urlparse
 import requests
 from pydantic import BaseModel
 from mechanicalsoup import StatefulBrowser
-from typing import cast
 
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import DomainMetadataUploader
 from merino.utils.gcs.models import Image
