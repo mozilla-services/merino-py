@@ -1,0 +1,362 @@
+{
+  "data": {
+    "getSections": [
+      {
+        "externalId": "cvb-345",
+        "active": true,
+        "title": "Health",
+        "sectionItems": []
+      },
+      {
+        "externalId": "music",
+        "active": true,
+        "title": "Music",
+        "sectionItems": [
+          {
+            "corpusItem": {
+              "id": "42935",
+              "url": "https://ultimateclassicrock.com/ted-nugent-archives-eddie-van-halen-billy-gibbons/",
+              "title": "Ted Nugent’s Archives Include Eddie Van Halen and Billy Gibbons Jams",
+              "excerpt": "Ted Nugent said he’s found jams with Eddie Van Halen and Billy Gibbons among the material uncovered for his Nuge Vault project in March 2025.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "ultimateclassicrock.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://townsquare.media/site/295/files/2025/03/attachment-Eddie-Ted-Billy.jpg?w=1200&q=75&format=natural"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42936",
+              "url": "https://theamericanscholar.org/song-for-the-earth/",
+              "title": "Song for the Earth",
+              "excerpt": "Finding a message for today in the music of Gustav Mahler",
+              "topic": "ENTERTAINMENT",
+              "publisher": "theamericanscholar.org",
+              "isTimeSensitive": false,
+              "imageUrl": "https://theamericanscholar.org/wp-content/uploads/2025/03/Mahler_horowitz.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42937",
+              "url": "https://www.stereogum.com/2302336/watch-perfume-genius-sing-no-front-teeth-live-for-the-first-time-in-london/news/",
+              "title": "Watch Perfume Genius Sing “No Front Teeth” Live for the First Time in London",
+              "excerpt": "Mike Hadreas has just started his run of live shows supporting his latest Perfume Genius album Glory. Last Thursday, the eve of the record’s release, he debuted a bunch of Glory songs at London’s Institute of Contemporary Arts including “It’s A Mirror,” “",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Stereogum",
+              "isTimeSensitive": false,
+              "imageUrl": "https://static.stereogum.com/uploads/2025/03/Perfume-Genius-bbc6-1743353362.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42938",
+              "url": "https://www.rollingstone.com/music/music-news/snl-recap-watch-morgan-wallen-perform-im-the-problem-just-in-case-new-album-1235306404/",
+              "title": "‘SNL’: Watch Morgan Wallen Perform ‘I’m the Problem,’ ‘Just in Case’",
+              "excerpt": "Country singer makes second SNL musical guest appearance after 2020 debut",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Rolling Stone",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.rollingstone.com/wp-content/uploads/2025/03/Screen-Shot-2025-03-30-at-1.49.21-AM.png?w=1362&h=762&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42939",
+              "url": "https://pitchfork.com/news/atlanta-rapper-young-scooter-dies-at-39/",
+              "title": "Atlanta Rapper Young Scooter Dies at 39",
+              "excerpt": "The musician worked with Future, Young Thug, Zaytoven, Gucci Mane, and many other luminaries of his Georgia hometown",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Pitchfork",
+              "isTimeSensitive": false,
+              "imageUrl": "https://media.pitchfork.com/photos/67e757f2c04fc432b0522dbe/16:9/w_1280,c_limit/Young-Scooter.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42940",
+              "url": "https://ultimateclassicrock.com/todd-rundgren-interview-2025/",
+              "title": "Todd Rundgren Reveals His Songwriting Inspiration",
+              "excerpt": "Todd Rundgren tells UCR during a 2025 interview about one of the inspirations behind his legendary hits.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "ultimateclassicrock.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://townsquare.media/site/295/files/2025/03/attachment-ToddRundgren-GettyImages-464929617.jpg?w=1200&q=75&format=natural"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42941",
+              "url": "https://www.billboard.com/business/management/billie-eilish-finneas-new-management-1235935319/",
+              "title": "Billie Eilish & Finneas Hire New Management",
+              "excerpt": "Billie Eilish and Finneas have hired Sandbox Entertainment’s Jason Owen, whose longtime clients include Kelsea Ballerini and Kacey Musgraves.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Billboard",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.billboard.com/wp-content/uploads/2024/12/billie-eilish-finneas-kia-forum-tour-2024-billboard-2-1548.jpg?w=1024"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42942",
+              "url": "https://variety.com/2025/music/news/billie-eilish-and-finneas-join-jason-owen-sandbox-management-1236352266/",
+              "title": "Billie Eilish and Finneas Join Jason Owen’s Sandbox Management",
+              "excerpt": "Billie Eilish and brother/ collaborator Finneas have left their managers of 10 years to join Jason Owen’s Sandbox Management, Variety confirms.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Variety",
+              "isTimeSensitive": false,
+              "imageUrl": "https://variety.com/wp-content/uploads/2025/03/GettyImages-2197321325-1-e1743390156987.jpg?w=1000&h=563&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42943",
+              "url": "https://loudwire.com/best-song-prog-rock-bands/",
+              "title": "The Best Song by 11 Legendary Prog Rock Bands",
+              "excerpt": "Obviously, these are also 11 of the best progressive rock songs ever!",
+              "topic": "ENTERTAINMENT",
+              "publisher": "loudwire.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://townsquare.media/site/366/files/2025/03/attachment-best_song_legendary_prog_rock_bands.jpg?w=1200&q=75&format=natural"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42944",
+              "url": "https://www.theroot.com/folks-are-dragging-kim-kardashian-for-daughter-north-we-1851773257",
+              "title": "Folks Are Dragging Kim Kardashian for Daughter North West’s Latest Appearance, but Is It Justified? Here’s the Tea",
+              "excerpt": "The famous mom and daughter are no strangers to trending.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "The Root",
+              "isTimeSensitive": false,
+              "imageUrl": "https://i.kinja-img.com/image/upload/c_fill,h_675,pg_1,q_80,w_1200/4368c08b02d3fc8275ebb08807c26f4b.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42945",
+              "url": "https://www.independent.co.uk/arts-entertainment/music/features/will-smith-album-slap-comeback-b2721138.html",
+              "title": "Will Smith’s Rap Comeback Could Be a Sign of a Career in Freefall",
+              "excerpt": "Three years after the slap seen and heard around the world, the Oscar winner is performing in Scarborough and releasing an album of inspirational hip-hop. Has it all gone wrong for one of our biggest stars, asks Ed Power",
+              "topic": "ENTERTAINMENT",
+              "publisher": "The Independent",
+              "isTimeSensitive": false,
+              "imageUrl": "https://static.independent.co.uk/2025/03/25/11/52/GettyImages-2206591525.jpeg?width=1200&height=800&crop=1200:800"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42946",
+              "url": "https://www.avclub.com/roger-daltry-going-blind-the-who",
+              "title": "The Who’s Roger Daltry Says He’s Going Blind",
+              "excerpt": "The Who’s Roger Daltry says he’s going blind ",
+              "topic": "ENTERTAINMENT",
+              "publisher": "The A.V. Club",
+              "isTimeSensitive": false,
+              "imageUrl": "https://img.pastemagazine.com/wp-content/avuploads/2025/03/30193040/roger-daltry-feature.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42947",
+              "url": "https://www.wired.com/story/this-crazy-instrument-lets-us-hear-how-dinosaurs-might-have-sounded/",
+              "title": "This Crazy Instrument Lets Us Hear How Dinosaurs Might Have Sounded",
+              "excerpt": "Using 3D models of ancient skulls, Dinosaur Choir gets us closer than ever to understanding the noises that dinosaurs made.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "WIRED",
+              "isTimeSensitive": false,
+              "imageUrl": "https://media.wired.com/photos/67e292cc22696af540843d9d/191:100/w_1280,c_limit/DinosaurChoir-Closeup.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42948",
+              "url": "https://consequence.net/2025/03/lady-gaga-mayhem-ball-how-to-buy-tickets/",
+              "title": "Lady Gaga’s “The Mayhem Ball”: How to Get Tickets",
+              "excerpt": "Lady Gaga has announced “The Mayhem Ball,” an arena tour taking place in summer and fall 2025. Learn how to get pre-sale tickets and everything else you need to know.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "consequence.net",
+              "isTimeSensitive": false,
+              "imageUrl": "https://consequence.net/wp-content/uploads/2025/03/lady-gaga-mayhem-ball-how-to-buy.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42949",
+              "url": "https://www.thefader.com/2025/03/28/yung-lean-babyface-maniacs-forever-yung-tour-dates",
+              "title": "Yung Lean Shares New Song “Babyface Maniacs,” 2025 Tour Dates",
+              "excerpt": "See Yung Lean’s 2025 Forever Yung tour dates, including shows in North America, Europe, and the U.K.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.thefader.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://thefader-res.cloudinary.com/private_images/w_1800,c_limit,f_auto,q_auto:best/MAIN_AM_YUNG_LEAN_7650_4_RGB_jcz1uh/yung-lean-babyface-maniacs-forever-yung-tour-dates.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42950",
+              "url": "https://www.spin.com/2025/03/sex-pistols-first-north-american-tour/",
+              "title": "Sex Pistols Reload for First North American Tour Since 2003",
+              "excerpt": "Never mind that there’s no Johnny Rotten, but the Sex Pistols will later this year tour North America for the first time since 2003.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.spin.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://static.spin.com/files/2025/03/Screen-Shot-2025-03-28-at-1.01.33-PM.png"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42951",
+              "url": "https://xtramagazine.com/culture/music/on-glory-perfume-genius-reaches-out-272243",
+              "title": "On ‘Glory,’ Perfume Genius Reaches Out",
+              "excerpt": "The lonely indie darling’s new album casts an eye outward—and shows the way forward",
+              "topic": "ENTERTAINMENT",
+              "publisher": "xtramagazine.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://xtramagazine.com/wp-content/uploads/2025/03/Perfume-Genius-GLORY-300dpi-Large-e1743105857819.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42952",
+              "url": "https://www.nylon.com/entertainment/diva-smith-put-together-a-friend-premiere",
+              "title": "Diva Smith Premieres Video & New Song “Put Together a Friend” (Exclusive)",
+              "excerpt": "On Diva Smith’s latest release, “Put Together A Friend,” the singer-songwriter builds her “therapy pop” oeuvre.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.nylon.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://imgix.bustle.com/uploads/image/2025/3/28/13736b93/diva.tif?w=1200&h=630&fit=crop&crop=faces&fm=jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42953",
+              "url": "https://ultimateclassicrock.com/prog-bands-should-be-bigger/",
+              "title": "5 Prog Rock Bands That Should’ve Been Bigger",
+              "excerpt": "A list of five underrated progressive rock bands.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "ultimateclassicrock.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://townsquare.media/site/295/files/2025/03/attachment-Underrated-Prog-Ian-Dickson-Redferns-Bips-Getty-YouTube.jpg?w=1200&q=75&format=natural"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42954",
+              "url": "https://www.billboard.com/music/awards/boi-1da-tributes-drake-2025-juno-awards-1235935343/",
+              "title": "Boi-1da Gives Drake Some Love in Acceptance Speech at 2025 Juno Awards",
+              "excerpt": "Boi-1da gives Drake some love in acceptance speech at 2025 Juno Awards. Read what he had to say.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Billboard",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.billboard.com/wp-content/uploads/2023/02/Boi-1da-cr-astral-2022-billboard-1548.jpg?w=1024"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42955",
+              "url": "https://www.cntraveler.com/story/in-kathmandu-finding-notes-of-commonality-in-nepali-folk-music",
+              "title": "In Kathmandu, Finding Notes of Commonality in Nepali Folk Music",
+              "excerpt": "Jamming with nomadic performers, Justin Goldman discovers the common ancestry of folk music around the globe",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Condé Nast Traveler",
+              "isTimeSensitive": false,
+              "imageUrl": "https://media.cntraveler.com/photos/67c912100a7d61595d2c38b1/16:9/w_1280,c_limit/2_130207_CNT_NEPAL_BHAKTAPUR130207_CNT_Bhaktapur_Durbar_Sq_1640.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42956",
+              "url": "https://www.theroot.com/wow-cardi-b-goes-off-about-the-scary-messages-her-ex-o-1851773355",
+              "title": "Wow! Cardi B Goes Off About the Scary Messages Her Ex Offset Is Allegedly Sending Her",
+              "excerpt": "The rapper appeared on X spaces and had a lot to say about her estranged ex.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "The Root",
+              "isTimeSensitive": false,
+              "imageUrl": "https://i.kinja-img.com/image/upload/c_fill,h_675,pg_1,q_80,w_1200/84f6f92529b1d0a47500829b97fbe572.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42957",
+              "url": "https://www.harpersbazaar.com/celebrity/latest/a64331767/suki-waterhouse-grandma-chic-pink-valentino-dress-photos/",
+              "title": "Suki Waterhouse Is Grandma-Chic in a Whimsical Valentino Look",
+              "excerpt": "Sequins and lace and fur...oh my!",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Harper's Bazaar",
+              "isTimeSensitive": false,
+              "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/gettyimages-2207588711-67e992b4d93a4.jpeg?crop=1.00xw:0.334xh;0,0.0481xh&resize=1200:*"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42958",
+              "url": "https://www.marieclaire.com/fashion/doechii-donna-karan-naked-dress-vintage-fendi-baguette-billboard-women-in-music-2025/",
+              "title": "Doechii Accessorizes a Donna Karan Naked Dress With a Vintage Fendi Baguette and Manolo Blahnik Sandals",
+              "excerpt": "Billboard’s Woman of the Year winner styled her 2014 runway gown with rainbow metallics.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.marieclaire.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.mos.cms.futurecdn.net/AGGmzbY5rq3vfdSUBjE5YX-1200-80.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "42524",
+              "url": "https://theamericanscholar.org/the-most-famous-unknown-artist/",
+              "title": "The Most Famous Unknown Artist",
+              "excerpt": "David Sheff puts Yoko Ono in the spotlight",
+              "topic": "ENTERTAINMENT",
+              "publisher": "theamericanscholar.org",
+              "isTimeSensitive": false,
+              "imageUrl": "https://theamericanscholar.org/wp-content/uploads/2025/03/318web.jpg"
+            }
+          }
+        ]
+      },
+      {
+        "externalId": "bvf-123",
+        "active": true,
+        "title": "Business",
+        "sectionItems": [
+          {
+            "corpusItem": {
+              "id": "39072",
+              "url": "https://prospect.org/api/content/69ae6e82-f84e-11ef-8a16-12163087a831/",
+              "title": "CFPB to Employees: When We Said Stop Work, We Didn’t Mean Stop Work!",
+              "excerpt": "The illegal plan to dismantle the consumer agency is failing. So Russ Vought and his charges are engaging in some CYA.",
+              "topic": "BUSINESS",
+              "publisher": "prospect.org",
+              "isTimeSensitive": false,
+              "imageUrl": "https://prospect.org/downloads/22555/download/Dayen-CFPB%20030325.jpg?cb=7e33d0a64c55b0e98328577cf675517e&w=1024"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "38878",
+              "url": "https://lithub.com/the-u-s-has-a-journalism-crisis-heres-why-writers-are-leaving-the-profession-in-droves/",
+              "title": "News, Notes, Talk",
+              "excerpt": "It feels like every day lately, we get more news of newsroom hemorrhage. Last week, self-appointed media emperor Jeff Bezos wrote a letter to his employees at The Washington Post asserting in no un…",
+              "topic": "BUSINESS",
+              "publisher": "Literary Hub",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s26162.pcdn.co/wp-content/uploads/2025/03/free-press-e1741023539655.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "38800",
+              "url": "https://www.fastcompany.com/91278935/best-work-bags-2025",
+              "title": "Five Beautiful Bags That Also Get the Job Done",
+              "excerpt": "You want a bag that makes a statement, but that also gets you through your busy day. Here are five to consider.",
+              "topic": "BUSINESS",
+              "publisher": "Fast Company",
+              "isTimeSensitive": false,
+              "imageUrl": "https://images.fastcompany.com/image/upload/f_webp,q_auto,c_fit/wp-cms-2/2025/02/p-91278935-spring-2025-bags.jpg"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

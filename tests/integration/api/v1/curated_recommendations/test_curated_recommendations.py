@@ -1027,8 +1027,7 @@ class TestSections:
             )
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("locale", ["en-US", "de-DE"])
-    async def test_sections_feed_content(self, locale, caplog):
+    async def test_corpus_sections_feed_content(self):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for different locales.
         """
@@ -1036,7 +1035,71 @@ class TestSections:
             # Mock the endpoint to request the sections feed
             response = await ac.post(
                 "/api/v1/curated-recommendations",
-                json={"locale": locale, "feeds": ["sections"]},
+                json={
+                    "locale": "en-US",
+                    "feeds": ["sections"],
+                    "experimentName": "new-tab-ml-sections",
+                    "experimentBranch": "treatment",
+                },
+            )
+            data = response.json()
+
+            # Check if the response is valid
+            assert response.status_code == 200
+
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
+            assert "music" in sections
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "experiment_payload",
+        [
+            {},  # No experiment
+            {"experimentName": "new-tab-ml-sections", "experimentBranch": "control"},
+        ],
+    )
+    async def test_corpus_sections_feed_content_control(self, experiment_payload):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'sections' feed for different locales.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "en-US", "feeds": ["sections"]} | experiment_payload,
+            )
+            data = response.json()
+
+            # Check if the response is valid
+            assert response.status_code == 200
+
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
+            # The only sections are topic sections or "top_stories_section"
+            assert all(
+                section_name == "top_stories_section" or section_name in Topic
+                for section_name in sections
+            )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("locale", ["en-US", "de-DE"])
+    @pytest.mark.parametrize(
+        "experiment_payload",
+        [
+            {},  # No experiment
+            {"experimentName": "new-tab-ml-sections", "experimentBranch": "treatment"},
+        ],
+    )
+    async def test_sections_feed_content(self, locale, experiment_payload, caplog):
+        """Test the curated recommendations endpoint response is as expected
+        when requesting the 'sections' feed for different locales.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": locale, "feeds": ["sections"]} | experiment_payload,
             )
             data = response.json()
 
@@ -1068,17 +1131,26 @@ class TestSections:
     @pytest.mark.parametrize(
         "sections_payload",
         [
-            None,
-            [{"sectionId": "sports", "isFollowed": True, "isBlocked": False}],
+            {},
+            {"sections": [{"sectionId": "sports", "isFollowed": True, "isBlocked": False}]},
         ],
     )
-    async def test_sections_layouts(self, sections_payload):
+    @pytest.mark.parametrize(
+        "experiment_payload",
+        [
+            {},  # No experiment
+            {"experimentName": "new-tab-ml-sections", "experimentBranch": "treatment"},
+        ],
+    )
+    async def test_sections_layouts(self, sections_payload, experiment_payload):
         """Test that the correct layout are returned along with sections."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            payload = {"locale": "en-US", "feeds": ["sections"]}
-            if sections_payload is not None:
-                payload["sections"] = sections_payload
-            response = await ac.post("/api/v1/curated-recommendations", json=payload)
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": "en-US", "feeds": ["sections"]}
+                | sections_payload
+                | experiment_payload,
+            )
             assert response.status_code == 200
             data = response.json()
             feeds = data["feeds"]

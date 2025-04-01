@@ -106,7 +106,7 @@ class CorpusApiGraphConfig:
 
 
 def build_corpus_item(
-    corpus_item: dict, manifest_provider: ManifestProvider, utm_source: str
+    corpus_item: dict, manifest_provider: ManifestProvider, utm_source: str | None
 ) -> CorpusItem:
     """Construct a CorpusItem from a GraphQL corpus item dictionary.
 
@@ -121,6 +121,10 @@ def build_corpus_item(
     Returns:
         CorpusItem: The constructed CorpusItem.
     """
+    url = corpus_item["url"]
+    if utm_source is not None:
+        url = update_url_utm_source(corpus_item["url"], utm_source)
+
     return CorpusItem(
         corpusItemId=corpus_item["id"],
         title=corpus_item["title"],
@@ -129,6 +133,6 @@ def build_corpus_item(
         publisher=corpus_item["publisher"],
         isTimeSensitive=corpus_item["isTimeSensitive"],
         imageUrl=corpus_item["imageUrl"],
-        iconUrl=manifest_provider.get_icon_url(corpus_item["url"]),
-        url=update_url_utm_source(corpus_item["url"], utm_source),
+        iconUrl=manifest_provider.get_icon_url(url),
+        url=url,
     )

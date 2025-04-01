@@ -228,7 +228,7 @@ class CuratedRecommendationsProvider:
         as an attribute on the given feed.
         """
         corpus_sections = await self.sections_backend.fetch(surface_id)
-        sections = dict()
+        sections: dict[str, Section] = dict()
         for corpus_section in corpus_sections:
             recommendations = [
                 CuratedRecommendation(
