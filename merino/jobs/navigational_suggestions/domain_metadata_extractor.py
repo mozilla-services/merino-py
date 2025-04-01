@@ -8,7 +8,8 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 from pydantic import BaseModel
-from robobrowser import RoboBrowser
+from mechanicalsoup import StatefulBrowser
+from typing import cast
 
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import DomainMetadataUploader
 from merino.utils.gcs.models import Image
@@ -40,14 +41,20 @@ class Scraper:
     )
     META_SELECTOR: str = "meta[name=apple-touch-icon], meta[name=msapplication-TileImage]"
     MANIFEST_SELECTOR: str = 'link[rel="manifest"]'
+    ALLOW_REDIRECTS = True
 
-    browser: RoboBrowser
+    browser: StatefulBrowser
     request_client: AsyncFaviconDownloader
+    parser: str = "html.parser"
 
     def __init__(self) -> None:
         session: requests.Session = requests.Session()
-        session.headers.update(REQUEST_HEADERS)
-        self.browser = RoboBrowser(session=session, parser="html.parser", allow_redirects=True)
+        self.browser = StatefulBrowser(
+            session=session,
+            soup_config={"features": self.parser},
+            raise_on_404=False,
+            user_agent=REQUEST_HEADERS["User-Agent"],
+        )
         self.request_client = AsyncFaviconDownloader()
 
     def open(self, url: str) -> Optional[str]:
@@ -59,7 +66,7 @@ class Scraper:
             Optional[str]: Full URL that was opened
         """
         try:
-            self.browser.open(url, timeout=TIMEOUT)
+            self.browser.open(url, timeout=TIMEOUT, allow_redirects=self.ALLOW_REDIRECTS)
             return str(self.browser.url)
         except Exception:
             return None
@@ -71,11 +78,11 @@ class Scraper:
             FaviconData: Favicon data for a URL
         """
         return FaviconData(
-            links=[link.attrs for link in self.browser.select(self.LINK_SELECTOR)],
-            metas=[meta.attrs for meta in self.browser.select(self.META_SELECTOR)],
+            links=[link.attrs for link in self.browser.page.select(self.LINK_SELECTOR)],
+            metas=[meta.attrs for meta in self.browser.page.select(self.META_SELECTOR)],
             manifests=[
                 manifest.attrs
-                for manifest in self.browser.select(f"head {self.MANIFEST_SELECTOR}")
+                for manifest in self.browser.page.select(f"head {self.MANIFEST_SELECTOR}")
             ],
         )
 
@@ -108,8 +115,8 @@ class Scraper:
         Returns:
             Optional[str]: Default favicon url if it exists
         """
+        default_favicon_url: str = urljoin(url, "favicon.ico")
         try:
-            default_favicon_url: str = urljoin(url, "favicon.ico")
             response = await self.request_client.requests_get(default_favicon_url)
             return str(response.url) if response else None
         except Exception:
@@ -122,8 +129,9 @@ class Scraper:
             Optional[str]: The title extracted from header of a url
         """
         try:
-            return str(self.browser.find("head").find("title").get_text())
-        except Exception:
+            return str(self.browser.page.find("head").find("title").get_text())
+        except Exception as e:
+            logger.info(f"Exception: {e} while scraping title")
             return None
 
 

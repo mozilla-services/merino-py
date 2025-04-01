@@ -973,9 +973,9 @@ def test_scraper_init() -> None:
     # Verify that the session headers are correctly set
     assert scraper.browser.session.headers.get("User-Agent") == REQUEST_HEADERS.get("User-Agent")
 
-    # Verify that the browser is properly configured
-    assert scraper.browser.parser == "html.parser"
-    assert scraper.browser.allow_redirects is True
+    # These properties are set as class properties in the Scraper class
+    assert scraper.parser == "html.parser"
+    assert scraper.ALLOW_REDIRECTS is True
 
     # Verify that the request client is properly initialized
     assert isinstance(scraper.request_client, AsyncFaviconDownloader)
@@ -1096,13 +1096,13 @@ def test_scraper_scrape_title() -> None:
     head_mock.find.return_value = title_mock
 
     # Mock the find method on the browser
-    scraper.browser.find.return_value = head_mock
+    scraper.browser.page.find.return_value = head_mock
 
     result = scraper.scrape_title()
     assert result == "Example Website"
 
     # Test exception - missing head tag
-    scraper.browser.find.return_value = None
+    scraper.browser.page.find.return_value = None
 
     result = scraper.scrape_title()
     assert result is None

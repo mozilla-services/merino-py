@@ -109,6 +109,7 @@ def test_domain(domain: str, min_width: int) -> DomainTestResult:
             # all URLs are absolute, just like in production
             raw_favicon_data.links = processed_links
 
+            raw_favicon_data = scraper.scrape_favicon_data()
             favicon_data = raw_favicon_data.model_dump()
             favicon_urls = set()
 
