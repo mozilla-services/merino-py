@@ -22,39 +22,44 @@ from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
     boost_followed_sections,
     is_section_recently_followed,
+    renumber_recommendations,
 )
+from tests.unit.curated_recommendations.fixtures import generate_recommendations
+
+
+class TestRenumberRecommendations:
+    """Tests for the renumber_recommendations function."""
+
+    def test_empty_list(self):
+        """Test that renumber_recommendations works with an empty list."""
+        recs: list[CuratedRecommendation] = []
+        renumber_recommendations(recs)
+        assert recs == []
+
+    def test_sequential_order(self):
+        """Test that renumber_recommendations assigns sequential ranks."""
+        recs = generate_recommendations(["1", "2", "3", "4", "5"])
+        renumber_recommendations(recs)
+        assert [rec.receivedRank for rec in recs] == list(range(len(recs)))
+
+    def test_preserve_order_for_equal_ranks(self):
+        """Test renumber_recommendations preserves original order for equal initial ranks."""
+        recs = generate_recommendations(["1", "2", "3", "4"])
+        # Set all recommendations to the same initial rank.
+        for rec in recs:
+            rec.receivedRank = 5
+        original_order = [rec.corpusItemId for rec in recs]
+        renumber_recommendations(recs)
+        assert [rec.corpusItemId for rec in recs] == original_order
+        assert [rec.receivedRank for rec in recs] == list(range(len(recs)))
 
 
 class TestCuratedRecommendationsProviderSpreadPublishers:
     """Unit tests for spread_publishers."""
 
-    @staticmethod
-    def generate_recommendations(item_ids: list[str]) -> list[CuratedRecommendation]:
-        """Create dummy recommendations for the tests below."""
-        recs = []
-        for item_id in item_ids:
-            rec = CuratedRecommendation(
-                corpusItemId=str(uuid.uuid4()),
-                tileId=MIN_TILE_ID + random.randint(0, 101),
-                receivedRank=random.randint(0, 101),
-                scheduledCorpusItemId=item_id,
-                url=HttpUrl("https://littlelarry.com/"),
-                title="little larry",
-                excerpt="is failing english",
-                topic=random.choice(list(Topic)),
-                publisher="cohens",
-                isTimeSensitive=False,
-                imageUrl=HttpUrl("https://placehold.co/600x400/"),
-                iconUrl=None,
-            )
-
-            recs.append(rec)
-
-        return recs
-
     def test_spread_publishers_single_reorder(self):
         """Should only re-order one element."""
-        recs = self.generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "walter.com"
         recs[2].publisher = "donnie.com"
@@ -93,7 +98,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
     def test_spread_publishers_multiple_reorder(self):
         """Should re-order multiple elements."""
-        recs = self.generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "walter.com"
         recs[2].publisher = "walter.com"
@@ -132,7 +137,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
     def test_spread_publishers_give_up_at_the_end(self):
         """Should not re-order when the end of the list cannot satisfy the requested spread."""
-        recs = self.generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "abides.com"
         recs[2].publisher = "walter.com"
@@ -161,7 +166,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
     def test_spread_publishers_cannot_spread(self):
         """If we don't have enough variance in publishers, spread can't happen."""
-        recs = self.generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "abides.com"
         recs[2].publisher = "donnie.com"

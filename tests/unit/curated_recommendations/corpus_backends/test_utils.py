@@ -7,12 +7,14 @@ from merino.curated_recommendations.corpus_backends.utils import (
     get_utm_source,
     update_url_utm_source,
 )
-from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId, Topic
+from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId
+
 
 @pytest.mark.parametrize("topic", ["CORONAVIRUS"])
 def test_map_corpus_to_serp_topic_return_none(topic):
     """Testing map_corpus_topic_to_serp_topic() method ensuring topics that don't have a mapping return None."""
     assert map_corpus_topic_to_serp_topic(topic) is None
+
 
 @pytest.mark.parametrize(
     "topic, mapped_topic",
@@ -40,10 +42,12 @@ def test_map_corpus_to_serp_topic(topic, mapped_topic):
     assert result is not None
     assert result.value == mapped_topic
 
+
 @pytest.mark.parametrize("scheduled_surface_id", ["bad-scheduled-surface-id"])
 def test_get_utm_source_return_none(scheduled_surface_id):
     """Testing get_utm_source() method ensuring ids that don't have a mapping return None."""
     assert get_utm_source(scheduled_surface_id) is None
+
 
 @pytest.mark.parametrize(
     ("scheduled_surface_id", "expected_utm_source"),
@@ -60,6 +64,7 @@ def test_get_utm_source_return_none(scheduled_surface_id):
 def test_get_utm_source(scheduled_surface_id, expected_utm_source):
     """Testing get_utm_source() method ensuring correct utm_source is returned for a scheduled surface id."""
     assert get_utm_source(scheduled_surface_id) == expected_utm_source
+
 
 @pytest.mark.parametrize(
     ("url", "utm_source", "expected_url"),

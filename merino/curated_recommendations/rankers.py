@@ -14,6 +14,17 @@ from merino.curated_recommendations.protocol import (
 )
 from scipy.stats import beta
 
+
+def renumber_recommendations(recommendations: list) -> None:
+    """Renumber the receivedRank of each recommendation to be sequential.
+
+    Args:
+        recommendations (list): A list of recommendation objects.
+    """
+    for rank, rec in enumerate(recommendations):
+        rec.receivedRank = rank
+
+
 # In a weighted average, how much to weigh the metrics from the requested region. 0.95 was chosen
 # somewhat arbitrarily in the new-tab-region-specific-content experiment that only targeted Canada.
 # CA has about 9x fewer impressions than the total for NEW_TAB_EN_US. A value close to 1 boosts

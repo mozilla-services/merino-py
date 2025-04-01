@@ -836,8 +836,8 @@ class TestCuratedRecommendationsMetrics:
             # TODO: Remove reliance on internal details of aiodogstatsd
             metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
             assert metric_keys == [
-                "corpus_api.request.timing",
-                "corpus_api.request.status_codes.200",
+                "corpus_api.scheduled_surface.timing",
+                "corpus_api.scheduled_surface.status_codes.200",
                 "post.api.v1.curated-recommendations.timing",
                 "post.api.v1.curated-recommendations.status_codes.200",
                 "response.status_codes.200",
@@ -897,10 +897,10 @@ class TestCuratedRecommendationsMetrics:
             assert (
                 metric_keys
                 == [
-                    "corpus_api.request.timing",
-                    "corpus_api.request.status_codes.500",
-                    "corpus_api.request.timing",
-                    "corpus_api.request.status_codes.200",
+                    "corpus_api.scheduled_surface.timing",
+                    "corpus_api.scheduled_surface.status_codes.500",
+                    "corpus_api.scheduled_surface.timing",
+                    "corpus_api.scheduled_surface.status_codes.200",
                     "post.api.v1.curated-recommendations.timing",
                     "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
                     "response.status_codes.200",
@@ -1064,9 +1064,6 @@ class TestSections:
                 recs = section["recommendations"]
                 assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
 
-            # Ensure all topics are present and are named according to the Topic Enum value.
-            assert all(topic.value in feeds for topic in Topic)
-
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "sections_payload",
@@ -1102,8 +1099,9 @@ class TestSections:
 
             # Assert layout of the first section.
             assert first_section["layout"]["name"] == "4-large-small-medium-1-ad"
-            # Assert layout of the second section.
-            assert second_section["layout"]["name"] == "7-double-row-3-ad"
+            # Assert layout of the second section has 2 rows, if it has enough recommendations for this layout.
+            if len(second_section["recommendations"]) >= 7:
+                assert second_section["layout"]["name"] == "7-double-row-3-ad"
             # Assert that none of the other sections have the layout "7-double-row-3-ad".
             for section in sections.values():
                 if section["receivedFeedRank"] != 1:
@@ -1137,14 +1135,14 @@ class TestSections:
             assert response.status_code == 200
 
             # assert isFollowed & isBlocked have been correctly set
-            if data["feeds"]["arts"] is not None:
+            if data["feeds"].get("arts") is not None:
                 assert data["feeds"]["arts"]["isFollowed"]
                 # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2]
-            if data["feeds"]["education"] is not None:
+            if data["feeds"].get("education") is not None:
                 assert not data["feeds"]["education"]["isFollowed"]
                 assert data["feeds"]["education"]["isBlocked"]
-            if data["feeds"]["sports"] is not None:
+            if data["feeds"].get("sports") is not None:
                 assert data["feeds"]["sports"]["isFollowed"]
                 # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2]
@@ -1218,23 +1216,23 @@ class TestSections:
             assert response.status_code == 200
 
             # assert isFollowed & isBlocked & followedAt have been correctly set
-            if data["feeds"]["arts"] is not None:
+            if data["feeds"].get("arts") is not None:
                 assert data["feeds"]["arts"]["isFollowed"]
                 # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2]
                 assert data["feeds"]["arts"]["followedAt"]
-            if data["feeds"]["education"] is not None:
+            if data["feeds"].get("education") is not None:
                 assert not data["feeds"]["education"]["isFollowed"]
                 assert not data["feeds"]["education"]["followedAt"]
                 assert data["feeds"]["education"]["isBlocked"]
-            if data["feeds"]["sports"] is not None:
+            if data["feeds"].get("sports") is not None:
                 assert data["feeds"]["sports"]["isFollowed"]
                 # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2]
                 assert data["feeds"]["sports"]["followedAt"]
 
             # in the case both sections are present, sports is recently followed & needs to have higher rank
-            if data["feeds"]["arts"] is not None and data["feeds"]["sports"] is not None:
+            if data["feeds"].get("arts") is not None and data["feeds"].get("sports") is not None:
                 assert data["feeds"]["sports"]["receivedFeedRank"] == 1
                 assert data["feeds"]["arts"]["receivedFeedRank"] == 2
 

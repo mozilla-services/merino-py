@@ -1,12 +1,15 @@
 """Unit tests for ScheduledCorpusBackend in merino/curated_recommendations/corpus_backends/scheduled_corpus_backend.py"""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 import pytest
 from freezegun import freeze_time
-from merino.curated_recommendations.corpus_backends.scheduled_corpus_backend import ScheduledCorpusBackend
+from merino.curated_recommendations.corpus_backends.scheduled_corpus_backend import (
+    ScheduledCorpusBackend,
+)
 from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId
 from pytest import LogCaptureFixture
+
 
 @pytest.mark.parametrize(
     "surface_id, timezone_str",
@@ -26,6 +29,7 @@ def test_get_surface_timezone(surface_id, timezone_str, caplog: LogCaptureFixtur
     assert tz.key == timezone_str
     # No warnings or errors were logged.
     assert not any(r for r in caplog.records if r.levelname in ("WARNING", "ERROR", "CRITICAL"))
+
 
 @pytest.mark.parametrize(
     "time_zone, time_to_freeze, expected_date",
@@ -53,6 +57,7 @@ def test_get_scheduled_surface_date(time_zone, time_to_freeze, expected_date):
             ZoneInfo(time_zone)
         )
         assert scheduled_surface_date.strftime("%Y-%m-%d") == expected_date
+
 
 @freeze_time("2012-01-14 00:00:00", tz_offset=0)
 def test_get_expiration_time():

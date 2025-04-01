@@ -34,6 +34,7 @@ from merino.curated_recommendations.rankers import (
     spread_publishers,
     thompson_sampling,
     boost_followed_sections,
+    renumber_recommendations,
 )
 
 logger = logging.getLogger(__name__)
@@ -258,6 +259,8 @@ class CuratedRecommendationsProvider:
         filtering out groups with insufficient recommendations.
         """
         max_recs_per_section = 30
+        # Section must have some extra items in case one is dismissed, beyond what can be displayed.
+        min_fallback_recs_per_section = 1
         top_stories_count = 6
 
         # Recommendations whose topic matches a blocked section should not be shown.
@@ -276,6 +279,7 @@ class CuratedRecommendationsProvider:
 
         # Separate top stories and the remaining recommendations.
         top_stories = recommendations[:top_stories_count]
+        renumber_recommendations(top_stories)
         remaining_recs = recommendations[top_stories_count:]
 
         # Create a dictionary to hold sections, starting with top_stories_section
@@ -317,7 +321,7 @@ class CuratedRecommendationsProvider:
         for section_id, section in sections.items():
             max_tile_count = section.layout.max_tile_count
             # Keep the section if it has enough recs to fill its biggest layout, plus fallback recs.
-            if len(section.recommendations) >= max_tile_count:
+            if len(section.recommendations) >= max_tile_count + min_fallback_recs_per_section:
                 valid_sections[section_id] = section
 
         # Renumber receivedFeedRank starting at 0.
