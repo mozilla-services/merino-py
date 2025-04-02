@@ -166,3 +166,6 @@ workspace/
 
 # Zed editor local settings
 .zed
+
+# Folders for the local Navigational Suggestions job
+local_data/

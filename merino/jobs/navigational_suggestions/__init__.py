@@ -2,9 +2,11 @@
 
 import base64
 import json
+import sys
+import socket
 import logging
 from hashlib import md5
-from typing import Optional
+from typing import Optional, Any
 
 import typer
 from httpx import URL
@@ -74,6 +76,24 @@ min_favicon_width_option = typer.Option(
     help="Minimum width of the domain favicon required for it to be a part of domain metadata",
 )
 
+local_mode_option = typer.Option(
+    False,
+    "--local",
+    help="Run in local mode using custom domains instead of BigQuery",
+)
+
+local_sample_size_option = typer.Option(
+    50,
+    "--sample-size",
+    help="Number of domains to process in local mode",
+)
+
+local_data_option = typer.Option(
+    "./local_data",
+    "--metrics-dir",
+    help="Directory to save local run metrics",
+)
+
 navigational_suggestions_cmd = typer.Typer(
     name="navigational-suggestions",
     help="Command for preparing top domain metadata for navigational suggestions",
@@ -85,18 +105,21 @@ def _construct_top_picks(
     domain_metadata: list[dict[str, Optional[str]]],
 ) -> dict[str, list[dict[str, str]]]:
     result = []
-    for index, domain in enumerate(domain_data):
-        if domain_metadata[index]["url"]:
-            domain_url = domain_metadata[index]["url"]
+
+    # Use zip to iterate over both lists together, stopping when either is exhausted
+    # This prevents IndexError when domain_metadata is shorter than domain_data
+    for domain, metadata in zip(domain_data, domain_metadata):
+        if metadata["url"]:
+            domain_url = metadata["url"]
             result.append(
                 {
                     "rank": domain["rank"],
-                    "domain": domain_metadata[index]["domain"],
+                    "domain": metadata["domain"],
                     "categories": domain["categories"],
                     "serp_categories": _get_serp_categories(domain_url),
                     "url": domain_url,
-                    "title": domain_metadata[index]["title"],
-                    "icon": domain_metadata[index]["icon"],
+                    "title": metadata["title"],
+                    "icon": metadata["icon"],
                     "source": domain.get("source", "top-picks"),
                 }
             )
@@ -142,16 +165,216 @@ def _write_xcom_file(xcom_data: dict):
         json.dump(xcom_data, file)
 
 
-@navigational_suggestions_cmd.command()
-def prepare_domain_metadata(
-    source_gcp_project: str = source_gcp_project_option,
-    destination_gcp_project: str = destination_gcp_project_option,
-    destination_gcs_bucket: str = destination_gcs_bucket_option,
-    destination_cdn_hostname: str = destination_gcs_cdn_hostname_option,
-    force_upload: bool = force_upload_option,
-    write_xcom: bool = write_xcom_option,
-    min_favicon_width: int = min_favicon_width_option,
-):
+def _run_local_mode(local_sample_size: int, local_data_dir: str, min_favicon_width: int) -> None:
+    """Run navigational suggestions in local mode"""
+    import os
+    import json
+    from merino.jobs.navigational_suggestions.local_mode import (
+        LocalDomainDataProvider,
+        LocalMetricsCollector,
+    )
+    from merino.jobs.navigational_suggestions.custom_domains import CUSTOM_DOMAINS
+    from google.cloud.storage import Client
+    from google.auth.credentials import AnonymousCredentials
+
+    # Convert typer.Option objects to actual values if needed
+    sample_size = local_sample_size
+    if hasattr(local_sample_size, "default"):
+        sample_size = getattr(local_sample_size, "default", 50)
+
+    data_dir = local_data_dir
+    if hasattr(local_data_dir, "default"):
+        data_dir = getattr(local_data_dir, "default", "./local_data")
+
+    min_width = min_favicon_width
+    if hasattr(min_favicon_width, "default"):
+        min_width = getattr(min_favicon_width, "default", 48)
+
+    logger.info("Running in LOCAL MODE with the following settings:")
+    logger.info(f"- Sample size: {sample_size} domains")
+    logger.info(f"- Data dir: {data_dir}")
+
+    # 1. Setup components
+    metrics_collector = LocalMetricsCollector(data_dir)
+
+    domain_provider = LocalDomainDataProvider(
+        custom_domains=CUSTOM_DOMAINS, sample_size=sample_size
+    )
+    domain_data = domain_provider.get_domain_data()
+    logger.info(f"Domain data loaded: {len(domain_data)} domains")
+
+    # 2. Setup GCS emulator
+    gcs_endpoint = "http://localhost:4443"
+    bucket_name = "merino-test-bucket"
+    cdn_hostname = "localhost:4443"
+
+    # Check if the GCS emulator is running before proceeding
+    # Add a small initial delay to make sure the log messages are flushed
+    logger.info("Checking if GCS emulator is running...")
+
+    try:
+        # Try directly connecting to the socket with a very short timeout
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5)  # 500ms timeout
+        result = sock.connect_ex(("localhost", 4443))
+        sock.close()
+
+        if result != 0:
+            error_message = (
+                "ERROR: GCS emulator is not running at localhost:4443. "
+                "Please start the container using ./dev/start-local-gcs-emulator.sh"
+            )
+            logger.error(error_message)
+            sys.exit(1)
+
+        logger.info("GCS emulator is running")
+    except Exception as e:
+        error_message = (
+            f"ERROR: Failed to connect to GCS emulator: {e}. "
+            "Please start the container using ./dev/start-local-gcs-emulator.sh"
+        )
+        logger.error(error_message)
+        sys.exit(1)
+
+    os.environ["STORAGE_EMULATOR_HOST"] = gcs_endpoint
+
+    try:
+        # Connect to fake-gcs-server
+        storage_client = Client(project="test-project", credentials=AnonymousCredentials())  # type: ignore
+
+        bucket = storage_client.bucket(bucket_name)
+        if not bucket.exists():
+            logger.info(f"Creating bucket {bucket_name} in fake-gcs-server")
+            bucket = storage_client.create_bucket(bucket_name)
+
+        # Setup uploader
+        gcs_uploader = GcsUploader(
+            destination_gcp_project="test-project",
+            destination_bucket_name=bucket_name,
+            destination_cdn_hostname=cdn_hostname,
+        )
+
+        domain_metadata_uploader = DomainMetadataUploader(
+            force_upload=True,
+            uploader=gcs_uploader,
+            async_favicon_downloader=AsyncFaviconDownloader(),
+        )
+    except Exception as e:
+        error_message = (
+            f"ERROR: Failed to connect to GCS emulator at {gcs_endpoint}: {e}\n"
+            "Please start the container using ./dev/start-local-gcs-emulator.sh"
+        )
+        logger.error(error_message)
+        sys.exit(1)
+
+    # 3. Setup domain metadata extractor with metrics collection
+    domain_metadata_extractor = DomainMetadataExtractor(blocked_domains=TOP_PICKS_BLOCKLIST)
+
+    # Add metrics collection
+    original_process_method = domain_metadata_extractor._process_single_domain
+
+    async def _process_with_metrics(
+        domain_data: dict[str, Any], min_width: int, uploader: DomainMetadataUploader
+    ) -> dict[str, Optional[str]]:
+        try:
+            result = await original_process_method(domain_data, min_width, uploader)
+            metrics_collector.record_domain_result(domain_data["domain"], result)
+            return result
+        except Exception as e:
+            logger.error(f"Error processing domain {domain_data['domain']}: {e}")
+            empty_result: dict[str, Optional[str]] = {
+                "url": None,
+                "title": None,
+                "icon": None,
+                "domain": None,
+            }
+            metrics_collector.record_domain_result(domain_data["domain"], empty_result)
+            return empty_result
+
+    # Type checker will complain about this, but it works at runtime
+    # We're monkey patching the method for local metrics collection
+    setattr(domain_metadata_extractor, "_process_single_domain", _process_with_metrics)
+
+    # 4. Process domains
+    domain_metadata = domain_metadata_extractor.process_domain_metadata(
+        domain_data, min_width, uploader=domain_metadata_uploader
+    )
+    logger.info("Domain metadata extraction complete")
+
+    # 5. Process partner favicons
+    partner_favicons = [item["icon"] for item in PARTNER_FAVICONS]
+    uploaded_partner_favicons = domain_metadata_uploader.upload_favicons(partner_favicons)
+    logger.info("Partner favicons uploaded to GCS")
+
+    # 6. Construct top picks content
+    top_picks = _construct_top_picks(domain_data, domain_metadata)
+    partner_manifest = _construct_partner_manifest(PARTNER_FAVICONS, uploaded_partner_favicons)
+    final_top_picks = {**top_picks, **partner_manifest}
+
+    if not final_top_picks:
+        final_top_picks = {"domains": []}
+
+    # 7. Save top picks
+    try:
+        # Upload to GCS emulator
+        top_picks_json = json.dumps(final_top_picks, indent=4)
+        top_pick_blob = domain_metadata_uploader.upload_top_picks(top_picks_json)
+
+        # Save local copy
+        os.makedirs(local_data_dir, exist_ok=True)
+        local_file = os.path.join(local_data_dir, "top_picks_latest.json")
+        with open(local_file, "w") as f:
+            f.write(top_picks_json)
+    except Exception as e:
+        logger.error(f"Error uploading top picks: {e}")
+        # Fallback to local file
+        os.makedirs(local_data_dir, exist_ok=True)
+        local_file = os.path.join(local_data_dir, "top_picks_latest.json")
+        with open(local_file, "w") as f:
+            f.write(json.dumps(final_top_picks, indent=4))
+
+        class MockBlob:
+            """Mock for GCS blob in local mode"""
+
+            name: str
+            public_url: str
+
+            def __init__(self):
+                self.name = "top_picks_latest.json"
+                self.public_url = f"file://{local_file}"
+
+        # We've declared the MockBlob class inline, so type checker won't recognize it
+        top_pick_blob = MockBlob()  # type: ignore
+
+    # 8. Save metrics and show results
+    metrics_collector.save_report()
+
+    # Show results
+    logger.info("=" * 40)
+    logger.info("TOP PICKS FILE:")
+    logger.info(f"GCS URL: {top_pick_blob.public_url}")
+
+    direct_url = (
+        f"http://localhost:4443/storage/v1/b/{bucket_name}/o/{top_pick_blob.name}?alt=media"
+    )
+    logger.info(f"Direct URL: {direct_url}")
+
+    local_file = os.path.join(local_data_dir, "top_picks_latest.json")
+    if os.path.exists(local_file):
+        logger.info(f"Local copy: {local_file}")
+
+    logger.info("=" * 40)
+
+
+def _run_normal_mode(
+    source_gcp_project: str,
+    destination_gcp_project: str,
+    destination_gcs_bucket: str,
+    destination_cdn_hostname: str,
+    force_upload: bool,
+    write_xcom: bool,
+    min_favicon_width: int,
+) -> None:
     """Prepare domain metadata for navigational suggestions"""
     # download top domains data
     domain_data_downloader = DomainDataDownloader(source_gcp_project)
@@ -225,3 +448,49 @@ def prepare_domain_metadata(
 
     if write_xcom is True:
         _write_xcom_file({"top_pick_url": top_pick_blob.public_url, "diff": diff})
+
+
+@navigational_suggestions_cmd.command()
+def prepare_domain_metadata(
+    source_gcp_project: str = source_gcp_project_option,
+    destination_gcp_project: str = destination_gcp_project_option,
+    destination_gcs_bucket: str = destination_gcs_bucket_option,
+    destination_cdn_hostname: str = destination_gcs_cdn_hostname_option,
+    force_upload: bool = force_upload_option,
+    write_xcom: bool = write_xcom_option,
+    min_favicon_width: int = min_favicon_width_option,
+    local_mode: bool = local_mode_option,
+    local_sample_size: int = local_sample_size_option,
+    local_data_dir: str = local_data_option,
+):
+    """Prepare domain metadata for navigational suggestions"""
+    # Unwrap typer.Option objects to get their default values if present
+    src_project = getattr(source_gcp_project, "default", source_gcp_project)
+    dst_project = getattr(destination_gcp_project, "default", destination_gcp_project)
+    dst_bucket = getattr(destination_gcs_bucket, "default", destination_gcs_bucket)
+    dst_cdn = getattr(destination_cdn_hostname, "default", destination_cdn_hostname)
+    force = getattr(force_upload, "default", force_upload)
+    write_x = getattr(write_xcom, "default", write_xcom)
+    min_width = getattr(min_favicon_width, "default", min_favicon_width)
+    sample_size = getattr(local_sample_size, "default", local_sample_size)
+    data_dir = getattr(local_data_dir, "default", local_data_dir)
+
+    # Run the appropriate mode
+    if local_mode:
+        # Local mode for development and testing
+        # This mode uses fake-gcs-server and custom domains
+        # instead of connecting to Google Cloud
+        _run_local_mode(sample_size, data_dir, min_width)
+    else:
+        # Normal mode used in production
+        # This connects to Google Cloud and processes custom_domains
+        # AND domains from BigQuery
+        _run_normal_mode(
+            src_project,
+            dst_project,
+            dst_bucket,
+            dst_cdn,
+            force,
+            write_x,
+            min_width,
+        )

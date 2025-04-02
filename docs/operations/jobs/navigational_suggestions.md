@@ -52,7 +52,7 @@ To see the navigational suggestions code that is run when the job is invoked, vi
 ## Running the favicon extractor locally
 
 ```bash
-$ poetry run probe-images mozilla.org wikipedia.org
+$ uv run probe-images mozilla.org wikipedia.org
 ```
 
 There is a Python script (`domain_tester.py`) which imports the `DomainMetadataExtractor`,  `Scraper` and `FaviconDownloader` and runs them locally, without saving the results to the cloud.
@@ -103,3 +103,50 @@ $ ./scripts/import_domains.sh DOWNLOADED_FILE.csv
 ```
 
 This will add the domains to the `custom_domains.py` file, check if the domain exists, and if not, it adds it. Afterwards, all domains are getting alphabetically sorted.
+
+## Running the Navigational Suggestions job locally
+
+The Navigational Suggestions job can be run locally for development and testing purposes without requiring access to Google Cloud. This is useful for testing changes to the favicon extraction and domain processing logic.
+
+### Prerequisites
+
+- Docker installed and running
+- Merino repository cloned locally
+
+### Starting the local GCS emulator
+
+The local mode uses a fake GCS server to emulate Google Cloud Storage. To start the emulator:
+
+```bash
+$ ./dev/start-local-gcs-emulator.sh
+```
+
+This will start a Docker container running the fake-gcs-server and create the necessary directory structure.
+
+### Running the job locally
+
+Once the GCS emulator is running, you can run the Navigational Suggestions job in local mode:
+
+```bash
+$ uv run merino-jobs navigational-suggestions prepare-domain-metadata --local --sample-size=20
+```
+
+This will:
+1. Use a sample of domains from `custom_domains.py` instead of querying BigQuery
+2. Process these domains through the same extraction pipeline used in production
+3. Upload favicons and domain metadata to the local GCS emulator
+4. Generate a local metrics report in the `local_data` directory
+
+### Options
+
+- `--local`: Enables local mode
+- `--sample-size=N`: Number of domains to process (default: 50)
+- `--metrics-dir=PATH`: Directory to save local run metrics (default: ./local_data)
+
+### Stopping the local services
+
+When you're done, stop the GCS emulator:
+
+```bash
+$ docker-compose -f dev/docker-compose.yaml down
+```
