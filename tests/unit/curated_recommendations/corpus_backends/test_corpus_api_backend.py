@@ -1,6 +1,5 @@
 """Unit tests for ScheduledCorpusBackend in merino/curated_recommendations/corpus_backends/scheduled_corpus_backend.py"""
 
-from datetime import datetime
 from zoneinfo import ZoneInfo
 import pytest
 from freezegun import freeze_time
@@ -57,13 +56,3 @@ def test_get_scheduled_surface_date(time_zone, time_to_freeze, expected_date):
             ZoneInfo(time_zone)
         )
         assert scheduled_surface_date.strftime("%Y-%m-%d") == expected_date
-
-
-@freeze_time("2012-01-14 00:00:00", tz_offset=0)
-def test_get_expiration_time():
-    """Testing the generation of expiration times."""
-    times = [ScheduledCorpusBackend.get_expiration_time() for _ in range(10)]
-    min_expected_time = datetime(2012, 1, 14, 0, 0, 50)
-    max_expected_time = datetime(2012, 1, 14, 0, 1, 10)
-    assert all(min_expected_time <= t <= max_expected_time for t in times)
-    assert len(set(times)) == len(times)

@@ -2,9 +2,7 @@
 
 import asyncio
 import logging
-import random
-from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import aiodogstatsd
 from httpx import AsyncClient, HTTPError
@@ -17,36 +15,24 @@ from tenacity import (
 )
 
 from merino.configs import settings
+from merino.curated_recommendations.corpus_backends.caching import (
+    stale_while_revalidate,
+    WaitRandomExpiration,
+)
 from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsCorpusProtocol,
     CorpusSection,
     ScheduledSurfaceId,
 )
-from merino.providers.manifest import Provider as ManifestProvider
 from merino.curated_recommendations.corpus_backends.utils import (
     get_utm_source,
     build_corpus_item,
     CorpusGraphQLError,
     CorpusApiGraphConfig,
 )
+from merino.providers.manifest import Provider as ManifestProvider
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class CacheKey:
-    """Cache key for identifying cached section data."""
-
-    surface_id: ScheduledSurfaceId
-
-
-@dataclass
-class CacheEntry:
-    """Class to store cached section data."""
-
-    sections: list[CorpusSection]
-    expiration: datetime
-    lock: asyncio.Lock
 
 
 class SectionsCorpusBackend(SectionsCorpusProtocol):
@@ -57,9 +43,7 @@ class SectionsCorpusBackend(SectionsCorpusProtocol):
     metrics_client: aiodogstatsd.Client
     manifest_provider: ManifestProvider
 
-    cache_time_to_live_min = timedelta(seconds=50)
-    cache_time_to_live_max = timedelta(seconds=70)
-    _cache: dict[CacheKey, CacheEntry]
+    _cache: dict
     _background_tasks: set[asyncio.Task]
 
     def __init__(
@@ -77,45 +61,11 @@ class SectionsCorpusBackend(SectionsCorpusProtocol):
         self._cache = {}
         self._background_tasks = set()
 
-    async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusSection]:
-        """Fetch section recommendations using caching and request coalescing."""
-        cache_key = CacheKey(surface_id)
-        if cache_key in self._cache:
-            cache_entry = self._cache[cache_key]
-            if datetime.now() >= cache_entry.expiration:
-                task = asyncio.create_task(self._revalidate_cache(surface_id))
-                self._background_tasks.add(task)
-                task.add_done_callback(self._background_tasks.discard)
-            return cache_entry.sections
-
-        return await self._revalidate_cache(surface_id)
-
-    async def _revalidate_cache(self, surface_id: ScheduledSurfaceId) -> list[CorpusSection]:
-        """Update the cache for a specific surface and return section recommendations."""
-        cache_key = CacheKey(surface_id)
-        if cache_key not in self._cache:
-            self._cache[cache_key] = CacheEntry([], datetime.min, asyncio.Lock())
-
-        async with self._cache[cache_key].lock:
-            if datetime.now() < self._cache[cache_key].expiration:
-                return self._cache[cache_key].sections
-            try:
-                sections = await self._fetch_from_backend(surface_id)
-                self._cache[cache_key] = CacheEntry(
-                    sections,
-                    self.get_expiration_time(),
-                    asyncio.Lock(),
-                )
-                return sections
-            except Exception as e:
-                if self._cache[cache_key].sections:
-                    logger.error(
-                        f"Failed to update sections cache: {e}. Returning stale cached data."
-                    )
-                    return self._cache[cache_key].sections
-                else:
-                    raise
-
+    @stale_while_revalidate(
+        wait_expiration=WaitRandomExpiration(timedelta(seconds=50), timedelta(seconds=70)),
+        cache=lambda self: self._cache,
+        jobs=lambda self: self._background_tasks,
+    )
     @retry(
         wait=wait_exponential_jitter(
             initial=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds,
@@ -126,8 +76,8 @@ class SectionsCorpusBackend(SectionsCorpusProtocol):
         reraise=True,
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def _fetch_from_backend(self, surface_id: ScheduledSurfaceId) -> list[CorpusSection]:
-        """Issue a getSections query to fetch section recommendations from the backend."""
+    async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusSection]:
+        """Fetch section recommendations from the backend."""
         query = """
             query GetSections($filters: SectionFilters!) {
               getSections(filters: $filters) {
@@ -172,7 +122,7 @@ class SectionsCorpusBackend(SectionsCorpusProtocol):
                 logger.info(f"Skipping inactive section {section['externalId']} for {surface_id}")
                 continue
 
-            section = CorpusSection(
+            section_obj = CorpusSection(
                 externalId=section["externalId"],
                 title=section["title"],
                 sectionItems=[
@@ -182,16 +132,6 @@ class SectionsCorpusBackend(SectionsCorpusProtocol):
                     for section_item in section["sectionItems"]
                 ],
             )
-            sections_list.append(section)
+            sections_list.append(section_obj)
 
         return sections_list
-
-    @staticmethod
-    def get_expiration_time() -> datetime:
-        """Return the date & time when a cached value should be expired."""
-        # Random jitter ensures that backend requests don't all happen at the same time.
-        time_to_live_seconds = random.uniform(
-            SectionsCorpusBackend.cache_time_to_live_min.total_seconds(),
-            SectionsCorpusBackend.cache_time_to_live_max.total_seconds(),
-        )
-        return datetime.now() + timedelta(seconds=time_to_live_seconds)

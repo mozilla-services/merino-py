@@ -2,13 +2,24 @@
 
 import asyncio
 import logging
-import random
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import aiodogstatsd
 from httpx import AsyncClient, HTTPError
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential_jitter,
+    before_sleep_log,
+)
+
 from merino.configs import settings
+from merino.curated_recommendations.corpus_backends.caching import (
+    stale_while_revalidate,
+    WaitRandomExpiration,
+)
 from merino.curated_recommendations.corpus_backends.protocol import (
     DatedCorpusBackend,
     CorpusItem,
@@ -23,13 +34,6 @@ from merino.curated_recommendations.corpus_backends.utils import (
     build_corpus_item,
 )
 from merino.providers.manifest import Provider as ManifestProvider
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential_jitter,
-    before_sleep_log,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +64,7 @@ class ScheduledCorpusBackend(DatedCorpusBackend):
         metrics_client: aiodogstatsd.Client,
         manifest_provider: ManifestProvider,
     ):
+        """Initialize the ScheduledCorpusBackend."""
         self.http_client = http_client
         self.graph_config = graph_config
         self.metrics_client = metrics_client
@@ -101,6 +106,21 @@ class ScheduledCorpusBackend(DatedCorpusBackend):
         """Return scheduled surface date based on timezone."""
         return datetime.now(tz=surface_timezone) - timedelta(hours=3)
 
+    @stale_while_revalidate(
+        wait_expiration=WaitRandomExpiration(cache_time_to_live_min, cache_time_to_live_max),
+        cache=lambda self: self._cache,
+        jobs=lambda self: self._background_tasks,
+    )
+    @retry(
+        wait=wait_exponential_jitter(
+            initial=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds,
+            jitter=settings.curated_recommendations.corpus_api.retry_wait_jitter_seconds,
+        ),
+        stop=stop_after_attempt(settings.curated_recommendations.corpus_api.retry_count),
+        retry=retry_if_exception_type((CorpusGraphQLError, HTTPError, ValueError)),
+        reraise=True,
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def fetch(
         self, surface_id: ScheduledSurfaceId, days_offset: int = 0
     ) -> list[CorpusItem]:
@@ -122,39 +142,6 @@ class ScheduledCorpusBackend(DatedCorpusBackend):
         Returns:
             list[CorpusItem]: A list of fetched corpus items.
         """
-        now = datetime.now()
-        cache_key = CacheKey(surface_id, days_offset)
-
-        # If we have expired cached data, revalidate asynchronously without waiting for the result.
-        if cache_key in self._cache:
-            cache_entry = self._cache[cache_key]
-            if now >= cache_entry.expiration:
-                task = asyncio.create_task(self._revalidate_cache(surface_id, days_offset))
-                # Save a reference to the result of this function, to avoid a task disappearing
-                # mid-execution. The event loop only keeps weak references to tasks. A task that
-                # isn’t referenced elsewhere may get garbage collected, even before it’s done.
-                # https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
-                self._background_tasks.add(task)
-                task.add_done_callback(self._background_tasks.discard)
-            return cache_entry.items
-
-        # If no cache value exists, fetch new data and await the result.
-        return await self._revalidate_cache(surface_id, days_offset)
-
-    @retry(
-        wait=wait_exponential_jitter(
-            initial=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds,
-            jitter=settings.curated_recommendations.corpus_api.retry_wait_jitter_seconds,
-        ),
-        stop=stop_after_attempt(settings.curated_recommendations.corpus_api.retry_count),
-        retry=retry_if_exception_type((CorpusGraphQLError, HTTPError, ValueError)),
-        reraise=True,
-        before_sleep=before_sleep_log(logger, logging.WARNING),
-    )
-    async def _fetch_from_backend(
-        self, surface_id: ScheduledSurfaceId, days_offset: int
-    ) -> list[CorpusItem]:
-        """Issue a scheduledSurface query"""
         query = """
             query ScheduledSurface($scheduledSurfaceId: ID!, $date: Date!) {
               scheduledSurface(id: $scheduledSurfaceId) {
@@ -219,46 +206,3 @@ class ScheduledCorpusBackend(DatedCorpusBackend):
             curated_recommendations.append(corpus_item)
 
         return curated_recommendations
-
-    async def _revalidate_cache(
-        self, surface_id: ScheduledSurfaceId, days_offset: int
-    ) -> list[CorpusItem]:
-        """Update the cache for a specific surface and return the corpus items.
-        If the API fails to respond successfully even after retries, return the latest cached data.
-        Only a single "coalesced" request will be made to the backend per surface id.
-        """
-        cache_key = CacheKey(surface_id, days_offset)
-
-        if cache_key not in self._cache:
-            self._cache[cache_key] = CacheEntry([], datetime.min, asyncio.Lock())
-
-        async with self._cache[cache_key].lock:
-            # Check if the cache was updated while waiting for the lock.
-            if datetime.now() < self._cache[cache_key].expiration:
-                return self._cache[cache_key].items
-
-            # Attempt to fetch new data from the backend
-            try:
-                data = await self._fetch_from_backend(surface_id, days_offset)
-                self._cache[cache_key] = CacheEntry(
-                    data, self.get_expiration_time(), asyncio.Lock()
-                )
-                return data
-            except Exception as e:
-                if self._cache[cache_key].items:
-                    logger.error(
-                        f"Failed to update corpus cache: {e}. Returning stale cached data."
-                    )
-                    return self._cache[cache_key].items
-                else:
-                    raise e
-
-    @staticmethod
-    def get_expiration_time() -> datetime:
-        """Return the date & time when a cached value should be expired."""
-        # Random jitter ensures that backend requests don't all happen at the same time.
-        time_to_live_seconds = random.uniform(
-            ScheduledCorpusBackend.cache_time_to_live_min.total_seconds(),
-            ScheduledCorpusBackend.cache_time_to_live_max.total_seconds(),
-        )
-        return datetime.now() + timedelta(seconds=time_to_live_seconds)
