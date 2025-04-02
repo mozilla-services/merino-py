@@ -133,6 +133,14 @@ class Scraper:
             logger.info(f"Exception: {e} while scraping title")
             return None
 
+    def close(self) -> None:
+        """Close the scraper browser session"""
+        try:
+            self.browser.close()
+        except Exception as ex:
+            logger.warning(f"Error ocurred when closing scraper session: {ex}")
+            return None
+
 
 class DomainMetadataExtractor:
     """Extract domain metadata from domain data"""
@@ -488,6 +496,9 @@ class DomainMetadataExtractor:
                         logger.error(f"Unexpected result type: {result}")
                         continue
                     filtered_results.append(result)
+
+        # Close the scraper browser session
+        self.scraper.close()
 
         return filtered_results
 
