@@ -224,14 +224,8 @@ async def suggest(
             for task in completed_tasks
         )
     )
-    if (
-        request_type == "weather"
-        and len(suggestions) == 1
-        and suggestions[0] is NO_LOCATION_KEY_SUGGESTION
-    ):
+    if len(suggestions) == 1 and suggestions[0] is NO_LOCATION_KEY_SUGGESTION:
         return Response(status_code=204)
-
-    suggestions = [s for s in suggestions if s is not NO_LOCATION_KEY_SUGGESTION]
 
     emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 
