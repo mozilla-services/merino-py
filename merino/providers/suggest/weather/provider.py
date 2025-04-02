@@ -2,12 +2,13 @@
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
 
+from merino.providers.suggest.weather.backends.accuweather.errors import MissingLocationKeyError
 from merino.utils import cron
 from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
@@ -27,6 +28,7 @@ from merino.providers.suggest.weather.backends.protocol import (
     WeatherBackend,
     WeatherReport,
     WeatherContext,
+    Temperature,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,6 +41,32 @@ class Suggestion(BaseSuggestion):
     region_code: str
     current_conditions: CurrentConditions
     forecast: Forecast
+    placeholder: Optional[bool] = None
+
+
+# A sentinel suggestion indicating that no location key was found for the given location.
+NO_LOCATION_KEY_SUGGESTION: Suggestion = Suggestion(
+    title="N/A",
+    url=HttpUrl("https://merino.services.mozilla.com"),
+    city_name="",
+    region_code="",
+    current_conditions=CurrentConditions(
+        url=HttpUrl("https://merino.services.mozilla.com"),
+        icon_id=0,
+        summary="",
+        temperature=Temperature(),
+    ),
+    forecast=Forecast(
+        url=HttpUrl("https://merino.services.mozilla.com"),
+        summary="",
+        high=Temperature(),
+        low=Temperature(),
+    ),
+    provider="",
+    is_sponsored=False,
+    score=0,
+    placeholder=True,
+)
 
 
 class LocationCompletionSuggestion(BaseSuggestion):
@@ -138,6 +166,8 @@ class Provider(BaseProvider):
                     weather_context.geolocation.key = srequest.query
                     self.metrics_client.increment(f"providers.{self.name}.query.weather_report")
                     weather_report = await self.backend.get_weather_report(weather_context)
+        except MissingLocationKeyError:
+            return [NO_LOCATION_KEY_SUGGESTION]
 
         except BackendError as backend_error:
             logger.warning(backend_error)
@@ -147,8 +177,7 @@ class Provider(BaseProvider):
             return [self.build_suggestion(weather_report)]
         if location_completions:
             return [self.build_suggestion(location_completions)]
-        else:
-            return []
+        return []
 
     def build_suggestion(
         self, data: WeatherReport | list[LocationCompletion]

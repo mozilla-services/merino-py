@@ -42,8 +42,8 @@ from merino.providers.suggest.weather.backends.accuweather.utils import (
 from merino.providers.suggest.weather.backends.accuweather.errors import (
     AccuweatherError,
     AccuweatherErrorMessages,
+    MissingLocationKeyError,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -604,7 +604,7 @@ class AccuweatherBackend:
             self.metrics_client.increment(
                 "accuweather.request.location.not_provided", sample_rate=self.metrics_sample_rate
             )
-            return None
+            raise MissingLocationKeyError(geolocation)
 
         try:
             cached_data, is_skipped = await pathfinder.explore(
@@ -616,7 +616,7 @@ class AccuweatherBackend:
             return None
 
         if is_skipped:
-            return None
+            raise MissingLocationKeyError(geolocation)
 
         cached_data = cached_data if cached_data is not None else []
         self.emit_cache_fetch_metrics(cached_data)
@@ -667,9 +667,10 @@ class AccuweatherBackend:
                 )
             except AccuweatherError as exc:
                 logger.warning(f"{exc}")
+                return None
 
             if location is None:
-                return None
+                raise MissingLocationKeyError(geolocation)
 
         try:
             async with asyncio.TaskGroup() as tg:

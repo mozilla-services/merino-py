@@ -31,7 +31,10 @@ from merino.providers.suggest.weather.backends.accuweather import (
     CurrentConditionsWithTTL,
     ForecastWithTTL,
 )
-from merino.providers.suggest.weather.backends.accuweather.errors import AccuweatherErrorMessages
+from merino.providers.suggest.weather.backends.accuweather.errors import (
+    AccuweatherErrorMessages,
+    MissingLocationKeyError,
+)
 from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     clear_skip_cities_mapping,
     increment_skip_cities_mapping,
@@ -1179,12 +1182,10 @@ async def test_get_weather_report_with_fallback_city_endpoint_returns_none(
         ".store_request_into_cache"
     ).return_value = TEST_CACHE_TTL_SEC
 
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(
-        weather_context_without_location_key
-    )
+    with pytest.raises(MissingLocationKeyError):
+        await accuweather.get_weather_report(weather_context_without_location_key)
 
-    assert report is None
-    assert len(get_skip_cities_mapping()) == 1
+        assert len(get_skip_cities_mapping()) == 1
 
 
 @pytest.mark.asyncio
@@ -1352,11 +1353,8 @@ async def test_get_weather_report_failed_location_query(
         ),
     )
 
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(
-        weather_context_without_location_key
-    )
-
-    assert report is None
+    with pytest.raises(MissingLocationKeyError):
+        await accuweather.get_weather_report(weather_context_without_location_key)
 
 
 @pytest.mark.asyncio
@@ -1590,18 +1588,18 @@ async def test_get_weather_report_invalid_location(
     is missing.
     """
     expected_result = None
+    with pytest.raises(MissingLocationKeyError):
+        result = await accuweather.get_weather_report(weather_context)
 
-    result = await accuweather.get_weather_report(weather_context)
+        assert expected_result == result
 
-    assert expected_result == result
-
-    metrics_called = [
-        (call_arg[0][0], call_arg[1]["sample_rate"])
-        for call_arg in statsd_mock.increment.call_args_list
-    ]
-    assert metrics_called == [
-        ("accuweather.request.location.not_provided", ACCUWEATHER_METRICS_SAMPLE_RATE)
-    ]
+        metrics_called = [
+            (call_arg[0][0], call_arg[1]["sample_rate"])
+            for call_arg in statsd_mock.increment.call_args_list
+        ]
+        assert metrics_called == [
+            ("accuweather.request.location.not_provided", ACCUWEATHER_METRICS_SAMPLE_RATE)
+        ]
 
 
 @pytest.mark.asyncio
@@ -1627,12 +1625,12 @@ async def test_get_weather_report_with_city_in_skip_list(
     )
 
     assert get_skip_cities_mapping().get(("CA", "ON", "North Park")) == 1
+    with pytest.raises(MissingLocationKeyError):
+        result = await accuweather.get_weather_report(weather_context)
 
-    result = await accuweather.get_weather_report(weather_context)
+        assert expected_result == result
 
-    assert expected_result == result
-
-    assert get_skip_cities_mapping().get(("CA", "ON", "North Park")) == 2
+        assert get_skip_cities_mapping().get(("CA", "ON", "North Park")) == 2
 
 
 @pytest.mark.asyncio

@@ -18,6 +18,7 @@ from merino.configs import settings
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.custom_details import CustomDetails, WeatherDetails
+from merino.providers.suggest.weather.backends.accuweather.errors import MissingLocationKeyError
 from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
     clear_region_mapping,
@@ -31,7 +32,11 @@ from merino.providers.suggest.weather.backends.protocol import (
     WeatherBackend,
     WeatherReport,
 )
-from merino.providers.suggest.weather.provider import Provider, Suggestion
+from merino.providers.suggest.weather.provider import (
+    Provider,
+    Suggestion,
+    NO_LOCATION_KEY_SUGGESTION,
+)
 from tests.types import FilterCaplogFixture
 
 TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC = 300
@@ -145,6 +150,22 @@ async def test_query_weather_report_returned(
 
     assert len(statsd_mock.increment.call_args_list) == 1
     assert statsd_mock.increment.call_args_list == [call("providers.weather.query.weather_report")]
+
+
+@pytest.mark.asyncio
+async def test_query_placeholder_weather_report_returned(
+    backend_mock: Any, provider: Provider, geolocation: Location
+) -> None:
+    """Test that the query method doesn't provide a weather suggestion without a weather
+    report.
+    """
+    backend_mock.get_weather_report.side_effect = MissingLocationKeyError()
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation)
+    )
+
+    assert suggestions == [NO_LOCATION_KEY_SUGGESTION]
 
 
 @pytest.mark.asyncio
