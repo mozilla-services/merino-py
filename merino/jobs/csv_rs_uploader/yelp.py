@@ -2,14 +2,11 @@
 output JSON.
 """
 
-from pydantic import BaseModel
-
 from merino.jobs.csv_rs_uploader.base import BaseSuggestion
 
 FIELD_SUBJECTS = "subjects"
 FIELD_PRE_MODIFIERS = "pre-modifiers"
 FIELD_POST_MODIFIERS = "post-modifiers"
-FIELD_LOCATION_MODIFIERS = "location-modifiers"
 FIELD_LOCATION_SIGNS = "location-signs"
 FIELD_YELP_MODIFIERS = "yelp-modifiers"
 
@@ -20,15 +17,6 @@ FIELD_YELP_MODIFIERS = "yelp-modifiers"
 ICON_ID = "yelp-favicon"
 
 
-class LocationSign(BaseModel):
-    """Model for location sign used in Yelp suggestion dataset as they should
-    be serialized in the output JSON.
-    """
-
-    keyword: str
-    needLocation: bool
-
-
 class Suggestion(BaseSuggestion):
     """Model for Yelp suggestions as they should be serialized in the output
     JSON.
@@ -37,7 +25,7 @@ class Suggestion(BaseSuggestion):
     subjects: list[str]
     preModifiers: list[str]
     postModifiers: list[str]
-    locationSigns: list[LocationSign]
+    locationSigns: list[str]
     yelpModifiers: list[str]
     icon: str
 
@@ -63,13 +51,9 @@ class Suggestion(BaseSuggestion):
             if post_modifier:
                 post_modifiers.append(post_modifier)
 
-            location_modifier = row[FIELD_LOCATION_MODIFIERS]
-            if location_modifier:
-                location_signs.append(LocationSign(keyword=location_modifier, needLocation=False))
-
             location_sign = row[FIELD_LOCATION_SIGNS]
             if location_sign:
-                location_signs.append(LocationSign(keyword=location_sign, needLocation=True))
+                location_signs.append(location_sign)
 
             yelp_modifier = row[FIELD_YELP_MODIFIERS]
             if yelp_modifier:
