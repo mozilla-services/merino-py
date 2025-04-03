@@ -1,18 +1,22 @@
 """Unit tests for utility functions in merino/curated_recommendations/corpus_backends/utils.py"""
 
+from unittest.mock import MagicMock
+
 import pytest
 
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
+from merino.curated_recommendations.corpus_backends.utils import build_corpus_item
 from merino.curated_recommendations.corpus_backends.utils import (
     map_corpus_topic_to_serp_topic,
     get_utm_source,
     update_url_utm_source,
 )
-from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
+from merino.providers.manifest import Provider
 
 
 @pytest.mark.parametrize("topic", ["CORONAVIRUS"])
 def test_map_corpus_to_serp_topic_return_none(topic):
-    """Testing map_corpus_topic_to_serp_topic() method ensuring topics that don't have a mapping return None."""
+    """Test that topics without a mapping return None."""
     assert map_corpus_topic_to_serp_topic(topic) is None
 
 
@@ -99,3 +103,82 @@ def test_get_utm_source(scheduled_surface_id, expected_utm_source):
 def test_update_url_utm_source(url, utm_source, expected_url):
     """Testing update_url_utm_source() method ensuring URL is updated correctly."""
     assert update_url_utm_source(url, utm_source) == expected_url
+
+
+class TestBuildCorpusItem:
+    """Tests covering build_corpus_item"""
+
+    sample_item = {
+        "id": "item1",
+        "title": "Test Title",
+        "excerpt": "Test excerpt",
+        "topic": "BUSINESS",
+        "publisher": "TestPublisher",
+        "isTimeSensitive": False,
+        "imageUrl": "https://example.com/image.png",
+        "url": "https://example.com/page",
+    }
+
+    @pytest.fixture
+    def dummy_manifest_provider(self):
+        """Provide a get_icon_url method that returns a valid URL.
+        The method returns a URL in the format:
+            https://dummy.icon/<original_url_without_https://>
+        """
+        dummy = MagicMock(spec=Provider)
+        dummy.get_icon_url.side_effect = (
+            lambda url: f"https://dummy.icon/{url.replace('https://', '')}"
+        )
+        return dummy
+
+    def test_build_corpus_item_with_utm(self, dummy_manifest_provider):
+        """When a valid utm_source is provided the URL should be updated and the manifest provider
+        should be called with the updated URL.
+        """
+        utm_source = "firefox-newtab-en-us"
+        corpus_item = self.sample_item.copy()
+        result = build_corpus_item(corpus_item, dummy_manifest_provider, utm_source)
+
+        expected_url = update_url_utm_source(corpus_item["url"], utm_source)
+        expected_icon_url = f"https://dummy.icon/{expected_url.replace('https://', '')}"
+        assert result.url == expected_url
+        assert result.iconUrl == expected_icon_url
+        mapped_topic = map_corpus_topic_to_serp_topic(corpus_item["topic"])
+        assert mapped_topic is not None
+        assert result.topic == mapped_topic
+
+    def test_build_corpus_item_without_utm(self, dummy_manifest_provider):
+        """When utm_source is None the URL should not be updated."""
+        utm_source = None
+        corpus_item = self.sample_item.copy()
+        result = build_corpus_item(corpus_item, dummy_manifest_provider, utm_source)
+
+        expected_url = corpus_item["url"]
+        expected_icon_url = f"https://dummy.icon/{expected_url.replace('https://', '')}"
+        assert result.url == expected_url
+        assert result.iconUrl == expected_icon_url
+
+    def test_build_corpus_item_unmapped_topic(self, dummy_manifest_provider):
+        """If the corpus item's topic does not have a corresponding mapping,
+        the returned CorpusItem should have a topic of None.
+        """
+        corpus_item = self.sample_item.copy()
+        corpus_item["topic"] = "UNKNOWN"  # Unmapped topic.
+        result = build_corpus_item(corpus_item, dummy_manifest_provider, utm_source=None)
+
+        expected_url = corpus_item["url"]
+        expected_icon_url = f"https://dummy.icon/{expected_url.replace('https://', '')}"
+        assert result.topic is None
+        assert result.url == expected_url
+        assert result.iconUrl == expected_icon_url
+
+    def test_build_corpus_item_empty_utm(self, dummy_manifest_provider):
+        """If an empty string is provided as utm_source, the URL should be updated accordingly."""
+        utm_source = ""
+        corpus_item = self.sample_item.copy()
+        result = build_corpus_item(corpus_item, dummy_manifest_provider, utm_source)
+
+        expected_url = update_url_utm_source(corpus_item["url"], utm_source)
+        expected_icon_url = f"https://dummy.icon/{expected_url.replace('https://', '')}"
+        assert result.url == expected_url
+        assert result.iconUrl == expected_icon_url
