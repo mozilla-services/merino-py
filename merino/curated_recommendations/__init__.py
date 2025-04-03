@@ -89,7 +89,7 @@ def init_provider() -> None:
 
     engagement_backend = init_engagement_backend()
 
-    corpus_backend = ScheduledSurfaceBackend(
+    scheduled_surface_backend = ScheduledSurfaceBackend(
         http_client=create_http_client(base_url=""),
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
@@ -104,7 +104,7 @@ def init_provider() -> None:
     )
 
     _provider = CuratedRecommendationsProvider(
-        scheduled_surface_backend=corpus_backend,
+        scheduled_surface_backend=scheduled_surface_backend,
         engagement_backend=engagement_backend,
         prior_backend=init_prior_backend(),
         sections_backend=sections_backend,
