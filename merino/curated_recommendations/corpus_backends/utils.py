@@ -1,9 +1,6 @@
 """Utility functions for corpus backends."""
 
-from dataclasses import dataclass
-from datetime import datetime
 from urllib.parse import urlparse, urlencode, parse_qsl
-from asyncio import Lock
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
@@ -13,23 +10,6 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 from merino.exceptions import BackendError
 from merino.providers.manifest import Provider as ManifestProvider
 from merino.utils.version import fetch_app_version_from_file
-
-
-@dataclass(frozen=True)
-class CacheKey:
-    """Cache key for identifying cached items."""
-
-    surface_id: ScheduledSurfaceId
-    days_offset: int = 0
-
-
-@dataclass
-class CacheEntry:
-    """Class to store cache-related data."""
-
-    items: list[CorpusItem]
-    expiration: datetime
-    lock: Lock
 
 
 def map_corpus_topic_to_serp_topic(topic: str) -> Topic | None:

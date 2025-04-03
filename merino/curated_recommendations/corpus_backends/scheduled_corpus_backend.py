@@ -26,8 +26,6 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceId,
 )
 from merino.curated_recommendations.corpus_backends.utils import (
-    CacheKey,
-    CacheEntry,
     get_utm_source,
     CorpusGraphQLError,
     CorpusApiGraphConfig,
@@ -54,7 +52,7 @@ class ScheduledCorpusBackend(DatedCorpusBackend):
     # rate to the scheduledSurface query stays close to the historic rate of ~100 requests/minute.
     cache_time_to_live_min = timedelta(seconds=50)
     cache_time_to_live_max = timedelta(seconds=70)
-    _cache: dict[CacheKey, CacheEntry]
+    _cache: dict
     _background_tasks: set[asyncio.Task]
 
     def __init__(
