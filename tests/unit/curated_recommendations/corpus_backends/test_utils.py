@@ -7,7 +7,7 @@ from merino.curated_recommendations.corpus_backends.utils import (
     get_utm_source,
     update_url_utm_source,
 )
-from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 
 
 @pytest.mark.parametrize("topic", ["CORONAVIRUS"])
@@ -52,13 +52,13 @@ def test_get_utm_source_return_none(scheduled_surface_id):
 @pytest.mark.parametrize(
     ("scheduled_surface_id", "expected_utm_source"),
     [
-        (ScheduledSurfaceId.NEW_TAB_EN_US, "firefox-newtab-en-us"),
-        (ScheduledSurfaceId.NEW_TAB_EN_GB, "firefox-newtab-en-gb"),
-        (ScheduledSurfaceId.NEW_TAB_EN_INTL, "firefox-newtab-en-intl"),
-        (ScheduledSurfaceId.NEW_TAB_DE_DE, "firefox-newtab-de-de"),
-        (ScheduledSurfaceId.NEW_TAB_ES_ES, "firefox-newtab-es-es"),
-        (ScheduledSurfaceId.NEW_TAB_FR_FR, "firefox-newtab-fr-fr"),
-        (ScheduledSurfaceId.NEW_TAB_IT_IT, "firefox-newtab-it-it"),
+        (SurfaceId.NEW_TAB_EN_US, "firefox-newtab-en-us"),
+        (SurfaceId.NEW_TAB_EN_GB, "firefox-newtab-en-gb"),
+        (SurfaceId.NEW_TAB_EN_INTL, "firefox-newtab-en-intl"),
+        (SurfaceId.NEW_TAB_DE_DE, "firefox-newtab-de-de"),
+        (SurfaceId.NEW_TAB_ES_ES, "firefox-newtab-es-es"),
+        (SurfaceId.NEW_TAB_FR_FR, "firefox-newtab-fr-fr"),
+        (SurfaceId.NEW_TAB_IT_IT, "firefox-newtab-it-it"),
     ],
 )
 def test_get_utm_source(scheduled_surface_id, expected_utm_source):

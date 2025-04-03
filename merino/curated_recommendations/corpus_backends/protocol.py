@@ -35,7 +35,7 @@ class Topic(str, Enum):
 
 
 @unique
-class ScheduledSurfaceId(str, Enum):
+class SurfaceId(str, Enum):
     """Defines the possible recommendation surfaces."""
 
     NEW_TAB_EN_US = "NEW_TAB_EN_US"
@@ -72,10 +72,10 @@ class CorpusSection(BaseModel):
     externalId: str
 
 
-class SectionsCorpusProtocol(Protocol):
+class SectionsProtocol(Protocol):
     """Protocol for fetching sections of corpus items for a given surface, without a date."""
 
-    async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusSection]:
+    async def fetch(self, surface_id: SurfaceId) -> list[CorpusSection]:
         """Fetch corpus items for the given surface.
 
         Args:
@@ -87,12 +87,10 @@ class SectionsCorpusProtocol(Protocol):
         ...
 
 
-class DatedCorpusBackend(Protocol):
+class ScheduledSurfaceProtocol(Protocol):
     """Protocol for corpus backends extended with support for fetching items by day offset."""
 
-    async def fetch(
-        self, surface_id: ScheduledSurfaceId, days_offset: int = 0
-    ) -> list[CorpusItem]:
+    async def fetch(self, surface_id: SurfaceId, days_offset: int = 0) -> list[CorpusItem]:
         """Fetch corpus items for the given surface and day offset.
 
         Args:

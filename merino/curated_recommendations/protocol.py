@@ -11,7 +11,7 @@ from pydantic import Field, field_validator, model_validator, BaseModel, Validat
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
     Topic,
-    ScheduledSurfaceId,
+    SurfaceId,
 )
 
 logger = logging.getLogger(__name__)
@@ -283,7 +283,7 @@ class CuratedRecommendationsResponse(BaseModel):
     """Response schema for a list of curated recommendations"""
 
     recommendedAt: int
-    surfaceId: ScheduledSurfaceId
+    surfaceId: SurfaceId
     data: list[CuratedRecommendation]
     feeds: dict[str, Section] | None = None
     interestPicker: InterestPicker | None = None

@@ -3,7 +3,7 @@
 from urllib.parse import urlparse, urlencode, parse_qsl
 
 from merino.curated_recommendations.corpus_backends.protocol import (
-    ScheduledSurfaceId,
+    SurfaceId,
     Topic,
     CorpusItem,
 )
@@ -35,16 +35,16 @@ def map_corpus_topic_to_serp_topic(topic: str) -> Topic | None:
     return mapping.get(topic.upper())
 
 
-def get_utm_source(surface_id: ScheduledSurfaceId) -> str | None:
+def get_utm_source(surface_id: SurfaceId) -> str | None:
     """Return the utm_source for the given scheduled surface id."""
     utm_mapping = {
-        ScheduledSurfaceId.NEW_TAB_EN_US: "firefox-newtab-en-us",
-        ScheduledSurfaceId.NEW_TAB_EN_GB: "firefox-newtab-en-gb",
-        ScheduledSurfaceId.NEW_TAB_EN_INTL: "firefox-newtab-en-intl",
-        ScheduledSurfaceId.NEW_TAB_DE_DE: "firefox-newtab-de-de",
-        ScheduledSurfaceId.NEW_TAB_ES_ES: "firefox-newtab-es-es",
-        ScheduledSurfaceId.NEW_TAB_FR_FR: "firefox-newtab-fr-fr",
-        ScheduledSurfaceId.NEW_TAB_IT_IT: "firefox-newtab-it-it",
+        SurfaceId.NEW_TAB_EN_US: "firefox-newtab-en-us",
+        SurfaceId.NEW_TAB_EN_GB: "firefox-newtab-en-gb",
+        SurfaceId.NEW_TAB_EN_INTL: "firefox-newtab-en-intl",
+        SurfaceId.NEW_TAB_DE_DE: "firefox-newtab-de-de",
+        SurfaceId.NEW_TAB_ES_ES: "firefox-newtab-es-es",
+        SurfaceId.NEW_TAB_FR_FR: "firefox-newtab-fr-fr",
+        SurfaceId.NEW_TAB_IT_IT: "firefox-newtab-it-it",
     }
     return utm_mapping.get(surface_id)
 

@@ -20,9 +20,9 @@ from merino.curated_recommendations.corpus_backends.caching import (
     WaitRandomExpiration,
 )
 from merino.curated_recommendations.corpus_backends.protocol import (
-    SectionsCorpusProtocol,
+    SectionsProtocol,
     CorpusSection,
-    ScheduledSurfaceId,
+    SurfaceId,
 )
 from merino.curated_recommendations.corpus_backends.utils import (
     get_utm_source,
@@ -35,7 +35,7 @@ from merino.providers.manifest import Provider as ManifestProvider
 logger = logging.getLogger(__name__)
 
 
-class SectionsCorpusBackend(SectionsCorpusProtocol):
+class SectionsBackend(SectionsProtocol):
     """Backend for fetching corpus sections using the getSections query."""
 
     http_client: AsyncClient
@@ -76,7 +76,7 @@ class SectionsCorpusBackend(SectionsCorpusProtocol):
         reraise=True,
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def fetch(self, surface_id: ScheduledSurfaceId) -> list[CorpusSection]:
+    async def fetch(self, surface_id: SurfaceId) -> list[CorpusSection]:
         """Fetch section recommendations from the backend."""
         query = """
             query GetSections($filters: SectionFilters!) {

@@ -1,4 +1,4 @@
-"""Integration tests for merino/curated_recommendations/corpus_backends/scheduled_corpus_backend.py"""
+"""Integration tests for merino/curated_recommendations/corpus_backends/scheduled_surface_backend.py"""
 
 from datetime import datetime
 
@@ -6,23 +6,25 @@ import pytest
 from httpx import Response
 from pydantic import HttpUrl
 
-from merino.curated_recommendations.corpus_backends.scheduled_corpus_backend import (
-    ScheduledCorpusBackend,
+from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
+    ScheduledSurfaceBackend,
 )
 from merino.curated_recommendations.corpus_backends.protocol import (
-    ScheduledSurfaceId,
+    SurfaceId,
     CorpusItem,
     Topic,
 )
 
 
 @pytest.mark.asyncio
-async def test_fetch(corpus_backend: ScheduledCorpusBackend, fixture_response_data):
+async def test_fetch(
+    scheduled_surface_backend: ScheduledSurfaceBackend, scheduled_surface_response_data
+):
     """Test if the fetch method returns data from cache if available."""
-    surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
+    surface_id = SurfaceId.NEW_TAB_EN_US
 
     # Populate the cache by calling the fetch method
-    results = await corpus_backend.fetch(surface_id)
+    results = await scheduled_surface_backend.fetch(surface_id)
 
     assert len(results) == 160
     assert results[0] == CorpusItem(
@@ -58,20 +60,22 @@ async def test_fetch(corpus_backend: ScheduledCorpusBackend, fixture_response_da
     ],
 )
 async def test_fetch_days_since_today(
-    corpus_backend: ScheduledCorpusBackend,
+    scheduled_surface_backend: ScheduledSurfaceBackend,
     fixture_request_data,
-    corpus_http_client,
+    scheduled_surface_http_client,
     test_input,
     expected_title,
 ):
     """Test fetch method with days_offset parameter."""
-    surface_id = ScheduledSurfaceId.NEW_TAB_EN_US
+    surface_id = SurfaceId.NEW_TAB_EN_US
 
     def mock_post_by_date(*args, **kwargs):
         """Mock scheduledSurface response containing a single item with the schedule date."""
         variables = kwargs["json"]["variables"]
-        surface_timezone = corpus_backend.get_surface_timezone(variables["scheduledSurfaceId"])
-        date_today = corpus_backend.get_scheduled_surface_date(surface_timezone).date()
+        surface_timezone = scheduled_surface_backend.get_surface_timezone(
+            variables["scheduledSurfaceId"]
+        )
+        date_today = scheduled_surface_backend.get_scheduled_surface_date(surface_timezone).date()
         days_ago = (datetime.strptime(variables.get("date"), "%Y-%m-%d").date() - date_today).days
         return Response(
             status_code=200,
@@ -99,8 +103,8 @@ async def test_fetch_days_since_today(
             request=fixture_request_data,
         )
 
-    corpus_http_client.post.side_effect = mock_post_by_date
+    scheduled_surface_http_client.post.side_effect = mock_post_by_date
 
-    results = await corpus_backend.fetch(surface_id, **test_input)
+    results = await scheduled_surface_backend.fetch(surface_id, **test_input)
     assert len(results) == 1
     assert results[0].title == expected_title

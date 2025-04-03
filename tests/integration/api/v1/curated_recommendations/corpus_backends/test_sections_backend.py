@@ -1,15 +1,15 @@
-"""Tests covering merino/curated_recommendations/corpus_backends/sections_corpus_backend.py"""
+"""Tests covering merino/curated_recommendations/corpus_backends/sections_backend.py"""
 
 import pytest
 
-from merino.curated_recommendations import SectionsCorpusBackend
-from merino.curated_recommendations.corpus_backends.protocol import ScheduledSurfaceId
+from merino.curated_recommendations import SectionsBackend
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 
 
 @pytest.mark.asyncio
-async def test_fetch(sections_backend: SectionsCorpusBackend):
+async def test_fetch(sections_backend: SectionsBackend):
     """Test that fetch returns expected sections from the backend."""
-    sections = await sections_backend.fetch(ScheduledSurfaceId.NEW_TAB_EN_US)
+    sections = await sections_backend.fetch(SurfaceId.NEW_TAB_EN_US)
     assert isinstance(sections, list)
 
     # Lookup the Health section by its externalId.

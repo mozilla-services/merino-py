@@ -21,9 +21,9 @@ from merino.curated_recommendations.corpus_backends.caching import (
     WaitRandomExpiration,
 )
 from merino.curated_recommendations.corpus_backends.protocol import (
-    DatedCorpusBackend,
+    ScheduledSurfaceProtocol,
     CorpusItem,
-    ScheduledSurfaceId,
+    SurfaceId,
 )
 from merino.curated_recommendations.corpus_backends.utils import (
     get_utm_source,
@@ -36,7 +36,7 @@ from merino.providers.manifest import Provider as ManifestProvider
 logger = logging.getLogger(__name__)
 
 
-class ScheduledCorpusBackend(DatedCorpusBackend):
+class ScheduledSurfaceBackend(ScheduledSurfaceProtocol):
     """Corpus API Backend hitting the curated corpus api
     & returning recommendations for a date & locale/region.
     Uses an in-memory cache and request coalescing to limit request rate to the backend.
@@ -71,20 +71,20 @@ class ScheduledCorpusBackend(DatedCorpusBackend):
         self._background_tasks = set()
 
     @staticmethod
-    def get_surface_timezone(scheduled_surface_id: ScheduledSurfaceId) -> ZoneInfo:
+    def get_surface_timezone(scheduled_surface_id: SurfaceId) -> ZoneInfo:
         """Return the correct timezone for a scheduled surface id.
         If no timezone is found, gracefully return timezone in UTC.
         https://github.com/Pocket/recommendation-api/blob/main/app/data_providers/corpus/corpus_api_client.py#L98 # noqa
         """
         zones = {
-            ScheduledSurfaceId.NEW_TAB_EN_US: "America/New_York",
-            ScheduledSurfaceId.NEW_TAB_EN_GB: "Europe/London",
+            SurfaceId.NEW_TAB_EN_US: "America/New_York",
+            SurfaceId.NEW_TAB_EN_GB: "Europe/London",
             # Note: en-Intl is poorly named. Only India is currently eligible.
-            ScheduledSurfaceId.NEW_TAB_EN_INTL: "Asia/Kolkata",
-            ScheduledSurfaceId.NEW_TAB_DE_DE: "Europe/Berlin",
-            ScheduledSurfaceId.NEW_TAB_ES_ES: "Europe/Madrid",
-            ScheduledSurfaceId.NEW_TAB_FR_FR: "Europe/Paris",
-            ScheduledSurfaceId.NEW_TAB_IT_IT: "Europe/Rome",
+            SurfaceId.NEW_TAB_EN_INTL: "Asia/Kolkata",
+            SurfaceId.NEW_TAB_DE_DE: "Europe/Berlin",
+            SurfaceId.NEW_TAB_ES_ES: "Europe/Madrid",
+            SurfaceId.NEW_TAB_FR_FR: "Europe/Paris",
+            SurfaceId.NEW_TAB_IT_IT: "Europe/Rome",
         }
 
         try:
@@ -119,9 +119,7 @@ class ScheduledCorpusBackend(DatedCorpusBackend):
         reraise=True,
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def fetch(
-        self, surface_id: ScheduledSurfaceId, days_offset: int = 0
-    ) -> list[CorpusItem]:
+    async def fetch(self, surface_id: SurfaceId, days_offset: int = 0) -> list[CorpusItem]:
         """Fetch corpus items with stale-while-revalidate caching and request coalescing.
 
         Stale-while-revalidate caching serves cached data while asynchronously refreshing it in the

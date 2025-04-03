@@ -15,7 +15,7 @@ from scipy.stats import linregress
 
 from merino.configs import settings
 from merino.curated_recommendations import (
-    ScheduledCorpusBackend,
+    ScheduledSurfaceBackend,
     CuratedRecommendationsProvider,
     get_provider,
     ConstantPrior,
@@ -23,8 +23,8 @@ from merino.curated_recommendations import (
 )
 from merino.curated_recommendations.corpus_backends.protocol import (
     Topic,
-    ScheduledSurfaceId,
-    SectionsCorpusProtocol,
+    SurfaceId,
+    SectionsProtocol,
 )
 from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
@@ -97,14 +97,14 @@ def setup_manifest_provider(manifest_provider):
 
 @pytest.fixture(name="corpus_provider")
 def provider(
-    corpus_backend: ScheduledCorpusBackend,
-    sections_backend: SectionsCorpusProtocol,
+    scheduled_surface_backend: ScheduledSurfaceBackend,
+    sections_backend: SectionsProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
-        corpus_backend=corpus_backend,
+        scheduled_surface_backend=scheduled_surface_backend,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
         sections_backend=sections_backend,
@@ -173,7 +173,7 @@ async def test_curated_recommendations(repeat):
         assert response.status_code == 200
 
         # Check surfaceId is returned (should be NEW_TAB_EN_US for en-US locale)
-        assert data["surfaceId"] == ScheduledSurfaceId.NEW_TAB_EN_US
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_US
 
         corpus_items = data["data"]
         # assert total of 100 items returned, which is the default maximum number of recommendations in the response.
@@ -227,20 +227,20 @@ class TestCuratedRecommendationsRequestParameters:
     @pytest.mark.parametrize(
         "locale,surface_id",
         [
-            (Locale.EN, ScheduledSurfaceId.NEW_TAB_EN_US),
-            (Locale.EN_CA, ScheduledSurfaceId.NEW_TAB_EN_US),
-            (Locale.EN_US, ScheduledSurfaceId.NEW_TAB_EN_US),
-            (Locale.EN_GB, ScheduledSurfaceId.NEW_TAB_EN_GB),
-            (Locale.DE, ScheduledSurfaceId.NEW_TAB_DE_DE),
-            (Locale.DE_DE, ScheduledSurfaceId.NEW_TAB_DE_DE),
-            (Locale.DE_AT, ScheduledSurfaceId.NEW_TAB_DE_DE),
-            (Locale.DE_CH, ScheduledSurfaceId.NEW_TAB_DE_DE),
-            (Locale.FR, ScheduledSurfaceId.NEW_TAB_FR_FR),
-            (Locale.FR_FR, ScheduledSurfaceId.NEW_TAB_FR_FR),
-            (Locale.ES, ScheduledSurfaceId.NEW_TAB_ES_ES),
-            (Locale.ES_ES, ScheduledSurfaceId.NEW_TAB_ES_ES),
-            (Locale.IT, ScheduledSurfaceId.NEW_TAB_IT_IT),
-            (Locale.IT_IT, ScheduledSurfaceId.NEW_TAB_IT_IT),
+            (Locale.EN, SurfaceId.NEW_TAB_EN_US),
+            (Locale.EN_CA, SurfaceId.NEW_TAB_EN_US),
+            (Locale.EN_US, SurfaceId.NEW_TAB_EN_US),
+            (Locale.EN_GB, SurfaceId.NEW_TAB_EN_GB),
+            (Locale.DE, SurfaceId.NEW_TAB_DE_DE),
+            (Locale.DE_DE, SurfaceId.NEW_TAB_DE_DE),
+            (Locale.DE_AT, SurfaceId.NEW_TAB_DE_DE),
+            (Locale.DE_CH, SurfaceId.NEW_TAB_DE_DE),
+            (Locale.FR, SurfaceId.NEW_TAB_FR_FR),
+            (Locale.FR_FR, SurfaceId.NEW_TAB_FR_FR),
+            (Locale.ES, SurfaceId.NEW_TAB_ES_ES),
+            (Locale.ES_ES, SurfaceId.NEW_TAB_ES_ES),
+            (Locale.IT, SurfaceId.NEW_TAB_IT_IT),
+            (Locale.IT_IT, SurfaceId.NEW_TAB_IT_IT),
         ],
     )
     async def test_curated_recommendations_locales(self, locale, surface_id):
@@ -271,7 +271,7 @@ class TestCuratedRecommendationsRequestParameters:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("count", [10, 50, 100])
-    async def test_curated_recommendations_count(self, count, fixture_response_data):
+    async def test_curated_recommendations_count(self, count, scheduled_surface_response_data):
         """Test the curated recommendations endpoint accepts valid count."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
@@ -279,7 +279,9 @@ class TestCuratedRecommendationsRequestParameters:
             )
             assert response.status_code == 200
             data = response.json()
-            schedule_count = len(fixture_response_data["data"]["scheduledSurface"]["items"])
+            schedule_count = len(
+                scheduled_surface_response_data["data"]["scheduledSurface"]["items"]
+            )
             assert len(data["data"]) == min(count, schedule_count)
 
     @pytest.mark.asyncio
@@ -617,9 +619,9 @@ class TestCuratedRecommendationsRequestParameters:
         topics,
         expected_topics,
         expected_warning,
-        fixture_response_data_short,
+        scheduled_surface_response_data_short,
         fixture_request_data,
-        corpus_http_client,
+        scheduled_surface_http_client,
         caplog,
         repeat,
     ):
@@ -627,9 +629,9 @@ class TestCuratedRecommendationsRequestParameters:
         Should treat invalid topic as blank.
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            corpus_http_client.post.return_value = Response(
+            scheduled_surface_http_client.post.return_value = Response(
                 status_code=200,
-                json=fixture_response_data_short,
+                json=scheduled_surface_response_data_short,
                 request=fixture_request_data,
             )
             response = await ac.post(
@@ -663,7 +665,7 @@ class TestCorpusApiCaching:
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
     @pytest.mark.asyncio
-    async def test_single_request_multiple_fetches(self, corpus_http_client):
+    async def test_single_request_multiple_fetches(self, scheduled_surface_http_client):
         """Test that only a single request is made to the curated-corpus-api."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Gather multiple fetch calls
@@ -672,7 +674,7 @@ class TestCorpusApiCaching:
             assert all(len(result.json()["data"]) == 100 for result in results)
 
             # Assert that exactly one request was made to the corpus api
-            corpus_http_client.post.assert_called_once()
+            scheduled_surface_http_client.post.assert_called_once()
 
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.parametrize(
@@ -685,9 +687,9 @@ class TestCorpusApiCaching:
     @pytest.mark.asyncio
     async def test_single_request_multiple_failed_fetches(
         self,
-        corpus_http_client,
+        scheduled_surface_http_client,
         fixture_request_data,
-        fixture_response_data,
+        scheduled_surface_response_data,
         fixture_graphql_200ok_with_error_response,
         caplog,
         error_type,
@@ -722,11 +724,11 @@ class TestCorpusApiCaching:
                 else:
                     return Response(
                         status_code=200,
-                        json=fixture_response_data,
+                        json=scheduled_surface_response_data,
                         request=fixture_request_data,
                     )
 
-            corpus_http_client.post = AsyncMock(side_effect=temporary_downtime)
+            scheduled_surface_http_client.post = AsyncMock(side_effect=temporary_downtime)
 
             # Hit the endpoint until a 200 response is received or until timeout.
             while datetime.now() < start_time + timedelta(seconds=1):
@@ -740,7 +742,7 @@ class TestCorpusApiCaching:
             assert result.status_code == 200
 
             # Assert that we did not send a lot of requests to the backend.
-            assert corpus_http_client.post.call_count == 2
+            assert scheduled_surface_http_client.post.call_count == 2
 
             # Assert that a warning was logged with a descriptive message.
             warnings = [r for r in caplog.records if r.levelname == "WARNING"]
@@ -748,7 +750,7 @@ class TestCorpusApiCaching:
 
     @pytest.mark.asyncio
     async def test_cache_returned_on_subsequent_calls(
-        self, corpus_http_client, fixture_response_data, fixture_request_data
+        self, scheduled_surface_http_client, scheduled_surface_response_data, fixture_request_data
     ):
         """Test that the cache expires, and subsequent requests return new data."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -757,16 +759,16 @@ class TestCorpusApiCaching:
                 initial_response = await fetch_en_us(ac)
                 initial_data = initial_response.json()
 
-                for item in fixture_response_data["data"]["scheduledSurface"]["items"]:
+                for item in scheduled_surface_response_data["data"]["scheduledSurface"]["items"]:
                     item["corpusItem"]["title"] += " (NEW)"  # Change all the titles
-                corpus_http_client.post.return_value = Response(
+                scheduled_surface_http_client.post.return_value = Response(
                     status_code=200,
-                    json=fixture_response_data,
+                    json=scheduled_surface_response_data,
                     request=fixture_request_data,
                 )
 
                 # Progress time to after the cache expires.
-                frozen_datetime.tick(delta=ScheduledCorpusBackend.cache_time_to_live_max)
+                frozen_datetime.tick(delta=ScheduledSurfaceBackend.cache_time_to_live_max)
                 frozen_datetime.tick(delta=timedelta(seconds=1))
 
                 # When the cache is expired, the first fetch may return stale data.
@@ -775,7 +777,7 @@ class TestCorpusApiCaching:
 
                 # Next fetch should get the new data
                 new_response = await fetch_en_us(ac)
-                assert corpus_http_client.post.call_count == 2
+                assert scheduled_surface_http_client.post.call_count == 2
                 new_data = new_response.json()
                 assert new_data["recommendedAt"] > initial_data["recommendedAt"]
                 assert all("NEW" in item["title"] for item in new_data["data"])
@@ -783,7 +785,7 @@ class TestCorpusApiCaching:
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.asyncio
     async def test_valid_cache_returned_on_error(
-        self, corpus_http_client, fixture_request_data, caplog
+        self, scheduled_surface_http_client, fixture_request_data, caplog
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -792,16 +794,16 @@ class TestCorpusApiCaching:
                 initial_response = await fetch_en_us(ac)
                 initial_data = initial_response.json()
                 assert initial_response.status_code == 200
-                assert corpus_http_client.post.call_count == 1
+                assert scheduled_surface_http_client.post.call_count == 1
 
                 # Simulate 503 error from Corpus API
-                corpus_http_client.post.return_value = Response(
+                scheduled_surface_http_client.post.return_value = Response(
                     status_code=503,
                     request=fixture_request_data,
                 )
 
                 # Progress time to after the cache expires.
-                frozen_datetime.tick(delta=ScheduledCorpusBackend.cache_time_to_live_max)
+                frozen_datetime.tick(delta=ScheduledSurfaceBackend.cache_time_to_live_max)
                 frozen_datetime.tick(delta=timedelta(seconds=1))
 
                 # Try to fetch data when cache expired
@@ -813,7 +815,7 @@ class TestCorpusApiCaching:
                 # assert that Corpus API was called the expected number of times
                 # 1 successful request from above, and retry_count number of retries.
                 assert (
-                    corpus_http_client.post.call_count
+                    scheduled_surface_http_client.post.call_count
                     == settings.curated_recommendations.corpus_api.retry_count + 1
                 )
 
@@ -866,9 +868,9 @@ class TestCuratedRecommendationsMetrics:
     async def test_metrics_corpus_api_error(
         self,
         mocker: MockerFixture,
-        corpus_http_client,
+        scheduled_surface_http_client,
         fixture_request_data,
-        fixture_response_data,
+        scheduled_surface_response_data,
     ) -> None:
         """Test that metrics are recorded when the curated-corpus-api returns a 500 error"""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
@@ -884,11 +886,11 @@ class TestCuratedRecommendationsMetrics:
                 else:
                     return Response(
                         status_code=200,
-                        json=fixture_response_data,
+                        json=scheduled_surface_response_data,
                         request=fixture_request_data,
                     )
 
-            corpus_http_client.post = AsyncMock(side_effect=first_request_returns_error)
+            scheduled_surface_http_client.post = AsyncMock(side_effect=first_request_returns_error)
 
             await fetch_en_us(ac)
 
@@ -1004,8 +1006,8 @@ class TestSections:
     @pytest.mark.parametrize(
         "surface_id",
         [
-            ScheduledSurfaceId.NEW_TAB_EN_US,
-            ScheduledSurfaceId.NEW_TAB_DE_DE,
+            SurfaceId.NEW_TAB_EN_US,
+            SurfaceId.NEW_TAB_DE_DE,
         ],
     )
     def test_section_translations(self, surface_id):
@@ -1445,7 +1447,7 @@ class TestSections:
 @pytest.mark.asyncio
 async def test_curated_recommendations_enriched_with_icons(
     manifest_provider,
-    corpus_http_client,
+    scheduled_surface_http_client,
     fixture_request_data,
 ):
     """Test the enrichment of a curated recommendation with an added icon-url."""
@@ -1484,7 +1486,7 @@ async def test_curated_recommendations_enriched_with_icons(
             }
         }
     }
-    corpus_http_client.post.return_value = Response(
+    scheduled_surface_http_client.post.return_value = Response(
         status_code=200,
         json=mocked_response,
         request=fixture_request_data,

@@ -6,9 +6,9 @@ import re
 from typing import cast
 
 from merino.curated_recommendations.corpus_backends.protocol import (
-    DatedCorpusBackend,
-    ScheduledSurfaceId,
-    SectionsCorpusProtocol,
+    ScheduledSurfaceProtocol,
+    SurfaceId,
+    SectionsProtocol,
     Topic,
 )
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
@@ -43,25 +43,23 @@ logger = logging.getLogger(__name__)
 class CuratedRecommendationsProvider:
     """Provider for recommendations that have been reviewed by human curators."""
 
-    corpus_backend: DatedCorpusBackend
-    sections_backend: SectionsCorpusProtocol
+    scheduled_surface_backend: ScheduledSurfaceProtocol
+    sections_backend: SectionsProtocol
 
     def __init__(
         self,
-        corpus_backend: DatedCorpusBackend,
+        scheduled_surface_backend: ScheduledSurfaceProtocol,
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
-        sections_backend: SectionsCorpusProtocol,
+        sections_backend: SectionsProtocol,
     ) -> None:
-        self.corpus_backend = corpus_backend
+        self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
         self.sections_backend = sections_backend
 
     @staticmethod
-    def get_recommendation_surface_id(
-        locale: Locale, region: str | None = None
-    ) -> ScheduledSurfaceId:
+    def get_recommendation_surface_id(locale: Locale, region: str | None = None) -> SurfaceId:
         """Locale/region mapping is documented here:
         https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit
 
@@ -78,24 +76,24 @@ class CuratedRecommendationsProvider:
         derived_region = CuratedRecommendationsProvider.derive_region(locale, region)
 
         if language == "de":
-            return ScheduledSurfaceId.NEW_TAB_DE_DE
+            return SurfaceId.NEW_TAB_DE_DE
         elif language == "es":
-            return ScheduledSurfaceId.NEW_TAB_ES_ES
+            return SurfaceId.NEW_TAB_ES_ES
         elif language == "fr":
-            return ScheduledSurfaceId.NEW_TAB_FR_FR
+            return SurfaceId.NEW_TAB_FR_FR
         elif language == "it":
-            return ScheduledSurfaceId.NEW_TAB_IT_IT
+            return SurfaceId.NEW_TAB_IT_IT
         else:
             # Default to English language for all other values of language (including 'en' or None)
             if derived_region is None or derived_region in ["US", "CA"]:
-                return ScheduledSurfaceId.NEW_TAB_EN_US
+                return SurfaceId.NEW_TAB_EN_US
             elif derived_region in ["GB", "IE"]:
-                return ScheduledSurfaceId.NEW_TAB_EN_GB
+                return SurfaceId.NEW_TAB_EN_GB
             elif derived_region in ["IN"]:
-                return ScheduledSurfaceId.NEW_TAB_EN_INTL
+                return SurfaceId.NEW_TAB_EN_INTL
             else:
                 # Default to the en-US New Tab if no 2-letter region can be derived from locale or region.
-                return ScheduledSurfaceId.NEW_TAB_EN_US
+                return SurfaceId.NEW_TAB_EN_US
 
     @staticmethod
     def extract_language_from_locale(locale: Locale) -> str | None:
@@ -145,7 +143,7 @@ class CuratedRecommendationsProvider:
     @staticmethod
     def is_sections_experiment(
         request: CuratedRecommendationsRequest,
-        surface_id: ScheduledSurfaceId,
+        surface_id: SurfaceId,
     ) -> bool:
         """Check if the 'sections' experiment is enabled."""
         return (
@@ -202,8 +200,8 @@ class CuratedRecommendationsProvider:
             # localized topic strings in Firefox. As a workaround, we decided to only send topics
             # for New Tab en-US. This workaround should be removed once Fx131 is released on Oct 1.
             if surface_id not in (
-                ScheduledSurfaceId.NEW_TAB_EN_US,
-                ScheduledSurfaceId.NEW_TAB_EN_GB,
+                SurfaceId.NEW_TAB_EN_US,
+                SurfaceId.NEW_TAB_EN_GB,
             ):
                 rec.topic = None
 
@@ -220,13 +218,9 @@ class CuratedRecommendationsProvider:
         ]
 
     async def get_corpus_sections(
-        self, surface_id: ScheduledSurfaceId, min_feed_rank: int
+        self, surface_id: SurfaceId, min_feed_rank: int
     ) -> dict[str, Section]:
-        """Fetch sections from the sections backend convert them to .
-
-        This function fetches corpus sections from the sections backend and sets each section
-        as an attribute on the given feed.
-        """
+        """Fetch sections from the sections backend for the given surface."""
         corpus_sections = await self.sections_backend.fetch(surface_id)
         sections: dict[str, Section] = dict()
         for corpus_section in corpus_sections:
@@ -251,7 +245,7 @@ class CuratedRecommendationsProvider:
         self,
         recommendations: list[CuratedRecommendation],
         request: CuratedRecommendationsRequest,
-        surface_id: ScheduledSurfaceId,
+        surface_id: SurfaceId,
     ) -> dict[str, Section]:
         """Return a dictionary of sections keyed on section id.
 
@@ -358,7 +352,7 @@ class CuratedRecommendationsProvider:
             locale=request.locale, region=request.region
         )
 
-        corpus_items = await self.corpus_backend.fetch(surface_id)
+        corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
         recommendations = [
             CuratedRecommendation(
                 **item.model_dump(),
