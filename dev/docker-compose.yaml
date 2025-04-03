@@ -25,6 +25,16 @@ services:
       - REDIS_HOSTS=local:redis-primary:6379
     ports:
       - 8081:8081
+  fake-gcs:
+    image: fsouza/fake-gcs-server
+    container_name: fake-gcs-server
+    restart: always
+    ports:
+      - 4443:4443
+    volumes:
+      - ./local_data/gcs_emulator:/data
+    command: -port=4443 -public-host=localhost:4443 -scheme=http
+
 volumes:
   redis_primary:
   redis_replica:
