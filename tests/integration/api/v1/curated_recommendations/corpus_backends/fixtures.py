@@ -6,41 +6,48 @@ from unittest.mock import AsyncMock
 import pytest
 from httpx import AsyncClient, Request, Response
 
-from merino.curated_recommendations.corpus_backends.corpus_api_backend import (
-    CorpusApiGraphConfig,
-    CorpusApiBackend,
+from merino.curated_recommendations.corpus_backends.utils import CorpusApiGraphConfig
+from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
+    ScheduledSurfaceBackend,
+)
+from merino.curated_recommendations.corpus_backends.sections_backend import (
+    SectionsBackend,
 )
 from merino.utils.metrics import get_metrics_client
 
 
 @pytest.fixture()
-def fixture_response_data():
-    """Load mock response data for the scheduledSurface query"""
+def scheduled_surface_response_data():
+    """Load mock response data for the scheduledSurface query."""
     with open("tests/data/scheduled_surface.json") as f:
         return json.load(f)
 
 
-# This fixture is used in tests where recs order is important to check &
-# keeping the list short is easier to manipulate.
 @pytest.fixture()
-def fixture_response_data_short():
-    """Load mock response data (shortened) for the scheduledSurface query"""
+def scheduled_surface_response_data_short():
+    """Load mock response data (shortened) for the scheduledSurface query."""
     with open("tests/data/scheduled_surface_short.json") as f:
         return json.load(f)
 
 
 @pytest.fixture()
+def sections_response_data():
+    """Load mock response data for the getSections query."""
+    with open("tests/data/sections.json") as f:
+        return json.load(f)
+
+
+@pytest.fixture()
 def fixture_graphql_200ok_with_error_response():
-    """Load mock response data for a GraphQL error response"""
+    """Load mock response data for a GraphQL error response."""
     with open("tests/data/graphql_error.json") as f:
         return json.load(f)
 
 
 @pytest.fixture()
 def fixture_request_data() -> Request:
-    """Load mock response data for the scheduledSurface query"""
+    """Load mock request data for the corpus API backend."""
     graph_config = CorpusApiGraphConfig()
-
     return Request(
         method="POST",
         url=graph_config.endpoint,
@@ -50,26 +57,49 @@ def fixture_request_data() -> Request:
 
 
 @pytest.fixture()
-def corpus_http_client(fixture_response_data, fixture_request_data) -> AsyncMock:
-    """Mock curated corpus api HTTP client."""
-    # Create a mock HTTP client
+def scheduled_surface_http_client(
+    scheduled_surface_response_data, fixture_request_data
+) -> AsyncMock:
+    """Mock HTTP client for the scheduled corpus API backend."""
     mock_http_client = AsyncMock(spec=AsyncClient)
-    # Mock the POST request response with the loaded json mock data
     mock_http_client.post.return_value = Response(
         status_code=200,
-        json=fixture_response_data,
+        json=scheduled_surface_response_data,
         request=fixture_request_data,
     )
-
     return mock_http_client
 
 
 @pytest.fixture()
-def corpus_backend(corpus_http_client: AsyncMock, manifest_provider) -> CorpusApiBackend:
-    """Mock corpus api backend."""
-    # Initialize the backend with the mock HTTP client
-    return CorpusApiBackend(
-        http_client=corpus_http_client,
+def sections_http_client(sections_response_data, fixture_request_data) -> AsyncMock:
+    """Mock HTTP client for the sections corpus API backend."""
+    mock_http_client = AsyncMock(spec=AsyncClient)
+    mock_http_client.post.return_value = Response(
+        status_code=200,
+        json=sections_response_data,
+        request=fixture_request_data,
+    )
+    return mock_http_client
+
+
+@pytest.fixture()
+def scheduled_surface_backend(
+    scheduled_surface_http_client: AsyncMock, manifest_provider
+) -> ScheduledSurfaceBackend:
+    """Create a mock ScheduledCorpusBackend instance with the corpus HTTP client."""
+    return ScheduledSurfaceBackend(
+        http_client=scheduled_surface_http_client,
+        graph_config=CorpusApiGraphConfig(),
+        metrics_client=get_metrics_client(),
+        manifest_provider=manifest_provider,
+    )
+
+
+@pytest.fixture()
+def sections_backend(sections_http_client: AsyncMock, manifest_provider) -> SectionsBackend:
+    """Create a mock SectionsCorpusBackend instance with the sections HTTP client."""
+    return SectionsBackend(
+        http_client=sections_http_client,
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
         manifest_provider=manifest_provider,

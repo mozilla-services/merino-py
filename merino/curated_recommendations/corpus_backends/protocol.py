@@ -35,7 +35,7 @@ class Topic(str, Enum):
 
 
 @unique
-class ScheduledSurfaceId(str, Enum):
+class SurfaceId(str, Enum):
     """Defines the possible recommendation surfaces."""
 
     NEW_TAB_EN_US = "NEW_TAB_EN_US"
@@ -53,7 +53,7 @@ class CorpusItem(BaseModel):
     """
 
     corpusItemId: str
-    scheduledCorpusItemId: str
+    scheduledCorpusItemId: str | None = None
     url: HttpUrl
     title: str
     excerpt: str
@@ -64,23 +64,40 @@ class CorpusItem(BaseModel):
     iconUrl: HttpUrl | None = None
 
 
-class CorpusBackend(Protocol):
-    """Protocol for Curated Recommendation backend that the provider depends on."""
+class CorpusSection(BaseModel):
+    """A list of section recommendations from the corpus API."""
 
-    async def fetch(
-        self,
-        surface_id: ScheduledSurfaceId,
-        days_offset: int = 0,
-    ) -> list[CorpusItem]:
-        """Fetch corpus items.
+    sectionItems: list[CorpusItem]
+    title: str
+    externalId: str
+
+
+class SectionsProtocol(Protocol):
+    """Protocol for fetching sections of corpus items for a given surface, without a date."""
+
+    async def fetch(self, surface_id: SurfaceId) -> list[CorpusSection]:
+        """Fetch corpus items for the given surface.
 
         Args:
-            surface_id: Identifies the scheduled surface, for example NEW_TAB_EN_US.
-            days_offset: Optionally, the number of days relative to today for which items were
-                scheduled. A positive value indicates a future day, negative value indicates a past
-                day, and 0 refers to today. Defaults to 0.
+            surface_id: Identifies the scheduled surface, e.g. NEW_TAB_EN_US.
 
         Returns:
-        list[CorpusItem]: A list of fetched corpus items.
+            list[CorpusSection]: A list of sections, each of which contains list of corpus items.
+        """
+        ...
+
+
+class ScheduledSurfaceProtocol(Protocol):
+    """Protocol for corpus backends extended with support for fetching items by day offset."""
+
+    async def fetch(self, surface_id: SurfaceId, days_offset: int = 0) -> list[CorpusItem]:
+        """Fetch corpus items for the given surface and day offset.
+
+        Args:
+            surface_id: Identifies the scheduled surface, e.g. NEW_TAB_EN_US.
+            days_offset: Number of days relative to today (0 for today, negative for past, positive for future).
+
+        Returns:
+            list[CorpusItem]: A list of fetched corpus items.
         """
         ...
