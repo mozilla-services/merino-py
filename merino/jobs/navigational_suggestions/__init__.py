@@ -83,7 +83,7 @@ local_mode_option = typer.Option(
 )
 
 local_sample_size_option = typer.Option(
-    50,
+    20,
     "--sample-size",
     help="Number of domains to process in local mode",
 )
@@ -97,6 +97,12 @@ local_data_option = typer.Option(
 navigational_suggestions_cmd = typer.Typer(
     name="navigational-suggestions",
     help="Command for preparing top domain metadata for navigational suggestions",
+)
+
+monitor_option = typer.Option(
+    False,
+    "--monitor",
+    help="Enable system monitoring during processing",
 )
 
 
@@ -165,7 +171,9 @@ def _write_xcom_file(xcom_data: dict):
         json.dump(xcom_data, file)
 
 
-def _run_local_mode(local_sample_size: int, local_data_dir: str, min_favicon_width: int) -> None:
+def _run_local_mode(
+    local_sample_size: int, local_data_dir: str, min_favicon_width: int, enable_monitoring: bool
+) -> None:
     """Run navigational suggestions in local mode"""
     import os
     import json
@@ -189,6 +197,10 @@ def _run_local_mode(local_sample_size: int, local_data_dir: str, min_favicon_wid
     min_width = min_favicon_width
     if hasattr(min_favicon_width, "default"):
         min_width = getattr(min_favicon_width, "default", 48)
+
+    enable_monitoring = enable_monitoring
+    if hasattr(enable_monitoring, "default"):
+        min_width = getattr(enable_monitoring, "default", False)
 
     logger.info("Running in LOCAL MODE with the following settings:")
     logger.info(f"- Sample size: {sample_size} domains")
@@ -297,7 +309,10 @@ def _run_local_mode(local_sample_size: int, local_data_dir: str, min_favicon_wid
 
     # 4. Process domains
     domain_metadata = domain_metadata_extractor.process_domain_metadata(
-        domain_data, min_width, uploader=domain_metadata_uploader
+        domain_data,
+        min_width,
+        uploader=domain_metadata_uploader,
+        enable_monitoring=enable_monitoring,
     )
     logger.info("Domain metadata extraction complete")
 
@@ -374,6 +389,7 @@ def _run_normal_mode(
     force_upload: bool,
     write_xcom: bool,
     min_favicon_width: int,
+    enable_monitoring: bool = False,
 ) -> None:
     """Prepare domain metadata for navigational suggestions"""
     # download top domains data
@@ -396,7 +412,10 @@ def _run_normal_mode(
     domain_metadata_extractor = DomainMetadataExtractor(blocked_domains=TOP_PICKS_BLOCKLIST)
     domain_metadata: list[dict[str, Optional[str]]] = (
         domain_metadata_extractor.process_domain_metadata(
-            domain_data, min_favicon_width, uploader=domain_metadata_uploader
+            domain_data,
+            min_favicon_width,
+            uploader=domain_metadata_uploader,
+            enable_monitoring=enable_monitoring,
         )
     )
     logger.info("domain metadata extraction complete")
@@ -462,6 +481,7 @@ def prepare_domain_metadata(
     local_mode: bool = local_mode_option,
     local_sample_size: int = local_sample_size_option,
     local_data_dir: str = local_data_option,
+    enable_monitoring: bool = monitor_option,
 ):
     """Prepare domain metadata for navigational suggestions"""
     # Unwrap typer.Option objects to get their default values if present
@@ -474,13 +494,14 @@ def prepare_domain_metadata(
     min_width = getattr(min_favicon_width, "default", min_favicon_width)
     sample_size = getattr(local_sample_size, "default", local_sample_size)
     data_dir = getattr(local_data_dir, "default", local_data_dir)
+    enable_monitoring = getattr(enable_monitoring, "default", enable_monitoring)
 
     # Run the appropriate mode
     if local_mode:
         # Local mode for development and testing
         # This mode uses fake-gcs-server and custom domains
         # instead of connecting to Google Cloud
-        _run_local_mode(sample_size, data_dir, min_width)
+        _run_local_mode(sample_size, data_dir, min_width, enable_monitoring)
     else:
         # Normal mode used in production
         # This connects to Google Cloud and processes custom_domains
@@ -493,4 +514,5 @@ def prepare_domain_metadata(
             force,
             write_x,
             min_width,
+            enable_monitoring,
         )

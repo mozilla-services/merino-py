@@ -21,6 +21,12 @@ INTEGRATION_COVERAGE_JSON := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)integration_
 # This will be run if no target is provided
 .DEFAULT_GOAL := help
 
+# Parameter for the Navigational Suggestions job
+SAMPLE_SIZE ?= 20
+METRICS_DIR ?= ./local_data
+ENABLE_MONITORING ?= false
+NAV_OPTS ?=
+
 .PHONY: install
 install: $(INSTALL_STAMP)  ##  Install dependencies with uv
 $(INSTALL_STAMP): pyproject.toml uv.lock
@@ -176,3 +182,38 @@ coverage-integration:
 	$(UV) run coverage json \
 		--data-file=$(TEST_RESULTS_DIR)/.coverage.integration \
 		-o $(INTEGRATION_COVERAGE_JSON)
+
+.PHONY: nav-suggestions
+nav-suggestions: $(INSTALL_STAMP)  ##  Run navigational suggestions job locally (start emulator, run job, stop emulator)
+	@echo "Starting navigational suggestions workflow..."
+	@docker info > /dev/null 2>&1 || (echo "❌ Docker is not running. Please start Docker and try again." && exit 1)
+	@mkdir -p $(METRICS_DIR)/gcs_emulator
+
+	@echo "Starting fake-GCS-server..."
+	@docker compose -f dev/docker-compose.yaml up -d fake-gcs
+	@echo "Waiting for service to be available..."
+	@sleep 3
+	@echo "✅ GCS emulator started successfully!"
+
+	@echo "Running navigational suggestions job with $(SAMPLE_SIZE) domains..."
+	@MONITOR_FLAG=""; \
+	if [ "$(ENABLE_MONITORING)" = "true" ]; then \
+		MONITOR_FLAG="--monitor"; \
+		echo "System monitoring enabled"; \
+	fi; \
+	$(UV) run merino-jobs navigational-suggestions prepare-domain-metadata \
+		--local \
+		--sample-size=$(SAMPLE_SIZE) \
+		--metrics-dir=$(METRICS_DIR) \
+		$$MONITOR_FLAG $(NAV_OPTS) || { \
+		echo "❌ Job failed - stopping emulator..."; \
+		docker compose -f dev/docker-compose.yaml down fake-gcs; \
+		exit 1; \
+	}
+
+	@echo "✅ Job completed successfully!"
+	@echo "The results are available in $(METRICS_DIR)"
+
+	@echo "Stopping GCS emulator..."
+	@docker compose -f dev/docker-compose.yaml down fake-gcs
+	@echo "✅ Workflow completed - GCS emulator stopped"

@@ -1,7 +1,6 @@
 """Extract domain metadata from domain data"""
 
 import asyncio
-import itertools
 import logging
 from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
@@ -11,7 +10,7 @@ from pydantic import BaseModel
 from mechanicalsoup import StatefulBrowser
 
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import DomainMetadataUploader
-from merino.utils.gcs.models import Image
+from merino.jobs.utils.system_monitor import SystemMonitor
 from merino.jobs.navigational_suggestions.utils import (
     REQUEST_HEADERS,
     TIMEOUT,
@@ -134,12 +133,34 @@ class Scraper:
             return None
 
     def close(self) -> None:
-        """Close the scraper browser session"""
+        """Close the scraper browser session properly"""
         try:
+            if hasattr(self.browser, "session") and self.browser.session:
+                self.browser.session.close()
+            if hasattr(self.browser, "_browser"):
+                self.browser._browser = None
             self.browser.close()
         except Exception as ex:
-            logger.warning(f"Error ocurred when closing scraper session: {ex}")
-            return None
+            logger.warning(f"Error occurred when closing scraper session: {ex}")
+
+    def reset(self) -> None:
+        """Reset the scraper by closing current connections and initializing a new browser session."""
+        try:
+            # Close the current browser session
+            self.close()
+
+            # Reinitialize the browser with a fresh session
+            session: requests.Session = requests.Session()
+            self.browser = StatefulBrowser(
+                session=session,
+                soup_config={"features": self.parser},
+                raise_on_404=False,
+                user_agent=REQUEST_HEADERS["User-Agent"],
+            )
+
+            # Don't recreate the request_client as it will be reset separately
+        except Exception as ex:
+            logger.warning(f"Error occurred when resetting scraper: {ex}")
 
 
 class DomainMetadataExtractor:
@@ -220,11 +241,6 @@ class DomainMetadataExtractor:
                 return ""
         # Return unchanged URLs that already have a protocol
         return url
-
-    def _get_favicon_smallest_dimension(self, image: Image) -> int:
-        """Return the smallest of the favicon image width and height"""
-        width, height = image.open().size
-        return int(min(width, height))
 
     async def _extract_favicons(
         self, scraped_url: str, max_icons: int = 5
@@ -332,80 +348,155 @@ class DomainMetadataExtractor:
     async def _upload_best_favicon(
         self, favicons: list[dict[str, Any]], min_width: int, uploader: DomainMetadataUploader
     ) -> str:
-        """Asynchronous method to find the best favicon"""
-        # Get URLs and filter out empty or problematic ones
-        urls = [self._fix_url(favicon.get("href", "")) for favicon in favicons]
-        # Remove empty strings and any remaining problematic URLs
-        urls = [url for url in urls if url and "://" in url]
+        """Asynchronous method to find the best favicon with improved memory management"""
+        try:
+            # Get URLs and filter out empty or problematic ones
+            urls = [self._fix_url(favicon.get("href", "")) for favicon in favicons]
+            urls = [url for url in urls if url and "://" in url]
 
-        # If we have no valid URLs after filtering, return empty string
-        if not urls:
-            return ""
+            # If we have no valid URLs after filtering, return empty string
+            if not urls:
+                return ""
 
-        masked_svg_indices = [i for i, favicon in enumerate(favicons) if "mask" in favicon]
+            # Identify masked SVG indices upfront
+            masked_svg_indices = [i for i, favicon in enumerate(favicons) if "mask" in favicon]
 
-        best_favicon_url = ""
-        best_favicon_width = 0
+            # Tracking variables for best favicon
+            best_favicon_url = ""
+            best_favicon_width = 0
 
-        # Process favicons in smaller chunks to limit concurrent connections and memory usage
-        chunk_size = 5
+            # Prioritization: Process SVGs first, then bitmap images
+            # This allows us to exit early once we find a good SVG
+            svg_urls = []
+            svg_indices = []
+            bitmap_urls = []
+            bitmap_indices = []
 
-        for chunk_idx, chunk_urls in enumerate(itertools.batched(urls, chunk_size)):
-            chunk_images = await self.favicon_downloader.download_multiple_favicons(
-                list(chunk_urls)
-            )
+            # Categorize URLs by likely type
+            for i, url in enumerate(urls):
+                if url.lower().endswith(".svg"):
+                    svg_urls.append(url)
+                    svg_indices.append(i)
+                else:
+                    bitmap_urls.append(url)
+                    bitmap_indices.append(i)
 
-            # Calculate the offset in the favicons list for this chunk
-            favicon_offset = chunk_idx * chunk_size
-
-            # Process this chunk immediately
-            for i, (image, url) in enumerate(zip(chunk_images, chunk_urls)):
-                if image is None or "image/" not in image.content_type:
-                    del image
-                    continue
-
-                # First priority: If favicon is an SVG and not masked, select it immediately
-                if (
-                    image.content_type == "image/svg+xml"
-                    and (i + favicon_offset) not in masked_svg_indices
-                ):
-                    # Upload and return immediately on finding a good SVG
-                    try:
-                        dst_favicon_name = uploader.destination_favicon_name(image)
-                        result = uploader.upload_image(image, dst_favicon_name, forced_upload=True)
-                        # Clear variables to help with garbage collection
-                        del chunk_images
-                        return str(result)
-                    except Exception as e:
-                        logger.warning(f"Failed to upload SVG favicon: {e}")
-                        return url
-
-                # Second priority: Track the highest resolution bitmap favicon
+            # Process SVGs first (since we prioritize them)
+            if svg_urls:
                 try:
-                    width = self._get_favicon_smallest_dimension(image)
-                    if width > best_favicon_width:
+                    svg_images = await self.favicon_downloader.download_multiple_favicons(svg_urls)
+
+                    # Process SVG images with proper cleanup
+                    for local_idx, (image, url) in enumerate(zip(svg_images, svg_urls)):
+                        original_idx = svg_indices[local_idx]
+
                         try:
-                            # Upload immediately
-                            dst_favicon_name = uploader.destination_favicon_name(image)
-                            favicon_url = uploader.upload_image(
-                                image, dst_favicon_name, forced_upload=True
-                            )
-                            best_favicon_url = favicon_url
-                            best_favicon_width = width
+                            if image is None or "image/svg+xml" not in image.content_type:
+                                continue
+
+                            # If it's not a masked SVG, we can select it immediately
+                            if original_idx not in masked_svg_indices:
+                                # Process and upload the SVG
+                                dst_favicon_name = uploader.destination_favicon_name(image)
+                                try:
+                                    result = uploader.upload_image(
+                                        image, dst_favicon_name, forced_upload=True
+                                    )
+                                    # Return early - SVGs are our top priority
+                                    return str(result)
+                                except Exception as e:
+                                    logger.warning(f"Failed to upload SVG favicon: {e}")
+                                    # Fall back to original URL for SVG if upload fails
+                                    return url
                         except Exception as e:
-                            logger.warning(f"Failed to upload bitmap favicon: {e}")
-                            best_favicon_url = url
-                            best_favicon_width = width
-                except Exception:
-                    logger.warning(f"Exception for favicon at position {i+favicon_offset}")
+                            logger.warning(f"Exception for favicon at position {local_idx}: {e}")
+                        finally:
+                            # Ensure we clean up each image individually
+                            if image:
+                                del image
 
-            # Explicitly clear chunk_images to free memory immediately
-            del chunk_images
+                    # Clear SVG processing variables
+                    del svg_images
+                except Exception as e:
+                    logger.error(f"Error during SVG favicon processing: {e}")
 
-            # Add a longer delay between batches to prevent network resource exhaustion
-            await asyncio.sleep(1.0)
+            # If we reach here, no good SVG was found - process bitmap images
+            if bitmap_urls:
+                try:
+                    # Process bitmap favicons in smaller batches to manage memory better
+                    BATCH_SIZE = 5
+                    for i in range(0, len(bitmap_urls), BATCH_SIZE):
+                        batch_urls = bitmap_urls[i : i + BATCH_SIZE]
+                        batch_indices = bitmap_indices[i : i + BATCH_SIZE]
 
-        return best_favicon_url if best_favicon_width >= min_width else ""
+                        try:
+                            # Download this batch
+                            batch_images = (
+                                await self.favicon_downloader.download_multiple_favicons(
+                                    batch_urls
+                                )
+                            )
+
+                            # Process images in this batch
+                            for local_idx, (image, url) in enumerate(
+                                zip(batch_images, batch_urls)
+                            ):
+                                original_idx = batch_indices[local_idx]
+
+                                try:
+                                    if image is None or "image/" not in image.content_type:
+                                        continue
+
+                                    # Get image dimensions
+                                    try:
+                                        width, height = image.get_dimensions()
+                                        width_val = min(width, height)
+                                    except Exception as e:
+                                        logger.warning(
+                                            f"Exception for favicon at position {local_idx}: {e}"
+                                        )
+                                        continue
+
+                                    # Check if this is a better favicon than what we've seen so far
+                                    if width_val > best_favicon_width:
+                                        try:
+                                            dst_favicon_name = uploader.destination_favicon_name(
+                                                image
+                                            )
+                                            favicon_url = uploader.upload_image(
+                                                image, dst_favicon_name, forced_upload=True
+                                            )
+                                            best_favicon_url = favicon_url
+                                            best_favicon_width = width_val
+                                        except Exception as e:
+                                            logger.warning(f"Failed to upload bitmap favicon: {e}")
+                                            # Fallback to original URL if upload fails
+                                            if width_val > best_favicon_width:
+                                                best_favicon_url = url
+                                                best_favicon_width = width_val
+                                except Exception as e:
+                                    logger.warning(
+                                        f"Exception for favicon at position {local_idx}: {e}"
+                                    )
+                                finally:
+                                    # Ensure we clean up each image individually
+                                    if image:
+                                        del image
+
+                            # Clear batch variables
+                            del batch_images
+                        except Exception as e:
+                            logger.error(f"Error processing bitmap batch: {e}")
+
+                except Exception as e:
+                    logger.error(f"Error during bitmap favicon processing: {e}")
+
+                # Return the best favicon URL if it meets the minimum width requirement
+                return best_favicon_url if best_favicon_width >= min_width else ""
+            return ""
+        except Exception as e:
+            logger.error(f"Unexpected error in _upload_best_favicon: {e}")
+            return ""
 
     def _extract_title(self) -> Optional[str]:
         """Extract title for a url"""
@@ -442,12 +533,15 @@ class DomainMetadataExtractor:
         domains_data: list[dict[str, Any]],
         favicon_min_width: int,
         uploader: DomainMetadataUploader,
+        enable_monitoring: bool = False,
     ) -> list[dict[str, Optional[str]]]:
         """Extract domain metadata for each domain, processing all concurrently and upload the
         favicons directly to the Google Cloud bucket
         """
         logger.info(f"Starting to process {len(domains_data)} domains")
-        results = asyncio.run(self._process_domains(domains_data, favicon_min_width, uploader))
+        results = asyncio.run(
+            self._process_domains(domains_data, favicon_min_width, uploader, enable_monitoring)
+        )
         successful_domains = sum(1 for result in results if result.get("icon"))
         logger.info(
             f"Completed processing: {len(results)} domains, found favicons for {successful_domains}"
@@ -459,12 +553,22 @@ class DomainMetadataExtractor:
         domains_data: list[dict[str, Any]],
         favicon_min_width: int,
         uploader: DomainMetadataUploader,
+        enable_monitoring: bool = False,
     ) -> list[dict[str, Optional[str]]]:
         """Process domains in chunks to limit resource consumption."""
         # Reduce batch size to decrease memory consumption and network load
-        chunk_size = 10
+        chunk_size = 50
         filtered_results: list[dict[str, Optional[str]]] = []
         total_chunks = (len(domains_data) + chunk_size - 1) // chunk_size
+
+        # Initialize monitor only if monitoring is enabled
+        monitor = None
+        if enable_monitoring:
+            monitor = SystemMonitor()
+            logger.info("Starting domain processing with system monitoring enabled")
+            monitor.log_metrics(chunk_num=0, total_chunks=total_chunks)
+        else:
+            logger.info("Starting domain processing (monitoring disabled)")
 
         for i in range(0, len(domains_data), chunk_size):
             end_idx = min(i + chunk_size, len(domains_data))
@@ -472,7 +576,7 @@ class DomainMetadataExtractor:
             chunk_num = i // chunk_size + 1
 
             logger.info(
-                f"Processing chunk {chunk_num}/{total_chunks} ({i+1}-{end_idx} of {len(domains_data)})"
+                f"Processing chunk {chunk_num}/{total_chunks} ({i + 1}-{end_idx} of {len(domains_data)})"
             )
 
             tasks = [
@@ -482,10 +586,6 @@ class DomainMetadataExtractor:
 
             # Process current chunk with gather
             chunk_results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            # Add a longer delay between chunks to allow system resources to recover
-            if end_idx < len(domains_data):
-                await asyncio.sleep(2.0)
 
             # Process results
             for result in chunk_results:
@@ -497,8 +597,19 @@ class DomainMetadataExtractor:
                         continue
                     filtered_results.append(result)
 
-        # Close the scraper browser session
-        self.scraper.close()
+            # Reset the StatefulBrowser cache and connections after each chunk instead of recreating
+            self.scraper.reset()
+
+            # Reset the FaviconDownloader instead of recreating
+            await self.favicon_downloader.reset()
+
+            # Log system metrics after processing this chunk if monitoring is enabled
+            if monitor:
+                monitor.log_metrics(chunk_num=chunk_num, total_chunks=total_chunks)
+
+        logger.info("Domain processing complete")
+        if monitor:
+            monitor.log_metrics()
 
         return filtered_results
 

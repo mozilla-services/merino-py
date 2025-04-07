@@ -22,6 +22,11 @@ class Image(BaseModel):
         with PILImage.open(BytesIO(self.content)) as image:
             return image
 
+    def get_dimensions(self) -> tuple[int, int]:
+        """Get image dimensions and properly close the file"""
+        with PILImage.open(BytesIO(self.content)) as img:
+            return img.size
+
 
 class BaseContentUploader(ABC):
     """Abstract class for uploading content to GCS."""

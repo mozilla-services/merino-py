@@ -4,6 +4,8 @@
 
 """Unit tests for domain_data_downloader.py module."""
 
+from unittest.mock import patch
+
 import pytest
 from google.cloud.bigquery.table import Row
 
@@ -12,6 +14,8 @@ from merino.jobs.navigational_suggestions.domain_data_downloader import (
 )
 
 
+@patch("google.auth.default")
+@patch("google.cloud.bigquery.Client")
 @pytest.fixture
 def mock_bigquery_client(mocker):
     """Return a mock BigQuery Client instance"""

@@ -81,19 +81,28 @@ class AsyncFaviconDownloader:
         Returns:
             List of favicon images
         """
-        # Implement stricter semaphore to limit concurrent connections
-        semaphore = asyncio.Semaphore(5)
-
-        async def download_with_semaphore(url: str) -> Optional[Image]:
-            try:
-                async with semaphore:
-                    return await self.download_favicon(url)
-            except Exception:
-                return None
-
-        # Create tasks with semaphore control
-        controlled_tasks = [download_with_semaphore(url) for url in urls]
+        # Create tasks without semaphore control
+        tasks = [self.download_favicon(url) for url in urls]
 
         # Handle the exceptions internally to maintain return type consistency
-        results = await asyncio.gather(*controlled_tasks, return_exceptions=True)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         return [None if isinstance(r, BaseException) else r for r in results]
+
+    async def close(self) -> None:
+        """Close the aiohttp session."""
+        if hasattr(self, "session"):
+            await self.session.aclose()
+
+    async def reset(self) -> None:
+        """Reset the downloader by closing the current session and creating a new one."""
+        try:
+            # Close the current session
+            await self.close()
+
+            # Create a new session
+            self.session = create_http_client(
+                request_timeout=float(TIMEOUT),
+                connect_timeout=float(TIMEOUT),
+            )
+        except Exception as ex:
+            logger.warning(f"Error occurred when resetting favicon downloader: {ex}")

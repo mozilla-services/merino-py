@@ -40,9 +40,9 @@ source = ["merino"]
 branch = true
 relative_files = true
 omit = [
-  # Data file only
   "merino/jobs/utils/domain_category_mapping.py",
-  "merino/jobs/utils/domain_tester.py"
+  "merino/jobs/utils/domain_tester.py",
+  "merino/jobs/utils/system_monitor.py",
 ]
 
 [dependency-groups]
