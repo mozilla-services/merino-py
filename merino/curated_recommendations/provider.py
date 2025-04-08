@@ -6,9 +6,8 @@ import re
 from typing import cast
 
 from merino.curated_recommendations.corpus_backends.protocol import (
-    ScheduledSurfaceProtocol,
-    SurfaceId,
-    SectionsProtocol,
+    CorpusBackend,
+    ScheduledSurfaceId,
     Topic,
 )
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
@@ -22,11 +21,11 @@ from merino.curated_recommendations.layouts import (
 from merino.curated_recommendations.localization import get_translation, LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
-    ExperimentName,
     Locale,
     CuratedRecommendation,
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
+    CuratedRecommendationsFeed,
     Section,
 )
 from merino.curated_recommendations.rankers import (
@@ -34,7 +33,6 @@ from merino.curated_recommendations.rankers import (
     spread_publishers,
     thompson_sampling,
     boost_followed_sections,
-    renumber_recommendations,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,23 +41,22 @@ logger = logging.getLogger(__name__)
 class CuratedRecommendationsProvider:
     """Provider for recommendations that have been reviewed by human curators."""
 
-    scheduled_surface_backend: ScheduledSurfaceProtocol
-    sections_backend: SectionsProtocol
+    corpus_backend: CorpusBackend
 
     def __init__(
         self,
-        scheduled_surface_backend: ScheduledSurfaceProtocol,
+        corpus_backend: CorpusBackend,
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
-        sections_backend: SectionsProtocol,
     ) -> None:
-        self.scheduled_surface_backend = scheduled_surface_backend
+        self.corpus_backend = corpus_backend
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
-        self.sections_backend = sections_backend
 
     @staticmethod
-    def get_recommendation_surface_id(locale: Locale, region: str | None = None) -> SurfaceId:
+    def get_recommendation_surface_id(
+        locale: Locale, region: str | None = None
+    ) -> ScheduledSurfaceId:
         """Locale/region mapping is documented here:
         https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit
 
@@ -76,24 +73,24 @@ class CuratedRecommendationsProvider:
         derived_region = CuratedRecommendationsProvider.derive_region(locale, region)
 
         if language == "de":
-            return SurfaceId.NEW_TAB_DE_DE
+            return ScheduledSurfaceId.NEW_TAB_DE_DE
         elif language == "es":
-            return SurfaceId.NEW_TAB_ES_ES
+            return ScheduledSurfaceId.NEW_TAB_ES_ES
         elif language == "fr":
-            return SurfaceId.NEW_TAB_FR_FR
+            return ScheduledSurfaceId.NEW_TAB_FR_FR
         elif language == "it":
-            return SurfaceId.NEW_TAB_IT_IT
+            return ScheduledSurfaceId.NEW_TAB_IT_IT
         else:
             # Default to English language for all other values of language (including 'en' or None)
             if derived_region is None or derived_region in ["US", "CA"]:
-                return SurfaceId.NEW_TAB_EN_US
+                return ScheduledSurfaceId.NEW_TAB_EN_US
             elif derived_region in ["GB", "IE"]:
-                return SurfaceId.NEW_TAB_EN_GB
+                return ScheduledSurfaceId.NEW_TAB_EN_GB
             elif derived_region in ["IN"]:
-                return SurfaceId.NEW_TAB_EN_INTL
+                return ScheduledSurfaceId.NEW_TAB_EN_INTL
             else:
                 # Default to the en-US New Tab if no 2-letter region can be derived from locale or region.
-                return SurfaceId.NEW_TAB_EN_US
+                return ScheduledSurfaceId.NEW_TAB_EN_US
 
     @staticmethod
     def extract_language_from_locale(locale: Locale) -> str | None:
@@ -143,20 +140,13 @@ class CuratedRecommendationsProvider:
     @staticmethod
     def is_sections_experiment(
         request: CuratedRecommendationsRequest,
-        surface_id: SurfaceId,
+        surface_id: ScheduledSurfaceId,
     ) -> bool:
         """Check if the 'sections' experiment is enabled."""
         return (
             request.feeds is not None
             and "sections" in request.feeds  # Clients must request "feeds": ["sections"]
             and surface_id in LOCALIZED_SECTION_TITLES  # The locale must be supported
-        )
-
-    @staticmethod
-    def is_ml_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
-        """Return True if the sections backend experiment is enabled."""
-        return CuratedRecommendationsProvider.is_enrolled_in_experiment(
-            request, ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment"
         )
 
     def rank_recommendations(
@@ -200,8 +190,8 @@ class CuratedRecommendationsProvider:
             # localized topic strings in Firefox. As a workaround, we decided to only send topics
             # for New Tab en-US. This workaround should be removed once Fx131 is released on Oct 1.
             if surface_id not in (
-                SurfaceId.NEW_TAB_EN_US,
-                SurfaceId.NEW_TAB_EN_GB,
+                ScheduledSurfaceId.NEW_TAB_EN_US,
+                ScheduledSurfaceId.NEW_TAB_EN_GB,
             ):
                 rec.topic = None
 
@@ -217,41 +207,13 @@ class CuratedRecommendationsProvider:
             r for r in recommendations if not r.topic or r.topic.value not in blocked_section_ids
         ]
 
-    async def get_corpus_sections(
-        self, surface_id: SurfaceId, min_feed_rank: int
-    ) -> dict[str, Section]:
-        """Fetch sections from the sections backend for the given surface."""
-        corpus_sections = await self.sections_backend.fetch(surface_id)
-        sections: dict[str, Section] = dict()
-        for corpus_section in corpus_sections:
-            recommendations = [
-                CuratedRecommendation(
-                    **item.model_dump(),
-                    receivedRank=rank,
-                )
-                for rank, item in enumerate(corpus_section.sectionItems)
-            ]
-
-            sections[corpus_section.externalId] = Section(
-                receivedFeedRank=len(sections) + min_feed_rank,
-                recommendations=recommendations,
-                title=corpus_section.title,
-                layout=layout_4_medium,
-            )
-
-        return sections
-
     async def get_sections(
         self,
         recommendations: list[CuratedRecommendation],
         request: CuratedRecommendationsRequest,
-        surface_id: SurfaceId,
-    ) -> dict[str, Section]:
-        """Return a dictionary of sections keyed on section id.
-
-        Sections are generated by grouping recommendations (excluding blocked ones) and then
-        filtering out groups with insufficient recommendations.
-        """
+        surface_id: ScheduledSurfaceId,
+    ) -> CuratedRecommendationsFeed:
+        """Return a CuratedRecommendationsFeed with recommendations mapped to their topic."""
         max_recs_per_section = 30
         # Section must have some extra items in case one is dismissed, beyond what can be displayed.
         min_fallback_recs_per_section = 1
@@ -271,88 +233,103 @@ class CuratedRecommendationsProvider:
             region=self.derive_region(request.locale, request.region),
         )
 
-        # Separate top stories and the remaining recommendations.
         top_stories = recommendations[:top_stories_count]
-        renumber_recommendations(top_stories)
         remaining_recs = recommendations[top_stories_count:]
 
-        # Create a dictionary to hold sections, starting with top_stories_section
-        sections: dict[str, Section] = {
-            "top_stories_section": Section(
+        # Renumber receivedRank for top_stories recommendations
+        for rank, recommendation in enumerate(top_stories):
+            recommendation.receivedRank = rank
+
+        # Create "Today's top stories" section with the first 6 recommendations
+        feeds = CuratedRecommendationsFeed(
+            top_stories_section=Section(
                 receivedFeedRank=0,
                 recommendations=top_stories,
                 title=get_translation(surface_id, "top-stories", "Popular Today"),
                 layout=layout_4_large,
-            )
-        }
+            ),
+        )
 
-        if self.is_ml_sections_experiment(request):
-            # Add corpus sections to sections dict
-            sections.update(
-                await self.get_corpus_sections(surface_id, min_feed_rank=len(sections))
-            )
+        # Group the remaining recommendations by topic, preserving Thompson sampling order
+        sections_by_topic: dict[Topic, Section] = {}
+        # Sections will cycle through the following layouts.
+        topic_layout_order = [
+            layout_6_tiles,
+            layout_4_large,
+            layout_4_medium,
+        ]
 
-        # Layout options for topic sections.
-        topic_layout_order = [layout_6_tiles, layout_4_large, layout_4_medium]
-
-        # Group remaining recommendations by topic (keyed on Topic.value)
         for rec in remaining_recs:
             if rec.topic:
-                section_id = rec.topic.value
-                if section_id not in sections:
-                    sections[section_id] = Section(
-                        receivedFeedRank=len(sections),
+                if rec.topic in sections_by_topic:
+                    section = sections_by_topic[rec.topic]
+                else:
+                    formatted_topic_en_us = rec.topic.replace("_", " ").capitalize()
+                    section = sections_by_topic[rec.topic] = Section(
+                        receivedFeedRank=len(sections_by_topic) + 1,  # +1 for top_stories_section
                         recommendations=[],
-                        title=get_translation(surface_id, rec.topic, rec.topic.value),
-                        layout=topic_layout_order[len(sections) % len(topic_layout_order)],
+                        # return the hardcoded localized topic section title
+                        # fallback on en-US topic title
+                        title=get_translation(surface_id, rec.topic, formatted_topic_en_us),
+                        layout=topic_layout_order[
+                            len(sections_by_topic) % len(topic_layout_order)
+                        ],
                     )
-                if len(sections[section_id].recommendations) < max_recs_per_section:
-                    rec.receivedRank = len(sections[section_id].recommendations)
-                    sections[section_id].recommendations.append(rec)
 
-        # Filter out sections that do not have enough recommendations.
-        valid_sections = {}
-        for section_id, section in sections.items():
+                if len(section.recommendations) < max_recs_per_section:
+                    rec.receivedRank = len(section.recommendations)
+                    section.recommendations.append(rec)
+
+        # Only keep sections with enough recommendations.
+        valid_sections_by_topic = {}
+        for topic, section in sections_by_topic.items():
             max_tile_count = section.layout.max_tile_count
             # Keep the section if it has enough recs to fill its biggest layout, plus fallback recs.
             if len(section.recommendations) >= max_tile_count + min_fallback_recs_per_section:
-                valid_sections[section_id] = section
+                valid_sections_by_topic[topic] = section
 
-        # Renumber receivedFeedRank starting at 0.
-        sorted_keys = sorted(
-            valid_sections.keys(), key=lambda k: valid_sections[k].receivedFeedRank
+        # The above loop may have dropped some sections. Renumber receivedFeedRank to 0, 1, 2,...
+        sorted_sections = sorted(
+            valid_sections_by_topic.items(), key=lambda item: item[1].receivedFeedRank
         )
-        for index, section_id in enumerate(sorted_keys):
-            valid_sections[section_id].receivedFeedRank = index
+        for index, (topic, section) in enumerate(sorted_sections):
+            section.receivedFeedRank = index + 1  # +1 for top_stories_section
+            feeds.set_topic_section(topic, section)
 
         # Boost followed sections, if any are provided with the request.
-        if request.sections and valid_sections:
-            valid_sections = boost_followed_sections(request.sections, valid_sections)
+        if request.sections and feeds:
+            feeds = boost_followed_sections(request.sections, feeds)
 
         # Set the layout of the second section to have 3 ads, to match the number of ads in control.
-        self.set_double_row_layout(valid_sections)
+        self.set_double_row_layout(feeds)
 
-        return valid_sections
+        return feeds
 
     @staticmethod
-    def set_double_row_layout(sections: dict[str, Section]):
+    def set_double_row_layout(feeds: CuratedRecommendationsFeed):
         """Apply the double row layout with 3 ads on the second section in the feed,
         only if the second section exists and has enough recommendations.
         """
-        second_section = next((s for s in sections.values() if s.receivedFeedRank == 1), None)
+        second_section = next(
+            (s for s, _ in feeds.get_sections() if s.receivedFeedRank == 1), None
+        )
         # Only change the layout if there is a second section, and if it contains enough recommendations.
         if second_section and len(second_section.recommendations) >= layout_3_ads.max_tile_count:
             second_section.layout = layout_3_ads
 
     async def fetch(
-        self, request: CuratedRecommendationsRequest
+        self, curated_recommendations_request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
+        # Get the recommendation surface ID based on passed locale & region
         surface_id = CuratedRecommendationsProvider.get_recommendation_surface_id(
-            locale=request.locale, region=request.region
+            curated_recommendations_request.locale,
+            curated_recommendations_request.region,
         )
 
-        corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
+        corpus_items = await self.corpus_backend.fetch(surface_id)
+
+        # Convert the CorpusItem list to a CuratedRecommendation list.
         recommendations = [
             CuratedRecommendation(
                 **item.model_dump(),
@@ -361,22 +338,32 @@ class CuratedRecommendationsProvider:
             for rank, item in enumerate(corpus_items)
         ]
 
+        # The sections experiment organizes recommendations in many feeds
         sections_feeds = None
-        general_feed = []
-        if self.is_sections_experiment(request, surface_id):
-            sections_feeds = await self.get_sections(recommendations, request, surface_id)
-        else:
-            general_feed = self.rank_recommendations(recommendations, surface_id, request)
 
+        if self.is_sections_experiment(curated_recommendations_request, surface_id):
+            sections_feeds = await self.get_sections(
+                recommendations, curated_recommendations_request, surface_id
+            )
+            general_feed = []  # Everything is organized into sections. There's no 'general' feed.
+        else:
+            # Default ranking for general feed
+            general_feed = self.rank_recommendations(
+                recommendations, surface_id, curated_recommendations_request
+            )
+
+        # Construct the base response
         response = CuratedRecommendationsResponse(
-            recommendedAt=self.time_ms(),
-            surfaceId=surface_id,
-            data=general_feed,
-            feeds=sections_feeds,
+            recommendedAt=self.time_ms(), surfaceId=surface_id, data=general_feed
         )
 
-        if request.enableInterestPicker and response.feeds:
-            response.interestPicker = create_interest_picker(response.feeds)
+        # If we have feeds to return, add those to the response
+        if sections_feeds:
+            response.feeds = sections_feeds
+
+        if curated_recommendations_request.enableInterestPicker and response.feeds:
+            interest_picker = create_interest_picker(response.feeds.get_sections())
+            response.interestPicker = interest_picker
 
         return response
 
