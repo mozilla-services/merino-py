@@ -122,6 +122,7 @@ class TestBuildCorpusItem:
 
     @staticmethod
     def get_mock_icon_url(url):
+        """Generate a dummy icon image url"""
         return f"https://dummy.icon/{url.replace('https://', '')}"
 
     @pytest.fixture
