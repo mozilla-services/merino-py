@@ -113,22 +113,12 @@ The Navigational Suggestions job can be run locally for development and testing 
 - Docker installed and running
 - Merino repository cloned locally
 
-### Starting the local GCS emulator
-
-The local mode uses a fake GCS server to emulate Google Cloud Storage. To start the emulator:
-
-```bash
-$ ./dev/start-local-gcs-emulator.sh
-```
-
-This will start a Docker container running the fake-gcs-server and create the necessary directory structure.
-
 ### Running the job locally
 
-Once the GCS emulator is running, you can run the Navigational Suggestions job in local mode:
+There is one Make command which starts the Docker container for GCS, queries 20 domains, and stops the container afterwards.
 
 ```bash
-$ uv run merino-jobs navigational-suggestions prepare-domain-metadata --local --sample-size=20
+$ make nav-suggestions
 ```
 
 This will:
@@ -137,16 +127,21 @@ This will:
 3. Upload favicons and domain metadata to the local GCS emulator
 4. Generate a local metrics report in the `local_data` directory
 
-### Options
-
-- `--local`: Enables local mode
-- `--sample-size=N`: Number of domains to process (default: 50)
-- `--metrics-dir=PATH`: Directory to save local run metrics (default: ./local_data)
-
-### Stopping the local services
-
-When you're done, stop the GCS emulator:
+### Examples
 
 ```bash
-$ docker-compose -f dev/docker-compose.yaml down
+# With monitoring enabled
+make nav-suggestions ENABLE_MONITORING=true
+
+# With custom sample size
+make nav-suggestions SAMPLE_SIZE=50
+
+# With custom metrics directory
+make nav-suggestions METRICS_DIR=./test_data
+
+# With all options combined
+make nav-suggestions SAMPLE_SIZE=30 METRICS_DIR=./test_data ENABLE_MONITORING=true
+
+# Add any other options as needed
+make nav-suggestions NAV_OPTS="--min-favicon-width=32"
 ```

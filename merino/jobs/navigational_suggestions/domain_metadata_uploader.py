@@ -75,6 +75,9 @@ class DomainMetadataUploader:
         Returns:
             Public URL of the uploaded favicon or empty string if upload failed
         """
+        if not favicon_url:
+            return ""
+
         # If URL is already from our CDN, return it directly
         if favicon_url and favicon_url.startswith(f"https://{self.uploader.cdn_hostname}"):
             return favicon_url

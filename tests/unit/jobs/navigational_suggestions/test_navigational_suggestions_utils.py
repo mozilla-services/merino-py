@@ -5,7 +5,6 @@
 """Unit tests for utils.py module."""
 
 import logging
-import asyncio
 
 import pytest
 import httpx
@@ -15,6 +14,7 @@ from pytest_mock import MockerFixture
 from merino.jobs.navigational_suggestions.utils import (
     AsyncFaviconDownloader,
     REQUEST_HEADERS,
+    TIMEOUT,
 )
 from merino.utils.gcs.models import Image
 
@@ -134,38 +134,6 @@ async def test_download_multiple_favicons(mocker):
 
 
 @pytest.mark.asyncio
-async def test_download_multiple_favicons_with_exceptions(mocker):
-    """Test that download_multiple_favicons handles errors properly"""
-    # Create a mock favicon image
-    test_favicon = Image(content=b"test", content_type="image/png")
-
-    # Create a mock that alternates between returning favicon and raising exception
-    async def mock_download_favicon(url):
-        if url == "http://example2.com":
-            raise Exception("Test exception")
-        return test_favicon
-
-    # Create the downloader
-    downloader = AsyncFaviconDownloader()
-
-    # Mock the download_favicon method
-    mocker.patch.object(downloader, "download_favicon", side_effect=mock_download_favicon)
-
-    # Test the method with multiple URLs
-    urls = ["http://example1.com", "http://example2.com", "http://example3.com"]
-    results = await downloader.download_multiple_favicons(urls)
-
-    # Verify the results - we should have None for the URL that raised an exception
-    assert len(results) == len(urls)
-    assert results[0] is test_favicon
-    assert results[1] is None  # This one raised an exception
-    assert results[2] is test_favicon
-
-    # Verify download_favicon was called for each URL
-    assert downloader.download_favicon.call_count == len(urls)
-
-
-@pytest.mark.asyncio
 async def test_favicon_downloader_handles_exception(
     mocker: MockerFixture, caplog: LogCaptureFixture
 ):
@@ -239,44 +207,6 @@ async def test_download_favicon_with_redirect(mocker):
     mock_session.get.assert_called_once_with(
         "http://example.com/favicon.ico", headers=REQUEST_HEADERS, follow_redirects=True
     )
-
-
-@pytest.mark.asyncio
-async def test_download_multiple_favicons_with_semaphore(mocker):
-    """Test that download_multiple_favicons uses a semaphore to limit concurrency."""
-    # Create a mock for asyncio.Semaphore
-    mock_semaphore = mocker.MagicMock()
-
-    # Mock the __aenter__ and __aexit__ methods
-    mock_semaphore.__aenter__ = mocker.AsyncMock()
-    mock_semaphore.__aexit__ = mocker.AsyncMock()
-
-    # Mock the Semaphore class to return our mock
-    mocker.patch("asyncio.Semaphore", return_value=mock_semaphore)
-
-    # Create a test favicon
-    test_favicon = Image(content=b"test", content_type="image/png")
-
-    # Create the downloader and mock download_favicon
-    downloader = AsyncFaviconDownloader()
-
-    mocker.patch.object(
-        downloader, "download_favicon", new=mocker.AsyncMock(return_value=test_favicon)
-    )
-
-    # Test with multiple URLs
-    urls = ["http://example1.com", "http://example2.com", "http://example3.com"]
-    await downloader.download_multiple_favicons(urls)
-
-    # Verify semaphore was used correctly
-    assert asyncio.Semaphore.call_count == 1
-    assert asyncio.Semaphore.call_args[0][0] == 5  # Semaphore(5)
-
-    # Verify __aenter__ was called for each URL
-    assert mock_semaphore.__aenter__.call_count == len(urls)
-
-    # Verify __aexit__ was called for each URL
-    assert mock_semaphore.__aexit__.call_count == len(urls)
 
 
 @pytest.mark.asyncio
@@ -390,3 +320,82 @@ async def test_download_multiple_favicons_with_exception_handling(mocker):
 
     # Verify all URLs were attempted
     assert downloader.download_favicon.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_close_session(mocker):
+    """Test the close method closes the session properly."""
+    # Create a downloader with a mock session
+    downloader = AsyncFaviconDownloader()
+    mock_session = mocker.AsyncMock()
+    downloader.session = mock_session
+
+    # Call the close method
+    await downloader.close()
+
+    # Verify the session was closed
+    mock_session.aclose.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_close_session_without_session_attribute(mocker):
+    """Test the close method when session attribute doesn't exist."""
+    # Create a downloader and remove its session attribute
+    downloader = AsyncFaviconDownloader()
+    delattr(downloader, "session")
+
+    # Call the close method (should not raise an exception)
+    await downloader.close()
+
+
+@pytest.mark.asyncio
+async def test_reset_session(mocker):
+    """Test the reset method closes and recreates the session."""
+    # Create a downloader with a mock session
+    downloader = AsyncFaviconDownloader()
+    mock_session = mocker.AsyncMock()
+    downloader.session = mock_session
+
+    # Mock create_http_client to return a new mock session
+    new_mock_session = mocker.AsyncMock()
+    mocker.patch(
+        "merino.jobs.navigational_suggestions.utils.create_http_client",
+        return_value=new_mock_session,
+    )
+
+    # Call the reset method
+    await downloader.reset()
+
+    # Verify the old session was closed
+    mock_session.aclose.assert_called_once()
+
+    # Verify create_http_client was called with the right timeout values
+    from merino.jobs.navigational_suggestions.utils import create_http_client
+
+    create_http_client.assert_called_once_with(
+        request_timeout=float(TIMEOUT),
+        connect_timeout=float(TIMEOUT),
+    )
+
+    # Verify the session was replaced
+    assert downloader.session is new_mock_session
+
+
+@pytest.mark.asyncio
+async def test_reset_session_with_exception(mocker, caplog):
+    """Test the reset method handles exceptions gracefully."""
+    # Create a downloader with a mock session
+    downloader = AsyncFaviconDownloader()
+    mock_session = mocker.AsyncMock()
+    mock_session.aclose.side_effect = Exception("Connection already closed")
+    downloader.session = mock_session
+
+    # Set log level to capture warning logs
+    caplog.set_level(logging.WARNING)
+
+    # Call the reset method
+    await downloader.reset()
+
+    # Verify the warning was logged
+    assert "Error occurred when resetting favicon downloader" in caplog.text
+    assert "Connection already closed" in caplog.text

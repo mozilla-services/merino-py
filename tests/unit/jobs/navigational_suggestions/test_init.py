@@ -349,11 +349,19 @@ def test_prepare_domain_metadata_normal_mode(mock_run_normal):
         write_xcom=True,
         min_favicon_width=48,
         local_mode=False,
+        enable_monitoring=False,
     )
 
     # Verify _run_normal_mode was called with correct parameters
     mock_run_normal.assert_called_once_with(
-        "test-project", "test-dest-project", "test-bucket", "cdn.example.com", True, True, 48
+        "test-project",
+        "test-dest-project",
+        "test-bucket",
+        "cdn.example.com",
+        True,
+        True,
+        48,
+        False,
     )
 
 
@@ -366,10 +374,11 @@ def test_prepare_domain_metadata_local_mode(mock_run_local):
         local_sample_size=20,
         local_data_dir="./test_data",
         min_favicon_width=64,
+        enable_monitoring=False,
     )
 
     # Verify _run_local_mode was called with correct parameters
-    mock_run_local.assert_called_once_with(20, "./test_data", 64)
+    mock_run_local.assert_called_once_with(20, "./test_data", 64, False)
 
 
 def test_prepare_domain_metadata_with_typer_options(mocker):
@@ -393,11 +402,19 @@ def test_prepare_domain_metadata_with_typer_options(mocker):
         write_xcom=MockOption(True),
         min_favicon_width=MockOption(48),
         local_mode=False,
+        enable_monitoring=False,
     )
 
     # Verify _run_normal_mode was called with the default values
     mock_run_normal.assert_called_once_with(
-        "test-project", "test-dest-project", "test-bucket", "cdn.example.com", True, True, 48
+        "test-project",
+        "test-dest-project",
+        "test-bucket",
+        "cdn.example.com",
+        True,
+        True,
+        48,
+        False,
     )
 
 
@@ -418,10 +435,11 @@ def test_prepare_domain_metadata_local_mode_with_typer_options(mocker):
         local_sample_size=MockOption(20),
         local_data_dir=MockOption("./test_data"),
         min_favicon_width=MockOption(64),
+        enable_monitoring=False,
     )
 
     # Verify _run_local_mode was called with the default values
-    mock_run_local.assert_called_once_with(20, "./test_data", 64)
+    mock_run_local.assert_called_once_with(20, "./test_data", 64, False)
 
 
 def test_run_normal_mode_execution_flow(mocker):
@@ -496,6 +514,7 @@ def test_run_normal_mode_execution_flow(mocker):
         force_upload=True,
         write_xcom=False,
         min_favicon_width=48,
+        enable_monitoring=False,
     )
 
     # Verify the interactions
@@ -575,6 +594,7 @@ def test_run_normal_mode_with_xcom(mocker):
         force_upload=True,
         write_xcom=True,
         min_favicon_width=48,
+        enable_monitoring=False,
     )
 
     # Verify _write_xcom_file was called
@@ -620,7 +640,7 @@ def test_run_local_mode_socket_failure(monkeypatch, mocker):
 
     # Call the function with exception handling to catch the SystemExit
     try:
-        _run_local_mode(20, "./test_data", 48)
+        _run_local_mode(20, "./test_data", 48, False)
         assert False, "Should have exited with SystemExit"
     except SystemExit:
         # This is expected behavior
@@ -719,7 +739,7 @@ def test_run_local_mode_success_path(monkeypatch, mocker):
     mocker.patch("builtins.open", mocker.mock_open())
 
     # Call the function
-    _run_local_mode(20, "./test_data", 48)
+    _run_local_mode(20, "./test_data", 48, False)
 
     # Verify key interactions
     mock_domain_provider.get_domain_data.assert_called_once()
