@@ -15,17 +15,13 @@ from scipy.stats import linregress
 
 from merino.configs import settings
 from merino.curated_recommendations import (
-    ScheduledSurfaceBackend,
+    CorpusApiBackend,
     CuratedRecommendationsProvider,
     get_provider,
     ConstantPrior,
     interest_picker,
 )
-from merino.curated_recommendations.corpus_backends.protocol import (
-    Topic,
-    SurfaceId,
-    SectionsProtocol,
-)
+from merino.curated_recommendations.corpus_backends.protocol import Topic, ScheduledSurfaceId
 from merino.curated_recommendations.engagement_backends.protocol import (
     EngagementBackend,
     Engagement,
@@ -35,6 +31,8 @@ from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
     Layout,
+    CuratedRecommendationsFeed,
+    Section,
     Locale,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
@@ -97,17 +95,15 @@ def setup_manifest_provider(manifest_provider):
 
 @pytest.fixture(name="corpus_provider")
 def provider(
-    scheduled_surface_backend: ScheduledSurfaceBackend,
-    sections_backend: SectionsProtocol,
+    corpus_backend: CorpusApiBackend,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
-        scheduled_surface_backend=scheduled_surface_backend,
+        corpus_backend=corpus_backend,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
-        sections_backend=sections_backend,
     )
 
 
@@ -173,7 +169,7 @@ async def test_curated_recommendations(repeat):
         assert response.status_code == 200
 
         # Check surfaceId is returned (should be NEW_TAB_EN_US for en-US locale)
-        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_US
+        assert data["surfaceId"] == ScheduledSurfaceId.NEW_TAB_EN_US
 
         corpus_items = data["data"]
         # assert total of 100 items returned, which is the default maximum number of recommendations in the response.
@@ -227,20 +223,20 @@ class TestCuratedRecommendationsRequestParameters:
     @pytest.mark.parametrize(
         "locale,surface_id",
         [
-            (Locale.EN, SurfaceId.NEW_TAB_EN_US),
-            (Locale.EN_CA, SurfaceId.NEW_TAB_EN_US),
-            (Locale.EN_US, SurfaceId.NEW_TAB_EN_US),
-            (Locale.EN_GB, SurfaceId.NEW_TAB_EN_GB),
-            (Locale.DE, SurfaceId.NEW_TAB_DE_DE),
-            (Locale.DE_DE, SurfaceId.NEW_TAB_DE_DE),
-            (Locale.DE_AT, SurfaceId.NEW_TAB_DE_DE),
-            (Locale.DE_CH, SurfaceId.NEW_TAB_DE_DE),
-            (Locale.FR, SurfaceId.NEW_TAB_FR_FR),
-            (Locale.FR_FR, SurfaceId.NEW_TAB_FR_FR),
-            (Locale.ES, SurfaceId.NEW_TAB_ES_ES),
-            (Locale.ES_ES, SurfaceId.NEW_TAB_ES_ES),
-            (Locale.IT, SurfaceId.NEW_TAB_IT_IT),
-            (Locale.IT_IT, SurfaceId.NEW_TAB_IT_IT),
+            (Locale.EN, ScheduledSurfaceId.NEW_TAB_EN_US),
+            (Locale.EN_CA, ScheduledSurfaceId.NEW_TAB_EN_US),
+            (Locale.EN_US, ScheduledSurfaceId.NEW_TAB_EN_US),
+            (Locale.EN_GB, ScheduledSurfaceId.NEW_TAB_EN_GB),
+            (Locale.DE, ScheduledSurfaceId.NEW_TAB_DE_DE),
+            (Locale.DE_DE, ScheduledSurfaceId.NEW_TAB_DE_DE),
+            (Locale.DE_AT, ScheduledSurfaceId.NEW_TAB_DE_DE),
+            (Locale.DE_CH, ScheduledSurfaceId.NEW_TAB_DE_DE),
+            (Locale.FR, ScheduledSurfaceId.NEW_TAB_FR_FR),
+            (Locale.FR_FR, ScheduledSurfaceId.NEW_TAB_FR_FR),
+            (Locale.ES, ScheduledSurfaceId.NEW_TAB_ES_ES),
+            (Locale.ES_ES, ScheduledSurfaceId.NEW_TAB_ES_ES),
+            (Locale.IT, ScheduledSurfaceId.NEW_TAB_IT_IT),
+            (Locale.IT_IT, ScheduledSurfaceId.NEW_TAB_IT_IT),
         ],
     )
     async def test_curated_recommendations_locales(self, locale, surface_id):
@@ -271,7 +267,7 @@ class TestCuratedRecommendationsRequestParameters:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("count", [10, 50, 100])
-    async def test_curated_recommendations_count(self, count, scheduled_surface_response_data):
+    async def test_curated_recommendations_count(self, count, fixture_response_data):
         """Test the curated recommendations endpoint accepts valid count."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
@@ -279,9 +275,7 @@ class TestCuratedRecommendationsRequestParameters:
             )
             assert response.status_code == 200
             data = response.json()
-            schedule_count = len(
-                scheduled_surface_response_data["data"]["scheduledSurface"]["items"]
-            )
+            schedule_count = len(fixture_response_data["data"]["scheduledSurface"]["items"])
             assert len(data["data"]) == min(count, schedule_count)
 
     @pytest.mark.asyncio
@@ -619,9 +613,9 @@ class TestCuratedRecommendationsRequestParameters:
         topics,
         expected_topics,
         expected_warning,
-        scheduled_surface_response_data_short,
+        fixture_response_data_short,
         fixture_request_data,
-        scheduled_surface_http_client,
+        corpus_http_client,
         caplog,
         repeat,
     ):
@@ -629,9 +623,9 @@ class TestCuratedRecommendationsRequestParameters:
         Should treat invalid topic as blank.
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            scheduled_surface_http_client.post.return_value = Response(
+            corpus_http_client.post.return_value = Response(
                 status_code=200,
-                json=scheduled_surface_response_data_short,
+                json=fixture_response_data_short,
                 request=fixture_request_data,
             )
             response = await ac.post(
@@ -665,7 +659,7 @@ class TestCorpusApiCaching:
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
     @pytest.mark.asyncio
-    async def test_single_request_multiple_fetches(self, scheduled_surface_http_client):
+    async def test_single_request_multiple_fetches(self, corpus_http_client):
         """Test that only a single request is made to the curated-corpus-api."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Gather multiple fetch calls
@@ -674,22 +668,22 @@ class TestCorpusApiCaching:
             assert all(len(result.json()["data"]) == 100 for result in results)
 
             # Assert that exactly one request was made to the corpus api
-            scheduled_surface_http_client.post.assert_called_once()
+            corpus_http_client.post.assert_called_once()
 
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.parametrize(
         "error_type, expected_warning",
         [
-            # ("graphql", 'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX".'),
+            ("graphql", 'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX".'),
             ("http", "'503 Service Unavailable' for url 'https://client-api.getpocket.com'"),
         ],
     )
     @pytest.mark.asyncio
     async def test_single_request_multiple_failed_fetches(
         self,
-        scheduled_surface_http_client,
+        corpus_http_client,
         fixture_request_data,
-        scheduled_surface_response_data,
+        fixture_response_data,
         fixture_graphql_200ok_with_error_response,
         caplog,
         error_type,
@@ -699,10 +693,6 @@ class TestCorpusApiCaching:
         Additionally, test that if the backend returns a GraphQL error, it is handled correctly.
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Pre-warm the backend via an arbitrary API request. Without this, the initial UserAgentMiddleware call
-            # incurs ~2-second latency, distorting the simulated downtime of `retry_wait_initial_seconds` seconds.
-            await ac.get("/__heartbeat__")
-
             start_time = datetime.now()
 
             def temporary_downtime(*args, **kwargs):
@@ -710,9 +700,8 @@ class TestCorpusApiCaching:
                 downtime_end = start_time + timedelta(
                     seconds=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds
                 )
-                now = datetime.now()
 
-                if now < downtime_end:
+                if datetime.now() < downtime_end:
                     if error_type == "graphql":
                         return Response(
                             status_code=200,
@@ -724,11 +713,11 @@ class TestCorpusApiCaching:
                 else:
                     return Response(
                         status_code=200,
-                        json=scheduled_surface_response_data,
+                        json=fixture_response_data,
                         request=fixture_request_data,
                     )
 
-            scheduled_surface_http_client.post = AsyncMock(side_effect=temporary_downtime)
+            corpus_http_client.post = AsyncMock(side_effect=temporary_downtime)
 
             # Hit the endpoint until a 200 response is received or until timeout.
             while datetime.now() < start_time + timedelta(seconds=1):
@@ -742,7 +731,7 @@ class TestCorpusApiCaching:
             assert result.status_code == 200
 
             # Assert that we did not send a lot of requests to the backend.
-            assert scheduled_surface_http_client.post.call_count == 2
+            assert corpus_http_client.post.call_count == 2
 
             # Assert that a warning was logged with a descriptive message.
             warnings = [r for r in caplog.records if r.levelname == "WARNING"]
@@ -750,7 +739,7 @@ class TestCorpusApiCaching:
 
     @pytest.mark.asyncio
     async def test_cache_returned_on_subsequent_calls(
-        self, scheduled_surface_http_client, scheduled_surface_response_data, fixture_request_data
+        self, corpus_http_client, fixture_response_data, fixture_request_data
     ):
         """Test that the cache expires, and subsequent requests return new data."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -759,16 +748,16 @@ class TestCorpusApiCaching:
                 initial_response = await fetch_en_us(ac)
                 initial_data = initial_response.json()
 
-                for item in scheduled_surface_response_data["data"]["scheduledSurface"]["items"]:
+                for item in fixture_response_data["data"]["scheduledSurface"]["items"]:
                     item["corpusItem"]["title"] += " (NEW)"  # Change all the titles
-                scheduled_surface_http_client.post.return_value = Response(
+                corpus_http_client.post.return_value = Response(
                     status_code=200,
-                    json=scheduled_surface_response_data,
+                    json=fixture_response_data,
                     request=fixture_request_data,
                 )
 
                 # Progress time to after the cache expires.
-                frozen_datetime.tick(delta=ScheduledSurfaceBackend.cache_time_to_live_max)
+                frozen_datetime.tick(delta=CorpusApiBackend.cache_time_to_live_max)
                 frozen_datetime.tick(delta=timedelta(seconds=1))
 
                 # When the cache is expired, the first fetch may return stale data.
@@ -777,7 +766,7 @@ class TestCorpusApiCaching:
 
                 # Next fetch should get the new data
                 new_response = await fetch_en_us(ac)
-                assert scheduled_surface_http_client.post.call_count == 2
+                assert corpus_http_client.post.call_count == 2
                 new_data = new_response.json()
                 assert new_data["recommendedAt"] > initial_data["recommendedAt"]
                 assert all("NEW" in item["title"] for item in new_data["data"])
@@ -785,7 +774,7 @@ class TestCorpusApiCaching:
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.asyncio
     async def test_valid_cache_returned_on_error(
-        self, scheduled_surface_http_client, fixture_request_data, caplog
+        self, corpus_http_client, fixture_request_data, caplog
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -794,16 +783,16 @@ class TestCorpusApiCaching:
                 initial_response = await fetch_en_us(ac)
                 initial_data = initial_response.json()
                 assert initial_response.status_code == 200
-                assert scheduled_surface_http_client.post.call_count == 1
+                assert corpus_http_client.post.call_count == 1
 
                 # Simulate 503 error from Corpus API
-                scheduled_surface_http_client.post.return_value = Response(
+                corpus_http_client.post.return_value = Response(
                     status_code=503,
                     request=fixture_request_data,
                 )
 
                 # Progress time to after the cache expires.
-                frozen_datetime.tick(delta=ScheduledSurfaceBackend.cache_time_to_live_max)
+                frozen_datetime.tick(delta=CorpusApiBackend.cache_time_to_live_max)
                 frozen_datetime.tick(delta=timedelta(seconds=1))
 
                 # Try to fetch data when cache expired
@@ -815,7 +804,7 @@ class TestCorpusApiCaching:
                 # assert that Corpus API was called the expected number of times
                 # 1 successful request from above, and retry_count number of retries.
                 assert (
-                    scheduled_surface_http_client.post.call_count
+                    corpus_http_client.post.call_count
                     == settings.curated_recommendations.corpus_api.retry_count + 1
                 )
 
@@ -838,8 +827,8 @@ class TestCuratedRecommendationsMetrics:
             # TODO: Remove reliance on internal details of aiodogstatsd
             metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
             assert metric_keys == [
-                "corpus_api.scheduled_surface.timing",
-                "corpus_api.scheduled_surface.status_codes.200",
+                "corpus_api.request.timing",
+                "corpus_api.request.status_codes.200",
                 "post.api.v1.curated-recommendations.timing",
                 "post.api.v1.curated-recommendations.status_codes.200",
                 "response.status_codes.200",
@@ -868,9 +857,9 @@ class TestCuratedRecommendationsMetrics:
     async def test_metrics_corpus_api_error(
         self,
         mocker: MockerFixture,
-        scheduled_surface_http_client,
+        corpus_http_client,
         fixture_request_data,
-        scheduled_surface_response_data,
+        fixture_response_data,
     ) -> None:
         """Test that metrics are recorded when the curated-corpus-api returns a 500 error"""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
@@ -886,11 +875,11 @@ class TestCuratedRecommendationsMetrics:
                 else:
                     return Response(
                         status_code=200,
-                        json=scheduled_surface_response_data,
+                        json=fixture_response_data,
                         request=fixture_request_data,
                     )
 
-            scheduled_surface_http_client.post = AsyncMock(side_effect=first_request_returns_error)
+            corpus_http_client.post = AsyncMock(side_effect=first_request_returns_error)
 
             await fetch_en_us(ac)
 
@@ -899,10 +888,10 @@ class TestCuratedRecommendationsMetrics:
             assert (
                 metric_keys
                 == [
-                    "corpus_api.scheduled_surface.timing",
-                    "corpus_api.scheduled_surface.status_codes.500",
-                    "corpus_api.scheduled_surface.timing",
-                    "corpus_api.scheduled_surface.status_codes.200",
+                    "corpus_api.request.timing",
+                    "corpus_api.request.status_codes.500",
+                    "corpus_api.request.timing",
+                    "corpus_api.request.status_codes.200",
                     "post.api.v1.curated-recommendations.timing",
                     "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
                     "response.status_codes.200",
@@ -1006,94 +995,40 @@ class TestSections:
     @pytest.mark.parametrize(
         "surface_id",
         [
-            SurfaceId.NEW_TAB_EN_US,
-            SurfaceId.NEW_TAB_DE_DE,
+            ScheduledSurfaceId.NEW_TAB_EN_US,
+            ScheduledSurfaceId.NEW_TAB_DE_DE,
         ],
     )
     def test_section_translations(self, surface_id):
-        """Check that there is a translation for every topic and top_stories_section.
+        """Check that there is a translation for every section title.
         Currently, for en-US and DE.
         """
         # Define the mapping of strings to be replaced, use the Topic enum
-        expected_translation_keys = [topic.value for topic in Topic]
+        replacement_section_titles = {topic.name.lower(): topic.value for topic in Topic}
         # top-stories is not in the Topic enum, do separately
-        expected_translation_keys.append("top-stories")
+        replacement_section_titles["top_stories_section"] = "top-stories"
+
+        # Get all Section titles in CuratedRecommendationsFeed
+        # Replace strings using the Topic enum-derived map
+        section_titles = [
+            # Replace if in section title map, else keep original section title
+            replacement_section_titles.get(title_name, title_name)
+            for title_name, title_type in CuratedRecommendationsFeed.__annotations__.items()
+            if title_type == Section | None
+        ]
 
         # Get the localized titles for the current surface_id
         localized_titles = LOCALIZED_SECTION_TITLES[surface_id]
 
         # Assert that each section title has a translation
-        for key in expected_translation_keys:
-            assert key in localized_titles and localized_titles[key], (
-                f"Missing translation for '{key}' in " f"{surface_id}"
-            )
-
-    @pytest.mark.asyncio
-    async def test_corpus_sections_feed_content(self):
-        """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for different locales.
-        """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": "en-US",
-                    "feeds": ["sections"],
-                    "experimentName": "new-tab-ml-sections",
-                    "experimentBranch": "treatment",
-                },
-            )
-            data = response.json()
-
-            # Check if the response is valid
-            assert response.status_code == 200
-
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
-            assert "music" in sections
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        "experiment_payload",
-        [
-            {},  # No experiment
-            {"experimentName": "new-tab-ml-sections", "experimentBranch": "control"},
-        ],
-    )
-    async def test_corpus_sections_feed_content_control(self, experiment_payload):
-        """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for different locales.
-        """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": "en-US", "feeds": ["sections"]} | experiment_payload,
-            )
-            data = response.json()
-
-            # Check if the response is valid
-            assert response.status_code == 200
-
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
-            # The only sections are topic sections or "top_stories_section"
-            assert all(
-                section_name == "top_stories_section" or section_name in Topic
-                for section_name in sections
+        for title in section_titles:
+            assert title in localized_titles and localized_titles[title], (
+                f"Missing translation for '{title}' in " f"{surface_id}"
             )
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("locale", ["en-US", "de-DE"])
-    @pytest.mark.parametrize(
-        "experiment_payload",
-        [
-            {},  # No experiment
-            {"experimentName": "new-tab-ml-sections", "experimentBranch": "treatment"},
-        ],
-    )
-    async def test_sections_feed_content(self, locale, experiment_payload, caplog):
+    async def test_sections_feed_content(self, locale, caplog):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for different locales.
         """
@@ -1101,7 +1036,7 @@ class TestSections:
             # Mock the endpoint to request the sections feed
             response = await ac.post(
                 "/api/v1/curated-recommendations",
-                json={"locale": locale, "feeds": ["sections"]} | experiment_payload,
+                json={"locale": locale, "feeds": ["sections"]},
             )
             data = response.json()
 
@@ -1129,30 +1064,24 @@ class TestSections:
                 recs = section["recommendations"]
                 assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
 
+            # Ensure all topics are present and are named according to the Topic Enum value.
+            assert all(topic.value in feeds for topic in Topic)
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "sections_payload",
         [
-            {},
-            {"sections": [{"sectionId": "sports", "isFollowed": True, "isBlocked": False}]},
+            None,
+            [{"sectionId": "sports", "isFollowed": True, "isBlocked": False}],
         ],
     )
-    @pytest.mark.parametrize(
-        "experiment_payload",
-        [
-            {},  # No experiment
-            {"experimentName": "new-tab-ml-sections", "experimentBranch": "treatment"},
-        ],
-    )
-    async def test_sections_layouts(self, sections_payload, experiment_payload):
+    async def test_sections_layouts(self, sections_payload):
         """Test that the correct layout are returned along with sections."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": "en-US", "feeds": ["sections"]}
-                | sections_payload
-                | experiment_payload,
-            )
+            payload = {"locale": "en-US", "feeds": ["sections"]}
+            if sections_payload is not None:
+                payload["sections"] = sections_payload
+            response = await ac.post("/api/v1/curated-recommendations", json=payload)
             assert response.status_code == 200
             data = response.json()
             feeds = data["feeds"]
@@ -1173,9 +1102,8 @@ class TestSections:
 
             # Assert layout of the first section.
             assert first_section["layout"]["name"] == "4-large-small-medium-1-ad"
-            # Assert layout of the second section has 2 rows, if it has enough recommendations for this layout.
-            if len(second_section["recommendations"]) >= 7:
-                assert second_section["layout"]["name"] == "7-double-row-3-ad"
+            # Assert layout of the second section.
+            assert second_section["layout"]["name"] == "7-double-row-3-ad"
             # Assert that none of the other sections have the layout "7-double-row-3-ad".
             for section in sections.values():
                 if section["receivedFeedRank"] != 1:
@@ -1209,14 +1137,14 @@ class TestSections:
             assert response.status_code == 200
 
             # assert isFollowed & isBlocked have been correctly set
-            if data["feeds"].get("arts") is not None:
+            if data["feeds"]["arts"] is not None:
                 assert data["feeds"]["arts"]["isFollowed"]
                 # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2]
-            if data["feeds"].get("education") is not None:
+            if data["feeds"]["education"] is not None:
                 assert not data["feeds"]["education"]["isFollowed"]
                 assert data["feeds"]["education"]["isBlocked"]
-            if data["feeds"].get("sports") is not None:
+            if data["feeds"]["sports"] is not None:
                 assert data["feeds"]["sports"]["isFollowed"]
                 # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2]
@@ -1290,23 +1218,23 @@ class TestSections:
             assert response.status_code == 200
 
             # assert isFollowed & isBlocked & followedAt have been correctly set
-            if data["feeds"].get("arts") is not None:
+            if data["feeds"]["arts"] is not None:
                 assert data["feeds"]["arts"]["isFollowed"]
                 # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2]
                 assert data["feeds"]["arts"]["followedAt"]
-            if data["feeds"].get("education") is not None:
+            if data["feeds"]["education"] is not None:
                 assert not data["feeds"]["education"]["isFollowed"]
                 assert not data["feeds"]["education"]["followedAt"]
                 assert data["feeds"]["education"]["isBlocked"]
-            if data["feeds"].get("sports") is not None:
+            if data["feeds"]["sports"] is not None:
                 assert data["feeds"]["sports"]["isFollowed"]
                 # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2]
                 assert data["feeds"]["sports"]["followedAt"]
 
             # in the case both sections are present, sports is recently followed & needs to have higher rank
-            if data["feeds"].get("arts") is not None and data["feeds"].get("sports") is not None:
+            if data["feeds"]["arts"] is not None and data["feeds"]["sports"] is not None:
                 assert data["feeds"]["sports"]["receivedFeedRank"] == 1
                 assert data["feeds"]["arts"]["receivedFeedRank"] == 2
 
@@ -1447,7 +1375,7 @@ class TestSections:
 @pytest.mark.asyncio
 async def test_curated_recommendations_enriched_with_icons(
     manifest_provider,
-    scheduled_surface_http_client,
+    corpus_http_client,
     fixture_request_data,
 ):
     """Test the enrichment of a curated recommendation with an added icon-url."""
@@ -1486,7 +1414,7 @@ async def test_curated_recommendations_enriched_with_icons(
             }
         }
     }
-    scheduled_surface_http_client.post.return_value = Response(
+    corpus_http_client.post.return_value = Response(
         status_code=200,
         json=mocked_response,
         request=fixture_request_data,

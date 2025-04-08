@@ -13,34 +13,43 @@ from merino.curated_recommendations.interest_picker import (
     MIN_INTEREST_PICKER_COUNT,
 )
 from merino.curated_recommendations.layouts import layout_4_medium
-from merino.curated_recommendations.protocol import Section
+from merino.curated_recommendations.protocol import (
+    Section,
+    CuratedRecommendationsFeed,
+    SectionWithID,
+)
 from tests.unit.curated_recommendations.fixtures import generate_sections_feed
 
 
 def test_no_sections():
     """Test that if the feed has no sections, no interest picker is created."""
-    assert create_interest_picker(sections={}) is None
+    feed = CuratedRecommendationsFeed()
+    sections: list[SectionWithID] = feed.get_sections()  # Expected to be empty.
+    picker = create_interest_picker(sections)
+    assert picker is None
 
 
 def test_not_enough_sections():
     """Test that no interest picker is created if insufficient sections are eligible."""
     # Create feed such that hidden sections = total - MIN_INITIALLY_VISIBLE_SECTION_COUNT
     total = MIN_INTEREST_PICKER_COUNT + MIN_INITIALLY_VISIBLE_SECTION_COUNT - 1
-    sections = generate_sections_feed(total)
+    feed = generate_sections_feed(total)
+    sections = feed.get_sections()
     picker = create_interest_picker(sections)
     # Not enough hidden sections -> no picker.
     assert picker is None
     # All sections must be visible.
-    for s in sections.values():
-        assert s.isInitiallyVisible is True
+    for s in sections:
+        assert s.section.isInitiallyVisible is True
 
 
 @pytest.mark.parametrize("followed_count", list(range(7)))
 def test_interest_picker_is_created(followed_count: int):
     """Test that an interest picker is created as expected, if enough sections are available."""
     total = 15
-    sections = generate_sections_feed(total, followed_count=followed_count)
-    original_order = list(sections.keys())
+    feed = generate_sections_feed(total, followed_count=followed_count)
+    sections = feed.get_sections()
+    original_order = [s.ID for s in sections]
 
     picker = create_interest_picker(sections)
     assert picker is not None
@@ -55,43 +64,43 @@ def test_interest_picker_is_created(followed_count: int):
     assert min_picker_rank <= picker.receivedFeedRank <= max_picker_rank
 
     # Check that first MIN_INITIALLY_VISIBLE_SECTION_COUNT sections are visible.
-    visible = [s for s in sections.values() if s.isInitiallyVisible]
+    visible = [s for s in sections if s.section.isInitiallyVisible]
     expected_vis = max(MIN_INITIALLY_VISIBLE_SECTION_COUNT, 1 + followed_count)
     assert len(visible) == expected_vis
 
     # All followed sections must be visible.
-    for s in sections.values():
-        if s.isFollowed:
-            assert s.isInitiallyVisible is True
+    for s in sections:
+        if s.section.isFollowed:
+            assert s.section.isInitiallyVisible is True
 
     # Check renumbering: ranks should be sequential and skip the picker rank.
-    ranks = [s.receivedFeedRank for s in sections.values()]
-    expected = [i for i in range(len(sections) + 1) if i != picker.receivedFeedRank]
+    ranks = [s.section.receivedFeedRank for s in sections]
+    expected = [i for i in range(total + 1) if i != picker.receivedFeedRank]
     assert sorted(ranks) == expected
 
     # Check picker sections: they must include all sections not initially visible.
-    hidden_ids = {key for key, s in sections.items() if not s.isInitiallyVisible}
+    hidden_ids = {s.ID for s in sections if not s.section.isInitiallyVisible}
     picker_ids = {ps.sectionId for ps in picker.sections}
     assert picker_ids == hidden_ids
 
     # Assert that the order of sections is preserved from before calling create_interest_picker.
-    new_order = [
-        key for key, s in sorted(sections.items(), key=lambda item: item[1].receivedFeedRank)
-    ]
+    new_order = [s.ID for s in sorted(sections, key=lambda s: s.section.receivedFeedRank)]
     assert new_order == original_order
 
 
 def test_renumber_sections_preserves_order():
     """Test that _renumber_sections assigns sequential ranks skipping the picker rank."""
-    sections = {}
+    # Create a simple list of SectionWithID with preset ranks.
+    sections = []
     for i in range(5):
         sec = Section(
             receivedFeedRank=i, recommendations=[], title=f"S{i}", layout=layout_4_medium
         )
-        sections[f"id{i}"] = sec
+        # Dummy ID is "id{i}"
+        sections.append(SectionWithID(section=sec, ID=f"id{i}"))
     # Suppose picker rank is 2.
     _renumber_sections(sections, 2)
-    new_ranks = [s.receivedFeedRank for s in sections.values()]
+    new_ranks = [s.section.receivedFeedRank for s in sections]
     # Expected ranks: 0,1,3,4,5 (2 is skipped).
     assert new_ranks == [0, 1, 3, 4, 5]
 
@@ -105,13 +114,13 @@ def test_renumber_sections_preserves_order():
 )
 def test_get_interest_picker_rank_param(followed: bool, expected_ranks: set[int]):
     """Test _get_interest_picker_rank returns proper values based on followed status."""
-    sections = {}
+    sections = []
     for i in range(10):
         sec = Section(
             receivedFeedRank=i, recommendations=[], title=f"S{i}", layout=layout_4_medium
         )
         sec.isFollowed = (i == 5) if followed else False
-        sections[f"id{i}"] = sec
+        sections.append(SectionWithID(section=sec, ID=f"id{i}"))
     actual_ranks = {_get_interest_picker_rank(sections) for _ in range(100)}
     assert actual_ranks == expected_ranks
 
@@ -119,7 +128,7 @@ def test_get_interest_picker_rank_param(followed: bool, expected_ranks: set[int]
 def test_set_section_initial_visibility_without_enough_sections():
     """Test _set_section_initial_visibility makes all sections visible exceeding min_picker."""
     # Create 10 sections; mark none as followed initially.
-    sections = {}
+    sections = []
     for i in range(10):
         sec = Section(
             receivedFeedRank=i, recommendations=[], title=f"S{i}", layout=layout_4_medium
@@ -127,16 +136,16 @@ def test_set_section_initial_visibility_without_enough_sections():
         sec.isFollowed = False
         # Initially, set all to False.
         sec.isInitiallyVisible = False
-        sections[f"id{i}"] = sec
+        sections.append(SectionWithID(section=sec, ID=f"id{i}"))
     # Call function with min_visible=3, min_picker=8.
     _set_section_initial_visibility(sections, 3, 8)
     # Since there are 10 sections, invisible count would be 10-3=7 < 8, so all become visible.
-    assert all(s.isInitiallyVisible for s in sections.values())
+    assert all(s.section.isInitiallyVisible for s in sections if s.section.isInitiallyVisible)
 
 
 def test_set_section_initial_visibility_with_followed():
     """Test that followed sections are always visible and minimum count is met."""
-    sections = {}
+    sections = []
     for i in range(15):
         sec = Section(
             receivedFeedRank=i, recommendations=[], title=f"S{i}", layout=layout_4_medium
@@ -144,18 +153,14 @@ def test_set_section_initial_visibility_with_followed():
         # Mark sections 2 and 7 as followed.
         sec.isFollowed = i in [2, 7]
         sec.isInitiallyVisible = False
-        sections[f"id{i}"] = sec
-    # Randomize the order by shuffling keys.
-    keys = list(sections.keys())
-    shuffle(keys)
-    sections = {k: sections[k] for k in keys}
+        sections.append(SectionWithID(section=sec, ID=f"id{i}"))
+    shuffle(sections)  # Randomize the order to ensure receivedFeedRank is respected.
 
     _set_section_initial_visibility(sections, 3, 8)
-    visible_ids = {k for k, s in sections.items() if s.isInitiallyVisible}
+    visible = [s for s in sections if s.section.isInitiallyVisible]
 
-    # Expected: top 3 by receivedFeedRank (id0, id1, id2) and followed section id7.
-    expected_visible = {"id0", "id1", "id2", "id7"}
-    assert visible_ids == expected_visible
-    for s in sections.values():
-        if s.isFollowed:
-            assert s.isInitiallyVisible is True
+    # At least sections 2 and 7 must be visible, and the top 3 overall.
+    assert {s.ID for s in visible} == {"id0", "id1", "id2", "id7"}
+    for s in sections:
+        if s.section.isFollowed:
+            assert s.section.isInitiallyVisible is True
