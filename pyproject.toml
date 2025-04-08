@@ -50,6 +50,7 @@ jobs = [
     "typer>=0.11.0,<0.15",
     "tldextract>=3.4.4,<4",
     "mechanicalsoup>=1.3.0",
+    "psutil>=7.0.0",
 ]
 load = [
     "faker>=20.0.0,<21",
