@@ -108,7 +108,7 @@ fail due to validation errors and missing fields (columns) in the input CSV.
 #### 7. Run the test
 
 ```
-$ MERINO_ENV=testing poetry run pytest tests/unit/jobs/csv_rs_uploader/test_foo.py
+$ MERINO_ENV=testing uv run pytest tests/unit/jobs/csv_rs_uploader/test_foo.py
 ```
 
 See also the main Merino development documentation for running unit tests.
@@ -130,7 +130,7 @@ options and their defaults. Note that the `upload` command is the only command
 in the `csv-rs-uploader` job.
 
 ```
-poetry run merino-jobs csv-rs-uploader upload --help`
+uv run merino-jobs csv-rs-uploader upload --help`
 ```
 
 The uploader takes a CSV file as input, so you'll need to download or create one
@@ -140,7 +140,7 @@ Here's an example that uploads suggestions in `foo.csv` to the remote settings
 dev server:
 
 ```
-poetry run merino-jobs csv-rs-uploader upload \
+uv run merino-jobs csv-rs-uploader upload \
   --server "https://remote-settings-dev.allizom.org/v1" \
   --bucket main-workspace \
   --csv-path foo.csv \
