@@ -21,7 +21,7 @@ COPY . $APP_HOME
 
 # Install maxmind db and app dependencies. Clean up build tools after
 RUN apt-get update && \
-    apt-get install --yes build-essential libmaxminddb0 libmaxminddb-dev procps && \
+    apt-get install --yes build-essential libmaxminddb0 libmaxminddb-dev && \
     uv sync --frozen --no-cache --no-dev --no-group load && \
     apt-get remove --yes build-essential && \
     apt-get -q --yes autoremove && \
