@@ -22,3 +22,5 @@ mermaid-init.js
 mermaid.min.js
 profile.json
 workspace/
+dev/local_data/
+local_data/
