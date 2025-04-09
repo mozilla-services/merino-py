@@ -102,6 +102,15 @@ def fixture_blob_json() -> str:
                     "icon": "https://merino-images.services.mozilla.com/favicons"
                     "/e673f8818103a583c9a98ee38aa7892d58969ec2a8387deaa46ef6d94e8a3796_4535.png",
                 },
+                {
+                    "rank": 4,
+                    "domain": "bbc",
+                    "categories": ["News"],
+                    "serp_categories": [0],
+                    "url": "https://www.bbc.co.uk/",
+                    "title": "BBC Home - Breaking News",
+                    "icon": "https://merino-images.services.mozilla.com/favicons/bbciconhash_12345.png",
+                },
             ]
         }
     )

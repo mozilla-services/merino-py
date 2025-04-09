@@ -23,7 +23,7 @@ async def test_get_file_async(
     assert get_file_result_code is GetManifestResultCode.SUCCESS
     assert isinstance(result, ManifestData)
     assert result.domains
-    assert len(result.domains) == 3
+    assert len(result.domains) == 4
     assert result.domains[0].domain == "google"
 
     # assert correct success log is emitted
