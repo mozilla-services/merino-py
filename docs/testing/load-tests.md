@@ -496,9 +496,9 @@ are set in step 1, the load test will stop automatically.
 The load test maintenance schedule cadence is once a quarter and should include
 updating the following:
 
-1. [poetry][poetry] version and python dependencies
+1. [uv][uv] version and python dependencies
     * [ ] [pyproject.toml][pyproject_toml]
-    * [ ] [poetry.lock][poetry_lock]
+    * [ ] [uv.lock][uv_lock]
 2. [Docker][docker] artifacts
     * [ ] [Dockerfile][dockerfile]
     * [ ] [docker-compose.yml][docker_compose]
@@ -529,8 +529,8 @@ updating the following:
 [merino_history_doc]: https://docs.google.com/document/d/1BGNhKuclUH40Bit9KxYWLiv_N_VnE66uxi9pBFbRWbg/edit
 [merino_spreadsheet]: https://docs.google.com/spreadsheets/d/1SAO3QYIrbxDRxzmYIab-ebZXA1dF06W1lT4I1h2R3a8/edit?usp=sharing
 [merino_test_plan]: https://docs.google.com/document/d/1v7LDXENPZg37KXeNcznEZKNZ8rQlOhNbsHprFyMXHhs/edit?usp=sharing
-[poetry]: https://python-poetry.org/docs/
-[poetry_lock]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/poetry.lock
+[uv]: https://docs.astral.sh/uv/
+[uv_lock]: https://github.com/mozilla-services/merino-py/blob/main/uv.lock
 [pyproject_toml]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/pyproject.toml
 [load_test_docs]: ./load-tests.md
 [setup_k8s]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/setup_k8s.sh
