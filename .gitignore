@@ -169,3 +169,6 @@ workspace/
 
 # Folders for the local Navigational Suggestions job
 local_data/
+
+# Local data for development
+dev/local_data/
