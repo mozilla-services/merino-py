@@ -14,7 +14,6 @@ from merino.curated_recommendations.layouts import layout_4_medium, layout_4_lar
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     MIN_TILE_ID,
-    CuratedRecommendationsFeed,
     Section,
     SectionConfiguration,
 )
@@ -23,39 +22,44 @@ from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
     boost_followed_sections,
     is_section_recently_followed,
+    renumber_recommendations,
 )
+from tests.unit.curated_recommendations.fixtures import generate_recommendations
+
+
+class TestRenumberRecommendations:
+    """Tests for the renumber_recommendations function."""
+
+    def test_empty_list(self):
+        """Test that renumber_recommendations works with an empty list."""
+        recs: list[CuratedRecommendation] = []
+        renumber_recommendations(recs)
+        assert recs == []
+
+    def test_sequential_order(self):
+        """Test that renumber_recommendations assigns sequential ranks."""
+        recs = generate_recommendations(["1", "2", "3", "4", "5"])
+        renumber_recommendations(recs)
+        assert [rec.receivedRank for rec in recs] == list(range(len(recs)))
+
+    def test_preserve_order_for_equal_ranks(self):
+        """Test renumber_recommendations preserves original order for equal initial ranks."""
+        recs = generate_recommendations(["1", "2", "3", "4"])
+        # Set all recommendations to the same initial rank.
+        for rec in recs:
+            rec.receivedRank = 5
+        original_order = [rec.corpusItemId for rec in recs]
+        renumber_recommendations(recs)
+        assert [rec.corpusItemId for rec in recs] == original_order
+        assert [rec.receivedRank for rec in recs] == list(range(len(recs)))
 
 
 class TestCuratedRecommendationsProviderSpreadPublishers:
     """Unit tests for spread_publishers."""
 
-    @staticmethod
-    def generate_recommendations(item_ids: list[str]) -> list[CuratedRecommendation]:
-        """Create dummy recommendations for the tests below."""
-        recs = []
-        for item_id in item_ids:
-            rec = CuratedRecommendation(
-                corpusItemId=str(uuid.uuid4()),
-                tileId=MIN_TILE_ID + random.randint(0, 101),
-                receivedRank=random.randint(0, 101),
-                scheduledCorpusItemId=item_id,
-                url=HttpUrl("https://littlelarry.com/"),
-                title="little larry",
-                excerpt="is failing english",
-                topic=random.choice(list(Topic)),
-                publisher="cohens",
-                isTimeSensitive=False,
-                imageUrl=HttpUrl("https://placehold.co/600x400/"),
-                iconUrl=None,
-            )
-
-            recs.append(rec)
-
-        return recs
-
     def test_spread_publishers_single_reorder(self):
         """Should only re-order one element."""
-        recs = self.generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "walter.com"
         recs[2].publisher = "donnie.com"
@@ -94,7 +98,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
     def test_spread_publishers_multiple_reorder(self):
         """Should re-order multiple elements."""
-        recs = self.generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "walter.com"
         recs[2].publisher = "walter.com"
@@ -133,7 +137,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
     def test_spread_publishers_give_up_at_the_end(self):
         """Should not re-order when the end of the list cannot satisfy the requested spread."""
-        recs = self.generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "abides.com"
         recs[2].publisher = "walter.com"
@@ -162,7 +166,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
     def test_spread_publishers_cannot_spread(self):
         """If we don't have enough variance in publishers, spread can't happen."""
-        recs = self.generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "abides.com"
         recs[2].publisher = "donnie.com"
@@ -394,30 +398,20 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
     """Unit tests for boost_followed_sections"""
 
     @staticmethod
-    def generate_curated_recommendations_feed_sections(
+    def generate_sections(
         received_feed_ranks: list[int], section_ids: list[str]
-    ) -> CuratedRecommendationsFeed:
-        """Create dummy sections & construct dummy CuratedRecommendationsFeed object for the tests below with
-        specific receivedFeedRank per section.
-        """
-        sections = []
+    ) -> dict[str, Section]:
+        """Create a dictionary of dummy sections with specific receivedFeedRank per section."""
+        sections = {}
         layout_order = [layout_4_medium, layout_4_large, layout_6_tiles]
-        i = 1
-        for rank in received_feed_ranks:
-            section = Section(
+        for rank, section_id in zip(received_feed_ranks, section_ids):
+            sections[section_id] = Section(
                 receivedFeedRank=rank,
-                recommendations=[],
-                title=section_ids[i - 1],
+                recommendations=[],  # Dummy recommendations.
+                title=section_id,
                 layout=layout_order[0],
             )
-            sections.append(section)
-            i += 1
-
-        feed = CuratedRecommendationsFeed()
-        for section_id, section in zip(section_ids, sections):
-            setattr(feed, section_id, section)  # Dynamically set Section attributes
-
-        return feed
+        return sections
 
     @freeze_time("2025-03-20 12:00:00", tz_offset=0)
     @pytest.mark.parametrize(
@@ -457,8 +451,8 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         """Test boosting sections works properly for each section."""
         req_sections = [followed_section]
 
-        # Generate feed with all sections
-        feed = self.generate_curated_recommendations_feed_sections(
+        # Generate feed with all sections as a dict using the correct keys.
+        feed = self.generate_sections(
             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
             [
                 "top_stories_section",  # 0
@@ -466,42 +460,39 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
                 "career",  # 2
                 "arts",  # 3
                 "food",  # 4
-                "health_fitness",  # 5
+                "health",  # 5
                 "home",  # 6
-                "personal_finance",  # 7
-                "politics",  # 8
+                "finance",  # 7
+                "government",  # 8
                 "sports",  # 9
-                "technology",  # 10
+                "tech",  # 10
                 "travel",  # 11
                 "education",  # 12
-                "gaming",  # 13
-                "parenting",  # 14
-                "science",  # 15
-                "self_improvement",  # 16
+                "hobbies",  # 13
+                "society-parenting",  # 14
+                "education-science",  # 15
+                "society",  # 16
             ],
         )
-        # Let's first assert original feed received ranks
-        assert feed.top_stories_section.receivedFeedRank == 0
-        assert (
-            feed.get_section_by_topic_id(followed_section.sectionId).receivedFeedRank
-            == original_received_feed_rank
-        )
+        # Assert original feed received ranks.
+        assert feed["top_stories_section"].receivedFeedRank == 0
+        assert feed[followed_section.sectionId].receivedFeedRank == original_received_feed_rank
 
-        # Get the updated feed with boosted followed sections
+        # Get the updated feed with boosted followed sections.
         new_feed = boost_followed_sections(req_sections, feed)
 
-        # Assertions for receivedFeedRank
-        assert new_feed.top_stories_section.receivedFeedRank == 0  # should always remain 0
-        # Followed section should have receivedFeedRank == 1
-        assert new_feed.get_section_by_topic_id(followed_section.sectionId).receivedFeedRank == 1
+        # Assertions for receivedFeedRank.
+        assert new_feed["top_stories_section"].receivedFeedRank == 0  # should always remain 0.
+        # Followed section should have receivedFeedRank == 1.
+        assert new_feed[followed_section.sectionId].receivedFeedRank == 1
 
-        # Assertions for isFollowed
-        assert new_feed.get_section_by_topic_id(followed_section.sectionId).isFollowed
+        # Assertions for isFollowed.
+        assert new_feed[followed_section.sectionId].isFollowed
 
     @freeze_time("2025-03-20 12:00:00", tz_offset=0)
     def test_boost_followed_sections_with_followed_at(self):
-        """Test boosting sections works properly when following more than 1 section. Followed sections should be ranked
-        based on followed_at. Followed & unfollowed sections should maintain their relative order.
+        """Test boosting sections works properly when following more than 1 section.
+        Followed sections should be ranked based on followed_at. Followed & unfollowed sections should maintain their relative order.
         """
         req_sections = [
             SectionConfiguration(
@@ -509,92 +500,85 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
                 isFollowed=True,
                 isBlocked=False,
                 followedAt=datetime(2025, 3, 18, tzinfo=timezone.utc),  # Followed on 03/18
-            ),  # maps to gaming section
+            ),  # maps to hobbies section
             SectionConfiguration(
                 sectionId="tech",
                 isFollowed=True,
                 isBlocked=False,
-                followedAt=datetime(2025, 3, 10, tzinfo=timezone.utc),  # Followed on 3/10
-            ),  # maps to technology section
+                followedAt=datetime(2025, 3, 10, tzinfo=timezone.utc),  # Followed on 03/10
+            ),  # maps to tech section
             SectionConfiguration(
                 sectionId="travel", isFollowed=False, isBlocked=True
             ),  # maps to travel section
         ]
-        feed = self.generate_curated_recommendations_feed_sections(
-            [0, 5, 3, 2, 6], ["top_stories_section", "gaming", "food", "technology", "travel"]
+        feed = self.generate_sections(
+            [0, 5, 3, 2, 6],
+            ["top_stories_section", "hobbies", "food", "tech", "travel"],
         )
-        # Let's first assert original feed received ranks
-        assert feed.top_stories_section.receivedFeedRank == 0
-        assert feed.technology.receivedFeedRank == 2
-        assert feed.food.receivedFeedRank == 3
-        assert feed.gaming.receivedFeedRank == 5
-        assert feed.travel.receivedFeedRank == 6
+        # Assert original feed received ranks.
+        assert feed["top_stories_section"].receivedFeedRank == 0
+        assert feed["tech"].receivedFeedRank == 2
+        assert feed["food"].receivedFeedRank == 3
+        assert feed["hobbies"].receivedFeedRank == 5
+        assert feed["travel"].receivedFeedRank == 6
 
-        # Get the updated feed with boosted followed sections
+        # Get the updated feed with boosted followed sections.
         new_feed = boost_followed_sections(req_sections, feed)
 
-        # Now let's assert the updated feed and check that followed sections were boosted
+        # Assertions for receivedFeedRank.
+        assert new_feed["top_stories_section"].receivedFeedRank == 0  # should always remain 0.
+        # 'hobbies' was followed more recently so should be boosted to rank 1.
+        assert new_feed["hobbies"].receivedFeedRank == 1
+        # 'tech' remains at rank 2.
+        assert new_feed["tech"].receivedFeedRank == 2
+        # 'food' remains at rank 3.
+        assert new_feed["food"].receivedFeedRank == 3
+        # 'travel' should come after food.
+        assert new_feed["travel"].receivedFeedRank == 4
 
-        # Assertions for receivedFeedRank
-        assert new_feed.top_stories_section.receivedFeedRank == 0  # should always remain 0
-        # gaming had a rank==5, should be now 1 as this topic was followed 2 days ago & is "recently followed"
-        assert new_feed.gaming.receivedFeedRank == 1
-        # technology had a rank==2, should stay 2 as this topic was followed 10 days ago so not "recently followed"
-        assert new_feed.technology.receivedFeedRank == 2
-        assert new_feed.food.receivedFeedRank == 3
-        assert (
-            new_feed.travel.receivedFeedRank == 4
-        )  # originally ranked after Food, should still be after
-
-        # Assertions for isFollowed
-        assert new_feed.gaming.isFollowed
-        assert new_feed.technology.isFollowed
-        assert not new_feed.food.isFollowed
-        assert not new_feed.travel.isFollowed
-
-        # Assertions for `isFollowed`
-        assert new_feed.gaming.isFollowed
-        assert new_feed.technology.isFollowed
-        assert not new_feed.travel.isFollowed
-        assert not new_feed.food.isFollowed
+        # Assertions for isFollowed.
+        assert new_feed["hobbies"].isFollowed
+        assert new_feed["tech"].isFollowed
+        assert not new_feed["food"].isFollowed
+        assert not new_feed["travel"].isFollowed
 
     def test_boost_followed_sections_no_followed_sections_found_block_section(self):
-        """Test boosting sections only boosts followed sections. If no followed sections found in request,
-        section order should remain the same.
+        """Test boosting sections only boosts followed sections.
+        If no followed sections found in request, section order should be updated based on blocked status.
         """
         req_sections = [
             SectionConfiguration(sectionId="arts", isFollowed=False, isBlocked=False),
             SectionConfiguration(sectionId="business", isFollowed=False, isBlocked=True),
             SectionConfiguration(sectionId="travel", isFollowed=False, isBlocked=True),
         ]
-        feed = self.generate_curated_recommendations_feed_sections(
-            [0, 5, 3, 2, 6], ["top_stories_section", "arts", "food", "business", "travel"]
+        feed = self.generate_sections(
+            [0, 5, 3, 2, 6],
+            ["top_stories_section", "arts", "food", "business", "travel"],
         )
-        # Let's first assert original feed received ranks
-        assert feed.top_stories_section.receivedFeedRank == 0
-        assert feed.business.receivedFeedRank == 2
-        assert feed.food.receivedFeedRank == 3
-        assert feed.arts.receivedFeedRank == 5
-        assert not feed.business.isBlocked  # isBlocked should be false by default
-        assert feed.travel.receivedFeedRank == 6
-        assert not feed.travel.isBlocked  # isBlocked should be false by default
+        # Assert original feed received ranks.
+        assert feed["top_stories_section"].receivedFeedRank == 0
+        assert feed["business"].receivedFeedRank == 2
+        assert feed["food"].receivedFeedRank == 3
+        assert feed["arts"].receivedFeedRank == 5
+        assert not feed["business"].isBlocked  # isBlocked should be false by default
+        assert feed["travel"].receivedFeedRank == 6
+        assert not feed["travel"].isBlocked  # isBlocked should be false by default
 
-        # Get the updated feed with boosted followed sections
+        # Get the updated feed with boosted followed sections.
         new_feed = boost_followed_sections(req_sections, feed)
 
-        # Now let's assert the updated feed and check that receivedFeedRank has not changed for sections
+        # Now assert updated receivedFeedRank.
+        assert new_feed["top_stories_section"].receivedFeedRank == 0
+        expected_ranks = [1, 2, 3, 4]
+        actual_ranks = [
+            new_feed[s].receivedFeedRank for s in ["business", "food", "arts", "travel"]
+        ]
+        assert sorted(actual_ranks) == expected_ranks
 
-        # Assertions for receivedFeedRank
-        assert new_feed.top_stories_section.receivedFeedRank == 0
-        assert new_feed.business.receivedFeedRank == 1
-        assert new_feed.food.receivedFeedRank == 2
-        assert new_feed.arts.receivedFeedRank == 3
-        assert new_feed.travel.receivedFeedRank == 4
-
-        # Assertions for isFollowed & isBlocked
-        assert not new_feed.arts.isFollowed
-        assert not new_feed.food.isFollowed
-        assert not new_feed.business.isFollowed
-        assert new_feed.business.isBlocked  # isBlocked should be now true
-        assert not new_feed.travel.isFollowed
-        assert new_feed.travel.isBlocked  # isBlocked should be now true
+        # Assertions for isFollowed & isBlocked.
+        assert not new_feed["arts"].isFollowed
+        assert not new_feed["food"].isFollowed
+        assert not new_feed["business"].isFollowed
+        assert new_feed["business"].isBlocked
+        assert not new_feed["travel"].isFollowed
+        assert new_feed["travel"].isBlocked
