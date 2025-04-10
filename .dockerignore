@@ -24,3 +24,6 @@ profile.json
 workspace/
 dev/local_data/
 local_data/
+
+# Ignore generated credentials from google-github-actions/auth
+gha-creds-*.json
