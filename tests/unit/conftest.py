@@ -111,6 +111,15 @@ def fixture_blob_json() -> str:
                     "title": "BBC Home - Breaking News",
                     "icon": "https://merino-images.services.mozilla.com/favicons/bbciconhash_12345.png",
                 },
+                {
+                    "rank": 5,
+                    "domain": "cnn",
+                    "categories": ["News"],
+                    "serp_categories": [0],
+                    "url": "https://edition.cnn.com/2025/04/09/entertainment/aimee-lou-wood-teeth-talk-intl-scli/index.html",
+                    "title": "‘White Lotus’ star Aimee Lou Wood doesn’t love all the talk about her teeth | CNN",
+                    "icon": "https://merino-images.services.mozilla.com/favicons/cnniconhash_98765.png",
+                },
             ]
         }
     )

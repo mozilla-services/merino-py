@@ -110,12 +110,12 @@ class Provider:
 
             idx = self.domain_lookup_table.get(base_domain, -1)
             if idx >= 0 and self.manifest_data is not None:
-                icon = self.manifest_data.domains[idx].icon
+                icon_url = self.manifest_data.domains[idx].icon
                 try:
-                    return HttpUrl(icon)
+                    return HttpUrl(icon_url)
                 except ValidationError:
-                    # As of April 2025, some icon URLs are empty strings, which are not valid URLs.
-                    logger.warning(f"Invalid icon URL for domain {base_domain}: '{icon}'")
+                    # [DISCO-3441] Some icon URLs are empty strings, which are not valid URLs.
+                    logger.warning(f"Invalid icon URL for domain {base_domain}: '{icon_url}'")
         except Exception as e:
             logger.warning(f"Error getting icon for URL {url}: {e}")
         return None
