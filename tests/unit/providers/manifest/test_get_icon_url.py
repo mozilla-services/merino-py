@@ -1,5 +1,7 @@
 """Unit tests for the get_icon_url method of the manifest provider."""
 
+import logging
+
 import pytest
 from pydantic import HttpUrl
 
@@ -25,26 +27,39 @@ async def test_domain_lookup_table_initialization(
             assert domain.domain in manifest_provider.domain_lookup_table
 
 
-@pytest.mark.asyncio
-async def test_get_icon_url_success(
-    manifest_provider: Provider, manifest_data: ManifestData, cleanup
-):
-    """Test successful icon URL retrieval for known domains."""
-    with patch(
-        "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
-    ):
-        await manifest_provider.initialize()
-        await cleanup(manifest_provider)
-
-        # Test with Google domain which exists in fixture
-        google_icon = manifest_provider.get_icon_url("https://www.google.com/search")
-        assert google_icon == ""  # Google has empty icon in fixture
+MS_ICON = HttpUrl(
+    "https://merino-images.services.mozilla.com/favicons/"
+    "90cdaf487716184e4034000935c605d1633926d348116d198f355a98b8c6cd21_17174.oct"
+)
+BBC_ICON = HttpUrl("https://merino-images.services.mozilla.com/favicons/bbciconhash_12345.png")
+# CNN_ICON = HttpUrl("https://merino-images.services.mozilla.com/favicons/cnniconhash_98765.png")
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "test_url, expected_icon",
+    [
+        ("https://google.com/search", None),  # Google icon fixture is empty
+        ("http://www.google.com", None),
+        ("https://google.com", None),
+        ("http://google.com/maps", None),
+        ("https://www.microsoft.com/en-us/", MS_ICON),
+        ("https://bbc.co.uk/news", BBC_ICON),
+        ("https://www.bbc.co.uk/sport", BBC_ICON),
+        # DISCO-3447: URLs with subdomains aren't handled correctly yet.
+        # (
+        #     "https://edition.cnn.com/2025/04/09/entertainment/aimee-lou-wood-teeth-talk-intl-scli/"
+        #     "index.html?utm_source=firefox-newtab-en-us",
+        #     CNN_ICON,
+        # ),
+    ],
+)
 async def test_get_icon_url_domain_variants(
-    manifest_provider: Provider, manifest_data: ManifestData, cleanup
+    manifest_provider: Provider,
+    manifest_data: ManifestData,
+    cleanup,
+    test_url,
+    expected_icon,
 ):
     """Test icon URL retrieval with different domain format variants."""
     with patch(
@@ -54,16 +69,7 @@ async def test_get_icon_url_domain_variants(
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
 
-        test_cases = [
-            "https://google.com/search",
-            "http://www.google.com",
-            "https://google.com",
-            "http://google.com/maps",
-        ]
-
-        for url in test_cases:
-            result = manifest_provider.get_icon_url(url)
-            assert result == ""  # Google has empty icon in fixture
+        assert manifest_provider.get_icon_url(test_url) == expected_icon
 
 
 @pytest.mark.asyncio
@@ -117,18 +123,41 @@ async def test_get_icon_url_with_pydantic_url(
         await cleanup(manifest_provider)
 
         url = HttpUrl("https://google.com/search")
-        assert manifest_provider.get_icon_url(url) == ""  # Google has empty icon
+        assert manifest_provider.get_icon_url(url) is None  # Google has empty icon
 
 
 @pytest.mark.asyncio
-async def test_get_icon_url_empty_manifest(manifest_provider: Provider, cleanup):
-    """Test icon URL retrieval with empty manifest data."""
-    empty_manifest = ManifestData(domains=[])
+@pytest.mark.parametrize(
+    "icon_value,expected_log_msg",
+    [
+        ("", "Invalid icon URL for domain google: ''"),
+        ("not-a-valid-url", "Invalid icon URL for domain google: 'not-a-valid-url'"),
+    ],
+)
+async def test_get_icon_url_invalid_icon_logged(
+    manifest_provider: Provider,
+    manifest_data: ManifestData,
+    cleanup,
+    icon_value: str,
+    expected_log_msg: str,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Test that invalid icon values log warnings and return None."""
+    # Override the Google icon value
+    for domain in manifest_data.domains:
+        if domain.domain == "google":
+            domain.icon = icon_value
+
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, empty_manifest),
+        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
 
-        assert manifest_provider.get_icon_url("https://google.com") is None
+        assert manifest_provider.get_icon_url("https://www.google.com") is None
+
+        assert any(
+            record.message == expected_log_msg and record.levelno == logging.WARNING
+            for record in caplog.records
+        )

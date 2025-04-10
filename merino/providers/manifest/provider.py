@@ -5,7 +5,7 @@ import time
 import logging
 from urllib.parse import urlparse
 
-from pydantic import HttpUrl
+from pydantic import HttpUrl, ValidationError
 
 from merino.providers.manifest.backends.filemanager import GetManifestResultCode
 from merino.utils import cron
@@ -92,7 +92,7 @@ class Provider:
         """Return manifest data"""
         return self.manifest_data
 
-    def get_icon_url(self, url: str | HttpUrl) -> str | None:
+    def get_icon_url(self, url: str | HttpUrl) -> HttpUrl | None:
         """Get icon URL for a domain.
 
         Args:
@@ -110,8 +110,12 @@ class Provider:
 
             idx = self.domain_lookup_table.get(base_domain, -1)
             if idx >= 0 and self.manifest_data is not None:
-                return self.manifest_data.domains[idx].icon
-
+                icon_url = self.manifest_data.domains[idx].icon
+                try:
+                    return HttpUrl(icon_url)
+                except ValidationError:
+                    # [DISCO-3441] Some icon URLs are empty strings, which are not valid URLs.
+                    logger.warning(f"Invalid icon URL for domain {base_domain}: '{icon_url}'")
         except Exception as e:
             logger.warning(f"Error getting icon for URL {url}: {e}")
         return None

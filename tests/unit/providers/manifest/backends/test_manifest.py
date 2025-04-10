@@ -25,7 +25,7 @@ async def test_fetch_manifest_data(backend: ManifestBackend, fixture_filemanager
         assert get_file_result_code is GetManifestResultCode.SUCCESS
         assert result is not None
         assert result.domains is not None
-        assert len(result.domains) == 3
+        assert len(result.domains) == 5
         assert result.domains[1].domain == "microsoft"
 
 
@@ -61,5 +61,5 @@ async def test_fetch(backend: ManifestBackend, fixture_filemanager) -> None:
         assert get_file_result_code is GetManifestResultCode.SUCCESS
         assert result is not None
         assert result.domains is not None
-        assert len(result.domains) == 3
+        assert len(result.domains) == 5
         assert result.domains[2].domain == "facebook"
