@@ -188,6 +188,13 @@ replica = "redis://localhost:6379"
 # To override the default max_conns of Redis-py: 2 ** 31.
 max_connections = 500
 
+# MERINO_REDIS__SOCKET_CONNECT_TIMEOUT_SEC
+# Timeout to connect to Redis in seconds
+socket_connect_timeout_sec = 3
+
+# MERINO_REDIS__SOCKET_TIMEOUT_SEC
+# Timeout to interact with Redis in seconds
+socket_timeout_sec = 3
 
 [default.sentry]
 # MERINO_SENTRY__MODE

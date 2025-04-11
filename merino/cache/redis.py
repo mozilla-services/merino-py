@@ -10,7 +10,12 @@ from merino.exceptions import CacheAdapterError
 
 
 def create_redis_clients(
-    primary: str, replica: str, max_connections: int, db: int = 0
+    primary: str,
+    replica: str,
+    max_connections: int,
+    socket_connect_timeout: int,
+    socket_timeout: int,
+    db: int = 0,
 ) -> tuple[Redis, Redis]:
     """Create redis clients for the primary and replica severs.
     When `replica` is the same as `primary`, the returned clients are the same.
@@ -19,17 +24,31 @@ def create_redis_clients(
         - `primary`: the URL to the Redis primary endpoint.
         - `replica`: the URL to the Redis replica endpoint.
         - `max_connections`: the maximum connections allowed in the connection pool.
+        - `socket_connect_timeout`: the timeout in seconds to connect to the Redis server.
+        - `socket_timeout`: the timeout in seconds to interact with the Redis server.
         - `db`: the ID (`SELECT db`) of the DB to which the clients connect.
     Returns:
         - A tuple of two clients, the first for the primary server and the second for the replica endpoint.
           When `primary` is the same as `replica`, the two share the same underlying client.
     """
-    client_primary: Redis = Redis.from_url(primary, db=db, max_connections=max_connections)
+    client_primary: Redis = Redis.from_url(
+        primary,
+        db=db,
+        max_connections=max_connections,
+        socket_connect_timeout=socket_connect_timeout,
+        socket_timeout=socket_timeout,
+    )
     client_replica: Redis
     if primary == replica:
         client_replica = client_primary
     else:
-        client_replica = Redis.from_url(replica, db=db, max_connections=max_connections)
+        client_replica = Redis.from_url(
+            replica,
+            db=db,
+            max_connections=max_connections,
+            socket_connect_timeout=socket_connect_timeout,
+            socket_timeout=socket_timeout,
+        )
 
     return client_primary, client_replica
 
