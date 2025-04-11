@@ -46,6 +46,8 @@ url_base = "test://test"
 [testing.providers.accuweather]
 enabled_by_default = false
 backend="test_weather"
+circuit_breaker_failure_threshold = 1
+circuit_breaker_recover_timeout_sec = 3
 
 [testing.providers.adm]
 # Whether or not this provider is enabled by default.
