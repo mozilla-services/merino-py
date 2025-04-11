@@ -532,7 +532,10 @@ class AccuweatherBackend:
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.fetch-via-location-key.error")
-            return None
+            # Propagate the error for circuit breaking.
+            raise AccuweatherError(
+                AccuweatherErrorMessages.CACHE_READ_ERROR, exception=exc
+            ) from exc
 
         self.emit_cache_fetch_metrics(cached_data, skip_location_key=True)
         cached_report = self.parse_cached_data(cached_data)
@@ -613,7 +616,10 @@ class AccuweatherBackend:
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch weather report from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.fetch.error")
-            return None
+            # Propagate the error for circuit breaking.
+            raise AccuweatherError(
+                AccuweatherErrorMessages.CACHE_READ_ERROR, exception=exc
+            ) from exc
 
         if is_skipped:
             raise MissingLocationKeyError(geolocation)

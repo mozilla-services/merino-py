@@ -11,6 +11,7 @@ class AccuweatherErrorMessages(Enum):
     """Enum variables with string values representing error messages"""
 
     CACHE_WRITE_ERROR = "Something went wrong with storing to cache. Did not update cache."
+    CACHE_READ_ERROR = "Failed to read from cache: {exception}"
     FAILED_WEATHER_REPORT = "Failed to fetch weather report: {exceptions}"
     HTTP_UNEXPECTED_LOCATION_RESPONSE = (
         "Unexpected location response from: {url_path}, city: {city}"

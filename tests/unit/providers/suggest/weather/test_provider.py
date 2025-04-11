@@ -185,15 +185,14 @@ async def test_query_no_weather_report_returned(
     assert suggestions == expected_suggestions
 
 
-@pytest.mark.asyncio
-async def test_query_with_no_request_type_param_returns_http_400(
+def test_query_with_no_request_type_param_returns_http_400(
     provider: Provider, geolocation: Location
 ) -> None:
     """Test that the query method throws a http 400 error when `q` param is provided but no
     `request_type` param is provided
     """
     with pytest.raises(HTTPException) as accuweather_error:
-        await provider.query(SuggestionRequest(query="weather", geolocation=geolocation))
+        provider.validate(SuggestionRequest(query="weather", geolocation=geolocation))
 
     expected_error_message = "400: Invalid query parameters: `request_type` is missing"
 

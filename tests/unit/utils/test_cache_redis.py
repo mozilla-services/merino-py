@@ -21,6 +21,8 @@ async def test_adapter_in_standalone_mode(mocker: MockerFixture) -> None:
             primary="redis://localhost:6379",
             replica="redis://localhost:6379",
             max_connections=1,
+            socket_connect_timeout=1,
+            socket_timeout=1,
             db=0,
         )
     )

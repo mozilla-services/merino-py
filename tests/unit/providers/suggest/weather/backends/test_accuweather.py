@@ -1294,7 +1294,7 @@ async def test_get_weather_report_with_cache_fetch_error(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
 ) -> None:
-    """Test that it should return None on the cache bulk fetch error."""
+    """Test that it should raise an exception on the cache bulk fetch error."""
     caplog.set_level(logging.ERROR)
 
     redis_mock = mocker.AsyncMock(spec=Redis)
@@ -1312,11 +1312,9 @@ async def test_get_weather_report_with_cache_fetch_error(
     )
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(
-        weather_context_without_location_key
-    )
+    with pytest.raises(AccuweatherError):
+        _ = await accuweather.get_weather_report(weather_context_without_location_key)
 
-    assert report is None
     client_mock.get.assert_not_called()
 
     metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
