@@ -193,7 +193,7 @@ async def test_query_with_no_request_type_param_returns_http_400(
     `request_type` param is provided
     """
     with pytest.raises(HTTPException) as accuweather_error:
-        await provider.query(SuggestionRequest(query="weather", geolocation=geolocation))
+        await provider.validate(SuggestionRequest(query="weather", geolocation=geolocation))
 
     expected_error_message = "400: Invalid query parameters: `request_type` is missing"
 

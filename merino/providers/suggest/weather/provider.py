@@ -9,8 +9,8 @@ from fastapi import HTTPException
 from pydantic import HttpUrl
 
 from merino.providers.suggest.weather.backends.accuweather.errors import MissingLocationKeyError
+from merino.governance.circuitbreakers import WeatherCircuitBreaker
 from merino.utils import cron
-from merino.exceptions import BackendError
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.custom_details import CustomDetails, WeatherDetails
@@ -141,15 +141,23 @@ class Provider(BaseProvider):
 
         logger.info(f"Weather Skip Cities: {get_skip_cities_mapping()}")
 
-    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
-        """Provide weather suggestions."""
-        # early exit with 400 error if "q" query param is present without the "request_type" param
+    def validate(self, srequest: SuggestionRequest) -> None:
+        """Validate the suggestion request."""
         if srequest.query and not srequest.request_type:
             raise HTTPException(
                 status_code=400,
                 detail="Invalid query parameters: `request_type` is missing",
             )
 
+    @WeatherCircuitBreaker(name="weather")  # Expect `AccuweatherError` and `BackendError`
+    async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Provide weather suggestions.
+
+        All the `AccuweatherError` errors, raised from the backend, are intentionally
+        unhandled in this function to drive the circuit breaker. Those exceptions will
+        eventually be propagated to the provider consumer (i.e. the API handler) and be
+        handled there.
+        """
         geolocation: Location = srequest.geolocation
         languages: list[str] = srequest.languages if srequest.languages else []
         is_location_completion_request = srequest.request_type == "location"
@@ -168,9 +176,6 @@ class Provider(BaseProvider):
                     weather_report = await self.backend.get_weather_report(weather_context)
         except MissingLocationKeyError:
             return [NO_LOCATION_KEY_SUGGESTION]
-
-        except BackendError as backend_error:
-            logger.warning(backend_error)
 
         # for this provider, the request can be either for weather or location completion
         if weather_report:

@@ -400,26 +400,3 @@ def test_suggest_metrics(
         (call.args[0], call.args[3]) for call in report.call_args_list
     ]
     assert metric_keys == expected_metric_keys
-
-
-@pytest.mark.parametrize("providers", [{"corrupt": FakeProviderFactory.corrupt()}])
-def test_suggest_metrics_500(mocker: MockerFixture, client: TestClient) -> None:
-    """Test that 500 status codes are recorded as metrics."""
-    error_msg = "test"
-    expected_metric_keys = [
-        "providers.corrupted.query",
-        "get.api.v1.suggest.timing",
-        "get.api.v1.suggest.status_codes.500",
-        "response.status_codes.500",
-    ]
-
-    report = mocker.patch.object(aiodogstatsd.Client, "_report")
-
-    with pytest.raises(RuntimeError) as excinfo:
-        client.get(f"/api/v1/suggest?q={error_msg}")
-
-    # TODO: Remove reliance on internal details of aiodogstatsd
-    metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
-    assert metric_keys == expected_metric_keys
-
-    assert str(excinfo.value) == error_msg

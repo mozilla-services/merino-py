@@ -191,16 +191,18 @@ async def suggest(
 
     lookups: list[Task] = []
     languages = get_accepted_languages(accept_language)
+    geolocation = refine_geolocation_for_suggestion(request, city, region, country)
 
     validate_suggest_custom_location_params(city, region, country)
 
     for p in search_from:
         srequest = SuggestionRequest(
             query=p.normalize_query(q),
-            geolocation=refine_geolocation_for_suggestion(request, city, region, country),
+            geolocation=geolocation,
             request_type=request_type,
             languages=languages,
         )
+        p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
         # `timeit_task()` doesn't support task naming, need to set the task name manually
         task.set_name(p.name)
@@ -216,12 +218,11 @@ async def suggest(
     )
     suggestions = list(
         chain.from_iterable(
-            # TODO: handle exceptions. `task.result()` will throw if the task was
-            # completed with an exception. This is OK for now as Merino will return
-            # an HTTP 500 response for unhandled exceptions, but we will want better
-            # exception handling for query tasks in the future.
+            # The `lookup` tasks could raise for reasons such as `CircuitBreakerError`.
+            # Exclude those exceptions from the result list.
             task.result()
             for task in completed_tasks
+            if task.exception() is None
         )
     )
     if len(suggestions) == 1 and suggestions[0] is NO_LOCATION_KEY_SUGGESTION:
