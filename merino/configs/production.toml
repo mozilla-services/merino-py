@@ -34,6 +34,8 @@ gcs_bucket = "merino-images-prodpy"
 cdn_hostname = "merino-images.services.mozilla.com"
 
 [production.providers.top_picks]
+# Temporarily disable it, see [DISCO-3453]
+enabled_by_default = false
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
 # Enum of either `remote` or `local` that defines whether domain data
 # is remotely or locally acquired.
