@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import Any, Optional, cast
+import asyncio
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -10,6 +11,7 @@ from google.cloud.storage import Blob
 
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
+    current_scraper,
     Scraper,
 )
 from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
@@ -34,8 +36,8 @@ class DomainTestResult(BaseModel):
     error: Optional[str] = None
 
 
-def test_domain(domain: str, min_width: int) -> DomainTestResult:
-    """Test metadata extraction for a single domain"""
+async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
+    """Test metadata extraction for a single domain asynchronously"""
     timestamp = datetime.now().isoformat()
 
     try:
@@ -48,10 +50,9 @@ def test_domain(domain: str, min_width: int) -> DomainTestResult:
             "categories": ["Unknown"],
         }
 
-        scraper = Scraper()
         favicon_downloader = AsyncFaviconDownloader()
         extractor = DomainMetadataExtractor(
-            blocked_domains=set(), scraper=scraper, favicon_downloader=favicon_downloader
+            blocked_domains=set(), favicon_downloader=favicon_downloader
         )
 
         # Create a mock uploader that doesn't actually upload to GCS
@@ -84,48 +85,57 @@ def test_domain(domain: str, min_width: int) -> DomainTestResult:
 
         favicon_data = None
         total_favicons = 0
+
         if metadata["url"]:
             base_url = metadata["url"]
 
-            # Get raw favicon data for displaying all favicons
-            raw_favicon_data = scraper.scrape_favicon_data()
+            # For testing, we need to create a scraper and set it in the context
+            async with Scraper() as test_scraper:
+                # Set the context variable for this test
+                token = current_scraper.set(test_scraper)
+                try:
+                    # Open the URL with our test scraper
+                    test_scraper.open(base_url)
 
-            # Use the same _extract_favicons method that production uses
-            # to process the favicon URLs and convert relative URLs to absolute
-            import asyncio
+                    # Get raw favicon data directly from the test scraper
+                    raw_favicon_data = test_scraper.scrape_favicon_data()
 
-            processed_favicons = asyncio.run(
-                extractor._extract_favicons(base_url, max_icons=100)  # Use high max to get all
-            )
+                    # Use the extractor method with our context-aware scraper
+                    processed_favicons = await extractor._extract_favicons(
+                        base_url,
+                        max_icons=100,  # Use high max to get all
+                    )
 
-            # Create processed version of favicon data
-            processed_links = []
-            for favicon in processed_favicons:
-                # Only include link-type favicons that have href
-                if "href" in favicon:
-                    processed_links.append(favicon)
+                    # Create processed version of favicon data
+                    processed_links = []
+                    for favicon in processed_favicons:
+                        # Only include link-type favicons that have href
+                        if "href" in favicon:
+                            processed_links.append(favicon)
 
-            # Replace the original links with processed ones to ensure
-            # all URLs are absolute, just like in production
-            raw_favicon_data.links = processed_links
+                    # Replace the original links with processed ones to ensure
+                    # all URLs are absolute, just like in production
+                    raw_favicon_data.links = processed_links
 
-            raw_favicon_data = scraper.scrape_favicon_data()
-            favicon_data = raw_favicon_data.model_dump()
-            favicon_urls = set()
+                    favicon_data = raw_favicon_data.model_dump()
+                    favicon_urls = set()
 
-            # Collect unique favicon URLs
-            for link in raw_favicon_data.links:
-                if "href" in link:
-                    favicon_urls.add(link["href"])
+                    # Collect unique favicon URLs
+                    for link in raw_favicon_data.links:
+                        if "href" in link:
+                            favicon_urls.add(link["href"])
 
-            for meta in raw_favicon_data.metas:
-                if "content" in meta:
-                    favicon_urls.add(meta["content"])
+                    for meta in raw_favicon_data.metas:
+                        if "content" in meta:
+                            favicon_urls.add(meta["content"])
 
-            if metadata["icon"]:
-                favicon_urls.add(metadata["icon"])
+                    if metadata["icon"]:
+                        favicon_urls.add(metadata["icon"])
 
-            total_favicons = len(favicon_urls)
+                    total_favicons = len(favicon_urls)
+                finally:
+                    # Reset the context variable
+                    current_scraper.reset(token)
 
         details = {
             "base_url_tried": f"https://{domain}",
@@ -154,6 +164,11 @@ def test_domain(domain: str, min_width: int) -> DomainTestResult:
             favicon_data=None,
             error=str(e),
         )
+
+
+def test_domain(domain: str, min_width: int) -> DomainTestResult:
+    """Synchronous wrapper for async test domain function"""
+    return asyncio.run(async_test_domain(domain, min_width))
 
 
 @cli.command()
