@@ -769,13 +769,6 @@ class AccuweatherBackend:
                 # record the country, region, city that did not provide a location
                 increment_skip_cities_mapping(country, region, city)
 
-        if weather_context.distance_calculation is not None:
-            self.metrics_client.increment(
-                "accuweather.request.location.dist_calculated.success"
-                if weather_context.distance_calculation
-                else "accuweather.request.location.dist_calculated.fail",
-            )
-
         return AccuweatherLocation(**response) if response else None
 
     async def get_current_conditions(
