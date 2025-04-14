@@ -2,6 +2,8 @@
 
 import asyncio
 import logging
+import contextvars
+
 from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
 
@@ -44,6 +46,13 @@ class Scraper:
     browser: StatefulBrowser
     request_client: AsyncFaviconDownloader
     parser: str = "html.parser"
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
 
     def __init__(self) -> None:
         session: requests.Session = requests.Session()
@@ -137,30 +146,17 @@ class Scraper:
         try:
             if hasattr(self.browser, "session") and self.browser.session:
                 self.browser.session.close()
+
             if hasattr(self.browser, "_browser"):
                 self.browser._browser = None
+
             self.browser.close()
         except Exception as ex:
             logger.warning(f"Error occurred when closing scraper session: {ex}")
 
-    def reset(self) -> None:
-        """Reset the scraper by closing current connections and initializing a new browser session."""
-        try:
-            # Close the current browser session
-            self.close()
 
-            # Reinitialize the browser with a fresh session
-            session: requests.Session = requests.Session()
-            self.browser = StatefulBrowser(
-                session=session,
-                soup_config={"features": self.parser},
-                raise_on_404=False,
-                user_agent=REQUEST_HEADERS["User-Agent"],
-            )
-
-            # Don't recreate the request_client as it will be reset separately
-        except Exception as ex:
-            logger.warning(f"Error occurred when resetting scraper: {ex}")
+# Create a context variable for the current scraper
+current_scraper: contextvars.ContextVar[Scraper] = contextvars.ContextVar("current_scraper")
 
 
 class DomainMetadataExtractor:
@@ -203,16 +199,13 @@ class DomainMetadataExtractor:
 
     # List of blocked (second level) domains
     blocked_domains: set[str]
-    scraper: Scraper
     favicon_downloader: AsyncFaviconDownloader
 
     def __init__(
         self,
         blocked_domains: set[str],
-        scraper: Scraper = Scraper(),
         favicon_downloader: AsyncFaviconDownloader = AsyncFaviconDownloader(),
     ) -> None:
-        self.scraper = scraper
         self.favicon_downloader = favicon_downloader
         self.blocked_domains = blocked_domains
 
@@ -243,15 +236,19 @@ class DomainMetadataExtractor:
         return url
 
     async def _extract_favicons(
-        self, scraped_url: str, max_icons: int = 5
+        self,
+        scraped_url: str,
+        max_icons: int = 5,
     ) -> list[dict[str, Any]]:
         """Extract a limited number of favicons for an already opened url"""
         self._current_base_url = scraped_url
         favicons: list[dict[str, Any]] = []
 
+        scraper = current_scraper.get()
+
         try:
             # Get the most common favicon sources first
-            favicon_data: FaviconData = self.scraper.scrape_favicon_data()
+            favicon_data: FaviconData = scraper.scrape_favicon_data()
 
             # First priority: process standard link icons (usually higher quality)
             for favicon in favicon_data.links[:max_icons]:
@@ -284,7 +281,7 @@ class DomainMetadataExtractor:
 
             # If still below max, try the default favicon
             if len(favicons) < max_icons:
-                default_favicon_url = await self.scraper.get_default_favicon(scraped_url)
+                default_favicon_url = await scraper.get_default_favicon(scraped_url)
                 if default_favicon_url is not None:
                     favicons.append({"href": default_favicon_url})
 
@@ -302,7 +299,7 @@ class DomainMetadataExtractor:
                 manifest_absolute_url: str = urljoin(scraped_url, manifest_url)
 
                 try:
-                    manifest_icons = await self.scraper.scrape_favicons_from_manifest(
+                    manifest_icons = await scraper.scrape_favicons_from_manifest(
                         manifest_absolute_url
                     )
 
@@ -333,7 +330,10 @@ class DomainMetadataExtractor:
         return favicons
 
     async def _process_favicon(
-        self, scraped_url: str, min_width: int, uploader: "DomainMetadataUploader"
+        self,
+        scraped_url: str,
+        min_width: int,
+        uploader: "DomainMetadataUploader",
     ) -> str:
         """Extract all favicons for an already opened URL and return the one that satisfies the
         minimum width criteria. If multiple favicons satisfy the criteria then upload the one
@@ -500,7 +500,10 @@ class DomainMetadataExtractor:
 
     def _extract_title(self) -> Optional[str]:
         """Extract title for a url"""
-        title: Optional[str] = self.scraper.scrape_title()
+        # Get the scraper from the context
+        scraper = current_scraper.get()
+
+        title: Optional[str] = scraper.scrape_title()
         if title:
             title = " ".join(title.split())
             title = (
@@ -557,7 +560,7 @@ class DomainMetadataExtractor:
     ) -> list[dict[str, Optional[str]]]:
         """Process domains in chunks to limit resource consumption."""
         # Reduce batch size to decrease memory consumption and network load
-        chunk_size = 50
+        chunk_size = 25
         filtered_results: list[dict[str, Optional[str]]] = []
         total_chunks = (len(domains_data) + chunk_size - 1) // chunk_size
 
@@ -597,9 +600,6 @@ class DomainMetadataExtractor:
                         continue
                     filtered_results.append(result)
 
-            # Reset the StatefulBrowser cache and connections after each chunk instead of recreating
-            self.scraper.reset()
-
             # Reset the FaviconDownloader instead of recreating
             await self.favicon_downloader.reset()
 
@@ -617,41 +617,48 @@ class DomainMetadataExtractor:
         self, domain_data: dict[str, Any], favicon_min_width: int, uploader: DomainMetadataUploader
     ) -> dict[str, Optional[str]]:
         """Process a single domain asynchronously and always return a valid dict."""
-        try:
-            scraped_base_url: Optional[str] = None
-            favicon: str = ""
-            title: str = ""
-            second_level_domain: str = ""
+        async with Scraper() as domain_scraper:
+            # Set the context variable for this task's context
+            token = current_scraper.set(domain_scraper)
+            try:
+                scraped_base_url: Optional[str] = None
+                favicon: str = ""
+                title: str = ""
+                second_level_domain: str = ""
 
-            domain: str = domain_data["domain"]
-            suffix: str = domain_data["suffix"]
+                domain: str = domain_data["domain"]
+                suffix: str = domain_data["suffix"]
 
-            if not self._is_domain_blocked(domain, suffix):
-                url: str = f"https://{domain}"
-                full_url: Optional[str] = self.scraper.open(url)
+                if not self._is_domain_blocked(domain, suffix):
+                    url: str = f"https://{domain}"
+                    full_url: Optional[str] = domain_scraper.open(url)
 
-                if full_url is None:
-                    # Retry with www. in the url as some domains require it explicitly
-                    url = f"https://www.{domain}"
-                    full_url = self.scraper.open(url)
+                    if full_url is None:
+                        # Retry with www. in the url as some domains require it explicitly
+                        url = f"https://www.{domain}"
+                        full_url = domain_scraper.open(url)
 
-                if full_url and domain in full_url:
-                    scraped_base_url = self._get_base_url(full_url)
-                    favicon = await self._process_favicon(
-                        scraped_base_url, favicon_min_width, uploader
-                    )
-                    second_level_domain = self._get_second_level_domain(domain, suffix)
-                    title = self._get_title(second_level_domain)
+                    if full_url and domain in full_url:
+                        scraped_base_url = self._get_base_url(full_url)
+                        favicon = await self._process_favicon(
+                            scraped_base_url, favicon_min_width, uploader
+                        )
+                        second_level_domain = self._get_second_level_domain(domain, suffix)
+                        title = self._get_title(second_level_domain)
 
-                    if favicon:
-                        logger.info(f"Found favicon for domain: {domain}")
+                        if favicon:
+                            logger.info(f"Found favicon for domain: {domain}")
 
-            return {
-                "url": scraped_base_url,
-                "title": title,
-                "icon": favicon,
-                "domain": second_level_domain,
-            }
-        except Exception:
-            # Return a default dict in case of error.
-            return {"url": None, "title": None, "icon": None, "domain": None}
+                return {
+                    "url": scraped_base_url,
+                    "title": title,
+                    "icon": favicon,
+                    "domain": second_level_domain,
+                }
+
+            except Exception:
+                # Return a default dict in case of error.
+                return {"url": None, "title": None, "icon": None, "domain": None}
+            finally:
+                # Reset the context variable
+                current_scraper.reset(token)

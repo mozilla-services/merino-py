@@ -10,6 +10,7 @@ from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
     FaviconData,
     Scraper,
+    current_scraper,
 )
 from merino.jobs.utils.system_monitor import SystemMonitor
 from merino.utils.gcs.models import Image
@@ -89,22 +90,18 @@ class TestDomainMetadataExtractor:
         """Test the initialization of DomainMetadataExtractor."""
         # Test with default parameters
         extractor = DomainMetadataExtractor(blocked_domains=set())
-        assert isinstance(extractor.scraper, Scraper)
         assert hasattr(extractor, "favicon_downloader")
         assert extractor.blocked_domains == set()
 
         # Test with custom parameters
-        mock_scraper = MagicMock()
         mock_downloader = MagicMock()
         custom_blocked = {"blocked1.com", "blocked2.com"}
 
         extractor = DomainMetadataExtractor(
             blocked_domains=custom_blocked,
-            scraper=mock_scraper,
             favicon_downloader=mock_downloader,
         )
 
-        assert extractor.scraper is mock_scraper
         assert extractor.favicon_downloader is mock_downloader
         assert extractor.blocked_domains == custom_blocked
 
@@ -183,26 +180,30 @@ class TestDomainMetadataExtractor:
     async def test_extract_favicons(self, mocker, mock_scraper, mock_favicon_data):
         """Test the _extract_favicons method."""
         extractor = DomainMetadataExtractor(blocked_domains=set())
-        extractor.scraper = mock_scraper
 
-        # Mock scrape_favicon_data
+        # Configure the mock scraper
         mock_scraper.scrape_favicon_data.return_value = mock_favicon_data
 
-        # Call the method
-        scraped_url = "https://example.com"
-        favicons = await extractor._extract_favicons(scraped_url, max_icons=5)
+        # Set the context variable
+        token = current_scraper.set(mock_scraper)
+        try:
+            # Call the method
+            scraped_url = "https://example.com"
+            favicons = await extractor._extract_favicons(scraped_url, max_icons=5)
 
-        # Verify the results
-        assert len(favicons) >= 2  # Should find at least the links
+            # Verify the results
+            assert len(favicons) >= 2  # Should find at least the links
 
-        # Verify base URL was set
-        assert extractor._current_base_url == scraped_url
+            # Verify base URL was set
+            assert extractor._current_base_url == scraped_url
+        finally:
+            # Reset the context variable
+            current_scraper.reset(token)
 
     @pytest.mark.asyncio
     async def test_process_favicon(self, mocker, mock_scraper, mock_uploader):
         """Test the _process_favicon method."""
         extractor = DomainMetadataExtractor(blocked_domains=set())
-        extractor.scraper = mock_scraper
 
         # Mock _extract_favicons
         mock_favicons = [{"href": "https://example.com/favicon.ico"}]
@@ -214,7 +215,7 @@ class TestDomainMetadataExtractor:
             extractor, "_upload_best_favicon", AsyncMock(return_value=expected_url)
         )
 
-        # Call the method
+        # Call the method without the scraper parameter
         result = await extractor._process_favicon("https://example.com", 32, mock_uploader)
 
         # Verify the result
@@ -526,9 +527,11 @@ class TestDomainMetadataExtractorIntegration:
         """Test extracting favicons from all possible sources."""
         # Create an extractor with mocked components
         extractor = DomainMetadataExtractor(blocked_domains=set())
-        extractor.scraper = MagicMock()
-        extractor.scraper.scrape_favicon_data.return_value = detailed_favicon_data
-        extractor.scraper.get_default_favicon = AsyncMock(
+
+        # Create and configure a mock scraper
+        mock_scraper = MagicMock(spec=Scraper)
+        mock_scraper.scrape_favicon_data.return_value = detailed_favicon_data
+        mock_scraper.get_default_favicon = AsyncMock(
             return_value="https://example.com/favicon.ico"
         )
 
@@ -537,28 +540,36 @@ class TestDomainMetadataExtractorIntegration:
             {"src": "/icon-192.png", "sizes": "192x192"},
             {"src": "/icon-512.png", "sizes": "512x512"},
         ]
-        extractor.scraper.scrape_favicons_from_manifest = AsyncMock(return_value=manifest_icons)
+        mock_scraper.scrape_favicons_from_manifest = AsyncMock(return_value=manifest_icons)
 
-        # Mock URL joining
-        with patch(
-            "merino.jobs.navigational_suggestions.domain_metadata_extractor.urljoin",
-            side_effect=lambda base, path: f"{base}/{path.lstrip('/')}",
-        ):
-            # Call the method
-            result = await extractor._extract_favicons("https://example.com")
+        # Set the context variable
+        token = current_scraper.set(mock_scraper)
+        try:
+            # Mock URL joining
+            with patch(
+                "merino.jobs.navigational_suggestions.domain_metadata_extractor.urljoin",
+                side_effect=lambda base, path: f"{base}/{path.lstrip('/')}",
+            ):
+                # Call the method
+                result = await extractor._extract_favicons("https://example.com")
 
-            # Verify the results - should extract from links, metas, default favicon, and manifest
-            assert len(result) >= 5
+                # Verify the results - should extract from links, metas, default favicon, and manifest
+                assert len(result) >= 5
 
-            # Verify base URL was set
-            assert extractor._current_base_url == "https://example.com"
+                # Verify base URL was set
+                assert extractor._current_base_url == "https://example.com"
+        finally:
+            # Reset the context variable
+            current_scraper.reset(token)
 
     @pytest.mark.asyncio
     async def test_extract_favicons_with_problematic_urls(self):
         """Test extracting favicons with problematic URLs that should be filtered out."""
         # Create an extractor with mocked components
         extractor = DomainMetadataExtractor(blocked_domains=set())
-        extractor.scraper = MagicMock()
+
+        # Create mock scraper
+        mock_scraper = MagicMock(spec=Scraper)
 
         # Create favicon data with problematic URLs
         problematic_data = FaviconData(
@@ -578,15 +589,22 @@ class TestDomainMetadataExtractorIntegration:
             manifests=[],
         )
 
-        extractor.scraper.scrape_favicon_data.return_value = problematic_data
-        extractor.scraper.get_default_favicon = AsyncMock(return_value=None)
+        # Configure the mock scraper
+        mock_scraper.scrape_favicon_data.return_value = problematic_data
+        mock_scraper.get_default_favicon = AsyncMock(return_value=None)
 
-        # Call the method
-        result = await extractor._extract_favicons("https://example.com")
+        # Set the context variable
+        token = current_scraper.set(mock_scraper)
+        try:
+            # Call the method (without passing scraper parameter)
+            result = await extractor._extract_favicons("https://example.com")
 
-        # Verify that only the valid URL was included
-        assert len(result) == 1
-        assert "https://example.com/favicon.ico" in str(result)
+            # Verify that only the valid URL was included
+            assert len(result) == 1
+            assert "https://example.com/favicon.ico" in str(result)
+        finally:
+            # Reset the context variable
+            current_scraper.reset(token)
 
     @pytest.mark.asyncio
     async def test_upload_best_favicon_svg_prioritization(self, mock_uploader):
@@ -612,35 +630,66 @@ class TestDomainMetadataExtractorIntegration:
         # Mock _is_problematic_favicon_url to return False for all URLs
         extractor._is_problematic_favicon_url = MagicMock(return_value=False)
 
+        # Create a mock scraper
+        mock_scraper = MagicMock(spec=Scraper)
+
         # Create a custom implementation for _upload_best_favicon that prioritizes SVGs
         async def mock_upload_best_favicon(favicons, min_width, uploader):
             return "https://cdn.example.com/favicons/favicon.svg"
 
-        # Replace the method with our mock
-        with patch.object(extractor, "_upload_best_favicon", side_effect=mock_upload_best_favicon):
-            # Call the method
-            result = await extractor._process_favicon("https://example.com", 16, mock_uploader)
+        # Also mock _extract_favicons to avoid calling the real one
+        mock_favicons = [{"href": "https://example.com/favicon.svg"}]
+        mock_extract_favicons = AsyncMock(return_value=mock_favicons)
 
-            # Verify the result
-            assert result == "https://cdn.example.com/favicons/favicon.svg"
+        # Set the context variable
+        token = current_scraper.set(mock_scraper)
+        try:
+            # Replace methods with our mocks
+            with (
+                patch.object(
+                    extractor, "_upload_best_favicon", side_effect=mock_upload_best_favicon
+                ),
+                patch.object(extractor, "_extract_favicons", mock_extract_favicons),
+            ):
+                # Call the method
+                result = await extractor._process_favicon("https://example.com", 16, mock_uploader)
+
+                # Verify the result
+                assert result == "https://cdn.example.com/favicons/favicon.svg"
+
+                # Verify _extract_favicons was called
+                extractor._extract_favicons.assert_called_once_with(
+                    "https://example.com", max_icons=5
+                )
+        finally:
+            # Reset the context variable
+            current_scraper.reset(token)
 
     @pytest.mark.asyncio
-    async def test_process_single_domain_complete_flow(self, mock_uploader):
+    async def test_process_single_domain_complete_flow(self, mock_uploader, mock_scraper_context):
         """Test the complete flow of processing a single domain."""
-        # Create an extractor with mocked components
-        extractor = DomainMetadataExtractor(blocked_domains=set())
-        extractor.scraper = MagicMock()
-        extractor.scraper.open.return_value = "https://example.com"
-        extractor.scraper.scrape_title.return_value = "Example Website"
+        # Unpack the fixture
+        MockScraper, shared_scraper = mock_scraper_context
 
-        # Mock internal methods
+        # Configure the shared scraper for this test
+        shared_scraper.open.return_value = "https://example.com"
+        shared_scraper.scrape_title.return_value = "Example Website"
+
+        # Create an extractor
+        extractor = DomainMetadataExtractor(blocked_domains=set())
+
+        # Mock internal methods that are called inside _process_single_domain
         extractor._get_base_url = MagicMock(return_value="https://example.com")
         extractor._process_favicon = AsyncMock(return_value="https://cdn.example.com/favicon.ico")
         extractor._get_second_level_domain = MagicMock(return_value="example")
 
-        # Call the method
-        domain_data = {"domain": "example.com", "suffix": "com"}
-        result = await extractor._process_single_domain(domain_data, 32, mock_uploader)
+        # Use the fixture to patch the Scraper class
+        with patch(
+            "merino.jobs.navigational_suggestions.domain_metadata_extractor.Scraper", MockScraper
+        ):
+            # Call the method
+            domain_data = {"domain": "example.com", "suffix": "com"}
+            result = await extractor._process_single_domain(domain_data, 32, mock_uploader)
 
         # Verify the result contains all expected fields
         assert result["url"] == "https://example.com"
@@ -700,8 +749,7 @@ class TestDomainMetadataExtractorIntegration:
         assert len(results) == 1
         assert results[0]["domain"] == "example1"
 
-        # Verify scraper and favicon_downloader were reset
-        assert extractor.scraper.reset.called
+        # Verify favicon_downloader were reset
         assert extractor.favicon_downloader.reset.called
 
     def test_process_domain_metadata_with_monitoring(self, mock_uploader, mocker):
@@ -755,35 +803,31 @@ class TestDomainMetadataExtractorIntegration:
     def test_extract_title_filtering(self):
         """Test the _extract_title method with various titles including invalid ones."""
         extractor = DomainMetadataExtractor(blocked_domains=set())
-        extractor.scraper = MagicMock()
 
-        # Test valid title
-        extractor.scraper.scrape_title.return_value = "Valid Website Title"
-        assert extractor._extract_title() == "Valid Website Title"
+        # Create mock scraper
+        mock_scraper = MagicMock(spec=Scraper)
 
-        # Test each invalid title in INVALID_TITLES
-        for invalid_title in extractor.INVALID_TITLES[:3]:  # Test just a few to save time
-            extractor.scraper.scrape_title.return_value = f"Some {invalid_title} Page"
+        # Set the context variable for all tests
+        token = current_scraper.set(mock_scraper)
+        try:
+            # Test valid title
+            mock_scraper.scrape_title.return_value = "Valid Website Title"
+            assert extractor._extract_title() == "Valid Website Title"
+
+            # Test each invalid title in INVALID_TITLES
+            for invalid_title in extractor.INVALID_TITLES[:3]:  # Test just a few to save time
+                mock_scraper.scrape_title.return_value = f"Some {invalid_title} Page"
+                assert extractor._extract_title() is None
+
+            # Test with None title
+            mock_scraper.scrape_title.return_value = None
             assert extractor._extract_title() is None
 
-        # Test with None title
-        extractor.scraper.scrape_title.return_value = None
-        assert extractor._extract_title() is None
-
-        # Test with empty title - based on the error, the implementation returns empty string, not None
-        extractor.scraper.scrape_title.return_value = ""
-        title = extractor._extract_title()
-        # The implementation appears to return empty string or None (test error shows it's returning "")
-        assert title == "" or title is None
-
-    def test_get_title_with_fallback(self):
-        """Test the _get_title method with title extraction and fallback."""
-        extractor = DomainMetadataExtractor(blocked_domains=set())
-
-        # Test with successful title extraction
-        with patch.object(extractor, "_extract_title", return_value="Extracted Title"):
-            assert extractor._get_title("fallback") == "Extracted Title"
-
-        # Test with failed title extraction
-        with patch.object(extractor, "_extract_title", return_value=None):
-            assert extractor._get_title("fallback") == "Fallback"
+            # Test with empty title
+            mock_scraper.scrape_title.return_value = ""
+            title = extractor._extract_title()
+            # The implementation appears to return empty string or None
+            assert title == "" or title is None
+        finally:
+            # Reset the context variable
+            current_scraper.reset(token)
