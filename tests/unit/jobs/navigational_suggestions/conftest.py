@@ -146,12 +146,12 @@ def fixture_mock_scraper_context():
             # For synchronous methods
             pass
 
-        async def __aenter__(self):
+        def __enter__(self):
             # Set the context variable and store the token
             self.token = current_scraper.set(shared_scraper)
             return shared_scraper
 
-        async def __aexit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type, exc_val, exc_tb):
             # Reset the context variable
             current_scraper.reset(self.token)
             return False
