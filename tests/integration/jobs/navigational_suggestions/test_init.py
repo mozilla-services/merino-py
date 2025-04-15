@@ -45,6 +45,15 @@ def mock_domain_data():
             "categories": ["search", "tech"],
             "source": "custom-domains",
         },
+        {
+            "rank": 3,
+            "domain": "no-favicon.org",
+            "host": "no-favicon.org",
+            "origin": "http://no-favicon.org",
+            "suffix": "org",
+            "categories": ["search", "tech"],
+            "source": "custom-domains",
+        },
     ]
 
 
@@ -63,6 +72,12 @@ def mock_domain_metadata():
             "url": "https://test.org",
             "title": "Test Website",
             "icon": "https://cdn.test.org/favicon.ico",
+        },
+        {
+            "domain": "no-favicon",
+            "url": "https://no-favicon.org",
+            "title": "No Favicon",
+            "icon": "",
         },
     ]
 
