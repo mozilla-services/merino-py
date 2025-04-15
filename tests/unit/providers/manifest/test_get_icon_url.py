@@ -32,7 +32,7 @@ MS_ICON = HttpUrl(
     "90cdaf487716184e4034000935c605d1633926d348116d198f355a98b8c6cd21_17174.oct"
 )
 BBC_ICON = HttpUrl("https://merino-images.services.mozilla.com/favicons/bbciconhash_12345.png")
-# CNN_ICON = HttpUrl("https://merino-images.services.mozilla.com/favicons/cnniconhash_98765.png")
+CNN_ICON = HttpUrl("https://merino-images.services.mozilla.com/favicons/cnniconhash_98765.png")
 
 
 @pytest.mark.asyncio
@@ -46,12 +46,11 @@ BBC_ICON = HttpUrl("https://merino-images.services.mozilla.com/favicons/bbciconh
         ("https://www.microsoft.com/en-us/", MS_ICON),
         ("https://bbc.co.uk/news", BBC_ICON),
         ("https://www.bbc.co.uk/sport", BBC_ICON),
-        # DISCO-3447: URLs with subdomains aren't handled correctly yet.
-        # (
-        #     "https://edition.cnn.com/2025/04/09/entertainment/aimee-lou-wood-teeth-talk-intl-scli/"
-        #     "index.html?utm_source=firefox-newtab-en-us",
-        #     CNN_ICON,
-        # ),
+        (
+            "https://edition.cnn.com/2025/04/09/entertainment/aimee-lou-wood-teeth-talk-intl-scli/"
+            "index.html?utm_source=firefox-newtab-en-us",
+            CNN_ICON,
+        ),
     ],
 )
 async def test_get_icon_url_domain_variants(

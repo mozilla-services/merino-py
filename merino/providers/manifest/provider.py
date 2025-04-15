@@ -5,6 +5,7 @@ import time
 import logging
 from urllib.parse import urlparse
 
+import tldextract
 from pydantic import HttpUrl, ValidationError
 
 from merino.providers.manifest.backends.filemanager import GetManifestResultCode
@@ -103,10 +104,8 @@ class Provider:
         """
         try:
             url_str = str(url)
-            # Remove www. and get the domain
-            domain = urlparse(url_str).netloc.replace("www.", "")
-            # Strip TLD by taking first part of domain
-            base_domain = domain.split(".")[0] if "." in domain else domain
+            # Use tldextract to correctly handle all domain patterns
+            base_domain = tldextract.extract(url_str).domain
 
             idx = self.domain_lookup_table.get(base_domain, -1)
             if idx >= 0 and self.manifest_data is not None:
