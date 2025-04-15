@@ -275,7 +275,7 @@ cron_interval_sec = 21600 # 6 hours
 # Cache TTLs for weather data.
 
 # MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__LOCATION_KEY_TTL_SEC
-location_key_ttl_sec = 604800 # 7 days
+location_key_ttl_sec = 2592000 # 30 days
 
 # MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__CURRENT_CONDITION_TTL_SEC
 current_condition_ttl_sec = 1800 # 1/2 hr
