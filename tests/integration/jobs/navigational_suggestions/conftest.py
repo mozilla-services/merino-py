@@ -26,10 +26,10 @@ def mock_scraper_context():
 
     # Create a context manager mock that will return our shared scraper
     class MockScraperContextManager:
-        async def __aenter__(self):
+        def __enter__(self):
             return shared_scraper
 
-        async def __aexit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type, exc_val, exc_tb):
             return False
 
     # Create a mock class for Scraper that returns our context manager

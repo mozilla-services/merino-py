@@ -90,7 +90,7 @@ async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
             base_url = metadata["url"]
 
             # For testing, we need to create a scraper and set it in the context
-            async with Scraper() as test_scraper:
+            with Scraper() as test_scraper:
                 # Set the context variable for this test
                 token = current_scraper.set(test_scraper)
                 try:

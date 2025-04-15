@@ -1353,7 +1353,7 @@ async def test_process_single_domain_unreachable(mock_domain_metadata_uploader, 
         )
 
     # Verify the exact expected result
-    assert result == {"url": None, "title": None, "icon": None, "domain": None}
+    assert result == {"url": None, "title": "", "icon": "", "domain": ""}
 
 
 @pytest.mark.asyncio

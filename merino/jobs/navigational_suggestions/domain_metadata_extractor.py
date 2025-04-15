@@ -47,10 +47,10 @@ class Scraper:
     request_client: AsyncFaviconDownloader
     parser: str = "html.parser"
 
-    async def __aenter__(self):
+    def __enter__(self):
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
         return False
 
@@ -617,7 +617,7 @@ class DomainMetadataExtractor:
         self, domain_data: dict[str, Any], favicon_min_width: int, uploader: DomainMetadataUploader
     ) -> dict[str, Optional[str]]:
         """Process a single domain asynchronously and always return a valid dict."""
-        async with Scraper() as domain_scraper:
+        with Scraper() as domain_scraper:
             # Set the context variable for this task's context
             token = current_scraper.set(domain_scraper)
             try:
