@@ -116,6 +116,12 @@ def _construct_top_picks(
     # This prevents IndexError when domain_metadata is shorter than domain_data
     for domain, metadata in zip(domain_data, domain_metadata):
         if metadata["url"]:
+            # We don't want to add custom-domains to the manifest file if they don't
+            # have a valid favicon. We keep the "top-picks" ones (from BigQuery) because
+            # they are used in Search & Suggest in the browser
+            if metadata["icon"] == "" and domain.get("source") != "top-picks":
+                continue
+
             domain_url = metadata["url"]
             result.append(
                 {
