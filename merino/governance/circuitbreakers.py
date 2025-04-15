@@ -17,7 +17,7 @@ Each breaker can be defined as follows:
     - `EXPECTED_EXCEPTION` [{exception} | iter(exceptions)]: The expected exception(s) that
       the breaker cares about. Only these specific exception(s) will be listened and update
       the state of the breaker.
-    - `FALLBACK_FUNCTION` {callable}: Optionally, a fullback function (or async function) can
+    - `FALLBACK_FUNCTION` {callable}: Optionally, a fallback function (or async function) can
       be called instead when the breaker is open. If this is specified, the
       `circuitbreaker.CircuitBreakerError` will no longer be raised as mentioned above.
   - You can create an instance of this circuit breaker class and attach it to a function

@@ -283,7 +283,7 @@ cron_interval_sec = 21600 # 6 hours
 circuit_breaker_failure_threshold = 10
 
 # MERINO_PROVIDERS__ACCUWEATHER__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
-# The circuit breaker will stay open for this period of time until the next revoery attempt.
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
 circuit_breaker_recover_timeout_sec = 30
 
 [default.providers.accuweather.cache_ttls]
