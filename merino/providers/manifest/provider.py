@@ -3,7 +3,6 @@
 import asyncio
 import time
 import logging
-from urllib.parse import urlparse
 
 import tldextract
 from pydantic import HttpUrl, ValidationError
