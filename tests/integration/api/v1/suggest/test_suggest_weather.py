@@ -20,7 +20,12 @@ from pydantic import HttpUrl, TypeAdapter
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.exceptions import BackendError
+from merino.providers.suggest.weather.backends.accuweather.errors import (
+    AccuweatherError,
+    AccuweatherErrorMessages,
+)
+from merino.configs import settings
+from merino.exceptions import BackendError, CacheAdapterError
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import GeolocationMiddleware, Location, Coordinates
 from merino.providers.suggest.base import SuggestionRequest
@@ -185,11 +190,10 @@ def fixture_location_completion_sample_cities() -> list[dict[str, Any]]:
     ]
 
 
-def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> None:
-    """Test that the suggest endpoint response is as expected when the Weather provider
-    supplies a suggestion.
-    """
-    weather_report: WeatherReport = WeatherReport(
+@pytest.fixture(name="weather_report")
+def fixture_weather_report() -> WeatherReport:
+    """Fixture as a weather report."""
+    return WeatherReport(
         city_name="Milton",
         region_code="WA",
         current_conditions=CurrentConditions(
@@ -215,7 +219,12 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
         ),
         ttl=500,
     )
-    expected_suggestion: list[Suggestion] = [
+
+
+@pytest.fixture(name="expected_suggestion")
+def fixture_expected_suggestion(weather_report: WeatherReport) -> list[Suggestion]:
+    """Fixture as an expected suggestion."""
+    return [
         Suggestion(
             title="Weather for Milton",
             url=HttpUrl(
@@ -232,6 +241,17 @@ def test_suggest_with_weather_report(client: TestClient, backend_mock: Any) -> N
             forecast=weather_report.forecast,
         )
     ]
+
+
+def test_suggest_with_weather_report(
+    client: TestClient,
+    backend_mock: Any,
+    weather_report: WeatherReport,
+    expected_suggestion: list[Suggestion],
+) -> None:
+    """Test that the suggest endpoint response is as expected when the Weather provider
+    supplies a suggestion.
+    """
     backend_mock.get_weather_report.return_value = weather_report
 
     response = client.get("/api/v1/suggest?q=weather&request_type=weather")
@@ -269,6 +289,65 @@ def test_suggest_backend_error_weather_report_returns_empty(
     assert response.status_code == 200
     result = response.json()
     assert result["suggestions"] == expected_suggestion
+
+
+def test_circuit_breaker_with_backend_error(
+    client: TestClient,
+    backend_mock: Any,
+    mocker: MockerFixture,
+    weather_report: WeatherReport,
+    expected_suggestion: list[Suggestion],
+) -> None:
+    """Test that the accuweather provider can behave as expected when the circuit breaker
+    is triggered.
+    """
+    backend_mock.get_weather_report.side_effect = AccuweatherError(
+        AccuweatherErrorMessages.CACHE_READ_ERROR, exception=CacheAdapterError()
+    )
+
+    with freeze_time("2025-04-11") as freezer:
+        # Trigger the breaker by calling the endpoint for the `threshold` times.
+        for _ in range(settings.providers.accuweather.circuit_breaker_failure_threshold):
+            _ = client.get("/api/v1/suggest?provider=accuweather&q=weather&request_type=weather")
+
+        spy = mocker.spy(backend_mock, "get_weather_report")
+
+        # Make a few more requests and verify all of them get short circuited and served by the fallback function.
+        for _ in range(settings.providers.accuweather.circuit_breaker_failure_threshold):
+            _ = client.get("/api/v1/suggest?provider=accuweather&q=weather&request_type=weather")
+
+        # You shall not pass!
+        spy.assert_not_called()
+
+        # Now tick the timer to advance for the recovery timeout seconds.
+        freezer.tick(settings.providers.accuweather.circuit_breaker_recover_timeout_sec + 1.0)
+
+        # Clear the side effect to restore the normal behavior.
+        backend_mock.get_weather_report.side_effect = None
+        backend_mock.get_weather_report.return_value = weather_report
+
+        # The breaker should be `half-open` hence the request should hit the integration point,
+        # and bring the breaker back to the `closed` state.
+        response = client.get("/api/v1/suggest?q=weather&request_type=weather")
+
+        spy.assert_called_once()
+        assert response.status_code == 200
+        result = response.json()
+        assert expected_suggestion == TypeAdapter(list[Suggestion]).validate_python(
+            result["suggestions"]
+        )
+
+        # Verify that all the subsequent requests can succeed as well.
+        for _ in range(settings.providers.accuweather.circuit_breaker_failure_threshold):
+            response = client.get(
+                "/api/v1/suggest?provider=accuweather&q=weather&request_type=weather"
+            )
+
+            assert response.status_code == 200
+            result = response.json()
+            assert expected_suggestion == TypeAdapter(list[Suggestion]).validate_python(
+                result["suggestions"]
+            )
 
 
 def test_suggest_location_error_weather_report_returns_empty(

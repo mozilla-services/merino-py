@@ -188,6 +188,13 @@ replica = "redis://localhost:6379"
 # To override the default max_conns of Redis-py: 2 ** 31.
 max_connections = 500
 
+# MERINO_REDIS__SOCKET_CONNECT_TIMEOUT_SEC
+# Timeout to connect to Redis in seconds
+socket_connect_timeout_sec = 3
+
+# MERINO_REDIS__SOCKET_TIMEOUT_SEC
+# Timeout to interact with Redis in seconds
+socket_timeout_sec = 3
 
 [default.sentry]
 # MERINO_SENTRY__MODE
@@ -270,6 +277,14 @@ connect_timeout_sec = 3.0
 
 # MERINO_PROVIDERS__ACCUWEATHER__CRON_INTERVAL_SEC
 cron_interval_sec = 21600 # 6 hours
+
+# MERINO_PROVIDERS__ACCUWEATHER__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+
+# MERINO_PROVIDERS__ACCUWEATHER__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
 
 [default.providers.accuweather.cache_ttls]
 # Cache TTLs for weather data.

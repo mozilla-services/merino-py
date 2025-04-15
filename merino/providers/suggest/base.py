@@ -169,6 +169,16 @@ class BaseProvider(ABC):
         """
         ...
 
+    def validate(self, srequest: SuggestionRequest) -> None:  # pragma: no cover
+        """Validate the request. Raise an `HTTPException` for any validation errors.
+
+        Args:
+          - `srequest`: the suggestion request.
+        Raise:
+          - `HTTPException` for any validation errors.
+        """
+        return
+
     def normalize_query(self, query: str) -> str:  # pragma: no cover
         """Normalize the query string when passed to the provider.
         Each provider can extend this class given its requirements. Can be used to

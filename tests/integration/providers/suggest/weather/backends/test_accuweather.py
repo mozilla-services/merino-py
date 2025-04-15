@@ -30,6 +30,7 @@ from merino.providers.suggest.weather.backends.accuweather import (
     AccuweatherBackend,
     WeatherDataType,
 )
+from merino.providers.suggest.weather.backends.accuweather.errors import AccuweatherError
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -878,8 +879,8 @@ async def test_get_weather_report_with_location_key_with_cache_error(
     accuweather_parameters: dict[str, Any],
     mocker: MockerFixture,
 ) -> None:
-    """Test that we catch the CacheAdapterError exception when running the script against the
-    cache.
+    """Test that we catch the CacheAdapterError exception and raise an `AccuweatherError`
+    when running the script against the cache.
     """
     caplog.set_level(ERROR)
 
@@ -891,13 +892,14 @@ async def test_get_weather_report_with_location_key_with_cache_error(
 
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
 
-    report = await accuweather.get_weather_report(weather_context_with_location_key)
+    with pytest.raises(AccuweatherError):
+        _ = await accuweather.get_weather_report(weather_context_with_location_key)
+
     records: list[LogRecord] = filter_caplog(
         caplog.records, "merino.providers.suggest.weather.backends.accuweather.backend"
     )
 
     client_mock.get.assert_not_called()
-    assert report is None
 
     assert len(records) == 1
     assert records[0].message.startswith(
