@@ -75,6 +75,12 @@ format = "mozlog"
 # Boolean to allow log propagation.
 can_propagate = false
 
+[default.governance]
+# MERINO_GOVERNANCE__CRON_INTERVAL_SEC
+# The interval of the background cron job for Merino governance.
+# This is currently set to match `circuit_breaker_recover_timeout_sec`.
+# This can be updated when more governance artifacts get added in the future.
+cron_interval_sec = 30
 
 [default.web.api.v1]
 # MERINO_WEB__API__V1__CLIENT_VARIANT_MAX
