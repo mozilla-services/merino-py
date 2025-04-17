@@ -199,3 +199,9 @@ When requesting a manifest file, we record the following metrics.
 - `manifest.gcs.fetch_time` - A timer for how long it took to download the latest manifest file from the Google Cloud bucket.
 - `manifest.request.no_manifest` - A counter to measure how many times we didn't find the latest manifest file.
 - `manifest.request.error` - A counter to measure how many times we could not provide a valid JSON manifest file.
+
+### Service Governance
+
+The following metrics are recorded for service governance monitoring.
+
+- `governance.circuits.<circuit-breaker-name>` - A gauge to instrument the failure count for each "open" circuit breaker.
