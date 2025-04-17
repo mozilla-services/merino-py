@@ -84,8 +84,8 @@ def main() -> None:
     if len(sys.argv) == 3:
         language = sys.argv[2]
 
-    with open("./page_ignore.json") as f, open("./dynamic_wikipedia_blocklist.csv") as g:
-        ignored = set(title.casefold() for title in json.load(f))
+    with open("page_ignore.csv") as f, open("./dynamic_wikipedia_blocklist.csv") as g:
+        ignored = set(item["title"].casefold() for item in csv.DictReader(f))
         ignored |= set(item["title"].casefold() for item in csv.DictReader(g))
 
     with Pool(None, initializer, [ignored]) as pool:
