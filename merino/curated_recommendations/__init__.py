@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 _provider: CuratedRecommendationsProvider
 
+
 def initialize_storage_client(destination_gcp_project: str) -> Client:
     """Initialize a Google Cloud Storage client with production or anonymous credentials if in non-production/staging environment"""
     if settings.runtime.skip_gcp_client_auth:
@@ -43,12 +44,15 @@ def initialize_storage_client(destination_gcp_project: str) -> Client:
         # if not using anonymous credentials in dev & testing envs, this will throw
         return Client(destination_gcp_project, credentials=AnonymousCredentials())  # type: ignore
 
+
 def init_engagement_backend() -> EngagementBackend:
     """Initialize the GCS Engagement Backend."""
     try:
         metrics_namespace = "recommendation.engagement"
         synced_gcs_blob = SyncedGcsBlob(
-            storage_client=initialize_storage_client(destination_gcp_project=settings.curated_recommendations.gcs.gcp_project),
+            storage_client=initialize_storage_client(
+                destination_gcp_project=settings.curated_recommendations.gcs.gcp_project
+            ),
             metrics_client=get_metrics_client(),
             metrics_namespace=metrics_namespace,
             bucket_name=settings.curated_recommendations.gcs.bucket_name,
@@ -75,7 +79,9 @@ def init_prior_backend() -> PriorBackend:
     """Initialize the GCS Prior Backend, falling back to ConstantPrior if GCS Prior cannot be initialized."""
     try:
         synced_gcs_blob = SyncedGcsBlob(
-            storage_client=initialize_storage_client(destination_gcp_project=settings.curated_recommendations.gcs.gcp_project),
+            storage_client=initialize_storage_client(
+                destination_gcp_project=settings.curated_recommendations.gcs.gcp_project
+            ),
             metrics_client=get_metrics_client(),
             metrics_namespace="recommendation.prior",
             bucket_name=settings.curated_recommendations.gcs.bucket_name,
