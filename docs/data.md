@@ -204,4 +204,4 @@ When requesting a manifest file, we record the following metrics.
 
 The following metrics are recorded for service governance monitoring.
 
-- `governance.circuits.<circuit-breaker-name>` - A gauge to instrument the status for each circuit breaker in Merino. The value can be any of "closed", "open", and "half-open". A tag of `{"failure_count": count}` is also attached.
+- `governance.circuits.<circuit-breaker-name>` - A gauge to instrument the failure count for each "open" circuit breaker.

@@ -38,12 +38,11 @@ class Governing:
             self.cron_task = None
 
     def _emit_circuit_metrics(self) -> None:
-        """Emit circuit breaker metrics."""
-        for circuit in CircuitBreakerMonitor.get_circuits():
+        """Emit circuit breaker metrics for "open" circuits."""
+        for circuit in CircuitBreakerMonitor.get_open():
             self.metrics_client.gauge(
                 f"governance.circuits.{circuit.name}",
-                value=circuit.state,
-                tags={"failure_count": circuit.failure_count},
+                value=circuit.failure_count,
             )
 
     async def cron(self) -> None:

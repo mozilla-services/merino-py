@@ -35,15 +35,21 @@ async def test_governing_start_shutdown() -> None:
     governance.shutdown()
 
 
-@circuit(name=CIRCUIT_NAME, failure_threshold=1, recovery_timeout=1)
-def dummy() -> None:  # noqa: D102
+@circuit(name=CIRCUIT_NAME, failure_threshold=1, recovery_timeout=100, expected_exception=KeyError)
+def dummy() -> None:
     """Attached a test circuit breaker to this dummy function."""
-    pass
+    raise KeyError()
 
 
 @pytest.mark.asyncio
 async def test_governing_metrics(mocker: MockerFixture) -> None:
     """Test the metrics emission."""
+    # "Open" the circuit breaker to emit metrics.
+    try:
+        dummy()
+    except KeyError:
+        pass
+
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
     # This doesn't require the daemon running.
@@ -51,6 +57,7 @@ async def test_governing_metrics(mocker: MockerFixture) -> None:
 
     # Check the test circuit breaker is contained in the metrics.
     # Note that there might be other circuit breakers registered in the monitor.
-    assert f"governance.circuits.{CIRCUIT_NAME}" in {
-        call.args[0] for call in report.call_args_list
+    expected_failure_count: int = 1
+    assert (f"governance.circuits.{CIRCUIT_NAME}", expected_failure_count) in {
+        (call.args[0], call.args[2]) for call in report.call_args_list
     }
