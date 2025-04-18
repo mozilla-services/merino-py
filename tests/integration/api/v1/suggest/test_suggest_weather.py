@@ -584,3 +584,46 @@ async def test_suggest_weather_with_custom_location(
     )
 
     assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_suggest_weather_with_custom_gb_location(
+    client: TestClient,
+    geolocation_middleware: GeolocationMiddleware,
+    geolocation_scope: Scope,
+    providers: Providers,
+    mocker: MockerFixture,
+) -> None:
+    """Test that the suggest endpoint returns a response using custom UK city, region & country params when provided.
+    Region in this case is being ignored. [DISCO-3507]
+    """
+    receive_mock = AsyncMock()
+    send_mock = AsyncMock()
+
+    mock_query = mocker.patch.object(providers["weather"], "query", autospec=True)
+
+    await geolocation_middleware(geolocation_scope, receive_mock, send_mock)
+
+    response = client.get(
+        "/api/v1/suggest",
+        params={
+            "q": "",
+            "providers": "weather",
+            "request_type": "weather",
+            "city": "Birmingham",
+            "region": "ENG",
+            "country": "GB",
+        },
+    )
+
+    expected_geolocation = geolocation_scope[ScopeKey.GEOLOCATION].model_copy(
+        update={"city": "Birmingham", "regions": [None], "country": "GB"}
+    )
+
+    mock_query.assert_called_with(
+        SuggestionRequest(
+            query="", geolocation=expected_geolocation, request_type="weather", languages=["en-US"]
+        )
+    )
+
+    assert response.status_code == 200
