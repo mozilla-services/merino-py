@@ -43,10 +43,6 @@ log inspection interfaces.
   - `sequence_no` -  A client-side event counter (0-based) that records the query
     sequence within each search session.
 
-- `INFO request.summary` - The application request summary that follows the [MozLog][]
-  convention. This log is recorded for all incoming HTTP requests except for the
-  suggest API endpoint.
-
 [Mozlog]: https://wiki.mozilla.org/Firefox/Services/Logging
 
 - `ERROR dockerflow.error_endpoint` - The `__error__` endpoint of the server was

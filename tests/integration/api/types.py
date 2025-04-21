@@ -3,10 +3,3 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Type definitions for the integration test modules."""
-
-from logging import LogRecord
-from typing import Callable
-
-from merino.utils.log_data_creators import RequestSummaryLogDataModel
-
-RequestSummaryLogDataFixture = Callable[[LogRecord], RequestSummaryLogDataModel]

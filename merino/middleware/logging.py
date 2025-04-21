@@ -10,16 +10,12 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from merino.utils.log_data_creators import (
-    RequestSummaryLogDataModel,
     SuggestLogDataModel,
-    create_request_summary_log_data,
     create_suggest_log_data,
 )
 
 # web.suggest.request is used for logs coming from the /suggest endpoint
 suggest_request_logger = logging.getLogger("web.suggest.request")
-# all other requests will be logged to request.summary
-logger = logging.getLogger("request.summary")
 
 # The path pattern for the suggest API
 PATTERN: Pattern = re.compile(r"/api/v[1-9]\d*/suggest$")
@@ -51,11 +47,6 @@ class LoggingMiddleware:
                         request, message, dt
                     )
                     suggest_request_logger.info("", extra=suggest_log_data.model_dump())
-                else:
-                    request_log_data: RequestSummaryLogDataModel = create_request_summary_log_data(
-                        request, message, dt
-                    )
-                    logger.info("", extra=request_log_data.model_dump())
 
             await send(message)
 

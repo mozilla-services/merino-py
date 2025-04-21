@@ -1,7 +1,6 @@
 """A utility module for log data creation"""
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, field_serializer
 from starlette.datastructures import Headers
@@ -14,9 +13,7 @@ from merino.middleware.user_agent import UserAgent
 
 
 class LogDataModel(BaseModel):
-    """Shared generic log data model. These fields are shared between the Request Summary Logs
-    and the Suggest Logs.
-    """
+    """Shared generic log data model."""
 
     errno: int
     time: datetime
@@ -27,15 +24,6 @@ class LogDataModel(BaseModel):
     def serialize_time(self, v: datetime, **kwargs):
         """Return a datetime value as an iso formatted str."""
         return v.isoformat()
-
-
-class RequestSummaryLogDataModel(LogDataModel):
-    """Log metadata specific to Request Summary."""
-
-    agent: str | None = None
-    lang: str | None = None
-    querystring: dict[str, Any]
-    code: int
 
 
 class SuggestLogDataModel(LogDataModel):
@@ -56,22 +44,6 @@ class SuggestLogDataModel(LogDataModel):
     browser: str
     os_family: str
     form_factor: str
-
-
-def create_request_summary_log_data(
-    request: Request, message: Message, dt: datetime
-) -> RequestSummaryLogDataModel:
-    """Create log data for API endpoints."""
-    return RequestSummaryLogDataModel(
-        errno=0,
-        time=dt,
-        agent=request.headers.get("User-Agent"),
-        path=request.url.path,
-        method=request.method,
-        lang=request.headers.get("Accept-Language"),
-        querystring=dict(request.query_params),
-        code=message["status"],
-    )
 
 
 def create_suggest_log_data(

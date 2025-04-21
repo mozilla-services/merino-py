@@ -4,7 +4,6 @@
 
 """Module for test configurations for the integration test directory."""
 
-from logging import LogRecord
 from typing import Iterator
 from unittest.mock import AsyncMock
 
@@ -18,8 +17,6 @@ from merino.providers.manifest.backends.protocol import GetManifestResultCode, M
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from contextlib import nullcontext
 from merino.main import app
-from merino.utils.log_data_creators import RequestSummaryLogDataModel
-from tests.integration.api.types import RequestSummaryLogDataFixture
 
 
 class NoOpMetricsClient(AioDogstatsdClient):
@@ -67,29 +64,6 @@ def fixture_test_client_with_events() -> Iterator[TestClient]:
     """
     with TestClient(app) as client:
         yield client
-
-
-@pytest.fixture(name="extract_request_summary_log_data")
-def fixture_extract_request_summary_log_data() -> RequestSummaryLogDataFixture:
-    """Return a function that will extract the extra log data from a captured
-    "request.summary" log record
-    """
-
-    def extract_request_summary_log_data(
-        record: LogRecord,
-    ) -> RequestSummaryLogDataModel:
-        return RequestSummaryLogDataModel(
-            errno=record.__dict__["errno"],
-            time=record.__dict__["time"],
-            agent=record.__dict__["agent"],
-            path=record.__dict__["path"],
-            method=record.__dict__["method"],
-            lang=record.__dict__["lang"],
-            querystring=record.__dict__["querystring"],
-            code=record.__dict__["code"],
-        )
-
-    return extract_request_summary_log_data
 
 
 @pytest.fixture

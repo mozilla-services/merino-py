@@ -17,57 +17,9 @@ from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
 from merino.utils.log_data_creators import (
     LogDataModel,
-    RequestSummaryLogDataModel,
     SuggestLogDataModel,
-    create_request_summary_log_data,
     create_suggest_log_data,
 )
-
-
-@pytest.mark.parametrize(
-    ["headers", "expected_agent", "expected_lang"],
-    [
-        ([], None, None),
-        ([(b"user-agent", b"curl/7.84.0")], "curl/7.84.0", None),
-        ([(b"accept-language", b"en-US")], None, "en-US"),
-    ],
-    ids=["no_headers", "user_agent_header", "accept_language_header"],
-)
-def test_create_request_summary_log_data(
-    headers: list[tuple[bytes, bytes]],
-    expected_agent: str | None,
-    expected_lang: str | None,
-) -> None:
-    """Test that the create_request_summary_log_data method properly constructs log
-    data given different headers.
-    """
-    dt: datetime = datetime(1998, 3, 31)
-
-    expected_log_data: RequestSummaryLogDataModel = RequestSummaryLogDataModel(
-        errno=0,
-        time=dt,
-        agent=expected_agent,
-        path="/__heartbeat__",
-        method="GET",
-        lang=expected_lang,
-        querystring={},
-        code=200,
-    )
-
-    request: Request = Request(
-        scope={
-            "type": "http",
-            "headers": headers,
-            "method": "GET",
-            "path": "/__heartbeat__",
-            "query_string": "",
-        }
-    )
-    message: Message = {"type": "http.response.start", "status": "200"}
-
-    log_data: RequestSummaryLogDataModel = create_request_summary_log_data(request, message, dt)
-
-    assert log_data == expected_log_data
 
 
 @pytest.mark.parametrize(
