@@ -287,14 +287,9 @@ class TestCuratedRecommendationsRequestParameters:
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
                 "/api/v1/curated-recommendations",
-                json={
-                    "locale": Locale.EN_US,
-                    "coarse_os": coarse_os,
-                },
+                json={"locale": Locale.EN_US, "coarse_os": coarse_os},
             )
-            assert (
-                response.status_code == 200
-            ), f"coarse_os {coarse_os} resulted in {response.status_code}"
+            assert response.status_code == 200
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("coarse_os", ["", "windows11"])
@@ -316,7 +311,7 @@ class TestCuratedRecommendationsRequestParameters:
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
                 "/api/v1/curated-recommendations",
-                json={"locale": Locale.EN_US, "utc_offset": utc_offset},
+                json={"locale": Locale.EN_US, "utcOffset": utc_offset},
             )
             assert response.status_code == 200
 
@@ -327,11 +322,9 @@ class TestCuratedRecommendationsRequestParameters:
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
                 "/api/v1/curated-recommendations",
-                json={"locale": Locale.EN_US, "utc_offset": utc_offset},
+                json={"locale": Locale.EN_US, "utcOffset": utc_offset},
             )
-            assert (
-                response.status_code == 400
-            ), f"utc_offset {utc_offset} should fail, got {response.status_code}"
+            assert response.status_code == 400
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("count", [10, 50, 100])

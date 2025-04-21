@@ -52,7 +52,6 @@ class Locale(str, Enum):
         return Locale._value2member_map_
 
 
-# New Enum for coarse_os
 @unique
 class CoarseOS(str, Enum):
     """Supported operating systems at a coarse granularity."""
