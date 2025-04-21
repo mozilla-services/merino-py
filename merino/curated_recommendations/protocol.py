@@ -52,6 +52,19 @@ class Locale(str, Enum):
         return Locale._value2member_map_
 
 
+# New Enum for coarse_os
+@unique
+class CoarseOS(str, Enum):
+    """Supported operating systems at a coarse granularity."""
+
+    MAC = "mac"
+    WIN = "win"
+    LINUX = "linux"
+    ANDROID = "android"
+    IOS = "ios"
+    OTHER = "other"
+
+
 @unique
 class ExperimentName(str, Enum):
     """List of Nimbus experiment names on New Tab. This list is NOT meant to be exhaustive.
@@ -143,6 +156,8 @@ class CuratedRecommendationsRequest(BaseModel):
 
     locale: Locale
     region: str | None = None
+    coarseOs: CoarseOS | None = None
+    utcOffset: Annotated[int, Field(ge=0, le=24)] | None = None
     count: int = 100
     topics: list[Topic | str] | None = None
     feeds: list[str] | None = None

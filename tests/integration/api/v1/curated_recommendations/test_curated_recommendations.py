@@ -35,7 +35,7 @@ from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
     Layout,
-    Locale,
+    Locale, CoarseOS,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
@@ -268,6 +268,63 @@ class TestCuratedRecommendationsRequestParameters:
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post("/api/v1/curated-recommendations", json={"locale": locale})
             assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "coarse_os",
+        [
+            CoarseOS.MAC,
+            CoarseOS.WIN,
+            CoarseOS.LINUX,
+            CoarseOS.ANDROID,
+            CoarseOS.IOS,
+            CoarseOS.OTHER,
+        ],
+    )
+    async def test_curated_recommendations_valid_os(self, coarse_os):
+        """Test the curated recommendations endpoint accepts valid coarse_os values."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post("/api/v1/curated-recommendations", json={
+                "locale": Locale.EN_US,
+                "coarse_os": coarse_os,
+            })
+            assert response.status_code == 200, f"coarse_os {coarse_os} resulted in {response.status_code}"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("coarse_os", ["", "windows11"])
+    async def test_curated_recommendations_invalid_os(self, coarse_os):
+        """Test the curated recommendations endpoint rejects invalid coarse_os values."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post("/api/v1/curated-recommendations", json={
+                "locale": Locale.EN_US,
+                "coarseOs": coarse_os
+            })
+            assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("utc_offset", [0, 12, 24])
+    async def test_curated_recommendations_valid_utc_offset(self, utc_offset):
+        """
+        Test the curated recommendations endpoint accepts valid utc_offset values.
+        This includes values that require rounding (e.g., 3.7 should be rounded to 4).
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post("/api/v1/curated-recommendations", json={
+                "locale": Locale.EN_US,
+                "utc_offset": utc_offset
+            })
+            assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("utc_offset", [-1, 11.5, 25, "Z"])
+    async def test_curated_recommendations_invalid_utc_offset(self, utc_offset):
+        """Test the curated recommendations endpoint rejects invalid utc_offset values."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post("/api/v1/curated-recommendations", json={
+                "locale": Locale.EN_US,
+                "utc_offset": utc_offset
+            })
+            assert response.status_code == 400, f"utc_offset {utc_offset} should fail, got {response.status_code}"
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("count", [10, 50, 100])
