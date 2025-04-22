@@ -43,25 +43,6 @@ def test_with_test_client_with_event(client_with_events: TestClient):
     response: Response = client_with_events.get("/api/v1/endpoint")
 ```
 
-### RequestSummaryLogDataFixture
-This fixture will extract the extra log data from a captured 'request.summary'
-LogRecord for verification
-
-_**Usage:**_
-```python
-def test_with_log_data(
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
-    extract_request_summary_log_data: LogDataFixture
-):
-    records: list[LogRecord] = filter_caplog(caplog.records, "request.summary")
-    assert len(records) == 1
-
-    record: LogRecord = records[0]
-    log_data: dict[str, Any] = extract_request_summary_log_data(record)
-    assert log_data == expected_log_data
-```
-
 ### InjectProvidersFixture & ProvidersFixture
 These fixture will setup and teardown given providers.
 

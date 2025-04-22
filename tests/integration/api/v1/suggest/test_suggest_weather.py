@@ -7,7 +7,6 @@ provider.
 """
 
 import logging
-from datetime import datetime
 from logging import LogRecord
 from typing import Any
 from unittest.mock import AsyncMock
@@ -44,8 +43,6 @@ from merino.providers.suggest.weather.provider import (
     Provider,
     Suggestion,
 )
-from merino.utils.log_data_creators import RequestSummaryLogDataModel
-from tests.integration.api.types import RequestSummaryLogDataFixture
 from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
 
@@ -376,33 +373,15 @@ def test_suggest_weather_with_missing_request_type_query_parameter(client: TestC
 def test_providers_request_log_data_weather(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
-    extract_request_summary_log_data: RequestSummaryLogDataFixture,
     client: TestClient,
 ) -> None:
-    """Test that accuweather" provider logs using "request.summary"."""
+    """Test that accuweather" provider logs are not using "web.suggest.request"."""
     caplog.set_level(logging.INFO)
-
-    expected_log_data: RequestSummaryLogDataModel = RequestSummaryLogDataModel(
-        agent="testclient",
-        path="/api/v1/suggest",
-        method="GET",
-        querystring={"providers": "accuweather", "q": ""},
-        errno=0,
-        code=200,
-        time=datetime(1998, 3, 31),
-    )
 
     client.get("/api/v1/suggest?providers=accuweather&q=")
 
-    records: list[LogRecord] = filter_caplog(caplog.records, "request.summary")
-    assert len(records) == 1
-
     suggest_records: list[LogRecord] = filter_caplog(caplog.records, "web.suggest.request")
     assert len(suggest_records) == 0
-
-    record: LogRecord = records[0]
-    log_data: RequestSummaryLogDataModel = extract_request_summary_log_data(record)
-    assert log_data == expected_log_data
 
 
 def test_suggest_with_location_completion(
