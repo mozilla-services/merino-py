@@ -3,7 +3,7 @@
 When changing or adding a new layout, put the change behind a Nimbus experiment, such that
 front-end engineering, product, and design can QA the layout before it reaches users.
 
-Tile order should be based on horizontal stacking. You can try this our in the Mozilla Playground:
+Tile order should be based on horizontal stacking. You can try this out in the Mozilla Playground:
 https://developer.mozilla.org/en-US/play?id=zWYUe3xC5v60fEuN8USHE24l7Q7tR2Vghi08O6KT9DAZz9cv%2B%2F0s0H8F7vJBWRVCnQgSHYWR%2BadDY4zA
 """
 

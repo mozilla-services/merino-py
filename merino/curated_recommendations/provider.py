@@ -3,6 +3,7 @@
 import logging
 import time
 import re
+from copy import deepcopy
 from typing import cast
 
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -282,7 +283,8 @@ class CuratedRecommendationsProvider:
                 receivedFeedRank=0,
                 recommendations=top_stories,
                 title=get_translation(surface_id, "top-stories", "Popular Today"),
-                layout=layout_4_large,
+                # use deepcopy to safely update unique layout per section
+                layout=deepcopy(layout_4_large),
             )
         }
 
@@ -304,7 +306,11 @@ class CuratedRecommendationsProvider:
                         receivedFeedRank=len(sections),
                         recommendations=[],
                         title=get_translation(surface_id, rec.topic, rec.topic.value),
-                        layout=topic_layout_order[len(sections) % len(topic_layout_order)],
+                        # use deepcopy to safely update unique layout per section
+                        # ensures every section gets unique copy of the layout
+                        layout=deepcopy(
+                            topic_layout_order[len(sections) % len(topic_layout_order)]
+                        ),
                     )
                 if len(sections[section_id].recommendations) < max_recs_per_section:
                     rec.receivedRank = len(sections[section_id].recommendations)
@@ -332,7 +338,25 @@ class CuratedRecommendationsProvider:
         # Set the layout of the second section to have 3 ads, to match the number of ads in control.
         self.set_double_row_layout(valid_sections)
 
+        # Keep ads only in sections 1,2,3,5,7,9
+        self.adjust_ads_in_sections(valid_sections)
         return valid_sections
+
+    @staticmethod
+    def adjust_ads_in_sections(sections: dict[str, Section]):
+        """Show ads only in sections 1,2,3,5,7,9"""
+        # 0-based, receivedFeedRank starts at 0
+        sections_with_ads = {0, 1, 2, 4, 6, 8}  # Use set for quicker lookup
+
+        for section in sections.values():
+            # Skip sections that should show ads
+            if section.receivedFeedRank in sections_with_ads:
+                continue
+
+            # Remove ads from all tiles for the other sections
+            for layout in section.layout.responsiveLayouts:
+                for tile in layout.tiles:
+                    tile.hasAd = False
 
     @staticmethod
     def set_double_row_layout(sections: dict[str, Section]):

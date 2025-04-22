@@ -1145,7 +1145,7 @@ class TestSections:
         ],
     )
     async def test_sections_layouts(self, sections_payload, experiment_payload):
-        """Test that the correct layout are returned along with sections."""
+        """Test that the correct layouts & ads are returned along with sections."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
                 "/api/v1/curated-recommendations",
@@ -1180,6 +1180,20 @@ class TestSections:
             for section in sections.values():
                 if section["receivedFeedRank"] != 1:
                     assert section["layout"]["name"] != "7-double-row-3-ad"
+
+            # Assert only sections 1,2,3,5,7,9 (ranks: 0,1,2,4,6,8) have ads
+            expected_section_ranks_with_ads = {0, 1, 2, 4, 6, 8}
+            for section in sections.values():
+                tiles_with_ads = [
+                    tile
+                    for layout in section["layout"]["responsiveLayouts"]
+                    for tile in layout["tiles"]
+                    if tile["hasAd"]
+                ]
+                if section["receivedFeedRank"] in expected_section_ranks_with_ads:
+                    assert tiles_with_ads
+                else:
+                    assert not tiles_with_ads
 
     @pytest.mark.asyncio
     async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
