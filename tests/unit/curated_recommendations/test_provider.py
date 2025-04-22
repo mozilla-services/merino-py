@@ -408,3 +408,43 @@ class TestSetDoubleRowLayout:
         CuratedRecommendationsProvider.set_double_row_layout(sample_feed)
 
         assert second_section.layout == layout_3_ads
+
+
+class TestAdjustAdsInSections:
+    """Tests covering CuratedRecommendationsProvider.adjust_ads_in_sections"""
+
+    @staticmethod
+    def ads_in_section(section: Section) -> bool:
+        """Check if a section contains ads."""
+        return any(
+            tile.hasAd for layout in section.layout.responsiveLayouts for tile in layout.tiles
+        )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "section_count, expected_section_ranks_with_ads",
+        [
+            (11, {0, 1, 2, 4, 6, 8}),  # All 6 expected sections (1,2,3,5,7,9) to have ads
+            (4, {0, 1, 2}),  # Partially expected sections to have ads
+        ],
+    )
+    async def test_ads_adjusted_in_sections_by_section_count(
+        self, section_count, expected_section_ranks_with_ads
+    ):
+        """Test that ads show up only in expected sections."""
+        # generate sample feed with provided # of sections
+        sample_feed = generate_sections_feed(section_count=section_count)
+
+        # Assert all sections have ads in some tiles
+        for section in sample_feed.values():
+            assert self.ads_in_section(section)
+
+        # Adjust ad display in sections
+        CuratedRecommendationsProvider.adjust_ads_in_sections(sample_feed)
+
+        # Assert that only expected sections with provided ranks have ads
+        for section in sample_feed.values():
+            if section.receivedFeedRank in expected_section_ranks_with_ads:
+                assert self.ads_in_section(section)
+            else:
+                assert not self.ads_in_section(section)

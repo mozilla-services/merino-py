@@ -2,6 +2,7 @@
 
 import random
 import uuid
+from copy import deepcopy
 
 from pydantic import HttpUrl
 
@@ -50,7 +51,7 @@ def generate_sections_feed(section_count: int, followed_count: int = 0) -> dict[
             receivedFeedRank=0,
             recommendations=[],  # Dummy recommendations.
             title="Top Stories",
-            layout=layout_4_medium,
+            layout=deepcopy(layout_4_medium),
         )
     }
 
@@ -61,7 +62,7 @@ def generate_sections_feed(section_count: int, followed_count: int = 0) -> dict[
             receivedFeedRank=i + 1,  # Ranks start after top_stories_section.
             recommendations=[],
             title=f"{topic.value.title()} Section",
-            layout=layout_4_medium,
+            layout=deepcopy(layout_4_medium),
             isFollowed=(i < followed_count),
         )
 
