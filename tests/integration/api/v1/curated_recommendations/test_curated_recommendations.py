@@ -36,6 +36,7 @@ from merino.curated_recommendations.protocol import (
     ExperimentName,
     Layout,
     Locale,
+    CoarseOS,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
@@ -270,6 +271,62 @@ class TestCuratedRecommendationsRequestParameters:
             assert response.status_code == 400
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "coarse_os",
+        [
+            CoarseOS.MAC,
+            CoarseOS.WIN,
+            CoarseOS.LINUX,
+            CoarseOS.ANDROID,
+            CoarseOS.IOS,
+            CoarseOS.OTHER,
+        ],
+    )
+    async def test_curated_recommendations_valid_os(self, coarse_os):
+        """Test the curated recommendations endpoint accepts valid coarse_os values."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": Locale.EN_US, "coarse_os": coarse_os},
+            )
+            assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("coarse_os", ["", "windows11"])
+    async def test_curated_recommendations_invalid_os(self, coarse_os):
+        """Test the curated recommendations endpoint rejects invalid coarse_os values."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": Locale.EN_US, "coarseOs": coarse_os},
+            )
+            assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("utc_offset", [0, 12, 24])
+    async def test_curated_recommendations_valid_utc_offset(self, utc_offset):
+        """Test the curated recommendations endpoint accepts valid utc_offset values.
+        This includes values that require rounding (e.g., 3.7 should be rounded to 4).
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": Locale.EN_US, "utcOffset": utc_offset},
+            )
+            assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("utc_offset", [-1, 11.5, 25, "Z"])
+    async def test_curated_recommendations_invalid_utc_offset(self, utc_offset):
+        """Test the curated recommendations endpoint rejects invalid utc_offset values."""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={"locale": Locale.EN_US, "utcOffset": utc_offset},
+            )
+            assert response.status_code == 400
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("count", [10, 50, 100])
     async def test_curated_recommendations_count(self, count, scheduled_surface_response_data):
         """Test the curated recommendations endpoint accepts valid count."""
@@ -369,30 +426,11 @@ class TestCuratedRecommendationsRequestParameters:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "locale",
-        ["fr", "fr-FR", "es", "es-ES", "it", "it-IT", "de", "de-DE", "de-AT", "de-CH"],
-    )
-    @pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
-    async def test_curated_recommendations_non_en_topic_is_null(self, locale, topics):
-        """Test that topic is missing/null for non-English locales."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
-            )
-            data = response.json()
-            corpus_items = data["data"]
-
-            assert len(corpus_items) > 0
-            # Assert that the topic is None for all items in non-en-US locales.
-            assert all(item["topic"] is None for item in corpus_items)
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        "locale",
-        ["en-US", "en-GB"],
+        ["en-US", "en-GB", "fr-FR", "es-ES", "it-IT", "de-DE"],
     )
     @pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
     async def test_curated_recommendations_en_topic(self, locale, topics):
-        """Test that topic is present for English locales."""
+        """Test that topic is present."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
                 "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
