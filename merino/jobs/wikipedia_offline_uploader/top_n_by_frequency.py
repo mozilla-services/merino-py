@@ -35,6 +35,7 @@ Usage:
     $ python top_n_by_frequency.py 5000
 """
 
+import base64
 import csv
 import glob
 import json
@@ -85,8 +86,12 @@ def main() -> None:
         language = sys.argv[2]
 
     with open("page_ignore.csv") as f, open("./dynamic_wikipedia_blocklist.csv") as g:
-        ignored = set(item["title"].casefold() for item in csv.DictReader(f))
-        ignored |= set(item["title"].casefold() for item in csv.DictReader(g))
+        ignored = set(
+            base64.b64decode(item["title"]).decode("utf-8") for item in csv.DictReader(f)
+        )
+        ignored |= set(
+            base64.b64decode(item["title"]).decode("utf-8") for item in csv.DictReader(g)
+        )
 
     with Pool(None, initializer, [ignored]) as pool:
         top_pages: Counter = Counter()
