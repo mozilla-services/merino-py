@@ -27,6 +27,7 @@ from merino.utils.http_client import create_http_client
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 from merino.providers.manifest import get_provider as get_manifest_provider
+from merino.utils.gcs import initialize_storage_client
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,9 @@ def init_engagement_backend() -> EngagementBackend:
     try:
         metrics_namespace = "recommendation.engagement"
         synced_gcs_blob = SyncedGcsBlob(
-            storage_client=Client(settings.curated_recommendations.gcs.gcp_project),
+            storage_client=initialize_storage_client(
+                destination_gcp_project=settings.curated_recommendations.gcs.gcp_project
+            ),
             metrics_client=get_metrics_client(),
             metrics_namespace=metrics_namespace,
             bucket_name=settings.curated_recommendations.gcs.bucket_name,
@@ -65,7 +68,9 @@ def init_prior_backend() -> PriorBackend:
     """Initialize the GCS Prior Backend, falling back to ConstantPrior if GCS Prior cannot be initialized."""
     try:
         synced_gcs_blob = SyncedGcsBlob(
-            storage_client=Client(settings.curated_recommendations.gcs.gcp_project),
+            storage_client=initialize_storage_client(
+                destination_gcp_project=settings.curated_recommendations.gcs.gcp_project
+            ),
             metrics_client=get_metrics_client(),
             metrics_namespace="recommendation.prior",
             bucket_name=settings.curated_recommendations.gcs.bucket_name,
