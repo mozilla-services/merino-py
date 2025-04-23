@@ -84,7 +84,7 @@ SKIP_WORDS: Pattern = re.compile(r"(\d+|the|an|a)$")
 
 # The directory for adM provided suggestions. This is used to load all the
 # keywords of the in-flight sponsored suggestions.
-ADM_SOURCE_DIR = "../source-data/"
+AMP_SOURCE_DIR = "../source-data/"
 
 # A set to store all the inflight sponsored keywords
 SPONSORED_KEYWORDS: Set[str] = set()
@@ -111,6 +111,7 @@ def scan(language) -> Generator[dict[str, str | list[str] | list[list[int]] | in
         title = article["title"]
         keywords = make_keywords(title.lower().split("_"))
         title_string = title.replace("_", " ")
+        wiki_title_string = "Wikipédia" if language == "fr" else "Wikipedia"
 
         if len(keywords) >= MIN_KEYWORDS:
             for keyword in keywords:
@@ -121,7 +122,7 @@ def scan(language) -> Generator[dict[str, str | list[str] | list[list[int]] | in
                 "iab_category": "5 - Education",
                 "icon": ICON_ID,
                 "advertiser": "Wikipedia",
-                "title": f"Wikipedia - {title_string}",
+                "title": f"{wiki_title_string} - {title_string}",
                 "keywords": keywords,
                 "full_keywords": [[title_string, len(keywords)]],
             }

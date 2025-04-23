@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
     shift
     ;;
   *)
-    echo "Unknown access-method: ${access}. Should be one of 'en', 'fr', 'de', 'it', and 'pl'"
+    echo "Unknown language: ${language}. Should be one of 'en', 'fr', 'de', 'it', and 'pl'"
     echo "${USAGE}"
     exit 1
     ;;
