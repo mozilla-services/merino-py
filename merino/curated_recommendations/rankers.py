@@ -15,7 +15,7 @@ from merino.curated_recommendations.protocol import (
 from scipy.stats import beta
 
 
-def renumber_recommendations(recommendations: list) -> None:
+def renumber_recommendations(recommendations: list[CuratedRecommendation]) -> None:
     """Renumber the receivedRank of each recommendation to be sequential.
 
     Args:
@@ -23,6 +23,19 @@ def renumber_recommendations(recommendations: list) -> None:
     """
     for rank, rec in enumerate(recommendations):
         rec.receivedRank = rank
+
+
+def renumber_sections(ordered_sections: list[tuple[str, Section]]) -> dict[str, Section]:
+    """Assign receivedFeedRank to each Section based on the list order, and convert it to a dict.
+
+    :param ordered_sections: A list of name + section tuples in the desired order.
+    :return: A dict mapping section names to Section objects with receivedFeedRank set.
+    """
+    result: dict[str, Section] = {}
+    for idx, (section_id, section) in enumerate(ordered_sections):
+        section.receivedFeedRank = idx
+        result[section_id] = section
+    return result
 
 
 # In a weighted average, how much to weigh the metrics from the requested region. 0.95 was chosen
@@ -93,6 +106,50 @@ def thompson_sampling(
 
     # Sort the recommendations from best to worst sampled score.
     return sorted(recs, key=sample_score, reverse=True)
+
+
+def section_thompson_sampling(
+    sections: dict[str, Section],
+    engagement_backend: EngagementBackend,
+    top_n: int = 3,
+) -> dict[str, Section]:
+    """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
+
+    :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
+    :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.
+    :param top_n: Number of top items in each section for which to sum engagement in the Thompson sampling score.
+
+    :return: Mapping of section IDs to Section objects with updated receivedFeedRank.
+
+    [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
+    """
+
+    def sample_score(sec: Section) -> float:
+        """Sample beta distribution for the combined engagement of the top _n_ items."""
+        # sum clicks and impressions over top_n items
+        recs = sec.recommendations[:top_n]
+        total_clicks = 0
+        total_imps = 0
+        for rec in recs:
+            if engagement := engagement_backend.get(rec.corpusItemId):
+                total_clicks += engagement.click_count
+                total_imps += engagement.impression_count
+
+        # constant prior α, β
+        prior = ConstantPrior().get()
+        a_prior = top_n * prior.alpha
+        b_prior = top_n * prior.beta
+
+        # Sum engagement and priors.
+        opens = total_clicks + a_prior
+        no_opens = total_imps - total_clicks + b_prior
+
+        # Sample distribution
+        return float(beta.rvs(opens, no_opens))
+
+    # sort sections by sampled score, highest first
+    ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
+    return renumber_sections(ordered)
 
 
 def spread_publishers(

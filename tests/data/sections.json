@@ -2,10 +2,666 @@
   "data": {
     "getSections": [
       {
-        "externalId": "cvb-345",
+        "externalId": "nfl",
         "active": true,
-        "title": "Health",
-        "sectionItems": []
+        "title": "NFL",
+        "sectionItems": [
+          {
+            "corpusItem": {
+              "id": "271742",
+              "url": "https://www.profootballrumors.com/2025/04/panthers-to-sign-wr-hunter-renfrow",
+              "title": "Hunter Renfrow Signs With NFC South Team",
+              "excerpt": "Hunter Renfrow will have a chance to complete a comeback this year. ",
+              "topic": "SPORTS",
+              "publisher": "www.profootballrumors.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.yardbarker.com/media/2/1/2182bb98ccf8bb52f9c0c9e5f970415377b2d5cd/thumb_16x9/hunter-renfrow-signs-nfc-south-team.jpg?v=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271743",
+              "url": "https://www.sportico.com/personalities/athletes/2025/sheduer-sanders-salary-browns-nil-ncaa-nfl-draft-1234850124/",
+              "title": "Browns Pick Shedeur Sanders Could Earn Less Than 19 College QBs",
+              "excerpt": "Cleveland Browns draft pick Shedeur Sanders will earn just over $1 million this season, while some NCAA quarterbacks receive $3 million-plus in NIL.",
+              "topic": "SPORTS",
+              "publisher": "www.sportico.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.sportico.com/wp-content/uploads/2025/04/GettyImages-1895922417-e1745699811248.jpg?w=1024"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271744",
+              "url": "https://www.sbnation.com/nfl/2025/4/26/24413980/49ers-5th-round-pick-forfeit-nfl-draft",
+              "title": "Why the 49ers Forfeited a Pick in the 2025 NFL Draft",
+              "excerpt": "One error cost the Niners a pick.",
+              "topic": "SPORTS",
+              "publisher": "SB Nation",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.vox-cdn.com/thumbor/VRuxYxnGdJ840-BPxgJBuZp3o4U=/0x392:5472x3257/fit-in/1200x630/cdn.vox-cdn.com/uploads/chorus_asset/file/25965618/2189513402.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271745",
+              "url": "https://www.yardbarker.com/nfl/articles/packers_take_care_of_remaining_needs_to_cap_solid_nfl_draft/s1_13132_42112850",
+              "title": "Packers Take Care of Remaining Needs to Cap Solid NFL Draft",
+              "excerpt": "The Green Bay Packers added to a solid draft on Saturday on the final day of the NFL Draft, taking advantage of their five remaining picks. ",
+              "topic": "SPORTS",
+              "publisher": "www.yardbarker.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.yardbarker.com/media/2/d/2d5b6e506c7dec46e7c684e0d2607c3012386e0e/thumb_16x9/packers-care-remaining-needs-cap-solid-nfl-draft.jpg?v=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271746",
+              "url": "https://www.bbc.com/sport/american-football/articles/cjwv8qv6026o",
+              "title": "Titans Select Ward With First Pick of NFL Draft",
+              "excerpt": "The Tennessee Titans select quarterback Cam Ward with the first overall pick of the NFL Draft.",
+              "topic": "SPORTS",
+              "publisher": "BBC",
+              "isTimeSensitive": false,
+              "imageUrl": "https://ichef.bbci.co.uk/ace/branded_sport/1200/cpsprodpb/8e48/live/7406bb10-216f-11f0-9060-674316cb3a1f.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271747",
+              "url": "https://larrybrownsports.com/football/new-info-dolphins-stance-tyreek-hill-trade/694708",
+              "title": "What Is the Dolphins’ Stance on a Tyreek Hill Trade After Draft?",
+              "excerpt": "Tyreek Hill remained with the Miami Dolphins through the NFL Draft despite recent trade rumors, and all signs point to that trend continuing through the start of the 2025 season.",
+              "topic": "SPORTS",
+              "publisher": "larrybrownsports.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.yardbarker.com/media/4/c/4c36b91083a61855feb9f01257379d3e91fe3e20/thumb_16x9/jan-5-2025-east-rutherford-new-jersey-usa-miami.jpg?v=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271748",
+              "url": "https://www.gq.com/story/mason-graham-abercrombie-suit-2025-nfl-draft",
+              "title": "Mason Graham Wore an Abercrombie Suit to the 2025 NFL Draft",
+              "excerpt": "The biggest cameo at the NFL Draft? Abercrombie’s slick, affordable tailoring.",
+              "topic": "SPORTS",
+              "publisher": "GQ",
+              "isTimeSensitive": false,
+              "imageUrl": "https://media.gq.com/photos/680babae06f598efab96d24f/16:9/w_1280,c_limit/afsuitnfllede.png"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271749",
+              "url": "https://www.sportico.com/personalities/athletes/2025/shedeur-sanders-nfl-draft-slide-contract-1234850068/",
+              "title": "Shedeur Sanders’ Slide Into Fifth Round Costs Him $44 Million",
+              "excerpt": "In November, Shedeur Sanders was the odds-on favorite to be the No. 1 pick in the NFL Draft, but he was not selected until the fifth round.",
+              "topic": "SPORTS",
+              "publisher": "www.sportico.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.sportico.com/wp-content/uploads/2025/04/GettyImages-1484189530-e1745677106609.jpg?w=1024"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271750",
+              "url": "https://www.yardbarker.com/nfl/articles/giants_saints_dont_have_time_to_take_things_slow_with_2025_nfl_draft_qbs/s1_13132_42113382",
+              "title": "Giants, Saints Don’t Have Time to Take Things Slow With 2025 NFL Draft QBs",
+              "excerpt": "The Giants and Saints have put themselves in a difficult situation.",
+              "topic": "SPORTS",
+              "publisher": "www.yardbarker.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.yardbarker.com/media/0/c/0c2d58193b5628274d6a2be4c0d743c1c17b2309/thumb_16x9/giants-saints-time-things-slow-new-qbs.jpg?v=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271751",
+              "url": "https://www.sbnation.com/nfl/2025/4/25/24415262/panthers-bryce-young-trade-chicago-bears-full-details-nfl-draft-haul",
+              "title": "Panthers’ Bryce Young Trade Completed at 2025 NFL Draft, and This Is the Bears’ Haul",
+              "excerpt": "The Bears and Panthers pulled off a blockbuster trade in 2023. Now the book is closed on Chicago’s haul.",
+              "topic": "SPORTS",
+              "publisher": "SB Nation",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.vox-cdn.com/thumbor/-2AOMbzDhBX-NfsSdUqENaqb9F8=/0x0:7086x3710/fit-in/1200x630/cdn.vox-cdn.com/uploads/chorus_asset/file/25966345/usa_today_20552102.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "270867",
+              "url": "https://www.esquire.com/style/mens-fashion/a64589995/marquez-valdes-scantling-five-fits-with/",
+              "title": "Five Fits With: Back-to-Back Super Bowl Winner Marquez Valdes-Scantling",
+              "excerpt": "The wide receiver talks football, fashion—and buying an entirely new wardrobe for this column.",
+              "topic": "SPORTS",
+              "publisher": "Esquire",
+              "isTimeSensitive": false,
+              "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/277a0819-jpg-680ba6878f83e.jpg?crop=1.00xw:0.335xh;0,0.245xh&resize=1200:*"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271752",
+              "url": "https://www.sbnation.com/2025/4/25/24413427/section-yellow-sober-packers-fan-group-community-recovery",
+              "title": "‘Section Yellow’ Sober Packers Fan Group Creates Community for Fans in Recovery",
+              "excerpt": "The goal is to normalize sobriety, and since 2019, this group has grown to 2,000-plus fans and counting.",
+              "topic": "SPORTS",
+              "publisher": "SB Nation",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.vox-cdn.com/thumbor/S6Tgvshf5KWEGaHEwurIz1BmqsU=/0x255:7038x3940/fit-in/1200x630/cdn.vox-cdn.com/uploads/chorus_asset/file/25969352/usa_today_8049685.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271753",
+              "url": "https://www.nbcnews.com/sports/college-football/bill-belichick-girlfriend-shuts-question-met-interview-rcna203227",
+              "title": "Bill Belichick’s Girlfriend Shuts Down Question About How They Met During Interview",
+              "excerpt": "The North Carolina head coach was interviewed on “CBS Mornings” as partner Jordon Hudson, 24, interjected from a sideline.",
+              "topic": "SPORTS",
+              "publisher": "NBC News",
+              "isTimeSensitive": false,
+              "imageUrl": "https://media-cldnry.s-nbcnews.com/image/upload/t_nbcnews-fp-1200-630,f_auto,q_auto:best/rockcms/2025-04/250427-Bill-Belichick-aa-715-150358.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271754",
+              "url": "https://www.profootballnetwork.com/justin-fields-contract-salary-and-net-worth/",
+              "title": "Justin Fields’ Contract, Salary, and Net Worth: How Much Is the Jets QB Making After His Massive Payday?",
+              "excerpt": "Poised for the starting role with the New York Jets, let’s analyze Justin Fields’ new contract, salary and career earnings ahead of the 2025 season.",
+              "topic": "SPORTS",
+              "publisher": "www.profootballnetwork.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://statico.profootballnetwork.com/wp-content/uploads/2025/04/28023907/USATSI_24816880-1024x683.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271755",
+              "url": "https://www.sbnation.com/nfl/2025/4/26/24417723/shedeur-sanders-nfl-draft-prospect-go-back-to-college-rules-lawsuit",
+              "title": "Can Shedeur Sanders Head Back to College? It’s Complicated",
+              "excerpt": "Could Shedeur Sanders’ draft slide take him back to campus? Not without a legal fight",
+              "topic": "SPORTS",
+              "publisher": "SB Nation",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.vox-cdn.com/thumbor/Wd-LAyemtJq4gEMGSNMcQgfmmCk=/0x0:4530x2372/fit-in/1200x630/cdn.vox-cdn.com/uploads/chorus_asset/file/25970897/usa_today_24296623.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271756",
+              "url": "https://www.inc.com/minda-zetlin/jason-kelce-just-turned-this-overused-4-word-phrase-into-something-meaningful/91181015",
+              "title": "Jason Kelce Just Turned This Overused 4-Word Phrase Into Something Meaningful",
+              "excerpt": "Kelce’s Underdog Apparel teamed up with the clothing brand American Giant for a truly homegrown product.",
+              "topic": "SPORTS",
+              "publisher": "Inc. Magazine",
+              "isTimeSensitive": false,
+              "imageUrl": "https://img-cdn.inc.com/image/upload/f_webp,q_auto,c_fit,w_1024,h_1024/vip/2025/04/jason-kelce-underdog-inc.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271757",
+              "url": "https://www.yardbarker.com/nfl/articles/report_broncos_big_offseason_addition_suffers_an_injury/s1_13132_42117630",
+              "title": "Report: Broncos’ Big Offseason Addition Suffers an Injury",
+              "excerpt": "Dre Greenlaw was looking forward to a bounce-back season after he signed with the Denver Broncos, but the veteran linebacker is now dealing with another injury.",
+              "topic": "SPORTS",
+              "publisher": "www.yardbarker.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.yardbarker.com/media/4/9/494f26071ff0b8577c763f23268754ec7b8c3a96/thumb_16x9/report-broncos-big-offseason-addition-suffers.jpg?v=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271758",
+              "url": "https://www.theroot.com/is-shannon-sharpe-done-heres-a-complete-breakdown-of-w-1851777821",
+              "title": "Is Shannon Sharpe Done? Here’s a Complete Breakdown of What’s",
+              "excerpt": "The headlines are piling up about the former NFL player and media personality.",
+              "topic": "SPORTS",
+              "publisher": "The Root",
+              "isTimeSensitive": false,
+              "imageUrl": "https://i.kinja-img.com/image/upload/c_fill,h_675,pg_1,q_80,w_1200/0749749759f8907fb663cdadbde73f80.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271759",
+              "url": "https://www.yardbarker.com/nfl/articles/dont_be_stunned_if_these_five_undrafted_free_agents_make_their_teams/s1_13132_42117723",
+              "title": "Don’t Be Stunned If These Five Undrafted Free Agents Make Their Teams",
+              "excerpt": "The 2025 NFL Draft in Green Bay is over, but not every player heard their name called during the three-day event. Now, these prospects will aim to make their team as undrafted free agents.",
+              "topic": "SPORTS",
+              "publisher": "www.yardbarker.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.yardbarker.com/media/8/2/82fb3a61c03341594990563bc6def3e6a5078572/thumb_16x9/stunned-these-five-udfas-teams.jpg?v=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271760",
+              "url": "https://www.jezebel.com/hot-dog-heiress-senator-wants-dems-to-be-more-like-the-detroit-lions-coach",
+              "title": "Hot Dog Heiress Senator Wants Dems to Be More Like…the Detroit Lions Coach?",
+              "excerpt": "Barf Bag: Sen. Elissa Slotkin (D-Mich.) has a goddamn “war plan” to get rid of wokeness and turn everyone into Dan Campbell.",
+              "topic": "SPORTS",
+              "publisher": "Jezebel",
+              "isTimeSensitive": false,
+              "imageUrl": "https://img.pastemagazine.com/wp-content/juploads/2025/04/barf-2.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271761",
+              "url": "https://andscape.com/features/nfl-is-shedeur-sanders-first-major-hill-to-climb/",
+              "title": "NFL Is Shedeur Sanders’ First Major Hill to Climb",
+              "excerpt": "From the very beginning and before any selections were made, I filtered this week’s NFL draft through the prism of Colorado quarterback Shedeur Sanders and his …",
+              "topic": "SPORTS",
+              "publisher": "andscape.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://andscape.com/wp-content/uploads/2025/04/NFL-Draft-Legacy-Players-Football_123434597-e1745588303263.jpg?w=700"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271762",
+              "url": "https://www.sbnation.com/nfl/2025/4/25/24416915/jaguars-trade-travis-hunter-2025-nfl-draft",
+              "title": "Travis Hunter ‘Embodying Belief’ Made Jaguars Go After Him",
+              "excerpt": "Jaguars GM James Gladstone offers a poetic explanation for Travis Hunter pick",
+              "topic": "SPORTS",
+              "publisher": "SB Nation",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.vox-cdn.com/thumbor/n6pXcPwVlZeIGmKcffMkVmxiVCQ=/0x0:5955x3118/fit-in/1200x630/cdn.vox-cdn.com/uploads/chorus_asset/file/25969386/usa_today_26012525.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271763",
+              "url": "https://www.yardbarker.com/nfl/articles/biggest_reaches_from_day_3_of_nfl_draft_did_teams_get_too_aggressive_with_rbs/s1_13132_42113423",
+              "title": "Biggest Reaches From Day 3 of NFL Draft: Did Teams Get Too Aggressive With RBs?",
+              "excerpt": "We already looked at some of the best picks from Rounds 4-7, so let’s take a look at some of the biggest reaches from Saturday’s picks.",
+              "topic": "SPORTS",
+              "publisher": "www.yardbarker.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.yardbarker.com/media/b/0/b0a928be212098499e2058d0a645f068a01e14e1/thumb_16x9/biggest-reaches-day-3-nfl-draft.jpg?v=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271764",
+              "url": "https://www.sbnation.com/nfl/2025/4/26/24418270/nfl-draft-results-2025-tracking-udfa-signings",
+              "title": "NFL Draft Results 2025: Tracking the UDFA Signings",
+              "excerpt": "The 2025 NFL Draft is over, but players are still finding spots on rosters",
+              "topic": "SPORTS",
+              "publisher": "SB Nation",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.vox-cdn.com/thumbor/tGYe5blfrxbX4Sxw-Bv1JJiY_kc=/0x193:5009x2816/fit-in/1200x630/cdn.vox-cdn.com/uploads/chorus_asset/file/25971782/usa_today_26022796.jpg"
+            }
+          }
+        ]
+      },
+      {
+        "externalId": "tv",
+        "active": true,
+        "title": "Television",
+        "sectionItems": [
+          {
+            "corpusItem": {
+              "id": "271677",
+              "url": "https://decider.com/2025/04/27/the-last-of-us-season-2-episode-3-who-are-the-seraphites/",
+              "title": "‘The Last of Us’ Season 2 Episode 3 Introduces a Weird New Cult: Who Are the Seraphites?",
+              "excerpt": "Oh, now there are people dressing up like they’re cosplaying Robin Hood in the apocalypse?",
+              "topic": "ENTERTAINMENT",
+              "publisher": "decider.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://decider.com/wp-content/uploads/2025/04/tlou-seraphites.jpg?quality=75&strip=all&w=680&h=356&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271678",
+              "url": "https://variety.com/2025/tv/news/channel-4-ceo-alex-mahon-step-down-1236379994/",
+              "title": "Channel 4 CEO Alex Mahon to Step Down",
+              "excerpt": "She leaves UK network this summer after 8 years",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Variety",
+              "isTimeSensitive": false,
+              "imageUrl": "https://variety.com/wp-content/uploads/2025/04/alex-mahon-channel-4-.jpg?w=1000&h=563&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271679",
+              "url": "https://www.spoilertv.com/2025/04/doctor-who-well-review-death-at-midnight.html",
+              "title": "Doctor Who - the Well - Review: Death at Midnight",
+              "excerpt": "Doctor Who - The Well - Review: Death at Midnight",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.spoilertv.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiJgupF0JKMxqyD5pVcJvNxgaB_CIVcTjyP9k5vkWcMlVG-eYBdj1GI2rfaJ3DYRnNuTXMoOEH3B-SoQYLenSip5t9cerFCEKtv-POznsTBWYfAIUBaIgBSpuxZ0NsPsJz24cLx_1wIWLejg4PCR3LZfMu0PwFNusbsIRU5hWX4qZSoOtifdrxnzw/s1600/Goa583tX0AA7-Nc.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271680",
+              "url": "https://www.hollywoodreporter.com/tv/tv-news/john-lithgow-harry-potter-jk-rowling-anti-trans-comments-1236201956/",
+              "title": "John Lithgow Says He Was Surprised by Backlash Over Joining ‘Harry Potter’ Series",
+              "excerpt": "“I thought, why is this a factor at all? I wonder how J.K. Rowling has absorbed it. I suppose at a certain point I’ll meet her and I’m curious to talk to her,” the actor said of the author, who has been slammed for her anti-trans comments.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "The Hollywood Reporter",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.hollywoodreporter.com/wp-content/uploads/2025/02/GettyImages-2195563371.jpg?crop=0px%2C3px%2C1296px%2C725px&resize=1440%2C810"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271681",
+              "url": "https://www.cosmopolitan.com/entertainment/tv/a64566104/love-hotel-season-1-cast/",
+              "title": "The ‘Love Hotel’ Season 1 Cast Is So Stacked",
+              "excerpt": "Some ‘Real Housewives’ faves are checking into a new series.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Cosmopolitan",
+              "isTimeSensitive": false,
+              "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/screenshot-2025-04-24-at-11-09-30-am-680a5476dc1ca.png?crop=0.838xw:1.00xh;0.0817xw,0&resize=1200:*"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271682",
+              "url": "https://variety.com/2025/tv/news/baby-shark-pinkfong-tbs-deal-1236379980/",
+              "title": "‘Baby Shark’ Outfit Pinkfong Inks Strategic Deal With Japan’s TBS Television",
+              "excerpt": "‘Baby Shark’ creator Pinkfong partners with Japan’s TBS Television to develop new family content and expand ‘Bebefinn’ in the Japanese market.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Variety",
+              "isTimeSensitive": false,
+              "imageUrl": "https://variety.com/wp-content/uploads/2025/04/Pinkfong.jpg?w=1000&h=563&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271683",
+              "url": "https://www.spoilertv.com/2025/04/godfather-of-harlem-stars-erik-laray.html",
+              "title": "“Godfather of Harlem” Stars Erik LaRay Harvey and Elvis Nolasco Dive Deep Into a Season of Change and Survival",
+              "excerpt": "“Godfather of Harlem” Stars Erik LaRay Harvey and Elvis Nolasco Dive Deep into a Season of Change and Survival",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.spoilertv.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://files.spoilertv.com/headers/godfather-of-harlem.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271684",
+              "url": "https://www.hollywoodreporter.com/news/politics-news/mike-myers-pro-canada-snl-shirts-ad-origins-1236201687/",
+              "title": "Mike Myers Explains Origins of Recent Canadian Political Activism",
+              "excerpt": "The ‘Saturday Night Live’ alum, who’s returned to the sketch show to play Elon Musk, has used his time on the air to also support his native country and starred in an ad for Canada’s Liberal Party.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "The Hollywood Reporter",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.hollywoodreporter.com/wp-content/uploads/2025/04/NUP_207100_00015.jpg?crop=0px%2C3px%2C3000px%2C1679px&resize=1440%2C810"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271685",
+              "url": "https://tvline.com/recaps/dark-winds-season-3-finale-bernadette-returns-emma-gone-1235440348/",
+              "title": "In Dark Winds Season Finale, Leaphorn Once Again Got His Man, but Is Left to Ponder All He Has Lost",
+              "excerpt": "‘Dark Winds’ closed out Season 3 with a quieter finale than usual, though its last scene was emotionally deafening for poor Joe.  ",
+              "topic": "ENTERTAINMENT",
+              "publisher": "TVLine.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://tvline.com/wp-content/uploads/2025/04/dark-winds-season-3-finale-1.jpg?w=650"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271686",
+              "url": "https://decider.com/2025/04/27/dark-winds-season-4-episodes-watch-dark-winds-amc-netflix/",
+              "title": "Will There Be a ‘Dark Winds’ Season 4?",
+              "excerpt": "How many episodes are there of Dark Winds Season 3? What time is the Dark Winds Season 3 finale on tonight? Has Dark Winds been renewed for Season 4? When will Dark Winds Season 3 be on Netflix? Here’s everything you need to know.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "decider.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://decider.com/wp-content/uploads/2025/03/Zahn-McClarnon-dark-winds.jpg?quality=75&strip=all&w=680&h=356&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271687",
+              "url": "https://tvshowsace.com/2025/04/27/how-to-get-on-patrol-live-rubber-duck/",
+              "title": "How to Get a ‘On Patrol: Live’ Rubber Duck",
+              "excerpt": "‘On Patrol: Live’ fans have seen the “Officer duck,” and now they are desperate to know where one can be obtained. ",
+              "topic": "ENTERTAINMENT",
+              "publisher": "tvshowsace.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://tvshowsace.com/wp-content/uploads/2025/04/IMG_1112.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271688",
+              "url": "https://variety.com/2025/tv/global/banijay-group-talks-to-buy-itv-1236379985/",
+              "title": "Banijay Group in Early Talks to Buy ITV (Report)",
+              "excerpt": "The French TV giant is reportedly in talks to buy ITV, either in its entirety or its ITV Studios arm",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Variety",
+              "isTimeSensitive": false,
+              "imageUrl": "https://variety.com/wp-content/uploads/2018/08/peaky-blinders1.jpg?w=1000&h=563&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271689",
+              "url": "https://www.spoilertv.com/2025/04/the-last-of-us-path-review-time-of.html",
+              "title": "The Last of Us - the Path - Review: A Time of Mourning",
+              "excerpt": "The Last of Us - The Path - Review: A Time of Mourning",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.spoilertv.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://files.spoilertv.com/headers/the-last-of-us.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271690",
+              "url": "https://tvline.com/interviews/andor-episode-4-bix-cassian-coruscant-hideout-adria-arjona-1235438690/",
+              "title": "Andor: Adria Arjona Says That Bix’s ‘Accumulation of Traumas’ Will Test Her and Cassian Moving Forward",
+              "excerpt": "‘Andor’ stars Adria Arjona and Diego Luna discuss the year gone by for Bix and Cassian, and the challenges facing them in Season 2, Episode 4.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "TVLine.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://tvline.com/wp-content/uploads/2025/04/andor-season-2-cassian-bix.jpeg?w=650"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271691",
+              "url": "https://www.cosmopolitan.com/entertainment/tv/a64566353/love-hotel-schedule/",
+              "title": "‘Love Hotel’ Schedule: When Do New Episodes Come Out?",
+              "excerpt": "Don’t miss out on all the drama and romance.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Cosmopolitan",
+              "isTimeSensitive": false,
+              "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/screenshot-2025-04-24-at-11-02-27-am-680a529510733.png?crop=1.00xw:0.767xh;0,0.0490xh&resize=1200:*"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271692",
+              "url": "https://decider.com/2025/04/26/emma-mackey-greta-gerwig-narnia-netflix/",
+              "title": "‘Sex Education’ Star Emma Mackey Cast As White Witch in Greta Gerwig’s ‘Narnia’ at Netflix",
+              "excerpt": "‘Sex Education’ star Emma Mackey has been cast as the White Witch in Greta Gerwig’s upcoming ‘Narnia’ adaptation at Netflix.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "decider.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://decider.com/wp-content/uploads/2025/04/GettyImages-2199591799.jpg?quality=75&strip=all&w=680&h=356&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271693",
+              "url": "https://tvshowsace.com/2025/04/27/actual-farmers-say-fwaw-gives-them-bad-name/",
+              "title": "Actual Farmers Say ‘FWAW’ Gives Them Bad Name",
+              "excerpt": "Season 3 of ‘Farmer Wants a Wife’ has put a bad taste in some real farmers mouths. They say the show gives them a bad name.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "tvshowsace.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://tvshowsace.com/wp-content/uploads/2025/04/John-Sansone-YouTube-2.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271694",
+              "url": "https://tvline.com/news/lar-park-lincoln-dead-knots-landing-cause-of-death-obituary-1235439758/",
+              "title": "Knots Landing’ S Lar Park-Lincoln Dead at 63",
+              "excerpt": "Lar Park-Lincoln, who played Linda Fairgate in nearly 50 episodes of CBS’ ‘Knots Landing,’ died at age 63.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "TVLine.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://tvline.com/wp-content/uploads/2025/04/Lar-Park-Lincoln-dead-obituary.jpg?w=620"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271695",
+              "url": "https://www.indiewire.com/news/general-news/jon-hamm-don-draper-mad-men-casting-1235118289/",
+              "title": "Jon Hamm Shares Don Draper Commonality That Earned Him ‘Mad Men’ Role : ‘Nobody Knows Who This Guy Is’",
+              "excerpt": "Breaking down the arduous audition process for ‘Mad Men,’ Jon Hamm discusses what landed him lead role of Don Draper on the hit series.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "IndieWire",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.indiewire.com/wp-content/uploads/2025/04/TCDMAM2_EC188.jpg?w=650"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271696",
+              "url": "https://www.spoilertv.com/2025/04/tracker-collision-review-dark-turn-and.html",
+              "title": "Tracker - Collision - Review: A Dark Turn and a Twisted Hunt",
+              "excerpt": "Tracker - Collision - Review: A Dark Turn and a Twisted Hunt",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.spoilertv.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://files.spoilertv.com/headers/tracker.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271697",
+              "url": "https://decider.com/2025/04/26/bill-maher-al-gore-trump-nazis-real-time/",
+              "title": "Bill Maher Confronts Al Gore for Comparing Trump Administration to Nazis on ‘Real Time’",
+              "excerpt": "Bill Maher confronted former VP Al Gore for comparing the Trump administration to Nazis on HBO’s ‘Real Time’.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "decider.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://decider.com/wp-content/uploads/2025/04/al-gore-bill-maher.jpg?quality=75&strip=all&w=680&h=356&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271698",
+              "url": "https://tvshowsace.com/2025/04/27/my-600-lb-life-s9-tammy-patton-stuns-in-new-weight-loss-pic/",
+              "title": "‘My 600-Lb Life’ S9 Tammy Patton Stuns in New Weight Loss Pic",
+              "excerpt": "‘My 600-Lb Life’ Season 9 star Tammy Patton has been thriving in her weight loss journey since parting ways with Dr. Now.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "tvshowsace.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://tvshowsace.com/wp-content/uploads/2025/04/Tammy-Patton.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271699",
+              "url": "https://tvline.com/recaps/the-last-of-us-season-2-episode-3-recap-1235439170/",
+              "title": "The Last of Us’ Ellie Is on Her Way to Avenge Joel — Read Episode 3 Recap",
+              "excerpt": "‘The Last of Us’ Season 2, Episode 3 recap: Find out what happens when Ellie is left alone after Joel’s death. ",
+              "topic": "ENTERTAINMENT",
+              "publisher": "TVLine.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://tvline.com/wp-content/uploads/2025/04/the-last-of-us-season-2-episode-3-recap.jpg?w=650"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271700",
+              "url": "https://www.monstersandcritics.com/tv/reality-tv/the-challenges-shane-landrum-addresses-davonne-rogers-retiring-after-all-stars-rivals/",
+              "title": "The Challenge’s Shane Landrum Addresses Da’vonne Rogers Retiring After All Stars Rivals",
+              "excerpt": "Shane Landrum spoke about his All Stars Rivals teammate Da’Vonne Rogers announcing she’s retired from The Challenge.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Monsters and Critics",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.monstersandcritics.com/wp-content/uploads/2025/04/the-challenge-shane-landrum-addresses-davonne-rogers-retirement-announcement.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271701",
+              "url": "https://tvshowsace.com/2025/04/27/are-when-calls-the-heart-stars-erin-krakow-ben-rosenbaum-still-dating/",
+              "title": "Are ‘When Calls the Heart’ Stars Erin Krakow & Ben Rosenbaum Still Dating?",
+              "excerpt": "Are ‘When Calls The Heart’ Stars Erin Krakow & Ben Rosenbaum Still Dating? The latest news on the Hallmark couple.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "tvshowsace.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://tvshowsace.com/wp-content/uploads/2025/04/erin-ben.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271702",
+              "url": "https://variety.com/2025/tv/news/60-minutes-scott-pelley-rebukes-paramount-bill-owens-exit-1236379735/",
+              "title": "’60 Minutes’ Calls Out Paramount for Executive Producer’s Exit in Rare on-Air Rebuke",
+              "excerpt": "‘60 Minutes’ correspondent Scott Pelley took CBS News owner Paramount Global to task Sunday for the exit of the show’s executive producer, Bill Owens",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Variety",
+              "isTimeSensitive": false,
+              "imageUrl": "https://variety.com/wp-content/uploads/2025/04/thumbnail_IMG_4592-e1745801252104.jpg?w=1000&h=563&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271704",
+              "url": "https://decider.com/2025/04/25/fire-country-season-4-cbs-release-date-fire-country-return-new-episodes/",
+              "title": "Will There Be a ‘Fire Country’ Season 4? ‘Fire Country’ Return Date Info",
+              "excerpt": "Will there be a Fire Country Season 4? When does Fire Country return with new episodes? When will Fire Country Season 4 premiere on CBS? Here’s everything you need to know.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "decider.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://decider.com/wp-content/uploads/2024/10/fire-country-s3-1.jpg?quality=75&strip=all&w=680&h=356&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271705",
+              "url": "https://www.cosmopolitan.com/entertainment/tv/a64524997/you-season-5-ending-explained/",
+              "title": "‘You’ Season 5 Ending: Here’s Where Every Character Ended Up",
+              "excerpt": "Goodbye...you.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Cosmopolitan",
+              "isTimeSensitive": false,
+              "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/you-510-unit-00126rc-6802a54d82136.jpg?crop=1xw:0.75xh;center,top&resize=1200:*"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271706",
+              "url": "https://www.spoilertv.com/2025/04/how-tv-dramas-reflect-online-gaming.html",
+              "title": "How TV Dramas Reflect Online Gaming Trends",
+              "excerpt": "How TV Dramas Reflect Online Gaming Trends",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.spoilertv.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgyjwKl1uE84123ax-7MiykKldCW8ja1bTKnoOCu5_9rXc3X7ouC0BVtrY1p7NnhhrMHn5NYpJTQw7FwiUyD3hpDAsXjgRghVUqbjrA-ZNiQCmyQEf8jjiOV6zWcQxqVsoYS6FTW-u5z0qqtTlscgwuXPjxE9nS9h-om3pqHYEcawRNJHoFu2vJ/s400/omid-armin-w0erZAfnkjg-unsplash.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271707",
+              "url": "https://tvshowsace.com/2025/04/27/american-idol-fans-threaten-to-boycott-if-carrie-underwood-returns/",
+              "title": "‘American Idol’ Fans Threaten to Boycott If Carrie Underwood Returns",
+              "excerpt": "‘American Idol’ fans are threatening to boycott the show if country star Carrie Underwood returns as a judge next season.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "tvshowsace.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://tvshowsace.com/wp-content/uploads/2025/04/Carrie-Underwood-via-YouTube-6.jpg"
+            }
+          }
+        ]
       },
       {
         "externalId": "music",
@@ -14,345 +670,1272 @@
         "sectionItems": [
           {
             "corpusItem": {
-              "id": "42935",
-              "url": "https://ultimateclassicrock.com/ted-nugent-archives-eddie-van-halen-billy-gibbons/",
-              "title": "Ted Nugent’s Archives Include Eddie Van Halen and Billy Gibbons Jams",
-              "excerpt": "Ted Nugent said he’s found jams with Eddie Van Halen and Billy Gibbons among the material uncovered for his Nuge Vault project in March 2025.",
+              "id": "271726",
+              "url": "https://ultimateclassicrock.com/rolling-stones-80s-songs/",
+              "title": "Top 10 ’80s Rolling Stones Songs",
+              "excerpt": "A list of 10 of the best songs released by the Rolling Stones in the ‘80s.",
               "topic": "ENTERTAINMENT",
-              "publisher": "ultimateclassicrock.com",
+              "publisher": "Ultimate Classic Rock",
               "isTimeSensitive": false,
-              "imageUrl": "https://townsquare.media/site/295/files/2025/03/attachment-Eddie-Ted-Billy.jpg?w=1200&q=75&format=natural"
+              "imageUrl": "https://townsquare.media/site/295/files/2025/04/attachment-stones80s.jpg?w=1200&q=75&format=natural"
             }
           },
           {
             "corpusItem": {
-              "id": "42936",
-              "url": "https://theamericanscholar.org/song-for-the-earth/",
-              "title": "Song for the Earth",
-              "excerpt": "Finding a message for today in the music of Gustav Mahler",
-              "topic": "ENTERTAINMENT",
-              "publisher": "theamericanscholar.org",
-              "isTimeSensitive": false,
-              "imageUrl": "https://theamericanscholar.org/wp-content/uploads/2025/03/Mahler_horowitz.jpg"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42937",
-              "url": "https://www.stereogum.com/2302336/watch-perfume-genius-sing-no-front-teeth-live-for-the-first-time-in-london/news/",
-              "title": "Watch Perfume Genius Sing “No Front Teeth” Live for the First Time in London",
-              "excerpt": "Mike Hadreas has just started his run of live shows supporting his latest Perfume Genius album Glory. Last Thursday, the eve of the record’s release, he debuted a bunch of Glory songs at London’s Institute of Contemporary Arts including “It’s A Mirror,” “",
-              "topic": "ENTERTAINMENT",
-              "publisher": "Stereogum",
-              "isTimeSensitive": false,
-              "imageUrl": "https://static.stereogum.com/uploads/2025/03/Perfume-Genius-bbc6-1743353362.jpg"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42938",
-              "url": "https://www.rollingstone.com/music/music-news/snl-recap-watch-morgan-wallen-perform-im-the-problem-just-in-case-new-album-1235306404/",
-              "title": "‘SNL’: Watch Morgan Wallen Perform ‘I’m the Problem,’ ‘Just in Case’",
-              "excerpt": "Country singer makes second SNL musical guest appearance after 2020 debut",
-              "topic": "ENTERTAINMENT",
-              "publisher": "Rolling Stone",
-              "isTimeSensitive": false,
-              "imageUrl": "https://www.rollingstone.com/wp-content/uploads/2025/03/Screen-Shot-2025-03-30-at-1.49.21-AM.png?w=1362&h=762&crop=1"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42939",
-              "url": "https://pitchfork.com/news/atlanta-rapper-young-scooter-dies-at-39/",
-              "title": "Atlanta Rapper Young Scooter Dies at 39",
-              "excerpt": "The musician worked with Future, Young Thug, Zaytoven, Gucci Mane, and many other luminaries of his Georgia hometown",
-              "topic": "ENTERTAINMENT",
-              "publisher": "Pitchfork",
-              "isTimeSensitive": false,
-              "imageUrl": "https://media.pitchfork.com/photos/67e757f2c04fc432b0522dbe/16:9/w_1280,c_limit/Young-Scooter.jpeg"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42940",
-              "url": "https://ultimateclassicrock.com/todd-rundgren-interview-2025/",
-              "title": "Todd Rundgren Reveals His Songwriting Inspiration",
-              "excerpt": "Todd Rundgren tells UCR during a 2025 interview about one of the inspirations behind his legendary hits.",
-              "topic": "ENTERTAINMENT",
-              "publisher": "ultimateclassicrock.com",
-              "isTimeSensitive": false,
-              "imageUrl": "https://townsquare.media/site/295/files/2025/03/attachment-ToddRundgren-GettyImages-464929617.jpg?w=1200&q=75&format=natural"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42941",
-              "url": "https://www.billboard.com/business/management/billie-eilish-finneas-new-management-1235935319/",
-              "title": "Billie Eilish & Finneas Hire New Management",
-              "excerpt": "Billie Eilish and Finneas have hired Sandbox Entertainment’s Jason Owen, whose longtime clients include Kelsea Ballerini and Kacey Musgraves.",
-              "topic": "ENTERTAINMENT",
-              "publisher": "Billboard",
-              "isTimeSensitive": false,
-              "imageUrl": "https://www.billboard.com/wp-content/uploads/2024/12/billie-eilish-finneas-kia-forum-tour-2024-billboard-2-1548.jpg?w=1024"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42942",
-              "url": "https://variety.com/2025/music/news/billie-eilish-and-finneas-join-jason-owen-sandbox-management-1236352266/",
-              "title": "Billie Eilish and Finneas Join Jason Owen’s Sandbox Management",
-              "excerpt": "Billie Eilish and brother/ collaborator Finneas have left their managers of 10 years to join Jason Owen’s Sandbox Management, Variety confirms.",
+              "id": "271727",
+              "url": "https://variety.com/2025/film/global/rave-on-cannes-the-playmaker-1236379608/",
+              "title": "Techno Music Drama ‘Rave On’ Heads to Cannes, the Playmaker Debuts Trailer (EXCLUSIVE)",
+              "excerpt": "Sales agency The Playmaker has released the trailer for techno music drama “Rave On.”",
               "topic": "ENTERTAINMENT",
               "publisher": "Variety",
               "isTimeSensitive": false,
-              "imageUrl": "https://variety.com/wp-content/uploads/2025/03/GettyImages-2197321325-1-e1743390156987.jpg?w=1000&h=563&crop=1"
+              "imageUrl": "https://variety.com/wp-content/uploads/2025/04/Rave-On.jpg?w=1000&h=563&crop=1"
             }
           },
           {
             "corpusItem": {
-              "id": "42943",
-              "url": "https://loudwire.com/best-song-prog-rock-bands/",
-              "title": "The Best Song by 11 Legendary Prog Rock Bands",
-              "excerpt": "Obviously, these are also 11 of the best progressive rock songs ever!",
-              "topic": "ENTERTAINMENT",
-              "publisher": "loudwire.com",
-              "isTimeSensitive": false,
-              "imageUrl": "https://townsquare.media/site/366/files/2025/03/attachment-best_song_legendary_prog_rock_bands.jpg?w=1200&q=75&format=natural"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42944",
-              "url": "https://www.theroot.com/folks-are-dragging-kim-kardashian-for-daughter-north-we-1851773257",
-              "title": "Folks Are Dragging Kim Kardashian for Daughter North West’s Latest Appearance, but Is It Justified? Here’s the Tea",
-              "excerpt": "The famous mom and daughter are no strangers to trending.",
-              "topic": "ENTERTAINMENT",
-              "publisher": "The Root",
-              "isTimeSensitive": false,
-              "imageUrl": "https://i.kinja-img.com/image/upload/c_fill,h_675,pg_1,q_80,w_1200/4368c08b02d3fc8275ebb08807c26f4b.jpg"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42945",
-              "url": "https://www.independent.co.uk/arts-entertainment/music/features/will-smith-album-slap-comeback-b2721138.html",
-              "title": "Will Smith’s Rap Comeback Could Be a Sign of a Career in Freefall",
-              "excerpt": "Three years after the slap seen and heard around the world, the Oscar winner is performing in Scarborough and releasing an album of inspirational hip-hop. Has it all gone wrong for one of our biggest stars, asks Ed Power",
-              "topic": "ENTERTAINMENT",
-              "publisher": "The Independent",
-              "isTimeSensitive": false,
-              "imageUrl": "https://static.independent.co.uk/2025/03/25/11/52/GettyImages-2206591525.jpeg?width=1200&height=800&crop=1200:800"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42946",
-              "url": "https://www.avclub.com/roger-daltry-going-blind-the-who",
-              "title": "The Who’s Roger Daltry Says He’s Going Blind",
-              "excerpt": "The Who’s Roger Daltry says he’s going blind ",
-              "topic": "ENTERTAINMENT",
-              "publisher": "The A.V. Club",
-              "isTimeSensitive": false,
-              "imageUrl": "https://img.pastemagazine.com/wp-content/avuploads/2025/03/30193040/roger-daltry-feature.jpg"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42947",
-              "url": "https://www.wired.com/story/this-crazy-instrument-lets-us-hear-how-dinosaurs-might-have-sounded/",
-              "title": "This Crazy Instrument Lets Us Hear How Dinosaurs Might Have Sounded",
-              "excerpt": "Using 3D models of ancient skulls, Dinosaur Choir gets us closer than ever to understanding the noises that dinosaurs made.",
-              "topic": "ENTERTAINMENT",
-              "publisher": "WIRED",
-              "isTimeSensitive": false,
-              "imageUrl": "https://media.wired.com/photos/67e292cc22696af540843d9d/191:100/w_1280,c_limit/DinosaurChoir-Closeup.jpeg"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42948",
-              "url": "https://consequence.net/2025/03/lady-gaga-mayhem-ball-how-to-buy-tickets/",
-              "title": "Lady Gaga’s “The Mayhem Ball”: How to Get Tickets",
-              "excerpt": "Lady Gaga has announced “The Mayhem Ball,” an arena tour taking place in summer and fall 2025. Learn how to get pre-sale tickets and everything else you need to know.",
-              "topic": "ENTERTAINMENT",
-              "publisher": "consequence.net",
-              "isTimeSensitive": false,
-              "imageUrl": "https://consequence.net/wp-content/uploads/2025/03/lady-gaga-mayhem-ball-how-to-buy.jpg"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42949",
-              "url": "https://www.thefader.com/2025/03/28/yung-lean-babyface-maniacs-forever-yung-tour-dates",
-              "title": "Yung Lean Shares New Song “Babyface Maniacs,” 2025 Tour Dates",
-              "excerpt": "See Yung Lean’s 2025 Forever Yung tour dates, including shows in North America, Europe, and the U.K.",
+              "id": "271728",
+              "url": "https://www.thefader.com/2025/04/28/rock-hall-of-fame-inductees-white-stripes-outkast-soundgarden",
+              "title": "Outkast and the White Stripes Lead List of 2025 Rock Hall of Fame Inductees",
+              "excerpt": "Cyndi Lauper, Outkast, Soundgarden, and the White Stripes will all be inducted into the the Rock &amp; Roll Hall of Fame this year. They are joined by fellow new additions Bad Company, Chubby Checker, and Joe Cocker. The ceremony takes place on November 8",
               "topic": "ENTERTAINMENT",
               "publisher": "www.thefader.com",
               "isTimeSensitive": false,
-              "imageUrl": "https://thefader-res.cloudinary.com/private_images/w_1800,c_limit,f_auto,q_auto:best/MAIN_AM_YUNG_LEAN_7650_4_RGB_jcz1uh/yung-lean-babyface-maniacs-forever-yung-tour-dates.jpg"
+              "imageUrl": "https://thefader-res.cloudinary.com/private_images/w_1800,c_limit,f_auto,q_auto:best/MixCollage-28-Apr-2025-12-23-PM-2666_ejd3of/rock-hall-of-fame-inductees-white-stripes-outkast-soundgarden.jpg"
             }
           },
           {
             "corpusItem": {
-              "id": "42950",
-              "url": "https://www.spin.com/2025/03/sex-pistols-first-north-american-tour/",
-              "title": "Sex Pistols Reload for First North American Tour Since 2003",
-              "excerpt": "Never mind that there’s no Johnny Rotten, but the Sex Pistols will later this year tour North America for the first time since 2003.",
-              "topic": "ENTERTAINMENT",
-              "publisher": "www.spin.com",
-              "isTimeSensitive": false,
-              "imageUrl": "https://static.spin.com/files/2025/03/Screen-Shot-2025-03-28-at-1.01.33-PM.png"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42951",
-              "url": "https://xtramagazine.com/culture/music/on-glory-perfume-genius-reaches-out-272243",
-              "title": "On ‘Glory,’ Perfume Genius Reaches Out",
-              "excerpt": "The lonely indie darling’s new album casts an eye outward—and shows the way forward",
-              "topic": "ENTERTAINMENT",
-              "publisher": "xtramagazine.com",
-              "isTimeSensitive": false,
-              "imageUrl": "https://xtramagazine.com/wp-content/uploads/2025/03/Perfume-Genius-GLORY-300dpi-Large-e1743105857819.jpeg"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42952",
-              "url": "https://www.nylon.com/entertainment/diva-smith-put-together-a-friend-premiere",
-              "title": "Diva Smith Premieres Video & New Song “Put Together a Friend” (Exclusive)",
-              "excerpt": "On Diva Smith’s latest release, “Put Together A Friend,” the singer-songwriter builds her “therapy pop” oeuvre.",
-              "topic": "ENTERTAINMENT",
-              "publisher": "www.nylon.com",
-              "isTimeSensitive": false,
-              "imageUrl": "https://imgix.bustle.com/uploads/image/2025/3/28/13736b93/diva.tif?w=1200&h=630&fit=crop&crop=faces&fm=jpg"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42953",
-              "url": "https://ultimateclassicrock.com/prog-bands-should-be-bigger/",
-              "title": "5 Prog Rock Bands That Should’ve Been Bigger",
-              "excerpt": "A list of five underrated progressive rock bands.",
-              "topic": "ENTERTAINMENT",
-              "publisher": "ultimateclassicrock.com",
-              "isTimeSensitive": false,
-              "imageUrl": "https://townsquare.media/site/295/files/2025/03/attachment-Underrated-Prog-Ian-Dickson-Redferns-Bips-Getty-YouTube.jpg?w=1200&q=75&format=natural"
-            }
-          },
-          {
-            "corpusItem": {
-              "id": "42954",
-              "url": "https://www.billboard.com/music/awards/boi-1da-tributes-drake-2025-juno-awards-1235935343/",
-              "title": "Boi-1da Gives Drake Some Love in Acceptance Speech at 2025 Juno Awards",
-              "excerpt": "Boi-1da gives Drake some love in acceptance speech at 2025 Juno Awards. Read what he had to say.",
+              "id": "271729",
+              "url": "https://www.billboard.com/music/chart-beat/sza-sos-13th-week-number-one-billboard-200-albums-chart-1235956497/",
+              "title": "SZA’s ‘SOS’ Captures 13th Week at No. 1 on Billboard 200 Albums Chart",
+              "excerpt": "SZA’s “SOS” scores a 13th nonconsecutive week at No. 1 on the Billboard 200 albums chart, while Doechii hits the top 10 for the first time.",
               "topic": "ENTERTAINMENT",
               "publisher": "Billboard",
               "isTimeSensitive": false,
-              "imageUrl": "https://www.billboard.com/wp-content/uploads/2023/02/Boi-1da-cr-astral-2022-billboard-1548.jpg?w=1024"
+              "imageUrl": "https://www.billboard.com/wp-content/uploads/2023/11/sza-press-credit-rca-records-2023-billboard-1548-546532132.jpg?w=1024"
             }
           },
           {
             "corpusItem": {
-              "id": "42955",
-              "url": "https://www.cntraveler.com/story/in-kathmandu-finding-notes-of-commonality-in-nepali-folk-music",
-              "title": "In Kathmandu, Finding Notes of Commonality in Nepali Folk Music",
-              "excerpt": "Jamming with nomadic performers, Justin Goldman discovers the common ancestry of folk music around the globe",
+              "id": "271730",
+              "url": "https://loudwire.com/best-grunge-album-hair-metal-bands/",
+              "title": "The Best Grunge Album by 5 Big Hair Metal Bands",
+              "excerpt": "Think hair metal and grunge don’t mix? These five albums will blow your mind — and maybe even mess up your perfectly teased hair.",
               "topic": "ENTERTAINMENT",
+              "publisher": "loudwire.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://townsquare.media/site/366/files/2025/04/attachment-The-Best-Grunge-Album-By-5-Hair-Metal-Bands.jpg?w=1200&q=75&format=natural"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271731",
+              "url": "https://chicagoreader.com/music/concert-preview/etran-de-lair-lincoln-hall/",
+              "title": "Etran De L’aïr Make Music From 100 Percent Sahara Guitar",
+              "excerpt": "Etran de L’Aïr’s latest album is titled 100% Sahara Guitar (Sahel Sounds), and no one can accuse them of false advertising.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "chicagoreader.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://i0.wp.com/chicagoreader.com/wp-content/uploads/2025/04/Etran-De-LAir-by-Abdoulmoumouni-Hamid_social.jpg?fit=1200%2C675&ssl=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "270794",
+              "url": "https://www.cntraveler.com/story/road-trip-on-the-maine-coast",
+              "title": "A Maine Coast Guide for Road Trippers",
+              "excerpt": "Portland, Camden, and Bar Harbor—the top three tracks on Maine’s Greatest Hits album—are the ones you want to revisit again and again.",
+              "topic": "TRAVEL",
               "publisher": "Condé Nast Traveler",
               "isTimeSensitive": false,
-              "imageUrl": "https://media.cntraveler.com/photos/67c912100a7d61595d2c38b1/16:9/w_1280,c_limit/2_130207_CNT_NEPAL_BHAKTAPUR130207_CNT_Bhaktapur_Durbar_Sq_1640.jpg"
+              "imageUrl": "https://media.cntraveler.com/photos/680935f6805ec1ceeafe7532/16:9/w_1280,c_limit/Nonantum-Resort_KennebunkRiver_Drone_Credit-to-Capshore-Photography.jpg"
             }
           },
           {
             "corpusItem": {
-              "id": "42956",
-              "url": "https://www.theroot.com/wow-cardi-b-goes-off-about-the-scary-messages-her-ex-o-1851773355",
-              "title": "Wow! Cardi B Goes Off About the Scary Messages Her Ex Offset Is Allegedly Sending Her",
-              "excerpt": "The rapper appeared on X spaces and had a lot to say about her estranged ex.",
+              "id": "271732",
+              "url": "https://www.stereogum.com/2305865/vinyl-me-please-reportedly-ghosting-customers-as-orders-go-unfulfilled/news/",
+              "title": "Vinyl Me, Please Reportedly Ghosting Customers As Orders Go Unfulfilled",
+              "excerpt": "The popular LP subscription club Vinyl Me, Please has come under fire for apparently “ghosting” their subscribers. The Denver Post published a report yesterday detailing weeks of alleged unfulfilled orders from the company, with dozens of frustrated custo",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Stereogum",
+              "isTimeSensitive": false,
+              "imageUrl": "https://static.stereogum.com/uploads/2024/05/vinyl-me-please-lawsuit-logo-1714910510.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271733",
+              "url": "https://www.psychologytoday.com/us/blog/promoting-student-well-being/202504/unpacking-doechiis-anxiety",
+              "title": "Unpacking Doechii’s “Anxiety”",
+              "excerpt": "Doechii’s “Anxiety” song mirrors our collective unease in these times. We can use the song to push us forward in healthy coping for ourselves and our families.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Psychology Today",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn2.psychologytoday.com/assets/styles/manual_crop_1_91_1_1528x800/public/field_blog_entry_images/2025-04/pexels-chuck-3587478.jpg?itok=UP1zCPCi"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271734",
+              "url": "https://ultimateclassicrock.com/pearl-jam-2025-tour-launch/",
+              "title": "Pearl Jam Launch 2025 North American Tour – Setlist + Video",
+              "excerpt": "Pearl Jam kicked off their 2025 tour in Hollywood, Florida on April 24, 2025.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Ultimate Classic Rock",
+              "isTimeSensitive": false,
+              "imageUrl": "https://townsquare.media/site/295/files/2025/04/attachment-pearljamopening.jpg?w=1200&q=75&format=natural"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271735",
+              "url": "https://consequence.net/2025/04/eladio-carrion-don-kbrn-tour-dates-how-to-get-tickets/",
+              "title": "Eladio Carrión Announces “DON KBRN World Tour” Dates",
+              "excerpt": "Eladio Carrión has announced 2025 US tour dates for his “DON KBRN World Tour.” Learn how to get tickets and everything else you need to know.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "consequence.net",
+              "isTimeSensitive": false,
+              "imageUrl": "https://consequence.net/wp-content/uploads/2025/04/Eladio-Carrion-announces-2025-tour-dates.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271736",
+              "url": "https://www.rollingstone.com/music/music-news/snoop-dogg-death-row-altar-call-gospel-album-1235324589/",
+              "title": "The Death Row Records Gospel Album —Yes, You Read That Right — Is Here",
+              "excerpt": "The Death Row Records gospel album ‘Altar Call’ is dedicated to Snoop Dogg’s late mother, Beverly Tate.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Rolling Stone",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.rollingstone.com/wp-content/uploads/2025/04/snoop-gospel-new-pic.jpg?w=1600&h=900&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271737",
+              "url": "https://www.theroot.com/do-you-remember-the-fat-boys-the-highs-and-tragic-lows-1851777864",
+              "title": "Do You Remember the Fat Boys? the Highs and Tragic Lows of One the 80s Most Popular Hip-Hop Groups",
+              "excerpt": "Along with LL Cool J and Run-D.M.C., these three friends from Brooklyn were the biggest group in the game. But their crossover success would cost them.",
               "topic": "ENTERTAINMENT",
               "publisher": "The Root",
               "isTimeSensitive": false,
-              "imageUrl": "https://i.kinja-img.com/image/upload/c_fill,h_675,pg_1,q_80,w_1200/84f6f92529b1d0a47500829b97fbe572.jpg"
+              "imageUrl": "https://i.kinja-img.com/image/upload/c_fill,h_675,pg_1,q_80,w_1200/bf2a71b4becaf25f4764f2587cd39200.png"
             }
           },
           {
             "corpusItem": {
-              "id": "42957",
-              "url": "https://www.harpersbazaar.com/celebrity/latest/a64331767/suki-waterhouse-grandma-chic-pink-valentino-dress-photos/",
-              "title": "Suki Waterhouse Is Grandma-Chic in a Whimsical Valentino Look",
-              "excerpt": "Sequins and lace and fur...oh my!",
+              "id": "271738",
+              "url": "https://faroutmagazine.co.uk/band-dave-grohl-says-invented-heavy-metal/",
+              "title": "The Band Dave Grohl Thinks Heavy Metal Owes Its Entire Existence to: “They Could Do Anything”",
+              "excerpt": "The moment Nirvana and Foo Fighters man, Dave Grohl, picked out a band that started heavy metal as we know it is a moment one icon recognises another.",
               "topic": "ENTERTAINMENT",
-              "publisher": "Harper's Bazaar",
+              "publisher": "Far Out Magazine",
               "isTimeSensitive": false,
-              "imageUrl": "https://hips.hearstapps.com/hmg-prod/images/gettyimages-2207588711-67e992b4d93a4.jpeg?crop=1.00xw:0.334xh;0,0.0481xh&resize=1200:*"
+              "imageUrl": "https://faroutmagazine.co.uk/static/uploads/1/2025/03/Dave-Grohl-Foo-Fighters-Glastonbury-2017-Far-Out-Magazine.jpg"
             }
           },
           {
             "corpusItem": {
-              "id": "42958",
-              "url": "https://www.marieclaire.com/fashion/doechii-donna-karan-naked-dress-vintage-fendi-baguette-billboard-women-in-music-2025/",
-              "title": "Doechii Accessorizes a Donna Karan Naked Dress With a Vintage Fendi Baguette and Manolo Blahnik Sandals",
-              "excerpt": "Billboard’s Woman of the Year winner styled her 2014 runway gown with rainbow metallics.",
+              "id": "271270",
+              "url": "https://www.texasmonthly.com/arts-entertainment/chaparelle-western-pleasure-album-wimberley/",
+              "title": "Chaparelle Makes Country Look Good—but the Group Sounds Even Better",
+              "excerpt": "The Wimberley-based band’s debut album, ‘Western Pleasure,’ is more than skin-deep.",
               "topic": "ENTERTAINMENT",
-              "publisher": "www.marieclaire.com",
+              "publisher": "Texas Monthly",
               "isTimeSensitive": false,
-              "imageUrl": "https://cdn.mos.cms.futurecdn.net/AGGmzbY5rq3vfdSUBjE5YX-1200-80.jpg"
+              "imageUrl": "https://img.texasmonthly.com/2025/04/Chaparelle.jpg?auto=compress&crop=faces&fit=fit&fm=pjpg&ixlib=php-3.3.1&q=45"
             }
           },
           {
             "corpusItem": {
-              "id": "42524",
-              "url": "https://theamericanscholar.org/the-most-famous-unknown-artist/",
-              "title": "The Most Famous Unknown Artist",
-              "excerpt": "David Sheff puts Yoko Ono in the spotlight",
+              "id": "271739",
+              "url": "https://www.thefader.com/2025/04/25/rap-blog-fatboi-sharif-let-me-out-beans",
+              "title": "Rap Blog: Fatboi Sharif’s Cosmic Horrorcore",
+              "excerpt": "“Zeitgeistic Psychosomatic Measurements” by Fatboi Sharif and Beans is a standout from Sharif’s new album ‘Let Me Out.’ Read our review here.",
               "topic": "ENTERTAINMENT",
-              "publisher": "theamericanscholar.org",
+              "publisher": "www.thefader.com",
               "isTimeSensitive": false,
-              "imageUrl": "https://theamericanscholar.org/wp-content/uploads/2025/03/318web.jpg"
+              "imageUrl": "https://thefader-res.cloudinary.com/private_images/w_1800,c_limit,f_auto,q_auto:best/rap_blog__ngmpi8/rap-blog-fatboi-sharif-let-me-out-beans.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271740",
+              "url": "https://www.openculture.com/2025/04/when-queens-freddie-mercury-performed-with-opera-superstar-montserrat-caballe-in-1988.html",
+              "title": "When Queen’s Freddie Mercury Performed With Opera Superstar Montserrat Caballé in 1988: A Meeting of Two Powerful Voices",
+              "excerpt": "Combining pop music with opera was always the height of pretension. But where would we be without the pretentious?",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Open Culture",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn8.openculture.com/2025/04/27223916/mainFRDMONT-1.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271741",
+              "url": "https://consequence.net/2025/04/phish-snubbed-rock-hall-despite-fan-vote/",
+              "title": "Phish Snubbed by Rock & Roll Hall of Fame Despite Winning Fan Vote",
+              "excerpt": "Phish have will not be inducted in the 2025 class of the Rock and Roll Hall of Fame, despite winning the fan vote by nearly 50,000 votes.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "consequence.net",
+              "isTimeSensitive": false,
+              "imageUrl": "https://consequence.net/wp-content/uploads/2025/04/Phish-snubbed-by-Rock-and-Roll-Hall-of-Fame-despite-winning-fan-vote.jpg"
             }
           }
         ]
       },
       {
-        "externalId": "bvf-123",
+        "externalId": "movies",
         "active": true,
-        "title": "Business",
+        "title": "Movies",
         "sectionItems": [
           {
             "corpusItem": {
-              "id": "39072",
-              "url": "https://prospect.org/api/content/69ae6e82-f84e-11ef-8a16-12163087a831/",
-              "title": "CFPB to Employees: When We Said Stop Work, We Didn’t Mean Stop Work!",
-              "excerpt": "The illegal plan to dismantle the consumer agency is failing. So Russ Vought and his charges are engaging in some CYA.",
-              "topic": "BUSINESS",
-              "publisher": "prospect.org",
+              "id": "271765",
+              "url": "https://deadline.com/2025/04/tom-cruise-underestimated-as-actor-says-kenneth-branagh-1236378168/",
+              "title": "Tom Cruise “Underestimated As an Actor,” Says Co-Star Kenneth Branagh",
+              "excerpt": "The two feted actors co-starred in the 2008 action thriller Valkyrie",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Deadline Hollywood",
               "isTimeSensitive": false,
-              "imageUrl": "https://prospect.org/downloads/22555/download/Dayen-CFPB%20030325.jpg?cb=7e33d0a64c55b0e98328577cf675517e&w=1024"
+              "imageUrl": "https://deadline.com/wp-content/uploads/2025/04/GettyImages-2208350831.jpg?w=1024"
             }
           },
           {
             "corpusItem": {
-              "id": "38878",
-              "url": "https://lithub.com/the-u-s-has-a-journalism-crisis-heres-why-writers-are-leaving-the-profession-in-droves/",
-              "title": "News, Notes, Talk",
-              "excerpt": "It feels like every day lately, we get more news of newsroom hemorrhage. Last week, self-appointed media emperor Jeff Bezos wrote a letter to his employees at The Washington Post asserting in no un…",
-              "topic": "BUSINESS",
-              "publisher": "Literary Hub",
+              "id": "271766",
+              "url": "https://variety.com/2025/film/news/china-box-office-ne-zha-2-may-holiday-1236379905/",
+              "title": "China Box Office: ‘Ne Zha 2’ Leads Again As Market Slows Ahead of May Holiday",
+              "excerpt": "China’s box office remained steady but subdued over the April 25–27 weekend, with animated megahit ‘Ne Zha 2’ once again topping the charts.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Variety",
               "isTimeSensitive": false,
-              "imageUrl": "https://s26162.pcdn.co/wp-content/uploads/2025/03/free-press-e1741023539655.jpeg"
+              "imageUrl": "https://variety.com/wp-content/uploads/2025/02/Ne-Zha-2-2.jpg?w=1000&h=563&crop=1"
             }
           },
           {
             "corpusItem": {
-              "id": "38800",
-              "url": "https://www.fastcompany.com/91278935/best-work-bags-2025",
-              "title": "Five Beautiful Bags That Also Get the Job Done",
-              "excerpt": "You want a bag that makes a statement, but that also gets you through your busy day. Here are five to consider.",
-              "topic": "BUSINESS",
-              "publisher": "Fast Company",
+              "id": "271767",
+              "url": "https://www.joblo.com/neighborhood-watch-review-another-underrated-jack-quaid-film/",
+              "title": "Neighborhood Watch Review: Another Underrated Jack Quaid Film",
+              "excerpt": "While a bit clunky plot-wise, Jack Quaid and Jeffrey Dean Morgan deliver great performances in this not-so-comedic buddy thriller.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "JoBlo",
               "isTimeSensitive": false,
-              "imageUrl": "https://images.fastcompany.com/image/upload/f_webp,q_auto,c_fit/wp-cms-2/2025/02/p-91278935-spring-2025-bags.jpg"
+              "imageUrl": "https://www.joblo.com/wp-content/uploads/2025/03/neighborhood-watch-jack-quaid-featured.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271768",
+              "url": "https://variety.com/2025/film/festivals/alexander-payne-venice-film-festival-jury-1236379936/",
+              "title": "Alexander Payne to Head Venice Film Festival Jury",
+              "excerpt": "Alexander Payne will preside over the main jury of the upcoming Venice Film Festival.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Variety",
+              "isTimeSensitive": false,
+              "imageUrl": "https://variety.com/wp-content/uploads/2025/04/Alexander-Payne.jpg?w=1000&h=563&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271769",
+              "url": "https://screencrush.com/fantastic-four-first-step-comic/",
+              "title": "Marvel Is Making the First Comic That Exists Inside the MCU",
+              "excerpt": "A ‘Fantastic Four’ comic isn’t just about the MCU FF — it exists inside the MCU too.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "screencrush.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://townsquare.media/site/442/files/2025/04/attachment-first-steps-111222.jpg?w=1200&q=75&format=natural"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "270583",
+              "url": "https://www.latimes.com/entertainment-arts/movies/story/2025-04-25/sinners-imax-70mm-fans-traveled-hundreds-miles",
+              "title": "They Traveled Hundreds of Miles to Watch ‘Sinners’ Make Hollywood History in Imax 70mm: ‘It Was a No-Brainer’",
+              "excerpt": "Ryan Coogler’s ‘Sinners’ is screening in Imax 70mm in only eight theaters in the U.S. These moviegoers traveled thousands of miles to watch the movie in its intended format.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Los Angeles Times",
+              "isTimeSensitive": false,
+              "imageUrl": "https://ca-times.brightspotcdn.com/dims4/default/de714f6/2147483647/strip/true/crop/3000x1575+0+0/resize/1200x630!/quality/75/?url=https%3A%2F%2Fcalifornia-times-brightspot.s3.amazonaws.com%2Ffb%2Fc6%2Fd74d1578455e9088d734c94b5e4c%2Fap25107672584838.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271770",
+              "url": "https://lwlies.com/reviews/until-dawn/",
+              "title": "Until Dawn Review – an Insulting Parade of Tedium",
+              "excerpt": "David F Sandberg’s tangentially related adaptation of Supermassive Games’ horror hit forgets what made its video game source material so great.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "lwlies.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://lwlies.com/wp-content/uploads/2025/04/Until-Dawn-2025-courtesy-of-Sony.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271771",
+              "url": "https://www.joblo.com/jeff-bridges-supports-fan-theory-that-donny-wasnt-real-in-the-big-lebowski/",
+              "title": "Jeff Bridges Supports Fan Theory That Donny Wasn’t Real in the Big Lebowski",
+              "excerpt": "Jeff Bridges thinks he has proof that Donny was only a figment of Walter’s imagination in The Big Lebowski…but does it stand, man?",
+              "topic": "ENTERTAINMENT",
+              "publisher": "JoBlo",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.joblo.com/wp-content/uploads/2025/04/big-lebowski-donny.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271772",
+              "url": "https://collider.com/psychological-thriller-inspired-serial-killer-the-collector-streaming-tubi/",
+              "title": "This Chilling Free-to-Watch Psychological Horror Inspired a Real-Life Serial Killer — but It’s Totally Not What You’d Expect",
+              "excerpt": "Odd choice...",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Collider",
+              "isTimeSensitive": false,
+              "imageUrl": "https://static1.colliderimages.com/wordpress/wp-content/uploads/2025/04/the-collector-1965.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271773",
+              "url": "https://www.rogerebert.com/interviews/thats-what-disruption-does-for-me-gareth-evans-on-havoc",
+              "title": "That’s What Disruption Does for Me: Gareth Evans on “Havoc”",
+              "excerpt": "The action director takes us blow-by-blow through his latest melee for Netflix.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.rogerebert.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.rogerebert.com/wp-content/uploads/2025/04/Still_RGB_Full_Range_00000002.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271774",
+              "url": "https://www.joblo.com/emma-mackey-white-witch-narnia-movie/",
+              "title": "Emma Mackey to Play the White Witch in Greta Gerwig’s Narnia Movie",
+              "excerpt": "Greta Gerwig taps Emma Mackey to play the White Witch in her upcoming Chronicles of Narnia movie for Netflix.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "JoBlo",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.joblo.com/wp-content/uploads/2025/04/emma-mackey-narnia-white-witch.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271775",
+              "url": "https://screencrush.com/best-superhero-movie-every-year/",
+              "title": "The Best Superhero Movie of Every Year From 2000 to Today",
+              "excerpt": "A quarter of a century. 25 superior comic-book movies.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "screencrush.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://townsquare.media/site/442/files/2025/04/attachment-best-super-every-yr-1.jpg?w=1200&q=75&format=natural"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271776",
+              "url": "https://variety.com/2025/film/news/warner-bros-superman-copyright-lawsuit-dismissed-1236378512/",
+              "title": "Warner Bros. Wins Dismissal of ‘Superman’ Foreign Copyright Suit",
+              "excerpt": "Warner Bros. has won the dismissal of a lawsuit challenging its copyright to ‘Superman’ in the U.K. and other territories.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Variety",
+              "isTimeSensitive": false,
+              "imageUrl": "https://variety.com/wp-content/uploads/2024/12/superman-1-e1735592067723.png?w=1000&h=563&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271777",
+              "url": "https://deadline.com/2025/04/cheech-chong-how-much-made-first-film-huge-horrible-deal-1236378297/",
+              "title": "Cheech & Chong on How Much They Made From First Film’s “Huge Horrible Deal”",
+              "excerpt": "The earnings from Cheech Marin and Tommy Chong’s 1978 breakout film almost immediately went up in smoke.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Deadline Hollywood",
+              "isTimeSensitive": false,
+              "imageUrl": "https://deadline.com/wp-content/uploads/2025/04/Cheech-Chong.jpg?w=1024"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271778",
+              "url": "https://www.rogerebert.com/ebertfest/your-guide-to-ebertfest-2025-day-3-april-25th",
+              "title": "Your Guide to Ebertfest 2025: Day 3, April 25th",
+              "excerpt": "A guide to Day 3 of the festival.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.rogerebert.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.rogerebert.com/wp-content/uploads/2025/04/MixCollage-23-Apr-2025-08-15-AM-7275.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271779",
+              "url": "https://www.latimes.com/entertainment-arts/movies/story/2025-04-25/on-swift-horses-review-jacob-elordi-will-poulter-daisy-edgar-jones",
+              "title": "In ‘On Swift Horses,’ a Handsome Trio Stumbles Into Romance and Messier Feelings",
+              "excerpt": "Jacob Elordi, Daisy Edgar-Jones and Will Poulter do sensitive work in director Daniel Minahan’s lushly mounted period drama about hidden suburban frustrations.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Los Angeles Times",
+              "isTimeSensitive": false,
+              "imageUrl": "https://ca-times.brightspotcdn.com/dims4/default/538893d/2147483647/strip/true/crop/1920x1008+0+66/resize/1200x630!/quality/75/?url=https%3A%2F%2Fcalifornia-times-brightspot.s3.amazonaws.com%2F6b%2Fe9%2F2abcdcae4e41a30c7a170cf7b354%2F1.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "270585",
+              "url": "https://lwlies.com/articles/video-game-cinema/",
+              "title": "Pretend It’s a Video Game: How Films Emulate Gaming Mechanics",
+              "excerpt": "As a (very loose) adaptation of Until Dawn hits cinemas, it’s worth investigating the successful – and unsuccessful – attempts to explore what it feels like to play a video game on the big screen.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "lwlies.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://lwlies.com/wp-content/uploads/2025/04/games-1024x768.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271780",
+              "url": "https://screenrant.com/mcu-bucky-barnes-record-appearance-marvel-main-character-op-ed/",
+              "title": "Sebastian Stan’s Bucky Barnes Holds an Impressive MCU Record & It’s Time Marvel Makes That Count",
+              "excerpt": "Stan’s Bucky Barnes holds a major MCU record.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Screen Rant",
+              "isTimeSensitive": false,
+              "imageUrl": "https://static1.srcdn.com/wordpress/wp-content/uploads/wm/2025/04/sebastian-stan-s-bucky-barnes-holds-an-impressive-mcu-record-it-s-time-marvel-makes-that-count.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271781",
+              "url": "https://www.joblo.com/alien-romulus-sequel-predator/",
+              "title": "Rumor: Will a Predator Appear in the Alien: Romulus Sequel?",
+              "excerpt": "RUMOR: Director Fede Álvarez might be bringing a Predator into the sequel to his Alien film Alien: Romulus",
+              "topic": "ENTERTAINMENT",
+              "publisher": "JoBlo",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.joblo.com/wp-content/uploads/2024/08/alien-vs-predator.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271782",
+              "url": "https://variety.com/2025/film/news/wyatt-russell-avengers-doomsday-media-training-sharing-spoilers-1236379551/",
+              "title": "Wyatt Russell Joked ‘Avengers: Doomsday’ Media Training Included ‘A Knife to Your Neck’ to Keep From Sharing Spoilers: ‘You Say Anything, and It’s Over’",
+              "excerpt": "Ahead of the release of “Avengers: Doomsday,” Wyatt Russell is joking about how Marvel practically held “a knife to your neck” to prevent spoilers.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Variety",
+              "isTimeSensitive": false,
+              "imageUrl": "https://variety.com/wp-content/uploads/2025/04/MixCollage-27-Apr-2025-10-23-AM-8001.jpg?w=1000&h=563&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271783",
+              "url": "https://www.rogerebert.com/chazs-blog/chaz-ebert-says-illuminate-film-festival-will-help-light-the-way",
+              "title": "Chaz Ebert Says ILLUMINATE Film Festival Will Help Light the Way",
+              "excerpt": "More information about the Santa Barbara-based film fest, dedicated to inspiring positive change, with Chaz in attendance.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.rogerebert.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.rogerebert.com/wp-content/uploads/2025/04/MixCollage-25-Apr-2025-10-02-AM-2084.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271784",
+              "url": "https://popcrush.com/worst-movie-2025-rotten-tomatoes/",
+              "title": "This Is the Worst Movie of the Year (So Far) According to Audiences on Rotten Tomatoes",
+              "excerpt": "Audiences on Rotten Tomatoes hate this movie. Is this the stinker of the year?",
+              "topic": "ENTERTAINMENT",
+              "publisher": "popcrush.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://townsquare.media/site/252/files/2025/04/attachment-The-Woman-in-the-Yard.jpg?w=1200&q=75&format=natural"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271785",
+              "url": "https://collider.com/billy-wilder-charles-brackett-best-movies-ranked/",
+              "title": "The 10 Best Billy Wilder and Charles Brackett Movies, Ranked",
+              "excerpt": "Billy Wilder and Charles Brackett co-wrote many iconic movies, including comedic triumphs like Ninotchka and film noir classics like Double Indemnity.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Collider",
+              "isTimeSensitive": false,
+              "imageUrl": "https://static1.colliderimages.com/wordpress/wp-content/uploads/2025/04/the-10-best-billy-wilder-and-charles-brackett-movies-ranked.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271786",
+              "url": "https://variety.com/2025/film/news/why-yoda-talks-backwards-star-wars-george-lucas-1236378508/",
+              "title": "George Lucas Reveals Why Yoda Talks Backwards at ‘Empire Strikes Back’ Anniversary Screening",
+              "excerpt": "George Lucas appeared at the TCM Classic Film Festival at a screening of ‘The Empire Strikes Back,’ revealing why Yoda talked backwards.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Variety",
+              "isTimeSensitive": false,
+              "imageUrl": "https://variety.com/wp-content/uploads/2025/04/2211858371.jpg?w=1000&h=563&crop=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271787",
+              "url": "https://www.joblo.com/box-office-update-sinners-having-an-amazing-second-weekend-the-accountant-2-on-par-with-the-first-film/",
+              "title": "Box Office Update: Sinners Having an Amazing Second Weekend; the Accountant 2 on-Par With the First Film",
+              "excerpt": "Sinners should make around $40 million in its second weekend, while The Accountant 2 should make in the $20-25 million range.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "JoBlo",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.joblo.com/wp-content/uploads/2025/04/accountant-sinners-box-office.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271788",
+              "url": "https://collider.com/laura-dern-essential-movies-ranked/",
+              "title": "10 Essential Laura Dern Movies, Ranked",
+              "excerpt": "We select the most essential movies starring Oscar-winning actress Laura Dern, including Wild at Heart, Blue Velvet, and Jurassic Park.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Collider",
+              "isTimeSensitive": false,
+              "imageUrl": "https://static1.colliderimages.com/wordpress/wp-content/uploads/2025/04/10-essential-laura-dern-movies-ranked.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271789",
+              "url": "https://www.rogerebert.com/festivals/doc10-2025-documentary-film-festival-preview",
+              "title": "Doc10 Launches 10th Anniversary Edition With Some of the Best Non-Fiction Films of 2025",
+              "excerpt": "A preview of Chicago’s elite documentary film festival.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "www.rogerebert.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.rogerebert.com/wp-content/uploads/2025/04/MixCollage-24-Apr-2025-11-37-AM-3245.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271790",
+              "url": "https://screencrush.com/best-zombie-movies-actually-scary/",
+              "title": "The 10 Best Zombie Movies That Are Actually Scary",
+              "excerpt": "A salute to the horror sub-genre with braaaaaains.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "screencrush.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://townsquare.media/site/442/files/2025/04/attachment-scary-zombie-movies1.jpg?w=1200&q=75&format=natural"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271791",
+              "url": "https://collider.com/survivor-48-biggest-villain-david-kinne-got-played-alliance/",
+              "title": "The Fall of ‘Survivor’ 48’s Biggest Villain: How David Kinne Got Played by His Own Alliance",
+              "excerpt": "Bringing the strong players together was David’s ultimate downfall. ",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Collider",
+              "isTimeSensitive": false,
+              "imageUrl": "https://static1.colliderimages.com/wordpress/wp-content/uploads/2025/04/survivor-48-david-voted-out.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271792",
+              "url": "https://screenrant.com/is-tim-burton-planet-of-the-apes-canon-franchise-explained/",
+              "title": "Is Tim Burton’s Planet of the Apes Canon? the 2001 Movie’s Placement in the Timeline Explained",
+              "excerpt": "Burton’s 2001 effort plays an interesting role.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Screen Rant",
+              "isTimeSensitive": false,
+              "imageUrl": "https://static1.srcdn.com/wordpress/wp-content/uploads/2025/04/untitled-2025-04-28t111047-407.jpg"
+            }
+          }
+        ]
+      },
+      {
+        "externalId": "nba",
+        "active": true,
+        "title": "NBA",
+        "sectionItems": [
+          {
+            "corpusItem": {
+              "id": "271793",
+              "url": "https://www.bbc.com/sport/basketball/articles/c75dyzygd4po",
+              "title": "Celtics Hold Off Magic to Take 3-1 Series Lead",
+              "excerpt": "The Boston Celtics beat the Orlando Magic in the NBA play-offs to take a 3-1 lead in the series.",
+              "topic": "SPORTS",
+              "publisher": "BBC",
+              "isTimeSensitive": false,
+              "imageUrl": "https://ichef.bbci.co.uk/ace/branded_sport/1200/cpsprodpb/497b/live/05794610-23fc-11f0-9eb9-cb41375ce672.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271794",
+              "url": "https://www.foxsports.com/stories/nba/damian-lillard-leg-injury-achilles-updates-bucks-pacers-playoffs",
+              "title": "Damian Lillard Won’t Return After Leaving Bucks-Pacers Game 4 With Leg Injury",
+              "excerpt": "Milwaukee Bucks guard Damian Lillard left Game 4 of an Eastern Conference first-round playoff series with the Indiana Pacers after injuring his lower left leg.",
+              "topic": "SPORTS",
+              "publisher": "FOX SPORTS",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a57.foxsports.com/statics.foxsports.com/www.foxsports.com/content/uploads/2025/04/1408/814/dame-injury.jpg?ve=1&tl=1"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271795",
+              "url": "https://marcstein.substack.com/p/sunday-best-the-latest-on-coaches",
+              "title": "Trae Young Considered Likely to Remain With Hawks",
+              "excerpt": "Trae Young Considered Likely To Remain With Hawks - RealGM Wiretap",
+              "topic": "SPORTS",
+              "publisher": "marcstein.substack.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://basketball.realgm.com/images/nba/4.2/wiretap/photos/2006/Young_Trae_atl_240513.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271796",
+              "url": "https://www.cbssports.com/nba/news/lakers-strengths-cant-mask-their-glaring-weaknesses-as-potential-playoff-elimination-to-timberwolves-looms/",
+              "title": "Lakers’ Strengths Can’t Mask Their Glaring Weaknesses As Potential Playoff Elimination to Timberwolves Looms",
+              "excerpt": "JJ Redick felt like he had no choice other than to play the same five players for the entire second half",
+              "topic": "SPORTS",
+              "publisher": "CBS Sports",
+              "isTimeSensitive": false,
+              "imageUrl": "https://sportshub.cbsistatic.com/i/r/2025/04/28/2e3b284e-7d3f-46c9-b368-c0be26333001/thumbnail/1200x675/a3bc7a3db427e239619fbac02299e34a/lebron-x-luka-getty-gm-4.png"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271797",
+              "url": "https://www.nbcsports.com/nba/news/hall-of-famer-dick-barnett-champion-with-knicks-and-ncaa-legend-dies-at-88",
+              "title": "Hall of Famer Dick Barnett, Champion With Knicks and NCAA Legend, Dies at 88",
+              "excerpt": "Barnett was part of the historic college powerhouse teams at Tennessee A&I.",
+              "topic": "SPORTS",
+              "publisher": "NBC Sports",
+              "isTimeSensitive": false,
+              "imageUrl": "https://nbcsports.brightspotcdn.com/76/a1/28ae939d488781e23e1813aaecb3/nbc-sports-logo-1.svg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271798",
+              "url": "https://sports.yahoo.com/nba/article/nba-playoffs-karl-anthony-towns-deep-3-pointer-late-no-call-give-knicks-94-93-win-over-pistons-in-game-4-190827937.html",
+              "title": "NBA Playoffs: Karl-Anthony Towns’ Deep 3-Pointer, Late No-Call Give Knicks 94-93 Win Over Pistons in Game 4",
+              "excerpt": "Detroit had two opportunities in the final seconds to potentially win, but couldn’t come through as the game ended with a no-call on a shot by Tim Hardaway Jr.",
+              "topic": "SPORTS",
+              "publisher": "Yahoo",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s.yimg.com/ny/api/res/1.2/.qO4jXaIArYQhpxwV1sfpg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD04MDA7Y2Y9d2VicA--/https://s.yimg.com/os/creatr-uploaded-images/2025-04/02c7bf70-23a0-11f0-9ef2-465af024cc08"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271799",
+              "url": "https://www.sportico.com/leagues/basketball/2025/nba-injuries-load-management-data-participation-1234849899/",
+              "title": "NBA Policies Curb Star Absences Amid Spike in Overall Injuries",
+              "excerpt": "NBA injuries were up 13% in terms of games missed by all players in 2024-25, despite the league’s Player Participation Policy curbing star absences.",
+              "topic": "SPORTS",
+              "publisher": "www.sportico.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.sportico.com/wp-content/uploads/2025/04/GettyImages-2209479169-e1745595244195.jpg?w=1024"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271800",
+              "url": "https://andscape.com/features/orlando-magic-center-wendell-carter-jr-shares-love-of-aviation-with-youth/",
+              "title": "Orlando Magic Center Wendell Carter Jr. Shares Love of Aviation With Youth",
+              "excerpt": "ORLANDO – Long before Orlando Magic center Wendell Carter Jr. was known for his high-flying dunks, he had dreams of going much higher. “So, growing up, I rememb…",
+              "topic": "SPORTS",
+              "publisher": "andscape.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://andscape.com/wp-content/uploads/2025/04/GettyImages-2209903791-e1745584833527.jpg?w=700"
+            }
+          }
+        ]
+      },
+      {
+        "externalId": "soccer",
+        "active": true,
+        "title": "Professional Soccer",
+        "sectionItems": [
+          {
+            "corpusItem": {
+              "id": "271801",
+              "url": "https://www.espn.co.uk/football/story/_/id/44897835/no-value-no-colour-lecce-wear-white-shirt-serie-protest",
+              "title": "‘No Value, No Colour’: Lecce Wear White Shirt in Serie a Protest",
+              "excerpt": "Lecce played white shirt on Sunday in protest at Serie A’s decision to reschedule Friday’s match three days after the death of their physiotherapist.",
+              "topic": "SPORTS",
+              "publisher": "www.espn.co.uk",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a2.espncdn.com/combiner/i?img=%2Fphoto%2F2025%2F0428%2Fr1485119_1296x729_16%2D9.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271802",
+              "url": "https://www.caughtoffside.com/2025/04/28/chelsea-attacker-stamford-bridge-move/",
+              "title": "“He Wants to Play for Chelsea” – 31 Goal Attacker Wants Stamford Bridge Move",
+              "excerpt": "Chelsea target Victor Osimhen wants to move to Stamford Bridge this summer according to former Blues midfielder John Obi Mikel.",
+              "topic": "SPORTS",
+              "publisher": "www.caughtoffside.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://icdn.caughtoffside.com/wp-content/uploads/2025/04/COS-FeaturedHero-Image-Templates-141.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271803",
+              "url": "https://www.football365.com/news/leeds-united-reassigning-six-relegated-stars-premier-league-return",
+              "title": "Leeds United: Reassigning Ipswich, Leicester and Southampton Sextet to Farke’s Side for PL Return",
+              "excerpt": "Leeds United could do worse than sign these six stars from relegated sides ahead of their Premier League return. 🤔",
+              "topic": "SPORTS",
+              "publisher": "Football365",
+              "isTimeSensitive": false,
+              "imageUrl": "https://d2x51gyc4ptf2q.cloudfront.net/content/uploads/2025/04/22155435/Aaron-Ramsdale-Kyle-Walker-Peters-Stephy-Mavididi.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271804",
+              "url": "https://www.skysports.com/football/news/11835/13356745/real-madrids-antonio-rudiger-could-face-lengthy-ban-after-appearing-to-throw-ice-at-referee-after-copa-del-rey-final",
+              "title": "Real Madrid’s Antonio Rudiger Could Face Lengthy Ban After Appearing to Throw Ice at Referee After Copa Del Rey Final",
+              "excerpt": "Jules Koundes goal in extra time handed  Barcelona a dramatic 3-2 win over Real Madrid in the Copa del Ray final; Real Madrid trio Antonio Rudiger, Jude Bellingham and Lucas Vazquez were all sent off after the final whistle as tempers boiled over at Sevil",
+              "topic": "SPORTS",
+              "publisher": "Sky Sports",
+              "isTimeSensitive": false,
+              "imageUrl": "https://e0.365dm.com/25/04/1600x900/skysports-real-madrid-barcelona_6898498.jpg?20250427083550"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271805",
+              "url": "https://www.bbc.com/sport/football/articles/c0qnyzg34kxo",
+              "title": "‘Pressley Willing to Leave Brentford for Hearts Job’ - Gossip",
+              "excerpt": "Steven Pressley is reportedly willing to leave Brentford to help former club Heart of Midlothian as Aberdeen and St Johnstone give trials to a Nigeria goalkeeper.",
+              "topic": "SPORTS",
+              "publisher": "BBC",
+              "isTimeSensitive": false,
+              "imageUrl": "https://ichef.bbci.co.uk/ace/branded_sport/1200/cpsprodpb/391d/live/f3dec590-23f8-11f0-9060-674316cb3a1f.png"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271806",
+              "url": "https://www.espn.co.uk/football/report/_/gameId/712450",
+              "title": "Napoli Take Sole Lead in Serie a After Win Against Torino",
+              "excerpt": "Expert recap and game analysis of the Napoli vs. Torino Italian Serie A game from 27 April 2025 on ESPN (UK).",
+              "topic": "SPORTS",
+              "publisher": "www.espn.co.uk",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a.espncdn.com/combiner/i?img=/i/espn/misc_logos/500/soccer.png"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271807",
+              "url": "https://www.skysports.com/football/news/11945/13354757/arsenal-can-beat-paris-saint-germain-and-have-massive-opportunity-to-win-champions-league-says-paul-merson",
+              "title": "Arsenal Can Beat Paris Saint-Germain and Have ‘Massive Opportunity’ to Win Champions League, Says Paul Merson",
+              "excerpt": "Arsenal face PSG in the Champions League semi-finals; the first leg is at the Emirates on Tuesday and the return leg at the Parc des Princes on Wednesday May 7; Paul Merson says the Gunners can win the tie over two legs and reach the final in Munich",
+              "topic": "SPORTS",
+              "publisher": "Sky Sports",
+              "isTimeSensitive": false,
+              "imageUrl": "https://e0.365dm.com/25/04/1600x900/skysports-football-champions-league_6895594.jpg?20250424153340"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271808",
+              "url": "https://www.caughtoffside.com/2025/04/28/the-reason-blue-flares-liverpool-title-celebrations/",
+              "title": "The Epic Reason Behind Blue Flares in Liverpool’s Title Celebrations at Anfield",
+              "excerpt": "An Everton fan pranked Liverpool fans into buying blue flares for their Premier League title celebrations without Liverpool fans finding out.",
+              "topic": "SPORTS",
+              "publisher": "www.caughtoffside.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://icdn.caughtoffside.com/wp-content/uploads/2025/04/COS-FeaturedHero-Image-Templates-1-66.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271809",
+              "url": "https://www.football365.com/news/real-madrid-lower-snakes-belly-john-nicholson",
+              "title": "Real Madrid Are Lower Than a Snake’s Belly; Throw the Book at Them",
+              "excerpt": "Real Madrid are a pathetic club. Prove us wrong...",
+              "topic": "SPORTS",
+              "publisher": "Football365",
+              "isTimeSensitive": false,
+              "imageUrl": "https://d2x51gyc4ptf2q.cloudfront.net/content/uploads/2025/04/28092600/Real-Madrid-players-surround-the-referee.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271810",
+              "url": "https://www.bbc.com/sport/football/articles/cdjl7mlekv7o",
+              "title": "Player Trading, Europe & Stability - How Celtic Have Built Domination",
+              "excerpt": "Chris McLaughlin examines Celtic’s dominance of Scottish football, what it means for the club, the rest of the league and city rivals Rangers.",
+              "topic": "SPORTS",
+              "publisher": "BBC",
+              "isTimeSensitive": false,
+              "imageUrl": "https://ichef.bbci.co.uk/ace/branded_sport/1200/cpsprodpb/5f3e/live/b5b2a910-21d9-11f0-9c65-a5c3dc449bf3.png"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271811",
+              "url": "https://www.espn.co.uk/football/report/_/gameId/735089",
+              "title": "Man City Beat Nottingham Forest to Reach Third Straight FA Cup Final",
+              "excerpt": "Expert recap and game analysis of the Manchester City vs. Nottingham Forest English Fa Cup game from 27 April 2025 on ESPN (UK).",
+              "topic": "SPORTS",
+              "publisher": "www.espn.co.uk",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a.espncdn.com/combiner/i?img=/i/espn/misc_logos/500/soccer.png"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271812",
+              "url": "https://equalizersoccer.com/2025/04/27/arsenal-stun-lyon-to-reach-first-uwcl-final-in-18-years-barcelona-crush-chelsea-again/",
+              "title": "Arsenal Stun Lyon to Reach First UWCL Final in 18 Years; Barcelona Crush Chelsea Again",
+              "excerpt": "On a dramatic Sunday of UEFA Women’s Champions League action, Arsenal produced a stunning 4-1 away victory to overturn a first-leg deficit against Lyon and book their spot in the final for the first time in 18 years. Trailing 2-1 after the first leg, the ",
+              "topic": "SPORTS",
+              "publisher": "equalizersoccer.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://equalizersoccer.com/wp-content/uploads/2025/04/SPP_931858-1000x600.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271813",
+              "url": "https://www.skysports.com/football/news/11095/13354974/bournemouth-1-1-man-utd-rasmus-hojlund-scores-96th-minute-equaliser-to-earn-ruben-amorims-men-a-point-on-the-coast",
+              "title": "Bournemouth 1-1 Man Utd: Rasmus Hojlund Scores 96th-Minute Equaliser to Earn Ruben Amorim’s Men a Point on the Coast",
+              "excerpt": "Rasmus Hojlund scored a 96th-minute equaliser as Man Utd hit back to hold 10-player Bournemouth to a 1-1 draw on <em>Super Sunday</em>.",
+              "topic": "SPORTS",
+              "publisher": "Sky Sports",
+              "isTimeSensitive": false,
+              "imageUrl": "https://e0.365dm.com/25/04/1600x900/skysports-rasmus-hojlund-man-utd_6898909.jpg?20250427160603"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271814",
+              "url": "https://www.football365.com/news/arsenal-saliba-best-world-claim-paris-saint-germain",
+              "title": "Arsenal Star Responds to ‘Best in the World’ Claim Ahead of Gunners Vs Paris Saint-Germain Clash",
+              "excerpt": "Arsenal defender William Saliba has responded to claims that he is the best defender in the world ahead of the Gunners’ clash with Paris Saint-Germain.",
+              "topic": "SPORTS",
+              "publisher": "Football365",
+              "isTimeSensitive": false,
+              "imageUrl": "https://d2x51gyc4ptf2q.cloudfront.net/content/uploads/2025/04/12134809/William-Saliba-Real-Madrid-F365.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271815",
+              "url": "https://www.caughtoffside.com/2025/04/28/negotiations-ongoing-arsenal-willing-to-submit-offer-bilal-el-khannous/",
+              "title": "Negotiations Ongoing: Arsenal Willing to Submit Offer for €30m Star From Relegated Club",
+              "excerpt": "Arsenal are reportedly keen on securing the services of the Leicester City midfielder Bilal El Khannouss.",
+              "topic": "SPORTS",
+              "publisher": "www.caughtoffside.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://icdn.caughtoffside.com/wp-content/uploads/2025/04/COS-FeaturedHero-Image-Templates-143.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271816",
+              "url": "https://www.espn.co.uk/football/story/_/id/44481381/liverpool-mohamed-salah-premier-league-top-foreign-scorer",
+              "title": "Liverpool Vs. Tottenham: Mohamed Salah Now Premier League’s Top Foreign Scorer",
+              "excerpt": "Liverpool forward Mohamed Salah is now the Premier League’s top-scoring foreign player after surpassing Manchester City legend Sergio Aguero with his strike against Tottenham Hotspur on Sunday.",
+              "topic": "SPORTS",
+              "publisher": "www.espn.co.uk",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a4.espncdn.com/combiner/i?img=%2Fphoto%2F2025%2F0427%2Fr1484681_1296x729_16%2D9.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271817",
+              "url": "https://www.skysports.com/football/news/11095/13354682/watch-liverpool-vs-tottenham-live-stream-tv-channel-now-team-news-score-prediction-and-premier-league-title-permutations",
+              "title": "Watch Liverpool Vs Tottenham: Live Stream, TV Channel, NOW, Team News, Score Prediction and Premier League Title Permutations",
+              "excerpt": "Sky customers can watch Liverpool vs Tottenham in the Premier League on Sky Sports from 4pm or via the Sky Sports app; non-Sky customers can stream the game with a NOW Day or Month pass; kick-off at Anfield is 4.30pm with Liverpool needing just a point to",
+              "topic": "SPORTS",
+              "publisher": "Sky Sports",
+              "isTimeSensitive": false,
+              "imageUrl": "https://e0.365dm.com/25/04/1600x900/skysports-liverpool-tottenham_6897216.jpg?20250426115145"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271818",
+              "url": "https://www.football365.com/news/man-utd-limp-ruben-amorim-mailbox",
+              "title": "Man Utd Were ‘Limp’ but Can Ruben Amorim Be Blamed With No Goalscorers?",
+              "excerpt": "Manchester United were predictably poor against Bournemouth again but can it be Ruben Amorim’s fault?",
+              "topic": "SPORTS",
+              "publisher": "Football365",
+              "isTimeSensitive": false,
+              "imageUrl": "https://d2x51gyc4ptf2q.cloudfront.net/content/uploads/2025/04/28082600/Man-Utd-manager-Ruben-Amorim-on-his-haunches.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271819",
+              "url": "https://www.bbc.com/sport/football/articles/c04526e57pdo",
+              "title": "Atletico Madrid Target Romero - Monday’s Gossip",
+              "excerpt": "Atletico Madrid want to sign Spurs defender Cristian Romero, Manchester City aim for defender Andrea Cambiaso, Manchester United keen on Palace striker Jean-Philippe Mateta, plus more.",
+              "topic": "SPORTS",
+              "publisher": "BBC",
+              "isTimeSensitive": false,
+              "imageUrl": "https://ichef.bbci.co.uk/ace/branded_sport/1200/cpsprodpb/6845/live/f3e2d1f0-23b0-11f0-8c2e-77498b1ce297.png"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271820",
+              "url": "https://www.espn.co.uk/football/story/_/id/44888527/real-madrid-ancelotti-exit-talks-perez",
+              "title": "Source: Real Madrid’s Ancelotti Set for Exit Talks With Pérez",
+              "excerpt": "Carlo Ancelotti will meet with Real Madrid president Florentino Pérez in the coming days to discuss the coach’s departure from the club, a source told ESPN.",
+              "topic": "SPORTS",
+              "publisher": "www.espn.co.uk",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a3.espncdn.com/combiner/i?img=%2Fphoto%2F2025%2F0412%2Fr1477652_1296x729_16%2D9.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271821",
+              "url": "https://www.espn.com/soccer/story/_/id/44891477/mls-investigating-discrimination-vancouver-minnesota",
+              "title": "MLS Investigating Discrimination in Vancouver Win Over Minnesota",
+              "excerpt": "MLS announced it is aware of a reported violation of the league’s Non-Discrimination Policy that occurred in Sunday’s match between Minnesota United FC and the Vancouver Whitecaps, and will “immediately begin a thorough review of the matter.”",
+              "topic": "SPORTS",
+              "publisher": "ESPN",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a3.espncdn.com/combiner/i?img=%2Fphoto%2F2025%2F0428%2Fr1484990_1296x729_16%2D9.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271822",
+              "url": "https://www.caughtoffside.com/2025/04/28/leicester-city-eyeing-manager-van-nistelrooy/",
+              "title": "Leicester City Eyeing 39-Year-Old Manager to Replace Ruud Van Nistelrooy",
+              "excerpt": "Leicester City are looking for a new manager to replace Van Nistelrooy after their relegation from the Premier League was confirmed.",
+              "topic": "SPORTS",
+              "publisher": "www.caughtoffside.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://icdn.caughtoffside.com/wp-content/uploads/2025/04/COS-FeaturedHero-Image-Templates-3-38.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271823",
+              "url": "https://www.espn.co.uk/football/story/_/id/44887693/wrexham-women-lose-cup-final-take-another-step-forward",
+              "title": "Wrexham Women Lose Cup Final but Take Another Step Forward",
+              "excerpt": "Wrexham AFC fell to Cardiff City in the Welsh Cup, but the team’s dreams of securing their first major trophy seem to be progressing anyway.",
+              "topic": "SPORTS",
+              "publisher": "www.espn.co.uk",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a4.espncdn.com/combiner/i?img=%2Fphoto%2F2025%2F0427%2Fr1484799_1296x729_16%2D9.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271824",
+              "url": "https://www.espn.com/soccer/story/_/id/44890146/inter-miami-waiving-julian-gressel-ahead-minnesota-move",
+              "title": "Sources: Inter Miami Waiving Julian Gressel Ahead of Minnesota Move",
+              "excerpt": "Inter Miami CF is waiving Julian Gressel, clearing the way for the midfielder to head to Minnesota United FC, sources tell ESPN.",
+              "topic": "SPORTS",
+              "publisher": "ESPN",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a2.espncdn.com/combiner/i?img=%2Fphoto%2F2025%2F0427%2Fr1484927_1296x729_16%2D9.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271825",
+              "url": "https://www.football365.com/news/man-city-de-bruyne-palmer-dybala-raphinha",
+              "title": "Man City ‘New De Bruyne’ Options Include Cole Palmer and Ballon D’or Favourite",
+              "excerpt": "Man City need a replacement for Kevin de Bruyne, but who? Maybe a Ballon d’Or favourite?",
+              "topic": "SPORTS",
+              "publisher": "Football365",
+              "isTimeSensitive": false,
+              "imageUrl": "https://d2x51gyc4ptf2q.cloudfront.net/content/uploads/2025/04/25134145/F365-One-Badge-Kevin-De-Bruyne-Rayan-Cherki-Cole-Palmer-Paulo-Dybala-Manchester-City.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271826",
+              "url": "https://www.espn.co.uk/football/report/_/gameId/712452",
+              "title": "Inter Milan’s Serie a Title Hopes Dented by Roma Loss",
+              "excerpt": "Expert recap and game analysis of the AS Roma vs. Internazionale Italian Serie A game from 27 April 2025 on ESPN (UK).",
+              "topic": "SPORTS",
+              "publisher": "www.espn.co.uk",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a.espncdn.com/combiner/i?img=/i/espn/misc_logos/500/soccer.png"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271827",
+              "url": "https://www.caughtoffside.com/2025/04/27/man-united-napoli-osimhen/",
+              "title": "Report: Man United Currently Unable to Make Move for £64m Target",
+              "excerpt": "Man United will be busy during the summer transfer window, and one item on their agenda is to bring in a new starting striker.",
+              "topic": "SPORTS",
+              "publisher": "www.caughtoffside.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://icdn.caughtoffside.com/wp-content/uploads/2025/04/COS-FeaturedHero-Image-Templates-1-64.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271828",
+              "url": "https://www.bbc.com/sport/football/articles/c77ny151ed1o",
+              "title": "Promoted Forest Plan to ‘Hit Ground Running’",
+              "excerpt": "Nottingham Forest Women have already begun preparations for Championship football after completing a league and cup double on Sunday.",
+              "topic": "SPORTS",
+              "publisher": "BBC",
+              "isTimeSensitive": false,
+              "imageUrl": "https://ichef.bbci.co.uk/ace/branded_sport/1200/cpsprodpb/57e0/live/943e0770-241d-11f0-9060-674316cb3a1f.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271829",
+              "url": "https://www.caughtoffside.com/2025/04/28/chelsea-man-united-to-compete-barcelona-aboubacar-maiga/",
+              "title": "Report: Chelsea and Man United Set to Compete With Barcelona for Midfield Prodigy",
+              "excerpt": "Chelsea and Manchester United are keen on signing the African midfielder Aboubacar Maiga at the end of the season.",
+              "topic": "SPORTS",
+              "publisher": "www.caughtoffside.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://icdn.caughtoffside.com/wp-content/uploads/2025/04/COS-FeaturedHero-Image-Templates-144.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271830",
+              "url": "https://www.bbc.com/sport/football/articles/c787k83jjg7o",
+              "title": "Villa Object to Spurs Request for Fixture Change",
+              "excerpt": "Tottenham want to move their 18 May Premier League tie at Aston Villa in case they reach the Europa League final three days later - but Villa object to the change.",
+              "topic": "SPORTS",
+              "publisher": "BBC",
+              "isTimeSensitive": false,
+              "imageUrl": "https://ichef.bbci.co.uk/ace/branded_sport/1200/cpsprodpb/25d0/live/2aae0190-23a8-11f0-82e6-6508ff6df3d3.jpg"
+            }
+          }
+        ]
+      },
+      {
+        "externalId": "mlb",
+        "active": true,
+        "title": "MLB",
+        "sectionItems": []
+      },
+      {
+        "externalId": "nhl",
+        "active": true,
+        "title": "NHL",
+        "sectionItems": [
+          {
+            "corpusItem": {
+              "id": "271708",
+              "url": "https://thescore.com/nhl/news/3276126",
+              "title": "Capitals Score Late to Win Game 4, Take Stranglehold on Canadiens",
+              "excerpt": "The Washington Capitals completed the comeback against Montreal on Sunday with a 5-2 victory in Game 4 to push the Canadiens to the edge of elimination.Andrew Mangiapane scored the winner with under four minutes left, while forward Brandon Duhaime and bru",
+              "topic": "SPORTS",
+              "publisher": "thescore.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://assets-cms.thescore.com/uploads/image/file/782853/w768xh576_GettyImages-2211800441.jpg?ts=1745803280"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271709",
+              "url": "https://www.prohockeyrumors.com/2025/04/hurricanes-frederik-anderson-to-be-evaluated-for-injury.html",
+              "title": "Hurricanes’ Frederik Anderson to Be Evaluated for Injury",
+              "excerpt": "The Hurricanes plan on re-evaluating Andersen tomorrow. Visit PHR for more details.",
+              "topic": "SPORTS",
+              "publisher": "www.prohockeyrumors.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.prohockeyrumors.com/files/2025/01/USATSI_24599569-1024x683.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271710",
+              "url": "https://thehockeywriters.com/nhl-best-russian-hockey-players/",
+              "title": "The NHL’s Top-50 Russians of All-Time",
+              "excerpt": "THW takes a look at the 50 best Russian hockey players to have graced the NHL over the years. Find out who made our list and why.",
+              "topic": "SPORTS",
+              "publisher": "thehockeywriters.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3951.pcdn.co/wp-content/uploads/2015/09/Russians_All_Time.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271711",
+              "url": "https://www.prohockeyrumors.com/2025/04/these-nhl-free-agents-will-get-overpaid-this-summer.html",
+              "title": "These NHL Free Agents Will Get Overpaid This Summer",
+              "excerpt": "These unrestricted free agents are likely to get overpaid this July. Read more at Pro Hockey Rumors.",
+              "topic": "SPORTS",
+              "publisher": "www.prohockeyrumors.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.prohockeyrumors.com/files/2023/01/USATSI_19873058-1024x683.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271712",
+              "url": "https://thescore.com/nhl/news/3275974",
+              "title": "Hellebuyck Chased Again After Allowing 5 Goals in Game 4",
+              "excerpt": "The Winnipeg Jets pulled Connor Hellebuyck for the second consecutive contest after the netminder allowed five goals on 18 shots in Game 4’s 5-1 loss to the St. Louis Blues on Sunday.Backup Eric Comrie entered the game in his place.Robert Thomas notched t",
+              "topic": "SPORTS",
+              "publisher": "thescore.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://assets-cms.thescore.com/uploads/image/file/782762/w768xh576_GettyImages-2211741534.jpg?ts=1745781129"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271713",
+              "url": "https://www.prohockeyrumors.com/2025/04/greg-cronin-interested-in-bruins-head-coaching-job.html",
+              "title": "Greg Cronin Interested in Bruins Head Coaching Job",
+              "excerpt": "Former Ducks head coach Greg Cronin would like to ship things up to Boston. Read more at Pro Hockey Rumors.",
+              "topic": "SPORTS",
+              "publisher": "www.prohockeyrumors.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.prohockeyrumors.com/files/2025/04/USATSI_25222321-1024x683.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271714",
+              "url": "https://thescore.com/nhl/news/3276056",
+              "title": "Hurricanes Put Devils on Brink of Elimination With Game 4 Win",
+              "excerpt": "The Carolina Hurricanes beat the New Jersey Devils 5-2 in Game 4 on Sunday to take a commanding 3-1 series lead.Forward Andrei Svechnikov led the way with the second playoff hat trick of his career. His first two tallies came in the opening minute of the ",
+              "topic": "SPORTS",
+              "publisher": "thescore.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://assets-cms.thescore.com/uploads/image/file/782821/w768xh576_GettyImages-2211763545.jpg?ts=1745792709"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271715",
+              "url": "https://www.espn.com/nhl/story/_/id/44888936/no-additional-discipline-matthew-tkachuk-sources-say",
+              "title": "No Additional Discipline for Matthew Tkachuk, Sources Say",
+              "excerpt": "Florida Panthers forward Matthew Tkachuk will not receive supplemental discipline for his hit on Tampa Bay Lightning forward Jake Guentzel in Game 3 of their Eastern Conference first-round series, sources told ESPN on Sunday.",
+              "topic": "SPORTS",
+              "publisher": "ESPN",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a1.espncdn.com/combiner/i?img=%2Fphoto%2F2025%2F0427%2Fr1484859_1296x729_16%2D9.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271716",
+              "url": "https://www.prohockeyrumors.com/2025/04/canadiens-recall-cayden-primeau.html",
+              "title": "Canadiens Recall Cayden Primeau",
+              "excerpt": "The Montreal Canadiens have recalled Cayden Primeau after an injury to starter Sam Montembeault. Primeau could backup Jakub Dobes in Game 4.",
+              "topic": "SPORTS",
+              "publisher": "www.prohockeyrumors.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.prohockeyrumors.com/files/2023/12/USATSI_21736519-1024x683.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271717",
+              "url": "https://www.prohockeyrumors.com/2025/04/ducks-interviewed-joel-quenneville-for-head-coach-vacancy.html",
+              "title": "Ducks Interviewed Joel Quenneville for Head Coach Vacancy",
+              "excerpt": "The Ducks have interest in the formerly suspended Joel Quenneville as their next head coach. Read more at Pro Hockey Rumors.",
+              "topic": "SPORTS",
+              "publisher": "www.prohockeyrumors.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.prohockeyrumors.com/files/2025/04/USATSI_17040143-1024x683.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271718",
+              "url": "https://thehockeywriters.com/oilers-make-dramatic-comeback-to-beat-kings-in-ot-even-series-2-2-4-27-2025/",
+              "title": "Oilers Make Dramatic Comeback to Beat Kings in OT, Even Series 2-2",
+              "excerpt": "Game 4 between the Kings and Oilers took place on Sunday night, with the Oilers coming away with a 4-3 win. Here’s your game recap.",
+              "topic": "SPORTS",
+              "publisher": "thehockeywriters.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3951.pcdn.co/wp-content/uploads/2025/04/Leon-Draisaitl-Oilers-5-scaled.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271719",
+              "url": "https://www.prohockeyrumors.com/2025/04/oilers-recall-seven-black-aces.html",
+              "title": "Oilers Recall Seven Black Aces",
+              "excerpt": "The Edmonton Oilers have recalled seven black aces, including top prospect Matthew Savoie and AHL starting goaltender Olivier Rodrigue.",
+              "topic": "SPORTS",
+              "publisher": "www.prohockeyrumors.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.prohockeyrumors.com/files/2024/10/USATSI_24303489-1024x683.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271720",
+              "url": "https://thescore.com/nhl/news/3275669",
+              "title": "MacKinnon: Landeskog’s Play Since Return ‘Beyond All Our Expectations’",
+              "excerpt": "Colorado Avalanche superstar Nathan MacKinnon is blown away at how quickly captain Gabriel Landeskog has got up to speed since returning to game action after nearly three years off. Landeskog made his first NHL appearance since the 2022 Stanley Cup Final ",
+              "topic": "SPORTS",
+              "publisher": "thescore.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://assets-cms.thescore.com/uploads/image/file/782697/w768xh576_GettyImages-2211179488.jpg?ts=1745757918"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271721",
+              "url": "https://www.prohockeyrumors.com/2025/04/eastern-notes-montembeault-protas-korpi.html",
+              "title": "Eastern Notes: Montembeault, Protas, Korpi",
+              "excerpt": "Notes from around the Eastern Conference, including the status of Protas and Montembeault.",
+              "topic": "SPORTS",
+              "publisher": "www.prohockeyrumors.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.prohockeyrumors.com/files/2023/12/USATSI_21957533-1024x683.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271722",
+              "url": "https://thehockeywriters.com/revisiting-the-tj-oshie-troy-brouwer-trade/",
+              "title": "The TJ Oshie Trade Analyzed",
+              "excerpt": "A look back at the TJ Oshie trade for Troy Brouwer involving the St. Louis Blues and Washington Capitals in 2015.",
+              "topic": "SPORTS",
+              "publisher": "thehockeywriters.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3951.pcdn.co/wp-content/uploads/2015/09/T.J.-Oshie-Capitals-1-1.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271723",
+              "url": "https://www.prohockeyrumors.com/2025/04/capitals-aliaksei-protas-logan-thompson-to-be-game-time-decisions.html",
+              "title": "Capitals’ Aliaksei Protas, Logan Thompson to Be Game-Time Decisions",
+              "excerpt": "The Capitals will make a game-time call on whether starting goaltender Logan Thompson or top forward Aliaksei Protas are healthy enough to go.",
+              "topic": "SPORTS",
+              "publisher": "www.prohockeyrumors.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://cdn.prohockeyrumors.com/files/2025/01/USATSI_25076805-1024x692.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "271724",
+              "url": "https://thehockeywriters.com/hockey-history-april-27-hasek-beliveau-roy-bowman-hull-sakic/",
+              "title": "Today in Hockey History: April 27",
+              "excerpt": "The Buffalo Sabres have not had a ton of playoff success since joining the NHL in 1970, but they have had some big moments on this date.",
+              "topic": "SPORTS",
+              "publisher": "thehockeywriters.com",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3951.pcdn.co/wp-content/uploads/2014/11/Dominik-Hasek.jpg"
             }
           }
         ]

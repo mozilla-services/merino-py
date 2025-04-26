@@ -4,6 +4,7 @@ import logging
 from copy import deepcopy
 from typing import Dict, List, Optional
 
+from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
@@ -24,6 +25,7 @@ from merino.curated_recommendations.rankers import (
     thompson_sampling,
     renumber_recommendations,
     boost_followed_sections,
+    section_thompson_sampling,
 )
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
@@ -168,7 +170,7 @@ async def get_sections(
     request: CuratedRecommendationsRequest,
     surface_id: SurfaceId,
     sections_backend: SectionsProtocol,
-    engagement_backend,
+    engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
     region: Optional[str] = None,
 ) -> Dict[str, Section]:
@@ -228,14 +230,17 @@ async def get_sections(
     # 7. Prune undersized sections
     sections = get_sections_with_enough_items(sections)
 
-    # 8. Reassign feed ranks
-    update_received_feed_rank(sections)
+    # 9. Boost sections with highly engaging items through Thompson sampling.
+    sections = section_thompson_sampling(sections, engagement_backend=engagement_backend)
 
-    # 9. Boost followed sections
+    # 10. Boost followed sections
     if request.sections and sections:
         sections = boost_followed_sections(request.sections, sections)
 
-    # 10. Apply ad/layout tweaks
+    # 10. Reassign feed ranks
+    update_received_feed_rank(sections)
+
+    # 11. Apply ad/layout tweaks
     set_double_row_layout(sections)
     adjust_ads_in_sections(sections)
 
