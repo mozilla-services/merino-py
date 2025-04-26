@@ -38,13 +38,13 @@ class TestRenumberRecommendations:
 
     def test_sequential_order(self):
         """Test that renumber_recommendations assigns sequential ranks."""
-        recs = generate_recommendations(["1", "2", "3", "4", "5"])
+        recs = generate_recommendations(item_ids=["1", "2", "3", "4", "5"])
         renumber_recommendations(recs)
         assert [rec.receivedRank for rec in recs] == list(range(len(recs)))
 
     def test_preserve_order_for_equal_ranks(self):
         """Test renumber_recommendations preserves original order for equal initial ranks."""
-        recs = generate_recommendations(["1", "2", "3", "4"])
+        recs = generate_recommendations(item_ids=["1", "2", "3", "4"])
         # Set all recommendations to the same initial rank.
         for rec in recs:
             rec.receivedRank = 5
@@ -59,7 +59,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
     def test_spread_publishers_single_reorder(self):
         """Should only re-order one element."""
-        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(item_ids=["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "walter.com"
         recs[2].publisher = "donnie.com"
@@ -85,7 +85,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
             "walter.com",
             "abides.com",
         ]
-        assert [x.scheduledCorpusItemId for x in reordered] == [
+        assert [x.corpusItemId for x in reordered] == [
             "1",
             "2",
             "3",
@@ -98,7 +98,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
     def test_spread_publishers_multiple_reorder(self):
         """Should re-order multiple elements."""
-        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(item_ids=["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "walter.com"
         recs[2].publisher = "walter.com"
@@ -124,7 +124,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
             "innout.com",
             "abides.com",
         ]
-        assert [x.scheduledCorpusItemId for x in reordered] == [
+        assert [x.corpusItemId for x in reordered] == [
             "1",
             "2",
             "5",
@@ -137,7 +137,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
     def test_spread_publishers_give_up_at_the_end(self):
         """Should not re-order when the end of the list cannot satisfy the requested spread."""
-        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(item_ids=["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "abides.com"
         recs[2].publisher = "walter.com"
@@ -153,7 +153,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
         # if the number of elements at the end of the list cannot satisfy the spread, we give up and just append
         # the remainder
-        assert [x.scheduledCorpusItemId for x in reordered] == [
+        assert [x.corpusItemId for x in reordered] == [
             "1",
             "2",
             "3",
@@ -166,7 +166,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
 
     def test_spread_publishers_cannot_spread(self):
         """If we don't have enough variance in publishers, spread can't happen."""
-        recs = generate_recommendations(["1", "2", "3", "4", "5", "6", "7", "8"])
+        recs = generate_recommendations(item_ids=["1", "2", "3", "4", "5", "6", "7", "8"])
         recs[0].publisher = "thedude.com"
         recs[1].publisher = "abides.com"
         recs[2].publisher = "donnie.com"
@@ -179,7 +179,7 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
         reordered = spread_publishers(recs, spread_distance=3)
 
         # ensure the elements aren't reordered at all (as we don't have enough publisher variance)
-        assert [x.scheduledCorpusItemId for x in reordered] == [
+        assert [x.corpusItemId for x in reordered] == [
             "1",
             "2",
             "3",
