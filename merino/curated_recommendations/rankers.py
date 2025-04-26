@@ -95,6 +95,36 @@ def thompson_sampling(
     return sorted(recs, key=sample_score, reverse=True)
 
 
+def section_thompson_sampling(
+    sections: dict[str, Section],
+    engagement_backend,
+    top_n: int = 3,
+) -> list[Section]:
+    """Re-rank sections by Thompson sampling on the sum-clicks / sum-impressions
+    of their top_n recommendations, using a constant prior.
+    """
+    # constant prior α, β
+    prior = ConstantPrior().get()
+    a_prior, b_prior = top_n * prior.alpha, top_n * prior.beta
+
+    def score(sec: Section) -> float:
+        # sum clicks and no‐opens over top_n items
+        recs = sec.recommendations[:top_n]
+        total_clicks = 0.0
+        total_imps = 0.0
+        for rec in recs:
+            eng = engagement_backend.get(rec.corpusItemId, None)
+            if eng:
+                total_clicks += eng.click_count
+                total_imps += eng.impression_count
+        opens = total_clicks + a_prior
+        no_opens = (total_imps - total_clicks) + b_prior
+        return float(beta.rvs(opens, no_opens))
+
+    # sort sections by sampled score, highest first
+    return sorted(sections.values(), key=score, reverse=True)
+
+
 def spread_publishers(
     recs: list[CuratedRecommendation], spread_distance: int
 ) -> list[CuratedRecommendation]:
