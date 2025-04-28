@@ -23,7 +23,7 @@ from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.rankers import (
     thompson_sampling,
     renumber_recommendations,
-    section_boosting_composite_sorting_key,
+    boost_followed_sections,
 )
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
@@ -79,42 +79,6 @@ def exclude_recommendations_from_blocked_sections(
     """
     blocked_ids = {s.sectionId for s in requested_sections if s.isBlocked}
     return [rec for rec in recommendations if not rec.topic or rec.topic.value not in blocked_ids]
-
-
-def boost_followed_sections(
-    user_sections: List[SectionConfiguration],
-    sections: Dict[str, Section],
-) -> Dict[str, Section]:
-    """Elevate followed sections to the top of the feed, sorting by follow recency.
-
-    Args:
-        user_sections: Config entries including follow and block metadata.
-        sections: Mapping of all sections keyed by section ID.
-
-    Returns:
-        Re-ordered sections dict with updated receivedFeedRank values.
-    """
-    # Annotate follow/block metadata
-    for cfg in user_sections:
-        sec = sections.get(cfg.sectionId)
-        if not sec:
-            continue
-        sec.isFollowed = cfg.isFollowed
-        sec.isBlocked = cfg.isBlocked
-        sec.followedAt = cfg.followedAt
-
-    # Exclude top_stories_section from sorting
-    main_sections = [s for k, s in sections.items() if k != "top_stories_section"]
-    main_sections.sort(key=section_boosting_composite_sorting_key)
-
-    # Rebuild dict preserving top_stories_section first
-    new_order = {"top_stories_section": sections["top_stories_section"]}
-    for sec in main_sections:
-        new_order[sec.title] = sec
-    # Reassign ranks
-    for idx, sec in enumerate(new_order.values()):
-        sec.receivedFeedRank = idx
-    return new_order
 
 
 def set_double_row_layout(sections: Dict[str, Section]) -> None:

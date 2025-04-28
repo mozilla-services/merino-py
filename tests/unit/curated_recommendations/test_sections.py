@@ -1,7 +1,6 @@
 """Module with tests covering merino/curated_recommendations/sections.py"""
 
 import copy
-from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -18,7 +17,6 @@ from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     set_double_row_layout,
     exclude_recommendations_from_blocked_sections,
-    boost_followed_sections,
     create_sections_from_items_by_topic,
     is_ml_sections_experiment,
     update_received_feed_rank,
@@ -185,49 +183,6 @@ class TestAdjustAdsInSections:
                 assert self.ads_in_section(section)
             else:
                 assert not self.ads_in_section(section)
-
-
-class TestBoostFollowedSections:
-    """Tests covering boost_followed_sections"""
-
-    at1 = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
-    at2 = datetime(2025, 1, 2, 0, 0, tzinfo=timezone.utc)
-
-    def test_followed_sections_moved_to_top(self):
-        """Test that followed sections are moved to the top in boost_followed_sections"""
-        feed = generate_sections_feed(section_count=3)
-        id_1, id_2 = list(feed.keys())[1:3]
-
-        cfgs = [
-            SectionConfiguration(
-                sectionId=id_1, isFollowed=False, isBlocked=False, followedAt=self.at1
-            ),
-            SectionConfiguration(
-                sectionId=id_2, isFollowed=True, isBlocked=False, followedAt=self.at2
-            ),
-        ]
-        new_order = boost_followed_sections(cfgs, feed)
-
-        keys = list(new_order.keys())
-        assert keys[0] == "top_stories_section"
-        assert keys[1] == feed[id_2].title
-        assert keys[2] == feed[id_1].title
-        assert new_order["top_stories_section"].receivedFeedRank == 0
-        assert new_order[feed[id_2].title].receivedFeedRank == 1
-        assert new_order[feed[id_1].title].receivedFeedRank == 2
-
-    def test_missing_sections_ignored(self):
-        """Test that non-existing sections are ignored"""
-        feed = generate_sections_feed(section_count=1)
-        cfgs = [
-            SectionConfiguration(
-                sectionId="foobar", isFollowed=True, isBlocked=False, followedAt=self.at1
-            )
-        ]
-        new_order = boost_followed_sections(cfgs, feed)
-
-        assert list(new_order.keys()) == ["top_stories_section"]
-        assert new_order["top_stories_section"].receivedFeedRank == 0
 
 
 class TestCreateSectionsFromItemsByTopic:
