@@ -1,20 +1,14 @@
 """Unit tests for CuratedRecommendationsProvider."""
 
-import copy
-
 import pytest
 from pydantic import HttpUrl
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
-from merino.curated_recommendations.layouts import layout_3_ads
 from merino.curated_recommendations.protocol import (
     MAX_TILE_ID,
     MIN_TILE_ID,
     CuratedRecommendation,
-    Section,
 )
-from merino.curated_recommendations.provider import CuratedRecommendationsProvider
-from tests.unit.curated_recommendations.fixtures import generate_sections_feed, generate_recommendations
 
 
 class TestCuratedRecommendationTileId:

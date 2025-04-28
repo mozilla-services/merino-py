@@ -153,7 +153,7 @@ def adjust_ads_in_sections(sections: Dict[str, Section]) -> None:
 
 
 def create_sections_from_items_by_topic(
-        items: List[CuratedRecommendation], surface_id: SurfaceId
+    items: List[CuratedRecommendation], surface_id: SurfaceId
 ) -> Dict[str, Section]:
     """Group remaining recommendations by topic and build sections for each topic.
 

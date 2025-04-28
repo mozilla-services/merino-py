@@ -1,3 +1,5 @@
+"""Module with tests covering merino/curated_recommendations/sections.py"""
+
 import copy
 
 import pytest
@@ -5,9 +7,15 @@ import pytest
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.layouts import layout_3_ads
 from merino.curated_recommendations.protocol import Section, SectionConfiguration
-from merino.curated_recommendations.sections import adjust_ads_in_sections, set_double_row_layout, \
-    exclude_recommendations_from_blocked_sections
-from tests.unit.curated_recommendations.fixtures import generate_recommendations, generate_sections_feed
+from merino.curated_recommendations.sections import (
+    adjust_ads_in_sections,
+    set_double_row_layout,
+    exclude_recommendations_from_blocked_sections,
+)
+from tests.unit.curated_recommendations.fixtures import (
+    generate_recommendations,
+    generate_sections_feed,
+)
 
 
 class TestExcludeRecommendationsFromBlockedSections:

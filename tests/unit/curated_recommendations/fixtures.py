@@ -12,7 +12,9 @@ from merino.curated_recommendations.layouts import layout_4_medium
 
 
 def generate_recommendations(
-    length: int | None = None, item_ids: list[str] | None = None, time_sensitive_count: int | None = None
+    length: int | None = None,
+    item_ids: list[str] | None = None,
+    time_sensitive_count: int | None = None,
 ) -> list[CuratedRecommendation]:
     """Create dummy recommendations for the tests below.
 
@@ -28,6 +30,10 @@ def generate_recommendations(
         length = len(item_ids)
     elif length is not None:
         item_ids = [f"id:{i}" for i in range(length)]
+
+    # Help the linter understand that length and item_ids are now set.
+    assert length is not None
+    assert item_ids is not None
 
     # If time_sensitive_count is not provided, default to half the length
     if time_sensitive_count is None:

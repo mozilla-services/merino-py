@@ -1,3 +1,5 @@
+"""Module with tests covering merino/curated_recommendations/utils.py"""
+
 import pytest
 
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
@@ -35,9 +37,7 @@ class TestCuratedRecommendationsProviderExtractLanguageFromLocale:
         """Testing the extract_language_from_locale() method
         & ensure appropriate language is returned.
         """
-        assert (
-            extract_language_from_locale(Locale(locale)) == language
-        )
+        assert extract_language_from_locale(Locale(locale)) == language
 
     def test_extract_language_from_locale_return_none(self):
         """Testing the extract_language_from_locale() method
@@ -83,9 +83,7 @@ class TestCuratedRecommendationsProviderDeriveRegion:
         """Testing the derive_region() method & ensure region is derived
         from region if region is provided
         """
-        assert (
-            derive_region(Locale(locale), region) == derived_region
-        )
+        assert derive_region(Locale(locale), region) == derived_region
 
     def test_derive_region_return_none(self):
         """Testing the derive_region() method &
@@ -174,7 +172,4 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
         """Testing the get_recommendation_surface_id() method &
         ensure correct surface id is returned based on passed locale & region
         """
-        assert (
-            get_recommendation_surface_id(locale, region)
-            == recommendation_surface_id
-        )
+        assert get_recommendation_surface_id(locale, region) == recommendation_surface_id
