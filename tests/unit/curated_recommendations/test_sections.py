@@ -1,16 +1,28 @@
 """Module with tests covering merino/curated_recommendations/sections.py"""
 
 import copy
+from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 
-from merino.curated_recommendations.corpus_backends.protocol import Topic
-from merino.curated_recommendations.layouts import layout_3_ads
-from merino.curated_recommendations.protocol import Section, SectionConfiguration
+from merino.curated_recommendations.corpus_backends.protocol import Topic, SurfaceId
+from merino.curated_recommendations.layouts import (
+    layout_3_ads,
+    layout_4_medium,
+    layout_6_tiles,
+    layout_4_large,
+)
+from merino.curated_recommendations.protocol import Section, SectionConfiguration, ExperimentName
 from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     set_double_row_layout,
     exclude_recommendations_from_blocked_sections,
+    boost_followed_sections,
+    create_sections_from_items_by_topic,
+    is_ml_sections_experiment,
+    update_received_feed_rank,
+    get_sections_with_enough_items,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -173,3 +185,126 @@ class TestAdjustAdsInSections:
                 assert self.ads_in_section(section)
             else:
                 assert not self.ads_in_section(section)
+
+
+class TestBoostFollowedSections:
+    """Tests covering boost_followed_sections"""
+
+    at1 = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+    at2 = datetime(2025, 1, 2, 0, 0, tzinfo=timezone.utc)
+
+    def test_followed_sections_moved_to_top(self):
+        """Test that followed sections are moved to the top in boost_followed_sections"""
+        feed = generate_sections_feed(section_count=3)
+        id_1, id_2 = list(feed.keys())[1:3]
+
+        cfgs = [
+            SectionConfiguration(
+                sectionId=id_1, isFollowed=False, isBlocked=False, followedAt=self.at1
+            ),
+            SectionConfiguration(
+                sectionId=id_2, isFollowed=True, isBlocked=False, followedAt=self.at2
+            ),
+        ]
+        new_order = boost_followed_sections(cfgs, feed)
+
+        keys = list(new_order.keys())
+        assert keys[0] == "top_stories_section"
+        assert keys[1] == feed[id_2].title
+        assert keys[2] == feed[id_1].title
+        assert new_order["top_stories_section"].receivedFeedRank == 0
+        assert new_order[feed[id_2].title].receivedFeedRank == 1
+        assert new_order[feed[id_1].title].receivedFeedRank == 2
+
+    def test_missing_sections_ignored(self):
+        """Test that non-existing sections are ignored"""
+        feed = generate_sections_feed(section_count=1)
+        cfgs = [
+            SectionConfiguration(
+                sectionId="foobar", isFollowed=True, isBlocked=False, followedAt=self.at1
+            )
+        ]
+        new_order = boost_followed_sections(cfgs, feed)
+
+        assert list(new_order.keys()) == ["top_stories_section"]
+        assert new_order["top_stories_section"].receivedFeedRank == 0
+
+
+class TestCreateSectionsFromItemsByTopic:
+    """Tests covering create_sections_from_items_by_topic"""
+
+    def test_group_by_topic_and_cycle_layout(self):
+        """Test grouping items by topic and cycling layouts"""
+        items = generate_recommendations(3)
+        items[0].topic = Topic.SCIENCE
+        items[1].topic = Topic.FOOD
+        items[2].topic = None
+
+        sections = create_sections_from_items_by_topic(items, SurfaceId.NEW_TAB_EN_US)
+        assert set(sections.keys()) == {Topic.SCIENCE.value, Topic.FOOD.value}
+
+        sci = sections[Topic.SCIENCE.value]
+        food = sections[Topic.FOOD.value]
+        assert sci.receivedFeedRank == 0
+        assert sci.layout == layout_6_tiles
+        assert food.receivedFeedRank == 1
+        assert food.layout == layout_4_large
+        assert sci.recommendations[0].receivedRank == 0
+        assert food.recommendations[0].receivedRank == 0
+
+    def test_ignores_none_topics(self):
+        """Test that items without a topic produce no sections"""
+        items = generate_recommendations(2)
+        # Topics aren't expected to be None in practice, but it may happen if a
+        # new topic is introduced in the corpus, without Merino having been updated.
+        items[0].topic = None
+        items[1].topic = None
+        result = create_sections_from_items_by_topic(items, SurfaceId.NEW_TAB_EN_US)
+        assert result == {}
+
+
+class TestMlSectionsExperiment:
+    """Tests covering is_ml_sections_experiment"""
+
+    @pytest.mark.parametrize(
+        "name,branch,expected",
+        [
+            (ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment", True),
+            (ExperimentName.ML_SECTIONS_EXPERIMENT.value, "control", False),
+            ("other", "treatment", False),
+        ],
+    )
+    def test_flag_logic(self, name, branch, expected):
+        """Test that ML sections experiment flag matches expected logic"""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        assert is_ml_sections_experiment(req) is expected
+
+
+class TestUpdateReceivedFeedRank:
+    """Tests covering update_received_feed_rank"""
+
+    def test_ranks_reassigned(self):
+        """Test that receivedFeedRank values are reassigned in sorted order"""
+        feed = generate_sections_feed(section_count=3)
+        secs = list(feed.values())[1:3]
+        secs[0].receivedFeedRank = 5
+        secs[1].receivedFeedRank = 2
+
+        update_received_feed_rank(feed)
+
+        assert secs[1].receivedFeedRank == 1
+        assert secs[0].receivedFeedRank == 2
+
+
+class TestGetSectionsWithEnoughItems:
+    """Tests covering get_sections_with_enough_items"""
+
+    def test_prunes_undersized_sections(self):
+        """Test that sections smaller than layout max_tile_count + 1 are removed"""
+        feed = generate_sections_feed(section_count=3)
+        secs = list(feed.values())[1:3]
+        keep_sec, drop_sec = secs
+        keep_sec.recommendations = generate_recommendations(layout_4_medium.max_tile_count + 1)
+        drop_sec.recommendations = generate_recommendations(layout_4_medium.max_tile_count)
+        result = get_sections_with_enough_items({"k": keep_sec, "d": drop_sec})
+        assert "k" in result and "d" not in result

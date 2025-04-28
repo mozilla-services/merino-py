@@ -1,5 +1,9 @@
 """Module with tests covering merino/curated_recommendations/utils.py"""
 
+from datetime import datetime, timezone
+from types import SimpleNamespace
+
+import freezegun
 import pytest
 
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
@@ -8,6 +12,8 @@ from merino.curated_recommendations.utils import (
     derive_region,
     extract_language_from_locale,
     get_recommendation_surface_id,
+    is_enrolled_in_experiment,
+    get_millisecond_epoch_time,
 )
 
 
@@ -19,14 +25,17 @@ class TestCuratedRecommendationsProviderExtractLanguageFromLocale:
         [
             ("fr", "fr"),
             ("fr-FR", "fr"),
+            ("FR_fr", "fr"),
             ("es", "es"),
             ("es-ES", "es"),
+            ("Es-Es", "es"),
             ("it", "it"),
             ("it-IT", "it"),
             ("en", "en"),
             ("en-CA", "en"),
             ("en-GB", "en"),
             ("en-US", "en"),
+            ("EN-US", "en"),
             ("de", "de"),
             ("de-DE", "de"),
             ("de-AT", "de"),
@@ -173,3 +182,35 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
         ensure correct surface id is returned based on passed locale & region
         """
         assert get_recommendation_surface_id(locale, region) == recommendation_surface_id
+
+
+class TestIsEnrolledInExperiment:
+    """Unit tests for is_enrolled_in_experiment."""
+
+    @pytest.mark.parametrize(
+        "req_name, req_branch, name, branch, expected",
+        [
+            ("exp1", "control", "exp1", "control", True),  # exact match
+            ("optin-exp1", "control", "exp1", "control", True),  # opt-in prefix
+            ("exp1", "treatment", "exp1", "control", False),  # branch mismatch
+            ("other", "control", "exp1", "control", False),  # name mismatch
+            (None, "control", "exp1", "control", False),  # None experimentName
+            ("exp1", None, "exp1", "control", False),  # None experimentBranch
+            (None, None, "exp1", "control", False),  # both None
+        ],
+    )
+    def test_enrollment(self, req_name, req_branch, name, branch, expected):
+        """Test that is_enrolled_in_experiment works correctly in all edge cases."""
+        req = SimpleNamespace(experimentName=req_name, experimentBranch=req_branch)
+        assert is_enrolled_in_experiment(req, name, branch) is expected
+
+
+class TestGetMillisecondEpochTime:
+    """Unit tests for get_millisecond_epoch_time."""
+
+    _TS: int = 1742472000
+
+    @freezegun.freeze_time(datetime.fromtimestamp(_TS, timezone.utc))
+    def test_millisecond_conversion(self):
+        """Test that get_millisecond_epoch_time returns the current time in ms."""
+        assert get_millisecond_epoch_time() == self._TS * 1000
