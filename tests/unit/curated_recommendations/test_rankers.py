@@ -23,8 +23,12 @@ from merino.curated_recommendations.rankers import (
     boost_followed_sections,
     is_section_recently_followed,
     renumber_recommendations,
+    put_top_stories_first,
 )
-from tests.unit.curated_recommendations.fixtures import generate_recommendations
+from tests.unit.curated_recommendations.fixtures import (
+    generate_recommendations,
+    generate_sections_feed,
+)
 
 
 class TestRenumberRecommendations:
@@ -453,7 +457,7 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
 
         # Generate feed with all sections as a dict using the correct keys.
         feed = self.generate_sections(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            list(range(17)),
             [
                 "top_stories_section",  # 0
                 "business",  # 1
@@ -481,10 +485,8 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         # Get the updated feed with boosted followed sections.
         new_feed = boost_followed_sections(req_sections, feed)
 
-        # Assertions for receivedFeedRank.
-        assert new_feed["top_stories_section"].receivedFeedRank == 0  # should always remain 0.
-        # Followed section should have receivedFeedRank == 1.
-        assert new_feed[followed_section.sectionId].receivedFeedRank == 1
+        # Followed section should have receivedFeedRank == 0.
+        assert new_feed[followed_section.sectionId].receivedFeedRank == 0
 
         # Assertions for isFollowed.
         assert new_feed[followed_section.sectionId].isFollowed
@@ -526,11 +528,11 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         new_feed = boost_followed_sections(req_sections, feed)
 
         # Assertions for receivedFeedRank.
-        assert new_feed["top_stories_section"].receivedFeedRank == 0  # should always remain 0.
-        # 'hobbies' was followed more recently so should be boosted to rank 1.
-        assert new_feed["hobbies"].receivedFeedRank == 1
+        # 'hobbies' was followed more recently so should be boosted to rank 0.
+        assert new_feed["hobbies"].receivedFeedRank == 0
         # 'tech' remains at rank 2.
-        assert new_feed["tech"].receivedFeedRank == 2
+        assert new_feed["tech"].receivedFeedRank == 1
+        assert new_feed["top_stories_section"].receivedFeedRank == 2
         # 'food' remains at rank 3.
         assert new_feed["food"].receivedFeedRank == 3
         # 'travel' should come after food.
@@ -582,3 +584,53 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         assert new_feed["business"].isBlocked
         assert not new_feed["travel"].isFollowed
         assert new_feed["travel"].isBlocked
+
+
+class TestPutTopStoriesFirst:
+    """Tests covering put_top_stories_first"""
+
+    def test_shifts_ranks_when_not_at_zero(self):
+        """Test that when top_stories_section has a non-zero rank, it is moved to the top."""
+        # Create 4 sections; default top_stories_section at rank 0
+        sections = generate_sections_feed(section_count=4)
+        # Get swap 'Top Stories' with the section on index 2.
+        keys: list[str] = list(sections.keys())
+        keys[0], keys[2] = keys[2], keys[0]
+        for idx, sid in enumerate(keys):
+            sections[sid].receivedFeedRank = idx
+
+        sections = put_top_stories_first(sections)
+
+        # Expected: top_stories_section first, then rest in keys order without top
+        expected_order = ["top_stories_section"] + [k for k in keys if k != "top_stories_section"]
+        for idx, sid in enumerate(expected_order):
+            assert sections[sid].receivedFeedRank == idx
+
+    def test_no_change_when_already_zero(self):
+        """Ensure that if top_stories_section is already at rank 0, no ranks are altered."""
+        # Default fixture has top_stories_section at 0
+        feed = generate_sections_feed(section_count=3)
+        original = {sid: sec.receivedFeedRank for sid, sec in feed.items()}
+
+        updated = put_top_stories_first(feed)
+
+        # No ranks should change
+        assert {sid: sec.receivedFeedRank for sid, sec in updated.items()} == original
+
+    def test_no_error_when_missing_top_stories(self):
+        """Ensure function returns unchanged feed when top_stories_section is absent."""
+        # Construct a feed without top_stories_section
+        from merino.curated_recommendations.layouts import layout_4_medium
+
+        feed = {
+            "foo": Section(
+                receivedFeedRank=2,
+                recommendations=[],
+                title="Foo",
+                layout=layout_4_medium,
+            )
+        }
+
+        # Should simply return the same dict
+        updated = put_top_stories_first(feed)
+        assert updated is feed

@@ -181,6 +181,23 @@ def spread_publishers(
     return result_recs
 
 
+def put_top_stories_first(sections: dict[str, Section]) -> dict[str, Section]:
+    """Rank top_stories_section at the top."""
+    key = "top_stories_section"
+    top_stories = sections.get(key)
+    # If missing or already first, nothing to do
+    if not top_stories or top_stories.receivedFeedRank == 0:
+        return sections
+
+    # Move top stories to rank 0 and bump others that were above it.
+    original_top_stories_rank = top_stories.receivedFeedRank
+    top_stories.receivedFeedRank = 0
+    for section_id, section in sections.items():
+        if section_id != key and section.receivedFeedRank < original_top_stories_rank:
+            section.receivedFeedRank += 1
+    return sections
+
+
 def boost_preferred_topic(
     recs: list[CuratedRecommendation],
     preferred_topics: list[Topic],
@@ -281,7 +298,7 @@ def boost_followed_sections(
     }
 
     # 3. Extract blocked section ids from req_sections param
-    blocked_section_ids = [section.sectionId for section in req_sections if section.isBlocked]
+    blocked_section_ids = {section.sectionId for section in req_sections if section.isBlocked}
 
     # 4. Update section attributes for sections in the request
     for section_id in initial_section_ids:
@@ -290,32 +307,19 @@ def boost_followed_sections(
         if not section:
             continue  # skip sections that did not map
 
-        if section_id == "top_stories_section":
-            section.receivedFeedRank = 0
-        else:
-            # set follow attributes if section is followed
-            if section_id in followed_sections_info:
-                section.isFollowed = True
-                section.followedAt = followed_sections_info[section_id]
-            # if section is blocked, set isBlocked
-            if section_id in blocked_section_ids:
-                section.isBlocked = True
+        # set follow attributes if section is followed
+        if section_id in followed_sections_info:
+            section.isFollowed = True
+            section.followedAt = followed_sections_info[section_id]
+        # if section is blocked, set isBlocked
+        if section_id in blocked_section_ids:
+            section.isBlocked = True
 
-    # 5. Collect all followed, unfollowed, blocked sections into a single array
-    sorted_sections = []
-    for section_id, section in sections.items():
-        if section_id == "top_stories_section":
-            section.receivedFeedRank = 0
-            continue
-        sorted_sections.append(section)
+    # 5. Sort the sections using lambda composite key
+    sorted_sections = sorted(sections.values(), key=section_boosting_composite_sorting_key)
 
-    # 6. Sort the sections using lambda composite key
-    sorted_sections.sort(key=section_boosting_composite_sorting_key)
-
-    # 7. Assign new rank starting from 1 for the sorted sections
-    current_received_feed_rank = 1
-    for section in sorted_sections:
-        section.receivedFeedRank = current_received_feed_rank
-        current_received_feed_rank += 1
+    # 6. Assign new rank starting from 1 for the sorted sections
+    for new_rank, section in enumerate(sorted_sections):
+        section.receivedFeedRank = new_rank
 
     return sections
