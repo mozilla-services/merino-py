@@ -34,7 +34,10 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Banī Suwayf": "Beni Suef",
     "Barishal": "Barisal",
     "Belem": "Belém",
+    "Białołeka": "Bialoleka",
     "Boca del Rio": "Boca del Río",
+    # Bochum is a borough of Hordel
+    "Bochum-Hordel": "Hordel",
     "Bogota D.C.": "Bogota",
     "Ciudad de Huajuapan de León": "Heroica Ciudad de Huajuapan de León",
     "Changwat Sara Buri": "Saraburi",
@@ -57,6 +60,7 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Guadalajara de Buga": "Buga",
     "Gustavo Adolfo Madero": "Gustavo A. Madero",
     "Hakusan'ura": "Hakusanura",
+    "Hameln": "Hamelin",
     # district in Onomichi
     "Haradachō-obara": "Onomichi",
     "Huatulco": "Santa María Huatulco",
@@ -108,13 +112,16 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Parigi Kulon": "Parigi",
     "Pasig-bo": "Lambunao",
     "Pilāni": "Pilani",
-    # 3km away
-    "Quweisna": "Quwaysna",
     "Port Montt": "Puerto Montt",
     "Province of Pangasinan": "Pangasinan",
+    "Puerto Juárez": "Benito Juárez",
+    # 3km away
+    "Quweisna": "Quwaysna",
+    "Quận Bình Thạnh": "Bình Thạnh",
     "Rahim Yar Khan": "Rahimyar Khan",
     # 13 km away
     "Research Triangle Park": "Durham",
+    "Rüsselsheim am Main": "Rüsselsheim",
     "Ste. Anne de la Pocatière": "Sainte-Anne-de-la-Pocatière",
     "Sainte-Clotilde-de-Châteauguay": "Sainte-Clotilde-de-Chateauguay",
     "Sainte-Geneviève": "Sainte-Genevieve",
