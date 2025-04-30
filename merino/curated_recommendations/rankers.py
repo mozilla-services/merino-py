@@ -279,9 +279,7 @@ def section_boosting_composite_sorting_key(section):
 def boost_followed_sections(
     req_sections: list[SectionConfiguration], sections: dict[str, Section]
 ) -> dict[str, Section]:
-    """Boost followed sections to the very top, right after top_stories_section.
-    Received feed rank for top_stories_section should always stay 0.
-    Received feed rank for followed_sections should follow top_stories_section.
+    """Boost followed sections to the very top and update receivedFeedRank accordingly.
     Most recently followed sections (followed within 1 week) should be boosted higher.
     Unfollowed sections should be ranked after followed_sections, and relative order should be preserved.
 
@@ -318,7 +316,7 @@ def boost_followed_sections(
     # 5. Sort the sections using lambda composite key
     sorted_sections = sorted(sections.values(), key=section_boosting_composite_sorting_key)
 
-    # 6. Assign new rank starting from 1 for the sorted sections
+    # 6. Assign new rank starting from 0 for the sorted sections
     for new_rank, section in enumerate(sorted_sections):
         section.receivedFeedRank = new_rank
 
