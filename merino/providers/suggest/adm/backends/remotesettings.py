@@ -10,6 +10,7 @@ import httpx
 import kinto_http
 from pydantic import BaseModel
 
+from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.suggest.adm.backends.protocol import SuggestionContent
 from merino.utils.http_client import create_http_client
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 RS_CONNECT_TIMEOUT: float = 5.0
 
-RecordType = Literal["data", "icon", "offline-expansion-data"]
+RecordType = Literal["amp", "data", "icon"]
 
 
 class KintoSuggestion(BaseModel):
@@ -193,7 +194,7 @@ class RemoteSettingsBackend:
         """
         # Falls back to "data" records if "offline-expansion-data" records do not exist
         data_records: list[dict[str, Any]] = self.filter_records(
-            "offline-expansion-data", records
+            "amp", records
         ) or self.filter_records("data", records)
 
         tasks: list[Task] = []
@@ -252,5 +253,19 @@ class RemoteSettingsBackend:
             records: List of Remote Settings records
         Returns:
             list[dict[str, Any]]: List of Remote Settings records filtered by type
+            and potentially country and form_factor if applicable
         """
-        return [record for record in records if record["type"] == record_type]
+        filtered_records = []
+
+        for record in records:
+            if record.get("type") != record_type:
+                continue
+
+            if "country" in record and record["country"] not in settings.remote_settings.countries:
+                continue
+
+            if "form_factor" in record and record["form_factor"] != "desktop":
+                continue
+
+            filtered_records.append(record)
+        return filtered_records
