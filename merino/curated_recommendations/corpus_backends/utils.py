@@ -73,7 +73,6 @@ class CorpusApiGraphConfig:
     @property
     def endpoint(self) -> str:
         """Return the GraphQL endpoint URL."""
-        # return self.CORPUS_API_DEV_ENDPOINT  # TODO: Switch to prod endpoint
         return self.CORPUS_API_PROD_ENDPOINT
 
     @property

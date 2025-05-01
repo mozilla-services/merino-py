@@ -1495,6 +1495,53 @@ class TestSections:
             else:
                 assert interest_picker_response is None
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "repeat",
+        range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
+    )
+    async def test_sections_ranked_by_top_items_engagement(self, repeat, engagement_backend):
+        """Sections should be ordered so that those with higher average CTR
+        among their top 3 items get a better (lower) feed rank.
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": "en-US",
+                    "feeds": ["sections"],
+                    "experimentName": "new-tab-ml-sections",
+                    "experimentBranch": "treatment",
+                },
+            )
+            assert response.status_code == 200
+            feeds = response.json()["feeds"]
+
+            # exclude top_stories_section, which by definition has high engagement.
+            sections = [
+                section
+                for name, section in feeds.items()
+                if section and name != "top_stories_section"
+            ]
+
+            # compute average CTR of the top recs in each section
+            avg_ctrs = []
+            for sec in sections:
+                recs = sec["recommendations"][:6]
+                ctrs = []
+                for rec in recs:
+                    e = engagement_backend.get(rec["corpusItemId"], region=None)
+                    if e:
+                        ctrs.append(e.click_count / e.impression_count)
+                # if no data, treat as 0
+                avg = sum(ctrs) / len(ctrs) if ctrs else 0.0
+                avg_ctrs.append((sec["receivedFeedRank"], avg))
+
+            # regression: feedRank vs avg CTR should have negative slope
+            ranks, avgs = zip(*avg_ctrs)
+            slope, _, _, _, _ = linregress(ranks, avgs)
+            assert slope < 0, f"Sections not ordered by engagement (slope={slope})"
+
 
 @pytest.mark.asyncio
 async def test_curated_recommendations_enriched_with_icons(

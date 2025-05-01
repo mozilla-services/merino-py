@@ -4,6 +4,7 @@ import logging
 from copy import deepcopy
 from typing import Dict, List, Optional
 
+from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
@@ -24,6 +25,8 @@ from merino.curated_recommendations.rankers import (
     thompson_sampling,
     renumber_recommendations,
     boost_followed_sections,
+    section_thompson_sampling,
+    put_top_stories_first,
 )
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
@@ -163,12 +166,47 @@ def update_received_feed_rank(sections: Dict[str, Section]):
         sections[sid].receivedFeedRank = idx
 
 
+def rank_sections(
+    sections: Dict[str, Section],
+    section_configurations: list[SectionConfiguration] | None,
+    engagement_backend: EngagementBackend,
+) -> Dict[str, Section]:
+    """Apply a series of stable ranking passes to the sections feed, in order of priority.
+
+    1. Pin the `top_stories_section` to receivedFeedRank 0 so it's always at the top.
+    2. Promote any user-followed sections from `section_configurations` to appear immediately
+       after Top Stories, ordered by recency (followedAt) and preserving their relative order.
+    3. Apply Thompson sampling on engagement data (via `engagement_backend`) to the remaining
+       sections for exploration/exploitation balance.
+
+    Args:
+        sections: a dict mapping section IDs to Section objects (with `receivedFeedRank` set).
+        section_configurations: optional list of SectionConfiguration objects indicating which
+            sections are followed/blocked and when they were followed.
+        engagement_backend: provides engagement signals for Thompson sampling.
+
+    Returns:
+        The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
+    """
+    # 3rd priority: reorder for exploration via Thompson sampling on engagement
+    sections = section_thompson_sampling(sections, engagement_backend=engagement_backend)
+
+    # 2nd priority: boost followed sections, if any
+    if section_configurations:
+        sections = boost_followed_sections(section_configurations, sections)
+
+    # 1st priority: always keep top stories at the very top
+    sections = put_top_stories_first(sections)
+
+    return sections
+
+
 async def get_sections(
     recommendations: List[CuratedRecommendation],
     request: CuratedRecommendationsRequest,
     surface_id: SurfaceId,
     sections_backend: SectionsProtocol,
-    engagement_backend,
+    engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
     region: Optional[str] = None,
 ) -> Dict[str, Section]:
@@ -228,14 +266,10 @@ async def get_sections(
     # 7. Prune undersized sections
     sections = get_sections_with_enough_items(sections)
 
-    # 8. Reassign feed ranks
-    update_received_feed_rank(sections)
+    # 8. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
+    sections = rank_sections(sections, request.sections, engagement_backend)
 
-    # 9. Boost followed sections
-    if request.sections and sections:
-        sections = boost_followed_sections(request.sections, sections)
-
-    # 10. Apply ad/layout tweaks
+    # 9. Apply ad/layout tweaks
     set_double_row_layout(sections)
     adjust_ads_in_sections(sections)
 

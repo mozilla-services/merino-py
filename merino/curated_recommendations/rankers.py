@@ -15,7 +15,7 @@ from merino.curated_recommendations.protocol import (
 from scipy.stats import beta
 
 
-def renumber_recommendations(recommendations: list) -> None:
+def renumber_recommendations(recommendations: list[CuratedRecommendation]) -> None:
     """Renumber the receivedRank of each recommendation to be sequential.
 
     Args:
@@ -23,6 +23,19 @@ def renumber_recommendations(recommendations: list) -> None:
     """
     for rank, rec in enumerate(recommendations):
         rec.receivedRank = rank
+
+
+def renumber_sections(ordered_sections: list[tuple[str, Section]]) -> dict[str, Section]:
+    """Assign receivedFeedRank to each Section based on the list order, and convert it to a dict.
+
+    :param ordered_sections: A list of name + section tuples in the desired order.
+    :return: A dict mapping section names to Section objects with receivedFeedRank set.
+    """
+    result: dict[str, Section] = {}
+    for idx, (section_id, section) in enumerate(ordered_sections):
+        section.receivedFeedRank = idx
+        result[section_id] = section
+    return result
 
 
 # In a weighted average, how much to weigh the metrics from the requested region. 0.95 was chosen
@@ -95,6 +108,50 @@ def thompson_sampling(
     return sorted(recs, key=sample_score, reverse=True)
 
 
+def section_thompson_sampling(
+    sections: dict[str, Section],
+    engagement_backend: EngagementBackend,
+    top_n: int = 6,
+) -> dict[str, Section]:
+    """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
+
+    :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
+    :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.
+    :param top_n: Number of top items in each section for which to sum engagement in the Thompson sampling score.
+
+    :return: Mapping of section IDs to Section objects with updated receivedFeedRank.
+
+    [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
+    """
+
+    def sample_score(sec: Section) -> float:
+        """Sample beta distribution for the combined engagement of the top _n_ items."""
+        # sum clicks and impressions over top_n items
+        recs = sec.recommendations[:top_n]
+        total_clicks = 0
+        total_imps = 0
+        for rec in recs:
+            if engagement := engagement_backend.get(rec.corpusItemId):
+                total_clicks += engagement.click_count
+                total_imps += engagement.impression_count
+
+        # constant prior α, β
+        prior = ConstantPrior().get()
+        a_prior = top_n * prior.alpha
+        b_prior = top_n * prior.beta
+
+        # Sum engagement and priors.
+        opens = total_clicks + a_prior
+        no_opens = total_imps - total_clicks + b_prior
+
+        # Sample distribution
+        return float(beta.rvs(opens, no_opens))
+
+    # sort sections by sampled score, highest first
+    ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
+    return renumber_sections(ordered)
+
+
 def spread_publishers(
     recs: list[CuratedRecommendation], spread_distance: int
 ) -> list[CuratedRecommendation]:
@@ -122,6 +179,23 @@ def spread_publishers(
         remaining_recs.remove(rec)
 
     return result_recs
+
+
+def put_top_stories_first(sections: dict[str, Section]) -> dict[str, Section]:
+    """Rank top_stories_section at the top."""
+    key = "top_stories_section"
+    top_stories = sections.get(key)
+    # If missing or already first, nothing to do
+    if not top_stories or top_stories.receivedFeedRank == 0:
+        return sections
+
+    # Move top stories to rank 0 and bump others that were above it.
+    original_top_stories_rank = top_stories.receivedFeedRank
+    top_stories.receivedFeedRank = 0
+    for section_id, section in sections.items():
+        if section_id != key and section.receivedFeedRank < original_top_stories_rank:
+            section.receivedFeedRank += 1
+    return sections
 
 
 def boost_preferred_topic(
@@ -205,9 +279,7 @@ def section_boosting_composite_sorting_key(section):
 def boost_followed_sections(
     req_sections: list[SectionConfiguration], sections: dict[str, Section]
 ) -> dict[str, Section]:
-    """Boost followed sections to the very top, right after top_stories_section.
-    Received feed rank for top_stories_section should always stay 0.
-    Received feed rank for followed_sections should follow top_stories_section.
+    """Boost followed sections to the very top and update receivedFeedRank accordingly.
     Most recently followed sections (followed within 1 week) should be boosted higher.
     Unfollowed sections should be ranked after followed_sections, and relative order should be preserved.
 
@@ -224,7 +296,7 @@ def boost_followed_sections(
     }
 
     # 3. Extract blocked section ids from req_sections param
-    blocked_section_ids = [section.sectionId for section in req_sections if section.isBlocked]
+    blocked_section_ids = {section.sectionId for section in req_sections if section.isBlocked}
 
     # 4. Update section attributes for sections in the request
     for section_id in initial_section_ids:
@@ -233,32 +305,19 @@ def boost_followed_sections(
         if not section:
             continue  # skip sections that did not map
 
-        if section_id == "top_stories_section":
-            section.receivedFeedRank = 0
-        else:
-            # set follow attributes if section is followed
-            if section_id in followed_sections_info:
-                section.isFollowed = True
-                section.followedAt = followed_sections_info[section_id]
-            # if section is blocked, set isBlocked
-            if section_id in blocked_section_ids:
-                section.isBlocked = True
+        # set follow attributes if section is followed
+        if section_id in followed_sections_info:
+            section.isFollowed = True
+            section.followedAt = followed_sections_info[section_id]
+        # if section is blocked, set isBlocked
+        if section_id in blocked_section_ids:
+            section.isBlocked = True
 
-    # 5. Collect all followed, unfollowed, blocked sections into a single array
-    sorted_sections = []
-    for section_id, section in sections.items():
-        if section_id == "top_stories_section":
-            section.receivedFeedRank = 0
-            continue
-        sorted_sections.append(section)
+    # 5. Sort the sections using lambda composite key
+    sorted_sections = sorted(sections.values(), key=section_boosting_composite_sorting_key)
 
-    # 6. Sort the sections using lambda composite key
-    sorted_sections.sort(key=section_boosting_composite_sorting_key)
-
-    # 7. Assign new rank starting from 1 for the sorted sections
-    current_received_feed_rank = 1
-    for section in sorted_sections:
-        section.receivedFeedRank = current_received_feed_rank
-        current_received_feed_rank += 1
+    # 6. Assign new rank starting from 0 for the sorted sections
+    for new_rank, section in enumerate(sorted_sections):
+        section.receivedFeedRank = new_rank
 
     return sections
