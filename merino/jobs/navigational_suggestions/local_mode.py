@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
+from merino.jobs.navigational_suggestions.utils import DomainMetadataExtractionErrorsCollector
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ class LocalMetricsCollector:
             f"Success rate: {self.favicons_found/max(1, self.domains_processed):.1%}"
         )
 
-    def save_report(self) -> None:
+    def save_report(self, error_collector: DomainMetadataExtractionErrorsCollector) -> None:
         """Save final metrics report"""
         elapsed = (datetime.now() - self.start_time).total_seconds()
 
@@ -98,6 +99,11 @@ class LocalMetricsCollector:
         logger.info(f"Time elapsed: {elapsed:.1f} seconds")
         logger.info(f"Processing speed: {report['processing_rate']:.1f} domains/second")
         logger.info(f"Detailed metrics saved to: {output_file}")
+        logger.info("=======================")
+
+        # Print error summary
+        logger.info("===== Error Summary =====")
+        error_collector.print_failures()
         logger.info("=======================")
 
 
