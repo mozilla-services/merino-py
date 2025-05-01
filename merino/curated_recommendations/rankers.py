@@ -111,7 +111,7 @@ def thompson_sampling(
 def section_thompson_sampling(
     sections: dict[str, Section],
     engagement_backend: EngagementBackend,
-    top_n: int = 3,
+    top_n: int = 6,
 ) -> dict[str, Section]:
     """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
 

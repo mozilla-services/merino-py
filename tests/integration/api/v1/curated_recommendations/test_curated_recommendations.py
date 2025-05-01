@@ -1524,10 +1524,10 @@ class TestSections:
                 if section and name != "top_stories_section"
             ]
 
-            # compute average CTR of the top 3 recs in each section
+            # compute average CTR of the top recs in each section
             avg_ctrs = []
             for sec in sections:
-                recs = sec["recommendations"][:3]
+                recs = sec["recommendations"][:6]
                 ctrs = []
                 for rec in recs:
                     e = engagement_backend.get(rec["corpusItemId"], region=None)
