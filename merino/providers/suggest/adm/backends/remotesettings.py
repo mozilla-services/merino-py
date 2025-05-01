@@ -10,7 +10,6 @@ import logging
 import httpx
 import kinto_http
 from pydantic import BaseModel
-from pygments.lexer import default
 
 from merino.configs import settings
 from merino.exceptions import BackendError
@@ -111,7 +110,7 @@ class RemoteSettingsBackend:
                     for query in keywords[begin : begin + n]:
                         # Note that for adM suggestions, each keyword can only be
                         # mapped to a single suggestion.
-                        suggestions[(form_factor,query)] = (result_id, fkw_index)
+                        suggestions[(form_factor, query)] = (result_id, fkw_index)
                     begin += n
                     full_keywords.append(full_keyword)
                     fkw_index = len(full_keywords)
