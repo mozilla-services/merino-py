@@ -10,7 +10,7 @@ class SuggestionContent(BaseModel):
 
     # A dictionary keyed on suggestion keywords, each value stores an index
     # (pointer) to one entry of the suggestion result list.
-    suggestions: dict[str, tuple[int, int]]
+    suggestions: dict[tuple[str, str], tuple[int, int]]
 
     # A list of full keywords
     full_keywords: list[str]
