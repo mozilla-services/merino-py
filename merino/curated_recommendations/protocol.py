@@ -128,6 +128,11 @@ class CuratedRecommendation(CorpusItem):
     __typename: TypeName = TypeName.RECOMMENDATION
     tileId: Annotated[int | None, Field(strict=True, ge=MIN_TILE_ID, le=MAX_TILE_ID)] = None
     receivedRank: int
+    features: dict[str, float] = Field(
+        default_factory=dict,
+        description="Maps feature names to weights, which the client "
+        "can use to create a coarse interest vector.",
+    )
 
     @model_validator(mode="before")
     def set_tileId(cls, values):

@@ -112,6 +112,7 @@ class CuratedRecommendationsProvider:
             CuratedRecommendation(
                 **item.model_dump(),
                 receivedRank=rank,
+                features={item.topic.value: 1.0} if item.topic else {},
             )
             for rank, item in enumerate(corpus_items)
         ]

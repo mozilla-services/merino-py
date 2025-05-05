@@ -165,6 +165,7 @@ async def test_curated_recommendations(repeat):
             imageUrl="https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg",
             receivedRank=0,
             tileId=301455520317019,
+            features={"food": 1.0},
         )
         # Mock the endpoint
         response = await fetch_en_us(ac)
@@ -184,6 +185,7 @@ async def test_curated_recommendations(repeat):
         assert all(item["publisher"] for item in corpus_items)
         assert all(item["imageUrl"] for item in corpus_items)
         assert all(item["tileId"] for item in corpus_items)
+        assert all(item["features"] for item in corpus_items)
 
         # Assert that receivedRank equals 0, 1, 2, ...
         for i, item in enumerate(corpus_items):
@@ -219,6 +221,18 @@ async def test_curated_recommendations_utm_source():
         assert all("utm_source=firefox-newtab-en-us" in item["url"] for item in corpus_items)
         assert all(item["publisher"] for item in corpus_items)
         assert all(item["imageUrl"] for item in corpus_items)
+
+
+@pytest.mark.asyncio
+async def test_curated_recommendations_features():
+    """Test the curated recommendations endpoint returns topic features"""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await fetch_en_us(ac)
+
+        recommendations = response.json()["data"]
+        for rec in recommendations:
+            expected_features = {rec["topic"]: 1.0}
+            assert rec["features"] == expected_features
 
 
 class TestCuratedRecommendationsRequestParameters:

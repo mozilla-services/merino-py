@@ -55,6 +55,7 @@ async def get_corpus_sections(
             CuratedRecommendation(
                 **item.model_dump(),
                 receivedRank=rank,
+                features={corpus_section.externalId: 1.0},
             )
             for rank, item in enumerate(corpus_section.sectionItems)
         ]
