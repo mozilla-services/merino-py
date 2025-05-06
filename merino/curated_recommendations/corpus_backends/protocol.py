@@ -3,7 +3,7 @@
 from enum import Enum, unique
 from typing import Protocol
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, Field
 
 
 @unique
@@ -50,7 +50,11 @@ class SurfaceId(str, Enum):
 class IABMetadata(BaseModel):
     """IAB (v3.0) metadata for a Section."""
 
-    taxonomy: str  # IAB taxonomy v3.0 is currently used
+    # IAB taxonomy v3.0 is currently used
+    taxonomy: str = Field(
+        default=None,
+        description="IAB taxonomy version, v3.0 currently used, e.g. IAB-3.0",
+    )
     categories: list[str]
 
 
