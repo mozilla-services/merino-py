@@ -245,7 +245,7 @@ cdn_hostname = ""
 # Subdirectory within bucket for favicons
 favicons_root = "favicons"
 # Maximum size of files to process (in bytes)
-max_size = 16777216  # 16MB
+max_size = 16777216 # 16MB
 # HTTP timeout for favicon downloads (in seconds)
 http_timeout = 5
 
@@ -406,7 +406,7 @@ default_languages = [
     "ur",
     "vi",
     "zh-CN",
-    "zh-TW"
+    "zh-TW",
 ]
 
 
@@ -649,8 +649,24 @@ es_url = ""
 es_api_key = ""
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__ES_ALIAS
-# Elasticsearch alias value for indexing job.
-es_alias = "enwiki-{version}"
+# Elasticsearch english alias value for indexing job.
+en_es_alias = "enwiki-{version}"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__FR__ES_ALIAS
+# Elasticsearch french alias value for indexing job.
+fr_es_alias = "frwiki-{version}"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__DE__ES_ALIAS
+# Elasticsearch german alias value for indexing job.
+de_es_alias = "dewiki-{version}"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__IT__ES_ALIAS
+# Elasticsearch italian alias value for indexing job.
+it_es_alias = "itwiki-{version}"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__PL__ES_ALIAS
+# Elasticsearch polish alias value for indexing job.
+pl_es_alias = "plwiki-{version}"
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__INDEX_VERSION
 # Index version that will be written.

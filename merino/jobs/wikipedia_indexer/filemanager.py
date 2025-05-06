@@ -19,6 +19,8 @@ from google.api_core.exceptions import GoogleAPIError
 
 logger = logging.getLogger(__name__)
 
+VALID_LANGUAGES = {"en", "fr", "de", "it", "pl"}
+
 
 class DirectoryParser(HTMLParser):
     """Parse the directory listing to find the specified file."""
@@ -53,11 +55,22 @@ class FileManager:
     object_prefix: str
     file_pattern: Pattern
     client: Client
+    language: str
 
-    def __init__(self, gcs_bucket: str, gcs_project: str, export_base_url: str) -> None:
-        self.file_pattern = re.compile(r"(?:.*/|^)enwiki-(\d+)-cirrussearch-content.json.gz")
+    def __init__(
+        self, gcs_bucket: str, gcs_project: str, export_base_url: str, language: str
+    ) -> None:
+        if language not in VALID_LANGUAGES:
+            raise ValueError(
+                f"Unsupported language '{language}'. Must be one of: {', '.join(VALID_LANGUAGES)}"
+            )
+
+        self.file_pattern = re.compile(
+            rf"(?:.*/|^){language}wiki-(\d+)-cirrussearch-content.json.gz"
+        )
         self.client = Client(gcs_project)
         self.base_url = export_base_url
+        self.language = language
         if "/" in gcs_bucket:
             self.gcs_bucket, self.object_prefix = gcs_bucket.split("/", 1)
         else:
@@ -91,9 +104,16 @@ class FileManager:
         return dt(1, 1, 1)
 
     def get_latest_gcs(self) -> Blob:
-        """Find the most recent file on GCS"""
+        """Find the most recent file on GCS that matches the language-specific pattern"""
         bucket = self.client.bucket(self.gcs_bucket)
-        blobs: list[Blob] = [b for b in bucket.list_blobs(prefix=self.object_prefix)]
+        blobs: list[Blob] = [
+            b
+            for b in bucket.list_blobs(prefix=self.object_prefix)
+            if self.file_pattern.match(b.name)
+        ]
+        if not blobs:
+            raise RuntimeError(f"No matching dump files found for pattern: {self.file_pattern}")
+
         blobs.sort(key=lambda b: self._parse_date(str(b.name)))
         return blobs[-1]
 

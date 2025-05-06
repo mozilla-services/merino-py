@@ -102,12 +102,13 @@ def test_index_from_export_no_exports_available(
 ):
     """Test that RuntimeError is emitted."""
     file_manager.get_latest_gcs.return_value = Blob("", "bucket")
+    file_manager.language = "en"
     es_client.indices.exists.return_value = False
     indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
     with pytest.raises(RuntimeError) as exc_info:
         indexer.index_from_export(100, "fake_alias")
 
-    assert exc_info.value.args[0] == "No exports available on GCS"
+    assert exc_info.value.args[0] == "No exports available on GCS for en"
 
 
 def test_index_from_export_fail_on_existing_index(

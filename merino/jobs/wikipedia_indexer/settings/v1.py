@@ -1,6 +1,6 @@
 """Version 1 of the index mapping & settings"""
 
-SUGGEST_MAPPING = {
+SUGGEST_MAPPING_EN = {
     "dynamic": False,
     "properties": {
         "batch_id": {"type": "long"},
@@ -27,7 +27,7 @@ SUGGEST_MAPPING = {
 }
 
 
-SUGGEST_SETTINGS = {
+SUGGEST_SETTINGS_EN = {
     "number_of_replicas": "1",
     "refresh_interval": "-1",
     "number_of_shards": "2",
