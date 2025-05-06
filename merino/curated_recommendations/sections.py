@@ -5,6 +5,19 @@ from copy import deepcopy
 from typing import Dict, List, Optional
 
 from merino.curated_recommendations import EngagementBackend
+from merino.curated_recommendations.corpus_backends.protocol import (
+    SectionsProtocol,
+    SurfaceId,
+    CorpusSection,
+    CorpusItem,
+)
+from merino.curated_recommendations.layouts import (
+    layout_4_medium,
+    layout_4_large,
+    layout_6_tiles,
+    layout_3_ads,
+)
+from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
@@ -13,14 +26,6 @@ from merino.curated_recommendations.protocol import (
     SectionConfiguration,
     ExperimentName,
 )
-from merino.curated_recommendations.corpus_backends.protocol import SectionsProtocol, SurfaceId
-from merino.curated_recommendations.layouts import (
-    layout_4_medium,
-    layout_4_large,
-    layout_6_tiles,
-    layout_3_ads,
-)
-from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.rankers import (
     thompson_sampling,
     renumber_recommendations,
@@ -31,6 +36,54 @@ from merino.curated_recommendations.rankers import (
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
 logger = logging.getLogger(__name__)
+
+
+def map_section_item_to_recommendation(
+    item: CorpusItem,
+    rank: int,
+    section_id: str,
+) -> CuratedRecommendation:
+    """Map a CorpusItem to a CuratedRecommendation.
+
+    Args:
+        item: The corpus item to map.
+        rank: The received rank of the recommendation.
+        section_id: The external ID of the section used for the features key.
+
+    Returns:
+        A CuratedRecommendation.
+    """
+    return CuratedRecommendation(
+        **item.model_dump(),
+        receivedRank=rank,
+        # Treat the section’s externalId as a weight-1.0 feature so the client can aggregate a
+        # coarse interest vector. See also https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
+        features={section_id: 1.0},
+    )
+
+
+def map_corpus_section_to_section(corpus_section: CorpusSection, rank: int) -> Section:
+    """Map a CorpusSection to a Section with recommendations.
+
+    Args:
+        corpus_section: The corpus section to map.
+        rank: The receivedFeedRank to assign to this section,
+        which determines how the client orders the sections.
+
+    Returns:
+        A Section model containing mapped recommendations and default layout.
+    """
+    recommendations = [
+        map_section_item_to_recommendation(item, rank, corpus_section.externalId)
+        for rank, item in enumerate(corpus_section.sectionItems)
+    ]
+    return Section(
+        receivedFeedRank=rank,
+        recommendations=recommendations,
+        title=corpus_section.title,
+        iab=corpus_section.iab,
+        layout=deepcopy(layout_4_medium),
+    )
 
 
 async def get_corpus_sections(
@@ -50,22 +103,9 @@ async def get_corpus_sections(
     """
     corpus_sections = await sections_backend.fetch(surface_id)
     sections: Dict[str, Section] = {}
-    for corpus_section in corpus_sections:
-        recommendations = [
-            CuratedRecommendation(
-                **item.model_dump(),
-                receivedRank=rank,
-                features={corpus_section.externalId: 1.0},
-            )
-            for rank, item in enumerate(corpus_section.sectionItems)
-        ]
-        sections[corpus_section.externalId] = Section(
-            receivedFeedRank=len(sections) + min_feed_rank,
-            recommendations=recommendations,
-            title=corpus_section.title,
-            iab=corpus_section.iab,
-            layout=deepcopy(layout_4_medium),
-        )
+    for cs in corpus_sections:
+        rank = len(sections) + min_feed_rank
+        sections[cs.externalId] = map_corpus_section_to_section(cs, rank)
     return sections
 
 

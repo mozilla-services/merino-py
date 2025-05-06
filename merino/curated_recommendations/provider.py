@@ -112,6 +112,10 @@ class CuratedRecommendationsProvider:
             CuratedRecommendation(
                 **item.model_dump(),
                 receivedRank=rank,
+                # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
+                # interest vector. Data science work shows that using the topics as features
+                # is effective as a first pass at personalization.
+                # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
                 features={item.topic.value: 1.0} if item.topic else {},
             )
             for rank, item in enumerate(corpus_items)

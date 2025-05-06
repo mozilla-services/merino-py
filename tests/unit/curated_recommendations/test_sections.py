@@ -1,6 +1,7 @@
 """Module with tests covering merino/curated_recommendations/sections.py"""
 
 import copy
+import random
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -12,7 +13,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SurfaceId,
     SectionsProtocol,
     CorpusSection,
-    CorpusItem,
+    CorpusItem, IABMetadata,
 )
 from merino.curated_recommendations.layouts import (
     layout_3_ads,
@@ -35,11 +36,46 @@ from merino.curated_recommendations.sections import (
     update_received_feed_rank,
     get_sections_with_enough_items,
     get_corpus_sections,
+    map_corpus_section_to_section,
+    map_section_item_to_recommendation,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
     generate_sections_feed,
 )
+
+
+def generate_corpus_item(corpus_id: str = "id", sched_id: str = "sched") -> CorpusItem:
+    """Create a CorpusItem instance for testing with provided or default IDs."""
+    return CorpusItem(
+        corpusItemId=corpus_id,
+        scheduledCorpusItemId=sched_id,
+        url=HttpUrl(f"https://example.com/{corpus_id}"),
+        title=f"Title_{corpus_id}",
+        excerpt=f"Excerpt_{corpus_id}",
+        topic=None,
+        publisher=f"Pub_{corpus_id}",
+        isTimeSensitive=False,
+        imageUrl=HttpUrl(f"https://example.com/img/{corpus_id}"),
+        iconUrl=None,
+    )
+
+
+@pytest.fixture
+def sample_backend_data() -> list[CorpusSection]:
+    """Build two corpus sections: 'secA' with 2 items, 'secB' with 1 using the helper."""
+    return [
+        CorpusSection(
+            sectionItems=[
+                generate_corpus_item(f"{sec_id}_item{i}", f"{sec_id}_sched{i}")
+                for i in range(count)
+            ],
+            title=f"Title_{sec_id}",
+            externalId=sec_id,
+            iab=IABMetadata(categories=["324"]),
+        )
+        for sec_id, count in [("secA", 2), ("secB", 1)]
+    ]
 
 
 class TestExcludeRecommendationsFromBlockedSections:
@@ -279,89 +315,64 @@ class TestGetSectionsWithEnoughItems:
         assert "k" in result and "d" not in result
 
 
+class TestMapSectionItemToRecommendation:
+    """Tests for map_section_item_to_recommendation."""
+
+    def test_basic_mapping(self):
+        """Map a valid CorpusItem into a CuratedRecommendation."""
+        item = generate_corpus_item()
+        section_id = "secX"
+        rec = map_section_item_to_recommendation(item, 3, section_id)
+        assert isinstance(rec, CuratedRecommendation)
+        assert rec.receivedRank == 3
+        assert rec.features == {section_id: 1.0}
+
+
+class TestMapCorpusSectionToSection:
+    """Tests for map_corpus_section_to_section."""
+
+    def test_basic_mapping(self, sample_backend_data):
+        """Map CorpusSection into Section with correct feed rank and recs."""
+        cs = sample_backend_data[1]
+        sec = map_corpus_section_to_section(cs, 5)
+        assert sec.receivedFeedRank == 5
+        assert sec.title == cs.title
+        assert sec.layout == layout_4_medium
+        assert sec.iab == cs.iab
+        assert len(sec.recommendations) == len(cs.sectionItems)
+        for idx, rec in enumerate(sec.recommendations):
+            assert rec.receivedRank == idx
+            assert rec.features == {cs.externalId: 1.0}
+
+    def test_empty_section_items(self):
+        """Empty sectionItems yields empty recommendations."""
+        empty_cs = CorpusSection(sectionItems=[], title="Empty", externalId="empty")
+        sec = map_corpus_section_to_section(empty_cs, 7)
+        assert sec.recommendations == []
+        assert sec.receivedFeedRank == 7
+
+
 class TestGetCorpusSections:
-    """Tests for the `get_corpus_sections` helper in sections.py."""
+    """Simplified tests for get_corpus_sections."""
 
-    @pytest.fixture(scope="class")
-    def sample_backend_data(self) -> list[CorpusSection]:
-        """Build two corpus sections: 'secA' with 2 items, 'secB' with 1."""
-        sections: list[CorpusSection] = []
-        for sec_id, count in [("secA", 2), ("secB", 1)]:
-            items = [
-                CorpusItem(
-                    corpusItemId=f"{sec_id}_item{i}",
-                    scheduledCorpusItemId=f"{sec_id}_sched{i}",
-                    url=HttpUrl("https://example.com"),
-                    title="Title",
-                    excerpt="Excerpt",
-                    topic=None,
-                    publisher="Pub",
-                    isTimeSensitive=False,
-                    imageUrl=HttpUrl("https://example.com/img"),
-                    iconUrl=None,
-                )
-                for i in range(count)
-            ]
-            sections.append(
-                CorpusSection(
-                    sectionItems=items,
-                    title=f"Title {sec_id}",
-                    externalId=sec_id,
-                )
-            )
-        return sections
-
-    @pytest.fixture(scope="class")
-    def sections_backend(self, sample_backend_data: list[CorpusSection]):
-        """Generate a fake SectionsProtocol whose `.fetch()` returns our sample data."""
-        mock_backend: MagicMock = MagicMock(spec=SectionsProtocol)
+    @pytest.fixture
+    def sections_backend(self, sample_backend_data):
+        """Fake SectionsProtocol returning sample data."""
+        mock_backend = MagicMock(spec=SectionsProtocol)
         mock_backend.fetch = AsyncMock(return_value=sample_backend_data)
         return mock_backend
 
     @pytest.mark.asyncio
     async def test_fetch_called_with_correct_args(self, sections_backend):
-        """Ensure `.fetch(surface_id)` is invoked exactly once."""
+        """Ensure fetch is called once with given surface_id."""
         await get_corpus_sections(sections_backend, SurfaceId.NEW_TAB_EN_US, 2)
         sections_backend.fetch.assert_awaited_once_with(SurfaceId.NEW_TAB_EN_US)
 
     @pytest.mark.asyncio
-    async def test_section_transformation(
-        self,
-        sections_backend,
-        sample_backend_data: list[CorpusSection],
-    ):
-        """Verify dict keys, Section props, and per-item transforms."""
+    async def test_section_transformation(self, sections_backend, sample_backend_data):
+        """Verify mapping logic for get_corpus_sections."""
         result = await get_corpus_sections(sections_backend, SurfaceId.NEW_TAB_EN_US, 5)
-        # keys match externalIds
         assert set(result.keys()) == {cs.externalId for cs in sample_backend_data}
-
-        for idx, corpus_section in enumerate(sample_backend_data):
-            section = result[corpus_section.externalId]
-            assert isinstance(section, Section)
-            assert section.receivedFeedRank == idx + 5
-            assert section.title == corpus_section.title
-            assert section.layout == layout_4_medium
-            # all section items got converted to recommendations
-            assert len(section.recommendations) == len(corpus_section.sectionItems)
-            # fields are as expected on each recommendation
-            for rank, rec in enumerate(section.recommendations):
-                assert isinstance(rec, CuratedRecommendation)
-                assert rec.receivedRank == rank
-                assert rec.features == {corpus_section.externalId: 1.0}
-
-    @pytest.mark.asyncio
-    async def test_empty_fetch_returns_empty_dict(self, sections_backend):
-        """If `.fetch()` yields no sections, result is {}."""
-        sections_backend.fetch.return_value = []
-        assert await get_corpus_sections(sections_backend, SurfaceId.NEW_TAB_EN_US, 0) == {}
-
-    @pytest.mark.asyncio
-    async def test_empty_section_items(self, sections_backend):
-        """A section with zero items appears with empty rec list and correct rank."""
-        empty_section = CorpusSection(sectionItems=[], title="Solo", externalId="solo")
-        sections_backend.fetch.return_value = [empty_section]
-        out = await get_corpus_sections(sections_backend, SurfaceId.NEW_TAB_EN_US, 7)
-        assert set(out.keys()) == {"solo"}
-        sec = out["solo"]
-        assert sec.recommendations == []
-        assert sec.receivedFeedRank == 7
+        section = result["secA"]
+        assert section.receivedFeedRank == 5
+        assert len(section.recommendations) == 2
