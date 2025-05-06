@@ -12,6 +12,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
     Topic,
     SurfaceId,
+    IABMetadata,
 )
 
 logger = logging.getLogger(__name__)
@@ -265,6 +266,7 @@ class Section(BaseModel):
     receivedFeedRank: int
     recommendations: list[CuratedRecommendation]
     title: str
+    iab: IABMetadata | None = None
     subtitle: str | None = None
     layout: Layout
     isFollowed: bool = False

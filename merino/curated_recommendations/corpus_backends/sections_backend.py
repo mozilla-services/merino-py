@@ -84,6 +84,10 @@ class SectionsBackend(SectionsProtocol):
                 externalId
                 active
                 title
+                iab {
+                    taxonomy
+                    categories
+                }
                 sectionItems {
                   corpusItem {
                     id
@@ -125,6 +129,7 @@ class SectionsBackend(SectionsProtocol):
             section_obj = CorpusSection(
                 externalId=section["externalId"],
                 title=section["title"],
+                iab=section["iab"],
                 sectionItems=[
                     build_corpus_item(
                         section_item["corpusItem"], self.manifest_provider, utm_source

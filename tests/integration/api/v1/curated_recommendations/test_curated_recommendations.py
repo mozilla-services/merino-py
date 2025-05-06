@@ -1091,6 +1091,26 @@ class TestSections:
             sections = {name: section for name, section in feeds.items() if section is not None}
             assert "music" in sections
 
+            # assert IAB metadata is present in ML sections (there are 8 of them)
+            expected_iab_metadata = {
+                "nfl": "484",
+                "tb": "640",
+                "music": "338",
+                "movies": "324",
+                "nba": "547",
+                "soccer": "533",
+                "mlb": None,
+                "nhl": "515",
+            }
+            # Sections have their expected IAB metadata
+            for section_name, expected_iab_code in expected_iab_metadata.items():
+                section = feeds.get(section_name)
+                if section:
+                    assert section["iab"]["taxonomy"] == "IAB-3.0"
+                    assert (
+                        section["iab"]["categories"][0] == expected_iab_code
+                    )  # only 1 code is sent for now
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "experiment_payload",

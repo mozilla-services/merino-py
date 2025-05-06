@@ -47,6 +47,13 @@ class SurfaceId(str, Enum):
     NEW_TAB_IT_IT = "NEW_TAB_IT_IT"
 
 
+class IABMetadata(BaseModel):
+    """IAB (v3.0) metadata for a Section."""
+
+    taxonomy: str  # IAB taxonomy v3.0 is currently used
+    categories: list[str]
+
+
 class CorpusItem(BaseModel):
     """Represents a scheduled item from our 'corpus'.
     The corpus is the set of all curated items deemed recommendable.
@@ -69,6 +76,7 @@ class CorpusSection(BaseModel):
 
     sectionItems: list[CorpusItem]
     title: str
+    iab: IABMetadata | None = None
     externalId: str
 
 
