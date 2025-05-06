@@ -52,7 +52,7 @@ class IABMetadata(BaseModel):
 
     # IAB taxonomy v3.0 is currently used
     taxonomy: str = Field(
-        default=None,
+        default="IAB-3.0",
         description="IAB taxonomy version, v3.0 currently used, e.g. IAB-3.0",
     )
     categories: list[str]
