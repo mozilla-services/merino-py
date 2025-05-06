@@ -62,6 +62,7 @@ async def get_corpus_sections(
             receivedFeedRank=len(sections) + min_feed_rank,
             recommendations=recommendations,
             title=corpus_section.title,
+            iab=corpus_section.iab,
             layout=deepcopy(layout_4_medium),
         )
     return sections

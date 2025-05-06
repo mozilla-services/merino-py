@@ -13,12 +13,16 @@ async def test_fetch(sections_backend: SectionsBackend):
     assert len(sections) == 8
 
     # Lookup the NFL section by its externalId.
-    hfl = next(s for s in sections if s.externalId == "nfl")
-    assert hfl.title == "NFL"
-    assert len(hfl.sectionItems) == 24
+    nfl = next(s for s in sections if s.externalId == "nfl")
+    assert nfl.title == "NFL"
+    assert nfl.iab.taxonomy == "IAB-3.0"  # IAB v3.0 is used
+    assert nfl.iab.categories[0] == "484"  # IAB v3.0 code for American Football
+    assert len(nfl.sectionItems) == 24
 
     # Lookup the Music section by its externalId.
     music = next(s for s in sections if s.externalId == "music")
     assert music is not None
     assert music.title == "Music"
+    assert music.iab.taxonomy == "IAB-3.0"  # IAB v3.0 is used
+    assert music.iab.categories[0] == "338"  # IAB v3.0 code for Music
     assert len(music.sectionItems) == 18

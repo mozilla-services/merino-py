@@ -3,7 +3,7 @@
 from enum import Enum, unique
 from typing import Protocol
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, Field
 
 
 @unique
@@ -47,6 +47,17 @@ class SurfaceId(str, Enum):
     NEW_TAB_IT_IT = "NEW_TAB_IT_IT"
 
 
+class IABMetadata(BaseModel):
+    """IAB (v3.0) metadata for a Section."""
+
+    # IAB taxonomy v3.0 is currently used
+    taxonomy: str = Field(
+        default="IAB-3.0",
+        description="IAB taxonomy version, v3.0 currently used, e.g. IAB-3.0",
+    )
+    categories: list[str]
+
+
 class CorpusItem(BaseModel):
     """Represents a scheduled item from our 'corpus'.
     The corpus is the set of all curated items deemed recommendable.
@@ -69,6 +80,7 @@ class CorpusSection(BaseModel):
 
     sectionItems: list[CorpusItem]
     title: str
+    iab: IABMetadata | None = None
     externalId: str
 
 

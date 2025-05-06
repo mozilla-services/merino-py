@@ -5,6 +5,7 @@
         "externalId": "nfl",
         "active": true,
         "title": "NFL",
+        "iab": {"taxonomy":  "IAB-3.0", "categories":  ["484"]},
         "sectionItems": [
           {
             "corpusItem": {
@@ -300,6 +301,7 @@
         "externalId": "tv",
         "active": true,
         "title": "Television",
+        "iab": {"taxonomy":  "IAB-3.0", "categories":  ["640"]},
         "sectionItems": [
           {
             "corpusItem": {
@@ -667,6 +669,7 @@
         "externalId": "music",
         "active": true,
         "title": "Music",
+        "iab": {"taxonomy":  "IAB-3.0", "categories":  ["338"]},
         "sectionItems": [
           {
             "corpusItem": {
@@ -890,6 +893,7 @@
         "externalId": "movies",
         "active": true,
         "title": "Movies",
+        "iab": {"taxonomy":  "IAB-3.0", "categories":  ["324"]},
         "sectionItems": [
           {
             "corpusItem": {
@@ -1257,6 +1261,7 @@
         "externalId": "nba",
         "active": true,
         "title": "NBA",
+        "iab": {"taxonomy":  "IAB-3.0", "categories":  ["547"]},
         "sectionItems": [
           {
             "corpusItem": {
@@ -1360,6 +1365,7 @@
         "externalId": "soccer",
         "active": true,
         "title": "Professional Soccer",
+        "iab": {"taxonomy":  "IAB-3.0", "categories":  ["533"]},
         "sectionItems": [
           {
             "corpusItem": {
@@ -1727,12 +1733,14 @@
         "externalId": "mlb",
         "active": true,
         "title": "MLB",
+        "iab": null,
         "sectionItems": []
       },
       {
         "externalId": "nhl",
         "active": true,
         "title": "NHL",
+        "iab": {"taxonomy":  "IAB-3.0", "categories":  ["515"]},
         "sectionItems": [
           {
             "corpusItem": {
