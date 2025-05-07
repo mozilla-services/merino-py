@@ -2,17 +2,31 @@
 
 import copy
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from pydantic import HttpUrl
 
-from merino.curated_recommendations.corpus_backends.protocol import Topic, SurfaceId
+from merino.curated_recommendations.corpus_backends.protocol import (
+    Topic,
+    SurfaceId,
+    SectionsProtocol,
+    CorpusSection,
+    CorpusItem,
+    IABMetadata,
+)
 from merino.curated_recommendations.layouts import (
     layout_3_ads,
     layout_4_medium,
     layout_6_tiles,
     layout_4_large,
 )
-from merino.curated_recommendations.protocol import Section, SectionConfiguration, ExperimentName
+from merino.curated_recommendations.protocol import (
+    Section,
+    SectionConfiguration,
+    ExperimentName,
+    CuratedRecommendation,
+)
 from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     set_double_row_layout,
@@ -21,11 +35,47 @@ from merino.curated_recommendations.sections import (
     is_ml_sections_experiment,
     update_received_feed_rank,
     get_sections_with_enough_items,
+    get_corpus_sections,
+    map_corpus_section_to_section,
+    map_section_item_to_recommendation,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
     generate_sections_feed,
 )
+
+
+def generate_corpus_item(corpus_id: str = "id", sched_id: str = "sched") -> CorpusItem:
+    """Create a CorpusItem instance for testing with provided or default IDs."""
+    return CorpusItem(
+        corpusItemId=corpus_id,
+        scheduledCorpusItemId=sched_id,
+        url=HttpUrl(f"https://example.com/{corpus_id}"),
+        title=f"Title_{corpus_id}",
+        excerpt=f"Excerpt_{corpus_id}",
+        topic=None,
+        publisher=f"Pub_{corpus_id}",
+        isTimeSensitive=False,
+        imageUrl=HttpUrl(f"https://example.com/img/{corpus_id}"),
+        iconUrl=None,
+    )
+
+
+@pytest.fixture
+def sample_backend_data() -> list[CorpusSection]:
+    """Build two corpus sections: 'secA' with 2 items, 'secB' with 1 using the helper."""
+    return [
+        CorpusSection(
+            sectionItems=[
+                generate_corpus_item(f"{sec_id}_item{i}", f"{sec_id}_sched{i}")
+                for i in range(count)
+            ],
+            title=f"Title_{sec_id}",
+            externalId=sec_id,
+            iab=IABMetadata(categories=["324"]),
+        )
+        for sec_id, count in [("secA", 2), ("secB", 1)]
+    ]
 
 
 class TestExcludeRecommendationsFromBlockedSections:
@@ -263,3 +313,66 @@ class TestGetSectionsWithEnoughItems:
         drop_sec.recommendations = generate_recommendations(layout_4_medium.max_tile_count)
         result = get_sections_with_enough_items({"k": keep_sec, "d": drop_sec})
         assert "k" in result and "d" not in result
+
+
+class TestMapSectionItemToRecommendation:
+    """Tests for map_section_item_to_recommendation."""
+
+    def test_basic_mapping(self):
+        """Map a valid CorpusItem into a CuratedRecommendation."""
+        item = generate_corpus_item()
+        section_id = "secX"
+        rec = map_section_item_to_recommendation(item, 3, section_id)
+        assert isinstance(rec, CuratedRecommendation)
+        assert rec.receivedRank == 3
+        assert rec.features == {section_id: 1.0}
+
+
+class TestMapCorpusSectionToSection:
+    """Tests for map_corpus_section_to_section."""
+
+    def test_basic_mapping(self, sample_backend_data):
+        """Map CorpusSection into Section with correct feed rank and recs."""
+        cs = sample_backend_data[1]
+        sec = map_corpus_section_to_section(cs, 5)
+        assert sec.receivedFeedRank == 5
+        assert sec.title == cs.title
+        assert sec.layout == layout_4_medium
+        assert sec.iab == cs.iab
+        assert len(sec.recommendations) == len(cs.sectionItems)
+        for idx, rec in enumerate(sec.recommendations):
+            assert rec.receivedRank == idx
+            assert rec.features == {cs.externalId: 1.0}
+
+    def test_empty_section_items(self):
+        """Empty sectionItems yields empty recommendations."""
+        empty_cs = CorpusSection(sectionItems=[], title="Empty", externalId="empty")
+        sec = map_corpus_section_to_section(empty_cs, 7)
+        assert sec.recommendations == []
+        assert sec.receivedFeedRank == 7
+
+
+class TestGetCorpusSections:
+    """Simplified tests for get_corpus_sections."""
+
+    @pytest.fixture
+    def sections_backend(self, sample_backend_data):
+        """Fake SectionsProtocol returning sample data."""
+        mock_backend = MagicMock(spec=SectionsProtocol)
+        mock_backend.fetch = AsyncMock(return_value=sample_backend_data)
+        return mock_backend
+
+    @pytest.mark.asyncio
+    async def test_fetch_called_with_correct_args(self, sections_backend):
+        """Ensure fetch is called once with given surface_id."""
+        await get_corpus_sections(sections_backend, SurfaceId.NEW_TAB_EN_US, 2)
+        sections_backend.fetch.assert_awaited_once_with(SurfaceId.NEW_TAB_EN_US)
+
+    @pytest.mark.asyncio
+    async def test_section_transformation(self, sections_backend, sample_backend_data):
+        """Verify mapping logic for get_corpus_sections."""
+        result = await get_corpus_sections(sections_backend, SurfaceId.NEW_TAB_EN_US, 5)
+        assert set(result.keys()) == {cs.externalId for cs in sample_backend_data}
+        section = result["secA"]
+        assert section.receivedFeedRank == 5
+        assert len(section.recommendations) == 2
