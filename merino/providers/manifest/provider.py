@@ -106,6 +106,14 @@ class Provider:
             # Use tldextract to correctly handle all domain patterns
             base_domain = tldextract.extract(url_str).domain
 
+            # getpocket.com serves syndicated articles from other publishers, for example:
+            # https://getpocket.com/explore/item/i-wish-i-was-a-little-bit-taller
+            # These should be attributed to the original publisher. However, we don't have the
+            # domain name available of the original publisher in Merino, to look up their icon.
+            # As a stopgap solution, we don't provide favicons for getpocket.com.
+            if base_domain == "getpocket":
+                return None
+
             idx = self.domain_lookup_table.get(base_domain, -1)
             if idx >= 0 and self.manifest_data is not None:
                 icon_url = self.manifest_data.domains[idx].icon
