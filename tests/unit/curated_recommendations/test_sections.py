@@ -1,7 +1,6 @@
 """Module with tests covering merino/curated_recommendations/sections.py"""
 
 import copy
-import random
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -13,7 +12,8 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SurfaceId,
     SectionsProtocol,
     CorpusSection,
-    CorpusItem, IABMetadata,
+    CorpusItem,
+    IABMetadata,
 )
 from merino.curated_recommendations.layouts import (
     layout_3_ads,
