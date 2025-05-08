@@ -24,6 +24,8 @@
 [default]
 debug = false
 
+suggest_supported_languages = ["en", "fr", "de", "it", "pl"]
+
 
 [default.runtime]
 # MERINO_RUNTIME__QUERY_TIMEOUT_SEC

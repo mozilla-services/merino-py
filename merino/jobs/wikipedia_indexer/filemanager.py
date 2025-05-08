@@ -7,6 +7,8 @@ from gzip import GzipFile
 from html.parser import HTMLParser
 from typing import Generator, Optional, Pattern
 from urllib.parse import urljoin
+from merino.configs import settings
+
 
 import requests
 from google.cloud.storage import Blob, Client
@@ -19,7 +21,7 @@ from google.api_core.exceptions import GoogleAPIError
 
 logger = logging.getLogger(__name__)
 
-VALID_LANGUAGES = {"en", "fr", "de", "it", "pl"}
+SUPPORTED_LANGUAGES = set(settings.suggest_supported_languages)
 
 
 class DirectoryParser(HTMLParser):
@@ -60,9 +62,9 @@ class FileManager:
     def __init__(
         self, gcs_bucket: str, gcs_project: str, export_base_url: str, language: str
     ) -> None:
-        if language not in VALID_LANGUAGES:
+        if language not in SUPPORTED_LANGUAGES:
             raise ValueError(
-                f"Unsupported language '{language}'. Must be one of: {', '.join(VALID_LANGUAGES)}"
+                f"Unsupported language '{language}'. Must be one of: {', '.join(SUPPORTED_LANGUAGES)}"
             )
 
         self.file_pattern = re.compile(
