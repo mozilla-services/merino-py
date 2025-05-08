@@ -51,10 +51,11 @@ class Indexer:
         """Primary indexer method.
         Reads the export file directly from GCS, indexes and swaps index aliases
         """
-        logger.info("Ensuring latest dump is on GCS")
+        language = self.file_manager.language
+        logger.info(f"Ensuring latest {language} dump is on GCS")
         latest = self.file_manager.get_latest_gcs()
         if not latest.name:
-            raise RuntimeError("No exports available on GCS")
+            raise RuntimeError(f"No exports available on GCS for {language}")
 
         # parse the index name out of the latest file name
         index_name = self._get_index_name(latest.name)
@@ -159,11 +160,22 @@ class Indexer:
         indices_client = self.es_client.indices
         exists = indices_client.exists(index=index_name)
         settings = get_settings_for_version(self.index_version)
+        language = self.file_manager.language.upper()  # e.g "FR"
+
         if not exists and settings:
+            suggest_mapping = getattr(
+                settings, f"SUGGEST_MAPPING_{language}", settings.SUGGEST_MAPPING_EN
+            )
+            suggest_settings = getattr(
+                settings, f"SUGGEST_SETTINGS_{language}", settings.SUGGEST_SETTINGS_EN
+            )
+
+            logger.info(f"Creating index for language: {language}")
+
             res = indices_client.create(
                 index=index_name,
-                mappings=settings.SUGGEST_MAPPING,
-                settings=settings.SUGGEST_SETTINGS,
+                mappings=suggest_mapping,
+                settings=suggest_settings,
             )
             return bool(res.get("acknowledged", False))
 
