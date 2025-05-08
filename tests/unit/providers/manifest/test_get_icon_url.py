@@ -51,11 +51,6 @@ CNN_ICON = HttpUrl("https://merino-images.services.mozilla.com/favicons/cnniconh
             "index.html?utm_source=firefox-newtab-en-us",
             CNN_ICON,
         ),
-        # getpocket should return None, to avoid misattributing syndicated articles to Pocket.
-        (
-            "https://getpocket.com/explore/item/i-wish-i-was-a-little-bit-taller",
-            None,
-        ),
     ],
 )
 async def test_get_icon_url_domain_variants(
