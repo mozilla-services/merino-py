@@ -10,6 +10,8 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SurfaceId,
     CorpusSection,
     CorpusItem,
+    Topic,
+    IABMetadata,
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
@@ -36,6 +38,38 @@ from merino.curated_recommendations.rankers import (
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
 logger = logging.getLogger(__name__)
+
+
+def map_iab_categories_to_section(section_topic: Topic) -> list[str]:
+    """Map an IAB category code to a Section. Source:
+    https://docs.google.com/spreadsheets/d/1R0wzDYgrFkLjo6sxTFvVYThJ4uKz-YVDkYMegbGK9XA/edit?gid=1439764175#gid
+    =1439764175
+
+    Args:
+        section_topic: The section topic to get the IAB category codes.
+
+    Returns:
+        Array of IAB codes for given section_topic.
+    """
+    section_iab_category_mapping = {
+        Topic.BUSINESS: ["52"],  # IAB -  Business and Finance
+        Topic.CAREER: ["123"],  # IAB -  Careers
+        Topic.EDUCATION: ["132"],  # IAB -  Education
+        Topic.ARTS: ["JLBCU7"],  # IAB -  Entertainment
+        Topic.FOOD: ["210"],  # IAB -  Food & Drink
+        Topic.HEALTH_FITNESS: ["223"],  # IAB -  Healthy Living
+        Topic.HOME: ["274"],  # IAB -  Home & Garden
+        Topic.PERSONAL_FINANCE: ["391"],  # IAB -  Personal Finance
+        Topic.POLITICS: ["386"],  # IAB -  Politics
+        Topic.SPORTS: ["483"],  # IAB -  Sports
+        Topic.TECHNOLOGY: ["596"],  # IAB -  Technology & Computing
+        Topic.TRAVEL: ["653"],  # IAB -  Travel
+        Topic.GAMING: ["596"],  # IAB -  Technology & Computing
+        Topic.PARENTING: ["192"],  # IAB -  Parenting
+        Topic.SCIENCE: ["464"],  # IAB -  Science
+        Topic.SELF_IMPROVEMENT: ["186"],  # IAB -  Family and Relationships
+    }
+    return section_iab_category_mapping.get(section_topic) or []
 
 
 def map_section_item_to_recommendation(
@@ -186,6 +220,7 @@ def create_sections_from_items_by_topic(
                     receivedFeedRank=idx,
                     recommendations=[],
                     title=get_translation(surface_id, rec.topic, sid),
+                    iab=IABMetadata(categories=map_iab_categories_to_section(rec.topic)),
                     layout=deepcopy(layout_cycle[idx % len(layout_cycle)]),
                 )
             sec = sections[sid]
