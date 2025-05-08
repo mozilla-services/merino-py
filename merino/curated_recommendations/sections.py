@@ -41,12 +41,12 @@ logger = logging.getLogger(__name__)
 
 
 def map_topic_to_iab_categories(topic: Topic) -> list[str]:
-    """Map an IAB category code to a Section. Source:
+    """Map a topic to IAB category code(s). Source:
     https://docs.google.com/spreadsheets/d/1R0wzDYgrFkLjo6sxTFvVYThJ4uKz-YVDkYMegbGK9XA/edit?gid=1439764175#gid
     =1439764175
 
     Args:
-        topic: The topic for which to get the IAB category codes.
+        topic: The topic for which to get IAB category code(s).
 
     Returns:
         Array of IAB codes for given section_topic.
