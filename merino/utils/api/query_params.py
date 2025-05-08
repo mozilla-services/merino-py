@@ -1,12 +1,15 @@
 """A utility module for merino API query params."""
 
 import functools
+import logging
 from typing import Optional
 
 from fastapi import HTTPException, Request
 
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
+
+logger = logging.getLogger(__name__)
 
 
 @functools.lru_cache(maxsize=1000)
@@ -35,6 +38,9 @@ def validate_suggest_custom_location_params(
     city: Optional[str], region: Optional[str], country: Optional[str]
 ):
     """Validate that city, region & country params are either all present or all omitted."""
+    logger.warning(
+        "HTTP 400: invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
+    )
     if any([country, region, city]) and not all([country, region, city]):
         raise HTTPException(
             status_code=400,
