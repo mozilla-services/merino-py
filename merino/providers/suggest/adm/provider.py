@@ -9,7 +9,7 @@ from typing import Any, Final
 from pydantic import HttpUrl
 
 from merino.utils import cron
-from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
+from merino.providers.suggest.adm.backends.protocol import AdmBackend, GlobalSuggestionContent
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ class NonsponsoredSuggestion(BaseSuggestion):
 class Provider(BaseProvider):
     """Suggestion provider for adMarketplace through Remote Settings."""
 
-    suggestion_content: SuggestionContent
+    global_suggestion_content: GlobalSuggestionContent
     # Store the value to avoid fetching it from settings every time as that'd
     # require a three-way dict lookup.
     score: float
@@ -82,25 +82,26 @@ class Provider(BaseProvider):
         self.score = score
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
-        self.suggestion_content = SuggestionContent(
-            suggestions={}, full_keywords=[], results=[], icons={}
+        self.global_suggestion_content = GlobalSuggestionContent(
+            suggestion_content={}, icons={}
         )
+        self._enabled_by_default = enabled_by_default
         self._name = name
         self._enabled_by_default = enabled_by_default
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
         """Initialize cron job."""
-        try:
-            await self._fetch()
-        except Exception as e:
-            logger.warning(
-                "Failed to fetch data from Remote Settings, will retry it soon",
-                extra={"error message": f"{e}"},
-            )
+        #try:
+        await self._fetch()
+        #except Exception as e:
+        #    logger.warning(
+        #        "Failed to fetch data from Remote Settings, will retry it soon",
+        #        extra={"error message": f"{e}"},
+        #    )
             # Set the last fetch timestamp to 0 so that the cron job will retry
             # the fetch upon the next tick.
-            self.last_fetch_at = 0
+        #    self.last_fetch_at = 0
 
         # Run a cron job that resyncs data from Remote Settings in the background.
         cron_job = cron.Job(
@@ -134,14 +135,20 @@ class Provider(BaseProvider):
         """Provide suggestion for a given query."""
         q: str = srequest.query
         form_factor = srequest.user_agent.form_factor
-        if (suggest_look_ups := self.suggestion_content.suggestions.get((form_factor,q))) is not None:
-            results_id, fkw_id = suggest_look_ups
-            res = self.suggestion_content.results[results_id]
+        country = srequest.geolocation.country
+        suggestion_content = self.global_suggestion_content.suggestion_content.get(country, {})
+        icons = self.global_suggestion_content.icons
+        if suggest_look_ups := suggestion_content.results.get(q) is not None:
+            suggestion_id, fkw_ind = suggest_look_ups
+            res = suggestion_content.core_suggestions_data[suggestion_id]
+            overrides = suggestion_content.overrides[form_factor].get(suggestion_id)
+            res.update(overrides)
+
             is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
 
             suggestion_dict: dict[str, Any] = {
                 "block_id": res.get("id"),
-                "full_keyword": self.suggestion_content.full_keywords[fkw_id],
+                "full_keyword": suggestion_content.full_keywords[form_factor][fkw_ind],
                 "title": res.get("title"),
                 "url": res.get("url"),
                 "impression_url": res.get("impression_url"),
@@ -149,7 +156,7 @@ class Provider(BaseProvider):
                 "provider": self.name,
                 "advertiser": res.get("advertiser"),
                 "is_sponsored": is_sponsored,
-                "icon": self.suggestion_content.icons.get(res.get("icon", MISSING_ICON_ID)),
+                "icon": icons.get(res.get("icon", MISSING_ICON_ID)),
                 "score": self.score,
             }
             return [

@@ -1,25 +1,22 @@
 """Protocol for the AdM provider backends."""
 
 from typing import Any, Protocol
-
 from pydantic import BaseModel
 
 
 class SuggestionContent(BaseModel):
-    """Class that holds the result from a fetch operation."""
+    """Class that holds subset of results from a fetch operation."""
 
-    # A dictionary keyed on suggestion keywords, each value stores an index
-    # (pointer) to one entry of the suggestion result list.
-    suggestions: dict[tuple[str, str], tuple[int, int]]
+    core_suggestions_data: dict[int, dict[str, Any]] = {}
+    overrides: dict[int, dict[str, Any]] = {}
+    full_keywords: dict[str, list] = {}
+    results: dict[str, tuple[int, int]] = {}
 
-    # A list of full keywords
-    full_keywords: list[str]
+class GlobalSuggestionContent(BaseModel):
+    """Class that holds all results from a fetch operation."""
 
-    # A list of suggestion results.
-    results: list[dict[str, Any]]
-
-    # A dictionary of icon IDs to icon URLs.
-    icons: dict[str, str]
+    suggestion_content: dict[str, SuggestionContent]
+    icons: dict[str, str] = {}
 
 
 class AdmBackend(Protocol):
@@ -30,6 +27,6 @@ class AdmBackend(Protocol):
     directly depend on.
     """
 
-    async def fetch(self) -> SuggestionContent:  # pragma: no cover
+    async def fetch(self) -> GlobalSuggestionContent:  # pragma: no cover
         """Get suggestion content from partner."""
         ...

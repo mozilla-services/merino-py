@@ -1,6 +1,7 @@
 """A thin wrapper around the Remote Settings client."""
 
 import asyncio
+from pympler import asizeof
 from asyncio import Task
 from collections import defaultdict
 from typing import Any, Literal, cast
@@ -13,13 +14,17 @@ from pydantic import BaseModel
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.adm.backends.protocol import SuggestionContent
+from merino.providers.suggest.adm.backends.protocol import (
+    SuggestionContent,
+    GlobalSuggestionContent,
+)
 from merino.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
 
 logger = logging.getLogger(__name__)
 
 RS_CONNECT_TIMEOUT: float = 5.0
+PLATFORMS = ["desktop", "tablet", "phone"]
 
 RecordType = Literal["amp", "data", "icon"]
 
@@ -37,6 +42,16 @@ class KintoSuggestion(BaseModel):
     keywords: list[str] = []
     title: str
     url: str
+
+
+class ResultContext(BaseModel):
+    """Class that hold result information for Suggestions."""
+
+    core_suggestions_data: dict[int, dict[str, Any]] = {}
+    overrides: dict[int, dict[str, Any]] = {}
+    full_keywords: dict[str, list] = {}
+    results: dict[str, tuple[int, int]] = {}
+    icons_in_use: set = set()
 
 
 class RemoteSettingsError(BackendError):
@@ -79,42 +94,131 @@ class RemoteSettingsBackend:
 
         self.icon_processor = icon_processor
 
-    async def fetch(self) -> SuggestionContent:
+    def process_keywords(self, suggestion: KintoSuggestion, platform: str, result_context: ResultContext) -> None:
+        """Process keywords for suggestions."""
+        keywords = suggestion.keywords
+        result_context.icons_in_use.add(suggestion.icon)
+        full_keywords_tuples = suggestion.full_keywords
+        result = result_context.results
+        if not result_context.full_keywords.get(platform):
+            result_context.full_keywords[platform] = []
+        full_keywords = result_context.full_keywords[platform]
+        begin = 0
+        fkw_index = 0
+        for full_keyword, n in full_keywords_tuples:
+            for query in keywords[begin : begin + n]:
+                # Note that for adM suggestions, each keyword can only be
+                # mapped to a single suggestion.
+                result[query] = (suggestion.id, fkw_index)
+                begin += n
+                full_keywords.append(full_keyword)
+                fkw_index = len(full_keywords)
+
+    def find_diff_fields(
+        self,
+        desktop: KintoSuggestion | None,
+        phone: KintoSuggestion | None,
+        tablet: KintoSuggestion | None,
+    ) -> set[str]:
+        """Find field values that are different."""
+        d = desktop.model_dump() if desktop else {}
+        p = phone.model_dump() if phone else {}
+        t = tablet.model_dump() if tablet else {}
+
+
+        all_keys = set(d.keys()) | set(p.keys()) | set(t.keys())
+        return {key for key in all_keys if len([d.get(key), p.get(key), t.get(key)]) > 1}
+
+    def process_suggestions(
+        self, suggestions: dict[str, list[KintoSuggestion]], result_context: ResultContext
+    ) -> None:
+        """Process a set of suggestions."""
+        i, j, k = 0, 0, 0
+        d_suggestions = suggestions["desktop"]
+        t_suggestions = suggestions["tablet"]
+        p_suggestions = suggestions["phone"]
+
+        while i < len(d_suggestions) or j < len(t_suggestions) or k < len(p_suggestions):
+            current_ids = []
+            if i < len(d_suggestions):
+                current_ids.append(d_suggestions[i].id)
+            if j < len(t_suggestions):
+                current_ids.append(t_suggestions[j].id)
+            if k < len(p_suggestions):
+                current_ids.append(p_suggestions[k].id)
+
+            min_id = min(current_ids)
+
+            # Gather the items that match the current min_id
+            items = {
+                "desktop": d_suggestions[i]
+                if i < len(d_suggestions) and d_suggestions[i].id == min_id
+                else None,
+                "tablet": t_suggestions[j]
+                if j < len(t_suggestions) and t_suggestions[j].id == min_id
+                else None,
+                "phone": p_suggestions[k]
+                if k < len(p_suggestions) and p_suggestions[k].id == min_id
+                else None,
+            }
+
+            diff_fields = self.find_diff_fields(items["desktop"], items["phone"], items["tablet"])
+
+            # Choose first non-None item for core_suggestions_data
+            primary_item = items.get("desktop") or items.get("tablet") or items.get("phone")
+            if primary_item:
+                result_context.core_suggestions_data[min_id] = primary_item.model_dump(
+                    exclude={"keywords", "full_keywords", *diff_fields}
+                )
+
+            # Handle overrides and keyword processing
+            for platform in ["desktop", "tablet", "phone"]:
+                item = items[platform]
+                if item:
+                    if min_id not in result_context.overrides:
+                        result_context.overrides[min_id] = {}
+                    result_context.overrides[min_id][platform] = item.model_dump(
+                        include=diff_fields
+                    )
+                    self.process_keywords(item, platform, result_context)
+
+            # Increment indices for the items we processed
+            if items["desktop"]:
+                i += 1
+            if items["tablet"]:
+                j += 1
+            if items["phone"]:
+                k += 1
+
+    async def fetch(self) -> GlobalSuggestionContent:
         """Fetch suggestions, keywords, and icons from Remote Settings.
 
         Raises:
             RemoteSettingsError: Failed request to Remote Settings.
         """
-        suggestions: dict[tuple[str, str], tuple[int, int]] = {}
-        full_keywords: list[str] = []
-        results: list[dict[str, Any]] = []
+        results: dict[str, Any] = {}
         icons: dict[str, str] = {}
-        icons_in_use: set[str] = set()
+        total_icons_in_use: set[str] = set()
 
         records: list[dict[str, Any]] = await self.get_records()
         attachment_host: str = await self.get_attachment_host()
-        rs_suggestions: dict[str,list[KintoSuggestion]] = await self.get_suggestions(
+        rs_suggestions: dict[str, dict[str, list[KintoSuggestion]]] = await self.get_suggestions(
             attachment_host, records
         )
 
-        fkw_index = 0
+        for country, c_suggestions in rs_suggestions.items():
+            result_context: ResultContext = ResultContext()
+            # sort platform specific suggestions by id
+            for suggestion in c_suggestions.values():
+                suggestion.sort(key=lambda x: x.id)
 
-        for form_factor, r_suggestions in rs_suggestions.items():
-            for suggestion in r_suggestions:
-                result_id = len(results)
-                keywords = suggestion.keywords
-                icons_in_use.add(suggestion.icon)
-                full_keywords_tuples = suggestion.full_keywords
-                begin = 0
-                for full_keyword, n in full_keywords_tuples:
-                    for query in keywords[begin : begin + n]:
-                        # Note that for adM suggestions, each keyword can only be
-                        # mapped to a single suggestion.
-                        suggestions[(form_factor, query)] = (result_id, fkw_index)
-                    begin += n
-                    full_keywords.append(full_keyword)
-                    fkw_index = len(full_keywords)
-                results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
+            self.process_suggestions(c_suggestions, result_context)
+
+            # update to results
+            total_icons_in_use.update(result_context.icons_in_use)
+            results[country] = SuggestionContent(
+                **result_context.model_dump(exclude={"icons_in_use"})
+            )
 
         icon_record = self.filter_records(record_type="icon", records=records)
 
@@ -123,7 +227,7 @@ class RemoteSettingsBackend:
 
         for icon in icon_record:
             id = icon["id"].replace("icon-", "")
-            if id not in icons_in_use:
+            if id not in total_icons_in_use:
                 continue
             original_icon_url = urljoin(base=attachment_host, url=icon["attachment"]["location"])
             icon_data.append((id, original_icon_url))
@@ -145,13 +249,10 @@ class RemoteSettingsBackend:
             except Exception as e:
                 logger.error(f"Error processing icon {id}: {e}")
                 icons[id] = original_url
-
-        return SuggestionContent(
-            suggestions=suggestions,
-            full_keywords=full_keywords,
-            results=results,
-            icons=icons,
-        )
+        print(f"{asizeof.asizeof(results["US"].core_suggestions_data)}")
+        print(f"{asizeof.asizeof(results["US"].overrides)}")
+        print(f"{asizeof.asizeof(results["US"].full_keywords)}")
+        return GlobalSuggestionContent(suggestion_content=results, icons=icons)
 
     async def get_records(self) -> list[dict[str, Any]]:
         """Get records from the Remote Settings server.
@@ -183,7 +284,7 @@ class RemoteSettingsBackend:
 
     async def get_suggestions(
         self, attachment_host: str, records: list[dict[str, Any]]
-    ) -> defaultdict[str,list[KintoSuggestion]]:
+    ) -> defaultdict[str, defaultdict[str, list[KintoSuggestion]]]:
         """Get suggestion data from all data records.
 
         Args:
@@ -194,10 +295,7 @@ class RemoteSettingsBackend:
         Raises:
             RemoteSettingsError: Failed request to Remote Settings.
         """
-        # Falls back to "data" records if "offline-expansion-data" records do not exist
-        data_records: list[dict[str, Any]] = self.filter_records(
-            "amp", records
-        ) or self.filter_records("data", records)
+        data_records: list[dict[str, Any]] = self.filter_records("amp", records)
 
         tasks: list[Task] = []
         try:
@@ -210,17 +308,18 @@ class RemoteSettingsBackend:
                                     base=attachment_host,
                                     url=record["attachment"]["location"],
                                 )
-                            ), name=record["form_factor"]
+                            ),
+                            name=f"{record["country"]}/{record["form_factor"]}",
                         )
                     )
         except ExceptionGroup as error_group:
             raise RemoteSettingsError(error_group.exceptions)
 
-        suggestions: defaultdict[str, list[KintoSuggestion]] = defaultdict(list)
+        suggestions: defaultdict[str, defaultdict[str, list[KintoSuggestion]]] = defaultdict(lambda: defaultdict(list))
         for task in tasks:
             result_suggestions = await task
-            form_factor = task.get_name()
-            suggestions[form_factor].extend(result_suggestions)
+            country, form_factor = task.get_name().split("/")
+            suggestions[country][form_factor].extend(result_suggestions)
         return suggestions
 
     async def get_attachment(self, url: str) -> list[KintoSuggestion]:
