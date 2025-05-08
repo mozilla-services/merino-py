@@ -38,7 +38,7 @@ from merino.curated_recommendations.sections import (
     get_corpus_sections,
     map_corpus_section_to_section,
     map_section_item_to_recommendation,
-    map_iab_categories_to_section,
+    map_topic_to_iab_categories,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -382,7 +382,7 @@ class TestGetCorpusSections:
 
 
 class TestMapIABCategoriesToSection:
-    """Tests for map_iab_categories_to_section."""
+    """Tests for map_topic_to_iab_categories."""
 
     @pytest.mark.parametrize(
         "section_id,expected_iab_codes",
@@ -408,4 +408,4 @@ class TestMapIABCategoriesToSection:
     )
     def test_mapping_works(self, section_id, expected_iab_codes):
         """Map a valid section_ids to IAB category code(s)."""
-        assert map_iab_categories_to_section(section_id) == expected_iab_codes
+        assert map_topic_to_iab_categories(section_id) == expected_iab_codes

@@ -40,18 +40,18 @@ from merino.curated_recommendations.utils import is_enrolled_in_experiment
 logger = logging.getLogger(__name__)
 
 
-def map_iab_categories_to_section(section_topic: Topic) -> list[str]:
+def map_topic_to_iab_categories(topic: Topic) -> list[str]:
     """Map an IAB category code to a Section. Source:
     https://docs.google.com/spreadsheets/d/1R0wzDYgrFkLjo6sxTFvVYThJ4uKz-YVDkYMegbGK9XA/edit?gid=1439764175#gid
     =1439764175
 
     Args:
-        section_topic: The section topic to get the IAB category codes.
+        topic: The topic for which to get the IAB category codes.
 
     Returns:
         Array of IAB codes for given section_topic.
     """
-    section_iab_category_mapping = {
+    topic_iab_category_mapping = {
         Topic.BUSINESS: ["52"],  # IAB -  Business and Finance
         Topic.CAREER: ["123"],  # IAB -  Careers
         Topic.EDUCATION: ["132"],  # IAB -  Education
@@ -69,7 +69,7 @@ def map_iab_categories_to_section(section_topic: Topic) -> list[str]:
         Topic.SCIENCE: ["464"],  # IAB -  Science
         Topic.SELF_IMPROVEMENT: ["186"],  # IAB -  Family and Relationships
     }
-    return section_iab_category_mapping.get(section_topic) or []
+    return topic_iab_category_mapping.get(topic) or []
 
 
 def map_section_item_to_recommendation(
@@ -220,7 +220,7 @@ def create_sections_from_items_by_topic(
                     receivedFeedRank=idx,
                     recommendations=[],
                     title=get_translation(surface_id, rec.topic, sid),
-                    iab=IABMetadata(categories=map_iab_categories_to_section(rec.topic)),
+                    iab=IABMetadata(categories=map_topic_to_iab_categories(rec.topic)),
                     layout=deepcopy(layout_cycle[idx % len(layout_cycle)]),
                 )
             sec = sections[sid]
