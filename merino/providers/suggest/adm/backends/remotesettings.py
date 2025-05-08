@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 RS_CONNECT_TIMEOUT: float = 5.0
 
-RecordType = Literal["amp", "data", "icon"]
+RecordType = Literal["amp", "icon"]
 
 
 class KintoSuggestion(BaseModel):
@@ -192,10 +192,7 @@ class RemoteSettingsBackend:
         Raises:
             RemoteSettingsError: Failed request to Remote Settings.
         """
-        # Falls back to "data" records if "offline-expansion-data" records do not exist
-        data_records: list[dict[str, Any]] = self.filter_records(
-            "amp", records
-        ) or self.filter_records("data", records)
+        data_records: list[dict[str, Any]] = self.filter_records("amp", records)
 
         tasks: list[Task] = []
         try:
@@ -255,17 +252,15 @@ class RemoteSettingsBackend:
             list[dict[str, Any]]: List of Remote Settings records filtered by type
             and potentially country and form_factor if applicable
         """
-        filtered_records = []
+        recs: list[dict[str, Any]] = [
+            record for record in records if record["type"] == record_type
+        ]
+        if record_type == "amp":
+            recs = [
+                rec
+                for rec in recs
+                if rec["country"] in settings.remote_settings.countries
+                and rec["form_factor"] == "desktop"
+            ]
 
-        for record in records:
-            if record.get("type") != record_type:
-                continue
-
-            if "country" in record and record["country"] not in settings.remote_settings.countries:
-                continue
-
-            if "form_factor" in record and record["form_factor"] != "desktop":
-                continue
-
-            filtered_records.append(record)
-        return filtered_records
+        return recs
