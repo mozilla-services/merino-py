@@ -25,7 +25,7 @@ def fixture_rs_parameters() -> dict[str, str]:
     return {
         "server": "test://test",
         "bucket": "main",
-        "collection": "quicksuggest",
+        "collection": "quicksuggest-amp",
     }
 
 
@@ -34,13 +34,15 @@ def fixture_rs_records() -> list[dict]:
     """Return fake records data for testing."""
     return [
         {
-            "type": "data",
+            "type": "amp",
             "schema": 123,
+            "country": "US",
+            "form_factor": "desktop",
             "attachment": {
                 "hash": "abcd",
                 "size": 1,
                 "filename": "data-01.json",
-                "location": "main-workspace/quicksuggest/attachmment-01.json",
+                "location": "main-workspace/quicksuggest-amp/attachmment-01.json",
                 "mimetype": "application/octet-stream",
             },
             "id": "data-01",
@@ -54,7 +56,7 @@ def fixture_rs_records() -> list[dict]:
                 "hash": "efghabcasd",
                 "size": 1,
                 "filename": "icon-01",
-                "location": "main-workspace/quicksuggest/icon-01",
+                "location": "main-workspace/quicksuggest-amp/icon-01",
                 "mimetype": "application/octet-stream",
             },
             "content_type": "image/png",
@@ -69,7 +71,7 @@ def fixture_rs_records() -> list[dict]:
                 "hash": "iconhash2",
                 "size": 1,
                 "filename": "icon-02",
-                "location": "main-workspace/quicksuggest/icon-02",
+                "location": "main-workspace/quicksuggest-amp/icon-02",
                 "mimetype": "application/octet-stream",
             },
             "content_type": "image/jpeg",
@@ -114,7 +116,7 @@ def fixture_rs_attachment_response(rs_attachment: KintoSuggestion) -> httpx.Resp
         request=httpx.Request(
             method="GET",
             url=(
-                "attachment-host/main-workspace/quicksuggest/"
+                "attachment-host/main-workspace/quicksuggest-amp/"
                 "6129d437-b3c1-48b5-b343-535e045d341a.json"
             ),
         ),
@@ -211,7 +213,7 @@ async def test_remotesettings_with_icon_processor(
         assert "test-cdn.mozilla.net/favicons" in icon_url
 
         # The original URLs should have been passed to the processor
-        original_url = f"attachment-host/main-workspace/quicksuggest/icon-{icon_id}"
+        original_url = f"attachment-host/main-workspace/quicksuggest-amp/icon-{icon_id}"
         assert original_url in mock_processor.processed_urls
 
 
@@ -256,10 +258,10 @@ async def test_remotesettings_icon_processor_error_handling(
 
     # Check that each icon URL is the original attachment URL
     for icon_id, icon_url in suggestion_content.icons.items():
-        assert icon_url == f"attachment-host/main-workspace/quicksuggest/icon-{icon_id}"
+        assert icon_url == f"attachment-host/main-workspace/quicksuggest-amp/icon-{icon_id}"
 
         # Verify the URL was processed (attempt was made)
-        original_url = f"attachment-host/main-workspace/quicksuggest/icon-{icon_id}"
+        original_url = f"attachment-host/main-workspace/quicksuggest-amp/icon-{icon_id}"
         assert original_url in mock_processor.processed_urls
 
 
