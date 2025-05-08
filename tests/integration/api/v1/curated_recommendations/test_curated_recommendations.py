@@ -1299,6 +1299,10 @@ class TestSections:
                 assert data["feeds"]["arts"]["isFollowed"]
                 # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2]
+                assert data["feeds"]["arts"]["iab"] == {
+                    "taxonomy": "IAB-3.0",
+                    "categories": ["JLBCU7"],
+                }
             if data["feeds"].get("education") is not None:
                 assert not data["feeds"]["education"]["isFollowed"]
                 assert data["feeds"]["education"]["isBlocked"]
@@ -1306,6 +1310,10 @@ class TestSections:
                 assert data["feeds"]["sports"]["isFollowed"]
                 # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2]
+                assert data["feeds"]["sports"]["iab"] == {
+                    "taxonomy": "IAB-3.0",
+                    "categories": ["483"],
+                }
 
             # Assert no errors were logged
             errors = [r for r in caplog.records if r.levelname == "ERROR"]
