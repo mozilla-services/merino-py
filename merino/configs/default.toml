@@ -160,8 +160,7 @@ bucket = "main"
 
 # MERINO_REMOTE_SETTINGS__COLLECTION
 # The collection to use for Remote Settings providers if not specified in provider config.
-# Ex: "quicksuggest".
-collection = "quicksuggest"
+collection = "quicksuggest-other"
 
 # The collection to use for uploading fakespot suggestions if not specified on the command line
 collection_fakespot = "fakespot-suggest-products"
@@ -177,6 +176,8 @@ chunk_size = 200
 # MERINO_REMOTE_SETTINGS__DRY_RUN
 # Log changes but don't actually make them when uploading suggestions.
 dry_run = false
+
+filter_expression = ""
 
 # MERINO_REMOTE_SETTINGS__SCORE
 # Default score to set in suggestions uploaded to remote settings.
@@ -741,26 +742,39 @@ alternates_path = "/export/dump/alternatenames/{country_code}.zip"
 # MERINO_JOBS__GEONAMES_UPLOADER__POPULATION_THRESHOLD
 # How large a geoname's population must be for it to be included in the output.
 # Geonames with populations at least this large will be included.
-population_threshold = 50_000
+# population_thresholds = [500_000, 1_000_000]
+population_thresholds = [100_000]
+
 # MERINO_JOBS__GEONAMES_UPLOADER__CITY_ALTERNATES_ISO_LANGUAGES
 # Which alternates of selected cities to include in the output. Alternates are
 # categorized by language, like "en", plus a few other categories like
 # abbreviations ("abbr") and airport codes ("iata", "icao", "faac").
-city_alternates_iso_languages = ["en", "en-US", "iata", "icao", "faac", "abbr"]
-# MERINO_JOBS__GEONAMES_UPLOADER__REGION_ALTERNATES_ISO_LANGUAGES
-# Which alternates of selected regions to include in the output. Takes the same
+city_alternates_iso_languages = ["iata", "icao", "faac", "abbr"]
+
+# MERINO_JOBS__GEONAMES_UPLOADER__ADMIN_ALTERNATES_ISO_LANGUAGES
+# Which alternates of selected admins to include in the output. Takes the same
 # values as city alternates. For U.S. states, "en" alternates include verbose
 # names like "State of California" that people are unlikely type and that
 # interfere with prefix matching, so we only include "abbr". Note that full
 # names like "California" are always included in the output.
-region_alternates_iso_languages = ["abbr"]
+admin_alternates_iso_languages = ["abbr"]
+
 # MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY_CODES
 # List of countries whose geonames will be uploaded. All countries' data will be
 # uploaded together without any separation into different records, attachments,
 # collections, etc. This is only a short-term hack to opportunistically include
 # Canadian cities, since there are many Canadians Mozillians and relatively few
 # Canadian cities over the population threshold.
-country_codes = ["US", "CA"]
+# country_codes = ["US", "CA"]
+
 # MERINO_JOBS__GEONAMES_UPLOADER__RECORD_TYPE
 # The "type" of each geonames remote settings record.
-record_type = "geonames"
+# record_type = "geonames-2"
+geonames_record_type = "geonames-2"
+alternates_record_type = "geonames-alternates"
+
+# filter_expression_country = ""
+# filter_expression_languages = []
+client_countries = ["CA", "GB", "US"]
+client_locales = ["en-US", "en-GB"]
+geoname_countries = ["GB"]
