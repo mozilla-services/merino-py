@@ -4,6 +4,8 @@
 
 """Unit tests for the api_v1.py utility module."""
 
+import logging
+
 from fastapi import HTTPException
 import pytest
 from unittest.mock import Mock
@@ -16,6 +18,7 @@ from merino.utils.api.query_params import (
     refine_geolocation_for_suggestion,
     validate_suggest_custom_location_params,
 )
+from tests.types import FilterCaplogFixture
 
 
 @pytest.fixture(name="geolocation")
@@ -64,14 +67,26 @@ def test_get_accepted_languages(languages, expected_filtered_languages):
         "missing_country",
     ],
 )
-def test_validate_suggest_custom_location_params(city, region, country):
+def test_validate_suggest_custom_location_params(
+    city, region, country, caplog: pytest.LogCaptureFixture, filter_caplog: FilterCaplogFixture
+):
     """Test that validation method throws a Http 400 error with incomplete location params"""
+    caplog.set_level(logging.INFO)
+
     with pytest.raises(HTTPException) as exc_info:
         validate_suggest_custom_location_params(city, region, country)
     assert exc_info.value.status_code == 400
     assert (
         exc_info.value.detail
         == "Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
+    )
+
+    records = filter_caplog(caplog.records, "merino.utils.api.query_params")
+
+    assert len(records) == 1
+    assert (
+        records[0].message
+        == "HTTP 400: invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
     )
 
 

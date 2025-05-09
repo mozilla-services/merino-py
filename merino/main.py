@@ -1,9 +1,11 @@
 """App startup point"""
 
+import logging
+
 from contextlib import asynccontextmanager
 
 from asgi_correlation_id import CorrelationIdMiddleware
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -14,7 +16,7 @@ from merino.configs.app_configs.config_logging import configure_logging
 from merino.configs.app_configs.config_sentry import configure_sentry
 from merino.providers import suggest, manifest
 from merino.utils.metrics import configure_metrics, get_metrics_client
-from merino.middleware import featureflags, geolocation, logging, metrics, user_agent
+from merino.middleware import featureflags, geolocation, logging as mw_logging, metrics, user_agent
 from merino.web import api_v1, dockerflow
 
 tags_metadata = [
@@ -27,6 +29,8 @@ tags_metadata = [
         "description": "Get a list of Firefox Suggest providers and their availability.",
     },
 ]
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -54,8 +58,13 @@ app = FastAPI(openapi_tags=tags_metadata, lifespan=lifespan, default_response_cl
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(_, exc) -> ORJSONResponse:
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> ORJSONResponse:
     """Use HTTP status code: 400 for all invalid requests."""
+    # `exe.errors()` is intentionally omitted in the log to avoid log excessively
+    # large error messages.
+    logger.warning(f"HTTP 400: request validation error for path: {request.url.path}")
     return ORJSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content=jsonable_encoder({"detail": exc.errors()}),
@@ -76,7 +85,7 @@ app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(featureflags.FeatureFlagsMiddleware)
 app.add_middleware(geolocation.GeolocationMiddleware)
 app.add_middleware(user_agent.UserAgentMiddleware)
-app.add_middleware(logging.LoggingMiddleware)
+app.add_middleware(mw_logging.LoggingMiddleware)
 
 app.include_router(dockerflow.router)
 app.include_router(api_v1.router, prefix="/api/v1")

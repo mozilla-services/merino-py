@@ -144,6 +144,7 @@ class Provider(BaseProvider):
     def validate(self, srequest: SuggestionRequest) -> None:
         """Validate the suggestion request."""
         if srequest.query and not srequest.request_type:
+            logger.warning("HTTP 400: invalid query parameters: `request_type` is missing")
             raise HTTPException(
                 status_code=400,
                 detail="Invalid query parameters: `request_type` is missing",
