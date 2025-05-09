@@ -61,7 +61,6 @@ class IconProcessor:
                     logger.info(f"Invalid image from {url}")
                     self.metrics_client.increment("icon_processor.invalid_images")
                     return url
-
                 # Generate content hash
                 content_hash = hashlib.sha256(favicon_image.content).hexdigest()
 
@@ -115,7 +114,6 @@ class IconProcessor:
     def _get_destination_path(self, favicon_image: Image, content_hash: str) -> str:
         """Generate GCS path based on content hash."""
         content_len = len(favicon_image.content)
-
         # Determine file extension from content type
         extension = ""
         match favicon_image.content_type:
@@ -156,7 +154,7 @@ class IconProcessor:
                         elif format == "ico":
                             favicon_image.content_type = "image/x-icon"
                 except Exception as e:
-                    logger.info(f"Exception detecting image type: {e}")
+                    logger.error(f"Exception detecting image type herrrr: {e}")
                     extension = ".png"  # Default to png
                     favicon_image.content_type = "image/png"
 
