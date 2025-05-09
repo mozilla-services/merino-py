@@ -504,7 +504,6 @@ CUSTOM_DOMAINS: list[str] = [
     "geographical.co.uk",
     "geopop.it",
     "geschichtedergegenwart.ch",
-    "getpocket.com",
     "getsurrey.co.uk",
     "ghosterysearch.com",
     "gibiru.com",
