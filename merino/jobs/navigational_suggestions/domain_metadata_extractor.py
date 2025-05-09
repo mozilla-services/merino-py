@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from mechanicalsoup import StatefulBrowser
 
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import DomainMetadataUploader
+from merino.jobs.navigational_suggestions.utils import DomainMetadataExtractionErrorsCollector
 from merino.jobs.utils.system_monitor import SystemMonitor
 from merino.jobs.navigational_suggestions.utils import (
     REQUEST_HEADERS,
@@ -54,7 +55,7 @@ class Scraper:
         self.close()
         return False
 
-    def __init__(self) -> None:
+    def __init__(self, error_collector: Optional[DomainMetadataExtractionErrorsCollector]) -> None:
         session: requests.Session = requests.Session()
         self.browser = StatefulBrowser(
             session=session,
@@ -63,6 +64,7 @@ class Scraper:
             user_agent=REQUEST_HEADERS["User-Agent"],
         )
         self.request_client = AsyncFaviconDownloader()
+        self.error_collector = error_collector if error_collector else None
 
     def open(self, url: str) -> Optional[str]:
         """Open the given url for scraping.
@@ -76,6 +78,10 @@ class Scraper:
             self.browser.open(url, timeout=TIMEOUT, allow_redirects=self.ALLOW_REDIRECTS)
             return str(self.browser.url)
         except Exception:
+            if self.error_collector:
+                self.error_collector.add_failure_reason_for_domain(
+                    domain=url, failure_reason="Cannot open URL."
+                )
             return None
 
     def scrape_favicon_data(self) -> FaviconData:
@@ -203,11 +209,13 @@ class DomainMetadataExtractor:
 
     def __init__(
         self,
+        error_collector: Optional[DomainMetadataExtractionErrorsCollector],
         blocked_domains: set[str],
         favicon_downloader: AsyncFaviconDownloader = AsyncFaviconDownloader(),
     ) -> None:
         self.favicon_downloader = favicon_downloader
         self.blocked_domains = blocked_domains
+        self.error_collector = error_collector if error_collector else None
 
     def _get_base_url(self, url: str) -> str:
         """Return base url from a given full url"""
@@ -322,9 +330,19 @@ class DomainMetadataExtractor:
                             break
 
                 except Exception as e:
+                    if self.error_collector:
+                        self.error_collector.add_failure_reason_for_domain(
+                            domain=self._current_base_url,
+                            failure_reason=f"Error processing manifest: {e}",
+                        )
                     logger.warning(f"Error processing manifest: {e}")
 
         except Exception as e:
+            if self.error_collector:
+                self.error_collector.add_failure_reason_for_domain(
+                    domain=self._current_base_url,
+                    failure_reason=f"Exception extracting favicons: {e}",
+                )
             logger.error(f"Exception extracting favicons: {e}")
 
         return favicons
@@ -418,6 +436,11 @@ class DomainMetadataExtractor:
                     # Clear SVG processing variables
                     del svg_images
                 except Exception as e:
+                    if self.error_collector:
+                        self.error_collector.add_failure_reason_for_domain(
+                            domain=self._current_base_url,
+                            failure_reason=f"Error during SVG favicon processing: {e}",
+                        )
                     logger.error(f"Error during SVG favicon processing: {e}")
 
             # If we reach here, no good SVG was found - process bitmap images
@@ -486,15 +509,30 @@ class DomainMetadataExtractor:
                             # Clear batch variables
                             del batch_images
                         except Exception as e:
+                            if self.error_collector:
+                                self.error_collector.add_failure_reason_for_domain(
+                                    domain=self._current_base_url,
+                                    failure_reason=f"Error processing bitmap batch: {e}",
+                                )
                             logger.error(f"Error processing bitmap batch: {e}")
 
                 except Exception as e:
+                    if self.error_collector:
+                        self.error_collector.add_failure_reason_for_domain(
+                            domain=self._current_base_url,
+                            failure_reason=f"Error during bitmap favicon processing: {e}",
+                        )
                     logger.error(f"Error during bitmap favicon processing: {e}")
 
                 # Return the best favicon URL if it meets the minimum width requirement
                 return best_favicon_url if best_favicon_width >= min_width else ""
             return ""
         except Exception as e:
+            if self.error_collector:
+                self.error_collector.add_failure_reason_for_domain(
+                    domain=self._current_base_url,
+                    failure_reason=f"Unexpected error in _upload_best_favicon: {e}",
+                )
             logger.error(f"Unexpected error in _upload_best_favicon: {e}")
             return ""
 
@@ -617,7 +655,7 @@ class DomainMetadataExtractor:
         self, domain_data: dict[str, Any], favicon_min_width: int, uploader: DomainMetadataUploader
     ) -> dict[str, Optional[str]]:
         """Process a single domain asynchronously and always return a valid dict."""
-        with Scraper() as domain_scraper:
+        with Scraper(error_collector=self.error_collector) as domain_scraper:
             # Set the context variable for this task's context
             token = current_scraper.set(domain_scraper)
             try:

@@ -13,7 +13,10 @@ from httpx import URL
 
 from merino.configs import settings as config
 from merino.jobs.navigational_suggestions.partner_favicons import PARTNER_FAVICONS
-from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
+from merino.jobs.navigational_suggestions.utils import (
+    AsyncFaviconDownloader,
+    DomainMetadataExtractionErrorsCollector,
+)
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
 from merino.jobs.navigational_suggestions.domain_data_downloader import (
@@ -286,7 +289,12 @@ def _run_local_mode(
         sys.exit(1)
 
     # 3. Setup domain metadata extractor with metrics collection
-    domain_metadata_extractor = DomainMetadataExtractor(blocked_domains=TOP_PICKS_BLOCKLIST)
+
+    error_collector = DomainMetadataExtractionErrorsCollector()
+    domain_metadata_extractor = DomainMetadataExtractor(
+        error_collector=error_collector,
+        blocked_domains=TOP_PICKS_BLOCKLIST,
+    )
 
     # Add metrics collection
     original_process_method = domain_metadata_extractor._process_single_domain
@@ -368,7 +376,7 @@ def _run_local_mode(
         top_pick_blob = MockBlob()  # type: ignore
 
     # 8. Save metrics and show results
-    metrics_collector.save_report()
+    metrics_collector.save_report(error_collector=error_collector)
 
     # Show results
     logger.info("=" * 40)
