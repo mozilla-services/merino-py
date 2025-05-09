@@ -1,9 +1,8 @@
 """Unit tests for the get_icon_url method of the manifest provider."""
 
-import logging
-
 import pytest
 from pydantic import HttpUrl
+from unittest.mock import MagicMock
 
 from merino.providers.manifest.backends.protocol import GetManifestResultCode, ManifestData
 from merino.providers.manifest.provider import Provider
@@ -127,36 +126,42 @@ async def test_get_icon_url_with_pydantic_url(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "icon_value,expected_log_msg",
+    "icon_value,expected_domain",
     [
-        ("", "Invalid icon URL for domain google: ''"),
-        ("not-a-valid-url", "Invalid icon URL for domain google: 'not-a-valid-url'"),
+        ("", "google"),
+        ("not-a-valid-url", "google"),
     ],
 )
-async def test_get_icon_url_invalid_icon_logged(
+async def test_get_icon_url_invalid_icon_metric(
     manifest_provider: Provider,
     manifest_data: ManifestData,
     cleanup,
     icon_value: str,
-    expected_log_msg: str,
-    caplog: pytest.LogCaptureFixture,
+    expected_domain: str,
 ):
-    """Test that invalid icon values log warnings and return None."""
+    """Test that invalid icon values increment metrics with domain tags and return None."""
+    # Create a mock metrics client
+    mock_metrics_client = MagicMock()
+
     # Override the Google icon value
     for domain in manifest_data.domains:
         if domain.domain == "google":
             domain.icon = icon_value
 
-    with patch(
-        "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+    # Replace the real metrics client with our mock
+    with (
+        patch.object(manifest_provider, "metrics_client", mock_metrics_client),
+        patch(
+            "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
+            return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+        ),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
 
         assert manifest_provider.get_icon_url("https://www.google.com") is None
 
-        assert any(
-            record.message == expected_log_msg and record.levelno == logging.WARNING
-            for record in caplog.records
+        # Check that the metrics were incremented
+        mock_metrics_client.increment.assert_called_once_with(
+            "manifest.invalid_icon_url", tags={"domain": expected_domain}
         )

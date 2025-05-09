@@ -195,6 +195,7 @@ When requesting a manifest file, we record the following metrics.
 - `manifest.gcs.fetch_time` - A timer for how long it took to download the latest manifest file from the Google Cloud bucket.
 - `manifest.request.no_manifest` - A counter to measure how many times we didn't find the latest manifest file.
 - `manifest.request.error` - A counter to measure how many times we could not provide a valid JSON manifest file.
+- `manifest.invalid_icon_url` - A counter to measure how many requests the Manifest provider gets for domains where we don't have a valid icon Url (with tags).
 
 ### Service Governance
 
