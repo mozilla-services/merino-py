@@ -1,6 +1,7 @@
 """CLI commands for the wikipedia_indexer module"""
 
 import logging
+from typing import Annotated
 
 import typer
 
@@ -40,11 +41,12 @@ indexer_cmd = typer.Typer(
     help="Commands for indexing Wikipedia exports into Elasticsearch",
 )
 
-SUPPORTED_LANGUAGES = ["en"]  # TODO starting with just english for now to ensure the setup works
-
 
 @indexer_cmd.command()
 def index(
+    language: Annotated[
+        str, typer.Option(help="Language to index (e.g., en, fr, de), default to en.")
+    ] = "en",
     elasticsearch_url: str = job_settings.es_url,
     elasticsearch_api_key: str = job_settings.es_api_key,
     blocklist_file_url: str = job_settings.blocklist_file_url,
@@ -59,40 +61,40 @@ def index(
     blocklist = create_blocklist(
         blocklist_file_url
     )  # TODO Re-using same blocklist for now until we figure something else out
-    for language in SUPPORTED_LANGUAGES:
-        logger.info(f"Starting Wikipedia indexing for language: {language}")
 
-        file_manager = FileManager(gcs_path, gcp_project, "", language)
+    logger.info(f"Starting Wikipedia indexing for language: {language}")
 
-        alias_key = f"{language}_es_alias"
-        elasticsearch_alias = getattr(job_settings, alias_key, "en_es_alias")
+    file_manager = FileManager(gcs_path, gcp_project, "", language)
 
-        indexer = Indexer(
-            index_version,
-            blocklist,
-            WIKIPEDIA_TITLE_BLOCKLIST,
-            file_manager,
-            es_client,
-        )
-        indexer.index_from_export(total_docs, elasticsearch_alias)
+    alias_key = f"{language}_es_alias"
+    elasticsearch_alias = elasticsearch_alias = job_settings[alias_key]
+
+    indexer = Indexer(
+        index_version,
+        blocklist,
+        WIKIPEDIA_TITLE_BLOCKLIST,
+        file_manager,
+        es_client,
+    )
+    indexer.index_from_export(total_docs, elasticsearch_alias)
 
 
 @indexer_cmd.command()
 def copy_export(
+    language: Annotated[
+        str, typer.Option(help="Language to copy export for (e.g., en, fr, de), default to en.")
+    ] = "en",
     export_base_url: str = job_settings.export_base_url,
     gcs_path: str = gcs_path_option,
     gcp_project: str = gcp_project_option,
 ):
     """Copy file from Wikimedia to GCS"""
-    for language in SUPPORTED_LANGUAGES:
-        file_manager = FileManager(gcs_path, gcp_project, export_base_url, language)
+    file_manager = FileManager(gcs_path, gcp_project, export_base_url, language)
 
-        logger.info(
-            f"Ensuring latest {language} dump is on GCS",
-            extra={"gcs_path": gcs_path, "gcp_project": gcp_project},
-        )
-        latest = file_manager.stream_latest_dump_to_gcs()
-        if not latest.name:
-            raise RuntimeError(
-                f"Unable to ensure latest {language} dump on GCS or missing file name."
-            )
+    logger.info(
+        f"Ensuring latest {language} dump is on GCS",
+        extra={"gcs_path": gcs_path, "gcp_project": gcp_project},
+    )
+    latest = file_manager.stream_latest_dump_to_gcs()
+    if not latest.name:
+        raise RuntimeError(f"Unable to ensure latest {language} dump on GCS or missing file name.")
