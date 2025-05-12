@@ -6,6 +6,7 @@ documentation on GeoNames.
 import asyncio
 import importlib
 import io
+import json
 import logging
 from zipfile import ZipFile
 from typing import Any, Callable
@@ -17,10 +18,9 @@ from urllib.parse import urljoin
 from tempfile import NamedTemporaryFile, TemporaryDirectory, TemporaryFile
 
 from merino.configs import settings as config
-from merino.jobs.csv_rs_uploader.chunked_rs_uploader import (
-    ChunkedRemoteSettingsSuggestionUploader,
-)
-from merino.jobs.utils.chunked_rs_uploader import Chunk, ChunkedRemoteSettingsUploader
+
+from merino.jobs.utils.rs_uploader import RemoteSettingsUploader
+
 from merino.jobs.geonames_uploader.downloader import Geoname, GeonamesDownloader
 
 logger = logging.getLogger(__name__)
@@ -53,12 +53,6 @@ bucket_option = typer.Option(
     help="Remote settings bucket",
 )
 
-chunk_size_option = typer.Option(
-    rs_settings.chunk_size,
-    "--chunk-size",
-    help="The number of geonames to store in each attachment",
-)
-
 city_alternates_iso_languages_option = typer.Option(
     job_settings.city_alternates_iso_languages,
     "--city-alternates-iso-languages",
@@ -71,16 +65,34 @@ collection_option = typer.Option(
     help="Remote settings collection ID",
 )
 
-country_codes_option = typer.Option(
-    job_settings.country_codes,
-    "--country-code",
-    help="Country codes of geonames to select",
+client_countries_option = typer.Option(
+    job_settings.client_countries,
+    "--client-country",
+    help="XXXadw",
+)
+
+client_locales_option = typer.Option(
+    job_settings.client_locales,
+    "--client-locale",
+    help="XXXadw",
+)
+
+geoname_countries_option = typer.Option(
+    job_settings.geoname_countries,
+    "--geoname-country",
+    help="XXXadw",
 )
 
 dry_run_option = typer.Option(
     rs_settings.dry_run,
     "--dry-run",
     help="Log the records that would be uploaded but don't upload them",
+)
+
+filter_expression = typer.Option(
+    rs_settings.filter_expression,
+    "--filter-expression",
+    help="Filter expression to set on remote settings records",
 )
 
 geonames_path_option = typer.Option(
@@ -95,20 +107,26 @@ keep_existing_records_option = typer.Option(
     help="Keep existing records not present in the new data",
 )
 
-population_threshold_option = typer.Option(
-    job_settings.population_threshold,
+population_thresholds_option = typer.Option(
+    job_settings.population_thresholds,
     "--population-threshold",
     help="Population threshold of geonames to select",
 )
 
-record_type_option = typer.Option(
-    job_settings.record_type,
-    "--record-type",
-    help="The `type` of each remote settings record",
+geonames_record_type_option = typer.Option(
+    job_settings.geonames_record_type,
+    "--geonames-record-type",
+    help="The `type` of each core geonames remote settings record",
 )
 
-region_alternates_iso_languages_option = typer.Option(
-    job_settings.region_alternates_iso_languages,
+alternates_record_type_option = typer.Option(
+    job_settings.alternates_record_type,
+    "--alternates-record-type",
+    help="The `type` of each alternates remote settings record",
+)
+
+admin_alternates_iso_languages_option = typer.Option(
+    job_settings.admin_alternates_iso_languages,
     "--region-alternates-iso-languages",
     help="Alternate region name languages and types to select",
 )
@@ -124,97 +142,110 @@ geonames_uploader_cmd = typer.Typer(
     help="Command for uploading GeoNames data from geonames.org to remote settings",
 )
 
-
-class GeonamesChunk(Chunk):
-    """A chunk of geonames to be uploaded in a single attachment."""
-
-    max_alternate_name_length: int
-    max_alternate_name_word_count: int
-
-    @staticmethod
-    def item_to_json_serializable(geoname: Geoname) -> Any:
-        """Convert the geoname to a JSON serializable object."""
-        return geoname.to_json_serializable()
-
-    def __init__(self, start_index: int):
-        super().__init__(start_index)
-        self.max_alternate_name_length = 0
-        self.max_alternate_name_word_count = 0
-
-    def add_item(self, geoname: Geoname) -> None:
-        """Add a geoname to the chunk."""
-        super().add_item(geoname)
-        for alt in geoname.alternates:
-            if len(alt.name) > self.max_alternate_name_length:
-                self.max_alternate_name_length = len(alt.name)
-            word_count = len(alt.name.split())
-            if word_count > self.max_alternate_name_word_count:
-                self.max_alternate_name_word_count = word_count
-
-    def to_json_serializable(self) -> Any:
-        """Convert the chunk to a JSON serializable object that will be stored
-        in the chunk's attachment.
-
-        """
-        return {
-            "max_alternate_name_length": self.max_alternate_name_length,
-            "max_alternate_name_word_count": self.max_alternate_name_word_count,
-            "geonames": self.items,
-        }
-
-
 @geonames_uploader_cmd.command()
 def upload(
     alternates_path: str = alternates_path_option,
     auth: str = auth_option,
     base_url: str = base_url_option,
     bucket: str = bucket_option,
-    chunk_size: int = chunk_size_option,
     collection: str = collection_option,
-    country_codes: list[str] = country_codes_option,
     dry_run: bool = dry_run_option,
-    geonames_path: str = geonames_path_option,
-    city_alternates_iso_languages: list[str] = city_alternates_iso_languages_option,
-    keep_existing_records: bool = keep_existing_records_option,
-    population_threshold: int = population_threshold_option,
-    record_type: str = record_type_option,
-    region_alternates_iso_languages: list[str] = region_alternates_iso_languages_option,
     server: str = server_option,
+    keep_existing_records: bool = keep_existing_records_option,
+    geonames_record_type: str = geonames_record_type_option,
+    alternates_record_type: str = alternates_record_type_option,
+    geonames_path: str = geonames_path_option,
+    client_countries: list[str] = client_countries_option,
+    client_locales: list[str] = client_locales_option,
+    geoname_countries: list[str] = geoname_countries_option,
+    city_alternates_iso_languages: list[str] = city_alternates_iso_languages_option,
+    admin_alternates_iso_languages: list[str] = admin_alternates_iso_languages_option,
+    population_thresholds: list[int] = population_thresholds_option,
 ):
     """Download GeoNames data from the GeoNames server, apply some processing
     and selection, and upload it to remote settings.
 
     """
-    downloader_states = []
-    total_geoname_count = 0
-    for country_code in country_codes:
+
+    min_threshold = min(population_thresholds)
+    thresholds_max_to_min = sorted(population_thresholds, reverse=True)
+    geonames_by_threshold_by_country: dict[str, dict[int, [Geoname]]] = {}
+
+    for country in geoname_countries:
         downloader = GeonamesDownloader(
             alternates_path=alternates_path,
             base_url=base_url,
             city_alternates_iso_languages=city_alternates_iso_languages,
-            country_code=country_code,
+            country_code=country,
             geonames_path=geonames_path,
-            population_threshold=population_threshold,
-            region_alternates_iso_languages=region_alternates_iso_languages,
+            population_threshold=min_threshold,
+            admin_alternates_iso_languages=admin_alternates_iso_languages,
         )
-        state = downloader.download()
-        total_geoname_count += len(state.geonames)
-        downloader_states.append(state)
 
-    with ChunkedRemoteSettingsUploader(
+        state = downloader.download()
+
+        for geoname_id, geoname in state.geonames_by_id.items():
+            threshold = next(t for t in thresholds_max_to_min if t <= geoname.population)
+            geonames_by_threshold = geonames_by_threshold_by_country.setdefault(country, {})
+            geonames = geonames_by_threshold.setdefault(threshold, [])
+            geonames.append(geoname)
+
+    rs_uploader = RemoteSettingsUploader(
         auth=auth,
         bucket=bucket,
-        chunk_cls=GeonamesChunk,
-        chunk_size=chunk_size,
         collection=collection,
-        dry_run=dry_run,
-        record_type=record_type,
         server=server,
-        total_item_count=len(state.geonames),
-    ) as uploader:
-        if not keep_existing_records:
-            uploader.delete_records()
+        dry_run=dry_run,
+    )
 
-        for state in downloader_states:
-            for g in state.geonames:
-                uploader.add_item(g)
+    #XXXadw
+    if not keep_existing_records:
+#         uploader.delete_records()
+        pass
+
+    for country, geonames_by_threshold in geonames_by_threshold_by_country.items():
+        previous_threshold: int | None = None
+        for threshold, geonames in geonames_by_threshold.items():
+            lower = _pretty_threshold(threshold)
+            record_id = f"geonames-{country}-{lower}"
+            if previous_threshold is not None:
+                upper = _pretty_threshold(previous_threshold)
+                record_id = f"{record_id}-{upper}"
+
+            previous_threshold = threshold
+
+            # core geonames record
+            filter_countries = ", ".join([f"'{c}'" for c in client_countries])
+            filter_locales = ", ".join([f"'{l}'" for l in client_locales])
+            filter_expression_list = []
+            if filter_countries:
+                filter_expression_list.append(f"env.country in [{filter_countries}]")
+            if filter_locales:
+                filter_expression_list.append(f"env.locale in [{filter_locales}]")
+            filter_expression = " && ".join(filter_expression_list)
+
+            geonames_record = {
+                "id": record_id,
+                "type": geonames_record_type,
+                "filter_expression": filter_expression,
+            }
+            geonames = [_jsonable_geoname(g) for g in geonames]
+            rs_uploader.upload(record=geonames_record, attachment_json=json.dumps(geonames))
+
+            #XXXadw alternates record
+
+
+def _jsonable_geoname(geoname: Geoname) -> dict[str, Any]:
+    d = dict(vars(geoname))
+    del d["alternates_by_iso_language"]
+    for a in ["admin1_code", "admin2_code", "admin3_code", "admin4_code"]:
+        if a in d and d[a] is None:
+            del d[a]
+    return d
+
+def _pretty_threshold(value: int) -> str:
+    if 1_000_000 <= value and value % 1_000_000 == 0:
+        return f"{int(value / 1_000_000)}m"
+    if 1_000 <= value and value % 1_000 == 0:
+        return f"{int(value / 1_000)}k"
+    return str(value)
