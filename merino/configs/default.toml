@@ -161,7 +161,7 @@ bucket = "main"
 # MERINO_REMOTE_SETTINGS__COLLECTION
 # The collection to use for Remote Settings providers if not specified in provider config.
 # Ex: "quicksuggest".
-collection = "quicksuggest"
+collection = "quicksuggest-amp"
 
 # The collection to use for uploading fakespot suggestions if not specified on the command line
 collection_fakespot = "fakespot-suggest-products"
@@ -181,6 +181,10 @@ dry_run = false
 # MERINO_REMOTE_SETTINGS__SCORE
 # Default score to set in suggestions uploaded to remote settings.
 score = 0.25
+
+# MERINO_REMOTE_SETTINGS__COUNTRIES
+# Default countries used to filter out records from remote settings.
+countries = ["US"]
 
 # Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
 [default.redis]
