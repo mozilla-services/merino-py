@@ -9,6 +9,7 @@ from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest, Category
 from merino.providers.suggest.wikipedia.backends.protocol import WikipediaBackend
+from merino.providers.suggest.wikipedia.backends.utils import get_language_code
 
 # The Wikipedia icon backed by Merino's image CDN.
 # TODO: Use a better way to fetch this icon URL instead of hardcoding it here.
@@ -74,7 +75,9 @@ class Provider(BaseProvider):
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         try:
-            suggestions = await self.backend.search(srequest.query)
+            languages: list[str] = srequest.languages if srequest.languages else []
+            language_code = get_language_code(languages)
+            suggestions = await self.backend.search(srequest.query, language_code)
         except BackendError as e:
             logger.warning(f"{e}")
             return []

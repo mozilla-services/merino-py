@@ -57,7 +57,7 @@ async def test_es_backend_search_success(
     )
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
 
-    suggestions = await es_backend.search("foO")
+    suggestions = await es_backend.search("foO", "en")
 
     assert suggestions == [
         {
@@ -105,7 +105,7 @@ async def test_es_backend_search_multiword_query(
     )
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
 
-    suggestions = await es_backend.search("food f")
+    suggestions = await es_backend.search("food f", "en")
 
     assert suggestions == [
         {
@@ -134,7 +134,7 @@ async def test_es_backend_search_without_suggest(
     async_mock = AsyncMock(return_value={})
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
 
-    suggestions = await es_backend.search("foo")
+    suggestions = await es_backend.search("foo", "en")
 
     assert suggestions == []
 
@@ -148,9 +148,9 @@ async def test_es_backend_search_exception(
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=Exception("404 error"))
 
     with pytest.raises(BackendError) as excinfo:
-        await es_backend.search("foo")
+        await es_backend.search("foo", "en")
 
-    assert str(excinfo.value) == "Failed to search from Elasticsearch: 404 error"
+    assert str(excinfo.value) == "Failed to search from Elasticsearch for en: 404 error"
 
 
 @pytest.mark.asyncio
@@ -192,7 +192,7 @@ async def test_es_backend_search_keyword_strip(
     )
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
 
-    suggestions = await es_backend.search("mozi")
+    suggestions = await es_backend.search("mozi", "en")
 
     assert suggestions == [
         {
