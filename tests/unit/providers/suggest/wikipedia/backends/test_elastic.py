@@ -35,10 +35,10 @@ def test_es_backend_initialize_with_url():
 
 
 @pytest.mark.asyncio
-async def test_es_backend_search_success(
+async def test_es_backend_search_success_en(
     mocker: MockerFixture, es_backend: ElasticBackend
 ) -> None:
-    """Test the search method of the ES backend."""
+    """Test the search method of the ES backend for english."""
     async_mock = AsyncMock(
         return_value={
             "suggest": {
@@ -57,7 +57,7 @@ async def test_es_backend_search_success(
     )
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
 
-    suggestions = await es_backend.search("foO")
+    suggestions = await es_backend.search("foO", "en")
 
     assert suggestions == [
         {
@@ -84,10 +84,51 @@ async def test_es_backend_search_success(
 
 
 @pytest.mark.asyncio
-async def test_es_backend_search_multiword_query(
+async def test_es_backend_search_success_fr(mocker, es_backend: ElasticBackend) -> None:
+    """Test the search method of the ES backend for French."""
+    async_mock = AsyncMock(
+        return_value={
+            "suggest": {
+                SUGGEST_ID: [
+                    {
+                        "options": [
+                            {"_source": {"title": "Nourriture"}},
+                            {"_source": {"title": "Nourriture pour chien"}},
+                            {"_source": {"title": "Matière à réflexion"}},
+                        ]
+                    }
+                ]
+            }
+        }
+    )
+    mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
+
+    suggestions = await es_backend.search("nou", "fr")
+
+    assert suggestions == [
+        {
+            "full_keyword": "nourriture",
+            "title": "Wikipédia - Nourriture",
+            "url": "https://fr.wikipedia.org/wiki/Nourriture",
+        },
+        {
+            "full_keyword": "nourriture",
+            "title": "Wikipédia - Nourriture pour chien",
+            "url": "https://fr.wikipedia.org/wiki/Nourriture_pour_chien",
+        },
+        {
+            "full_keyword": "matière à réflexion",
+            "title": "Wikipédia - Matière à réflexion",
+            "url": "https://fr.wikipedia.org/wiki/Mati%C3%A8re_%C3%A0_r%C3%A9flexion",
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_es_backend_search_multiword_query_en(
     mocker: MockerFixture, es_backend: ElasticBackend
 ) -> None:
-    """Test the search method of the ES backend."""
+    """Test the search method of the ES backend with multiword query for english."""
     async_mock = AsyncMock(
         return_value={
             "suggest": {
@@ -105,7 +146,7 @@ async def test_es_backend_search_multiword_query(
     )
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
 
-    suggestions = await es_backend.search("food f")
+    suggestions = await es_backend.search("food f", "en")
 
     assert suggestions == [
         {
@@ -127,6 +168,49 @@ async def test_es_backend_search_multiword_query(
 
 
 @pytest.mark.asyncio
+async def test_es_backend_search_multiword_query_de(
+    mocker: MockerFixture, es_backend: ElasticBackend
+) -> None:
+    """Test the search method of the ES backend with multiword query for german."""
+    async_mock = AsyncMock(
+        return_value={
+            "suggest": {
+                SUGGEST_ID: [
+                    {
+                        "options": [
+                            {"_source": {"title": "Berliner Flughafen"}},
+                            {"_source": {"title": "Berliner Freiheit"}},
+                            {"_source": {"title": "Nicht Berliner Fernsehen"}},
+                        ]
+                    }
+                ]
+            }
+        }
+    )
+    mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
+
+    suggestions = await es_backend.search("berliner f", "de")
+
+    assert suggestions == [
+        {
+            "full_keyword": "berliner flughafen",
+            "title": "Wikipedia - Berliner Flughafen",
+            "url": "https://de.wikipedia.org/wiki/Berliner_Flughafen",
+        },
+        {
+            "full_keyword": "berliner freiheit",
+            "title": "Wikipedia - Berliner Freiheit",
+            "url": "https://de.wikipedia.org/wiki/Berliner_Freiheit",
+        },
+        {
+            "full_keyword": "berliner fernsehen",
+            "title": "Wikipedia - Nicht Berliner Fernsehen",
+            "url": "https://de.wikipedia.org/wiki/Nicht_Berliner_Fernsehen",
+        },
+    ]
+
+
+@pytest.mark.asyncio
 async def test_es_backend_search_without_suggest(
     mocker: MockerFixture, es_backend: ElasticBackend
 ) -> None:
@@ -134,23 +218,37 @@ async def test_es_backend_search_without_suggest(
     async_mock = AsyncMock(return_value={})
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
 
-    suggestions = await es_backend.search("foo")
+    suggestions = await es_backend.search("foo", "en")
 
     assert suggestions == []
 
 
 @pytest.mark.asyncio
-async def test_es_backend_search_exception(
+async def test_es_backend_search_exception_en(
     mocker: MockerFixture,
     es_backend: ElasticBackend,
 ) -> None:
-    """Test the exception handling in the search method of the ES backend."""
+    """Test the exception handling in the search method of the ES backend for english."""
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=Exception("404 error"))
 
     with pytest.raises(BackendError) as excinfo:
-        await es_backend.search("foo")
+        await es_backend.search("foo", "en")
 
-    assert str(excinfo.value) == "Failed to search from Elasticsearch: 404 error"
+    assert str(excinfo.value) == "Failed to search from Elasticsearch for en: 404 error"
+
+
+@pytest.mark.asyncio
+async def test_es_backend_search_exception_it(
+    mocker: MockerFixture,
+    es_backend: ElasticBackend,
+) -> None:
+    """Test the exception handling in the search method of the ES backend for italian."""
+    mocker.patch.object(AsyncElasticsearch, "search", side_effect=Exception("404 error"))
+
+    with pytest.raises(BackendError) as excinfo:
+        await es_backend.search("bis", "it")
+
+    assert str(excinfo.value) == "Failed to search from Elasticsearch for it: 404 error"
 
 
 @pytest.mark.asyncio
@@ -192,7 +290,7 @@ async def test_es_backend_search_keyword_strip(
     )
     mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
 
-    suggestions = await es_backend.search("mozi")
+    suggestions = await es_backend.search("mozi", "en")
 
     assert suggestions == [
         {
