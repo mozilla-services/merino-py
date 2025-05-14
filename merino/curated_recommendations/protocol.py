@@ -6,7 +6,7 @@ from typing import Annotated
 import logging
 from datetime import datetime
 
-from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo
+from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo, HttpUrl
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
@@ -154,6 +154,24 @@ class CuratedRecommendation(CorpusItem):
         :return: Integer hash of s in the range [start, stop)
         """
         return start + (int(hashlib.sha256(s.encode("utf-8")).hexdigest(), 16) % (stop - start))
+
+
+class CuratedRecommendationDesktopV1(BaseModel):
+    """TODO"""
+
+    typename: str = Field(default="Recommendation", alias="__typename")
+    recommendationId: str
+    tileId: int
+    url: HttpUrl
+    title: str
+    excerpt: str
+    publisher: str
+    imageUrl: HttpUrl
+
+    class Config:
+        """TODO"""
+
+        populate_by_name = True
 
 
 class CuratedRecommendationsRequest(BaseModel):
@@ -308,3 +326,9 @@ class CuratedRecommendationsResponse(BaseModel):
     data: list[CuratedRecommendation]
     feeds: dict[str, Section] | None = None
     interestPicker: InterestPicker | None = None
+
+
+class CuratedRecommendationsDesktopV1Response(BaseModel):
+    """Response schema for a list of curated recommendations for the /desktop/v1/recommendations endpoint"""
+
+    data: list[CuratedRecommendationDesktopV1]

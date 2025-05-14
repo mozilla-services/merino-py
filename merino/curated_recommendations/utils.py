@@ -4,7 +4,13 @@ import re
 import time
 
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
-from merino.curated_recommendations.protocol import CuratedRecommendationsRequest, Locale
+from merino.curated_recommendations.protocol import (
+    CuratedRecommendationsRequest,
+    Locale,
+    CuratedRecommendation,
+    CuratedRecommendationDesktopV1,
+    TypeName,
+)
 
 
 def get_recommendation_surface_id(locale: Locale, region: str | None = None) -> SurfaceId:
@@ -87,3 +93,22 @@ def is_enrolled_in_experiment(
 def get_millisecond_epoch_time() -> int:
     """Return the time in milliseconds since the epoch as an integer."""
     return int(time.time() * 1000)
+
+
+def map_curated_recommendations_to_desktop_v1_recommendations(
+    base_recommendations: list[CuratedRecommendation],
+) -> list[CuratedRecommendationDesktopV1]:
+    """TODO"""
+    return [
+        CuratedRecommendationDesktopV1(
+            typename="Recommendation",
+            recommendationId=item.corpusItemId,
+            tileId=item.tileId,
+            url=item.url,
+            title=item.title,
+            excerpt=item.excerpt,
+            publisher=item.publisher,
+            imageUrl=item.imageUrl,
+        )
+        for item in base_recommendations
+    ]
