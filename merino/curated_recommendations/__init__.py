@@ -39,6 +39,7 @@ _provider: CuratedRecommendationsProvider
 
 def init_local_model_backend() -> LocalModelBackend:
     """Initialize the GCS Local Model Backend."""
+    metrics_namespace = "recommendations.local_model"
     try:
         synced_gcs_blob = SyncedGcsBlob(
             storage_client=initialize_storage_client(
@@ -49,6 +50,8 @@ def init_local_model_backend() -> LocalModelBackend:
             max_size=settings.local_model.gcs.local_model.max_size,
             cron_interval_seconds=settings.local_model.gcs.local_model.cron_interval_seconds,
             cron_job_name="fetch_local_model",
+            metrics_client=get_metrics_client(),
+            metrics_namespace=metrics_namespace,
         )
         synced_gcs_blob.initialize()
 

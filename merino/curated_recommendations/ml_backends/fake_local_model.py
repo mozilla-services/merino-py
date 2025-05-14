@@ -1,5 +1,7 @@
 """Backup local model for testing and in case of GCS failure"""
 
+from typing import Any
+
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
     LocalModelBackend,
@@ -37,7 +39,7 @@ class FakeLocalModel(LocalModelBackend):
     def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
         """Fetch local model for the region"""
 
-        def get_topic(topic):
+        def get_topic(topic: str) -> dict[str, Any]:
             return {
                 "features": {f"t_{topic}": 1},
                 "thresholds": [0.3, 0.4],

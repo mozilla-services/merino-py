@@ -187,7 +187,7 @@ async def test_curated_recommendations(repeat):
             imageUrl="https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg",
             receivedRank=0,
             tileId=301455520317019,
-            features={"food": 1.0},
+            features={"t_food": 1.0},
         )
         # Mock the endpoint
         response = await fetch_en_us(ac)

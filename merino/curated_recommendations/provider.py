@@ -109,7 +109,6 @@ class CuratedRecommendationsProvider:
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
         surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
-
         corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
         recommendations = [
             CuratedRecommendation(

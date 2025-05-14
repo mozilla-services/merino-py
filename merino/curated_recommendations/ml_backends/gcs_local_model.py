@@ -2,6 +2,7 @@
 
 import json
 import logging
+from typing import Any
 
 from merino.curated_recommendations.ml_backends.protocol import (
     LocalModelBackend,
@@ -24,7 +25,7 @@ class GCSLocalModel(LocalModelBackend):
         Args:
             synced_gcs_blob: Instance of SyncedGcsBlob that manages GCS synchronization.
         """
-        self._cache = {}
+        self._cache: dict[str | None, Any] = {}
         self.synced_blob = synced_gcs_blob
         self.synced_blob.set_fetch_callback(self._fetch_callback)
 
