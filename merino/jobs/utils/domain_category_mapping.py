@@ -3,14 +3,17 @@
 from merino.configs import settings
 from merino.providers.suggest.base import Category
 
+_mapping: dict[str, list[Category]]
 if settings.env_for_dynaconf in ["testing", "ci"]:
-    DOMAIN_MAPPING = {
+    _mapping = {
+        # "testserpcategories.com"
+        "3hcN3vfGxlXjlaHR2TGGDA==": [Category.Education],
         "mqzeM3Cm0XLuAd0kKwCttg==": [Category.Sports],
         "g01iNP2/b7ehY5hQXQRP1g==": [Category.Sports, Category.News],
         "uQX8/1Xq/Q9wZOXXGogCaQ==": [Category.Inconclusive],
     }
 else:
-    DOMAIN_MAPPING = {
+    _mapping = {
         "BPNrX9JDOSGaN/1l4qozIg==": [Category.Home],
         "fH/ay2trYCtgO1liGcnqKA==": [Category.Home],
         "FpvYfZ+lFeup4Zppijee6g==": [Category.Travel],
@@ -34163,3 +34166,5 @@ else:
         "WEx15bXkR7627I7kK0WfTQ==": [Category.Business],
         "wSUqisCPuYgiPI2lqvD0Ug==": [Category.Tech],
     }
+
+DOMAIN_MAPPING: dict[str, list[Category]] = _mapping
