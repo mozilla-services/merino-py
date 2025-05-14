@@ -1,13 +1,12 @@
-"""Wrapper for engagement data from Google Cloud Storage."""
+"""Wrapper for local model data from Google Cloud Storage."""
 
 import json
 import logging
 
-from merino.curated_recommendations.engagement_backends.protocol import (
-    Engagement,
-    EngagementBackend,
+from merino.curated_recommendations.ml_backends.protocol import (
+    LocalModelBackend,
+    InferredLocalModel,
 )
-from merino.curated_recommendations.ml_backends.protocol import LocalModelBackend, InferredLocalModel
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 logger = logging.getLogger(__name__)
@@ -36,7 +35,7 @@ class GCSLocalModel(LocalModelBackend):
             surface_id: Return model for a given surface (e.g. 'EN_US').
 
         Returns:
-            Engagement: Engagement data for the specified id if it exists in cache, otherwise None.
+            Inferred local model
         """
         return self._cache.get(surface_id)
 
@@ -53,4 +52,3 @@ class GCSLocalModel(LocalModelBackend):
         """
         parsed_data = [InferredLocalModel(**item) for item in json.loads(data)]
         self._cache = {d.surface_id: d for d in parsed_data}
-

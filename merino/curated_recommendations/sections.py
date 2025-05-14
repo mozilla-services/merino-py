@@ -53,12 +53,17 @@ def map_section_item_to_recommendation(
     Returns:
         A CuratedRecommendation.
     """
+    # We use a feature prefix of "t_" for topics and "s_" for sections
+    features = {f"s_{section_id}": 1.0}
+    if item.topic is not None:
+        features[f"t_{item.topic}"] = 1.0
+
     return CuratedRecommendation(
         **item.model_dump(),
         receivedRank=rank,
         # Treat the section’s externalId as a weight-1.0 feature so the client can aggregate a
         # coarse interest vector. See also https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
-        features={section_id: 1.0},
+        features=features,
     )
 
 

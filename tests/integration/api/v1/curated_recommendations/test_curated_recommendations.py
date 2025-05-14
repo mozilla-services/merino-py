@@ -19,7 +19,8 @@ from merino.curated_recommendations import (
     CuratedRecommendationsProvider,
     get_provider,
     ConstantPrior,
-    interest_picker, LocalModelBackend,
+    interest_picker,
+    LocalModelBackend,
 )
 from merino.curated_recommendations.corpus_backends.protocol import (
     Topic,
@@ -31,6 +32,7 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     Engagement,
 )
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
+from merino.curated_recommendations.ml_backends.protocol import InferredLocalModel
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
@@ -75,10 +77,28 @@ class MockEngagementBackend(EngagementBackend):
         pass
 
 
+class MockLocalModelBackend(LocalModelBackend):
+    """Mock class implementing the protocol for EngagementBackend."""
+
+    def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
+        """Return sample local model"""
+        return InferredLocalModel(model_id="fake", surface_id=surface_id, model_data={})
+
+    def initialize(self) -> None:
+        """Mock class must implement this method, but no initialization needs to happen."""
+        pass
+
+
 @pytest.fixture
 def engagement_backend():
     """Fixture for the MockEngagementBackend"""
     return MockEngagementBackend()
+
+
+@pytest.fixture
+def local_model_backend():
+    """Fixture for the MockLocalModelBackend"""
+    return MockLocalModelBackend()
 
 
 @pytest.fixture(name="prior_backend")
@@ -102,7 +122,7 @@ def provider(
     sections_backend: SectionsProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
-    local_model_backend: LocalModelBackend
+    local_model_backend: LocalModelBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
@@ -110,7 +130,7 @@ def provider(
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
         sections_backend=sections_backend,
-        local_model_backend=local_model_backend
+        local_model_backend=local_model_backend,
     )
 
 
@@ -233,7 +253,8 @@ async def test_curated_recommendations_features():
 
         recommendations = response.json()["data"]
         for rec in recommendations:
-            expected_features = {rec["topic"]: 1.0}
+            # Topic features have a t_ prefix
+            expected_features = {f"t_{rec['topic']}": 1.0}
             assert rec["features"] == expected_features
 
 
@@ -1530,6 +1551,26 @@ class TestSections:
                 assert interest_picker_response is not None
             else:
                 assert interest_picker_response is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("enable_interest_vector", [True, False])
+    async def test_sections_model_interest_vector(self, enable_interest_vector, monkeypatch):
+        """Test the curated recommendations endpoint returns a model when interest vector is passed"""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": Locale.EN_US,
+                    "feeds": ["sections"],
+                    "inferredInterests": {} if enable_interest_vector else None,
+                },
+            )
+            data = response.json()
+            local_model = data["inferredLocalModel"]
+            if enable_interest_vector:
+                assert local_model is not None
+            else:
+                assert local_model is None
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(

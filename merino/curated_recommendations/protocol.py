@@ -6,7 +6,15 @@ from typing import Annotated
 import logging
 from datetime import datetime
 
-from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo, RootModel
+from pydantic import (
+    Field,
+    field_validator,
+    model_validator,
+    BaseModel,
+    ValidationInfo,
+    RootModel,
+    ConfigDict,
+)
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
@@ -90,8 +98,9 @@ MIN_TILE_ID = 10000000
 
 
 class InferredInterests(RootModel[dict[str, float]]):
-    class Config:
-        arbitrary_types_allowed = True
+    """Inferred general interests from New Tab article interactions"""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class SectionConfiguration(BaseModel):
@@ -103,7 +112,7 @@ class SectionConfiguration(BaseModel):
     followedAt: datetime | None = Field(
         default=None,
         description="Timestamp when the section was followed. Must be in ISO 8601 format with timezone, "
-                    "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
+        "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
     )
 
     @field_validator("followedAt", mode="before")
@@ -137,7 +146,7 @@ class CuratedRecommendation(CorpusItem):
     features: dict[str, float] = Field(
         default_factory=dict,
         description="Maps feature names to weights, which the client "
-                    "can use to create a coarse interest vector.",
+        "can use to create a coarse interest vector.",
     )
 
     @model_validator(mode="before")
@@ -286,7 +295,7 @@ class Section(BaseModel):
     followedAt: datetime | None = Field(
         default=None,
         description="Timestamp when the section was followed. Must be in ISO 8601 format with timezone, "
-                    "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
+        "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
     )
     isInitiallyVisible: bool = True
 

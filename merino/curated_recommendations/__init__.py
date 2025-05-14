@@ -40,7 +40,6 @@ _provider: CuratedRecommendationsProvider
 def init_local_model_backend() -> LocalModelBackend:
     """Initialize the GCS Local Model Backend."""
     try:
-        metrics_namespace = "recommendation.local_model"
         synced_gcs_blob = SyncedGcsBlob(
             storage_client=initialize_storage_client(
                 destination_gcp_project=settings.local_model.gcs.gcp_project
@@ -53,9 +52,7 @@ def init_local_model_backend() -> LocalModelBackend:
         )
         synced_gcs_blob.initialize()
 
-        return GCSLocalModel(
-            synced_gcs_blob=synced_gcs_blob
-        )
+        return GCSLocalModel(synced_gcs_blob=synced_gcs_blob)
     except Exception as e:
         logger.error(f"Failed to initialize GCS Local Model Backend: {e}")
         # Return hard coded local model as degraded experience for testing
@@ -137,13 +134,12 @@ def init_provider() -> None:
         manifest_provider=get_manifest_provider(),
     )
 
-
     _provider = CuratedRecommendationsProvider(
         scheduled_surface_backend=scheduled_surface_backend,
         engagement_backend=engagement_backend,
         prior_backend=init_prior_backend(),
         sections_backend=sections_backend,
-        local_model_backend=local_model_backend
+        local_model_backend=local_model_backend,
     )
 
 

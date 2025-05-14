@@ -46,7 +46,7 @@ class CuratedRecommendationsProvider:
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
         sections_backend: SectionsProtocol,
-        local_model_backend: LocalModelBackend
+        local_model_backend: LocalModelBackend,
     ) -> None:
         self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
@@ -119,7 +119,7 @@ class CuratedRecommendationsProvider:
                 # interest vector. Data science work shows that using the topics as features
                 # is effective as a first pass at personalization.
                 # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
-                features={item.topic.value: 1.0} if item.topic else {},
+                features={f"t_{item.topic.value}": 1.0} if item.topic else {},
             )
             for rank, item in enumerate(corpus_items)
         ]
@@ -146,7 +146,9 @@ class CuratedRecommendationsProvider:
             surfaceId=surface_id,
             data=general_feed,
             feeds=sections_feeds,
-            inferredLocalModel=self.local_model_backend.get(surface_id) if inferred_p13n_enabled else None
+            inferredLocalModel=self.local_model_backend.get(surface_id)
+            if inferred_p13n_enabled
+            else None,
         )
 
         if request.enableInterestPicker and response.feeds:

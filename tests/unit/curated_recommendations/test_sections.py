@@ -53,7 +53,7 @@ def generate_corpus_item(corpus_id: str = "id", sched_id: str = "sched") -> Corp
         url=HttpUrl(f"https://example.com/{corpus_id}"),
         title=f"Title_{corpus_id}",
         excerpt=f"Excerpt_{corpus_id}",
-        topic=None,
+        topic="society",
         publisher=f"Pub_{corpus_id}",
         isTimeSensitive=False,
         imageUrl=HttpUrl(f"https://example.com/img/{corpus_id}"),
@@ -325,7 +325,17 @@ class TestMapSectionItemToRecommendation:
         rec = map_section_item_to_recommendation(item, 3, section_id)
         assert isinstance(rec, CuratedRecommendation)
         assert rec.receivedRank == 3
-        assert rec.features == {section_id: 1.0}
+        assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic}": 1.0}
+
+    def test_basic_mapping_no_topic(self):
+        """Map a valid CorpusItem into a CuratedRecommendation."""
+        item = generate_corpus_item()
+        item.topic = None
+        section_id = "secX"
+        rec = map_section_item_to_recommendation(item, 3, section_id)
+        assert isinstance(rec, CuratedRecommendation)
+        assert rec.receivedRank == 3
+        assert rec.features == {f"s_{section_id}": 1.0}
 
 
 class TestMapCorpusSectionToSection:
@@ -341,8 +351,11 @@ class TestMapCorpusSectionToSection:
         assert sec.iab == cs.iab
         assert len(sec.recommendations) == len(cs.sectionItems)
         for idx, rec in enumerate(sec.recommendations):
+            features_compare = {f"s_{cs.externalId}": 1.0}
+            if rec.topic is not None:
+                features_compare[f"t_{rec.topic}"] = 1.0
             assert rec.receivedRank == idx
-            assert rec.features == {cs.externalId: 1.0}
+            assert rec.features == features_compare
 
     def test_empty_section_items(self):
         """Empty sectionItems yields empty recommendations."""

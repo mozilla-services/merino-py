@@ -3,4 +3,3 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 """Module dedicated to backends ML modeling, features and recommendations"""
-
