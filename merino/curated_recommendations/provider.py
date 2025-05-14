@@ -3,6 +3,7 @@
 import logging
 from typing import cast
 
+from merino.curated_recommendations import LocalModelBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceProtocol,
     SurfaceId,
@@ -45,11 +46,13 @@ class CuratedRecommendationsProvider:
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
         sections_backend: SectionsProtocol,
+        local_model_backend: LocalModelBackend
     ) -> None:
         self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
         self.sections_backend = sections_backend
+        self.local_model_backend = local_model_backend
 
     @staticmethod
     def is_sections_experiment(
@@ -123,7 +126,10 @@ class CuratedRecommendationsProvider:
 
         sections_feeds = None
         general_feed = []
-        if self.is_sections_experiment(request, surface_id):
+        is_sections_experiment = self.is_sections_experiment(request, surface_id)
+        inferred_p13n_enabled = is_sections_experiment and request.inferredInterests
+
+        if is_sections_experiment:
             sections_feeds = await get_sections(
                 recommendations,
                 request,
@@ -140,6 +146,7 @@ class CuratedRecommendationsProvider:
             surfaceId=surface_id,
             data=general_feed,
             feeds=sections_feeds,
+            inferredLocalModel=self.local_model_backend.get(surface_id) if inferred_p13n_enabled else None
         )
 
         if request.enableInterestPicker and response.feeds:

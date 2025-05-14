@@ -18,6 +18,9 @@ from merino.curated_recommendations.corpus_backends.sections_backend import (
 from merino.curated_recommendations.engagement_backends.fake_engagement import FakeEngagement
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.ml_backends.fake_local_model import FakeLocalModel
+from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalModel
+from merino.curated_recommendations.ml_backends.protocol import LocalModelBackend
 from merino.curated_recommendations.prior_backends.gcs_prior import GcsPrior
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
@@ -32,6 +35,31 @@ from merino.utils.gcs import initialize_storage_client
 logger = logging.getLogger(__name__)
 
 _provider: CuratedRecommendationsProvider
+
+
+def init_local_model_backend() -> LocalModelBackend:
+    """Initialize the GCS Local Model Backend."""
+    try:
+        metrics_namespace = "recommendation.local_model"
+        synced_gcs_blob = SyncedGcsBlob(
+            storage_client=initialize_storage_client(
+                destination_gcp_project=settings.local_model.gcs.gcp_project
+            ),
+            bucket_name=settings.local_model.gcs.bucket_name,
+            blob_name=settings.local_model.gcs.local_model.blob_name,
+            max_size=settings.local_model.gcs.local_model.max_size,
+            cron_interval_seconds=settings.local_model.gcs.local_model.cron_interval_seconds,
+            cron_job_name="fetch_local_model",
+        )
+        synced_gcs_blob.initialize()
+
+        return GCSLocalModel(
+            synced_gcs_blob=synced_gcs_blob
+        )
+    except Exception as e:
+        logger.error(f"Failed to initialize GCS Local Model Backend: {e}")
+        # Return hard coded local model as degraded experience for testing
+        return FakeLocalModel()
 
 
 def init_engagement_backend() -> EngagementBackend:
@@ -89,10 +117,11 @@ def init_prior_backend() -> PriorBackend:
 
 
 def init_provider() -> None:
-    """Initialize the curated recommendations provider."""
+    """Initialize the curated recommendations' provider."""
     global _provider
 
     engagement_backend = init_engagement_backend()
+    local_model_backend = init_local_model_backend()
 
     scheduled_surface_backend = ScheduledSurfaceBackend(
         http_client=create_http_client(base_url=""),
@@ -108,11 +137,13 @@ def init_provider() -> None:
         manifest_provider=get_manifest_provider(),
     )
 
+
     _provider = CuratedRecommendationsProvider(
         scheduled_surface_backend=scheduled_surface_backend,
         engagement_backend=engagement_backend,
         prior_backend=init_prior_backend(),
         sections_backend=sections_backend,
+        local_model_backend=local_model_backend
     )
 
 
