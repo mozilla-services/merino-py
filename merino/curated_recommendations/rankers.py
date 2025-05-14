@@ -132,8 +132,11 @@ def section_thompson_sampling(
         total_imps = 0
         for rec in recs:
             if engagement := engagement_backend.get(rec.corpusItemId):
+                print('section thompson, GOT!')
                 total_clicks += engagement.click_count
                 total_imps += engagement.impression_count
+            else:
+                print('section thompson, PASSSSS!')
 
         # constant prior α, β
         prior = ConstantPrior().get()
@@ -171,8 +174,11 @@ def aggregate_section_click_passes(
         total_imps = 0
         for rec in recs:
             if engagement := engagement_backend.get(rec.corpusItemId):
+                print('accumluate!!!', engagement.click_count, engagement.impression_count)
                 total_clicks += engagement.click_count
                 total_imps += engagement.impression_count
+            else:
+                print('pass!!', engagement_backend.get(rec.corpusItemId))
 
         # Sum engagement and priors.
         opens = total_clicks 
@@ -181,9 +187,12 @@ def aggregate_section_click_passes(
         return opens, no_opens
 
     # update clicks and passes
+    print('engagement backend', engagement_backend)
     for k in sections:
-        sections[k]['clicks'],sections[k]['passes'] = aggregate_counts(sections[k])
-        
+        clicks,passes = aggregate_counts(sections[k])
+        print(k, clicks, passes, '\n\n\n\n')
+        sections[k].clicks,sections[k].passes = clicks,passes
+
     return sections
 
 

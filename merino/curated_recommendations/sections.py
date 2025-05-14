@@ -223,6 +223,8 @@ def create_sections_from_items_by_topic(
                     title=get_translation(surface_id, rec.topic, sid),
                     iab=IABMetadata(categories=map_topic_to_iab_categories(rec.topic)),
                     layout=deepcopy(layout_cycle[idx % len(layout_cycle)]),
+                    clicks=0,
+                    passes=0,
                 )
             sec = sections[sid]
             if len(sec.recommendations) < max_recs_per_section:
@@ -329,6 +331,8 @@ async def get_sections(
             recommendations=top_stories,
             title=get_translation(surface_id, "top-stories", "Popular Today"),
             layout=deepcopy(layout_4_large),
+            clicks=0,
+            passes=0,
         )
     }
 
@@ -352,7 +356,7 @@ async def get_sections(
     adjust_ads_in_sections(sections)
 
     # 10. Aggregate clicks and passes
-    sections = aggregate_section_click_passes(sections)
+    sections = aggregate_section_click_passes(sections,engagement_backend)
 
     return sections
 
