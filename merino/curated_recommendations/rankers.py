@@ -151,6 +151,42 @@ def section_thompson_sampling(
     ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
     return renumber_sections(ordered)
 
+def aggregate_section_click_passes(
+    sections: dict[str, Section],
+    engagement_backend: EngagementBackend,    
+) -> dict[str, Section]:
+    """Aggregate item clicks and impressions to section level clicks and passes
+
+    :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
+    :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.    
+
+    :return: Mapping of section IDs to Section objects with updated clicks and passes
+    """
+
+    def aggregate_counts(sec: Section) -> float:
+        """cycle articles and aggregate section clicks and passes"""
+        # sum clicks and impressions over all items
+        recs = sec.recommendations
+        total_clicks = 0
+        total_imps = 0
+        for rec in recs:
+            if engagement := engagement_backend.get(rec.corpusItemId):
+                total_clicks += engagement.click_count
+                total_imps += engagement.impression_count
+
+        # Sum engagement and priors.
+        opens = total_clicks 
+        no_opens = total_imps - total_clicks 
+
+        return opens, no_opens
+
+    # update clicks and passes
+    for k in sections:
+        sections[k]['clicks'],sections[k]['passes'] = aggregate_counts(sections[k])
+        
+    return sections
+
+
 
 def spread_publishers(
     recs: list[CuratedRecommendation], spread_distance: int

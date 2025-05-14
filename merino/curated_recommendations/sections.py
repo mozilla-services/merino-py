@@ -34,6 +34,7 @@ from merino.curated_recommendations.rankers import (
     boost_followed_sections,
     section_thompson_sampling,
     put_top_stories_first,
+    aggregate_section_click_passes
 )
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
@@ -349,6 +350,9 @@ async def get_sections(
     # 9. Apply ad/layout tweaks
     set_double_row_layout(sections)
     adjust_ads_in_sections(sections)
+
+    # 10. Aggregate clicks and passes
+    sections = aggregate_section_click_passes(sections)
 
     return sections
 

@@ -274,6 +274,8 @@ class Section(BaseModel):
     iab: IABMetadata | None = None
     subtitle: str | None = None
     layout: Layout
+    clicks: int
+    passes: int
     isFollowed: bool = False
     isBlocked: bool = False
     followedAt: datetime | None = Field(
