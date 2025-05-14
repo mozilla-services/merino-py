@@ -2,6 +2,7 @@
 
 import logging
 from typing import Any, Final
+import unicodedata
 
 from pydantic import HttpUrl
 
@@ -71,6 +72,13 @@ class Provider(BaseProvider):
     def hidden(self) -> bool:  # noqa: D102
         """Whether this provider is hidden or not."""
         return False
+
+    def normalize_query(self, query: str) -> str:
+        """Lowercase and remove accents/diacritics from query."""
+        text = query.strip().lower()
+        return "".join(
+            c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c)
+        )
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""

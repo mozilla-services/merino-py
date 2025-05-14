@@ -117,3 +117,34 @@ async def test_query(
             categories=[Category.Education],
         )
     ]
+
+
+@pytest.mark.parametrize(
+    "query,expected",
+    [
+        ("Café", "cafe"),
+        ("MÜNCHEN", "munchen"),
+        ("Crème brûlée", "creme brulee"),
+        ("Matière à réflexion", "matiere a reflexion"),
+        ("naïve", "naive"),
+        ("niño", "nino"),
+        ("", ""),
+        ("Normal", "normal"),
+        ("   Résumé ", "resume"),
+    ],
+    ids=[
+        "acute-accent",
+        "umlaut-uppercase",
+        "multiple-accents",
+        "french-phrase",
+        "diaeresis",
+        "tilde",
+        "empty-string",
+        "no-change",
+        "strip-trailing-space",
+    ],
+)
+def test_normalize_query(query, expected, wikipedia: Provider):
+    """Test that queries are normalized for multiple languages"""
+    result = wikipedia.normalize_query(query)
+    assert result == expected

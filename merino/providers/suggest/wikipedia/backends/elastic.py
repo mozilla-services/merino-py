@@ -54,7 +54,11 @@ class ElasticBackend:
 
     async def search(self, q: str, language_code: str) -> list[dict[str, Any]]:
         """Search Wikipedia articles from the ES cluster."""
-        index_id = getattr(settings.providers.wikipedia, f"{language_code}_es_index", settings.providers.wikipedia.en_es_index)
+        index_id = getattr(
+            settings.providers.wikipedia,
+            f"{language_code}_es_index",
+            settings.providers.wikipedia.en_es_index,
+        )
 
         suggest = {
             SUGGEST_ID: {
@@ -74,10 +78,15 @@ class ElasticBackend:
                 source_includes=["title"],
             )
         except Exception as e:
-            raise BackendError(f"Failed to search from Elasticsearch for {language_code}: {e}") from e
+            raise BackendError(
+                f"Failed to search from Elasticsearch for {language_code}: {e}"
+            ) from e
 
         if "suggest" in res:
-            return [self.build_article(q, doc, language_code) for doc in res["suggest"][SUGGEST_ID][0]["options"]]
+            return [
+                self.build_article(q, doc, language_code)
+                for doc in res["suggest"][SUGGEST_ID][0]["options"]
+            ]
         else:
             return []
 
