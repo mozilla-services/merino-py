@@ -13,7 +13,6 @@ from pydantic import (
     BaseModel,
     ValidationInfo,
     RootModel,
-    ConfigDict,
 )
 
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -97,10 +96,8 @@ MAX_TILE_ID = (1 << 53) - 1
 MIN_TILE_ID = 10000000
 
 
-class InferredInterests(RootModel[dict[str, float]]):
+class InferredInterests(RootModel[dict[str, float | str]]):
     """Inferred general interests from New Tab article interactions"""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class SectionConfiguration(BaseModel):

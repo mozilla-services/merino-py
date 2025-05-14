@@ -1,6 +1,6 @@
 """Protocol and Pydantic models for the Local Model provider backend."""
 
-from typing import Protocol, Dict, Any
+from typing import Protocol, Any
 from pydantic import BaseModel, ConfigDict
 
 
@@ -11,7 +11,7 @@ class InferredLocalModel(BaseModel):
 
     model_id: str
     surface_id: str
-    model_data: Dict[str, Any]
+    model_data: dict[str, Any]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

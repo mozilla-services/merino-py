@@ -126,7 +126,10 @@ class CuratedRecommendationsProvider:
         sections_feeds = None
         general_feed = []
         is_sections_experiment = self.is_sections_experiment(request, surface_id)
-        inferred_p13n_enabled = is_sections_experiment and request.inferredInterests
+
+        inferred_local_model = None
+        if is_sections_experiment and request.inferredInterests:
+            inferred_local_model = self.local_model_backend.get(surface_id)
 
         if is_sections_experiment:
             sections_feeds = await get_sections(
@@ -145,9 +148,7 @@ class CuratedRecommendationsProvider:
             surfaceId=surface_id,
             data=general_feed,
             feeds=sections_feeds,
-            inferredLocalModel=self.local_model_backend.get(surface_id)
-            if inferred_p13n_enabled
-            else None,
+            inferredLocalModel=inferred_local_model,
         )
 
         if request.enableInterestPicker and response.feeds:

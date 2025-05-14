@@ -603,8 +603,8 @@ blob_name = "newtab-merino-exports/local_model/latest.json"
 
 # MERINO__CURATED_RECOMMENDATIONS__GCS__LOCAL_MODEL__CRON_INTERVAL_SECONDS
 # Interval in seconds at which the cron job checks if GCS contains updated model.
-# Model is checked every 1 hour.
-cron_interval_seconds = 3600
+# Model is checked every 10 minutes.
+cron_interval_seconds = 600
 
 [default.curated_recommendations.gcs.engagement]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__MAX_SIZE
