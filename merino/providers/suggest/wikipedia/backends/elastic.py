@@ -15,6 +15,17 @@ TIMEOUT_MS: Final[str] = f"{settings.providers.wikipedia.es_request_timeout_ms}m
 MAX_SUGGESTIONS: Final[int] = settings.providers.wikipedia.es_max_suggestions
 
 
+INDICES: dict[str, str] = {
+    "en": settings.providers.wikipedia.en_es_index,
+    "fr": settings.providers.wikipedia.fr_es_index,
+    "de": settings.providers.wikipedia.de_es_index,
+    "it": settings.providers.wikipedia.it_es_index,
+    "pl": settings.providers.wikipedia.pl_es_index,
+}
+
+FALLBACK_INDEX: str = INDICES["en"]
+
+
 class ElasticBackendError(BackendError):
     """Error with Elastic Backend"""
 
@@ -54,11 +65,7 @@ class ElasticBackend:
 
     async def search(self, q: str, language_code: str) -> list[dict[str, Any]]:
         """Search Wikipedia articles from the ES cluster."""
-        index_id = getattr(
-            settings.providers.wikipedia,
-            f"{language_code}_es_index",
-            settings.providers.wikipedia.en_es_index,
-        )
+        index_id = INDICES[language_code]
 
         suggest = {
             SUGGEST_ID: {
