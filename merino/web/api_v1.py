@@ -43,10 +43,6 @@ from merino.utils.api.query_params import (
     refine_geolocation_for_suggestion,
     validate_suggest_custom_location_params,
 )
-from merino.curated_recommendations.utils import (
-    map_curated_recommendations_to_legacy_recommendations,
-    map_curated_recommendations_to_legacy_global_recommendations,
-)
 
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 from merino.providers.manifest.provider import Provider as ManifestProvider
@@ -359,18 +355,7 @@ async def curated_content_legacy(
         then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 30.
     """
-    base_recommendations = await provider.fetch_recommendations_for_legacy_recommendations(
-        query_params
-    )
-
-    legacy_recommendations = map_curated_recommendations_to_legacy_recommendations(
-        base_recommendations
-    )
-
-    # build response for api request
-    return CuratedRecommendationsLegacyResponse(
-        data=legacy_recommendations[: query_params.count],
-    )
+    return await provider.fetch_recommendations_for_legacy_recommendations(query_params)
 
 
 @router.get(
@@ -394,19 +379,9 @@ async def curated_content_global_recs_legacy(
     - `region`: [Optional] The country-level region, for example US or IE (Ireland).
         This will help return more relevant recommendations. If `region` is not provided,
         then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
-    - `count`: [Optional] The maximum number of recommendations to return. Defaults to 10."""
-    base_recommendations = await provider.fetch_recommendations_for_global_legacy_recommendations(
-        query_params
-    )
-
-    legacy_global_recommendations = map_curated_recommendations_to_legacy_global_recommendations(
-        base_recommendations
-    )
-
-    # build response for api request
-    return CuratedRecommendationsGlobalLegacyResponse(
-        recommendations=legacy_global_recommendations[: query_params.count],
-    )
+    - `count`: [Optional] The maximum number of recommendations to return. Defaults to 10.
+    """
+    return await provider.fetch_recommendations_for_global_legacy_recommendations(query_params)
 
 
 @router.get(
