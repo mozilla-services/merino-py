@@ -10,6 +10,7 @@ from merino.jobs.csv_rs_uploader.yelp import (
     FIELD_POST_MODIFIERS,
     FIELD_PRE_MODIFIERS,
     FIELD_SUBJECTS,
+    FIELD_BUSINESS_SUBJECTS,
     FIELD_YELP_MODIFIERS,
     ICON_ID,
 )
@@ -26,6 +27,7 @@ def test_upload(mocker):
         csv_rows=[
             {
                 FIELD_SUBJECTS: "subject-1",
+                FIELD_BUSINESS_SUBJECTS: "business-subject-1",
                 FIELD_PRE_MODIFIERS: "pre-modifier-1",
                 FIELD_POST_MODIFIERS: "post-modifier-1",
                 FIELD_LOCATION_MODIFIERS: "location-modifier-1",
@@ -34,6 +36,7 @@ def test_upload(mocker):
             },
             {
                 FIELD_SUBJECTS: "subject-2",
+                FIELD_BUSINESS_SUBJECTS: "business-subject-2",
                 FIELD_PRE_MODIFIERS: "pre-modifier-2",
                 FIELD_POST_MODIFIERS: "post-modifier-2",
                 FIELD_LOCATION_MODIFIERS: "location-modifier-2",
@@ -99,6 +102,10 @@ def test_upload(mocker):
                     "subject-5",
                     "subject-6",
                     "subject-7",
+                ],
+                "businessSubjects": [
+                    "business-subject-1",
+                    "business-subject-2",
                 ],
                 "preModifiers": [
                     "pre-modifier-1",
