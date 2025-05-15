@@ -73,7 +73,14 @@ def blob(gcs_bucket):
     """Create a blob with region data."""
     return create_blob(
         gcs_bucket,
-        [{"surface_id": TEST_SURFACE_ID, "model_id": TEST_MODEL_ID, "model_data": {}}],
+        [
+            {
+                "surface_id": TEST_SURFACE_ID,
+                "model_id": TEST_MODEL_ID,
+                "model_version": 0,
+                "model_data": {},
+            }
+        ],
     )
 
 
@@ -106,5 +113,5 @@ async def test_gcs_local_model_fetches_data(gcs_storage_client, gcs_bucket, metr
     await wait_until_engagement_is_updated(local_model)
 
     assert local_model.get(TEST_SURFACE_ID) == InferredLocalModel(
-        surface_id=TEST_SURFACE_ID, model_id=TEST_MODEL_ID, model_data={}
+        surface_id=TEST_SURFACE_ID, model_version=0, model_id=TEST_MODEL_ID, model_data={}
     )

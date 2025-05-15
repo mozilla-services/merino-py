@@ -9,7 +9,11 @@ class InferredLocalModel(BaseModel):
     events
     """
 
+    # Id of model
     model_id: str
+    # Schema version
+    model_version: int
+
     surface_id: str
     model_data: dict[str, Any]
 

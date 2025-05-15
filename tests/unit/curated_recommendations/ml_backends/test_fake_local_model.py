@@ -22,4 +22,5 @@ def test_model_returns_inferred_local_model(model):
     assert isinstance(result, InferredLocalModel)
     assert result.model_id == FAKE_MODEL_ID
     assert result.surface_id == surface_id
+    assert result.model_version == 0
     assert isinstance(result.model_data, dict)

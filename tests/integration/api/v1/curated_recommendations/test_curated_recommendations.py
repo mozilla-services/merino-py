@@ -82,7 +82,9 @@ class MockLocalModelBackend(LocalModelBackend):
 
     def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
         """Return sample local model"""
-        return InferredLocalModel(model_id="fake", surface_id=surface_id, model_data={})
+        return InferredLocalModel(
+            model_id="fake", model_version=0, surface_id=surface_id, model_data={}
+        )
 
     def initialize(self) -> None:
         """Mock class must implement this method, but no initialization needs to happen."""

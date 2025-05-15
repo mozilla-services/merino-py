@@ -67,5 +67,5 @@ class FakeLocalModel(LocalModelBackend):
             },
         }
         return InferredLocalModel(
-            model_id=FAKE_MODEL_ID, surface_id=surface_id, model_data=model_data
+            model_id=FAKE_MODEL_ID, surface_id=surface_id, model_data=model_data, model_version=0
         )
