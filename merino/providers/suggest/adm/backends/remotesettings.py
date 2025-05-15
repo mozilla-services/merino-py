@@ -1,6 +1,7 @@
 """A thin wrapper around the Remote Settings client."""
-
+import ast
 import asyncio
+import json
 from asyncio import Task
 from typing import Any, Literal, cast
 from urllib.parse import urljoin
@@ -12,7 +13,11 @@ from pydantic import BaseModel
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.adm.backends.protocol import SuggestionContent
+from merino.providers.suggest.adm.backends.protocol import (
+    SuggestionContent,
+    GlobalSuggestionContent,
+    SegmentTuple,
+)
 from merino.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
 
@@ -40,6 +45,16 @@ class KintoSuggestion(BaseModel):
 
 class RemoteSettingsError(BackendError):
     """Error during interaction with Remote Settings."""
+
+
+class ResultContext(BaseModel):
+    """Context object to help manage results."""
+
+    core_suggestions_data: dict[int, Any] = {}
+    variants: dict[int, dict[SegmentTuple, Any]] = {}
+    full_keywords: dict[SegmentTuple, list] = {}
+    results: dict[SegmentTuple, dict[str, tuple[int, int]]] = {}
+    icons_in_use: set[str] = set()
 
 
 class RemoteSettingsBackend:
@@ -78,41 +93,30 @@ class RemoteSettingsBackend:
 
         self.icon_processor = icon_processor
 
-    async def fetch(self) -> SuggestionContent:
+    async def fetch(self) -> GlobalSuggestionContent:
         """Fetch suggestions, keywords, and icons from Remote Settings.
 
         Raises:
             RemoteSettingsError: Failed request to Remote Settings.
         """
-        suggestions: dict[str, tuple[int, int]] = {}
-        full_keywords: list[str] = []
-        results: list[dict[str, Any]] = []
+        results: dict[str, Any] = {}
         icons: dict[str, str] = {}
         icons_in_use: set[str] = set()
 
         records: list[dict[str, Any]] = await self.get_records()
         attachment_host: str = await self.get_attachment_host()
-        rs_suggestions: list[KintoSuggestion] = await self.get_suggestions(
-            attachment_host, records
-        )
+        rs_suggestions: dict[
+            str, dict[SegmentTuple, list[KintoSuggestion]]
+        ] = await self.get_suggestions(attachment_host, records)
 
-        fkw_index = 0
-
-        for suggestion in rs_suggestions:
-            result_id = len(results)
-            keywords = suggestion.keywords
-            icons_in_use.add(suggestion.icon)
-            full_keywords_tuples = suggestion.full_keywords
-            begin = 0
-            for full_keyword, n in full_keywords_tuples:
-                for query in keywords[begin : begin + n]:
-                    # Note that for adM suggestions, each keyword can only be
-                    # mapped to a single suggestion.
-                    suggestions[query] = (result_id, fkw_index)
-                begin += n
-                full_keywords.append(full_keyword)
-                fkw_index = len(full_keywords)
-            results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
+        for country, c_suggestions in rs_suggestions.items():
+            result_context = ResultContext()
+            self.process_suggestions(c_suggestions, result_context)
+            # update processed suggestions to results
+            icons_in_use.update(result_context.icons_in_use)
+            results[country] = SuggestionContent(
+                **result_context.model_dump(exclude={"icons_in_use"})
+            )
 
         icon_record = self.filter_records(record_type="icon", records=records)
 
@@ -144,12 +148,7 @@ class RemoteSettingsBackend:
                 logger.error(f"Error processing icon {id}: {e}")
                 icons[id] = original_url
 
-        return SuggestionContent(
-            suggestions=suggestions,
-            full_keywords=full_keywords,
-            results=results,
-            icons=icons,
-        )
+        return GlobalSuggestionContent(suggestion_content=results, icons=icons)
 
     async def get_records(self) -> list[dict[str, Any]]:
         """Get records from the Remote Settings server.
@@ -181,7 +180,7 @@ class RemoteSettingsBackend:
 
     async def get_suggestions(
         self, attachment_host: str, records: list[dict[str, Any]]
-    ) -> list[KintoSuggestion]:
+    ) -> dict[str, dict[SegmentTuple, list[KintoSuggestion]]]:
         """Get suggestion data from all data records.
 
         Args:
@@ -205,15 +204,25 @@ class RemoteSettingsBackend:
                                     base=attachment_host,
                                     url=record["attachment"]["location"],
                                 )
-                            )
+                            ),
+                            # denote segment dimensions of record to keep track of origin
+                            name=f"{record["country"]}_{record["form_factor"]}",
                         )
                     )
         except ExceptionGroup as error_group:
             raise RemoteSettingsError(error_group.exceptions)
 
-        suggestions: list[KintoSuggestion] = []
+        suggestions: dict[str, dict] = {}
+        for country in settings.remote_settings.countries:
+            suggestions[country] = {}
+
         for task in tasks:
-            suggestions.extend(await task)
+            result_suggestions = await task
+            country, *segments = task.get_name().split("_")
+            segment_key = tuple(segments)
+            if segment_key not in suggestions[country]:
+                suggestions[country][segment_key] = []
+            suggestions[country][tuple(segments)].extend(result_suggestions)
         return suggestions
 
     async def get_attachment(self, url: str) -> list[KintoSuggestion]:
@@ -256,11 +265,120 @@ class RemoteSettingsBackend:
             record for record in records if record["type"] == record_type
         ]
         if record_type == "amp":
-            recs = [
-                rec
-                for rec in recs
-                if rec["country"] in settings.remote_settings.countries
-                and rec["form_factor"] == "desktop"
-            ]
+            recs = [rec for rec in recs if rec["country"] in settings.remote_settings.countries]
 
         return recs
+
+    def process_suggestions(
+        self, suggestions: dict[SegmentTuple, list[KintoSuggestion]], result_context: ResultContext
+    ) -> None:
+        """TODO"""
+        # sort segments by id for processing
+        for segment_suggestions in suggestions.values():
+            segment_suggestions.sort(key=lambda x: x.id)
+
+        segments = suggestions.keys()
+        indices = {s: 0 for s in segments}
+        lengths = {s: len(suggestions[s]) for s in segments}
+
+        while any(indices[s] < lengths[s] for s in segments):
+            current_ids = []
+
+            # get current suggestion id at current indices
+            for segment in segments:
+                idx = indices[segment]
+                if idx < lengths[segment]:
+                    current_ids.append(suggestions[segment][idx].id)
+
+            min_id = min(current_ids)
+
+            common_suggestions = {}
+            for segment in segments:
+                idx = indices[segment]
+                if idx < lengths[segment] and suggestions[segment][idx].id == min_id:
+                    common_suggestions[segment] = suggestions[segment][idx]
+
+            diff_fields = self.find_diff_fields(list(common_suggestions.values()))
+
+            # retrieve an arbitrary suggestion to get base fields
+            primary_item = list(common_suggestions.values())[0]
+
+            result_context.core_suggestions_data[min_id] = primary_item.model_dump(
+                exclude={"keywords", "full_keywords", *diff_fields}
+            )
+
+            for segment, suggestion in common_suggestions.items():
+                if min_id not in result_context.variants:
+                    result_context.variants[min_id] = {}
+                result_context.variants[min_id][segment] = suggestion.model_dump(
+                    include=diff_fields
+                )
+                result_context.icons_in_use.add(suggestion.icon)
+                self.process_keywords(suggestion, segment, result_context)
+
+            for segment in segments:
+                if segment in common_suggestions:
+                    indices[segment] += 1
+            #if min_id == 61:
+            #    raise KeyError(f"core:{result_context.core_suggestions_data}\n variants:{result_context.variants}\n full_keywords:{result_context.full_keywords}\n result:{result_context.results}")
+
+    def find_diff_fields(self, suggestions: list[KintoSuggestion]) -> set[str]:
+        """Find all the fields that have different values"""
+        data = [s.model_dump() for s in suggestions]
+        all_keys = set().union(*(d.keys() for d in data))
+        return {key for key in all_keys if len({str(d.get(key)) for d in data}) > 1}
+
+    def process1_keywords(
+        self, suggestion: KintoSuggestion, segment: SegmentTuple, result_context: ResultContext
+    ) -> None:
+        """Process keywords for suggestions."""
+        keywords = suggestion.keywords
+        full_keywords_tuples = suggestion.full_keywords
+        result = result_context.results
+        if not result_context.full_keywords.get(segment):
+            result_context.full_keywords[segment] = []
+        full_keywords = result_context.full_keywords[segment]
+        begin = 0
+        fkw_index = 0
+        for full_keyword, n in full_keywords_tuples:
+            for query in keywords[begin : begin + n]:
+                # Note that for adM suggestions, each keyword can only be
+                # mapped to a single suggestion.
+                result[query] = (suggestion.id, fkw_index)
+                begin += n
+                full_keywords.append(full_keyword)
+                fkw_index = len(full_keywords)
+
+    def process_keywords(
+        self, suggestion: KintoSuggestion, segment: SegmentTuple, result_context: ResultContext
+    ) -> None:
+        """Process keywords for suggestions."""
+        keywords = suggestion.keywords
+        full_keywords_tuples = suggestion.full_keywords
+        result = result_context.results
+        if not result_context.full_keywords.get(segment):
+            result_context.full_keywords[segment] = []
+            result[segment] = {}
+            begin = 0
+            fkw_index = 0
+        else:
+            begin = 0
+            fkw_index = len(result_context.full_keywords[segment])-1
+
+        full_keywords = result_context.full_keywords[segment]
+
+        for full_keyword, n in full_keywords_tuples:
+            for query in keywords[begin : begin + n]:
+                try:
+                    if full_keywords[fkw_index] == full_keyword:
+                        result[segment][query] = (suggestion.id, fkw_index)
+                    else:
+                        full_keywords.append(full_keyword)
+                        fkw_index = len(full_keywords) - 1
+                except IndexError:
+                        full_keywords.append(full_keyword)
+                        fkw_index = len(full_keywords) - 1
+            begin += n
+
+
+

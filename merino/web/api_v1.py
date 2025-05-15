@@ -24,6 +24,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsResponse,
 )
 from merino.middleware import ScopeKey
+from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest import get_providers as get_suggest_providers
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.suggest.base import BaseProvider, SuggestionRequest
@@ -175,6 +176,7 @@ async def suggest(
     # enabled for this request by calling feature_flags.is_enabled("example").
     # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
+    user_agent: UserAgent = request.scope[ScopeKey.USER_AGENT]
 
     active_providers, default_providers = sources
     if providers is not None:
@@ -201,6 +203,7 @@ async def suggest(
             geolocation=geolocation,
             request_type=request_type,
             languages=languages,
+            user_agent=user_agent,
         )
         p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
