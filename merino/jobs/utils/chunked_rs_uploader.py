@@ -1,12 +1,9 @@
 """Chunked remote settings uploader"""
 
-import io
-import json
 import logging
-from dataclasses import dataclass
-from typing import Any
+from typing import Any, Tuple
 
-import kinto_http
+from merino.jobs.utils.rs_uploader import RemoteSettingsUploader
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +14,7 @@ class Chunk:
 
     """
 
+    uploader: "ChunkedRemoteSettingsUploader"
     start_index: int
     items: list[Any]
 
@@ -25,7 +23,8 @@ class Chunk:
         """Convert the item to a JSON serializable object."""
         return item
 
-    def __init__(self, start_index: int):
+    def __init__(self, uploader: "ChunkedRemoteSettingsUploader", start_index: int):
+        self.uploader = uploader
         self.start_index = start_index
         self.items = []
 
@@ -36,29 +35,45 @@ class Chunk:
 
     def add_item(self, item: Any) -> None:
         """Add an item to the chunk."""
-        self.items.append(self.item_to_json_serializable(item))
+        self.items.append(item)
 
-    def to_json_serializable(self) -> Any:
-        """Convert the chunk to a JSON serializable object that will be stored
-        in the chunk's attachment.
+    def to_record(self) -> dict[str, Any]:
+        """Create the record for the chunk. Subclasses can override this to
+        return a different record.
 
         """
-        return self.items
+        start, end = self.pretty_indexes()
+        record_id = "-".join([self.uploader.record_type, start, end])
+        return {
+            "id": record_id,
+            "type": self.uploader.record_type,
+        }
 
+    def to_attachment(self) -> Any:
+        """Create the attachment for the chunk. Subclasses can override this to
+        return a different attachment.
 
-@dataclass
-class KintoRecordUpdate:
-    """Represents a Kinto update we want to perform"""
+        """
+        return [self.item_to_json_serializable(i) for i in self.items]
 
-    record_data: Any
-    attachment_json: str
-    chunk_size: int
+    def pretty_indexes(self) -> Tuple[str, str]:
+        """Return (start, end) where `start` and `end` are the start and end
+        indexes of this chunk as zero-padded strings based on the total
+        suggestion count.
+
+        """
+        places = (
+            0 if not self.uploader.total_item_count else len(str(self.uploader.total_item_count))
+        )
+        start = f"{self.start_index:0{places}}"
+        end = f"{self.start_index + self.size:0{places}}"
+        return (start, end)
 
 
 class ChunkedRemoteSettingsUploader:
     """A class that uploads items to remote settings. Items are uploaded and
     stored in chunks. Chunking is handled automatically, and the caller only
-    needs to specify a chunk size and call `add_item()` until all items haveq
+    needs to specify a chunk size and call `add_item()` until all items have
     been added:
 
         with ChunkedRemoteSettingsUploader(
@@ -113,12 +128,9 @@ class ChunkedRemoteSettingsUploader:
     chunk_cls: type[Chunk]
     chunk_size: int
     current_chunk: Chunk
-    dry_run: bool
-    kinto: kinto_http.Client
     record_type: str
     total_item_count: int | None
-    # Records to add/update/delete in Kinto.  Keyed by record ID.  None indicates deletion.
-    _kinto_changes: dict[str, KintoRecordUpdate | None]
+    uploader: RemoteSettingsUploader
 
     def __init__(
         self,
@@ -135,17 +147,16 @@ class ChunkedRemoteSettingsUploader:
         """Initialize the uploader."""
         self.chunk_cls = chunk_cls
         self.chunk_size = chunk_size
-        self.current_chunk = chunk_cls(0)
-        self.dry_run = dry_run
+        self.current_chunk = chunk_cls(self, 0)
         self.record_type = record_type
         self.total_item_count = total_item_count
-        self._kinto_changes = {}
-        if dry_run:
-            self.kinto = None
-        else:
-            self.kinto = kinto_http.Client(
-                server_url=server, bucket=bucket, collection=collection, auth=auth
-            )
+        self.uploader = RemoteSettingsUploader(
+            auth=auth,
+            bucket=bucket,
+            collection=collection,
+            server=server,
+            dry_run=dry_run,
+        )
 
     def add_item(self, item: dict[str, Any]) -> None:
         """Add an item to the current_chunk. If the chunk becomes full as a
@@ -164,64 +175,12 @@ class ChunkedRemoteSettingsUploader:
         """
         self._finish_current_chunk()
 
-    def _execute_kinto_changes(self):
-        records_to_delete = [
-            record_id for (record_id, change) in self._kinto_changes.items() if change is None
-        ]
-        records_to_update = [
-            (record_id, change)
-            for (record_id, change) in self._kinto_changes.items()
-            if change is not None
-        ]
-
-        for record_id in records_to_delete:
-            logger.info(f"Deleting record: {record_id}")
-            if not self.dry_run:
-                self.kinto.delete_record(id=record_id)
-
-        for record_id, change in records_to_update:
-            logger.info(f"Uploading record: {record_id}")
-            if not self.dry_run:
-                self.kinto.update_record(data=change.record_data)
-
-            # The logger apparently formats the message even when no args are
-            # passed, and if `attachment_json` is an object literal (as opposed
-            # to an array literal), the curly braces must confuse it because it
-            # ends up logging nothing at all. Adding a trailing space seems to
-            # prevent that.
-            logger.info(f"Uploading attachment json with {change.chunk_size} items")
-            logger.debug(change.attachment_json + " ")
-
-            if not self.dry_run:
-                self.kinto.session.request(
-                    "post",
-                    f"/buckets/{self.kinto.bucket_name}/collections/"
-                    f"{self.kinto.collection_name}/records/{record_id}/attachment",
-                    files={
-                        "attachment": (
-                            f"{record_id}.json",
-                            io.StringIO(change.attachment_json),
-                            "application/json",
-                        )
-                    },
-                )
-
-        if len(records_to_delete) > 0:
-            logger.info(f"Deleted {len(records_to_delete)} records")
-
-        if len(records_to_update) > 0:
-            logger.info(f"Updated {len(records_to_update)} records")
-        self._kinto_changes = {}
-
     def delete_records(self) -> None:
         """Delete records whose "type" is equal to the uploader's
         `record_type`.
         """
         logger.info(f"Deleting records with type: {self.record_type}")
-        if not self.dry_run:
-            for record in self.kinto.get_records():
-                if record.get("type") == self.record_type:
-                    self._kinto_changes[record["id"]] = None
+        self.uploader.delete_if(lambda record: record.get("type") == self.record_type)
 
     def _finish_current_chunk(self) -> None:
         """If the current chunk is not empty, upload it and create a new empty
@@ -230,27 +189,14 @@ class ChunkedRemoteSettingsUploader:
         if self.current_chunk.size:
             self._upload_chunk(self.current_chunk)
             self.current_chunk = self.chunk_cls(
-                self.current_chunk.start_index + self.current_chunk.size
+                self, self.current_chunk.start_index + self.current_chunk.size
             )
 
     def _upload_chunk(self, chunk: Chunk) -> None:
         """Create a record and attachment for a chunk."""
-        # The record ID will be "{record_type}-{start}-{end}", where `start` and
-        # `end` are zero-padded based on the total suggestion count.
-        places = 0 if not self.total_item_count else len(str(self.total_item_count))
-        start = f"{chunk.start_index:0{places}}"
-        end = f"{chunk.start_index + chunk.size:0{places}}"
-        record_id = "-".join([self.record_type, start, end])
-        record = {
-            "id": record_id,
-            "type": self.record_type,
-        }
-        attachment_json = json.dumps(chunk.to_json_serializable())
-
-        self._kinto_changes[record_id] = KintoRecordUpdate(
-            record_data=record,
-            chunk_size=chunk.size,
-            attachment_json=attachment_json,
+        self.uploader.upload(
+            record=chunk.to_record(),
+            attachment=chunk.to_attachment(),
         )
 
     def __enter__(self):
@@ -258,4 +204,3 @@ class ChunkedRemoteSettingsUploader:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.finish()
-        self._execute_kinto_changes()

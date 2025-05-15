@@ -136,8 +136,8 @@ class GeonamesChunk(Chunk):
         """Convert the geoname to a JSON serializable object."""
         return geoname.to_json_serializable()
 
-    def __init__(self, start_index: int):
-        super().__init__(start_index)
+    def __init__(self, *args):
+        super().__init__(self, *args)
         self.max_alternate_name_length = 0
         self.max_alternate_name_word_count = 0
 
@@ -151,15 +151,12 @@ class GeonamesChunk(Chunk):
             if word_count > self.max_alternate_name_word_count:
                 self.max_alternate_name_word_count = word_count
 
-    def to_json_serializable(self) -> Any:
-        """Convert the chunk to a JSON serializable object that will be stored
-        in the chunk's attachment.
-
-        """
+    def to_attachment(self) -> Any:
+        """Create the attachment for the chunk."""
         return {
             "max_alternate_name_length": self.max_alternate_name_length,
             "max_alternate_name_word_count": self.max_alternate_name_word_count,
-            "geonames": self.items,
+            "geonames": [self.item_to_json_serializable(i) for i in self.items],
         }
 
 

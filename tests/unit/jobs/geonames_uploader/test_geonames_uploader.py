@@ -165,8 +165,8 @@ def test_upload_multiple_countries(mocker):
     )
 
 
-def test_to_json_serializable():
-    """Test GeonamesChunk.to_json_serializable()"""
+def test_to_attachment():
+    """Test GeonamesChunk.to_attachment()"""
     chunk = GeonamesChunk(0)
     chunk.add_item(
         Geoname(
@@ -214,7 +214,7 @@ def test_to_json_serializable():
             alternates=[GeonameAlternate(3, long_name.lower())],
         )
     )
-    assert chunk.to_json_serializable() == {
+    assert chunk.to_attachment() == {
         "geonames": [
             {
                 "admin1_code": "AL",
