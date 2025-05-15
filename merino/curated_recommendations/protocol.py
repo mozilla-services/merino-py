@@ -177,9 +177,11 @@ class CuratedRecommendation(CorpusItem):
         return start + (int(hashlib.sha256(s.encode("utf-8")).hexdigest(), 16) % (stop - start))
 
 
-class CuratedRecommendationDesktopV1(BaseModel):
-    """TODO"""
+class CuratedRecommendationDesktopLegacy(BaseModel):
+    """Schema for a single desktop legacy recommendation."""
 
+    # Note we can't name this variable as `__typename`
+    # because it is then considered an internal variable by Pydantic and omitted in the final API response.
     typename: str = Field(default="Recommendation", alias="__typename")
     recommendationId: str
     tileId: int
@@ -190,7 +192,7 @@ class CuratedRecommendationDesktopV1(BaseModel):
     imageUrl: HttpUrl
 
     class Config:
-        """TODO"""
+        """Allow field population using aliases (e.g., __typename)"""
 
         populate_by_name = True
 
@@ -251,8 +253,8 @@ class CuratedRecommendationsRequest(BaseModel):
         return []
 
 
-class CuratedRecommendationsDesktopV1Request(BaseModel):
-    """TODO"""
+class CuratedRecommendationsDesktopLegacyRequest(BaseModel):
+    """Request query parameters/variables received for the /desktop/legacy-recommendations endpoint"""
 
     locale: Locale
     region: str | None = None
@@ -369,10 +371,10 @@ class CuratedRecommendationsResponse(BaseModel):
     interestPicker: InterestPicker | None = None
 
 
-class CuratedRecommendationsDesktopV1Response(BaseModel):
+class CuratedRecommendationsDesktopLegacyResponse(BaseModel):
     """Response schema for a list of curated recommendations for the /desktop/v1/recommendations endpoint"""
 
-    data: list[CuratedRecommendationDesktopV1]
+    data: list[CuratedRecommendationDesktopLegacy]
 
 
 class LegacyGlobalRecommendationsResponse(BaseModel):

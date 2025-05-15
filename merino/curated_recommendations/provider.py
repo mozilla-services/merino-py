@@ -16,7 +16,7 @@ from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
-    CuratedRecommendationsDesktopV1Request,
+    CuratedRecommendationsDesktopLegacyRequest,
     CuratedRecommendationsResponse,
 )
 from merino.curated_recommendations.rankers import (
@@ -148,10 +148,10 @@ class CuratedRecommendationsProvider:
 
         return response
 
-    async def fetch_recommendations_for_desktop_v1(
-        self, request: CuratedRecommendationsDesktopV1Request
+    async def fetch_recommendations_for_desktop_legacy(
+        self, request: CuratedRecommendationsDesktopLegacyRequest
     ) -> list[CuratedRecommendation]:
-        """Provide curated recommendations."""
+        """Provide curated recommendations for /desktop/legacy-recommendations endpoint."""
         surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
 
         corpus_items = await self.scheduled_surface_backend.fetch(surface_id)

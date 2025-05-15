@@ -10,7 +10,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     Locale,
     CuratedRecommendation,
-    CuratedRecommendationDesktopV1,
+    CuratedRecommendationDesktopLegacy,
     LegacyFeedItem,
 )
 
@@ -98,17 +98,20 @@ def get_millisecond_epoch_time() -> int:
 
 
 def transform_image_url_to_pocket_cdn(original_url: HttpUrl) -> HttpUrl:
-    """TODO"""
+    """Transform an original image URL to a Pocket CDN URL for the given image with a fixed width of 450px.
+
+    The original URL is encoded and embedded as a query parameter.
+    """
     encoded_url = quote(str(original_url), safe="")
     return HttpUrl(f"https://img-getpocket.cdn.mozilla.net/direct?url={encoded_url}&resize=w450")
 
 
-def map_curated_recommendations_to_desktop_v1_recommendations(
+def map_curated_recommendations_to_desktop_legacy_recommendations(
     base_recommendations: list[CuratedRecommendation],
-) -> list[CuratedRecommendationDesktopV1]:
-    """TODO"""
+) -> list[CuratedRecommendationDesktopLegacy]:
+    """Map CuratedRecommendation object to CuratedRecommendationDesktopLegacy"""
     return [
-        CuratedRecommendationDesktopV1(
+        CuratedRecommendationDesktopLegacy(
             typename="Recommendation",
             recommendationId=item.corpusItemId,
             tileId=item.tileId,

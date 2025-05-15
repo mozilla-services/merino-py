@@ -21,9 +21,9 @@ from merino.curated_recommendations.provider import (
 )
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
-    CuratedRecommendationsDesktopV1Request,
+    CuratedRecommendationsDesktopLegacyRequest,
     CuratedRecommendationsResponse,
-    CuratedRecommendationsDesktopV1Response,
+    CuratedRecommendationsDesktopLegacyResponse,
     LegacyGlobalRecommendationsResponse,
 )
 from merino.middleware import ScopeKey
@@ -43,7 +43,7 @@ from merino.utils.api.query_params import (
     validate_suggest_custom_location_params,
 )
 from merino.curated_recommendations.utils import (
-    map_curated_recommendations_to_desktop_v1_recommendations,
+    map_curated_recommendations_to_desktop_legacy_recommendations,
     map_curated_recommendations_to_legacy_global_recommendations,
 )
 
@@ -334,25 +334,41 @@ async def curated_content(
     """
     return await provider.fetch(curated_recommendations_request)
 
-# TODO rename everything from v1 to something else
-@router.get(
-    "/desktop/v1/recommendations", summary="Curated Recommendations for New Tab Fx 115-129"
-)
-async def curated_content_desktop_v1(
-    query_params: Annotated[CuratedRecommendationsDesktopV1Request, Query()],
-    provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
-) -> CuratedRecommendationsDesktopV1Response:
-    """TODO"""
-    base_recommendations = await provider.fetch_recommendations_for_desktop_v1(query_params)
 
-    desktop_v1_recommendations = map_curated_recommendations_to_desktop_v1_recommendations(
+@router.get(
+    "/desktop/legacy-recommendations",
+    summary="Curated Recommendations for New Tab Firefox v115-129",
+)
+async def curated_content_desktop_legacy(
+    query_params: Annotated[CuratedRecommendationsDesktopLegacyRequest, Query()],
+    provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
+) -> CuratedRecommendationsDesktopLegacyResponse:
+    """Query for a list of curated content recommendations for legacy Firefox desktop clients
+    (versions 115–129) using the legacy schema structure.
+
+    This endpoint maps modern recommendation data into a response format compatible with
+    older Firefox versions that expect the original `/desktop/v1/recommendations` structure.
+
+    Query parameters:
+    - `locale`: The Firefox installed locale, for example en, en-US, de-DE.
+        See the Request body schema below for the full list of supported values.
+        This will determine the language of the recommendations.
+    - `region`: [Optional] The country-level region, for example US or IE (Ireland).
+        This will help return more relevant recommendations. If `region` is not provided,
+        then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
+    - `count`: [Optional] The maximum number of recommendations to return. Defaults to 30.
+    """
+    base_recommendations = await provider.fetch_recommendations_for_desktop_legacy(query_params)
+
+    desktop_v1_recommendations = map_curated_recommendations_to_desktop_legacy_recommendations(
         base_recommendations
     )
 
     # build response for api request
-    return CuratedRecommendationsDesktopV1Response(
+    return CuratedRecommendationsDesktopLegacyResponse(
         data=desktop_v1_recommendations[: query_params.count],
     )
+
 
 # TODO fix query params
 @router.get("/v3/firefox/global-recs", summary="Legacy Recommendations for New Tab Fx <= 114")
