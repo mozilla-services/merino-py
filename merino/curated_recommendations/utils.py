@@ -10,8 +10,8 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     Locale,
     CuratedRecommendation,
-    CuratedRecommendationDesktopLegacy,
-    LegacyFeedItem,
+    CuratedRecommendationLegacy,
+    CuratedRecommendationGlobalLegacy,
 )
 
 
@@ -106,12 +106,12 @@ def transform_image_url_to_pocket_cdn(original_url: HttpUrl) -> HttpUrl:
     return HttpUrl(f"https://img-getpocket.cdn.mozilla.net/direct?url={encoded_url}&resize=w450")
 
 
-def map_curated_recommendations_to_desktop_legacy_recommendations(
+def map_curated_recommendations_to_legacy_recommendations(
     base_recommendations: list[CuratedRecommendation],
-) -> list[CuratedRecommendationDesktopLegacy]:
+) -> list[CuratedRecommendationLegacy]:
     """Map CuratedRecommendation object to CuratedRecommendationDesktopLegacy"""
     return [
-        CuratedRecommendationDesktopLegacy(
+        CuratedRecommendationLegacy(
             typename="Recommendation",
             recommendationId=item.corpusItemId,
             tileId=item.tileId,
@@ -127,10 +127,10 @@ def map_curated_recommendations_to_desktop_legacy_recommendations(
 
 def map_curated_recommendations_to_legacy_global_recommendations(
     base_recommendations: list[CuratedRecommendation],
-) -> list[LegacyFeedItem]:
-    """TODO"""
+) -> list[CuratedRecommendationGlobalLegacy]:
+    """Map CuratedRecommendation object to CuratedRecommendationGlobalLegacy"""
     return [
-        LegacyFeedItem(
+        CuratedRecommendationGlobalLegacy(
             id=item.tileId,
             title=item.title,
             url=item.url,

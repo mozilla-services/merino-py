@@ -16,8 +16,9 @@ from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
-    CuratedRecommendationsDesktopLegacyRequest,
+    CuratedRecommendationsLegacyRequest,
     CuratedRecommendationsResponse,
+    CuratedRecommendationsGlobalLegacyRequest,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -148,11 +149,34 @@ class CuratedRecommendationsProvider:
 
         return response
 
-    async def fetch_recommendations_for_desktop_legacy(
-        self, request: CuratedRecommendationsDesktopLegacyRequest
+    async def fetch_recommendations_for_legacy_recommendations(
+        self, request: CuratedRecommendationsLegacyRequest
     ) -> list[CuratedRecommendation]:
-        """Provide curated recommendations for /desktop/legacy-recommendations endpoint."""
+        """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
         surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
+
+        corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
+        recommendations = [
+            CuratedRecommendation(
+                **item.model_dump(),
+                receivedRank=rank,
+                # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
+                # interest vector. Data science work shows that using the topics as features
+                # is effective as a first pass at personalization.
+                # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
+                features={item.topic.value: 1.0} if item.topic else {},
+            )
+            for rank, item in enumerate(corpus_items)
+        ]
+        return recommendations
+
+    async def fetch_recommendations_for_global_legacy_recommendations(
+        self, request: CuratedRecommendationsGlobalLegacyRequest
+    ) -> list[CuratedRecommendation]:
+        """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
+        surface_id = get_recommendation_surface_id(
+            locale=request.locale_lang, region=request.region
+        )
 
         corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
         recommendations = [

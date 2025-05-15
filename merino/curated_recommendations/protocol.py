@@ -177,7 +177,7 @@ class CuratedRecommendation(CorpusItem):
         return start + (int(hashlib.sha256(s.encode("utf-8")).hexdigest(), 16) % (stop - start))
 
 
-class CuratedRecommendationDesktopLegacy(BaseModel):
+class CuratedRecommendationLegacy(BaseModel):
     """Schema for a single desktop legacy recommendation."""
 
     # Note we can't name this variable as `__typename`
@@ -197,8 +197,8 @@ class CuratedRecommendationDesktopLegacy(BaseModel):
         populate_by_name = True
 
 
-class LegacyFeedItem(BaseModel):
-    """TODO"""
+class CuratedRecommendationGlobalLegacy(BaseModel):
+    """Schema for a single legacy global recommendation."""
 
     id: int
     title: str
@@ -253,12 +253,24 @@ class CuratedRecommendationsRequest(BaseModel):
         return []
 
 
-class CuratedRecommendationsDesktopLegacyRequest(BaseModel):
-    """Request query parameters/variables received for the /desktop/legacy-recommendations endpoint"""
+class CuratedRecommendationsLegacyRequest(BaseModel):
+    """Request query parameters/variables received for
+    the /curated-recommendations/legacy-115-129 endpoint
+    """
 
     locale: Locale
     region: str | None = None
     count: int = 30
+
+
+class CuratedRecommendationsGlobalLegacyRequest(BaseModel):
+    """Request query parameters/variables received for
+    the /curated-recommendations/legacy-global-recs-114 endpoint
+    """
+
+    locale_lang: Locale
+    region: str | None = None
+    count: int = 10
 
 
 @unique
@@ -371,16 +383,20 @@ class CuratedRecommendationsResponse(BaseModel):
     interestPicker: InterestPicker | None = None
 
 
-class CuratedRecommendationsDesktopLegacyResponse(BaseModel):
-    """Response schema for a list of curated recommendations for the /desktop/v1/recommendations endpoint"""
+class CuratedRecommendationsLegacyResponse(BaseModel):
+    """Response schema for a list of curated recommendations for
+    the /curated-recommendations/legacy-115-129 endpoint
+    """
 
-    data: list[CuratedRecommendationDesktopLegacy]
+    data: list[CuratedRecommendationLegacy]
 
 
-class LegacyGlobalRecommendationsResponse(BaseModel):
-    """Response schema for a list of curated recommendations for the /v3/firefox/global-recs endpoint"""
+class CuratedRecommendationsGlobalLegacyResponse(BaseModel):
+    """Response schema for a list of curated recommendations for
+    /curated-recommendations/legacy-global-recs-114 endpoint
+    """
 
     status: int = 1
     spocs: list = Field(default_factory=list)
     settings: dict[str, Any] = LEGACY_GLOBAL_RECS_SETTINGS
-    recommendations: list[LegacyFeedItem]
+    recommendations: list[CuratedRecommendationGlobalLegacy]

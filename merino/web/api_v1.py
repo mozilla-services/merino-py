@@ -21,10 +21,11 @@ from merino.curated_recommendations.provider import (
 )
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
-    CuratedRecommendationsDesktopLegacyRequest,
+    CuratedRecommendationsLegacyRequest,
+    CuratedRecommendationsGlobalLegacyRequest,
     CuratedRecommendationsResponse,
-    CuratedRecommendationsDesktopLegacyResponse,
-    LegacyGlobalRecommendationsResponse,
+    CuratedRecommendationsLegacyResponse,
+    CuratedRecommendationsGlobalLegacyResponse,
 )
 from merino.middleware import ScopeKey
 from merino.providers.suggest import get_providers as get_suggest_providers
@@ -43,7 +44,7 @@ from merino.utils.api.query_params import (
     validate_suggest_custom_location_params,
 )
 from merino.curated_recommendations.utils import (
-    map_curated_recommendations_to_desktop_legacy_recommendations,
+    map_curated_recommendations_to_legacy_recommendations,
     map_curated_recommendations_to_legacy_global_recommendations,
 )
 
@@ -336,13 +337,13 @@ async def curated_content(
 
 
 @router.get(
-    "/desktop/legacy-recommendations",
+    "/curated-recommendations/legacy-115-129",
     summary="Curated Recommendations for New Tab Firefox v115-129",
 )
-async def curated_content_desktop_legacy(
-    query_params: Annotated[CuratedRecommendationsDesktopLegacyRequest, Query()],
+async def curated_content_legacy(
+    query_params: Annotated[CuratedRecommendationsLegacyRequest, Query()],
     provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
-) -> CuratedRecommendationsDesktopLegacyResponse:
+) -> CuratedRecommendationsLegacyResponse:
     """Query for a list of curated content recommendations for legacy Firefox desktop clients
     (versions 115–129) using the legacy schema structure.
 
@@ -358,34 +359,53 @@ async def curated_content_desktop_legacy(
         then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 30.
     """
-    base_recommendations = await provider.fetch_recommendations_for_desktop_legacy(query_params)
+    base_recommendations = await provider.fetch_recommendations_for_legacy_recommendations(
+        query_params
+    )
 
-    desktop_v1_recommendations = map_curated_recommendations_to_desktop_legacy_recommendations(
+    legacy_recommendations = map_curated_recommendations_to_legacy_recommendations(
         base_recommendations
     )
 
     # build response for api request
-    return CuratedRecommendationsDesktopLegacyResponse(
-        data=desktop_v1_recommendations[: query_params.count],
+    return CuratedRecommendationsLegacyResponse(
+        data=legacy_recommendations[: query_params.count],
     )
 
 
-# TODO fix query params
-@router.get("/v3/firefox/global-recs", summary="Legacy Recommendations for New Tab Fx <= 114")
-async def legacy_global_recs(
-    query_params: Annotated[CuratedRecommendationsRequest, Query()],
+@router.get(
+    "/curated-recommendations/legacy-global-recs-114",
+    summary="Legacy Recommendations for New Tab Fx <= 114",
+)
+async def curated_content_global_recs_legacy(
+    query_params: Annotated[CuratedRecommendationsGlobalLegacyRequest, Query()],
     provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
-) -> LegacyGlobalRecommendationsResponse:
-    """TODO"""
-    base_recommendations = await provider.fetch(query_params)
+) -> CuratedRecommendationsGlobalLegacyResponse:
+    """Query for a list of curated content recommendations for legacy Firefox desktop clients
+    (versions <= 114) using the legacy schema structure.
+
+    This endpoint maps modern recommendation data into a response format compatible with
+    older Firefox versions that expect the original `/v3/firefox/global-recs` structure.
+
+    Query parameters:
+    - `locale_lang`: The Firefox installed locale, for example en, en-US, de-DE.
+        See the Request body schema below for the full list of supported values.
+        This will determine the language of the recommendations.
+    - `region`: [Optional] The country-level region, for example US or IE (Ireland).
+        This will help return more relevant recommendations. If `region` is not provided,
+        then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
+    - `count`: [Optional] The maximum number of recommendations to return. Defaults to 10."""
+    base_recommendations = await provider.fetch_recommendations_for_global_legacy_recommendations(
+        query_params
+    )
 
     legacy_global_recommendations = map_curated_recommendations_to_legacy_global_recommendations(
-        base_recommendations.data
+        base_recommendations
     )
 
     # build response for api request
-    return LegacyGlobalRecommendationsResponse(
-        recommendations=legacy_global_recommendations,
+    return CuratedRecommendationsGlobalLegacyResponse(
+        recommendations=legacy_global_recommendations[: query_params.count],
     )
 
 
