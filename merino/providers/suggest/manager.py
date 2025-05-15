@@ -123,7 +123,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 backend=(
                     RemoteSettingsBackend(
                         server=settings.remote_settings.server,
-                        collection=settings.remote_settings.collection,
+                        collection=settings.remote_settings.collection_amp,
                         bucket=settings.remote_settings.bucket,
                         icon_processor=IconProcessor(
                             gcs_project=settings.image_gcs.gcs_project,

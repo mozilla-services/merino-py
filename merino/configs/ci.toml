@@ -15,7 +15,7 @@ format = "pretty"
 [ci.remote_settings]
 server = "http://kinto:8888"
 bucket = "main"
-collection = "quicksuggest"
+collection = "quicksuggest-other"
 
 [ci.accuweather]
 api_key = "test"

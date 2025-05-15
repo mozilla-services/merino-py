@@ -159,9 +159,12 @@ server = "https://firefox.settings.services.mozilla.com"
 bucket = "main"
 
 # MERINO_REMOTE_SETTINGS__COLLECTION
-# The collection to use for Remote Settings providers if not specified in provider config.
-# Ex: "quicksuggest".
-collection = "quicksuggest-amp"
+# The remote settings collection that contains data other than AMP.
+collection = "quicksuggest-other"
+
+# MERINO_REMOTE_SETTINGS__COLLECTION_AMP
+# The remote settings collection that contains AMP data.
+collection_amp = "quicksuggest-amp"
 
 # The collection to use for uploading fakespot suggestions if not specified on the command line
 collection_fakespot = "fakespot-suggest-products"
@@ -746,11 +749,13 @@ alternates_path = "/export/dump/alternatenames/{country_code}.zip"
 # How large a geoname's population must be for it to be included in the output.
 # Geonames with populations at least this large will be included.
 population_threshold = 50_000
+
 # MERINO_JOBS__GEONAMES_UPLOADER__CITY_ALTERNATES_ISO_LANGUAGES
 # Which alternates of selected cities to include in the output. Alternates are
 # categorized by language, like "en", plus a few other categories like
 # abbreviations ("abbr") and airport codes ("iata", "icao", "faac").
 city_alternates_iso_languages = ["en", "en-US", "iata", "icao", "faac", "abbr"]
+
 # MERINO_JOBS__GEONAMES_UPLOADER__REGION_ALTERNATES_ISO_LANGUAGES
 # Which alternates of selected regions to include in the output. Takes the same
 # values as city alternates. For U.S. states, "en" alternates include verbose
@@ -758,6 +763,7 @@ city_alternates_iso_languages = ["en", "en-US", "iata", "icao", "faac", "abbr"]
 # interfere with prefix matching, so we only include "abbr". Note that full
 # names like "California" are always included in the output.
 region_alternates_iso_languages = ["abbr"]
+
 # MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY_CODES
 # List of countries whose geonames will be uploaded. All countries' data will be
 # uploaded together without any separation into different records, attachments,
@@ -765,6 +771,7 @@ region_alternates_iso_languages = ["abbr"]
 # Canadian cities, since there are many Canadians Mozillians and relatively few
 # Canadian cities over the population threshold.
 country_codes = ["US", "CA"]
+
 # MERINO_JOBS__GEONAMES_UPLOADER__RECORD_TYPE
 # The "type" of each geonames remote settings record.
 record_type = "geonames"
