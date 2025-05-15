@@ -16,6 +16,7 @@ from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
+    CuratedRecommendationsDesktopV1Request,
     CuratedRecommendationsResponse,
 )
 from merino.curated_recommendations.rankers import (
@@ -146,3 +147,24 @@ class CuratedRecommendationsProvider:
             response.interestPicker = create_interest_picker(response.feeds)
 
         return response
+
+    async def fetch_recommendations_for_desktop_v1(
+        self, request: CuratedRecommendationsDesktopV1Request
+    ) -> list[CuratedRecommendation]:
+        """Provide curated recommendations."""
+        surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
+
+        corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
+        recommendations = [
+            CuratedRecommendation(
+                **item.model_dump(),
+                receivedRank=rank,
+                # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
+                # interest vector. Data science work shows that using the topics as features
+                # is effective as a first pass at personalization.
+                # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
+                features={item.topic.value: 1.0} if item.topic else {},
+            )
+            for rank, item in enumerate(corpus_items)
+        ]
+        return recommendations

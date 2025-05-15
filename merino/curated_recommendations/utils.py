@@ -3,13 +3,15 @@
 import re
 import time
 
+from urllib.parse import quote
+from pydantic import HttpUrl
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     Locale,
     CuratedRecommendation,
     CuratedRecommendationDesktopV1,
-    TypeName,
+    LegacyFeedItem,
 )
 
 
@@ -95,6 +97,12 @@ def get_millisecond_epoch_time() -> int:
     return int(time.time() * 1000)
 
 
+def transform_image_url_to_pocket_cdn(original_url: HttpUrl) -> HttpUrl:
+    """TODO"""
+    encoded_url = quote(str(original_url), safe="")
+    return HttpUrl(f"https://img-getpocket.cdn.mozilla.net/direct?url={encoded_url}&resize=w450")
+
+
 def map_curated_recommendations_to_desktop_v1_recommendations(
     base_recommendations: list[CuratedRecommendation],
 ) -> list[CuratedRecommendationDesktopV1]:
@@ -109,6 +117,24 @@ def map_curated_recommendations_to_desktop_v1_recommendations(
             excerpt=item.excerpt,
             publisher=item.publisher,
             imageUrl=item.imageUrl,
+        )
+        for item in base_recommendations
+    ]
+
+
+def map_curated_recommendations_to_legacy_global_recommendations(
+    base_recommendations: list[CuratedRecommendation],
+) -> list[LegacyFeedItem]:
+    """TODO"""
+    return [
+        LegacyFeedItem(
+            id=item.tileId,
+            title=item.title,
+            url=item.url,
+            excerpt=item.excerpt,
+            domain=item.publisher,
+            image_src=transform_image_url_to_pocket_cdn(item.imageUrl),
+            raw_image_src=item.imageUrl,
         )
         for item in base_recommendations
     ]

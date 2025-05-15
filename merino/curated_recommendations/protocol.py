@@ -2,7 +2,7 @@
 
 import hashlib
 from enum import unique, Enum
-from typing import Annotated
+from typing import Annotated, Any
 import logging
 from datetime import datetime
 
@@ -86,6 +86,27 @@ class ExperimentName(str, Enum):
 # generated the identifier.
 MAX_TILE_ID = (1 << 53) - 1
 MIN_TILE_ID = 10000000
+
+LEGACY_GLOBAL_RECS_SETTINGS = {
+    "domainAffinityParameterSets": {},
+    "timeSegments": [
+        {
+            "id": "week",
+            "startTime": 604800,
+            "endTime": 0,
+            "weightPosition": 1,
+        },
+        {
+            "id": "month",
+            "startTime": 2592000,
+            "endTime": 604800,
+            "weightPosition": 0.5,
+        },
+    ],
+    "recsExpireTime": 5400,
+    "spocsPerNewTabs": 0.5,
+    "version": "6f605b0212069b4b8d3d040faf55742061a25c16",
+}
 
 
 class SectionConfiguration(BaseModel):
@@ -174,6 +195,18 @@ class CuratedRecommendationDesktopV1(BaseModel):
         populate_by_name = True
 
 
+class LegacyFeedItem(BaseModel):
+    """TODO"""
+
+    id: int
+    title: str
+    url: HttpUrl
+    excerpt: str
+    domain: str
+    image_src: HttpUrl
+    raw_image_src: HttpUrl
+
+
 class CuratedRecommendationsRequest(BaseModel):
     """Body schema for requesting a list of curated recommendations"""
 
@@ -216,6 +249,14 @@ class CuratedRecommendationsRequest(BaseModel):
                 # Not wrapped in a list
                 logger.warning(f"Topics not wrapped in a list: {values}")
         return []
+
+
+class CuratedRecommendationsDesktopV1Request(BaseModel):
+    """TODO"""
+
+    locale: Locale
+    region: str | None = None
+    count: int = 30
 
 
 @unique
@@ -332,3 +373,12 @@ class CuratedRecommendationsDesktopV1Response(BaseModel):
     """Response schema for a list of curated recommendations for the /desktop/v1/recommendations endpoint"""
 
     data: list[CuratedRecommendationDesktopV1]
+
+
+class LegacyGlobalRecommendationsResponse(BaseModel):
+    """Response schema for a list of curated recommendations for the /v3/firefox/global-recs endpoint"""
+
+    status: int = 1
+    spocs: list = Field(default_factory=list)
+    settings: dict[str, Any] = LEGACY_GLOBAL_RECS_SETTINGS
+    recommendations: list[LegacyFeedItem]

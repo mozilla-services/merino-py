@@ -21,8 +21,10 @@ from merino.curated_recommendations.provider import (
 )
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
+    CuratedRecommendationsDesktopV1Request,
     CuratedRecommendationsResponse,
     CuratedRecommendationsDesktopV1Response,
+    LegacyGlobalRecommendationsResponse,
 )
 from merino.middleware import ScopeKey
 from merino.providers.suggest import get_providers as get_suggest_providers
@@ -42,6 +44,7 @@ from merino.utils.api.query_params import (
 )
 from merino.curated_recommendations.utils import (
     map_curated_recommendations_to_desktop_v1_recommendations,
+    map_curated_recommendations_to_legacy_global_recommendations,
 )
 
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
@@ -331,25 +334,42 @@ async def curated_content(
     """
     return await provider.fetch(curated_recommendations_request)
 
-
-# CuratedRecommendationsDesktopV1Request
+# TODO rename everything from v1 to something else
 @router.get(
     "/desktop/v1/recommendations", summary="Curated Recommendations for New Tab Fx 115-129"
 )
 async def curated_content_desktop_v1(
-    query_params: Annotated[CuratedRecommendationsRequest, Query()],
+    query_params: Annotated[CuratedRecommendationsDesktopV1Request, Query()],
     provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
 ) -> CuratedRecommendationsDesktopV1Response:
     """TODO"""
-    base_recommendations = await provider.fetch(query_params)
+    base_recommendations = await provider.fetch_recommendations_for_desktop_v1(query_params)
 
     desktop_v1_recommendations = map_curated_recommendations_to_desktop_v1_recommendations(
-        base_recommendations.data
+        base_recommendations
     )
 
     # build response for api request
     return CuratedRecommendationsDesktopV1Response(
-        data=desktop_v1_recommendations,
+        data=desktop_v1_recommendations[: query_params.count],
+    )
+
+# TODO fix query params
+@router.get("/v3/firefox/global-recs", summary="Legacy Recommendations for New Tab Fx <= 114")
+async def legacy_global_recs(
+    query_params: Annotated[CuratedRecommendationsRequest, Query()],
+    provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
+) -> LegacyGlobalRecommendationsResponse:
+    """TODO"""
+    base_recommendations = await provider.fetch(query_params)
+
+    legacy_global_recommendations = map_curated_recommendations_to_legacy_global_recommendations(
+        base_recommendations.data
+    )
+
+    # build response for api request
+    return LegacyGlobalRecommendationsResponse(
+        recommendations=legacy_global_recommendations,
     )
 
 
