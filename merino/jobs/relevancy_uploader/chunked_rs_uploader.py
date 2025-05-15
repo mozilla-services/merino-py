@@ -14,7 +14,7 @@ class RelevancyChunk(Chunk):
     uploader: "ChunkedRemoteSettingsRelevancyUploader"
 
     def to_record(self) -> dict[str, Any]:
-        """Create a record and attachment for a chunk."""
+        """Create the record for the chunk."""
         start, end = self.pretty_indexes()
         record_id = "-".join([self.uploader.category_name, start, end])
         return {
