@@ -137,7 +137,7 @@ class Provider(BaseProvider):
             suggestion_content = self.global_suggestion_content.suggestion_content.get(country)
             segment = (form_factor,)
             if (
-                suggest_look_ups := suggestion_content.results.get(segment, {}).get(q)
+                suggest_look_ups := suggestion_content.common_results.get(q) or suggestion_content.results.get(segment, {}).get(q)
             ) is not None:
                 suggestion_id, fkw_id = suggest_look_ups
                 res = suggestion_content.core_suggestions_data[suggestion_id]

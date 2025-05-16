@@ -20,7 +20,7 @@ class SuggestionContent(BaseModel):
     full_keywords: list[str] = []
     # A list of suggestion results
     results: dict[SegmentTuple, dict[str, tuple[int, int]]] = {}
-
+    common_results: dict[str, tuple[int, int]] = {}
 
 class GlobalSuggestionContent(BaseModel):
     """Class that holds all results from a fetch operation."""

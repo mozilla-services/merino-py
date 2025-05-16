@@ -1,6 +1,7 @@
 """A thin wrapper around the Remote Settings client."""
 
 import asyncio
+import json
 from asyncio import Task
 from typing import Any, Literal, cast
 from urllib.parse import urljoin
@@ -53,6 +54,7 @@ class ResultContext(BaseModel):
     variants: dict[int, dict[SegmentTuple, Any]] = {}
     full_keywords: list[str] = []
     results: dict[SegmentTuple, dict[str, tuple[int, int]]] = {}
+    common_results: dict[str, tuple[int, int]] = {}
     icons_in_use: set[str] = set()
 
 
@@ -111,6 +113,7 @@ class RemoteSettingsBackend:
         for country, c_suggestions in rs_suggestions.items():
             result_context = ResultContext()
             self.process_suggestions(c_suggestions, result_context)
+            self.reduce_results(result_context)
             # update processed suggestions to results
             icons_in_use.update(result_context.icons_in_use)
             results[country] = SuggestionContent(
@@ -146,7 +149,6 @@ class RemoteSettingsBackend:
             except Exception as e:
                 logger.error(f"Error processing icon {id}: {e}")
                 icons[id] = original_url
-
         return GlobalSuggestionContent(suggestion_content=results, icons=icons)
 
     async def get_records(self) -> list[dict[str, Any]]:
@@ -264,7 +266,7 @@ class RemoteSettingsBackend:
             record for record in records if record["type"] == record_type
         ]
         if record_type == "amp":
-            recs = [rec for rec in recs if rec["country"] in settings.remote_settings.countries]
+            recs = [rec for rec in recs if rec["country"] in settings.remote_settings.countries and rec["form_factor"] in settings.remote_settings.form_factors]
 
         return recs
 
@@ -362,3 +364,17 @@ class RemoteSettingsBackend:
                     result[s][query] = (suggestion.id, fkw_index)
 
             begin += n
+
+    def reduce_results(self, result_context: ResultContext) -> None:
+        dicts = list(result_context.results.values())
+        common_items = set(dicts[0].items())
+        for d in dicts[1:]:
+            common_items &= set(d.items())
+
+        # store common results
+        result_context.common_results = dict(common_items)
+
+        # remove common results
+        for d in dicts:
+            for k, v in common_items:
+                d.pop(k, None)
