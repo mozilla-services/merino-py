@@ -184,7 +184,7 @@ EN_INDEX_SETTINGS: dict = {
             "accentfolding": {"type": "icu_folding"},
         },
         "analyzer": {
-            "stop_analyzer": {
+            "stop_analyzer_en": {
                 "filter": [
                     "icu_normalizer",
                     "stop_filter",
@@ -195,19 +195,19 @@ EN_INDEX_SETTINGS: dict = {
                 "type": "custom",
                 "tokenizer": "standard",
             },
-            "plain_search": {
+            "plain_search_en": {
                 "filter": ["remove_empty", "token_limit", "lowercase"],
                 "char_filter": ["word_break_helper"],
                 "type": "custom",
                 "tokenizer": "whitespace",
             },
-            "plain": {
+            "plain_en": {
                 "filter": ["remove_empty", "token_limit", "lowercase"],
                 "char_filter": ["word_break_helper"],
                 "type": "custom",
                 "tokenizer": "whitespace",
             },
-            "stop_analyzer_search": {
+            "stop_analyzer_search_en": {
                 "filter": [
                     "icu_normalizer",
                     "accentfolding",

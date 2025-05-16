@@ -220,6 +220,63 @@ def test_stream_latest_dump_skips_if_up_to_date(
     assert returned_blob == mock_blob
 
 
+@patch.object(FileManager, "_stream_dump_to_gcs")
+@patch.object(FileManager, "get_latest_dump")
+@patch.object(FileManager, "get_latest_gcs")
+def test_stream_latest_dump_when_gcs_empty(mock_get_latest_gcs, mock_get_latest_dump, mock_stream):
+    """Triggers streaming when no prior GCS dump exists (first-time run)."""
+    mock_client = MagicMock()
+
+    mock_blob = MagicMock()
+    mock_blob.name = "BlobMock"
+
+    # First call raises RuntimeError (no file)
+    mock_get_latest_gcs.side_effect = [RuntimeError("No matching dump files found"), mock_blob]
+    mock_get_latest_dump.return_value = (
+        "http://mock-url/dewiki-20250512-cirrussearch-content.json.gz"
+    )
+
+    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
+        fm = FileManager("gcs-bucket", "gcs-project", "http://mock-url/", "de")
+        returned_blob = fm.stream_latest_dump_to_gcs()
+
+    mock_stream.assert_called_once_with(
+        "http://mock-url/dewiki-20250512-cirrussearch-content.json.gz"
+    )
+    assert returned_blob.name == "BlobMock"
+
+
+@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
+@patch("merino.jobs.wikipedia_indexer.filemanager.Client")
+def test_get_latest_dump_when_gcs_is_none(mock_storage_client, mock_requests_get):
+    """Returns remote dump URL on first run when no GCS file exists."""
+    html = """
+    <html>
+      <body>
+        <a href="dewiki-20250512-cirrussearch-content.json.gz">dewiki-20250512-cirrussearch-content.json.gz</a>
+      </body>
+    </html>
+    """
+    mock_response = MagicMock()
+    mock_response.content = html
+    mock_requests_get.return_value = mock_response
+
+    mock_client_instance = MagicMock()
+    mock_storage_client.return_value = mock_client_instance
+
+    # --- FileManager setup
+    fm = FileManager(
+        gcs_bucket="gcs-bucket",
+        gcs_project="gcs-project",
+        export_base_url="http://mock-url/",
+        language="de",
+    )
+
+    result = fm.get_latest_dump(latest_gcs=None)
+
+    assert result == "http://mock-url/dewiki-20250512-cirrussearch-content.json.gz"
+
+
 def test_parse_date_returns_correct_datetime():
     """Parses and returns the correct datetime from a valid filename."""
     mock_client = MagicMock()
