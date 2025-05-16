@@ -2,9 +2,10 @@
 
 import asyncio
 import logging
-from typing import Optional, List
-
 import httpx
+
+from typing import Optional, List
+from pprint import pprint
 
 from merino.utils.gcs.models import Image
 from merino.utils.http_client import create_http_client
@@ -106,3 +107,25 @@ class AsyncFaviconDownloader:
             )
         except Exception as ex:
             logger.warning(f"Error occurred when resetting favicon downloader: {ex}")
+
+
+class DomainMetadataExtractionErrorsCollector:
+    """Collects metadata extraction errors for multiple domains."""
+
+    # Maps domain names to a list of failure reasons.
+    domain_failure_reasons: dict[str, list[str]]
+
+    def __init__(self) -> None:
+        # Initialize the failure reasons dictionary.
+        self.domain_failure_reasons = {}
+
+    def add_failure_reason_for_domain(self, *, domain: str, failure_reason: str):
+        """Add a failure reason for a specific domain."""
+        if domain not in self.domain_failure_reasons:
+            self.domain_failure_reasons[domain] = []
+
+        self.domain_failure_reasons[domain].append(failure_reason)
+
+    def print_failures(self) -> None:
+        """Pretty print the collected domain failure reasons."""
+        logger.warning(f"@@@@@@@@@@@@@@@@@@@ \n{self.domain_failure_reasons}")
