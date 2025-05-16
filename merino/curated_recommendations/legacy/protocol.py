@@ -26,7 +26,7 @@ LEGACY_FX114_RECS_SETTINGS = {
 }
 
 
-class CuratedRecommendationsLegacyFx115fx129Request(BaseModel):
+class CuratedRecommendationsLegacyFx115Fx129Request(BaseModel):
     """Request query parameters/variables received for
     the /curated-recommendations/legacy-115-129 endpoint
     """
@@ -38,7 +38,7 @@ class CuratedRecommendationsLegacyFx115fx129Request(BaseModel):
 
 class CuratedRecommendationsLegacyFx114Request(BaseModel):
     """Request query parameters/variables received for
-    the /curated-recommendations/legacy-global-recs-114 endpoint
+    the /curated-recommendations/legacy-114 endpoint
     """
 
     locale_lang: Locale
@@ -64,7 +64,7 @@ class CuratedRecommendationLegacyFx115Fx129(BaseModel):
 
 
 class CuratedRecommendationLegacyFx114(BaseModel):
-    """Schema for a single legacy global recommendation."""
+    """Schema for a single legacy Fx114 recommendation."""
 
     id: int
     title: str
@@ -85,7 +85,7 @@ class CuratedRecommendationsLegacyFx115Fx129Response(BaseModel):
 
 class CuratedRecommendationsLegacyFx114Response(BaseModel):
     """Response schema for a list of curated recommendations for
-    /curated-recommendations/legacy-global-recs-114 endpoint
+    /curated-recommendations/legacy-114 endpoint
     """
 
     status: int = 1

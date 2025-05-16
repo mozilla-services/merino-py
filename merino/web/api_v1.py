@@ -28,7 +28,7 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
 from merino.curated_recommendations.legacy.protocol import (
-    CuratedRecommendationsLegacyFx115fx129Request,
+    CuratedRecommendationsLegacyFx115Fx129Request,
     CuratedRecommendationsLegacyFx114Request,
     CuratedRecommendationsLegacyFx115Fx129Response,
     CuratedRecommendationsLegacyFx114Response,
@@ -343,7 +343,7 @@ async def curated_content(
     summary="Curated Recommendations for New Tab Firefox v115-129",
 )
 async def curated_content_legacy_fx_115_129(
-    query_params: Annotated[CuratedRecommendationsLegacyFx115fx129Request, Query()],
+    query_params: Annotated[CuratedRecommendationsLegacyFx115Fx129Request, Query()],
     provider: LegacyCuratedRecommendationsProvider = Depends(get_legacy_provider),
 ) -> CuratedRecommendationsLegacyFx115Fx129Response:
     """Query for a list of curated content recommendations for legacy Firefox desktop clients

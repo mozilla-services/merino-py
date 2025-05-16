@@ -4,10 +4,8 @@ import re
 import time
 
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
-from merino.curated_recommendations.protocol import (
-    CuratedRecommendationsRequest,
-    Locale,
-)
+from merino.curated_recommendations.protocol import CuratedRecommendationsRequest, Locale
+
 
 
 def get_recommendation_surface_id(locale: Locale, region: str | None = None) -> SurfaceId:

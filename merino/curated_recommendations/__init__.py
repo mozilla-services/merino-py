@@ -129,6 +129,6 @@ def get_provider() -> CuratedRecommendationsProvider:
 
 
 def get_legacy_provider() -> LegacyCuratedRecommendationsProvider:
-    """TODO"""
+    """Return the legacy curated recommendations provider"""
     global _legacy_provider
     return _legacy_provider

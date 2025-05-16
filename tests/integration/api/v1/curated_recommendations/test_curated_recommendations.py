@@ -113,14 +113,16 @@ def provider(
         sections_backend=sections_backend,
     )
 
+
 @pytest.fixture(name="legacy_corpus_provider")
 def legacy_provider(
     scheduled_surface_backend: ScheduledSurfaceBackend,
 ) -> LegacyCuratedRecommendationsProvider:
-    """Mock curated recommendations provider."""
+    """Mock legacy curated recommendations provider."""
     return LegacyCuratedRecommendationsProvider(
         scheduled_surface_backend=scheduled_surface_backend,
     )
+
 
 @pytest.fixture(autouse=True)
 def setup_curated_recommendations_provider(corpus_provider):
@@ -130,7 +132,7 @@ def setup_curated_recommendations_provider(corpus_provider):
 
 @pytest.fixture(autouse=True)
 def setup_legacy_curated_recommendations_provider(legacy_corpus_provider):
-    """Set up the curated recommendations provider"""
+    """Set up the legacy curated recommendations provider"""
     app.dependency_overrides[get_legacy_provider] = lambda: legacy_corpus_provider
 
 
@@ -216,6 +218,7 @@ async def test_curated_recommendations(repeat):
             for i, item in enumerate(corpus_items)
         )
 
+
 @pytest.mark.asyncio
 async def test_curated_recommendations_for_fx115_129():
     """Test the legacy fx115-129 curated recommedations endpoint response is as expected"""
@@ -241,6 +244,7 @@ async def test_curated_recommendations_for_fx115_129():
         assert all(item["excerpt"] for item in corpus_items)
         assert all(item["publisher"] for item in corpus_items)
         assert all(item["imageUrl"] for item in corpus_items)
+
 
 @pytest.mark.asyncio
 async def test_curated_recommendations_for_fx114():

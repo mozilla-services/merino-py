@@ -12,7 +12,7 @@ from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.curated_recommendations.legacy.protocol import (
     CuratedRecommendationLegacyFx115Fx129,
     CuratedRecommendationLegacyFx114,
-    CuratedRecommendationsLegacyFx115fx129Request,
+    CuratedRecommendationsLegacyFx115Fx129Request,
     CuratedRecommendationsLegacyFx115Fx129Response,
     CuratedRecommendationsLegacyFx114Request,
     CuratedRecommendationsLegacyFx114Response,
@@ -47,7 +47,7 @@ class LegacyCuratedRecommendationsProvider:
     def map_curated_recommendations_to_legacy_recommendations_fx_115_129(
         base_recommendations: list[CuratedRecommendation],
     ) -> list[CuratedRecommendationLegacyFx115Fx129]:
-        """Map CuratedRecommendation object to CuratedRecommendationDesktopLegacy"""
+        """Map CuratedRecommendation object to CuratedRecommendationLegacyFx115Fx129"""
         return [
             CuratedRecommendationLegacyFx115Fx129(
                 typename="Recommendation",
@@ -66,7 +66,7 @@ class LegacyCuratedRecommendationsProvider:
     def map_curated_recommendations_to_legacy_recommendations_fx_114(
         base_recommendations: list[CuratedRecommendation],
     ) -> list[CuratedRecommendationLegacyFx114]:
-        """Map CuratedRecommendation object to CuratedRecommendationGlobalLegacy"""
+        """Map CuratedRecommendation object to CuratedRecommendationLegacyFx114"""
         return [
             CuratedRecommendationLegacyFx114(
                 id=item.tileId,
@@ -83,7 +83,7 @@ class LegacyCuratedRecommendationsProvider:
         ]
 
     async def fetch_recommendations_for_legacy_fx_115_129(
-        self, request: CuratedRecommendationsLegacyFx115fx129Request
+        self, request: CuratedRecommendationsLegacyFx115Fx129Request
     ) -> CuratedRecommendationsLegacyFx115Fx129Response:
         """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
         surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
