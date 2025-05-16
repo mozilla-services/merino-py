@@ -246,6 +246,37 @@ def test_stream_latest_dump_when_gcs_empty(mock_get_latest_gcs, mock_get_latest_
     assert returned_blob.name == "BlobMock"
 
 
+@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
+@patch("merino.jobs.wikipedia_indexer.filemanager.Client")
+def test_get_latest_dump_when_gcs_is_none(mock_storage_client, mock_requests_get):
+    """Returns remote dump URL on first run when no GCS file exists."""
+    html = """
+    <html>
+      <body>
+        <a href="dewiki-20250512-cirrussearch-content.json.gz">dewiki-20250512-cirrussearch-content.json.gz</a>
+      </body>
+    </html>
+    """
+    mock_response = MagicMock()
+    mock_response.content = html
+    mock_requests_get.return_value = mock_response
+
+    mock_client_instance = MagicMock()
+    mock_storage_client.return_value = mock_client_instance
+
+    # --- FileManager setup
+    fm = FileManager(
+        gcs_bucket="gcs-bucket",
+        gcs_project="gcs-project",
+        export_base_url="http://mock-url/",
+        language="de",
+    )
+
+    result = fm.get_latest_dump(latest_gcs=None)
+
+    assert result == "http://mock-url/dewiki-20250512-cirrussearch-content.json.gz"
+
+
 def test_parse_date_returns_correct_datetime():
     """Parses and returns the correct datetime from a valid filename."""
     mock_client = MagicMock()

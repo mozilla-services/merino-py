@@ -79,8 +79,8 @@ class FileManager:
             self.gcs_bucket = gcs_bucket
             self.object_prefix = ""
 
-    def get_latest_dump(self, latest_gcs: Blob) -> Optional[str]:
-        """Find the latest export that's newer than the latest on gcs."""
+    def get_latest_dump(self, latest_gcs: Optional[Blob]) -> Optional[str]:
+        """Find the latest export that's newer than the latest on GCS (if any)."""
         resp = requests.get(self.base_url)  # nosec
         parser = DirectoryParser(self.file_pattern)
         parser.feed(str(resp.content))
@@ -88,8 +88,15 @@ class FileManager:
         if len(links) == 1:
             name = links[0]
             url = urljoin(self.base_url, name)
-            last_gcs_date = self._parse_date(str(latest_gcs.name))
+
             link_date = self._parse_date(name)
+
+            if latest_gcs:
+                last_gcs_date = self._parse_date(str(latest_gcs.name))
+            else:
+                logger.info("")
+                last_gcs_date = dt.min  # treat as oldest possible date for first_run
+
             if last_gcs_date < link_date:
                 return url
         return None
