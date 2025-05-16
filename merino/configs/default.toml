@@ -570,9 +570,27 @@ es_url = "http://localhost:9200"
 # The base64 key used to authenticate on the Elasticsearch cluster specified by `es_cloud_id`.
 es_api_key = ""
 
-# MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX
-#  The index identifier of Wikipedia in Elasticsearch.
-es_index = "enwiki-v1"
+es_index = "enwiki-v1" # TODO temporarily leaving this here for backward compatibility with load tests
+
+# MERINO_PROVIDERS__WIKIPEDIA__EN_ES_INDEX
+#  The english index identifier of Wikipedia in Elasticsearch.
+en_es_index = "enwiki-v1"
+
+# MERINO_PROVIDERS__WIKIPEDIA__FR_ES_INDEX
+#  The french index identifier of Wikipedia in Elasticsearch.
+fr_es_index = "frwiki-v1"
+
+# MERINO_PROVIDERS__WIKIPEDIA__DE_ES_INDEX
+#  The german index identifier of Wikipedia in Elasticsearch.
+de_es_index = "dewiki-v1"
+
+# MERINO_PROVIDERS__WIKIPEDIA__IT_ES_INDEX
+#  The italian index identifier of Wikipedia in Elasticsearch.
+it_es_index = "itwiki-v1"
+
+# MERINO_PROVIDERS__WIKIPEDIA__PL_ES_INDEX
+#  The polish index identifier of Wikipedia in Elasticsearch.
+pl_es_index = "plwiki-v1"
 
 # MERINO_PROVIDERS__WIKIPEDIA__ES_MAX_SUGGESTIONS
 # The maximum suggestions for each search request to Elasticsearch.
