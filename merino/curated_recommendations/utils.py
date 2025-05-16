@@ -7,7 +7,6 @@ from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 from merino.curated_recommendations.protocol import CuratedRecommendationsRequest, Locale
 
 
-
 def get_recommendation_surface_id(locale: Locale, region: str | None = None) -> SurfaceId:
     """Locale/region mapping is documented here:
     https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit
