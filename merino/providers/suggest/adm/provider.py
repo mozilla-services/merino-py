@@ -131,37 +131,40 @@ class Provider(BaseProvider):
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         q: str = srequest.query
-        form_factor = srequest.user_agent.form_factor
+        form_factor = srequest.user_agent.form_factor if srequest.user_agent else None
         country = srequest.geolocation.country
-        suggestion_content = self.global_suggestion_content.suggestion_content.get(country, {})
-        segment = (form_factor,)
+        if country and form_factor:
+            suggestion_content = self.global_suggestion_content.suggestion_content.get(country)
+            segment = (form_factor,)
+            if (
+                suggest_look_ups := suggestion_content.results.get(segment, {}).get(q)
+            ) is not None:
+                suggestion_id, fkw_id = suggest_look_ups
+                res = suggestion_content.core_suggestions_data[suggestion_id]
+                variants = suggestion_content.variants[suggestion_id].get(segment, {})
+                res.update(variants)
+                is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
 
-        if (suggest_look_ups := suggestion_content.results.get(segment,{}).get(q)) is not None:
-            suggestion_id, fkw_id = suggest_look_ups
-            res = suggestion_content.core_suggestions_data[suggestion_id]
-            variants = suggestion_content.variants[suggestion_id].get((form_factor,), {})
-            res.update(variants)
-            is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
-
-
-            suggestion_dict: dict[str, Any] = {
-                "block_id": res.get("id"),
-                "full_keyword": suggestion_content.full_keywords[segment][fkw_id],
-                "title": res.get("title"),
-                "url": res.get("url"),
-                "impression_url": res.get("impression_url"),
-                "click_url": res.get("click_url"),
-                "provider": self.name,
-                "advertiser": res.get("advertiser"),
-                "is_sponsored": is_sponsored,
-                "icon": self.global_suggestion_content.icons.get(res.get("icon", MISSING_ICON_ID)),
-                "score": self.score,
-            }
-            return [
-                (
-                    SponsoredSuggestion(**suggestion_dict)
-                    if is_sponsored
-                    else NonsponsoredSuggestion(**suggestion_dict)
-                )
-            ]
+                suggestion_dict: dict[str, Any] = {
+                    "block_id": res.get("id"),
+                    "full_keyword": suggestion_content.full_keywords[fkw_id],
+                    "title": res.get("title"),
+                    "url": res.get("url"),
+                    "impression_url": res.get("impression_url"),
+                    "click_url": res.get("click_url"),
+                    "provider": self.name,
+                    "advertiser": res.get("advertiser"),
+                    "is_sponsored": is_sponsored,
+                    "icon": self.global_suggestion_content.icons.get(
+                        res.get("icon", MISSING_ICON_ID)
+                    ),
+                    "score": self.score,
+                }
+                return [
+                    (
+                        SponsoredSuggestion(**suggestion_dict)
+                        if is_sponsored
+                        else NonsponsoredSuggestion(**suggestion_dict)
+                    )
+                ]
         return []

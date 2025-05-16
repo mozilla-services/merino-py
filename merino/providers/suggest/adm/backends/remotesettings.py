@@ -1,7 +1,6 @@
 """A thin wrapper around the Remote Settings client."""
-import ast
+
 import asyncio
-import json
 from asyncio import Task
 from typing import Any, Literal, cast
 from urllib.parse import urljoin
@@ -52,7 +51,7 @@ class ResultContext(BaseModel):
 
     core_suggestions_data: dict[int, Any] = {}
     variants: dict[int, dict[SegmentTuple, Any]] = {}
-    full_keywords: dict[SegmentTuple, list] = {}
+    full_keywords: list[str] = []
     results: dict[SegmentTuple, dict[str, tuple[int, int]]] = {}
     icons_in_use: set[str] = set()
 
@@ -307,6 +306,14 @@ class RemoteSettingsBackend:
                 exclude={"keywords", "full_keywords", *diff_fields}
             )
 
+            if "keywords" not in diff_fields and "full_keywords" not in diff_fields:
+                self.process_keywords(
+                    primary_item, list(common_suggestions.keys()), result_context
+                )
+            else:
+                for segment, suggestion in common_suggestions.items():
+                    self.process_keywords(suggestion, [segment], result_context)
+
             for segment, suggestion in common_suggestions.items():
                 if min_id not in result_context.variants:
                     result_context.variants[min_id] = {}
@@ -314,13 +321,10 @@ class RemoteSettingsBackend:
                     include=diff_fields
                 )
                 result_context.icons_in_use.add(suggestion.icon)
-                self.process_keywords(suggestion, segment, result_context)
 
             for segment in segments:
                 if segment in common_suggestions:
                     indices[segment] += 1
-            #if min_id == 61:
-            #    raise KeyError(f"core:{result_context.core_suggestions_data}\n variants:{result_context.variants}\n full_keywords:{result_context.full_keywords}\n result:{result_context.results}")
 
     def find_diff_fields(self, suggestions: list[KintoSuggestion]) -> set[str]:
         """Find all the fields that have different values"""
@@ -328,57 +332,33 @@ class RemoteSettingsBackend:
         all_keys = set().union(*(d.keys() for d in data))
         return {key for key in all_keys if len({str(d.get(key)) for d in data}) > 1}
 
-    def process1_keywords(
-        self, suggestion: KintoSuggestion, segment: SegmentTuple, result_context: ResultContext
-    ) -> None:
-        """Process keywords for suggestions."""
-        keywords = suggestion.keywords
-        full_keywords_tuples = suggestion.full_keywords
-        result = result_context.results
-        if not result_context.full_keywords.get(segment):
-            result_context.full_keywords[segment] = []
-        full_keywords = result_context.full_keywords[segment]
-        begin = 0
-        fkw_index = 0
-        for full_keyword, n in full_keywords_tuples:
-            for query in keywords[begin : begin + n]:
-                # Note that for adM suggestions, each keyword can only be
-                # mapped to a single suggestion.
-                result[query] = (suggestion.id, fkw_index)
-                begin += n
-                full_keywords.append(full_keyword)
-                fkw_index = len(full_keywords)
-
     def process_keywords(
-        self, suggestion: KintoSuggestion, segment: SegmentTuple, result_context: ResultContext
+        self,
+        suggestion: KintoSuggestion,
+        segments: list[SegmentTuple],
+        result_context: ResultContext,
     ) -> None:
         """Process keywords for suggestions."""
         keywords = suggestion.keywords
         full_keywords_tuples = suggestion.full_keywords
         result = result_context.results
-        if not result_context.full_keywords.get(segment):
-            result_context.full_keywords[segment] = []
-            result[segment] = {}
-            begin = 0
-            fkw_index = 0
-        else:
-            begin = 0
-            fkw_index = len(result_context.full_keywords[segment])-1
+        for s in segments:
+            if not result_context.results.get(s):
+                result[s] = {}
+        begin = 0
+        fkw_index = len(result_context.full_keywords)
 
-        full_keywords = result_context.full_keywords[segment]
+        full_keywords = result_context.full_keywords
 
         for full_keyword, n in full_keywords_tuples:
             for query in keywords[begin : begin + n]:
-                try:
-                    if full_keywords[fkw_index] == full_keyword:
-                        result[segment][query] = (suggestion.id, fkw_index)
-                    else:
-                        full_keywords.append(full_keyword)
-                        fkw_index = len(full_keywords) - 1
-                except IndexError:
-                        full_keywords.append(full_keyword)
-                        fkw_index = len(full_keywords) - 1
+                if fkw_index < len(full_keywords) - 1 and full_keywords[fkw_index] == full_keyword:
+                    pass
+                else:
+                    full_keywords.append(full_keyword)
+                    fkw_index = len(full_keywords) - 1
+
+                for s in segments:
+                    result[s][query] = (suggestion.id, fkw_index)
+
             begin += n
-
-
-

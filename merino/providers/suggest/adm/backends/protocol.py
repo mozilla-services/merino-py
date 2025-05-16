@@ -17,7 +17,7 @@ class SuggestionContent(BaseModel):
     # each value stores fields data that is different across segments
     variants: dict[int, dict[SegmentTuple, Any]] = {}
     # A list of full keywords
-    full_keywords: dict[SegmentTuple, list] = {}
+    full_keywords: list[str] = []
     # A list of suggestion results
     results: dict[SegmentTuple, dict[str, tuple[int, int]]] = {}
 
