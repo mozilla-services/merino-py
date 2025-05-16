@@ -1,4 +1,4 @@
-"""TODO"""
+"""Curated Recommendations legacy provider top-level request and response models"""
 
 from typing import Any, Annotated
 from pydantic import Field, BaseModel, HttpUrl, ConfigDict
