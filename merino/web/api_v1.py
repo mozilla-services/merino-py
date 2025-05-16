@@ -15,15 +15,21 @@ from aiodogstatsd import Client
 from starlette.responses import Response
 
 from merino.configs import settings
-from merino.curated_recommendations import get_provider as get_corpus_api_provider
+from merino.curated_recommendations import (
+    get_provider as get_corpus_api_provider,
+    get_legacy_provider,
+)
 from merino.curated_recommendations.provider import (
     CuratedRecommendationsProvider,
 )
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
+    CuratedRecommendationsResponse,
+)
+from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
+from merino.curated_recommendations.legacy.protocol import (
     CuratedRecommendationsLegacyRequest,
     CuratedRecommendationsGlobalLegacyRequest,
-    CuratedRecommendationsResponse,
     CuratedRecommendationsLegacyResponse,
     CuratedRecommendationsGlobalLegacyResponse,
 )
@@ -338,7 +344,7 @@ async def curated_content(
 )
 async def curated_content_legacy(
     query_params: Annotated[CuratedRecommendationsLegacyRequest, Query()],
-    provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
+    provider: LegacyCuratedRecommendationsProvider = Depends(get_legacy_provider),
 ) -> CuratedRecommendationsLegacyResponse:
     """Query for a list of curated content recommendations for legacy Firefox desktop clients
     (versions 115–129) using the legacy schema structure.
@@ -364,7 +370,7 @@ async def curated_content_legacy(
 )
 async def curated_content_global_recs_legacy(
     query_params: Annotated[CuratedRecommendationsGlobalLegacyRequest, Query()],
-    provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
+    provider: LegacyCuratedRecommendationsProvider = Depends(get_legacy_provider),
 ) -> CuratedRecommendationsGlobalLegacyResponse:
     """Query for a list of curated content recommendations for legacy Firefox desktop clients
     (versions <= 114) using the legacy schema structure.

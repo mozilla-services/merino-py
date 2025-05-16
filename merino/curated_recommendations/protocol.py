@@ -2,11 +2,11 @@
 
 import hashlib
 from enum import unique, Enum
-from typing import Annotated, Any
+from typing import Annotated
 import logging
 from datetime import datetime
 
-from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo, HttpUrl
+from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
@@ -87,27 +87,6 @@ class ExperimentName(str, Enum):
 MAX_TILE_ID = (1 << 53) - 1
 MIN_TILE_ID = 10000000
 
-LEGACY_GLOBAL_RECS_SETTINGS = {
-    "domainAffinityParameterSets": {},
-    "timeSegments": [
-        {
-            "id": "week",
-            "startTime": 604800,
-            "endTime": 0,
-            "weightPosition": 1,
-        },
-        {
-            "id": "month",
-            "startTime": 2592000,
-            "endTime": 604800,
-            "weightPosition": 0.5,
-        },
-    ],
-    "recsExpireTime": 5400,
-    "spocsPerNewTabs": 0.5,
-    "version": "6f605b0212069b4b8d3d040faf55742061a25c16",
-}
-
 
 class SectionConfiguration(BaseModel):
     """Configuration settings for a Section"""
@@ -177,38 +156,6 @@ class CuratedRecommendation(CorpusItem):
         return start + (int(hashlib.sha256(s.encode("utf-8")).hexdigest(), 16) % (stop - start))
 
 
-class CuratedRecommendationLegacy(BaseModel):
-    """Schema for a single desktop legacy recommendation."""
-
-    # Note we can't name this variable as `__typename`
-    # because it is then considered an internal variable by Pydantic and omitted in the final API response.
-    typename: str = Field(default="Recommendation", alias="__typename")
-    recommendationId: str
-    tileId: int
-    url: HttpUrl
-    title: str
-    excerpt: str
-    publisher: str
-    imageUrl: HttpUrl
-
-    class Config:
-        """Allow field population using aliases (e.g., __typename)"""
-
-        populate_by_name = True
-
-
-class CuratedRecommendationGlobalLegacy(BaseModel):
-    """Schema for a single legacy global recommendation."""
-
-    id: int
-    title: str
-    url: HttpUrl
-    excerpt: str
-    domain: str
-    image_src: HttpUrl
-    raw_image_src: HttpUrl
-
-
 class CuratedRecommendationsRequest(BaseModel):
     """Body schema for requesting a list of curated recommendations"""
 
@@ -251,26 +198,6 @@ class CuratedRecommendationsRequest(BaseModel):
                 # Not wrapped in a list
                 logger.warning(f"Topics not wrapped in a list: {values}")
         return []
-
-
-class CuratedRecommendationsLegacyRequest(BaseModel):
-    """Request query parameters/variables received for
-    the /curated-recommendations/legacy-115-129 endpoint
-    """
-
-    locale: Locale
-    region: str | None = None
-    count: int = 30
-
-
-class CuratedRecommendationsGlobalLegacyRequest(BaseModel):
-    """Request query parameters/variables received for
-    the /curated-recommendations/legacy-global-recs-114 endpoint
-    """
-
-    locale_lang: Locale
-    region: str | None = None
-    count: int = 10
 
 
 @unique
@@ -381,22 +308,3 @@ class CuratedRecommendationsResponse(BaseModel):
     data: list[CuratedRecommendation]
     feeds: dict[str, Section] | None = None
     interestPicker: InterestPicker | None = None
-
-
-class CuratedRecommendationsLegacyResponse(BaseModel):
-    """Response schema for a list of curated recommendations for
-    the /curated-recommendations/legacy-115-129 endpoint
-    """
-
-    data: list[CuratedRecommendationLegacy]
-
-
-class CuratedRecommendationsGlobalLegacyResponse(BaseModel):
-    """Response schema for a list of curated recommendations for
-    /curated-recommendations/legacy-global-recs-114 endpoint
-    """
-
-    status: int = 1
-    spocs: list = Field(default_factory=list)
-    settings: dict[str, Any] = LEGACY_GLOBAL_RECS_SETTINGS
-    recommendations: list[CuratedRecommendationGlobalLegacy]

@@ -16,11 +16,7 @@ from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
-    CuratedRecommendationsLegacyRequest,
-    CuratedRecommendationsLegacyResponse,
     CuratedRecommendationsResponse,
-    CuratedRecommendationsGlobalLegacyRequest,
-    CuratedRecommendationsGlobalLegacyResponse,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -32,8 +28,6 @@ from merino.curated_recommendations.utils import (
     get_recommendation_surface_id,
     get_millisecond_epoch_time,
     derive_region,
-    map_curated_recommendations_to_legacy_recommendations,
-    map_curated_recommendations_to_legacy_global_recommendations,
 )
 
 logger = logging.getLogger(__name__)
@@ -152,63 +146,3 @@ class CuratedRecommendationsProvider:
             response.interestPicker = create_interest_picker(response.feeds)
 
         return response
-
-    async def fetch_recommendations_for_legacy_recommendations(
-        self, request: CuratedRecommendationsLegacyRequest
-    ) -> CuratedRecommendationsLegacyResponse:
-        """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
-        surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
-
-        corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
-        base_recommendations = [
-            CuratedRecommendation(
-                **item.model_dump(),
-                receivedRank=rank,
-                # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
-                # interest vector. Data science work shows that using the topics as features
-                # is effective as a first pass at personalization.
-                # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
-                features={item.topic.value: 1.0} if item.topic else {},
-            )
-            for rank, item in enumerate(corpus_items)
-        ]
-
-        legacy_recommendations = map_curated_recommendations_to_legacy_recommendations(
-            base_recommendations
-        )
-
-        # build response for api request
-        return CuratedRecommendationsLegacyResponse(
-            data=legacy_recommendations[: request.count],
-        )
-
-    async def fetch_recommendations_for_global_legacy_recommendations(
-        self, request: CuratedRecommendationsGlobalLegacyRequest
-    ) -> CuratedRecommendationsGlobalLegacyResponse:
-        """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
-        surface_id = get_recommendation_surface_id(
-            locale=request.locale_lang, region=request.region
-        )
-
-        corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
-        base_recommendations = [
-            CuratedRecommendation(
-                **item.model_dump(),
-                receivedRank=rank,
-                # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
-                # interest vector. Data science work shows that using the topics as features
-                # is effective as a first pass at personalization.
-                # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
-                features={item.topic.value: 1.0} if item.topic else {},
-            )
-            for rank, item in enumerate(corpus_items)
-        ]
-
-        legacy_global_recommendations = (
-            map_curated_recommendations_to_legacy_global_recommendations(base_recommendations)
-        )
-
-        # build response for api request
-        return CuratedRecommendationsGlobalLegacyResponse(
-            recommendations=legacy_global_recommendations[: request.count],
-        )
