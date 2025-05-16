@@ -1,6 +1,6 @@
 """TODO"""
 
-from typing import Any
+from typing import Any, Annotated
 from pydantic import Field, BaseModel, HttpUrl
 from merino.curated_recommendations.protocol import Locale
 
@@ -33,7 +33,7 @@ class CuratedRecommendationsLegacyFx115fx129Request(BaseModel):
 
     locale: Locale
     region: str | None = None
-    count: int = 30
+    count: Annotated[int, Field(ge=0, le=30)] | None = 30
 
 
 class CuratedRecommendationsLegacyFx114Request(BaseModel):
@@ -43,7 +43,7 @@ class CuratedRecommendationsLegacyFx114Request(BaseModel):
 
     locale_lang: Locale
     region: str | None = None
-    count: int = 10
+    count: Annotated[int, Field(ge=0, le=10)] | None = 10
 
 
 class CuratedRecommendationLegacyFx115Fx129(BaseModel):
