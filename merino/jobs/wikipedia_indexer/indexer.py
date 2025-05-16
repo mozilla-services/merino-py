@@ -11,6 +11,10 @@ from google.cloud.storage import Blob
 
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.settings import get_settings_for_version
+from merino.jobs.wikipedia_indexer.settings.v1 import (
+    get_suggest_mapping,
+    get_suggest_settings,
+)
 from merino.jobs.wikipedia_indexer.suggestion import Builder
 from merino.jobs.wikipedia_indexer.utils import ProgressReporter
 
@@ -159,23 +163,17 @@ class Indexer:
     def _create_index(self, index_name: str) -> bool:
         indices_client = self.es_client.indices
         exists = indices_client.exists(index=index_name)
-        settings = get_settings_for_version(self.index_version)
-        language = self.file_manager.language.upper()  # e.g "FR"
 
-        if not exists and settings:
-            suggest_mapping = getattr(
-                settings, f"SUGGEST_MAPPING_{language}", settings.SUGGEST_MAPPING_EN
-            )
-            suggest_settings = getattr(
-                settings, f"SUGGEST_SETTINGS_{language}", settings.SUGGEST_SETTINGS_EN
-            )
+        version_settings = get_settings_for_version(self.index_version)
+        language = self.file_manager.language  # e.g "fr"
 
+        if not exists and version_settings:
             logger.info(f"Creating index for language: {language}")
 
             res = indices_client.create(
                 index=index_name,
-                mappings=suggest_mapping,
-                settings=suggest_settings,
+                mappings=get_suggest_mapping(language),
+                settings=get_suggest_settings(language),
             )
             return bool(res.get("acknowledged", False))
 

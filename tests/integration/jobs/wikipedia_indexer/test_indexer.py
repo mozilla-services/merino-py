@@ -31,7 +31,9 @@ def title_blocklist() -> set:
 def file_manager(mocker):
     """Return a mock FileManager instance."""
     fm_mock = mocker.patch("merino.jobs.wikipedia_indexer.filemanager.FileManager")
-    return fm_mock.return_value
+    fm = fm_mock.return_value
+    fm.language = "en"
+    return fm
 
 
 @pytest.fixture
@@ -45,9 +47,9 @@ def es_client(mocker):
     ["file_name", "version", "expected"],
     [
         ("enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
-        ("foo/enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
-        ("foo/bar/enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
-        ("enwiki-123-content.json", "v2", f"enwiki-123-v2-{EPOCH_FROZEN_TIME}"),
+        ("foo/plwiki-123-content.json", "v1", f"plwiki-123-v1-{EPOCH_FROZEN_TIME}"),
+        ("foo/bar/dewiki-123-content.json", "v1", f"dewiki-123-v1-{EPOCH_FROZEN_TIME}"),
+        ("frwiki-123-content.json", "v2", f"frwiki-123-v2-{EPOCH_FROZEN_TIME}"),
     ],
 )
 @freezegun.freeze_time(FROZEN_TIME)
