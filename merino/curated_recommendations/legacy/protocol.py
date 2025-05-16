@@ -1,7 +1,7 @@
 """TODO"""
 
 from typing import Any, Annotated
-from pydantic import Field, BaseModel, HttpUrl
+from pydantic import Field, BaseModel, HttpUrl, ConfigDict
 from merino.curated_recommendations.protocol import Locale
 
 LEGACY_FX114_RECS_SETTINGS = {
@@ -49,6 +49,8 @@ class CuratedRecommendationsLegacyFx114Request(BaseModel):
 class CuratedRecommendationLegacyFx115Fx129(BaseModel):
     """Schema for a single desktop legacy recommendation."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     # Note we can't name this variable as `__typename`
     # because it is then considered an internal variable by Pydantic and omitted in the final API response.
     typename: str = Field(default="Recommendation", alias="__typename")
@@ -59,11 +61,6 @@ class CuratedRecommendationLegacyFx115Fx129(BaseModel):
     excerpt: str
     publisher: str
     imageUrl: HttpUrl
-
-    class Config:
-        """Allow field population using aliases (e.g., __typename)"""
-
-        populate_by_name = True
 
 
 class CuratedRecommendationLegacyFx114(BaseModel):
