@@ -2,23 +2,33 @@
 
 from pydantic import HttpUrl
 from urllib.parse import quote
-from merino.curated_recommendations.provider import CuratedRecommendationsProvider
+from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
+    ScheduledSurfaceProtocol,
+)
 from merino.curated_recommendations.utils import (
     get_recommendation_surface_id,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.curated_recommendations.legacy.protocol import (
-    CuratedRecommendationLegacy,
-    CuratedRecommendationGlobalLegacy,
-    CuratedRecommendationsLegacyRequest,
-    CuratedRecommendationsLegacyResponse,
-    CuratedRecommendationsGlobalLegacyRequest,
-    CuratedRecommendationsGlobalLegacyResponse,
+    CuratedRecommendationLegacyFx115Fx129,
+    CuratedRecommendationLegacyFx114,
+    CuratedRecommendationsLegacyFx115fx129Request,
+    CuratedRecommendationsLegacyFx115Fx129Response,
+    CuratedRecommendationsLegacyFx114Request,
+    CuratedRecommendationsLegacyFx114Response,
 )
 
 
-class LegacyCuratedRecommendationsProvider(CuratedRecommendationsProvider):
+class LegacyCuratedRecommendationsProvider:
     """TODO"""
+
+    scheduled_surface_backend: ScheduledSurfaceProtocol
+
+    def __init__(
+        self,
+        scheduled_surface_backend: ScheduledSurfaceProtocol,
+    ) -> None:
+        self.scheduled_surface_backend = scheduled_surface_backend
 
     def transform_image_url_to_pocket_cdn(self, original_url: HttpUrl) -> HttpUrl:
         """Transform an original image URL to a Pocket CDN URL for the given image with a fixed width of 450px.
@@ -33,10 +43,10 @@ class LegacyCuratedRecommendationsProvider(CuratedRecommendationsProvider):
     def map_curated_recommendations_to_legacy_recommendations(
         self,
         base_recommendations: list[CuratedRecommendation],
-    ) -> list[CuratedRecommendationLegacy]:
+    ) -> list[CuratedRecommendationLegacyFx115Fx129]:
         """Map CuratedRecommendation object to CuratedRecommendationDesktopLegacy"""
         return [
-            CuratedRecommendationLegacy(
+            CuratedRecommendationLegacyFx115Fx129(
                 typename="Recommendation",
                 recommendationId=item.corpusItemId,
                 tileId=item.tileId,
@@ -52,10 +62,10 @@ class LegacyCuratedRecommendationsProvider(CuratedRecommendationsProvider):
     def map_curated_recommendations_to_legacy_global_recommendations(
         self,
         base_recommendations: list[CuratedRecommendation],
-    ) -> list[CuratedRecommendationGlobalLegacy]:
+    ) -> list[CuratedRecommendationLegacyFx114]:
         """Map CuratedRecommendation object to CuratedRecommendationGlobalLegacy"""
         return [
-            CuratedRecommendationGlobalLegacy(
+            CuratedRecommendationLegacyFx114(
                 id=item.tileId,
                 title=item.title,
                 url=item.url,
@@ -68,8 +78,8 @@ class LegacyCuratedRecommendationsProvider(CuratedRecommendationsProvider):
         ]
 
     async def fetch_recommendations_for_legacy_recommendations(
-        self, request: CuratedRecommendationsLegacyRequest
-    ) -> CuratedRecommendationsLegacyResponse:
+        self, request: CuratedRecommendationsLegacyFx115fx129Request
+    ) -> CuratedRecommendationsLegacyFx115Fx129Response:
         """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
         surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
 
@@ -92,13 +102,13 @@ class LegacyCuratedRecommendationsProvider(CuratedRecommendationsProvider):
         )
 
         # build response for api request
-        return CuratedRecommendationsLegacyResponse(
+        return CuratedRecommendationsLegacyFx115Fx129Response(
             data=legacy_recommendations[: request.count],
         )
 
     async def fetch_recommendations_for_global_legacy_recommendations(
-        self, request: CuratedRecommendationsGlobalLegacyRequest
-    ) -> CuratedRecommendationsGlobalLegacyResponse:
+        self, request: CuratedRecommendationsLegacyFx114Request
+    ) -> CuratedRecommendationsLegacyFx114Response:
         """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
         surface_id = get_recommendation_surface_id(
             locale=request.locale_lang, region=request.region
@@ -123,6 +133,6 @@ class LegacyCuratedRecommendationsProvider(CuratedRecommendationsProvider):
         )
 
         # build response for api request
-        return CuratedRecommendationsGlobalLegacyResponse(
+        return CuratedRecommendationsLegacyFx114Response(
             recommendations=legacy_global_recommendations[: request.count],
         )

@@ -4,7 +4,7 @@ from typing import Any
 from pydantic import Field, BaseModel, HttpUrl
 from merino.curated_recommendations.protocol import Locale
 
-LEGACY_GLOBAL_RECS_SETTINGS = {
+LEGACY_FX114_RECS_SETTINGS = {
     "domainAffinityParameterSets": {},
     "timeSegments": [
         {
@@ -26,7 +26,7 @@ LEGACY_GLOBAL_RECS_SETTINGS = {
 }
 
 
-class CuratedRecommendationsLegacyRequest(BaseModel):
+class CuratedRecommendationsLegacyFx115fx129Request(BaseModel):
     """Request query parameters/variables received for
     the /curated-recommendations/legacy-115-129 endpoint
     """
@@ -36,7 +36,7 @@ class CuratedRecommendationsLegacyRequest(BaseModel):
     count: int = 30
 
 
-class CuratedRecommendationsGlobalLegacyRequest(BaseModel):
+class CuratedRecommendationsLegacyFx114Request(BaseModel):
     """Request query parameters/variables received for
     the /curated-recommendations/legacy-global-recs-114 endpoint
     """
@@ -46,7 +46,7 @@ class CuratedRecommendationsGlobalLegacyRequest(BaseModel):
     count: int = 10
 
 
-class CuratedRecommendationLegacy(BaseModel):
+class CuratedRecommendationLegacyFx115Fx129(BaseModel):
     """Schema for a single desktop legacy recommendation."""
 
     # Note we can't name this variable as `__typename`
@@ -66,7 +66,7 @@ class CuratedRecommendationLegacy(BaseModel):
         populate_by_name = True
 
 
-class CuratedRecommendationGlobalLegacy(BaseModel):
+class CuratedRecommendationLegacyFx114(BaseModel):
     """Schema for a single legacy global recommendation."""
 
     id: int
@@ -78,20 +78,20 @@ class CuratedRecommendationGlobalLegacy(BaseModel):
     raw_image_src: HttpUrl
 
 
-class CuratedRecommendationsLegacyResponse(BaseModel):
+class CuratedRecommendationsLegacyFx115Fx129Response(BaseModel):
     """Response schema for a list of curated recommendations for
     the /curated-recommendations/legacy-115-129 endpoint
     """
 
-    data: list[CuratedRecommendationLegacy]
+    data: list[CuratedRecommendationLegacyFx115Fx129]
 
 
-class CuratedRecommendationsGlobalLegacyResponse(BaseModel):
+class CuratedRecommendationsLegacyFx114Response(BaseModel):
     """Response schema for a list of curated recommendations for
     /curated-recommendations/legacy-global-recs-114 endpoint
     """
 
     status: int = 1
     spocs: list = Field(default_factory=list)
-    settings: dict[str, Any] = LEGACY_GLOBAL_RECS_SETTINGS
-    recommendations: list[CuratedRecommendationGlobalLegacy]
+    settings: dict[str, Any] = LEGACY_FX114_RECS_SETTINGS
+    recommendations: list[CuratedRecommendationLegacyFx114]

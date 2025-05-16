@@ -119,9 +119,6 @@ def init_provider() -> None:
     )
     _legacy_provider = LegacyCuratedRecommendationsProvider(
         scheduled_surface_backend=scheduled_surface_backend,
-        engagement_backend=engagement_backend,
-        prior_backend=init_prior_backend(),
-        sections_backend=sections_backend,
     )
 
 

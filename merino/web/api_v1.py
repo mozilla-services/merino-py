@@ -28,10 +28,10 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
 from merino.curated_recommendations.legacy.protocol import (
-    CuratedRecommendationsLegacyRequest,
-    CuratedRecommendationsGlobalLegacyRequest,
-    CuratedRecommendationsLegacyResponse,
-    CuratedRecommendationsGlobalLegacyResponse,
+    CuratedRecommendationsLegacyFx115fx129Request,
+    CuratedRecommendationsLegacyFx114Request,
+    CuratedRecommendationsLegacyFx115Fx129Response,
+    CuratedRecommendationsLegacyFx114Response,
 )
 from merino.middleware import ScopeKey
 from merino.providers.suggest import get_providers as get_suggest_providers
@@ -342,10 +342,10 @@ async def curated_content(
     "/curated-recommendations/legacy-115-129",
     summary="Curated Recommendations for New Tab Firefox v115-129",
 )
-async def curated_content_legacy(
-    query_params: Annotated[CuratedRecommendationsLegacyRequest, Query()],
+async def curated_content_legacy_fx_115_129(
+    query_params: Annotated[CuratedRecommendationsLegacyFx115fx129Request, Query()],
     provider: LegacyCuratedRecommendationsProvider = Depends(get_legacy_provider),
-) -> CuratedRecommendationsLegacyResponse:
+) -> CuratedRecommendationsLegacyFx115Fx129Response:
     """Query for a list of curated content recommendations for legacy Firefox desktop clients
     (versions 115–129) using the legacy schema structure.
 
@@ -365,13 +365,13 @@ async def curated_content_legacy(
 
 
 @router.get(
-    "/curated-recommendations/legacy-global-recs-114",
+    "/curated-recommendations/legacy-114",
     summary="Legacy Recommendations for New Tab Fx <= 114",
 )
-async def curated_content_global_recs_legacy(
-    query_params: Annotated[CuratedRecommendationsGlobalLegacyRequest, Query()],
+async def curated_content_legacy_fx_114(
+    query_params: Annotated[CuratedRecommendationsLegacyFx114Request, Query()],
     provider: LegacyCuratedRecommendationsProvider = Depends(get_legacy_provider),
-) -> CuratedRecommendationsGlobalLegacyResponse:
+) -> CuratedRecommendationsLegacyFx114Response:
     """Query for a list of curated content recommendations for legacy Firefox desktop clients
     (versions <= 114) using the legacy schema structure.
 
