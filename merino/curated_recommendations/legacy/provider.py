@@ -77,7 +77,7 @@ class LegacyCuratedRecommendationsProvider:
             for item in base_recommendations
         ]
 
-    async def fetch_recommendations_for_legacy_recommendations(
+    async def fetch_recommendations_for_legacy_fx_115_129(
         self, request: CuratedRecommendationsLegacyFx115fx129Request
     ) -> CuratedRecommendationsLegacyFx115Fx129Response:
         """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
@@ -106,7 +106,7 @@ class LegacyCuratedRecommendationsProvider:
             data=legacy_recommendations[: request.count],
         )
 
-    async def fetch_recommendations_for_global_legacy_recommendations(
+    async def fetch_recommendations_for_legacy_fx_114(
         self, request: CuratedRecommendationsLegacyFx114Request
     ) -> CuratedRecommendationsLegacyFx114Response:
         """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""

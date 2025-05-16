@@ -361,7 +361,7 @@ async def curated_content_legacy_fx_115_129(
         then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 30.
     """
-    return await provider.fetch_recommendations_for_legacy_recommendations(query_params)
+    return await provider.fetch_recommendations_for_legacy_fx_115_129(query_params)
 
 
 @router.get(
@@ -387,7 +387,7 @@ async def curated_content_legacy_fx_114(
         then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 10.
     """
-    return await provider.fetch_recommendations_for_global_legacy_recommendations(query_params)
+    return await provider.fetch_recommendations_for_legacy_fx_114(query_params)
 
 
 @router.get(
