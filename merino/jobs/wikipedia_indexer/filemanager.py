@@ -121,12 +121,21 @@ class FileManager:
 
     def stream_latest_dump_to_gcs(self, latest_gcs: Optional[Blob] = None) -> Blob:
         """Stream the latest Wikimedia dump to GCS"""
-        if not latest_gcs:
-            latest_gcs = self.get_latest_gcs()
+        try:
+            if not latest_gcs:
+                latest_gcs = self.get_latest_gcs()
+        except RuntimeError as e:
+            logger.warning(
+                f"No existing GCS file found, will stream latest from Wikimedia. Error: {e}"
+            )
+            latest_gcs = None
+
         latest_dump_url = self.get_latest_dump(latest_gcs)
         logger.info("latest_dump_url", extra={"ldurl": latest_dump_url})
         if latest_dump_url:
             self._stream_dump_to_gcs(latest_dump_url)
+            # Recompute latest_gcs after upload
+            latest_gcs = self.get_latest_gcs()
         else:
             logger.info("Currently up to date")
 
