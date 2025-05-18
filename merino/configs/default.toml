@@ -734,44 +734,93 @@ record_type = "amo-suggestions"
 
 
 [default.jobs.geonames_uploader]
-# MERINO_JOBS__GEONAMES_UPLOADER__BASE_URL
-# Base URL of the GeoNames server.
-base_url = "https://download.geonames.org"
-# MERINO_JOBS__GEONAMES_UPLOADER__GEONAMES_PATH
-# Full path on the GeoNames server of country-specific geonames files. Expected
-# to be an f-string with a `country_code` variable.
-geonames_path = "/export/dump/{country_code}.zip"
-# MERINO_JOBS__GEONAMES_UPLOADER__ALTERNATES_PATH
-# Full path on the GeoNames server of country-specific alternates files.
-# Expected to be an f-string with a `country_code` variable.
-alternates_path = "/export/dump/alternatenames/{country_code}.zip"
-# MERINO_JOBS__GEONAMES_UPLOADER__POPULATION_THRESHOLD
-# How large a geoname's population must be for it to be included in the output.
-# Geonames with populations at least this large will be included.
-population_threshold = 50_000
+# # MERINO_JOBS__GEONAMES_UPLOADER__BASE_URL
+# # Base URL of the GeoNames server.
+# base_url = "https://download.geonames.org"
+# # MERINO_JOBS__GEONAMES_UPLOADER__GEONAMES_PATH
+# # Full path on the GeoNames server of country-specific geonames files. Expected
+# # to be an f-string with a `country_code` variable.
+# geonames_path = "/export/dump/{country_code}.zip"
+# # MERINO_JOBS__GEONAMES_UPLOADER__ALTERNATES_PATH
+# # Full path on the GeoNames server of country-specific alternates files.
+# # Expected to be an f-string with a `country_code` variable.
+# alternates_path = "/export/dump/alternatenames/{country_code}.zip"
+# # MERINO_JOBS__GEONAMES_UPLOADER__POPULATION_THRESHOLD
+# # How large a geoname's population must be for it to be included in the output.
+# # Geonames with populations at least this large will be included.
+# # population_threshold = 50_000
 
-# MERINO_JOBS__GEONAMES_UPLOADER__CITY_ALTERNATES_ISO_LANGUAGES
-# Which alternates of selected cities to include in the output. Alternates are
-# categorized by language, like "en", plus a few other categories like
-# abbreviations ("abbr") and airport codes ("iata", "icao", "faac").
-city_alternates_iso_languages = ["en", "en-US", "iata", "icao", "faac", "abbr"]
+# population_thresholds = [500_000, 1_000_000]
+# # population_thresholds = [500_000]
 
-# MERINO_JOBS__GEONAMES_UPLOADER__REGION_ALTERNATES_ISO_LANGUAGES
-# Which alternates of selected regions to include in the output. Takes the same
-# values as city alternates. For U.S. states, "en" alternates include verbose
-# names like "State of California" that people are unlikely type and that
-# interfere with prefix matching, so we only include "abbr". Note that full
-# names like "California" are always included in the output.
-region_alternates_iso_languages = ["abbr"]
+# # MERINO_JOBS__GEONAMES_UPLOADER__CITY_ALTERNATES_ISO_LANGUAGES
+# # Which alternates of selected cities to include in the output. Alternates are
+# # categorized by language, like "en", plus a few other categories like
+# # abbreviations ("abbr") and airport codes ("iata", "icao", "faac").
+# # city_alternates_iso_languages = ["en", "en-US", "iata", "icao", "faac", "abbr"]
 
-# MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY_CODES
-# List of countries whose geonames will be uploaded. All countries' data will be
-# uploaded together without any separation into different records, attachments,
-# collections, etc. This is only a short-term hack to opportunistically include
-# Canadian cities, since there are many Canadians Mozillians and relatively few
-# Canadian cities over the population threshold.
-country_codes = ["US", "CA"]
+# # MERINO_JOBS__GEONAMES_UPLOADER__REGION_ALTERNATES_ISO_LANGUAGES
+# # Which alternates of selected regions to include in the output. Takes the same
+# # values as city alternates. For U.S. states, "en" alternates include verbose
+# # names like "State of California" that people are unlikely type and that
+# # interfere with prefix matching, so we only include "abbr". Note that full
+# # names like "California" are always included in the output.
+# # region_alternates_iso_languages = ["abbr"]
 
-# MERINO_JOBS__GEONAMES_UPLOADER__RECORD_TYPE
-# The "type" of each geonames remote settings record.
-record_type = "geonames"
+# alternates_iso_languages = ["abbr", "iata", "icao", "faac"]
+
+# # MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY_CODES
+# # List of countries whose geonames will be uploaded. All countries' data will be
+# # uploaded together without any separation into different records, attachments,
+# # collections, etc. This is only a short-term hack to opportunistically include
+# # Canadian cities, since there are many Canadians Mozillians and relatively few
+# # Canadian cities over the population threshold.
+# # country_codes = ["US", "CA"]
+
+
+# # filter_expression_country = ""
+# # filter_expression_languages = []
+# # client_countries = ["CA", "GB", "US"]
+# # client_locales = ["en-US", "en-GB"]
+# filter_expression_countries = []
+# filter_expression_locales = []
+# geonames_countries = []
+
+
+# filter_expression_countries_per_population_threshold = [["US", "CA"], []]
+# filter_expression_countries_per_population_threshold2 = { 1 = ["US"] }
+
+# # filter_expr_countries_per_population_threshold = { \
+# #     50_000 = ["CA", "US"], \
+# #     500_000 = [], \
+# # }
+
+
+# geonames_country = "US"
+# filter_expr_countries_by_population_threshold = { 50_000 = ["CA", "US"], 500_000 = [] }
+
+
+# # MERINO_JOBS__GEONAMES_UPLOADER__RECORD_TYPE
+# # The "type" of each geonames remote settings record.
+# # record_type = "geonames"
+
+# geonames_record_type = "geonames-2"
+# alternates_record_type = "geonames-alternates"
+
+
+
+geonames_url_format = "https://download.geonames.org/export/dump/{country}.zip"
+country = ""
+geonames_record_type = "geonames-2"
+# filter_expr_countries_by_population_threshold = { 50_000 = ["CA", "US"], 500_000 = [] }
+
+# population_thresholds = [50_000, 500_000]
+# filter_expr_countries = [["CA", "US"], []]
+
+# population_thresholds_and_filter_expr_countries = [50_000, "CA", "US", 500_000]
+
+filter_expr_countries_by_population_threshold = '{ "50_000": ["CA", "US"], "500_000": [] }'
+
+alternates_url_format = "https://download.geonames.org/export/dump/alternatenames/{country}.zip"
+alternates_record_type = "geonames-alternates"
+alternates_languages = []
