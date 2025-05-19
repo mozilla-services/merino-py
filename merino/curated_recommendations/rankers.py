@@ -11,6 +11,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     SectionConfiguration,
     Section,
+    InferredInterests,
 )
 from scipy.stats import beta
 
@@ -147,6 +148,51 @@ def section_thompson_sampling(
         # Sample distribution
         return float(beta.rvs(opens, no_opens))
 
+    # sort sections by sampled score, highest first
+    ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
+    return renumber_sections(ordered)
+
+def personalized_section_thompson_sampling(
+    sections: dict[str, Section],
+    engagement_backend: EngagementBackend,
+    personal_interests: InferredInterests,
+    top_n: int = 6,
+) -> dict[str, Section]:
+    """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
+
+    :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
+    :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.
+    :param top_n: Number of top items in each section for which to sum engagement in the Thompson sampling score.
+
+    :return: Mapping of section IDs to Section objects with updated receivedFeedRank.
+
+    [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
+    """
+
+    def sample_score(sec: Section) -> float:
+        """Sample beta distribution for the combined engagement of the top _n_ items."""
+        # sum clicks and impressions over top_n items
+        recs = sec.recommendations[:top_n]
+        total_clicks = 0
+        total_imps = 0
+        for rec in recs:
+            if engagement := engagement_backend.get(rec.corpusItemId):
+                total_clicks += engagement.click_count
+                total_imps += engagement.impression_count
+
+        # constant prior α, β
+        prior = ConstantPrior().get()
+        a_prior = top_n * prior.alpha
+        b_prior = top_n * prior.beta
+
+        # Sum engagement and priors.
+        opens = total_clicks + a_prior
+        no_opens = total_imps - total_clicks + b_prior
+
+        # Sample distribution
+        return float(beta.rvs(opens, no_opens))
+    
+    print('personal interests', personal_interests)
     # sort sections by sampled score, highest first
     ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
     return renumber_sections(ordered)
