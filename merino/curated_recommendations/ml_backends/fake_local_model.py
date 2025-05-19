@@ -1,6 +1,5 @@
 """Backup local model for testing and in case of GCS failure"""
 
-from typing import Any
 
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,

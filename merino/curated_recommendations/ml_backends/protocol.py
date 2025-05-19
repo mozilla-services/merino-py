@@ -1,12 +1,14 @@
 """Protocol and Pydantic models for the Local Model provider backend."""
 
 from enum import Enum
-from typing import Protocol, Any
-from pydantic import BaseModel, ConfigDict
+from typing import Protocol
+from pydantic import BaseModel
 
 
 # Define the model type enum
 class ModelType(str, Enum):
+    """Type of model. Indicates source of data, such as whether we are working with clicks or include impressions"""
+
     CLICKS = "clicks"
     CLICK_IMP_PAIR = "click_impression_pair"
 

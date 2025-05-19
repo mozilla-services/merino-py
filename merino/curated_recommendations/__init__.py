@@ -39,7 +39,8 @@ _provider: CuratedRecommendationsProvider
 
 def init_local_model_backend() -> LocalModelBackend:
     """Initialize the Local Model Backend. This will be repaced with GCSLocal model
-    prior to production launch so we can dynamically update models."""
+    prior to production launch so we can dynamically update models.
+    """
     return FakeLocalModel()
 
 
