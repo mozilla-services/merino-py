@@ -32,7 +32,12 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     Engagement,
 )
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
-from merino.curated_recommendations.ml_backends.protocol import InferredLocalModel
+from merino.curated_recommendations.ml_backends.protocol import (
+    InferredLocalModel,
+    ModelData,
+    ModelType,
+    DayTimeWeightingConfig,
+)
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
@@ -82,8 +87,17 @@ class MockLocalModelBackend(LocalModelBackend):
 
     def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
         """Return sample local model"""
+        model_data = ModelData(
+            model_type=ModelType.CLICKS,
+            rescale=True,
+            day_time_weighting=DayTimeWeightingConfig(
+                days=[3, 14, 45],
+                relative_weight=[1, 1, 1],
+            ),
+            interest_vector={},
+        )
         return InferredLocalModel(
-            model_id="fake", model_version=0, surface_id=surface_id, model_data={}
+            model_id="fake", model_version=0, surface_id=surface_id, model_data=model_data
         )
 
     def initialize(self) -> None:
