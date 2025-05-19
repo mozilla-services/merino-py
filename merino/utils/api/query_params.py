@@ -70,7 +70,17 @@ def refine_geolocation_for_suggestion(
             # temp measure as FX is not providing the expected region for GB. [DISCO-3507]
             update={
                 "city": city,
-                "regions": [region if country.casefold() != "gb" else None],
+                "regions": [
+                    region
+                    if country.casefold()
+                    not in [
+                        "gb",
+                        "de",
+                        "it",
+                        "fr",
+                    ]
+                    else None
+                ],
                 "country": country,
             }
         )
