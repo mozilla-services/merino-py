@@ -13,6 +13,8 @@ class ModelType(str, Enum):
 
 # Interest vector category configuration
 class InterestVectorConfig(BaseModel):
+    """Class that defines the mapping of several article features (that were impressed, clicked etc) to an output feature"""
+
     # features that are added together to form the output value
     features: dict[str, float]
 
@@ -26,12 +28,15 @@ class InterestVectorConfig(BaseModel):
 
 # Top-level model config
 class DayTimeWeightingConfig(BaseModel):
-    # day ranges and relative weights. Each list must have the same length
+    """Day ranges and relative weights. 1 is no special weighting. Each list (days and relative_weight) must have the same length"""
+
     days: list[int]
     relative_weight: list[float]
 
 
 class ModelData(BaseModel):
+    """Data defining a model that maps interactions over many features to an interest vector of smaller number of dimensions"""
+
     model_type: ModelType
     # Whether to rescale the values based on 1 max value
     rescale: bool
