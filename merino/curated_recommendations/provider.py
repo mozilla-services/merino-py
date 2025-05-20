@@ -128,6 +128,7 @@ class CuratedRecommendationsProvider:
         is_sections_experiment = self.is_sections_experiment(request, surface_id)
 
         inferred_local_model = None
+        print('referred interests', request.inferredInterests)
         if is_sections_experiment and request.inferredInterests:
             inferred_local_model = self.local_model_backend.get(surface_id)
 
@@ -137,7 +138,7 @@ class CuratedRecommendationsProvider:
                 request,
                 surface_id,
                 engagement_backend=self.engagement_backend,
-                personal_interests= inferred_local_model,
+                personal_interests= request.inferredInterests,
                 prior_backend=self.prior_backend,
                 sections_backend=self.sections_backend,
             )

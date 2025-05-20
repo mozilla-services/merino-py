@@ -3,7 +3,7 @@
 from copy import copy
 from datetime import datetime, timedelta, timezone
 
-from merino.curated_recommendations import ConstantPrior
+from merino.curated_recommendations import ConstantPrior, ScaledGlobalPrior
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, Prior
@@ -152,6 +152,44 @@ def section_thompson_sampling(
     ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
     return renumber_sections(ordered)
 
+def aggregate_section_click_imps(
+    sections: dict[str, Section],
+    engagement_backend: EngagementBackend,    
+) -> dict[str, Section]:
+    """Aggregate item clicks and impressions to section level clicks and imps
+
+    :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
+    :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.    
+
+    :return: Mapping of section IDs to Section objects with updated clicks and imps
+    """
+
+    def aggregate_counts(sec: Section) -> float:
+        """cycle articles and aggregate section clicks and imps"""
+        # sum clicks and impressions over all items
+        recs = sec.recommendations
+        total_clicks = 0
+        total_imps = 0
+        for rec in recs:
+            if engagement := engagement_backend.get(rec.corpusItemId):
+                print('accumluate!!!', engagement.click_count, engagement.impression_count)
+                total_clicks += engagement.click_count
+                total_imps += engagement.impression_count
+            else:
+                print('pass!!', engagement_backend.get(rec.corpusItemId))
+        return total_clicks, total_imps
+
+    # update clicks and passes
+    print('engagement backend', engagement_backend)
+    sec_clicks={};sec_imps={}
+    for k in sections:
+        clicks,imps = aggregate_counts(sections[k])
+        print(k, clicks, imps, '\n\n\n\n')
+        sec_clicks[k]=clicks;sec_imps[k]=imps
+
+    return sec_clicks, sec_imps
+
+
 def personalized_section_thompson_sampling(
     sections: dict[str, Section],
     engagement_backend: EngagementBackend,
@@ -171,30 +209,36 @@ def personalized_section_thompson_sampling(
 
     def sample_score(sec: Section) -> float:
         """Sample beta distribution for the combined engagement of the top _n_ items."""
-        # sum clicks and impressions over top_n items
-        recs = sec.recommendations[:top_n]
-        total_clicks = 0
-        total_imps = 0
-        for rec in recs:
-            if engagement := engagement_backend.get(rec.corpusItemId):
-                total_clicks += engagement.click_count
-                total_imps += engagement.impression_count
 
-        # constant prior α, β
-        prior = ConstantPrior().get()
-        a_prior = top_n * prior.alpha
-        b_prior = top_n * prior.beta
+        print('sample score!! sec', sec.title)
+        ## global prior
+        prior = scaled_prior.get(sec)
+        a_prior = prior.alpha
+        b_prior = prior.beta
 
-        # Sum engagement and priors.
-        opens = total_clicks + a_prior
-        no_opens = total_imps - total_clicks + b_prior
+        # personal clicks and imps
+        personal_clicks = personal_interests['t_'+sec] if 't_'+sec in personal_interests else 0
+        personal_passes = 1 ## hardcoded for now
+
+        ## alpha and beta are prior plus observed
+        opens = personal_clicks + a_prior
+        no_opens = personal_passes + b_prior
 
         # Sample distribution
         return float(beta.rvs(opens, no_opens))
     
-    print('personal interests', personal_interests)
+    ## referred interests root={'model_id': 'nenew', 't_sports': 10000.0}
+    # pi = vars(personal_interests)
+    # section_clicks = {k[2:]:pi[k] for k in pi
+    #                   if k.startswith('t_')}
+    # section_imps = {k[2:]:1 for k in pi ## hardcoded 1 for now
+    #                   if k.startswith('t_')}
+    ## get global clicks and impressions
+    global_clicks, global_imps = aggregate_section_click_imps(sections,engagement_backend)
+    ## norm and scale the global clicks and impressions
+    scaled_prior = ScaledGlobalPrior(global_clicks,global_imps)
     # sort sections by sampled score, highest first
-    ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
+    ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1].title), reverse=True)
     return renumber_sections(ordered)
 
 

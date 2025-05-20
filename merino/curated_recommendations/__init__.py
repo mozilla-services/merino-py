@@ -23,6 +23,7 @@ from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalM
 from merino.curated_recommendations.ml_backends.protocol import LocalModelBackend
 from merino.curated_recommendations.prior_backends.gcs_prior import GcsPrior
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
+from merino.curated_recommendations.prior_backends.scaled_global_prior import ScaledGlobalPrior
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.provider import CuratedRecommendationsProvider
 from merino.utils.metrics import get_metrics_client
