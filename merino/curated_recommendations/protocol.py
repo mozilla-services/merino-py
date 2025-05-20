@@ -6,7 +6,14 @@ from typing import Annotated
 import logging
 from datetime import datetime
 
-from pydantic import Field, field_validator, model_validator, BaseModel, ValidationInfo
+from pydantic import (
+    Field,
+    field_validator,
+    model_validator,
+    BaseModel,
+    ValidationInfo,
+    RootModel,
+)
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
@@ -14,6 +21,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SurfaceId,
     IABMetadata,
 )
+from merino.curated_recommendations.ml_backends.protocol import InferredLocalModel
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +94,10 @@ class ExperimentName(str, Enum):
 # generated the identifier.
 MAX_TILE_ID = (1 << 53) - 1
 MIN_TILE_ID = 10000000
+
+
+class InferredInterests(RootModel[dict[str, float | str]]):
+    """Inferred general interests from New Tab article interactions"""
 
 
 class SectionConfiguration(BaseModel):
@@ -173,6 +185,7 @@ class CuratedRecommendationsRequest(BaseModel):
     experimentName: ExperimentName | str | None = None
     experimentBranch: str | None = None
     enableInterestPicker: bool = False
+    inferredInterests: InferredInterests | None = None
 
     @field_validator("topics", mode="before")
     def validate_topics(cls, values):
@@ -281,7 +294,6 @@ class Section(BaseModel):
         description="Timestamp when the section was followed. Must be in ISO 8601 format with timezone, "
         "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
     )
-
     isInitiallyVisible: bool = True
 
 
@@ -308,3 +320,4 @@ class CuratedRecommendationsResponse(BaseModel):
     data: list[CuratedRecommendation]
     feeds: dict[str, Section] | None = None
     interestPicker: InterestPicker | None = None
+    inferredLocalModel: InferredLocalModel | None = None

@@ -601,6 +601,20 @@ bucket_name = ""
 gcp_project = ""
 
 
+[default.curated_recommendations.gcs.local_model]
+# MERINO__CURATED_RECOMMENDATIONS__GCS__LOCAL_MODEL__MAX_SIZE
+# The maximum size in bytes of the GCS local model file. If exceeded, an error will be logged.
+max_size = 10_000
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__LOCAL_MODEL__BLOB_PREFIX
+# GCS path of the priors JSON file.
+blob_name = "newtab-merino-exports/local_model/latest.json"
+
+# MERINO__CURATED_RECOMMENDATIONS__GCS__LOCAL_MODEL__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains updated model.
+# Model is checked every 10 minutes.
+cron_interval_seconds = 600
+
 [default.curated_recommendations.gcs.engagement]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__MAX_SIZE
 # The maximum size in bytes of the GCS engagement blob. If exceeded, an error will be logged.

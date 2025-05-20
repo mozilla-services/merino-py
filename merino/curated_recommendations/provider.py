@@ -3,6 +3,7 @@
 import logging
 from typing import cast
 
+from merino.curated_recommendations import LocalModelBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceProtocol,
     SurfaceId,
@@ -46,11 +47,13 @@ class CuratedRecommendationsProvider:
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
         sections_backend: SectionsProtocol,
+        local_model_backend: LocalModelBackend,
     ) -> None:
         self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
         self.sections_backend = sections_backend
+        self.local_model_backend = local_model_backend
 
     @staticmethod
     def is_sections_experiment(
@@ -107,7 +110,6 @@ class CuratedRecommendationsProvider:
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
         surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
-
         corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
         recommendations = [
             CuratedRecommendation(
@@ -117,14 +119,20 @@ class CuratedRecommendationsProvider:
                 # interest vector. Data science work shows that using the topics as features
                 # is effective as a first pass at personalization.
                 # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
-                features={item.topic.value: 1.0} if item.topic else {},
+                features={f"t_{item.topic.value}": 1.0} if item.topic else {},
             )
             for rank, item in enumerate(corpus_items)
         ]
 
         sections_feeds = None
         general_feed = []
-        if self.is_sections_experiment(request, surface_id):
+        is_sections_experiment = self.is_sections_experiment(request, surface_id)
+
+        inferred_local_model = None
+        if is_sections_experiment and request.inferredInterests:
+            inferred_local_model = self.local_model_backend.get(surface_id)
+
+        if is_sections_experiment:
             sections_feeds = await get_sections(
                 recommendations,
                 request,
@@ -141,6 +149,7 @@ class CuratedRecommendationsProvider:
             surfaceId=surface_id,
             data=general_feed,
             feeds=sections_feeds,
+            inferredLocalModel=inferred_local_model,
         )
 
         if request.enableInterestPicker and response.feeds:
