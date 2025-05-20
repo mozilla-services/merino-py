@@ -31,7 +31,9 @@ def title_blocklist() -> set:
 def file_manager(mocker):
     """Return a mock FileManager instance."""
     fm_mock = mocker.patch("merino.jobs.wikipedia_indexer.filemanager.FileManager")
-    return fm_mock.return_value
+    fm = fm_mock.return_value
+    fm.language = "en"
+    return fm
 
 
 @pytest.fixture
@@ -45,9 +47,9 @@ def es_client(mocker):
     ["file_name", "version", "expected"],
     [
         ("enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
-        ("foo/enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
-        ("foo/bar/enwiki-123-content.json", "v1", f"enwiki-123-v1-{EPOCH_FROZEN_TIME}"),
-        ("enwiki-123-content.json", "v2", f"enwiki-123-v2-{EPOCH_FROZEN_TIME}"),
+        ("foo/plwiki-123-content.json", "v1", f"plwiki-123-v1-{EPOCH_FROZEN_TIME}"),
+        ("foo/bar/dewiki-123-content.json", "v1", f"dewiki-123-v1-{EPOCH_FROZEN_TIME}"),
+        ("frwiki-123-content.json", "v2", f"frwiki-123-v2-{EPOCH_FROZEN_TIME}"),
     ],
 )
 @freezegun.freeze_time(FROZEN_TIME)
@@ -102,12 +104,13 @@ def test_index_from_export_no_exports_available(
 ):
     """Test that RuntimeError is emitted."""
     file_manager.get_latest_gcs.return_value = Blob("", "bucket")
+    file_manager.language = "en"
     es_client.indices.exists.return_value = False
     indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
     with pytest.raises(RuntimeError) as exc_info:
         indexer.index_from_export(100, "fake_alias")
 
-    assert exc_info.value.args[0] == "No exports available on GCS"
+    assert exc_info.value.args[0] == "No exports available on GCS for en"
 
 
 def test_index_from_export_fail_on_existing_index(

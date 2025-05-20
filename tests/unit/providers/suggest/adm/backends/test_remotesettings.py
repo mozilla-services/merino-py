@@ -91,6 +91,21 @@ def fixture_rs_records() -> list[dict[str, Any]]:
             "last_modified": 123,
         },
         {
+            "type": "amp",
+            "country": "US",
+            "form_factor": "desktop",
+            "schema": 123,
+            "attachment": {
+                "hash": "abcd",
+                "size": 1,
+                "filename": "data-01.json",
+                "location": "main-workspace/quicksuggest/attachmment-01.json",
+                "mimetype": "application/octet-stream",
+            },
+            "id": "data-01",
+            "last_modified": 123,
+        },
+        {
             "type": "icon",
             "schema": 456,
             "attachment": {
@@ -299,6 +314,33 @@ async def test_fetch_no_adm_wikipedia_result(
     suggestion_content: SuggestionContent = await rs_backend.fetch()
 
     assert suggestion_content.results == []
+
+
+@pytest.mark.asyncio
+async def test_filter_amp_records(
+    rs_records: list[dict[str, Any]],
+    rs_backend: RemoteSettingsBackend,
+) -> None:
+    """Test that the filter_records method returns the proper records."""
+    suggestion_content = rs_backend.filter_records("amp", rs_records)
+
+    assert suggestion_content == [
+        {
+            "type": "amp",
+            "country": "US",
+            "form_factor": "desktop",
+            "schema": 123,
+            "attachment": {
+                "hash": "abcd",
+                "size": 1,
+                "filename": "data-01.json",
+                "location": "main-workspace/quicksuggest/attachmment-01.json",
+                "mimetype": "application/octet-stream",
+            },
+            "id": "data-01",
+            "last_modified": 123,
+        }
+    ]
 
 
 @pytest.mark.asyncio

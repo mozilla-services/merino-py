@@ -4,11 +4,13 @@ import asyncio
 import time
 import logging
 
+import aiodogstatsd
 import tldextract
 from pydantic import HttpUrl, ValidationError
 
 from merino.providers.manifest.backends.filemanager import GetManifestResultCode
 from merino.utils import cron
+from merino.utils.metrics import get_metrics_client
 
 from merino.providers.manifest.backends.protocol import (
     ManifestBackend,
@@ -29,6 +31,7 @@ class Provider:
     cron_interval_sec: int
     last_fetch_at: float
     name: str
+    metrics_client: aiodogstatsd.Client
 
     def __init__(
         self,
@@ -45,6 +48,7 @@ class Provider:
         self.manifest_data = ManifestData(domains=[])
         self.domain_lookup_table = {}
         self.data_fetched_event = asyncio.Event()
+        self.metrics_client = get_metrics_client()
 
         super().__init__()
 
@@ -113,7 +117,9 @@ class Provider:
                     return HttpUrl(icon_url)
                 except ValidationError:
                     # [DISCO-3441] Some icon URLs are empty strings, which are not valid URLs.
-                    logger.warning(f"Invalid icon URL for domain {base_domain}: '{icon_url}'")
+                    self.metrics_client.increment(
+                        "manifest.invalid_icon_url", tags={"domain": base_domain}
+                    )
         except Exception as e:
             logger.warning(f"Error getting icon for URL {url}: {e}")
         return None

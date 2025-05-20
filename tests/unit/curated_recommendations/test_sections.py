@@ -38,6 +38,7 @@ from merino.curated_recommendations.sections import (
     get_corpus_sections,
     map_corpus_section_to_section,
     map_section_item_to_recommendation,
+    map_topic_to_iab_categories,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -252,8 +253,10 @@ class TestCreateSectionsFromItemsByTopic:
         food = sections[Topic.FOOD.value]
         assert sci.receivedFeedRank == 0
         assert sci.layout == layout_6_tiles
+        assert sci.iab.categories == ["464"]
         assert food.receivedFeedRank == 1
         assert food.layout == layout_4_large
+        assert food.iab.categories == ["210"]
         assert sci.recommendations[0].receivedRank == 0
         assert food.recommendations[0].receivedRank == 0
 
@@ -389,3 +392,33 @@ class TestGetCorpusSections:
         section = result["secA"]
         assert section.receivedFeedRank == 5
         assert len(section.recommendations) == 2
+
+
+class TestMapIABCategoriesToSection:
+    """Tests for map_topic_to_iab_categories."""
+
+    @pytest.mark.parametrize(
+        "section_id,expected_iab_codes",
+        [
+            (Topic.BUSINESS, ["52"]),
+            (Topic.CAREER, ["123"]),
+            (Topic.EDUCATION, ["132"]),
+            (Topic.ARTS, ["JLBCU7"]),
+            (Topic.FOOD, ["210"]),
+            (Topic.HEALTH_FITNESS, ["223"]),
+            (Topic.HOME, ["274"]),
+            (Topic.PERSONAL_FINANCE, ["391"]),
+            (Topic.POLITICS, ["386"]),
+            (Topic.SPORTS, ["483"]),
+            (Topic.TECHNOLOGY, ["596"]),
+            (Topic.TRAVEL, ["653"]),
+            (Topic.GAMING, ["596"]),
+            (Topic.PARENTING, ["192"]),
+            (Topic.SCIENCE, ["464"]),
+            (Topic.SELF_IMPROVEMENT, ["186"]),
+            ("section_id_not_found", []),  # return empty array if section_id not found in mapping
+        ],
+    )
+    def test_mapping_works(self, section_id, expected_iab_codes):
+        """Map a valid section_ids to IAB category code(s)."""
+        assert map_topic_to_iab_categories(section_id) == expected_iab_codes

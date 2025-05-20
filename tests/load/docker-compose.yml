@@ -16,7 +16,7 @@ services:
       LOAD_TESTS__LOGGING_LEVEL: 10
       MERINO_REMOTE_SETTINGS__SERVER: "https://firefox.settings.services.mozilla.com"
       MERINO_REMOTE_SETTINGS__BUCKET: "main"
-      MERINO_REMOTE_SETTINGS__COLLECTION: "quicksuggest"
+      MERINO_REMOTE_SETTINGS__COLLECTION: "quicksuggest-other"
       MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH: "dev/top_picks.json"
       MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT: "4"
       MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT: "2"
@@ -38,7 +38,7 @@ services:
       LOAD_TESTS__LOGGING_LEVEL: 10
       MERINO_REMOTE_SETTINGS__SERVER: "https://firefox.settings.services.mozilla.com"
       MERINO_REMOTE_SETTINGS__BUCKET: "main"
-      MERINO_REMOTE_SETTINGS__COLLECTION: "quicksuggest"
+      MERINO_REMOTE_SETTINGS__COLLECTION: "quicksuggest-other"
       MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH: "dev/top_picks.json"
       MERINO_PROVIDERS__TOP_PICKS__QUERY_CHAR_LIMIT: "4"
       MERINO_PROVIDERS__TOP_PICKS__FIREFOX_CHAR_LIMIT: "2"

@@ -7,6 +7,8 @@ from gzip import GzipFile
 from html.parser import HTMLParser
 from typing import Generator, Optional, Pattern
 from urllib.parse import urljoin
+from merino.configs import settings
+
 
 import requests
 from google.cloud.storage import Blob, Client
@@ -18,6 +20,8 @@ from google.api_core.exceptions import GoogleAPIError
 
 
 logger = logging.getLogger(__name__)
+
+SUPPORTED_LANGUAGES = set(settings.suggest_supported_languages)
 
 
 class DirectoryParser(HTMLParser):
@@ -53,19 +57,30 @@ class FileManager:
     object_prefix: str
     file_pattern: Pattern
     client: Client
+    language: str
 
-    def __init__(self, gcs_bucket: str, gcs_project: str, export_base_url: str) -> None:
-        self.file_pattern = re.compile(r"(?:.*/|^)enwiki-(\d+)-cirrussearch-content.json.gz")
+    def __init__(
+        self, gcs_bucket: str, gcs_project: str, export_base_url: str, language: str
+    ) -> None:
+        if language not in SUPPORTED_LANGUAGES:
+            raise ValueError(
+                f"Unsupported language '{language}'. Must be one of: {', '.join(SUPPORTED_LANGUAGES)}"
+            )
+
+        self.file_pattern = re.compile(
+            rf"(?:.*/|^){language}wiki-(\d+)-cirrussearch-content.json.gz"
+        )
         self.client = Client(gcs_project)
         self.base_url = export_base_url
+        self.language = language
         if "/" in gcs_bucket:
             self.gcs_bucket, self.object_prefix = gcs_bucket.split("/", 1)
         else:
             self.gcs_bucket = gcs_bucket
             self.object_prefix = ""
 
-    def get_latest_dump(self, latest_gcs: Blob) -> Optional[str]:
-        """Find the latest export that's newer than the latest on gcs."""
+    def get_latest_dump(self, latest_gcs: Optional[Blob]) -> Optional[str]:
+        """Find the latest export that's newer than the latest on GCS (if any)."""
         resp = requests.get(self.base_url)  # nosec
         parser = DirectoryParser(self.file_pattern)
         parser.feed(str(resp.content))
@@ -73,8 +88,15 @@ class FileManager:
         if len(links) == 1:
             name = links[0]
             url = urljoin(self.base_url, name)
-            last_gcs_date = self._parse_date(str(latest_gcs.name))
+
             link_date = self._parse_date(name)
+
+            if latest_gcs:
+                last_gcs_date = self._parse_date(str(latest_gcs.name))
+            else:
+                logger.info("")
+                last_gcs_date = dt.min  # treat as oldest possible date for first_run
+
             if last_gcs_date < link_date:
                 return url
         return None
@@ -91,20 +113,36 @@ class FileManager:
         return dt(1, 1, 1)
 
     def get_latest_gcs(self) -> Blob:
-        """Find the most recent file on GCS"""
+        """Find the most recent file on GCS that matches the language-specific pattern"""
         bucket = self.client.bucket(self.gcs_bucket)
-        blobs: list[Blob] = [b for b in bucket.list_blobs(prefix=self.object_prefix)]
+        blobs: list[Blob] = [
+            b
+            for b in bucket.list_blobs(prefix=self.object_prefix)
+            if self.file_pattern.match(b.name)
+        ]
+        if not blobs:
+            raise RuntimeError(f"No matching dump files found for pattern: {self.file_pattern}")
+
         blobs.sort(key=lambda b: self._parse_date(str(b.name)))
         return blobs[-1]
 
     def stream_latest_dump_to_gcs(self, latest_gcs: Optional[Blob] = None) -> Blob:
         """Stream the latest Wikimedia dump to GCS"""
-        if not latest_gcs:
-            latest_gcs = self.get_latest_gcs()
+        try:
+            if not latest_gcs:
+                latest_gcs = self.get_latest_gcs()
+        except RuntimeError as e:
+            logger.warning(
+                f"No existing GCS file found, will stream latest from Wikimedia. Error: {e}"
+            )
+            latest_gcs = None
+
         latest_dump_url = self.get_latest_dump(latest_gcs)
         logger.info("latest_dump_url", extra={"ldurl": latest_dump_url})
         if latest_dump_url:
             self._stream_dump_to_gcs(latest_dump_url)
+            # Recompute latest_gcs after upload
+            latest_gcs = self.get_latest_gcs()
         else:
             logger.info("Currently up to date")
 

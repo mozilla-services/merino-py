@@ -1,6 +1,7 @@
 """CLI commands for the wikipedia_indexer module"""
 
 import logging
+from typing import Annotated
 
 import typer
 
@@ -43,9 +44,11 @@ indexer_cmd = typer.Typer(
 
 @indexer_cmd.command()
 def index(
+    language: Annotated[
+        str, typer.Option(help="Language to index (e.g., en, fr, de), default to en.")
+    ] = "en",
     elasticsearch_url: str = job_settings.es_url,
     elasticsearch_api_key: str = job_settings.es_api_key,
-    elasticsearch_alias: str = job_settings.es_alias,
     blocklist_file_url: str = job_settings.blocklist_file_url,
     index_version: str = version_option,
     total_docs: int = job_settings.total_docs,
@@ -55,9 +58,16 @@ def index(
     """Index file from GCS to Elasticsearch"""
     es_client = create_elasticsearch_client(elasticsearch_url, elasticsearch_api_key)
 
-    file_manager = FileManager(gcs_path, gcp_project, "")
+    blocklist = create_blocklist(
+        blocklist_file_url
+    )  # TODO Re-using same blocklist for now until we figure something else out
 
-    blocklist = create_blocklist(blocklist_file_url)
+    logger.info(f"Starting Wikipedia indexing for language: {language}")
+
+    file_manager = FileManager(gcs_path, gcp_project, "", language)
+
+    alias_key = f"{language}_es_alias"
+    elasticsearch_alias = elasticsearch_alias = job_settings[alias_key]
 
     indexer = Indexer(
         index_version,
@@ -71,17 +81,20 @@ def index(
 
 @indexer_cmd.command()
 def copy_export(
+    language: Annotated[
+        str, typer.Option(help="Language to copy export for (e.g., en, fr, de), default to en.")
+    ] = "en",
     export_base_url: str = job_settings.export_base_url,
     gcs_path: str = gcs_path_option,
     gcp_project: str = gcp_project_option,
 ):
     """Copy file from Wikimedia to GCS"""
-    file_manager = FileManager(gcs_path, gcp_project, export_base_url)
+    file_manager = FileManager(gcs_path, gcp_project, export_base_url, language)
 
     logger.info(
-        "Ensuring latest dump is on GCS",
+        f"Ensuring latest {language} dump is on GCS",
         extra={"gcs_path": gcs_path, "gcp_project": gcp_project},
     )
     latest = file_manager.stream_latest_dump_to_gcs()
     if not latest.name:
-        raise RuntimeError("Unable to ensure latest dump on GCS or missing file name.")
+        raise RuntimeError(f"Unable to ensure latest {language} dump on GCS or missing file name.")

@@ -24,6 +24,8 @@
 [default]
 debug = false
 
+suggest_supported_languages = ["en", "fr", "de", "it", "pl"]
+
 
 [default.runtime]
 # MERINO_RUNTIME__QUERY_TIMEOUT_SEC
@@ -157,9 +159,12 @@ server = "https://firefox.settings.services.mozilla.com"
 bucket = "main"
 
 # MERINO_REMOTE_SETTINGS__COLLECTION
-# The collection to use for Remote Settings providers if not specified in provider config.
-# Ex: "quicksuggest".
-collection = "quicksuggest"
+# The remote settings collection that contains data other than AMP.
+collection = "quicksuggest-other"
+
+# MERINO_REMOTE_SETTINGS__COLLECTION_AMP
+# The remote settings collection that contains AMP data.
+collection_amp = "quicksuggest-amp"
 
 # The collection to use for uploading fakespot suggestions if not specified on the command line
 collection_fakespot = "fakespot-suggest-products"
@@ -179,6 +184,10 @@ dry_run = false
 # MERINO_REMOTE_SETTINGS__SCORE
 # Default score to set in suggestions uploaded to remote settings.
 score = 0.25
+
+# MERINO_REMOTE_SETTINGS__COUNTRIES
+# Default countries used to filter out records from remote settings.
+countries = ["US"]
 
 # Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
 [default.redis]
@@ -245,7 +254,7 @@ cdn_hostname = ""
 # Subdirectory within bucket for favicons
 favicons_root = "favicons"
 # Maximum size of files to process (in bytes)
-max_size = 16777216  # 16MB
+max_size = 16777216 # 16MB
 # HTTP timeout for favicon downloads (in seconds)
 http_timeout = 5
 
@@ -406,7 +415,7 @@ default_languages = [
     "ur",
     "vi",
     "zh-CN",
-    "zh-TW"
+    "zh-TW",
 ]
 
 
@@ -663,8 +672,24 @@ es_url = ""
 es_api_key = ""
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__ES_ALIAS
-# Elasticsearch alias value for indexing job.
-es_alias = "enwiki-{version}"
+# Elasticsearch english alias value for indexing job.
+en_es_alias = "enwiki-{version}"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__FR__ES_ALIAS
+# Elasticsearch french alias value for indexing job.
+fr_es_alias = "frwiki-{version}"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__DE__ES_ALIAS
+# Elasticsearch german alias value for indexing job.
+de_es_alias = "dewiki-{version}"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__IT__ES_ALIAS
+# Elasticsearch italian alias value for indexing job.
+it_es_alias = "itwiki-{version}"
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__PL__ES_ALIAS
+# Elasticsearch polish alias value for indexing job.
+pl_es_alias = "plwiki-{version}"
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__INDEX_VERSION
 # Index version that will be written.
@@ -738,11 +763,13 @@ alternates_path = "/export/dump/alternatenames/{country_code}.zip"
 # How large a geoname's population must be for it to be included in the output.
 # Geonames with populations at least this large will be included.
 population_threshold = 50_000
+
 # MERINO_JOBS__GEONAMES_UPLOADER__CITY_ALTERNATES_ISO_LANGUAGES
 # Which alternates of selected cities to include in the output. Alternates are
 # categorized by language, like "en", plus a few other categories like
 # abbreviations ("abbr") and airport codes ("iata", "icao", "faac").
 city_alternates_iso_languages = ["en", "en-US", "iata", "icao", "faac", "abbr"]
+
 # MERINO_JOBS__GEONAMES_UPLOADER__REGION_ALTERNATES_ISO_LANGUAGES
 # Which alternates of selected regions to include in the output. Takes the same
 # values as city alternates. For U.S. states, "en" alternates include verbose
@@ -750,6 +777,7 @@ city_alternates_iso_languages = ["en", "en-US", "iata", "icao", "faac", "abbr"]
 # interfere with prefix matching, so we only include "abbr". Note that full
 # names like "California" are always included in the output.
 region_alternates_iso_languages = ["abbr"]
+
 # MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY_CODES
 # List of countries whose geonames will be uploaded. All countries' data will be
 # uploaded together without any separation into different records, attachments,
@@ -757,6 +785,7 @@ region_alternates_iso_languages = ["abbr"]
 # Canadian cities, since there are many Canadians Mozillians and relatively few
 # Canadian cities over the population threshold.
 country_codes = ["US", "CA"]
+
 # MERINO_JOBS__GEONAMES_UPLOADER__RECORD_TYPE
 # The "type" of each geonames remote settings record.
 record_type = "geonames"

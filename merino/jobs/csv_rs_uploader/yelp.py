@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from merino.jobs.csv_rs_uploader.base import BaseSuggestion
 
 FIELD_SUBJECTS = "subjects"
+FIELD_BUSINESS_SUBJECTS = "business-subjects"
 FIELD_PRE_MODIFIERS = "pre-modifiers"
 FIELD_POST_MODIFIERS = "post-modifiers"
 FIELD_LOCATION_MODIFIERS = "location-modifiers"
@@ -35,6 +36,7 @@ class Suggestion(BaseSuggestion):
     """
 
     subjects: list[str]
+    businessSubjects: list[str]
     preModifiers: list[str]
     postModifiers: list[str]
     locationSigns: list[LocationSign]
@@ -45,6 +47,7 @@ class Suggestion(BaseSuggestion):
     def csv_to_suggestions(cls, csv_reader) -> list["Suggestion"]:
         """Convert CSV content to Yelp Suggestions."""
         subjects = []
+        business_subjects = []
         pre_modifiers = []
         post_modifiers = []
         location_signs = []
@@ -54,6 +57,10 @@ class Suggestion(BaseSuggestion):
             subject = row[FIELD_SUBJECTS]
             if subject:
                 subjects.append(subject)
+
+            business_subject = row[FIELD_BUSINESS_SUBJECTS]
+            if business_subject:
+                business_subjects.append(business_subject)
 
             pre_modifier = row[FIELD_PRE_MODIFIERS]
             if pre_modifier:
@@ -78,6 +85,7 @@ class Suggestion(BaseSuggestion):
         return [
             Suggestion(
                 subjects=subjects,
+                businessSubjects=business_subjects,
                 preModifiers=pre_modifiers,
                 postModifiers=post_modifiers,
                 locationSigns=location_signs,

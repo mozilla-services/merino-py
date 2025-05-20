@@ -12,6 +12,7 @@ from pytest import LogCaptureFixture
 
 from merino.providers.suggest.adm.backends.protocol import SuggestionContent
 from merino.providers.suggest.adm.provider import NonsponsoredSuggestion, Provider
+from merino.providers.suggest.base import Category
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
 
@@ -123,6 +124,7 @@ async def test_query_success(
             full_keyword="firefox accounts",
             title="Mozilla Firefox Accounts",
             url=HttpUrl("https://example.org/target/mozfirefoxaccounts"),
+            categories=[],
             impression_url=HttpUrl("https://example.org/impression/mozilla"),
             click_url=HttpUrl("https://example.org/click/mozilla"),
             provider="adm",
@@ -140,3 +142,18 @@ async def test_query_with_missing_key(srequest: SuggestionRequestFixture, adm: P
     await adm.initialize()
 
     assert await adm.query(srequest("nope")) == []
+
+
+@pytest.mark.parametrize(
+    ["domain", "expected"],
+    [
+        ("testserpcategories.com", [Category.Education]),
+        ("nocategories.com", []),
+    ],
+)
+@pytest.mark.asyncio
+async def test_query_serp_categories(adm: Provider, domain: str, expected: list[Category]) -> None:
+    """Test for the serp_categories() method of the adM provider."""
+    categories = adm.serp_categories(domain)
+
+    assert categories == expected

@@ -68,7 +68,7 @@ def test_directory_parser():
 )
 def test_parse_date(file_name, expected_datetime):
     """Test parse date regexp properly converts to a valid or sentinel datetime"""
-    file_manager = FileManager("foo/bar", "a-project", "http://foo/")
+    file_manager = FileManager("foo/bar", "a-project", "http://foo/", "en")
 
     parsed_date = file_manager._parse_date(file_name)
 
@@ -86,7 +86,7 @@ def test_parse_date(file_name, expected_datetime):
 )
 def test_parse_gcs_bucket(gcs_bucket, expected_bucket, expected_prefix):
     """Test gcs bucket path parsing"""
-    file_manager = FileManager(gcs_bucket, "a-project", "http://foo/")
+    file_manager = FileManager(gcs_bucket, "a-project", "http://foo/", "en")
 
     assert file_manager.gcs_bucket == expected_bucket
     assert file_manager.object_prefix == expected_prefix
@@ -116,7 +116,7 @@ def test_get_latest_dump(requests_mock, file_date, gcs_date, expected):
     html_directory = f"<a href='{file_name}' />"
     requests_mock.get(base_url, text=html_directory)  # nosec
 
-    file_manager = FileManager("foo/bar", "a-project", base_url)
+    file_manager = FileManager("foo/bar", "a-project", base_url, "en")
 
     latest_dump_url = file_manager.get_latest_dump(latest_gcs)
 
@@ -131,7 +131,7 @@ def test_get_latest_gcs(mock_gcs_client):
     mock_bucket = mock_gcs_client.bucket.return_value
     mock_bucket.list_blobs.return_value = [blob1, blob2]
 
-    file_manager = FileManager("foo/bar", "a-project", "")
+    file_manager = FileManager("foo/bar", "a-project", "", "en")
     latest_gcs = file_manager.get_latest_gcs()
 
     assert latest_gcs == blob1
@@ -159,7 +159,7 @@ def test_stream_dump_to_gcs_success(mock_requests, mock_gcs_client, mock_wiki_ht
     mock_blob.open.return_value.__enter__.return_value = mock_blob_writer
     mock_blob.open.return_value.__exit__.return_value = None
 
-    file_manager = FileManager(mock_bucket, "a-project", base_url)
+    file_manager = FileManager(mock_bucket, "a-project", base_url, "en")
     file_manager._stream_dump_to_gcs(dump_url)
 
     mock_blob.open.assert_called_once_with("wb")
@@ -197,7 +197,7 @@ def test_stream_dump_to_gcs_blob_deletion(mock_requests, mock_gcs_client, mock_w
     # raise an exception during streaming
     mock_blob_writer.write.side_effect = Exception("failed to write chunk")
 
-    file_manager = FileManager(mock_bucket, "a-project", base_url)
+    file_manager = FileManager(mock_bucket, "a-project", base_url, "en")
 
     with pytest.raises(WikipediaFilemanagerError, match="Failed to stream dump to GCS"):
         file_manager._stream_dump_to_gcs(dump_url)

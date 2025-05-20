@@ -87,14 +87,23 @@ def test_query_max_length(client: TestClient) -> None:
     assert len(response.json()["suggestions"]) == 0
 
 
-def test_query_failure_exceeds_max_length(client: TestClient) -> None:
+def test_query_failure_exceeds_max_length(
+    client: TestClient, caplog: LogCaptureFixture, filter_caplog: FilterCaplogFixture
+) -> None:
     """Test that the suggest endpoint query is limited by the defined query_max_length.
     This ensures a 400 code returns and the request fails.
     Constant in configuration under [default | testing].web.api.v1.query_max_length.
     """
+    caplog.set_level(logging.WARNING)
+
     query_string = "a" * (QUERY_CHARACTER_MAX * 2)
     response = client.get(f"/api/v1/suggest?q={query_string}")
     assert response.status_code == 400
+
+    records = filter_caplog(caplog.records, "merino.main")
+
+    assert len(records) == 1
+    assert records[0].message == "HTTP 400: request validation error for path: /api/v1/suggest"
 
 
 def test_suggest_duplicate_providers(client: TestClient) -> None:

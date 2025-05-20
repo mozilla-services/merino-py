@@ -11,7 +11,12 @@ from google.cloud.storage import Client, Bucket
 
 from merino.configs import settings
 from merino.curated_recommendations import GCSLocalModel
-from merino.curated_recommendations.ml_backends.protocol import InferredLocalModel
+from merino.curated_recommendations.ml_backends.protocol import (
+    InferredLocalModel,
+    ModelData,
+    ModelType,
+    DayTimeWeightingConfig,
+)
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 TEST_SURFACE_ID = "AA"
@@ -78,7 +83,12 @@ def blob(gcs_bucket):
                 "surface_id": TEST_SURFACE_ID,
                 "model_id": TEST_MODEL_ID,
                 "model_version": 0,
-                "model_data": {},
+                "model_data": {
+                    "model_type": ModelType.CLICKS,
+                    "rescale": True,
+                    "day_time_weighting": {"days": [], "relative_weight": []},
+                    "interest_vector": {},
+                },
             }
         ],
     )
@@ -111,7 +121,22 @@ async def test_gcs_local_model_fetches_data(gcs_storage_client, gcs_bucket, metr
     """Test that the backend fetches data from GCS and returns engagement data."""
     local_model = create_gcs_local_model(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_engagement_is_updated(local_model)
+    model_data = ModelData(
+        model_type=ModelType.CLICKS,
+        rescale=True,
+        day_time_weighting=DayTimeWeightingConfig(
+            days=[3, 14, 45],
+            relative_weight=[1, 1, 1],
+        ),
+        interest_vector={},
+    )
 
-    assert local_model.get(TEST_SURFACE_ID) == InferredLocalModel(
-        surface_id=TEST_SURFACE_ID, model_version=0, model_id=TEST_MODEL_ID, model_data={}
+    assert (
+        local_model.get(TEST_SURFACE_ID).model_id
+        == InferredLocalModel(
+            surface_id=TEST_SURFACE_ID,
+            model_version=0,
+            model_id=TEST_MODEL_ID,
+            model_data=model_data,
+        ).model_id
     )

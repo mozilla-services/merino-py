@@ -186,17 +186,27 @@ async def test_query_no_weather_report_returned(
 
 
 def test_query_with_no_request_type_param_returns_http_400(
-    provider: Provider, geolocation: Location
+    provider: Provider,
+    geolocation: Location,
+    caplog: pytest.LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
 ) -> None:
     """Test that the query method throws a http 400 error when `q` param is provided but no
     `request_type` param is provided
     """
+    caplog.set_level(logging.WARNING)
+
     with pytest.raises(HTTPException) as accuweather_error:
         provider.validate(SuggestionRequest(query="weather", geolocation=geolocation))
 
     expected_error_message = "400: Invalid query parameters: `request_type` is missing"
 
     assert expected_error_message == str(accuweather_error.value)
+
+    records = filter_caplog(caplog.records, "merino.providers.suggest.weather.provider")
+
+    assert len(records) == 1
+    assert records[0].message == "HTTP 400: invalid query parameters: `request_type` is missing"
 
 
 @pytest.mark.asyncio

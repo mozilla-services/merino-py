@@ -39,28 +39,10 @@ _provider: CuratedRecommendationsProvider
 
 
 def init_local_model_backend() -> LocalModelBackend:
-    """Initialize the GCS Local Model Backend."""
-    metrics_namespace = "recommendations.local_model"
-    try:
-        synced_gcs_blob = SyncedGcsBlob(
-            storage_client=initialize_storage_client(
-                destination_gcp_project=settings.local_model.gcs.gcp_project
-            ),
-            bucket_name=settings.local_model.gcs.bucket_name,
-            blob_name=settings.local_model.gcs.local_model.blob_name,
-            max_size=settings.local_model.gcs.local_model.max_size,
-            cron_interval_seconds=settings.local_model.gcs.local_model.cron_interval_seconds,
-            cron_job_name="fetch_local_model",
-            metrics_client=get_metrics_client(),
-            metrics_namespace=metrics_namespace,
-        )
-        synced_gcs_blob.initialize()
-
-        return GCSLocalModel(synced_gcs_blob=synced_gcs_blob)
-    except Exception as e:
-        logger.error(f"Failed to initialize GCS Local Model Backend: {e}")
-        # Return hard coded local model as degraded experience for testing
-        return FakeLocalModel()
+    """Initialize the Local Model Backend. This will be repaced with GCSLocal model
+    prior to production launch so we can dynamically update models.
+    """
+    return FakeLocalModel()
 
 
 def init_engagement_backend() -> EngagementBackend:

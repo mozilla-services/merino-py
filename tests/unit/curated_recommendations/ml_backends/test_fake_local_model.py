@@ -23,4 +23,11 @@ def test_model_returns_inferred_local_model(model):
     assert result.model_id == FAKE_MODEL_ID
     assert result.surface_id == surface_id
     assert result.model_version == 0
+<<<<<<< HEAD
     assert isinstance(result.model_data, dict)
+=======
+    assert result.model_data is not None
+    assert len(result.model_data.interest_vector) > 0
+    assert len(result.model_data.day_time_weighting.days) > 0
+    assert len(result.model_data.day_time_weighting.relative_weight) > 0
+>>>>>>> origin/main
