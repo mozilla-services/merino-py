@@ -465,13 +465,15 @@ def test_suggest_with_location_completion_with_incorrect_request_type_param(
 
 
 @pytest.mark.parametrize(
-    ("city", "region", "country"),
+    ("city", "region", "country", "admin1", "admin2"),
     [
-        (None, "MA", "US"),
-        ("Boston", None, None),
-        (None, "MA", None),
-        (None, None, "US"),
-        ("Boston", "MA", None),
+        (None, "MA", "US", None, None),
+        ("Boston", None, None, None, None),
+        (None, "MA", None, None, None),
+        (None, None, "US", None, None),
+        ("Boston", "MA", None, None, None),
+        ("Boston", None, "US", None, None),
+        ("Boston", None, "US", None, "US"),
     ],
     ids=[
         "missing_city",
@@ -479,6 +481,8 @@ def test_suggest_with_location_completion_with_incorrect_request_type_param(
         "missing_city_and_country",
         "missing_city_and_region",
         "missing_country",
+        "missing_admin1_and_admin2",
+        "missing_admin2",
     ],
 )
 @pytest.mark.asyncio
@@ -487,9 +491,11 @@ async def test_suggest_weather_with_incomplete_city_region_country_params(
     city: str | None,
     region: str | None,
     country: str | None,
+    admin1: str | None,
+    admin2: str | None,
 ) -> None:
     """Test that the suggest endpoint response for accuweather provider returns a 400 when city, region
-    & country params are not all provided.
+    & country params or city, admin1 & country are not all provided.
     """
     base_url = "/api/v1/suggest?q=weather&providers=weather&request_type=weather"
 
@@ -499,12 +505,16 @@ async def test_suggest_weather_with_incomplete_city_region_country_params(
         base_url += f"&region={region}"
     if country is not None:
         base_url += f"&country={country}"
+    if admin1 is not None:
+        base_url += f"&admin1={admin1}"
+    if admin2 is not None:
+        base_url += f"&admin2={admin2}"
 
     response = client.get(base_url)
     assert response.status_code == 400
     assert (
         response.json()["detail"]
-        == "Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
+        == "Invalid query parameters: either  all of `city`, `region`, `country` need to be present or all of `city`, `admin1`, and/or `admin2`, `country` need to be present."
     )
 
 
@@ -566,22 +576,36 @@ async def test_suggest_weather_with_custom_location(
 
 
 @pytest.mark.asyncio
-async def test_suggest_weather_with_custom_gb_location(
+async def test_suggest_weather_with_custom_location_with_admin_codes(
     client: TestClient,
     geolocation_middleware: GeolocationMiddleware,
     geolocation_scope: Scope,
     providers: Providers,
     mocker: MockerFixture,
 ) -> None:
-    """Test that the suggest endpoint returns a response using custom UK city, region & country params when provided.
-    Region in this case is being ignored. [DISCO-3507]
-    """
+    """Test that the suggest endpoint returns a response using custom city, admin1, admin2 & country params when provided."""
+    expected_initial_location: Location = Location(
+        country="US",
+        country_name="United States",
+        regions=["WA"],
+        region_names=["Washington"],
+        city="Milton",
+        dma=819,
+        postal_code="98354",
+        coordinates=Coordinates(latitude=47.2513, longitude=-122.3149, radius=22),
+    )
+
     receive_mock = AsyncMock()
     send_mock = AsyncMock()
 
     mock_query = mocker.patch.object(providers["weather"], "query", autospec=True)
 
+    # IP points to city = Milton, region = WA, country = US
+    mocker.patch("merino.middleware.geolocation.CLIENT_IP_OVERRIDE", "216.160.83.56")
+
     await geolocation_middleware(geolocation_scope, receive_mock, send_mock)
+
+    assert geolocation_scope[ScopeKey.GEOLOCATION] == expected_initial_location
 
     response = client.get(
         "/api/v1/suggest",
@@ -589,14 +613,15 @@ async def test_suggest_weather_with_custom_gb_location(
             "q": "",
             "providers": "weather",
             "request_type": "weather",
-            "city": "Birmingham",
-            "region": "ENG",
-            "country": "GB",
+            "city": "Boston",
+            "admin1": "MA",
+            "admin2": "AA",
+            "country": "US",
         },
     )
 
     expected_geolocation = geolocation_scope[ScopeKey.GEOLOCATION].model_copy(
-        update={"city": "Birmingham", "regions": [None], "country": "GB"}
+        update={"city": "Boston", "regions": ["MA", "AA"], "country": "US"}
     )
 
     mock_query.assert_called_with(

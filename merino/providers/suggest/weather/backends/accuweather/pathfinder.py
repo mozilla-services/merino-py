@@ -72,6 +72,7 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     # 3 km away
     "Adrogué": "José Marmol",
     "Aizu-wakamatsu Shi": "Aizu-wakamatsu",
+    "Altona": "Hamburg-Altona",
     "Amealco": "Amealco de Bonfil",
     # part of greater London
     "Archway": "London",
@@ -108,6 +109,7 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Gustavo Adolfo Madero": "Gustavo A. Madero",
     "Hakusan'ura": "Hakusanura",
     "Hameln": "Hamelin",
+    "Hannover": "Hanover",
     # district in Onomichi
     "Haradachō-obara": "Onomichi",
     "Huatulco": "Santa María Huatulco",
@@ -132,9 +134,24 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Lake Shasta": "Shasta Lake",
     "La'ie": "Laie",
     "Livramento do Brumado": "Livramento de Nossa Senhora",
+    "Lyon 03": "Lyon",
+    "Lyon 06": "Lyon",
+    "Lyon 07": "Lyon",
+    "Lyon 08": "Lyon",
+    "Lyon 09": "Lyon",
     "Madīnat an Naşr": "Nasr",
     "Magnesia ad Sipylum": "Manisa",
     "Magdalena Contreras": "La Magdalena Contreras",
+    # Neighbourhood in Paris
+    "Maison Blanche": "Paris",
+    "Marseille 08": "Marseille",
+    "Marseille 09": "Marseille",
+    "Marseille 10": "Marseille",
+    "Marseille 11": "Marseille",
+    "Marseille 12": "Marseille",
+    "Marseille 13": "Marseille",
+    "Marseille 14": "Marseille",
+    "Marseille 15": "Marseille",
     "Matías Romero": "Matías Romero Avendaño",
     "Middlebury (village)": "Middlebury",
     "Mitchell/Ontario": "Mitchell",
@@ -157,6 +174,10 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Panderma": "Bandırma",
     "Panjim": "Panaji",
     "Parigi Kulon": "Parigi",
+    "Paris 10e Arrondissement": "Paris",
+    "Paris 11e Arrondissement": "Paris",
+    "Paris 12e Arrondissement": "Paris",
+    "Paris 13e Arrondissement": "Paris",
     "Pasig-bo": "Lambunao",
     "Pilāni": "Pilani",
     "Port Montt": "Puerto Montt",
@@ -212,9 +233,85 @@ SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
     ("US", "UT", "Hill Air Force Base"): 0,
 }
 
+# mapping from https://dev.maxmind.com/geoip/whats-new-in-geoip2/#iso-3166-2-fips-10-4-and-country-subdivisions
+FIPS_ISO_MAPPING = {
+    "CA": {
+        "01": "AB",
+        "02": "BC",
+        "03": "MB",
+        "04": "NB",
+        "05": "NL",
+        "07": "NS",
+        "08": "ON",
+        "09": "PE",
+        "10": "QC",
+        "11": "SK",
+        "12": "YT",
+        "13": "NT",
+        "14": "NU",
+    },
+    "DE": {
+        "01": "BW",
+        "10": "SH",
+        "11": "BB",
+        "12": "MV",
+        "13": "SN",
+        "14": "ST",
+        "15": "TH",
+        "16": "BE",
+        "02": "BY",
+        "03": "HB",
+        "04": "HH",
+        "05": "HE",
+        "06": "NI",
+        "07": "NW",
+        "08": "RP",
+        "09": "SL",
+    },
+    "IT": {
+        "01": "65",
+        "10": "57",
+        "11": "67",
+        "12": "21",
+        "13": "75",
+        "14": "88",
+        "15": "82",
+        "16": "52",
+        "17": "32",
+        "18": "55",
+        "19": "23",
+        "02": "77",
+        "20": "34",
+        "03": "78",
+        "04": "72",
+        "05": "45",
+        "06": "36",
+        "07": "62",
+        "08": "42",
+        "09": "25",
+    },
+    "PL": {
+        "72": "02",
+        "73": "04",
+        "74": "10",
+        "75": "06",
+        "76": "08",
+        "77": "12",
+        "78": "14",
+        "79": "16",
+        "80": "18",
+        "81": "20",
+        "82": "22",
+        "83": "24",
+        "84": "26",
+        "85": "28",
+        "86": "30",
+        "87": "32",
+    },
+}
 # Countries that use the most specific region to retrieve weather
 KNOWN_SPECIFIC_REGION_COUNTRIES: frozenset = frozenset(
-    ["AR", "AU", "BR", "CA", "CN", "DE", "FR", "GB", "MX", "NZ", "PL", "PT", "RU", "US"]
+    ["AR", "AU", "BR", "CA", "CN", "DE", "GB", "MX", "NZ", "PL", "PT", "RU", "US"]
 )
 # Countries that use the least specific region to retrieve weather
 KNOWN_REGION_COUNTRIES: frozenset = frozenset(["IT", "ES", "GR"])
@@ -228,6 +325,17 @@ def normalize_string(input_str: str) -> str:
 def remove_locality_suffix(city: str) -> str:
     """Remove either city or municipality suffix from a city name"""
     return LOCALITY_SUFFIX_PATTERN.sub("", city)
+
+
+def get_fips_region_mapping(
+    country: Optional[str], regions: Optional[list[str]]
+) -> Optional[list[str]]:
+    """Get iso code for region if it exists in mapping."""
+    if country and regions:
+        for region in regions:
+            if iso_region := FIPS_ISO_MAPPING.get(country, {}).get(region):
+                return [iso_region]
+    return regions
 
 
 CITY_NAME_NORMALIZERS: list[Callable[[str], str]] = [
@@ -248,7 +356,7 @@ def compass(location: Location) -> Generator[MaybeStr, None, None]:
       - region string that could be None.
     """
     country = location.country
-    regions = location.regions
+    regions = get_fips_region_mapping(country, location.regions)
     city = location.city
 
     if regions and country and city:

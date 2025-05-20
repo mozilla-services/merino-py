@@ -74,11 +74,12 @@ def test_validate_suggest_custom_location_params(
     caplog.set_level(logging.INFO)
 
     with pytest.raises(HTTPException) as exc_info:
-        validate_suggest_custom_location_params(city, region, country)
+        validate_suggest_custom_location_params(city, region, None, None, country)
     assert exc_info.value.status_code == 400
     assert (
         exc_info.value.detail
-        == "Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
+        == "Invalid query parameters: either  all of `city`, `region`, `country` need to be present or "
+        "all of `city`, `admin1`, and/or `admin2`, `country` need to be present."
     )
 
     records = filter_caplog(caplog.records, "merino.utils.api.query_params")
@@ -86,7 +87,8 @@ def test_validate_suggest_custom_location_params(
     assert len(records) == 1
     assert (
         records[0].message
-        == "HTTP 400: invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
+        == "HTTP 400: Invalid query parameters: either  all of `city`, `region`, `country` need to be present or "
+        "all of `city`, `admin1`, and/or `admin2`, `country` need to be present."
     )
 
 
@@ -107,7 +109,7 @@ def test_refine_geolocation_for_suggestion_with_all_params(geolocation: Location
     mock_request.scope = {ScopeKey.GEOLOCATION: geolocation}
 
     assert (
-        refine_geolocation_for_suggestion(mock_request, "New York", "NY", "US")
+        refine_geolocation_for_suggestion(mock_request, "New York", ["NY"], "US")
         == expected_location
     )
 
