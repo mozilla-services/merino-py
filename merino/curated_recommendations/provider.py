@@ -22,6 +22,7 @@ from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
     spread_publishers,
     thompson_sampling,
+    put_top_stories_first,
 )
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
@@ -144,5 +145,6 @@ class CuratedRecommendationsProvider:
 
         if request.enableInterestPicker and response.feeds:
             response.interestPicker = create_interest_picker(response.feeds)
-
+            # Re-ensure top_stories_section has receivedFeedRank == 0
+            put_top_stories_first(response.feeds)
         return response

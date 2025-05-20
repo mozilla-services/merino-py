@@ -1536,6 +1536,10 @@ class TestSections:
                 assert interest_picker_response is not None
             else:
                 assert interest_picker_response is None
+            # Ensure top_stories_section always has receivedFeedRank == 0
+            top_stories_section = data["feeds"].get("top_stories_section")
+            assert top_stories_section is not None
+            assert top_stories_section["receivedFeedRank"] == 0
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
