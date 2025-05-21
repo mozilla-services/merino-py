@@ -81,19 +81,27 @@ def test_interest_picker_is_created(followed_count: int):
     assert new_order == original_order
 
 
-def test_renumber_sections_preserves_order():
-    """Test that _renumber_sections assigns sequential ranks skipping the picker rank."""
+def test_renumber_sections_preserves_order_skips_picker_rank():
+    """Test that _renumber_sections preserves original order and skips the picker rank."""
     sections = {}
     for i in range(5):
         sec = Section(
             receivedFeedRank=i, recommendations=[], title=f"S{i}", layout=layout_4_medium
         )
         sections[f"id{i}"] = sec
+    # Capture original section insertion order
+    section_ids_original_order = list(sections.keys())
     # Suppose picker rank is 2.
     _renumber_sections(sections, 2)
-    new_ranks = [s.receivedFeedRank for s in sections.values()]
+    # Get new_ranks in original order
+    new_ranks = [sections[s].receivedFeedRank for s in section_ids_original_order]
+
     # Expected ranks: 0,1,3,4,5 (2 is skipped).
     assert new_ranks == [0, 1, 3, 4, 5]
+
+    # Verify that sorting by new rank preserves original ordering of section keys
+    new_order = [s for s, _ in sorted(sections.items(), key=lambda item: item[1].receivedFeedRank)]
+    assert new_order == section_ids_original_order
 
 
 @pytest.mark.parametrize(

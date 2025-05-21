@@ -1642,6 +1642,47 @@ class TestSections:
                 assert interest_picker_response is not None
             else:
                 assert interest_picker_response is None
+            # Ensure top_stories_section always has receivedFeedRank == 0
+            top_stories_section = data["feeds"].get("top_stories_section")
+            assert top_stories_section is not None
+            assert top_stories_section["receivedFeedRank"] == 0
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("enable_interest_picker", [True, False])
+    async def test_sections_interest_picker_ml_sections(self, enable_interest_picker, monkeypatch):
+        """Test the curated recommendations endpoint returns expected response when an
+        interest picker & ML sections enabled
+        """
+        # The fixture data doesn't have enough sections for the interest picker to show up, so lower
+        # the minimum number of sections that it needs to have to 1.
+        monkeypatch.setattr(interest_picker, "MIN_INTEREST_PICKER_COUNT", 1)
+
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "experimentName": "optin-new-tab-ml-sections",
+                    "experimentBranch": "treatment",
+                    "utc_offset": 17,
+                    "coarse_os": "windows",
+                    "surface_id": "",
+                    "locale": "en-US",
+                    "region": "US",
+                    "enableInterestPicker": enable_interest_picker,
+                    "feeds": ["sections"],
+                },
+            )
+            data = response.json()
+
+            interest_picker_response = data["interestPicker"]
+            if enable_interest_picker:
+                assert interest_picker_response is not None
+            else:
+                assert interest_picker_response is None
+            # Ensure top_stories_section always has receivedFeedRank == 0
+            top_stories_section = data["feeds"].get("top_stories_section")
+            assert top_stories_section is not None
+            assert top_stories_section["receivedFeedRank"] == 0
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("enable_interest_vector", [True, False])
