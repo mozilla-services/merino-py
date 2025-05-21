@@ -26,6 +26,7 @@ cli.add_typer(csv_rs_uploader_cmd, no_args_is_help=True)
 cli.add_typer(relevancy_csv_rs_uploader_cmd, no_args_is_help=True)
 
 cli.add_typer(geonames_uploader_cmd, no_args_is_help=True)
+# cli.add_typer(geonames_uploader_cmd, no_args_is_help=True, default=[])
 
 
 @cli.callback()

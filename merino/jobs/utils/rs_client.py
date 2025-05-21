@@ -1,4 +1,4 @@
-"""Remote settings uploader"""
+"""Remote settings client"""
 
 import json
 import logging
@@ -11,7 +11,7 @@ import kinto_http
 logger = logging.getLogger(__name__)
 
 
-class RemoteSettingsUploader:
+class RemoteSettingsClient:
     """A class that uploads records and attachments to remote settings."""
 
     kinto: kinto_http.Client
@@ -24,7 +24,7 @@ class RemoteSettingsUploader:
         server: str,
         dry_run: bool = False,
     ):
-        """Initialize the uploader."""
+        """Initialize the client."""
         self.kinto = kinto_http.Client(
             server_url=server, bucket=bucket, collection=collection, auth=auth, dry_mode=dry_run
         )
@@ -58,16 +58,31 @@ class RemoteSettingsUploader:
                 mimetype="application/json",
             )
 
-    def delete_if(self, predicate: Callable[[dict[str, Any]], bool]) -> list[dict[str, Any]]:
-        """Delete records that match a predicate. The predicate function is
-        passed each record and should return True if it should be deleted. The
-        deleted records are returned.
+#     def delete_if(self, predicate: Callable[[dict[str, Any]], bool]) -> list[dict[str, Any]]:
+#         """Delete records that match a predicate. The predicate function is
+#         passed each record and should return True if it should be deleted. The
+#         deleted records are returned.
 
-        """
-        deleted_records = []
-        for record in self.kinto.get_records():
-            if predicate(record):
-                deleted_records.append(record)
-                self.kinto.delete_record(id=record["id"])
+#         """
+#         deleted_records = []
+#         for record in self.kinto.get_records():
+#             if predicate(record):
+#                 deleted_records.append(record)
+#                 self.kinto.delete_record(id=record["id"])
 
-        return deleted_records
+#         return deleted_records
+
+    def get_records(self) -> list[dict[str, Any]]:
+        return self.kinto.get_records()
+
+    def delete_record(self, id: str) -> None:
+        self.kinto.delete_record(id=id)
+
+    def download_attachment(self, record: dict[str, Any]) -> Any:
+#         #XXXadw
+#         record["attachment"]["location"] = record["attachment"]["location"][len("http://localhost:7777/"):]
+
+        path = self.kinto.download_attachment(record)
+        with open(path, "r") as file:
+#             return json.load( = file.read()
+            return json.load(file)
