@@ -65,32 +65,6 @@ def fixture_rs_records() -> list[dict[str, Any]]:
     """
     return [
         {
-            "type": "data",
-            "schema": 123,
-            "attachment": {
-                "hash": "abcd",
-                "size": 1,
-                "filename": "data-01.json",
-                "location": "main-workspace/quicksuggest/attachmment-01.json",
-                "mimetype": "application/octet-stream",
-            },
-            "id": "data-01",
-            "last_modified": 123,
-        },
-        {
-            "type": "offline-expansion-data",
-            "schema": 111,
-            "attachment": {
-                "hash": "efgh",
-                "size": 1,
-                "filename": "offline-expansion-data-01.json",
-                "location": "main-workspace/quicksuggest/attachment-02.json",
-                "mimetype": "application/octet-stream",
-            },
-            "id": "offline-expansion-data-01",
-            "last_modified": 123,
-        },
-        {
             "type": "amp",
             "country": "US",
             "form_factor": "desktop",
@@ -297,6 +271,40 @@ async def test_fetch(
 
 
 @pytest.mark.asyncio
+async def test_fetch_skip(
+    mocker: MockerFixture,
+    rs_backend: RemoteSettingsBackend,
+    rs_records: list[dict[str, Any]],
+    rs_server_info: dict[str, Any],
+    rs_attachment_response: httpx.Response,
+    adm_suggestion_content: SuggestionContent,
+) -> None:
+    """Test that the fetch method should skip records processing if the records are up to date."""
+    mocker.patch.object(kinto_http.AsyncClient, "get_records", return_value=rs_records)
+    mocker.patch.object(kinto_http.AsyncClient, "server_info", return_value=rs_server_info)
+    mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
+
+    suggestion_content_1st: SuggestionContent = await rs_backend.fetch()
+
+    # call it again, it should be short curcuited as the record is already processed and up to date.
+    spy = mocker.spy(rs_backend, "get_suggestions")
+    suggestion_content_2nd: SuggestionContent = await rs_backend.fetch()
+
+    spy.assert_not_called()
+
+    assert suggestion_content_1st is suggestion_content_2nd
+
+    # update the "last_modified" field, fetch should proceed as usual.
+    rs_records[0]["last_modified"] = rs_records[0]["last_modified"] + 1
+
+    suggestion_content_3rd: SuggestionContent = await rs_backend.fetch()
+
+    spy.assert_called_once()
+
+    assert suggestion_content_3rd is not suggestion_content_2nd
+
+
+@pytest.mark.asyncio
 async def test_fetch_no_adm_wikipedia_result(
     mocker: MockerFixture,
     rs_backend: RemoteSettingsBackend,
@@ -414,7 +422,7 @@ async def test_get_suggestions(
     mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
 
     suggestions: list[KintoSuggestion] = await rs_backend.get_suggestions(
-        attachment_host, rs_records
+        attachment_host, rs_backend.filter_records("amp", rs_records)
     )
 
     assert suggestions == expected_suggestions
@@ -438,7 +446,9 @@ async def test_get_suggestions_backend_error(
     )
 
     with pytest.raises(BackendError) as error:
-        await rs_backend.get_suggestions(attachment_host, rs_records)
+        await rs_backend.get_suggestions(
+            attachment_host, rs_backend.filter_records("amp", rs_records)
+        )
 
     assert str(error.value) == expected_error_value
 
