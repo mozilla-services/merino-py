@@ -47,6 +47,10 @@ from merino.providers.suggest.weather.backends.protocol import WeatherContext
             Location(country="CA", regions=["ON"], city="Mitchell/Ontario"),
             "ON",
         ),
+        (
+            Location(country="IT", regions=["33", "09"], city="Milan"),
+            "25",
+        ),
     ],
     ids=[
         "Specific Region Country",
@@ -55,6 +59,7 @@ from merino.providers.suggest.weather.backends.protocol import WeatherContext
         "Fallback with Region",
         "Fallback No Region",
         "Corrected City Name",
+        "FIP region Mapped",
     ],
 )
 def test_compass(location: Location, expected_region_and_city: str) -> None:

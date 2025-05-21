@@ -465,14 +465,14 @@ def test_suggest_with_location_completion_with_incorrect_request_type_param(
 
 
 @pytest.mark.parametrize(
-    ("city", "region", "regions", "country"),
+    ("city", "region", "country"),
     [
-        (None, "MA", None, "US"),
-        ("Boston", None, None, None),
-        (None, "MA", None, None),
-        (None, None, None, "US"),
-        ("Boston", "MA", None, None),
-        ("Boston", None, None, "US"),
+        (None, "MA", "US"),
+        ("Boston", None, None),
+        (None, "MA", None),
+        (None, None, "US"),
+        ("Boston", "MA,AA", None),
+        ("Boston", None, "US"),
     ],
     ids=[
         "missing_city",
@@ -489,7 +489,6 @@ async def test_suggest_weather_with_incomplete_city_region_country_params(
     city: str | None,
     region: str | None,
     country: str | None,
-    regions: str | None,
 ) -> None:
     """Test that the suggest endpoint response for accuweather provider returns a 400 when city, region
     & country params or city, regions & country are not all provided.
@@ -502,15 +501,12 @@ async def test_suggest_weather_with_incomplete_city_region_country_params(
         base_url += f"&region={region}"
     if country is not None:
         base_url += f"&country={country}"
-    if regions is not None:
-        base_url += f"&regions={regions}"
 
     response = client.get(base_url)
     assert response.status_code == 400
     assert (
         response.json()["detail"]
-        == "Invalid query parameters: one of the following triplet params require all non None values: "
-        "[`city`, `region`, `country`] or [`city`,`regions`, `country`]."
+        == "Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
     )
 
 
@@ -610,7 +606,7 @@ async def test_suggest_weather_with_custom_location_with_admin_codes(
             "providers": "weather",
             "request_type": "weather",
             "city": "Boston",
-            "regions": "MA,AA",
+            "region": "MA,AA",
             "country": "US",
         },
     )

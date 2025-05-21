@@ -74,12 +74,11 @@ def test_validate_suggest_custom_location_params(
     caplog.set_level(logging.INFO)
 
     with pytest.raises(HTTPException) as exc_info:
-        validate_suggest_custom_location_params(city, region, None, country)
+        validate_suggest_custom_location_params(city, region, country)
     assert exc_info.value.status_code == 400
     assert (
         exc_info.value.detail
-        == "Invalid query parameters: one of the following triplet params require all non None values: "
-        "[`city`, `region`, `country`] or [`city`,`regions`, `country`]."
+        == "Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
     )
 
     records = filter_caplog(caplog.records, "merino.utils.api.query_params")
@@ -87,8 +86,7 @@ def test_validate_suggest_custom_location_params(
     assert len(records) == 1
     assert (
         records[0].message
-        == "HTTP 400: Invalid query parameters: one of the following triplet params require all non None values: "
-        "[`city`, `region`, `country`] or [`city`,`regions`, `country`]."
+        == "HTTP 400: invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
     )
 
 
@@ -109,12 +107,12 @@ def test_refine_geolocation_for_suggestion_with_region_params(geolocation: Locat
     mock_request.scope = {ScopeKey.GEOLOCATION: geolocation}
 
     assert (
-        refine_geolocation_for_suggestion(mock_request, "New York", "NY", None, "US")
+        refine_geolocation_for_suggestion(mock_request, "New York", "NY", "US")
         == expected_location
     )
 
 
-def test_refine_geolocation_for_suggestion_with_regions_params(geolocation: Location):
+def test_refine_geolocation_for_suggestion_with_multiple_regions_params(geolocation: Location):
     """Test that refine geolocation method returns geolocation when regions string param is provided"""
     mock_request = Mock(spec=Request)
 
@@ -129,6 +127,6 @@ def test_refine_geolocation_for_suggestion_with_regions_params(geolocation: Loca
         postal_code="98354",
     )
     assert (
-        refine_geolocation_for_suggestion(mock_request, "New York", None, "NY,AA", "US")
+        refine_geolocation_for_suggestion(mock_request, "New York", "NY,AA", "US")
         == expected_location
     )

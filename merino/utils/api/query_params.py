@@ -35,40 +35,23 @@ def get_accepted_languages(languages: str | None) -> list[str]:
 
 
 def validate_suggest_custom_location_params(
-    city: Optional[str],
-    region: Optional[str],
-    regions: Optional[str],
-    country: Optional[str],
-) -> None:
-    """Validate that triplet of either city, region, country
-    or city, regions, country have all non None values if one is a non None value.
-    """
-    if any([city, region, country, regions]):
-        if not all([city, region, country]) and not all([city, regions, country]):
-            logger.warning(
-                "HTTP 400: Invalid query parameters: one of the following triplet params require all non None values: "
-                "[`city`, `region`, `country`] or [`city`,`regions`, `country`]."
-            )
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid query parameters: one of the following triplet params require all non None values: "
-                "[`city`, `region`, `country`] or [`city`,`regions`, `country`].",
-            )
-        if regions and region:
-            logger.warning(
-                "HTTP 400: Invalid query parameters: either `region` or `regions` can be present."
-            )
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid query parameters: either `region` or `regions` can be present.",
-            )
+    city: Optional[str], region: Optional[str], country: Optional[str]
+):
+    """Validate that city, region & country params are either all present or all omitted."""
+    if any([country, region, city]) and not all([country, region, city]):
+        logger.warning(
+            "HTTP 400: invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted.",
+        )
 
 
 def refine_geolocation_for_suggestion(
     request: Request,
     city: Optional[str],
     region: Optional[str],
-    regions: Optional[str],
     country: Optional[str],
 ) -> Location:
     """Generate a refined geolocation object based on optional city, region, and country parameters
@@ -79,20 +62,18 @@ def refine_geolocation_for_suggestion(
         request (Request): The request containing geolocation data in the scope.
         city (Optional[str]): The name of the city to include in the geolocation, if available.
         region (Optional[str]): The name of the region to include in the geolocation, if available.
-        regions (Optional[str]): The name of possible regions to include in the geolocation, if available.
         country (Optional[str]): The name of the country to include in the geolocation, if available.
 
     Returns:
         Location: A Location object with refined geolocation data based on provided parameters.
     """
     geolocation: Location = request.scope[ScopeKey.GEOLOCATION].model_copy()
-    regions_list = regions.split(",") if regions else [region] if region else []
 
-    if country and regions_list and city:
+    if country and region and city:
         geolocation = geolocation.model_copy(
             update={
                 "city": city,
-                "regions": regions_list,
+                "regions": region.split(","),
                 "country": country,
             }
         )

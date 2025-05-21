@@ -73,7 +73,6 @@ async def suggest(
     q: Annotated[str, Query(max_length=QUERY_CHARACTER_MAX)],
     country: Annotated[str | None, Query(max_length=2, min_length=2)] = None,
     region: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
-    regions: Annotated[str | None, Query(max_length=CLIENT_VARIANT_MAX)] = None,
     city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     providers: str | None = None,
@@ -102,13 +101,9 @@ async def suggest(
     - `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided,
         Accuweather provider returns weather suggestions based on this country. Note: If provided,
         `city` and `region` must also be provided to successfully return weather suggestions.
-    - `region`: [Optional] Subdivision code. E.g. : “NY”. If provided,
-        Accuweather provider returns weather suggestions based on this region. Note: If provided,
-        `city` and `country` must also be provided to successfully return weather suggestions.
-    - `regions`: [Optional] A list of subdivision code containing potentially FIP and ISO codes.
-        If provided, Accuweather provider try to map the codes provided to an ISO code to return
-        weather suggestions based on this region. Note: If provided, `city` and `country` must
-        also be provided to successfully return weather suggestions.
+    - `region`: [Optional] Comma separated string of subdivision code(s). This may contain FIPs codes
+        and/or iso codes. If provided, Accuweather provider will try to return weather suggestions based on this region(s).
+        Note: If provided,`city` and `country` must also be provided to successfully return weather suggestions.
     - `client_variants`: [Optional] A comma-separated list of any experiments or
         rollouts that are affecting the client's Suggest experience. If Merino
         recognizes any of them it will modify its behavior accordingly.
@@ -197,8 +192,8 @@ async def suggest(
     lookups: list[Task] = []
     languages = get_accepted_languages(accept_language)
 
-    validate_suggest_custom_location_params(city, region, regions, country)
-    geolocation = refine_geolocation_for_suggestion(request, city, region, regions, country)
+    validate_suggest_custom_location_params(city, region, country)
+    geolocation = refine_geolocation_for_suggestion(request, city, region, country)
 
     for p in search_from:
         srequest = SuggestionRequest(
