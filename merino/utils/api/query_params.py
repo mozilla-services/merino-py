@@ -49,7 +49,10 @@ def validate_suggest_custom_location_params(
 
 
 def refine_geolocation_for_suggestion(
-    request: Request, city: Optional[str], region: Optional[str], country: Optional[str]
+    request: Request,
+    city: Optional[str],
+    region: Optional[str],
+    country: Optional[str],
 ) -> Location:
     """Generate a refined geolocation object based on optional city, region, and country parameters
     for the suggest endpoint. If all parameters are provided, the geolocation data is updated
@@ -65,12 +68,12 @@ def refine_geolocation_for_suggestion(
         Location: A Location object with refined geolocation data based on provided parameters.
     """
     geolocation: Location = request.scope[ScopeKey.GEOLOCATION].model_copy()
+
     if country and region and city:
-        geolocation = request.scope[ScopeKey.GEOLOCATION].model_copy(
-            # temp measure as FX is not providing the expected region for GB. [DISCO-3507]
+        geolocation = geolocation.model_copy(
             update={
                 "city": city,
-                "regions": [region if country.casefold() != "gb" else None],
+                "regions": region.split(","),
                 "country": country,
             }
         )

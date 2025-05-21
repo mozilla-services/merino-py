@@ -90,7 +90,7 @@ def test_validate_suggest_custom_location_params(
     )
 
 
-def test_refine_geolocation_for_suggestion_with_all_params(geolocation: Location):
+def test_refine_geolocation_for_suggestion_with_region_params(geolocation: Location):
     """Test that refine geolocation method returns correct geolocation with updated params when all params are provided"""
     mock_request = Mock(spec=Request)
 
@@ -112,10 +112,21 @@ def test_refine_geolocation_for_suggestion_with_all_params(geolocation: Location
     )
 
 
-def test_refine_geolocation_for_suggestion_with_incomplete_params(geolocation: Location):
-    """Test that refine geolocation method returns original geolocation when incomplete params are provided"""
+def test_refine_geolocation_for_suggestion_with_multiple_regions_params(geolocation: Location):
+    """Test that refine geolocation method returns geolocation when regions string param is provided"""
     mock_request = Mock(spec=Request)
 
     mock_request.scope = {ScopeKey.GEOLOCATION: geolocation}
-
-    assert refine_geolocation_for_suggestion(mock_request, "New York", None, "US") == geolocation
+    expected_location: Location = Location(
+        country="US",
+        country_name="United States",
+        regions=["NY", "AA"],
+        region_names=["Washington"],
+        city="New York",
+        dma=819,
+        postal_code="98354",
+    )
+    assert (
+        refine_geolocation_for_suggestion(mock_request, "New York", "NY,AA", "US")
+        == expected_location
+    )
