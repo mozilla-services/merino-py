@@ -242,7 +242,7 @@ async def test_query(
     """
     await top_picks.initialize()
 
-    result: list[BaseSuggestion] = await top_picks.query(srequest(query))
+    result: list[BaseSuggestion] = await top_picks.query(srequest(query, None, None))
     assert result == [
         Suggestion(
             block_id=0,
@@ -268,7 +268,7 @@ async def test_query_with_top_pick_without_category(
     """
     await top_picks.initialize()
     query = "pine"
-    result: list[BaseSuggestion] = await top_picks.query(srequest(query))
+    result: list[BaseSuggestion] = await top_picks.query(srequest(query, None, None))
     assert result == [
         Suggestion(
             block_id=0,
@@ -302,7 +302,7 @@ async def test_query_filtered_input(
     """
     await top_picks.initialize()
 
-    assert await top_picks.query(srequest(query)) == []
+    assert await top_picks.query(srequest(query, None, None)) == []
 
 
 @pytest.mark.parametrize(
@@ -336,7 +336,7 @@ async def test_short_domain_query(
     ]
     await top_picks.initialize()
 
-    result = await top_picks.query(srequest(query))
+    result = await top_picks.query(srequest(query, None, None))
     assert result == expected_suggestion
 
 
@@ -351,7 +351,7 @@ async def test_short_domain_query_fails(
     """Test invalid inputs for Top Pick Provider when providing short domain queries."""
     await top_picks.initialize()
 
-    result = await top_picks.query(srequest(query))
+    result = await top_picks.query(srequest(query, None, None))
     assert result == []
 
 
@@ -388,5 +388,5 @@ async def test_short_domain_query_similars_longer_than_domain(
     ]
     await top_picks.initialize()
 
-    result = await top_picks.query(srequest(query))
+    result = await top_picks.query(srequest(query, None, None))
     assert result == expected_suggestion

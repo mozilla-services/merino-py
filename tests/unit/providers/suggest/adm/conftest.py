@@ -18,15 +18,31 @@ def fixture_adm_suggestion_content() -> SuggestionContent:
     """Define backend suggestion content for test."""
     return SuggestionContent(
         suggestions={
-            "firefox": (0, 0),
-            "firefox account": (0, 0),
-            "firefox accounts": (0, 0),
-            "mozilla": (0, 1),
-            "mozilla firefox": (0, 1),
-            "mozilla firefox account": (0, 1),
-            "mozilla firefox accounts": (0, 1),
+            "US": {
+                (("desktop",), "firefox"): (0, 0),
+                (("desktop",), "firefox account"): (0, 0),
+                (("desktop",), "firefox accounts"): (0, 0),
+                (("desktop",), "mozilla"): (0, 1),
+                (("desktop",), "mozilla firefox"): (0, 1),
+                (("desktop",), "mozilla firefox account"): (0, 1),
+                (("desktop",), "mozilla firefox accounts"): (0, 1),
+            },
+            "DE": {
+                (("phone",), "firefox"): (1, 2),
+                (("phone",), "firefox account"): (1, 2),
+                (("phone",), "firefox accounts de"): (1, 2),
+                (("phone",), "mozilla"): (1, 3),
+                (("phone",), "mozilla firefox"): (1, 3),
+                (("phone",), "mozilla firefox account"): (1, 3),
+                (("phone",), "mozilla firefox accounts de"): (1, 3),
+            },
         },
-        full_keywords=["firefox accounts", "mozilla firefox accounts"],
+        full_keywords=[
+            "firefox accounts",
+            "mozilla firefox accounts",
+            "firefox accounts de",
+            "mozilla firefox accounts de",
+        ],
         results=[
             {
                 "id": 2,
@@ -37,7 +53,17 @@ def fixture_adm_suggestion_content() -> SuggestionContent:
                 "icon": "01",
                 "advertiser": "Example.org",
                 "title": "Mozilla Firefox Accounts",
-            }
+            },
+            {
+                "id": 3,
+                "url": "https://de.example.org/target/mozfirefoxaccounts",
+                "click_url": "https://de.example.org/click/mozilla",
+                "impression_url": "https://de.example.org/impression/mozilla",
+                "iab_category": "5 - Education",
+                "icon": "01",
+                "advertiser": "de.Example.org",
+                "title": "Mozilla Firefox Accounts",
+            },
         ],
         icons={"01": "attachment-host/main-workspace/quicksuggest/icon-01"},
     )

@@ -19,6 +19,7 @@ from pydantic import HttpUrl, TypeAdapter
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
+from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest.weather.backends.accuweather.errors import (
     AccuweatherError,
     AccuweatherErrorMessages,
@@ -558,7 +559,11 @@ async def test_suggest_weather_with_custom_location(
 
     mock_query.assert_called_with(
         SuggestionRequest(
-            query="", geolocation=expected_geolocation, request_type="weather", languages=["en-US"]
+            query="",
+            geolocation=expected_geolocation,
+            request_type="weather",
+            languages=["en-US"],
+            user_agent=UserAgent(browser="Other", form_factor="other", os_family="other"),
         )
     )
 
@@ -601,7 +606,11 @@ async def test_suggest_weather_with_custom_gb_location(
 
     mock_query.assert_called_with(
         SuggestionRequest(
-            query="", geolocation=expected_geolocation, request_type="weather", languages=["en-US"]
+            query="",
+            geolocation=expected_geolocation,
+            request_type="weather",
+            languages=["en-US"],
+            user_agent=UserAgent(browser="Other", form_factor="other", os_family="other"),
         )
     )
 

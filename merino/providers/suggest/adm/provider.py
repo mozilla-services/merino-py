@@ -36,6 +36,7 @@ class IABCategory(str, Enum):
 
 # Used whenever the `icon` field is missing from the suggestion payload.
 MISSING_ICON_ID: Final = "-1"
+FORM_FACTORS_FALLBACK_MAPPING = {"other": "desktop", "tablet": "phone"}
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -162,33 +163,43 @@ class Provider(BaseProvider):
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         q: str = srequest.query
-        if (suggest_look_ups := self.suggestion_content.suggestions.get(q)) is not None:
-            results_id, fkw_id = suggest_look_ups
-            res = self.suggestion_content.results[results_id]
-            is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
-
-            url: str = res["url"]
-            e: ExtractResult = tldextract.extract(url)
-            categories: list[Category] = Provider.serp_categories(domain=f"{e.domain}.{e.suffix}")
-            suggestion_dict: dict[str, Any] = {
-                "block_id": res.get("id"),
-                "full_keyword": self.suggestion_content.full_keywords[fkw_id],
-                "title": res.get("title"),
-                "url": url,
-                "categories": categories,
-                "impression_url": res.get("impression_url"),
-                "click_url": res.get("click_url"),
-                "provider": self.name,
-                "advertiser": res.get("advertiser"),
-                "is_sponsored": is_sponsored,
-                "icon": self.suggestion_content.icons.get(res.get("icon", MISSING_ICON_ID)),
-                "score": self.score,
-            }
-            return [
-                (
-                    SponsoredSuggestion(**suggestion_dict)
-                    if is_sponsored
-                    else NonsponsoredSuggestion(**suggestion_dict)
+        form_factor = srequest.user_agent.form_factor if srequest.user_agent else None
+        country = srequest.geolocation.country
+        if country and form_factor:
+            segment = (FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, form_factor),)
+            if (
+                suggest_look_ups := self.suggestion_content.suggestions.get(country, {}).get(
+                    (segment, q)
                 )
-            ]
+            ) is not None:
+                results_id, fkw_id = suggest_look_ups
+                res = self.suggestion_content.results[results_id]
+                is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
+
+                url: str = res["url"]
+                e: ExtractResult = tldextract.extract(url)
+                categories: list[Category] = Provider.serp_categories(
+                    domain=f"{e.domain}.{e.suffix}"
+                )
+                suggestion_dict: dict[str, Any] = {
+                    "block_id": res.get("id"),
+                    "full_keyword": self.suggestion_content.full_keywords[fkw_id],
+                    "title": res.get("title"),
+                    "url": url,
+                    "categories": categories,
+                    "impression_url": res.get("impression_url"),
+                    "click_url": res.get("click_url"),
+                    "provider": self.name,
+                    "advertiser": res.get("advertiser"),
+                    "is_sponsored": is_sponsored,
+                    "icon": self.suggestion_content.icons.get(res.get("icon", MISSING_ICON_ID)),
+                    "score": self.score,
+                }
+                return [
+                    (
+                        SponsoredSuggestion(**suggestion_dict)
+                        if is_sponsored
+                        else NonsponsoredSuggestion(**suggestion_dict)
+                    )
+                ]
         return []
