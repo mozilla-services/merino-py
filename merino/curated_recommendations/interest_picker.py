@@ -59,9 +59,12 @@ def _renumber_sections(
     sections: dict[str, Section],
     picker_rank: int,
 ) -> None:
-    """Renumber section ranks, leaving a gap for the interest picker."""
+    """Renumber section ranks (original order preserved), leaving a gap for the interest picker."""
+    # Sort sections by original receivedFeedRank
+    sorted_sections = sorted(sections.values(), key=lambda s: s.receivedFeedRank)
+
     new_rank = 0
-    for s in sections.values():
+    for s in sorted_sections:
         if new_rank == picker_rank:
             # Skip the rank for the interest picker.
             new_rank += 1
