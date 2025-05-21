@@ -25,6 +25,7 @@ from merino.curated_recommendations.prior_backends.gcs_prior import GcsPrior
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.provider import CuratedRecommendationsProvider
+from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
 from merino.utils.metrics import get_metrics_client
 from merino.utils.http_client import create_http_client
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
@@ -35,6 +36,7 @@ from merino.utils.gcs import initialize_storage_client
 logger = logging.getLogger(__name__)
 
 _provider: CuratedRecommendationsProvider
+_legacy_provider: LegacyCuratedRecommendationsProvider
 
 
 def init_local_model_backend() -> LocalModelBackend:
@@ -101,6 +103,7 @@ def init_prior_backend() -> PriorBackend:
 def init_provider() -> None:
     """Initialize the curated recommendations' provider."""
     global _provider
+    global _legacy_provider
 
     engagement_backend = init_engagement_backend()
     local_model_backend = init_local_model_backend()
@@ -126,9 +129,16 @@ def init_provider() -> None:
         sections_backend=sections_backend,
         local_model_backend=local_model_backend,
     )
+    _legacy_provider = LegacyCuratedRecommendationsProvider()
 
 
 def get_provider() -> CuratedRecommendationsProvider:
     """Return the curated recommendations provider."""
     global _provider
     return _provider
+
+
+def get_legacy_provider() -> LegacyCuratedRecommendationsProvider:
+    """Return the legacy curated recommendations provider"""
+    global _legacy_provider
+    return _legacy_provider

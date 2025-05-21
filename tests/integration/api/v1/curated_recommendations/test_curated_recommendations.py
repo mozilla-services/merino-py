@@ -18,10 +18,12 @@ from merino.curated_recommendations import (
     ScheduledSurfaceBackend,
     CuratedRecommendationsProvider,
     get_provider,
+    get_legacy_provider,
     ConstantPrior,
     interest_picker,
     LocalModelBackend,
 )
+from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
 from merino.curated_recommendations.corpus_backends.protocol import (
     Topic,
     SurfaceId,
@@ -150,10 +152,22 @@ def provider(
     )
 
 
+@pytest.fixture(name="legacy_corpus_provider")
+def legacy_provider() -> LegacyCuratedRecommendationsProvider:
+    """Mock legacy curated recommendations provider."""
+    return LegacyCuratedRecommendationsProvider()
+
+
 @pytest.fixture(autouse=True)
 def setup_curated_recommendations_provider(corpus_provider):
     """Set up the curated recommendations provider"""
     app.dependency_overrides[get_provider] = lambda: corpus_provider
+
+
+@pytest.fixture(autouse=True)
+def setup_legacy_curated_recommendations_provider(legacy_corpus_provider):
+    """Set up the legacy curated recommendations provider"""
+    app.dependency_overrides[get_legacy_provider] = lambda: legacy_corpus_provider
 
 
 async def fetch_en_us(client: AsyncClient) -> Response:
@@ -237,6 +251,59 @@ async def test_curated_recommendations(repeat):
             == expected_recommendation.model_copy(update={"receivedRank": i})
             for i, item in enumerate(corpus_items)
         )
+
+
+@pytest.mark.asyncio
+async def test_curated_recommendations_for_fx115_129():
+    """Test the legacy fx115-129 curated recommedations endpoint response is as expected"""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        # Mock the endpoint
+        response = await ac.get(
+            "/api/v1/curated-recommendations/legacy-115-129", params={"locale": "en-US"}
+        )
+        data = response.json()
+
+        # Check if the mock response is valid
+        assert response.status_code == 200
+
+        corpus_items = data["data"]
+        # assert total of 30 items returned, which is the default maximum number of recommendations in the response.
+        assert len(corpus_items) == 30
+        # Assert all corpus_items have expected fields populated.
+        assert all(item["__typename"] for item in corpus_items)
+        assert all(item["recommendationId"] for item in corpus_items)
+        assert all(item["tileId"] for item in corpus_items)
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["title"] for item in corpus_items)
+        assert all(item["excerpt"] for item in corpus_items)
+        assert all(item["publisher"] for item in corpus_items)
+        assert all(item["imageUrl"] for item in corpus_items)
+
+
+@pytest.mark.asyncio
+async def test_curated_recommendations_for_fx114():
+    """Test the legacy fx114 curated recommedations endpoint response is as expected"""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        # Mock the endpoint
+        response = await ac.get(
+            "/api/v1/curated-recommendations/legacy-114", params={"locale_lang": "en-US"}
+        )
+        data = response.json()
+
+        # Check if the mock response is valid
+        assert response.status_code == 200
+
+        corpus_items = data["recommendations"]
+        # assert total of 20 items returned, which is the default maximum number of recommendations in the response.
+        assert len(corpus_items) == 20
+        # Assert all corpus_items have expected fields populated.
+        assert all(item["id"] for item in corpus_items)
+        assert all(item["title"] for item in corpus_items)
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["excerpt"] for item in corpus_items)
+        assert all(item["domain"] for item in corpus_items)
+        assert all(item["image_src"] for item in corpus_items)
+        assert all(item["raw_image_src"] for item in corpus_items)
 
 
 @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
