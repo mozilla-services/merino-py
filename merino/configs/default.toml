@@ -439,8 +439,8 @@ backend = "remote-settings"
 cron_interval_sec = 60
 
 # MERINO_PROVIDERS__ADM__RESYNC_INTERVAL_SEC
-# Time between re-syncs of Remote Settings data, in seconds. Defaults to 3 hours.
-resync_interval_sec = 10800
+# Time between re-syncs of Remote Settings data, in seconds. Defaults to 1 hour.
+resync_interval_sec = 3600
 
 # MERINO_PROVIDERS__ADM__SCORE
 # Ranking score for this provider as a floating point number. Defaults to 0.31.
