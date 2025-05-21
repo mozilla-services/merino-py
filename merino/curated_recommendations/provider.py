@@ -139,6 +139,7 @@ class CuratedRecommendationsProvider:
                 engagement_backend=self.engagement_backend,
                 prior_backend=self.prior_backend,
                 sections_backend=self.sections_backend,
+                region=derive_region(request.locale, request.region),
             )
         else:
             general_feed = self.rank_recommendations(recommendations, request)
