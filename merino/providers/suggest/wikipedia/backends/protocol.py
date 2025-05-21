@@ -15,8 +15,8 @@ class WikipediaBackend(Protocol):
         """Shut down connection to the backend"""
         ...
 
-    async def search(self, q: str) -> list[dict[str, Any]]:  # pragma: no cover
-        """Search Wikipedia and return articles relevant to the given query.
+    async def search(self, q: str, language_code: str) -> list[dict[str, Any]]:  # pragma: no cover
+        """Search Wikipedia and return articles relevant to the given query using the language-specific index.
 
         Raises:
             BackendError: Category of error specific to provider backends.

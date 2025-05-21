@@ -10,11 +10,20 @@ from elasticsearch import AsyncElasticsearch
 from merino.configs import settings
 from merino.exceptions import BackendError
 
-# The Index ID in Elasticsearch cluster.
-INDEX_ID: Final[str] = settings.providers.wikipedia.es_index
 SUGGEST_ID: Final[str] = "suggest-on-title"
 TIMEOUT_MS: Final[str] = f"{settings.providers.wikipedia.es_request_timeout_ms}ms"
 MAX_SUGGESTIONS: Final[int] = settings.providers.wikipedia.es_max_suggestions
+
+
+INDICES: dict[str, str] = {
+    "en": settings.providers.wikipedia.en_es_index,
+    "fr": settings.providers.wikipedia.fr_es_index,
+    "de": settings.providers.wikipedia.de_es_index,
+    "it": settings.providers.wikipedia.it_es_index,
+    "pl": settings.providers.wikipedia.pl_es_index,
+}
+
+FALLBACK_INDEX: str = INDICES["en"]
 
 
 class ElasticBackendError(BackendError):
@@ -54,8 +63,10 @@ class ElasticBackend:
         """Shut down the connection to the ES cluster."""
         await self.client.close()
 
-    async def search(self, q: str) -> list[dict[str, Any]]:
+    async def search(self, q: str, language_code: str) -> list[dict[str, Any]]:
         """Search Wikipedia articles from the ES cluster."""
+        index_id = INDICES[language_code]
+
         suggest = {
             SUGGEST_ID: {
                 "prefix": q,
@@ -68,26 +79,33 @@ class ElasticBackend:
 
         try:
             res = await self.client.search(
-                index=INDEX_ID,
+                index=index_id,
                 suggest=suggest,
                 timeout=TIMEOUT_MS,
                 source_includes=["title"],
             )
         except Exception as e:
-            raise BackendError(f"Failed to search from Elasticsearch: {e}") from e
+            raise BackendError(
+                f"Failed to search from Elasticsearch for {language_code}: {e}"
+            ) from e
 
         if "suggest" in res:
-            return [self.build_article(q, doc) for doc in res["suggest"][SUGGEST_ID][0]["options"]]
+            return [
+                self.build_article(q, doc, language_code)
+                for doc in res["suggest"][SUGGEST_ID][0]["options"]
+            ]
         else:
             return []
 
     @staticmethod
-    def build_article(q: str, doc: dict[str, Any]) -> dict[str, Any]:
+    def build_article(q: str, doc: dict[str, Any], language_code: str) -> dict[str, Any]:
         """Build a Wikipedia article based on the ES result."""
         title = str(doc["_source"]["title"])
         quoted_title = quote(title.replace(" ", "_"))
+        title_prefix = "Wikipédia" if language_code == "fr" else "Wikipedia"
+
         return {
             "full_keyword": get_best_keyword(q, title),
-            "title": f"Wikipedia - {title}",
-            "url": f"https://en.wikipedia.org/wiki/{quoted_title}",
+            "title": f"{title_prefix} - {title}",
+            "url": f"https://{language_code}.wikipedia.org/wiki/{quoted_title}",
         }

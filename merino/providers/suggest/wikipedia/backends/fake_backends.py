@@ -13,7 +13,7 @@ class FakeWikipediaBackend:  # pragma: no cover
         """Nothing to shut down."""
         return None
 
-    async def search(self, _: str) -> list[dict[str, Any]]:
+    async def search(self, _: str, language_code: str) -> list[dict[str, Any]]:
         """Return an empty list."""
         return []
 
@@ -25,13 +25,13 @@ class FakeEchoWikipediaBackend:
         """Nothing to shut down."""
         return None
 
-    async def search(self, q: str) -> list[dict[str, Any]]:
+    async def search(self, q: str, language_code: str) -> list[dict[str, Any]]:
         """Echoing the query as the single suggestion."""
         return [
             {
                 "full_keyword": q,
                 "title": q,
-                "url": f"""https://en.wikipedia.org/wiki/{quote(q.replace(" ", "_"))}""",
+                "url": f"""https://{language_code}.wikipedia.org/wiki/{quote(q.replace(" ", "_"))}""",
             }
         ]
 
@@ -43,6 +43,6 @@ class FakeExceptionWikipediaBackend:  # pragma: no cover
         """Nothing to shut down."""
         return None
 
-    async def search(self, q: str) -> list[dict[str, Any]]:
+    async def search(self, q: str, language_code: str) -> list[dict[str, Any]]:
         """Echoing the query as the single suggestion."""
         raise BackendError("A backend failure")
