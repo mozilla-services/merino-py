@@ -82,7 +82,7 @@ class LegacyCuratedRecommendationsProvider:
         # build a CuratedRecommendationsRequest object for the `fetch` method
         # of curated recommendations provider from the request query params
         curated_rec_req_from_legacy_req = CuratedRecommendationsRequest(
-            locale=request.locale, region=request.region
+            locale=request.locale, region=request.region, count=request.count
         )
 
         # get base recs from the curated recommendations provider
@@ -97,10 +97,8 @@ class LegacyCuratedRecommendationsProvider:
             )
         )
 
-        # build the endpoint response with the length of `count` request query param
-        return CuratedRecommendationsLegacyFx115Fx129Response(
-            data=legacy_recommendations[: request.count],
-        )
+        # build the endpoint response
+        return CuratedRecommendationsLegacyFx115Fx129Response(data=legacy_recommendations)
 
     async def fetch_recommendations_for_legacy_fx_114(
         self,
@@ -111,7 +109,7 @@ class LegacyCuratedRecommendationsProvider:
         # build a CuratedRecommendationsRequest object for the `fetch` method
         # of curated recommendations provider from the request query params
         curated_rec_req_from_legacy_req = CuratedRecommendationsRequest(
-            locale=request.locale_lang, region=request.region
+            locale=request.locale_lang, region=request.region, count=request.count
         )
 
         # get base recs from the curated recommendations provider
@@ -124,7 +122,7 @@ class LegacyCuratedRecommendationsProvider:
             self.map_curated_recommendations_to_legacy_recommendations_fx_114(base_recommendations)
         )
 
-        # build the endpoint response with the length of `count` request query param
+        # build the endpoint response
         return CuratedRecommendationsLegacyFx114Response(
-            recommendations=legacy_global_recommendations[: request.count],
+            recommendations=legacy_global_recommendations,
         )
