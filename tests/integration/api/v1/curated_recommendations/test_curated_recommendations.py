@@ -1643,6 +1643,52 @@ class TestSections:
             slope, _, _, _, _ = linregress(ranks, avgs)
             assert slope < 0, f"Sections not ordered by engagement (slope={slope})"
 
+    @pytest.mark.parametrize(
+        "locale,region,derived_region",
+        [
+            ("en-US", None, "US"),
+            ("en-US", "IN", "IN"),
+            ("fr-FR", "FR", "FR"),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_sections_pass_region_to_engagement_backend(
+        self,
+        locale,
+        region,
+        derived_region,
+        mocker,
+        engagement_backend,
+        scheduled_surface_http_client,
+        fixture_request_data,
+    ):
+        """Ensure that when fetching a 'sections' feed we pass the right region into engagement.get"""
+        spy = mocker.spy(engagement_backend, "get")
+
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": locale,
+                    "region": region,
+                    "feeds": ["sections"],
+                    "experimentName": "new-tab-ml-sections",
+                    "experimentBranch": "treatment",
+                },
+            )
+
+        def passed_region(call):
+            # first look for keyword, otherwise fall back to positional second arg
+            if "region" in call.kwargs:
+                return call.kwargs["region"]
+            if len(call.args) > 1:
+                return call.args[1]
+            return None
+
+        assert any(
+            passed_region(call) == derived_region for call in spy.call_args_list
+        ), f"No engagement.get(..., region={repr(derived_region)}) in {spy.call_args_list}"
+
 
 @pytest.mark.asyncio
 async def test_curated_recommendations_enriched_with_icons(
