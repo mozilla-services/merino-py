@@ -344,7 +344,8 @@ async def curated_content(
 )
 async def curated_content_legacy_fx_115_129(
     query_params: Annotated[CuratedRecommendationsLegacyFx115Fx129Request, Query()],
-    provider: LegacyCuratedRecommendationsProvider = Depends(get_legacy_provider),
+    curated_corpus_provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
+    legacy_provider: LegacyCuratedRecommendationsProvider = Depends(get_legacy_provider),
 ) -> CuratedRecommendationsLegacyFx115Fx129Response:
     """Query for a list of curated content recommendations for legacy Firefox desktop clients
     (versions 115–129) using the legacy schema structure.
@@ -361,7 +362,9 @@ async def curated_content_legacy_fx_115_129(
         then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 30.
     """
-    return await provider.fetch_recommendations_for_legacy_fx_115_129(query_params)
+    return await legacy_provider.fetch_recommendations_for_legacy_fx_115_129(
+        query_params, curated_corpus_provider
+    )
 
 
 @router.get(
@@ -370,7 +373,8 @@ async def curated_content_legacy_fx_115_129(
 )
 async def curated_content_legacy_fx_114(
     query_params: Annotated[CuratedRecommendationsLegacyFx114Request, Query()],
-    provider: LegacyCuratedRecommendationsProvider = Depends(get_legacy_provider),
+    curated_corpus_provider: CuratedRecommendationsProvider = Depends(get_corpus_api_provider),
+    legacy_provider: LegacyCuratedRecommendationsProvider = Depends(get_legacy_provider),
 ) -> CuratedRecommendationsLegacyFx114Response:
     """Query for a list of curated content recommendations for legacy Firefox desktop clients
     (versions <= 114) using the legacy schema structure.
@@ -387,7 +391,9 @@ async def curated_content_legacy_fx_114(
         then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 10.
     """
-    return await provider.fetch_recommendations_for_legacy_fx_114(query_params)
+    return await legacy_provider.fetch_recommendations_for_legacy_fx_114(
+        query_params, curated_corpus_provider
+    )
 
 
 @router.get(

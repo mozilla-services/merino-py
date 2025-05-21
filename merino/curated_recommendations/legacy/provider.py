@@ -2,13 +2,12 @@
 
 from pydantic import HttpUrl
 from urllib.parse import quote
-from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
-    ScheduledSurfaceProtocol,
+
+from merino.curated_recommendations.provider import CuratedRecommendationsProvider
+from merino.curated_recommendations.protocol import (
+    CuratedRecommendation,
+    CuratedRecommendationsRequest,
 )
-from merino.curated_recommendations.utils import (
-    get_recommendation_surface_id,
-)
-from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.curated_recommendations.legacy.protocol import (
     CuratedRecommendationLegacyFx115Fx129,
     CuratedRecommendationLegacyFx114,
@@ -23,14 +22,6 @@ class LegacyCuratedRecommendationsProvider:
     """Provider for curated recommendations for legacy Firefox versions.
     Provides separate recommendations for v114 and for v115-129
     """
-
-    scheduled_surface_backend: ScheduledSurfaceProtocol
-
-    def __init__(
-        self,
-        scheduled_surface_backend: ScheduledSurfaceProtocol,
-    ) -> None:
-        self.scheduled_surface_backend = scheduled_surface_backend
 
     @staticmethod
     def transform_image_url_to_pocket_cdn(original_url: HttpUrl) -> HttpUrl:
@@ -83,63 +74,57 @@ class LegacyCuratedRecommendationsProvider:
         ]
 
     async def fetch_recommendations_for_legacy_fx_115_129(
-        self, request: CuratedRecommendationsLegacyFx115Fx129Request
+        self,
+        request: CuratedRecommendationsLegacyFx115Fx129Request,
+        curated_corpus_provider: CuratedRecommendationsProvider,
     ) -> CuratedRecommendationsLegacyFx115Fx129Response:
         """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
-        surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
+        # build a CuratedRecommendationsRequest object for the `fetch` method
+        # of curated recommendations provider from the request query params
+        curated_rec_req_from_legacy_req = CuratedRecommendationsRequest(
+            locale=request.locale, region=request.region
+        )
 
-        corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
-        base_recommendations = [
-            CuratedRecommendation(
-                **item.model_dump(),
-                receivedRank=rank,
-                # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
-                # interest vector. Data science work shows that using the topics as features
-                # is effective as a first pass at personalization.
-                # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
-                features={item.topic.value: 1.0} if item.topic else {},
-            )
-            for rank, item in enumerate(corpus_items)
-        ]
+        # get base recs from the curated recommendations provider
+        base_recommendations = (
+            await curated_corpus_provider.fetch(curated_rec_req_from_legacy_req)
+        ).data
 
+        # map base recommendations to fx 115-129 recommendations
         legacy_recommendations = (
             self.map_curated_recommendations_to_legacy_recommendations_fx_115_129(
                 base_recommendations
             )
         )
 
-        # build response for api request
+        # build the endpoint response with the length of `count` request query param
         return CuratedRecommendationsLegacyFx115Fx129Response(
             data=legacy_recommendations[: request.count],
         )
 
     async def fetch_recommendations_for_legacy_fx_114(
-        self, request: CuratedRecommendationsLegacyFx114Request
+        self,
+        request: CuratedRecommendationsLegacyFx114Request,
+        curated_corpus_provider: CuratedRecommendationsProvider,
     ) -> CuratedRecommendationsLegacyFx114Response:
         """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
-        surface_id = get_recommendation_surface_id(
+        # build a CuratedRecommendationsRequest object for the `fetch` method
+        # of curated recommendations provider from the request query params
+        curated_rec_req_from_legacy_req = CuratedRecommendationsRequest(
             locale=request.locale_lang, region=request.region
         )
 
-        corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
-        base_recommendations = [
-            CuratedRecommendation(
-                **item.model_dump(),
-                receivedRank=rank,
-                # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
-                # interest vector. Data science work shows that using the topics as features
-                # is effective as a first pass at personalization.
-                # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
-                features={item.topic.value: 1.0} if item.topic else {},
-            )
-            for rank, item in enumerate(corpus_items)
-        ]
+        # get base recs from the curated recommendations provider
+        base_recommendations = (
+            await curated_corpus_provider.fetch(curated_rec_req_from_legacy_req)
+        ).data
 
+        # map base recommendations to fx 114 recommendations
         legacy_global_recommendations = (
             self.map_curated_recommendations_to_legacy_recommendations_fx_114(base_recommendations)
         )
 
-        # build response for api request
+        # build the endpoint response with the length of `count` request query param
         return CuratedRecommendationsLegacyFx114Response(
             recommendations=legacy_global_recommendations[: request.count],
         )

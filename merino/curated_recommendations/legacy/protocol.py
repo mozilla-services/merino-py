@@ -33,7 +33,7 @@ class CuratedRecommendationsLegacyFx115Fx129Request(BaseModel):
 
     locale: Locale
     region: str | None = None
-    count: Annotated[int, Field(ge=0, le=30)] | None = 30
+    count: Annotated[int, Field(ge=1, le=30)] | None = 30
 
 
 class CuratedRecommendationsLegacyFx114Request(BaseModel):
@@ -43,7 +43,7 @@ class CuratedRecommendationsLegacyFx114Request(BaseModel):
 
     locale_lang: Locale
     region: str | None = None
-    count: Annotated[int, Field(ge=0, le=10)] | None = 10
+    count: Annotated[int, Field(ge=1, le=50)] | None = 20
 
 
 class CuratedRecommendationLegacyFx115Fx129(BaseModel):

@@ -115,13 +115,9 @@ def provider(
 
 
 @pytest.fixture(name="legacy_corpus_provider")
-def legacy_provider(
-    scheduled_surface_backend: ScheduledSurfaceBackend,
-) -> LegacyCuratedRecommendationsProvider:
+def legacy_provider() -> LegacyCuratedRecommendationsProvider:
     """Mock legacy curated recommendations provider."""
-    return LegacyCuratedRecommendationsProvider(
-        scheduled_surface_backend=scheduled_surface_backend,
-    )
+    return LegacyCuratedRecommendationsProvider()
 
 
 @pytest.fixture(autouse=True)
@@ -260,8 +256,8 @@ async def test_curated_recommendations_for_fx114():
         assert response.status_code == 200
 
         corpus_items = data["recommendations"]
-        # assert total of 10 items returned, which is the default maximum number of recommendations in the response.
-        assert len(corpus_items) == 10
+        # assert total of 20 items returned, which is the default maximum number of recommendations in the response.
+        assert len(corpus_items) == 20
         # Assert all corpus_items have expected fields populated.
         assert all(item["id"] for item in corpus_items)
         assert all(item["title"] for item in corpus_items)
