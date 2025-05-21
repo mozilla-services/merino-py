@@ -430,9 +430,32 @@ async def test_fetch_with_icon_processing_errors():
     """Test handling of exceptions during icon processing."""
     # Mock data
     mock_records = [
-        {"id": "icon-123", "attachment": {"location": "/path/to/icon1.png"}},
-        {"id": "icon-456", "attachment": {"location": "/path/to/icon2.png"}},
-        {"id": "icon-789", "attachment": {"location": "/path/to/icon3.png"}},
+        {
+            "id": "suggestion-record",
+            "type": "amp",
+            "attachment": {"location": "/path/to/suggestions.json"},
+            "country": "US",
+            "form_factor": "desktop",
+            "last_modified": 123,
+        },
+        {
+            "id": "icon-123",
+            "type": "icon",
+            "attachment": {"location": "/path/to/icon1.png"},
+            "last_modified": 123,
+        },
+        {
+            "id": "icon-456",
+            "type": "icon",
+            "attachment": {"location": "/path/to/icon2.png"},
+            "last_modified": 123,
+        },
+        {
+            "id": "icon-789",
+            "type": "icon",
+            "attachment": {"location": "/path/to/icon3.png"},
+            "last_modified": 123,
+        },
     ]
     mock_suggestions = [
         KintoSuggestion(
@@ -452,10 +475,9 @@ async def test_fetch_with_icon_processing_errors():
     backend = RemoteSettingsBackend("server", "collection", "bucket", icon_processor_mock)
 
     # Mock the methods directly on the instance
-    backend.get_records = AsyncMock(return_value=[])
+    backend.get_records = AsyncMock(return_value=mock_records)
     backend.get_attachment_host = AsyncMock(return_value=attachment_host)
     backend.get_suggestions = AsyncMock(return_value=mock_suggestions)
-    backend.filter_records = MagicMock(return_value=mock_records)
 
     # Mock icon processor's process_icon_url method with different behaviors
     async def mock_process_side_effect(url):
