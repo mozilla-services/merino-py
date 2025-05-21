@@ -234,6 +234,7 @@ SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
 }
 
 # mapping from https://dev.maxmind.com/geoip/whats-new-in-geoip2/#iso-3166-2-fips-10-4-and-country-subdivisions
+# FR not included since the mapping does not map to ISO codes.
 FIPS_ISO_MAPPING = {
     "CA": {
         "01": "AB",
@@ -309,6 +310,9 @@ FIPS_ISO_MAPPING = {
         "87": "32",
     },
 }
+
+FIPS_ISO_MAPPING_COUNTRIES: frozenset = frozenset(FIPS_ISO_MAPPING.keys())
+
 # Countries that use the most specific region to retrieve weather
 KNOWN_SPECIFIC_REGION_COUNTRIES: frozenset = frozenset(
     ["AR", "AU", "BR", "CA", "CN", "DE", "GB", "MX", "NZ", "PL", "PT", "RU", "US"]
@@ -327,14 +331,11 @@ def remove_locality_suffix(city: str) -> str:
     return LOCALITY_SUFFIX_PATTERN.sub("", city)
 
 
-def get_fips_region_mapping(
-    country: Optional[str], regions: Optional[list[str]]
-) -> Optional[list[str]]:
+def get_fips_region_mapping(country: str, regions: list[str]) -> list[str]:
     """Get iso code for region if it exists in mapping."""
-    if country and regions:
-        for region in regions:
-            if iso_region := FIPS_ISO_MAPPING.get(country, {}).get(region):
-                return [iso_region]
+    for region in regions:
+        if iso_region := FIPS_ISO_MAPPING.get(country, {}).get(region):
+            return [iso_region]
     return regions
 
 
@@ -356,7 +357,10 @@ def compass(location: Location) -> Generator[MaybeStr, None, None]:
       - region string that could be None.
     """
     country = location.country
-    regions = get_fips_region_mapping(country, location.regions)
+    regions = location.regions
+    if country and country in FIPS_ISO_MAPPING_COUNTRIES and regions:
+        regions = get_fips_region_mapping(country, regions)
+
     city = location.city
 
     if regions and country and city:

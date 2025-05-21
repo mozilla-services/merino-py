@@ -465,15 +465,14 @@ def test_suggest_with_location_completion_with_incorrect_request_type_param(
 
 
 @pytest.mark.parametrize(
-    ("city", "region", "country", "admin1", "admin2"),
+    ("city", "region", "regions", "country"),
     [
-        (None, "MA", "US", None, None),
-        ("Boston", None, None, None, None),
-        (None, "MA", None, None, None),
-        (None, None, "US", None, None),
-        ("Boston", "MA", None, None, None),
-        ("Boston", None, "US", None, None),
-        ("Boston", None, "US", None, "US"),
+        (None, "MA", None, "US"),
+        ("Boston", None, None, None),
+        (None, "MA", None, None),
+        (None, None, None, "US"),
+        ("Boston", "MA", None, None),
+        ("Boston", None, None, "US"),
     ],
     ids=[
         "missing_city",
@@ -481,8 +480,7 @@ def test_suggest_with_location_completion_with_incorrect_request_type_param(
         "missing_city_and_country",
         "missing_city_and_region",
         "missing_country",
-        "missing_admin1_and_admin2",
-        "missing_admin2",
+        "missing_regions",
     ],
 )
 @pytest.mark.asyncio
@@ -491,11 +489,10 @@ async def test_suggest_weather_with_incomplete_city_region_country_params(
     city: str | None,
     region: str | None,
     country: str | None,
-    admin1: str | None,
-    admin2: str | None,
+    regions: str | None,
 ) -> None:
     """Test that the suggest endpoint response for accuweather provider returns a 400 when city, region
-    & country params or city, admin1 & country are not all provided.
+    & country params or city, regions & country are not all provided.
     """
     base_url = "/api/v1/suggest?q=weather&providers=weather&request_type=weather"
 
@@ -505,16 +502,15 @@ async def test_suggest_weather_with_incomplete_city_region_country_params(
         base_url += f"&region={region}"
     if country is not None:
         base_url += f"&country={country}"
-    if admin1 is not None:
-        base_url += f"&admin1={admin1}"
-    if admin2 is not None:
-        base_url += f"&admin2={admin2}"
+    if regions is not None:
+        base_url += f"&regions={regions}"
 
     response = client.get(base_url)
     assert response.status_code == 400
     assert (
         response.json()["detail"]
-        == "Invalid query parameters: either  all of `city`, `region`, `country` need to be present or all of `city`, `admin1`, and/or `admin2`, `country` need to be present."
+        == "Invalid query parameters: one of the following triplet params require all non None values: "
+        "[`city`, `region`, `country`] or [`city`,`regions`, `country`]."
     )
 
 
@@ -614,16 +610,13 @@ async def test_suggest_weather_with_custom_location_with_admin_codes(
             "providers": "weather",
             "request_type": "weather",
             "city": "Boston",
-            "admin1": "MA",
-            "admin2": "AA",
+            "regions": "MA,AA",
             "country": "US",
         },
     )
-
     expected_geolocation = geolocation_scope[ScopeKey.GEOLOCATION].model_copy(
         update={"city": "Boston", "regions": ["MA", "AA"], "country": "US"}
     )
-
     mock_query.assert_called_with(
         SuggestionRequest(
             query="", geolocation=expected_geolocation, request_type="weather", languages=["en-US"]

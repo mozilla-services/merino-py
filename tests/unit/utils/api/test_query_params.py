@@ -74,12 +74,12 @@ def test_validate_suggest_custom_location_params(
     caplog.set_level(logging.INFO)
 
     with pytest.raises(HTTPException) as exc_info:
-        validate_suggest_custom_location_params(city, region, None, None, country)
+        validate_suggest_custom_location_params(city, region, None, country)
     assert exc_info.value.status_code == 400
     assert (
         exc_info.value.detail
-        == "Invalid query parameters: either  all of `city`, `region`, `country` need to be present or "
-        "all of `city`, `admin1`, and/or `admin2`, `country` need to be present."
+        == "Invalid query parameters: one of the following triplet params require all non None values: "
+        "[`city`, `region`, `country`] or [`city`,`regions`, `country`]."
     )
 
     records = filter_caplog(caplog.records, "merino.utils.api.query_params")
@@ -87,12 +87,12 @@ def test_validate_suggest_custom_location_params(
     assert len(records) == 1
     assert (
         records[0].message
-        == "HTTP 400: Invalid query parameters: either  all of `city`, `region`, `country` need to be present or "
-        "all of `city`, `admin1`, and/or `admin2`, `country` need to be present."
+        == "HTTP 400: Invalid query parameters: one of the following triplet params require all non None values: "
+        "[`city`, `region`, `country`] or [`city`,`regions`, `country`]."
     )
 
 
-def test_refine_geolocation_for_suggestion_with_all_params(geolocation: Location):
+def test_refine_geolocation_for_suggestion_with_region_params(geolocation: Location):
     """Test that refine geolocation method returns correct geolocation with updated params when all params are provided"""
     mock_request = Mock(spec=Request)
 
@@ -109,15 +109,26 @@ def test_refine_geolocation_for_suggestion_with_all_params(geolocation: Location
     mock_request.scope = {ScopeKey.GEOLOCATION: geolocation}
 
     assert (
-        refine_geolocation_for_suggestion(mock_request, "New York", ["NY"], "US")
+        refine_geolocation_for_suggestion(mock_request, "New York", "NY", None, "US")
         == expected_location
     )
 
 
-def test_refine_geolocation_for_suggestion_with_incomplete_params(geolocation: Location):
-    """Test that refine geolocation method returns original geolocation when incomplete params are provided"""
+def test_refine_geolocation_for_suggestion_with_regions_params(geolocation: Location):
+    """Test that refine geolocation method returns geolocation when regions string param is provided"""
     mock_request = Mock(spec=Request)
 
     mock_request.scope = {ScopeKey.GEOLOCATION: geolocation}
-
-    assert refine_geolocation_for_suggestion(mock_request, "New York", None, "US") == geolocation
+    expected_location: Location = Location(
+        country="US",
+        country_name="United States",
+        regions=["NY", "AA"],
+        region_names=["Washington"],
+        city="New York",
+        dma=819,
+        postal_code="98354",
+    )
+    assert (
+        refine_geolocation_for_suggestion(mock_request, "New York", None, "NY,AA", "US")
+        == expected_location
+    )
