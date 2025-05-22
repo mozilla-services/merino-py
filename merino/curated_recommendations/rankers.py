@@ -172,11 +172,9 @@ def greedy_personalized_section_rank(
     ordered_preferences = sorted(ptopics,key=lambda x: personal_interests.root[x])        
 
     ## swap in preferences with probability 1-epsililon, lowest prefered score gets inserted first
-    for section_id in ordered_preferences: 
-        do_swap = np.random.choice([0,1],p=[epsilon,1-epsilon])
-        if do_swap:
-            if section_id in ordered_sections:
-                ordered_sections.remove(section_id)
+    for section_id in ordered_preferences:         
+        if section_id in ordered_sections and np.random.choice([0,1],p=[epsilon,1-epsilon]):            
+            ordered_sections.remove(section_id)
             ordered_sections.insert(0,section_id)    
 
     ## reorder the sections according to the new ranking        
