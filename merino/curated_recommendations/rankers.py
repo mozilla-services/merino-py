@@ -159,6 +159,11 @@ def greedy_personalized_section_rank(
     personal_interests: InferredInterests,
     epsilon: float = 0.0,
     ) -> dict[str, Section]:
+    """Insert the ordered personal interest sections into the top of the section ranking.
+
+    Insertion happens for each sectionwith probability 1-epsilon. 
+      default is to always do the insertion
+    """
     ## order init from other functions
     ordered_sections = sorted(sections,key=lambda x:sections[x].receivedFeedRank)
 
