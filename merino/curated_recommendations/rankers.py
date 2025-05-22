@@ -11,8 +11,10 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     SectionConfiguration,
     Section,
+    InferredInterests,
 )
 from scipy.stats import beta
+import numpy as np
 
 
 def renumber_recommendations(recommendations: list[CuratedRecommendation]) -> None:
@@ -36,6 +38,7 @@ def renumber_sections(ordered_sections: list[tuple[str, Section]]) -> dict[str, 
         section.receivedFeedRank = idx
         result[section_id] = section
     return result
+
 
 
 # In a weighted average, how much to weigh the metrics from the requested region. 0.95 was chosen
@@ -151,6 +154,31 @@ def section_thompson_sampling(
     ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
     return renumber_sections(ordered)
 
+def greedy_personalized_section_rank(
+    sections: dict[str, Section],
+    personal_interests: InferredInterests,
+    epsilon: float = 0.0,
+    ) -> dict[str, Section]:
+    ## order init from other functions
+    ordered_sections = sorted(sections,key=lambda x:sections[x].receivedFeedRank)
+
+    ## order of personal preferences
+    ptopics = [k for k in personal_interests.root if k.startswith('t_')]    
+    ordered_preferences = sorted(ptopics,key=lambda x: personal_interests.root[x])
+    ordered_preferences = [k[2:] for k in ordered_preferences]
+
+    ## swap in preferences with probability 1-epsililon, lowest prefered score gets inserted first
+    for section_id in ordered_preferences[::-1]: 
+        do_swap = np.random.choice([0,1],p=[epsilon,1-epsilon])
+        if do_swap:
+            if section_id in ordered_sections:
+                ordered_sections.remove(section_id)
+            ordered_sections.insert(0,section_id)
+
+    ## reorder the sections according to the new ranking        
+    ordered = [(sec,sections[sec]) for sec in ordered_sections
+               if sec in sections]
+    return renumber_sections(ordered)
 
 def spread_publishers(
     recs: list[CuratedRecommendation], spread_distance: int
