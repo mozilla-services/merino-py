@@ -312,8 +312,7 @@ async def get_sections(
 
     Returns:
         A dict mapping section IDs to fully-configured Section models.
-    """
-    print('\n\n\n\n GET SECTIONS \n\n\n\n')
+    """    
     # 1. Filter out blocked topics
     if request.sections:
         recommendations = exclude_recommendations_from_blocked_sections(
