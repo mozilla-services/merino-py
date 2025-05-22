@@ -165,15 +165,15 @@ def greedy_personalized_section_rank(
       default is to always do the insertion
     """
     ## order init from other functions
-    ordered_sections = sorted(sections,key=lambda x:sections[x].receivedFeedRank)
+    ordered_sections = sorted(sections,key=lambda x:sections[x].receivedFeedRank)    
 
     ## order of personal preferences
     ptopics = [k for k in personal_interests.root if k.startswith('t_')]    
     ordered_preferences = sorted(ptopics,key=lambda x: personal_interests.root[x])
-    ordered_preferences = [k[2:] for k in ordered_preferences]
+    ordered_preferences = [k[2:] for k in ordered_preferences]    
 
     ## swap in preferences with probability 1-epsililon, lowest prefered score gets inserted first
-    for section_id in ordered_preferences[::-1]: 
+    for section_id in ordered_preferences: 
         do_swap = np.random.choice([0,1],p=[epsilon,1-epsilon])
         if do_swap:
             if section_id in ordered_sections:
@@ -182,7 +182,7 @@ def greedy_personalized_section_rank(
 
     ## reorder the sections according to the new ranking        
     ordered = [(sec,sections[sec]) for sec in ordered_sections
-               if sec in sections]
+               if sec in sections]    
     return renumber_sections(ordered)
 
 def spread_publishers(
