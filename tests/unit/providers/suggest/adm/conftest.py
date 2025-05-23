@@ -10,6 +10,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
+from merino.providers.suggest.adm.backends.remotesettings import FormFactor
 from merino.providers.suggest.adm.provider import Provider
 
 
@@ -19,22 +20,22 @@ def fixture_adm_suggestion_content() -> SuggestionContent:
     return SuggestionContent(
         suggestions={
             "US": {
-                (("desktop",), "firefox"): (0, 0),
-                (("desktop",), "firefox account"): (0, 0),
-                (("desktop",), "firefox accounts"): (0, 0),
-                (("desktop",), "mozilla"): (0, 1),
-                (("desktop",), "mozilla firefox"): (0, 1),
-                (("desktop",), "mozilla firefox account"): (0, 1),
-                (("desktop",), "mozilla firefox accounts"): (0, 1),
+                "firefox": {(FormFactor.DESKTOP.value,): (0, 0)},
+                "firefox account": {(FormFactor.DESKTOP.value,): (0, 0)},
+                "firefox accounts": {(FormFactor.DESKTOP.value,): (0, 0)},
+                "mozilla": {(FormFactor.DESKTOP.value,): (0, 1)},
+                "mozilla firefox": {(FormFactor.DESKTOP.value,): (0, 1)},
+                "mozilla firefox account": {(FormFactor.DESKTOP.value,): (0, 1)},
+                "mozilla firefox accounts": {(FormFactor.DESKTOP.value,): (0, 1)},
             },
             "DE": {
-                (("phone",), "firefox"): (1, 2),
-                (("phone",), "firefox account"): (1, 2),
-                (("phone",), "firefox accounts de"): (1, 2),
-                (("phone",), "mozilla"): (1, 3),
-                (("phone",), "mozilla firefox"): (1, 3),
-                (("phone",), "mozilla firefox account"): (1, 3),
-                (("phone",), "mozilla firefox accounts de"): (1, 3),
+                "firefox": {(FormFactor.PHONE.value,): (1, 2)},
+                "firefox account": {(FormFactor.PHONE.value,): (1, 2)},
+                "firefox accounts de": {(FormFactor.PHONE.value,): (1, 2)},
+                "mozilla": {(FormFactor.PHONE.value,): (1, 3)},
+                "mozilla firefox": {(FormFactor.PHONE.value,): (1, 3)},
+                "mozilla firefox account": {(FormFactor.PHONE.value,): (1, 3)},
+                "mozilla firefox accounts de": {(FormFactor.PHONE.value,): (1, 3)},
             },
         },
         full_keywords=[

@@ -14,6 +14,7 @@ import tldextract
 from pydantic import HttpUrl
 from tldextract.tldextract import ExtractResult
 
+from merino.providers.suggest.adm.backends.remotesettings import FormFactor
 from merino.utils import cron
 from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
@@ -36,7 +37,12 @@ class IABCategory(str, Enum):
 
 # Used whenever the `icon` field is missing from the suggestion payload.
 MISSING_ICON_ID: Final = "-1"
-FORM_FACTORS_FALLBACK_MAPPING = {"other": "desktop", "tablet": "phone"}
+FORM_FACTORS_FALLBACK_MAPPING = {
+    "other": FormFactor.DESKTOP.value,
+    "tablet": FormFactor.PHONE.value,
+    "desktop": FormFactor.DESKTOP.value,
+    "phone": FormFactor.PHONE.value,
+}
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -166,11 +172,11 @@ class Provider(BaseProvider):
         form_factor = srequest.user_agent.form_factor if srequest.user_agent else None
         country = srequest.geolocation.country
         if country and form_factor:
-            segment = (FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, form_factor),)
+            segment = (FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, FormFactor.DESKTOP.value),)
             if (
-                suggest_look_ups := self.suggestion_content.suggestions.get(country, {}).get(
-                    (segment, q)
-                )
+                suggest_look_ups := self.suggestion_content.suggestions.get(country, {})
+                .get(q, {})
+                .get(segment)
             ) is not None:
                 results_id, fkw_id = suggest_look_ups
                 res = self.suggestion_content.results[results_id]

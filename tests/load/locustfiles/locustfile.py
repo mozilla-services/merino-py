@@ -198,9 +198,10 @@ def get_adm_queries(server: str | None, collection: str | None, bucket: str | No
     content: SuggestionContent = asyncio.run(backend.fetch())
 
     adm_query_dict: dict[int, list[str]] = {}
-    for country, suggestion_items in content.suggestions.items():
-        for (segment, query), (result_id, fkw_index) in suggestion_items.items():
-            adm_query_dict.setdefault(result_id, []).append(query)
+    for country, index in content.suggestions.items():
+        for query, data in index.items():
+            for segment, (result_id, kw_ind) in data.items():
+                adm_query_dict.setdefault(result_id, []).append(query)
 
     return list(adm_query_dict.values())
 

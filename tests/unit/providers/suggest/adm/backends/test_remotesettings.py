@@ -19,6 +19,7 @@ from merino.providers.suggest.adm.backends.protocol import SuggestionContent
 from merino.providers.suggest.adm.backends.remotesettings import (
     KintoSuggestion,
     RemoteSettingsBackend,
+    FormFactor,
 )
 from merino.utils.icon_processor import IconProcessor
 
@@ -483,8 +484,8 @@ async def test_get_suggestions(
 ) -> None:
     """Test that the method returns the proper suggestion information."""
     expected_suggestions: dict[str, dict[tuple, list[KintoSuggestion]]] = {
-        "US": {("desktop",): [rs_attachment]},
-        "DE": {("phone",): [rs_attachment]},
+        "US": {(FormFactor.DESKTOP.value,): [rs_attachment]},
+        "DE": {(FormFactor.PHONE.value,): [rs_attachment]},
     }
     attachment_host: str = "attachment-host/"
     mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
