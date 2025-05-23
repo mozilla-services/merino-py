@@ -82,9 +82,6 @@ SEEN_KEYWORDS: Set[str] = set([])
 # The leading words to be skipped
 SKIP_WORDS: Pattern = re.compile(r"(\d+|the|an|a)$")
 
-# The directory for adM provided suggestions. This is used to load all the
-# keywords of the in-flight sponsored suggestions.
-AMP_SOURCE_DIR = "../source-data/"
 
 # A set to store all the inflight sponsored keywords
 SPONSORED_KEYWORDS: Set[str] = set()
@@ -105,9 +102,9 @@ def make_keywords(words: List[str]):
     )
 
 
-def scan(language) -> Generator[dict[str, str | list[str] | list[list[int]] | int], Any, None]:
+def scan(language, data) -> Generator[dict[str, str | list[str] | list[list[int]] | int], Any, None]:
     """Generate Suggestion."""
-    for article in json.loads(sys.stdin.read()):
+    for article in data:
         title = article["title"]
         keywords = make_keywords(title.lower().split("_"))
         title_string = title.replace("_", " ")
@@ -128,42 +125,12 @@ def scan(language) -> Generator[dict[str, str | list[str] | list[list[int]] | in
             }
 
 
-def main() -> None:
+def make_suggestions(language, want, data) -> list:
     """Construct Suggestions and write to json files."""
-    language = "en"
-    if len(sys.argv) < 2:
-        want = 7000
-    else:
-        want = int(sys.argv[1])
-
-    if len(sys.argv) == 3:
-        language = sys.argv[2]
-
-    n_suggestions = 0
-    n_chunked = 0
-    gen = scan(language)
-
-    while True:
-        suggestions = list(islice(gen, min(want - n_chunked * RS_CHUNK_SIZE, RS_CHUNK_SIZE)))
-
-        if not suggestions:
-            break
-
-        with open(
-            f"{OUTPUT_PREFIX}-{language}-{n_chunked*RS_CHUNK_SIZE:04}"
-            f"-{(n_chunked+1)*RS_CHUNK_SIZE:04}.json",
-            "w",
-        ) as f:
-            json.dump(suggestions, f, ensure_ascii=False)
-
-        n_chunked += 1
-        n_suggestions += len(suggestions)
-
-        if n_chunked * RS_CHUNK_SIZE >= want:
-            break
-
-    print(f"Total suggestions: {n_suggestions}\n" f"Total keywords: {len(SEEN_KEYWORDS)}")
+    print(data)
+    gen = scan(language, data)
+    results = list(islice(gen, want))
+    print(f"Total suggestions: {len(results)}\n" f"Total keywords: {len(SEEN_KEYWORDS)}")
+    return results
 
 
-if __name__ == "__main__":
-    main()
