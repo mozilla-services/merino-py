@@ -39,9 +39,9 @@ import base64
 import csv
 import glob
 import json
+import os
 import random
 import re
-import sys
 from collections import Counter
 from multiprocessing import Pool
 
@@ -75,17 +75,15 @@ def initializer(ignored_titles):
     process.ignored_titles = ignored_titles
 
 
-def main() -> None:
+def get_top_n_frequency(language, top_n, tempdir) -> list[dict]:
     """Extract the top N viewed pages for a given language."""
-    language = "en"
-    if len(sys.argv) < 2:
-        top_n = 1000
-    else:
-        top_n = int(sys.argv[1])
-    if len(sys.argv) == 3:
-        language = sys.argv[2]
-
-    with open("page_ignore.csv") as f, open("./dynamic_wikipedia_blocklist.csv") as g:
+    merino_dir = os.getcwd()
+    with (
+        open(f"{merino_dir}/merino/jobs/wikipedia_offline_uploader/page_ignore.csv") as f,
+        open(
+            f"{merino_dir}/merino/jobs/wikipedia_offline_uploader/dynamic_wikipedia_blocklist.csv"
+        ) as g,
+    ):
         ignored = set(
             base64.b64decode(item["title"]).decode("utf-8") for item in csv.DictReader(f)
         )
@@ -95,7 +93,7 @@ def main() -> None:
 
     with Pool(None, initializer, [ignored]) as pool:
         top_pages: Counter = Counter()
-        inputs = glob.glob(f"./wikipedia-top-pages/{language}*.json")
+        inputs = glob.glob(os.path.join(tempdir, f"{language}*.json"))
         random.shuffle(inputs)
         # Chunk the input list into sublists of 7
         tasks = [inputs[i : i + 7] for i in range(0, len(inputs), 7)]
@@ -109,8 +107,4 @@ def main() -> None:
             for n, (title, views) in enumerate(top_pages.most_common(top_n), start=1)
         ]
 
-        print(json.dumps(res, ensure_ascii=False), end="")
-
-
-if __name__ == "__main__":
-    main()
+        return res
