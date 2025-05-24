@@ -137,9 +137,9 @@ class RemoteSettingsBackend:
             return self.suggestion_content
 
         attachment_host: str = await self.get_attachment_host()
-        rs_suggestions: dict[str, dict[SegmentType, list[KintoSuggestion]]] = await self.get_suggestions(
-            attachment_host, amp_records
-        )
+        rs_suggestions: dict[
+            str, dict[SegmentType, list[KintoSuggestion]]
+        ] = await self.get_suggestions(attachment_host, amp_records)
 
         fkw_index = 0
         for country, c_suggestions in rs_suggestions.items():
