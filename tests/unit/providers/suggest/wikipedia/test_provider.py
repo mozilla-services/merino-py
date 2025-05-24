@@ -52,7 +52,7 @@ async def test_query_failure(
     # Override default behavior for query
     mocker.patch.object(wikipedia, "query", side_effect=BackendError)
     with pytest.raises(BackendError):
-        result = await wikipedia.query(srequest(query_keyword))
+        result = await wikipedia.query(srequest(query_keyword, None, None))
         assert result == []
 
 
@@ -82,7 +82,7 @@ async def test_query_title_block_list(
     """Test that query method filters out blocked suggestion titles.
     Also verifies check is not case-sensitive.
     """
-    suggestions = await wikipedia.query(srequest(query))
+    suggestions = await wikipedia.query(srequest(query, None, None))
 
     assert suggestions == []
 
@@ -99,7 +99,7 @@ async def test_query(
     expected_title: str,
 ) -> None:
     """Test for the query method."""
-    suggestions = await wikipedia.query(srequest(query))
+    suggestions = await wikipedia.query(srequest(query, None, None))
 
     assert suggestions == [
         WikipediaSuggestion(

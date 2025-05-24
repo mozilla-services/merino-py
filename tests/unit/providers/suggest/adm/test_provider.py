@@ -10,6 +10,8 @@ import pytest
 from pydantic import HttpUrl
 from pytest import LogCaptureFixture
 
+from merino.middleware.geolocation import Location
+from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest.adm.backends.protocol import SuggestionContent
 from merino.providers.suggest.adm.provider import NonsponsoredSuggestion, Provider
 from merino.providers.suggest.base import Category
@@ -101,7 +103,7 @@ async def test_initialize_remote_settings_failure(
         results=[],
         icons={},
     )
-    assert await adm.query(srequest(query)) == []
+    assert await adm.query(srequest(query, None, None)) == []
 
 
 @pytest.mark.parametrize("query", ["firefox"])
@@ -116,8 +118,9 @@ async def test_query_success(
     normalization, when uppercase or trailing whitespace in query string.
     """
     await adm.initialize()
-
-    res = await adm.query(srequest(query))
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+    res = await adm.query(srequest(query, geolocation, user_agent))
     assert res == [
         NonsponsoredSuggestion(
             block_id=2,
@@ -141,7 +144,7 @@ async def test_query_with_missing_key(srequest: SuggestionRequestFixture, adm: P
     """Test for the query() method of the adM provider with a missing key."""
     await adm.initialize()
 
-    assert await adm.query(srequest("nope")) == []
+    assert await adm.query(srequest("nope", None, None)) == []
 
 
 @pytest.mark.parametrize(

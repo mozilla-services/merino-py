@@ -457,17 +457,21 @@ async def test_fetch_with_icon_processing_errors():
             "last_modified": 123,
         },
     ]
-    mock_suggestions = [
-        KintoSuggestion(
-            id=id,
-            advertiser="Example.org",
-            iab_category="5 - Education",
-            icon=icon_id,
-            title="Test Suggestion",
-            url="https://example.org/test",
-        )
-        for id, icon_id in enumerate(["123", "456", "789"])
-    ]
+    mock_suggestions = {
+        "US": {
+            ("desktop",): [
+                KintoSuggestion(
+                    id=id,
+                    advertiser="Example.org",
+                    iab_category="5 - Education",
+                    icon=icon_id,
+                    title="Test Suggestion",
+                    url="https://example.org/test",
+                )
+                for id, icon_id in enumerate(["123", "456", "789"])
+            ]
+        }
+    }
     attachment_host = "https://example.com"
 
     # Create instance with mock icon processor

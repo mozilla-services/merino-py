@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from merino.configs import settings
 from merino.middleware.geolocation import Location
+from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest.custom_details import CustomDetails
 
 
@@ -20,6 +21,7 @@ class SuggestionRequest(BaseModel):
     city: str | None = None
     region: str | None = None
     country: str | None = None
+    user_agent: UserAgent | None = None
 
 
 class Category(Enum):
