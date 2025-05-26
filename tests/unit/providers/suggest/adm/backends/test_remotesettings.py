@@ -19,6 +19,7 @@ from merino.providers.suggest.adm.backends.protocol import SuggestionContent
 from merino.providers.suggest.adm.backends.remotesettings import (
     KintoSuggestion,
     RemoteSettingsBackend,
+    FormFactor,
 )
 from merino.utils.icon_processor import IconProcessor
 
@@ -74,6 +75,21 @@ def fixture_rs_records() -> list[dict[str, Any]]:
                 "size": 1,
                 "filename": "data-01.json",
                 "location": "main-workspace/quicksuggest/attachmment-01.json",
+                "mimetype": "application/octet-stream",
+            },
+            "id": "data-01",
+            "last_modified": 123,
+        },
+        {
+            "type": "amp",
+            "country": "DE",
+            "form_factor": "phone",
+            "schema": 123,
+            "attachment": {
+                "hash": "abcd",
+                "size": 1,
+                "filename": "data-03.json",
+                "location": "main-workspace/quicksuggest/attachmment-03.json",
                 "mimetype": "application/octet-stream",
             },
             "id": "data-01",
@@ -261,9 +277,44 @@ async def test_fetch(
     adm_suggestion_content: SuggestionContent,
 ) -> None:
     """Test that the fetch method returns the proper suggestion content."""
+    de_phone_attachment = KintoSuggestion(
+        id=3,
+        advertiser="de.Example.org",
+        impression_url="https://de.example.org/impression/mozilla",
+        click_url="https://de.example.org/click/mozilla",
+        full_keywords=[["firefox accounts de", 3], ["mozilla firefox accounts de", 4]],
+        iab_category="5 - Education",
+        icon="01",
+        keywords=[
+            "firefox",
+            "firefox account",
+            "firefox accounts de",
+            "mozilla",
+            "mozilla firefox",
+            "mozilla firefox account",
+            "mozilla firefox accounts de",
+        ],
+        title="Mozilla Firefox Accounts",
+        url="https://de.example.org/target/mozfirefoxaccounts",
+    )
+    de_phone_attachment_response = httpx.Response(
+        status_code=200,
+        json=[dict(de_phone_attachment)],
+        request=httpx.Request(
+            method="GET",
+            url=(
+                "attachment-host/main-workspace/quicksuggest/"
+                "6129d437-b3c1-48b5-b343-535e045d341a.json"
+            ),
+        ),
+    )
     mocker.patch.object(kinto_http.AsyncClient, "get_records", return_value=rs_records)
     mocker.patch.object(kinto_http.AsyncClient, "server_info", return_value=rs_server_info)
-    mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        side_effect=[rs_attachment_response, de_phone_attachment_response],
+    )
 
     suggestion_content: SuggestionContent = await rs_backend.fetch()
 
@@ -347,7 +398,22 @@ async def test_filter_amp_records(
             },
             "id": "data-01",
             "last_modified": 123,
-        }
+        },
+        {
+            "type": "amp",
+            "country": "DE",
+            "form_factor": "phone",
+            "schema": 123,
+            "attachment": {
+                "hash": "abcd",
+                "size": 1,
+                "filename": "data-03.json",
+                "location": "main-workspace/quicksuggest/attachmment-03.json",
+                "mimetype": "application/octet-stream",
+            },
+            "id": "data-01",
+            "last_modified": 123,
+        },
     ]
 
 
@@ -417,11 +483,14 @@ async def test_get_suggestions(
     rs_attachment_response: httpx.Response,
 ) -> None:
     """Test that the method returns the proper suggestion information."""
-    expected_suggestions: list[KintoSuggestion] = [rs_attachment]
+    expected_suggestions: dict[str, dict[tuple, list[KintoSuggestion]]] = {
+        "US": {(FormFactor.DESKTOP.value,): [rs_attachment]},
+        "DE": {(FormFactor.PHONE.value,): [rs_attachment]},
+    }
     attachment_host: str = "attachment-host/"
     mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
 
-    suggestions: list[KintoSuggestion] = await rs_backend.get_suggestions(
+    suggestions: dict[str, dict[tuple, list[KintoSuggestion]]] = await rs_backend.get_suggestions(
         attachment_host, rs_backend.filter_records("amp", rs_records)
     )
 
@@ -437,7 +506,7 @@ async def test_get_suggestions_backend_error(
     """Test that the method raises an appropriate exception in the event of an
     error while getting the suggestion information.
     """
-    expected_error_value: str = "(RemoteSettingsError('Failed to get attachment'),)"
+    expected_error_value: str = "(RemoteSettingsError('Failed to get attachment'), RemoteSettingsError('Failed to get attachment'))"
     attachment_host: str = "attachment-host/"
     mocker.patch.object(
         httpx.AsyncClient,

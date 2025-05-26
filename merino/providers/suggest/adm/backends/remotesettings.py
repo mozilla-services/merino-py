@@ -2,6 +2,8 @@
 
 import asyncio
 from asyncio import Task
+from collections import defaultdict
+from enum import Enum
 from typing import Any, Literal, cast
 from urllib.parse import urljoin
 
@@ -12,7 +14,11 @@ from pydantic import BaseModel
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.adm.backends.protocol import SuggestionContent
+from merino.providers.suggest.adm.backends.protocol import (
+    SuggestionContent,
+    IndexType,
+    SegmentType,
+)
 from merino.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
 
@@ -20,7 +26,15 @@ logger = logging.getLogger(__name__)
 
 RS_CONNECT_TIMEOUT: float = 5.0
 
+
 RecordType = Literal["amp", "icon"]
+
+
+class FormFactor(Enum):
+    """Enum for form factor."""
+
+    DESKTOP = 0
+    PHONE = 1
 
 
 class KintoSuggestion(BaseModel):
@@ -110,7 +124,7 @@ class RemoteSettingsBackend:
         Raises:
             RemoteSettingsError: Failed request to Remote Settings.
         """
-        suggestions: dict[str, tuple[int, int]] = {}
+        suggestions: defaultdict[str, IndexType] = defaultdict(lambda: defaultdict(dict))
         full_keywords: list[str] = []
         results: list[dict[str, Any]] = []
         icons: dict[str, str] = {}
@@ -123,27 +137,28 @@ class RemoteSettingsBackend:
             return self.suggestion_content
 
         attachment_host: str = await self.get_attachment_host()
-        rs_suggestions: list[KintoSuggestion] = await self.get_suggestions(
-            attachment_host, amp_records
-        )
+        rs_suggestions: dict[
+            str, dict[SegmentType, list[KintoSuggestion]]
+        ] = await self.get_suggestions(attachment_host, amp_records)
 
         fkw_index = 0
-
-        for suggestion in rs_suggestions:
-            result_id = len(results)
-            keywords = suggestion.keywords
-            icons_in_use.add(suggestion.icon)
-            full_keywords_tuples = suggestion.full_keywords
-            begin = 0
-            for full_keyword, n in full_keywords_tuples:
-                for query in keywords[begin : begin + n]:
-                    # Note that for adM suggestions, each keyword can only be
-                    # mapped to a single suggestion.
-                    suggestions[query] = (result_id, fkw_index)
-                begin += n
-                full_keywords.append(full_keyword)
-                fkw_index = len(full_keywords)
-            results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
+        for country, c_suggestions in rs_suggestions.items():
+            for segment, s_suggestions in c_suggestions.items():
+                for suggestion in s_suggestions:
+                    result_id = len(results)
+                    keywords = suggestion.keywords
+                    icons_in_use.add(suggestion.icon)
+                    full_keywords_tuples = suggestion.full_keywords
+                    begin = 0
+                    for full_keyword, n in full_keywords_tuples:
+                        for query in keywords[begin : begin + n]:
+                            # Note that for adM suggestions, each keyword can only be
+                            # mapped to a single suggestion.
+                            suggestions[country][query][segment] = (result_id, fkw_index)
+                        begin += n
+                        full_keywords.append(full_keyword)
+                        fkw_index = len(full_keywords)
+                    results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
 
         icon_record = self.filter_records(record_type="icon", records=records)
 
@@ -216,9 +231,14 @@ class RemoteSettingsBackend:
             raise RemoteSettingsError("Failed to get server information") from error
         return cast(str, server_info["capabilities"]["attachments"]["base_url"])
 
+    def get_segment(self, record) -> SegmentType:
+        """Compose segment, based on record division types."""
+        form_factor = record["form_factor"].upper()
+        return (FormFactor[form_factor].value,)
+
     async def get_suggestions(
         self, attachment_host: str, records: list[dict[str, Any]]
-    ) -> list[KintoSuggestion]:
+    ) -> dict[str, dict[SegmentType, list[KintoSuggestion]]]:
         """Get suggestion data from all data records.
 
         Args:
@@ -229,26 +249,33 @@ class RemoteSettingsBackend:
         Raises:
             RemoteSettingsError: Failed request to Remote Settings.
         """
-        tasks: list[Task] = []
+        tasks: list[
+            tuple[
+                str,
+                SegmentType,
+                Task,
+            ]
+        ] = []
         try:
             async with asyncio.TaskGroup() as task_group:
                 for record in records:
-                    tasks.append(
-                        task_group.create_task(
-                            self.get_attachment(
-                                url=urljoin(
-                                    base=attachment_host,
-                                    url=record["attachment"]["location"],
-                                )
+                    segment = self.get_segment(record)
+                    task: Task = task_group.create_task(
+                        self.get_attachment(
+                            url=urljoin(
+                                base=attachment_host,
+                                url=record["attachment"]["location"],
                             )
                         )
                     )
+                    tasks.append((record["country"], segment, task))
         except ExceptionGroup as error_group:
             raise RemoteSettingsError(error_group.exceptions)
 
-        suggestions: list[KintoSuggestion] = []
-        for task in tasks:
-            suggestions.extend(await task)
+        suggestions: defaultdict[str, dict] = defaultdict(lambda: defaultdict(list))
+
+        for country, segment, task in tasks:
+            suggestions[country][segment].extend(await task)
         return suggestions
 
     async def get_attachment(self, url: str) -> list[KintoSuggestion]:
@@ -295,7 +322,7 @@ class RemoteSettingsBackend:
                 rec
                 for rec in recs
                 if rec["country"] in settings.remote_settings.countries
-                and rec["form_factor"] == "desktop"
+                and rec["form_factor"] in settings.remote_settings.form_factors
             ]
 
         return recs

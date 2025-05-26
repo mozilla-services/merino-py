@@ -5,7 +5,7 @@
 """Module for test configurations for the unit test directory."""
 
 import json
-from typing import Any
+from typing import Any, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -13,6 +13,7 @@ from google.auth.credentials import AnonymousCredentials
 from pytest_mock import MockerFixture
 
 from merino.middleware.geolocation import Location
+from merino.middleware.user_agent import UserAgent
 from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.suggest.base import SuggestionRequest
 from tests.unit.types import SuggestionRequestFixture
@@ -25,9 +26,15 @@ def fixture_srequest() -> SuggestionRequestFixture:
     `query`
     """
 
-    def srequest(query: str) -> SuggestionRequest:
+    def srequest(
+        query: str, geolocation: Optional[Location] = None, user_agent: Optional[UserAgent] = None
+    ) -> SuggestionRequest:
         """Create a SuggestionRequest object with a given `query`"""
-        return SuggestionRequest(query=query, geolocation=Location())
+        return SuggestionRequest(
+            query=query,
+            geolocation=geolocation if geolocation else Location(),
+            user_agent=user_agent if user_agent else None,
+        )
 
     return srequest
 

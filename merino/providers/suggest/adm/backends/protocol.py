@@ -5,12 +5,16 @@ from typing import Any, Protocol
 from pydantic import BaseModel
 
 
+SegmentType = tuple[int]
+IndexType = dict[str, dict[SegmentType, tuple[int, int]]]
+
+
 class SuggestionContent(BaseModel):
     """Class that holds the result from a fetch operation."""
 
     # A dictionary keyed on suggestion keywords, each value stores an index
     # (pointer) to one entry of the suggestion result list.
-    suggestions: dict[str, tuple[int, int]]
+    suggestions: dict[str, IndexType]
 
     # A list of full keywords
     full_keywords: list[str]
