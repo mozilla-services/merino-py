@@ -174,6 +174,7 @@ async def suggest(
     - `suggestions` - A list of suggestions or an empty list if nothing was found.
         Please look at the documentation for `BaseSuggestion` model for information
         about what the model contains.
+    or 204 - No content if a weather request is made and no weather was found for the location.
 
     **Response Headers:**
 
