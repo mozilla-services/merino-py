@@ -1704,6 +1704,39 @@ class TestSections:
             else:
                 assert local_model is None
 
+    @pytest.mark.asyncio    
+    async def test_sections_model_interest_vector_greedy_ranking(self, monkeypatch):
+        """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
+        # define interest vector
+        interests = {
+            "arts": 1.0,
+            "food": .8,
+            "government": .7,
+            "society": .00001,
+            "model_id": "fake_model_id"
+            }
+        # make the api call
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": Locale.EN_US,
+                    "feeds": ["sections"],
+                    "inferredInterests": interests,
+                        },
+            )
+            data = response.json()
+            # expect intests to be sorted by value
+            sorted_interests = sorted([k for k,v in interests.items()
+                                       if isinstance(v,float)],
+                                       key=interests.get)[::-1]
+            # expect top stories to be first
+            sorted_interests.insert(0,'top_stories_section')
+            # order is in receivedFeedRank
+            for i,sec in enumerate(sorted_interests):
+                assert data['feeds'][sec]['receivedFeedRank']==i
+
+            
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "repeat",
