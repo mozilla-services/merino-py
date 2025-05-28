@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Tuple
 
-from merino.jobs.utils.rs_uploader import RemoteSettingsUploader
+from merino.jobs.utils.rs_client import RemoteSettingsClient
 
 logger = logging.getLogger(__name__)
 
@@ -127,10 +127,10 @@ class ChunkedRemoteSettingsUploader:
 
     chunk_cls: type[Chunk]
     chunk_size: int
+    client: RemoteSettingsClient
     current_chunk: Chunk
     record_type: str
     total_item_count: int | None
-    uploader: RemoteSettingsUploader
 
     def __init__(
         self,
@@ -150,7 +150,7 @@ class ChunkedRemoteSettingsUploader:
         self.current_chunk = chunk_cls(self, 0)
         self.record_type = record_type
         self.total_item_count = total_item_count
-        self.uploader = RemoteSettingsUploader(
+        self.client = RemoteSettingsClient(
             auth=auth,
             bucket=bucket,
             collection=collection,
@@ -180,7 +180,9 @@ class ChunkedRemoteSettingsUploader:
         `record_type`.
         """
         logger.info(f"Deleting records with type: {self.record_type}")
-        self.uploader.delete_if(lambda record: record.get("type") == self.record_type)
+        for record in self.client.get_records():
+            if record.get("type") == self.record_type:
+                self.client.delete_record(record["id"])
 
     def _finish_current_chunk(self) -> None:
         """If the current chunk is not empty, upload it and create a new empty
@@ -194,7 +196,7 @@ class ChunkedRemoteSettingsUploader:
 
     def _upload_chunk(self, chunk: Chunk) -> None:
         """Create a record and attachment for a chunk."""
-        self.uploader.upload(
+        self.client.upload(
             record=chunk.to_record(),
             attachment=chunk.to_attachment(),
         )

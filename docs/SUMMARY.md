@@ -32,6 +32,7 @@
     - [Navigational Suggestions](./operations/jobs/navigational_suggestions.md)
     - [Dynamic Wikipedia Indexer](./operations/jobs/dynamic-wiki-indexer.md)
     - [Remote Settings CSV Uploader](./operations/jobs/csv-remote-settings.md)
+    - [Geonames Uploader](./operations/jobs/geonames-uploader.md)
 
 
 # ADR
