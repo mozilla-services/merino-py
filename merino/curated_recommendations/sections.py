@@ -339,6 +339,20 @@ async def get_sections(
     # 5. Add ML sections if requested
     if is_ml_sections_experiment(request):
         corpus_sections = await get_corpus_sections(sections_backend, surface_id, len(sections))
+
+        for cs in corpus_sections.values():
+            # Apply Thompson Sampling
+            ranked_section_items = thompson_sampling(
+                cs.recommendations,
+                engagement_backend=engagement_backend,
+                prior_backend=prior_backend,
+                region=region,
+            )
+
+            # Replace with re-ranked items
+            cs.recommendations = ranked_section_items
+            renumber_recommendations(cs.recommendations)
+
         sections.update(corpus_sections)
 
     # 6. Group items outside the 'top stories section' by topic
