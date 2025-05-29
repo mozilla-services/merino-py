@@ -612,6 +612,77 @@ query_timeout_sec = 5.0
 score = 0.23
 
 
+[default.providers.polygon]
+# MERINO_PROVIDERS__POLYGON__TYPE
+# The type of this provider, should be `polygon`.
+type = "polygon"
+
+# MERINO_PROVIDERS__POLYGON__BACKEND
+#  The backend of the provider. Either `polygon` or `test`.
+backend = "polygon"
+
+# MERINO_PROVIDERS__POLYGON__CACHE
+# The store used to finance data. Either `redis` or `none`.
+# If `redis`, the global Redis settings must be set. See redis.server.
+cache = "none"
+
+# MERINO_PROVIDERS__POLYGON__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default.
+enabled_by_default = false
+
+# MERINO_PROVIDERS__POLYGON__SCORE
+# The ranking score for this provider as a floating point number.
+score = 0 # TODO
+
+# MERINO_PROVIDERS__POLYGON__QUERY_TIMEOUT_SEC
+# A floating point (in seconds) indicating the maximum waiting period when Merino queries
+# for finance data. This will override the default global query timeout.
+query_timeout_sec = 5.0
+
+# MERINO_PROVIDERS__POLYGON__CONNECT_TIMEOUT_SEC
+# A floating point (in seconds) indicating the maximum waiting period for the
+# polygon backend http client to establish a connection to the host.
+connect_timeout_sec = 3.0
+
+# MERINO_PROVIDERS__POLYGON__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+
+# MERINO_PROVIDERS__POLYGON__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
+
+[default.providers.polygon.cache_ttls]
+# Cache TTLs for finance data.
+
+# MERINO_PROVIDERS__POLYGON__CACHE_TTLS__STOCK_TICKER_TTL_SEC
+stock_ticker_ttl_sec = 900 # 15 minutes
+
+# MERINO_PROVIDERS__POLYGON__CACHE_TTLS__INDEX_TICKER_TTL_SEC
+index_ticker_ttl_sec = 900 # 15 minutes
+
+[default.polygon]
+# MERINO_POLYGON__API_KEY
+# The API key to Polygon's API endpoint.
+# In production, this should be set via environment variable as a secret.
+api_key = ""
+
+## MERINO_POLYGON__URL_BASE
+url_base = "https://api.polygon.io"
+
+# MERINO_POLYGON__URL_TICKER_LAST_QUOTE
+url_ticker_last_quote ="/v2/last/nbbo/{stock_ticker}"
+
+# MERINO_POLYGON__URL_INDEX_DAILY_SUMMARY
+url_index_daily_summary = "/v1/open-close/{indices_ticker}/{date}"
+
+# MERINO_ACCUWEATHER__URL_PARAM_API_KEY
+# The name of the query param whose value is the API key, not the key itself.
+url_param_api_key = "apiKey"
+
+# Sampling rate (75%) used by some metrics, can be of int type as well.
+metrics_sampling_rate = 0.75
+
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
 # GCS bucket that contains Airflow data for Merino
