@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import aiodogstatsd
 from fastapi import HTTPException
@@ -10,18 +10,17 @@ from pydantic import HttpUrl
 
 
 # from merino.governance.circuitbreakers import WeatherCircuitBreaker
-#from merino.middleware.geolocation import Location
+# from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.suggest.finance.backends.protocol import (
-    FinanceBackend
-)
+from merino.providers.suggest.finance.backends.protocol import FinanceBackend
 
 logger = logging.getLogger(__name__)
 
 
 class Suggestion(BaseSuggestion):
     """Model for finance suggestions."""
-    #TODO
+
+    # TODO
 
 
 class Provider(BaseProvider):
@@ -81,12 +80,11 @@ class Provider(BaseProvider):
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
                 # TODO: add backend function call
                 print("TODO: add backend function call")
-        except Exception as ex:
+        except Exception:
             # TODO
             return []
         # TODO
         return []
-
 
     async def shutdown(self) -> None:
         """Shut down the provider."""

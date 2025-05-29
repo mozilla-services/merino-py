@@ -1,4 +1,7 @@
+"""Protocol for finance provider backends."""
+
 from typing import Protocol
+
 
 class FinanceBackend(Protocol):
     """Protocol for a finance backend that this provider depends on.
@@ -7,6 +10,7 @@ class FinanceBackend(Protocol):
     might define additional methods and attributes which this provider doesn't
     directly depend on.
     """
+
     # TODO
     # async def get_something(
     #     self, finance_context: FinanceContext
