@@ -2,6 +2,7 @@
 
 import aiodogstatsd
 from httpx import AsyncClient, Response
+from merino.providers.suggest.finance.backends.protocol import FinanceBackend
 from pydantic import BaseModel
 
 from merino.cache.protocol import CacheAdapter
@@ -24,7 +25,7 @@ class IndexPrice(BaseModel):
     price: float
 
 
-class PolygonBackend:
+class PolygonBackend(FinanceBackend):
     """Backend that connects to the Polygon API."""
 
     api_key: str
@@ -66,6 +67,13 @@ class PolygonBackend:
         self.metrics_sample_rate = metrics_sample_rate
         self.url_ticker_last_quote = url_ticker_last_quote
         self.url_index_daily_summary = url_index_daily_summary
+
+    # async def get_finance_report(self, finance_context: FinanceContext) -> FinanceReport | None:
+    #   """TODO"""
+    #     if finance_context.entity_type == FinanceEntityType.STOCK:
+    #         # TODO
+    #     else:
+    #         # TODO
 
     async def get_stock_price(self, ticker_symbol: str) -> StockPrice:
         """Get the stock price for the ticker"""
