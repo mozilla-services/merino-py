@@ -43,6 +43,10 @@ api_key = "test"
 # anyway to make sure the production server isn't accidentally pinged.
 url_base = "test://test"
 
+[testing.remote_settings]
+# MERINO_REMOTE_SETTINGS__FORM_FACTORS
+form_factors = ["desktop", "phone",]
+
 [testing.providers.accuweather]
 enabled_by_default = false
 backend="test_weather"

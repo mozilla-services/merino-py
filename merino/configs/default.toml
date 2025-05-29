@@ -190,7 +190,7 @@ score = 0.25
 countries = ["US", "GB", "DE", "FR", "PL"]
 
 # MERINO_REMOTE_SETTINGS__FORM_FACTORS
-form_factors = ["desktop", "phone"]
+form_factors = ["desktop"]
 
 # Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
 [default.redis]
