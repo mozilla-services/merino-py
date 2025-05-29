@@ -5,18 +5,21 @@ from httpx import AsyncClient, Response
 from pydantic import BaseModel
 
 from merino.cache.protocol import CacheAdapter
+from merino.providers.suggest.finance.backends.polygon.utils import FinanceEntityType
 
 
 class StockPrice(BaseModel):
-    """TODO"""
+    """Model for a Stock"""
 
+    type: FinanceEntityType = FinanceEntityType.STOCK
     ticker_symbol: str
     price: float
 
 
 class IndexPrice(BaseModel):
-    """TODO"""
+    """Model for a Index"""
 
+    type: FinanceEntityType = FinanceEntityType.INDEX
     ticker_symbol: str
     price: float
 
@@ -40,7 +43,11 @@ class PolygonBackend:
         http_client: AsyncClient,
         metrics_sample_rate: float,
     ) -> None:
-        """TODO"""
+        """Initialize the Polygon backend.
+
+        Raises:
+            ValueError: If API key or URL variables are None or empty.
+        """
         required_params = {
             "Polygon API key": url_param_api_key,
             "url_ticker_last_quote": url_ticker_last_quote,
@@ -61,7 +68,7 @@ class PolygonBackend:
         self.url_index_daily_summary = url_index_daily_summary
 
     async def get_stock_price(self, ticker_symbol: str) -> StockPrice:
-        """TODO"""
+        """Get the stock price for the ticker"""
         params = {
             self.url_param_api_key: self.url_param_api_key,
             "stock_ticker": ticker_symbol,
@@ -69,14 +76,13 @@ class PolygonBackend:
         response: Response = await self.http_client.get(self.url_ticker_last_quote, params=params)
         response.raise_for_status()
 
-        # TODO add type for stock_data
         stock_data = response.json().results
 
         # build and return response
         return StockPrice(ticker_symbol=stock_data.T, price=stock_data.P)
 
     async def get_index_price(self, ticker_symbol: str, date: str) -> IndexPrice:
-        """TODO"""
+        """Get the index price for the ticker"""
         params = {
             self.url_param_api_key: self.url_param_api_key,
             "indices_ticker": ticker_symbol,
@@ -87,7 +93,6 @@ class PolygonBackend:
         )
         response.raise_for_status()
 
-        # TODO add type for stock_data
         index_data = response.json().results
 
         # build and return response

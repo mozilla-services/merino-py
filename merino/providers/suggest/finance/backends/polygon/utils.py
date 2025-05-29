@@ -1,19 +1,16 @@
 """Utilities for the Polygon backend"""
 
-# import logging
 from enum import StrEnum
 
-# logger = logging.getLogger(__name__)
 
-
-# TODO: subject to change
-class RequestType(StrEnum):
-    """Enum for the request type for a finance suggestion request."""
+class FinanceEntityType(StrEnum):
+    """Enum for the entity type for a finance suggestion request."""
 
     STOCK = "stock"
     INDEX = "index"
 
 
+# TODO: subject to change
 class TickerSymbol(StrEnum):
     """Enum for the stock ticker symbol."""
 
