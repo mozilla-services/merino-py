@@ -28,6 +28,7 @@ from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
 )
 from merino.providers.suggest.base import Category
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
+from merino.jobs.navigational_suggestions.custom_favicons import get_custom_favicon_url
 
 logger = logging.getLogger(__name__)
 
@@ -295,8 +296,16 @@ def _run_local_mode(
         domain_data: dict[str, Any], min_width: int, uploader: DomainMetadataUploader
     ) -> dict[str, Optional[str]]:
         try:
+            # Check if this domain has a custom favicon
+            domain = domain_data.get("domain", "")
+            has_custom_favicon = bool(get_custom_favicon_url(domain))
+
             result = await original_process_method(domain_data, min_width, uploader)
-            metrics_collector.record_domain_result(domain_data["domain"], result)
+
+            # Determine if custom favicon was actually used
+            used_custom = has_custom_favicon and bool(result.get("icon"))
+
+            metrics_collector.record_domain_result(domain_data["domain"], result, used_custom)
             return result
         except Exception as e:
             logger.error(f"Error processing domain {domain_data['domain']}: {e}")
@@ -306,7 +315,7 @@ def _run_local_mode(
                 "icon": None,
                 "domain": None,
             }
-            metrics_collector.record_domain_result(domain_data["domain"], empty_result)
+            metrics_collector.record_domain_result(domain_data["domain"], empty_result, False)
             return empty_result
 
     # Type checker will complain about this, but it works at runtime
