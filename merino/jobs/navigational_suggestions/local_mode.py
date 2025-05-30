@@ -20,17 +20,24 @@ class LocalMetricsCollector:
         self.favicons_found = 0
         self.urls_found = 0
         self.titles_found = 0
+        self.custom_favicons_used = 0
+        self.scraped_favicons_used = 0
         self.start_time = datetime.now()
 
         # Detailed records for each domain
         self.domain_records: List[Dict[str, Any]] = []
 
-    def record_domain_result(self, domain: str, result: Dict[str, Any]):
+    def record_domain_result(self, domain: str, result: Dict[str, Any], used_custom: bool = False):
         """Record metrics for a processed domain"""
         self.domains_processed += 1
 
         if result.get("icon"):
             self.favicons_found += 1
+            if used_custom:
+                self.custom_favicons_used += 1
+            else:
+                self.scraped_favicons_used += 1
+
         if result.get("url"):
             self.urls_found += 1
         if result.get("title"):
@@ -41,6 +48,7 @@ class LocalMetricsCollector:
             {
                 "domain": domain,
                 "success": bool(result.get("icon")),
+                "used_custom_favicon": used_custom,
                 "url": result.get("url"),
                 "title": result.get("title"),
             }
@@ -55,10 +63,17 @@ class LocalMetricsCollector:
         elapsed = (datetime.now() - self.start_time).total_seconds()
         rate = self.domains_processed / max(elapsed, 0.1)
 
+        custom_rate = (
+            self.custom_favicons_used / max(1, self.favicons_found)
+            if self.favicons_found > 0
+            else 0
+        )
+
         logger.info(
             f"Progress: {self.domains_processed} domains processed "
             f"({rate:.1f} domains/sec) - "
-            f"Success rate: {self.favicons_found/max(1, self.domains_processed):.1%}"
+            f"Success rate: {self.favicons_found / max(1, self.domains_processed):.1%} "
+            f"(Custom: {custom_rate:.1%})"
         )
 
     def save_report(self) -> None:
@@ -70,6 +85,11 @@ class LocalMetricsCollector:
             "total_domains": self.domains_processed,
             "favicons_found": self.favicons_found,
             "favicon_success_rate": self.favicons_found / max(1, self.domains_processed),
+            "custom_favicons_used": self.custom_favicons_used,
+            "scraped_favicons_used": self.scraped_favicons_used,
+            "custom_favicon_rate": self.custom_favicons_used / max(1, self.favicons_found)
+            if self.favicons_found > 0
+            else 0,
             "urls_found": self.urls_found,
             "url_success_rate": self.urls_found / max(1, self.domains_processed),
             "titles_found": self.titles_found,
@@ -93,6 +113,7 @@ class LocalMetricsCollector:
         logger.info("===== Run Summary =====")
         logger.info(f"Domains processed: {self.domains_processed}")
         logger.info(f"Favicon success rate: {report['favicon_success_rate']:.2%}")
+        logger.info(f"Custom favicon usage: {report['custom_favicon_rate']:.2%}")
         logger.info(f"URL success rate: {report['url_success_rate']:.2%}")
         logger.info(f"Title success rate: {report['title_success_rate']:.2%}")
         logger.info(f"Time elapsed: {elapsed:.1f} seconds")
