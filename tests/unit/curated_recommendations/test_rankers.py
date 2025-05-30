@@ -684,3 +684,17 @@ class TestGreedyPersonalizedSectionRanker:
         # the ranking should not have changed
         for sec in reranked_sections:
             assert reranked_sections[sec].receivedFeedRank == original_ranking[sec]
+
+    def test_fictional_interests(self):
+        """Interest vector keys that are not sections should not appear in section ranking"""
+        # get example section feed
+        sections = generate_sections_feed(section_count=16)
+        # inferredinterests is empty
+        bogus = "asflkjdfoij"
+        personal_interests = InferredInterests({bogus: 1.0})
+        # rerank the sections
+        reranked_sections = greedy_personalized_section_rank(
+            sections=sections, personal_interests=personal_interests, epsilon=0.0
+        )
+        # the sections should not include bogus
+        assert bogus not in reranked_sections
