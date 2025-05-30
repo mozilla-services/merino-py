@@ -4,7 +4,7 @@
 
 """Improved unit tests for __init__.py module."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
 
@@ -336,11 +336,12 @@ def test_construct_partner_manifest_empty():
     assert len(result["partners"]) == 0
 
 
+@pytest.mark.asyncio
 @patch("merino.jobs.navigational_suggestions._run_normal_mode")
-def test_prepare_domain_metadata_normal_mode(mock_run_normal):
+async def test_prepare_domain_metadata_normal_mode(mock_run_normal):
     """Test prepare_domain_metadata with normal mode."""
     # Call with normal mode parameters
-    prepare_domain_metadata(
+    await prepare_domain_metadata(
         source_gcp_project="test-project",
         destination_gcp_project="test-dest-project",
         destination_gcs_bucket="test-bucket",
@@ -365,11 +366,12 @@ def test_prepare_domain_metadata_normal_mode(mock_run_normal):
     )
 
 
+@pytest.mark.asyncio
 @patch("merino.jobs.navigational_suggestions._run_local_mode")
-def test_prepare_domain_metadata_local_mode(mock_run_local):
+async def test_prepare_domain_metadata_local_mode(mock_run_local):
     """Test prepare_domain_metadata with local mode."""
     # Call with local mode parameters
-    prepare_domain_metadata(
+    await prepare_domain_metadata(
         local_mode=True,
         local_sample_size=20,
         local_data_dir="./test_data",
@@ -381,7 +383,8 @@ def test_prepare_domain_metadata_local_mode(mock_run_local):
     mock_run_local.assert_called_once_with(20, "./test_data", 64, False)
 
 
-def test_prepare_domain_metadata_with_typer_options(mocker):
+@pytest.mark.asyncio
+async def test_prepare_domain_metadata_with_typer_options(mocker):
     """Test prepare_domain_metadata with typer.Option objects."""
 
     # Mock typer.Option objects
@@ -393,7 +396,7 @@ def test_prepare_domain_metadata_with_typer_options(mocker):
     mock_run_normal = mocker.patch("merino.jobs.navigational_suggestions._run_normal_mode")
 
     # Call prepare_domain_metadata with MockOption objects
-    prepare_domain_metadata(
+    await prepare_domain_metadata(
         source_gcp_project=MockOption("test-project"),
         destination_gcp_project=MockOption("test-dest-project"),
         destination_gcs_bucket=MockOption("test-bucket"),
@@ -418,7 +421,8 @@ def test_prepare_domain_metadata_with_typer_options(mocker):
     )
 
 
-def test_prepare_domain_metadata_local_mode_with_typer_options(mocker):
+@pytest.mark.asyncio
+async def test_prepare_domain_metadata_local_mode_with_typer_options(mocker):
     """Test prepare_domain_metadata local mode with typer.Option objects."""
 
     # Mock typer.Option objects
@@ -430,7 +434,7 @@ def test_prepare_domain_metadata_local_mode_with_typer_options(mocker):
     mock_run_local = mocker.patch("merino.jobs.navigational_suggestions._run_local_mode")
 
     # Call prepare_domain_metadata with MockOption objects
-    prepare_domain_metadata(
+    await prepare_domain_metadata(
         local_mode=True,
         local_sample_size=MockOption(20),
         local_data_dir=MockOption("./test_data"),
@@ -442,7 +446,8 @@ def test_prepare_domain_metadata_local_mode_with_typer_options(mocker):
     mock_run_local.assert_called_once_with(20, "./test_data", 64, False)
 
 
-def test_run_normal_mode_execution_flow(mocker):
+@pytest.mark.asyncio
+async def test_run_normal_mode_execution_flow(mocker):
     """Test the execution flow of _run_normal_mode without patch decorators."""
     from unittest.mock import MagicMock
     from merino.jobs.navigational_suggestions import _run_normal_mode
@@ -483,7 +488,7 @@ def test_run_normal_mode_execution_flow(mocker):
 
     mock_uploader = MagicMock()
     mock_uploader.upload_top_picks.return_value = mock_blob
-    mock_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
+    mock_uploader.upload_favicons = AsyncMock(return_value=["https://cdn.example.com/favicon.ico"])
     mock_uploader.get_latest_file_for_diff.return_value = {"domains": []}
 
     mock_uploader_class = mocker.patch(
@@ -506,7 +511,7 @@ def test_run_normal_mode_execution_flow(mocker):
     )
 
     # Execute the function
-    _run_normal_mode(
+    await _run_normal_mode(
         source_gcp_project="test-project",
         destination_gcp_project="test-dest-project",
         destination_gcs_bucket="test-bucket",
@@ -528,7 +533,8 @@ def test_run_normal_mode_execution_flow(mocker):
     mock_uploader.upload_top_picks.assert_called_once()
 
 
-def test_run_normal_mode_with_xcom(mocker):
+@pytest.mark.asyncio
+async def test_run_normal_mode_with_xcom(mocker):
     """Test _run_normal_mode with write_xcom=True."""
     # Mock all dependencies
     mock_write_xcom = mocker.patch("merino.jobs.navigational_suggestions._write_xcom_file")
@@ -573,7 +579,7 @@ def test_run_normal_mode_with_xcom(mocker):
     mock_blob.name = "test_blob.json"
     mock_blob.public_url = "https://cdn.example.com/test_blob.json"
     mock_uploader.upload_top_picks.return_value = mock_blob
-    mock_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
+    mock_uploader.upload_favicons = AsyncMock(return_value=["https://cdn.example.com/favicon.ico"])
     mock_uploader.get_latest_file_for_diff.return_value = {"domains": []}
 
     mock_diff = mock_domain_diff_class.return_value
@@ -586,7 +592,7 @@ def test_run_normal_mode_with_xcom(mocker):
     )
 
     # Call the function with write_xcom=True
-    _run_normal_mode(
+    await _run_normal_mode(
         source_gcp_project="test-project",
         destination_gcp_project="test-dest-project",
         destination_gcs_bucket="test-bucket",
@@ -604,7 +610,8 @@ def test_run_normal_mode_with_xcom(mocker):
     assert "diff" in args
 
 
-def test_run_local_mode_socket_failure(monkeypatch, mocker):
+@pytest.mark.asyncio
+async def test_run_local_mode_socket_failure(monkeypatch, mocker):
     """Test _run_local_mode when GCS emulator socket connection fails."""
     from merino.jobs.navigational_suggestions import _run_local_mode
 
@@ -640,7 +647,7 @@ def test_run_local_mode_socket_failure(monkeypatch, mocker):
 
     # Call the function with exception handling to catch the SystemExit
     try:
-        _run_local_mode(20, "./test_data", 48, False)
+        await _run_local_mode(20, "./test_data", 48, False)
         assert False, "Should have exited with SystemExit"
     except SystemExit:
         # This is expected behavior
@@ -655,7 +662,8 @@ def test_run_local_mode_socket_failure(monkeypatch, mocker):
     mock_exit.assert_called_once_with(1)
 
 
-def test_run_local_mode_success_path(monkeypatch, mocker):
+@pytest.mark.asyncio
+async def test_run_local_mode_success_path(monkeypatch, mocker):
     """Test _run_local_mode successful execution path."""
     from merino.jobs.navigational_suggestions import _run_local_mode
     from google.cloud.storage import Blob
@@ -705,9 +713,10 @@ def test_run_local_mode_success_path(monkeypatch, mocker):
     mock_blob.public_url = "https://test.url/test_blob.json"
     mock_domain_uploader.upload_top_picks.return_value = mock_blob
 
-    # Important fix: Return a list of strings for upload_favicons
     # This needs to match the number of items in PARTNER_FAVICONS
-    mock_domain_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
+    mock_domain_uploader.upload_favicons = AsyncMock(
+        return_value=["https://cdn.example.com/favicon.ico"]
+    )
 
     mocker.patch(
         "merino.jobs.navigational_suggestions.DomainMetadataUploader",
@@ -739,7 +748,7 @@ def test_run_local_mode_success_path(monkeypatch, mocker):
     mocker.patch("builtins.open", mocker.mock_open())
 
     # Call the function
-    _run_local_mode(20, "./test_data", 48, False)
+    await _run_local_mode(20, "./test_data", 48, False)
 
     # Verify key interactions
     mock_domain_provider.get_domain_data.assert_called_once()

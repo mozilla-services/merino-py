@@ -20,12 +20,13 @@ from merino.jobs.navigational_suggestions import (
 from merino.providers.suggest.base import Category
 
 
-def test_prepare_domain_metadata_top_picks_construction():
+@pytest.mark.asyncio
+async def test_prepare_domain_metadata_top_picks_construction():
     """Test whether top pick is constructed properly"""
     # Mock the functionality that would otherwise be executed
     with patch("merino.jobs.navigational_suggestions._run_normal_mode") as mock_run_normal:
         # Call the function with local_mode=False
-        prepare_domain_metadata(
+        await prepare_domain_metadata(
             "dummy_src_project",
             "dummy_destination_project",
             "dummy_destination_blob",

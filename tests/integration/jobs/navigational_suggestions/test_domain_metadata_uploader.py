@@ -147,7 +147,8 @@ def test_upload_top_picks(gcs_storage_client, gcs_storage_bucket, mock_favicon_d
     assert top_picks_latest_blob is not None
 
 
-def test_upload_favicons(gcs_storage_client, gcs_storage_bucket, mock_favicon_downloader):
+@pytest.mark.asyncio
+async def test_upload_favicons(gcs_storage_client, gcs_storage_bucket, mock_favicon_downloader):
     """Test upload_favicons method of DomainMetaDataUploader. This test uses the mocked version
     of the favicon downloader. This test also implicitly tests the underlying gcs uploader methods.
     """
@@ -168,7 +169,7 @@ def test_upload_favicons(gcs_storage_client, gcs_storage_bucket, mock_favicon_do
     test_favicons = ["favicon1.jpg", "favicon2.jpg", "favicon3.jpg", "favicon4.jpg"]
 
     # call the upload method with a test top picks json
-    uploaded_favicons = domain_metadata_uploader.upload_favicons(test_favicons)
+    uploaded_favicons = await domain_metadata_uploader.upload_favicons(test_favicons)
 
     bucket_with_uploaded_favicons = gcp_uploader.storage_client.get_bucket(gcs_storage_bucket.name)
 
@@ -313,7 +314,8 @@ def test_upload_image(gcs_storage_client, gcs_storage_bucket, mock_favicon_downl
     assert blob.download_as_bytes() == b"test_image_content"
 
 
-def test_upload_favicon_with_cdn_url(
+@pytest.mark.asyncio
+async def test_upload_favicon_with_cdn_url(
     gcs_storage_client, gcs_storage_bucket, mock_favicon_downloader
 ):
     """Test upload_favicon method with a URL that's already on our CDN."""
@@ -333,13 +335,14 @@ def test_upload_favicon_with_cdn_url(
     cdn_url = f"https://{gcp_uploader.cdn_hostname}/some/path/favicon.png"
 
     # Call upload_favicon
-    result = domain_metadata_uploader.upload_favicon(cdn_url)
+    result = await domain_metadata_uploader.upload_favicon(cdn_url)
 
     # Verify the result is the same URL (no re-upload)
     assert result == cdn_url
 
 
-def test_upload_favicon_with_empty_url(gcs_storage_client, gcs_storage_bucket, mocker):
+@pytest.mark.asyncio
+async def test_upload_favicon_with_empty_url(gcs_storage_client, gcs_storage_bucket, mocker):
     """Test upload_favicon method with an empty URL."""
     # Create uploader
     gcp_uploader = GcsUploader(
@@ -365,13 +368,14 @@ def test_upload_favicon_with_empty_url(gcs_storage_client, gcs_storage_bucket, m
     )
 
     # Call upload_favicon with an empty URL
-    result = domain_metadata_uploader.upload_favicon("")
+    result = await domain_metadata_uploader.upload_favicon("")
 
     # Verify the result is an empty string
     assert result == ""
 
 
-def test_upload_favicon_download_failure(gcs_storage_client, gcs_storage_bucket, mocker):
+@pytest.mark.asyncio
+async def test_upload_favicon_download_failure(gcs_storage_client, gcs_storage_bucket, mocker):
     """Test upload_favicon method when download fails."""
     # Create uploader
     gcp_uploader = GcsUploader(
@@ -394,7 +398,7 @@ def test_upload_favicon_download_failure(gcs_storage_client, gcs_storage_bucket,
     )
 
     # Call upload_favicon with a URL that will fail to download
-    result = domain_metadata_uploader.upload_favicon("https://example.com/favicon.png")
+    result = await domain_metadata_uploader.upload_favicon("https://example.com/favicon.png")
 
     # Verify the result is an empty string
     assert result == ""
@@ -404,7 +408,8 @@ def test_upload_favicon_download_failure(gcs_storage_client, gcs_storage_bucket,
     )
 
 
-def test_upload_favicon_upload_failure(gcs_storage_client, gcs_storage_bucket, mocker):
+@pytest.mark.asyncio
+async def test_upload_favicon_upload_failure(gcs_storage_client, gcs_storage_bucket, mocker):
     """Test upload_favicon method when upload fails."""
     # Create uploader
     gcp_uploader = GcsUploader(
@@ -430,13 +435,14 @@ def test_upload_favicon_upload_failure(gcs_storage_client, gcs_storage_bucket, m
     )
 
     # Call upload_favicon
-    result = domain_metadata_uploader.upload_favicon("https://example.com/favicon.png")
+    result = await domain_metadata_uploader.upload_favicon("https://example.com/favicon.png")
 
     # Verify the result is an empty string (upload failed)
     assert result == ""
 
 
-def test_upload_favicons_with_mixed_results(gcs_storage_client, gcs_storage_bucket, mocker):
+@pytest.mark.asyncio
+async def test_upload_favicons_with_mixed_results(gcs_storage_client, gcs_storage_bucket, mocker):
     """Test upload_favicons method with some successful and some failed uploads."""
     # Create uploader
     gcp_uploader = GcsUploader(
@@ -466,7 +472,7 @@ def test_upload_favicons_with_mixed_results(gcs_storage_client, gcs_storage_buck
     test_favicons = ["success1.png", "fail1.png", "success2.png", "fail2.png"]
 
     # Call upload_favicons
-    results = domain_metadata_uploader.upload_favicons(test_favicons)
+    results = await domain_metadata_uploader.upload_favicons(test_favicons)
 
     # Verify the results
     assert len(results) == 4

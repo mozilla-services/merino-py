@@ -276,7 +276,10 @@ def test_upload_top_picks(
     assert result.name == mock_blob.name
 
 
-def test_upload_favicons_upload_if_not_present(mock_favicon_downloader, mock_gcs_uploader) -> None:
+@pytest.mark.asyncio
+async def test_upload_favicons_upload_if_not_present(
+    mock_favicon_downloader, mock_gcs_uploader
+) -> None:
     """Test that favicons are uploaded only if not already present
     in GCS when force upload is not set
     """
@@ -295,7 +298,7 @@ def test_upload_favicons_upload_if_not_present(mock_favicon_downloader, mock_gcs
     expected_image = Image(content=b"\xff", content_type="image/png")
     expected_destination = domain_metadata_uploader.destination_favicon_name(expected_image)
 
-    uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
+    uploaded_favicons = await domain_metadata_uploader.upload_favicons(["favicon1.png"])
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(
@@ -303,7 +306,8 @@ def test_upload_favicons_upload_if_not_present(mock_favicon_downloader, mock_gcs
     )
 
 
-def test_upload_favicons_upload_if_force_upload_set(
+@pytest.mark.asyncio
+async def test_upload_favicons_upload_if_force_upload_set(
     mock_favicon_downloader, mock_gcs_uploader
 ) -> None:
     """Test that favicons are uploaded always when force upload is set"""
@@ -322,7 +326,7 @@ def test_upload_favicons_upload_if_force_upload_set(
     expected_image = Image(content=b"\xff", content_type="image/png")
     expected_destination = domain_metadata_uploader.destination_favicon_name(expected_image)
 
-    uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
+    uploaded_favicons = await domain_metadata_uploader.upload_favicons(["favicon1.png"])
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(
@@ -330,7 +334,8 @@ def test_upload_favicons_upload_if_force_upload_set(
     )
 
 
-def test_upload_favicons_return_favicon_with_cdn_hostname_when_provided(
+@pytest.mark.asyncio
+async def test_upload_favicons_return_favicon_with_cdn_hostname_when_provided(
     mock_gcs_client, mock_favicon_downloader, mock_gcs_uploader
 ) -> None:
     """Test if uploaded favicon url has cdn hostname when provided"""
@@ -345,14 +350,15 @@ def test_upload_favicons_return_favicon_with_cdn_hostname_when_provided(
         force_upload=False,
         async_favicon_downloader=mock_favicon_downloader,
     )
-    uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
+    uploaded_favicons = await domain_metadata_uploader.upload_favicons(["favicon1.png"])
 
     mock_dst_blob.public_url.assert_not_called()
     for uploaded_favicon in uploaded_favicons:
         assert "dummy.cdn.hostname" in uploaded_favicon
 
 
-def test_upload_favicons_return_empty_url_for_failed_favicon_download(
+@pytest.mark.asyncio
+async def test_upload_favicons_return_empty_url_for_failed_favicon_download(
     mock_gcs_client, mock_favicon_downloader, mock_gcs_uploader
 ) -> None:
     """Test if a failure in downloading favicon from the scraped url returns an empty uploaded
@@ -365,13 +371,14 @@ def test_upload_favicons_return_empty_url_for_failed_favicon_download(
         force_upload=False,
         async_favicon_downloader=mock_favicon_downloader,
     )
-    uploaded_favicons = domain_metadata_uploader.upload_favicons(["favicon1.png"])
+    uploaded_favicons = await domain_metadata_uploader.upload_favicons(["favicon1.png"])
 
     for uploaded_favicon in uploaded_favicons:
         assert uploaded_favicon == ""
 
 
-def test_upload_favicons_return_same_url_for_urls_from_our_cdn(
+@pytest.mark.asyncio
+async def test_upload_favicons_return_same_url_for_urls_from_our_cdn(
     mock_gcs_client, mock_favicon_downloader, mock_gcs_uploader, mocker
 ) -> None:
     """Test that upload is skipped when the src favicon URL is from our CDN."""
@@ -386,7 +393,7 @@ def test_upload_favicons_return_same_url_for_urls_from_our_cdn(
     )
 
     src_favicon_url = f"https://{mock_gcs_uploader.cdn_hostname}/favicon1.png"
-    uploaded_favicons = domain_metadata_uploader.upload_favicons([src_favicon_url])
+    uploaded_favicons = await domain_metadata_uploader.upload_favicons([src_favicon_url])
 
     assert uploaded_favicons == [src_favicon_url]
 

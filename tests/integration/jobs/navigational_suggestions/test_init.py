@@ -5,7 +5,7 @@ within the navigational suggestions job runner.
 """
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
 from google.cloud.storage import Client, Blob
@@ -194,7 +194,8 @@ class TestRunLocalMode:
     @patch("os.environ", {})
     @patch("os.makedirs")
     @patch("builtins.open", new_callable=MagicMock)
-    def test_run_local_mode_with_gcs_emulator(
+    @pytest.mark.asyncio
+    async def test_run_local_mode_with_gcs_emulator(
         self, mock_open, mock_makedirs, mocker, mock_uploader, tmp_path
     ):
         """Test _run_local_mode when GCS emulator is running."""
@@ -221,7 +222,9 @@ class TestRunLocalMode:
         mock_blob.name = "top_picks_latest.json"
         mock_blob.public_url = "https://cdn.example.com/top_picks_latest.json"
         mock_domain_uploader.upload_top_picks.return_value = mock_blob
-        mock_domain_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
+        mock_domain_uploader.upload_favicons = AsyncMock(
+            return_value=["https://cdn.example.com/favicon.ico"]
+        )
         mocker.patch(
             "merino.jobs.navigational_suggestions.DomainMetadataUploader",
             return_value=mock_domain_uploader,
@@ -271,7 +274,7 @@ class TestRunLocalMode:
 
         # Call the function
         test_dir = str(tmp_path)
-        _run_local_mode(20, test_dir, 48, False)
+        await _run_local_mode(20, test_dir, 48, False)
 
         # Verify key interactions
         mock_socket_instance.connect_ex.assert_called_once_with(("localhost", 4443))
@@ -284,7 +287,8 @@ class TestRunLocalMode:
     @patch("os.environ", {})
     @patch("os.makedirs")
     @patch("builtins.open", new_callable=MagicMock)
-    def test_run_local_mode_with_system_monitoring(
+    @pytest.mark.asyncio
+    async def test_run_local_mode_with_system_monitoring(
         self, mock_open, mock_makedirs, mocker, mock_uploader, tmp_path
     ):
         """Test _run_local_mode with system monitoring enabled."""
@@ -311,7 +315,9 @@ class TestRunLocalMode:
         mock_blob.name = "top_picks_latest.json"
         mock_blob.public_url = "https://cdn.example.com/top_picks_latest.json"
         mock_domain_uploader.upload_top_picks.return_value = mock_blob
-        mock_domain_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
+        mock_domain_uploader.upload_favicons = AsyncMock(
+            return_value=["https://cdn.example.com/favicon.ico"]
+        )
         mocker.patch(
             "merino.jobs.navigational_suggestions.DomainMetadataUploader",
             return_value=mock_domain_uploader,
@@ -367,7 +373,7 @@ class TestRunLocalMode:
 
         # Call the function with monitoring enabled
         test_dir = str(tmp_path)
-        _run_local_mode(20, test_dir, 48, True)
+        await _run_local_mode(20, test_dir, 48, True)
 
         # Verify key interactions
         mock_socket_instance.connect_ex.assert_called_once_with(("localhost", 4443))
@@ -384,7 +390,8 @@ class TestRunLocalMode:
         mock_metrics.save_report.assert_called_once()
 
     @patch("os.environ", {})
-    def test_run_local_mode_gcs_emulator_not_running(self, mocker):
+    @pytest.mark.asyncio
+    async def test_run_local_mode_gcs_emulator_not_running(self, mocker):
         """Test _run_local_mode when GCS emulator is not running."""
         # Mock socket with failed connection
         mock_socket = mocker.MagicMock()
@@ -404,7 +411,7 @@ class TestRunLocalMode:
 
         # Call the function (expecting it to exit)
         with pytest.raises(SystemExit):
-            _run_local_mode(20, "./test_data", 48, False)
+            await _run_local_mode(20, "./test_data", 48, False)
 
         # Verify socket connection was attempted
         mock_socket_instance.connect_ex.assert_called_once_with(("localhost", 4443))
@@ -417,7 +424,8 @@ class TestRunLocalMode:
 class TestRunNormalMode:
     """Test the _run_normal_mode function."""
 
-    def test_run_normal_mode_basic_flow(self, mocker, mock_uploader):
+    @pytest.mark.asyncio
+    async def test_run_normal_mode_basic_flow(self, mocker, mock_uploader):
         """Test the basic execution flow of _run_normal_mode."""
         # Mock the necessary components
         mock_downloader = mocker.MagicMock()
@@ -448,7 +456,9 @@ class TestRunNormalMode:
         mock_blob.name = "test_blob.json"
         mock_blob.public_url = "https://cdn.example.com/test_blob.json"
         mock_domain_uploader.upload_top_picks.return_value = mock_blob
-        mock_domain_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
+        mock_domain_uploader.upload_favicons = AsyncMock(
+            return_value=["https://cdn.example.com/favicon.ico"]
+        )
         mock_domain_uploader.get_latest_file_for_diff.return_value = {"domains": []}
         mocker.patch(
             "merino.jobs.navigational_suggestions.DomainMetadataUploader",
@@ -482,7 +492,7 @@ class TestRunNormalMode:
         mocker.patch("merino.jobs.navigational_suggestions.logger")
 
         # Call the function
-        _run_normal_mode(
+        await _run_normal_mode(
             source_gcp_project="test-project",
             destination_gcp_project="test-dest-project",
             destination_gcs_bucket="test-bucket",
@@ -501,7 +511,8 @@ class TestRunNormalMode:
         mock_diff.create_diff.assert_called_once()
         mock_domain_uploader.upload_top_picks.assert_called_once()
 
-    def test_run_normal_mode_with_system_monitoring(self, mocker, mock_uploader):
+    @pytest.mark.asyncio
+    async def test_run_normal_mode_with_system_monitoring(self, mocker, mock_uploader):
         """Test _run_normal_mode with system monitoring enabled."""
         # Mock the necessary components
         mock_downloader = mocker.MagicMock()
@@ -532,7 +543,9 @@ class TestRunNormalMode:
         mock_blob.name = "test_blob.json"
         mock_blob.public_url = "https://cdn.example.com/test_blob.json"
         mock_domain_uploader.upload_top_picks.return_value = mock_blob
-        mock_domain_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
+        mock_domain_uploader.upload_favicons = AsyncMock(
+            return_value=["https://cdn.example.com/favicon.ico"]
+        )
         mock_domain_uploader.get_latest_file_for_diff.return_value = {"domains": []}
         mocker.patch(
             "merino.jobs.navigational_suggestions.DomainMetadataUploader",
@@ -572,7 +585,7 @@ class TestRunNormalMode:
         mocker.patch("merino.jobs.navigational_suggestions.logger")
 
         # Call the function with system monitoring enabled
-        _run_normal_mode(
+        await _run_normal_mode(
             source_gcp_project="test-project",
             destination_gcp_project="test-dest-project",
             destination_gcs_bucket="test-bucket",
@@ -598,7 +611,8 @@ class TestRunNormalMode:
         mock_diff.create_diff.assert_called_once()
         mock_domain_uploader.upload_top_picks.assert_called_once()
 
-    def test_run_normal_mode_with_xcom(self, mocker, mock_uploader):
+    @pytest.mark.asyncio
+    async def test_run_normal_mode_with_xcom(self, mocker, mock_uploader):
         """Test _run_normal_mode with write_xcom=True."""
         # Mock _write_xcom_file
         mock_write_xcom = mocker.patch("merino.jobs.navigational_suggestions._write_xcom_file")
@@ -632,7 +646,9 @@ class TestRunNormalMode:
         mock_blob.name = "test_blob.json"
         mock_blob.public_url = "https://cdn.example.com/test_blob.json"
         mock_domain_uploader.upload_top_picks.return_value = mock_blob
-        mock_domain_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
+        mock_domain_uploader.upload_favicons = AsyncMock(
+            return_value=["https://cdn.example.com/favicon.ico"]
+        )
         mock_domain_uploader.get_latest_file_for_diff.return_value = {"domains": []}
         mocker.patch(
             "merino.jobs.navigational_suggestions.DomainMetadataUploader",
@@ -666,7 +682,7 @@ class TestRunNormalMode:
         mocker.patch("merino.jobs.navigational_suggestions.logger")
 
         # Call the function with write_xcom=True
-        _run_normal_mode(
+        await _run_normal_mode(
             source_gcp_project="test-project",
             destination_gcp_project="test-dest-project",
             destination_gcs_bucket="test-bucket",

@@ -635,7 +635,7 @@ class DomainMetadataExtractor:
         custom_favicon_url = get_custom_favicon_url(normalized_domain)
         if custom_favicon_url:
             try:
-                favicon = uploader.upload_favicon(custom_favicon_url)
+                favicon = await uploader.upload_favicon(custom_favicon_url)
                 if favicon:
                     second_level_domain = self._get_second_level_domain(domain, suffix)
                     # For custom favicons, use the second level domain as title since we don't scrape

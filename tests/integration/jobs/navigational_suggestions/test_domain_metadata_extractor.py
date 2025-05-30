@@ -846,7 +846,9 @@ class TestCustomFavicons:
         mock_get_custom_favicon.return_value = "https://static.axios.com/icons/favicon.svg"
 
         # Mock successful favicon upload - this should be synchronous and return a string
-        mock_uploader.upload_favicon.return_value = "https://cdn.example.com/axios_favicon.svg"
+        mock_uploader.upload_favicon = AsyncMock(
+            return_value="https://cdn.example.com/axios_favicon.svg"
+        )
 
         # Create extractor
         extractor = DomainMetadataExtractor(blocked_domains=set())
@@ -995,7 +997,7 @@ class TestCustomFavicons:
         mock_get_custom_favicon.side_effect = mock_custom_favicon_lookup
 
         # Mock successful custom favicon uploads - return actual strings, not coroutines
-        def mock_upload_favicon(url):
+        async def mock_upload_favicon(url):
             return f"https://cdn.example.com/{url.split('/')[-1]}"
 
         mock_uploader.upload_favicon.side_effect = mock_upload_favicon

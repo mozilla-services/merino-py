@@ -31,7 +31,10 @@ def mock_favicon_downloader():
     return mock_downloader
 
 
-def test_upload_favicon_exception_handling(mock_gcs_uploader, mock_favicon_downloader, caplog):
+@pytest.mark.asyncio
+async def test_upload_favicon_exception_handling(
+    mock_gcs_uploader, mock_favicon_downloader, caplog
+):
     """Test error handling in upload_favicon method."""
     # Configure the mock uploader to raise an exception during upload
     mock_gcs_uploader.upload_image.side_effect = Exception("Test upload error")
@@ -51,7 +54,7 @@ def test_upload_favicon_exception_handling(mock_gcs_uploader, mock_favicon_downl
     caplog.set_level(logging.DEBUG)
 
     # Call the method
-    result = uploader.upload_favicon("https://example.com/favicon.ico")
+    result = await uploader.upload_favicon("https://example.com/favicon.ico")
 
     # Verify the result is empty string
     assert result == ""
@@ -94,7 +97,8 @@ def test_upload_favicon_with_different_content_types(mock_gcs_uploader, mock_fav
         assert result.startswith(uploader.DESTINATION_FAVICONS_ROOT)
 
 
-def test_upload_favicons_with_empty_urls(mock_gcs_uploader, mock_favicon_downloader):
+@pytest.mark.asyncio
+async def test_upload_favicons_with_empty_urls(mock_gcs_uploader, mock_favicon_downloader):
     """Test upload_favicons handles empty URLs correctly."""
     uploader = DomainMetadataUploader(
         force_upload=False,
@@ -103,24 +107,25 @@ def test_upload_favicons_with_empty_urls(mock_gcs_uploader, mock_favicon_downloa
     )
 
     # Test with an empty URL list
-    result = uploader.upload_favicons([])
+    result = await uploader.upload_favicons([])
     assert result == []
 
     # Test with None URL
-    result = uploader.upload_favicons([None])
+    result = await uploader.upload_favicons([None])
     assert result == [""]
 
     # Test with empty string URL
-    result = uploader.upload_favicons([""])
+    result = await uploader.upload_favicons([""])
     assert result == [""]
 
     # Mock favicon_downloader to test null return case
     mock_favicon_downloader.download_favicon.return_value = None
-    result = uploader.upload_favicons(["https://example.com/favicon.ico"])
+    result = await uploader.upload_favicons(["https://example.com/favicon.ico"])
     assert result == [""]
 
 
-def test_upload_favicon_with_cdn_url(mock_gcs_uploader, mock_favicon_downloader):
+@pytest.mark.asyncio
+async def test_upload_favicon_with_cdn_url(mock_gcs_uploader, mock_favicon_downloader):
     """Test that upload_favicon skips uploading when URL is from our CDN."""
     uploader = DomainMetadataUploader(
         force_upload=False,
@@ -132,7 +137,7 @@ def test_upload_favicon_with_cdn_url(mock_gcs_uploader, mock_favicon_downloader)
     cdn_url = f"https://{mock_gcs_uploader.cdn_hostname}/favicons/test.png"
 
     # Call the method
-    result = uploader.upload_favicon(cdn_url)
+    result = await uploader.upload_favicon(cdn_url)
 
     # Verify the CDN URL was returned unchanged
     assert result == cdn_url
@@ -200,7 +205,8 @@ def test_upload_image_handles_none_image(mock_gcs_uploader, mock_favicon_downloa
         uploader.upload_image(None, "test.png", False)
 
 
-def test_upload_favicons_with_internal_error(mock_gcs_uploader, mock_favicon_downloader):
+@pytest.mark.asyncio
+async def test_upload_favicons_with_internal_error(mock_gcs_uploader, mock_favicon_downloader):
     """Test upload_favicons handles internal errors."""
     # Configure upload_favicon to raise an exception
     uploader = DomainMetadataUploader(
@@ -218,7 +224,7 @@ def test_upload_favicons_with_internal_error(mock_gcs_uploader, mock_favicon_dow
         with patch.object(uploader, "upload_favicon", side_effect=upload_favicon_with_error):
             # This should result in an empty string, but the implementation might
             # be propagating exceptions instead of catching them
-            result = uploader.upload_favicons(["https://example.com/favicon.ico"])
+            result = await uploader.upload_favicons(["https://example.com/favicon.ico"])
             assert result == [""]
     except Exception as e:
         # Test passes either way - if the exception is caught or propagated
