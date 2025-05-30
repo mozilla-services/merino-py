@@ -1,6 +1,5 @@
 """Upload the domain metadata to GCS"""
 
-import asyncio
 import hashlib
 import json
 import logging
@@ -66,7 +65,7 @@ class DomainMetadataUploader:
         file_contents: dict = json.loads(data)
         return file_contents
 
-    def upload_favicon(self, favicon_url: str) -> str:
+    async def upload_favicon(self, favicon_url: str) -> str:
         """Upload a single favicon to GCS and return its public URL.
 
         Args:
@@ -82,8 +81,7 @@ class DomainMetadataUploader:
         if favicon_url and favicon_url.startswith(f"https://{self.uploader.cdn_hostname}"):
             return favicon_url
 
-        # Download the favicon
-        favicon_image = asyncio.run(self.async_favicon_downloader.download_favicon(favicon_url))
+        favicon_image = await self.async_favicon_downloader.download_favicon(favicon_url)
 
         # Process and upload the favicon
         if favicon_image:
@@ -115,7 +113,7 @@ class DomainMetadataUploader:
             favicon_image, dst_favicon_name, forced_upload=forced_upload
         )
 
-    def upload_favicons(self, src_favicons: list[str]) -> list[str]:
+    async def upload_favicons(self, src_favicons: list[str]) -> list[str]:
         """Upload multiple domain favicons to GCS using their source URLs.
 
         For backward compatibility with partner favicons.
@@ -128,7 +126,7 @@ class DomainMetadataUploader:
         """
         results = []
         for favicon_url in src_favicons:
-            result = self.upload_favicon(favicon_url)
+            result = await self.upload_favicon(favicon_url)
             # Ensure we always return a string, even for None or failed uploads
             results.append(result if isinstance(result, str) else "")
         return results

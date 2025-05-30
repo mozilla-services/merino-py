@@ -178,7 +178,7 @@ def _write_xcom_file(xcom_data: dict):
         json.dump(xcom_data, file)
 
 
-def _run_local_mode(
+async def _run_local_mode(
     local_sample_size: int, local_data_dir: str, min_favicon_width: int, enable_monitoring: bool
 ) -> None:
     """Run navigational suggestions in local mode"""
@@ -333,7 +333,7 @@ def _run_local_mode(
 
     # 5. Process partner favicons
     partner_favicons = [item["icon"] for item in PARTNER_FAVICONS]
-    uploaded_partner_favicons = domain_metadata_uploader.upload_favicons(partner_favicons)
+    uploaded_partner_favicons = await domain_metadata_uploader.upload_favicons(partner_favicons)
     logger.info("Partner favicons uploaded to GCS")
 
     # 6. Construct top picks content
@@ -396,7 +396,7 @@ def _run_local_mode(
     logger.info("=" * 40)
 
 
-def _run_normal_mode(
+async def _run_normal_mode(
     source_gcp_project: str,
     destination_gcp_project: str,
     destination_gcs_bucket: str,
@@ -437,7 +437,7 @@ def _run_normal_mode(
 
     # Process partner favicons
     partner_favicons = [item["icon"] for item in PARTNER_FAVICONS]
-    uploaded_partner_favicons = domain_metadata_uploader.upload_favicons(partner_favicons)
+    uploaded_partner_favicons = await domain_metadata_uploader.upload_favicons(partner_favicons)
     logger.info("partner favicons uploaded to GCS")
 
     # construct top pick contents. The `domain_metadata` already has the uploaded favicon URL in it
@@ -485,7 +485,7 @@ def _run_normal_mode(
 
 
 @navigational_suggestions_cmd.command()
-def prepare_domain_metadata(
+async def prepare_domain_metadata(
     source_gcp_project: str = source_gcp_project_option,
     destination_gcp_project: str = destination_gcp_project_option,
     destination_gcs_bucket: str = destination_gcs_bucket_option,
@@ -516,12 +516,12 @@ def prepare_domain_metadata(
         # Local mode for development and testing
         # This mode uses fake-gcs-server and custom domains
         # instead of connecting to Google Cloud
-        _run_local_mode(sample_size, data_dir, min_width, enable_monitoring)
+        await _run_local_mode(sample_size, data_dir, min_width, enable_monitoring)
     else:
         # Normal mode used in production
         # This connects to Google Cloud and processes custom_domains
         # AND domains from BigQuery
-        _run_normal_mode(
+        await _run_normal_mode(
             src_project,
             dst_project,
             dst_bucket,
