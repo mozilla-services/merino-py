@@ -27,6 +27,7 @@ from merino.curated_recommendations.protocol import (
     Section,
     SectionConfiguration,
     ExperimentName,
+    InferredInterests,
 )
 from merino.curated_recommendations.rankers import (
     thompson_sampling,
@@ -34,6 +35,7 @@ from merino.curated_recommendations.rankers import (
     boost_followed_sections,
     section_thompson_sampling,
     put_top_stories_first,
+    greedy_personalized_section_rank,
 )
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
@@ -252,6 +254,7 @@ def rank_sections(
     sections: Dict[str, Section],
     section_configurations: list[SectionConfiguration] | None,
     engagement_backend: EngagementBackend,
+    personal_interests: InferredInterests | None,
 ) -> Dict[str, Section]:
     """Apply a series of stable ranking passes to the sections feed, in order of priority.
 
@@ -270,8 +273,12 @@ def rank_sections(
     Returns:
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
     """
-    # 3rd priority: reorder for exploration via Thompson sampling on engagement
+    # 4th priority: reorder for exploration via Thompson sampling on engagement
     sections = section_thompson_sampling(sections, engagement_backend=engagement_backend)
+
+    # 3rd priority: reorder based on inferred interest vector
+    if personal_interests is not None:
+        sections = greedy_personalized_section_rank(sections, personal_interests)
 
     # 2nd priority: boost followed sections, if any
     if section_configurations:
@@ -290,6 +297,7 @@ async def get_sections(
     sections_backend: SectionsProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
+    personal_interests: Optional[InferredInterests] = None,
     region: Optional[str] = None,
 ) -> Dict[str, Section]:
     """Build, rank, and layout recommendation sections for a "sections" experiment.
@@ -349,7 +357,7 @@ async def get_sections(
     sections = get_sections_with_enough_items(sections)
 
     # 8. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
-    sections = rank_sections(sections, request.sections, engagement_backend)
+    sections = rank_sections(sections, request.sections, engagement_backend, personal_interests)
 
     # 9. Apply ad/layout tweaks
     set_double_row_layout(sections)

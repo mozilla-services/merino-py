@@ -137,6 +137,7 @@ class CuratedRecommendationsProvider:
                 request,
                 surface_id,
                 engagement_backend=self.engagement_backend,
+                personal_interests=request.inferredInterests,
                 prior_backend=self.prior_backend,
                 sections_backend=self.sections_backend,
                 region=derive_region(request.locale, request.region),
