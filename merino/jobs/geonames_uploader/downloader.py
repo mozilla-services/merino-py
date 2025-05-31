@@ -9,6 +9,7 @@ regions, and countries [1]. See technical documentation at [2].
 
 import logging
 from typing import Any, Callable
+from dataclasses import dataclass
 
 import csv
 import requests
@@ -47,6 +48,7 @@ FEATURE_CLASS_ADMIN_DIVISION = "A"
 FEATURE_CLASS_CITY = "P"
 
 
+@dataclass
 class Geoname:
     """A geoname is a representation of a single place like a city, state, or
     region. An instance of this class corresponds to a single row in the
@@ -68,44 +70,8 @@ class Geoname:
     admin4_code: str | None
     population: int | None
 
-    def __init__(
-        self,
-        id: int,
-        name: str,
-        ascii_name: str,
-        latitude: str | None,
-        longitude: str | None,
-        feature_class: str,
-        feature_code: str,
-        country_code: str,
-        population: int | None,
-        admin1_code: str | None = None,
-        admin2_code: str | None = None,
-        admin3_code: str | None = None,
-        admin4_code: str | None = None,
-    ):
-        """Initialize the geoname."""
-        self.id = id
-        self.name = name
-        self.ascii_name = ascii_name
-        self.latitude = latitude
-        self.longitude = longitude
-        self.feature_class = feature_class
-        self.feature_code = feature_code
-        self.country_code = country_code
-        self.population = population
-        self.admin1_code = admin1_code
-        self.admin2_code = admin2_code
-        self.admin3_code = admin3_code
-        self.admin4_code = admin4_code
 
-    def __repr__(self) -> str:
-        return str(vars(self))
-
-    def __eq__(self, other) -> bool:
-        return isinstance(other, Geoname) and vars(self) == vars(other)
-
-
+@dataclass
 class GeonameAlternate:
     """An alternate name for a geoname selected during the download process. A
     single geoname can have many alternate names since a place can have many
@@ -115,19 +81,8 @@ class GeonameAlternate:
     """
 
     name: str
-    is_preferred: bool
-    is_short: bool
-
-    def __init__(self, name: str, is_preferred: bool = False, is_short: bool = False):
-        self.name = name
-        self.is_preferred = is_preferred
-        self.is_short = is_short
-
-    def __repr__(self) -> str:
-        return str(vars(self))
-
-    def __eq__(self, other) -> bool:
-        return isinstance(other, GeonameAlternate) and vars(self) == vars(other)
+    is_preferred: bool = False
+    is_short: bool = False
 
 
 class GeonamesDownload:

@@ -5,7 +5,7 @@ documentation on GeoNames.
 
 import logging
 from typing import Any
-
+from dataclasses import asdict
 
 from merino.jobs.utils.rs_client import RemoteSettingsClient, filter_expression_dict
 from merino.jobs.geonames_uploader.downloader import Geoname, download_geonames
@@ -145,26 +145,16 @@ def _rs_geoname(geoname: Geoname) -> dict[str, Any]:
 
     """
     key_map = {
-        "id": "id",
-        "name": "name",
-        "feature_class": "feature_class",
-        "feature_code": "feature_code",
-        "country": "country_code",
-        "admin1": "admin1_code",
-        "admin2": "admin2_code",
-        "admin3": "admin3_code",
-        "admin4": "admin4_code",
-        "population": "population",
-        "ascii_name": "ascii_name",
-        "latitude": "latitude",
-        "longitude": "longitude",
+        "country_code": "country",
+        "admin1_code": "admin1",
+        "admin2_code": "admin2",
+        "admin3_code": "admin3",
+        "admin4_code": "admin4",
     }
 
-    source = dict(vars(geoname))
-    d = {}
-    for dk, sk in key_map.items():
-        if source[sk] is not None:
-            d[dk] = source[sk]
+    d = asdict(
+        geoname, dict_factory=lambda obj: {key_map.get(k, k): v for (k, v) in obj if v is not None}
+    )
 
     # The client is prepared to handle null `ascii_name`s, so to save space in
     # RS, discard it if it's the same as `name`.
