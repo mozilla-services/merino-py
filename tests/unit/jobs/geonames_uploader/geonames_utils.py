@@ -172,6 +172,14 @@ ALTERNATES = {
             ],
         ),
         (GEONAME_NY_STATE, [GeonameAlternate("State of New York")]),
+        (
+            GEONAME_GOESSNITZ,
+            [
+                GeonameAlternate("Gößnitz"),
+                GeonameAlternate("Goessnitz"),
+                GeonameAlternate("Gössnitz"),
+            ],
+        ),
     ],
     "es": [
         (GEONAME_WATERLOO_IA, [GeonameAlternate("Waterloo")]),

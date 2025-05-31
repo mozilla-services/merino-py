@@ -11,9 +11,9 @@ from typing import Any
 
 from merino.jobs.geonames_uploader import alternates as upload_alternates
 
-from merino.jobs.geonames_uploader.alternates import _rs_alternate
+from merino.jobs.geonames_uploader.alternates import _rs_alternates_list, _rs_alternate
 
-from merino.jobs.geonames_uploader.downloader import GeonameAlternate
+from merino.jobs.geonames_uploader.downloader import Geoname, GeonameAlternate
 
 from merino.jobs.geonames_uploader.geonames import _rs_geoname
 
@@ -37,23 +37,22 @@ from tests.unit.jobs.geonames_uploader.geonames_utils import (
 
 def filter_alternates(
     language: str,
-    geoname_ids: set[int] | None = None,
+    geonames: list[Geoname],
 ) -> list[list[int | list[str | None | dict[str, Any]]]]:
-    """Filter `ALTERNATES` on a language and geoname IDs."""
-    geoname_id_and_alts_tuples: list[list[int | list[str | None | dict[str, Any]]]] = []
-    for lang, geoname_alts_tuples in ALTERNATES.items():
-        if lang == language:
-            for geoname, alts in geoname_alts_tuples:
-                if geoname_ids is None or geoname.id in geoname_ids:
-                    rs_geoname = _rs_geoname(geoname)
-                    geoname_id_and_alts_tuples.append(
-                        [geoname.id, [_rs_alternate(a, rs_geoname) for a in alts]]
-                    )
-    return geoname_id_and_alts_tuples
+    """Filter `ALTERNATES` on a language and geonames and return a list of
+    tuples appropriate for including in a remote settings attachment.
+
+    """
+    return _rs_alternates_list(
+        [
+            (_rs_geoname(geoname), alts)
+            for geoname, alts in ALTERNATES[language]
+            if geoname in geonames
+        ]
+    )
 
 
 def do_test(
-    mocker,
     requests_mock,
     languages: list[str],
     country: str,
@@ -102,12 +101,9 @@ def do_test(
     check_delete_requests(rs_requests, expected_deleted_records)
 
 
-def test_one_lang_one_geonames_record(
-    mocker, requests_mock, downloader_fixture: DownloaderFixture
-):
+def test_one_lang_one_geonames_record(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload alternates for one language and one geonames record"""
     do_test(
-        mocker,
         requests_mock,
         country="US",
         languages=["en"],
@@ -136,7 +132,7 @@ def test_one_lang_one_geonames_record(
                     "language": "en",
                     "alternates_by_geoname_id": filter_alternates(
                         "en",
-                        set(g.id for g in filter_geonames("US", 1_000)),
+                        filter_geonames("US", 1_000),
                     ),
                 },
             ),
@@ -144,12 +140,9 @@ def test_one_lang_one_geonames_record(
     )
 
 
-def test_one_lang_two_geonames_records(
-    mocker, requests_mock, downloader_fixture: DownloaderFixture
-):
+def test_one_lang_two_geonames_records(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload alternates for one language and two geonames records"""
     do_test(
-        mocker,
         requests_mock,
         country="US",
         languages=["en"],
@@ -176,22 +169,9 @@ def test_one_lang_two_geonames_records(
             ),
         ],
         expected_uploaded_records=[
-            Record(
-                data={
-                    "id": "geonames-US-50k-1m-en",
-                    "type": "geonames-alternates",
-                    "country": "US",
-                    "language": "en",
-                    "filter_expression": "env.country in ['GB', 'US'] && env.locale in ['en', 'en-CA', 'en-GB', 'en-US', 'en-ZA']",
-                },
-                attachment={
-                    "language": "en",
-                    "alternates_by_geoname_id": filter_alternates(
-                        "en",
-                        set(g.id for g in filter_geonames("US", 50_000, 1_000_000)),
-                    ),
-                },
-            ),
+            # No `geonames-US-50k-1m-en` record because all "en" alternates for
+            # geonames in the range [50k, 1m) are the same as their geonames'
+            # names.
             Record(
                 data={
                     "id": "geonames-US-1m-en",
@@ -204,7 +184,7 @@ def test_one_lang_two_geonames_records(
                     "language": "en",
                     "alternates_by_geoname_id": filter_alternates(
                         "en",
-                        set(g.id for g in filter_geonames("US", 1_000_000)),
+                        filter_geonames("US", 1_000_000),
                     ),
                 },
             ),
@@ -212,10 +192,9 @@ def test_one_lang_two_geonames_records(
     )
 
 
-def test_three_langs(mocker, requests_mock, downloader_fixture: DownloaderFixture):
+def test_three_langs(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload alternates for three languages, not all of which have alternates"""
     do_test(
-        mocker,
         requests_mock,
         country="US",
         # There are no "de" alternates for the US, and "abbr" alternates exist
@@ -244,6 +223,10 @@ def test_three_langs(mocker, requests_mock, downloader_fixture: DownloaderFixtur
             ),
         ],
         expected_uploaded_records=[
+            # No `geonames-US-50k-1m-en` record because all "en" alternates for
+            # geonames in the range [50k, 1m) are the same as their geonames'
+            # names.
+            #
             # No `geonames-US-50k-1m-abbr` record because "abbr" alternates
             # exist only for geonames with >= 1m
             #
@@ -262,23 +245,7 @@ def test_three_langs(mocker, requests_mock, downloader_fixture: DownloaderFixtur
                     "language": "abbr",
                     "alternates_by_geoname_id": filter_alternates(
                         "abbr",
-                        set(g.id for g in filter_geonames("US", 1_000_000)),
-                    ),
-                },
-            ),
-            Record(
-                data={
-                    "id": "geonames-US-50k-1m-en",
-                    "type": "geonames-alternates",
-                    "country": "US",
-                    "language": "en",
-                    "filter_expression": "env.country in ['GB', 'US'] && env.locale in ['en', 'en-CA', 'en-GB', 'en-US', 'en-ZA']",
-                },
-                attachment={
-                    "language": "en",
-                    "alternates_by_geoname_id": filter_alternates(
-                        "en",
-                        set(g.id for g in filter_geonames("US", 50_000, 1_000_000)),
+                        filter_geonames("US", 1_000_000),
                     ),
                 },
             ),
@@ -294,7 +261,7 @@ def test_three_langs(mocker, requests_mock, downloader_fixture: DownloaderFixtur
                     "language": "en",
                     "alternates_by_geoname_id": filter_alternates(
                         "en",
-                        set(g.id for g in filter_geonames("US", 1_000_000)),
+                        filter_geonames("US", 1_000_000),
                     ),
                 },
             ),
@@ -302,7 +269,7 @@ def test_three_langs(mocker, requests_mock, downloader_fixture: DownloaderFixtur
     )
 
 
-def test_delete_old_record(mocker, requests_mock, downloader_fixture: DownloaderFixture):
+def test_delete_old_record(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload new alternates, leaving one old alternates record that should be
     deleted
 
@@ -317,14 +284,10 @@ def test_delete_old_record(mocker, requests_mock, downloader_fixture: Downloader
         },
         attachment={
             "language": "en",
-            "alternates_by_geoname_id": filter_alternates(
-                "en",
-                set(g.id for g in filter_geonames("US", 50_000)),
-            ),
+            "alternates_by_geoname_id": filter_alternates("en", filter_geonames("US", 50_000)),
         },
     )
     do_test(
-        mocker,
         requests_mock,
         country="US",
         languages=["en"],
@@ -356,7 +319,7 @@ def test_delete_old_record(mocker, requests_mock, downloader_fixture: Downloader
                     "language": "abbr",
                     "alternates_by_geoname_id": filter_alternates(
                         "abbr",
-                        set(g.id for g in filter_geonames("US", 1_000)),
+                        filter_geonames("US", 1_000),
                     ),
                 },
             ),
@@ -374,7 +337,7 @@ def test_delete_old_record(mocker, requests_mock, downloader_fixture: Downloader
                     "language": "en",
                     "alternates_by_geoname_id": filter_alternates(
                         "en",
-                        set(g.id for g in filter_geonames("US", 1_000)),
+                        filter_geonames("US", 1_000),
                     ),
                 },
             ),
@@ -385,7 +348,7 @@ def test_delete_old_record(mocker, requests_mock, downloader_fixture: Downloader
     )
 
 
-def test_no_geonames_records(mocker, requests_mock, downloader_fixture: DownloaderFixture):
+def test_no_geonames_records(requests_mock, downloader_fixture: DownloaderFixture):
     """Nothing should happen when there aren't any geonames records for the
     given country
 
@@ -402,12 +365,11 @@ def test_no_geonames_records(mocker, requests_mock, downloader_fixture: Download
             "language": "en",
             "alternates_by_geoname_id": filter_alternates(
                 "en",
-                set(g.id for g in filter_geonames("US", 50_000)),
+                filter_geonames("US", 50_000),
             ),
         },
     )
     do_test(
-        mocker,
         requests_mock,
         country="US",
         languages=["en"],
@@ -428,7 +390,7 @@ def test_no_geonames_records(mocker, requests_mock, downloader_fixture: Download
                     "language": "abbr",
                     "alternates_by_geoname_id": filter_alternates(
                         "abbr",
-                        set(g.id for g in filter_geonames("US", 1_000)),
+                        filter_geonames("US", 1_000),
                     ),
                 },
             ),
@@ -439,14 +401,13 @@ def test_no_geonames_records(mocker, requests_mock, downloader_fixture: Download
 
 
 def test_geonames_record_without_filter_countries(
-    mocker, requests_mock, downloader_fixture: DownloaderFixture
+    requests_mock, downloader_fixture: DownloaderFixture
 ):
     """Test upload with a geonames record for the given country that doesn't
     have any filter-expression countries
 
     """
     do_test(
-        mocker,
         requests_mock,
         country="US",
         languages=["en"],
@@ -474,12 +435,69 @@ def test_geonames_record_without_filter_countries(
                     "language": "en",
                     "alternates_by_geoname_id": filter_alternates(
                         "en",
-                        set(g.id for g in filter_geonames("US", 1_000)),
+                        filter_geonames("US", 1_000),
                     ),
                 },
             ),
         ],
     )
+
+
+def test_rs_alternates_list():
+    """Test the `filter_alternates` and `_rs_alternates_list` helper functions.
+    In particular, `_rs_alternates_list` relies on `_rs_alternate`, which
+    returns `None` when an alternate is the same as its geoname's `name` or
+    `ascii_name`. `_rs_alternates_list` should not include `None` values.
+
+    """
+    # Use the Goessnitz geoname, which has alternates for its name and ASCII
+    # name. First, do some sanity checks:
+    #
+    # (1) The geoname should have the expected name and ASCII name.
+    assert GEONAME_GOESSNITZ.name == "Gößnitz"
+    assert GEONAME_GOESSNITZ.ascii_name == "Goessnitz"
+
+    # (2) `ALTERNATES` should include the Goessnitz alts.
+    alt_tuples = [tup for tup in ALTERNATES["en"] if tup[0] == GEONAME_GOESSNITZ]
+    assert len(alt_tuples) == 1
+    alts = alt_tuples[0][1]
+
+    # (3) The Goessnitz alts should include the geoname's name and ASCII name.
+    assert [a.name for a in alts if a.name == GEONAME_GOESSNITZ.name] == [GEONAME_GOESSNITZ.name]
+    assert [a.name for a in alts if a.name == GEONAME_GOESSNITZ.ascii_name] == [
+        GEONAME_GOESSNITZ.ascii_name
+    ]
+
+    # Now check `filter_alternates`. Goessnitz has one alt that's not its name
+    # or ASCII name, and `None` values should not be included.
+    assert filter_alternates("en", [GEONAME_GOESSNITZ]) == [
+        [GEONAME_GOESSNITZ.id, ["Gössnitz"]],
+    ]
+
+    # Check `_rs_alternates_list` directly for good measure.
+    assert _rs_alternates_list(
+        [
+            (
+                _rs_geoname(GEONAME_GOESSNITZ),
+                [
+                    GeonameAlternate("some other name 1"),
+                    GeonameAlternate(GEONAME_GOESSNITZ.name),
+                    GeonameAlternate("some other name 2"),
+                    GeonameAlternate(GEONAME_GOESSNITZ.ascii_name),
+                    GeonameAlternate("some other name 3"),
+                ],
+            )
+        ]
+    ) == [
+        [
+            GEONAME_GOESSNITZ.id,
+            [
+                "some other name 1",
+                "some other name 2",
+                "some other name 3",
+            ],
+        ]
+    ]
 
 
 def test_rs_alternate_name_only():

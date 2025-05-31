@@ -32,7 +32,6 @@ from tests.unit.jobs.geonames_uploader.geonames_utils import (
 
 
 def do_test(
-    mocker,
     requests_mock,
     country: str,
     partitions: list[Any],
@@ -75,13 +74,11 @@ def do_test(
 
 
 def test_one_part_no_filter_countries(
-    mocker,
     requests_mock,
     downloader_fixture,
 ):
     """Upload one partition, no filter-expression countries"""
     do_test(
-        mocker,
         requests_mock,
         country="US",
         partitions=[1],
@@ -98,10 +95,9 @@ def test_one_part_no_filter_countries(
     )
 
 
-def test_one_part_filter_countries(mocker, requests_mock, downloader_fixture: DownloaderFixture):
+def test_one_part_filter_countries(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload one partition with some filter-expression countries"""
     do_test(
-        mocker,
         requests_mock,
         country="US",
         partitions=[[1, ["GB", "US"]]],
@@ -120,10 +116,9 @@ def test_one_part_filter_countries(mocker, requests_mock, downloader_fixture: Do
     )
 
 
-def test_one_part_empty_1(mocker, requests_mock, downloader_fixture: DownloaderFixture):
+def test_one_part_empty_1(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload one partition that's empty and has no filter-expression countries"""
     do_test(
-        mocker,
         requests_mock,
         country="US",
         partitions=[999_999_999_999],
@@ -131,13 +126,12 @@ def test_one_part_empty_1(mocker, requests_mock, downloader_fixture: DownloaderF
     )
 
 
-def test_one_part_empty_2(mocker, requests_mock, downloader_fixture: DownloaderFixture):
+def test_one_part_empty_2(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload one partition that's empty and has some filter-expression
     countries
 
     """
     do_test(
-        mocker,
         requests_mock,
         country="US",
         partitions=[[999_999_999_999, ["US", "GB"]]],
@@ -146,7 +140,6 @@ def test_one_part_empty_2(mocker, requests_mock, downloader_fixture: DownloaderF
 
 
 def test_two_parts_first_part_empty_1(
-    mocker,
     requests_mock,
     downloader_fixture: DownloaderFixture,
 ):
@@ -155,7 +148,6 @@ def test_two_parts_first_part_empty_1(
 
     """
     do_test(
-        mocker,
         requests_mock,
         country="US",
         # There are no geonames with populations in the range [1k, 10k), so the
@@ -178,7 +170,6 @@ def test_two_parts_first_part_empty_1(
 
 
 def test_two_parts_first_part_empty_2(
-    mocker,
     requests_mock,
     downloader_fixture: DownloaderFixture,
 ):
@@ -187,7 +178,6 @@ def test_two_parts_first_part_empty_2(
 
     """
     do_test(
-        mocker,
         requests_mock,
         country="US",
         # There are no geonames with populations in the range [1k, 10k), so the
@@ -208,13 +198,12 @@ def test_two_parts_first_part_empty_2(
     )
 
 
-def test_two_parts_neither_empty_1(mocker, requests_mock, downloader_fixture: DownloaderFixture):
+def test_two_parts_neither_empty_1(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload two partitions, neither are empty, second does not have
     filter-expression countries
 
     """
     do_test(
-        mocker,
         requests_mock,
         country="US",
         partitions=[[50, "US"], 1_000],
@@ -241,13 +230,12 @@ def test_two_parts_neither_empty_1(mocker, requests_mock, downloader_fixture: Do
     )
 
 
-def test_two_parts_neither_empty_2(mocker, requests_mock, downloader_fixture: DownloaderFixture):
+def test_two_parts_neither_empty_2(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload two partitions, neither are empty, second has filter-expression
     countries
 
     """
     do_test(
-        mocker,
         requests_mock,
         country="US",
         partitions=[[50, "US"], [1_000, "GB"]],
@@ -276,10 +264,9 @@ def test_two_parts_neither_empty_2(mocker, requests_mock, downloader_fixture: Do
     )
 
 
-def test_update_old_records(mocker, requests_mock, downloader_fixture: DownloaderFixture):
+def test_update_old_records(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload a record that already exists"""
     do_test(
-        mocker,
         requests_mock,
         country="US",
         partitions=[1],
@@ -306,7 +293,7 @@ def test_update_old_records(mocker, requests_mock, downloader_fixture: Downloade
     )
 
 
-def test_delete_old_records(mocker, requests_mock, downloader_fixture: DownloaderFixture):
+def test_delete_old_records(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload a record, deleting existing records for the same country"""
     existing_us_records = [
         Record(
@@ -327,7 +314,6 @@ def test_delete_old_records(mocker, requests_mock, downloader_fixture: Downloade
         ),
     ]
     do_test(
-        mocker,
         requests_mock,
         country="US",
         partitions=[1],

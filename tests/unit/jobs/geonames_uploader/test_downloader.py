@@ -94,11 +94,14 @@ def filter_alternates(
     alts_by_geoname_id_by_lang: dict[str, dict[int, list[GeonameAlternate]]] = {}
     for lang, geoname_and_alts_tuples in ALTERNATES.items():
         for geoname, alts in geoname_and_alts_tuples:
-            for alt in alts:
-                if predicate(geoname.id, lang, alt):
-                    alts_by_geoname_id = alts_by_geoname_id_by_lang.setdefault(lang, {})
-                    selected_alts = alts_by_geoname_id.setdefault(geoname.id, [])
-                    selected_alts.append(alt)
+            # The `AlternatesDownloaderTest` fixture only provides US geonames
+            # and alternates, so ignore ones in other countries (Goessnitz).
+            if geoname.country_code == "US":
+                for alt in alts:
+                    if predicate(geoname.id, lang, alt):
+                        alts_by_geoname_id = alts_by_geoname_id_by_lang.setdefault(lang, {})
+                        selected_alts = alts_by_geoname_id.setdefault(geoname.id, [])
+                        selected_alts.append(alt)
     return alts_by_geoname_id_by_lang
 
 

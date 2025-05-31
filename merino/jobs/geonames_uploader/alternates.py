@@ -97,6 +97,24 @@ def alternates_cmd(
                 )
                 continue
 
+            # Build the list of tuples of geoname IDs and alternates that will
+            # be in the attachment. Keep in mind that `_rs_alternate` may return
+            # None.
+            rs_geoname_and_alts_lists = _rs_alternates_list(
+                [
+                    (geonames_by_id[geoname_id], alts)
+                    for geoname_id, alts in alts_by_geoname_id.items()
+                ]
+            )
+            if not rs_geoname_and_alts_lists:
+                # There are alternates for this country and language, but
+                # they're all the same as their geonames' names or ASCII names,
+                # so no alternates record is necessary.
+                logger.info(
+                    f"Alternates record not necessary for geonames record '{geonames_record_id}' in language '{lang}'"
+                )
+                continue
+
             alts_record_id = f"{geonames_record_id}-{lang}"
             uploaded_record_ids.add(alts_record_id)
 
@@ -120,13 +138,7 @@ def alternates_cmd(
                 },
                 attachment={
                     "language": lang,
-                    "alternates_by_geoname_id": [
-                        [
-                            geoname_id,
-                            [_rs_alternate(alt, geonames_by_id[geoname_id]) for alt in alts],
-                        ]
-                        for geoname_id, alts in alts_by_geoname_id.items()
-                    ],
+                    "alternates_by_geoname_id": rs_geoname_and_alts_lists,
                 },
             )
 
@@ -137,11 +149,31 @@ def alternates_cmd(
             rs_client.delete_record(r["id"])
 
 
+def _rs_alternates_list(
+    rs_geoname_and_alts_tuples: list[Tuple[dict[str, Any], list[GeonameAlternate]]],
+) -> list[list[int | list[str | None | dict[str, Any]]]]:
+    """Convert a list of `(rs_geoname, [GeonameAlternate])` tuples to a list of
+    `[geoname_id, [rs_alternate]]` lists appropriate for including in an
+    alternates attachment as `alternates_by_geoname_id`.
+
+    """
+    geoname_id_and_rs_alts_tuples = []
+    for rs_geoname, alts in rs_geoname_and_alts_tuples:
+        rs_alts = []
+        for alt in alts:
+            rs_alt = _rs_alternate(alt, rs_geoname)
+            if rs_alt:
+                rs_alts.append(rs_alt)
+        if rs_alts:
+            geoname_id_and_rs_alts_tuples.append([rs_geoname["id"], rs_alts])
+    return geoname_id_and_rs_alts_tuples
+
+
 def _rs_alternate(
     alt: GeonameAlternate,
     geoname: dict[str, Any],
 ) -> str | dict[str, Any] | None:
-    """Convert a `GeonameAlternate` to a dict that will be stored in an
+    """Convert a `GeonameAlternate` to a dict appropriate for including in an
     alternates attachment.
 
     """

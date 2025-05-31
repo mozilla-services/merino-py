@@ -140,7 +140,7 @@ def geonames_cmd(
 
 
 def _rs_geoname(geoname: Geoname) -> dict[str, Any]:
-    """Convert a `Geoname` to a dict that will be stored in a geonames
+    """Convert a `Geoname` to a dict appropriate for including in a geonames
     attachment.
 
     """
