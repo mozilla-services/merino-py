@@ -72,14 +72,12 @@ class ChunkedRemoteSettingsRelevancyUploader(ChunkedRemoteSettingsUploader):
         `category_code`.
         """
         logger.info(f"Deleting records with type: {self.record_type}")
-        deleted_records = self.uploader.delete_if(self._delete_if_predicate)
-        count = len(deleted_records)
+        count = 0
+        for record in self.client.get_records():
+            record_details = record.get("record_custom_details", {})
+            cat_to_domains_details = record_details.get("category_to_domains", {})
+            if cat_to_domains_details.get("version") == self.version:
+                logger.info(f"Deleting record: {record['id']}")
+                self.client.delete_record(record["id"])
+                count += 1
         logger.info(f"Deleted {count} records")
-
-    def _delete_if_predicate(self, record: dict[str, Any]) -> bool:
-        record_details = record.get("record_custom_details", {})
-        cat_to_domains_details = record_details.get("category_to_domains", {})
-        if cat_to_domains_details.get("version") == self.version:
-            logger.info(f"Deleting record: {record['id']}")
-            return True
-        return False
