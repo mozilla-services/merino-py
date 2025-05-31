@@ -232,13 +232,49 @@ def test_two_parts_neither_empty_1(requests_mock, downloader_fixture: Downloader
 
 def test_two_parts_neither_empty_2(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload two partitions, neither are empty, second has filter-expression
-    countries
+    countries with one new country
 
     """
     do_test(
         requests_mock,
         country="US",
         partitions=[[50, "US"], [1_000, "GB"]],
+        expected_uploaded_records=[
+            Record(
+                data={
+                    "id": "geonames-US-50k-1m",
+                    "type": "geonames-2",
+                    "country": "US",
+                    "filter_expression_countries": ["US"],
+                    "filter_expression": "env.country in ['US']",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 50_000, 1_000_000)],
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-1m",
+                    "type": "geonames-2",
+                    "country": "US",
+                    "filter_expression_countries": ["GB", "US"],
+                    "filter_expression": "env.country in ['GB', 'US']",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000_000)],
+            ),
+        ],
+    )
+
+
+def test_two_parts_neither_empty_3(requests_mock, downloader_fixture: DownloaderFixture):
+    """Upload two partitions, neither are empty, second has filter-expression
+    countries with one new country plus the country from the first partition.
+    This should be equivalent to the previous test, where the country from the
+    first partition was not included in the second
+
+    """
+    do_test(
+        requests_mock,
+        country="US",
+        partitions=[[50, "US"], [1_000, ["GB", "US"]]],
         expected_uploaded_records=[
             Record(
                 data={

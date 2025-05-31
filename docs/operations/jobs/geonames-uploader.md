@@ -117,9 +117,7 @@ two-letter uppercase country code.
 *Required.* A JSON string describing how the geonames should be partitioned. One
 geonames record will be created per partition. Each partition defines a
 population threshold and optionally one or more filter-expression countries. The
-`json` value should be any one of the following. Note that **all integer
-threshold values are in thousands**. For example, a specified value of `50`
-means 50 thousand.
+`json` value should be any one of the following:
 
 * An integer population threshold
 * A tuple `[threshold, country]`, where `threshold` is an integer population
@@ -128,10 +126,25 @@ means 50 thousand.
   threshold and `countries` is an array of country code strings
 * An array whose items are any combination of the above
 
+**Important: All integer population thresholds are in thousands**. For example,
+a specified value of `50` means 50 thousand.
+
 Each partition defines only its lower threshold. The upper threshold is
 automatically calculated from the partition with the next-largest threshold. The
-final partition -- that is, the partition with the largest threshold -- won't
-have an upper threshold.
+lower threshold is inclusive and the upper threshold is exclusive, or in other
+words a partition's range is `[lower, upper)`.
+
+The final partition -- that is, the partition with the largest threshold --
+won't have an upper threshold.
+
+Filter-expression countries are cumulative. A country in one partition will
+automatically be included in all partitions with larger thresholds. For example,
+the following two `--partitions` values are equivalent:
+
+```
+--partitions '[[50, "US"], [100, "CA"]]'
+--partitions '[[50, "US"], [100, ["CA", "US"]]]'
+```
 
 *Examples:*
 
