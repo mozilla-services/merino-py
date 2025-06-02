@@ -11,7 +11,7 @@ class PolygonErrorMessages(Enum):
 
     CACHE_WRITE_ERROR = "Something went wrong with storing to cache. Did not update cache."
     CACHE_READ_ERROR = "Failed to read from cache: {exception}"
-    FAILED_WEATHER_REPORT = "Failed to fetch weather report: {exceptions}"
+    FAILED_FINANCE_REPORT = "Failed to fetch finance report: {exceptions}"
     HTTP_UNEXPECTED_RESPONSE = "Unexpected response for request: {req}"
 
     def format_message(self, **kwargs) -> str:
