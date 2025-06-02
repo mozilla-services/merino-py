@@ -11,8 +11,10 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     SectionConfiguration,
     Section,
+    InferredInterests,
 )
 from scipy.stats import beta
+import numpy as np
 
 
 def renumber_recommendations(recommendations: list[CuratedRecommendation]) -> None:
@@ -149,6 +151,38 @@ def section_thompson_sampling(
 
     # sort sections by sampled score, highest first
     ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
+    return renumber_sections(ordered)
+
+
+def greedy_personalized_section_rank(
+    sections: dict[str, Section],
+    personal_interests: InferredInterests,
+    epsilon: float = 0.0,
+) -> dict[str, Section]:
+    """Insert the ordered personal interest sections into the top of the section ranking.
+
+    Insertion happens for each section with probability 1-epsilon.
+      default is to always do the insertion
+    """
+    ## order init from other functions
+    ordered_sections = sorted(sections, key=lambda x: sections[x].receivedFeedRank)
+
+    ## order of personal preferences
+    ptopics = [k for k, v in personal_interests.root.items() if isinstance(v, float)]
+    ordered_preferences = sorted(ptopics, key=lambda x: personal_interests.root[x], reverse=True)
+
+    # decide once for each pref whether it “wins” (prob. 1-epsilon)
+    chosen = [
+        sec
+        for sec in ordered_preferences
+        if sec in ordered_sections and np.random.choice([0, 1], p=[epsilon, 1 - epsilon])
+    ]
+
+    # append the rest in original order
+    rest = [sec for sec in ordered_sections if sec not in chosen]
+
+    # reorder the sections according to the new ranking
+    ordered = [(sec, sections[sec]) for sec in chosen + rest]
     return renumber_sections(ordered)
 
 

@@ -16,6 +16,7 @@ from merino.curated_recommendations.protocol import (
     MIN_TILE_ID,
     Section,
     SectionConfiguration,
+    InferredInterests,
 )
 from merino.curated_recommendations.rankers import (
     spread_publishers,
@@ -24,6 +25,7 @@ from merino.curated_recommendations.rankers import (
     is_section_recently_followed,
     renumber_recommendations,
     put_top_stories_first,
+    greedy_personalized_section_rank,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -634,3 +636,65 @@ class TestPutTopStoriesFirst:
         # Should simply return the same dict
         updated = put_top_stories_first(feed)
         assert updated is feed
+
+
+class TestGreedyPersonalizedSectionRanker:
+    """Tests greedy use of inferred section ranker"""
+
+    def test_expected_ranking(self):
+        """Tests putting sections from inferred interests first"""
+        # get example section feed
+        sections = generate_sections_feed(section_count=16)
+        # extract titles and build InferredInterests
+        sec_titles = [sec for sec in sections]
+        personal_sections = [sec_titles[i] for i in [4, 10, 13, 15]]
+        personal_interests = InferredInterests({k: i for i, k in enumerate(personal_sections)})
+        # store original order of sections not in inferredInterests
+        original_order = sorted(sections, key=lambda x: sections[x].receivedFeedRank)
+        original_order = [k for k in original_order if k not in personal_sections]
+        # rerank the sections
+        reranked_sections = greedy_personalized_section_rank(
+            sections=sections, personal_interests=personal_interests, epsilon=0.0
+        )
+        print("original order", original_order)
+        print("personal_sections", personal_sections)
+        print(
+            "new order",
+            sorted(reranked_sections, key=lambda x: reranked_sections[x].receivedFeedRank),
+        )
+        # personal_interests should be at the top of reranked_sections, reversed
+        for i, s in enumerate(personal_sections[::-1]):
+            assert i == reranked_sections[s].receivedFeedRank
+        # original order should be preserved
+        for i, s in enumerate(original_order):
+            assert i + len(personal_sections) == reranked_sections[s].receivedFeedRank
+
+    def test_empty_interests(self):
+        """Empty inferredinterests should not affect the section ranking"""
+        # get example section feed
+        sections = generate_sections_feed(section_count=16)
+        # store the original ranking
+        original_ranking = {sec: sections[sec].receivedFeedRank for sec in sections}
+        # inferredinterests is empty
+        personal_interests = InferredInterests({})
+        # rerank the sections
+        reranked_sections = greedy_personalized_section_rank(
+            sections=sections, personal_interests=personal_interests, epsilon=0.0
+        )
+        # the ranking should not have changed
+        for sec in reranked_sections:
+            assert reranked_sections[sec].receivedFeedRank == original_ranking[sec]
+
+    def test_fictional_interests(self):
+        """Interest vector keys that are not sections should not appear in section ranking"""
+        # get example section feed
+        sections = generate_sections_feed(section_count=16)
+        # inferredinterests is empty
+        bogus = "asflkjdfoij"
+        personal_interests = InferredInterests({bogus: 1.0})
+        # rerank the sections
+        reranked_sections = greedy_personalized_section_rank(
+            sections=sections, personal_interests=personal_interests, epsilon=0.0
+        )
+        # the sections should not include bogus
+        assert bogus not in reranked_sections
