@@ -845,11 +845,26 @@ class TestCustomFavicons:
         )
         mock_get_custom_favicon.return_value = "https://static.axios.com/icons/favicon.svg"
 
-        # Mock successful favicon upload - this should be synchronous and return a string
-        mock_uploader.upload_favicon.return_value = "https://cdn.example.com/axios_favicon.svg"
-
-        # Create extractor
+        # Create extractor with mocked favicon downloader
         extractor = DomainMetadataExtractor(blocked_domains=set())
+
+        # Mock the favicon downloader to return a valid image
+        from merino.utils.gcs.models import Image
+
+        mock_image = Image(content=b"test_svg_content", content_type="image/svg+xml")
+        extractor.favicon_downloader = mocker.AsyncMock()
+        extractor.favicon_downloader.download_favicon.return_value = mock_image
+
+        # Mock uploader methods - IMPORTANT: These are synchronous methods
+        mock_uploader.destination_favicon_name = mocker.MagicMock(
+            return_value="favicons/axios_favicon.svg"
+        )
+        mock_uploader.upload_image = mocker.MagicMock(
+            return_value="https://cdn.example.com/axios_favicon.svg"
+        )
+        mock_uploader.force_upload = True
+        mock_uploader.uploader = mocker.MagicMock()
+        mock_uploader.uploader.cdn_hostname = "cdn.example.com"
 
         # Mock helper methods
         extractor._get_second_level_domain = mocker.MagicMock(return_value="axios")
@@ -860,8 +875,14 @@ class TestCustomFavicons:
 
         # Verify custom favicon was used
         mock_get_custom_favicon.assert_called_once_with("axios.com")
-        mock_uploader.upload_favicon.assert_called_once_with(
+
+        # Verify the inline processing was used instead of upload_favicon
+        extractor.favicon_downloader.download_favicon.assert_called_once_with(
             "https://static.axios.com/icons/favicon.svg"
+        )
+        mock_uploader.destination_favicon_name.assert_called_once_with(mock_image)
+        mock_uploader.upload_image.assert_called_once_with(
+            mock_image, "favicons/axios_favicon.svg", forced_upload=True
         )
 
         # Verify result contains custom favicon data
@@ -874,7 +895,7 @@ class TestCustomFavicons:
     async def test_process_single_domain_with_custom_favicon_upload_failure(
         self, mock_uploader, mock_scraper_context, mocker
     ):
-        """Test fallback to scraping when custom favicon upload fails."""
+        """Test fallback to scraping when custom favicon download fails."""
         # Unpack the fixture
         MockScraper, shared_scraper = mock_scraper_context
 
@@ -884,15 +905,14 @@ class TestCustomFavicons:
         )
         mock_get_custom_favicon.return_value = "https://static.axios.com/icons/favicon.svg"
 
-        # Mock failed favicon upload (returns empty string)
-        mock_uploader.upload_favicon.return_value = ""
+        # Create extractor with mocked favicon downloader that returns None (download failure)
+        extractor = DomainMetadataExtractor(blocked_domains=set())
+        extractor.favicon_downloader = mocker.AsyncMock()
+        extractor.favicon_downloader.download_favicon.return_value = None  # Download failure
 
-        # Configure the shared scraper for this test
+        # Configure the shared scraper for fallback
         shared_scraper.open.return_value = "https://axios.com"
         shared_scraper.scrape_title.return_value = "Axios News"
-
-        # Create extractor
-        extractor = DomainMetadataExtractor(blocked_domains=set())
 
         # Mock helper methods for scraping fallback
         extractor._get_base_url = mocker.MagicMock(return_value="https://axios.com")
@@ -913,7 +933,7 @@ class TestCustomFavicons:
 
         # Verify custom favicon was attempted first
         mock_get_custom_favicon.assert_called_once_with("axios.com")
-        mock_uploader.upload_favicon.assert_called_once_with(
+        extractor.favicon_downloader.download_favicon.assert_called_once_with(
             "https://static.axios.com/icons/favicon.svg"
         )
 
@@ -938,15 +958,14 @@ class TestCustomFavicons:
         )
         mock_get_custom_favicon.return_value = "https://static.axios.com/icons/favicon.svg"
 
-        # Mock favicon upload to raise an exception
-        mock_uploader.upload_favicon.side_effect = Exception("Upload failed")
+        # Create extractor with mocked favicon downloader that raises an exception
+        extractor = DomainMetadataExtractor(blocked_domains=set())
+        extractor.favicon_downloader = mocker.AsyncMock()
+        extractor.favicon_downloader.download_favicon.side_effect = Exception("Download failed")
 
         # Configure the shared scraper for fallback
         shared_scraper.open.return_value = "https://axios.com"
         shared_scraper.scrape_title.return_value = "Axios News"
-
-        # Create extractor
-        extractor = DomainMetadataExtractor(blocked_domains=set())
 
         # Mock helper methods for scraping fallback
         extractor._get_base_url = mocker.MagicMock(return_value="https://axios.com")
@@ -967,7 +986,7 @@ class TestCustomFavicons:
 
         # Verify custom favicon was attempted
         mock_get_custom_favicon.assert_called_once_with("axios.com")
-        mock_uploader.upload_favicon.assert_called_once_with(
+        extractor.favicon_downloader.download_favicon.assert_called_once_with(
             "https://static.axios.com/icons/favicon.svg"
         )
 
@@ -994,14 +1013,45 @@ class TestCustomFavicons:
         )
         mock_get_custom_favicon.side_effect = mock_custom_favicon_lookup
 
-        # Mock successful custom favicon uploads - return actual strings, not coroutines
-        def mock_upload_favicon(url):
-            return f"https://cdn.example.com/{url.split('/')[-1]}"
-
-        mock_uploader.upload_favicon.side_effect = mock_upload_favicon
-
-        # Create extractor
+        # Create extractor with mocked favicon downloader
         extractor = DomainMetadataExtractor(blocked_domains=set())
+        extractor.favicon_downloader = mocker.AsyncMock()
+
+        # Mock favicon downloads to return valid images for custom favicon domains
+        from merino.utils.gcs.models import Image
+
+        def mock_download_favicon(url):
+            if "axios.com" in url:
+                return Image(content=b"axios_content", content_type="image/svg+xml")
+            elif "reuters.com" in url:
+                return Image(content=b"reuters_content", content_type="image/svg+xml")
+            return None
+
+        extractor.favicon_downloader.download_favicon.side_effect = mock_download_favicon
+
+        # Mock uploader methods - IMPORTANT: These must be synchronous
+        def mock_destination_name(image):
+            if b"axios" in image.content:
+                return "favicons/axios_favicon.svg"
+            elif b"reuters" in image.content:
+                return "favicons/reuters_favicon.svg"
+            return "favicons/default.ico"
+
+        def mock_upload_image(image, name, forced_upload):
+            if "axios" in name:
+                return "https://cdn.example.com/axios_favicon.svg"
+            elif "reuters" in name:
+                return "https://cdn.example.com/reuters_favicon.svg"
+            return "https://cdn.example.com/default.ico"
+
+        mock_uploader.destination_favicon_name = mocker.MagicMock(
+            side_effect=mock_destination_name
+        )
+        mock_uploader.upload_image = mocker.MagicMock(side_effect=mock_upload_image)
+        mock_uploader.force_upload = True
+        mock_uploader.uploader = mocker.MagicMock()
+        mock_uploader.uploader.cdn_hostname = "cdn.example.com"
+
         extractor._get_second_level_domain = mocker.MagicMock(
             side_effect=lambda domain, suffix: domain.split(".")[0]
         )
@@ -1032,18 +1082,19 @@ class TestCustomFavicons:
         # Verify custom favicons were used for axios and reuters
         assert mock_get_custom_favicon.call_count == 3
         assert (
-            mock_uploader.upload_favicon.call_count == 2
+            extractor.favicon_downloader.download_favicon.call_count == 2
         )  # Only for domains with custom favicons
+        assert mock_uploader.upload_image.call_count == 2  # Only for successful downloads
 
         # Verify results
         axios_result = results[0]
         assert axios_result["domain"] == "axios"
-        assert "favicon.svg" in axios_result["icon"]
+        assert "axios_favicon.svg" in axios_result["icon"]
         assert axios_result["title"] == "Axios"
 
         reuters_result = results[1]
         assert reuters_result["domain"] == "reuters"
-        assert "tr_kinesis_v2.svg" in reuters_result["icon"]
+        assert "reuters_favicon.svg" in reuters_result["icon"]
         assert reuters_result["title"] == "Reuters"
 
         # Example.com should have empty result because scraper is mocked to fail
