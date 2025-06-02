@@ -61,8 +61,9 @@ class MockEngagementBackend(EngagementBackend):
         seed_input = "_".join(filter(None, [corpus_item_id, region]))
         rng = np.random.default_rng(seed=int.from_bytes(seed_input.encode()))
 
-        if corpus_item_id == "4095b364-02ff-402c-b58a-792a067fccf2":
-            # Give the first item 100% click-through rate to put it on top with high certainty.
+        if corpus_item_id in ["271736", "4095b364-02ff-402c-b58a-792a067fccf2"]:
+            # Give the first item (corpus rec & ML section) 100% click-through rate to put it on top with high
+            # certainty.
             return Engagement(
                 corpus_item_id=corpus_item_id,
                 click_count=1000000,
@@ -202,7 +203,7 @@ def get_max_total_retry_duration() -> float:
 async def test_curated_recommendations(repeat):
     """Test the curated recommendations endpoint response is as expected."""
     async with AsyncClient(app=app, base_url="http://test") as ac:
-        # expected recommendation with topic = None
+        # expected recommendation
         expected_recommendation = CuratedRecommendation(
             scheduledCorpusItemId="de614b6b-6df6-470a-97f2-30344c56c1b3",
             corpusItemId="4095b364-02ff-402c-b58a-792a067fccf2",
@@ -1683,6 +1684,45 @@ class TestSections:
             top_stories_section = data["feeds"].get("top_stories_section")
             assert top_stories_section is not None
             assert top_stories_section["receivedFeedRank"] == 0
+
+    @pytest.mark.parametrize(
+        "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
+        range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
+    )
+    @pytest.mark.asyncio
+    async def test_ml_sections_thompson_sampling(self, repeat):
+        """Test that Thompson sampling is applied to ML sections"""
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": "en-US",
+                    "feeds": ["sections"],
+                    "experimentName": "new-tab-ml-sections",
+                    "experimentBranch": "treatment",
+                },
+            )
+            data = response.json()
+
+            # Check if the response is valid
+            assert response.status_code == 200
+
+            feeds = data["feeds"]
+            music_recs = feeds["music"]["recommendations"]  # ML feed
+
+            # The expected ML sectionItem has 100% CTR, and is always present in the response.
+            expected_high_ctr_id = "271736"
+            # Find the receivedRank of the high CTR ML sectionItem
+            high_item_rank = next(
+                (
+                    rec["receivedRank"]
+                    for rec in music_recs
+                    if rec["corpusItemId"] == expected_high_ctr_id
+                ),
+                None,
+            )
+            assert high_item_rank < 3
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("enable_interest_vector", [True, False])

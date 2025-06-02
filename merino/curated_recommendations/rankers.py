@@ -106,8 +106,10 @@ def thompson_sampling(
 
         return float(beta.rvs(opens, no_opens))
 
-    # Sort the recommendations from best to worst sampled score.
-    return sorted(recs, key=sample_score, reverse=True)
+    # Sort the recommendations from best to worst sampled score & renumber
+    sorted_recs = sorted(recs, key=sample_score, reverse=True)
+    renumber_recommendations(sorted_recs)
+    return sorted_recs
 
 
 def section_thompson_sampling(

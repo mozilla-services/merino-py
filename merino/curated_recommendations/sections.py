@@ -31,7 +31,6 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.rankers import (
     thompson_sampling,
-    renumber_recommendations,
     boost_followed_sections,
     section_thompson_sampling,
     put_top_stories_first,
@@ -331,7 +330,6 @@ async def get_sections(
     # 3. Split top stories
     top_stories_count = 6
     top_stories = recommendations[:top_stories_count]
-    renumber_recommendations(top_stories)
     remaining = recommendations[top_stories_count:]
 
     # 4. Initialize sections with top stories
@@ -347,6 +345,19 @@ async def get_sections(
     # 5. Add ML sections if requested
     if is_ml_sections_experiment(request):
         corpus_sections = await get_corpus_sections(sections_backend, surface_id, len(sections))
+
+        for cs in corpus_sections.values():
+            # Apply Thompson Sampling
+            ranked_section_items = thompson_sampling(
+                cs.recommendations,
+                engagement_backend=engagement_backend,
+                prior_backend=prior_backend,
+                region=region,
+            )
+
+            # Replace with re-ranked items
+            cs.recommendations = ranked_section_items
+
         sections.update(corpus_sections)
 
     # 6. Group items outside the 'top stories section' by topic
