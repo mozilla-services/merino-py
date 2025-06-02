@@ -49,6 +49,18 @@ backend="test_weather"
 circuit_breaker_failure_threshold = 1
 circuit_breaker_recover_timeout_sec = 3
 
+[testing.polygon]
+api_key = "test"
+# The URL in `url_base` isn't actually pinged during testing but we set it
+# anyway to make sure the production server isn't accidentally pinged.
+url_base = "test://test"
+
+[testing.providers.polygon]
+enabled_by_default = false
+backend="test_polygon"
+circuit_breaker_failure_threshold = 1
+circuit_breaker_recover_timeout_sec = 3
+
 [testing.providers.adm]
 # Whether or not this provider is enabled by default.
 enabled_by_default = true

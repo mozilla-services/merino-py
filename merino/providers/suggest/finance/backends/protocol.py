@@ -1,10 +1,11 @@
 """Protocol for finance provider backends."""
 
 from typing import Protocol
+from pydantic import BaseModel
 from merino.providers.suggest.finance.backends.polygon.utils import FinanceEntityType, TickerSymbol
 
 
-class FinanceContext:
+class FinanceContext(BaseModel):
     """Model that contains context from the finance suggestion request needed to make finance report."""
 
     entity_type: FinanceEntityType
@@ -13,7 +14,7 @@ class FinanceContext:
     request_type: str = "price" or "aggregate"
 
 
-class FinanceReport:
+class FinanceReport(BaseModel):
     """Model for finance report that is returned as part of the finance suggestion response"""
 
     entity_type: FinanceEntityType
