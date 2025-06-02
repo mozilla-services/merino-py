@@ -30,7 +30,6 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.rankers import (
     thompson_sampling,
-    renumber_recommendations,
     boost_followed_sections,
     section_thompson_sampling,
     put_top_stories_first,
