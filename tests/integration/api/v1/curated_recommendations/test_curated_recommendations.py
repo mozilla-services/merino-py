@@ -61,8 +61,9 @@ class MockEngagementBackend(EngagementBackend):
         seed_input = "_".join(filter(None, [corpus_item_id, region]))
         rng = np.random.default_rng(seed=int.from_bytes(seed_input.encode()))
 
-        if corpus_item_id == "4095b364-02ff-402c-b58a-792a067fccf2":
-            # Give the first item 100% click-through rate to put it on top with high certainty.
+        if corpus_item_id in ["271736", "4095b364-02ff-402c-b58a-792a067fccf2"]:
+            # Give the first item (corpus rec & ML section) 100% click-through rate to put it on top with high
+            # certainty.
             return Engagement(
                 corpus_item_id=corpus_item_id,
                 click_count=1000000,

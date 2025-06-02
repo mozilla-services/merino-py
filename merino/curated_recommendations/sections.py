@@ -323,7 +323,6 @@ async def get_sections(
     # 3. Split top stories
     top_stories_count = 6
     top_stories = recommendations[:top_stories_count]
-    renumber_recommendations(top_stories)
     remaining = recommendations[top_stories_count:]
 
     # 4. Initialize sections with top stories
@@ -351,7 +350,6 @@ async def get_sections(
 
             # Replace with re-ranked items
             cs.recommendations = ranked_section_items
-            renumber_recommendations(cs.recommendations)
 
         sections.update(corpus_sections)
 
