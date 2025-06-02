@@ -14,6 +14,7 @@ LOCALITY_SUFFIX_PATTERN: re.Pattern = re.compile(r"\s+(city|municipality|town)$"
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {
     ("AR", "El Sombrero"): None,
     ("BR", "Barcellos"): None,
+    ("GB", "London"): "LND",
     ("IE", "Dublin"): None,
     ("IN", "Angul"): None,
     ("IN", "Bhadrāchalam"): None,

@@ -1,11 +1,12 @@
-"""CLI commands for the geonames_uploader module. See downloader.py for
-documentation on GeoNames.
+"""CLI commands for the geonames-uploader job. See the `geonames-uploader.md`
+doc for info on the job and `downloader.py` for documentation on GeoNames.
 
 """
 
 import asyncio
 import importlib
 import io
+import json
 import logging
 from zipfile import ZipFile
 from typing import Any, Callable
@@ -17,11 +18,8 @@ from urllib.parse import urljoin
 from tempfile import NamedTemporaryFile, TemporaryDirectory, TemporaryFile
 
 from merino.configs import settings as config
-from merino.jobs.csv_rs_uploader.chunked_rs_uploader import (
-    ChunkedRemoteSettingsSuggestionUploader,
-)
-from merino.jobs.utils.chunked_rs_uploader import Chunk, ChunkedRemoteSettingsUploader
-from merino.jobs.geonames_uploader.downloader import Geoname, GeonamesDownloader
+from merino.jobs.geonames_uploader.geonames import geonames_cmd, Partition
+from merino.jobs.geonames_uploader.alternates import alternates_cmd
 
 logger = logging.getLogger(__name__)
 
@@ -29,189 +27,198 @@ rs_settings = config.remote_settings
 job_settings = config.jobs.geonames_uploader
 
 # Options
-alternates_path_option = typer.Option(
-    job_settings.alternates_path,
-    "--alternates-path",
-    help="Path of alternate names on the GeoNames server",
+alternates_record_type_option = typer.Option(
+    job_settings.alternates_record_type,
+    "--alternates-record-type",
+    help="The `type` field of geonames alternates records",
 )
 
-auth_option = typer.Option(
+alternates_url_format_option = typer.Option(
+    job_settings.alternates_url_format,
+    "--alternates-url-format",
+    help="URL of country-specific alternates zip files on the GeoNames server",
+)
+
+country_option = typer.Option(
+    job_settings.country,
+    "--country",
+    help="The country whose geonames or alternates to upload",
+)
+
+geonames_record_type_option = typer.Option(
+    job_settings.geonames_record_type,
+    "--geonames-record-type",
+    help="The `type` field of core geonames records",
+)
+
+geonames_url_format_option = typer.Option(
+    job_settings.geonames_url_format,
+    "--geonames-url-format",
+    help="URL of country-specific geonames zip files on the GeoNames server",
+)
+
+languages_option = typer.Option(
+    job_settings.languages,
+    "--language",
+    help="List of language codes of alternates to upload",
+)
+
+partitions_option = typer.Option(
+    job_settings.partitions,
+    "--partitions",
+    help="JSON string of population thresholds and filter-expression countries",
+)
+
+rs_auth_option = typer.Option(
     rs_settings.auth,
-    "--auth",
+    "--rs-auth",
     help="Remote settings authorization token",
 )
 
-base_url_option = typer.Option(
-    job_settings.base_url,
-    "--base-url",
-    help="Base URL of the GeoNames server",
-)
-
-bucket_option = typer.Option(
+rs_bucket_option = typer.Option(
     rs_settings.bucket,
-    "--bucket",
+    "--rs-bucket",
     help="Remote settings bucket",
 )
 
-chunk_size_option = typer.Option(
-    rs_settings.chunk_size,
-    "--chunk-size",
-    help="The number of geonames to store in each attachment",
-)
-
-city_alternates_iso_languages_option = typer.Option(
-    job_settings.city_alternates_iso_languages,
-    "--city-alternates-iso-languages",
-    help="Alternate city name languages and types to select",
-)
-
-collection_option = typer.Option(
+rs_collection_option = typer.Option(
     rs_settings.collection,
-    "--collection",
+    "--rs-collection",
     help="Remote settings collection ID",
 )
 
-country_codes_option = typer.Option(
-    job_settings.country_codes,
-    "--country-code",
-    help="Country codes of geonames to select",
-)
-
-dry_run_option = typer.Option(
+rs_dry_run_option = typer.Option(
     rs_settings.dry_run,
-    "--dry-run",
+    "--rs-dry-run",
     help="Log the records that would be uploaded but don't upload them",
 )
 
-geonames_path_option = typer.Option(
-    job_settings.geonames_path,
-    "--geonames-path",
-    help="Path of geonames on the GeoNames server",
-)
-
-keep_existing_records_option = typer.Option(
-    False,
-    "--keep-existing-records",
-    help="Keep existing records not present in the new data",
-)
-
-population_threshold_option = typer.Option(
-    job_settings.population_threshold,
-    "--population-threshold",
-    help="Population threshold of geonames to select",
-)
-
-record_type_option = typer.Option(
-    job_settings.record_type,
-    "--record-type",
-    help="The `type` of each remote settings record",
-)
-
-region_alternates_iso_languages_option = typer.Option(
-    job_settings.region_alternates_iso_languages,
-    "--region-alternates-iso-languages",
-    help="Alternate region name languages and types to select",
-)
-
-server_option = typer.Option(
+rs_server_option = typer.Option(
     rs_settings.server,
-    "--server",
+    "--rs-server",
     help="Remote settings server",
 )
 
 geonames_uploader_cmd = typer.Typer(
     name="geonames-uploader",
-    help="Command for uploading GeoNames data from geonames.org to remote settings",
+    help="Uploads GeoNames data to remote settings",
 )
 
 
-class GeonamesChunk(Chunk):
-    """A chunk of geonames to be uploaded in a single attachment."""
+class PartitionsError(Exception):
+    """An error encountered parsing the `partitions` option."""
 
-    max_alternate_name_length: int
-    max_alternate_name_word_count: int
+    pass
 
-    @staticmethod
-    def item_to_json_serializable(geoname: Geoname) -> Any:
-        """Convert the geoname to a JSON serializable object."""
-        return geoname.to_json_serializable()
 
-    def __init__(self, *args):
-        super().__init__(self, *args)
-        self.max_alternate_name_length = 0
-        self.max_alternate_name_word_count = 0
+def _parse_partitions(partitions_json: str) -> list[Partition]:
+    value = None
+    try:
+        value = json.loads(partitions_json)
+    except json.decoder.JSONDecodeError:
+        raise PartitionsError("Partitions string is not valid JSON")
 
-    def add_item(self, geoname: Geoname) -> None:
-        """Add a geoname to the chunk."""
-        super().add_item(geoname)
-        for alt in geoname.alternates:
-            if len(alt.name) > self.max_alternate_name_length:
-                self.max_alternate_name_length = len(alt.name)
-            word_count = len(alt.name.split())
-            if word_count > self.max_alternate_name_word_count:
-                self.max_alternate_name_word_count = word_count
+    if isinstance(value, list):
+        return [_parse_partitions_item(i) for i in value]
 
-    def to_attachment(self) -> Any:
-        """Create the attachment for the chunk."""
-        return {
-            "max_alternate_name_length": self.max_alternate_name_length,
-            "max_alternate_name_word_count": self.max_alternate_name_word_count,
-            "geonames": [self.item_to_json_serializable(i) for i in self.items],
-        }
+    raise PartitionsError("Partitions must be a list")
+
+
+def _parse_partitions_item(value: Any) -> Partition:
+    if isinstance(value, int):
+        return Partition(threshold_in_thousands=value)
+
+    if isinstance(value, list):
+        if len(value) != 2:
+            raise PartitionsError("Partitions list item must be a 2-tuple when a list")
+
+        threshold = 0
+        countries = []
+        threshold_value, countries_value = value
+
+        if isinstance(threshold_value, int):
+            threshold = threshold_value
+        else:
+            raise PartitionsError("Theshold value must be an int")
+
+        if isinstance(countries_value, str):
+            countries = [countries_value]
+        elif isinstance(countries_value, list):
+            for i in countries_value:
+                if not isinstance(i, str):
+                    raise PartitionsError("Country list item must be a string")
+            countries = countries_value
+        else:
+            raise PartitionsError("Country value must be a string or list of strings")
+
+        return Partition(threshold_in_thousands=threshold, countries=countries)
+
+    raise PartitionsError("Partitions list item must be a threshold or threshold-countries tuple")
 
 
 @geonames_uploader_cmd.command()
-def upload(
-    alternates_path: str = alternates_path_option,
-    auth: str = auth_option,
-    base_url: str = base_url_option,
-    bucket: str = bucket_option,
-    chunk_size: int = chunk_size_option,
-    collection: str = collection_option,
-    country_codes: list[str] = country_codes_option,
-    dry_run: bool = dry_run_option,
-    geonames_path: str = geonames_path_option,
-    city_alternates_iso_languages: list[str] = city_alternates_iso_languages_option,
-    keep_existing_records: bool = keep_existing_records_option,
-    population_threshold: int = population_threshold_option,
-    record_type: str = record_type_option,
-    region_alternates_iso_languages: list[str] = region_alternates_iso_languages_option,
-    server: str = server_option,
+def geonames(
+    country: str = country_option,
+    partitions: str = partitions_option,
+    geonames_record_type: str = geonames_record_type_option,
+    geonames_url_format: str = geonames_url_format_option,
+    rs_auth: str = rs_auth_option,
+    rs_bucket: str = rs_bucket_option,
+    rs_collection: str = rs_collection_option,
+    rs_dry_run: bool = rs_dry_run_option,
+    rs_server: str = rs_server_option,
 ):
-    """Download GeoNames data from the GeoNames server, apply some processing
-    and selection, and upload it to remote settings.
+    """Perform the `geonames` command."""
+    if not country:
+        raise ValueError("Country is required")
+    if not partitions:
+        raise ValueError("Partitions is required")
 
-    """
-    downloader_states = []
-    total_geoname_count = 0
-    for country_code in country_codes:
-        downloader = GeonamesDownloader(
-            alternates_path=alternates_path,
-            base_url=base_url,
-            city_alternates_iso_languages=city_alternates_iso_languages,
-            country_code=country_code,
-            geonames_path=geonames_path,
-            population_threshold=population_threshold,
-            region_alternates_iso_languages=region_alternates_iso_languages,
-        )
-        state = downloader.download()
-        total_geoname_count += len(state.geonames)
-        downloader_states.append(state)
+    # `partitions` is a JSON string since it can't easily be represented in the
+    # config files otherwise.
+    parsed_partitions = _parse_partitions(partitions)
 
-    with ChunkedRemoteSettingsUploader(
-        auth=auth,
-        bucket=bucket,
-        chunk_cls=GeonamesChunk,
-        chunk_size=chunk_size,
-        collection=collection,
-        dry_run=dry_run,
-        record_type=record_type,
-        server=server,
-        total_item_count=len(state.geonames),
-    ) as uploader:
-        if not keep_existing_records:
-            uploader.delete_records()
+    geonames_cmd(
+        country=country,
+        partitions=parsed_partitions,
+        geonames_record_type=geonames_record_type,
+        geonames_url_format=geonames_url_format,
+        rs_auth=rs_auth,
+        rs_bucket=rs_bucket,
+        rs_collection=rs_collection,
+        rs_dry_run=rs_dry_run,
+        rs_server=rs_server,
+    )
 
-        for state in downloader_states:
-            for g in state.geonames:
-                uploader.add_item(g)
+
+@geonames_uploader_cmd.command()
+def alternates(
+    languages: list[str] = languages_option,
+    alternates_record_type: str = alternates_record_type_option,
+    alternates_url_format: str = alternates_url_format_option,
+    geonames_record_type: str = geonames_record_type_option,
+    country: str = country_option,
+    rs_auth: str = rs_auth_option,
+    rs_bucket: str = rs_bucket_option,
+    rs_collection: str = rs_collection_option,
+    rs_dry_run: bool = rs_dry_run_option,
+    rs_server: str = rs_server_option,
+):
+    """Perform the `upload alternates` command."""
+    if not country:
+        raise ValueError("Country is required")
+    if not languages:
+        raise ValueError("Languages is required")
+
+    alternates_cmd(
+        languages=set(languages),
+        alternates_record_type=alternates_record_type,
+        alternates_url_format=alternates_url_format,
+        country=country,
+        geonames_record_type=geonames_record_type,
+        rs_auth=rs_auth,
+        rs_bucket=rs_bucket,
+        rs_collection=rs_collection,
+        rs_dry_run=rs_dry_run,
+        rs_server=rs_server,
+    )

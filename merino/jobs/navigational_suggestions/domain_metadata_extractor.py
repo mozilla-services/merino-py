@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import contextvars
+import tldextract
 
 from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
@@ -18,6 +19,7 @@ from merino.jobs.navigational_suggestions.utils import (
     TIMEOUT,
     AsyncFaviconDownloader,
 )
+from merino.jobs.navigational_suggestions.custom_favicons import get_custom_favicon_url
 
 logger = logging.getLogger(__name__)
 
@@ -617,18 +619,60 @@ class DomainMetadataExtractor:
         self, domain_data: dict[str, Any], favicon_min_width: int, uploader: DomainMetadataUploader
     ) -> dict[str, Optional[str]]:
         """Process a single domain asynchronously and always return a valid dict."""
+        scraped_base_url: Optional[str] = None
+        favicon: str = ""
+        title: str = ""
+        second_level_domain: str = ""
+
+        domain: str = domain_data["domain"]
+        suffix: str = domain_data["suffix"]
+
+        # Normalize domain for custom favicon lookup
+        e = tldextract.extract(domain)
+        normalized_domain = f"{e.domain}.{e.suffix}"
+
+        # STEP 1: Check custom favicons FIRST (primary source)
+        custom_favicon_url = get_custom_favicon_url(normalized_domain)
+        if custom_favicon_url:
+            try:
+                # If URL is already from our CDN, use it directly
+                if custom_favicon_url.startswith(f"https://{uploader.uploader.cdn_hostname}"):
+                    favicon = custom_favicon_url
+                else:
+                    # Download the favicon asynchronously (we're already in async context)
+                    favicon_image = await self.favicon_downloader.download_favicon(
+                        custom_favicon_url
+                    )
+                    if favicon_image:
+                        # Upload the image synchronously
+                        dst_favicon_name = uploader.destination_favicon_name(favicon_image)
+                        favicon = uploader.upload_image(
+                            favicon_image, dst_favicon_name, forced_upload=uploader.force_upload
+                        )
+                    else:
+                        favicon = ""
+
+                if favicon:
+                    second_level_domain = self._get_second_level_domain(domain, suffix)
+                    title = second_level_domain.capitalize()
+                    scraped_base_url = f"https://{domain}"
+                    logger.info(f"Used custom favicon for: {domain}")
+
+                    return {
+                        "url": scraped_base_url,
+                        "title": title,
+                        "icon": favicon,
+                        "domain": second_level_domain,
+                    }
+            except Exception as e:
+                logger.warning(f"Failed to upload custom favicon for {domain}: {e}")
+                # Continue to scraping fallback below
+
+        # STEP 2: Fall back to normal scraping process only if no custom favicon
         with Scraper() as domain_scraper:
             # Set the context variable for this task's context
             token = current_scraper.set(domain_scraper)
             try:
-                scraped_base_url: Optional[str] = None
-                favicon: str = ""
-                title: str = ""
-                second_level_domain: str = ""
-
-                domain: str = domain_data["domain"]
-                suffix: str = domain_data["suffix"]
-
                 if not self._is_domain_blocked(domain, suffix):
                     url: str = f"https://{domain}"
                     full_url: Optional[str] = domain_scraper.open(url)
