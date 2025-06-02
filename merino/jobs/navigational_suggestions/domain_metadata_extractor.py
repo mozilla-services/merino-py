@@ -635,10 +635,25 @@ class DomainMetadataExtractor:
         custom_favicon_url = get_custom_favicon_url(normalized_domain)
         if custom_favicon_url:
             try:
-                favicon = uploader.upload_favicon(custom_favicon_url)
+                # If URL is already from our CDN, use it directly
+                if custom_favicon_url.startswith(f"https://{uploader.uploader.cdn_hostname}"):
+                    favicon = custom_favicon_url
+                else:
+                    # Download the favicon asynchronously (we're already in async context)
+                    favicon_image = await self.favicon_downloader.download_favicon(
+                        custom_favicon_url
+                    )
+                    if favicon_image:
+                        # Upload the image synchronously
+                        dst_favicon_name = uploader.destination_favicon_name(favicon_image)
+                        favicon = uploader.upload_image(
+                            favicon_image, dst_favicon_name, forced_upload=uploader.force_upload
+                        )
+                    else:
+                        favicon = ""
+
                 if favicon:
                     second_level_domain = self._get_second_level_domain(domain, suffix)
-                    # For custom favicons, use the second level domain as title since we don't scrape
                     title = second_level_domain.capitalize()
                     scraped_base_url = f"https://{domain}"
                     logger.info(f"Used custom favicon for: {domain}")
