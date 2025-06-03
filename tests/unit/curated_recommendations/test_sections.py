@@ -75,7 +75,7 @@ def sample_backend_data() -> list[CorpusSection]:
             externalId=sec_id,
             iab=IABMetadata(categories=["324"]),
         )
-        for sec_id, count in [("secA", 2), ("secB", 1)]
+        for sec_id, count in [("secA", 2), ("secB", 1), ("secC", 3)]
     ]
 
 
@@ -347,10 +347,10 @@ class TestMapCorpusSectionToSection:
     def test_basic_mapping(self, sample_backend_data):
         """Map CorpusSection into Section with correct feed rank and recs."""
         cs = sample_backend_data[1]
-        sec = map_corpus_section_to_section(cs, 5)
+        sec = map_corpus_section_to_section(cs, 5, layout_6_tiles)
         assert sec.receivedFeedRank == 5
         assert sec.title == cs.title
-        assert sec.layout == layout_4_medium
+        assert sec.layout == layout_6_tiles
         assert sec.iab == cs.iab
         assert len(sec.recommendations) == len(cs.sectionItems)
         for idx, rec in enumerate(sec.recommendations):
@@ -363,7 +363,7 @@ class TestMapCorpusSectionToSection:
     def test_empty_section_items(self):
         """Empty sectionItems yields empty recommendations."""
         empty_cs = CorpusSection(sectionItems=[], title="Empty", externalId="empty")
-        sec = map_corpus_section_to_section(empty_cs, 7)
+        sec = map_corpus_section_to_section(empty_cs, 7, layout_4_medium)
         assert sec.recommendations == []
         assert sec.receivedFeedRank == 7
 
@@ -385,13 +385,27 @@ class TestGetCorpusSections:
         sections_backend.fetch.assert_awaited_once_with(SurfaceId.NEW_TAB_EN_US)
 
     @pytest.mark.asyncio
-    async def test_section_transformation(self, sections_backend, sample_backend_data):
+    async def test_section_transformation_and_cycle_layout(
+        self, sections_backend, sample_backend_data
+    ):
         """Verify mapping logic for get_corpus_sections."""
         result = await get_corpus_sections(sections_backend, SurfaceId.NEW_TAB_EN_US, 5)
+
         assert set(result.keys()) == {cs.externalId for cs in sample_backend_data}
-        section = result["secA"]
-        assert section.receivedFeedRank == 5
-        assert len(section.recommendations) == 2
+        section_a = result["secA"]
+        assert section_a.receivedFeedRank == 5
+        assert len(section_a.recommendations) == 2
+        assert section_a.layout == layout_6_tiles
+
+        section_b = result["secB"]
+        assert section_b.receivedFeedRank == 6
+        assert len(section_b.recommendations) == 1
+        assert section_b.layout == layout_4_large
+
+        section_c = result["secC"]
+        assert section_c.receivedFeedRank == 7
+        assert len(section_c.recommendations) == 3
+        assert section_c.layout == layout_4_medium
 
 
 class TestMapIABCategoriesToSection:
