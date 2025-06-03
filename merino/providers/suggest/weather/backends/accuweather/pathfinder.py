@@ -518,7 +518,7 @@ FIPS_ISO_MAPPING_COUNTRIES: frozenset = frozenset(FIPS_ISO_MAPPING.keys())
 
 # Countries that use the most specific region to retrieve weather
 KNOWN_SPECIFIC_REGION_COUNTRIES: frozenset = frozenset(
-    ["AR", "AU", "BR", "CA", "CN", "DE", "GB", "MX", "NZ", "PL", "PT", "RU", "US"]
+    ["AR", "AU", "BR", "CA", "CN", "DE", "MX", "NZ", "PL", "PT", "RU", "US"]
 )
 # Countries that use the least specific region to retrieve weather
 KNOWN_REGION_COUNTRIES: frozenset = frozenset(["IT", "ES", "GR"])

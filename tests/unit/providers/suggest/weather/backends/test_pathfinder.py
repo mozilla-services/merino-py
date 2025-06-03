@@ -87,6 +87,20 @@ def test_compass(location: Location, expected_region_and_city: str) -> None:
             ),
             1,
         ),
+        (
+            WeatherContext(
+                Location(
+                    country="GB",
+                    regions=[
+                        "ENG",
+                        "WNH",
+                    ],
+                    city="Northampton",
+                ),
+                languages=["en-US"],
+            ),
+            3,
+        ),
     ],
 )
 @pytest.mark.asyncio
