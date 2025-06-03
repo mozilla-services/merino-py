@@ -28,6 +28,7 @@ from merino.curated_recommendations.protocol import (
     SectionConfiguration,
     ExperimentName,
     InferredInterests,
+    Layout,
 )
 from merino.curated_recommendations.rankers import (
     thompson_sampling,
@@ -39,6 +40,8 @@ from merino.curated_recommendations.rankers import (
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
 logger = logging.getLogger(__name__)
+
+LAYOUT_CYCLE = [layout_6_tiles, layout_4_large, layout_4_medium]
 
 
 def map_topic_to_iab_categories(topic: Topic) -> list[str]:
@@ -102,12 +105,15 @@ def map_section_item_to_recommendation(
     )
 
 
-def map_corpus_section_to_section(corpus_section: CorpusSection, rank: int) -> Section:
+def map_corpus_section_to_section(
+    corpus_section: CorpusSection, rank: int, layout: Layout
+) -> Section:
     """Map a CorpusSection to a Section with recommendations.
 
     Args:
         corpus_section: The corpus section to map.
-        rank: The receivedFeedRank to assign to this section,
+        rank: The receivedFeedRank to assign to this section.
+        layout: The layout for the Section.
         which determines how the client orders the sections.
 
     Returns:
@@ -122,7 +128,7 @@ def map_corpus_section_to_section(corpus_section: CorpusSection, rank: int) -> S
         recommendations=recommendations,
         title=corpus_section.title,
         iab=corpus_section.iab,
-        layout=deepcopy(layout_4_medium),
+        layout=deepcopy(layout),
     )
 
 
@@ -143,9 +149,12 @@ async def get_corpus_sections(
     """
     corpus_sections = await sections_backend.fetch(surface_id)
     sections: Dict[str, Section] = {}
+
     for cs in corpus_sections:
         rank = len(sections) + min_feed_rank
-        sections[cs.externalId] = map_corpus_section_to_section(cs, rank)
+        sections[cs.externalId] = map_corpus_section_to_section(
+            cs, rank, LAYOUT_CYCLE[len(sections) % len(LAYOUT_CYCLE)]
+        )
     return sections
 
 
@@ -215,7 +224,6 @@ def create_sections_from_items_by_topic(
     """
     sections: Dict[str, Section] = {}
     max_recs_per_section = 30
-    layout_cycle = [layout_6_tiles, layout_4_large, layout_4_medium]
 
     for rec in items:
         if rec.topic:
@@ -227,7 +235,7 @@ def create_sections_from_items_by_topic(
                     recommendations=[],
                     title=get_translation(surface_id, rec.topic, sid),
                     iab=IABMetadata(categories=map_topic_to_iab_categories(rec.topic)),
-                    layout=deepcopy(layout_cycle[idx % len(layout_cycle)]),
+                    layout=deepcopy(LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)]),
                 )
             sec = sections[sid]
             if len(sec.recommendations) < max_recs_per_section:
