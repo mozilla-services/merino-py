@@ -7,6 +7,13 @@ from pydantic import BaseModel
 from merino.cache.protocol import CacheAdapter
 from merino.providers.suggest.finance.backends.polygon.utils import FinanceEntityType
 
+# Export all the classes from this module
+__all__ = [
+    "StockPrice",
+    "IndexPrice",
+    "PolygonBackend",
+]
+
 
 class StockPrice(BaseModel):
     """Model for a Stock"""

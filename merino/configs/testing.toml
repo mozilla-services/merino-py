@@ -57,7 +57,7 @@ url_base = "test://test"
 
 [testing.providers.polygon]
 enabled_by_default = false
-backend="test_polygon"
+backend="polygon"
 circuit_breaker_failure_threshold = 1
 circuit_breaker_recover_timeout_sec = 3
 
