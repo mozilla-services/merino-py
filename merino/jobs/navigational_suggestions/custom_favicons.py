@@ -9,6 +9,8 @@ CUSTOM_FAVICONS: dict[str, str] = {
     "si.com": "https://images2.minutemediacdn.com/image/upload/v1713365891/shape/cover/sport/SI-f87ae31620c381274a85426b5c4f1341.ico",
     "yahoo.com": "https://s.yimg.com/rz/l/favicon.ico",
     "espn.com": "https://a.espncdn.com/favicon.ico",
+    "telegraph.co.uk": "https://www.telegraph.co.uk/etc.clientlibs/settings/wcm/designs/telegraph/core/clientlibs/core/resources/icons/favicon-196x196.png",
+    "ndtv.com": "https://www.ndtv.com/images/icons/ndtv.ico",
 }
 
 
