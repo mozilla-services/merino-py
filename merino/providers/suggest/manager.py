@@ -26,6 +26,8 @@ from merino.providers.suggest.weather.provider import Provider as WeatherProvide
 from merino.providers.suggest.wikipedia.backends.elastic import ElasticBackend
 from merino.providers.suggest.wikipedia.backends.fake_backends import FakeWikipediaBackend
 from merino.providers.suggest.wikipedia.provider import Provider as WikipediaProvider
+from merino.providers.suggest.finance.provider import Provider as PolygonProvider
+from merino.providers.suggest.finance.backends import PolygonBackend
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST, WIKIPEDIA_TITLE_BLOCKLIST
 from merino.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
@@ -41,6 +43,7 @@ class ProviderType(str, Enum):
     GEOLOCATION = "geolocation"
     TOP_PICKS = "top_picks"
     WIKIPEDIA = "wikipedia"
+    POLYGON = "polygon"
 
 
 def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
@@ -173,6 +176,41 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     else FakeWikipediaBackend()
                 ),
                 title_block_list=WIKIPEDIA_TITLE_BLOCKLIST,
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.POLYGON:
+            cache = (
+                RedisAdapter(
+                    *create_redis_clients(
+                        settings.redis.server,
+                        settings.redis.replica,
+                        settings.redis.max_connections,
+                        settings.redis.socket_connect_timeout_sec,
+                        settings.redis.socket_timeout_sec,
+                        db=1,
+                    )
+                )
+                if setting.cache == "redis"
+                else NoCacheAdapter()
+            )
+            return PolygonProvider(
+                backend=PolygonBackend(
+                    api_key=settings.polygon.api_key,
+                    cache=cache,  # type: ignore [arg-type]
+                    metrics_client=get_metrics_client(),
+                    metrics_sample_rate=settings.polygon.metrics_sampling_rate,
+                    http_client=create_http_client(
+                        base_url=settings.polygon.url_base,
+                        connect_timeout=settings.providers.polygon.connect_timeout_sec,
+                    ),
+                    url_param_api_key=settings.polygon.url_param_api_key,
+                    url_ticker_last_quote=settings.polygon.url_param_api_key,
+                    url_index_daily_summary=settings.polygon.url_param_api_key,
+                ),
+                metrics_client=get_metrics_client(),
+                score=setting.score,
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,
