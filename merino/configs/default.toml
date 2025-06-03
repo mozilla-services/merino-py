@@ -665,7 +665,8 @@ index_ticker_ttl_sec = 900 # 15 minutes
 # MERINO_POLYGON__API_KEY
 # The API key to Polygon's API endpoint.
 # In production, this should be set via environment variable as a secret.
-api_key = ""
+# TODO replace with actual
+api_key = "test"
 
 ## MERINO_POLYGON__URL_BASE
 url_base = "https://api.polygon.io"

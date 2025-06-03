@@ -61,7 +61,7 @@ class PolygonBackend:
             ValueError: If API key or URL variables are None or empty.
         """
         required_params = {
-            "Polygon API key": api_key,
+            "api_key": api_key,
             "url_ticker_last_quote": url_ticker_last_quote,
             "url_index_daily_summary": url_index_daily_summary,
         }
