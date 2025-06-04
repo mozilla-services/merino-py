@@ -78,6 +78,7 @@ class RemoteSettingsClient:
 
     def delete_record(self, id: str) -> None:
         """Delete a record by its ID."""
+        logger.info(f"Deleting record: {id}")
         if not self.dry_run:
             self.kinto.delete_record(id=id)
 
