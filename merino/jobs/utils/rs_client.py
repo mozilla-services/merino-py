@@ -83,9 +83,10 @@ class RemoteSettingsClient:
 
     def download_attachment(self, record: dict[str, Any]) -> Any:
         """Download and return a record's attachment."""
-        path = self.kinto.download_attachment(record)
-        with open(path, "r") as file:
-            return json.load(file)
+        with TemporaryDirectory() as tmp_dir_name:
+            path = self.kinto.download_attachment(record, filepath=tmp_dir_name)
+            with open(path, "r") as file:
+                return json.load(file)
 
 
 def filter_expression(countries: list[str] = [], locales: list[str] = []) -> str:
