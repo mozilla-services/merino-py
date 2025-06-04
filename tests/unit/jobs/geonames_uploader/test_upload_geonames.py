@@ -182,7 +182,7 @@ def test_two_parts_first_part_empty_2(
         country="US",
         # There are no geonames with populations in the range [1k, 10k), so the
         # first partition should not be created.
-        partitions=[[1, "US"], [10, "GB"]],
+        partitions=[[1, "US"], [10, ["US", "GB"]]],
         expected_uploaded_records=[
             Record(
                 data={
@@ -231,14 +231,14 @@ def test_two_parts_neither_empty_1(requests_mock, downloader_fixture: Downloader
 
 
 def test_two_parts_neither_empty_2(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload two partitions, neither are empty, second has filter-expression
-    countries with one new country
+    """Upload two partitions, neither are empty, second has different
+    filter-expression countries
 
     """
     do_test(
         requests_mock,
         country="US",
-        partitions=[[50, "US"], [1_000, "GB"]],
+        partitions=[[50, "US"], [1_000, ["GB"]]],
         expected_uploaded_records=[
             Record(
                 data={
@@ -255,8 +255,8 @@ def test_two_parts_neither_empty_2(requests_mock, downloader_fixture: Downloader
                     "id": "geonames-US-1m",
                     "type": "geonames-2",
                     "country": "US",
-                    "filter_expression_countries": ["GB", "US"],
-                    "filter_expression": "env.country in ['GB', 'US']",
+                    "filter_expression_countries": ["GB"],
+                    "filter_expression": "env.country in ['GB']",
                 },
                 attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000_000)],
             ),
@@ -266,9 +266,7 @@ def test_two_parts_neither_empty_2(requests_mock, downloader_fixture: Downloader
 
 def test_two_parts_neither_empty_3(requests_mock, downloader_fixture: DownloaderFixture):
     """Upload two partitions, neither are empty, second has filter-expression
-    countries with one new country plus the country from the first partition.
-    This should be equivalent to the previous test, where the country from the
-    first partition was not included in the second
+    countries with one new country plus the country from the first partition
 
     """
     do_test(

@@ -8,6 +8,8 @@ from typing import Any
 
 import kinto_http
 
+from merino.jobs.utils import pretty_file_size
+
 logger = logging.getLogger(__name__)
 
 
@@ -39,14 +41,16 @@ class RemoteSettingsClient:
     def upload(self, record: dict[str, Any], attachment: Any) -> None:
         """Create or update a record and its attachment."""
         record_id = record["id"]
-        logger.info(f"Uploading record: {record_id}")
+        logger.info(f"Updating record: {record_id}")
         logger.debug(json.dumps(record) + " ")
 
         if not self.dry_run:
             self.kinto.update_record(data=record)
 
         attachment_json = json.dumps(attachment)
-        logger.debug(f"Uploading attachment: {record_id}")
+        attachment_bytes = attachment_json.encode(encoding="utf-8")
+        attachment_size = pretty_file_size(len(attachment_bytes))
+        logger.info(f"Uploading attachment: {record_id} ({attachment_size})")
 
         # The logger apparently formats the message even when no args are
         # passed, and if `attachment_json` is an object literal (as opposed to
@@ -59,8 +63,8 @@ class RemoteSettingsClient:
             # unfortunately, so create a temporary one.
             with TemporaryDirectory() as tmp_dir_name:
                 path = os.path.join(tmp_dir_name, f"{record_id}.json")
-                with open(path, "w") as file:
-                    file.write(attachment_json)
+                with open(path, "wb") as file:
+                    file.write(attachment_bytes)
                 self.kinto.add_attachment(
                     id=record["id"],
                     filepath=path,

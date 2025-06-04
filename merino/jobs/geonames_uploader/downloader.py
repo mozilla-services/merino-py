@@ -16,6 +16,8 @@ import requests
 
 from merino.jobs.geonames_uploader.tempzipfile import TempZipFile
 
+from merino.jobs.utils import pretty_file_size
+
 logger = logging.getLogger(__name__)
 
 
@@ -252,13 +254,14 @@ def _download(
     logger.info(f"Sending request: {url}")
     resp = requests.get(url, stream=True)  # nosec
     resp.raise_for_status()
-    content_len = resp.headers.get("content-length", "???")
-    logger.info(f"Downloading {url} ({content_len} bytes)...")
+    content_len = resp.headers.get("content-length")
+    content_len_str = pretty_file_size(int(content_len)) if content_len else "??? bytes"
+    logger.info(f"Downloading {url} ({content_len_str})")
     with TempZipFile(resp.raw) as zip_file:
         txt_filename = f"{country}.txt"
-        logger.info(f"Extracting {txt_filename} from {url}...")
+        logger.info(f"Extracting {txt_filename} from {url}")
         txt_path = zip_file.extract(txt_filename)
-        logger.info(f"Opening {txt_filename} from {url}...")
+        logger.info(f"Opening {txt_filename} from {url}")
         with open(txt_path, newline="", encoding="utf-8-sig") as txt_file:
             reader = csv.reader(txt_file, dialect="excel-tab")
             for line in reader:

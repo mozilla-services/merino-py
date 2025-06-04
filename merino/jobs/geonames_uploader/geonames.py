@@ -82,16 +82,9 @@ def geonames_cmd(
 
     partitions_ascending = list(reversed(partitions_descending))
 
-    # Create a record for each partition's geonames. Keep a running set of
-    # filter-expression countries: A country in one partition should apply to
-    # all partitions with higher thresholds, as long as those other partitions
-    # also have countries. Partitions that don't have countries shouldn't have
-    # filter expressions at all because they're intended to be ingested by all
-    # clients.
-    cumulative_filter_countries = set()
+    # Create a record for each partition's geonames.
     uploaded_record_ids = set()
     for i, partition in enumerate(partitions_ascending):
-        cumulative_filter_countries |= set(partition.countries or [])
         lower_threshold = partition.threshold
         upper_threshold = (
             partitions_ascending[i + 1].threshold if i + 1 < len(partitions_ascending) else None
@@ -112,10 +105,10 @@ def geonames_cmd(
 
         filter_dict = {}
         filter_countries_dict = {}
-        if cumulative_filter_countries and partition.countries is not None:
-            filter_dict = filter_expression_dict(countries=list(cumulative_filter_countries))
+        if partition.countries:
+            filter_dict = filter_expression_dict(countries=partition.countries)
             filter_countries_dict = {
-                "filter_expression_countries": sorted(cumulative_filter_countries),
+                "filter_expression_countries": sorted(partition.countries),
             }
 
         rs_client.upload(
