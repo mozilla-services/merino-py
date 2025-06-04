@@ -94,6 +94,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         url_location_key_placeholder=(
                             settings.accuweather.url_location_key_placeholder
                         ),
+                        url_location_key_path=settings.accuweather.url_location_key_path,
                     )
                     if setting.backend == "accuweather"
                     else FakeWeatherBackend()

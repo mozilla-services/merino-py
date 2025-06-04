@@ -73,6 +73,7 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
         "url_location_completion_path": "/locations/v1/cities/{country_code}/autocomplete.json",
         "url_location_key_placeholder": "{location_key}",
+        "url_location_key_path": "locations/v1/{location_key}",
         "metrics_sample_rate": ACCUWEATHER_METRICS_SAMPLE_RATE,
     }
 

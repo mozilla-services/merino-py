@@ -7,7 +7,7 @@ import hashlib
 import orjson
 import logging
 from enum import Enum
-from typing import Any, Callable, NamedTuple, cast
+from typing import Any, Callable, NamedTuple, cast, Optional
 
 import aiodogstatsd
 from dateutil import parser
@@ -16,7 +16,7 @@ from pydantic import BaseModel, ValidationError
 
 from merino.cache.protocol import CacheAdapter
 from merino.exceptions import CacheAdapterError
-from merino.middleware.geolocation import Location
+from merino.middleware.geolocation import Location, MAXMIND_SUPPORTED_LOCALE
 from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
     increment_skip_cities_mapping,
@@ -37,6 +37,7 @@ from merino.providers.suggest.weather.backends.accuweather.utils import (
     process_current_condition_response,
     process_location_response,
     get_language,
+    process_location_key_response,
 )
 
 from merino.providers.suggest.weather.backends.accuweather.errors import (
@@ -120,6 +121,31 @@ LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
     return {current_conditions, forecast, ttl}
 """
 SCRIPT_LOCATION_KEY_ID = "bulk_fetch_by_location_key"
+
+# The Lua script to fetch the city name and TTL for
+# a given a city-based_location/language key.
+#
+# Note:
+#   - The script retrieves the cached localized city name and TTL data
+#   - The cache key for localized city name should be provided
+#     through `ARGV[1]`
+#   - It returns a 2-element array `[city_name, ttl]`. All of these elements
+#     can be nil
+#   - If the city_name TTL is a non-positive value (-1 or -2),
+#     it will return ttl as false, which is translated to None type in app code.
+LUA_SCRIPT_CACHE_BULK_FETCH_CITY_NAME: str = """
+    local city_name_key = ARGV[1]
+
+    local city_name = redis.call("GET", city_name_key)
+    local ttl = false
+
+    if city_name then
+        local ttl = redis.call("TTL", city_name_key)
+    end
+
+    return {city_name, ttl}
+"""
+SCRIPT_CITY_NAME_ID = "bulk_fetch_city_name"
 # LOCATION_SENTINEL constant below is prepended to the list returned by the above
 # bulk_fetch_by_location_key script. This is to accommodate parse_cached_data method which
 # expects 4 list elements to be returned from the cache but this script only returns 3.
@@ -202,6 +228,7 @@ class AccuweatherBackend:
     url_current_conditions_path: str
     url_forecasts_path: str
     url_location_path: str
+    url_location_key_path: str
     url_location_key_placeholder: str
     url_location_completion_path: str
     http_client: AsyncClient
@@ -223,6 +250,7 @@ class AccuweatherBackend:
         url_current_conditions_path: str,
         url_forecasts_path: str,
         url_location_completion_path: str,
+        url_location_key_path: str,
         url_location_key_placeholder: str,
         metrics_sample_rate: float,
     ) -> None:
@@ -242,6 +270,7 @@ class AccuweatherBackend:
             or not url_current_conditions_path
             or not url_forecasts_path
             or not url_location_key_placeholder
+            or not url_location_key_path
         ):
             raise ValueError("One or more AccuWeather API URL parameters are undefined")
 
@@ -254,6 +283,7 @@ class AccuweatherBackend:
         self.cache.register_script(
             SCRIPT_ID_BULK_FETCH_VIA_GEOLOCATION, LUA_SCRIPT_CACHE_BULK_FETCH
         )
+        self.cache.register_script(SCRIPT_CITY_NAME_ID, LUA_SCRIPT_CACHE_BULK_FETCH_CITY_NAME)
         self.cached_location_key_ttl_sec = cached_location_key_ttl_sec
         self.cached_current_condition_ttl_sec = cached_current_condition_ttl_sec
         self.cached_forecast_ttl_sec = cached_forecast_ttl_sec
@@ -266,6 +296,7 @@ class AccuweatherBackend:
         self.url_current_conditions_path = url_current_conditions_path
         self.url_forecasts_path = url_forecasts_path
         self.url_location_completion_path = url_location_completion_path
+        self.url_location_key_path = url_location_key_path
         self.url_location_key_placeholder = url_location_key_placeholder
         self.metrics_sample_rate = metrics_sample_rate
 
@@ -283,9 +314,9 @@ class AccuweatherBackend:
                     hasher.update(key.encode("utf-8") + value.encode("utf-8"))
             extra_identifiers = hasher.hexdigest()
 
-            return f"{self.__class__.__name__}:v6:{url}:{extra_identifiers}"
+            return f"{self.__class__.__name__}:v7:{url}:{extra_identifiers}"
 
-        return f"{self.__class__.__name__}:v6:{url}"
+        return f"{self.__class__.__name__}:v7:{url}"
 
     @functools.cache
     def cache_key_template(self, dt: WeatherDataType, language: str) -> str:
@@ -324,7 +355,7 @@ class AccuweatherBackend:
           - `request_type` {RequestType}: the request type used for metrics and logging
           - `process_api_response` {Callable}: the response processor, it returns None if the processing fails
           - `cache_ttl_sec` {int}: the cache TTL in seconds
-          - `should_cache` {bool}: whether or not to cache the processed response
+          - `should_cache` {bool}: whether to cache the processed response
         Return:
           - The processed response or None if failed
         Raises:
@@ -340,7 +371,6 @@ class AccuweatherBackend:
         ):
             response: Response = await self.http_client.get(url_path, params=params)
             response.raise_for_status()
-
         if (response_dict := process_api_response(response.json())) is None:
             self.metrics_client.increment(f"accuweather.request.{request_type}.processor.error")
             return None
@@ -389,7 +419,7 @@ class AccuweatherBackend:
         return cache_ttl.seconds
 
     def emit_cache_fetch_metrics(
-        self, cached_data: list[bytes | None], skip_location_key=False
+        self, cached_data: list[bytes | None], skip_location_key=False, skip_report=False
     ) -> None:
         """Emit cache fetch metrics.
 
@@ -420,19 +450,19 @@ class AccuweatherBackend:
                 else "accuweather.cache.fetch.miss.locations",
                 sample_rate=self.metrics_sample_rate,
             )
-
-        self.metrics_client.increment(
-            "accuweather.cache.hit.currentconditions"
-            if current
-            else "accuweather.cache.fetch.miss.currentconditions",
-            sample_rate=self.metrics_sample_rate,
-        )
-        self.metrics_client.increment(
-            "accuweather.cache.hit.forecasts"
-            if forecast
-            else "accuweather.cache.fetch.miss.forecasts",
-            sample_rate=self.metrics_sample_rate,
-        )
+        if not skip_report:
+            self.metrics_client.increment(
+                "accuweather.cache.hit.currentconditions"
+                if current
+                else "accuweather.cache.fetch.miss.currentconditions",
+                sample_rate=self.metrics_sample_rate,
+            )
+            self.metrics_client.increment(
+                "accuweather.cache.hit.forecasts"
+                if forecast
+                else "accuweather.cache.fetch.miss.forecasts",
+                sample_rate=self.metrics_sample_rate,
+            )
 
     def parse_cached_data(self, cached_data: list[bytes | None]) -> WeatherData:
         """Parse the weather data from cache.
@@ -452,7 +482,6 @@ class AccuweatherBackend:
         current_conditions: CurrentConditions | None = None
         forecast: Forecast | None = None
         ttl: int | None = None
-
         try:
             if location_cached is not None:
                 location = AccuweatherLocation.model_validate(orjson.loads(location_cached))
@@ -485,6 +514,93 @@ class AccuweatherBackend:
             return await self.get_weather_report_with_location_key(weather_context)
 
         return await self.get_weather_report_with_geolocation(weather_context)
+
+    async def get_accuweather_localized_city_name(
+        self, location_key: str, language: str
+    ) -> Optional[str]:
+        """Get localized city name from AccuWeather.
+
+        Firstly, it will look up the Redis cache for city name.
+        If found in the cache return them without requesting from AccuWeather.
+        Otherwise, it will issue an API request to AccuWeather for the missing data.
+        Lastly, the API responses are stored in the cache for future uses.
+
+        Note:
+            - To avoid making excessive API requests to Accuweather in the event of
+              "Cache Avalanche", it will *not* call AccuWeather for weather reports upon any
+              cache errors such as timeouts or connection issues to Redis
+
+        Raises:
+            AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
+        """
+        url = self.url_location_key_path.format(location_key=location_key)
+        params = {"apikey": self.api_key, "language": language}
+        cache_key = self.cache_key_for_accuweather_request(url=url, query_params=params)
+
+        try:
+            cached_data = await self._fetch_city_name_from_cache(cache_key)
+        except CacheAdapterError as exc:
+            logger.error(f"Failed to fetch localized city name from Redis: {exc}")
+            self.metrics_client.increment("accuweather.cache.fetch-city-name.error")
+            raise AccuweatherError(
+                AccuweatherErrorMessages.CACHE_READ_ERROR, exception=exc
+            ) from exc
+
+        self.emit_cache_fetch_metrics(cached_data, skip_report=True)
+
+        weather_data = self.parse_cached_data(cached_data)
+        if weather_data.location:
+            return weather_data.location.localized_name
+
+        return await self._fetch_city_name_from_upstream(url, params)
+
+    async def _fetch_city_name_from_cache(self, cache_key: str) -> list[bytes | None]:
+        with self.metrics_client.timeit(
+            "accuweather.cache.fetch-city-name",
+            sample_rate=self.metrics_sample_rate,
+        ):
+            cached_data: list[bytes | None] = await self.cache.run_script(
+                sid=SCRIPT_CITY_NAME_ID,
+                keys=[],
+                args=[cache_key],
+                readonly=True,
+            )
+
+        if cached_data:
+            location_data, ttl = cached_data
+            return [location_data, None, None, ttl]
+
+        return cached_data
+
+    async def _fetch_city_name_from_upstream(self, url: str, params: dict) -> Optional[str]:
+        location_response = await self.request_upstream(
+            url_path=url,
+            params=params,
+            request_type=RequestType.LOCATIONS,
+            process_api_response=process_location_key_response,
+            cache_ttl_sec=self.cached_location_key_ttl_sec,
+        )
+        return location_response.get("localized_name") if location_response else None
+
+    async def get_localized_city_name(
+        self, location: AccuweatherLocation, weather_context: WeatherContext
+    ) -> str | None:
+        """Get city name based on specified language."""
+        geolocation = weather_context.geolocation
+        language = get_language(weather_context.languages)
+        city_name = None
+
+        # Skip if english
+        if language.startswith("en"):
+            return None
+
+        if geolocation:
+            city_name = self.get_localized_city_name_via_geolocation(
+                location, geolocation, language
+            )
+        if not city_name:
+            city_name = await self.get_accuweather_localized_city_name(location.key, language)
+        return city_name
 
     async def get_weather_report_with_location_key(
         self, weather_context: WeatherContext
@@ -657,8 +773,9 @@ class AccuweatherBackend:
         # if all the other three values are present, ttl here would be a valid ttl value
         if location and current_conditions and forecast and ttl:
             # Return the weather report with the values returned from the cache.
+            city_name = await self.get_localized_city_name(location, weather_context)
             return WeatherReport(
-                city_name=location.localized_name,
+                city_name=city_name if city_name else location.localized_name,
                 region_code=location.administrative_area_id,
                 current_conditions=current_conditions,
                 forecast=forecast,
@@ -708,10 +825,10 @@ class AccuweatherBackend:
             current_conditions, current_conditions_ttl = current_conditions_response
             forecast, forecast_ttl = forecast_response
             weather_report_ttl = min(current_conditions_ttl, forecast_ttl)
-
+            city_name = await self.get_localized_city_name(location, weather_context)
             return (
                 WeatherReport(
-                    city_name=location.localized_name,
+                    city_name=city_name if city_name else location.localized_name,
                     region_code=location.administrative_area_id,
                     current_conditions=current_conditions,
                     forecast=forecast,
@@ -864,6 +981,18 @@ class AccuweatherBackend:
             if response
             else None
         )
+
+    def get_localized_city_name_via_geolocation(
+        self, location: AccuweatherLocation, geolocation: Location, language: str
+    ):
+        """Get localized city name"""
+        if geolocation.city_names:
+            # ensure city was not overridden, if so city_names do not contain what we need
+            if (
+                location.localized_name == geolocation.city_names.get("en")
+                and language in MAXMIND_SUPPORTED_LOCALE
+            ):
+                return geolocation.city_names.get(language)
 
     async def get_location_completion(
         self, weather_context: WeatherContext, search_term: str
