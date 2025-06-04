@@ -548,6 +548,8 @@ class AccuweatherBackend:
 
         self.emit_cache_fetch_metrics(cached_data, skip_report=True)
 
+        # using parse_cached_data to parse cached bytes,
+        # which returns weather data containing location
         weather_data = self.parse_cached_data(cached_data)
         if weather_data.location:
             return weather_data.location.localized_name
