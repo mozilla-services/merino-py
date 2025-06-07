@@ -590,19 +590,19 @@ class AccuweatherBackend:
         """Get city name based on specified language."""
         geolocation = weather_context.geolocation
         language = get_language(weather_context.languages)
-        city_name = None
 
         # Skip if english
         if language.startswith("en"):
             return None
 
-        if geolocation:
-            city_name = self.get_localized_city_name_via_geolocation(
-                location, geolocation, language
-            )
-        if not city_name:
-            city_name = await self.get_accuweather_localized_city_name(location.key, language)
-        return city_name
+        if geolocation and geolocation.city_names:
+            # ensure city was not overridden, if so city_names do not contain what we need
+            if (
+                location.localized_name == geolocation.city_names.get("en")
+                and language in MAXMIND_SUPPORTED_LOCALE
+            ):
+                return geolocation.city_names.get(language)
+        return None
 
     async def get_weather_report_with_location_key(
         self, weather_context: WeatherContext
@@ -983,18 +983,6 @@ class AccuweatherBackend:
             if response
             else None
         )
-
-    def get_localized_city_name_via_geolocation(
-        self, location: AccuweatherLocation, geolocation: Location, language: str
-    ):
-        """Get localized city name"""
-        if geolocation.city_names:
-            # ensure city was not overridden, if so city_names do not contain what we need
-            if (
-                location.localized_name == geolocation.city_names.get("en")
-                and language in MAXMIND_SUPPORTED_LOCALE
-            ):
-                return geolocation.city_names.get(language)
 
     async def get_location_completion(
         self, weather_context: WeatherContext, search_term: str
