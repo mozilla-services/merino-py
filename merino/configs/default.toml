@@ -372,12 +372,6 @@ url_cities_admin_path = "/locations/v1/cities/{country_code}/{admin_code}/search
 # The URL path for cities using country code
 url_cities_path = "/locations/v1/cities/{country_code}/search.json"
 
-
-# MERINO_ACCUWEATHER__URL_LOCATION_KEY_PATH
-# The URL path for location
-url_location_key_path = "/locations/v1/{location_key}"
-
-
 # MERINO_ACCUWEATHER__URL_CITIES_PARAM_QUERY
 # The query parameter for cities
 url_cities_param_query = "q"

@@ -105,29 +105,6 @@ def process_location_response(
             return None
 
 
-def process_location_key_response(
-    response: Any,
-) -> ProcessedLocationResponse | None:
-    """Process the API response for location keys.
-
-    Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
-    to reflect the change(s) here.
-    """
-    match response:
-        case {
-            "Key": key,
-            "LocalizedName": localized_name,
-            "AdministrativeArea": {"ID": administrative_area_id},
-        }:
-            return {
-                "key": key,
-                "localized_name": localized_name,
-                "administrative_area_id": administrative_area_id,
-            }
-        case _:
-            return None
-
-
 def process_current_condition_response(response: Any) -> dict[str, Any] | None:
     """Process the API response for current conditions."""
     match response:

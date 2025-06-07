@@ -304,7 +304,6 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "url_location_completion_path": "/locations/v1/cities/{country_code}/autocomplete.json",
         "url_location_key_placeholder": "{location_key}",
         "metrics_sample_rate": ACCUWEATHER_METRICS_SAMPLE_RATE,
-        "url_location_key_path": "/locations/v1/{location_key}",
     }
 
 
@@ -1660,92 +1659,6 @@ async def test_get_weather_report_with_city_in_skip_list(
         assert get_skip_cities_mapping().get(("CA", "ON", "North Park")) == 2
 
 
-@pytest.mark.parametrize(
-    ("languages", "expected_city_name", "has_localized_response"),
-    [
-        (["en-US"], "San Francisco", False),
-        (["it"], "Santo Francisco", True),
-        (["ur"], "San Francisco", False),
-    ],
-)
-@pytest.mark.asyncio
-async def test_get_weather_report_with_localized_name(
-    mocker: MockerFixture,
-    accuweather: AccuweatherBackend,
-    expected_weather_report: WeatherReport,
-    weather_context_without_location_key: WeatherContext,
-    accuweather_location_response: bytes,
-    accuweather_current_conditions_response: bytes,
-    accuweather_forecast_response_fahrenheit: bytes,
-    response_header: dict[str, str],
-    localized_name_response: bytes,
-    has_localized_response: bool,
-    languages: list[str],
-    expected_city_name: str,
-) -> None:
-    """Test that the get_weather_report method returns a WeatherReport."""
-    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
-    client_mock.get.side_effect = [
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=accuweather_location_response,
-            request=Request(
-                method="GET",
-                url=(
-                    "https://www.accuweather.com/locations/v1/cities/US/CA/search.json?"
-                    "apikey=test&q=94105"
-                ),
-            ),
-        ),
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=accuweather_current_conditions_response,
-            request=Request(
-                method="GET",
-                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
-            ),
-        ),
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=accuweather_forecast_response_fahrenheit,
-            request=Request(
-                method="GET",
-                url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
-                ),
-            ),
-        ),
-        Response(
-            status_code=200,
-            headers=response_header,
-            content=localized_name_response if has_localized_response else b"[]",
-            request=Request(
-                method="GET",
-                url=("http://www.accuweather.com/locations/v1/39376" "apikey=test"),
-            ),
-        ),
-    ]
-
-    # This request flow hits the store_request_into_cache method that returns the ttl. Mocking
-    # that call to return the default weather report ttl
-    mocker.patch(
-        "merino.providers.suggest.weather.backends.accuweather.AccuweatherBackend"
-        ".store_request_into_cache"
-    ).return_value = TEST_CACHE_TTL_SEC
-
-    weather_context = replace(weather_context_without_location_key, languages=languages)
-
-    report: Optional[WeatherReport] = await accuweather.get_weather_report(weather_context)
-
-    modified_weather_report = expected_weather_report.model_copy(
-        update={"city_name": expected_city_name}
-    )
-    assert report == modified_weather_report
-
-
 @pytest.mark.asyncio
 async def test_get_location_by_geolocation(
     accuweather: AccuweatherBackend,
@@ -2138,16 +2051,16 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend, language: str
     [
         (
             {"q": "asdfg", "apikey": "filter_me_out"},
-            f"AccuweatherBackend:v7:localhost:"
+            f"AccuweatherBackend:v6:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
         (
             {},
-            "AccuweatherBackend:v7:localhost",
+            "AccuweatherBackend:v6:localhost",
         ),
         (
             {"q": "asdfg"},
-            f"AccuweatherBackend:v7:localhost:"
+            f"AccuweatherBackend:v6:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
     ],
@@ -2727,7 +2640,7 @@ def test_get_languages(languages, expected_selected_language) -> None:
     [
         (["en-US"], None),
         (["fr"], "Sân Frâncisco"),
-        (["it"], "Santo Francisco"),
+        (["it"], None),
     ],
 )
 @pytest.mark.asyncio
