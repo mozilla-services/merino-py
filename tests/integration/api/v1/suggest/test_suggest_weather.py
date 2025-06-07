@@ -529,6 +529,7 @@ async def test_suggest_weather_with_custom_location(
         dma=819,
         postal_code="98354",
         coordinates=Coordinates(latitude=47.2513, longitude=-122.3149, radius=22),
+        city_names={"en": "Milton", "ru": "Мильтон"},
     )
 
     receive_mock = AsyncMock()
@@ -590,6 +591,7 @@ async def test_suggest_weather_with_custom_location_with_admin_codes(
         dma=819,
         postal_code="98354",
         coordinates=Coordinates(latitude=47.2513, longitude=-122.3149, radius=22),
+        city_names={"en": "Milton", "ru": "Мильтон"},
     )
 
     receive_mock = AsyncMock()

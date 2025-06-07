@@ -6,6 +6,8 @@
 
 import datetime
 import hashlib
+from dataclasses import replace
+
 import orjson
 import logging
 from ssl import SSLError
@@ -161,6 +163,31 @@ def fixture_location_response_for_fallback() -> bytes:
     )
 
 
+@pytest.fixture(name="localized_name_response")
+def fixture_localized_name_response() -> bytes:
+    """Fixture for localized name response."""
+    return orjson.dumps(
+        {
+            "Version": 1,
+            "Key": "39376",
+            "Type": "City",
+            "Rank": 35,
+            "LocalizedName": "Santo Francisco",
+            "EnglishName": "San Francisco",
+            "PrimaryPostalCode": "94105",
+            "AdministrativeArea": {
+                "ID": "CA",
+                "LocalizedName": "California",
+                "EnglishName": "California",
+                "Level": 1,
+                "LocalizedType": "State",
+                "EnglishType": "State",
+                "CountryID": "US",
+            },
+        }
+    )
+
+
 @pytest.fixture(name="location_completion_sample_cities")
 def fixture_location_completion_sample_cities() -> list[dict[str, Any]]:
     """Create a list of sample location completions for the search term 'new'"""
@@ -277,6 +304,7 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "url_location_completion_path": "/locations/v1/cities/{country_code}/autocomplete.json",
         "url_location_key_placeholder": "{location_key}",
         "metrics_sample_rate": ACCUWEATHER_METRICS_SAMPLE_RATE,
+        "url_location_key_path": "/locations/v1/{location_key}",
     }
 
 
@@ -324,6 +352,7 @@ def fixture_weather_context_without_location_key() -> WeatherContext:
             city="San Francisco",
             dma=807,
             postal_code="94105",
+            city_names={"en": "San Francisco", "fr": "Sân Frâncisco"},
         ),
         ["en-US", "fr"],
     )
@@ -2023,16 +2052,16 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend, language: str
     [
         (
             {"q": "asdfg", "apikey": "filter_me_out"},
-            f"AccuweatherBackend:v6:localhost:"
+            f"AccuweatherBackend:v7:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
         (
             {},
-            "AccuweatherBackend:v6:localhost",
+            "AccuweatherBackend:v7:localhost",
         ),
         (
             {"q": "asdfg"},
-            f"AccuweatherBackend:v6:localhost:"
+            f"AccuweatherBackend:v7:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
     ],
@@ -2605,3 +2634,40 @@ async def test_fetch_from_cache_without_country_city(
 def test_get_languages(languages, expected_selected_language) -> None:
     """Test return language returns the first valid language."""
     assert get_language(languages) == expected_selected_language
+
+
+@pytest.mark.parametrize(
+    ("languages", "expected_city_name"),
+    [
+        (["en-US"], None),
+        (["fr"], "Sân Frâncisco"),
+        (["it"], None),
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_localized_city_name(
+    weather_context_without_location_key: WeatherContext,
+    languages: list[str],
+    expected_city_name: str,
+    accuweather: AccuweatherBackend,
+    response_header: dict[str, str],
+    localized_name_response: bytes,
+) -> None:
+    """Test return city name returns correct localized city name."""
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        headers=response_header,
+        content=localized_name_response,
+        request=Request(
+            method="GET",
+            url=("https://www.accuweather.com/locations/v1/123?" "apikey=test"),
+        ),
+    )
+
+    location = AccuweatherLocation(
+        key="123", localized_name="San Francisco", administrative_area_id="CA"
+    )
+    modified_weather_context = replace(weather_context_without_location_key, languages=languages)
+    city_name = await accuweather.get_localized_city_name(location, modified_weather_context)
+    assert city_name == expected_city_name
