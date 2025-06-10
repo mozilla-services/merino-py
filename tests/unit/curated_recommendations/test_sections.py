@@ -39,6 +39,8 @@ from merino.curated_recommendations.sections import (
     map_corpus_section_to_section,
     map_section_item_to_recommendation,
     map_topic_to_iab_categories,
+    remove_top_story_recs,
+    get_corpus_sections_for_legacy_topic,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -64,7 +66,7 @@ def generate_corpus_item(corpus_id: str = "id", sched_id: str = "sched") -> Corp
 
 @pytest.fixture
 def sample_backend_data() -> list[CorpusSection]:
-    """Build two corpus sections: 'secA' with 2 items, 'secB' with 1 using the helper."""
+    """Build three corpus sections: 'secA' with 2 items, 'secB' with 1 item, 'secC' with 3 items using the helper."""
     return [
         CorpusSection(
             sectionItems=[
@@ -366,6 +368,104 @@ class TestMapCorpusSectionToSection:
         sec = map_corpus_section_to_section(empty_cs, 7, layout_4_medium)
         assert sec.recommendations == []
         assert sec.receivedFeedRank == 7
+
+
+class TestGetCorpusSectionsForLegacyTopics:
+    """Tests for get_corpus_sections_for_legacy_topic."""
+
+    def test_get_corpus_sections_for_legacy_topic(self):
+        """Only return corpus_sections matching legacy topics."""
+        # generate 5 legacy sections
+        legacy_sections = generate_sections_feed(5, has_top_stories=False)
+        # 2 more non-legacy sections
+        non_legacy_sections = {
+            "mlb": Section(
+                receivedFeedRank=100,
+                recommendations=[],
+                title="MLB",
+                layout=copy.deepcopy(layout_4_medium),
+            ),
+            "nhl": Section(
+                receivedFeedRank=101,
+                recommendations=[],
+                title="NHL",
+                layout=copy.deepcopy(layout_4_medium),
+            ),
+        }
+        corpus_sections = {**legacy_sections, **non_legacy_sections}
+        result = get_corpus_sections_for_legacy_topic(corpus_sections)
+
+        # Check that non-legacy sections are filtered out from the result
+        assert "mlb" not in result
+        assert "nhl" not in result
+        # Check that all legacy sections present in result
+        for sid in legacy_sections.keys():
+            assert sid in result
+
+    def test_return_empty_feed_no_legacy_topics_found(self):
+        """Returns an empty feed when no corpus_section IDs match legacy topics."""
+        non_legacy_sections = {
+            "mlb": Section(
+                receivedFeedRank=100,
+                recommendations=[],
+                title="MLB",
+                layout=copy.deepcopy(layout_4_medium),
+            ),
+            "nhl": Section(
+                receivedFeedRank=101,
+                recommendations=[],
+                title="NHL",
+                layout=copy.deepcopy(layout_4_medium),
+            ),
+        }
+        result = get_corpus_sections_for_legacy_topic(non_legacy_sections)
+        assert result == {}
+
+    def test_return_all_when_all_legacy_topics(self):
+        """Returns entire feed if all corpus_section IDs match legacy topics."""
+        # generate 8 legacy sections
+        legacy_sections = generate_sections_feed(8, has_top_stories=False)
+
+        result = get_corpus_sections_for_legacy_topic(legacy_sections)
+        assert result == legacy_sections
+
+
+class TestRemoveTopStoryRecs:
+    """Tests for remove_top_story_recs."""
+
+    def test_remove_top_story_recs(self):
+        """Removes recommendations that are in the top_stories_section."""
+        # generate 5 recs
+        recommendations = generate_recommendations(5, ["a", "b", "c", "d", "e"])
+        # 3 recs in top_stories_section
+        top_story_ids = {"a", "d", "e"}
+
+        result = remove_top_story_recs(recommendations, top_story_ids)
+
+        # the 3 top story ids should not be present, result should have 2 recs
+        assert len(result) == 2
+        assert result[0].corpusItemId == "b"
+        assert result[1].corpusItemId == "c"
+
+    def test_recs_unchanged_no_match_found(self):
+        """Return original list of recommendations if no corpus Ids match top_story_ids."""
+        # generate 3 recs
+        recommendations = generate_recommendations(3, ["a", "b", "c"])
+        # rec ids for top stories, not found in recs list
+        top_story_ids = {"z", "xy"}
+        result = remove_top_story_recs(recommendations, top_story_ids)
+
+        assert result == recommendations
+
+    def test_return_empty_list_all_match(self):
+        """Return empty list if  all recommendations are top stories"""
+        # generate 3 recs
+        recommendations = generate_recommendations(3, ["a", "b", "c"])
+        # rec ids for top stories, all 3 ids match original recommendations list
+        top_story_ids = {"a", "b", "c"}
+        result = remove_top_story_recs(recommendations, top_story_ids)
+
+        assert result == []
 
 
 class TestGetCorpusSections:
