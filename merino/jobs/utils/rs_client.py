@@ -51,10 +51,11 @@ class RemoteSettingsClient:
         attachment: Any,
         existing_record: RecordData | None = None,
         force_reupload: bool = False,
-    ) -> None:
+    ) -> bool:
         """Create or update a record and its attachment. If `existing_record` is
         defined and its attachment hash is the same as `attachment`'s hash,
-        nothing is actually uploaded unless `force-reupload` is `True`.
+        nothing is actually uploaded unless `force-reupload` is `True`. Return
+        `True` if the record was created/updated or `False` if not.
 
         """
         record_id = record["id"]
@@ -66,7 +67,7 @@ class RemoteSettingsClient:
             new_hash = hashlib.sha256(attachment_bytes).hexdigest()
             if attachment_hash == new_hash:
                 logger.info(f"Record has not changed: {record_id}")
-                return
+                return False
 
         logger.info(f"Updating record: {record_id}")
         logger.debug(json.dumps(record) + " ")
@@ -95,6 +96,8 @@ class RemoteSettingsClient:
                     filepath=path,
                     mimetype="application/json",
                 )
+
+        return True
 
     def get_records(self) -> list[RecordData]:
         """Get all records."""

@@ -75,7 +75,7 @@ def do_test(
                 geonames_records_by_id[record_id] = record
 
     # Call the upload function.
-    final_geonames_records = upload_geonames(
+    upload = upload_geonames(
         country=country,
         existing_geonames_records_by_id=geonames_records_by_id,
         force_reupload=force_reupload,
@@ -95,7 +95,7 @@ def do_test(
         ),
         key=lambda r: r.data["id"],
     )
-    assert final_geonames_records == expected_final_geonames_records
+    assert upload.final_records == expected_final_geonames_records
 
     # Only check remote settings requests, ignore geonames requests.
     rs_requests = [r for r in requests_mock.request_history if r.url.startswith(rs_server)]

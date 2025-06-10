@@ -39,6 +39,16 @@ class GeonamesRecord:
     geonames: list[RsGeoname]
 
 
+@dataclass
+class GeonamesUpload:
+    """The result of a successful geonames records upload."""
+
+    final_records: list[GeonamesRecord] = field(default_factory=list)
+    uploaded_count: int = 0
+    not_uploaded_count: int = 0
+    deleted_count: int = 0
+
+
 def upload_geonames(
     country: str,
     existing_geonames_records_by_id: Mapping[str, RecordData],
@@ -47,7 +57,7 @@ def upload_geonames(
     geonames_url_format: str,
     partitions: list[Partition],
     rs_client: RemoteSettingsClient,
-) -> list[GeonamesRecord]:
+) -> GeonamesUpload:
     """Download geonames from the geonames server for a given country and upload
     geonames records to remote settings.
 
@@ -72,7 +82,7 @@ def upload_geonames(
         partition.geonames.append(geoname)
 
     # Create a record for each partition.
-    final_records = []
+    upload = GeonamesUpload()
     final_record_ids = set()
     partitions_ascending = list(reversed(partitions_descending))
     for i, partition in enumerate(partitions_ascending):
@@ -118,7 +128,7 @@ def upload_geonames(
 
         geonames = [_rs_geoname(g) for g in partition.geonames]
 
-        rs_client.upload(
+        uploaded = rs_client.upload(
             record=record,
             attachment=geonames,
             existing_record=existing_record,
@@ -126,14 +136,19 @@ def upload_geonames(
         )
 
         final_record_ids.add(record_id)
-        final_records.append(GeonamesRecord(data=record, geonames=geonames))
+        upload.final_records.append(GeonamesRecord(data=record, geonames=geonames))
+        if uploaded:
+            upload.uploaded_count += 1
+        else:
+            upload.not_uploaded_count += 1
 
     # Delete existing records for the country that weren't uploaded above.
     for record_id, record in existing_geonames_records_by_id.items():
         if record_id not in final_record_ids:
             rs_client.delete_record(record_id)
+            upload.deleted_count += 1
 
-    return final_records
+    return upload
 
 
 def _rs_geoname(geoname: Geoname) -> RsGeoname:

@@ -10,10 +10,11 @@ from typing import Any, Iterable, Mapping, Tuple
 import typer
 
 from merino.configs import settings as config
-from merino.jobs.geonames_uploader.geonames import upload_geonames, Partition
+from merino.jobs.geonames_uploader.geonames import upload_geonames, GeonamesUpload, Partition
 from merino.jobs.geonames_uploader.alternates import (
     upload_alternates,
     ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE,
+    AlternatesUpload,
 )
 
 from merino.jobs.utils.rs_client import RecordData, RemoteSettingsClient
@@ -229,7 +230,7 @@ def _upload(
     # Upload records for each country.
     for country, data in configs_by_country.items():
         # Upload geonames records.
-        final_geonames_records = upload_geonames(
+        geonames_upload = upload_geonames(
             country=country,
             existing_geonames_records_by_id=existing_geonames_records_by_id_by_country.get(
                 country, {}
@@ -242,7 +243,7 @@ def _upload(
         )
 
         # Upload alternates records.
-        upload_alternates(
+        alts_upload = upload_alternates(
             alternates_languages_by_client_locale=alternates_languages_by_client_locale,
             alternates_record_type=alternates_record_type,
             alternates_url_format=alternates_url_format,
@@ -252,10 +253,33 @@ def _upload(
             ),
             force_reupload=force_reupload,
             geonames_record_type=geonames_record_type,
-            geonames_records=final_geonames_records,
+            geonames_records=geonames_upload.final_records,
             locales_by_country=locales_by_country,
             rs_client=rs_client,
         )
+
+    logger.info(
+        "Geonames records: {} uploaded, {} skipped, {} deleted".format(
+            geonames_upload.uploaded_count,
+            geonames_upload.not_uploaded_count,
+            geonames_upload.deleted_count,
+        )
+    )
+    logger.info(
+        "Alternates records: {} uploaded, {} skipped, {} deleted".format(
+            alts_upload.uploaded_count,
+            alts_upload.not_uploaded_count,
+            alts_upload.deleted_count,
+        )
+    )
+    logger.info(
+        "Total record count: {}".format(
+            geonames_upload.uploaded_count
+            + geonames_upload.not_uploaded_count
+            + alts_upload.uploaded_count
+            + alts_upload.not_uploaded_count
+        )
+    )
 
 
 def _get_geonames_and_alternates_records(

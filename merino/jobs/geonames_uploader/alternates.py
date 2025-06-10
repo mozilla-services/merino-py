@@ -1,5 +1,6 @@
 """Geonames alternates helpers for the geonames-uploader command."""
 
+from dataclasses import dataclass
 import logging
 from typing import Any, Iterable, Mapping, Tuple
 import itertools
@@ -39,6 +40,15 @@ RsAlternate = dict[str, Any] | str
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class AlternatesUpload:
+    """The result of a successful alternates records upload."""
+
+    uploaded_count: int = 0
+    not_uploaded_count: int = 0
+    deleted_count: int = 0
+
+
 def upload_alternates(
     alternates_record_type: str,
     alternates_url_format: str,
@@ -52,12 +62,14 @@ def upload_alternates(
     alternates_languages_by_client_locale: Mapping[
         str, Iterable[str]
     ] = ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE,
-):
+) -> AlternatesUpload:
     """Download alternates from the geonames server for a given country and
     upload alternates records to remote settings.
 
     """
     logger.info(f"Uploading alternates records for country '{country}'")
+
+    upload = AlternatesUpload()
 
     # If there are no geonames records for the country, consider all its
     # alternates records as unused and delete them. Then we're done.
@@ -65,7 +77,8 @@ def upload_alternates(
         logger.info(f"No geonames records for country '{country}'")
         for record_id in existing_alternates_records_by_id.keys():
             rs_client.delete_record(record_id)
-        return
+        upload.deleted_count = len(existing_alternates_records_by_id)
+        return upload
 
     # Build a set of all geoname IDs.
     all_geoname_ids = set(
@@ -169,7 +182,7 @@ def upload_alternates(
                 and record != {k: existing_alts_record.get(k) for k, v in record.items()}
             )
 
-            rs_client.upload(
+            uploaded = rs_client.upload(
                 record=record,
                 attachment={
                     "language": lang,
@@ -179,11 +192,19 @@ def upload_alternates(
                 force_reupload=force_record,
             )
 
+            if uploaded:
+                upload.uploaded_count += 1
+            else:
+                upload.not_uploaded_count += 1
+
     # Delete existing records for the country and languages that weren't
     # uploaded above.
     for record_id in existing_alternates_records_by_id.keys():
         if record_id not in final_record_ids:
             rs_client.delete_record(record_id)
+            upload.deleted_count += 1
+
+    return upload
 
 
 def _rs_alternates_list(
