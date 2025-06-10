@@ -120,7 +120,6 @@ LUA_SCRIPT_CACHE_BULK_FETCH_VIA_LOCATION: str = """
     return {current_conditions, forecast, ttl}
 """
 SCRIPT_LOCATION_KEY_ID = "bulk_fetch_by_location_key"
-
 # LOCATION_SENTINEL constant below is prepended to the list returned by the above
 # bulk_fetch_by_location_key script. This is to accommodate parse_cached_data method which
 # expects 4 list elements to be returned from the cache but this script only returns 3.
@@ -203,7 +202,6 @@ class AccuweatherBackend:
     url_current_conditions_path: str
     url_forecasts_path: str
     url_location_path: str
-    url_location_key_path: str
     url_location_key_placeholder: str
     url_location_completion_path: str
     http_client: AsyncClient
@@ -342,6 +340,7 @@ class AccuweatherBackend:
         ):
             response: Response = await self.http_client.get(url_path, params=params)
             response.raise_for_status()
+
         if (response_dict := process_api_response(response.json())) is None:
             self.metrics_client.increment(f"accuweather.request.{request_type}.processor.error")
             return None
@@ -453,6 +452,7 @@ class AccuweatherBackend:
         current_conditions: CurrentConditions | None = None
         forecast: Forecast | None = None
         ttl: int | None = None
+
         try:
             if location_cached is not None:
                 location = AccuweatherLocation.model_validate(orjson.loads(location_cached))
@@ -486,24 +486,29 @@ class AccuweatherBackend:
 
         return await self.get_weather_report_with_geolocation(weather_context)
 
-    async def get_localized_city_name(
-        self, location: AccuweatherLocation, weather_context: WeatherContext
+    @staticmethod
+    def get_localized_city_name(
+        location: AccuweatherLocation, weather_context: WeatherContext
     ) -> str | None:
         """Get city name based on specified language."""
         geolocation = weather_context.geolocation
         language = get_language(weather_context.languages)
+        normalized_lang = (
+            "es" if language.startswith("es") else "en" if language.startswith("en") else language
+        )
 
         # Skip if english
-        if language.startswith("en"):
+        if normalized_lang == "en":
             return None
 
-        if geolocation and geolocation.city_names:
-            # ensure city was not overridden, if so city_names do not contain what we need
-            if (
-                location.localized_name == geolocation.city_names.get("en")
-                and language in MAXMIND_SUPPORTED_LOCALE
-            ):
-                return geolocation.city_names.get(language)
+        # ensure city was not overridden, if so city_names do not contain what we need
+        if (
+            geolocation
+            and geolocation.city_names
+            and location.localized_name == geolocation.city_names.get("en")
+            and normalized_lang in MAXMIND_SUPPORTED_LOCALE
+        ):
+            return geolocation.city_names.get(normalized_lang)
         return None
 
     async def get_weather_report_with_location_key(
@@ -677,7 +682,7 @@ class AccuweatherBackend:
         # if all the other three values are present, ttl here would be a valid ttl value
         if location and current_conditions and forecast and ttl:
             # Return the weather report with the values returned from the cache.
-            city_name = await self.get_localized_city_name(location, weather_context)
+            city_name = self.get_localized_city_name(location, weather_context)
             return WeatherReport(
                 city_name=city_name if city_name else location.localized_name,
                 region_code=location.administrative_area_id,
@@ -729,7 +734,7 @@ class AccuweatherBackend:
             current_conditions, current_conditions_ttl = current_conditions_response
             forecast, forecast_ttl = forecast_response
             weather_report_ttl = min(current_conditions_ttl, forecast_ttl)
-            city_name = await self.get_localized_city_name(location, weather_context)
+            city_name = self.get_localized_city_name(location, weather_context)
             return (
                 WeatherReport(
                     city_name=city_name if city_name else location.localized_name,
