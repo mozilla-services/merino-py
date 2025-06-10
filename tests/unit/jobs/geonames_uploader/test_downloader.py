@@ -19,13 +19,13 @@ from merino.jobs.geonames_uploader.downloader import (
 from tests.unit.jobs.geonames_uploader.geonames_utils import (
     DownloaderFixture,
     SERVER_DATA,
-    GEONAMES,
+    GEONAMES_BY_COUNTRY,
     GEONAME_AL,
     GEONAME_WATERLOO_IA,
     GEONAME_IA,
     GEONAME_NYC,
     GEONAME_NY_STATE,
-    ALTERNATES,
+    ALTERNATES_BY_COUNTRY,
 )
 
 
@@ -92,7 +92,7 @@ def filter_alternates(
 ) -> dict[str, dict[int, list[GeonameAlternate]]]:
     """Filter `ALTERNATES` on a given predicate."""
     alts_by_geoname_id_by_lang: dict[str, dict[int, list[GeonameAlternate]]] = {}
-    for lang, geoname_and_alts_tuples in ALTERNATES.items():
+    for lang, geoname_and_alts_tuples in ALTERNATES_BY_COUNTRY["US"].items():
         for geoname, alts in geoname_and_alts_tuples:
             # The `AlternatesDownloaderTest` fixture only provides US geonames
             # and alternates, so ignore ones in other countries (Goessnitz).
@@ -131,6 +131,11 @@ def test_filter_alternates_on_geoname_id():
                 GeonameAlternate("LGA"),
             ],
         },
+        "xx": {
+            GEONAME_NYC.id: [
+                GeonameAlternate("New York Xx"),
+            ],
+        },
     }
 
 
@@ -160,7 +165,7 @@ def test_geonames_all(
         population_threshold=1,
         expected_download=GeonamesDownload(
             population_threshold=1,
-            geonames=GEONAMES,
+            geonames=GEONAMES_BY_COUNTRY["US"],
         ),
     )
 
@@ -182,8 +187,8 @@ def test_alternates_all(
     alternates_downloader_test: AlternatesDownloaderTest,
 ):
     """Request all alternates"""
-    languages = set(["abbr", "en", "es", "iata"])
-    geoname_ids = set(g.id for g in GEONAMES)
+    languages = set(["abbr", "en", "es", "fr", "iata"])
+    geoname_ids = set(g.id for g in GEONAMES_BY_COUNTRY["US"])
     alternates_downloader_test.run(
         languages=languages,
         geoname_ids=geoname_ids,
@@ -191,7 +196,7 @@ def test_alternates_all(
             languages=languages,
             geoname_ids=geoname_ids,
             alternates_by_geoname_id_by_language=filter_alternates(
-                lambda geoname_id, lang, alt: True
+                lambda geoname_id, lang, alt: lang in languages
             ),
         ),
     )
@@ -202,7 +207,7 @@ def test_alternates_en(
 ):
     """Request en alternates"""
     languages = set(["en"])
-    geoname_ids = set(g.id for g in GEONAMES)
+    geoname_ids = set(g.id for g in GEONAMES_BY_COUNTRY["US"])
     alternates_downloader_test.run(
         languages=languages,
         geoname_ids=geoname_ids,
@@ -210,7 +215,7 @@ def test_alternates_en(
             languages=languages,
             geoname_ids=geoname_ids,
             alternates_by_geoname_id_by_language=filter_alternates(
-                lambda geoname_id, lang, alt: lang == "en"
+                lambda geoname_id, lang, alt: lang in languages
             ),
         ),
     )
@@ -229,8 +234,7 @@ def test_alternates_specific_geoname(
             languages=languages,
             geoname_ids=geoname_ids,
             alternates_by_geoname_id_by_language=filter_alternates(
-                lambda geoname_id, lang, alt: geoname_id == GEONAME_NYC.id
-                and lang in ["en", "abbr"]
+                lambda geoname_id, lang, alt: geoname_id == GEONAME_NYC.id and lang in languages
             ),
         ),
     )

@@ -49,7 +49,7 @@ def do_get_records_test(
     client_kwargs: dict[str, Any] = {},
 ) -> None:
     """Perform a get_records and download_attachment test."""
-    mock_responses(requests_mock, TEST_RECORDS)
+    mock_responses(requests_mock, get=TEST_RECORDS)
 
     client = RemoteSettingsClient(**(TEST_CLIENT_KWARGS | client_kwargs))
     actual_records = client.get_records()
@@ -72,7 +72,7 @@ def do_upload_test(
     client_kwargs: dict[str, Any] = {},
 ) -> None:
     """Perform an upload test."""
-    mock_responses(requests_mock, records)
+    mock_responses(requests_mock, update=records)
 
     client = RemoteSettingsClient(**(TEST_CLIENT_KWARGS | client_kwargs))
     for record in records:
@@ -89,7 +89,7 @@ def do_delete_test(
     client_kwargs: dict[str, Any] = {},
 ) -> None:
     """Perform a delete test."""
-    mock_responses(requests_mock, TEST_RECORDS)
+    mock_responses(requests_mock, delete=TEST_RECORDS)
 
     client = RemoteSettingsClient(**(TEST_CLIENT_KWARGS | client_kwargs))
     for record_id in record_ids:
