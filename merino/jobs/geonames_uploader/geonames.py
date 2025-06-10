@@ -8,10 +8,15 @@ import math
 from typing import Any, Mapping
 from dataclasses import asdict, dataclass, field
 
-from merino.jobs.utils.rs_client import RemoteSettingsClient, filter_expression_dict
+from merino.jobs.utils.rs_client import RecordData, RemoteSettingsClient, filter_expression_dict
 from merino.jobs.geonames_uploader.downloader import Geoname, download_geonames
 
 logger = logging.getLogger(__name__)
+
+
+# A representation of a `Geoname` appropriate for including in a geonames
+# attachment.
+RsGeoname = dict[str, Any]
 
 
 @dataclass
@@ -30,13 +35,13 @@ class GeonamesRecord:
 
     """
 
-    data: dict[str, Any]
-    geonames: list[dict[str, Any]]
+    data: RecordData
+    geonames: list[RsGeoname]
 
 
 def upload_geonames(
     country: str,
-    existing_geonames_records_by_id: Mapping[str, dict[str, Any]],
+    existing_geonames_records_by_id: Mapping[str, RecordData],
     force_reupload: bool,
     geonames_record_type: str,
     geonames_url_format: str,
@@ -131,7 +136,7 @@ def upload_geonames(
     return final_records
 
 
-def _rs_geoname(geoname: Geoname) -> dict[str, Any]:
+def _rs_geoname(geoname: Geoname) -> RsGeoname:
     """Convert a `Geoname` to a dict appropriate for including in a geonames
     attachment.
 

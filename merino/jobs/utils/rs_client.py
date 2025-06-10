@@ -11,6 +11,12 @@ import kinto_http
 
 from merino.jobs.utils import pretty_file_size
 
+
+# Inline remote settings record data, or in other words, a `dict` representation
+# of a record.
+RecordData = dict[str, Any]
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,9 +47,9 @@ class RemoteSettingsClient:
 
     def upload(
         self,
-        record: dict[str, Any],
+        record: RecordData,
         attachment: Any,
-        existing_record: dict[str, Any] | None = None,
+        existing_record: RecordData | None = None,
         force_reupload: bool = False,
     ) -> None:
         """Create or update a record and its attachment. If `existing_record` is
@@ -90,10 +96,10 @@ class RemoteSettingsClient:
                     mimetype="application/json",
                 )
 
-    def get_records(self) -> list[dict[str, Any]]:
+    def get_records(self) -> list[RecordData]:
         """Get all records."""
         logger.info("Getting all records")
-        records: list[dict[str, Any]] = self.kinto.get_records()
+        records: list[RecordData] = self.kinto.get_records()
         return records
 
     def delete_record(self, id: str) -> None:
@@ -102,7 +108,7 @@ class RemoteSettingsClient:
         if not self.dry_run:
             self.kinto.delete_record(id=id)
 
-    def download_attachment(self, record: dict[str, Any]) -> Any:
+    def download_attachment(self, record: RecordData) -> Any:
         """Download and return a record's attachment."""
         with TemporaryDirectory() as tmp_dir_name:
             logger.info(f"Downloading attachment for record: {record.get('id')}")

@@ -1224,14 +1224,14 @@ def test_rs_alternates_list():
             )
         ]
     ) == [
-        [
+        (
             GEONAME_GOESSNITZ.id,
             [
                 "some other name 1",
                 "some other name 2",
                 "some other name 3",
             ],
-        ]
+        )
     ]
 
 

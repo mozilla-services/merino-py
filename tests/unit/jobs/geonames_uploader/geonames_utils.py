@@ -6,7 +6,7 @@
 
 import csv
 import pytest
-from typing import Any, Generator, Tuple
+from typing import Generator, Tuple
 
 from io import BufferedReader
 
@@ -38,7 +38,7 @@ from merino.jobs.geonames_uploader.downloader import (
     GeonameAlternate,
 )
 
-from merino.jobs.geonames_uploader.alternates import _rs_alternates_list
+from merino.jobs.geonames_uploader.alternates import _rs_alternates_list, RsAlternate
 from merino.jobs.geonames_uploader.geonames import _rs_geoname
 
 
@@ -483,15 +483,20 @@ def filter_alternates(
     country: str,
     language: str,
     geonames: list[Geoname],
-) -> list[list[int | list[str | None | dict[str, Any]]]]:
-    """Filter `ALTERNATES` on a language and geonames and return a list of
-    tuples appropriate for including in a remote settings attachment.
+) -> list[list[int | list[RsAlternate]]]:
+    """Filter all alternates on a language and geonames and return a list of
+    tuples appropriate for comparing to data in remote settings attachments. The
+    tuples are actually lists since tuples are lists in JSON.
 
     """
-    return _rs_alternates_list(
-        [
-            (_rs_geoname(geoname), alts)
-            for geoname, alts in ALTERNATES_BY_COUNTRY[country][language]
-            if geoname in geonames
-        ]
-    )
+    return [
+        # Convert the (geoname_id, rd_alts) tuple to a list.
+        list(tup)
+        for tup in _rs_alternates_list(
+            [
+                (_rs_geoname(geoname), alts)
+                for geoname, alts in ALTERNATES_BY_COUNTRY[country][language]
+                if geoname in geonames
+            ]
+        )
+    ]

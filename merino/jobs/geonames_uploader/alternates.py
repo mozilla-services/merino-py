@@ -4,10 +4,10 @@ import logging
 from typing import Any, Iterable, Mapping, Tuple
 import itertools
 
-from merino.jobs.utils.rs_client import RemoteSettingsClient, filter_expression_dict
+from merino.jobs.utils.rs_client import RecordData, RemoteSettingsClient, filter_expression_dict
 from merino.jobs.geonames_uploader.downloader import download_alternates, GeonameAlternate
 
-from merino.jobs.geonames_uploader.geonames import GeonamesRecord
+from merino.jobs.geonames_uploader.geonames import GeonamesRecord, RsGeoname
 
 
 # Maps from Firefox locales to alternates languages in the geonames data.
@@ -30,6 +30,12 @@ PSEUDO_LANGUAGES = [
 ]
 
 
+# A representation of a `GeonameAlternate` appropriate for including in an
+# alternates attachment. Alternates with `is_preferred` or `is_short` set to
+# `True` will be a dict. Others will be a string.
+RsAlternate = dict[str, Any] | str
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,7 +43,7 @@ def upload_alternates(
     alternates_record_type: str,
     alternates_url_format: str,
     country: str,
-    existing_alternates_records_by_id: Mapping[str, dict[str, Any]],
+    existing_alternates_records_by_id: Mapping[str, RecordData],
     force_reupload: bool,
     geonames_record_type: str,
     geonames_records: list[GeonamesRecord],
@@ -181,14 +187,14 @@ def upload_alternates(
 
 
 def _rs_alternates_list(
-    rs_geoname_and_alts_tuples: list[Tuple[dict[str, Any], list[GeonameAlternate]]],
-) -> list[list[int | list[str | None | dict[str, Any]]]]:
+    rs_geoname_and_alts_tuples: list[Tuple[RsGeoname, list[GeonameAlternate]]],
+) -> list[Tuple[int, list[RsAlternate]]]:
     """Convert a list of `(rs_geoname, [GeonameAlternate])` tuples to a list of
-    `[geoname_id, [rs_alternate]]` lists appropriate for including in an
+    `(geoname_id, [rs_alternate])` tuples appropriate for including in an
     alternates attachment as `alternates_by_geoname_id`.
 
     """
-    geoname_id_and_rs_alts_tuples = []
+    geoname_id_and_rs_alts_tuples: list[Tuple[int, list[RsAlternate]]] = []
     for rs_geoname, alts in rs_geoname_and_alts_tuples:
         rs_alts = []
         for alt in alts:
@@ -196,16 +202,16 @@ def _rs_alternates_list(
             if rs_alt:
                 rs_alts.append(rs_alt)
         if rs_alts:
-            geoname_id_and_rs_alts_tuples.append([rs_geoname["id"], rs_alts])
+            geoname_id_and_rs_alts_tuples.append((rs_geoname["id"], rs_alts))
     return geoname_id_and_rs_alts_tuples
 
 
 def _rs_alternate(
     alt: GeonameAlternate,
-    geoname: dict[str, Any],
-) -> str | dict[str, Any] | None:
-    """Convert a `GeonameAlternate` to a dict appropriate for including in an
-    alternates attachment.
+    geoname: RsGeoname,
+) -> RsAlternate | None:
+    """Convert a `GeonameAlternate` to a value appropriate for including in an
+    alternates attachment. Return `None` if the alternate should be excluded.
 
     """
     # The alternate is the name by itself if it doesn't have any metadata.

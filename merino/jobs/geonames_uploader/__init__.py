@@ -16,7 +16,7 @@ from merino.jobs.geonames_uploader.alternates import (
     ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE,
 )
 
-from merino.jobs.utils.rs_client import RemoteSettingsClient
+from merino.jobs.utils.rs_client import RecordData, RemoteSettingsClient
 
 
 EN_CLIENT_LOCALES = ["en-CA", "en-GB", "en-US", "en-ZA"]
@@ -263,7 +263,7 @@ def _get_geonames_and_alternates_records(
     countries: set[str],
     geonames_record_type: str,
     rs_client: RemoteSettingsClient,
-) -> Tuple[dict[str, dict[str, dict[str, Any]]], dict[str, dict[str, dict[str, Any]]]]:
+) -> Tuple[Mapping[str, Mapping[str, RecordData]], Mapping[str, Mapping[str, RecordData]]]:
     geonames_records_by_id_by_country: dict[str, dict[str, dict[str, Any]]] = {}
     alts_records_by_id_by_country: dict[str, dict[str, dict[str, Any]]] = {}
     for record in rs_client.get_records():

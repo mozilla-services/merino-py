@@ -11,6 +11,8 @@ from urllib.parse import urljoin
 
 from requests_toolbelt.multipart.decoder import MultipartDecoder
 
+from merino.jobs.utils.rs_client import RecordData
+
 
 SERVER_DATA = {
     "auth": "Bearer auth",
@@ -26,13 +28,13 @@ class Record:
     attachment: Any
     bucket: str
     collection: str
-    data: dict[str, Any]
+    data: RecordData
     post_attachment_url: str
     url: str
 
     def __init__(
         self,
-        data: dict[str, Any],
+        data: RecordData,
         attachment: Any,
         bucket: str = SERVER_DATA["bucket"],
         collection: str = SERVER_DATA["collection"],
@@ -94,7 +96,7 @@ class Record:
             "url": self.url,
         }
 
-    def all_data(self) -> dict[str, Any]:
+    def all_data(self) -> RecordData:
         """All the record's data, including its attachment metadata, that should
         be returned for the record by the RS server.
 
