@@ -7,15 +7,18 @@
 
 """Unit tests for alternates.py module and `alternates` command."""
 
-from typing import Any
+from merino.jobs.geonames_uploader.alternates import (
+    _rs_alternates_list,
+    _rs_alternate,
+    upload_alternates,
+    ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE,
+)
 
-from merino.jobs.geonames_uploader import alternates as upload_alternates
+from merino.jobs.geonames_uploader.downloader import GeonameAlternate
 
-from merino.jobs.geonames_uploader.alternates import _rs_alternates_list, _rs_alternate
+from merino.jobs.geonames_uploader.geonames import _rs_geoname, GeonamesRecord
 
-from merino.jobs.geonames_uploader.downloader import Geoname, GeonameAlternate
-
-from merino.jobs.geonames_uploader.geonames import _rs_geoname
+from merino.jobs.utils.rs_client import RemoteSettingsClient
 
 from tests.unit.jobs.utils.rs_utils import (
     Record,
@@ -27,39 +30,61 @@ from tests.unit.jobs.utils.rs_utils import (
 from tests.unit.jobs.geonames_uploader.geonames_utils import (
     DownloaderFixture,
     downloader_fixture,  # noqa: F401
+    filter_alternates,
     filter_geonames,
-    ALTERNATES,
+    ALTERNATES_BY_COUNTRY,
     GEONAME_NYC,
     GEONAME_GOESSNITZ,
     SERVER_DATA as GEONAMES_SERVER_DATA,
 )
 
 
-def filter_alternates(
-    language: str,
-    geonames: list[Geoname],
-) -> list[list[int | list[str | None | dict[str, Any]]]]:
-    """Filter `ALTERNATES` on a language and geonames and return a list of
-    tuples appropriate for including in a remote settings attachment.
+ALTS_RECORD_US_0001_ABBR = Record(
+    data={
+        "id": "geonames-US-0001-abbr",
+        "type": "geonames-alternates",
+        "country": "US",
+        "language": "abbr",
+    },
+    attachment={
+        "language": "abbr",
+        "alternates_by_geoname_id": filter_alternates(
+            "US",
+            "abbr",
+            filter_geonames("US", 1_000),
+        ),
+    },
+)
 
-    """
-    return _rs_alternates_list(
-        [
-            (_rs_geoname(geoname), alts)
-            for geoname, alts in ALTERNATES[language]
-            if geoname in geonames
-        ]
-    )
+ALTS_RECORD_US_0001_IATA = Record(
+    data={
+        "id": "geonames-US-0001-iata",
+        "type": "geonames-alternates",
+        "country": "US",
+        "language": "iata",
+    },
+    attachment={
+        "language": "iata",
+        "alternates_by_geoname_id": filter_alternates(
+            "US",
+            "iata",
+            filter_geonames("US", 1_000),
+        ),
+    },
+)
 
 
 def do_test(
     requests_mock,
-    languages: list[str],
+    force_reupload: bool,
     country: str,
-    geonames_records: list[Record],
+    locales_by_country: dict[str, list[str]],
+    existing_records: list[Record],
     expected_uploaded_records: list[Record],
     expected_deleted_records: list[Record] = [],
-    existing_alternates_records: list[Record] = [],
+    alternates_languages_by_client_locale: dict[
+        str, list[str]
+    ] = ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE,
     alternates_record_type: str = "geonames-alternates",
     alternates_url_format: str = GEONAMES_SERVER_DATA["alternates_url_format"],
     geonames_record_type: str = "geonames-2",
@@ -74,24 +99,43 @@ def do_test(
     # there was a request for a record that's not mocked here.
     mock_responses(
         requests_mock,
-        geonames_records
-        + existing_alternates_records
-        + expected_uploaded_records
-        + expected_deleted_records,
+        get=existing_records,
+        update=expected_uploaded_records,
+        delete=expected_deleted_records,
     )
 
-    # Call the command.
+    rs_client = RemoteSettingsClient(
+        auth=rs_auth,
+        bucket=rs_bucket,
+        collection=rs_collection,
+        server=rs_server,
+        dry_run=rs_dry_run,
+    )
+
+    geonames_records = [
+        GeonamesRecord(data=r.data, geonames=r.attachment)
+        for r in existing_records + expected_deleted_records
+        if r.data.get("type") == geonames_record_type
+    ]
+
+    alternates_records_by_id = {
+        r["id"]: r
+        for r in rs_client.get_records()
+        if r.get("country") == country and r.get("type") == alternates_record_type
+    }
+
+    # Call the upload function.
     upload_alternates(
-        languages=languages,
         country=country,
+        existing_alternates_records_by_id=alternates_records_by_id,
+        force_reupload=force_reupload,
+        geonames_records=geonames_records,
+        locales_by_country=locales_by_country,
+        alternates_languages_by_client_locale=alternates_languages_by_client_locale,
         alternates_record_type=alternates_record_type,
         alternates_url_format=alternates_url_format,
         geonames_record_type=geonames_record_type,
-        rs_auth=rs_auth,
-        rs_bucket=rs_bucket,
-        rs_collection=rs_collection,
-        rs_dry_run=rs_dry_run,
-        rs_server=rs_server,
+        rs_client=rs_client,
     )
 
     # Only check remote settings requests, ignore geonames requests.
@@ -101,341 +145,731 @@ def do_test(
     check_delete_requests(rs_requests, expected_deleted_records)
 
 
-def test_one_lang_one_geonames_record(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload alternates for one language and one geonames record"""
-    do_test(
-        requests_mock,
-        country="US",
-        languages=["en"],
-        geonames_records=[
-            Record(
-                data={
-                    "id": "geonames-US-1k",
-                    "type": "geonames-2",
-                    "country": "US",
-                    "filter_expression_countries": ["GB", "US"],
-                    "filter_expression": "env.country in ['GB', 'US']",
-                },
-                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
-            ),
-        ],
-        expected_uploaded_records=[
-            Record(
-                data={
-                    "id": "geonames-US-1k-en",
-                    "type": "geonames-alternates",
-                    "country": "US",
-                    "language": "en",
-                    "filter_expression": "env.country in ['GB', 'US'] && env.locale in ['en', 'en-CA', 'en-GB', 'en-US', 'en-ZA']",
-                },
-                attachment={
-                    "language": "en",
-                    "alternates_by_geoname_id": filter_alternates(
-                        "en",
-                        filter_geonames("US", 1_000),
-                    ),
-                },
-            ),
-        ],
-    )
-
-
-def test_one_lang_two_geonames_records(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload alternates for one language and two geonames records"""
-    do_test(
-        requests_mock,
-        country="US",
-        languages=["en"],
-        geonames_records=[
-            Record(
-                data={
-                    "id": "geonames-US-50k-1m",
-                    "type": "geonames-2",
-                    "country": "US",
-                    "filter_expression_countries": ["GB", "US"],
-                    "filter_expression": "env.country in ['GB', 'US']",
-                },
-                attachment=[_rs_geoname(g) for g in filter_geonames("US", 50_000, 1_000_000)],
-            ),
-            Record(
-                data={
-                    "id": "geonames-US-1m",
-                    "type": "geonames-2",
-                    "country": "US",
-                    "filter_expression_countries": ["GB", "US"],
-                    "filter_expression": "env.country in ['GB', 'US']",
-                },
-                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000_000)],
-            ),
-        ],
-        expected_uploaded_records=[
-            # No `geonames-US-50k-1m-en` record because all "en" alternates for
-            # geonames in the range [50k, 1m) are the same as their geonames'
-            # names.
-            Record(
-                data={
-                    "id": "geonames-US-1m-en",
-                    "type": "geonames-alternates",
-                    "country": "US",
-                    "language": "en",
-                    "filter_expression": "env.country in ['GB', 'US'] && env.locale in ['en', 'en-CA', 'en-GB', 'en-US', 'en-ZA']",
-                },
-                attachment={
-                    "language": "en",
-                    "alternates_by_geoname_id": filter_alternates(
-                        "en",
-                        filter_geonames("US", 1_000_000),
-                    ),
-                },
-            ),
-        ],
-    )
-
-
-def test_three_langs(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload alternates for three languages, not all of which have alternates"""
-    do_test(
-        requests_mock,
-        country="US",
-        # There are no "de" alternates for the US, and "abbr" alternates exist
-        # only for geonames with large populations.
-        languages=["abbr", "de", "en"],
-        geonames_records=[
-            Record(
-                data={
-                    "id": "geonames-US-50k-1m",
-                    "type": "geonames-2",
-                    "country": "US",
-                    "filter_expression_countries": ["GB", "US"],
-                    "filter_expression": "env.country in ['GB', 'US']",
-                },
-                attachment=[_rs_geoname(g) for g in filter_geonames("US", 50_000, 1_000_000)],
-            ),
-            Record(
-                data={
-                    "id": "geonames-US-1m",
-                    "type": "geonames-2",
-                    "country": "US",
-                    "filter_expression_countries": ["GB", "US"],
-                    "filter_expression": "env.country in ['GB', 'US']",
-                },
-                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000_000)],
-            ),
-        ],
-        expected_uploaded_records=[
-            # No `geonames-US-50k-1m-en` record because all "en" alternates for
-            # geonames in the range [50k, 1m) are the same as their geonames'
-            # names.
-            #
-            # No `geonames-US-50k-1m-abbr` record because "abbr" alternates
-            # exist only for geonames with >= 1m
-            #
-            # No `geonames-US-50k-1m-de` and `geonames-US-1m-de` records because
-            # there are no "de" alternates
-            Record(
-                data={
-                    "id": "geonames-US-1m-abbr",
-                    "type": "geonames-alternates",
-                    "country": "US",
-                    "language": "abbr",
-                    # No locales filter
-                    "filter_expression": "env.country in ['GB', 'US']",
-                },
-                attachment={
-                    "language": "abbr",
-                    "alternates_by_geoname_id": filter_alternates(
-                        "abbr",
-                        filter_geonames("US", 1_000_000),
-                    ),
-                },
-            ),
-            Record(
-                data={
-                    "id": "geonames-US-1m-en",
-                    "type": "geonames-alternates",
-                    "country": "US",
-                    "language": "en",
-                    "filter_expression": "env.country in ['GB', 'US'] && env.locale in ['en', 'en-CA', 'en-GB', 'en-US', 'en-ZA']",
-                },
-                attachment={
-                    "language": "en",
-                    "alternates_by_geoname_id": filter_alternates(
-                        "en",
-                        filter_geonames("US", 1_000_000),
-                    ),
-                },
-            ),
-        ],
-    )
-
-
-def test_delete_old_record(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload new alternates, leaving one old alternates record that should be
-    deleted
+def test_basic_no_existing_record(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
+):
+    """Upload alternates for one country with one client locale with one
+    langauge. The alternates record doesn't already exist.
 
     """
-    existing_en_us_record = Record(
-        data={
-            "id": "geonames-US-50k-en",
-            "type": "geonames-alternates",
-            "country": "US",
-            "language": "en",
-            "filter_expression": "env.country in ['GB', 'US'] && env.locales in ['en', 'GB', 'US']",
-        },
-        attachment={
-            "language": "en",
-            "alternates_by_geoname_id": filter_alternates("en", filter_geonames("US", 50_000)),
-        },
-    )
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        languages=["en"],
-        geonames_records=[
+        locales_by_country={
+            "US": ["en-US"],
+        },
+        existing_records=[
             Record(
                 data={
-                    "id": "geonames-US-1k",
+                    "id": "geonames-US-0001",
                     "type": "geonames-2",
                     "country": "US",
-                    "filter_expression_countries": ["US"],
+                    "client_countries": ["US"],
                     "filter_expression": "env.country in ['US']",
                 },
                 attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
             ),
         ],
-        existing_alternates_records=[
-            existing_en_us_record,
-            # This record is "abbr" but only "en" was passed to the command, so
-            # it shouldn't be deleted.
-            Record(
-                data={
-                    "id": "geonames-US-1k-abbr",
-                    "type": "geonames-alternates",
-                    "country": "US",
-                    "language": "abbr",
-                    "filter_expression": "env.country in ['GB', 'US']",
-                },
-                attachment={
-                    "language": "abbr",
-                    "alternates_by_geoname_id": filter_alternates(
-                        "abbr",
-                        filter_geonames("US", 1_000),
-                    ),
-                },
-            ),
-        ],
         expected_uploaded_records=[
+            ALTS_RECORD_US_0001_ABBR,
             Record(
                 data={
-                    "id": "geonames-US-1k-en",
+                    "id": "geonames-US-0001-en",
                     "type": "geonames-alternates",
                     "country": "US",
                     "language": "en",
-                    "filter_expression": "env.country in ['US'] && env.locale in ['en', 'en-CA', 'en-GB', 'en-US', 'en-ZA']",
+                    "filter_expression": "env.locale in ['en-US']",
                 },
                 attachment={
                     "language": "en",
                     "alternates_by_geoname_id": filter_alternates(
+                        "US",
                         "en",
                         filter_geonames("US", 1_000),
                     ),
                 },
             ),
-        ],
-        expected_deleted_records=[
-            existing_en_us_record,
+            ALTS_RECORD_US_0001_IATA,
         ],
     )
 
 
-def test_no_geonames_records(requests_mock, downloader_fixture: DownloaderFixture):
-    """Nothing should happen when there aren't any geonames records for the
-    given country
+def test_basic_existing_record_dont_force(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
+):
+    """Upload alternates for one country with one client locale with one
+    langauge. The alternates record already exists. Don't force re-upload. No
+    mutable requests should be made.
 
     """
-    existing_en_us_record = Record(
-        data={
-            "id": "geonames-US-50k-en",
-            "type": "geonames-alternates",
-            "country": "US",
-            "language": "en",
-            "filter_expression": "env.country in ['GB', 'US'] && env.locales in ['en', 'GB', 'US']",
-        },
-        attachment={
-            "language": "en",
-            "alternates_by_geoname_id": filter_alternates(
-                "en",
-                filter_geonames("US", 50_000),
-            ),
-        },
-    )
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        languages=["en"],
-        geonames_records=[],
-        existing_alternates_records=[
-            existing_en_us_record,
-            # This record is "abbr" but only "en" was passed to the command, so
-            # it shouldn't be deleted.
+        locales_by_country={
+            "US": ["en-US"],
+        },
+        existing_records=[
             Record(
                 data={
-                    "id": "geonames-US-1k-abbr",
+                    "id": "geonames-US-0001",
+                    "type": "geonames-2",
+                    "country": "US",
+                    "client_countries": ["US"],
+                    "filter_expression": "env.country in ['US']",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
+            ),
+            ALTS_RECORD_US_0001_ABBR,
+            Record(
+                data={
+                    "id": "geonames-US-0001-en",
                     "type": "geonames-alternates",
                     "country": "US",
-                    "language": "abbr",
-                    "filter_expression": "env.country in ['GB', 'US']",
+                    "language": "en",
+                    "filter_expression": "env.locale in ['en-US']",
                 },
                 attachment={
-                    "language": "abbr",
+                    "language": "en",
                     "alternates_by_geoname_id": filter_alternates(
-                        "abbr",
+                        "US",
+                        "en",
                         filter_geonames("US", 1_000),
                     ),
                 },
             ),
+            ALTS_RECORD_US_0001_IATA,
         ],
         expected_uploaded_records=[],
-        expected_deleted_records=[],
     )
 
 
-def test_geonames_record_without_filter_countries(
-    requests_mock, downloader_fixture: DownloaderFixture
+def test_basic_existing_record_force(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
 ):
-    """Test upload with a geonames record for the given country that doesn't
-    have any filter-expression countries
+    """Upload alternates for one country with one client locale with one
+    langauge. The alternates record already exists. Force re-upload.
 
     """
+    alts_en_record = Record(
+        data={
+            "id": "geonames-US-0001-en",
+            "type": "geonames-alternates",
+            "country": "US",
+            "language": "en",
+            "filter_expression": "env.locale in ['en-US']",
+        },
+        attachment={
+            "language": "en",
+            "alternates_by_geoname_id": filter_alternates(
+                "US",
+                "en",
+                filter_geonames("US", 1_000),
+            ),
+        },
+    )
     do_test(
         requests_mock,
+        force_reupload=True,
         country="US",
-        languages=["en"],
-        geonames_records=[
+        locales_by_country={
+            "US": ["en-US"],
+        },
+        existing_records=[
             Record(
                 data={
-                    "id": "geonames-US-1k",
+                    "id": "geonames-US-0001",
                     "type": "geonames-2",
                     "country": "US",
-                    # No `filter_expression_countries` or `filter_expression`
+                    "client_countries": ["US"],
+                    "filter_expression": "env.country in ['US']",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
+            ),
+            alts_en_record,
+        ],
+        expected_uploaded_records=[
+            ALTS_RECORD_US_0001_ABBR,
+            alts_en_record,
+            ALTS_RECORD_US_0001_IATA,
+        ],
+    )
+
+
+def test_many_locales(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
+):
+    """Upload alternates for one country with many client locales"""
+    do_test(
+        requests_mock,
+        force_reupload=False,
+        country="US",
+        locales_by_country={
+            "US": ["en-CA", "en-GB", "en-US"],
+        },
+        existing_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0001",
+                    "type": "geonames-2",
+                    "country": "US",
+                    "client_countries": ["US"],
+                    "filter_expression": "env.country in ['US']",
                 },
                 attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
             ),
         ],
         expected_uploaded_records=[
+            ALTS_RECORD_US_0001_ABBR,
             Record(
                 data={
-                    "id": "geonames-US-1k-en",
+                    "id": "geonames-US-0001-en",
                     "type": "geonames-alternates",
                     "country": "US",
                     "language": "en",
-                    "filter_expression": "env.locale in ['en', 'en-CA', 'en-GB', 'en-US', 'en-ZA']",
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
                 },
                 attachment={
                     "language": "en",
                     "alternates_by_geoname_id": filter_alternates(
+                        "US",
                         "en",
                         filter_geonames("US", 1_000),
+                    ),
+                },
+            ),
+            ALTS_RECORD_US_0001_IATA,
+        ],
+    )
+
+
+def test_reupload_locales_changed(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
+):
+    """Upload alternates for one country with many client locales. An alternates
+    record for the same partition already exists but with different locales. It
+    should be re-uploaded.
+
+    """
+    do_test(
+        requests_mock,
+        force_reupload=False,
+        country="US",
+        locales_by_country={
+            "US": ["en-CA", "en-GB", "en-US"],
+        },
+        existing_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0001",
+                    "type": "geonames-2",
+                    "country": "US",
+                    "client_countries": ["US"],
+                    "filter_expression": "env.country in ['US']",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-0001-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    # The filter expression only contains `en-US` and none of
+                    # the other `en` locales.
+                    "filter_expression": "env.locale in ['en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 1_000),
+                    ),
+                },
+            ),
+        ],
+        expected_uploaded_records=[
+            ALTS_RECORD_US_0001_ABBR,
+            Record(
+                data={
+                    "id": "geonames-US-0001-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 1_000),
+                    ),
+                },
+            ),
+            ALTS_RECORD_US_0001_IATA,
+        ],
+    )
+
+
+def test_reupload_alternates_data_changed(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
+):
+    """Upload alternates for one country with many client locales. An alternates
+    record for the same partition already exists but with different alternates
+    data in its attachment. It should be re-uploaded.
+
+    """
+    do_test(
+        requests_mock,
+        force_reupload=False,
+        country="US",
+        locales_by_country={
+            "US": ["en-CA", "en-GB", "en-US"],
+        },
+        existing_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0001",
+                    "type": "geonames-2",
+                    "country": "US",
+                    "client_countries": ["US"],
+                    "filter_expression": "env.country in ['US']",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-0001-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
+                },
+                # The attachment has alternates data that's incorrect/out of
+                # date. We'll just use some DE alternates.
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "DE",
+                        "en",
+                        [GEONAME_GOESSNITZ],
+                    ),
+                },
+            ),
+        ],
+        expected_uploaded_records=[
+            ALTS_RECORD_US_0001_ABBR,
+            Record(
+                data={
+                    "id": "geonames-US-0001-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 1_000),
+                    ),
+                },
+            ),
+            ALTS_RECORD_US_0001_IATA,
+        ],
+    )
+
+
+def test_no_client_countries_one_country_one_locale(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
+):
+    """There's only one client country with one locale. A geonames record exists
+    with no client countries. Upload alternates for it. The alternates record
+    should have all client locales, which is just the one.
+
+    """
+    do_test(
+        requests_mock,
+        force_reupload=False,
+        country="US",
+        locales_by_country={
+            # One client locale
+            "US": ["en-US"],
+        },
+        existing_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0001",
+                    "type": "geonames-2",
+                    "country": "US",
+                    # No `client_countries`
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
+            ),
+        ],
+        expected_uploaded_records=[
+            ALTS_RECORD_US_0001_ABBR,
+            Record(
+                data={
+                    "id": "geonames-US-0001-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    # The one client locale should be included
+                    "filter_expression": "env.locale in ['en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 1_000),
+                    ),
+                },
+            ),
+            ALTS_RECORD_US_0001_IATA,
+        ],
+    )
+
+
+def test_no_client_countries_one_country_many_locales(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
+):
+    """There's only one client country and it has many locales. A geonames
+    record exists with no client countries. Upload alternates for it. The
+    alternates record should have all client locales, which are the ones just
+    for the one client country.
+
+    """
+    do_test(
+        requests_mock,
+        force_reupload=False,
+        country="US",
+        locales_by_country={
+            # Many client locales
+            "US": ["en-CA", "en-GB", "en-US"],
+        },
+        existing_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0001",
+                    "type": "geonames-2",
+                    "country": "US",
+                    # No `client_countries`
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
+            ),
+        ],
+        expected_uploaded_records=[
+            ALTS_RECORD_US_0001_ABBR,
+            Record(
+                data={
+                    "id": "geonames-US-0001-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    # All client locales should be included
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 1_000),
+                    ),
+                },
+            ),
+            ALTS_RECORD_US_0001_IATA,
+        ],
+    )
+
+
+def test_no_client_countries_many_countries_same_locales(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
+):
+    """There are many client countries with many locales, but the locales are
+    the same for all client countries. A geonames record exists with no client
+    countries. Upload alternates for it. The alternates record should have all
+    client locales.
+
+    """
+    do_test(
+        requests_mock,
+        force_reupload=False,
+        country="US",
+        locales_by_country={
+            # Many countries with the same client locales
+            "CA": ["en-CA", "en-GB", "en-US"],
+            "US": ["en-CA", "en-GB", "en-US"],
+        },
+        existing_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0001",
+                    "type": "geonames-2",
+                    "country": "US",
+                    # No `client_countries`
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
+            ),
+        ],
+        expected_uploaded_records=[
+            ALTS_RECORD_US_0001_ABBR,
+            Record(
+                data={
+                    "id": "geonames-US-0001-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    # All client locales should be included
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 1_000),
+                    ),
+                },
+            ),
+            ALTS_RECORD_US_0001_IATA,
+        ],
+    )
+
+
+def test_no_client_countries_many_countries_different_locales(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
+):
+    """There are many client countries with many diffrent locales. A geonames
+    record exists with no client countries. Upload alternates for it. An
+    alternates record per parition per language should be created for partitions
+    that have alternates in that language.
+
+    """
+    do_test(
+        requests_mock,
+        force_reupload=False,
+        country="US",
+        locales_by_country={
+            # Many countries with different client locales
+            "CA": ["en-CA", "en-GB", "en-US"],
+            "ES": ["es"],
+            "MX": ["es-MX"],
+            "US": ["en-CA", "en-GB", "en-US"],
+        },
+        alternates_languages_by_client_locale={
+            **ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE,
+            "es": ["es"],
+            "es-MX": ["es"],
+        },
+        existing_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0001",
+                    "type": "geonames-2",
+                    "country": "US",
+                    # No `client_countries`
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
+            ),
+        ],
+        expected_uploaded_records=[
+            ALTS_RECORD_US_0001_ABBR,
+            # en record with en locales
+            Record(
+                data={
+                    "id": "geonames-US-0001-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 1_000),
+                    ),
+                },
+            ),
+            # es record with es locales
+            Record(
+                data={
+                    "id": "geonames-US-0001-es",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "es",
+                    "filter_expression": "env.locale in ['es', 'es-MX']",
+                },
+                attachment={
+                    "language": "es",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "es",
+                        filter_geonames("US", 1_000),
+                    ),
+                },
+            ),
+            ALTS_RECORD_US_0001_IATA,
+        ],
+    )
+
+
+def test_realistic_1(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
+):
+    """Realistic upload test: Geonames records have client countries that map to
+    the same alternates language
+
+    """
+    do_test(
+        requests_mock,
+        force_reupload=False,
+        country="US",
+        locales_by_country={
+            "CA": ["en-CA", "en-GB", "en-US"],
+            "ES": ["es"],
+            "MX": ["es-MX"],
+            "US": ["en-CA", "en-GB", "en-US"],
+        },
+        alternates_languages_by_client_locale={
+            **ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE,
+            "es": ["es"],
+            "es-MX": ["es"],
+        },
+        existing_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0050-0100",
+                    "type": "geonames-2",
+                    "country": "US",
+                    "client_countries": ["US"],
+                    "filter_expression": "env.country in ['US']",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 50_000, 100_000)],
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-0100-1000",
+                    "type": "geonames-2",
+                    "country": "US",
+                    # CA and US map to the same alternates languages
+                    "client_countries": ["CA", "US"],
+                    "filter_expression": "env.country in ['CA', 'US']",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 100_000, 1_000_000)],
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-1000",
+                    "type": "geonames-2",
+                    "country": "US",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000_000)],
+            ),
+        ],
+        expected_uploaded_records=[
+            # No "geonames-US-0050-0100-en" because there aren't any alternates
+            # for US geonames in the range [50k, 100k) that are different from
+            # their geonames' names and ASCII names
+            Record(
+                data={
+                    "id": "geonames-US-0100-1000-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 100_000, 1_000_000),
+                    ),
+                },
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-1000-abbr",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "abbr",
+                },
+                attachment={
+                    "language": "abbr",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "abbr",
+                        filter_geonames("US", 1_000_000),
+                    ),
+                },
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-1000-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 1_000_000),
+                    ),
+                },
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-1000-es",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "es",
+                    "filter_expression": "env.locale in ['es', 'es-MX']",
+                },
+                attachment={
+                    "language": "es",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "es",
+                        filter_geonames("US", 1_000_000),
+                    ),
+                },
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-1000-iata",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "iata",
+                },
+                attachment={
+                    "language": "iata",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "iata",
+                        filter_geonames("US", 1_000_000),
                     ),
                 },
             ),
@@ -443,10 +877,316 @@ def test_geonames_record_without_filter_countries(
     )
 
 
+def test_realistic_2(
+    requests_mock,
+    downloader_fixture: DownloaderFixture,
+):
+    """Realistic upload test: Geonames records have client countries that map to
+    different alternates languages
+
+    """
+    do_test(
+        requests_mock,
+        force_reupload=False,
+        country="US",
+        locales_by_country={
+            "CA": ["en-CA", "en-GB", "en-US"],
+            "ES": ["es"],
+            "MX": ["es-MX"],
+            "US": ["en-CA", "en-GB", "en-US"],
+        },
+        alternates_languages_by_client_locale={
+            **ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE,
+            "es": ["es"],
+            "es-MX": ["es"],
+        },
+        existing_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0050-0100",
+                    "type": "geonames-2",
+                    "country": "US",
+                    # MX and US map to different alternates languages
+                    "client_countries": ["MX", "US"],
+                    "filter_expression": "env.country in ['MX', 'US']",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 50_000, 100_000)],
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-0100-1000",
+                    "type": "geonames-2",
+                    "country": "US",
+                    # MX and CA/US map to different alternates languages
+                    "client_countries": ["CA", "MX", "US"],
+                    "filter_expression": "env.country in ['CA', 'MX', 'US']",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 100_000, 1_000_000)],
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-1000",
+                    "type": "geonames-2",
+                    "country": "US",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000_000)],
+            ),
+        ],
+        expected_uploaded_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0100-1000-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 100_000, 1_000_000),
+                    ),
+                },
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-1000-abbr",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "abbr",
+                },
+                attachment={
+                    "language": "abbr",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "abbr",
+                        filter_geonames("US", 1_000_000),
+                    ),
+                },
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-1000-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 1_000_000),
+                    ),
+                },
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-1000-es",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "es",
+                    "filter_expression": "env.locale in ['es', 'es-MX']",
+                },
+                attachment={
+                    "language": "es",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "es",
+                        filter_geonames("US", 1_000_000),
+                    ),
+                },
+            ),
+            Record(
+                data={
+                    "id": "geonames-US-1000-iata",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "iata",
+                },
+                attachment={
+                    "language": "iata",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "iata",
+                        filter_geonames("US", 1_000_000),
+                    ),
+                },
+            ),
+        ],
+    )
+
+
+def test_delete_unused_records(requests_mock, downloader_fixture: DownloaderFixture):
+    """Upload new alternates. Old unused alternates records should be deleted."""
+    # An existing `en-US` alternates record for a partition that doesn't have a
+    # corresponding geoanmes record. It should be deleted.
+    existing_en_us_record = Record(
+        data={
+            "id": "geonames-US-0050-0100-en",
+            "type": "geonames-alternates",
+            "country": "US",
+            "language": "en",
+            "filter_expression": "env.locales in ['en-CA', 'en-GB', 'en-US']",
+        },
+        attachment={
+            "language": "en",
+            "alternates_by_geoname_id": filter_alternates(
+                "US", "en", filter_geonames("US", 50_000, 100_000)
+            ),
+        },
+    )
+
+    # An existing `fr-US` alternates record. `fr` isn't listed in
+    # `locales_by_country` for the US, so this record should be deleted.
+    existing_fr_us_record = Record(
+        data={
+            "id": "geonames-US-0001-fr",
+            "type": "geonames-alternates",
+            "country": "US",
+            "language": "fr",
+        },
+        attachment={
+            "language": "fr",
+            "alternates_by_geoname_id": filter_alternates(
+                "US",
+                "fr",
+                filter_geonames("US", 1_000),
+            ),
+        },
+    )
+
+    do_test(
+        requests_mock,
+        force_reupload=False,
+        country="US",
+        locales_by_country={
+            "US": ["en-CA", "en-GB", "en-US"],
+        },
+        existing_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0001",
+                    "type": "geonames-2",
+                    "country": "US",
+                    "client_countries": ["US"],
+                    "filter_expression": "env.country in ['US']",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
+            ),
+            existing_en_us_record,
+            existing_fr_us_record,
+            # This is an alternates record for a different country, not the US,
+            # so it shouldn't be deleted.
+            Record(
+                data={
+                    "id": "geonames-DE-0001-de",
+                    "type": "geonames-alternates",
+                    "country": "DE",
+                    "language": "de",
+                },
+                attachment={
+                    "language": "de",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "DE",
+                        "en",
+                        filter_geonames("DE", 1_000),
+                    ),
+                },
+            ),
+        ],
+        expected_uploaded_records=[
+            ALTS_RECORD_US_0001_ABBR,
+            Record(
+                data={
+                    "id": "geonames-US-0001-en",
+                    "type": "geonames-alternates",
+                    "country": "US",
+                    "language": "en",
+                    "filter_expression": "env.locale in ['en-CA', 'en-GB', 'en-US']",
+                },
+                attachment={
+                    "language": "en",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "US",
+                        "en",
+                        filter_geonames("US", 1_000),
+                    ),
+                },
+            ),
+            ALTS_RECORD_US_0001_IATA,
+        ],
+        expected_deleted_records=[
+            existing_en_us_record,
+            existing_fr_us_record,
+        ],
+    )
+
+
+def test_no_geonames_records(requests_mock, downloader_fixture: DownloaderFixture):
+    """When there aren't any geonames records for the given country, no records
+    should be uploaded and alternates records for the country should be deleted
+    since they're unused.
+
+    """
+    existing_en_us_record = Record(
+        data={
+            "id": "geonames-US-0050-0100-en",
+            "type": "geonames-alternates",
+            "country": "US",
+            "language": "en",
+            "filter_expression": "env.locales in ['en-CA', 'en-GB', 'en-US']",
+        },
+        attachment={
+            "language": "en",
+            "alternates_by_geoname_id": filter_alternates(
+                "US",
+                "en",
+                filter_geonames("US", 50_000, 100_000),
+            ),
+        },
+    )
+    do_test(
+        requests_mock,
+        force_reupload=False,
+        country="US",
+        locales_by_country={
+            "US": ["en-CA", "en-GB", "en-US"],
+        },
+        existing_records=[
+            # No geonames records
+            existing_en_us_record,
+            # This is an alternates record for a different country, not the US,
+            # so it shouldn't be deleted.
+            Record(
+                data={
+                    "id": "geonames-DE-0001-de",
+                    "type": "geonames-alternates",
+                    "country": "DE",
+                    "language": "de",
+                },
+                attachment={
+                    "language": "de",
+                    "alternates_by_geoname_id": filter_alternates(
+                        "DE",
+                        "en",
+                        filter_geonames("DE", 1_000),
+                    ),
+                },
+            ),
+        ],
+        expected_uploaded_records=[],
+        expected_deleted_records=[existing_en_us_record],
+    )
+
+
 def test_rs_alternates_list():
-    """Test the `filter_alternates` and `_rs_alternates_list` helper functions.
-    In particular, `_rs_alternates_list` relies on `_rs_alternate`, which
-    returns `None` when an alternate is the same as its geoname's `name` or
+    """Test the `_rs_alternates_list` and `_rs_alternate` helper functions. In
+    particular, `_rs_alternates_list` relies on `_rs_alternate`, which returns
+    `None` when an alternate is the same as its geoname's `name` or
     `ascii_name`. `_rs_alternates_list` should not include `None` values.
 
     """
@@ -457,8 +1197,8 @@ def test_rs_alternates_list():
     assert GEONAME_GOESSNITZ.name == "Gößnitz"
     assert GEONAME_GOESSNITZ.ascii_name == "Goessnitz"
 
-    # (2) `ALTERNATES` should include the Goessnitz alts.
-    alt_tuples = [tup for tup in ALTERNATES["en"] if tup[0] == GEONAME_GOESSNITZ]
+    # (2) The alternates data should include the Goessnitz alts.
+    alt_tuples = [tup for tup in ALTERNATES_BY_COUNTRY["DE"]["en"] if tup[0] == GEONAME_GOESSNITZ]
     assert len(alt_tuples) == 1
     alts = alt_tuples[0][1]
 
@@ -468,13 +1208,8 @@ def test_rs_alternates_list():
         GEONAME_GOESSNITZ.ascii_name
     ]
 
-    # Now check `filter_alternates`. Goessnitz has one alt that's not its name
+    # Now check `_rs_alternates_list`. Goessnitz has one alt that's not its name
     # or ASCII name, and `None` values should not be included.
-    assert filter_alternates("en", [GEONAME_GOESSNITZ]) == [
-        [GEONAME_GOESSNITZ.id, ["Gössnitz"]],
-    ]
-
-    # Check `_rs_alternates_list` directly for good measure.
     assert _rs_alternates_list(
         [
             (

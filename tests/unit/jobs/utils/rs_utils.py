@@ -167,7 +167,9 @@ def check_delete_requests(actual_requests: list, records: list[Record]) -> None:
 
 def mock_responses(
     requests_mock,
-    records: list[Record],
+    get: list[Record] = [],
+    update: list[Record] = [],
+    delete: list[Record] = [],
     bucket: str = SERVER_DATA["bucket"],
     collection: str = SERVER_DATA["collection"],
     server: str = SERVER_DATA["server"],
@@ -201,21 +203,23 @@ def mock_responses(
     requests_mock.get(
         records_url,
         json={
-            "data": [r.all_data() for r in records],
+            "data": [r.all_data() for r in get],
         },
     )
 
-    for r in records:
-        # update record
-        requests_mock.put(r.url, json={})
-
-        # delete record
-        requests_mock.delete(r.url, json={"data": [{"deleted": True, "id": r.id}]})
-
-        # post attachment
-        requests_mock.post(r.post_attachment_url, json={})
-
+    for r in get:
         # get attachment
         attachment_metadata = r.all_data().get("attachment")
         if attachment_metadata:
             requests_mock.get(urljoin(server, attachment_metadata["location"]), json=r.attachment)
+
+    for r in update:
+        # update record
+        requests_mock.put(r.url, json={})
+
+        # post attachment
+        requests_mock.post(r.post_attachment_url, json={})
+
+    for r in delete:
+        # delete record
+        requests_mock.delete(r.url, json={"data": [{"deleted": True, "id": r.id}]})

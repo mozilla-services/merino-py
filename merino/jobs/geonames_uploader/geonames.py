@@ -1,11 +1,12 @@
-"""CLI commands for the geonames_uploader module. See downloader.py for
-documentation on GeoNames.
+"""Geonames helpers for the geonames-uploader command. See downloader.py for
+documentation on geonames.
 
 """
 
 import logging
-from typing import Any
-from dataclasses import asdict
+import math
+from typing import Any, Mapping
+from dataclasses import asdict, dataclass, field
 
 from merino.jobs.utils.rs_client import RemoteSettingsClient, filter_expression_dict
 from merino.jobs.geonames_uploader.downloader import Geoname, download_geonames
@@ -13,47 +14,40 @@ from merino.jobs.geonames_uploader.downloader import Geoname, download_geonames
 logger = logging.getLogger(__name__)
 
 
+@dataclass
 class Partition:
     """A chunk of geonames partitioned by population threshold."""
 
     threshold: int
-    countries: list[str] | None
-    geonames: list[Geoname]
-
-    def __init__(self, threshold_in_thousands: int, countries: list[str] | None = None):
-        """Create a new partition."""
-        self.threshold = 1_000 * threshold_in_thousands
-        self.countries = countries
-        self.geonames = []
-
-    def add_geoname(self, geoname: Geoname) -> None:
-        """Add a geoname to the partition."""
-        self.geonames.append(geoname)
-
-    def __repr__(self) -> str:
-        return str(vars(self))
-
-    def __eq__(self, other) -> bool:
-        return isinstance(other, Partition) and vars(self) == vars(other)
+    client_countries: list[str] = field(default_factory=list)
+    geonames: list[Geoname] = field(default_factory=list)
 
 
-def geonames_cmd(
-    country: str,
-    partitions: list[Partition],
-    geonames_record_type: str,
-    geonames_url_format: str,
-    rs_auth: str,
-    rs_bucket: str,
-    rs_collection: str,
-    rs_dry_run: bool,
-    rs_server: str,
-):
-    """Perform the `geonames` command, which uploads geonames to remote
-    settings.
+@dataclass
+class GeonamesRecord:
+    """A geonames record with inline record data and a list of geonames as its
+    attachment.
 
     """
-    if not partitions:
-        raise ValueError("At least one partition must be specified")
+
+    data: dict[str, Any]
+    geonames: list[dict[str, Any]]
+
+
+def upload_geonames(
+    country: str,
+    existing_geonames_records_by_id: Mapping[str, dict[str, Any]],
+    force_reupload: bool,
+    geonames_record_type: str,
+    geonames_url_format: str,
+    partitions: list[Partition],
+    rs_client: RemoteSettingsClient,
+) -> list[GeonamesRecord]:
+    """Download geonames from the geonames server for a given country and upload
+    geonames records to remote settings.
+
+    """
+    logger.info(f"Uploading geonames records for country '{country}'")
 
     partitions_descending = sorted(partitions, key=lambda p: p.threshold, reverse=True)
     min_threshold = partitions_descending[-1].threshold
@@ -70,20 +64,12 @@ def geonames_cmd(
         partition = next(
             p for p in partitions_descending if p.threshold <= (geoname.population or 0)
         )
-        partition.add_geoname(geoname)
+        partition.geonames.append(geoname)
 
-    rs_client = RemoteSettingsClient(
-        auth=rs_auth,
-        bucket=rs_bucket,
-        collection=rs_collection,
-        server=rs_server,
-        dry_run=rs_dry_run,
-    )
-
+    # Create a record for each partition.
+    final_records = []
+    final_record_ids = set()
     partitions_ascending = list(reversed(partitions_descending))
-
-    # Create a record for each partition's geonames.
-    uploaded_record_ids = set()
     for i, partition in enumerate(partitions_ascending):
         lower_threshold = partition.threshold
         upper_threshold = (
@@ -91,45 +77,58 @@ def geonames_cmd(
         )
 
         if not partition.geonames:
-            logger.warning(
-                f"No geonames with populations in requested partition [{lower_threshold}, {upper_threshold})"
+            logger.info(
+                f"No geonames for country '{country}' in partition [{lower_threshold}, {upper_threshold})"
             )
             continue
 
+        # Build the record.
         record_id = _record_id(
             country=country,
             lower_threshold=lower_threshold,
             upper_threshold=upper_threshold,
         )
-        uploaded_record_ids.add(record_id)
 
         filter_dict = {}
-        filter_countries_dict = {}
-        if partition.countries:
-            filter_dict = filter_expression_dict(countries=partition.countries)
-            filter_countries_dict = {
-                "filter_expression_countries": sorted(partition.countries),
+        client_countries_dict = {}
+        if partition.client_countries:
+            filter_dict = filter_expression_dict(countries=partition.client_countries)
+            client_countries_dict = {
+                "client_countries": sorted(partition.client_countries),
             }
 
-        rs_client.upload(
-            record={
-                "id": record_id,
-                "type": geonames_record_type,
-                "country": country,
-                **filter_countries_dict,
-                **filter_dict,
-            },
-            attachment=[_rs_geoname(g) for g in partition.geonames],
+        record = {
+            "id": record_id,
+            "type": geonames_record_type,
+            "country": country,
+            **client_countries_dict,
+            **filter_dict,
+        }
+
+        # Force re-upload if requested or the existing record is different.
+        existing_record = existing_geonames_records_by_id.get(record_id)
+        force_record = force_reupload or bool(
+            existing_record and record != {k: existing_record.get(k) for k, v in record.items()}
         )
 
+        geonames = [_rs_geoname(g) for g in partition.geonames]
+
+        rs_client.upload(
+            record=record,
+            attachment=geonames,
+            existing_record=existing_record,
+            force_reupload=force_record,
+        )
+
+        final_record_ids.add(record_id)
+        final_records.append(GeonamesRecord(data=record, geonames=geonames))
+
     # Delete existing records for the country that weren't uploaded above.
-    for record in rs_client.get_records():
-        if (
-            record.get("type") == geonames_record_type
-            and record.get("country") == country
-            and record["id"] not in uploaded_record_ids
-        ):
-            rs_client.delete_record(record["id"])
+    for record_id, record in existing_geonames_records_by_id.items():
+        if record_id not in final_record_ids:
+            rs_client.delete_record(record_id)
+
+    return final_records
 
 
 def _rs_geoname(geoname: Geoname) -> dict[str, Any]:
@@ -181,8 +180,9 @@ def _pretty_threshold(value: int | None) -> str | None:
     """Convert a numeric threshold to a pretty string."""
     if value is None:
         return None
-    if 1_000_000 <= value and value % 1_000_000 == 0:
-        return f"{int(value / 1_000_000)}m"
-    if 1_000 <= value and value % 1_000 == 0:
-        return f"{int(value / 1_000)}k"
-    return str(value)
+
+    # Pad the value with zeroes using a width of 4 since we're representing
+    # population thresholds in thousands. No reasonable city population
+    # threshold should be larger than 9 million = 4 places.
+    in_thousands = math.floor(value / 1_000)
+    return f"{in_thousands:04}"

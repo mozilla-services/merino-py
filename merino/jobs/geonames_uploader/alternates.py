@@ -1,89 +1,120 @@
-"""The `upload alternates` command for the `geonames_uploader` job."""
+"""Geonames alternates helpers for the geonames-uploader command."""
 
 import logging
-from typing import Any, Tuple
+from typing import Any, Iterable, Mapping, Tuple
+import itertools
 
 from merino.jobs.utils.rs_client import RemoteSettingsClient, filter_expression_dict
 from merino.jobs.geonames_uploader.downloader import download_alternates, GeonameAlternate
 
+from merino.jobs.geonames_uploader.geonames import GeonamesRecord
 
-# This maps language codes to all locales that include them, for language codes
-# that are not by themselves also locale codes. This is necessary because remote
-# settings filter expressions can filter on locale but not language. Languages
-# not listed here are assumed to also be valid locales.
-LOCALES_BY_LANGUAGE = {
-    "en": ["en-CA", "en-GB", "en-US", "en-ZA"],
+
+# Maps from Firefox locales to alternates languages in the geonames data.
+ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE = {
+    "en-CA": ["en", "en-CA"],
+    "en-GB": ["en", "en-GB"],
+    "en-US": ["en"],
+    "en-ZA": ["en"],
+    "de": ["de"],
+    "fr": ["fr"],
+    "it": ["it"],
+    "pl": ["pl"],
 }
+
+# Geonames pseudo-language codes for which we should create alternates records.
+# There are others than the ones here but typically we shouldn't be using them.
+PSEUDO_LANGUAGES = [
+    "abbr",  # abbreviations
+    "iata",  # airport codes
+]
 
 
 logger = logging.getLogger(__name__)
 
 
-def alternates_cmd(
-    languages: set[str],
+def upload_alternates(
     alternates_record_type: str,
     alternates_url_format: str,
     country: str,
+    existing_alternates_records_by_id: Mapping[str, dict[str, Any]],
+    force_reupload: bool,
     geonames_record_type: str,
-    rs_auth: str,
-    rs_bucket: str,
-    rs_collection: str,
-    rs_dry_run: bool,
-    rs_server: str,
+    geonames_records: list[GeonamesRecord],
+    locales_by_country: Mapping[str, Iterable[str]],
+    rs_client: RemoteSettingsClient,
+    alternates_languages_by_client_locale: Mapping[
+        str, Iterable[str]
+    ] = ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE,
 ):
-    """Perform the `alternates` command, which uploads geonames alternates to
-    remote settings.
+    """Download alternates from the geonames server for a given country and
+    upload alternates records to remote settings.
 
     """
-    rs_client = RemoteSettingsClient(
-        auth=rs_auth,
-        bucket=rs_bucket,
-        collection=rs_collection,
-        server=rs_server,
-        dry_run=rs_dry_run,
-    )
+    logger.info(f"Uploading alternates records for country '{country}'")
 
-    # Get geonames records and existing alternates records for the country.
-    geonames_records = []
-    existing_alternates_records = []
-    for record in rs_client.get_records():
-        if record.get("type") == geonames_record_type and record.get("country") == country:
-            geonames_records.append(record)
-        elif (
-            record.get("type") == alternates_record_type
-            and record.get("country") == country
-            and record.get("language") in languages
-        ):
-            existing_alternates_records.append(record)
-
+    # If there are no geonames records for the country, consider all its
+    # alternates records as unused and delete them. Then we're done.
     if not geonames_records:
-        logger.info(f"No records for country '{country}' in remote settings, stopping")
+        logger.info(f"No geonames records for country '{country}'")
+        for record_id in existing_alternates_records_by_id.keys():
+            rs_client.delete_record(record_id)
         return
 
-    # Download the attachments of the geonames records. Each attachment is a
-    # list of geonames.
-    record_and_geonames_tuples: list[Tuple[dict[str, Any], list[dict[int, Any]]]] = []
-    all_geoname_ids: set[int] = set()
-    for record in geonames_records:
-        geonames = rs_client.download_attachment(record)
-        record_and_geonames_tuples.append((record, geonames))
-        all_geoname_ids |= set(g["id"] for g in geonames)
+    # Build a set of all geoname IDs.
+    all_geoname_ids = set(
+        itertools.chain.from_iterable((g["id"] for g in r.geonames) for r in geonames_records)
+    )
+
+    # Build a set of all alternates languages and an augmented version of
+    # `locales_by_country` that maps from locales to alternates languages.
+    all_langs: set[str] = set(PSEUDO_LANGUAGES)
+    langs_by_locale_by_country: dict[str, dict[str, set[str]]] = {}
+    for client_country, locales in locales_by_country.items():
+        for locale in locales:
+            langs = alternates_languages_by_client_locale.get(locale)
+            if not langs:
+                raise ValueError(
+                    f"Client locale '{locale}' not mapped to any alternates languages. "
+                    "Please add an entry for it!"
+                )
+            for lang in langs:
+                all_langs.add(lang)
+                langs_by_locale_by_country.setdefault(client_country, {}).setdefault(
+                    locale, set()
+                ).add(lang)
 
     # Download alternates from the geonames server.
     download = download_alternates(
         country=country,
         geoname_ids=all_geoname_ids,
-        languages=languages,
+        languages=all_langs,
         url_format=alternates_url_format,
     )
 
-    # Create an alternates record for each language and geonames record.
-    uploaded_record_ids = set()
-    for lang in sorted(languages):
-        for geonames_record, geonames in record_and_geonames_tuples:
-            geonames_record_id = geonames_record["id"]
-            geonames_by_id = {g["id"]: g for g in geonames}
+    # For each geonames record and language, create (potentially) an alternates
+    # record.
+    final_record_ids = set()
+    for geonames_record in geonames_records:
+        geonames_record_id = geonames_record.data["id"]
+        geonames_by_id = {g["id"]: g for g in geonames_record.geonames}
+        client_countries = geonames_record.data.get("client_countries", [])
 
+        # Build a map from alternates languages to client locales for the
+        # locales that are relevant to the client countries in the geonames
+        # record. If the record doesn't have any client countries, then the map
+        # will contain all supported languages and locales. Always include the
+        # pseudo-languages since they're locale agnostic.
+        locales_by_lang: dict[str, set[str]] = {lang: set() for lang in PSEUDO_LANGUAGES}
+        for lang_country, langs_by_locale in langs_by_locale_by_country.items():
+            if not client_countries or lang_country in client_countries:
+                for locale, langs in langs_by_locale.items():
+                    for lang in langs:
+                        locales_by_lang.setdefault(lang, set()).add(locale)
+
+        # For each language, create (potentially) an alternates record.
+        for lang, locales in sorted(list(locales_by_lang.items()), key=lambda t: t[0]):
+            # Collect the alternates for the geonames in the geonames record.
             alts_by_geoname_id = {
                 geoname_id: alt
                 for geoname_id, alt in download.alternates_by_geoname_id_by_language.get(
@@ -92,14 +123,14 @@ def alternates_cmd(
                 if geoname_id in geonames_by_id
             }
             if not alts_by_geoname_id:
-                logger.warning(
-                    f"No alternates for record '{geonames_record_id}' in language '{lang}'"
+                # No alternates for this country and language.
+                logger.info(
+                    f"{geonames_record_id}: No alternates for country '{country}' and language '{lang}'"
                 )
                 continue
 
-            # Build the list of tuples of geoname IDs and alternates that will
-            # be in the attachment. Keep in mind that `_rs_alternate` may return
-            # None.
+            # Build the list of tuples of geoname IDs and alternates for the
+            # attachment. Keep in mind that `_rs_alternate` may return None.
             rs_geoname_and_alts_lists = _rs_alternates_list(
                 [
                     (geonames_by_id[geoname_id], alts)
@@ -111,42 +142,42 @@ def alternates_cmd(
                 # they're all the same as their geonames' names or ASCII names,
                 # so no alternates record is necessary.
                 logger.info(
-                    f"Alternates record not necessary for geonames record '{geonames_record_id}' in language '{lang}'"
+                    f"{geonames_record_id}: Alternates unnecessary for country '{country}' and language '{lang}'"
                 )
                 continue
 
             alts_record_id = f"{geonames_record_id}-{lang}"
-            uploaded_record_ids.add(alts_record_id)
+            final_record_ids.add(alts_record_id)
 
-            # Build the filter expression. Include the same countries as the
-            # geonames record.
-            filter_countries = geonames_record.get("filter_expression_countries", [])
+            record = {
+                "id": alts_record_id,
+                "type": alternates_record_type,
+                "country": country,
+                "language": lang,
+                **filter_expression_dict(locales=locales),
+            }
 
-            # If the language code is a natural language and not "abbr"
-            # (abbreviation) or "iata" (airport code), include a locales filter.
-            filter_locales = []
-            if lang not in ["abbr", "iata"]:
-                filter_locales = [lang] + LOCALES_BY_LANGUAGE.get(lang, [])
+            existing_alts_record = existing_alternates_records_by_id.get(alts_record_id)
+            force_record = force_reupload or bool(
+                existing_alts_record
+                and record != {k: existing_alts_record.get(k) for k, v in record.items()}
+            )
 
             rs_client.upload(
-                record={
-                    "id": alts_record_id,
-                    "type": alternates_record_type,
-                    "country": country,
-                    "language": lang,
-                    **filter_expression_dict(countries=filter_countries, locales=filter_locales),
-                },
+                record=record,
                 attachment={
                     "language": lang,
                     "alternates_by_geoname_id": rs_geoname_and_alts_lists,
                 },
+                existing_record=existing_alts_record,
+                force_reupload=force_record,
             )
 
     # Delete existing records for the country and languages that weren't
     # uploaded above.
-    for r in existing_alternates_records:
-        if r["id"] not in uploaded_record_ids:
-            rs_client.delete_record(r["id"])
+    for record_id in existing_alternates_records_by_id.keys():
+        if record_id not in final_record_ids:
+            rs_client.delete_record(record_id)
 
 
 def _rs_alternates_list(

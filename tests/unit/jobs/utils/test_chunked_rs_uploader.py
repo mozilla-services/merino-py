@@ -59,7 +59,7 @@ def do_upload_test(
     suggestion_score: float | None = None,
 ) -> None:
     """Perform an upload test."""
-    mock_responses(requests_mock, expected_records)
+    mock_responses(requests_mock, update=expected_records)
 
     with ChunkedRemoteSettingsSuggestionUploader(
         chunk_size=chunk_size,

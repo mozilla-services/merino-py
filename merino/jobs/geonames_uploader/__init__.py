@@ -3,23 +3,90 @@ doc for info on the job and `downloader.py` for documentation on GeoNames.
 
 """
 
-import asyncio
-import importlib
-import io
-import json
+from dataclasses import dataclass
 import logging
-from zipfile import ZipFile
-from typing import Any, Callable
+from typing import Any, Iterable, Mapping, Tuple
 
-import csv
-import requests
 import typer
-from urllib.parse import urljoin
-from tempfile import NamedTemporaryFile, TemporaryDirectory, TemporaryFile
 
 from merino.configs import settings as config
-from merino.jobs.geonames_uploader.geonames import geonames_cmd, Partition
-from merino.jobs.geonames_uploader.alternates import alternates_cmd
+from merino.jobs.geonames_uploader.geonames import upload_geonames, Partition
+from merino.jobs.geonames_uploader.alternates import (
+    upload_alternates,
+    ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE,
+)
+
+from merino.jobs.utils.rs_client import RemoteSettingsClient
+
+
+EN_CLIENT_LOCALES = ["en-CA", "en-GB", "en-US", "en-ZA"]
+
+
+@dataclass
+class CountryConfig:
+    """Job configuration for a particular country."""
+
+    geonames_partitions: list[Partition]
+    supported_client_locales: list[str]
+
+
+# Maps from country codes to job config. See `geonames-uploader.md`.
+CONFIGS_BY_COUNTRY = {
+    "CA": CountryConfig(
+        geonames_partitions=[
+            Partition(threshold=50_000, client_countries=["CA"]),
+            Partition(threshold=250_000, client_countries=["CA", "US"]),
+            Partition(threshold=500_000),
+        ],
+        supported_client_locales=EN_CLIENT_LOCALES,
+    ),
+    "DE": CountryConfig(
+        geonames_partitions=[
+            Partition(threshold=50_000, client_countries=["DE"]),
+            Partition(threshold=500_000),
+        ],
+        supported_client_locales=["de"],
+    ),
+    "FR": CountryConfig(
+        geonames_partitions=[
+            Partition(threshold=50_000, client_countries=["FR"]),
+            Partition(threshold=500_000),
+        ],
+        supported_client_locales=["fr"],
+    ),
+    "GB": CountryConfig(
+        geonames_partitions=[
+            Partition(threshold=50_000, client_countries=["GB"]),
+            Partition(threshold=500_000),
+        ],
+        supported_client_locales=EN_CLIENT_LOCALES,
+    ),
+    "IT": CountryConfig(
+        geonames_partitions=[
+            Partition(threshold=50_000, client_countries=["IT"]),
+            Partition(threshold=500_000),
+        ],
+        supported_client_locales=["it"],
+    ),
+    "PL": CountryConfig(
+        geonames_partitions=[
+            Partition(threshold=50_000, client_countries=["PL"]),
+            Partition(threshold=500_000),
+        ],
+        supported_client_locales=["pl"],
+    ),
+    "US": CountryConfig(
+        geonames_partitions=[
+            # There are a lot of US geonames in the range [50k, 250k), so break
+            # it up into two smaller partitions to keep attachment sizes down.
+            Partition(threshold=50_000, client_countries=["US"]),
+            Partition(threshold=100_000, client_countries=["US"]),
+            Partition(threshold=250_000, client_countries=["CA", "US"]),
+            Partition(threshold=500_000),
+        ],
+        supported_client_locales=EN_CLIENT_LOCALES,
+    ),
+}
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +106,10 @@ alternates_url_format_option = typer.Option(
     help="URL of country-specific alternates zip files on the GeoNames server",
 )
 
-country_option = typer.Option(
-    job_settings.country,
-    "--country",
-    help="The country whose geonames or alternates to upload",
+force_reupload_option = typer.Option(
+    False,
+    "--force-reupload",
+    help="Recreate records and attachments even if they haven't changed",
 )
 
 geonames_record_type_option = typer.Option(
@@ -55,18 +122,6 @@ geonames_url_format_option = typer.Option(
     job_settings.geonames_url_format,
     "--geonames-url-format",
     help="URL of country-specific geonames zip files on the GeoNames server",
-)
-
-languages_option = typer.Option(
-    job_settings.languages,
-    "--language",
-    help="List of language codes of alternates to upload",
-)
-
-partitions_option = typer.Option(
-    job_settings.partitions,
-    "--partitions",
-    help="JSON string of population thresholds and filter-expression countries",
 )
 
 rs_auth_option = typer.Option(
@@ -105,61 +160,11 @@ geonames_uploader_cmd = typer.Typer(
 )
 
 
-class PartitionsError(Exception):
-    """An error encountered parsing the `partitions` option."""
-
-    pass
-
-
-def _parse_partitions(partitions_json: str) -> list[Partition]:
-    value = None
-    try:
-        value = json.loads(partitions_json)
-    except json.decoder.JSONDecodeError:
-        raise PartitionsError("Partitions string is not valid JSON")
-
-    if isinstance(value, list):
-        return [_parse_partitions_item(i) for i in value]
-
-    raise PartitionsError("Partitions must be a list")
-
-
-def _parse_partitions_item(value: Any) -> Partition:
-    if isinstance(value, int):
-        return Partition(threshold_in_thousands=value)
-
-    if isinstance(value, list):
-        if len(value) != 2:
-            raise PartitionsError("Partitions list item must be a 2-tuple when a list")
-
-        threshold = 0
-        countries = []
-        threshold_value, countries_value = value
-
-        if isinstance(threshold_value, int):
-            threshold = threshold_value
-        else:
-            raise PartitionsError("Theshold value must be an int")
-
-        if isinstance(countries_value, str):
-            countries = [countries_value]
-        elif isinstance(countries_value, list):
-            for i in countries_value:
-                if not isinstance(i, str):
-                    raise PartitionsError("Country list item must be a string")
-            countries = countries_value
-        else:
-            raise PartitionsError("Country value must be a string or list of strings")
-
-        return Partition(threshold_in_thousands=threshold, countries=countries)
-
-    raise PartitionsError("Partitions list item must be a threshold or threshold-countries tuple")
-
-
 @geonames_uploader_cmd.command()
-def geonames(
-    country: str = country_option,
-    partitions: str = partitions_option,
+def upload(
+    alternates_record_type: str = alternates_record_type_option,
+    alternates_url_format: str = alternates_url_format_option,
+    force_reupload: bool = force_reupload_option,
     geonames_record_type: str = geonames_record_type_option,
     geonames_url_format: str = geonames_url_format_option,
     rs_auth: str = rs_auth_option,
@@ -168,19 +173,11 @@ def geonames(
     rs_dry_run: bool = rs_dry_run_option,
     rs_server: str = rs_server_option,
 ):
-    """Perform the `geonames` command."""
-    if not country:
-        raise ValueError("Country is required")
-    if not partitions:
-        raise ValueError("Partitions is required")
-
-    # `partitions` is a JSON string since it can't easily be represented in the
-    # config files otherwise.
-    parsed_partitions = _parse_partitions(partitions)
-
-    geonames_cmd(
-        country=country,
-        partitions=parsed_partitions,
+    """Perform the `upload` command."""
+    _upload(
+        alternates_record_type=alternates_record_type,
+        alternates_url_format=alternates_url_format,
+        force_reupload=force_reupload,
         geonames_record_type=geonames_record_type,
         geonames_url_format=geonames_url_format,
         rs_auth=rs_auth,
@@ -191,34 +188,89 @@ def geonames(
     )
 
 
-@geonames_uploader_cmd.command()
-def alternates(
-    languages: list[str] = languages_option,
-    alternates_record_type: str = alternates_record_type_option,
-    alternates_url_format: str = alternates_url_format_option,
-    geonames_record_type: str = geonames_record_type_option,
-    country: str = country_option,
-    rs_auth: str = rs_auth_option,
-    rs_bucket: str = rs_bucket_option,
-    rs_collection: str = rs_collection_option,
-    rs_dry_run: bool = rs_dry_run_option,
-    rs_server: str = rs_server_option,
+def _upload(
+    alternates_record_type: str,
+    alternates_url_format: str,
+    force_reupload: bool,
+    geonames_record_type: str,
+    geonames_url_format: str,
+    rs_auth: str,
+    rs_bucket: str,
+    rs_collection: str,
+    rs_dry_run: bool,
+    rs_server: str,
+    configs_by_country: Mapping[str, CountryConfig] = CONFIGS_BY_COUNTRY,
+    alternates_languages_by_client_locale: Mapping[
+        str, Iterable[str]
+    ] = ALTERNATES_LANGUAGES_BY_CLIENT_LOCALE,
 ):
-    """Perform the `upload alternates` command."""
-    if not country:
-        raise ValueError("Country is required")
-    if not languages:
-        raise ValueError("Languages is required")
+    locales_by_country = {
+        country: data.supported_client_locales for country, data in configs_by_country.items()
+    }
 
-    alternates_cmd(
-        languages=set(languages),
-        alternates_record_type=alternates_record_type,
-        alternates_url_format=alternates_url_format,
-        country=country,
-        geonames_record_type=geonames_record_type,
-        rs_auth=rs_auth,
-        rs_bucket=rs_bucket,
-        rs_collection=rs_collection,
-        rs_dry_run=rs_dry_run,
-        rs_server=rs_server,
+    rs_client = RemoteSettingsClient(
+        auth=rs_auth,
+        bucket=rs_bucket,
+        collection=rs_collection,
+        server=rs_server,
+        dry_run=rs_dry_run,
     )
+
+    # Get existing geonames and alternates records.
+    existing_geonames_records_by_id_by_country, existing_alts_records_by_id_by_country = (
+        _get_geonames_and_alternates_records(
+            alternates_record_type=alternates_record_type,
+            countries=set(configs_by_country.keys()),
+            geonames_record_type=geonames_record_type,
+            rs_client=rs_client,
+        )
+    )
+
+    # Upload records for each country.
+    for country, data in configs_by_country.items():
+        # Upload geonames records.
+        final_geonames_records = upload_geonames(
+            country=country,
+            existing_geonames_records_by_id=existing_geonames_records_by_id_by_country.get(
+                country, {}
+            ),
+            force_reupload=force_reupload,
+            geonames_record_type=geonames_record_type,
+            geonames_url_format=geonames_url_format,
+            partitions=data.geonames_partitions,
+            rs_client=rs_client,
+        )
+
+        # Upload alternates records.
+        upload_alternates(
+            alternates_languages_by_client_locale=alternates_languages_by_client_locale,
+            alternates_record_type=alternates_record_type,
+            alternates_url_format=alternates_url_format,
+            country=country,
+            existing_alternates_records_by_id=existing_alts_records_by_id_by_country.get(
+                country, {}
+            ),
+            force_reupload=force_reupload,
+            geonames_record_type=geonames_record_type,
+            geonames_records=final_geonames_records,
+            locales_by_country=locales_by_country,
+            rs_client=rs_client,
+        )
+
+
+def _get_geonames_and_alternates_records(
+    alternates_record_type: str,
+    countries: set[str],
+    geonames_record_type: str,
+    rs_client: RemoteSettingsClient,
+) -> Tuple[dict[str, dict[str, dict[str, Any]]], dict[str, dict[str, dict[str, Any]]]]:
+    geonames_records_by_id_by_country: dict[str, dict[str, dict[str, Any]]] = {}
+    alts_records_by_id_by_country: dict[str, dict[str, dict[str, Any]]] = {}
+    for record in rs_client.get_records():
+        country = record.get("country")
+        if country in countries and (record_id := record.get("id")):
+            if record.get("type") == geonames_record_type:
+                geonames_records_by_id_by_country.setdefault(country, {})[record_id] = record
+            elif record.get("type") == alternates_record_type:
+                alts_records_by_id_by_country.setdefault(country, {})[record_id] = record
+    return (geonames_records_by_id_by_country, alts_records_by_id_by_country)

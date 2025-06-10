@@ -858,18 +858,3 @@ geonames_record_type = "geonames-2"
 # MERINO_JOBS__GEONAMES_UPLOADER__ALTERNATES_RECORD_TYPE
 # The `type` field of geonames alternates records.
 alternates_record_type = "geonames-alternates"
-
-# MERINO_JOBS__GEONAMES_UPLOADER__COUNTRY
-# The country whose geonames or alternates to upload. Typically specified on the
-# command line. See `geonames-uploader.md` doc.
-country = ""
-
-# MERINO_JOBS__GEONAMES_UPLOADER__PARTITIONS
-# JSON string of population thresholds and filter-expression countries.
-# Typically specified on the command line. See `geonames-uploader.md` doc.
-partitions = ""
-
-# MERINO_JOBS__GEONAMES_UPLOADER__LANGUAGES
-# List of language codes of alternates to upload. Typically specified on the
-# command line. See `geonames-uploader.md` doc.
-languages = []
