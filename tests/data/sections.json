@@ -5,7 +5,7 @@
         "externalId": "nfl",
         "active": true,
         "title": "NFL",
-        "iab": null,
+        "iab": {"taxonomy":  "IAB-3.0", "categories":  ["484"]},
         "sectionItems": [
           {
             "corpusItem": {
@@ -746,7 +746,7 @@
         "externalId": "music",
         "active": true,
         "title": "Music",
-        "iab": null,
+        "iab": {"taxonomy":  "IAB-3.0", "categories":  ["338"]},
         "sectionItems": [
           {
             "corpusItem": {
