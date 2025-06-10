@@ -7,12 +7,15 @@
 
 """Unit tests for geonames.py module and `geonames` command."""
 
-import json
+from merino.jobs.geonames_uploader.geonames import (
+    _rs_geoname,
+    _record_id,
+    Partition,
+    upload_geonames,
+    GeonamesRecord,
+)
 
-from typing import Any
-
-from merino.jobs.geonames_uploader import geonames as upload_geonames, _parse_partitions
-from merino.jobs.geonames_uploader.geonames import _rs_geoname, _record_id, Partition
+from merino.jobs.utils.rs_client import RemoteSettingsClient
 
 from tests.unit.jobs.utils.rs_utils import (
     Record,
@@ -33,8 +36,9 @@ from tests.unit.jobs.geonames_uploader.geonames_utils import (
 
 def do_test(
     requests_mock,
+    force_reupload: bool,
     country: str,
-    partitions: list[Any],
+    partitions: list[Partition],
     expected_uploaded_records: list[Record],
     expected_deleted_records: list[Record] = [],
     existing_records: list[Record] = [],
@@ -50,21 +54,48 @@ def do_test(
     # A `requests_mock.exceptions.NoMockAddress: No mock address` error means
     # there was a request for a record that's not mocked here.
     mock_responses(
-        requests_mock, existing_records + expected_uploaded_records + expected_deleted_records
+        requests_mock,
+        get=existing_records,
+        update=expected_uploaded_records,
+        delete=expected_deleted_records,
     )
 
-    # Call the command.
-    upload_geonames(
+    rs_client = RemoteSettingsClient(
+        auth=rs_auth,
+        bucket=rs_bucket,
+        collection=rs_collection,
+        server=rs_server,
+        dry_run=rs_dry_run,
+    )
+
+    geonames_records_by_id = {}
+    for record in rs_client.get_records():
+        if record.get("country") == country and (record_id := record.get("id")):
+            if record.get("type") == geonames_record_type:
+                geonames_records_by_id[record_id] = record
+
+    # Call the upload function.
+    upload = upload_geonames(
         country=country,
-        partitions=json.dumps(partitions),
+        existing_geonames_records_by_id=geonames_records_by_id,
+        force_reupload=force_reupload,
+        partitions=partitions,
         geonames_record_type=geonames_record_type,
         geonames_url_format=geonames_url_format,
-        rs_auth=rs_auth,
-        rs_bucket=rs_bucket,
-        rs_collection=rs_collection,
-        rs_dry_run=rs_dry_run,
-        rs_server=rs_server,
+        rs_client=rs_client,
     )
+
+    expected_final_geonames_records = sorted(
+        list(
+            {
+                r.data["id"]: GeonamesRecord(data=r.data, geonames=r.attachment)
+                for r in existing_records + expected_uploaded_records
+                if r.data["type"] == geonames_record_type and r.attachment
+            }.values()
+        ),
+        key=lambda r: r.data["id"],
+    )
+    assert upload.final_records == expected_final_geonames_records
 
     # Only check remote settings requests, ignore geonames requests.
     rs_requests = [r for r in requests_mock.request_history if r.url.startswith(rs_server)]
@@ -77,15 +108,16 @@ def test_one_part_no_filter_countries(
     requests_mock,
     downloader_fixture,
 ):
-    """Upload one partition, no filter-expression countries"""
+    """Upload one partition, no client countries"""
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        partitions=[1],
+        partitions=[Partition(1_000)],
         expected_uploaded_records=[
             Record(
                 data={
-                    "id": "geonames-US-1k",
+                    "id": "geonames-US-0001",
                     "type": "geonames-2",
                     "country": "US",
                 },
@@ -96,18 +128,19 @@ def test_one_part_no_filter_countries(
 
 
 def test_one_part_filter_countries(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload one partition with some filter-expression countries"""
+    """Upload one partition with some client countries"""
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        partitions=[[1, ["GB", "US"]]],
+        partitions=[Partition(1_000, ["GB", "US"])],
         expected_uploaded_records=[
             Record(
                 data={
-                    "id": "geonames-US-1k",
+                    "id": "geonames-US-0001",
                     "type": "geonames-2",
                     "country": "US",
-                    "filter_expression_countries": ["GB", "US"],
+                    "client_countries": ["GB", "US"],
                     "filter_expression": "env.country in ['GB', 'US']",
                 },
                 attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
@@ -117,24 +150,23 @@ def test_one_part_filter_countries(requests_mock, downloader_fixture: Downloader
 
 
 def test_one_part_empty_1(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload one partition that's empty and has no filter-expression countries"""
+    """Upload one partition that's empty and has no client countries"""
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        partitions=[999_999_999_999],
+        partitions=[Partition(999_999_999_999)],
         expected_uploaded_records=[],
     )
 
 
 def test_one_part_empty_2(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload one partition that's empty and has some filter-expression
-    countries
-
-    """
+    """Upload one partition that's empty and has some client countries"""
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        partitions=[[999_999_999_999, ["US", "GB"]]],
+        partitions=[Partition(999_999_999_999, ["US", "GB"])],
         expected_uploaded_records=[],
     )
 
@@ -143,23 +175,24 @@ def test_two_parts_first_part_empty_1(
     requests_mock,
     downloader_fixture: DownloaderFixture,
 ):
-    """Upload two partitions, first is empty, second does not have
-    filter-expression countries
+    """Upload two partitions, first is empty, second does not have client
+    countries
 
     """
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        # There are no geonames with populations in the range [1k, 10k), so the
-        # first partition should not be created.
-        partitions=[[1, "US"], 10],
+        # There are no US geonames with populations in the range [1k, 10k), so
+        # the first partition should not be created.
+        partitions=[Partition(1_000, ["US"]), Partition(10_000)],
         expected_uploaded_records=[
             Record(
                 data={
                     # There shouldn't be a filter expression since the second
                     # partition doesn't specify any countries -- it should be
                     # available to all clients.
-                    "id": "geonames-US-10k",
+                    "id": "geonames-US-0010",
                     "type": "geonames-2",
                     "country": "US",
                 },
@@ -173,23 +206,21 @@ def test_two_parts_first_part_empty_2(
     requests_mock,
     downloader_fixture: DownloaderFixture,
 ):
-    """Upload two partitions, first is empty, second has filter-expression
-    countries
-
-    """
+    """Upload two partitions, first is empty, second has client countries"""
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
         # There are no geonames with populations in the range [1k, 10k), so the
         # first partition should not be created.
-        partitions=[[1, "US"], [10, ["US", "GB"]]],
+        partitions=[Partition(1_000, ["US"]), Partition(10_000, ["US", "GB"])],
         expected_uploaded_records=[
             Record(
                 data={
-                    "id": "geonames-US-10k",
+                    "id": "geonames-US-0010",
                     "type": "geonames-2",
                     "country": "US",
-                    "filter_expression_countries": ["GB", "US"],
+                    "client_countries": ["GB", "US"],
                     "filter_expression": "env.country in ['GB', 'US']",
                 },
                 attachment=[_rs_geoname(g) for g in filter_geonames("US", 10_000)],
@@ -199,30 +230,33 @@ def test_two_parts_first_part_empty_2(
 
 
 def test_two_parts_neither_empty_1(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload two partitions, neither are empty, second does not have
-    filter-expression countries
+    """Upload two partitions, neither are empty, second does not have client
+    countries
 
     """
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        partitions=[[50, "US"], 1_000],
+        partitions=[Partition(50_000, ["US"]), Partition(1_000_000)],
         expected_uploaded_records=[
             Record(
                 data={
-                    "id": "geonames-US-50k-1m",
+                    "id": "geonames-US-0050-1000",
                     "type": "geonames-2",
                     "country": "US",
-                    "filter_expression_countries": ["US"],
+                    "client_countries": ["US"],
                     "filter_expression": "env.country in ['US']",
                 },
                 attachment=[_rs_geoname(g) for g in filter_geonames("US", 50_000, 1_000_000)],
             ),
             Record(
                 data={
-                    "id": "geonames-US-1m",
+                    "id": "geonames-US-1000",
                     "type": "geonames-2",
                     "country": "US",
+                    # No `client_countries` or `filter_expression` since the
+                    # final partition didn't include them
                 },
                 attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000_000)],
             ),
@@ -231,31 +265,32 @@ def test_two_parts_neither_empty_1(requests_mock, downloader_fixture: Downloader
 
 
 def test_two_parts_neither_empty_2(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload two partitions, neither are empty, second has different
-    filter-expression countries
+    """Upload two partitions, neither are empty, second has different client
+    countries
 
     """
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        partitions=[[50, "US"], [1_000, ["GB"]]],
+        partitions=[Partition(50_000, ["US"]), Partition(1_000_000, ["GB"])],
         expected_uploaded_records=[
             Record(
                 data={
-                    "id": "geonames-US-50k-1m",
+                    "id": "geonames-US-0050-1000",
                     "type": "geonames-2",
                     "country": "US",
-                    "filter_expression_countries": ["US"],
+                    "client_countries": ["US"],
                     "filter_expression": "env.country in ['US']",
                 },
                 attachment=[_rs_geoname(g) for g in filter_geonames("US", 50_000, 1_000_000)],
             ),
             Record(
                 data={
-                    "id": "geonames-US-1m",
+                    "id": "geonames-US-1000",
                     "type": "geonames-2",
                     "country": "US",
-                    "filter_expression_countries": ["GB"],
+                    "client_countries": ["GB"],
                     "filter_expression": "env.country in ['GB']",
                 },
                 attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000_000)],
@@ -265,31 +300,32 @@ def test_two_parts_neither_empty_2(requests_mock, downloader_fixture: Downloader
 
 
 def test_two_parts_neither_empty_3(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload two partitions, neither are empty, second has filter-expression
-    countries with one new country plus the country from the first partition
+    """Upload two partitions, neither are empty, second has client countries
+    with one new country plus the country from the first partition
 
     """
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        partitions=[[50, "US"], [1_000, ["GB", "US"]]],
+        partitions=[Partition(50_000, ["US"]), Partition(1_000_000, ["GB", "US"])],
         expected_uploaded_records=[
             Record(
                 data={
-                    "id": "geonames-US-50k-1m",
+                    "id": "geonames-US-0050-1000",
                     "type": "geonames-2",
                     "country": "US",
-                    "filter_expression_countries": ["US"],
+                    "client_countries": ["US"],
                     "filter_expression": "env.country in ['US']",
                 },
                 attachment=[_rs_geoname(g) for g in filter_geonames("US", 50_000, 1_000_000)],
             ),
             Record(
                 data={
-                    "id": "geonames-US-1m",
+                    "id": "geonames-US-1000",
                     "type": "geonames-2",
                     "country": "US",
-                    "filter_expression_countries": ["GB", "US"],
+                    "client_countries": ["GB", "US"],
                     "filter_expression": "env.country in ['GB', 'US']",
                 },
                 attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000_000)],
@@ -298,26 +334,51 @@ def test_two_parts_neither_empty_3(requests_mock, downloader_fixture: Downloader
     )
 
 
-def test_update_old_records(requests_mock, downloader_fixture: DownloaderFixture):
-    """Upload a record that already exists"""
+def test_existing_record_dont_force(requests_mock, downloader_fixture: DownloaderFixture):
+    """Try to update an existing record but with no changes. Don't force
+    re-upload. No mutable requests should be made.
+
+    """
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        partitions=[1],
+        partitions=[Partition(1_000)],
         existing_records=[
             Record(
                 data={
-                    "id": "geonames-US-1k",
+                    "id": "geonames-US-0001",
                     "type": "geonames-2",
                     "country": "US",
                 },
-                attachment=[],
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
+            ),
+        ],
+        expected_uploaded_records=[],
+    )
+
+
+def test_existing_record_force(requests_mock, downloader_fixture: DownloaderFixture):
+    """Try to update an existing record but with no changes. Force re-upload."""
+    do_test(
+        requests_mock,
+        force_reupload=True,
+        country="US",
+        partitions=[Partition(1_000)],
+        existing_records=[
+            Record(
+                data={
+                    "id": "geonames-US-0001",
+                    "type": "geonames-2",
+                    "country": "US",
+                },
+                attachment=[_rs_geoname(g) for g in filter_geonames("US", 1_000)],
             ),
         ],
         expected_uploaded_records=[
             Record(
                 data={
-                    "id": "geonames-US-1k",
+                    "id": "geonames-US-0001",
                     "type": "geonames-2",
                     "country": "US",
                 },
@@ -332,7 +393,7 @@ def test_delete_old_records(requests_mock, downloader_fixture: DownloaderFixture
     existing_us_records = [
         Record(
             data={
-                "id": "geonames-US-50k-100k",
+                "id": "geonames-US-0050-0100",
                 "type": "geonames-2",
                 "country": "US",
             },
@@ -340,7 +401,7 @@ def test_delete_old_records(requests_mock, downloader_fixture: DownloaderFixture
         ),
         Record(
             data={
-                "id": "geonames-US-100k",
+                "id": "geonames-US-0100",
                 "type": "geonames-2",
                 "country": "US",
             },
@@ -349,14 +410,15 @@ def test_delete_old_records(requests_mock, downloader_fixture: DownloaderFixture
     ]
     do_test(
         requests_mock,
+        force_reupload=False,
         country="US",
-        partitions=[1],
+        partitions=[Partition(1_000)],
         existing_records=[
             *existing_us_records,
             # A record with a different country should not be deleted.
             Record(
                 data={
-                    "id": "geonames-GB-1m",
+                    "id": "geonames-GB-1000",
                     "type": "geonames-2",
                     "country": "GB",
                 },
@@ -366,7 +428,7 @@ def test_delete_old_records(requests_mock, downloader_fixture: DownloaderFixture
         expected_uploaded_records=[
             Record(
                 data={
-                    "id": "geonames-US-1k",
+                    "id": "geonames-US-0001",
                     "type": "geonames-2",
                     "country": "US",
                 },
@@ -413,72 +475,49 @@ def test_rs_geoname_goessnitz():
 
 def test_record_id_1():
     """Test the `_record_id` helper function"""
-    assert _record_id("US", 1) == "geonames-US-1"
+    assert _record_id("US", 1) == "geonames-US-0000"
 
 
 def test_record_id_2():
     """Test the `_record_id` helper function"""
-    assert _record_id("US", 1, 50) == "geonames-US-1-50"
+    assert _record_id("US", 1, 50) == "geonames-US-0000-0000"
 
 
 def test_record_id_1k_1():
     """Test the `_record_id` helper function"""
-    assert _record_id("US", 1_000, 5_000) == "geonames-US-1k-5k"
+    assert _record_id("US", 1_000, 5_000) == "geonames-US-0001-0005"
 
 
 def test_record_id_1k_2():
     """Test the `_record_id` helper function"""
-    assert _record_id("US", 1_001, 5_001) == "geonames-US-1001-5001"
+    assert _record_id("US", 1_001, 5_001) == "geonames-US-0001-0005"
 
 
 def test_record_id_10k_1():
     """Test the `_record_id` helper function"""
-    assert _record_id("US", 10_000, 50_000) == "geonames-US-10k-50k"
+    assert _record_id("US", 10_000, 50_000) == "geonames-US-0010-0050"
 
 
 def test_record_id_10k_2():
     """Test the `_record_id` helper function"""
-    assert _record_id("US", 10_001, 50_001) == "geonames-US-10001-50001"
+    assert _record_id("US", 10_001, 50_001) == "geonames-US-0010-0050"
 
 
 def test_record_id_100k_1():
     """Test the `_record_id` helper function"""
-    assert _record_id("US", 100_000, 500_000) == "geonames-US-100k-500k"
+    assert _record_id("US", 100_000, 500_000) == "geonames-US-0100-0500"
 
 
 def test_record_id_100k_2():
     """Test the `_record_id` helper function"""
-    assert _record_id("US", 100_001, 500_001) == "geonames-US-100001-500001"
+    assert _record_id("US", 100_001, 500_001) == "geonames-US-0100-0500"
 
 
 def test_record_id_1m_1():
     """Test the `_record_id` helper function"""
-    assert _record_id("US", 1_000_000, 5_000_000) == "geonames-US-1m-5m"
+    assert _record_id("US", 1_000_000, 5_000_000) == "geonames-US-1000-5000"
 
 
 def test_record_id_1m_2():
     """Test the `_record_id` helper function"""
-    assert _record_id("US", 1_000_001, 5_000_001) == "geonames-US-1000001-5000001"
-
-
-def test_parse_partitions_one_threshold():
-    """Test the `_parse_partitions` helper function"""
-    assert _parse_partitions("[1]") == [Partition(1)]
-
-
-def test_parse_partitions_one_tuple_one_country():
-    """Test the `_parse_partitions` helper function"""
-    assert _parse_partitions('[[1, "US"]]') == [Partition(1, ["US"])]
-
-
-def test_parse_partitions_one_tuple_many_countries():
-    """Test the `_parse_partitions` helper function"""
-    assert _parse_partitions('[[1, ["US", "GB"]]]') == [Partition(1, ["US", "GB"])]
-
-
-def test_parse_partitions_one_tuple_one_threshold():
-    """Test the `_parse_partitions` helper function"""
-    assert _parse_partitions('[[1, ["US", "GB"]], 50]') == [
-        Partition(1, ["US", "GB"]),
-        Partition(50),
-    ]
+    assert _record_id("US", 1_000_001, 5_000_001) == "geonames-US-1000-5000"

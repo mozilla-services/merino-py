@@ -38,6 +38,9 @@ from merino.jobs.geonames_uploader.downloader import (
     GeonameAlternate,
 )
 
+from merino.jobs.geonames_uploader.alternates import _rs_alternates_list, RsAlternate
+from merino.jobs.geonames_uploader.geonames import _rs_geoname
+
 
 SERVER_DATA = {
     "geonames_url_format": "http://geonames/export/dump/{country}.zip",
@@ -140,6 +143,70 @@ GEONAME_NY_STATE = Geoname(
     longitude="-75.4999",
 )
 
+GEONAME_SACRAMENTO = Geoname(
+    id=5389489,
+    name="Sacramento",
+    ascii_name="Sacramento",
+    feature_class="P",
+    feature_code="PPLA",
+    country_code="US",
+    admin1_code="CA",
+    admin2_code="067",
+    admin3_code=None,
+    admin4_code=None,
+    population=490712,
+    latitude="38.58157",
+    longitude="-121.4944",
+)
+
+GEONAME_WATERLOO_ON = Geoname(
+    id=6176823,
+    name="Waterloo",
+    ascii_name="Waterloo",
+    feature_class="P",
+    feature_code="PPL",
+    country_code="CA",
+    admin1_code="08",
+    admin2_code="3530",
+    admin3_code=None,
+    admin4_code=None,
+    population=104986,
+    latitude="43.4668",
+    longitude="-80.51639",
+)
+
+GEONAME_HALIFAX = Geoname(
+    id=6324729,
+    name="Halifax",
+    ascii_name="Halifax",
+    feature_class="P",
+    feature_code="PPLA",
+    country_code="CA",
+    admin1_code="07",
+    admin2_code="1209",
+    admin3_code=None,
+    admin4_code=None,
+    population=439819,
+    latitude="44.64269",
+    longitude="-63.57688",
+)
+
+GEONAME_VANCOUVER = Geoname(
+    id=6173331,
+    name="Vancouver",
+    ascii_name="Vancouver",
+    feature_class="P",
+    feature_code="PPL",
+    country_code="CA",
+    admin1_code="02",
+    admin2_code="5915",
+    admin3_code=None,
+    admin4_code=None,
+    population=600000,
+    latitude="49.24966",
+    longitude="-123.11934",
+)
+
 GEONAME_GOESSNITZ = Geoname(
     id=2918770,
     name="Gößnitz",
@@ -157,52 +224,147 @@ GEONAME_GOESSNITZ = Geoname(
     longitude="12.43292",
 )
 
-GEONAMES = [
-    GEONAME_WATERLOO_AL,
-    GEONAME_AL,
-    GEONAME_WATERLOO_IA,
-    GEONAME_IA,
-    GEONAME_NYC,
-    GEONAME_NY_STATE,
-]
+GEONAME_KIEL = Geoname(
+    id=2918770,
+    name="Kiel",
+    ascii_name="Kiel",
+    feature_class="P",
+    feature_code="PPLA",
+    country_code="DE",
+    admin1_code="10",
+    admin2_code="00",
+    admin3_code="01002",
+    admin4_code="01002000",
+    population=246601,
+    latitude="54.32133",
+    longitude="10.13489",
+)
 
-ALTERNATES = {
-    "abbr": [
-        (GEONAME_AL, [GeonameAlternate("AL")]),
-        (GEONAME_IA, [GeonameAlternate("IA")]),
-        (GEONAME_NYC, [GeonameAlternate("NY"), GeonameAlternate("NYC")]),
-        (GEONAME_NY_STATE, [GeonameAlternate("NY")]),
+GEONAME_BERLIN = Geoname(
+    id=2950159,
+    name="Berlin",
+    ascii_name="Berlin",
+    feature_class="P",
+    feature_code="PPLC",
+    country_code="DE",
+    admin1_code="16",
+    admin2_code="00",
+    admin3_code="11000",
+    admin4_code="11000000",
+    population=3426354,
+    latitude="52.52437",
+    longitude="13.41053",
+)
+
+GEONAME_GUADALUPE = Geoname(
+    id=4005509,
+    name="Guadalupe",
+    ascii_name="Guadalupe",
+    feature_class="P",
+    feature_code="PPLA2",
+    country_code="MX",
+    admin1_code="32",
+    admin2_code="17",
+    admin3_code=None,
+    admin4_code=None,
+    population=215000,
+    latitude="22.74753",
+    longitude="-102.51874",
+)
+
+GEONAME_MEXICO_CITY = Geoname(
+    id=3530597,
+    name="Mexico City",
+    ascii_name="Mexico City",
+    feature_class="P",
+    feature_code="PPLC",
+    country_code="MX",
+    admin1_code="09",
+    admin2_code=None,
+    admin3_code=None,
+    admin4_code=None,
+    population=12294193,
+    latitude="19.42847",
+    longitude="-99.12766",
+)
+
+GEONAMES_BY_COUNTRY = {
+    "DE": [
+        GEONAME_GOESSNITZ,
+        GEONAME_KIEL,
+        GEONAME_BERLIN,
     ],
-    "en": [
-        (GEONAME_WATERLOO_AL, [GeonameAlternate("Waterloo")]),
-        (GEONAME_AL, [GeonameAlternate("State of Alabama")]),
-        (GEONAME_WATERLOO_IA, [GeonameAlternate("Waterloo")]),
-        (GEONAME_IA, [GeonameAlternate("State of Iowa")]),
-        (
-            GEONAME_NYC,
-            [
-                GeonameAlternate("New York", is_preferred=True, is_short=True),
-                GeonameAlternate("New York City"),
-            ],
-        ),
-        (GEONAME_NY_STATE, [GeonameAlternate("State of New York")]),
-        (
-            GEONAME_GOESSNITZ,
-            [
-                GeonameAlternate("Gößnitz"),
-                GeonameAlternate("Goessnitz"),
-                GeonameAlternate("Gössnitz"),
-            ],
-        ),
+    "CA": [
+        GEONAME_WATERLOO_ON,
+        GEONAME_HALIFAX,
+        GEONAME_VANCOUVER,
     ],
-    "es": [
-        (GEONAME_WATERLOO_IA, [GeonameAlternate("Waterloo")]),
-        (GEONAME_NYC, [GeonameAlternate("Nueva York")]),
-        (GEONAME_NY_STATE, [GeonameAlternate("Nueva York")]),
+    "MX": [
+        GEONAME_GUADALUPE,
+        GEONAME_MEXICO_CITY,
     ],
-    "iata": [
-        (GEONAME_NYC, [GeonameAlternate("LGA")]),
+    "US": [
+        GEONAME_WATERLOO_AL,
+        GEONAME_AL,
+        GEONAME_WATERLOO_IA,
+        GEONAME_IA,
+        GEONAME_NYC,
+        GEONAME_NY_STATE,
+        GEONAME_SACRAMENTO,
     ],
+}
+
+ALTERNATES_BY_COUNTRY = {
+    "DE": {
+        "en": [
+            (
+                GEONAME_GOESSNITZ,
+                [
+                    GeonameAlternate("Gößnitz"),
+                    GeonameAlternate("Goessnitz"),
+                    GeonameAlternate("Gössnitz"),
+                ],
+            ),
+        ],
+    },
+    "US": {
+        "abbr": [
+            (GEONAME_AL, [GeonameAlternate("AL")]),
+            (GEONAME_IA, [GeonameAlternate("IA")]),
+            (GEONAME_NYC, [GeonameAlternate("NY"), GeonameAlternate("NYC")]),
+            (GEONAME_NY_STATE, [GeonameAlternate("NY")]),
+        ],
+        "en": [
+            (GEONAME_WATERLOO_AL, [GeonameAlternate("Waterloo")]),
+            (GEONAME_AL, [GeonameAlternate("State of Alabama")]),
+            (GEONAME_WATERLOO_IA, [GeonameAlternate("Waterloo")]),
+            (GEONAME_IA, [GeonameAlternate("State of Iowa")]),
+            (
+                GEONAME_NYC,
+                [
+                    GeonameAlternate("New York", is_preferred=True, is_short=True),
+                    GeonameAlternate("New York City"),
+                ],
+            ),
+            (GEONAME_NY_STATE, [GeonameAlternate("State of New York")]),
+            (GEONAME_SACRAMENTO, [GeonameAlternate("Sac")]),
+        ],
+        "es": [
+            (GEONAME_WATERLOO_IA, [GeonameAlternate("Waterloo")]),
+            (GEONAME_NYC, [GeonameAlternate("Nueva York")]),
+            (GEONAME_NY_STATE, [GeonameAlternate("Nueva York")]),
+        ],
+        "fr": [
+            (GEONAME_NY_STATE, [GeonameAlternate("État de New York")]),
+        ],
+        "iata": [
+            (GEONAME_NYC, [GeonameAlternate("LGA")]),
+        ],
+        # an unused/unrecognized language
+        "xx": [
+            (GEONAME_NYC, [GeonameAlternate("New York Xx")]),
+        ],
+    },
 }
 
 
@@ -211,18 +373,26 @@ class DownloaderFixture:
     mocks requests for them.
     """
 
-    geonames: BufferedReader
-    alternates: BufferedReader
+    # country => (geonames_zip, alternates_zip)
+    zips_by_country: dict[str, Tuple[BufferedReader, BufferedReader]]
 
-    def __init__(self, requests_mock, country: str = "US") -> None:
-        """Initialize test"""
-        self.geonames = self.make_geonames_zip(GEONAMES, country)
-        self.alternates = self.make_alternates_zip(ALTERNATES, country)
+    def __init__(
+        self,
+        requests_mock,
+        countries: list[str] = [c for c in GEONAMES_BY_COUNTRY.keys()],
+    ):
+        """Initialize fixture"""
+        self.zips_by_country = {}
+        for country in countries:
+            geonames = self.make_geonames_zip(GEONAMES_BY_COUNTRY[country], country)
+            alternates = self.make_alternates_zip(ALTERNATES_BY_COUNTRY.get(country, {}), country)
 
-        geonames_url = SERVER_DATA["geonames_url_format"].format(country=country)
-        alternates_url = SERVER_DATA["alternates_url_format"].format(country=country)
-        requests_mock.get(geonames_url, body=self.geonames)
-        requests_mock.get(alternates_url, body=self.alternates)
+            self.zips_by_country[country] = (geonames, alternates)
+
+            geonames_url = SERVER_DATA["geonames_url_format"].format(country=country)
+            alternates_url = SERVER_DATA["alternates_url_format"].format(country=country)
+            requests_mock.get(geonames_url, body=geonames)
+            requests_mock.get(alternates_url, body=alternates)
 
     def make_geonames_zip(self, geonames: list[Geoname], country: str) -> BufferedReader:
         """Create a geonames zip file"""
@@ -282,8 +452,9 @@ class DownloaderFixture:
 
     def clean_up(self) -> None:
         """Tear down the test"""
-        self.geonames.close()
-        self.alternates.close()
+        for geonames_zip, alternates_zip in self.zips_by_country.values():
+            geonames_zip.close()
+            alternates_zip.close()
 
 
 @pytest.fixture()
@@ -302,8 +473,30 @@ def filter_geonames(
     """Return geonames for the given country and population partition."""
     return [
         g
-        for g in GEONAMES
-        if g.country_code == country
-        and lower_threshold <= (g.population or 0)
+        for g in GEONAMES_BY_COUNTRY[country]
+        if lower_threshold <= (g.population or 0)
         and (upper_threshold is None or (g.population or 0) < upper_threshold)
+    ]
+
+
+def filter_alternates(
+    country: str,
+    language: str,
+    geonames: list[Geoname],
+) -> list[list[int | list[RsAlternate]]]:
+    """Filter all alternates on a language and geonames and return a list of
+    tuples appropriate for comparing to data in remote settings attachments. The
+    tuples are actually lists since tuples are lists in JSON.
+
+    """
+    return [
+        # Convert the (geoname_id, rd_alts) tuple to a list.
+        list(tup)
+        for tup in _rs_alternates_list(
+            [
+                (_rs_geoname(geoname), alts)
+                for geoname, alts in ALTERNATES_BY_COUNTRY[country][language]
+                if geoname in geonames
+            ]
+        )
     ]

@@ -1,14 +1,21 @@
 """Remote settings client"""
 
+import hashlib
 import json
 import logging
 import os
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Any, Iterable
 
 import kinto_http
 
 from merino.jobs.utils import pretty_file_size
+
+
+# Inline remote settings record data, or in other words, a `dict` representation
+# of a record.
+RecordData = dict[str, Any]
+
 
 logger = logging.getLogger(__name__)
 
@@ -38,17 +45,36 @@ class RemoteSettingsClient:
             server_url=server, bucket=bucket, collection=collection, auth=auth
         )
 
-    def upload(self, record: dict[str, Any], attachment: Any) -> None:
-        """Create or update a record and its attachment."""
+    def upload(
+        self,
+        record: RecordData,
+        attachment: Any,
+        existing_record: RecordData | None = None,
+        force_reupload: bool = False,
+    ) -> bool:
+        """Create or update a record and its attachment. If `existing_record` is
+        defined and its attachment hash is the same as `attachment`'s hash,
+        nothing is actually uploaded unless `force-reupload` is `True`. Return
+        `True` if the record was created/updated or `False` if not.
+
+        """
         record_id = record["id"]
+        attachment_json = json.dumps(attachment)
+        attachment_bytes = attachment_json.encode(encoding="utf-8")
+
+        if not force_reupload and existing_record:
+            attachment_hash = existing_record.get("attachment", {}).get("hash")
+            new_hash = hashlib.sha256(attachment_bytes).hexdigest()
+            if attachment_hash == new_hash:
+                logger.info(f"Record has not changed: {record_id}")
+                return False
+
         logger.info(f"Updating record: {record_id}")
         logger.debug(json.dumps(record) + " ")
 
         if not self.dry_run:
             self.kinto.update_record(data=record)
 
-        attachment_json = json.dumps(attachment)
-        attachment_bytes = attachment_json.encode(encoding="utf-8")
         attachment_size = pretty_file_size(len(attachment_bytes))
         logger.info(f"Uploading attachment: {record_id} ({attachment_size})")
 
@@ -71,9 +97,12 @@ class RemoteSettingsClient:
                     mimetype="application/json",
                 )
 
-    def get_records(self) -> list[dict[str, Any]]:
+        return True
+
+    def get_records(self) -> list[RecordData]:
         """Get all records."""
-        records: list[dict[str, Any]] = self.kinto.get_records()
+        logger.info("Getting all records")
+        records: list[RecordData] = self.kinto.get_records()
         return records
 
     def delete_record(self, id: str) -> None:
@@ -82,15 +111,16 @@ class RemoteSettingsClient:
         if not self.dry_run:
             self.kinto.delete_record(id=id)
 
-    def download_attachment(self, record: dict[str, Any]) -> Any:
+    def download_attachment(self, record: RecordData) -> Any:
         """Download and return a record's attachment."""
         with TemporaryDirectory() as tmp_dir_name:
+            logger.info(f"Downloading attachment for record: {record.get('id')}")
             path = self.kinto.download_attachment(record, filepath=tmp_dir_name)
             with open(path, "r") as file:
                 return json.load(file)
 
 
-def filter_expression(countries: list[str] = [], locales: list[str] = []) -> str:
+def filter_expression(countries: Iterable[str] = [], locales: Iterable[str] = []) -> str:
     """Build a jexl filter expression."""
     terms = []
     if countries:
@@ -100,7 +130,9 @@ def filter_expression(countries: list[str] = [], locales: list[str] = []) -> str
     return " && ".join(terms)
 
 
-def filter_expression_dict(countries: list[str] = [], locales: list[str] = []) -> dict[str, str]:
+def filter_expression_dict(
+    countries: Iterable[str] = [], locales: Iterable[str] = []
+) -> dict[str, str]:
     """Return a dict containing a "filter_expression", or an empty dict if the
     filter expression is empty.
 
@@ -111,5 +143,5 @@ def filter_expression_dict(countries: list[str] = [], locales: list[str] = []) -
     return {"filter_expression": expr}
 
 
-def _join_items(items: list[str]) -> str:
+def _join_items(items: Iterable[str]) -> str:
     return ", ".join([f"'{i}'" for i in sorted(items)])
