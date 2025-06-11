@@ -155,6 +155,9 @@ class AccuweatherLocation(BaseModel):
     # Unique Administrative Area ID for the Location.
     administrative_area_id: str
 
+    # Country name for the location
+    country_name: str
+
 
 class WeatherData(NamedTuple):
     """The quartet for weather data used internally."""
@@ -283,9 +286,9 @@ class AccuweatherBackend:
                     hasher.update(key.encode("utf-8") + value.encode("utf-8"))
             extra_identifiers = hasher.hexdigest()
 
-            return f"{self.__class__.__name__}:v6:{url}:{extra_identifiers}"
+            return f"{self.__class__.__name__}:v7:{url}:{extra_identifiers}"
 
-        return f"{self.__class__.__name__}:v6:{url}"
+        return f"{self.__class__.__name__}:v7:{url}"
 
     @functools.cache
     def cache_key_template(self, dt: WeatherDataType, language: str) -> str:
@@ -501,7 +504,24 @@ class AccuweatherBackend:
         if location.localized_name == geolocation.city_names.get("en"):
             return geolocation.city_names.get(normalized_lang)
 
-        return None
+        return location.localized_name
+
+    @staticmethod
+    def get_region_for_weather_report(
+        location: AccuweatherLocation, weather_context: WeatherContext
+    ) -> str | None:
+        """Get region based on request country origin and the country of the requested city."""
+        geolocation = weather_context.geolocation
+        # we don't override country_name so it should tell us where the request came from
+        request_origin_country = geolocation.country_name
+        requested_country = geolocation.country
+        if request_origin_country in ["Canada", "United States"] and requested_country in [
+            "CA",
+            "US",
+        ]:
+            return location.administrative_area_id
+        else:
+            return location.country_name
 
     async def get_weather_report_with_location_key(
         self, weather_context: WeatherContext
@@ -669,20 +689,24 @@ class AccuweatherBackend:
             # request was made with location key rather than geolocation
             # so location info is not in the cache
             location = AccuweatherLocation(
-                localized_name="N/A", key=location_key, administrative_area_id="N/A"
+                localized_name="N/A",
+                key=location_key,
+                administrative_area_id="N/A",
+                country_name="N/A",
             )
         # if all the other three values are present, ttl here would be a valid ttl value
         if location and current_conditions and forecast and ttl:
             # Return the weather report with the values returned from the cache.
             city_name = self.get_localized_city_name(location, weather_context)
+            admin_area = self.get_region_for_weather_report(location, weather_context)
+
             return WeatherReport(
                 city_name=city_name if city_name else location.localized_name,
-                region_code=location.administrative_area_id,
+                region_code=admin_area,
                 current_conditions=current_conditions,
                 forecast=forecast,
                 ttl=ttl,
             )
-
         # The cached report is incomplete, now fetching from AccuWeather.
         if location is None:
             try:
@@ -727,10 +751,11 @@ class AccuweatherBackend:
             forecast, forecast_ttl = forecast_response
             weather_report_ttl = min(current_conditions_ttl, forecast_ttl)
             city_name = self.get_localized_city_name(location, weather_context)
+            admin_area = self.get_region_for_weather_report(location, weather_context)
             return (
                 WeatherReport(
                     city_name=city_name if city_name else location.localized_name,
-                    region_code=location.administrative_area_id,
+                    region_code=admin_area,
                     current_conditions=current_conditions,
                     forecast=forecast,
                     ttl=weather_report_ttl,

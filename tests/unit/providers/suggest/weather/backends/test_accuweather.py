@@ -163,31 +163,6 @@ def fixture_location_response_for_fallback() -> bytes:
     )
 
 
-@pytest.fixture(name="localized_name_response")
-def fixture_localized_name_response() -> bytes:
-    """Fixture for localized name response."""
-    return orjson.dumps(
-        {
-            "Version": 1,
-            "Key": "39376",
-            "Type": "City",
-            "Rank": 35,
-            "LocalizedName": "Santo Francisco",
-            "EnglishName": "San Francisco",
-            "PrimaryPostalCode": "94105",
-            "AdministrativeArea": {
-                "ID": "CA",
-                "LocalizedName": "California",
-                "EnglishName": "California",
-                "Level": 1,
-                "LocalizedType": "State",
-                "EnglishType": "State",
-                "CountryID": "US",
-            },
-        }
-    )
-
-
 @pytest.fixture(name="location_completion_sample_cities")
 def fixture_location_completion_sample_cities() -> list[dict[str, Any]]:
     """Create a list of sample location completions for the search term 'new'"""
@@ -362,7 +337,7 @@ def fixture_expected_weather_report() -> WeatherReport:
     """Create an `AccuWeatherReport` for assertions"""
     return WeatherReport(
         city_name="San Francisco",
-        region_code="CA",
+        region_code="United States",
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
@@ -627,6 +602,7 @@ def fixture_accuweather_cached_location_key() -> bytes:
         "key": "39376",
         "localized_name": "San Francisco",
         "administrative_area_id": "CA",
+        "country_name": "United States",
     }
     return orjson.dumps(location)
 
@@ -1668,7 +1644,10 @@ async def test_get_location_by_geolocation(
 ) -> None:
     """Test that the get_location method returns an AccuweatherLocation."""
     expected_location: AccuweatherLocation = AccuweatherLocation(
-        key="39376", localized_name="San Francisco", administrative_area_id="CA"
+        key="39376",
+        localized_name="San Francisco",
+        administrative_area_id="CA",
+        country_name="United States",
     )
     weather_context_without_location_key.selected_region = "CA"
     weather_context_without_location_key.selected_city = "San Francisco"
@@ -2051,16 +2030,16 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend, language: str
     [
         (
             {"q": "asdfg", "apikey": "filter_me_out"},
-            f"AccuweatherBackend:v6:localhost:"
+            f"AccuweatherBackend:v7:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
         (
             {},
-            "AccuweatherBackend:v6:localhost",
+            "AccuweatherBackend:v7:localhost",
         ),
         (
             {"q": "asdfg"},
-            f"AccuweatherBackend:v6:localhost:"
+            f"AccuweatherBackend:v7:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
     ],
@@ -2651,12 +2630,81 @@ async def test_get_localized_city_name(
     expected_city_name: str,
     accuweather: AccuweatherBackend,
     response_header: dict[str, str],
-    localized_name_response: bytes,
 ) -> None:
     """Test return city name returns correct localized city name."""
     location = AccuweatherLocation(
-        key="123", localized_name="San Francisco", administrative_area_id="CA"
+        key="123",
+        localized_name="San Francisco",
+        administrative_area_id="CA",
+        country_name="United States",
     )
     modified_weather_context = replace(weather_context_without_location_key, languages=languages)
     city_name = accuweather.get_localized_city_name(location, modified_weather_context)
     assert city_name == expected_city_name
+
+
+@pytest.mark.parametrize(
+    ("country_request_origin", "expected_region"),
+    [
+        ("United States", "CA"),
+        ("France", "United States"),
+        (None, "United States"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_region_for_weather_report_north_america(
+    weather_context_without_location_key: WeatherContext,
+    country_request_origin: str,
+    expected_region: str,
+    accuweather: AccuweatherBackend,
+    response_header: dict[str, str],
+) -> None:
+    """Test return city name returns correct localized city name."""
+    location = AccuweatherLocation(
+        key="123",
+        localized_name="San Francisco",
+        administrative_area_id="CA",
+        country_name="United States",
+    )
+    geolocation = weather_context_without_location_key.geolocation
+    modified_geolocation = geolocation.model_copy(update={"country_name": country_request_origin})
+    modified_weather_context = replace(
+        weather_context_without_location_key, geolocation=modified_geolocation
+    )
+    region = accuweather.get_region_for_weather_report(location, modified_weather_context)
+    assert region == expected_region
+
+
+@pytest.mark.parametrize(
+    ("country_request_origin", "request_country", "expected_region"),
+    [
+        ("United States", "GB", "United Kingdom"),
+        ("United Kingdom", "GB", "United Kingdom"),
+        (None, "GB", "United Kingdom"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_region_for_weather_report_outside_north_america(
+    weather_context_without_location_key: WeatherContext,
+    country_request_origin: str,
+    request_country: str,
+    expected_region: str,
+    accuweather: AccuweatherBackend,
+    response_header: dict[str, str],
+) -> None:
+    """Test return city name returns correct localized city name."""
+    location = AccuweatherLocation(
+        key="123",
+        localized_name="London",
+        administrative_area_id="LND",
+        country_name="United Kingdom",
+    )
+    geolocation = weather_context_without_location_key.geolocation
+    modified_geolocation = geolocation.model_copy(
+        update={"country_name": country_request_origin, "country": request_country}
+    )
+    modified_weather_context = replace(
+        weather_context_without_location_key, geolocation=modified_geolocation
+    )
+    region = accuweather.get_region_for_weather_report(location, modified_weather_context)
+    assert region == expected_region
