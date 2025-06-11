@@ -41,7 +41,7 @@ class Location(BaseModel):
     postal_code: Optional[str] = None
     key: Optional[str] = None
     coordinates: Optional[Coordinates] = None
-    city_names: Optional[dict[str, str]] = None
+    city_names: dict[str, str] = {}
 
 
 def get_regions(subdivisions) -> Optional[list[str]]:

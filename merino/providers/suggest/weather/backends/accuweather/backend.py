@@ -16,7 +16,7 @@ from pydantic import BaseModel, ValidationError
 
 from merino.cache.protocol import CacheAdapter
 from merino.exceptions import CacheAdapterError
-from merino.middleware.geolocation import Location, MAXMIND_SUPPORTED_LOCALE
+from merino.middleware.geolocation import Location
 from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     set_region_mapping,
     increment_skip_cities_mapping,
@@ -494,21 +494,13 @@ class AccuweatherBackend:
         geolocation = weather_context.geolocation
         language = get_language(weather_context.languages)
         normalized_lang = (
-            "es" if language.startswith("es") else "en" if language.startswith("en") else language
+            "en" if language.startswith("en") else "es" if language.startswith("es") else language
         )
 
-        # Skip if english
-        if normalized_lang == "en":
-            return None
-
         # ensure city was not overridden, if so city_names do not contain what we need
-        if (
-            geolocation
-            and geolocation.city_names
-            and location.localized_name == geolocation.city_names.get("en")
-            and normalized_lang in MAXMIND_SUPPORTED_LOCALE
-        ):
+        if location.localized_name == geolocation.city_names.get("en"):
             return geolocation.city_names.get(normalized_lang)
+
         return None
 
     async def get_weather_report_with_location_key(

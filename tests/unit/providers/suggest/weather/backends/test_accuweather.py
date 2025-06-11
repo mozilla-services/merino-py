@@ -2637,7 +2637,12 @@ def test_get_languages(languages, expected_selected_language) -> None:
 
 @pytest.mark.parametrize(
     ("languages", "expected_city_name"),
-    [(["en-US"], None), (["fr"], "Sân Frâncisco"), (["it"], None), (["es-MX"], "Sán Fráncisco")],
+    [
+        (["en-US"], "San Francisco"),
+        (["fr"], "Sân Frâncisco"),
+        (["it"], None),
+        (["es-MX"], "Sán Fráncisco"),
+    ],
 )
 @pytest.mark.asyncio
 async def test_get_localized_city_name(
