@@ -7,7 +7,7 @@ import hashlib
 import orjson
 import logging
 from enum import Enum
-from typing import Any, Callable, NamedTuple, cast, Optional
+from typing import Any, Callable, NamedTuple, cast
 
 import aiodogstatsd
 from dateutil import parser
@@ -156,7 +156,7 @@ class AccuweatherLocation(BaseModel):
     administrative_area_id: str
 
     # Country name for the location
-    country_name: Optional[str] = None
+    country_name: str
 
 
 class WeatherData(NamedTuple):
@@ -515,9 +515,7 @@ class AccuweatherBackend:
         # we don't override country_name so it should tell us where the request came from
         request_origin_country = geolocation.country_name
         requested_country = geolocation.country
-
-        # None in the list because if we don't know the origin country of the request, use NA convention.
-        if request_origin_country in ["Canada", "United States", None] and requested_country in [
+        if request_origin_country in ["Canada", "United States"] and requested_country in [
             "CA",
             "US",
         ]:

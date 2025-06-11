@@ -337,7 +337,7 @@ def fixture_expected_weather_report() -> WeatherReport:
     """Create an `AccuWeatherReport` for assertions"""
     return WeatherReport(
         city_name="San Francisco",
-        region_code="CA",
+        region_code="United States",
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
@@ -602,6 +602,7 @@ def fixture_accuweather_cached_location_key() -> bytes:
         "key": "39376",
         "localized_name": "San Francisco",
         "administrative_area_id": "CA",
+        "country_name": "United States",
     }
     return orjson.dumps(location)
 
@@ -2632,7 +2633,10 @@ async def test_get_localized_city_name(
 ) -> None:
     """Test return city name returns correct localized city name."""
     location = AccuweatherLocation(
-        key="123", localized_name="San Francisco", administrative_area_id="CA"
+        key="123",
+        localized_name="San Francisco",
+        administrative_area_id="CA",
+        country_name="United States",
     )
     modified_weather_context = replace(weather_context_without_location_key, languages=languages)
     city_name = accuweather.get_localized_city_name(location, modified_weather_context)
@@ -2644,7 +2648,7 @@ async def test_get_localized_city_name(
     [
         ("United States", "CA"),
         ("France", "United States"),
-        (None, "CA"),
+        (None, "United States"),
     ],
 )
 @pytest.mark.asyncio

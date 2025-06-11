@@ -160,6 +160,7 @@ def fixture_weather_context_without_location_key() -> WeatherContext:
             city="San Francisco",
             dma=807,
             postal_code="94105",
+            country_name="United States",
         ),
         ["en-US", "fr"],
     )
@@ -176,6 +177,7 @@ def fixture_weather_context_with_location_key() -> WeatherContext:
             dma=807,
             postal_code="94105",
             key=ACCUWEATHER_LOCATION_KEY,
+            country_name="United States",
         ),
         ["en-US", "fr"],
     )
@@ -188,6 +190,7 @@ def fixture_accuweather_cached_location_key() -> bytes:
         "key": "39376",
         "localized_name": "San Francisco",
         "administrative_area_id": "CA",
+        "country_name": "United States",
     }
     return json.dumps(location).encode("utf-8")
 
