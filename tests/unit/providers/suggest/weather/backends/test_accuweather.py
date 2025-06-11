@@ -6,6 +6,8 @@
 
 import datetime
 import hashlib
+from dataclasses import replace
+
 import orjson
 import logging
 from ssl import SSLError
@@ -158,6 +160,31 @@ def fixture_location_response_for_fallback() -> bytes:
                 ],
             },
         ]
+    )
+
+
+@pytest.fixture(name="localized_name_response")
+def fixture_localized_name_response() -> bytes:
+    """Fixture for localized name response."""
+    return orjson.dumps(
+        {
+            "Version": 1,
+            "Key": "39376",
+            "Type": "City",
+            "Rank": 35,
+            "LocalizedName": "Santo Francisco",
+            "EnglishName": "San Francisco",
+            "PrimaryPostalCode": "94105",
+            "AdministrativeArea": {
+                "ID": "CA",
+                "LocalizedName": "California",
+                "EnglishName": "California",
+                "Level": 1,
+                "LocalizedType": "State",
+                "EnglishType": "State",
+                "CountryID": "US",
+            },
+        }
     )
 
 
@@ -324,8 +351,9 @@ def fixture_weather_context_without_location_key() -> WeatherContext:
             city="San Francisco",
             dma=807,
             postal_code="94105",
+            city_names={"en": "San Francisco", "fr": "Sân Frâncisco", "es": "Sán Fráncisco"},
         ),
-        ["en-US", "fr"],
+        ["en-US", "fr", "es"],
     )
 
 
@@ -2605,3 +2633,30 @@ async def test_fetch_from_cache_without_country_city(
 def test_get_languages(languages, expected_selected_language) -> None:
     """Test return language returns the first valid language."""
     assert get_language(languages) == expected_selected_language
+
+
+@pytest.mark.parametrize(
+    ("languages", "expected_city_name"),
+    [
+        (["en-US"], "San Francisco"),
+        (["fr"], "Sân Frâncisco"),
+        (["it"], None),
+        (["es-MX"], "Sán Fráncisco"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_get_localized_city_name(
+    weather_context_without_location_key: WeatherContext,
+    languages: list[str],
+    expected_city_name: str,
+    accuweather: AccuweatherBackend,
+    response_header: dict[str, str],
+    localized_name_response: bytes,
+) -> None:
+    """Test return city name returns correct localized city name."""
+    location = AccuweatherLocation(
+        key="123", localized_name="San Francisco", administrative_area_id="CA"
+    )
+    modified_weather_context = replace(weather_context_without_location_key, languages=languages)
+    city_name = accuweather.get_localized_city_name(location, modified_weather_context)
+    assert city_name == expected_city_name
