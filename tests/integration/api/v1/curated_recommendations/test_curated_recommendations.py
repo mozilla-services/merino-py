@@ -59,14 +59,18 @@ class MockEngagementBackend(EngagementBackend):
     def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Return random click and impression counts based on the scheduled corpus id and region."""
         HIGH_CTR_ITEMS = {
-            "292161": (1_000_000, 1_000_000),  # ML music 100% CTR
-            "290522": (1_000_000, 1_000_000),  # ML NFL 100% CTR
-            "292230": (1_000_000, 1_000_000),  # ML Entertainment 100% CTR
-            "291772": (1_000_000, 1_000_000),  # ML Entertainment 100% CTR
-            "292253": (1_000_000, 1_000_000),  # ML NBA 100% CTR
-            "2301": (1_000_000, 1_000_000),  # ML Food 100% CTR
+            "b2c10703-5377-4fe8-89d3-32fbd7288187": (1_000_000, 1_000_000),  # ML music 100% CTR
+            "f509393b-c1d6-4500-8ed2-29f8a23f39a7": (1_000_000, 1_000_000),  # ML NFL 100% CTR
+            "2afcef43-4663-446e-9d69-69cbc6966162": (1_000_000, 1_000_000),  # ML Movies 100% CTR
+            "dc4b30c4-170b-4e9f-a068-bdc51474a0fb": (1_000_000, 1_000_000),  # ML Soccer 100% CTR
+            "9261e868-beff-4419-8071-7750d063d642": (1_000_000, 1_000_000),  # ML NBA 100% CTR
+            "63909b8c-a619-45f3-9ebc-fd8fcaeb72b1": (1_000_000, 1_000_000),  # ML Food 100% CTR
             # The above 6 ML recs have the highest CTR & will be included in top_stories_section
-            "292145": (990_000, 1_000_000),  # ML music 99% CTR (highest CTR in Music feed)
+            "41111154-ebb1-45d9-9799-a882f13cd8cc": (
+                990_000,
+                1_000_000,
+            ),  # ML music 99% CTR (highest CTR in Music
+            # feed)
             "4095b364-02ff-402c-b58a-792a067fccf2": (1_000_000, 1_000_000),  # Non-ML food 100% CTR
         }
         seed_input = "_".join(filter(None, [corpus_item_id, region]))
@@ -1754,7 +1758,7 @@ class TestSections:
                         assert rec["corpusItemId"] not in top_story_ids
 
             # The expected ML sectionItem has 100% CTR, and is always present in the ML section part of the response.
-            expected_high_ctr_id = "292145"
+            expected_high_ctr_id = "41111154-ebb1-45d9-9799-a882f13cd8cc"
             # Find the receivedRank of the high CTR ML sectionItem
             high_item_rank = next(
                 (
