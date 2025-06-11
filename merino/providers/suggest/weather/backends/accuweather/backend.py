@@ -324,7 +324,7 @@ class AccuweatherBackend:
           - `request_type` {RequestType}: the request type used for metrics and logging
           - `process_api_response` {Callable}: the response processor, it returns None if the processing fails
           - `cache_ttl_sec` {int}: the cache TTL in seconds
-          - `should_cache` {bool}: whether or not to cache the processed response
+          - `should_cache` {bool}: whether to cache the processed response
         Return:
           - The processed response or None if failed
         Raises:
@@ -485,6 +485,23 @@ class AccuweatherBackend:
             return await self.get_weather_report_with_location_key(weather_context)
 
         return await self.get_weather_report_with_geolocation(weather_context)
+
+    @staticmethod
+    def get_localized_city_name(
+        location: AccuweatherLocation, weather_context: WeatherContext
+    ) -> str | None:
+        """Get city name based on specified language."""
+        geolocation = weather_context.geolocation
+        language = get_language(weather_context.languages)
+        normalized_lang = (
+            "en" if language.startswith("en") else "es" if language.startswith("es") else language
+        )
+
+        # ensure city was not overridden, if so city_names do not contain what we need
+        if location.localized_name == geolocation.city_names.get("en"):
+            return geolocation.city_names.get(normalized_lang)
+
+        return None
 
     async def get_weather_report_with_location_key(
         self, weather_context: WeatherContext
@@ -657,8 +674,9 @@ class AccuweatherBackend:
         # if all the other three values are present, ttl here would be a valid ttl value
         if location and current_conditions and forecast and ttl:
             # Return the weather report with the values returned from the cache.
+            city_name = self.get_localized_city_name(location, weather_context)
             return WeatherReport(
-                city_name=location.localized_name,
+                city_name=city_name if city_name else location.localized_name,
                 region_code=location.administrative_area_id,
                 current_conditions=current_conditions,
                 forecast=forecast,
@@ -708,10 +726,10 @@ class AccuweatherBackend:
             current_conditions, current_conditions_ttl = current_conditions_response
             forecast, forecast_ttl = forecast_response
             weather_report_ttl = min(current_conditions_ttl, forecast_ttl)
-
+            city_name = self.get_localized_city_name(location, weather_context)
             return (
                 WeatherReport(
-                    city_name=location.localized_name,
+                    city_name=city_name if city_name else location.localized_name,
                     region_code=location.administrative_area_id,
                     current_conditions=current_conditions,
                     forecast=forecast,

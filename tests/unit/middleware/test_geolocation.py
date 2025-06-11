@@ -38,6 +38,7 @@ def fixture_geolocation_middleware(mocker: MockerFixture) -> GeolocationMiddlewa
                 dma=819,
                 postal_code="98354",
                 coordinates=Coordinates(latitude=47.2513, longitude=-122.3149, radius=22),
+                city_names={"en": "Milton", "ru": "Мильтон"},
             ),
             ["216.160.83.56", 50000],
         ),
@@ -50,6 +51,7 @@ def fixture_geolocation_middleware(mocker: MockerFixture) -> GeolocationMiddlewa
                 city="Boxford",
                 postal_code="OX1",
                 coordinates=Coordinates(latitude=51.75, longitude=-1.25, radius=100),
+                city_names={"en": "Boxford"},
             ),
             ["2.125.160.216", 50000],
         ),
@@ -119,6 +121,7 @@ async def test_geolocation_client_ip_override(
         dma=819,
         postal_code="98354",
         coordinates=Coordinates(latitude=47.2513, longitude=-122.3149, radius=22),
+        city_names={"en": "Milton", "ru": "Мильтон"},
     )
     mocker.patch("merino.middleware.geolocation.CLIENT_IP_OVERRIDE", "216.160.83.56")
 

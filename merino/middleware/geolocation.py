@@ -18,6 +18,8 @@ reader = geoip2.database.Reader(settings.location.maxmind_database)
 
 logger = logging.getLogger(__name__)
 
+MAXMIND_SUPPORTED_LOCALE = frozenset({"de", "en", "es", "fr", "ja", "pt-BR", "ru", "zh-CN"})
+
 
 class Coordinates(BaseModel):
     """Data model for coordinates for geolocation."""
@@ -39,6 +41,7 @@ class Location(BaseModel):
     postal_code: Optional[str] = None
     key: Optional[str] = None
     coordinates: Optional[Coordinates] = None
+    city_names: dict[str, str] = {}
 
 
 def get_regions(subdivisions) -> Optional[list[str]]:
@@ -95,6 +98,7 @@ class GeolocationMiddleware:
                     longitude=record.location.longitude,
                     radius=record.location.accuracy_radius,
                 ),
+                city_names=record.city.names,
             )
             if record
             else Location()
