@@ -32,6 +32,7 @@ class ProcessedLocationResponse(TypedDict):
     key: str
     localized_name: str
     administrative_area_id: str
+    country_name: str
 
 
 def add_partner_code(
@@ -89,6 +90,9 @@ def process_location_response(
                 "Key": key,
                 "LocalizedName": localized_name,
                 "AdministrativeArea": {"ID": administrative_area_id},
+                "Country": {
+                    "LocalizedName": country_name,
+                },
             },
             *_,
         ]:
@@ -100,6 +104,7 @@ def process_location_response(
                 "key": key,
                 "localized_name": localized_name,
                 "administrative_area_id": administrative_area_id,
+                "country_name": country_name,
             }
         case _:
             return None
