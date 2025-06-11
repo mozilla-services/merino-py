@@ -31,7 +31,6 @@ from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     set_double_row_layout,
     exclude_recommendations_from_blocked_sections,
-    create_sections_from_items_by_topic,
     is_ml_sections_experiment,
     update_received_feed_rank,
     get_sections_with_enough_items,
@@ -236,41 +235,6 @@ class TestAdjustAdsInSections:
                 assert self.ads_in_section(section)
             else:
                 assert not self.ads_in_section(section)
-
-
-class TestCreateSectionsFromItemsByTopic:
-    """Tests covering create_sections_from_items_by_topic"""
-
-    def test_group_by_topic_and_cycle_layout(self):
-        """Test grouping items by topic and cycling layouts"""
-        items = generate_recommendations(3)
-        items[0].topic = Topic.SCIENCE
-        items[1].topic = Topic.FOOD
-        items[2].topic = None
-
-        sections = create_sections_from_items_by_topic(items, SurfaceId.NEW_TAB_EN_US)
-        assert set(sections.keys()) == {Topic.SCIENCE.value, Topic.FOOD.value}
-
-        sci = sections[Topic.SCIENCE.value]
-        food = sections[Topic.FOOD.value]
-        assert sci.receivedFeedRank == 0
-        assert sci.layout == layout_6_tiles
-        assert sci.iab.categories == ["464"]
-        assert food.receivedFeedRank == 1
-        assert food.layout == layout_4_large
-        assert food.iab.categories == ["210"]
-        assert sci.recommendations[0].receivedRank == 0
-        assert food.recommendations[0].receivedRank == 0
-
-    def test_ignores_none_topics(self):
-        """Test that items without a topic produce no sections"""
-        items = generate_recommendations(2)
-        # Topics aren't expected to be None in practice, but it may happen if a
-        # new topic is introduced in the corpus, without Merino having been updated.
-        items[0].topic = None
-        items[1].topic = None
-        result = create_sections_from_items_by_topic(items, SurfaceId.NEW_TAB_EN_US)
-        assert result == {}
 
 
 class TestMlSectionsExperiment:

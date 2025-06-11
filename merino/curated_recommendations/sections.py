@@ -11,7 +11,6 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusSection,
     CorpusItem,
     Topic,
-    IABMetadata,
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
@@ -209,40 +208,6 @@ def adjust_ads_in_sections(sections: Dict[str, Section]) -> None:
         for rl in sec.layout.responsiveLayouts:
             for tile in rl.tiles:
                 tile.hasAd = False
-
-
-def create_sections_from_items_by_topic(
-    items: List[CuratedRecommendation], surface_id: SurfaceId
-) -> Dict[str, Section]:
-    """Group remaining recommendations by topic and build sections for each topic.
-
-    Args:
-        items: List of CuratedRecommendation to group.
-        surface_id: SurfaceId for title localization.
-
-    Returns:
-        Mapping from topic IDs to Section objects, each with assigned receivedFeedRank and recommendations.
-    """
-    sections: Dict[str, Section] = {}
-    max_recs_per_section = 30
-
-    for rec in items:
-        if rec.topic:
-            sid = rec.topic.value
-            if sid not in sections:
-                idx = len(sections)
-                sections[sid] = Section(
-                    receivedFeedRank=idx,
-                    recommendations=[],
-                    title=get_translation(surface_id, rec.topic, sid),
-                    iab=IABMetadata(categories=map_topic_to_iab_categories(rec.topic)),
-                    layout=deepcopy(LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)]),
-                )
-            sec = sections[sid]
-            if len(sec.recommendations) < max_recs_per_section:
-                rec.receivedRank = len(sec.recommendations)
-                sec.recommendations.append(rec)
-    return sections
 
 
 def is_ml_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
