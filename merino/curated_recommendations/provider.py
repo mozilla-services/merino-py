@@ -133,7 +133,6 @@ class CuratedRecommendationsProvider:
 
         if is_sections_experiment:
             sections_feeds = await get_sections(
-                recommendations,
                 request,
                 surface_id,
                 engagement_backend=self.engagement_backend,
