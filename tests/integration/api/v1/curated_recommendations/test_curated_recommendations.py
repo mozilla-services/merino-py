@@ -1369,13 +1369,17 @@ class TestSections:
 
             # Assert layout of the first section.
             assert first_section["layout"]["name"] == "4-large-small-medium-1-ad"
-            # Assert layout of the second section has 2 rows, if it has enough recommendations for this layout.
-            if len(second_section["recommendations"]) >= 7:
-                assert second_section["layout"]["name"] == "7-double-row-3-ad"
-            # Assert that none of the other sections have the layout "7-double-row-3-ad".
-            for section in sections.values():
-                if section["receivedFeedRank"] != 1:
-                    assert section["layout"]["name"] != "7-double-row-3-ad"
+
+            valid_layouts = {
+                "4-large-small-medium-1-ad",
+                "4-medium-small-1-ad",
+                "6-small-medium-1-ad",
+            }
+
+            # Check that sections have a layout in the valid_layouts list
+            for sec in sections.values():
+                layout_name = sec["layout"]["name"]
+                assert layout_name in valid_layouts
 
             # Assert only sections 1,2,3,5,7,9 (ranks: 0,1,2,4,6,8) have ads
             expected_section_ranks_with_ads = {0, 1, 2, 4, 6, 8}

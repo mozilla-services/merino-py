@@ -17,7 +17,6 @@ from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_4_large,
     layout_6_tiles,
-    layout_3_ads,
 )
 from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
@@ -173,23 +172,6 @@ def exclude_recommendations_from_blocked_sections(
     """
     blocked_ids = {s.sectionId for s in requested_sections if s.isBlocked}
     return [rec for rec in recommendations if not rec.topic or rec.topic.value not in blocked_ids]
-
-
-def set_double_row_layout(sections: Dict[str, Section]) -> None:
-    """Apply a 3-ad, double-row layout to the second section if it exists and has enough items.
-
-    Args:
-        sections: Mapping of section IDs to Section objects (with current ReceivedFeedRank).
-
-    Returns:
-        None. Mutates the Section.layout in-place.
-    """
-    second = next(
-        (s for s in sections.values() if s.receivedFeedRank == 1),
-        None,
-    )
-    if second and len(second.recommendations) >= layout_3_ads.max_tile_count:
-        second.layout = layout_3_ads
 
 
 def adjust_ads_in_sections(sections: Dict[str, Section]) -> None:
@@ -378,8 +360,7 @@ async def get_sections(
     # 8. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
     sections = rank_sections(sections, request.sections, engagement_backend, personal_interests)
 
-    # 9. Apply ad/layout tweaks
-    set_double_row_layout(sections)
+    # 9. Apply ads adjustments
     adjust_ads_in_sections(sections)
 
     return sections
