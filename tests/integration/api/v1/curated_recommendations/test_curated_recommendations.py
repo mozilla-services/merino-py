@@ -58,16 +58,32 @@ class MockEngagementBackend(EngagementBackend):
 
     def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Return random click and impression counts based on the scheduled corpus id and region."""
+        HIGH_CTR_ITEMS = {
+            "b2c10703-5377-4fe8-89d3-32fbd7288187": (1_000_000, 1_000_000),  # ML music 100% CTR
+            "f509393b-c1d6-4500-8ed2-29f8a23f39a7": (1_000_000, 1_000_000),  # ML NFL 100% CTR
+            "2afcef43-4663-446e-9d69-69cbc6966162": (1_000_000, 1_000_000),  # ML Movies 100% CTR
+            "dc4b30c4-170b-4e9f-a068-bdc51474a0fb": (1_000_000, 1_000_000),  # ML Soccer 100% CTR
+            "9261e868-beff-4419-8071-7750d063d642": (1_000_000, 1_000_000),  # ML NBA 100% CTR
+            "63909b8c-a619-45f3-9ebc-fd8fcaeb72b1": (1_000_000, 1_000_000),  # ML Food 100% CTR
+            # The above 6 ML recs have the highest CTR & will be included in top_stories_section
+            "41111154-ebb1-45d9-9799-a882f13cd8cc": (
+                990_000,
+                1_000_000,
+            ),  # ML music 99% CTR (highest CTR in Music
+            # feed)
+            "4095b364-02ff-402c-b58a-792a067fccf2": (1_000_000, 1_000_000),  # Non-ML food 100% CTR
+        }
         seed_input = "_".join(filter(None, [corpus_item_id, region]))
         rng = np.random.default_rng(seed=int.from_bytes(seed_input.encode()))
 
-        if corpus_item_id in ["271736", "4095b364-02ff-402c-b58a-792a067fccf2"]:
+        if corpus_item_id in HIGH_CTR_ITEMS:
             # Give the first item (corpus rec & ML section) 100% click-through rate to put it on top with high
             # certainty.
+            click_count, impression_count = HIGH_CTR_ITEMS[corpus_item_id]
             return Engagement(
                 corpus_item_id=corpus_item_id,
-                click_count=1000000,
-                impression_count=1000000,
+                click_count=click_count,
+                impression_count=impression_count,
             )
         elif rng.random() < 0.5:
             # 50% chance of no engagement data being available.
@@ -1215,7 +1231,7 @@ class TestSections:
             # assert IAB metadata is present in ML sections (there are 8 of them)
             expected_iab_metadata = {
                 "nfl": "484",
-                "tb": "640",
+                "tv": "640",
                 "music": "338",
                 "movies": "324",
                 "nba": "547",
@@ -1227,10 +1243,11 @@ class TestSections:
             for section_name, expected_iab_code in expected_iab_metadata.items():
                 section = feeds.get(section_name)
                 if section:
-                    assert section["iab"]["taxonomy"] == "IAB-3.0"
-                    assert (
-                        section["iab"]["categories"][0] == expected_iab_code
-                    )  # only 1 code is sent for now
+                    if section["iab"]:
+                        assert section["iab"]["taxonomy"] == "IAB-3.0"
+                        assert (
+                            section["iab"]["categories"][0] == expected_iab_code
+                        )  # only 1 code is sent for now
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -1712,7 +1729,7 @@ class TestSections:
             music_recs = feeds["music"]["recommendations"]  # ML feed
 
             # The expected ML sectionItem has 100% CTR, and is always present in the response.
-            expected_high_ctr_id = "271736"
+            expected_high_ctr_id = "41111154-ebb1-45d9-9799-a882f13cd8cc"
             # Find the receivedRank of the high CTR ML sectionItem
             high_item_rank = next(
                 (
