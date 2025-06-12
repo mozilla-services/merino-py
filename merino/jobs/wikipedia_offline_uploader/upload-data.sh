@@ -65,10 +65,10 @@ then
     echo $language
     case "$language" in
       "en") fe="env.locale in ['en-GB', 'en-CA', 'en-US']" ;;
-      "fr") fe="env.locale == 'fr'" ;;
-      "de") fe="env.locale == 'de'" ;;
-      "it") fe="env.locale == 'it'" ;;
-      "pl") fe="env.locale == 'pl'" ;;
+      "fr") fe="env.locale in ['fr', 'fr-FR']" ;;
+      "de") fe="env.locale in ['de', 'de-DE']" ;;
+      "it") fe="env.locale in ['it', 'it-IT']" ;;
+      "pl") fe="env.locale in ['pl', 'pl-PL']" ;;
       *) error "Unsupported language specified" ;;
     esac
 
@@ -76,7 +76,7 @@ then
 
     $DRY_RUN curl -X POST ${SERVER}/buckets/${WORKSPACE}/collections/${OFFLINE_CID}/records/${NAME}/attachment \
         -H 'Content-Type:multipart/form-data' \
-        -F attachment=@${file} \
+        -F "attachment=@${file};type=application/json" \
         -F data="{\"type\": \"wikipedia\", \"filter_expression\": \"${fe}\"}" \
         -H "Authorization: ${AUTH}"
     echo
