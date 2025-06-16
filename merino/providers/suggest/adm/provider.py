@@ -141,8 +141,8 @@ class Provider(BaseProvider):
         return False
 
     def normalize_query(self, query: str) -> str:
-        """Convert a query string to lowercase and remove trailing spaces."""
-        return query.strip().lower()
+        """Convert a query string to lowercase and remove leading spaces."""
+        return query.lstrip().lower()
 
     @staticmethod
     @functools.lru_cache(maxsize=100)
