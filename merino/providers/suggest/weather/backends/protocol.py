@@ -83,6 +83,7 @@ class WeatherContext:
     languages: list[str]
     selected_region: Optional[str] = None
     selected_city: Optional[str] = None
+    request_source: Optional[str] = None
 
 
 class WeatherBackend(Protocol):

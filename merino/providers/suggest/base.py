@@ -22,6 +22,7 @@ class SuggestionRequest(BaseModel):
     region: str | None = None
     country: str | None = None
     user_agent: UserAgent | None = None
+    source: str | None = None
 
 
 class Category(Enum):

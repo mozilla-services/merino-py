@@ -4,6 +4,8 @@ import asyncio
 import datetime
 import functools
 import hashlib
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+
 import orjson
 import logging
 from enum import Enum
@@ -15,6 +17,7 @@ from httpx import AsyncClient, HTTPError, Response
 from pydantic import BaseModel, ValidationError
 
 from merino.cache.protocol import CacheAdapter
+from merino.configs import settings
 from merino.exceptions import CacheAdapterError
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
@@ -678,6 +681,7 @@ class AccuweatherBackend:
         geolocation = weather_context.geolocation
         location_key = geolocation.key
         language = get_language(weather_context.languages)
+        request_source = weather_context.request_source
 
         async def as_awaitable(val: Any) -> Any:
             """Wrap a non-awaitable value into a coroutine and resolve it right away."""
@@ -699,6 +703,9 @@ class AccuweatherBackend:
             # Return the weather report with the values returned from the cache.
             city_name = self.get_localized_city_name(location, weather_context)
             admin_area = self.get_region_for_weather_report(location, weather_context)
+            if request_source:
+                current_conditions = self.update_weather_url(current_conditions, request_source)
+                forecast = self.update_weather_url(forecast, request_source)
 
             return WeatherReport(
                 city_name=city_name if city_name else location.localized_name,
@@ -752,6 +759,9 @@ class AccuweatherBackend:
             weather_report_ttl = min(current_conditions_ttl, forecast_ttl)
             city_name = self.get_localized_city_name(location, weather_context)
             admin_area = self.get_region_for_weather_report(location, weather_context)
+            if request_source and current_conditions and forecast:
+                current_conditions = self.update_weather_url(current_conditions, request_source)
+                forecast = self.update_weather_url(forecast, request_source)
             return (
                 WeatherReport(
                     city_name=city_name if city_name else location.localized_name,
@@ -963,3 +973,19 @@ class AccuweatherBackend:
         """Close out the cache during shutdown."""
         await self.http_client.aclose()
         await self.cache.close()
+
+    @staticmethod
+    def update_weather_url(weather_model: CurrentConditions | Forecast, request_source: str):
+        """Update weather model urls include request source."""
+        partner_code_param = settings.accuweather.get("url_param_partner_code")
+        append_str = f"_{request_source}"
+        if partner_code_param and settings.accuweather.get("partner_code"):
+            parsed_url = urlparse(str(weather_model.url))
+            query_params = parse_qs(parsed_url.query)
+            query_params[partner_code_param] = [
+                val + append_str for val in query_params[partner_code_param]
+            ]
+
+            modified_query_params = urlencode(query_params, doseq=True)
+            modified_url = urlunparse(parsed_url._replace(query=modified_query_params))
+            return weather_model.model_copy(update={"url": modified_url})
