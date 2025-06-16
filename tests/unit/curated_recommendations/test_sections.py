@@ -35,7 +35,6 @@ from merino.curated_recommendations.sections import (
     get_corpus_sections,
     map_corpus_section_to_section,
     map_section_item_to_recommendation,
-    map_topic_to_iab_categories,
     remove_top_story_recs,
     get_corpus_sections_for_legacy_topic,
 )
@@ -424,33 +423,3 @@ class TestGetCorpusSections:
         assert section_c.receivedFeedRank == 7
         assert len(section_c.recommendations) == 3
         assert section_c.layout == layout_4_medium
-
-
-class TestMapIABCategoriesToSection:
-    """Tests for map_topic_to_iab_categories."""
-
-    @pytest.mark.parametrize(
-        "section_id,expected_iab_codes",
-        [
-            (Topic.BUSINESS, ["52"]),
-            (Topic.CAREER, ["123"]),
-            (Topic.EDUCATION, ["132"]),
-            (Topic.ARTS, ["JLBCU7"]),
-            (Topic.FOOD, ["210"]),
-            (Topic.HEALTH_FITNESS, ["223"]),
-            (Topic.HOME, ["274"]),
-            (Topic.PERSONAL_FINANCE, ["391"]),
-            (Topic.POLITICS, ["386"]),
-            (Topic.SPORTS, ["483"]),
-            (Topic.TECHNOLOGY, ["596"]),
-            (Topic.TRAVEL, ["653"]),
-            (Topic.GAMING, ["596"]),
-            (Topic.PARENTING, ["192"]),
-            (Topic.SCIENCE, ["464"]),
-            (Topic.SELF_IMPROVEMENT, ["186"]),
-            ("section_id_not_found", []),  # return empty array if section_id not found in mapping
-        ],
-    )
-    def test_mapping_works(self, section_id, expected_iab_codes):
-        """Map a valid section_ids to IAB category code(s)."""
-        assert map_topic_to_iab_categories(section_id) == expected_iab_codes
