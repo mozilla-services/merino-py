@@ -63,25 +63,30 @@ def generate_recommendations(
     return recs
 
 
-def generate_sections_feed(section_count: int, followed_count: int = 0) -> dict[str, Section]:
+def generate_sections_feed(
+    section_count: int, followed_count: int = 0, has_top_stories: bool = True
+) -> dict[str, Section]:
     """Create a sections dictionary populated with sections.
 
     Args:
         section_count (int): Number of sections to create.
         followed_count (int, optional): Number of sections to follow. Defaults to 0.
+        has_top_stories (bool, optional): Indicate whether to include a 'top_stories_section'. Default to True.
 
     Returns:
         dict[str, Section]: A dictionary of sections.
     """
+    sections = {}
     # Set top_stories_section first.
-    sections = {
-        "top_stories_section": Section(
-            receivedFeedRank=0,
-            recommendations=[],  # Dummy recommendations.
-            title="Top Stories",
-            layout=deepcopy(layout_4_medium),
-        )
-    }
+    if has_top_stories:
+        sections = {
+            "top_stories_section": Section(
+                receivedFeedRank=0,
+                recommendations=[],  # Dummy recommendations.
+                title="Top Stories",
+                layout=deepcopy(layout_4_medium),
+            )
+        }
 
     # Use topics to generate remaining sections.
     topics = list(Topic)[: section_count - 1]

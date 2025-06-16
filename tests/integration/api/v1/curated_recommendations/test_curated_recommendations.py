@@ -1325,6 +1325,25 @@ class TestSections:
                 recs = section["recommendations"]
                 assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
 
+            # Check if non-ML experiment, only legacy sections returned
+            legacy_topics = {topic.value for topic in Topic}
+
+            if experiment_payload.get("experimentName") != "new-tab-ml-sections":
+                # Non-ML sections experiment: All section keys (excluding top_stories) must be in legacy topics
+                for sid in sections:
+                    if sid != "top_stories_section":
+                        assert sid in legacy_topics
+
+            # Check the recs used in top_stories_section are removed from their original ML sections.
+            top_story_ids = {
+                rec["corpusItemId"] for rec in sections["top_stories_section"]["recommendations"]
+            }
+
+            for sid, sec in sections.items():
+                if sid != "top_stories_section":
+                    for rec in sec["recommendations"]:
+                        assert rec["corpusItemId"] not in top_story_ids
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "sections_payload",
@@ -1611,9 +1630,9 @@ class TestSections:
                 "de-DE",
                 {
                     "top_stories_section": "Meistgelesen",
-                    "arts": "Unterhaltung",
-                    "education": "Bildung",
-                    "sports": "Sport",
+                    "Career": "Karriere",
+                    "Education": "Bildung",
+                    "Sports": "Sport",
                 },
             ),
         ],
@@ -1732,7 +1751,17 @@ class TestSections:
             feeds = data["feeds"]
             music_recs = feeds["music"]["recommendations"]  # ML feed
 
-            # The expected ML sectionItem has 100% CTR, and is always present in the response.
+            # Check the recs used in top_stories_section are removed from their original ML sections.
+            top_story_ids = {
+                rec["corpusItemId"] for rec in feeds["top_stories_section"]["recommendations"]
+            }
+
+            for sid, section in feeds.items():
+                if sid != "top_stories_section":
+                    for rec in section["recommendations"]:
+                        assert rec["corpusItemId"] not in top_story_ids
+
+            # The expected ML sectionItem has 100% CTR, and is always present in the ML section part of the response.
             expected_high_ctr_id = "41111154-ebb1-45d9-9799-a882f13cd8cc"
             # Find the receivedRank of the high CTR ML sectionItem
             high_item_rank = next(
@@ -1770,7 +1799,7 @@ class TestSections:
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
         # define interest vector
         interests = {
-            "arts": 1.0,
+            "education-science": 1.0,
             "food": 0.8,
             "government": 0.7,
             "society": 0.00001,
