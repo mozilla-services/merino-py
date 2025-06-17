@@ -61,4 +61,3 @@ jobs:
           image_tag: latest
           workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
           project_id: ${{ vars.GCP_PROJECT_ID }}
-          service_account_name: artifact-writer@moz-fx-merino-prod-5de4.iam.gserviceaccount.com

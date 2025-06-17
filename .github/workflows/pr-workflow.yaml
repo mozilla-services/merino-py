@@ -9,34 +9,10 @@ jobs:
     uses: ./.github/workflows/tests.yaml
   run-docs-build:
     uses: ./.github/workflows/docs-build.yaml
-  # run-docker-image-build:
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: read
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Get info
-  #       run: |
-  #         uname -v
-  #         docker info
-  #     - name: Create version.json
-  #       run: |
-  #         printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' \
-  #         "$GITHUB_SHA" \
-  #         "$GITHUB_REF_NAME" \
-  #         "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
-  #         "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > version.json
-  #     - name: Output version.json
-  #       run: cat version.json
-  #     - name: Build docker image
-  #       run: make docker-build
-  run-docker-image-build-and-push:
-    environment: build
+  run-docker-image-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      deployments: write
-      id-token: write
     steps:
       - uses: actions/checkout@v4
       - name: Get info
@@ -54,11 +30,3 @@ jobs:
         run: cat version.json
       - name: Build docker image
         run: make docker-build
-      - name: Push the docker image to GAR
-        uses: mozilla-it/deploy-actions/docker-push@v3.11.1
-        with:
-          local_image: app:build
-          image_repo_path: ${{ secrets.DOCKER_IMAGE_PATH }}
-          image_tag: latest
-          workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
-          project_id: ${{ vars.GCP_PROJECT_ID }}
