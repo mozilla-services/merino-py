@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: merino-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: merino
+          imagePullPolicy: Never
+        - name: ohttp-gateway
+          # Use the image we built from the ohttp folder
+          image: rust-ohttp-gateway:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: RUST_LOG
+              value: "debug,ohttp_gateway=debug"
+            - name: BACKEND_URL
+              value: "http://localhost:8000"
+          # The gateway should handle /gateway and /ohttp-keys endpoints
+          command: ["ohttp-gateway"]
+          args:
+            - "--listen"
+            - "0.0.0.0:8080"
+            - "--target"
+            - "http://localhost:8000"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastly-mock-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: fastly-mock
+          image: fastly-mock:local
+          imagePullPolicy: Never
+          env:
+            - name: OHTTP_GATEWAY_URL
+              value: "http://merino-service.default.svc.cluster.local:8080"

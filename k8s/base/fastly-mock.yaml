@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastly-mock-deployment
+  labels:
+    app: fastly-mock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fastly-mock
+  template:
+    metadata:
+      labels:
+        app: fastly-mock
+    spec:
+      containers:
+        - name: fastly-mock
+          image: fastly-mock:v2
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+          env:
+            - name: DELAY_MS
+              value: "0.01" # 10ms delay for socat
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastly-mock-service
+spec:
+  selector:
+    app: fastly-mock
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fastly-mock-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /fastly/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: fastly-mock-service
+                port:
+                  number: 80

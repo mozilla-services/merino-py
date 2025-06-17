@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: merino-deployment
+  labels:
+    app: merino
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: merino
+  template:
+    metadata:
+      labels:
+        app: merino
+    spec:
+      containers:
+        - name: merino
+          image: merino:local
+          ports:
+            - containerPort: 8000
+          command:
+            [
+              "uvicorn",
+              "merino.main:app",
+              "--host",
+              "0.0.0.0",
+              "--port",
+              "8000",
+            ]
+          env:
+            - name: LOG_LEVEL
+              value: "debug"
+        - name: ohttp-gateway
+          image: cloudflare/ohttp:local
+          env:
+            - name: SEED_SECRET_KEY
+              value: "5bc39831bae1e2a112f67325190ea08b19a45c2af33b546960241503ecb73b5a"
+            - name: ALLOWED_TARGET_ORIGINS
+              value: "localhost,localhost:8000"
+            - name: TARGET_REWRITES
+              value: |
+                {
+                  "localhost": { "scheme": "http", "host": "localhost:8000" },
+                  "localhost:8000": { "scheme": "http", "host": "localhost:8000" }
+                }
+            - name: LOG_LEVEL
+              value: "debug"
+            - name: PORT
+              value: "8080"
+          ports:
+            - containerPort: 8080
