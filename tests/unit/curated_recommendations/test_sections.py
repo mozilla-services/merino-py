@@ -17,8 +17,6 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
-    layout_6_tiles,
-    layout_4_large,
 )
 from merino.curated_recommendations.protocol import (
     Section,
@@ -37,6 +35,8 @@ from merino.curated_recommendations.sections import (
     map_section_item_to_recommendation,
     remove_top_story_recs,
     get_corpus_sections_for_legacy_topic,
+    cycle_layouts_for_ranked_sections,
+    LAYOUT_CYCLE,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -266,10 +266,10 @@ class TestMapCorpusSectionToSection:
     def test_basic_mapping(self, sample_backend_data):
         """Map CorpusSection into Section with correct feed rank and recs."""
         cs = sample_backend_data[1]
-        sec = map_corpus_section_to_section(cs, 5, layout_6_tiles)
+        sec = map_corpus_section_to_section(cs, 5)
         assert sec.receivedFeedRank == 5
         assert sec.title == cs.title
-        assert sec.layout == layout_6_tiles
+        assert sec.layout == layout_4_medium
         assert sec.iab == cs.iab
         assert len(sec.recommendations) == len(cs.sectionItems)
         for idx, rec in enumerate(sec.recommendations):
@@ -282,7 +282,7 @@ class TestMapCorpusSectionToSection:
     def test_empty_section_items(self):
         """Empty sectionItems yields empty recommendations."""
         empty_cs = CorpusSection(sectionItems=[], title="Empty", externalId="empty")
-        sec = map_corpus_section_to_section(empty_cs, 7, layout_4_medium)
+        sec = map_corpus_section_to_section(empty_cs, 7)
         assert sec.recommendations == []
         assert sec.receivedFeedRank == 7
 
@@ -385,6 +385,47 @@ class TestRemoveTopStoryRecs:
         assert result == []
 
 
+class TestCycleLayoutsForRankedSections:
+    """Tests for cycle_layouts_for_ranked_sections."""
+
+    def test_cycle_layouts_for_ranked_sections(self):
+        """All non-top_story sections get assigned cycled layouts."""
+        sections = generate_sections_feed(6, has_top_stories=False)
+
+        # All sections start with layout_4_medium
+        assert all(s.layout == layout_4_medium for s in sections.values())
+
+        # Apply layout cycling
+        cycle_layouts_for_ranked_sections(sections)
+
+        # Check layouts were cycled through LAYOUT_CYCLE
+        for idx, section in enumerate(sections.values()):
+            expected_layout = LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)]
+            assert section.layout == expected_layout
+
+    def test_cycle_layouts_for_non_top_stories_only(self):
+        """Only sections other than 'top_stories_section' have layouts modified."""
+        sections = generate_sections_feed(7, has_top_stories=True)
+
+        # All sections start with layout_4_medium
+        assert all(s.layout == layout_4_medium for s in sections.values())
+
+        # Apply layout cycling
+        cycle_layouts_for_ranked_sections(sections)
+
+        # top_stories_section layout should remain layout_4_medium
+        assert sections["top_stories_section"].layout == layout_4_medium
+
+        # Other sections should have new cycled layouts assigned to them
+        other_sections = [
+            section for sid, section in sections.items() if sid != "top_stories_section"
+        ]
+
+        for idx, section in enumerate(other_sections):
+            expected_layout = LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)]
+            assert section.layout == expected_layout
+
+
 class TestGetCorpusSections:
     """Simplified tests for get_corpus_sections."""
 
@@ -402,9 +443,7 @@ class TestGetCorpusSections:
         sections_backend.fetch.assert_awaited_once_with(SurfaceId.NEW_TAB_EN_US)
 
     @pytest.mark.asyncio
-    async def test_section_transformation_and_cycle_layout(
-        self, sections_backend, sample_backend_data
-    ):
+    async def test_section_transformation(self, sections_backend, sample_backend_data):
         """Verify mapping logic for get_corpus_sections."""
         result = await get_corpus_sections(sections_backend, SurfaceId.NEW_TAB_EN_US, 5)
 
@@ -412,12 +451,12 @@ class TestGetCorpusSections:
         section_a = result["secA"]
         assert section_a.receivedFeedRank == 5
         assert len(section_a.recommendations) == 2
-        assert section_a.layout == layout_6_tiles
+        assert section_a.layout == layout_4_medium
 
         section_b = result["secB"]
         assert section_b.receivedFeedRank == 6
         assert len(section_b.recommendations) == 1
-        assert section_b.layout == layout_4_large
+        assert section_b.layout == layout_4_medium
 
         section_c = result["secC"]
         assert section_c.receivedFeedRank == 7

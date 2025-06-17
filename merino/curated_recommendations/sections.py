@@ -26,7 +26,6 @@ from merino.curated_recommendations.protocol import (
     SectionConfiguration,
     ExperimentName,
     InferredInterests,
-    Layout,
 )
 from merino.curated_recommendations.rankers import (
     thompson_sampling,
@@ -73,14 +72,14 @@ def map_section_item_to_recommendation(
 
 
 def map_corpus_section_to_section(
-    corpus_section: CorpusSection, rank: int, layout: Layout
+    corpus_section: CorpusSection,
+    rank: int,
 ) -> Section:
     """Map a CorpusSection to a Section with recommendations.
 
     Args:
         corpus_section: The corpus section to map.
         rank: The receivedFeedRank to assign to this section.
-        layout: The layout for the Section.
         which determines how the client orders the sections.
 
     Returns:
@@ -95,7 +94,7 @@ def map_corpus_section_to_section(
         recommendations=recommendations,
         title=corpus_section.title,
         iab=corpus_section.iab,
-        layout=deepcopy(layout),
+        layout=deepcopy(layout_4_medium),
     )
 
 
@@ -120,7 +119,8 @@ async def get_corpus_sections(
     for cs in corpus_sections:
         rank = len(sections) + min_feed_rank
         sections[cs.externalId] = map_corpus_section_to_section(
-            cs, rank, LAYOUT_CYCLE[len(sections) % len(LAYOUT_CYCLE)]
+            cs,
+            rank,
         )
     return sections
 
@@ -184,9 +184,19 @@ def get_corpus_sections_for_legacy_topic(
 
 def remove_top_story_recs(
     recommendations: list[CuratedRecommendation], top_stories_rec_ids
-) -> (list)[CuratedRecommendation]:
+) -> list[CuratedRecommendation]:
     """Remove recommendations that were included in the top stories section."""
     return [rec for rec in recommendations if rec.corpusItemId not in top_stories_rec_ids]
+
+
+def cycle_layouts_for_ranked_sections(sections: dict[str, Section]):
+    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section'"""
+    # Exclude top_stories_section from layout cycling
+    ranked_sections = [
+        section for sid, section in sections.items() if sid != "top_stories_section"
+    ]
+    for idx, section in enumerate(ranked_sections):
+        section.layout = deepcopy(LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)])
 
 
 def rank_sections(
@@ -208,6 +218,7 @@ def rank_sections(
         section_configurations: optional list of SectionConfiguration objects indicating which
             sections are followed/blocked and when they were followed.
         engagement_backend: provides engagement signals for Thompson sampling.
+        personal_interests: provides personal interests.
 
     Returns:
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
@@ -314,7 +325,10 @@ async def get_sections(
     # 12. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
     sections = rank_sections(sections, request.sections, engagement_backend, personal_interests)
 
-    # 13. Apply ad adjustments
+    # 13. Apply layout cycling to sections except top stories
+    cycle_layouts_for_ranked_sections(sections)
+
+    # 14. Apply ad adjustments
     adjust_ads_in_sections(sections)
 
     return sections
