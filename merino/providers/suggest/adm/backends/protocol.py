@@ -2,7 +2,8 @@
 
 from typing import Any, Protocol
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from rethink_about_amp import AmpIndexManager
 
 
 SegmentType = tuple[int]
@@ -21,6 +22,16 @@ class SuggestionContent(BaseModel):
 
     # A list of suggestion results.
     results: list[dict[str, Any]]
+
+    # A dictionary of icon IDs to icon URLs.
+    icons: dict[str, str]
+
+
+class SuggestionContentEx(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Class that holds the result from a fetch operation."""
+
+    index_manager: AmpIndexManager
 
     # A dictionary of icon IDs to icon URLs.
     icons: dict[str, str]
