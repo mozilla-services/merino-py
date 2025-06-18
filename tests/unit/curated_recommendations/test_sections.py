@@ -1,5 +1,6 @@
 """Module with tests covering merino/curated_recommendations/sections.py"""
 
+import copy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -16,8 +17,6 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
-    layout_6_tiles,
-    layout_4_large,
 )
 from merino.curated_recommendations.protocol import (
     Section,
@@ -28,14 +27,16 @@ from merino.curated_recommendations.protocol import (
 from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
-    create_sections_from_items_by_topic,
     is_ml_sections_experiment,
     update_received_feed_rank,
     get_sections_with_enough_items,
     get_corpus_sections,
     map_corpus_section_to_section,
     map_section_item_to_recommendation,
-    map_topic_to_iab_categories,
+    remove_top_story_recs,
+    get_corpus_sections_for_legacy_topic,
+    cycle_layouts_for_ranked_sections,
+    LAYOUT_CYCLE,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -61,7 +62,7 @@ def generate_corpus_item(corpus_id: str = "id", sched_id: str = "sched") -> Corp
 
 @pytest.fixture
 def sample_backend_data() -> list[CorpusSection]:
-    """Build two corpus sections: 'secA' with 2 items, 'secB' with 1 using the helper."""
+    """Build three corpus sections: 'secA' with 2 items, 'secB' with 1 item, 'secC' with 3 items using the helper."""
     return [
         CorpusSection(
             sectionItems=[
@@ -189,41 +190,6 @@ class TestAdjustAdsInSections:
                 assert not self.ads_in_section(section)
 
 
-class TestCreateSectionsFromItemsByTopic:
-    """Tests covering create_sections_from_items_by_topic"""
-
-    def test_group_by_topic_and_cycle_layout(self):
-        """Test grouping items by topic and cycling layouts"""
-        items = generate_recommendations(3)
-        items[0].topic = Topic.SCIENCE
-        items[1].topic = Topic.FOOD
-        items[2].topic = None
-
-        sections = create_sections_from_items_by_topic(items, SurfaceId.NEW_TAB_EN_US)
-        assert set(sections.keys()) == {Topic.SCIENCE.value, Topic.FOOD.value}
-
-        sci = sections[Topic.SCIENCE.value]
-        food = sections[Topic.FOOD.value]
-        assert sci.receivedFeedRank == 0
-        assert sci.layout == layout_6_tiles
-        assert sci.iab.categories == ["464"]
-        assert food.receivedFeedRank == 1
-        assert food.layout == layout_4_large
-        assert food.iab.categories == ["210"]
-        assert sci.recommendations[0].receivedRank == 0
-        assert food.recommendations[0].receivedRank == 0
-
-    def test_ignores_none_topics(self):
-        """Test that items without a topic produce no sections"""
-        items = generate_recommendations(2)
-        # Topics aren't expected to be None in practice, but it may happen if a
-        # new topic is introduced in the corpus, without Merino having been updated.
-        items[0].topic = None
-        items[1].topic = None
-        result = create_sections_from_items_by_topic(items, SurfaceId.NEW_TAB_EN_US)
-        assert result == {}
-
-
 class TestMlSectionsExperiment:
     """Tests covering is_ml_sections_experiment"""
 
@@ -300,10 +266,10 @@ class TestMapCorpusSectionToSection:
     def test_basic_mapping(self, sample_backend_data):
         """Map CorpusSection into Section with correct feed rank and recs."""
         cs = sample_backend_data[1]
-        sec = map_corpus_section_to_section(cs, 5, layout_6_tiles)
+        sec = map_corpus_section_to_section(cs, 5)
         assert sec.receivedFeedRank == 5
         assert sec.title == cs.title
-        assert sec.layout == layout_6_tiles
+        assert sec.layout == layout_4_medium
         assert sec.iab == cs.iab
         assert len(sec.recommendations) == len(cs.sectionItems)
         for idx, rec in enumerate(sec.recommendations):
@@ -316,9 +282,148 @@ class TestMapCorpusSectionToSection:
     def test_empty_section_items(self):
         """Empty sectionItems yields empty recommendations."""
         empty_cs = CorpusSection(sectionItems=[], title="Empty", externalId="empty")
-        sec = map_corpus_section_to_section(empty_cs, 7, layout_4_medium)
+        sec = map_corpus_section_to_section(empty_cs, 7)
         assert sec.recommendations == []
         assert sec.receivedFeedRank == 7
+
+
+class TestGetCorpusSectionsForLegacyTopics:
+    """Tests for get_corpus_sections_for_legacy_topic."""
+
+    def test_get_corpus_sections_for_legacy_topic(self):
+        """Only return corpus_sections matching legacy topics."""
+        # generate 5 legacy sections
+        legacy_sections = generate_sections_feed(5, has_top_stories=False)
+        # 2 more non-legacy sections
+        non_legacy_sections = {
+            "mlb": Section(
+                receivedFeedRank=100,
+                recommendations=[],
+                title="MLB",
+                layout=copy.deepcopy(layout_4_medium),
+            ),
+            "nhl": Section(
+                receivedFeedRank=101,
+                recommendations=[],
+                title="NHL",
+                layout=copy.deepcopy(layout_4_medium),
+            ),
+        }
+        corpus_sections = {**legacy_sections, **non_legacy_sections}
+        result = get_corpus_sections_for_legacy_topic(corpus_sections)
+
+        # Check that non-legacy sections are filtered out from the result
+        assert "mlb" not in result
+        assert "nhl" not in result
+        # Check that all legacy sections present in result
+        for sid in legacy_sections.keys():
+            assert sid in result
+
+    def test_return_empty_feed_no_legacy_topics_found(self):
+        """Returns an empty feed when no corpus_section IDs match legacy topics."""
+        non_legacy_sections = {
+            "mlb": Section(
+                receivedFeedRank=100,
+                recommendations=[],
+                title="MLB",
+                layout=copy.deepcopy(layout_4_medium),
+            ),
+            "nhl": Section(
+                receivedFeedRank=101,
+                recommendations=[],
+                title="NHL",
+                layout=copy.deepcopy(layout_4_medium),
+            ),
+        }
+        result = get_corpus_sections_for_legacy_topic(non_legacy_sections)
+        assert result == {}
+
+    def test_return_all_when_all_legacy_topics(self):
+        """Returns entire feed if all corpus_section IDs match legacy topics."""
+        # generate 8 legacy sections
+        legacy_sections = generate_sections_feed(8, has_top_stories=False)
+
+        result = get_corpus_sections_for_legacy_topic(legacy_sections)
+        assert result == legacy_sections
+
+
+class TestRemoveTopStoryRecs:
+    """Tests for remove_top_story_recs."""
+
+    def test_remove_top_story_recs(self):
+        """Removes recommendations that are in the top_stories_section."""
+        # generate 5 recs
+        recommendations = generate_recommendations(5, ["a", "b", "c", "d", "e"])
+        # 3 recs in top_stories_section
+        top_story_ids = {"a", "d", "e"}
+
+        result = remove_top_story_recs(recommendations, top_story_ids)
+
+        # the 3 top story ids should not be present, result should have 2 recs
+        assert len(result) == 2
+        assert result[0].corpusItemId == "b"
+        assert result[1].corpusItemId == "c"
+
+    def test_recs_unchanged_no_match_found(self):
+        """Return original list of recommendations if no corpus Ids match top_story_ids."""
+        # generate 3 recs
+        recommendations = generate_recommendations(3, ["a", "b", "c"])
+        # rec ids for top stories, not found in recs list
+        top_story_ids = {"z", "xy"}
+        result = remove_top_story_recs(recommendations, top_story_ids)
+
+        assert result == recommendations
+
+    def test_return_empty_list_all_match(self):
+        """Return empty list if  all recommendations are top stories"""
+        # generate 3 recs
+        recommendations = generate_recommendations(3, ["a", "b", "c"])
+        # rec ids for top stories, all 3 ids match original recommendations list
+        top_story_ids = {"a", "b", "c"}
+        result = remove_top_story_recs(recommendations, top_story_ids)
+
+        assert result == []
+
+
+class TestCycleLayoutsForRankedSections:
+    """Tests for cycle_layouts_for_ranked_sections."""
+
+    def test_cycle_layouts_for_ranked_sections(self):
+        """All non-top_story sections get assigned cycled layouts."""
+        sections = generate_sections_feed(6, has_top_stories=False)
+
+        # All sections start with layout_4_medium
+        assert all(s.layout == layout_4_medium for s in sections.values())
+
+        # Apply layout cycling
+        cycle_layouts_for_ranked_sections(sections)
+
+        # Check layouts were cycled through LAYOUT_CYCLE
+        for idx, section in enumerate(sections.values()):
+            expected_layout = LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)]
+            assert section.layout == expected_layout
+
+    def test_cycle_layouts_for_non_top_stories_only(self):
+        """Only sections other than 'top_stories_section' have layouts modified."""
+        sections = generate_sections_feed(7, has_top_stories=True)
+
+        # All sections start with layout_4_medium
+        assert all(s.layout == layout_4_medium for s in sections.values())
+
+        # Apply layout cycling
+        cycle_layouts_for_ranked_sections(sections)
+
+        # top_stories_section layout should remain layout_4_medium
+        assert sections["top_stories_section"].layout == layout_4_medium
+
+        # Other sections should have new cycled layouts assigned to them
+        other_sections = [
+            section for sid, section in sections.items() if sid != "top_stories_section"
+        ]
+
+        for idx, section in enumerate(other_sections):
+            expected_layout = LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)]
+            assert section.layout == expected_layout
 
 
 class TestGetCorpusSections:
@@ -338,9 +443,7 @@ class TestGetCorpusSections:
         sections_backend.fetch.assert_awaited_once_with(SurfaceId.NEW_TAB_EN_US)
 
     @pytest.mark.asyncio
-    async def test_section_transformation_and_cycle_layout(
-        self, sections_backend, sample_backend_data
-    ):
+    async def test_section_transformation(self, sections_backend, sample_backend_data):
         """Verify mapping logic for get_corpus_sections."""
         result = await get_corpus_sections(sections_backend, SurfaceId.NEW_TAB_EN_US, 5)
 
@@ -348,44 +451,14 @@ class TestGetCorpusSections:
         section_a = result["secA"]
         assert section_a.receivedFeedRank == 5
         assert len(section_a.recommendations) == 2
-        assert section_a.layout == layout_6_tiles
+        assert section_a.layout == layout_4_medium
 
         section_b = result["secB"]
         assert section_b.receivedFeedRank == 6
         assert len(section_b.recommendations) == 1
-        assert section_b.layout == layout_4_large
+        assert section_b.layout == layout_4_medium
 
         section_c = result["secC"]
         assert section_c.receivedFeedRank == 7
         assert len(section_c.recommendations) == 3
         assert section_c.layout == layout_4_medium
-
-
-class TestMapIABCategoriesToSection:
-    """Tests for map_topic_to_iab_categories."""
-
-    @pytest.mark.parametrize(
-        "section_id,expected_iab_codes",
-        [
-            (Topic.BUSINESS, ["52"]),
-            (Topic.CAREER, ["123"]),
-            (Topic.EDUCATION, ["132"]),
-            (Topic.ARTS, ["JLBCU7"]),
-            (Topic.FOOD, ["210"]),
-            (Topic.HEALTH_FITNESS, ["223"]),
-            (Topic.HOME, ["274"]),
-            (Topic.PERSONAL_FINANCE, ["391"]),
-            (Topic.POLITICS, ["386"]),
-            (Topic.SPORTS, ["483"]),
-            (Topic.TECHNOLOGY, ["596"]),
-            (Topic.TRAVEL, ["653"]),
-            (Topic.GAMING, ["596"]),
-            (Topic.PARENTING, ["192"]),
-            (Topic.SCIENCE, ["464"]),
-            (Topic.SELF_IMPROVEMENT, ["186"]),
-            ("section_id_not_found", []),  # return empty array if section_id not found in mapping
-        ],
-    )
-    def test_mapping_works(self, section_id, expected_iab_codes):
-        """Map a valid section_ids to IAB category code(s)."""
-        assert map_topic_to_iab_categories(section_id) == expected_iab_codes

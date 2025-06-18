@@ -11,7 +11,6 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusSection,
     CorpusItem,
     Topic,
-    IABMetadata,
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
@@ -41,38 +40,7 @@ from merino.curated_recommendations.utils import is_enrolled_in_experiment
 logger = logging.getLogger(__name__)
 
 LAYOUT_CYCLE = [layout_6_tiles, layout_4_large, layout_4_medium]
-
-
-def map_topic_to_iab_categories(topic: Topic) -> list[str]:
-    """Map a topic to IAB category code(s). Source:
-    https://docs.google.com/spreadsheets/d/1R0wzDYgrFkLjo6sxTFvVYThJ4uKz-YVDkYMegbGK9XA/edit?gid=1439764175#gid
-    =1439764175
-
-    Args:
-        topic: The topic for which to get IAB category code(s).
-
-    Returns:
-        Array of IAB codes for given section_topic.
-    """
-    topic_iab_category_mapping = {
-        Topic.BUSINESS: ["52"],  # IAB -  Business and Finance
-        Topic.CAREER: ["123"],  # IAB -  Careers
-        Topic.EDUCATION: ["132"],  # IAB -  Education
-        Topic.ARTS: ["JLBCU7"],  # IAB -  Entertainment
-        Topic.FOOD: ["210"],  # IAB -  Food & Drink
-        Topic.HEALTH_FITNESS: ["223"],  # IAB -  Healthy Living
-        Topic.HOME: ["274"],  # IAB -  Home & Garden
-        Topic.PERSONAL_FINANCE: ["391"],  # IAB -  Personal Finance
-        Topic.POLITICS: ["386"],  # IAB -  Politics
-        Topic.SPORTS: ["483"],  # IAB -  Sports
-        Topic.TECHNOLOGY: ["596"],  # IAB -  Technology & Computing
-        Topic.TRAVEL: ["653"],  # IAB -  Travel
-        Topic.GAMING: ["596"],  # IAB -  Technology & Computing
-        Topic.PARENTING: ["192"],  # IAB -  Parenting
-        Topic.SCIENCE: ["464"],  # IAB -  Science
-        Topic.SELF_IMPROVEMENT: ["186"],  # IAB -  Family and Relationships
-    }
-    return topic_iab_category_mapping.get(topic) or []
+TOP_STORIES_COUNT = 6
 
 
 def map_section_item_to_recommendation(
@@ -105,15 +73,15 @@ def map_section_item_to_recommendation(
 
 
 def map_corpus_section_to_section(
-    corpus_section: CorpusSection, rank: int, layout: Layout
+    corpus_section: CorpusSection, rank: int, layout: Layout = layout_4_medium
 ) -> Section:
     """Map a CorpusSection to a Section with recommendations.
 
     Args:
         corpus_section: The corpus section to map.
         rank: The receivedFeedRank to assign to this section.
-        layout: The layout for the Section.
         which determines how the client orders the sections.
+        layout: The layout for the Section. Defaults to layouts_4_medium.
 
     Returns:
         A Section model containing mapped recommendations and default layout.
@@ -152,7 +120,8 @@ async def get_corpus_sections(
     for cs in corpus_sections:
         rank = len(sections) + min_feed_rank
         sections[cs.externalId] = map_corpus_section_to_section(
-            cs, rank, LAYOUT_CYCLE[len(sections) % len(LAYOUT_CYCLE)]
+            cs,
+            rank,
         )
     return sections
 
@@ -192,40 +161,6 @@ def adjust_ads_in_sections(sections: Dict[str, Section]) -> None:
                 tile.hasAd = False
 
 
-def create_sections_from_items_by_topic(
-    items: List[CuratedRecommendation], surface_id: SurfaceId
-) -> Dict[str, Section]:
-    """Group remaining recommendations by topic and build sections for each topic.
-
-    Args:
-        items: List of CuratedRecommendation to group.
-        surface_id: SurfaceId for title localization.
-
-    Returns:
-        Mapping from topic IDs to Section objects, each with assigned receivedFeedRank and recommendations.
-    """
-    sections: Dict[str, Section] = {}
-    max_recs_per_section = 30
-
-    for rec in items:
-        if rec.topic:
-            sid = rec.topic.value
-            if sid not in sections:
-                idx = len(sections)
-                sections[sid] = Section(
-                    receivedFeedRank=idx,
-                    recommendations=[],
-                    title=get_translation(surface_id, rec.topic, sid),
-                    iab=IABMetadata(categories=map_topic_to_iab_categories(rec.topic)),
-                    layout=deepcopy(LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)]),
-                )
-            sec = sections[sid]
-            if len(sec.recommendations) < max_recs_per_section:
-                rec.receivedRank = len(sec.recommendations)
-                sec.recommendations.append(rec)
-    return sections
-
-
 def is_ml_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the sections backend experiment is enabled."""
     return is_enrolled_in_experiment(
@@ -237,6 +172,32 @@ def update_received_feed_rank(sections: Dict[str, Section]):
     """Set receivedFeedRank such that it is incrementing from 0 to len(sections)"""
     for idx, sid in enumerate(sorted(sections, key=lambda k: sections[k].receivedFeedRank)):
         sections[sid].receivedFeedRank = idx
+
+
+def get_corpus_sections_for_legacy_topic(
+    corpus_sections: dict[str, Section],
+) -> dict[str, Section]:
+    """Return corpus sections only those matching legacy topics."""
+    legacy_topics = {topic.value for topic in Topic}
+
+    return {sid: section for sid, section in corpus_sections.items() if sid in legacy_topics}
+
+
+def remove_top_story_recs(
+    recommendations: list[CuratedRecommendation], top_stories_rec_ids
+) -> list[CuratedRecommendation]:
+    """Remove recommendations that were included in the top stories section."""
+    return [rec for rec in recommendations if rec.corpusItemId not in top_stories_rec_ids]
+
+
+def cycle_layouts_for_ranked_sections(sections: dict[str, Section]):
+    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section'"""
+    # Exclude top_stories_section from layout cycling
+    ranked_sections = [
+        section for sid, section in sections.items() if sid != "top_stories_section"
+    ]
+    for idx, section in enumerate(ranked_sections):
+        section.layout = deepcopy(LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)])
 
 
 def rank_sections(
@@ -258,6 +219,7 @@ def rank_sections(
         section_configurations: optional list of SectionConfiguration objects indicating which
             sections are followed/blocked and when they were followed.
         engagement_backend: provides engagement signals for Thompson sampling.
+        personal_interests: provides personal interests.
 
     Returns:
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
@@ -280,7 +242,6 @@ def rank_sections(
 
 
 async def get_sections(
-    recommendations: List[CuratedRecommendation],
     request: CuratedRecommendationsRequest,
     surface_id: SurfaceId,
     sections_backend: SectionsProtocol,
@@ -292,7 +253,6 @@ async def get_sections(
     """Build, rank, and layout recommendation sections for a "sections" experiment.
 
     Args:
-        recommendations: Base list of CuratedRecommendation objects.
         request: The full API request containing feeds and section configs.
         surface_id: SurfaceId determining locale-specific titles.
         sections_backend: Backend to fetch editorial ML-generated sections.
@@ -303,26 +263,51 @@ async def get_sections(
     Returns:
         A dict mapping section IDs to fully-configured Section models.
     """
-    # 1. Filter out blocked topics
-    if request.sections:
-        recommendations = exclude_recommendations_from_blocked_sections(
-            recommendations, request.sections
-        )
+    # 1. Get ALL corpus sections
+    corpus_sections = await get_corpus_sections(sections_backend, surface_id, 1)
 
-    # 2. Rank all recs by engagement
-    recommendations = thompson_sampling(
-        recommendations,
+    # 2. If ML sections are NOT requested, filter to legacy sections
+    if not is_ml_sections_experiment(request):
+        corpus_sections = get_corpus_sections_for_legacy_topic(corpus_sections)
+
+    # 3. Filter out blocked topics
+    if request.sections:
+        for cs in corpus_sections.values():
+            cs.recommendations = exclude_recommendations_from_blocked_sections(
+                cs.recommendations, request.sections
+            )
+
+    # 4. Collect all recommendations across all sections
+    all_corpus_recommendations = [
+        rec for section in corpus_sections.values() for rec in section.recommendations
+    ]
+
+    # 5. Rank all corpus recommendations globally by engagement to build top_stories_section
+    all_ranked_corpus_recommendations = thompson_sampling(
+        all_corpus_recommendations,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
         region=region,
     )
 
-    # 3. Split top stories
-    top_stories_count = 6
-    top_stories = recommendations[:top_stories_count]
-    remaining = recommendations[top_stories_count:]
+    # 6. Split top stories
+    top_stories = all_ranked_corpus_recommendations[:TOP_STORIES_COUNT]
+    top_stories_rec_ids = {rec.corpusItemId for rec in top_stories}
 
-    # 4. Initialize sections with top stories
+    # 7. Remove top story recs from original corpus sections
+    for cs in corpus_sections.values():
+        cs.recommendations = remove_top_story_recs(cs.recommendations, top_stories_rec_ids)
+
+    # 8. Rank remaining recs in sections by engagement
+    for cs in corpus_sections.values():
+        cs.recommendations = thompson_sampling(
+            cs.recommendations,
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            region=region,
+        )
+
+    # 9. Initialize sections with top stories
     sections: Dict[str, Section] = {
         "top_stories_section": Section(
             receivedFeedRank=0,
@@ -332,35 +317,19 @@ async def get_sections(
         )
     }
 
-    # 5. Add ML sections if requested
-    if is_ml_sections_experiment(request):
-        corpus_sections = await get_corpus_sections(sections_backend, surface_id, len(sections))
+    # 10. Add remaining corpus sections
+    sections.update(corpus_sections)
 
-        for cs in corpus_sections.values():
-            # Apply Thompson Sampling
-            ranked_section_items = thompson_sampling(
-                cs.recommendations,
-                engagement_backend=engagement_backend,
-                prior_backend=prior_backend,
-                region=region,
-            )
-
-            # Replace with re-ranked items
-            cs.recommendations = ranked_section_items
-
-        sections.update(corpus_sections)
-
-    # 6. Group items outside the 'top stories section' by topic
-    topic_sections = create_sections_from_items_by_topic(remaining, surface_id)
-    sections.update(topic_sections)
-
-    # 7. Prune undersized sections
+    # 11. Prune undersized sections
     sections = get_sections_with_enough_items(sections)
 
-    # 8. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
+    # 12. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
     sections = rank_sections(sections, request.sections, engagement_backend, personal_interests)
 
-    # 9. Apply ads adjustments
+    # 13. Apply layout cycling to sections except top stories
+    cycle_layouts_for_ranked_sections(sections)
+
+    # 14. Apply ad adjustments
     adjust_ads_in_sections(sections)
 
     return sections
