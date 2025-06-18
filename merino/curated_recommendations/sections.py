@@ -26,6 +26,7 @@ from merino.curated_recommendations.protocol import (
     SectionConfiguration,
     ExperimentName,
     InferredInterests,
+    Layout,
 )
 from merino.curated_recommendations.rankers import (
     thompson_sampling,
@@ -72,8 +73,7 @@ def map_section_item_to_recommendation(
 
 
 def map_corpus_section_to_section(
-    corpus_section: CorpusSection,
-    rank: int,
+    corpus_section: CorpusSection, rank: int, layout: Layout = layout_4_medium
 ) -> Section:
     """Map a CorpusSection to a Section with recommendations.
 
@@ -81,6 +81,7 @@ def map_corpus_section_to_section(
         corpus_section: The corpus section to map.
         rank: The receivedFeedRank to assign to this section.
         which determines how the client orders the sections.
+        layout: The layout for the Section. Defaults to layouts_4_medium.
 
     Returns:
         A Section model containing mapped recommendations and default layout.
@@ -94,7 +95,7 @@ def map_corpus_section_to_section(
         recommendations=recommendations,
         title=corpus_section.title,
         iab=corpus_section.iab,
-        layout=deepcopy(layout_4_medium),
+        layout=deepcopy(layout),
     )
 
 
