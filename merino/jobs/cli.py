@@ -9,6 +9,7 @@ from merino.jobs.geonames_uploader import geonames_uploader_cmd
 from merino.jobs.navigational_suggestions import navigational_suggestions_cmd
 from merino.jobs.relevancy_uploader import relevancy_csv_rs_uploader_cmd
 from merino.jobs.wikipedia_indexer import indexer_cmd
+from merino.jobs.wikipedia_offline_uploader import wiki_offline_uploader_cmd
 
 cli = typer.Typer(no_args_is_help=True, add_completion=False)
 # Add the wikipedia-indexer subcommands
@@ -26,6 +27,8 @@ cli.add_typer(csv_rs_uploader_cmd, no_args_is_help=True)
 cli.add_typer(relevancy_csv_rs_uploader_cmd, no_args_is_help=True)
 
 cli.add_typer(geonames_uploader_cmd, no_args_is_help=True)
+
+cli.add_typer(wiki_offline_uploader_cmd, no_args_is_help=True)
 
 
 @cli.callback()
