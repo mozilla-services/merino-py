@@ -86,7 +86,7 @@ def fixture_expected_weather_report() -> WeatherReport:
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
-                "current-weather/39376?lang=en-us"
+                "current-weather/39376?lang=en-us&partner=test_newtab"
             ),
             summary="Mostly cloudy",
             icon_id=6,
@@ -95,7 +95,7 @@ def fixture_expected_weather_report() -> WeatherReport:
         forecast=Forecast(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
-                "daily-weather-forecast/39376?lang=en-us"
+                "daily-weather-forecast/39376?lang=en-us&partner=test_newtab"
             ),
             summary="Pleasant Saturday",
             high=Temperature(c=21.1, f=70.0),
@@ -114,7 +114,7 @@ def fixture_expected_weather_report_via_location_key() -> WeatherReport:
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
-                "current-weather/39376?lang=en-us"
+                "current-weather/39376?lang=en-us&partner=test_newtab"
             ),
             summary="Mostly cloudy",
             icon_id=6,
@@ -123,7 +123,7 @@ def fixture_expected_weather_report_via_location_key() -> WeatherReport:
         forecast=Forecast(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
-                "daily-weather-forecast/39376?lang=en-us"
+                "daily-weather-forecast/39376?lang=en-us&partner=test_newtab"
             ),
             summary="Pleasant Saturday",
             high=Temperature(c=21.1, f=70.0),
@@ -239,7 +239,7 @@ def fixture_accuweather_cached_current_conditions() -> bytes:
         {
             "url": (
                 "https://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/current-weather/39376?lang=en-us"
+                "94103/current-weather/39376?lang=en-us&partner=test_newtab"
             ),
             "summary": "Mostly cloudy",
             "icon_id": 6,
@@ -316,7 +316,7 @@ def fixture_accuweather_cached_forecast_fahrenheit() -> bytes:
         {
             "url": (
                 "https://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/daily-weather-forecast/39376?lang=en-us"
+                "94103/daily-weather-forecast/39376?lang=en-us&partner=test_newtab"
             ),
             "summary": "Pleasant Saturday",
             "high": {"f": 70.0},

@@ -553,6 +553,7 @@ async def test_suggest_weather_with_custom_location(
             "city": "Boston",
             "region": "MA",
             "country": "US",
+            "source": "newtab",
         },
     )
 
@@ -567,6 +568,7 @@ async def test_suggest_weather_with_custom_location(
             request_type="weather",
             languages=["en-US"],
             user_agent=UserAgent(browser="Other", form_factor="other", os_family="other"),
+            source="newtab",
         )
     )
 
@@ -615,6 +617,7 @@ async def test_suggest_weather_with_custom_location_with_admin_codes(
             "city": "Boston",
             "region": "MA,AA",
             "country": "US",
+            "source": "newtab",
         },
     )
     expected_geolocation = geolocation_scope[ScopeKey.GEOLOCATION].model_copy(
@@ -627,6 +630,7 @@ async def test_suggest_weather_with_custom_location_with_admin_codes(
             request_type="weather",
             languages=["en-US"],
             user_agent=UserAgent(browser="Other", form_factor="other", os_family="other"),
+            source="newtab",
         )
     )
 

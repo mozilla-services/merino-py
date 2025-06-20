@@ -4,7 +4,7 @@ import logging
 from asyncio import Task
 from functools import partial
 from itertools import chain
-from typing import Annotated
+from typing import Annotated, Literal
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Query, Header
@@ -71,6 +71,7 @@ QUERY_CHARACTER_MAX = settings.web.api.v1.query_character_max
 CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
 HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 WEATHER_PROVIDER = settings.providers.accuweather.backend
+WEATHER_SOURCE_TYPE = Literal["urlbar", "newtab", "unknown"]
 
 
 @router.get(
@@ -85,6 +86,7 @@ async def suggest(
     country: Annotated[str | None, Query(max_length=2, min_length=2)] = None,
     region: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
+    source: Annotated[WEATHER_SOURCE_TYPE, Query(max_length=QUERY_CHARACTER_MAX)] = "unknown",
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
@@ -115,6 +117,7 @@ async def suggest(
     - `region`: [Optional] Comma separated string of subdivision code(s). This may contain FIPs codes
         and/or iso codes. If provided, Accuweather provider will try to return weather suggestions based on this region(s).
         Note: If provided,`city` and `country` must also be provided to successfully return weather suggestions.
+    - `source`: [Optional] Identifier of which part of firefox the request comes from.
     - `client_variants`: [Optional] A comma-separated list of any experiments or
         rollouts that are affecting the client's Suggest experience. If Merino
         recognizes any of them it will modify its behavior accordingly.
@@ -215,6 +218,7 @@ async def suggest(
             request_type=request_type,
             languages=languages,
             user_agent=user_agent,
+            source=source,
         )
         p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")

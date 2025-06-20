@@ -37,6 +37,7 @@ from merino.providers.suggest.weather.backends.accuweather.utils import (
     process_current_condition_response,
     process_location_response,
     get_language,
+    update_weather_url_with_suggest_partner_code,
 )
 
 from merino.providers.suggest.weather.backends.accuweather.errors import (
@@ -130,6 +131,7 @@ ALIAS_PARAM_VALUE: str = "always"
 LOCATION_COMPLETE_ALIAS_PARAM: str = "includealiases"
 LOCATION_COMPLETE_ALIAS_PARAM_VALUE: str = "true"
 LANGUAGE_PARAM: str = "language"
+URLBAR_REQUEST_SOURCE: str = "urlbar"
 
 __all__ = [
     "AccuweatherBackend",
@@ -678,6 +680,7 @@ class AccuweatherBackend:
         geolocation = weather_context.geolocation
         location_key = geolocation.key
         language = get_language(weather_context.languages)
+        request_source = weather_context.request_source
 
         async def as_awaitable(val: Any) -> Any:
             """Wrap a non-awaitable value into a coroutine and resolve it right away."""
@@ -699,6 +702,10 @@ class AccuweatherBackend:
             # Return the weather report with the values returned from the cache.
             city_name = self.get_localized_city_name(location, weather_context)
             admin_area = self.get_region_for_weather_report(location, weather_context)
+            if request_source == URLBAR_REQUEST_SOURCE:
+                current_conditions, forecast = update_weather_url_with_suggest_partner_code(
+                    current_conditions, forecast
+                )
 
             return WeatherReport(
                 city_name=city_name if city_name else location.localized_name,
@@ -752,6 +759,10 @@ class AccuweatherBackend:
             weather_report_ttl = min(current_conditions_ttl, forecast_ttl)
             city_name = self.get_localized_city_name(location, weather_context)
             admin_area = self.get_region_for_weather_report(location, weather_context)
+            if request_source == URLBAR_REQUEST_SOURCE and current_conditions and forecast:
+                current_conditions, forecast = update_weather_url_with_suggest_partner_code(
+                    current_conditions, forecast
+                )
             return (
                 WeatherReport(
                     city_name=city_name if city_name else location.localized_name,

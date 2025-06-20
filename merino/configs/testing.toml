@@ -42,6 +42,8 @@ api_key = "test"
 # The URL in `url_base` isn't actually pinged during testing but we set it
 # anyway to make sure the production server isn't accidentally pinged.
 url_base = "test://test"
+partner_code_ffsuggest_value="test_urlbar"
+partner_code_newtab_value="test_newtab"
 
 [testing.remote_settings]
 # MERINO_REMOTE_SETTINGS__FORM_FACTORS

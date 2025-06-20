@@ -46,6 +46,7 @@ from merino.providers.suggest.weather.backends.accuweather.utils import (
     RequestType,
     add_partner_code,
     get_language,
+    update_weather_url_with_suggest_partner_code,
 )
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
@@ -341,7 +342,7 @@ def fixture_expected_weather_report() -> WeatherReport:
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
-                "current-weather/39376?lang=en-us"
+                "current-weather/39376?lang=en-us&partner=test_newtab"
             ),
             summary="Mostly cloudy",
             icon_id=6,
@@ -350,7 +351,7 @@ def fixture_expected_weather_report() -> WeatherReport:
         forecast=Forecast(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
-                "daily-weather-forecast/39376?lang=en-us"
+                "daily-weather-forecast/39376?lang=en-us&partner=test_newtab"
             ),
             summary="Pleasant Saturday",
             high=Temperature(c=21.1, f=70.0),
@@ -369,7 +370,7 @@ def fixture_expected_weather_report_via_location_key() -> WeatherReport:
         current_conditions=CurrentConditions(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
-                "current-weather/39376?lang=en-us"
+                "current-weather/39376?lang=en-us&partner=test_newtab"
             ),
             summary="Mostly cloudy",
             icon_id=6,
@@ -378,7 +379,7 @@ def fixture_expected_weather_report_via_location_key() -> WeatherReport:
         forecast=Forecast(
             url=HttpUrl(
                 "https://www.accuweather.com/en/us/san-francisco-ca/94103/"
-                "daily-weather-forecast/39376?lang=en-us"
+                "daily-weather-forecast/39376?lang=en-us&partner=test_newtab"
             ),
             summary="Pleasant Saturday",
             high=Temperature(c=21.1, f=70.0),
@@ -651,7 +652,7 @@ def fixture_accuweather_cached_current_conditions() -> bytes:
         {
             "url": (
                 "https://www.accuweather.com/en/us/san-francisco-ca/"
-                "94103/current-weather/39376?lang=en-us"
+                "94103/current-weather/39376?lang=en-us&partner=test_newtab"
             ),
             "summary": "Mostly cloudy",
             "icon_id": 6,
@@ -1786,7 +1787,7 @@ async def test_get_location_by_geolocation_raises_accuweather_error_on_generic_e
         (
             "accuweather",
             "https://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/"
-            "39376?lang=en-us",
+            "39376?lang=en-us&partner=test_newtab",
         ),
     ],
     ids=["without_partner_code"],
@@ -1908,7 +1909,7 @@ async def test_get_current_conditions_error(
         (
             "accuweather",
             "https://www.accuweather.com/en/us/san-francisco-ca/94103/daily-weather-forecast/"
-            "39376?lang=en-us",
+            "39376?lang=en-us&partner=test_newtab",
         ),
     ],
     ids=["without_partner_code"],
@@ -2216,6 +2217,26 @@ def test_add_partner_code(
     """Test add_partner_code."""
     updated_url: str = add_partner_code(url, partner_param_id, partner_code)
     assert updated_url == expected_url
+
+
+def test_update_weather_url_with_suggest_partner_code(
+    accuweather_cached_current_conditions, accuweather_cached_forecast_fahrenheit
+):
+    """Test update_weather_url_with_suggest_partner_code correctly updates the partner param"""
+    current_conditions_data = orjson.loads(accuweather_cached_current_conditions.decode("utf-8"))
+    forecast_data = orjson.loads(accuweather_cached_forecast_fahrenheit.decode("utf-8"))
+    current_conditions = CurrentConditions(**current_conditions_data)
+    forecast = Forecast(**forecast_data)
+
+    modified_current_conditions, modified_forecast = update_weather_url_with_suggest_partner_code(
+        current_conditions, forecast
+    )
+    assert modified_current_conditions.url == HttpUrl(
+        "https://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/39376?lang=en-us&partner=test_urlbar"
+    )
+    assert modified_forecast.url == HttpUrl(
+        "https://www.accuweather.com/en/us/san-francisco-ca/94103/daily-weather-forecast/39376?lang=en-us&partner=test_urlbar"
+    )
 
 
 @pytest.mark.parametrize(
