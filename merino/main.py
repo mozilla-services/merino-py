@@ -1,23 +1,20 @@
-"""App startup point"""
+"""App startup point with V2 API support"""
 
 import logging
-
 from contextlib import asynccontextmanager
-
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, status, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-
 from merino import curated_recommendations, governance
 from merino.configs.app_configs.config_logging import configure_logging
 from merino.configs.app_configs.config_sentry import configure_sentry
 from merino.providers import suggest, manifest
 from merino.utils.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging as mw_logging, metrics, user_agent
-from merino.web import api_v1, dockerflow
+from merino.web import api_v1, api_v2, dockerflow  # Import the new api_v2
 
 tags_metadata = [
     {
@@ -25,8 +22,16 @@ tags_metadata = [
         "description": "Main search API to query Firefox Suggest.",
     },
     {
+        "name": "suggest-v2",
+        "description": "OHTTP-compatible search API (V2) that requires explicit location/device parameters.",
+    },
+    {
         "name": "providers",
         "description": "Get a list of Firefox Suggest providers and their availability.",
+    },
+    {
+        "name": "providers-v2",
+        "description": "Get a list of Firefox Suggest providers (V2 API).",
     },
 ]
 
@@ -78,7 +83,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["GET", "OPTIONS", "HEAD"],
+    allow_methods=["GET", "POST", "OPTIONS", "HEAD"],
 )
 app.add_middleware(metrics.MetricsMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
@@ -89,13 +94,12 @@ app.add_middleware(mw_logging.LoggingMiddleware)
 
 app.include_router(dockerflow.router)
 app.include_router(api_v1.router, prefix="/api/v1")
-
+app.include_router(api_v2.router, prefix="/api/v2")
 
 if __name__ == "__main__":  # pragma: no cover
     """This is used only for profiling.
-
     Start the profiling:
-        $ python -m scalene merino/main.py
+    $ python -m scalene merino/main.py
     """
     import uvicorn
 
