@@ -703,10 +703,9 @@ class AccuweatherBackend:
             city_name = self.get_localized_city_name(location, weather_context)
             admin_area = self.get_region_for_weather_report(location, weather_context)
             if request_source == URLBAR_REQUEST_SOURCE:
-                current_conditions = update_weather_url_with_suggest_partner_code(
-                    current_conditions
+                current_conditions, forecast = update_weather_url_with_suggest_partner_code(
+                    current_conditions, forecast
                 )
-                forecast = update_weather_url_with_suggest_partner_code(forecast)
 
             return WeatherReport(
                 city_name=city_name if city_name else location.localized_name,
@@ -761,10 +760,9 @@ class AccuweatherBackend:
             city_name = self.get_localized_city_name(location, weather_context)
             admin_area = self.get_region_for_weather_report(location, weather_context)
             if request_source == URLBAR_REQUEST_SOURCE and current_conditions and forecast:
-                current_conditions = update_weather_url_with_suggest_partner_code(
-                    current_conditions
+                current_conditions, forecast = update_weather_url_with_suggest_partner_code(
+                    current_conditions, forecast
                 )
-                forecast = update_weather_url_with_suggest_partner_code(forecast)
             return (
                 WeatherReport(
                     city_name=city_name if city_name else location.localized_name,

@@ -5,11 +5,14 @@ from enum import StrEnum
 from typing import Any, TypedDict
 
 from httpx import URL, InvalidURL
+from pydantic import HttpUrl
+
 from merino.configs import settings
 from merino.providers.suggest.weather.backends.protocol import CurrentConditions, Forecast
 
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
-PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
+PARTNER_CODE_NEWTAB: str | None = settings.accuweather.get("partner_code_newtab_value")
+PARTNER_FFSUGGEST_CODE: str | None = settings.accuweather.get("partner_code_ffsuggest_value")
 VALID_LANGUAGES: frozenset = frozenset(settings.accuweather.default_languages)
 
 logger = logging.getLogger(__name__)
@@ -133,7 +136,7 @@ def process_current_condition_response(response: Any) -> dict[str, Any] | None:
             # matching structures of type `Any` and reports the following
             # lines as unreachable. See
             # https://github.com/python/mypy/issues/12770
-            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)  # type: ignore
+            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE_NEWTAB)  # type: ignore
             return {
                 "url": url,
                 "summary": summary,
@@ -171,7 +174,7 @@ def process_forecast_response(response: Any) -> dict[str, Any] | None:
             # matching structures of type `Any` and reports the following
             # lines as unreachable. See
             # https://github.com/python/mypy/issues/12770
-            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE)  # type: ignore
+            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE_NEWTAB)  # type: ignore
 
             return {
                 "url": url,
@@ -190,12 +193,19 @@ def get_language(requested_languages: list[str]) -> str:
     )
 
 
-def update_weather_url_with_suggest_partner_code(weather_model: CurrentConditions | Forecast):
+def update_weather_url_with_suggest_partner_code(
+    current_conditions: CurrentConditions, forecast: Forecast
+) -> tuple[CurrentConditions, Forecast]:
     """Update weather model urls to use suggest partner code."""
-    partner_code_param = settings.accuweather.get("url_param_partner_code")
-    if partner_code_param:
-        modified_url = URL(str(weather_model.url)).copy_set_param(
-            partner_code_param, settings.accuweather.get("url_param_partner_code_ffsuggest_value")
+    if not PARTNER_PARAM_ID:
+        return current_conditions, forecast
+    else:
+        cc_modified_url = URL(str(current_conditions.url)).copy_set_param(
+            PARTNER_PARAM_ID, PARTNER_FFSUGGEST_CODE
         )
-        return weather_model.model_copy(update={"url": modified_url})
-    return weather_model
+        f_modified_url = URL(str(forecast.url)).copy_set_param(
+            PARTNER_PARAM_ID, PARTNER_FFSUGGEST_CODE
+        )
+        current_conditions.url = HttpUrl(str(cc_modified_url))
+        forecast.url = HttpUrl(str(f_modified_url))
+        return current_conditions, forecast
