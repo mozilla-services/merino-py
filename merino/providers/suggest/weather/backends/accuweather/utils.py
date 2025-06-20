@@ -6,6 +6,7 @@ from typing import Any, TypedDict
 
 from httpx import URL, InvalidURL
 from merino.configs import settings
+from merino.providers.suggest.weather.backends.protocol import CurrentConditions, Forecast
 
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
 PARTNER_CODE: str | None = settings.accuweather.get("partner_code")
@@ -187,3 +188,14 @@ def get_language(requested_languages: list[str]) -> str:
     return next(
         (language for language in requested_languages if language in VALID_LANGUAGES), "en-US"
     )
+
+
+def update_weather_url_with_suggest_partner_code(weather_model: CurrentConditions | Forecast):
+    """Update weather model urls to use suggest partner code."""
+    partner_code_param = settings.accuweather.get("url_param_partner_code")
+    if partner_code_param:
+        modified_url = URL(str(weather_model.url)).copy_set_param(
+            partner_code_param, settings.accuweather.get("url_param_partner_code_ffsuggest_value")
+        )
+        return weather_model.model_copy(update={"url": modified_url})
+    return weather_model

@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 import freezegun
-from httpx import AsyncClient, HTTPError, Request, Response
+from httpx import AsyncClient, HTTPError, Request, Response, URL
 from pydantic import HttpUrl
 from pytest import FixtureRequest, LogCaptureFixture
 from pytest_mock import MockerFixture
@@ -46,6 +46,7 @@ from merino.providers.suggest.weather.backends.accuweather.utils import (
     RequestType,
     add_partner_code,
     get_language,
+    update_weather_url_with_suggest_partner_code,
 )
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
@@ -2216,6 +2217,16 @@ def test_add_partner_code(
     """Test add_partner_code."""
     updated_url: str = add_partner_code(url, partner_param_id, partner_code)
     assert updated_url == expected_url
+
+
+def test_update_weather_url_with_suggest_partner_code(accuweather_cached_current_conditions):
+    """Test update_weather_url_with_suggest_partner_code correctly updates the partner param"""
+    current_conditions_data = orjson.loads(accuweather_cached_current_conditions.decode("utf-8"))
+    current_conditions = CurrentConditions(**current_conditions_data)
+
+    assert update_weather_url_with_suggest_partner_code(current_conditions).url == URL(
+        "https://www.accuweather.com/en/us/san-francisco-ca/94103/current-weather/39376?lang=en-us&partner=test_partner_code"
+    )
 
 
 @pytest.mark.parametrize(
