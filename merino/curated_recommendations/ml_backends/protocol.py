@@ -10,6 +10,7 @@ class ModelType(str, Enum):
     """Type of model. Indicates source of data, such as whether we are working with clicks or include impressions"""
 
     CLICKS = "clicks"
+    CTR = "ctr"
     CLICK_IMP_PAIR = "click_impression_pair"
 
 
