@@ -1,0 +1,29 @@
+name: build-locust-image
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+    secrets:
+      DOCKER_IMAGE_PATH:
+        required: true
+
+jobs:
+  build-locust:
+    environment: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Locust Docker image
+        run: docker build -t merino-locust -f ./tests/load/Dockerfile .
+      - name: Tag with GAR path
+        run: docker tag merino-locust ${{ secrets.DOCKER_IMAGE_PATH }}/merino-locust:${{ inputs.image_tag }}
+      - name: Save image
+        run: docker save ${{ secrets.DOCKER_IMAGE_PATH }}/merino-locust:${{ inputs.image_tag }} | gzip > locust-image.tar.gz
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: locust-image
+          path: locust-image.tar.gz

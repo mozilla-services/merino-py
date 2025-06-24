@@ -1,0 +1,43 @@
+name: publish-docker-image
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      project_id:
+        required: true
+        type: string
+      workload_identity_pool_project_number:
+        required: true
+        type: string
+    secrets:
+      DOCKER_IMAGE_PATH:
+        required: true
+
+jobs:
+  publish:
+    environment: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: merino
+          path: .
+      - name: Load Docker image
+        run: gunzip -c image.tar.gz | docker load
+      - name: Tag image with GAR path
+        run: docker tag app:build ${{ secrets.DOCKER_IMAGE_PATH }}/merino:${{ inputs.image_tag }}
+      - name: Push image to GAR
+        uses: mozilla-it/deploy-actions/docker-push@v3.11.1
+        with:
+          local_image: app:build
+          image_repo_path: ${{ secrets.DOCKER_IMAGE_PATH }}/merino
+          image_tag: ${{ inputs.image_tag }}
+          workload_identity_pool_project_number: ${{ inputs.workload_identity_pool_project_number }}
+          project_id: ${{ inputs.project_id }}
