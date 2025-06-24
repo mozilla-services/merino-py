@@ -17,6 +17,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
+    layout_6_tiles,
 )
 from merino.curated_recommendations.protocol import (
     Section,
@@ -269,7 +270,7 @@ class TestMapCorpusSectionToSection:
         sec = map_corpus_section_to_section(cs, 5)
         assert sec.receivedFeedRank == 5
         assert sec.title == cs.title
-        assert sec.layout == layout_4_medium
+        assert sec.layout == layout_6_tiles
         assert sec.iab == cs.iab
         assert len(sec.recommendations) == len(cs.sectionItems)
         for idx, rec in enumerate(sec.recommendations):
@@ -451,14 +452,14 @@ class TestGetCorpusSections:
         section_a = result["secA"]
         assert section_a.receivedFeedRank == 5
         assert len(section_a.recommendations) == 2
-        assert section_a.layout == layout_4_medium
+        assert section_a.layout == layout_6_tiles
 
         section_b = result["secB"]
         assert section_b.receivedFeedRank == 6
         assert len(section_b.recommendations) == 1
-        assert section_b.layout == layout_4_medium
+        assert section_b.layout == layout_6_tiles
 
         section_c = result["secC"]
         assert section_c.receivedFeedRank == 7
         assert len(section_c.recommendations) == 3
-        assert section_c.layout == layout_4_medium
+        assert section_c.layout == layout_6_tiles

@@ -210,6 +210,24 @@ def get_max_total_retry_duration() -> float:
     return float(initial * (2**retry_count - 1) + retry_count * jitter)
 
 
+def assert_section_layouts_are_cycled(sections: dict):
+    """Assert that layouts of all sections (excluding 'top_stories_section') are cycled through expected pattern."""
+    layout_cycle = [
+        "6-small-medium-1-ad",
+        "4-large-small-medium-1-ad",
+        "4-medium-small-1-ad",
+    ]
+    cycled_sections = [
+        section for sid, section in sections.items() if sid != "top_stories_section"
+    ]  # Exclude top stories
+
+    # Check layouts were cycled through LAYOUT_CYCLE (no repeating layouts for consecutive sections)
+    for idx, sec in enumerate(cycled_sections):
+        expected_layout = layout_cycle[idx % len(layout_cycle)]
+        actual_layout = sec["layout"]["name"]
+        assert actual_layout == expected_layout
+
+
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
@@ -1226,6 +1244,10 @@ class TestSections:
 
             feeds = data["feeds"]
             sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
+
             assert "music" in sections
 
             # assert IAB metadata is present in ML sections (there are 8 of them)
@@ -1274,6 +1296,10 @@ class TestSections:
 
             feeds = data["feeds"]
             sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
+
             # The only sections are topic sections or "top_stories_section"
             assert all(
                 section_name == "top_stories_section" or section_name in Topic
@@ -1312,6 +1338,9 @@ class TestSections:
 
             feeds = data["feeds"]
             sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
 
             # The fixture data contains enough recommendations for at least 4 sections. The number
             # of sections varies because top_stories_section is determined by Thompson sampling,
@@ -1380,25 +1409,14 @@ class TestSections:
             first_section = next(
                 (s for s in sections.values() if s["receivedFeedRank"] == 0), None
             )
-            second_section = next(
-                (s for s in sections.values() if s["receivedFeedRank"] == 1), None
-            )
             assert first_section is not None
-            assert second_section is not None
 
-            # Assert layout of the first section.
+            # Assert layout of the first section (Popular Today).
+            assert first_section["title"] == "Popular Today"
             assert first_section["layout"]["name"] == "4-large-small-medium-1-ad"
 
-            valid_layouts = {
-                "4-large-small-medium-1-ad",
-                "4-medium-small-1-ad",
-                "6-small-medium-1-ad",
-            }
-
-            # Check that sections have a layout in the valid_layouts list
-            for sec in sections.values():
-                layout_name = sec["layout"]["name"]
-                assert layout_name in valid_layouts
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
 
             # Assert only sections 1,2,3,5,7,9 (ranks: 0,1,2,4,6,8) have ads
             expected_section_ranks_with_ads = {0, 1, 2, 4, 6, 8}
@@ -1415,8 +1433,15 @@ class TestSections:
                     assert not tiles_with_ads
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "experiment_payload",
+        [
+            {},  # No experiment
+            {"experimentName": "new-tab-ml-sections", "experimentBranch": "treatment"},
+        ],
+    )
     async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
-        self, caplog
+        self, caplog, experiment_payload
     ):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale. Sections requested to be boosted (followed)
@@ -1434,9 +1459,12 @@ class TestSections:
                         {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
                         {"sectionId": "education", "isFollowed": False, "isBlocked": True},
                     ],
-                },
+                }
+                | experiment_payload,
             )
             data = response.json()
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
 
             # Check if the response is valid
             assert response.status_code == 200
@@ -1461,6 +1489,9 @@ class TestSections:
                     "taxonomy": "IAB-3.0",
                     "categories": ["483"],
                 }
+
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
 
             # Assert no errors were logged
             errors = [r for r in caplog.records if r.levelname == "ERROR"]
@@ -1488,8 +1519,14 @@ class TestSections:
             )
             data = response.json()
 
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
+
             # assert that none of the recommendations has a blocked topic.
-            for _, feed in data["feeds"].items():
+            for _, feed in feeds.items():
                 if feed:
                     for recommendation in feed["recommendations"]:
                         assert recommendation["topic"] not in blocked_topics
@@ -1678,6 +1715,12 @@ class TestSections:
             )
             data = response.json()
 
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
+
             interest_picker_response = data["interestPicker"]
             if enable_interest_picker:
                 assert interest_picker_response is not None
@@ -1715,6 +1758,12 @@ class TestSections:
             )
             data = response.json()
 
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
+
             interest_picker_response = data["interestPicker"]
             if enable_interest_picker:
                 assert interest_picker_response is not None
@@ -1750,6 +1799,11 @@ class TestSections:
 
             feeds = data["feeds"]
             music_recs = feeds["music"]["recommendations"]  # ML feed
+
+            sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
 
             # Check the recs used in top_stories_section are removed from their original ML sections.
             top_story_ids = {
