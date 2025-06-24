@@ -25,7 +25,7 @@ ${0} -d dump
 "
 
 # Default time range
-days=28
+days=90
 # Default access method
 access="all-access"
 # Default output directory
@@ -106,6 +106,7 @@ action=${ACTION}
 
 echo "Fetching begins..."
 while [[ ${i} -le ${days} ]]; do
+  sleep 2
   o=$((offset + i))
   d=$(date -v-${o}d '+%Y/%m/%d')
   dd=$(date -v-${o}d '+%Y%m%d')
