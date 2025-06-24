@@ -73,7 +73,7 @@ def map_section_item_to_recommendation(
 
 
 def map_corpus_section_to_section(
-    corpus_section: CorpusSection, rank: int, layout: Layout = layout_4_medium
+    corpus_section: CorpusSection, rank: int, layout: Layout = layout_6_tiles
 ) -> Section:
     """Map a CorpusSection to a Section with recommendations.
 
@@ -81,7 +81,8 @@ def map_corpus_section_to_section(
         corpus_section: The corpus section to map.
         rank: The receivedFeedRank to assign to this section.
         which determines how the client orders the sections.
-        layout: The layout for the Section. Defaults to layouts_4_medium.
+        layout: The layout for the Section. Defaults to layout_6_tiles to ensure
+        Sections have enough recs for the biggest layout.
 
     Returns:
         A Section model containing mapped recommendations and default layout.
@@ -238,6 +239,12 @@ def rank_sections(
     # 1st priority: always keep top stories at the very top
     sections = put_top_stories_first(sections)
 
+    # Sort sections by receivedFeedRank
+    sections = {
+        sid: section
+        for sid, section in sorted(sections.items(), key=lambda kv: kv[1].receivedFeedRank)
+    }
+
     return sections
 
 
@@ -326,7 +333,7 @@ async def get_sections(
     # 12. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
     sections = rank_sections(sections, request.sections, engagement_backend, personal_interests)
 
-    # 13. Apply layout cycling to sections except top stories
+    # 13. Apply final layout cycling to ranked sections except top_stories
     cycle_layouts_for_ranked_sections(sections)
 
     # 14. Apply ad adjustments
