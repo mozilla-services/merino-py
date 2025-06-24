@@ -247,7 +247,9 @@ class TestMapSectionItemToRecommendation:
         rec = map_section_item_to_recommendation(item, 3, section_id)
         assert isinstance(rec, CuratedRecommendation)
         assert rec.receivedRank == 3
-        assert "." not in rec.features.topic # Make sure we're not sending a type but actual value.
+        assert (
+            "." not in rec.features.topic
+        )  # Make sure we're not sending a type but actual value.
         assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic.name}": 1.0}
 
     def test_basic_mapping_no_topic(self):
