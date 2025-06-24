@@ -1,0 +1,50 @@
+name: publish-locust-image
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      project_id:
+        required: true
+        type: string
+      workload_identity_pool_project_number:
+        required: true
+        type: string
+    secrets:
+      DOCKER_IMAGE_PATH:
+        required: true
+
+jobs:
+  publish-locust:
+    environment: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for [load test skip] directive
+        run: |
+          if git log -1 --pretty=%B | grep -qi '\[load test: skip\]'; then
+            echo "Skipping Locust image publish due to [load test: skip] directive."
+            exit 0
+          fi
+      - name: Download Locust image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: locust-image
+          path: .
+      - name: Load Locust Docker image
+        run: gunzip -c locust-image.tar.gz | docker load
+      - name: Tag image as latest
+        run: docker tag ${{ secrets.DOCKER_IMAGE_PATH }}/merino-locust:${{ inputs.image_tag }} ${{ secrets.DOCKER_IMAGE_PATH }}/merino-locust:latest
+      - name: Push Locust image to GAR
+        uses: mozilla-it/deploy-actions/docker-push@v3.11.1
+        with:
+          local_image: ${{ secrets.DOCKER_IMAGE_PATH }}/merino-locust:latest
+          image_repo_path: ${{ secrets.DOCKER_IMAGE_PATH }}/merino-locust
+          image_tag: latest
+          workload_identity_pool_project_number: ${{ inputs.workload_identity_pool_project_number }}
+          project_id: ${{ inputs.project_id }}
