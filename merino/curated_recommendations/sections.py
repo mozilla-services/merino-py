@@ -61,7 +61,7 @@ def map_section_item_to_recommendation(
     # We use a feature prefix of "t_" for topics and "s_" for sections
     features = {f"s_{section_id}": 1.0}
     if item.topic is not None:
-        features[f"t_{item.topic}"] = 1.0
+        features[f"t_{item.topic.value}"] = 1.0
 
     return CuratedRecommendation(
         **item.model_dump(),

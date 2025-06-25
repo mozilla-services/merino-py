@@ -9,7 +9,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     DayTimeWeightingConfig,
 )
 
-FAKE_MODEL_ID = "fake_model_id"
+CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
 SPECIAL_FEATURE_CLICK = "clicks"
 
 BASE_TOPICS = [
@@ -51,8 +51,8 @@ class FakeLocalModel(LocalModelBackend):
 
         category_fields: dict[str, InterestVectorConfig] = {a: get_topic(a) for a in BASE_TOPICS}
         model_data: ModelData = ModelData(
-            model_type=ModelType.CLICKS,
-            rescale=True,
+            model_type=ModelType.CTR,
+            rescale=False,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[3, 14, 45],
                 relative_weight=[1, 1, 1],
@@ -61,5 +61,8 @@ class FakeLocalModel(LocalModelBackend):
         )
 
         return InferredLocalModel(
-            model_id=FAKE_MODEL_ID, surface_id=surface_id, model_data=model_data, model_version=0
+            model_id=CTR_TOPIC_MODEL_ID,
+            surface_id=surface_id,
+            model_data=model_data,
+            model_version=0,
         )

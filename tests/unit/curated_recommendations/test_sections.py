@@ -248,7 +248,10 @@ class TestMapSectionItemToRecommendation:
         rec = map_section_item_to_recommendation(item, 3, section_id)
         assert isinstance(rec, CuratedRecommendation)
         assert rec.receivedRank == 3
-        assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic}": 1.0}
+        for k in rec.features.keys():
+            if k.startswith("t_"):
+                assert "." not in k  # Make sure we're not sending a type but actual value.
+        assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic.value}": 1.0}
 
     def test_basic_mapping_no_topic(self):
         """Map a valid CorpusItem into a CuratedRecommendation."""
@@ -276,7 +279,7 @@ class TestMapCorpusSectionToSection:
         for idx, rec in enumerate(sec.recommendations):
             features_compare = {f"s_{cs.externalId}": 1.0}
             if rec.topic is not None:
-                features_compare[f"t_{rec.topic}"] = 1.0
+                features_compare[f"t_{rec.topic.value}"] = 1.0
             assert rec.receivedRank == idx
             assert rec.features == features_compare
 
