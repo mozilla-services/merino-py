@@ -39,7 +39,7 @@ from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
 logger = logging.getLogger(__name__)
 
-LAYOUT_CYCLE = [layout_6_tiles, layout_4_large, layout_4_medium]
+LAYOUT_CYCLE = [layout_4_medium, layout_6_tiles, layout_4_large]
 TOP_STORIES_COUNT = 6
 
 
