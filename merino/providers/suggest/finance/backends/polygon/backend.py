@@ -6,6 +6,10 @@ from pydantic import BaseModel
 
 from merino.cache.protocol import CacheAdapter
 from merino.providers.suggest.finance.backends.polygon.utils import FinanceEntityType
+from merino.providers.suggest.finance.backends.protocol import (
+    FinanceContext,
+    FinanceReport,
+)
 
 # Export all the classes from this module
 __all__ = [
@@ -80,26 +84,30 @@ class PolygonBackend:
         self.url_ticker_last_quote = url_ticker_last_quote
         self.url_index_daily_summary = url_index_daily_summary
 
-    # async def get_finance_report(self, finance_context: FinanceContext) -> FinanceReport | None:
-    #   """TODO"""
-    #     if finance_context.entity_type == FinanceEntityType.STOCK:
-    #         # TODO
-    #     else:
-    #         # TODO
+    # WIP
+    async def get_finance_report(self, finance_context: FinanceContext) -> FinanceReport:
+        """Get the finance report for stock ticker"""
+        ticker = finance_context.ticker_symbol
+        stock_price = await self.get_stock_price(ticker)
+        finance_report = FinanceReport(
+            entity_type=finance_context.entity_type, ticker_symbol=ticker, price=stock_price.price
+        )
+
+        return finance_report
 
     async def get_stock_price(self, ticker_symbol: str) -> StockPrice:
         """Get the stock price for the ticker"""
-        params = {
-            self.url_param_api_key: self.url_param_api_key,
-            "stock_ticker": ticker_symbol,
-        }
-        response: Response = await self.http_client.get(self.url_ticker_last_quote, params=params)
+        params = {self.url_param_api_key: self.api_key}
+
+        response: Response = await self.http_client.get(
+            self.url_ticker_last_quote.format(stock_ticker=ticker_symbol), params=params
+        )
         response.raise_for_status()
 
-        stock_data = response.json().results
+        stock_data = response.json()["results"]
 
         # build and return response
-        return StockPrice(ticker_symbol=stock_data.T, price=stock_data.P)
+        return StockPrice(ticker_symbol=stock_data["T"], price=stock_data["P"])
 
     async def get_index_price(self, ticker_symbol: str, date: str) -> IndexPrice:
         """Get the index price for the ticker"""

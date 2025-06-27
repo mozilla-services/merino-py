@@ -32,7 +32,7 @@ class FinanceBackend(Protocol):
 
     async def get_finance_report(
         self, finance_context: FinanceContext
-    ) -> FinanceReport | None:  # pragma: no cover
+    ) -> FinanceReport:  # pragma: no cover
         """Get finance information from partner.
 
         Raises:
