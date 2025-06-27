@@ -21,3 +21,9 @@ jobs:
       image_tag: latest
     secrets:
       DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
+  run-build-dockerhub-app:
+    uses: ./.github/workflows/build-dockerhub-app-image.yaml
+    with:
+      image_tag: ${{ github.sha }}
+    secrets:
+      DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_REPO }}
