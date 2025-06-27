@@ -109,6 +109,7 @@ class MockLocalModelBackend(LocalModelBackend):
         model_data = ModelData(
             model_type=ModelType.CLICKS,
             rescale=True,
+            noise_scale=0.002,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[3, 14, 45],
                 relative_weight=[1, 1, 1],
