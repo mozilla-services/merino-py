@@ -42,7 +42,7 @@ def create_gcs_local_model(
         metrics_client=metrics_client,
         metrics_namespace="recommendation.local_model",
         max_size=settings.curated_recommendations.gcs.local_model.max_size,
-        cron_interval_seconds=0.01,
+        cron_interval_seconds=0.002,
         cron_job_name="fetch_local_model",
     )
     # Call initialize to start the cron job in the same event loop
