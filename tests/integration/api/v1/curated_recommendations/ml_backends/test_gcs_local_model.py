@@ -125,7 +125,7 @@ async def test_gcs_local_model_fetches_data(gcs_storage_client, gcs_bucket, metr
     model_data = ModelData(
         model_type=ModelType.CTR,
         rescale=True,
-        noise_scale=0.01,
+        noise_scale=0.002,
         day_time_weighting=DayTimeWeightingConfig(
             days=[3, 14, 45],
             relative_weight=[1, 1, 1],
