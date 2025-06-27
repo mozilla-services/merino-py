@@ -1,4 +1,4 @@
-name: publish-docker-image
+name: publish-gar-image
 
 on:
   workflow_call:

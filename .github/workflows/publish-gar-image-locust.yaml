@@ -1,4 +1,4 @@
-name: publish-locust-image
+name: publish-gar-image-locust
 
 on:
   workflow_call:
