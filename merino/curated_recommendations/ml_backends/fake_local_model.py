@@ -33,7 +33,7 @@ BASE_TOPICS = [
 
 # Creates a simple model based on topics. Topic features are stored with a t_
 # in telemetry
-class FakeLocalModel(LocalModelBackend):
+class FakeLocalModelTopics(LocalModelBackend):
     """Class that defines sample parameters on the local Firefox client for defining an interest
     vector from interaction events
 
@@ -73,8 +73,34 @@ class FakeLocalModel(LocalModelBackend):
 
 
 BASE_SECTIONS = [
-      'dummy'
+    "nfl",
+    "nba",
+    "mlb",
+    "nhl",
+    "soccer",
+    "tv",
+    "movies",
+    "music",
+    "celebrity news",
+    "books",
+    "business",
+    "career",
+    "arts",
+    "food",
+    "health",
+    "home",
+    "finance",
+    "government",
+    "sports",
+    "tech",
+    "travel",
+    "education",
+    "hobbies",
+    "society-parenting",
+    "education-science",
+    "society",
 ]
+
 
 # Creates a simple model based on sections. Section features are stored with a s_
 # in telemetry
