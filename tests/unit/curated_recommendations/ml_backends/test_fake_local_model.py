@@ -25,6 +25,7 @@ def test_model_returns_inferred_local_model_topics(model_topics):
     assert result.surface_id == surface_id
     assert result.model_version == 0
     assert result.model_data is not None
+    assert result.model_data.noise_scale > 0
     assert len(result.model_data.interest_vector) > 0
     assert len(result.model_data.day_time_weighting.days) > 0
     assert len(result.model_data.day_time_weighting.relative_weight) > 0
@@ -46,6 +47,7 @@ def test_model_returns_inferred_local_model_sections(model_sections):
     assert result.surface_id == surface_id
     assert result.model_version == 0
     assert result.model_data is not None
+    assert result.model_data.noise_scale > 0
     assert len(result.model_data.interest_vector) > 0
     assert len(result.model_data.day_time_weighting.days) > 0
     assert len(result.model_data.day_time_weighting.relative_weight) > 0

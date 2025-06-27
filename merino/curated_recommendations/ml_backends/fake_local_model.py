@@ -57,6 +57,7 @@ class FakeLocalModelTopics(LocalModelBackend):
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=False,
+            noise_scale=0.01,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[3, 14, 45],
                 relative_weight=[1, 1, 1],
@@ -128,6 +129,7 @@ class FakeLocalModelSections(LocalModelBackend):
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=False,
+            noise_scale=0.01,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[3, 14, 45],
                 relative_weight=[1, 1, 1],

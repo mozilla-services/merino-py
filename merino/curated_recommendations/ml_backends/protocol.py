@@ -46,6 +46,7 @@ class ModelData(BaseModel):
     day_time_weighting: DayTimeWeightingConfig
     # Output key, and inputs for how fields affect it
     interest_vector: dict[str, InterestVectorConfig]
+    noise_scale: float
 
 
 class InferredLocalModel(BaseModel):
