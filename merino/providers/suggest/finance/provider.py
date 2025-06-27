@@ -52,6 +52,7 @@ class Provider(BaseProvider):
         self._name = name
         self._query_timeout_sec = query_timeout_sec
         self._enabled_by_default = enabled_by_default
+        self.dummy_url = HttpUrl("http://www.dummy.com")
 
         super().__init__(**kwargs)
 
@@ -91,15 +92,15 @@ class Provider(BaseProvider):
             finance_suggestion: FinanceSuggestion = self.build_suggestion(finance_report)
             return [finance_suggestion]
 
-        except Exception:
-            # TODO
+        except Exception as e:
+            logger.warning(f"Exception occurred for Polygon provider:  {e}")
             return []
 
     def build_suggestion(self, data: FinanceReport) -> FinanceSuggestion:
         """Build a FinanceSuggestion from a FinanceReport"""
         return FinanceSuggestion(
             title="Stock suggestion",
-            url=HttpUrl("www.test.com"),
+            url=HttpUrl(self.dummy_url),
             provider=self.name,
             is_sponsored=False,
             score=self.score,

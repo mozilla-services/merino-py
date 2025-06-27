@@ -98,16 +98,16 @@ class PolygonBackend:
     async def get_stock_price(self, ticker_symbol: str) -> StockPrice:
         """Get the stock price for the ticker"""
         params = {
-            self.url_param_api_key: self.url_param_api_key,
-            "stock_ticker": ticker_symbol,
+            self.url_param_api_key: self.api_key
         }
-        response: Response = await self.http_client.get(self.url_ticker_last_quote, params=params)
+
+        response: Response = await self.http_client.get(self.url_ticker_last_quote.format(stock_ticker=ticker_symbol), params=params)
         response.raise_for_status()
 
-        stock_data = response.json().results
+        stock_data = response.json()['results']
 
         # build and return response
-        return StockPrice(ticker_symbol=stock_data.T, price=stock_data.P)
+        return StockPrice(ticker_symbol=stock_data['T'], price=stock_data['P'])
 
     async def get_index_price(self, ticker_symbol: str, date: str) -> IndexPrice:
         """Get the index price for the ticker"""
