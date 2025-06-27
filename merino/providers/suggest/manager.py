@@ -198,7 +198,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             return PolygonProvider(
                 backend=PolygonBackend(
                     api_key=settings.polygon.api_key,
-                    cache=cache,  # type: ignore [arg-type]
+                    cache=cache,
                     metrics_client=get_metrics_client(),
                     metrics_sample_rate=settings.polygon.metrics_sampling_rate,
                     http_client=create_http_client(

@@ -6,6 +6,10 @@ from pydantic import BaseModel
 
 from merino.cache.protocol import CacheAdapter
 from merino.providers.suggest.finance.backends.polygon.utils import FinanceEntityType
+from merino.providers.suggest.finance.backends.protocol import (
+    FinanceContext,
+    FinanceReport,
+)
 
 # Export all the classes from this module
 __all__ = [
@@ -80,12 +84,16 @@ class PolygonBackend:
         self.url_ticker_last_quote = url_ticker_last_quote
         self.url_index_daily_summary = url_index_daily_summary
 
-    # async def get_finance_report(self, finance_context: FinanceContext) -> FinanceReport | None:
-    #   """TODO"""
-    #     if finance_context.entity_type == FinanceEntityType.STOCK:
-    #         # TODO
-    #     else:
-    #         # TODO
+    # WIP
+    async def get_finance_report(self, finance_context: FinanceContext) -> FinanceReport:
+        """Get the finance report for stock ticker"""
+        ticker = finance_context.ticker_symbol
+        stock_price = await self.get_stock_price(ticker)
+        finance_report = FinanceReport(
+            entity_type=finance_context.entity_type, ticker_symbol=ticker, price=stock_price.price
+        )
+
+        return finance_report
 
     async def get_stock_price(self, ticker_symbol: str) -> StockPrice:
         """Get the stock price for the ticker"""
