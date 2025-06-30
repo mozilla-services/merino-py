@@ -5,7 +5,11 @@ from httpx import AsyncClient, Response
 from pydantic import BaseModel
 
 from merino.cache.protocol import CacheAdapter
-from merino.providers.suggest.finance.backends.polygon.utils import FinanceEntityType
+from merino.providers.suggest.finance.backends.polygon.utils import (
+    FinanceEntityType,
+    TickerSnapshot,
+    extract_ticker_snapshot,
+)
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceContext,
     FinanceReport,
@@ -54,6 +58,7 @@ class PolygonBackend:
         url_param_api_key: str,
         url_ticker_last_quote: str,
         url_index_daily_summary: str,
+        url_single_ticker_snapshot: str,
         cache: CacheAdapter,
         metrics_client: aiodogstatsd.Client,
         http_client: AsyncClient,
@@ -83,31 +88,30 @@ class PolygonBackend:
         self.url_param_api_key = url_param_api_key
         self.url_ticker_last_quote = url_ticker_last_quote
         self.url_index_daily_summary = url_index_daily_summary
+        self.url_single_ticker_snapshot = url_single_ticker_snapshot
 
     # WIP
     async def get_finance_report(self, finance_context: FinanceContext) -> FinanceReport:
         """Get the finance report for stock ticker"""
         ticker = finance_context.ticker_symbol
-        stock_price = await self.get_stock_price(ticker)
+        stock_price = await self.get_ticker_snapshot(ticker)
         finance_report = FinanceReport(
             entity_type=finance_context.entity_type, ticker_symbol=ticker, price=stock_price.price
         )
 
         return finance_report
 
-    async def get_stock_price(self, ticker_symbol: str) -> StockPrice:
+    async def get_ticker_snapshot(self, ticker: str) -> TickerSnapshot:
         """Get the stock price for the ticker"""
         params = {self.url_param_api_key: self.api_key}
 
         response: Response = await self.http_client.get(
-            self.url_ticker_last_quote.format(stock_ticker=ticker_symbol), params=params
+            self.url_single_ticker_snapshot.format(ticker=ticker), params=params
         )
         response.raise_for_status()
 
-        stock_data = response.json()["results"]
-
-        # build and return response
-        return StockPrice(ticker_symbol=stock_data["T"], price=stock_data["P"])
+        # build and return response as a ticker snapshot
+        return extract_ticker_snapshot(response.json())
 
     async def get_index_price(self, ticker_symbol: str, date: str) -> IndexPrice:
         """Get the index price for the ticker"""

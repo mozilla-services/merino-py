@@ -208,6 +208,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     url_param_api_key=settings.polygon.url_param_api_key,
                     url_ticker_last_quote=settings.polygon.url_ticker_last_quote,
                     url_index_daily_summary=settings.polygon.url_index_daily_summary,
+                    url_single_ticker_snapshot=settings.polygon.url_single_ticker_snapshot,
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,

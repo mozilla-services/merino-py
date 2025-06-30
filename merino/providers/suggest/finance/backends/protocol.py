@@ -2,24 +2,13 @@
 
 from typing import Protocol
 from pydantic import BaseModel
-from merino.providers.suggest.finance.backends.polygon.utils import FinanceEntityType, TickerSymbol
-
-
-class FinanceContext(BaseModel):
-    """Model that contains context from the finance suggestion request needed to make finance report."""
-
-    entity_type: FinanceEntityType
-    ticker_symbol: TickerSymbol
-    # TODO might change
-    request_type: str = "price" or "aggregate"
-
+from merino.providers.suggest.finance.backends.polygon.utils import TickerSnapshot
 
 class FinanceReport(BaseModel):
     """Model for finance report that is returned as part of the finance suggestion response"""
 
-    entity_type: FinanceEntityType
-    ticker_symbol: TickerSymbol
-    price: float
+    ticker_snapshot: TickerSnapshot
+    ticker_image_url: str | None
 
 
 class FinanceBackend(Protocol):
