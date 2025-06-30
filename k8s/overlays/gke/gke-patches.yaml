@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: merino-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: merino
+          image: gcr.io/sandbox-merino-ohttp/merino:v1
+          imagePullPolicy: Always
+        - name: ohttp-gateway
+          image: gcr.io/sandbox-merino-ohttp/ohttp-gateway:v1
+          imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastly-mock-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: fastly-mock
+          image: gcr.io/sandbox-merino-ohttp/fastly-mock:v1
+          imagePullPolicy: Always

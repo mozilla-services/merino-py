@@ -1,0 +1,5 @@
+resources:
+  - merino-deployment.yaml
+  - merino-service.yaml
+  - ingress.yaml
+  - fastly-mock.yaml

@@ -1,0 +1,79 @@
+# Replaces the Cloudflare OHTTP sidecar with Rust OHTTP
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: merino-deployment
+spec:
+  template:
+    spec:
+      volumes:
+        - name: ohttp-config
+          emptyDir: {}
+      containers:
+        - name: merino
+          imagePullPolicy: Never
+        - name: ohttp-gateway
+          image: rust-ohttp:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 9443
+          volumeMounts:
+            - name: ohttp-config
+              mountPath: /shared
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Start server and capture config
+              ohttp-server 0.0.0.0:9443 -c /opt/ohttp-server/server.crt -k /opt/ohttp-server/server.key > /tmp/server.log 2>&1 &
+              PID=$!
+              sleep 2
+              grep "Config:" /tmp/server.log | awk '{print $2}' > /shared/config.hex
+              wait $PID
+---
+# Replaces fastly-mock with rust-fastly-mock
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastly-mock-deployment
+spec:
+  template:
+    spec:
+      volumes:
+        - name: fastly-config
+          emptyDir: {}
+      initContainers:
+        - name: wait-for-config
+          image: busybox
+          command:
+            [
+              "sh",
+              "-c",
+              'until [ -f /config/config.hex ]; do echo "Waiting for config..."; sleep 2; done; cp /config/config.hex /shared/',
+            ]
+          volumeMounts:
+            - name: fastly-config
+              mountPath: /shared
+      containers:
+        - name: fastly-mock
+          image: rust-fastly-mock:local
+          imagePullPolicy: Never
+          volumeMounts:
+            - name: fastly-config
+              mountPath: /opt
+---
+# Update service to expose the HTTPS port
+apiVersion: v1
+kind: Service
+metadata:
+  name: merino-service
+spec:
+  ports:
+    - name: merino
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+    - name: ohttp-gateway
+      protocol: TCP
+      port: 9443
+      targetPort: 9443

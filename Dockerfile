@@ -19,11 +19,23 @@ RUN groupadd --gid 10001 app \
 # Copy local code to the container image
 COPY . $APP_HOME
 
-# Install maxmind db and app dependencies. Clean up build tools after
+# Change ownership of the app directory to the app user
+RUN chown -R app:app $APP_HOME
+
+# Install system dependencies as root (keep build-essential for Python deps build)
 RUN apt-get update && \
-    apt-get install --yes build-essential libmaxminddb0 libmaxminddb-dev && \
-    uv sync --frozen --no-cache --no-dev --no-group load && \
-    apt-get remove --yes build-essential && \
+    apt-get install --yes build-essential libmaxminddb0 libmaxminddb-dev
+
+# Switch to app user for Python dependencies
+USER app
+
+# Install Python dependencies as the app user (creates .venv in /app)
+RUN uv sync --frozen --no-cache --no-dev --no-group load
+
+USER root
+
+# Clean up build tools after dependencies are installed
+RUN apt-get remove --yes build-essential && \
     apt-get -q --yes autoremove && \
     apt-get clean && \
     rm -rf /root/.cache
@@ -45,8 +57,4 @@ EXPOSE 8000
 USER app
 
 ENTRYPOINT ["uv", "run", "--no-project", "fastapi", "run"]
-# Note:
-#   * `--proxy-headers` is used as Merino will be running behind an load balancer.
-#   * Only use one Uvicorn worker process per container. Replication and container
-#     management will be handled by container orchestration.
 CMD ["merino/main.py", "--proxy-headers", "--host", "0.0.0.0", "--port", "8000"]
