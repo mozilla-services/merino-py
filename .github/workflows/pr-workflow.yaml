@@ -27,3 +27,9 @@ jobs:
       image_tag: ${{ github.sha }}
     secrets:
       DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_REPO }}
+  run-build-dockerhub-locust:
+    uses: ./.github/workflows/build-dockerhub-locust-image.yaml
+    with:
+      image_tag: ${{ github.sha }}
+    secrets:
+      DOCKERHUB_MERINO_LOCUST_REPO: ${{ secrets.DOCKERHUB_MERINO_LOCUST_REPO }}
