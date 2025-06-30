@@ -198,7 +198,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             return PolygonProvider(
                 backend=PolygonBackend(
                     api_key=settings.polygon.api_key,
-                    cache=cache,  # type: ignore [arg-type]
+                    cache=cache,
                     metrics_client=get_metrics_client(),
                     metrics_sample_rate=settings.polygon.metrics_sampling_rate,
                     http_client=create_http_client(
@@ -206,8 +206,8 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         connect_timeout=settings.providers.polygon.connect_timeout_sec,
                     ),
                     url_param_api_key=settings.polygon.url_param_api_key,
-                    url_ticker_last_quote=settings.polygon.url_param_api_key,
-                    url_index_daily_summary=settings.polygon.url_param_api_key,
+                    url_ticker_last_quote=settings.polygon.url_ticker_last_quote,
+                    url_index_daily_summary=settings.polygon.url_index_daily_summary,
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
