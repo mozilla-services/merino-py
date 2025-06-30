@@ -9,11 +9,9 @@ from fastapi import HTTPException
 from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.suggest.finance.backends.polygon.utils import FinanceEntityType, TickerSymbol
+from merino.providers.suggest.finance.backends.polygon.utils import TickerSnapshot, TickerSymbol
 from merino.providers.suggest.finance.backends.protocol import (
-    FinanceBackend,
-    FinanceContext,
-    FinanceReport,
+    FinanceBackend
 )
 
 logger = logging.getLogger(__name__)
@@ -23,7 +21,7 @@ class FinanceSuggestion(BaseSuggestion):
     """Model for finance suggestions."""
 
     # TODO will expand / change
-    finance_report: FinanceReport
+    ticker_snapshot: TickerSnapshot
 
 
 class Provider(BaseProvider):
@@ -62,11 +60,11 @@ class Provider(BaseProvider):
 
     def validate(self, srequest: SuggestionRequest) -> None:
         """Validate the suggestion request."""
-        if srequest.query and not srequest.request_type:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid query parameters: `request_type` is missing",
-            )
+        # if srequest.query and not srequest.request_type:
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail="Invalid query parameters: `request_type` is missing",
+        #     )
 
     # TODO: circuit breaker
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
@@ -78,33 +76,28 @@ class Provider(BaseProvider):
         handled there.
         """
         try:
-            if not srequest.request_type == "stock":
-                return []
+            print(f"@@@@@@@@@@@@@@@@@@@@@ \n\n")
+            # build the stock enum from query param q and do a snapshot req
+            ticker = TickerSymbol(srequest.query)
+            # possible logic to branch search and snapshot req
 
-            # test for now
-            finance_context = FinanceContext(
-                entity_type=FinanceEntityType.STOCK,
-                ticker_symbol=TickerSymbol.AAPL,
-                request_type="price",
-            )
-
-            finance_report = await self.backend.get_finance_report(finance_context)
-            finance_suggestion: FinanceSuggestion = self.build_suggestion(finance_report)
+            snapshot = await self.backend.get_ticker_snapshot(ticker)
+            finance_suggestion: FinanceSuggestion = self.build_suggestion(snapshot)
             return [finance_suggestion]
 
         except Exception as e:
             logger.warning(f"Exception occurred for Polygon provider:  {e}")
             return []
 
-    def build_suggestion(self, data: FinanceReport) -> FinanceSuggestion:
-        """Build a FinanceSuggestion from a FinanceReport"""
+    def build_suggestion(self, data: TickerSnapshot) -> FinanceSuggestion:
+        """Build a FinanceSuggestion from a TickerSnapshot"""
         return FinanceSuggestion(
             title="Stock suggestion",
             url=HttpUrl(self.dummy_url),
             provider=self.name,
             is_sponsored=False,
             score=self.score,
-            finance_report=data,
+            ticker_snapshot=data,
         )
 
     async def shutdown(self) -> None:

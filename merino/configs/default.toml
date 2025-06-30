@@ -39,7 +39,7 @@ query_timeout_sec = 0.2
 # MERINO_RUNTIME__DISABLED_PROVIDERS
 # List containing providers to disable at startup.
 # Prevents a provider from being instantiated.
-disabled_providers = ["amo", "polygon"]
+disabled_providers = ["amo"]
 
 # MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
 default_suggestions_response_ttl_sec = 300 # 5 mins
@@ -636,11 +636,11 @@ cache = "none"
 
 # MERINO_PROVIDERS__POLYGON__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
-enabled_by_default = false
+enabled_by_default = true
 
 # MERINO_PROVIDERS__POLYGON__SCORE
 # The ranking score for this provider as a floating point number.
-score = 0 # TODO
+score = 0 # TODO#
 
 # MERINO_PROVIDERS__POLYGON__QUERY_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period when Merino queries
@@ -673,7 +673,6 @@ index_ticker_ttl_sec = 900 # 15 minutes
 # MERINO_POLYGON__API_KEY
 # The API key to Polygon's API endpoint.
 # In production, this should be set via environment variable as a secret.
-# TODO replace with actual
 api_key = "test"
 
 ## MERINO_POLYGON__URL_BASE
@@ -684,6 +683,9 @@ url_ticker_last_quote = "/v2/last/nbbo/{stock_ticker}"
 
 # MERINO_POLYGON__URL_INDEX_DAILY_SUMMARY
 url_index_daily_summary = "/v1/open-close/{indices_ticker}/{date}"
+
+# MERINO_POLYGON__URL_TICKER_SNAPSHOT
+url_single_ticker_snapshot = "/v2/snapshot/locale/us/markets/stocks/tickers/{ticker}"
 
 # MERINO_ACCUWEATHER__URL_PARAM_API_KEY
 # The name of the query param whose value is the API key, not the key itself.

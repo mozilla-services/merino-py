@@ -1,6 +1,8 @@
 """Utilities for the Polygon backend"""
 
 from enum import StrEnum
+from dataclasses import dataclass
+from typing import Any, Dict
 
 
 class FinanceEntityType(StrEnum):
@@ -49,3 +51,23 @@ class IndexFund(StrEnum):
     RUSSELL2000 = "RUSSELL2000"
     SP100 = "SP100"
     SP500 = "SP500"
+
+
+@dataclass
+class TickerSnapshot:
+    """Ticker Snapshot"""
+
+    ticker: TickerSymbol
+    todays_change_perc: float
+    last_price: float
+
+
+def extract_ticker_snapshot(data: Dict[str, Any]) -> TickerSnapshot:
+    """Extract the TickerSnapshot from the nested JSON response."""
+    ticker_info = data.get("ticker", {})
+
+    return TickerSnapshot(
+        ticker=ticker_info.get("ticker", ""),
+        todays_change_perc=ticker_info.get("todaysChangePerc", 0.0),
+        last_price=ticker_info.get("lastQuote", {}).get("P", 0.0),
+    )

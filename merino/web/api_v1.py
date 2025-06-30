@@ -91,7 +91,7 @@ async def suggest(
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
-    request_type: Annotated[str | None, Query(pattern="^(location|weather|stock)$")] = None,
+    request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
 ) -> Response:
     """Query Merino for suggestions.
 
@@ -204,6 +204,7 @@ async def suggest(
             search_from.extend(p for p in default_providers if p not in search_from)
     else:
         search_from = default_providers
+        print(f"~~~~~~~~~~~~~~~~~~ default providers: {search_from}")
 
     lookups: list[Task] = []
     languages = get_accepted_languages(accept_language)
@@ -221,6 +222,7 @@ async def suggest(
             source=source,
         )
         p.validate(srequest)
+        print(f"##################### providers.{p.name}.query \n\n")
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
         # `timeit_task()` doesn't support task naming, need to set the task name manually
         task.set_name(p.name)
