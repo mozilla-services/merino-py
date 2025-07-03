@@ -194,6 +194,7 @@ class DomainMetadataExtractor:
         "Too Many Requests",
         "IP blocked",
         "Service unavailable",
+        "Unsupported browser",
     ]
 
     # Constants for favicon URL validation
