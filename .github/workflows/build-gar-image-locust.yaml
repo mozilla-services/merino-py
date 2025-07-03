@@ -1,4 +1,4 @@
-name: build-locust-image
+name: build-gar-image-locust
 
 on:
   workflow_call:
