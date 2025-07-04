@@ -143,13 +143,15 @@ async def test_query_weather_report_returned(
     backend_mock.get_weather_report.return_value = weather_report
 
     suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(query="", geolocation=geolocation)
+        SuggestionRequest(query="", geolocation=geolocation, source="urlbar")
     )
 
     assert suggestions == expected_suggestions
 
     assert len(statsd_mock.increment.call_args_list) == 1
-    assert statsd_mock.increment.call_args_list == [call("providers.weather.query.weather_report")]
+    assert statsd_mock.increment.call_args_list == [
+        call("providers.weather.query.weather_report", tags={"source": "urlbar"})
+    ]
 
 
 @pytest.mark.asyncio
