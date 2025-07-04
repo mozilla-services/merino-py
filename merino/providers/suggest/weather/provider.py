@@ -173,8 +173,11 @@ class Provider(BaseProvider):
                         weather_context, search_term=srequest.query
                     )
                 else:
+                    tags = {"source": srequest.source if srequest.source else "newtab"}
                     weather_context.geolocation.key = srequest.query
-                    self.metrics_client.increment(f"providers.{self.name}.query.weather_report")
+                    self.metrics_client.increment(
+                        f"providers.{self.name}.query.weather_report", tags=tags
+                    )
                     weather_report = await self.backend.get_weather_report(weather_context)
         except MissingLocationKeyError:
             return [NO_LOCATION_KEY_SUGGESTION]
