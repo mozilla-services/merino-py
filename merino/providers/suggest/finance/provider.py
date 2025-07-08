@@ -1,6 +1,5 @@
 """Finance integration."""
 
-import asyncio
 import logging
 from typing import Any
 
@@ -10,9 +9,7 @@ from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.finance.backends.polygon.utils import TickerSnapshot, TickerSymbol
-from merino.providers.suggest.finance.backends.protocol import (
-    FinanceBackend
-)
+from merino.providers.suggest.finance.backends.protocol import FinanceBackend
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +28,6 @@ class Provider(BaseProvider):
     metrics_client: aiodogstatsd.Client
     score: float
     dummy_url: HttpUrl
-    cron_task: asyncio.Task
-    cron_interval_sec: float
 
     def __init__(
         self,
@@ -60,11 +55,11 @@ class Provider(BaseProvider):
 
     def validate(self, srequest: SuggestionRequest) -> None:
         """Validate the suggestion request."""
-        # if srequest.query and not srequest.request_type:
-        #     raise HTTPException(
-        #         status_code=400,
-        #         detail="Invalid query parameters: `request_type` is missing",
-        #     )
+        if not srequest.query:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid query parameters: `q` is missing",
+            )
 
     # TODO: circuit breaker
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
@@ -76,7 +71,6 @@ class Provider(BaseProvider):
         handled there.
         """
         try:
-            print(f"@@@@@@@@@@@@@@@@@@@@@ \n\n")
             # build the stock enum from query param q and do a snapshot req
             ticker = TickerSymbol(srequest.query)
             # possible logic to branch search and snapshot req
@@ -85,8 +79,9 @@ class Provider(BaseProvider):
             finance_suggestion: FinanceSuggestion = self.build_suggestion(snapshot)
             return [finance_suggestion]
 
+        # TODO: Replace for circuit breakers
         except Exception as e:
-            logger.warning(f"Exception occurred for Polygon provider:  {e}")
+            logger.warning(f"Exception occurred for Polygon provider: {e}")
             return []
 
     def build_suggestion(self, data: TickerSnapshot) -> FinanceSuggestion:

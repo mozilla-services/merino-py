@@ -204,7 +204,6 @@ async def suggest(
             search_from.extend(p for p in default_providers if p not in search_from)
     else:
         search_from = default_providers
-        print(f"~~~~~~~~~~~~~~~~~~ default providers: {search_from}")
 
     lookups: list[Task] = []
     languages = get_accepted_languages(accept_language)
@@ -222,7 +221,6 @@ async def suggest(
             source=source,
         )
         p.validate(srequest)
-        print(f"##################### providers.{p.name}.query \n\n")
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
         # `timeit_task()` doesn't support task naming, need to set the task name manually
         task.set_name(p.name)
