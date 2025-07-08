@@ -8,6 +8,15 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+# Avoid a circular import error that happens when a single test is run:
+# pytest tests/integration/jobs/navigational_suggestions/test_domain_metadata_extractor.py
+# E   ImportError: cannot import name 'DOMAIN_MAPPING' from partially initialized module
+# 'merino.jobs.utils.domain_category_mapping' (most likely due to a circular import)
+import sys, types
+_stub = types.ModuleType("merino.jobs.utils.domain_category_mapping")
+_stub.DOMAIN_MAPPING = {}
+sys.modules["merino.jobs.utils.domain_category_mapping"] = _stub
+
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import Scraper
 
 
