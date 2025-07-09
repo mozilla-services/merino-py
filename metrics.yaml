@@ -1,7 +1,7 @@
 version: 1.0
 
 service: Merino
-weather:
+suggest/accuweather:
   providers_accuweather_query_weather_report:
     description: |
       Measurement of the volume of weather requests
