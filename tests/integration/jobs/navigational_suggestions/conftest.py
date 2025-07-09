@@ -12,12 +12,14 @@ import pytest
 # pytest tests/integration/jobs/navigational_suggestions/test_domain_metadata_extractor.py
 # E   ImportError: cannot import name 'DOMAIN_MAPPING' from partially initialized module
 # 'merino.jobs.utils.domain_category_mapping' (most likely due to a circular import)
-import sys, types
+import sys
+import types
+
 _stub = types.ModuleType("merino.jobs.utils.domain_category_mapping")
-_stub.DOMAIN_MAPPING = {}
+setattr(_stub, "DOMAIN_MAPPING", {})
 sys.modules["merino.jobs.utils.domain_category_mapping"] = _stub
 
-from merino.jobs.navigational_suggestions.domain_metadata_extractor import Scraper
+from merino.jobs.navigational_suggestions.domain_metadata_extractor import Scraper  # noqa
 
 
 @pytest.fixture

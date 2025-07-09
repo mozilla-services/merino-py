@@ -1126,7 +1126,9 @@ class TestCustomFavicons:
 
         # Mock uploader methods
         mock_uploader.destination_favicon_name = mocker.MagicMock(return_value="favicons/espn.ico")
-        mock_uploader.upload_image = mocker.MagicMock(return_value="https://cdn.example.com/espn.ico")
+        mock_uploader.upload_image = mocker.MagicMock(
+            return_value="https://cdn.example.com/espn.ico"
+        )
         mock_uploader.force_upload = True
         mock_uploader.uploader = mocker.MagicMock()
         mock_uploader.uploader.cdn_hostname = "cdn.example.com"
