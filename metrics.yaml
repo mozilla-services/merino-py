@@ -11,4 +11,5 @@ suggest/accuweather:
         description: |
           Origin of the weather request
     scope: |
-      Metric is instrumented in the API endpoint.
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
