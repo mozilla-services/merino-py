@@ -52,14 +52,14 @@ while read domain; do
 done < "$CSV_DOMAINS_FILE"
 
 # Sort all domains alphabetically
-sort -u -o "$SORTED_DOMAINS_FILE" "$SORTED_DOMAINS_FILE"
+LC_ALL=C sort -u -o "$SORTED_DOMAINS_FILE" "$SORTED_DOMAINS_FILE"
 FINAL_COUNT=$(wc -l < "$SORTED_DOMAINS_FILE" | xargs)
 
 # Create the output file with docstring and sorted domains
 cat > "$TEMP_OUTPUT_FILE" << 'EOF'
 """Custom domains data for navigational suggestions"""
 
-CUSTOM_DOMAINS = [
+CUSTOM_DOMAINS: list[str] = [
 EOF
 
 # Add sorted domains
