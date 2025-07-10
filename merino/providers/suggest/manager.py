@@ -213,6 +213,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,
+                url=settings.polygon.url_base,
             )
         case _:
             raise InvalidProviderError(f"Unknown provider type: {setting.type}")

@@ -42,6 +42,14 @@ class TickerSymbol(StrEnum):
     WMT = "WMT"
     XOM = "XOM"
 
+    @classmethod
+    def from_str(cls, symbol: str):
+        try:
+            return cls[symbol.upper()]
+        except KeyError:
+            return None
+
+
 
 class IndexFund(StrEnum):
     """Enum for the index fund ticker symbol."""

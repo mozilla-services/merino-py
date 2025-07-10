@@ -27,7 +27,7 @@ class Provider(BaseProvider):
     backend: FinanceBackend
     metrics_client: aiodogstatsd.Client
     score: float
-    dummy_url: HttpUrl
+    url: HttpUrl
 
     def __init__(
         self,
@@ -36,6 +36,7 @@ class Provider(BaseProvider):
         score: float,
         name: str,
         query_timeout_sec: float,
+        url: HttpUrl,
         enabled_by_default: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -45,7 +46,7 @@ class Provider(BaseProvider):
         self._name = name
         self._query_timeout_sec = query_timeout_sec
         self._enabled_by_default = enabled_by_default
-        self.dummy_url = HttpUrl("http://www.dummy.com")
+        self.url = url
 
         super().__init__(**kwargs)
 
@@ -70,14 +71,16 @@ class Provider(BaseProvider):
         eventually be propagated to the provider consumer (i.e. the API handler) and be
         handled there.
         """
+        # get a stock snapshot if the query param contains a supported ticker else do a search for that ticker
         try:
-            # build the stock enum from query param q and do a snapshot req
-            ticker = TickerSymbol(srequest.query)
-            # possible logic to branch search and snapshot req
+            if ticker := TickerSymbol.from_str(srequest.query):
+                snapshot = await self.backend.get_ticker_snapshot(ticker)
+                finance_suggestion: FinanceSuggestion = self.build_suggestion(snapshot)
 
-            snapshot = await self.backend.get_ticker_snapshot(ticker)
-            finance_suggestion: FinanceSuggestion = self.build_suggestion(snapshot)
-            return [finance_suggestion]
+                return [finance_suggestion]
+            else:
+                # search request logic goes here
+                return []
 
         # TODO: Replace for circuit breakers
         except Exception as e:
@@ -88,7 +91,7 @@ class Provider(BaseProvider):
         """Build a FinanceSuggestion from a TickerSnapshot"""
         return FinanceSuggestion(
             title="Stock suggestion",
-            url=HttpUrl(self.dummy_url),
+            url=HttpUrl(self.url),
             provider=self.name,
             is_sponsored=False,
             score=self.score,
