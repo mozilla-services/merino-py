@@ -839,7 +839,7 @@ class TestCustomFavicons:
     @pytest.mark.asyncio
     async def test_process_single_domain_with_custom_favicon_success(self, mock_uploader, mocker):
         """Test that custom favicon is used when available and upload succeeds."""
-        # Mock the custom favicon function to return a URL for axios.com
+        # Mock the custom favicon function to return a URL for axios
         mock_get_custom_favicon = mocker.patch(
             "merino.jobs.navigational_suggestions.domain_metadata_extractor.get_custom_favicon_url"
         )
@@ -874,7 +874,7 @@ class TestCustomFavicons:
         result = await extractor._process_single_domain(domain_data, 32, mock_uploader)
 
         # Verify custom favicon was used
-        mock_get_custom_favicon.assert_called_once_with("axios.com")
+        mock_get_custom_favicon.assert_called_once_with("axios")
 
         # Verify the inline processing was used instead of upload_favicon
         extractor.favicon_downloader.download_favicon.assert_called_once_with(
@@ -932,7 +932,7 @@ class TestCustomFavicons:
         result = await extractor._process_single_domain(domain_data, 32, mock_uploader)
 
         # Verify custom favicon was attempted first
-        mock_get_custom_favicon.assert_called_once_with("axios.com")
+        mock_get_custom_favicon.assert_called_once_with("axios")
         extractor.favicon_downloader.download_favicon.assert_called_once_with(
             "https://static.axios.com/icons/favicon.svg"
         )
@@ -985,7 +985,7 @@ class TestCustomFavicons:
         result = await extractor._process_single_domain(domain_data, 32, mock_uploader)
 
         # Verify custom favicon was attempted
-        mock_get_custom_favicon.assert_called_once_with("axios.com")
+        mock_get_custom_favicon.assert_called_once_with("axios")
         extractor.favicon_downloader.download_favicon.assert_called_once_with(
             "https://static.axios.com/icons/favicon.svg"
         )
@@ -1003,8 +1003,8 @@ class TestCustomFavicons:
         # Mock the custom favicon function to return URLs only for specific domains
         def mock_custom_favicon_lookup(domain):
             custom_favicons = {
-                "axios.com": "https://static.axios.com/icons/favicon.svg",
-                "reuters.com": "https://www.reuters.com/pf/resources/images/reuters/favicon/tr_kinesis_v2.svg?d=287",
+                "axios": "https://static.axios.com/icons/favicon.svg",
+                "reuters": "https://www.reuters.com/pf/resources/images/reuters/favicon/tr_kinesis_v2.svg?d=287",
             }
             return custom_favicons.get(domain, "")
 
@@ -1111,3 +1111,48 @@ class TestCustomFavicons:
         assert get_custom_favicon_url("localhost") == ""
 
         assert get_custom_favicon_url(".com") == ""
+
+    def test_process_domain_metadata_multiple_tlds(self, mock_uploader, mocker):
+        """Ensure domains sharing the same base use the custom favicon."""
+        extractor = DomainMetadataExtractor(blocked_domains=set())
+
+        # Mock favicon downloader to always return an image
+        from merino.utils.gcs.models import Image
+
+        mock_image = Image(content=b"espn_icon", content_type="image/x-icon")
+        extractor.favicon_downloader = mocker.AsyncMock()
+        extractor.favicon_downloader.download_favicon.return_value = mock_image
+        extractor.favicon_downloader.reset = mocker.AsyncMock()
+
+        # Mock uploader methods
+        mock_uploader.destination_favicon_name = mocker.MagicMock(return_value="favicons/espn.ico")
+        mock_uploader.upload_image = mocker.MagicMock(
+            return_value="https://cdn.example.com/espn.ico"
+        )
+        mock_uploader.force_upload = True
+        mock_uploader.uploader = mocker.MagicMock()
+        mock_uploader.uploader.cdn_hostname = "cdn.example.com"
+
+        # Patch Scraper since it should not be used when custom favicon is found
+        mock_scraper = mocker.MagicMock()
+        mock_scraper.__enter__.return_value = mock_scraper
+        mock_scraper.__exit__.return_value = None
+        mocker.patch(
+            "merino.jobs.navigational_suggestions.domain_metadata_extractor.Scraper",
+            return_value=mock_scraper,
+        )
+
+        domains = [
+            {"domain": "espn.com", "suffix": "com"},
+            {"domain": "espn.in", "suffix": "in"},
+            {"domain": "espn.co.uk", "suffix": "co.uk"},
+        ]
+
+        results = extractor.process_domain_metadata(domains, 32, mock_uploader)
+
+        assert len(results) == 3
+        for res in results:
+            assert res["domain"] == "espn"
+            assert res["icon"] == "https://cdn.example.com/espn.ico"
+            assert res["title"] == "Espn"
+            assert res["url"].startswith("https://espn")

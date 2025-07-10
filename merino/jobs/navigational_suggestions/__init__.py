@@ -10,6 +10,7 @@ from typing import Optional, Any
 
 import typer
 from httpx import URL
+import tldextract
 
 from merino.configs import settings as config
 from merino.jobs.navigational_suggestions.partner_favicons import PARTNER_FAVICONS
@@ -298,7 +299,8 @@ def _run_local_mode(
         try:
             # Check if this domain has a custom favicon
             domain = domain_data.get("domain", "")
-            has_custom_favicon = bool(get_custom_favicon_url(domain))
+            second_level = tldextract.extract(domain).domain if domain else ""
+            has_custom_favicon = bool(get_custom_favicon_url(second_level))
 
             result = await original_process_method(domain_data, min_width, uploader)
 
