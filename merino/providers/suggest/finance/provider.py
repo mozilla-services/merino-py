@@ -1,7 +1,6 @@
 """Finance integration."""
 
 import logging
-from typing import Any
 
 import aiodogstatsd
 from fastapi import HTTPException
@@ -38,7 +37,6 @@ class Provider(BaseProvider):
         query_timeout_sec: float,
         url: HttpUrl,
         enabled_by_default: bool = False,
-        **kwargs: Any,
     ) -> None:
         self.backend = backend
         self.metrics_client = metrics_client
@@ -48,11 +46,10 @@ class Provider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         self.url = url
 
-        super().__init__(**kwargs)
+        super().__init__()
 
     async def initialize(self) -> None:
         """Initialize the provider."""
-        # TODO
 
     def validate(self, srequest: SuggestionRequest) -> None:
         """Validate the suggestion request."""
@@ -62,19 +59,12 @@ class Provider(BaseProvider):
                 detail="Invalid query parameters: `q` is missing",
             )
 
-    # TODO: circuit breaker
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
-        """Provide finance suggestions.
-
-        All the `PolygonError` errors, raised from the backend, are intentionally
-        unhandled in this function to drive the circuit breaker. Those exceptions will
-        eventually be propagated to the provider consumer (i.e. the API handler) and be
-        handled there.
-        """
+        """Provide finance suggestions."""
         # get a stock snapshot if the query param contains a supported ticker else do a search for that ticker
         try:
             if ticker := TickerSymbol.from_str(srequest.query):
-                snapshot = await self.backend.get_ticker_snapshot(ticker)
+                snapshot: TickerSnapshot = await self.backend.get_ticker_snapshot(ticker)
                 finance_suggestion: FinanceSuggestion = self.build_suggestion(snapshot)
 
                 return [finance_suggestion]
@@ -82,7 +72,6 @@ class Provider(BaseProvider):
                 # search request logic goes here
                 return []
 
-        # TODO: Replace for circuit breakers
         except Exception as e:
             logger.warning(f"Exception occurred for Polygon provider: {e}")
             return []
