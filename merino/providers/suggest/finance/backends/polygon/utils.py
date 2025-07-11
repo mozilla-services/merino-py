@@ -44,11 +44,11 @@ class TickerSymbol(StrEnum):
 
     @classmethod
     def from_str(cls, symbol: str):
+        """Get the string value for the enum key if it exists."""
         try:
             return cls[symbol.upper()]
         except KeyError:
             return None
-
 
 
 class IndexFund(StrEnum):
