@@ -83,9 +83,8 @@ async def test_should_fetch_false(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
         return_value=(GetManifestResultCode.SUCCESS, manifest_data),
     ):
-        # difference between last fetch and current time is 40000 (less than 86400)
         with patch(
-            "merino.providers.manifest.provider.time.time", side_effect=[100000, 140000, 200000]
+            "merino.providers.manifest.provider.time.time", side_effect=[100000, 101000, 101500]
         ):
             await manifest_provider.initialize()
             await cleanup(manifest_provider)

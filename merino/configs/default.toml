@@ -324,8 +324,8 @@ forecast_ttl_sec = 3600 # 1 hr
 cron_interval_sec = 60
 
 # MERINO_PROVIDERS__MANIFEST__RESYNC_INTERVAL_SEC
-# Time between re-syncs of the manifest file, in seconds. Defaults to 24 hours.
-resync_interval_sec = 86400
+# Time between re-syncs of the manifest file, in seconds. Defaults to every hour.
+resync_interval_sec = 3600
 
 [default.accuweather]
 # MERINO_ACCUWEATHER__API_KEY
@@ -680,7 +680,7 @@ api_key = "test"
 url_base = "https://api.polygon.io"
 
 # MERINO_POLYGON__URL_TICKER_LAST_QUOTE
-url_ticker_last_quote ="/v2/last/nbbo/{stock_ticker}"
+url_ticker_last_quote = "/v2/last/nbbo/{stock_ticker}"
 
 # MERINO_POLYGON__URL_INDEX_DAILY_SUMMARY
 url_index_daily_summary = "/v1/open-close/{indices_ticker}/{date}"
