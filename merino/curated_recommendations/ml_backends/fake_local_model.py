@@ -113,6 +113,12 @@ class FakeLocalModelSections(LocalModelBackend):
     Sections are the features of the model. The model is a represetion of users interests.
 
     Set which model is used at __init__ import
+
+    0.002 is about the CTR of users who have clicked at least once
+    .0092 is ~99% not to be noise given laplace noise and 0.002 scale
+    .0184 is double the first edge
+    with these thresholds, the buckets are:
+    [probably never clicked, almost certainly clicked, clicked quite a bit]
     """
 
     def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
@@ -121,7 +127,7 @@ class FakeLocalModelSections(LocalModelBackend):
         def get_topic(topic: str) -> InterestVectorConfig:
             return InterestVectorConfig(
                 features={f"s_{topic}": 1},
-                thresholds=[0.3, 0.4],
+                thresholds=[0.0092, 0.0184],
                 diff_p=0.75,
                 diff_q=0.25,
             )
