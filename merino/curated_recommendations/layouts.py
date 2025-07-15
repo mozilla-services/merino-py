@@ -155,8 +155,8 @@ layout_8_tiles_2_ads = Layout(
             tiles=[
                 Tile(size=TileSize.LARGE, position=0, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.SMALL, position=2, hasAd=False, hasExcerpt=False),
-                Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
@@ -168,8 +168,8 @@ layout_8_tiles_2_ads = Layout(
             tiles=[
                 Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.SMALL, position=2, hasAd=False, hasExcerpt=False),
-                Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
                 Tile(size=TileSize.SMALL, position=6, hasAd=False, hasExcerpt=False),
@@ -181,8 +181,8 @@ layout_8_tiles_2_ads = Layout(
             tiles=[
                 Tile(size=TileSize.LARGE, position=0, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.SMALL, position=2, hasAd=False, hasExcerpt=False),
-                Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
                 Tile(size=TileSize.SMALL, position=6, hasAd=False, hasExcerpt=False),
