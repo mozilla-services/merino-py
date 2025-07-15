@@ -16,6 +16,7 @@ from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_4_large,
     layout_6_tiles,
+    layout_8_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
@@ -169,6 +170,13 @@ def is_ml_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
     )
 
 
+def is_popular_today_double_row_layout(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the sections backend experiment is enabled."""
+    return is_enrolled_in_experiment(
+        request, ExperimentName.ML_SECTIONS_POPULAR_TODAY_DOUBLE_ROW_EXPERIMENT.value, "treatment"
+    )
+
+
 def update_received_feed_rank(sections: Dict[str, Section]):
     """Set receivedFeedRank such that it is incrementing from 0 to len(sections)"""
     for idx, sid in enumerate(sorted(sections, key=lambda k: sections[k].receivedFeedRank)):
@@ -191,14 +199,18 @@ def remove_top_story_recs(
     return [rec for rec in recommendations if rec.corpusItemId not in top_stories_rec_ids]
 
 
-def cycle_layouts_for_ranked_sections(sections: dict[str, Section]):
+def cycle_layouts_for_ranked_sections(
+    sections: dict[str, Section], layout_cycle: list[Layout] | None = None
+):
     """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section'"""
+    if not layout_cycle:
+        layout_cycle = LAYOUT_CYCLE
     # Exclude top_stories_section from layout cycling
     ranked_sections = [
         section for sid, section in sections.items() if sid != "top_stories_section"
     ]
     for idx, section in enumerate(ranked_sections):
-        section.layout = deepcopy(LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)])
+        section.layout = deepcopy(layout_cycle[idx % len(layout_cycle)])
 
 
 def rank_sections(
@@ -298,7 +310,18 @@ async def get_sections(
     )
 
     # 6. Split top stories
-    top_stories = all_ranked_corpus_recommendations[:TOP_STORIES_COUNT]
+    top_stories_count = TOP_STORIES_COUNT
+    layout_cycle = LAYOUT_CYCLE
+    popular_today_layout = layout_4_large
+
+    # check if popular today double row experiment is enabled
+    # update top story count & layout cycle
+    if is_popular_today_double_row_layout(request):
+        top_stories_count = 9
+        layout_cycle = [layout_6_tiles, layout_4_large, layout_4_medium]
+        popular_today_layout = layout_8_tiles_2_ads
+
+    top_stories = all_ranked_corpus_recommendations[:top_stories_count]
     top_stories_rec_ids = {rec.corpusItemId for rec in top_stories}
 
     # 7. Remove top story recs from original corpus sections
@@ -320,7 +343,7 @@ async def get_sections(
             receivedFeedRank=0,
             recommendations=top_stories,
             title=get_translation(surface_id, "top-stories", "Popular Today"),
-            layout=deepcopy(layout_4_large),
+            layout=deepcopy(popular_today_layout),
         )
     }
 
@@ -334,7 +357,7 @@ async def get_sections(
     sections = rank_sections(sections, request.sections, engagement_backend, personal_interests)
 
     # 13. Apply final layout cycling to ranked sections except top_stories
-    cycle_layouts_for_ranked_sections(sections)
+    cycle_layouts_for_ranked_sections(sections, layout_cycle)
 
     # 14. Apply ad adjustments
     adjust_ads_in_sections(sections)
