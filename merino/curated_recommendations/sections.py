@@ -16,6 +16,7 @@ from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_4_large,
     layout_6_tiles,
+    layout_8_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
@@ -39,8 +40,8 @@ from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
 logger = logging.getLogger(__name__)
 
-LAYOUT_CYCLE = [layout_4_medium, layout_6_tiles, layout_4_large]
-TOP_STORIES_COUNT = 6
+LAYOUT_CYCLE = [layout_6_tiles, layout_4_large, layout_4_medium]
+TOP_STORIES_COUNT = 9
 
 
 def map_section_item_to_recommendation(
@@ -320,7 +321,7 @@ async def get_sections(
             receivedFeedRank=0,
             recommendations=top_stories,
             title=get_translation(surface_id, "top-stories", "Popular Today"),
-            layout=deepcopy(layout_4_large),
+            layout=deepcopy(layout_8_tiles_2_ads),
         )
     }
 

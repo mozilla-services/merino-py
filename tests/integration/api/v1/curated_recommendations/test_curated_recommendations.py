@@ -65,7 +65,10 @@ class MockEngagementBackend(EngagementBackend):
             "dc4b30c4-170b-4e9f-a068-bdc51474a0fb": (1_000_000, 1_000_000),  # ML Soccer 100% CTR
             "9261e868-beff-4419-8071-7750d063d642": (1_000_000, 1_000_000),  # ML NBA 100% CTR
             "63909b8c-a619-45f3-9ebc-fd8fcaeb72b1": (1_000_000, 1_000_000),  # ML Food 100% CTR
-            # The above 6 ML recs have the highest CTR & will be included in top_stories_section
+            "f26309fb-163c-41b3-9507-837cc76bbc8b": (1_000_000, 1_000_000),  # ML Movies 100% CTR
+            "dc53b7ae-d15c-4d21-b5e6-d6e652ffeacc": (1_000_000, 1_000_000),  # ML Food 100% CTR
+            "0de15171-7e9e-486a-b250-24b240ded273": (1_000_000, 1_000_000),  # ML NBA 100% CTR
+            # The above 9 ML recs have the highest CTR & will be included in top_stories_section
             "41111154-ebb1-45d9-9799-a882f13cd8cc": (
                 990_000,
                 1_000_000,
@@ -214,9 +217,9 @@ def get_max_total_retry_duration() -> float:
 def assert_section_layouts_are_cycled(sections: dict):
     """Assert that layouts of all sections (excluding 'top_stories_section') are cycled through expected pattern."""
     layout_cycle = [
-        "4-medium-small-1-ad",
         "6-small-medium-1-ad",
         "4-large-small-medium-1-ad",
+        "4-medium-small-1-ad",
     ]
     cycled_sections = [
         section for sid, section in sections.items() if sid != "top_stories_section"
@@ -1414,7 +1417,7 @@ class TestSections:
 
             # Assert layout of the first section (Popular Today).
             assert first_section["title"] == "Popular Today"
-            assert first_section["layout"]["name"] == "4-large-small-medium-1-ad"
+            assert first_section["layout"]["name"] == "8-double-row-2-ad"
 
             # Assert layouts are cycled
             assert_section_layouts_are_cycled(sections)
@@ -1810,6 +1813,7 @@ class TestSections:
             top_story_ids = {
                 rec["corpusItemId"] for rec in feeds["top_stories_section"]["recommendations"]
             }
+            print(top_story_ids)
 
             for sid, section in feeds.items():
                 if sid != "top_stories_section":
@@ -1855,7 +1859,7 @@ class TestSections:
         # define interest vector
         interests = {
             "education-science": 1.0,
-            "food": 0.8,
+            "health": 0.8,
             "government": 0.7,
             "society": 0.00001,
             "model_id": "fake_model_id",
@@ -1871,7 +1875,8 @@ class TestSections:
                 },
             )
             data = response.json()
-            # expect intests to be sorted by value
+            print(data["feeds"])
+            # expect interests to be sorted by value
             sorted_interests = sorted(
                 [k for k, v in interests.items() if isinstance(v, float)], key=interests.get
             )[::-1]
