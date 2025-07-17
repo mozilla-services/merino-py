@@ -7,10 +7,12 @@
 import asyncio
 import csv
 import gzip
+import json
 import logging
 import os
 import socket
 import struct
+from collections import defaultdict
 from itertools import chain
 from random import choice, randint, sample
 from typing import Any
@@ -24,7 +26,7 @@ from pydantic import BaseModel
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.providers.manifest.backends.protocol import ManifestData
-from merino.providers.suggest.adm.backends.protocol import SuggestionContent
+from merino.providers.suggest.adm.backends.protocol import SegmentType
 from merino.providers.suggest.adm.backends.remotesettings import (
     RemoteSettingsBackend,
     RemoteSettingsError,
@@ -110,14 +112,14 @@ WIKIPEDIA_QUERIES: list[str] = []
 
 
 @events.test_start.add_listener
-def on_locust_test_start(environment, **kwargs) -> None:
+async def on_locust_test_start(environment, **kwargs) -> None:
     """Download suggestions from Kinto and store suggestions on workers."""
     if not isinstance(environment.runner, MasterRunner):
         return
 
     query_data: QueryData = QueryData()
     try:
-        query_data.adm = get_adm_queries(
+        query_data.adm = await get_adm_queries(
             server=MERINO_REMOTE_SETTINGS__SERVER,
             collection=MERINO_REMOTE_SETTINGS__COLLECTION,
             bucket=MERINO_REMOTE_SETTINGS__BUCKET,
@@ -167,7 +169,9 @@ def on_locust_test_start(environment, **kwargs) -> None:
         environment.runner.send_message("store_suggestions", dict(query_data), client_id=worker)
 
 
-def get_adm_queries(server: str | None, collection: str | None, bucket: str | None) -> QueriesList:
+async def get_adm_queries(
+    server: str | None, collection: str | None, bucket: str | None
+) -> QueriesList:
     """Get query strings for use in testing the AdM Provider.
 
     Args:
@@ -195,15 +199,21 @@ def get_adm_queries(server: str | None, collection: str | None, bucket: str | No
     backend: RemoteSettingsBackend = RemoteSettingsBackend(
         server, collection, bucket, icon_processor
     )
-    content: SuggestionContent = asyncio.run(backend.fetch())
+    records: list[dict[str, Any]] = await backend.get_records()
+    amp_records: list[dict[str, Any]] = backend.filter_records("amp", records)
+    attachment_host: str = await backend.get_attachment_host()
+    rs_suggestions: defaultdict[
+        str, defaultdict[SegmentType, str]
+    ] = await backend.get_suggestions(attachment_host, amp_records)
 
-    adm_query_dict: dict[int, list[str]] = {}
-    for country, index in content.suggestions.items():
-        for query, data in index.items():
-            for segment, (result_id, kw_ind) in data.items():
-                adm_query_dict.setdefault(result_id, []).append(query)
+    keywords = []
+    for country, c_suggestions in rs_suggestions.items():
+        for segment, raw_suggestions in c_suggestions.items():
+            suggestions = json.loads(raw_suggestions)
+            for suggestion in suggestions:
+                keywords.extend(suggestion.get("keywords", []))
 
-    return list(adm_query_dict.values())
+    return keywords
 
 
 def get_amo_queries() -> list[str]:
