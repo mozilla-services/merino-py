@@ -2,37 +2,17 @@
 
 import aiodogstatsd
 from httpx import AsyncClient, Response
-from pydantic import BaseModel
 
 from merino.cache.protocol import CacheAdapter
 from merino.providers.suggest.finance.backends.polygon.utils import (
-    FinanceEntityType,
     TickerSnapshot,
     extract_ticker_snapshot,
 )
 
 # Export all the classes from this module
 __all__ = [
-    "StockPrice",
-    "IndexPrice",
     "PolygonBackend",
 ]
-
-
-class StockPrice(BaseModel):
-    """Model for a Stock"""
-
-    type: FinanceEntityType = FinanceEntityType.STOCK
-    ticker_symbol: str
-    price: float
-
-
-class IndexPrice(BaseModel):
-    """Model for a Index"""
-
-    type: FinanceEntityType = FinanceEntityType.INDEX
-    ticker_symbol: str
-    price: float
 
 
 class PolygonBackend:
@@ -57,11 +37,7 @@ class PolygonBackend:
         http_client: AsyncClient,
         metrics_sample_rate: float,
     ) -> None:
-        """Initialize the Polygon backend.
-
-        Raises:
-            ValueError: If API key or URL variables are None or empty.
-        """
+        """Initialize the Polygon backend."""
         self.api_key = api_key
         self.cache = cache
         self.metrics_client = metrics_client
