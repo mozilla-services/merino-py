@@ -1,26 +1,20 @@
 """Protocol for the AdM provider backends."""
 
-from typing import Any, Protocol
+from typing import Protocol
 
-from pydantic import BaseModel
-
+from pydantic import BaseModel, ConfigDict
+from moz_merino_ext.amp import AmpIndexManager
 
 SegmentType = tuple[int]
 IndexType = dict[str, dict[SegmentType, tuple[int, int]]]
 
 
-class SuggestionContent(BaseModel):
+class SuggestionContentExt(BaseModel):
     """Class that holds the result from a fetch operation."""
 
-    # A dictionary keyed on suggestion keywords, each value stores an index
-    # (pointer) to one entry of the suggestion result list.
-    suggestions: dict[str, IndexType]
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    # A list of full keywords
-    full_keywords: list[str]
-
-    # A list of suggestion results.
-    results: list[dict[str, Any]]
+    index_manager: AmpIndexManager
 
     # A dictionary of icon IDs to icon URLs.
     icons: dict[str, str]
@@ -34,6 +28,6 @@ class AdmBackend(Protocol):
     directly depend on.
     """
 
-    async def fetch(self) -> SuggestionContent:  # pragma: no cover
+    async def fetch(self) -> SuggestionContentExt:  # pragma: no cover
         """Get suggestion content from partner."""
         ...
