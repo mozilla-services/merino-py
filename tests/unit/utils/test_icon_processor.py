@@ -1,6 +1,7 @@
 """Unit tests for the IconProcessor utility."""
 
 import hashlib
+import json
 from unittest.mock import MagicMock, patch, AsyncMock
 from urllib.parse import urljoin
 
@@ -10,7 +11,7 @@ from pytest_mock import MockerFixture
 from merino.configs import settings
 from merino.providers.suggest.adm.backends.remotesettings import (
     RemoteSettingsBackend,
-    KintoSuggestion,
+    FormFactor,
 )
 from merino.utils.gcs.models import Image
 from merino.utils.icon_processor import IconProcessor
@@ -457,21 +458,24 @@ async def test_fetch_with_icon_processing_errors():
             "last_modified": 123,
         },
     ]
-    mock_suggestions = {
-        "US": {
-            ("desktop",): [
-                KintoSuggestion(
-                    id=id,
-                    advertiser="Example.org",
-                    iab_category="5 - Education",
-                    icon=icon_id,
-                    title="Test Suggestion",
-                    url="https://example.org/test",
-                )
-                for id, icon_id in enumerate(["123", "456", "789"])
-            ]
-        }
-    }
+    mock_attachment = json.dumps(
+        [
+            {
+                "id": id,
+                "advertiser": "Example.org",
+                "click_url": "test",
+                "full_keywords": [],
+                "iab_category": "5 - Education",
+                "icon": icon_id,
+                "impression_url": "test",
+                "keywords": [],
+                "title": "Test Suggestion",
+                "url": "https://example.org/test",
+            }
+            for id, icon_id in enumerate(["123", "456", "789"])
+        ]
+    )
+
     attachment_host = "https://example.com"
 
     # Create instance with mock icon processor
@@ -481,7 +485,7 @@ async def test_fetch_with_icon_processing_errors():
     # Mock the methods directly on the instance
     backend.get_records = AsyncMock(return_value=mock_records)
     backend.get_attachment_host = AsyncMock(return_value=attachment_host)
-    backend.get_suggestions = AsyncMock(return_value=mock_suggestions)
+    backend.get_attachment_raw = AsyncMock(return_value=mock_attachment.encode("utf-8"))
 
     # Mock icon processor's process_icon_url method with different behaviors
     async def mock_process_side_effect(url):
@@ -497,10 +501,11 @@ async def test_fetch_with_icon_processing_errors():
     # Call the method we're testing
     result = await backend.fetch()
 
+    result_icons = result.index_manager.list_icons(f"US/({FormFactor.DESKTOP.value},)")
     # Assertions
-    assert "123" in result.icons
-    assert "456" in result.icons
-    assert "789" in result.icons
+    assert "123" in result_icons
+    assert "456" in result_icons
+    assert "789" in result_icons
 
     # Check successful processing
     assert result.icons["123"] == "https://processed.example.com/icon1.png"
