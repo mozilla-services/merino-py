@@ -648,7 +648,7 @@ class TestGreedyPersonalizedSectionRanker:
         # extract titles and build InferredInterests
         sec_titles = [sec for sec in sections]
         personal_sections = [sec_titles[i] for i in [4, 10, 13, 15]]
-        personal_interests = InferredInterests({k: i for i, k in enumerate(personal_sections)})
+        personal_interests = InferredInterests({k: i + 1 for i, k in enumerate(personal_sections)})
         # store original order of sections not in inferredInterests
         original_order = sorted(sections, key=lambda x: sections[x].receivedFeedRank)
         original_order = [k for k in original_order if k not in personal_sections]
