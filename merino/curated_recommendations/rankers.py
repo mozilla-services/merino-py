@@ -170,7 +170,12 @@ def greedy_personalized_section_rank(
     ordered_sections = sorted(sections, key=lambda x: sections[x].receivedFeedRank)
 
     ## order of personal preferences
-    ptopics = [k for k, v in personal_interests.root.items() if isinstance(v, float)]
+    ### only keeps a value if above first coarse threshold. this
+    ### is because there is noise added to every value in client and
+    ## we do not want to rank on the noise
+    ptopics = [
+        k for k, v in personal_interests.root.items() if isinstance(v, float) and v >= 0.0092
+    ]
     ordered_preferences = sorted(ptopics, key=lambda x: personal_interests.root[x], reverse=True)
 
     # decide once for each pref whether it “wins” (prob. 1-epsilon)

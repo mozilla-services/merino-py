@@ -1857,7 +1857,7 @@ class TestSections:
             "education-science": 1.0,
             "food": 0.8,
             "government": 0.7,
-            "society": 0.00001,
+            "society": 0.1,
             "model_id": "fake_model_id",
         }
         # make the api call
