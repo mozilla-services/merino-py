@@ -648,26 +648,29 @@ class TestGreedyPersonalizedSectionRanker:
         # extract titles and build InferredInterests
         sec_titles = [sec for sec in sections]
         personal_sections = [sec_titles[i] for i in [4, 10, 13, 15]]
-        personal_interests = InferredInterests({k: i + 1 for i, k in enumerate(personal_sections)})
+        personal_interests = InferredInterests({k: i for i, k in enumerate(personal_sections)})
         # store original order of sections not in inferredInterests
         original_order = sorted(sections, key=lambda x: sections[x].receivedFeedRank)
-        original_order = [k for k in original_order if k not in personal_sections]
+        original_order = [
+            k
+            for k in original_order
+            if k not in personal_sections or personal_interests.root[k] < 0.0092
+        ]
         # rerank the sections
         reranked_sections = greedy_personalized_section_rank(
             sections=sections, personal_interests=personal_interests, epsilon=0.0
         )
-        print("original order", original_order)
-        print("personal_sections", personal_sections)
-        print(
-            "new order",
-            sorted(reranked_sections, key=lambda x: reranked_sections[x].receivedFeedRank),
-        )
+
         # personal_interests should be at the top of reranked_sections, reversed
-        for i, s in enumerate(personal_sections[::-1]):
+        # the last section in personal_interests has 0 value, doesnt meet minimum
+        # and diverts to original ranking
+        for i, s in enumerate(personal_sections[::-1][:-1]):
+            print(i, s)
             assert i == reranked_sections[s].receivedFeedRank
-        # original order should be preserved
+        # original order should be preserved, -1 due to 0 value in personal interests
         for i, s in enumerate(original_order):
-            assert i + len(personal_sections) == reranked_sections[s].receivedFeedRank
+            print(i, s)
+            assert i + len(personal_sections) - 1 == reranked_sections[s].receivedFeedRank
 
     def test_empty_interests(self):
         """Empty inferredinterests should not affect the section ranking"""
