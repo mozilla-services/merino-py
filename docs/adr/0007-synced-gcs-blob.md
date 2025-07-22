@@ -28,7 +28,7 @@ Should we standardize on `SyncedGcsBlob` for all providers, and further, should 
 
 |       | Option                                                   | Summary                                     | Pros                                             | Cons                                      |
 | ----- | -------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------ | ----------------------------------------- |
-| **A** | **`SyncedGcsBlob` + `gcloud-aio-storage` (preferred)**   | Adopt async GCS client within SyncedGcsBlob | Low latency, minimal memory usage, non-blocking I/O, consistent implementation | New dependency, refactor existing code    |
+| **A** | **`SyncedGcsBlob` + `gcloud-aio-storage` (preferred)**   | Adopt async GCS client within SyncedGcsBlob | Low latency, minimal memory usage, non-blocking I/O, consistent implementation | Requires refactor    |
 | **B** | **`SyncedGcsBlob` with current sync GCS client**         | Use existing SyncedGcsBlob (status quo)    | Low latency, existing solution | Memory overhead from threads    |
 | **C** | **Provider-specific loaders**                            | Keep per-provider loading logic            | No immediate refactor, flexible per provider     | Duplicate logic, higher maintenance      |
 | **D** | **GCS → Pub/Sub push**                                   | Event-driven notifications                 | Instant updates                                  | Increased complexity, more infrastructure |
