@@ -13,7 +13,7 @@ import httpx
 import kinto_http
 import moz_merino_ext.amp
 import pytest
-from _pytest.logging import LogCaptureFixture
+from pytest import LogCaptureFixture
 from httpx import HTTPError, Request, Response
 from kinto_http import KintoException
 from pytest_mock import MockerFixture
