@@ -6,7 +6,12 @@
 
 ## Context and Problem Statement
 
-Merino currently loads provider data from Google Cloud Storage (GCS). Apart from the curated recommendations endpoint, most provider data is loaded priorically without checking whether is was updated. This requires a longer reload time, leading to stale data, unnecessary resource use, and duplicated maintenance effort.
+The following Merino providers load data from Google Cloud Storage (GCS):
+- **TopPicks** - reloads suggestion data every 12 hours
+- **Manifest** - reloads domain metadata (icons, titles, categories) every hour
+- **Curated Recommendations** - uses `SyncedGcsBlob` to check every minute and load data only when the blob is updated
+
+TopPicks and Manifest are loaded periodically without checking whether the data was updated. This requires a longer reload time, leading to stale data, unnecessary resource use, and duplicated maintenance effort.
 
 The existing `SyncedGcsBlob` class, used by the curated recommendations endpoint, periodically checks the `updated` timestamp of GCS blobs and reloads data only when blobs are updated, calling a callback function to parse and cache the data. However, `SyncedGcsBlob` currently uses Google's synchronous GCS client (`google-cloud-storage`), offloading synchronous calls to a thread pool to avoid blocking the main event loop (as previously addressed in [ADR 0005](adr/0005-asynchronous-gcs-client.md)).
 
@@ -45,6 +50,15 @@ By integrating `gcloud-aio-storage` into `SyncedGcsBlob`, it will natively use a
 ### Negative Consequences
 
 - **Initial refactor:** Existing providers require updating.
+
+## Implementation Impact
+
+Adopting this approach will require the following changes:
+- **SyncedGcsBlob** - Refactor to use the async `gcloud-aio-storage` client instead of the synchronous client
+- **TopPicks** - Replace periodic reload with `SyncedGcsBlob` to check for updates
+- **Manifest** - Replace periodic reload with `SyncedGcsBlob` to check for updates
+
+Curated Recommendations already uses `SyncedGcsBlob` and will benefit from the async refactor without requiring significant changes.
 
 ## Usage Example
 
