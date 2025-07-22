@@ -18,7 +18,7 @@ from tldextract.tldextract import ExtractResult
 from merino.providers.suggest.adm.backends.remotesettings import FormFactor
 from merino.utils import cron
 from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
-from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContentExt
+from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, Category, SuggestionRequest
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class NonsponsoredSuggestion(BaseSuggestion):
 class Provider(BaseProvider):
     """Suggestion provider for adMarketplace through Remote Settings."""
 
-    suggestion_content: SuggestionContentExt
+    suggestion_content: SuggestionContent
     # Store the value to avoid fetching it from settings every time as that'd
     # require a three-way dict lookup.
     score: float
@@ -97,7 +97,7 @@ class Provider(BaseProvider):
         self.score = score
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
-        self.suggestion_content = SuggestionContentExt(index_manager=AmpIndexManager(), icons={})  # type: ignore[no-untyped-call]
+        self.suggestion_content = SuggestionContent(index_manager=AmpIndexManager(), icons={})  # type: ignore[no-untyped-call]
         self._name = name
         self._enabled_by_default = enabled_by_default
         super().__init__(**kwargs)

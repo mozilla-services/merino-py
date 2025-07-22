@@ -10,7 +10,7 @@ import kinto_http
 import pytest
 from pytest_mock import MockerFixture
 
-from merino.providers.suggest.adm.backends.protocol import SuggestionContentExt
+from merino.providers.suggest.adm.backends.protocol import SuggestionContent
 from merino.providers.suggest.adm.backends.remotesettings import (
     KintoSuggestion,
     RemoteSettingsBackend,
@@ -205,7 +205,7 @@ async def test_remotesettings_with_icon_processor(
     mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
 
     # Fetch the suggestions
-    suggestion_content: SuggestionContentExt = await rs_backend.fetch()
+    suggestion_content: SuggestionContent = await rs_backend.fetch()
 
     # Verify that the in-use icon URLs were processed, the not-in-use one shouldn't be processed.
     assert len(suggestion_content.icons) == 1
@@ -254,7 +254,7 @@ async def test_remotesettings_icon_processor_error_handling(
     mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
 
     # Fetch the suggestions - this should not raise an exception
-    suggestion_content: SuggestionContentExt = await rs_backend.fetch()
+    suggestion_content: SuggestionContent = await rs_backend.fetch()
 
     # Verify that the icon URLs defaulted to original URLs due to error
     assert len(suggestion_content.icons) == 1
@@ -323,7 +323,7 @@ async def test_remotesettings_with_gcs_integration(
         mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
 
         # Fetch the suggestions
-        suggestion_content: SuggestionContentExt = await rs_backend.fetch()
+        suggestion_content: SuggestionContent = await rs_backend.fetch()
 
         # Verify that the in-use icon URLs were processed, the not-in-use one shouldn't be processed.
         assert len(suggestion_content.icons) == 1

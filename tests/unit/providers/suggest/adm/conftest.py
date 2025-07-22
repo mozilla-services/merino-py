@@ -13,7 +13,7 @@ from pytest_mock import MockerFixture
 
 from merino.providers.suggest.adm.backends.protocol import (
     AdmBackend,
-    SuggestionContentExt,
+    SuggestionContent,
 )
 from merino.providers.suggest.adm.backends.remotesettings import FormFactor
 from merino.providers.suggest.adm.provider import Provider
@@ -98,7 +98,7 @@ def fixture_backend_mock(
     index_manager = AmpIndexManager()  # type: ignore[no-untyped-call]
     index_manager.build(f"US/({FormFactor.DESKTOP.value},)", rs_attachment_raw_us)
     index_manager.build(f"DE/({FormFactor.PHONE.value},)", rs_attachment_raw_de)
-    backend_mock.fetch.return_value = SuggestionContentExt(
+    backend_mock.fetch.return_value = SuggestionContent(
         index_manager=index_manager,
         icons={"01": "attachment-host/main-workspace/quicksuggest/icon-01"},
     )

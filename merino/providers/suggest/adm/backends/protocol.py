@@ -9,7 +9,7 @@ SegmentType = tuple[int]
 IndexType = dict[str, dict[SegmentType, tuple[int, int]]]
 
 
-class SuggestionContentExt(BaseModel):
+class SuggestionContent(BaseModel):
     """Class that holds the result from a fetch operation."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -28,6 +28,6 @@ class AdmBackend(Protocol):
     directly depend on.
     """
 
-    async def fetch(self) -> SuggestionContentExt:  # pragma: no cover
+    async def fetch(self) -> SuggestionContent:  # pragma: no cover
         """Get suggestion content from partner."""
         ...

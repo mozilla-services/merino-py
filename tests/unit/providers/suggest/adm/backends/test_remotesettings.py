@@ -11,19 +11,22 @@ from urllib.parse import urljoin
 
 import httpx
 import kinto_http
+import moz_merino_ext.amp
 import pytest
+from _pytest.logging import LogCaptureFixture
 from httpx import HTTPError, Request, Response
 from kinto_http import KintoException
 from pytest_mock import MockerFixture
 
 from merino.exceptions import BackendError
-from merino.providers.suggest.adm.backends.protocol import SuggestionContentExt
+from merino.providers.suggest.adm.backends.protocol import SuggestionContent
 from merino.providers.suggest.adm.backends.remotesettings import (
     KintoSuggestion,
     RemoteSettingsBackend,
     FormFactor,
 )
 from merino.utils.icon_processor import IconProcessor
+from tests.types import FilterCaplogFixture
 
 
 @pytest.fixture(name="rs_parameters")
@@ -315,7 +318,7 @@ async def test_fetch(
         side_effect=[rs_attachment_response, de_phone_attachment_response],
     )
 
-    suggestion_content: SuggestionContentExt = await rs_backend.fetch()
+    suggestion_content: SuggestionContent = await rs_backend.fetch()
 
     assert suggestion_content.index_manager.stats(f"DE/({FormFactor.PHONE.value},)") == {
         "advertisers_count": 1,
@@ -324,6 +327,35 @@ async def test_fetch(
         "icons_count": 1,
         "suggestions_count": 1,
     }
+
+
+@pytest.mark.asyncio
+async def test_fetch_with_index_build_fail(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    mocker: MockerFixture,
+    rs_backend: RemoteSettingsBackend,
+    rs_records: list[dict[str, Any]],
+    rs_server_info: dict[str, Any],
+    rs_attachment_response: httpx.Response,
+) -> None:
+    """Test logging when building the index fails."""
+    mocker.patch.object(kinto_http.AsyncClient, "get_records", return_value=rs_records)
+    mocker.patch.object(kinto_http.AsyncClient, "server_info", return_value=rs_server_info)
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=rs_attachment_response,
+    )
+    mocker.patch.object(
+        moz_merino_ext.amp.AmpIndexManager, "build", side_effect=Exception("Build Index Error")
+    )
+
+    _ = await rs_backend.fetch()
+    records = filter_caplog(caplog.records, "merino.providers.suggest.adm.backends.remotesettings")
+    assert len(records) == 2
+    for record in records:
+        assert record.__dict__["error message"] == "Build Index Error"
 
 
 @pytest.mark.asyncio
@@ -339,7 +371,7 @@ async def test_fetch_skip(
     mocker.patch.object(kinto_http.AsyncClient, "server_info", return_value=rs_server_info)
     mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
 
-    suggestion_content_1st: SuggestionContentExt = await rs_backend.fetch()
+    suggestion_content_1st: SuggestionContent = await rs_backend.fetch()
     assert set(suggestion_content_1st.index_manager.list()) == {"US/(0,)", "DE/(1,)"}
 
     # clear index
@@ -349,7 +381,7 @@ async def test_fetch_skip(
 
     # call it again, it should be short-circuited as the record is already processed and up to date.
     spy = mocker.spy(rs_backend, "get_suggestions")
-    suggestion_content_2nd: SuggestionContentExt = await rs_backend.fetch()
+    suggestion_content_2nd: SuggestionContent = await rs_backend.fetch()
 
     spy.assert_not_called()
 
@@ -359,7 +391,7 @@ async def test_fetch_skip(
     # update the "last_modified" field, fetch should proceed as usual.
     rs_records[0]["last_modified"] = rs_records[0]["last_modified"] + 1
 
-    suggestion_content_3rd: SuggestionContentExt = await rs_backend.fetch()
+    suggestion_content_3rd: SuggestionContent = await rs_backend.fetch()
 
     spy.assert_called_once()
 
