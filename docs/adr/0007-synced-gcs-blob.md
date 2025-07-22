@@ -90,7 +90,7 @@ def parse_and_cache_provider_data(data: str) -> None:
     cache_provider_data(provider_data)
 ```
 
-The callback (`parse_and_cache_provider_data`) is called automatically by `SyncedGcsBlob` whenever the blob is updated. The callback implementation will vary; typical it decode JSON, optionally convert to Pydantic models, and caches in memory.
+The callback (`parse_and_cache_provider_data`) is called automatically by `SyncedGcsBlob` whenever the blob is updated. The callback implementation will vary; typical it decodes JSON, sometimes converting it to Pydantic models, and caching in memory.
 
 ## Links
 
