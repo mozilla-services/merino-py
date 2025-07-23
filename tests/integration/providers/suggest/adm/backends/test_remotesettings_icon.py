@@ -1,6 +1,7 @@
 """Integration tests for the RemoteSettingsBackend with IconProcessor."""
 
 import hashlib
+import json
 from typing import Optional
 from unittest.mock import MagicMock, patch, AsyncMock
 
@@ -104,6 +105,8 @@ def fixture_rs_attachment() -> KintoSuggestion:
         icon="01",
         title="Test Suggestion",
         url="https://example.org/test",
+        click_url="https://example.org/test",
+        impression_url="https://example.org/test",
     )
 
 
@@ -112,7 +115,7 @@ def fixture_rs_attachment_response(rs_attachment: KintoSuggestion) -> httpx.Resp
     """Return response content for a Remote Settings attachment."""
     return httpx.Response(
         status_code=200,
-        json=[dict(rs_attachment)],
+        text=json.dumps([dict(rs_attachment)]),
         request=httpx.Request(
             method="GET",
             url=(
