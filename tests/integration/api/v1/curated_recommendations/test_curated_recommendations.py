@@ -1994,7 +1994,7 @@ async def test_curated_recommendations_enriched_with_icons(
             serp_categories=[0],
         )
     ]
-    manifest_provider.domain_lookup_table = {"microsoft": 0}
+    manifest_provider.domain_lookup_table = {"microsoft.com": 0}
 
     mocked_response = {
         "data": {

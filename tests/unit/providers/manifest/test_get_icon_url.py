@@ -23,7 +23,8 @@ async def test_domain_lookup_table_initialization(
 
         assert len(manifest_provider.domain_lookup_table) == len(manifest_data.domains)
         for domain in manifest_data.domains:
-            assert domain.domain in manifest_provider.domain_lookup_table
+            normalized_url = manifest_provider._extract_full_domain(str(domain.url))
+            assert normalized_url in manifest_provider.domain_lookup_table
 
 
 MS_ICON = HttpUrl(
@@ -165,3 +166,56 @@ async def test_get_icon_url_invalid_icon_metric(
         mock_metrics_client.increment.assert_called_once_with(
             "manifest.invalid_icon_url", tags={"domain": expected_domain}
         )
+
+
+@pytest.mark.asyncio
+async def test_get_icon_url_tld_specific_matching(manifest_provider: Provider, cleanup):
+    """Test that different TLDs of the same domain can have different icons."""
+    from merino.providers.manifest.backends.protocol import ManifestData, Domain
+
+    custom_manifest_data = ManifestData(
+        domains=[
+            Domain(
+                rank=1,
+                domain="businessinsider",
+                categories=["News"],
+                serp_categories=[0],
+                url=HttpUrl("https://www.businessinsider.com/"),  # Base URL only
+                title="Business Insider US",
+                icon="https://example.com/bi-us-icon.png",
+            ),
+            Domain(
+                rank=2,
+                domain="businessinsider",  # Same domain but different URL
+                categories=["News"],
+                serp_categories=[0],
+                url=HttpUrl("https://www.businessinsider.es/"),  # Base URL only
+                title="Business Insider ES",
+                icon="https://example.com/bi-es-icon.png",
+            ),
+        ]
+    )
+
+    with patch(
+        "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
+        return_value=(GetManifestResultCode.SUCCESS, custom_manifest_data),
+    ):
+        await manifest_provider.initialize()
+        await cleanup(manifest_provider)
+
+        # Test that each URL gets its specific icon, even with paths
+        us_icon = manifest_provider.get_icon_url("https://www.businessinsider.com/some-article")
+        es_icon = manifest_provider.get_icon_url("https://www.businessinsider.es/some-article")
+
+        assert us_icon == HttpUrl("https://example.com/bi-us-icon.png")
+        assert es_icon == HttpUrl("https://example.com/bi-es-icon.png")
+
+        # They should be different!
+        assert us_icon != es_icon
+
+        # Test base URLs too
+        us_base_icon = manifest_provider.get_icon_url("https://www.businessinsider.com/")
+        es_base_icon = manifest_provider.get_icon_url("https://www.businessinsider.es/")
+
+        assert us_base_icon == HttpUrl("https://example.com/bi-us-icon.png")
+        assert es_base_icon == HttpUrl("https://example.com/bi-es-icon.png")
