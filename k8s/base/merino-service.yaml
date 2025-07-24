@@ -8,10 +8,10 @@ spec:
   ports:
     - name: merino
       protocol: TCP
-      port: 8000
-      targetPort: 8000
-    - name: ohttp
-      protocol: TCP
       port: 8080
       targetPort: 8080
+    - name: ohttp
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
   type: ClusterIP

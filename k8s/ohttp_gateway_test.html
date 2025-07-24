@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OHTTP Gateway Test Client</title>
+</head>
+<body>
+    <div id="output"></div>
+    <script>
+
+class Util {
+    static BITS_PER_BYTE = 8
+
+    static Log(...data) {
+        console.log(...data);
+    }
+
+    static StringToArrayBuffer(string) {
+        return (new TextEncoder).encode(string)
+    }
+
+    static UInt8ToArrayBuffer(u8) {
+        let buffer = new ArrayBuffer(1);
+        (new DataView(buffer)).setUint8(0, u8);
+        return buffer
+    }
+
+    static UInt16ToArrayBuffer(u16) {
+        let buffer = new ArrayBuffer(2);
+        (new DataView(buffer)).setUint16(0, u16);
+        return buffer
+    }
+
+    static ArrayBufferToHex(buffer) {
+        return new Uint8Array(buffer).toHex()
+    }
+
+    static HexToArrayBuffer(hex) {
+        return Uint8Array.fromHex(hex).buffer
+    }
+
+    static ArrayBufferToBase64Url(buffer) {
+        return new Uint8Array(buffer).toBase64({
+            alphabet: "base64url",
+            omitPadding: true,
+        })
+    }
+
+    static ConcatBuffers(...buffers) {
+        let totalLength = buffers
+            .map(x => x.byteLength)
+            .reduce((a, b) => a + b, 0);
+        let result = new ArrayBuffer(totalLength);
+
+        let cursor = 0
+        let view = new Uint8Array(result)
+        for (let buffer of buffers) {
+            view.set(new Uint8Array(buffer), cursor)
+            cursor += buffer.byteLength
+        }
+
+        return result
+    }
+
+    // Encode raw ECDH public/private key pair as JWK to allow importing raw
+    // key pairs for test cases.
+    static EncodeJWK(namedCurve, publicRaw, secretRaw) {
+        if (namedCurve == "X25519") {
+            return {
+                kty: "OKP",
+                crv: namedCurve,
+                d: Util.ArrayBufferToBase64Url(secretRaw),
+                x: Util.ArrayBufferToBase64Url(publicRaw),
+            };
+        } else {
+            let publicView = new DataView(publicRaw)
+            let publicMode = publicView.getUint8(0)
+
+            // Mode 0x04 is uncompressed X/Y points
+            if ((publicMode != 0x04) || (publicRaw.byteLength % 2 == 0)) {
+                throw new Error("Unsupported key format")
+            }
+
+            let publicRaw_X = publicRaw.slice(1, 1 + publicRaw.byteLength / 2)
+            let publicRaw_Y = publicRaw.slice(1 + publicRaw.byteLength / 2)
+
+            return {
+                kty: "EC",
+                crv: namedCurve,
+                d: Util.ArrayBufferToBase64Url(secretRaw),
+                x: Util.ArrayBufferToBase64Url(publicRaw_X),
+                y: Util.ArrayBufferToBase64Url(publicRaw_Y)
+            };
+        }
+    }
+}
+
+class BhttpMessage {
+    headers = []
+
+    request(method, scheme, authority, path) {
+        this.method = method;
+        this.scheme = scheme;
+        this.authority = authority;
+        this.path = path;
+    }
+
+    put_header(key, value) {
+        this.headers.push([key, value]);
+    }
+
+    write_content(payload) {
+        this.content = payload;
+    }
+
+    encodeRequest() {
+          let encoder = new BhttpMessage.Encoder;
+
+          // Indeterminate-Length Request; Truncated
+          encoder.encodeVLI(0x02);
+          encoder.encodeString(this.method);
+          encoder.encodeString(this.scheme);
+          encoder.encodeString(this.authority);
+          encoder.encodeString(this.path);
+          for (let [name, value] of this.headers) {
+              encoder.encodeString(name);
+              encoder.encodeString(value);
+          }
+
+          encoder.encodeTerminator();
+
+          if (this.content) {
+              encoder.encodeTerminator();
+              encoder.encodeBytes(this.content)
+          }
+
+          // Terminator after content (even if no content)
+          encoder.encodeTerminator();
+
+          // No trailers, so add final terminator for empty trailers
+          encoder.encodeTerminator();
+
+          return encoder.output();
+      }
+
+    decode(data) {
+        let decoder = new BhttpMessage.Decoder(data);
+        let framing_indicator = decoder.NextVLI();
+
+        if (framing_indicator >= 0x04) {
+            decoder.Fail();
+        }
+
+        // Control Data
+        if (framing_indicator & 0x01) {
+            let status_code = decoder.NextVLI();
+            this.informational = [];
+            while (status_code < 200) {
+                let fields = (framing_indicator < 0x02)
+                    ? decoder.NextKLFields()
+                    : decoder.NextILFields();
+                this.informational.push([status_code, fields]);
+                status_code = decoder.NextVLI();
+            }
+            this.status_code = status_code;
+        } else {
+            this.method = decoder.NextString();
+            this.scheme = decoder.NextString();
+            this.authority = decoder.NextString();
+            this.path = decoder.NextString();
+        }
+
+        // Headers / Content / Trailers
+        if (framing_indicator < 0x02) {
+            this.headers = decoder.NextKLFields();
+            this.content = decoder.NextBytes();
+            this.trailers = decoder.NextKLFields();
+        } else {
+            this.headers = decoder.NextILFields();
+            this.content = decoder.NextILContent();
+            this.trailers = decoder.NextILFields();
+        }
+    }
+}
+
+BhttpMessage.Encoder = class {
+    chunks = [];
+
+    encodeVLI(i) {
+        let buffer;
+        if (i < 0x40) {
+            buffer = new ArrayBuffer(1);
+            (new DataView(buffer)).setUint8(0, 0x00 + i);
+        } else if (i < 0x4000) {
+            buffer = new ArrayBuffer(2);
+            (new DataView(buffer)).setUint16(0, 0x4000 + i);
+        } else {
+            buffer = new ArrayBuffer(4);
+            (new DataView(buffer)).setUint32(0, 0x80000000 + i);
+        }
+        this.chunks.push(buffer);
+    }
+
+    encodeBytes(bytes) {
+        this.encodeVLI(bytes.byteLength)
+        this.chunks.push(bytes);
+    }
+
+    encodeString(str) {
+        this.encodeBytes(Util.StringToArrayBuffer(str))
+    }
+
+    encodeTerminator() {
+        this.encodeVLI(0);
+    }
+
+    output() {
+        return Util.ConcatBuffers(...this.chunks);
+    }
+}
+
+BhttpMessage.Decoder = class {
+    constructor(data) {
+        this.data = data;
+        this.cursor = 0;
+    }
+
+    Fail() {
+        throw new Error("Unsupported or invalid BHTTP")
+    }
+
+    CurrentCursor() {
+        return this.cursor;
+    }
+
+    NextVLI() {
+        // Truncated messages are interpreted as sequence of VLI(0)
+        if (this.cursor == this.data.byteLength) {
+            return 0x00;
+        }
+
+        let view = new DataView(this.data, this.cursor);
+        let i, lead = view.getUint8(0);
+        switch (lead >> 6) {
+            case 0: i = view.getUint8() - 0x00; this.cursor += 1; break;
+            case 1: i = view.getUint16() - 0x4000; this.cursor += 2; break;
+            case 2: i = view.getUint32() - 0x80000000; this.cursor += 4; break;
+            default: this.Fail();
+        }
+        return i;
+    }
+
+    NextBytes() {
+        let length = this.NextVLI()
+        let slice = this.data.slice(this.cursor, this.cursor + length);
+        this.cursor += length;
+        return slice;
+    }
+
+    NextString() {
+        let slice = this.NextBytes();
+        return (new TextDecoder).decode(slice);
+    }
+
+    NextFieldLine() {
+        let name = this.NextString();
+        let value = this.NextString();
+        return [name, value];
+    }
+
+    NextKLFields() {
+        let fields = [];
+        let limit = this.NextVLI() + this.CurrentCursor();
+        while (this.CurrentCursor() < limit) {
+            fields.push(this.NextFieldLine());
+        }
+        return fields;
+    }
+
+    MaybeTerminator() {
+        let view = new DataView(this.data, this.cursor);
+        let isTerminator = (view.getUint8(0) == 0x00);
+        if (isTerminator) {
+            this.cursor += 1;
+        }
+        return isTerminator;
+    }
+
+    NextILFields() {
+        let fields = [];
+        while (!this.MaybeTerminator()) {
+            fields.push(this.NextFieldLine());
+        }
+        return fields;
+    }
+
+    NextILContent() {
+        let chunks = [];
+        while (!this.MaybeTerminator()) {
+            chunks.push(this.NextBytes());
+        }
+        return Util.ConcatBuffers(...chunks);
+    }
+}
+
+class KEM_X25519Sha256 {
+    static Id = 0x0020
+    static Name = "DHKEM(X25519, HKDF-SHA256)"
+
+    static Ndh = 32
+    static Nsk = 32
+    static Npk = 32
+    static Nenc = 32
+    static Nsecret = 32
+
+    static Algo = { name: "X25519" }
+    static KdfAlgo = { name: "HKDF", hash: "SHA-256" }
+}
+
+class KEM_DhP256Sha256 {
+    static Id = 0x0010
+    static Name = "DHKEM(P-256, HKDF-SHA256)"
+
+    static Ndh = 32
+    static Nsk = 32
+    static Npk = 65
+    static Nenc = 65
+    static Nsecret = 32
+
+    static Algo = { name: "ECDH", namedCurve: "P-256" }
+    static KdfAlgo = { name: "HKDF", hash: "SHA-256" }
+}
+
+class KDF_Sha256 {
+    static Id = 0x0001
+    static Name = "HKDF-SHA256"
+
+    static Nh = 32
+
+    static Algo = { name: "HKDF", hash: "SHA-256" }
+    static HashAlgo = { name: "HMAC", hash: "SHA-256", length: 256 }
+}
+
+class KDF_Sha512 {
+    static Id = 0x0003
+    static Name = "HKDF-SHA512"
+
+    static Nh = 64
+
+    static Algo = { name: "HKDF", hash: "SHA-512" }
+    static HashAlgo = { name: "HMAC", hash: "SHA-512", length: 512 }
+}
+
+class AEAD_Aes128Gcm {
+    static Id = 0x0001
+    static Name = "AES-128-GCM"
+
+    static Nk = 16
+    static Nn = 12
+    static Nt = 16
+
+    static Algo = { name: "AES-GCM", length: 128 }
+}
+
+// HPKE DHKEM implementation using SubtleCrypto. The parameterization data must
+// be provided to specify algorithms and key sizes.
+class DhKem {
+    constructor(kemSpec) {
+        this.kemSpec = kemSpec
+    }
+
+    // Generate a random DH key-pair.
+    async GenerateKey() {
+        return await crypto.subtle.generateKey(
+            this.kemSpec.Algo,
+            false,
+            ["deriveBits"]);
+    }
+
+    // Performs the Extract/Expand KDF operations with context labeling on
+    // the input key and info material. This generates an N-byte secret.
+    async LabeledExtractAndExpand(N, extractLabel, expandLabel, ikm, ...info) {
+        let labeled_ikm = Util.ConcatBuffers(
+            Util.StringToArrayBuffer("HPKE-v1"),
+            Util.StringToArrayBuffer("KEM"),
+            Util.UInt16ToArrayBuffer(this.kemSpec.Id),
+            Util.StringToArrayBuffer(extractLabel),
+            ikm);
+
+        let labeled_info = Util.ConcatBuffers(
+            Util.UInt16ToArrayBuffer(N),
+            Util.StringToArrayBuffer("HPKE-v1"),
+            Util.StringToArrayBuffer("KEM"),
+            Util.UInt16ToArrayBuffer(this.kemSpec.Id),
+            Util.StringToArrayBuffer(expandLabel),
+            ...info);
+
+        let key = await crypto.subtle.importKey(
+            "raw",
+            labeled_ikm,
+            this.kemSpec.KdfAlgo,
+            false,
+            ["deriveBits"]);
+
+        return await crypto.subtle.deriveBits(
+            {
+                ...this.kemSpec.KdfAlgo,
+                salt: new ArrayBuffer,
+                info: labeled_info
+            },
+            key,
+            N * Util.BITS_PER_BYTE);
+    }
+
+    // Derive the KEM shared secret from sender and receiver keys. Combining
+    // both public keys and either of the private keys will lead to the same
+    // shared secret at each endpoint.
+    async ComputeSharedSecret(pub_key, ephemeral, isReceiver = false) {
+        // Export ephemeral public key
+        let { privateKey: skE, publicKey: pkE } = ephemeral;
+        let enc = await crypto.subtle.exportKey("raw", pkE);
+
+        // Import receiver public key
+        let pkR = await crypto.subtle.importKey(
+            "raw",
+            pub_key,
+            this.kemSpec.Algo,
+            false,
+            []);
+
+        // Generate shared ECDH secret
+        let dh = await crypto.subtle.deriveBits(
+            { ...this.kemSpec.Algo, public: pkR },
+            skE,
+            this.kemSpec.Ndh * Util.BITS_PER_BYTE);
+
+        // Derive the KEM shared secret from the DH secret, the public keys and
+        // context labels.
+        let info = isReceiver ? [pub_key, enc] : [enc, pub_key];
+        let shared_secret = await this.LabeledExtractAndExpand(
+            this.kemSpec.Nsecret,
+            "eae_prk",
+            "shared_secret",
+            dh,
+            ...info);
+
+        return { shared_secret, enc }
+    }
+}
+
+class Hpke {
+    constructor(kemSpec, kdfSpec, aeadSpec) {
+        this.kemSpec = kemSpec
+        this.kdfSpec = kdfSpec
+        this.aeadSpec = aeadSpec
+    }
+
+    LabeledIkm(labelString, ...ikm) {
+        return Util.ConcatBuffers(
+            Util.StringToArrayBuffer("HPKE-v1"),
+            Util.StringToArrayBuffer("HPKE"),
+            Util.UInt16ToArrayBuffer(this.kemSpec.Id),
+            Util.UInt16ToArrayBuffer(this.kdfSpec.Id),
+            Util.UInt16ToArrayBuffer(this.aeadSpec.Id),
+            Util.StringToArrayBuffer(labelString),
+            ...ikm);
+    }
+
+    // Label the info data for input into the KDF.
+    LabeledInfo(N, labelString, ...info) {
+        return Util.ConcatBuffers(
+            Util.UInt16ToArrayBuffer(N),
+            Util.StringToArrayBuffer("HPKE-v1"),
+            Util.StringToArrayBuffer("HPKE"),
+            Util.UInt16ToArrayBuffer(this.kemSpec.Id),
+            Util.UInt16ToArrayBuffer(this.kdfSpec.Id),
+            Util.UInt16ToArrayBuffer(this.aeadSpec.Id),
+            Util.StringToArrayBuffer(labelString),
+            ...info);
+    }
+
+    // Extract a pseudo-random-key out of input key material. Context labeling
+    // is applied to the key data first.
+    async LabeledExtract(label, ...ikm) {
+        // No salt is specified so use a null key
+        let salt = await crypto.subtle.importKey(
+            "raw",
+            new ArrayBuffer(this.kdfSpec.Nh),
+            this.kdfSpec.HashAlgo,
+            false,
+            ["sign"]);
+
+        let labeled_ikm = this.LabeledIkm(label, ...ikm)
+        return await crypto.subtle.sign(
+            this.kdfSpec.HashAlgo,
+            salt,
+            labeled_ikm);
+    }
+
+    // Derive an N-byte secret from a key and context labels.
+    async LabeledExpand(key, N, label, info) {
+        // The full HKDF-Expand implementation is a chain of HMACs, but for
+        // simplicity we only support exports satisfied by first iteration.
+        if (N > this.kdfSpec.Nh) {
+            throw new Error("NYI")
+        }
+        let idx = Util.UInt8ToArrayBuffer(1)
+        let labeled_info = this.LabeledInfo(N, label, info, idx)
+        let expanded = await crypto.subtle.sign(
+            this.kdfSpec.HashAlgo,
+            key,
+            labeled_info);
+        return expanded.slice(0, N)
+    }
+
+    // Given the KEM shared secret and domain-seperation context info, derive
+    // any additional secrets or nonces using the KDF algorithm.
+    async KeyScheduleS(salt, info) {
+        // Construct the key_scedule_context
+        let mode = Util.UInt8ToArrayBuffer(0x00)
+        let psk_id_hash = await this.LabeledExtract("psk_id_hash")
+        let info_hash = await this.LabeledExtract("info_hash", info)
+        let key_schedule_context = [mode, psk_id_hash, info_hash]
+
+        // The KDF key is derived from optional PSK (which we do not use).
+        let labeled_psk = this.LabeledIkm("secret")
+        let secret = await crypto.subtle.importKey(
+            "raw",
+            labeled_psk,
+            this.kdfSpec.Algo,
+            false,
+            ["deriveBits", "deriveKey"]);
+
+        // Derive AEAD key
+        let key_info = this.LabeledInfo(this.aeadSpec.Nk, "key", ...key_schedule_context);
+        let key = await crypto.subtle.deriveKey(
+            { ...this.kdfSpec.Algo, salt, info: key_info },
+            secret,
+            this.aeadSpec.Algo,
+            this.extractKeyForTests,
+            ["encrypt"]);
+
+        // Derive AEAD nonce
+        let base_nonce_info = this.LabeledInfo(this.aeadSpec.Nn, "base_nonce", ...key_schedule_context)
+        let base_nonce = await crypto.subtle.deriveBits(
+            { ...this.kdfSpec.Algo, salt, info: base_nonce_info },
+            secret,
+            this.aeadSpec.Nn * Util.BITS_PER_BYTE);
+
+        // The exporter secret is used by consumers of HPKE to generate
+        // additional secrets.
+        let exporter_secret_info = this.LabeledInfo(this.kdfSpec.Nh, "exp", ...key_schedule_context)
+        let exporter_secret = await crypto.subtle.deriveKey(
+            { ...this.kdfSpec.Algo, salt, info: exporter_secret_info },
+            secret,
+            this.kdfSpec.HashAlgo,
+            this.extractKeyForTests,
+            ["sign"]);
+
+        return {
+            key,
+            base_nonce,
+            exporter_secret,
+        }
+    }
+}
+
+function GetKemSpec(id) {
+    let kems = [
+        KEM_X25519Sha256,
+        KEM_DhP256Sha256,
+    ];
+    return kems.find(x => x.Id == id)
+}
+
+function GetKdfSpec(id) {
+    let kems = [
+        KDF_Sha256,
+        KDF_Sha512,
+    ];
+    return kems.find(x => x.Id == id)
+}
+
+function GetAeadSpec(id) {
+    let kems = [
+        AEAD_Aes128Gcm,
+    ];
+    return kems.find(x => x.Id == id)
+}
+
+// A decoded OHTTP config object containing algorithm identifies and public
+// keys.
+class OhttpConfig {
+    constructor(raw) {
+        let view = new DataView(raw)
+        let cursor = 0
+
+        this.key_id = view.getUint8(cursor + 0)
+        this.kem_id = view.getUint16(cursor + 1)
+        cursor += 3
+
+        let kemSpec = GetKemSpec(this.kem_id)
+        this.pub_key = raw.slice(cursor, cursor + kemSpec.Npk)
+        cursor += kemSpec.Npk
+
+        let sym_alg_len = view.getUint16(cursor)
+        cursor += 2
+
+        this.sym_alg = []
+        for (let i = 0; i < sym_alg_len; i += 4) {
+            let kdf = view.getUint16(cursor + 0)
+            let aead = view.getUint16(cursor + 2)
+            cursor += 4
+
+            this.sym_alg.push({ kdf, aead })
+        }
+    }
+}
+
+class OhttpSession {
+    constructor(configRaw) {
+        this.config = new OhttpConfig(configRaw)
+        this.kem = new DhKem(GetKemSpec(this.config.kem_id))
+        this.hpke = new Hpke(
+            GetKemSpec(this.config.kem_id),
+            GetKdfSpec(this.config.sym_alg[0].kdf),
+            GetAeadSpec(this.config.sym_alg[0].aead))
+    }
+
+    // Encapsulate a BHTTP message using HPKE encryption. Context and headers
+    // are specific to the OHTTP protocol.
+    async Encapsulate(payload) {
+        // Generate a new emphemeral key and use the KEM algorithm to establish
+        // a shared secret that only holder our ephemeral key or the OHTTP
+        // gateway private key can derive.
+        let ephemeral = this.ephemeralKeyForTesting || await this.kem.GenerateKey()
+        let kem_context = await this.kem.ComputeSharedSecret(this.config.pub_key, ephemeral);
+
+        // OHTTP payload header
+        let header = new ArrayBuffer(7)
+        {
+            let view = new DataView(header)
+            view.setUint8(0, this.config.key_id)
+            view.setUint16(1, this.kem.kemSpec.Id)
+            view.setUint16(3, this.hpke.kdfSpec.Id)
+            view.setUint16(5, this.hpke.aeadSpec.Id)
+        }
+
+        // Encode the context info to use for key schedule.
+        let info = Util.ConcatBuffers(
+            Util.StringToArrayBuffer("message/bhttp request"),
+            Util.UInt8ToArrayBuffer(0x00),
+            header);
+
+        // Derive the HPKE AEAD/KDF keys from KEM shared secret.
+        let hpke_context = await this.hpke.KeyScheduleS(kem_context.shared_secret, info);
+
+        // Encrypt the payload message with AEAD.
+        let ciphertext = await crypto.subtle.encrypt(
+            { ...this.hpke.aeadSpec.Algo, iv: hpke_context.base_nonce },
+            hpke_context.key,
+            payload);
+
+        // Save information needed for decoding response later.
+        this.session_state = {
+            enc: kem_context.enc,
+            exporter_secret: hpke_context.exporter_secret
+        };
+
+        // Resulting message has OHTTP headers, our ephemeral public key, and
+        // the ciphertext.
+        return Util.ConcatBuffers(
+            header,
+            kem_context.enc,
+            ciphertext);
+    }
+
+    // Derive the response secret using the HPKE Export procedure.
+    async ExportResponseSecret(exporter_secret) {
+        let length = Math.max(this.hpke.aeadSpec.Nn, this.hpke.aeadSpec.Nk)
+        let secret = await this.hpke.LabeledExpand(
+            exporter_secret,
+            length,
+            "sec",
+            Util.StringToArrayBuffer("message/bhttp response"))
+
+        return await crypto.subtle.importKey(
+            "raw",
+            secret,
+            this.hpke.kdfSpec.Algo,
+            false,
+            ["deriveBits", "deriveKey"]);
+    }
+
+    async Decapsulate(response) {
+        // Extract the response nonce from start of message.
+        let nonce_length = Math.max(this.hpke.aeadSpec.Nn, this.hpke.aeadSpec.Nk)
+        let response_nonce = response.slice(0, nonce_length)
+        let ciphertext = response.slice(nonce_length)
+
+        // Derive the response key from saved HPKE exporter secret.
+        let secret = await this.ExportResponseSecret(this.session_state.exporter_secret);
+
+        // Derive the AEAD key and nonce.
+        let salt = Util.ConcatBuffers(this.session_state.enc, response_nonce)
+        let aead_key = await crypto.subtle.deriveKey(
+            {
+                ...this.hpke.kdfSpec.Algo,
+                salt,
+                info: Util.StringToArrayBuffer("key")
+            },
+            secret,
+            this.hpke.aeadSpec.Algo,
+            false,
+            ["decrypt"]);
+        let aead_nonce = await crypto.subtle.deriveBits(
+            {
+                ...this.hpke.kdfSpec.Algo,
+                salt,
+                info: Util.StringToArrayBuffer("nonce")
+            },
+            secret,
+            this.hpke.aeadSpec.Nn * Util.BITS_PER_BYTE);
+
+        // Decrypt the response to get the BHTTP message inside.
+        return await crypto.subtle.decrypt(
+            { ...this.hpke.aeadSpec.Algo, iv: aead_nonce },
+            aead_key,
+            ciphertext);
+    }
+}
+// Updated helper function to use your config
+function getYourGatewayKeyRaw() {
+    return Util.HexToArrayBuffer(
+        "01002073f1b3ceae1318d7fcd7edf0d822acca8b528453fdf15e525ecb45567d7d5b7900080001000100010003");
+}
+
+// Test with your gateway's key
+async function test_encapsulate_your_key() {
+    console.log("Testing encapsulation with your gateway key...");
+    let ohttp = new OhttpSession(getYourGatewayKeyRaw());
+    let payload = new ArrayBuffer(64);
+    let encrypted = await ohttp.Encapsulate(payload);
+    console.log("Encapsulated with your key:", Util.ArrayBufferToHex(encrypted));
+    console.log("✅ Encapsulation with your key successful!");
+}
+
+// Test a real BHTTP request with your key
+async function test_real_request_your_key() {
+    console.log("Testing real HTTP request with your gateway key...");
+
+    // Create a real BHTTP request
+    let bhttpMsg = new BhttpMessage();
+    bhttpMsg.request("GET", "https", "localhost", "/json");
+    bhttpMsg.put_header("user-agent", "OHTTP-Test-Client/1.0");
+    bhttpMsg.put_header("accept", "application/json");
+    bhttpMsg.put_header("host", "localhost");
+
+    let bhttpRequest = bhttpMsg.encodeRequest();
+    console.log("BHTTP request:", Util.ArrayBufferToHex(bhttpRequest));
+
+    // Encrypt with your gateway's key
+    let ohttp = new OhttpSession(getYourGatewayKeyRaw());
+    let encrypted = await ohttp.Encapsulate(bhttpRequest);
+
+    console.log("Encrypted request for your gateway:", Util.ArrayBufferToHex(encrypted));
+    console.log("Length:", encrypted.byteLength, "bytes");
+
+    // This encrypted request should work with your gateway at /gateway endpoint
+    console.log("✅ Real request encryption successful!");
+    return encrypted;
+}
+
+// Test against your actual gateway
+async function test_your_gateway_full() {
+    const gatewayUrl = 'http://localhost:2005'; // Your gateway IP
+    try {
+        console.log("Testing full round-trip with your gateway...");
+
+        // Step 1: Verify we can fetch the config
+        console.log("Fetching config from your gateway...");
+        const configResponse = await fetch(`${gatewayUrl}/ohttp-configs`);
+        let configFromGateway = await configResponse.arrayBuffer();
+
+        // Check if this config has a length prefix (first 2 bytes)
+        let actualConfig = configFromGateway;
+        if (configFromGateway.byteLength > 2) {
+            const view = new DataView(configFromGateway);
+            const possibleLength = view.getUint16(0, false); // big-endian
+
+            // If the length matches the remaining bytes, strip the prefix
+            if (possibleLength === configFromGateway.byteLength - 2) {
+                console.log("Detected length prefix, stripping it");
+                actualConfig = configFromGateway.slice(2);
+            }
+        }
+
+        const actualConfigHex = Util.ArrayBufferToHex(actualConfig);
+        console.log("Processed config (without length prefix):", actualConfigHex);
+
+        const rawConfigHex = Util.ArrayBufferToHex(configFromGateway);
+        console.log("Raw config from gateway:", rawConfigHex);
+
+        // Verify the processed config matches your expected format
+        const expectedConfigHex = "01002073f1b3ceae1318d7fcd7edf0d822acca8b528453fdf15e525ecb45567d7d5b7900080001000100010003";
+        if (actualConfigHex.toLowerCase() === expectedConfigHex.toLowerCase()) {
+            console.log("✅ Processed config matches expected!");
+        } else {
+            console.log("⚠️  Processed config differs from expected:");
+            console.log("Expected:", expectedConfigHex);
+            console.log("Got:     ", actualConfigHex);
+        }
+
+        // Step 2: Create OHTTP session with the PROCESSED config (without length prefix)
+        const ohttp = new OhttpSession(actualConfig);
+
+        // Step 3: Create a test request
+        const bhttpMsg = new BhttpMessage();
+        bhttpMsg.request("GET", "https", "localhost", "/get");
+        bhttpMsg.put_header("user-agent", "OHTTP-Test-Client/1.0");
+        bhttpMsg.put_header("accept", "application/json");
+
+        const bhttpRequest = bhttpMsg.encodeRequest();
+        console.log("BHTTP request bytes:", bhttpRequest.byteLength);
+
+        // Step 4: Encrypt the request
+        const encryptedRequest = await ohttp.Encapsulate(bhttpRequest);
+        console.log("Encrypted request bytes:", encryptedRequest.byteLength);
+        console.log("Encrypted request hex:", Util.ArrayBufferToHex(encryptedRequest));
+
+        // Step 5: Send to your gateway
+        console.log("Sending request to your gateway...");
+        const gatewayResponse = await fetch(`${gatewayUrl}/gateway`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'message/ohttp-req'
+            },
+            body: encryptedRequest
+        });
+
+        if (!gatewayResponse.ok) {
+            const errorText = await gatewayResponse.text();
+            throw new Error(`Gateway request failed: ${gatewayResponse.status} ${gatewayResponse.statusText}\n${errorText}`);
+        }
+
+        const encryptedResponse = await gatewayResponse.arrayBuffer();
+        console.log("Encrypted response bytes:", encryptedResponse.byteLength);
+        console.log("Encrypted response hex:", Util.ArrayBufferToHex(encryptedResponse));
+
+        // Step 6: Decrypt the response
+        const decryptedResponse = await ohttp.Decapsulate(encryptedResponse);
+        console.log("Decrypted response bytes:", decryptedResponse.byteLength);
+
+        // Step 7: Parse the BHTTP response
+        const responseMsg = new BhttpMessage();
+        responseMsg.decode(decryptedResponse);
+
+        console.log("✅ SUCCESS! Full round-trip test passed!");
+        console.log("Response status:", responseMsg.status_code);
+        console.log("Response headers:", responseMsg.headers.length, "headers");
+        console.log("Response content length:", responseMsg.content.byteLength, "bytes");
+
+        // Display some of the response content
+        const contentText = new TextDecoder().decode(responseMsg.content);
+        console.log("Response content preview:", contentText.substring(0, 200) + "...");
+
+        return {
+            success: true,
+            status: responseMsg.status_code,
+            headers: responseMsg.headers,
+            content: contentText
+        };
+
+    } catch (error) {
+        console.error("❌ Full gateway test failed:", error);
+        throw error;
+    }
+}
+
+// Updated main test runner
+(async function () {
+    console.log("=== Testing with your gateway configuration ===");
+
+    try {
+        // Test basic functionality with your key
+        // await test_encapsulate_your_key();
+        // await test_real_request_your_key();
+
+        // Test against your actual gateway
+        const result = await test_your_gateway_full();
+
+        // Display results on page if we have DOM
+        if (typeof document !== 'undefined') {
+            document.getElementById('output').innerHTML = `
+                <h2>✅ Your Gateway Test Successful!</h2>
+                <p><strong>Status:</strong> ${result.status}</p>
+                <p><strong>Headers:</strong> ${result.headers.length} headers received</p>
+                <p><strong>Content Preview:</strong></p>
+                <pre style="background: #f0f0f0; padding: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto;">${result.content.substring(0, 500)}${result.content.length > 500 ? '...' : ''}</pre>
+            `;
+        }
+
+    } catch (error) {
+        console.error("Tests failed:", error);
+        if (typeof document !== 'undefined') {
+            document.getElementById('output').innerHTML = `
+                <h2>❌ Gateway Test Failed</h2>
+                <p><strong>Error:</strong> ${error.message}</p>
+                <p>Check the browser console for detailed logs.</p>
+            `;
+        }
+    }
+})();
+    </script>
+</body>
+</html>

@@ -13,19 +13,18 @@ spec:
           image: rust-ohttp-gateway:local
           imagePullPolicy: Never
           ports:
-            - containerPort: 8080
+            - containerPort: 8000
           env:
+            - name: PORT
+              value: "8000"
             - name: RUST_LOG
               value: "debug,ohttp_gateway=debug"
+            - name: GATEWAY_DEBUG
+              value: "true"
             - name: BACKEND_URL
-              value: "http://localhost:8000"
+              value: "http://localhost:8080"
           # The gateway should handle /gateway and /ohttp-keys endpoints
           command: ["ohttp-gateway"]
-          args:
-            - "--listen"
-            - "0.0.0.0:8080"
-            - "--target"
-            - "http://localhost:8000"
 ---
 apiVersion: apps/v1
 kind: Deployment

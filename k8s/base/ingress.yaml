@@ -1,35 +1,47 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: merino-ingress-v2
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
+  name: merino-specific-routes
 spec:
   ingressClassName: nginx
   rules:
     - http:
         paths:
-          - path: /api/v2/(gateway|ohttp-keys)
-            pathType: ImplementationSpecific
+          # Most specific paths first - OHTTP endpoints
+          - path: /ohttp-configs
+            pathType: Exact
+            backend:
+              service:
+                name: merino-service
+                port:
+                  number: 8000
+          - path: /gateway
+            pathType: Exact
+            backend:
+              service:
+                name: merino-service
+                port:
+                  number: 8000
+          # Merino API endpoints - route to backend
+          - path: /api/v2
+            pathType: Prefix
             backend:
               service:
                 name: merino-service
                 port:
                   number: 8080
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: merino-ingress-v1
-spec:
-  ingressClassName: nginx
-  rules:
-    - http:
-        paths:
           - path: /api/v1
             pathType: Prefix
             backend:
               service:
                 name: merino-service
                 port:
-                  number: 8000
+                  number: 8080
+          # Root path LAST (catches everything else)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fastly-mock-service
+                port:
+                  number: 80

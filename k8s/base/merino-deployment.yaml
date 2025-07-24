@@ -18,7 +18,7 @@ spec:
         - name: merino
           image: merino:local
           ports:
-            - containerPort: 8000
+            - containerPort: 8080
           command:
             [
               "uvicorn",
@@ -26,7 +26,7 @@ spec:
               "--host",
               "0.0.0.0",
               "--port",
-              "8000",
+              "8080",
             ]
           env:
             - name: LOG_LEVEL
@@ -37,16 +37,17 @@ spec:
             - name: SEED_SECRET_KEY
               value: "5bc39831bae1e2a112f67325190ea08b19a45c2af33b546960241503ecb73b5a"
             - name: ALLOWED_TARGET_ORIGINS
-              value: "localhost,localhost:8000"
+              value: "localhost,localhost:8000,34.59.207.77,merino.services.mozilla.com"
             - name: TARGET_REWRITES
               value: |
                 {
-                  "localhost": { "scheme": "http", "host": "localhost:8000" },
-                  "localhost:8000": { "scheme": "http", "host": "localhost:8000" }
+                  "localhost": { "scheme": "http", "host": "localhost:8080" },
+                  "localhost:8080": { "scheme": "http", "host": "localhost:8080" },
+                  "34.59.207.77": { "scheme": "http", "host": "localhost:8080" }
                 }
             - name: LOG_LEVEL
               value: "debug"
             - name: PORT
-              value: "8080"
+              value: "8000"
           ports:
-            - containerPort: 8080
+            - containerPort: 8000
