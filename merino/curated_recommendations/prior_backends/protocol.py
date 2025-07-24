@@ -3,6 +3,8 @@
 from typing import Protocol
 from pydantic import BaseModel
 
+from merino.curated_recommendations.protocol import CuratedRecommendation
+
 
 class Prior(BaseModel):
     """Represents the Thompson sampling prior data for a specific region."""
@@ -31,3 +33,17 @@ class PriorBackend(Protocol):
     def update_count(self) -> int:
         """Return the number of times the prior data has been updated."""
         ...
+
+
+class ExperimentRescaler(BaseModel):
+    """
+    Used to scale priors based on relative experiment size, when an experiment
+    include content that is not in other test branches.
+    """
+    experiment_name: str
+    experiment_branch: str
+    target_region: str
+    experiment_relative_size: float
+
+    def rescale(self, rec: CuratedRecommendation, opens, no_opens):
+        return opens, no_opens

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from merino.curated_recommendations import ConstantPrior
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.prior_backends.protocol import PriorBackend, Prior
+from merino.curated_recommendations.prior_backends.protocol import PriorBackend, Prior, ExperimentRescaler
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     SectionConfiguration,
@@ -53,11 +53,12 @@ NUM_RECS_PER_TOPIC = 2
 
 
 def thompson_sampling(
-    recs: list[CuratedRecommendation],
-    engagement_backend: EngagementBackend,
-    prior_backend: PriorBackend,
-    region: str | None = None,
-    region_weight: float = REGION_ENGAGEMENT_WEIGHT,
+        recs: list[CuratedRecommendation],
+        engagement_backend: EngagementBackend,
+        prior_backend: PriorBackend,
+        region: str | None = None,
+        region_weight: float = REGION_ENGAGEMENT_WEIGHT,
+        rescaler: ExperimentRescaler = None
 ) -> list[CuratedRecommendation]:
     """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
     CTR with exploration of new items using a prior.
@@ -67,6 +68,7 @@ def thompson_sampling(
     :param prior_backend: Provides prior alpha and beta values for Thompson sampling.
     :param region: Optionally, the client's region, e.g. 'US'.
     :param region_weight: In a weighted average, how much to weigh regional engagement.
+    :param rescaler: Class that can up-scale interaction stats for certain items based on experiment size
 
     :return: A re-ordered version of recs, ranked according to the Thompson sampling score.
 
@@ -75,7 +77,7 @@ def thompson_sampling(
     fallback_prior = ConstantPrior().get()
 
     def get_opens_no_opens(
-        rec: CuratedRecommendation, region_query: str | None = None
+            rec: CuratedRecommendation, region_query: str | None = None
     ) -> tuple[float, float]:
         """Get opens and no-opens counts for a recommendation, optionally in a region."""
         engagement = engagement_backend.get(rec.corpusItemId, region_query)
@@ -87,6 +89,7 @@ def thompson_sampling(
     def sample_score(rec: CuratedRecommendation) -> float:
         """Sample beta distributed from weighted regional/global engagement for a recommendation."""
         opens, no_opens = get_opens_no_opens(rec)
+
         prior: Prior = prior_backend.get() or fallback_prior
         a_prior = prior.alpha
         b_prior = prior.beta
@@ -99,6 +102,9 @@ def thompson_sampling(
             no_opens = (region_weight * region_no_opens) + ((1 - region_weight) * no_opens)
             a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
             b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
+
+        if rescaler is not None:
+            opens, no_opens = rescaler.rescale(rec, opens, no_opens)
 
         # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
         opens += max(a_prior, 1e-18)
@@ -113,9 +119,9 @@ def thompson_sampling(
 
 
 def section_thompson_sampling(
-    sections: dict[str, Section],
-    engagement_backend: EngagementBackend,
-    top_n: int = 6,
+        sections: dict[str, Section],
+        engagement_backend: EngagementBackend,
+        top_n: int = 6,
 ) -> dict[str, Section]:
     """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
 
@@ -157,9 +163,9 @@ def section_thompson_sampling(
 
 
 def greedy_personalized_section_rank(
-    sections: dict[str, Section],
-    personal_interests: InferredInterests,
-    epsilon: float = 0.0,
+        sections: dict[str, Section],
+        personal_interests: InferredInterests,
+        epsilon: float = 0.0,
 ) -> dict[str, Section]:
     """Insert the ordered personal interest sections into the top of the section ranking.
 
@@ -194,7 +200,7 @@ def greedy_personalized_section_rank(
 
 
 def spread_publishers(
-    recs: list[CuratedRecommendation], spread_distance: int
+        recs: list[CuratedRecommendation], spread_distance: int
 ) -> list[CuratedRecommendation]:
     """Spread a list of CuratedRecommendations by the publisher attribute to avoid encountering the same publisher
     in sequence.
@@ -240,8 +246,8 @@ def put_top_stories_first(sections: dict[str, Section]) -> dict[str, Section]:
 
 
 def boost_preferred_topic(
-    recs: list[CuratedRecommendation],
-    preferred_topics: list[Topic],
+        recs: list[CuratedRecommendation],
+        preferred_topics: list[Topic],
 ) -> list[CuratedRecommendation]:
     """Boost recommendations into top N slots based on preferred topics.
     2 recs per topic (for now).
@@ -264,9 +270,9 @@ def boost_preferred_topic(
         # Boost if slots (e.g. 10) remain and its topic hasn't been boosted too often (e.g. 2).
         # It relies on get() returning None for missing keys, and None and 0 being falsy.
         if (
-            topic in remaining_num_topic_boosts
-            and len(boosted_recs) < MAX_TOP_REC_SLOTS
-            and remaining_num_topic_boosts.get(topic)
+                topic in remaining_num_topic_boosts
+                and len(boosted_recs) < MAX_TOP_REC_SLOTS
+                and remaining_num_topic_boosts.get(topic)
         ):
             boosted_recs.append(rec)
             remaining_num_topic_boosts[topic] -= 1  # decrement remaining # of topics to boost
@@ -318,7 +324,7 @@ def section_boosting_composite_sorting_key(section):
 
 
 def boost_followed_sections(
-    req_sections: list[SectionConfiguration], sections: dict[str, Section]
+        req_sections: list[SectionConfiguration], sections: dict[str, Section]
 ) -> dict[str, Section]:
     """Boost followed sections to the very top and update receivedFeedRank accordingly.
     Most recently followed sections (followed within 1 week) should be boosted higher.
