@@ -19,6 +19,7 @@ from merino.curated_recommendations.layouts import (
     layout_8_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
+from merino.curated_recommendations.prior_backends.experiment_rescaler import SubsectionsExperimentRescaler
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
@@ -283,12 +284,14 @@ async def get_sections(
         A dict mapping section IDs to fully-configured Section models.
     """
     # 1. Get ALL corpus sections
-    corpus_sections = await get_corpus_sections(sections_backend, surface_id, 1)
+    corpus_sections_all = await get_corpus_sections(sections_backend, surface_id, 1)
 
     # 2. If ML sections are NOT requested, filter to legacy sections
-    if not is_ml_sections_experiment(request):
-        corpus_sections = get_corpus_sections_for_legacy_topic(corpus_sections)
-
+    subtopic_experiment_enabled = is_ml_sections_experiment(request)
+    if not subtopic_experiment_enabled:
+        corpus_sections = get_corpus_sections_for_legacy_topic(corpus_sections_all)
+    else:
+        corpus_sections = corpus_sections_all
     # 3. Filter out blocked topics
     if request.sections:
         for cs in corpus_sections.values():
@@ -301,12 +304,15 @@ async def get_sections(
         rec for section in corpus_sections.values() for rec in section.recommendations
     ]
 
+    rescaler = SubsectionsExperimentRescaler(cur_recs=corpus_sections) if subtopic_experiment_enabled else None
+
     # 5. Rank all corpus recommendations globally by engagement to build top_stories_section
     all_ranked_corpus_recommendations = thompson_sampling(
         all_corpus_recommendations,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
         region=region,
+        rescaler=rescaler
     )
 
     # 6. Split top stories
@@ -322,6 +328,12 @@ async def get_sections(
         popular_today_layout = layout_8_tiles_2_ads
 
     top_stories = all_ranked_corpus_recommendations[:top_stories_count]
+
+    experiment_count = 0
+    for story in top_stories:
+        if rescaler.is_experiment_story(story):
+            experiment_count += 1
+
     top_stories_rec_ids = {rec.corpusItemId for rec in top_stories}
 
     # 7. Remove top story recs from original corpus sections
