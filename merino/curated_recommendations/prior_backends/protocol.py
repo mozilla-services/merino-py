@@ -36,14 +36,15 @@ class PriorBackend(Protocol):
 
 
 class ExperimentRescaler(BaseModel):
-    """
-    Used to scale priors based on relative experiment size, when an experiment
+    """Used to scale priors based on relative experiment size, when an experiment
     include content that is not in other test branches.
     """
+
     experiment_name: str
     experiment_branch: str
     target_region: str
     experiment_relative_size: float
 
     def rescale(self, rec: CuratedRecommendation, opens, no_opens):
+        """Update open and non-open values based on whether item is unique to the experiment"""
         return opens, no_opens
