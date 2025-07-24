@@ -104,6 +104,7 @@ def thompson_sampling(
             b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
 
         if rescaler is not None:
+            # rescale for content associated exclusively with an experiment in a specific region
             opens, no_opens = rescaler.rescale(rec, opens, no_opens)
 
         # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
