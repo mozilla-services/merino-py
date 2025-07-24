@@ -1,8 +1,8 @@
 # Load GCS Data via SyncedGcsBlob in Merino
 
-* **Status:** Proposed
+* **Status:** Accepted
 * **Deciders:** Bastian Gruber, Herraj Luhano, Mathijs Miermans, Nan Jiang
-* **Date:** 2025-07-21
+* **Date:** 2025-07-24
 
 ## Context and Problem Statement
 
