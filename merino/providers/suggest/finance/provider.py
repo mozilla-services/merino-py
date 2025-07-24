@@ -7,8 +7,9 @@ from fastapi import HTTPException
 from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.suggest.finance.backends.polygon.utils import TickerSnapshot, TickerSymbol
+from merino.providers.suggest.finance.backends.polygon.utils import TickerSnapshot
 from merino.providers.suggest.finance.backends.protocol import FinanceBackend
+from merino.providers.suggest.finance.backends.polygon.utils import is_valid_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -63,19 +64,23 @@ class Provider(BaseProvider):
         """Provide finance suggestions."""
         # get a stock snapshot if the query param contains a supported ticker else do a search for that ticker
         try:
-            if ticker := TickerSymbol.from_str(srequest.query):
-                snapshot: TickerSnapshot = await self.backend.get_ticker_snapshot(ticker)
-                finance_suggestion: FinanceSuggestion = self.build_suggestion(snapshot)
-
-                return [finance_suggestion]
-            else:
-                # search request logic goes here
+            if not is_valid_ticker(srequest.query):
                 return []
+            else:
+                # Normalize the ticker to upper case since all downstream methods rely on it being upper.
+                ticker = srequest.query.upper()
+                # TODO type
+                # ticker_summary= await self.backend.get_ticker_summary(ticker)
+                # finance_suggestion: FinanceSuggestion = self.build_suggestion(ticker_summary)
+                await self.backend.get_ticker_summary(ticker)
+                return []
+                # return [finance_suggestion]
 
         except Exception as e:
             logger.warning(f"Exception occurred for Polygon provider: {e}")
             return []
 
+    # TODO refactor to new shape
     def build_suggestion(self, data: TickerSnapshot) -> FinanceSuggestion:
         """Build a FinanceSuggestion from a TickerSnapshot"""
         return FinanceSuggestion(

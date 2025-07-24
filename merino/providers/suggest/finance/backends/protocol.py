@@ -1,7 +1,6 @@
 """Protocol for finance provider backends."""
 
-from typing import Protocol
-from merino.providers.suggest.finance.backends.polygon.utils import TickerSnapshot, TickerSymbol
+from typing import Protocol, Any
 
 
 class FinanceBackend(Protocol):
@@ -12,9 +11,8 @@ class FinanceBackend(Protocol):
     directly depend on.
     """
 
-    async def get_ticker_snapshot(
-        self, ticker: TickerSymbol
-    ) -> TickerSnapshot:  # pragma: no cover
+    # TODO types and comments
+    async def get_ticker_summary(self, ticker: str) -> dict[str, Any]:  # pragma: no cover
         """Get snapshot info for a given ticker from partner.
 
         Raises:
