@@ -25,6 +25,7 @@ class Engagement(BaseModel):
     region: str | None = None  # If region is None, then engagement is across all regions.
     click_count: int
     impression_count: int
+    report_count: int | None = None
 
 
 class EngagementBackend(Protocol):
