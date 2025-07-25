@@ -16,7 +16,7 @@ from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_4_large,
     layout_6_tiles,
-    layout_8_tiles_2_ads,
+    layout_7_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
@@ -319,7 +319,7 @@ async def get_sections(
     if is_popular_today_double_row_layout(request):
         top_stories_count = 9
         layout_cycle = [layout_6_tiles, layout_4_large, layout_4_medium]
-        popular_today_layout = layout_8_tiles_2_ads
+        popular_today_layout = layout_7_tiles_2_ads
 
     top_stories = all_ranked_corpus_recommendations[:top_stories_count]
     top_stories_rec_ids = {rec.corpusItemId for rec in top_stories}
