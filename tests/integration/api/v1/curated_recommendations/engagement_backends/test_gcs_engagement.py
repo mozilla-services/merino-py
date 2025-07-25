@@ -76,7 +76,12 @@ def blob(gcs_bucket):
     return create_blob(
         gcs_bucket,
         [
-            {"corpus_item_id": "1A", "click_count": 30, "impression_count": 300},
+            {
+                "corpus_item_id": "1A",
+                "click_count": 30,
+                "impression_count": 300,
+                "report_count": 15,
+            },
             {"corpus_item_id": "6A", "click_count": 40, "impression_count": 400},
             # Some records have a region
             {
@@ -84,6 +89,7 @@ def blob(gcs_bucket):
                 "region": "US",
                 "click_count": 3,
                 "impression_count": 9,
+                "report_count": 6,
             },
             {
                 "corpus_item_id": "6A",
@@ -146,7 +152,7 @@ async def test_gcs_engagement_fetches_data(gcs_storage_client, gcs_bucket, metri
     await wait_until_engagement_is_updated(gcs_engagement)
 
     assert gcs_engagement.get("1A") == Engagement(
-        corpus_item_id="1A", click_count=30, impression_count=300
+        corpus_item_id="1A", click_count=30, impression_count=300, report_count=15
     )
     assert gcs_engagement.get("6A") == Engagement(
         corpus_item_id="6A", click_count=40, impression_count=400
@@ -183,7 +189,7 @@ async def test_gcs_engagement_logs_error_for_large_blob(
     await wait_until_engagement_is_updated(gcs_engagement)
 
     max_size = settings.curated_recommendations.gcs.engagement.max_size
-    assert f"Blob '{large_blob.name}' size {max_size+3} exceeds {max_size}" in caplog.text
+    assert f"Blob '{large_blob.name}' size {max_size + 3} exceeds {max_size}" in caplog.text
 
 
 @pytest.mark.asyncio
@@ -220,6 +226,9 @@ async def test_gcs_engagement_metrics(gcs_storage_client, gcs_bucket, metrics_cl
     # Verify the metrics are recorded correctly
     metrics_client.gauge.assert_any_call("recommendation.engagement.size", value=blob.size)
     metrics_client.gauge.assert_any_call("recommendation.engagement.global.count", value=3)
+    metrics_client.gauge.assert_any_call(
+        "recommendation.engagement.global.report_counts", value=15
+    )
     metrics_client.gauge.assert_any_call("recommendation.engagement.global.clicks", value=120)
     metrics_client.gauge.assert_any_call("recommendation.engagement.global.impressions", value=800)
     metrics_client.gauge.assert_any_call("recommendation.engagement.us.count", value=3)
