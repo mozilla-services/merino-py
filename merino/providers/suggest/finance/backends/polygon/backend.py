@@ -58,7 +58,6 @@ class PolygonBackend:
         else:
             return build_ticker_summary(ticker=ticker, snapshot=snapshot)
 
-
     async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
         """Make a request and fetch the snapshot for this single ticker."""
         params = {self.url_param_api_key: self.api_key}

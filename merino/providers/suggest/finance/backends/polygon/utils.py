@@ -62,7 +62,6 @@ def extract_ticker_snapshot(data: dict[str, Any] | None) -> TickerSnapshot | Non
         )
 
 
-
 def build_ticker_summary(ticker: str, snapshot: TickerSnapshot) -> TickerSummary:
     """Build a ticker summary for a finance suggestion response."""
     company = lookup_ticker_company(ticker)
