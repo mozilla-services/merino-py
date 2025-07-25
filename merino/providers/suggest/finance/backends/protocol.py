@@ -1,6 +1,24 @@
 """Protocol for finance provider backends."""
 
-from typing import Protocol, Any
+from typing import Protocol, TypedDict
+from pydantic import BaseModel
+
+
+class TickerSnapshot(TypedDict):
+    """Ticker Snapshot."""
+
+    todays_change_perc: str
+    last_price: str
+
+
+class TickerSummary(BaseModel):
+    """Ticker summary."""
+
+    ticker: str
+    name: str
+    last_price: str
+    todays_change_perc: str
+    query: str
 
 
 class FinanceBackend(Protocol):
@@ -11,8 +29,7 @@ class FinanceBackend(Protocol):
     directly depend on.
     """
 
-    # TODO types and comments
-    async def get_ticker_summary(self, ticker: str) -> dict[str, Any]:  # pragma: no cover
+    async def get_ticker_summary(self, ticker: str) -> TickerSummary | None:  # pragma: no cover
         """Get snapshot info for a given ticker from partner.
 
         Raises:

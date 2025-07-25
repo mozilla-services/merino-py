@@ -13,12 +13,10 @@ from starlette.exceptions import HTTPException
 
 from merino.configs import settings
 from merino.middleware.geolocation import Location
-from merino.providers.suggest.finance.backends.polygon.utils import TickerSymbol
-from merino.providers.suggest.finance.backends.protocol import FinanceBackend
+from merino.providers.suggest.custom_details import CustomDetails, FinanceDetails
+from merino.providers.suggest.finance.backends.protocol import FinanceBackend, TickerSummary
 from merino.providers.suggest.finance.provider import (
-    FinanceSuggestion,
     Provider,
-    TickerSnapshot,
     BaseSuggestion,
     SuggestionRequest,
 )
@@ -36,10 +34,16 @@ def fixture_geolocation() -> Location:
     )
 
 
-@pytest.fixture(name="ticker_snapshot")
-def fixture_ticker_snapshot() -> TickerSnapshot:
-    """Return a test TickerSnapshot."""
-    return TickerSnapshot(ticker=TickerSymbol.AAPL, last_price=100.5, todays_change_perc=1.5)
+@pytest.fixture(name="ticker_summary")
+def fixture_ticker_summar() -> TickerSummary:
+    """Return a test TickerSummary."""
+    return TickerSummary(
+        name="Apple Inc.",
+        ticker="AAPL",
+        last_price="$100.5",
+        todays_change_perc="1.5",
+        query="AAPL stock",
+    )
 
 
 @pytest.fixture(name="backend_mock")
@@ -81,25 +85,24 @@ def test_validate_fails_on_missing_query_param(
 
 
 @pytest.mark.asyncio
-async def test_query_ticker_snapshot_returned(
-    statsd_mock: Any,
+async def test_query_ticker_summary_returned(
     backend_mock: Any,
     provider: Provider,
-    ticker_snapshot: TickerSnapshot,
+    ticker_summary: TickerSummary,
     geolocation: Location,
 ) -> None:
     """Test that the query method provides a valid finance suggestion when ticker symbol from query param is supported"""
-    expected_suggestions: list[FinanceSuggestion] = [
-        FinanceSuggestion(
-            title="Stock suggestion",
+    expected_suggestions: list[BaseSuggestion] = [
+        BaseSuggestion(
+            title="Finance Suggestion",
             url=HttpUrl(provider.url),
             provider=provider.name,
             is_sponsored=False,
             score=provider.score,
-            ticker_snapshot=ticker_snapshot,
+            custom_details=CustomDetails(finance=FinanceDetails(values=[ticker_summary])),
         ),
     ]
-    backend_mock.get_ticker_snapshot.return_value = ticker_snapshot
+    backend_mock.get_ticker_summary.return_value = ticker_summary
 
     suggestions: list[BaseSuggestion] = await provider.query(
         SuggestionRequest(query="aapl", geolocation=geolocation)
@@ -109,7 +112,7 @@ async def test_query_ticker_snapshot_returned(
 
 
 @pytest.mark.asyncio
-async def test_query_ticker_snapshot_not_returned(
+async def test_query_ticker_summary_not_returned(
     provider: Provider,
     geolocation: Location,
 ) -> None:

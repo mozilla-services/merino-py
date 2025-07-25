@@ -7,18 +7,11 @@ from fastapi import HTTPException
 from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.suggest.finance.backends.polygon.utils import TickerSnapshot
-from merino.providers.suggest.finance.backends.protocol import FinanceBackend
+from merino.providers.suggest.custom_details import CustomDetails, FinanceDetails
+from merino.providers.suggest.finance.backends.protocol import FinanceBackend, TickerSummary
 from merino.providers.suggest.finance.backends.polygon.utils import is_valid_ticker
 
 logger = logging.getLogger(__name__)
-
-
-class FinanceSuggestion(BaseSuggestion):
-    """Model for finance suggestions."""
-
-    # TODO will expand / change
-    ticker_snapshot: TickerSnapshot
 
 
 class Provider(BaseProvider):
@@ -67,29 +60,30 @@ class Provider(BaseProvider):
             if not is_valid_ticker(srequest.query):
                 return []
             else:
-                # Normalize the ticker to upper case since all downstream methods rely on it being upper.
+                # Normalize the ticker to upper case since all downstream methods rely on it being upper case.
                 ticker = srequest.query.upper()
-                # TODO type
-                # ticker_summary= await self.backend.get_ticker_summary(ticker)
-                # finance_suggestion: FinanceSuggestion = self.build_suggestion(ticker_summary)
-                await self.backend.get_ticker_summary(ticker)
-                return []
-                # return [finance_suggestion]
+                ticker_summary: TickerSummary | None
+
+                if (ticker_summary := await self.backend.get_ticker_summary(ticker)) is None:
+                    return []
+                else:
+                    return [self.build_suggestion(ticker_summary)]
 
         except Exception as e:
             logger.warning(f"Exception occurred for Polygon provider: {e}")
             return []
 
-    # TODO refactor to new shape
-    def build_suggestion(self, data: TickerSnapshot) -> FinanceSuggestion:
-        """Build a FinanceSuggestion from a TickerSnapshot"""
-        return FinanceSuggestion(
-            title="Stock suggestion",
+    def build_suggestion(self, data: TickerSummary) -> BaseSuggestion:
+        """Build the suggestion with custom finance details since this is a finance suggestion."""
+        custom_details = CustomDetails(finance=FinanceDetails(values=[data]))
+
+        return BaseSuggestion(
+            title="Finance Suggestion",
             url=HttpUrl(self.url),
             provider=self.name,
             is_sponsored=False,
             score=self.score,
-            ticker_snapshot=data,
+            custom_details=custom_details,
         )
 
     async def shutdown(self) -> None:
