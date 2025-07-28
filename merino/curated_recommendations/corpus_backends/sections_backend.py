@@ -62,7 +62,7 @@ class SectionsBackend(SectionsProtocol):
         self._background_tasks = set()
 
     @stale_while_revalidate(
-        wait_expiration=WaitRandomExpiration(timedelta(seconds=50), timedelta(seconds=70)),
+        wait_expiration=WaitRandomExpiration(timedelta(seconds=0), timedelta(seconds=0)),
         cache=lambda self: self._cache,
         jobs=lambda self: self._background_tasks,
     )

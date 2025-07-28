@@ -261,6 +261,7 @@ def rank_sections(
 
 
 async def get_sections(
+    grid_recs: list[CuratedRecommendation],
     request: CuratedRecommendationsRequest,
     surface_id: SurfaceId,
     sections_backend: SectionsProtocol,
@@ -288,6 +289,36 @@ async def get_sections(
     # 2. If ML sections are NOT requested, filter to legacy sections
     if not is_ml_sections_experiment(request):
         corpus_sections = get_corpus_sections_for_legacy_topic(corpus_sections)
+
+        grid_ids = {rec.corpusItemId for rec in grid_recs}
+        section_map = {}
+        for section_id, section in corpus_sections.items():
+            for rec in section.recommendations:
+                topic = rec.topic.value if rec.topic else None
+                section_map[rec.corpusItemId] = (section_id, topic)
+        grid_map = {rec.corpusItemId: (rec.topic.value if rec.topic else None) for rec in grid_recs}
+
+        only_in_grid = sorted(grid_ids - section_map.keys())
+        only_in_sections = sorted(section_map.keys() - grid_ids)
+
+        if only_in_grid or only_in_sections:
+            from fastapi import HTTPException
+
+            payload = {
+                "only_in_grid": [
+                    {"corpusItemId": cid, "topic": grid_map[cid]}
+                    for cid in only_in_grid
+                ],
+                "only_in_sections": [
+                    {
+                        "corpusItemId": cid,
+                        "sectionId": section_map[cid][0],
+                        "topic": section_map[cid][1],
+                    }
+                    for cid in only_in_sections
+                ],
+            }
+            raise HTTPException(status_code=500, detail=payload)
 
     # 3. Filter out blocked topics
     if request.sections:
