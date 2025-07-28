@@ -11,7 +11,6 @@ from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 from starlette.exceptions import HTTPException
 
-from merino.configs import settings
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.custom_details import CustomDetails, FinanceDetails
 from merino.providers.suggest.finance.backends.protocol import FinanceBackend, TickerSummary
@@ -61,7 +60,6 @@ def fixture_provider(backend_mock: Any, statsd_mock: Any) -> Provider:
         name="finance",
         score=0.3,
         query_timeout_sec=0.2,
-        url=settings.polygon.url_base,
     )
 
 

@@ -29,7 +29,6 @@ class Provider(BaseProvider):
         score: float,
         name: str,
         query_timeout_sec: float,
-        url: HttpUrl,
         enabled_by_default: bool = False,
     ) -> None:
         self.backend = backend
@@ -38,7 +37,7 @@ class Provider(BaseProvider):
         self._name = name
         self._query_timeout_sec = query_timeout_sec
         self._enabled_by_default = enabled_by_default
-        self.url = url
+        self.url = HttpUrl("https://merino.services.mozilla.com/")
 
         super().__init__()
 
