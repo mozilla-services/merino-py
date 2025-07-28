@@ -181,24 +181,9 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.POLYGON:
-            cache = (
-                RedisAdapter(
-                    *create_redis_clients(
-                        settings.redis.server,
-                        settings.redis.replica,
-                        settings.redis.max_connections,
-                        settings.redis.socket_connect_timeout_sec,
-                        settings.redis.socket_timeout_sec,
-                        db=1,
-                    )
-                )
-                if setting.cache == "redis"
-                else NoCacheAdapter()
-            )
             return PolygonProvider(
                 backend=PolygonBackend(
                     api_key=settings.polygon.api_key,
-                    cache=cache,
                     metrics_client=get_metrics_client(),
                     metrics_sample_rate=settings.polygon.metrics_sampling_rate,
                     http_client=create_http_client(
@@ -206,14 +191,14 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         connect_timeout=settings.providers.polygon.connect_timeout_sec,
                     ),
                     url_param_api_key=settings.polygon.url_param_api_key,
-                    url_ticker_last_quote=settings.polygon.url_ticker_last_quote,
-                    url_index_daily_summary=settings.polygon.url_index_daily_summary,
+                    url_single_ticker_snapshot=settings.polygon.url_single_ticker_snapshot,
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,
+                url=settings.polygon.url_base,
             )
         case _:
             raise InvalidProviderError(f"Unknown provider type: {setting.type}")

@@ -4,12 +4,16 @@
 
 """Unit tests for the Remote Settings backend module."""
 
+import json
+from collections import defaultdict
 from typing import Any
 from urllib.parse import urljoin
 
 import httpx
 import kinto_http
+import moz_merino_ext.amp
 import pytest
+from pytest import LogCaptureFixture
 from httpx import HTTPError, Request, Response
 from kinto_http import KintoException
 from pytest_mock import MockerFixture
@@ -22,6 +26,7 @@ from merino.providers.suggest.adm.backends.remotesettings import (
     FormFactor,
 )
 from merino.utils.icon_processor import IconProcessor
+from tests.types import FilterCaplogFixture
 
 
 @pytest.fixture(name="rs_parameters")
@@ -274,7 +279,6 @@ async def test_fetch(
     rs_records: list[dict[str, Any]],
     rs_server_info: dict[str, Any],
     rs_attachment_response: httpx.Response,
-    adm_suggestion_content: SuggestionContent,
 ) -> None:
     """Test that the fetch method returns the proper suggestion content."""
     de_phone_attachment = KintoSuggestion(
@@ -282,17 +286,15 @@ async def test_fetch(
         advertiser="de.Example.org",
         impression_url="https://de.example.org/impression/mozilla",
         click_url="https://de.example.org/click/mozilla",
-        full_keywords=[["firefox accounts de", 3], ["mozilla firefox accounts de", 4]],
+        full_keywords=[
+            ["firefox accounts de", 3],
+        ],
         iab_category="5 - Education",
         icon="01",
         keywords=[
             "firefox",
             "firefox account",
             "firefox accounts de",
-            "mozilla",
-            "mozilla firefox",
-            "mozilla firefox account",
-            "mozilla firefox accounts de",
         ],
         title="Mozilla Firefox Accounts",
         url="https://de.example.org/target/mozfirefoxaccounts",
@@ -318,7 +320,42 @@ async def test_fetch(
 
     suggestion_content: SuggestionContent = await rs_backend.fetch()
 
-    assert suggestion_content == adm_suggestion_content
+    assert suggestion_content.index_manager.stats(f"DE/({FormFactor.PHONE.value},)") == {
+        "advertisers_count": 1,
+        "keyword_index_size": 3,
+        "url_templates_count": 1,
+        "icons_count": 1,
+        "suggestions_count": 1,
+    }
+
+
+@pytest.mark.asyncio
+async def test_fetch_with_index_build_fail(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    mocker: MockerFixture,
+    rs_backend: RemoteSettingsBackend,
+    rs_records: list[dict[str, Any]],
+    rs_server_info: dict[str, Any],
+    rs_attachment_response: httpx.Response,
+) -> None:
+    """Test logging when building the index fails."""
+    mocker.patch.object(kinto_http.AsyncClient, "get_records", return_value=rs_records)
+    mocker.patch.object(kinto_http.AsyncClient, "server_info", return_value=rs_server_info)
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=rs_attachment_response,
+    )
+    mocker.patch.object(
+        moz_merino_ext.amp.AmpIndexManager, "build", side_effect=Exception("Build Index Error")
+    )
+
+    _ = await rs_backend.fetch()
+    records = filter_caplog(caplog.records, "merino.providers.suggest.adm.backends.remotesettings")
+    assert len(records) == 2
+    for record in records:
+        assert record.__dict__["error message"] == "Build Index Error"
 
 
 @pytest.mark.asyncio
@@ -328,7 +365,6 @@ async def test_fetch_skip(
     rs_records: list[dict[str, Any]],
     rs_server_info: dict[str, Any],
     rs_attachment_response: httpx.Response,
-    adm_suggestion_content: SuggestionContent,
 ) -> None:
     """Test that the fetch method should skip records processing if the records are up to date."""
     mocker.patch.object(kinto_http.AsyncClient, "get_records", return_value=rs_records)
@@ -336,14 +372,21 @@ async def test_fetch_skip(
     mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
 
     suggestion_content_1st: SuggestionContent = await rs_backend.fetch()
+    assert set(suggestion_content_1st.index_manager.list()) == {"US/(0,)", "DE/(1,)"}
 
-    # call it again, it should be short curcuited as the record is already processed and up to date.
+    # clear index
+    suggestion_content_1st.index_manager.delete("US/(0,)")
+    suggestion_content_1st.index_manager.delete("DE/(1,)")
+    assert suggestion_content_1st.index_manager.list() == []
+
+    # call it again, it should be short-circuited as the record is already processed and up to date.
     spy = mocker.spy(rs_backend, "get_suggestions")
     suggestion_content_2nd: SuggestionContent = await rs_backend.fetch()
 
     spy.assert_not_called()
 
-    assert suggestion_content_1st is suggestion_content_2nd
+    # index should still be empty
+    assert suggestion_content_2nd.index_manager.list() == []
 
     # update the "last_modified" field, fetch should proceed as usual.
     rs_records[0]["last_modified"] = rs_records[0]["last_modified"] + 1
@@ -352,27 +395,8 @@ async def test_fetch_skip(
 
     spy.assert_called_once()
 
-    assert suggestion_content_3rd is not suggestion_content_2nd
-
-
-@pytest.mark.asyncio
-async def test_fetch_no_adm_wikipedia_result(
-    mocker: MockerFixture,
-    rs_backend: RemoteSettingsBackend,
-    rs_records: list[dict[str, Any]],
-    rs_server_info: dict[str, Any],
-    rs_wiki_attachment_response: httpx.Response,
-) -> None:
-    """Test that the fetch method returns no suggestions as a result of filtering out
-    records with Wikipedia defined as advertiser.
-    """
-    mocker.patch.object(kinto_http.AsyncClient, "get_records", return_value=rs_records)
-    mocker.patch.object(kinto_http.AsyncClient, "server_info", return_value=rs_server_info)
-    mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_wiki_attachment_response)
-
-    suggestion_content: SuggestionContent = await rs_backend.fetch()
-
-    assert suggestion_content.results == []
+    # index should be rebuilt
+    assert set(suggestion_content_3rd.index_manager.list()) == {"US/(0,)", "DE/(1,)"}
 
 
 @pytest.mark.asyncio
@@ -483,18 +507,44 @@ async def test_get_suggestions(
     rs_attachment_response: httpx.Response,
 ) -> None:
     """Test that the method returns the proper suggestion information."""
-    expected_suggestions: dict[str, dict[tuple, list[KintoSuggestion]]] = {
-        "US": {(FormFactor.DESKTOP.value,): [rs_attachment]},
-        "DE": {(FormFactor.PHONE.value,): [rs_attachment]},
-    }
     attachment_host: str = "attachment-host/"
     mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
 
-    suggestions: dict[str, dict[tuple, list[KintoSuggestion]]] = await rs_backend.get_suggestions(
+    suggestions: defaultdict[str, defaultdict[tuple[int], str]] = await rs_backend.get_suggestions(
         attachment_host, rs_backend.filter_records("amp", rs_records)
     )
-
-    assert suggestions == expected_suggestions
+    expected_suggestion_info = [
+        ("US", (FormFactor.DESKTOP.value,)),
+        ("DE", (FormFactor.PHONE.value,)),
+    ]
+    expected_suggestion_data_str = json.dumps(
+        [
+            {
+                "id": 2,
+                "advertiser": "Example.org",
+                "click_url": "https://example.org/click/mozilla",
+                "full_keywords": [["firefox accounts", 3], ["mozilla firefox accounts", 4]],
+                "iab_category": "5 - Education",
+                "icon": "01",
+                "impression_url": "https://example.org/impression/mozilla",
+                "keywords": [
+                    "firefox",
+                    "firefox account",
+                    "firefox accounts",
+                    "mozilla",
+                    "mozilla firefox",
+                    "mozilla firefox account",
+                    "mozilla firefox accounts",
+                ],
+                "title": "Mozilla Firefox Accounts",
+                "url": "https://example.org/target/mozfirefoxaccounts",
+            }
+        ]
+    )
+    for country, segment in expected_suggestion_info:
+        assert country in suggestions.keys()
+        assert list(suggestions[country].keys()) == [segment]
+        assert suggestions[country][segment] == expected_suggestion_data_str
 
 
 @pytest.mark.asyncio
@@ -530,14 +580,14 @@ async def test_get_attachment(
     rs_attachment_response: httpx.Response,
 ) -> None:
     """Test that the method returns the proper attachment information."""
-    expected_attachment: list[KintoSuggestion] = [rs_attachment]
+    expected_attachment: str = json.dumps([dict(rs_attachment)])
     url: str = urljoin(
         base="attachment-host",
         url="main-workspace/quicksuggest/6129d437-b3c1-48b5-b343-535e045d341a.json",
     )
     mocker.patch.object(httpx.AsyncClient, "get", return_value=rs_attachment_response)
 
-    attachment: list[KintoSuggestion] = await rs_backend.get_attachment(url)
+    attachment: str = await rs_backend.get_attachment_raw(url)
 
     assert attachment == expected_attachment
 
@@ -568,6 +618,6 @@ async def test_get_attachment_backend_error(
     )
 
     with pytest.raises(BackendError) as error:
-        await rs_backend.get_attachment(url)
+        await rs_backend.get_attachment_raw(url)
 
     assert str(error.value) == expected_error_value

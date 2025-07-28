@@ -1,25 +1,24 @@
 """Protocol for finance provider backends."""
 
-from typing import Protocol
+from typing import Protocol, TypedDict
 from pydantic import BaseModel
-from merino.providers.suggest.finance.backends.polygon.utils import FinanceEntityType, TickerSymbol
 
 
-class FinanceContext(BaseModel):
-    """Model that contains context from the finance suggestion request needed to make finance report."""
+class TickerSnapshot(TypedDict):
+    """Ticker Snapshot."""
 
-    entity_type: FinanceEntityType
-    ticker_symbol: TickerSymbol
-    # TODO might change
-    request_type: str = "price" or "aggregate"
+    todays_change_perc: str
+    last_price: str
 
 
-class FinanceReport(BaseModel):
-    """Model for finance report that is returned as part of the finance suggestion response"""
+class TickerSummary(BaseModel):
+    """Ticker summary."""
 
-    entity_type: FinanceEntityType
-    ticker_symbol: TickerSymbol
-    price: float
+    ticker: str
+    name: str
+    last_price: str
+    todays_change_perc: str
+    query: str
 
 
 class FinanceBackend(Protocol):
@@ -30,10 +29,8 @@ class FinanceBackend(Protocol):
     directly depend on.
     """
 
-    async def get_finance_report(
-        self, finance_context: FinanceContext
-    ) -> FinanceReport:  # pragma: no cover
-        """Get finance information from partner.
+    async def get_ticker_summary(self, ticker: str) -> TickerSummary | None:  # pragma: no cover
+        """Get snapshot info for a given ticker from partner.
 
         Raises:
             BackendError: Category of error specific to provider backends.
