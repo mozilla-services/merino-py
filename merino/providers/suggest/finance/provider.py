@@ -1,29 +1,17 @@
 """Finance integration."""
 
-import asyncio
 import logging
-from typing import Any
 
 import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.suggest.finance.backends.polygon.utils import FinanceEntityType, TickerSymbol
-from merino.providers.suggest.finance.backends.protocol import (
-    FinanceBackend,
-    FinanceContext,
-    FinanceReport,
-)
+from merino.providers.suggest.custom_details import CustomDetails, FinanceDetails
+from merino.providers.suggest.finance.backends.protocol import FinanceBackend, TickerSummary
+from merino.providers.suggest.finance.backends.polygon.utils import is_valid_ticker
 
 logger = logging.getLogger(__name__)
-
-
-class FinanceSuggestion(BaseSuggestion):
-    """Model for finance suggestions."""
-
-    # TODO will expand / change
-    finance_report: FinanceReport
 
 
 class Provider(BaseProvider):
@@ -32,9 +20,7 @@ class Provider(BaseProvider):
     backend: FinanceBackend
     metrics_client: aiodogstatsd.Client
     score: float
-    dummy_url: HttpUrl
-    cron_task: asyncio.Task
-    cron_interval_sec: float
+    url: HttpUrl
 
     def __init__(
         self,
@@ -43,8 +29,8 @@ class Provider(BaseProvider):
         score: float,
         name: str,
         query_timeout_sec: float,
+        url: HttpUrl,
         enabled_by_default: bool = False,
-        **kwargs: Any,
     ) -> None:
         self.backend = backend
         self.metrics_client = metrics_client
@@ -52,59 +38,52 @@ class Provider(BaseProvider):
         self._name = name
         self._query_timeout_sec = query_timeout_sec
         self._enabled_by_default = enabled_by_default
-        self.dummy_url = HttpUrl("http://www.dummy.com")
+        self.url = url
 
-        super().__init__(**kwargs)
+        super().__init__()
 
     async def initialize(self) -> None:
         """Initialize the provider."""
-        # TODO
 
     def validate(self, srequest: SuggestionRequest) -> None:
         """Validate the suggestion request."""
-        if srequest.query and not srequest.request_type:
+        if not srequest.query:
             raise HTTPException(
                 status_code=400,
-                detail="Invalid query parameters: `request_type` is missing",
+                detail="Invalid query parameters: `q` is missing",
             )
 
-    # TODO: circuit breaker
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
-        """Provide finance suggestions.
-
-        All the `PolygonError` errors, raised from the backend, are intentionally
-        unhandled in this function to drive the circuit breaker. Those exceptions will
-        eventually be propagated to the provider consumer (i.e. the API handler) and be
-        handled there.
-        """
+        """Provide finance suggestions."""
+        # get a stock snapshot if the query param contains a supported ticker else do a search for that ticker
         try:
-            if not srequest.request_type == "stock":
+            if not is_valid_ticker(srequest.query):
                 return []
+            else:
+                # Normalize the ticker to upper case since all downstream methods rely on it being upper case.
+                ticker = srequest.query.upper()
+                ticker_summary: TickerSummary | None
 
-            # test for now
-            finance_context = FinanceContext(
-                entity_type=FinanceEntityType.STOCK,
-                ticker_symbol=TickerSymbol.AAPL,
-                request_type="price",
-            )
-
-            finance_report = await self.backend.get_finance_report(finance_context)
-            finance_suggestion: FinanceSuggestion = self.build_suggestion(finance_report)
-            return [finance_suggestion]
+                if (ticker_summary := await self.backend.get_ticker_summary(ticker)) is None:
+                    return []
+                else:
+                    return [self.build_suggestion(ticker_summary)]
 
         except Exception as e:
-            logger.warning(f"Exception occurred for Polygon provider:  {e}")
+            logger.warning(f"Exception occurred for Polygon provider: {e}")
             return []
 
-    def build_suggestion(self, data: FinanceReport) -> FinanceSuggestion:
-        """Build a FinanceSuggestion from a FinanceReport"""
-        return FinanceSuggestion(
-            title="Stock suggestion",
-            url=HttpUrl(self.dummy_url),
+    def build_suggestion(self, data: TickerSummary) -> BaseSuggestion:
+        """Build the suggestion with custom finance details since this is a finance suggestion."""
+        custom_details = CustomDetails(finance=FinanceDetails(values=[data]))
+
+        return BaseSuggestion(
+            title="Finance Suggestion",
+            url=HttpUrl(self.url),
             provider=self.name,
             is_sponsored=False,
             score=self.score,
-            finance_report=data,
+            custom_details=custom_details,
         )
 
     async def shutdown(self) -> None:
