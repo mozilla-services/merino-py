@@ -1,4 +1,5 @@
 """Rescaler of engagement for experiments"""
+
 from typing import Any
 
 from merino.curated_recommendations.prior_backends.protocol import ExperimentRescaler
@@ -6,6 +7,7 @@ from merino.curated_recommendations.protocol import CuratedRecommendation
 
 SUBSECTION_EXPERIMENT_PERCENT = 0.03  # This may eventually be computed by an airflow job
 SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
+
 
 class SubsectionsExperimentRescaler(ExperimentRescaler):
     """Scales experiment based content on relative size of experiment, as a fractional percentage"""

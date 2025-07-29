@@ -4,10 +4,13 @@ thompson sampling experiments
 
 from unittest.mock import Mock
 
-from merino.curated_recommendations.prior_backends.experiment_rescaler import SubsectionsExperimentRescaler
+from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+    SubsectionsExperimentRescaler,
+)
 
 SUBSECTION_EXPERIMENT_PERCENT = 0.25
 SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "in_subtopic_experiment"
+
 
 class TestSubsectionsExperimentRescaler:
     """Test Rig for the rescaler"""

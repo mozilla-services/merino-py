@@ -259,7 +259,9 @@ class TestMapSectionItemToRecommendation:
         item = generate_corpus_item()
         experiment_id = "eid"
         section_id = "secX"
-        rec = map_section_item_to_recommendation(item, 3, section_id, experiment_flags={experiment_id})
+        rec = map_section_item_to_recommendation(
+            item, 3, section_id, experiment_flags={experiment_id}
+        )
         assert isinstance(rec, CuratedRecommendation)
         assert rec.receivedRank == 3
         for k in rec.features.keys():
