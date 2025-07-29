@@ -1,4 +1,5 @@
 """Rescaler of engagement for experiments"""
+from typing import Any
 
 from merino.curated_recommendations.prior_backends.protocol import ExperimentRescaler
 from merino.curated_recommendations.protocol import CuratedRecommendation
@@ -9,7 +10,7 @@ SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 class SubsectionsExperimentRescaler(ExperimentRescaler):
     """Scales experiment based content on relative size of experiment, as a fractional percentage"""
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any):
         data.setdefault("experiment_relative_size", SUBSECTION_EXPERIMENT_PERCENT)
         super().__init__(**data)
 

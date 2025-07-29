@@ -58,7 +58,7 @@ def thompson_sampling(
         prior_backend: PriorBackend,
         region: str | None = None,
         region_weight: float = REGION_ENGAGEMENT_WEIGHT,
-        rescaler: ExperimentRescaler = None
+        rescaler: ExperimentRescaler | None = None
 ) -> list[CuratedRecommendation]:
     """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
     CTR with exploration of new items using a prior.
@@ -123,7 +123,7 @@ def section_thompson_sampling(
         sections: dict[str, Section],
         engagement_backend: EngagementBackend,
         top_n: int = 6,
-        rescaler: ExperimentRescaler = None
+        rescaler: ExperimentRescaler | None = None
 ) -> dict[str, Section]:
     """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
 
