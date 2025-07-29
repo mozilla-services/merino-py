@@ -356,6 +356,7 @@ async def get_sections(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
             region=region,
+            rescaler=rescaler,
         )
 
     # 9. Initialize sections with top stories
