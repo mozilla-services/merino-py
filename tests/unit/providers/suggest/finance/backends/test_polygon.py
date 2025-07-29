@@ -17,7 +17,6 @@ from pytest import LogCaptureFixture
 from merino.providers.suggest.finance.backends import PolygonBackend
 from merino.providers.suggest.finance.backends.protocol import TickerSummary
 
-# URL_SINGLE_TICKER_SNAPSHOT = settings.polygon.url_single_ticker_snapshot
 URL_SINGLE_TICKER_SNAPSHOT = "/v2/snapshot/locale/us/markets/stocks/tickers/{ticker}"
 
 

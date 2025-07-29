@@ -75,19 +75,19 @@ def extract_ticker_snapshot(data: dict[str, Any] | None) -> TickerSnapshot | Non
     if data is None:
         return None
     else:
-        ticker_info = data.get("ticker", {})
-        return TickerSnapshot(
-            todays_change_perc=ticker_info.get("todaysChangePerc", 0.0),
-            last_price=ticker_info.get("lastQuote", {}).get("P", 0.0),
-        )
+        ticker_info = data["ticker"]
+        todays_change_perc = f'{ticker_info["todaysChangePerc"]:.2f}'
+        last_price = f'{ticker_info["lastQuote"]["P"]:.2f}'
+
+        return TickerSnapshot(todays_change_perc=todays_change_perc, last_price=last_price)
 
 
 def build_ticker_summary(ticker: str, snapshot: TickerSnapshot) -> TickerSummary:
     """Build a ticker summary for a finance suggestion response."""
     company = lookup_ticker_company(ticker)
     serp_query = f"{ticker} stock"
-    last_price = f"${snapshot["last_price"]} USD"
-    todays_change_perc = f"{snapshot["todays_change_perc"]:.2f}"
+    last_price = f"${snapshot.last_price} USD"
+    todays_change_perc = snapshot.todays_change_perc
 
     return TickerSummary(
         ticker=ticker,
