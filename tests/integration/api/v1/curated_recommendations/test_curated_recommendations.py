@@ -1464,7 +1464,6 @@ class TestSections:
                 | experiment_payload,
             )
             data = response.json()
-            feeds = data["feeds"]
 
             # Check if the response is valid
             assert response.status_code == 200
@@ -1755,8 +1754,6 @@ class TestSections:
             )
             data = response.json()
 
-            feeds = data["feeds"]
-
             interest_picker_response = data["interestPicker"]
             if enable_interest_picker:
                 assert interest_picker_response is not None
@@ -1789,8 +1786,7 @@ class TestSections:
 
         # collect non-top_stories sections
         sub_topic_sections = [
-            sec for name, sec in feeds.items()
-            if name != "top_stories_section" and sec is not None
+            sec for name, sec in feeds.items() if name != "top_stories_section" and sec is not None
         ]
 
         # compute avg CTR over the recommendations for each section
