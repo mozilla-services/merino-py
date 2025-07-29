@@ -171,10 +171,8 @@ def is_ml_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
 
 
 def is_popular_today_double_row_layout(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the sections backend experiment is enabled."""
-    return is_enrolled_in_experiment(
-        request, ExperimentName.ML_SECTIONS_POPULAR_TODAY_DOUBLE_ROW_EXPERIMENT.value, "treatment"
-    )
+    """Return True for the treatment branch of the ML sub-topics experiment, otherwise False."""
+    return is_ml_sections_experiment(request)
 
 
 def update_received_feed_rank(sections: Dict[str, Section]):
