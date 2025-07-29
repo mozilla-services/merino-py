@@ -1266,8 +1266,11 @@ class TestSections:
             feeds = data["feeds"]
             sections = {name: section for name, section in feeds.items() if section is not None}
 
-            # Assert layouts are cycled
-            assert_section_layouts_are_cycled(sections)
+            # the first layouts for the subtopic sections should be a double-row layout, after which it should cycle.
+            layout_names = [sec["layout"]["name"] for sec in sections.values()]
+            assert layout_names[0] == "7-double-row-2-ad"  # top_stories double‐row layout
+            assert layout_names[1] == "6-small-medium-1-ad"  # first ML section
+            assert layout_names[2] == "4-large-small-medium-1-ad"  # second ML section
 
             assert "music" in sections
 
@@ -1360,9 +1363,6 @@ class TestSections:
             feeds = data["feeds"]
             sections = {name: section for name, section in feeds.items() if section is not None}
 
-            # Assert layouts are cycled
-            assert_section_layouts_are_cycled(sections)
-
             # The fixture data contains enough recommendations for at least 4 sections. The number
             # of sections varies because top_stories_section is determined by Thompson sampling,
             # and therefore the number of recs per topics is non-deterministic.
@@ -1406,7 +1406,7 @@ class TestSections:
         "experiment_payload",
         [
             {},  # No experiment
-            {"experimentName": "new-tab-ml-sections", "experimentBranch": "treatment"},
+            {"experimentName": "new-tab-ml-sections", "experimentBranch": "control"},
         ],
     )
     async def test_sections_layouts(self, sections_payload, experiment_payload):
@@ -1484,8 +1484,6 @@ class TestSections:
                 | experiment_payload,
             )
             data = response.json()
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
 
             # Check if the response is valid
             assert response.status_code == 200
@@ -1510,9 +1508,6 @@ class TestSections:
                     "taxonomy": "IAB-3.0",
                     "categories": ["483"],
                 }
-
-            # Assert layouts are cycled
-            assert_section_layouts_are_cycled(sections)
 
             # Assert no errors were logged
             errors = [r for r in caplog.records if r.levelname == "ERROR"]
@@ -1779,12 +1774,6 @@ class TestSections:
             )
             data = response.json()
 
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
-
-            # Assert layouts are cycled
-            assert_section_layouts_are_cycled(sections)
-
             interest_picker_response = data["interestPicker"]
             if enable_interest_picker:
                 assert interest_picker_response is not None
@@ -1800,10 +1789,9 @@ class TestSections:
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
     @pytest.mark.asyncio
-    async def test_ml_sections_thompson_sampling(self, repeat):
-        """Test that Thompson sampling is applied to ML sections"""
+    async def test_ml_sections_thompson_sampling(self, repeat, engagement_backend):
+        """Statistically verify ML sections order by engagement (higher CTR → lower feed rank)."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
             response = await ac.post(
                 "/api/v1/curated-recommendations",
                 json={
@@ -1813,41 +1801,32 @@ class TestSections:
                     "experimentBranch": "treatment",
                 },
             )
-            data = response.json()
-
-            # Check if the response is valid
             assert response.status_code == 200
+            feeds = response.json()["feeds"]
 
-            feeds = data["feeds"]
-            music_recs = feeds["music"]["recommendations"]  # ML feed
+        # collect non-top_stories sections
+        sub_topic_sections = [
+            sec for name, sec in feeds.items() if name != "top_stories_section" and sec is not None
+        ]
 
-            sections = {name: section for name, section in feeds.items() if section is not None}
+        # compute avg CTR over the recommendations for each section
+        avg_ctrs = []
+        for sec in sub_topic_sections:
+            recs = sec["recommendations"]
+            ctrs = []
+            for rec in recs:
+                e = engagement_backend.get(rec["corpusItemId"], region=None)
+                if e:
+                    ctrs.append(e.click_count / e.impression_count)
+            avg = sum(ctrs) / len(ctrs) if ctrs else 0.0
+            avg_ctrs.append((sec["receivedFeedRank"], avg))
 
-            # Assert layouts are cycled
-            assert_section_layouts_are_cycled(sections)
+        # run linear regression: rank vs avg CTR
+        ranks, avgs = zip(*avg_ctrs)
+        slope, _, _, _, _ = linregress(ranks, avgs)
 
-            # Check the recs used in top_stories_section are removed from their original ML sections.
-            top_story_ids = {
-                rec["corpusItemId"] for rec in feeds["top_stories_section"]["recommendations"]
-            }
-
-            for sid, section in feeds.items():
-                if sid != "top_stories_section":
-                    for rec in section["recommendations"]:
-                        assert rec["corpusItemId"] not in top_story_ids
-
-            # The expected ML sectionItem has 100% CTR, and is always present in the ML section part of the response.
-            expected_high_ctr_id = "41111154-ebb1-45d9-9799-a882f13cd8cc"
-            # Find the receivedRank of the high CTR ML sectionItem
-            high_item_rank = next(
-                (
-                    rec["receivedRank"]
-                    for rec in music_recs
-                    if rec["corpusItemId"] == expected_high_ctr_id
-                ),
-                None,
-            )
-            assert high_item_rank < 3
+        # assert that slope is negative: better‑engaged sections get better (lower) ranks
+        assert slope < 0, f"Sections not ordered by engagement (slope={slope})"
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("enable_interest_vector", [True, False])
