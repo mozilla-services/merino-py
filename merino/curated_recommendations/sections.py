@@ -4,6 +4,7 @@ import logging
 from copy import deepcopy
 from typing import Dict, List, Optional
 
+
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsProtocol,
@@ -19,7 +20,11 @@ from merino.curated_recommendations.layouts import (
     layout_7_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
-from merino.curated_recommendations.prior_backends.protocol import PriorBackend
+from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+    SubsectionsExperimentRescaler,
+    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
+)
+from merino.curated_recommendations.prior_backends.protocol import PriorBackend, ExperimentRescaler
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendation,
@@ -45,9 +50,7 @@ TOP_STORIES_COUNT = 6
 
 
 def map_section_item_to_recommendation(
-    item: CorpusItem,
-    rank: int,
-    section_id: str,
+    item: CorpusItem, rank: int, section_id: str, experiment_flags: set[str] | None = None
 ) -> CuratedRecommendation:
     """Map a CorpusItem to a CuratedRecommendation.
 
@@ -55,7 +58,7 @@ def map_section_item_to_recommendation(
         item: The corpus item to map.
         rank: The received rank of the recommendation.
         section_id: The external ID of the section used for the features key.
-
+        experiment_flags: A set indicating special memberships of the content item
     Returns:
         A CuratedRecommendation.
     """
@@ -70,11 +73,15 @@ def map_section_item_to_recommendation(
         # Treat the section’s externalId as a weight-1.0 feature so the client can aggregate a
         # coarse interest vector. See also https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
         features=features,
+        experiment_flags=experiment_flags,
     )
 
 
 def map_corpus_section_to_section(
-    corpus_section: CorpusSection, rank: int, layout: Layout = layout_6_tiles
+    corpus_section: CorpusSection,
+    rank: int,
+    layout: Layout = layout_6_tiles,
+    is_legacy_section: bool = False,
 ) -> Section:
     """Map a CorpusSection to a Section with recommendations.
 
@@ -84,12 +91,16 @@ def map_corpus_section_to_section(
         which determines how the client orders the sections.
         layout: The layout for the Section. Defaults to layout_6_tiles to ensure
         Sections have enough recs for the biggest layout.
+        is_legacy_section: If section is one of the standard historical sections
 
     Returns:
         A Section model containing mapped recommendations and default layout.
     """
+    item_flags = set() if is_legacy_section else {SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG}
     recommendations = [
-        map_section_item_to_recommendation(item, rank, corpus_section.externalId)
+        map_section_item_to_recommendation(
+            item, rank, corpus_section.externalId, experiment_flags=item_flags
+        )
         for rank, item in enumerate(corpus_section.sectionItems)
     ]
     return Section(
@@ -119,11 +130,11 @@ async def get_corpus_sections(
     corpus_sections = await sections_backend.fetch(surface_id)
     sections: Dict[str, Section] = {}
 
+    legacy_sections = {topic.value for topic in Topic}
     for cs in corpus_sections:
         rank = len(sections) + min_feed_rank
         sections[cs.externalId] = map_corpus_section_to_section(
-            cs,
-            rank,
+            cs, rank, is_legacy_section=cs.externalId in legacy_sections
         )
     return sections
 
@@ -218,6 +229,7 @@ def rank_sections(
     section_configurations: list[SectionConfiguration] | None,
     engagement_backend: EngagementBackend,
     personal_interests: InferredInterests | None,
+    experiment_rescaler: ExperimentRescaler | None,
 ) -> Dict[str, Section]:
     """Apply a series of stable ranking passes to the sections feed, in order of priority.
 
@@ -233,12 +245,15 @@ def rank_sections(
             sections are followed/blocked and when they were followed.
         engagement_backend: provides engagement signals for Thompson sampling.
         personal_interests: provides personal interests.
+        experiment_rescaler: Rescaler that can rescale based on experiment size
 
     Returns:
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
     """
     # 4th priority: reorder for exploration via Thompson sampling on engagement
-    sections = section_thompson_sampling(sections, engagement_backend=engagement_backend)
+    sections = section_thompson_sampling(
+        sections, engagement_backend=engagement_backend, rescaler=experiment_rescaler
+    )
 
     # 3rd priority: reorder based on inferred interest vector
     if personal_interests is not None:
@@ -283,12 +298,14 @@ async def get_sections(
         A dict mapping section IDs to fully-configured Section models.
     """
     # 1. Get ALL corpus sections
-    corpus_sections = await get_corpus_sections(sections_backend, surface_id, 1)
+    corpus_sections_all = await get_corpus_sections(sections_backend, surface_id, 1)
 
     # 2. If ML sections are NOT requested, filter to legacy sections
-    if not is_ml_sections_experiment(request):
-        corpus_sections = get_corpus_sections_for_legacy_topic(corpus_sections)
-
+    subtopic_experiment_enabled = is_ml_sections_experiment(request)
+    if not subtopic_experiment_enabled:
+        corpus_sections = get_corpus_sections_for_legacy_topic(corpus_sections_all)
+    else:
+        corpus_sections = corpus_sections_all
     # 3. Filter out blocked topics
     if request.sections:
         for cs in corpus_sections.values():
@@ -301,12 +318,15 @@ async def get_sections(
         rec for section in corpus_sections.values() for rec in section.recommendations
     ]
 
+    rescaler = SubsectionsExperimentRescaler() if subtopic_experiment_enabled else None
+
     # 5. Rank all corpus recommendations globally by engagement to build top_stories_section
     all_ranked_corpus_recommendations = thompson_sampling(
         all_corpus_recommendations,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
         region=region,
+        rescaler=rescaler,
     )
 
     # 6. Split top stories
@@ -322,6 +342,7 @@ async def get_sections(
         popular_today_layout = layout_7_tiles_2_ads
 
     top_stories = all_ranked_corpus_recommendations[:top_stories_count]
+
     top_stories_rec_ids = {rec.corpusItemId for rec in top_stories}
 
     # 7. Remove top story recs from original corpus sections
@@ -335,6 +356,7 @@ async def get_sections(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
             region=region,
+            rescaler=rescaler,
         )
 
     # 9. Initialize sections with top stories
@@ -354,7 +376,13 @@ async def get_sections(
     sections = get_sections_with_enough_items(sections)
 
     # 12. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
-    sections = rank_sections(sections, request.sections, engagement_backend, personal_interests)
+    sections = rank_sections(
+        sections,
+        request.sections,
+        engagement_backend,
+        personal_interests,
+        experiment_rescaler=rescaler,
+    )
 
     # 13. Apply final layout cycling to ranked sections except top_stories
     cycle_layouts_for_ranked_sections(sections, layout_cycle)

@@ -140,6 +140,7 @@ class CuratedRecommendation(CorpusItem):
     """Extends CorpusItem with additional fields for a curated recommendation"""
 
     __typename: TypeName = TypeName.RECOMMENDATION
+    experiment_flags: Annotated[set[str] | None, Field(default_factory=set, exclude=True)] = None
     tileId: Annotated[int | None, Field(strict=True, ge=MIN_TILE_ID, le=MAX_TILE_ID)] = None
     receivedRank: int
     features: dict[str, float] = Field(
@@ -147,6 +148,12 @@ class CuratedRecommendation(CorpusItem):
         description="Maps feature names to weights, which the client "
         "can use to create a coarse interest vector.",
     )
+
+    def in_experiment(self, experiment_name) -> bool:
+        """Return if particular experiment name is associated with this experiment
+        rescaler
+        """
+        return self.experiment_flags is not None and experiment_name in self.experiment_flags
 
     @model_validator(mode="before")
     def set_tileId(cls, values):
