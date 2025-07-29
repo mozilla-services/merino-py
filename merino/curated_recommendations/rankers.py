@@ -123,12 +123,14 @@ def section_thompson_sampling(
         sections: dict[str, Section],
         engagement_backend: EngagementBackend,
         top_n: int = 6,
+        rescaler: ExperimentRescaler = None
 ) -> dict[str, Section]:
     """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
 
     :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
     :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.
     :param top_n: Number of top items in each section for which to sum engagement in the Thompson sampling score.
+    :param rescaler: Class that can up-scale interaction stats for certain items based on experiment size
 
     :return: Mapping of section IDs to Section objects with updated receivedFeedRank.
 
@@ -143,8 +145,14 @@ def section_thompson_sampling(
         total_imps = 0
         for rec in recs:
             if engagement := engagement_backend.get(rec.corpusItemId):
-                total_clicks += engagement.click_count
-                total_imps += engagement.impression_count
+                clicks = engagement.click_count
+                impressions = engagement.impression_count
+                if rescaler is not None:
+                    # rescale for content associated exclusively with an experiment in a specific region
+                    clicks, impressions = rescaler.rescale(rec, clicks, impressions)
+
+                total_clicks += clicks
+                total_imps += impressions
 
         # constant prior α, β
         prior = ConstantPrior().get()

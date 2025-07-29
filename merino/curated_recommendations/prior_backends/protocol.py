@@ -40,11 +40,10 @@ class ExperimentRescaler(BaseModel):
     include content that is not in other test branches.
     """
 
-    experiment_name: str
-    experiment_branch: str
-    target_region: str
     experiment_relative_size: float
 
     def rescale(self, rec: CuratedRecommendation, opens, no_opens):
-        """Update open and non-open values based on whether item is unique to the experiment"""
+        """Update open and non-open values based on whether item is unique to the experiment. Note that
+        impressions and clicks can be used in place of opens and no_opens
+        """
         return opens, no_opens

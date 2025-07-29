@@ -1,42 +1,22 @@
 """Rescaler of engagement for experiments"""
 
-from typing import Optional
-
-from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
-from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.prior_backends.protocol import ExperimentRescaler
-from merino.curated_recommendations.protocol import CuratedRecommendation, Section
+from merino.curated_recommendations.protocol import CuratedRecommendation
 
-SUBSECTION_EXPERIMENT_PERCENT = 0.03  # This will eventually be computed by an airflow job
-
+SUBSECTION_EXPERIMENT_PERCENT = 0.03  # This may eventually be computed by an airflow job
+SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 
 class SubsectionsExperimentRescaler(ExperimentRescaler):
-    """Scales experiment based content on relative size of experiment"""
-
-    cur_recs: dict[str, Section]
-    experiment_additional_content_id: Optional[set] = None
+    """Scales experiment based content on relative size of experiment, as a fractional percentage"""
 
     def __init__(self, **data):
-        data.setdefault('experiment_name', "sf")
-        data.setdefault('experiment_branch', "treatment")
-        data.setdefault('target_region', "EN_US")
-        data.setdefault('experiment_relative_size', SUBSECTION_EXPERIMENT_PERCENT)
+        data.setdefault("experiment_relative_size", SUBSECTION_EXPERIMENT_PERCENT)
         super().__init__(**data)
 
-    def model_post_init(self, __context) -> None:
-        """Complete setup for experiment by looking up items in/out of experiment"""
-        self.experiment_additional_content_id = set()
-        for section_name, section in self.cur_recs.items():
-            if not self.is_legacy_section(section_name):
-                self.experiment_additional_content_id.update([rec.corpusItemId for rec in section.recommendations])
-
-    def is_legacy_section(self, section_id):
-        """Section id is part of the standard set of sections (vs a subtopic)"""
-        return section_id in LOCALIZED_SECTION_TITLES[SurfaceId.NEW_TAB_EN_US]
-
-    def is_experiment_story(self, rec: CuratedRecommendation):
+    @classmethod
+    def is_experiment_story(cls, rec: CuratedRecommendation) -> bool:
         """Story is part of an experiment"""
-        return rec.corpusItemId in self.experiment_additional_content_id
+        return rec.in_experiment(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
 
     def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
         """Update open and non-open values based on whether item is unique to the experiment"""
