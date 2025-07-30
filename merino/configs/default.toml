@@ -715,7 +715,7 @@ cron_interval_seconds = 600
 [default.curated_recommendations.gcs.engagement]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__MAX_SIZE
 # The maximum size in bytes of the GCS engagement blob. If exceeded, an error will be logged.
-max_size = 2_000_000
+max_size = 4_000_000
 
 # MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__BLOB_PREFIX
 # GCS path of the priors JSON file.
