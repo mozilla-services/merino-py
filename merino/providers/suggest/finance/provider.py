@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
-from merino.providers.suggest.custom_details import CustomDetails, FinanceDetails
+from merino.providers.suggest.custom_details import CustomDetails, PolygonDetails
 from merino.providers.suggest.finance.backends.protocol import FinanceBackend, TickerSummary
 from merino.providers.suggest.finance.backends.polygon.utils import is_valid_ticker
 
@@ -73,8 +73,8 @@ class Provider(BaseProvider):
             return []
 
     def build_suggestion(self, data: TickerSummary) -> BaseSuggestion:
-        """Build the suggestion with custom finance details since this is a finance suggestion."""
-        custom_details = CustomDetails(finance=FinanceDetails(values=[data]))
+        """Build the suggestion with custom polygon details since this is a finance suggestion."""
+        custom_details = CustomDetails(polygon=PolygonDetails(values=[data]))
 
         return BaseSuggestion(
             title="Finance Suggestion",

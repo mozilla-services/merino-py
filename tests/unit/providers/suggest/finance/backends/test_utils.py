@@ -98,13 +98,17 @@ def test_extract_ticker_snapshot_success(single_ticker_snapshot_response: dict[s
     assert actual is not None
     assert actual == expected
 
+
 def test_extract_ticker_snapshot_returns_none() -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return None when snapshot param is None."""
     assert extract_ticker_snapshot(None) is None
 
+
 def test_build_ticker_summary_success() -> None:
     """Test build_ticker_summary method."""
-    actual = build_ticker_summary(ticker="AAPL", snapshot=TickerSnapshot(last_price="120.47", todays_change_perc="0.82"))
+    actual = build_ticker_summary(
+        ticker="AAPL", snapshot=TickerSnapshot(last_price="120.47", todays_change_perc="0.82")
+    )
     expected = TickerSummary(
         ticker="AAPL",
         name="Apple Inc.",
