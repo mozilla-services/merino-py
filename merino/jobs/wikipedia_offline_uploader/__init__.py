@@ -9,7 +9,7 @@ from merino.jobs.csv_rs_uploader.chunked_rs_uploader import (
 )
 from merino.jobs.utils.chunked_rs_uploader import Chunk
 from merino.jobs.wikipedia_offline_uploader.downloader import get_wiki_suggestions
-from merino.jobs.utils.rs_client import filter_expression_dict
+from merino.jobs.utils.rs_client import filter_expression_dict, logger
 
 rs_settings = config.remote_settings
 
@@ -238,7 +238,15 @@ class WikipediaSuggestionChunkRemoteSettingsUploader(ChunkedRemoteSettingsSugges
 
     def _upload_chunk(self, chunk: Chunk) -> None:
         record = chunk.to_record()
-        record["id"] = f"{self.language}-{record["id"]}"
+        chunk_range = record["id"].split("wikipedia-")[1]
+        record["id"] = f"data-wikipedia-{self.language}-{chunk_range}"
         filter_expression = filter_expression_dict(locales=LOCALES_MAPPING.get(self.language, []))
         record = {**record, **filter_expression}
         self.client.upload(record=record, attachment=chunk.to_attachment())
+
+    def delete_records(self) -> None:
+        """Delete records of the same language and id."""
+        logger.info(f"Deleting records with type: {self.record_type}")
+        for record in self.client.get_records():
+            if record.get("type") == self.record_type and self.language in record["id"]:
+                self.client.delete_record(record["id"])
