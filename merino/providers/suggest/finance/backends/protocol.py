@@ -1,10 +1,10 @@
 """Protocol for finance provider backends."""
 
-from typing import Protocol, TypedDict
+from typing import Protocol
 from pydantic import BaseModel
 
 
-class TickerSnapshot(TypedDict):
+class TickerSnapshot(BaseModel):
     """Ticker Snapshot."""
 
     todays_change_perc: str

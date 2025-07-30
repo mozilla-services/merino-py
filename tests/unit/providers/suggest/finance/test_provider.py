@@ -11,9 +11,8 @@ from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 from starlette.exceptions import HTTPException
 
-from merino.configs import settings
 from merino.middleware.geolocation import Location
-from merino.providers.suggest.custom_details import CustomDetails, FinanceDetails
+from merino.providers.suggest.custom_details import CustomDetails, PolygonDetails
 from merino.providers.suggest.finance.backends.protocol import FinanceBackend, TickerSummary
 from merino.providers.suggest.finance.provider import (
     Provider,
@@ -61,7 +60,6 @@ def fixture_provider(backend_mock: Any, statsd_mock: Any) -> Provider:
         name="finance",
         score=0.3,
         query_timeout_sec=0.2,
-        url=settings.polygon.url_base,
     )
 
 
@@ -99,7 +97,7 @@ async def test_query_ticker_summary_returned(
             provider=provider.name,
             is_sponsored=False,
             score=provider.score,
-            custom_details=CustomDetails(finance=FinanceDetails(values=[ticker_summary])),
+            custom_details=CustomDetails(polygon=PolygonDetails(values=[ticker_summary])),
         ),
     ]
     backend_mock.get_ticker_summary.return_value = ticker_summary

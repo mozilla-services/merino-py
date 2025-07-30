@@ -1,7 +1,8 @@
 """A wrapper for Polygon API interactions."""
 
+import logging
 import aiodogstatsd
-from httpx import AsyncClient, Response
+from httpx import AsyncClient, HTTPStatusError, Response
 from typing import Any
 
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
@@ -14,6 +15,8 @@ from merino.providers.suggest.finance.backends.polygon.utils import (
 __all__ = [
     "PolygonBackend",
 ]
+
+logger = logging.getLogger(__name__)
 
 
 class PolygonBackend:
@@ -62,10 +65,17 @@ class PolygonBackend:
         """Make a request and fetch the snapshot for this single ticker."""
         params = {self.url_param_api_key: self.api_key}
 
-        response: Response = await self.http_client.get(
-            self.url_single_ticker_snapshot.format(ticker=ticker), params=params
-        )
-        response.raise_for_status()
+        try:
+            response: Response = await self.http_client.get(
+                self.url_single_ticker_snapshot.format(ticker=ticker), params=params
+            )
+
+            response.raise_for_status()
+        except HTTPStatusError as ex:
+            logger.error(
+                f"Polygon request error for ticker snapshot: {ex.response.status_code} {ex.response.reason_phrase}"
+            )
+            return None
 
         return response.json()
 

@@ -31,8 +31,8 @@ class WeatherDetails(BaseModel):
     weather_report_ttl: int
 
 
-class FinanceDetails(BaseModel):
-    """Finance specific fields."""
+class PolygonDetails(BaseModel):
+    """Polygon specific fields."""
 
     values: list[TickerSummary]
 
@@ -46,4 +46,4 @@ class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     amo: AmoDetails | None = None
     geolocation: GeolocationDetails | None = None
     weather: WeatherDetails | None = None
-    finance: FinanceDetails | None = None
+    polygon: PolygonDetails | None = None
