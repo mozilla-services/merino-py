@@ -62,7 +62,13 @@ class GcsEngagement(EngagementBackend):
             data: The engagement blob string data, with an array of Engagement objects.
         """
         parsed_data = [Engagement(**item) for item in json.loads(data)]
-        self._cache = {(d.corpus_item_id, d.region): d for d in parsed_data}
+        next_cache = {}
+        for engagement in parsed_data:
+            cache_key = (engagement.corpus_item_id, engagement.region)
+            prev_engagement = next_cache.get(cache_key, None)
+            next_cache[cache_key] = engagement if prev_engagement is None else prev_engagement + engagement
+        if len(next_cache) > 0:
+            self._cache = next_cache
         self._track_metrics()
 
     def _track_metrics(self) -> None:
