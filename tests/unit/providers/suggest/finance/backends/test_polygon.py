@@ -4,24 +4,58 @@
 
 """Unit tests for the Polygon backend module."""
 
+import hashlib
 import orjson
 import logging
+from pydantic import HttpUrl
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from httpx import AsyncClient, Request, Response
 from pytest_mock import MockerFixture
 from typing import Any, cast
+from merino.utils.gcs.gcs_uploader import GcsUploader
+from merino.utils.gcs.models import Image
 from tests.types import FilterCaplogFixture
 from pytest import LogCaptureFixture
+from merino.configs import settings
 
-from merino.providers.suggest.finance.backends import PolygonBackend
-from merino.providers.suggest.finance.backends.protocol import TickerSummary
+from merino.providers.suggest.finance.backends.polygon.backend import PolygonBackend
+from merino.providers.suggest.finance.backends.protocol import (
+    FinanceManifest,
+    GetManifestResultCode,
+    TickerSummary,
+)
 
-URL_SINGLE_TICKER_SNAPSHOT = "/v2/snapshot/locale/us/markets/stocks/tickers/{ticker}"
+URL_SINGLE_TICKER_SNAPSHOT = settings.polygon.url_single_ticker_snapshot
+URL_SINGLE_TICKER_OVERVIEW = settings.polygon.url_single_ticker_overview
+
+
+@pytest.fixture(name="mock_gcs_uploader")
+def fixture_mock_gcs_uploader(mocker) -> GcsUploader:
+    """Create a mock GcsUploader instance."""
+    mock_uploader = MagicMock()
+
+    mock_uploader.bucket_name = "test-bucket"
+    mock_uploader.cdn_hostname = "cdn.example.com"
+
+    mock_uploader.file_exists_in_gcs.return_value = False
+    mock_uploader._get_public_url.return_value = "https://cdn.example.com/fake.png"
+    mock_uploader.upload_image.return_value = "https://cdn.example.com/fake.png"
+
+    mock_blob = mocker.MagicMock()
+    mock_bucket = mocker.MagicMock()
+    mock_bucket.blob.return_value = mock_blob
+    mock_storage_client = mocker.MagicMock()
+    mock_storage_client.bucket.return_value = mock_bucket
+    mock_uploader.storage_client = mock_storage_client
+
+    return cast(GcsUploader, mock_uploader)
 
 
 @pytest.fixture(name="polygon_parameters")
-def fixture_polygon_parameters(mocker: MockerFixture, statsd_mock: Any) -> dict[str, Any]:
+def fixture_polygon_parameters(
+    mocker: MockerFixture, statsd_mock: Any, mock_gcs_uploader
+) -> dict[str, Any]:
     """Create constructor parameters for Polygon backend module."""
     return {
         "api_key": "api_key",
@@ -30,14 +64,22 @@ def fixture_polygon_parameters(mocker: MockerFixture, statsd_mock: Any) -> dict[
         "metrics_sample_rate": 1,
         "url_param_api_key": "apiKey",
         "url_single_ticker_snapshot": URL_SINGLE_TICKER_SNAPSHOT,
+        "url_single_ticker_overview": URL_SINGLE_TICKER_OVERVIEW,
+        "gcs_uploader": mock_gcs_uploader,
     }
 
 
 @pytest.fixture(name="polygon")
 def fixture_polygon(
     polygon_parameters: dict[str, Any],
+    mocker: MockerFixture,
 ) -> PolygonBackend:
     """Create a Polygon backend module object."""
+    mock_filemanager = mocker.MagicMock()
+    mocker.patch(
+        "merino.providers.suggest.finance.backends.polygon.backend.PolygonFilemanager",
+        return_value=mock_filemanager,
+    )
     return PolygonBackend(**polygon_parameters)
 
 
@@ -102,7 +144,14 @@ def fixture_ticker_summary() -> TickerSummary:
         last_price="$120.47 USD",
         todays_change_perc="0.82",
         query="AAPL stock",
+        image_url=None,
     )
+
+
+@pytest.fixture
+def sample_image() -> Image:
+    """Return a sample image object"""
+    return Image(content=b"fake-image-bytes", content_type="image/png")
 
 
 @pytest.mark.asyncio
@@ -183,7 +232,7 @@ async def test_get_ticker_summary_success(
     )
 
     expected = ticker_summary
-    actual = await polygon.get_ticker_summary(ticker)
+    actual = await polygon.get_ticker_summary(ticker, ticker_summary.image_url)
 
     assert actual is not None
     assert actual == expected
@@ -204,6 +253,391 @@ async def test_get_ticker_summary_failure_returns_none(polygon: PolygonBackend) 
         request=Request(method="GET", url=(f"{base_url}{snapshot_endpoint}")),
     )
 
-    actual = await polygon.get_ticker_summary(ticker)
+    actual = await polygon.get_ticker_summary(ticker, None)
 
     assert actual is None
+
+
+@pytest.mark.asyncio
+async def test_get_ticker_image_url_success(polygon: PolygonBackend) -> None:
+    """Test get_ticker_image_url returns the logo_url when present in the response."""
+    client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
+    ticker = "AAPL"
+    image_url = "https://example.com/logo.png"
+
+    client_mock.get.return_value = Response(
+        status_code=200,
+        content=orjson.dumps({"results": {"branding": {"logo_url": image_url}}}),
+        request=Request(method="GET", url="mock-url"),
+    )
+
+    result = await polygon.get_ticker_image_url(ticker)
+    assert result == image_url
+
+
+@pytest.mark.asyncio
+async def test_get_ticker_image_url_missing_logo_url(polygon: PolygonBackend) -> None:
+    """Test get_ticker_image_url returns None when logo_url is missing from response."""
+    client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
+    ticker = "AAPL"
+
+    client_mock.get.return_value = Response(
+        status_code=200,
+        content=orjson.dumps(
+            {
+                "results": {
+                    "branding": {
+                        # no "logo_url"
+                    }
+                }
+            }
+        ),
+        request=Request(method="GET", url="mock-url"),
+    )
+
+    result = await polygon.get_ticker_image_url(ticker)
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_get_ticker_image_url_http_error(polygon: PolygonBackend) -> None:
+    """Test get_ticker_image_url returns None and logs error on HTTP failure."""
+    client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
+    ticker = "AAPL"
+
+    client_mock.get.side_effect = Exception("network error")
+
+    result = await polygon.get_ticker_image_url(ticker)
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_get_ticker_image_url_invalid_response_structure(polygon: PolygonBackend) -> None:
+    """Test get_ticker_image_url returns None when branding or results keys are missing."""
+    client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
+    ticker = "AAPL"
+
+    client_mock.get.return_value = Response(
+        status_code=200,
+        content=orjson.dumps({"unexpected": {"data": "bad format"}}),
+        request=Request(method="GET", url="mock-url"),
+    )
+
+    result = await polygon.get_ticker_image_url(ticker)
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_download_ticker_image_success(polygon: PolygonBackend, mocker):
+    """Test download_ticker_image returns Image object on valid download."""
+    image_url = "https://example.com/logo.png"
+    image_content = b"\x89PNG\r\n\x1a\n..."
+
+    mocker.patch.object(polygon, "get_ticker_image_url", return_value=image_url)
+
+    mock_response = Response(
+        status_code=200,
+        content=image_content,
+        headers={"Content-Type": "image/png"},
+        request=Request(method="GET", url=image_url),
+    )
+
+    client_mock = cast(AsyncMock, polygon.http_client)
+    client_mock.get.return_value = mock_response
+
+    image = await polygon.download_ticker_image("AAPL")
+
+    assert isinstance(image, Image)
+    assert image.content == image_content
+    assert image.content_type == "image/png"
+
+
+@pytest.mark.asyncio
+async def test_download_ticker_image_returns_none_if_no_image_url(polygon: PolygonBackend, mocker):
+    """Test download_ticker_image returns None if get_ticker_image_url returns None."""
+    mocker.patch.object(polygon, "get_ticker_image_url", return_value=None)
+
+    result = await polygon.download_ticker_image("AAPL")
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_download_ticker_image_failure(polygon: PolygonBackend, mocker):
+    """Test download_ticker_image returns None if image download fails."""
+    image_url = "https://example.com/logo.png"
+    mocker.patch.object(polygon, "get_ticker_image_url", return_value=image_url)
+
+    client_mock = cast(AsyncMock, polygon.http_client)
+    client_mock.get.side_effect = Exception("timeout")
+
+    result = await polygon.download_ticker_image("AAPL")
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_download_ticker_image_with_missing_content_type(polygon: PolygonBackend, mocker):
+    """Test download_ticker_image returns 'image/unknown' if Content-Type is missing."""
+    image_url = "https://example.com/logo.png"
+    image_content = b"some-binary-content"
+
+    mocker.patch.object(polygon, "get_ticker_image_url", return_value=image_url)
+
+    mock_response = Response(
+        status_code=200,
+        content=image_content,
+        headers={},  # No Content-Type
+        request=Request(method="GET", url=image_url),
+    )
+
+    client_mock = cast(AsyncMock, polygon.http_client)
+    client_mock.get.return_value = mock_response
+
+    image = await polygon.download_ticker_image("AAPL")
+
+    assert isinstance(image, Image)
+    assert image.content == image_content
+    assert image.content_type == "image/svg+xml"
+
+
+@pytest.mark.asyncio
+async def test_upload_ticker_images_skips_none_image_and_uploads_other(
+    polygon: PolygonBackend, sample_image, mock_gcs_uploader, mocker
+):
+    """Test that `bulk_download_and_upload_ticker_images` skips a ticker when its image is None"""
+    ticker_skipped = "AAPL"
+    ticker_uploaded = "GOOGL"
+
+    # AAPL returns None, GOOGL returns an image
+    polygon_mock_download = mocker.patch.object(
+        polygon, "download_ticker_image", side_effect=[None, sample_image]
+    )
+
+    content_hash = hashlib.sha256(sample_image.content).hexdigest()
+    content_len = len(sample_image.content)
+    destination_name = f"polygon/{content_hash}_{content_len}.png"
+    expected_url = f"https://cdn.example.com/{destination_name}"
+
+    upload_image_mock = mocker.patch.object(
+        mock_gcs_uploader, "upload_image", return_value=expected_url
+    )
+    mocker.patch.object(mock_gcs_uploader, "file_exists_in_gcs", return_value=False)
+
+    result = await polygon.bulk_download_and_upload_ticker_images(
+        [ticker_skipped, ticker_uploaded],
+    )
+
+    assert result == {ticker_uploaded: expected_url}
+    assert polygon_mock_download.call_count == 2
+    polygon_mock_download.assert_any_await(ticker_skipped)
+    polygon_mock_download.assert_any_await(ticker_uploaded)
+    upload_image_mock.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_upload_ticker_images_skips_existing_blob(
+    polygon: PolygonBackend,
+    sample_image: Image,
+    mock_gcs_uploader: GcsUploader,
+    mocker,
+):
+    """Test that `bulk_download_and_upload_ticker_images` skips upload if the image already exists in GCS."""
+    mocker.patch.object(polygon, "download_ticker_image", return_value=sample_image)
+
+    content_hash = hashlib.sha256(sample_image.content).hexdigest()
+    content_len = len(sample_image.content)
+    destination = f"polygon/{content_hash}_{content_len}.png"
+    public_url = f"https://cdn.example.com/{destination}"
+
+    mocker.patch.object(mock_gcs_uploader, "file_exists_in_gcs", return_value=True)
+    upload_image_mock = mocker.patch.object(mock_gcs_uploader, "upload_image", return_value=True)
+    mocker.patch.object(mock_gcs_uploader, "_get_public_url", return_value=public_url)
+
+    result = await polygon.bulk_download_and_upload_ticker_images(["AAPL"])
+
+    assert result == {"AAPL": public_url}
+    upload_image_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_upload_ticker_images_uploads_if_not_exists(
+    polygon: PolygonBackend,
+    sample_image: Image,
+    mock_gcs_uploader: GcsUploader,
+    mocker,
+):
+    """Test that `bulk_download_and_upload_ticker_images` uploads an image when it does not already exist in GCS."""
+    mocker.patch.object(polygon, "download_ticker_image", return_value=sample_image)
+
+    content_hash = hashlib.sha256(sample_image.content).hexdigest()
+    content_len = len(sample_image.content)
+    destination = f"polygon/{content_hash}_{content_len}.png"
+    expected_url = f"https://cdn.example.com/{destination}"
+
+    mocker.patch.object(mock_gcs_uploader, "file_exists_in_gcs", return_value=False)
+    upload_image_mock = mocker.patch.object(
+        mock_gcs_uploader, "upload_image", return_value=expected_url
+    )
+
+    result = await polygon.bulk_download_and_upload_ticker_images(["AAPL"])
+
+    assert result == {"AAPL": expected_url}
+    upload_image_mock.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_upload_ticker_images_upload_fails(
+    polygon: PolygonBackend,
+    sample_image: Image,
+    mock_gcs_uploader: GcsUploader,
+    mocker,
+):
+    """Test that `bulk_download_and_upload_ticker_images` skips the ticker if upload_image raises an exception."""
+    mocker.patch.object(polygon, "download_ticker_image", return_value=sample_image)
+    upload_image_mock = mocker.patch.object(
+        mock_gcs_uploader, "upload_image", side_effect=RuntimeError("upload failed")
+    )
+    mocker.patch.object(mock_gcs_uploader, "file_exists_in_gcs", return_value=False)
+
+    result = await polygon.bulk_download_and_upload_ticker_images(["AAPL"])
+
+    assert result == {}
+    upload_image_mock.assert_called_once()
+
+
+def test_build_finance_manifest_valid():
+    """Test that build_finance_manifest creates a valid FinanceManifest with uppercased tickers
+    and valid URLs
+    """
+    input_data = {
+        "aapl": "https://cdn.example.com/aapl.png",
+        "googl": "https://cdn.example.com/googl.png",
+    }
+
+    manifest = PolygonBackend.build_finance_manifest(input_data)
+
+    assert isinstance(manifest, FinanceManifest)
+    assert set(manifest.tickers.keys()) == {"AAPL", "GOOGL"}
+    assert manifest.tickers["AAPL"] == HttpUrl("https://cdn.example.com/aapl.png")
+
+
+def test_build_finance_manifest_already_uppercase():
+    """Test that build_finance_manifest preserves uppercase tickers correctly."""
+    input_data = {
+        "AAPL": "https://cdn.example.com/aapl.png",
+        "MSFT": "https://cdn.example.com/msft.png",
+    }
+
+    manifest = PolygonBackend.build_finance_manifest(input_data)
+
+    assert "AAPL" in manifest.tickers
+    assert "MSFT" in manifest.tickers
+    assert len(manifest.tickers) == 2
+
+
+def test_build_finance_manifest_empty_dict():
+    """Test that build_finance_manifest works with empty input."""
+    manifest = PolygonBackend.build_finance_manifest({})
+
+    assert isinstance(manifest, FinanceManifest)
+    assert manifest.tickers == {}
+
+
+def test_build_finance_manifest_invalid_url_logs_and_returns_empty(caplog):
+    """Test that build_finance_manifest returns an empty manifest and logs validation error
+    when the input contains an invalid URL.
+    """
+    input_data = {"AAPL": "not-a-valid-url"}
+
+    caplog.set_level(logging.ERROR)
+
+    manifest = PolygonBackend.build_finance_manifest(input_data)
+
+    assert isinstance(manifest, FinanceManifest)
+    assert manifest.tickers == {}
+
+    assert any("Failed to build FinanceManifest" in record.message for record in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_fetch_manifest_data_success(polygon: PolygonBackend, mocker):
+    """Test that fetch_manifest_data returns SUCCESS and a valid FinanceManifest
+    when the filemanager returns a valid result.
+    """
+    mock_manifest = FinanceManifest(tickers={"AAPL": "https://cdn.example.com/aapl.png"})
+
+    mocker.patch.object(
+        polygon.filemanager,
+        "get_file",
+        new_callable=AsyncMock,
+        return_value=(GetManifestResultCode.SUCCESS, mock_manifest),
+    )
+
+    result_code, manifest = await polygon.fetch_manifest_data()
+
+    assert result_code == GetManifestResultCode.SUCCESS
+    assert isinstance(manifest, FinanceManifest)
+    assert "AAPL" in manifest.tickers
+
+
+@pytest.mark.asyncio
+async def test_fetch_manifest_data_fail(polygon: PolygonBackend, mocker):
+    """Test that fetch_manifest_data returns FAIL and None if filemanager fails to load the manifest."""
+    mocker.patch.object(
+        polygon.filemanager,
+        "get_file",
+        new_callable=AsyncMock,
+        return_value=(GetManifestResultCode.FAIL, None),
+    )
+
+    result_code, manifest = await polygon.fetch_manifest_data()
+
+    assert result_code == GetManifestResultCode.FAIL
+    assert manifest is None
+
+
+@pytest.mark.asyncio
+async def test_build_and_upload_manifest_file_success(polygon: PolygonBackend, mocker):
+    """Test that build_and_upload_manifest_file uploads the manifest successfully."""
+    polygon_upload_mock = mocker.patch.object(
+        polygon,
+        "bulk_download_and_upload_ticker_images",
+        return_value={"AAPL": "https://cdn.example.com/aapl.png"},
+    )
+
+    upload_file_mock = mocker.patch.object(
+        polygon.filemanager,
+        "upload_file",
+        new_callable=AsyncMock,
+        return_value=True,
+    )
+
+    await polygon.build_and_upload_manifest_file()
+
+    polygon_upload_mock.assert_awaited_once()
+    upload_file_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_build_and_upload_manifest_file_upload_fails(
+    polygon: PolygonBackend, mocker, caplog
+):
+    """Test that build_and_upload_manifest_file logs an error if manifest upload fails."""
+    caplog.set_level("ERROR")
+
+    mocker.patch.object(
+        polygon,
+        "bulk_download_and_upload_ticker_images",
+        return_value={"AAPL": "https://cdn.example.com/aapl.png"},
+    )
+
+    upload_file_mock = mocker.patch.object(
+        polygon.filemanager,
+        "upload_file",
+        new_callable=AsyncMock,
+        return_value=False,
+    )
+
+    await polygon.build_and_upload_manifest_file()
+
+    upload_file_mock.assert_awaited_once()
+    assert "polygon manifest upload failed" in caplog.text

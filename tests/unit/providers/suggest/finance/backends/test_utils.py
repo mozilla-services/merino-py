@@ -107,7 +107,9 @@ def test_extract_ticker_snapshot_returns_none() -> None:
 def test_build_ticker_summary_success() -> None:
     """Test build_ticker_summary method."""
     actual = build_ticker_summary(
-        ticker="AAPL", snapshot=TickerSnapshot(last_price="120.47", todays_change_perc="0.82")
+        ticker="AAPL",
+        snapshot=TickerSnapshot(last_price="120.47", todays_change_perc="0.82"),
+        image_url=None,
     )
     expected = TickerSummary(
         ticker="AAPL",
@@ -115,6 +117,7 @@ def test_build_ticker_summary_success() -> None:
         last_price="$120.47 USD",
         todays_change_perc="0.82",
         query="AAPL stock",
+        image_url=None,
     )
 
     assert actual == expected
