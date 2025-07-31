@@ -8,8 +8,6 @@ from merino.cache.none import NoCacheAdapter
 from merino.cache.redis import RedisAdapter, create_redis_clients
 from merino.configs import settings
 from merino.exceptions import InvalidProviderError
-from merino.providers.suggest.finance.backends.polygon.backend import PolygonBackend
-from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.metrics import get_metrics_client
 from merino.providers.suggest.adm.backends.fake_backends import FakeAdmBackend
 from merino.providers.suggest.adm.backends.remotesettings import RemoteSettingsBackend
@@ -29,6 +27,7 @@ from merino.providers.suggest.wikipedia.backends.elastic import ElasticBackend
 from merino.providers.suggest.wikipedia.backends.fake_backends import FakeWikipediaBackend
 from merino.providers.suggest.wikipedia.provider import Provider as WikipediaProvider
 from merino.providers.suggest.finance.provider import Provider as PolygonProvider
+from merino.providers.suggest.finance.backends import PolygonBackend
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST, WIKIPEDIA_TITLE_BLOCKLIST
 from merino.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
@@ -193,20 +192,12 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     ),
                     url_param_api_key=settings.polygon.url_param_api_key,
                     url_single_ticker_snapshot=settings.polygon.url_single_ticker_snapshot,
-                    url_single_ticker_overview=settings.polygon.url_single_ticker_overview,
-                    gcs_uploader=GcsUploader(
-                        settings.image_gcs.gcs_project,
-                        settings.image_gcs.gcs_bucket,
-                        settings.image_gcs.cdn_hostname,
-                    ),
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,
-                resync_interval_sec=setting.resync_interval_sec,
-                cron_interval_sec=setting.cron_interval_sec,
             )
         case _:
             raise InvalidProviderError(f"Unknown provider type: {setting.type}")

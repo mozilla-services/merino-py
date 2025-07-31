@@ -1,7 +1,7 @@
 """Protocol for the Manifest provider backend."""
 
 from enum import Enum
-from typing import Protocol
+from typing import Optional, Protocol
 
 from pydantic import BaseModel, HttpUrl
 from merino.exceptions import BackendError
@@ -36,7 +36,9 @@ class ManifestData(BaseModel):
     """Model for manifest file content"""
 
     domains: list[Domain]
-    partners: list[dict[str, str]]
+    partners: Optional[
+        list[dict[str, str]]
+    ] = []  # TODO remove Optional tag after first successful job run with partners field
 
 
 class ManifestBackend(Protocol):

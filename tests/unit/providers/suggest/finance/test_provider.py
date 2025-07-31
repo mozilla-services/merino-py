@@ -13,11 +13,7 @@ from starlette.exceptions import HTTPException
 
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.custom_details import CustomDetails, PolygonDetails
-from merino.providers.suggest.finance.backends.protocol import (
-    FinanceBackend,
-    FinanceManifest,
-    TickerSummary,
-)
+from merino.providers.suggest.finance.backends.protocol import FinanceBackend, TickerSummary
 from merino.providers.suggest.finance.provider import (
     Provider,
     BaseSuggestion,
@@ -46,7 +42,6 @@ def fixture_ticker_summar() -> TickerSummary:
         last_price="$100.5",
         todays_change_perc="1.5",
         query="AAPL stock",
-        image_url=None,
     )
 
 
@@ -65,8 +60,6 @@ def fixture_provider(backend_mock: Any, statsd_mock: Any) -> Provider:
         name="finance",
         score=0.3,
         query_timeout_sec=0.2,
-        cron_interval_sec=60,
-        resync_interval_sec=3600,
     )
 
 
@@ -127,83 +120,3 @@ async def test_query_ticker_summary_not_returned(
     )
 
     assert suggestions == []
-
-
-def test_get_image_url_for_ticker_found(provider: Provider):
-    """Test that get_image_url_for_ticker returns the correct URL
-    when the ticker is present in the manifest.
-    """
-    provider.manifest_data = FinanceManifest(tickers={"AAPL": "https://cdn.example.com/aapl.png"})
-
-    result = provider.get_image_url_for_ticker("AAPL")
-    assert result == HttpUrl("https://cdn.example.com/aapl.png")
-
-
-def test_get_image_url_for_ticker_found_case_insensitive(provider: Provider):
-    """Test that get_image_url_for_ticker handles lowercase input
-    and still returns the correct URL.
-    """
-    provider.manifest_data = FinanceManifest(tickers={"AAPL": "https://cdn.example.com/aapl.png"})
-
-    result = provider.get_image_url_for_ticker("aapl")
-    assert result == HttpUrl("https://cdn.example.com/aapl.png")
-
-
-def test_get_image_url_for_ticker_not_found(provider: Provider):
-    """Test that get_image_url_for_ticker returns an empty string
-    when the ticker is not in the manifest.
-    """
-    provider.manifest_data = FinanceManifest(
-        tickers={"GOOGL": "https://cdn.example.com/googl.png"}
-    )
-
-    result = provider.get_image_url_for_ticker("AAPL")
-    assert result is None
-
-
-def test_get_image_url_for_ticker_empty_manifest(provider: Provider):
-    """Test that get_image_url_for_ticker returns an empty string
-    when the manifest is empty.
-    """
-    provider.manifest_data = FinanceManifest(tickers={})
-    result = provider.get_image_url_for_ticker("AAPL")
-    assert result is None
-
-
-@pytest.mark.asyncio
-async def test_query_appends_image_url_to_summary(
-    backend_mock: Any,
-    provider: Provider,
-    geolocation: Location,
-    mocker,
-) -> None:
-    """Test that the query method passes the correct image_url and includes it in the TickerSummary."""
-    ticker = "AAPL"
-    image_url = HttpUrl("https://cdn.example.com/aapl.png")
-    provider.manifest_data = FinanceManifest(tickers={ticker: image_url})
-
-    expected_summary = TickerSummary(
-        ticker=ticker,
-        name="Apple Inc.",
-        last_price="$100.5",
-        todays_change_perc="1.5",
-        query="AAPL stock",
-        image_url=image_url,
-    )
-
-    backend_mock.get_ticker_summary = mocker.AsyncMock(return_value=expected_summary)
-
-    suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(query=ticker, geolocation=geolocation)
-    )
-
-    backend_mock.get_ticker_summary.assert_awaited_once_with(ticker, image_url)
-
-    assert len(suggestions) == 1
-    suggestion = suggestions[0]
-    assert suggestion.custom_details is not None
-    assert suggestion.custom_details.polygon is not None
-    summary = suggestion.custom_details.polygon.values[0]
-
-    assert summary.ticker == ticker
-    assert summary.image_url == image_url

@@ -80,8 +80,7 @@ def mock_manifest():
                 "title": "Spotify",
                 "icon": "https://test.com/spotify-favicon.ico",
             }
-        ],
-        "partners": [],
+        ]
     }
 
 

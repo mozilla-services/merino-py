@@ -103,9 +103,3 @@ class GcsUploader(BaseContentUploader):
             most_recent = bucket.get_blob(blob_name, if_generation_not_match=blob_generation)
             return most_recent
         return None
-
-    def file_exists_in_gcs(self, blob_name: str) -> bool:
-        """Return true if file with the same name exists in the GCS bucket"""
-        bucket = self.storage_client.bucket(self.bucket_name)
-        blob: Blob = bucket.blob(blob_name)
-        return bool(blob.exists())
