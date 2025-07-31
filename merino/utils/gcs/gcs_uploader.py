@@ -57,7 +57,7 @@ class GcsUploader(BaseContentUploader):
 
         try:
             if forced_upload or not destination_blob.exists():
-                logger.info(f"Uploading blob: name={destination_blob.name}, bucket={destination_blob.bucket.name}")
+                logger.info(f"Uploading blob: {destination_blob.name}")
                 destination_blob.upload_from_string(
                     content,
                     content_type=content_type,

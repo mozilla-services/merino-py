@@ -93,9 +93,6 @@ class Provider(BaseProvider):
             match GetManifestResultCode(result_code):
                 case GetManifestResultCode.SUCCESS if data is not None:
                     self.manifest_data = data
-
-                    self.last_fetch_at = time.time()
-
                 case GetManifestResultCode.FAIL:
                     logger.error("Failed to fetch manifest data from finance backend.")
                     return None
@@ -105,6 +102,7 @@ class Provider(BaseProvider):
             logger.exception(f"Unexpected error in cron job 'fetch_manifest': {e}")
 
         finally:
+            self.last_fetch_at = time.time()
             self.data_fetched_event.set()
 
     async def _upload_manifest(self) -> None:
@@ -115,6 +113,8 @@ class Provider(BaseProvider):
             logger.error("Failed to upload manifest data from finance backend: %s", err)
         except Exception as e:
             logger.exception(f"Unexpected error in cron job 'upload_manifest': {e}")
+        finally:
+            self.last_fetch_at = time.time()
 
     def _should_fetch(self) -> bool:
         """Determine if we should fetch new data based on time elapsed."""
