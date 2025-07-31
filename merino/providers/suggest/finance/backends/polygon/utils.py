@@ -2,8 +2,6 @@
 
 from typing import Any
 from types import MappingProxyType
-
-from pydantic import HttpUrl
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
 
 # Source of truth for ticker symbol and company name mapping.
@@ -84,9 +82,7 @@ def extract_ticker_snapshot(data: dict[str, Any] | None) -> TickerSnapshot | Non
         return TickerSnapshot(todays_change_perc=todays_change_perc, last_price=last_price)
 
 
-def build_ticker_summary(
-    ticker: str, snapshot: TickerSnapshot, image_url: HttpUrl | None
-) -> TickerSummary:
+def build_ticker_summary(ticker: str, snapshot: TickerSnapshot) -> TickerSummary:
     """Build a ticker summary for a finance suggestion response."""
     company = lookup_ticker_company(ticker)
     serp_query = f"{ticker} stock"
@@ -99,5 +95,4 @@ def build_ticker_summary(
         last_price=last_price,
         todays_change_perc=todays_change_perc,
         query=serp_query,
-        image_url=image_url,
     )

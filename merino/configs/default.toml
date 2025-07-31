@@ -39,7 +39,7 @@ query_timeout_sec = 0.2
 # MERINO_RUNTIME__DISABLED_PROVIDERS
 # List containing providers to disable at startup.
 # Prevents a provider from being instantiated.
-disabled_providers = ["amo"]
+disabled_providers = ["amo", "polygon"]
 
 # MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
 default_suggestions_response_ttl_sec = 300 # 5 mins
@@ -652,16 +652,6 @@ query_timeout_sec = 5.0
 # polygon backend http client to establish a connection to the host.
 connect_timeout_sec = 3.0
 
-# MERINO_PROVIDERS__POLYGON__CRON_INTERVAL_SEC
-# The interval of the PolygonFilemanager cron job (in seconds)
-# The cron job should tick more frequently than `resync_interval_sec` so that
-# the resync failure can be retried soon.
-cron_interval_sec = 60
-
-# MERINO_PROVIDERS__POLYGON__RESYNC_INTERVAL_SEC
-# Time between re-syncs of the polygon manifest file, in seconds. Defaults to every hour.
-resync_interval_sec = 3600
-
 # MERINO_PROVIDERS__POLYGON__CIRCUIT_BREAKER_FAILURE_THRESHOLD
 # The circuit breaker will open when the failure is over this threshold.
 circuit_breaker_failure_threshold = 10
@@ -690,9 +680,6 @@ url_base = "https://api.polygon.io"
 
 # MERINO_POLYGON__URL_TICKER_SNAPSHOT
 url_single_ticker_snapshot = "/v2/snapshot/locale/us/markets/stocks/tickers/{ticker}"
-
-# MERINO_POLYGON__URL_TICKER_OVERVIEW
-url_single_ticker_overview = "/v3/reference/tickers/{ticker}"
 
 # MERINO_ACCUWEATHER__URL_PARAM_API_KEY
 # The name of the query param whose value is the API key, not the key itself.

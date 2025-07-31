@@ -1,3 +1,3 @@
 """Finance backends"""
 
-from merino.providers.suggest.finance.backends.protocol import FinanceBackend
+from merino.providers.suggest.finance.backends.polygon import PolygonBackend
