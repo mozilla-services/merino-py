@@ -60,13 +60,8 @@ class PolygonFilemanager:
             # Serialize manifest as JSON bytes
             content_bytes = orjson.dumps(manifest.model_dump(mode="json"))
 
-            blob = Blob(name=self.blob_name, bucket=self.bucket, metadata={})
-
-            # Upload the content to GCS
-            await blob.upload(
-                data=content_bytes,
-                content_type="application/json",
-            )
+            blob = self.bucket.blob(self.blob_name)
+            await blob.upload(data=content_bytes, content_type="application/json")
 
             logger.info(f"Successfully uploaded manifest to GCS: {self.blob_name}")
             return True
