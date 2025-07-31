@@ -17,7 +17,10 @@ TOP_N = 7000
 
 async def fetch_url(url, output_path) -> None:
     """Make a request to the specified URL and save the response."""
-    response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
+    # wikimedia asks to have a unique user agent https://www.mediawiki.org/wiki/Wikimedia_REST_API
+    response = requests.get(
+        url, headers={"User-Agent": "Mozilla/5.0 disco-team@mozilla.com"}, timeout=5
+    )
     response.raise_for_status()
     with open(output_path, "w") as f:
         f.write(json.dumps(response.json()))

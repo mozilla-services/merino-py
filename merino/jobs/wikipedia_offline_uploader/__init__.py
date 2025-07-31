@@ -1,6 +1,8 @@
 """CLI commands for the wiki_rs_uploader module"""
 
 import asyncio
+from typing import Any
+
 import typer
 
 from merino.configs import settings as config
@@ -207,6 +209,27 @@ async def _upload_file_object(
                 uploader.add_suggestion(suggestion)
 
 
+class WikipediaChunk(Chunk):
+    """A chunk of items for the wikipedia uploader."""
+
+    uploader: "WikipediaSuggestionChunkRemoteSettingsUploader"
+
+    def to_record(self) -> dict[str, Any]:
+        """Create the record for the chunk."""
+        start, end = self.pretty_indexes()
+        record_id = "-".join(
+            ["data", self.uploader.record_type, self.uploader.language, start, end]
+        )
+        filter_expression = filter_expression_dict(
+            locales=LOCALES_MAPPING.get(self.uploader.language, [])
+        )
+        return {
+            "id": record_id,
+            "type": self.uploader.record_type,
+            **filter_expression,
+        }
+
+
 class WikipediaSuggestionChunkRemoteSettingsUploader(ChunkedRemoteSettingsSuggestionUploader):
     """A class that uploads wikipedia suggestions to remote settings."""
 
@@ -233,16 +256,9 @@ class WikipediaSuggestionChunkRemoteSettingsUploader(ChunkedRemoteSettingsSugges
             dry_run,
             suggestion_score_fallback,
             total_item_count,
+            chunk_cls=WikipediaChunk,
         )
         self.language = language
-
-    def _upload_chunk(self, chunk: Chunk) -> None:
-        record = chunk.to_record()
-        chunk_range = record["id"].split("wikipedia-")[1]
-        record["id"] = f"data-wikipedia-{self.language}-{chunk_range}"
-        filter_expression = filter_expression_dict(locales=LOCALES_MAPPING.get(self.language, []))
-        record = {**record, **filter_expression}
-        self.client.upload(record=record, attachment=chunk.to_attachment())
 
     def delete_records(self) -> None:
         """Delete records of the same language and id."""
