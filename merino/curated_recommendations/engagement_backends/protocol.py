@@ -1,9 +1,12 @@
 """Protocol and Pydantic models for the Engagement provider backend."""
+
 import logging
 from typing import Protocol
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+
 class Engagement(BaseModel):
     """Represents the engagement data from the last 24 hours for a scheduled corpus item.
 
@@ -35,13 +38,15 @@ class Engagement(BaseModel):
         if self.corpus_item_id != other.corpus_item_id:
             logger.error("corpus_item_id don't adding engagements")
         return Engagement(
-            scheduled_corpus_item_id=self.scheduled_corpus_item_id or other.scheduled_corpus_item_id,
+            scheduled_corpus_item_id=self.scheduled_corpus_item_id
+            or other.scheduled_corpus_item_id,
             corpus_item_id=self.corpus_item_id,
             region=self.region,
             click_count=self.click_count + other.click_count,
             impression_count=self.impression_count + other.impression_count,
-            report_count=(self.report_count or 0) + (other.report_count or 0)
+            report_count=(self.report_count or 0) + (other.report_count or 0),
         )
+
 
 class EngagementBackend(Protocol):
     """Protocol for Engagement backend that the provider depends on."""

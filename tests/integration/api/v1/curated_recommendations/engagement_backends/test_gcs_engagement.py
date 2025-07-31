@@ -123,9 +123,8 @@ def blob(gcs_bucket):
                 "region": "US",
                 "click_count": 2,
                 "impression_count": 20,
-                "report_count": 1
+                "report_count": 1,
             },
-
         ],
     )
 
@@ -174,6 +173,7 @@ async def test_gcs_engagement_fetches_data(gcs_storage_client, gcs_bucket, metri
         corpus_item_id="6A", click_count=40, impression_count=400
     )
 
+
 @pytest.mark.asyncio
 async def test_gcs_engagement_fetches_region_data(
     gcs_storage_client, gcs_bucket, metrics_client, blob
@@ -190,7 +190,12 @@ async def test_gcs_engagement_fetches_region_data(
     )
 
     assert gcs_engagement.get("AA", "US") == Engagement(
-        corpus_item_id="AA", scheduled_corpus_item_id="A3", region="US", click_count=12, impression_count=1020, report_count=1
+        corpus_item_id="AA",
+        scheduled_corpus_item_id="A3",
+        region="US",
+        click_count=12,
+        impression_count=1020,
+        report_count=1,
     )
     assert gcs_engagement.get("AA", "AU") is None
     assert gcs_engagement.get("AA") is None
@@ -253,8 +258,10 @@ async def test_gcs_engagement_metrics(gcs_storage_client, gcs_bucket, metrics_cl
     metrics_client.gauge.assert_any_call("recommendation.engagement.global.clicks", value=120)
     metrics_client.gauge.assert_any_call("recommendation.engagement.global.impressions", value=800)
     metrics_client.gauge.assert_any_call("recommendation.engagement.us.count", value=4)
-    metrics_client.gauge.assert_any_call("recommendation.engagement.us.clicks", value=8+12)
-    metrics_client.gauge.assert_any_call("recommendation.engagement.us.impressions", value=23+1020)
+    metrics_client.gauge.assert_any_call("recommendation.engagement.us.clicks", value=8 + 12)
+    metrics_client.gauge.assert_any_call(
+        "recommendation.engagement.us.impressions", value=23 + 1020
+    )
     metrics_client.timeit.assert_any_call("recommendation.engagement.update.timing")
 
     # Check the last_updated gauge value shows that the engagement was updated just now.
