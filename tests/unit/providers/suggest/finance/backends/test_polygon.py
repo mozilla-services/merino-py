@@ -10,7 +10,7 @@ import logging
 from pydantic import HttpUrl
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from httpx import AsyncClient, Request, Response
+from httpx import AsyncClient, HTTPStatusError, Request, Response
 from pytest_mock import MockerFixture
 from typing import Any, cast
 from merino.utils.gcs.gcs_uploader import GcsUploader
@@ -299,12 +299,21 @@ async def test_get_ticker_image_url_missing_logo_url(polygon: PolygonBackend) ->
 
 
 @pytest.mark.asyncio
-async def test_get_ticker_image_url_http_error(polygon: PolygonBackend) -> None:
+async def test_get_ticker_image_url_http_error(polygon: PolygonBackend):
     """Test get_ticker_image_url returns None and logs error on HTTP failure."""
     client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
     ticker = "AAPL"
 
-    client_mock.get.side_effect = Exception("network error")
+    # Simulate a failed response
+    response = Response(
+        status_code=500,
+        content=b"{}",
+        request=Request("GET", f"https://api.polygon.io/v3/reference/tickers/{ticker}"),
+    )
+
+    client_mock.get.side_effect = HTTPStatusError(
+        "Server Error", request=response.request, response=response
+    )
 
     result = await polygon.get_ticker_image_url(ticker)
     assert result is None
@@ -366,10 +375,19 @@ async def test_download_ticker_image_failure(polygon: PolygonBackend, mocker):
     image_url = "https://example.com/logo.png"
     mocker.patch.object(polygon, "get_ticker_image_url", return_value=image_url)
 
+    response = Response(
+        status_code=500,
+        content=b"server error",
+        request=Request("GET", image_url),
+    )
+
     client_mock = cast(AsyncMock, polygon.http_client)
-    client_mock.get.side_effect = Exception("timeout")
+    client_mock.get.side_effect = HTTPStatusError(
+        "Image download failed", request=response.request, response=response
+    )
 
     result = await polygon.download_ticker_image("AAPL")
+
     assert result is None
 
 
