@@ -1,10 +1,6 @@
 version = 1
 revision = 2
-requires-python = ">=3.13, <4"
-resolution-markers = [
-    "python_full_version >= '3.14'",
-    "python_full_version < '3.14'",
-]
+requires-python = "==3.13.*"
 
 [[package]]
 name = "aiodogstatsd"
@@ -1035,7 +1031,6 @@ dependencies = [
     { name = "flask" },
     { name = "flask-cors" },
     { name = "flask-login" },
-    { name = "gevent", marker = "python_full_version >= '3.14'" },
     { name = "geventhttpclient" },
     { name = "msgpack" },
     { name = "psutil" },
