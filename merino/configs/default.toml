@@ -640,11 +640,11 @@ cache = "none"
 
 # MERINO_PROVIDERS__POLYGON__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
-enabled_by_default = false
+enabled_by_default = true
 
 # MERINO_PROVIDERS__POLYGON__SCORE
 # The ranking score for this provider as a floating point number.
-score = 0 # TODO
+score = 0.29
 
 # MERINO_PROVIDERS__POLYGON__QUERY_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period when Merino queries
@@ -663,8 +663,9 @@ connect_timeout_sec = 3.0
 cron_interval_sec = 60
 
 # MERINO_PROVIDERS__POLYGON__RESYNC_INTERVAL_SEC
-# Time between re-syncs of the polygon manifest file, in seconds. Defaults to every hour.
-resync_interval_sec = 3600
+# Time between re-syncs of the polygon manifest file, in seconds.
+# Set to 7 days.
+resync_interval_sec = 604800
 
 # MERINO_PROVIDERS__POLYGON__CIRCUIT_BREAKER_FAILURE_THRESHOLD
 # The circuit breaker will open when the failure is over this threshold.
