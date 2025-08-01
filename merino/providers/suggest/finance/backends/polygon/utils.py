@@ -11,7 +11,7 @@ _TICKER_COMPANY = {
     "AAPL": "Apple Inc.",
     "AAL": "American Airlines Group Inc.",
     "ABBV": "AbbVie Inc.",
-    "ABDE": "Adobe Inc.",
+    "ADBE": "Adobe Inc.",
     "AMD": "Advanced Micro Devices, Inc.",
     "AMZN": "Amazon.com, Inc.",
     "AVGO": "Broadcom Inc.",
