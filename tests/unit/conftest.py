@@ -127,7 +127,8 @@ def fixture_blob_json() -> str:
                     "title": "‘White Lotus’ star Aimee Lou Wood doesn’t love all the talk about her teeth | CNN",
                     "icon": "https://merino-images.services.mozilla.com/favicons/cnniconhash_98765.png",
                 },
-            ]
+            ],
+            "partners": [],
         }
     )
 

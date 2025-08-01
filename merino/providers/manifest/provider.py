@@ -45,7 +45,7 @@ class Provider:
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
         self.last_fetch_at = 0.0
-        self.manifest_data = ManifestData(domains=[])
+        self.manifest_data = ManifestData(domains=[], partners=[])
         self.domain_lookup_table = {}
         self.data_fetched_event = asyncio.Event()
         self.metrics_client = get_metrics_client()
