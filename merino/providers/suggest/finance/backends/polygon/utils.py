@@ -31,6 +31,7 @@ _TICKER_COMPANY = {
     "KO": "The Coca-Cola Company",
     "LCID": "Lucid Group, Inc.",
     "LLY": "Eli Lilly and Company",
+    "LULU": "Lululemon Athletica Inc.",
     "MA": "Mastercard Incorporated",
     "MCD": "McDonald's Corporation",
     "META": "Meta Platforms, Inc.",
@@ -79,7 +80,7 @@ def extract_ticker_snapshot(data: dict[str, Any] | None) -> TickerSnapshot | Non
     else:
         ticker_info = data["ticker"]
         todays_change_perc = f'{ticker_info["todaysChangePerc"]:.2f}'
-        last_price = f'{ticker_info["lastQuote"]["P"]:.2f}'
+        last_price = f'{ticker_info["lastTrade"]["p"]:.2f}'
 
         return TickerSnapshot(todays_change_perc=todays_change_perc, last_price=last_price)
 

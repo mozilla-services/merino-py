@@ -165,6 +165,8 @@ class Provider(BaseProvider):
                 detail="Invalid query parameters: `q` is missing",
             )
 
+    # TODO use normalize method
+
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide finance suggestions."""
         # get a stock snapshot if the query param contains a supported ticker else do a search for that ticker
