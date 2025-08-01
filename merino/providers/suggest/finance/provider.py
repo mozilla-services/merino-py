@@ -19,6 +19,7 @@ from merino.providers.suggest.finance.backends.protocol import (
 )
 from merino.providers.suggest.finance.backends.polygon.utils import is_valid_ticker
 from merino.utils import cron
+from merino.configs import settings
 
 logger = logging.getLogger(__name__)
 
@@ -69,23 +70,24 @@ class Provider(BaseProvider):
 
     async def initialize(self) -> None:
         """Initialize the provider."""
-        await self._fetch_manifest()
+        if settings.current_env.lower() == "production":
+            await self._fetch_manifest()
 
-        cron_job_fetch = cron.Job(
-            name="fetch_polygon_manifest",
-            interval=self.cron_interval_sec,
-            condition=self._should_fetch,
-            task=self._fetch_manifest,
-        )
+            cron_job_fetch = cron.Job(
+                name="fetch_polygon_manifest",
+                interval=self.cron_interval_sec,
+                condition=self._should_fetch,
+                task=self._fetch_manifest,
+            )
 
-        cron_job_upload = cron.Job(
-            name="upload_polygon_manifest",
-            interval=self.cron_interval_sec,
-            condition=self._should_upload,
-            task=self._upload_manifest,
-        )
-        self.cron_task_fetch = asyncio.create_task(cron_job_fetch())
-        self.cron_task_upload = asyncio.create_task(cron_job_upload())
+            cron_job_upload = cron.Job(
+                name="upload_polygon_manifest",
+                interval=self.cron_interval_sec,
+                condition=self._should_upload,
+                task=self._upload_manifest,
+            )
+            self.cron_task_fetch = asyncio.create_task(cron_job_fetch())
+            self.cron_task_upload = asyncio.create_task(cron_job_upload())
 
     async def _fetch_manifest(self) -> None:
         """Cron fetch method to re-run after set interval.
