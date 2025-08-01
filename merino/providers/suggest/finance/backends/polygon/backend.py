@@ -116,8 +116,10 @@ class PolygonBackend(FinanceBackend):
             )
             response.raise_for_status()
             result = response.json()
-        except Exception as e:
-            logger.error(f"Failed to get ticker image for {ticker}: {e}")
+        except HTTPStatusError as ex:
+            logger.error(
+                f"Failed to get ticker image for {ticker}: {ex.response.status_code} {ex.response.reason_phrase}"
+            )
             return None
 
         branding = result.get("results", {}).get("branding", {})
@@ -149,8 +151,10 @@ class PolygonBackend(FinanceBackend):
                 content=content,
                 content_type=str(content_type),
             )
-        except Exception as e:
-            logger.error(f"Failed to download ticker image for {ticker}: {e}")
+        except HTTPStatusError as ex:
+            logger.error(
+                f"Failed to download ticker image for {ticker}: {ex.response.status_code} {ex.response.reason_phrase}"
+            )
             return None
 
     async def bulk_download_and_upload_ticker_images(
