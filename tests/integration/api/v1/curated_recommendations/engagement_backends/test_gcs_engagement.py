@@ -110,6 +110,21 @@ def blob(gcs_bucket):
                 "click_count": 1,
                 "impression_count": 5,
             },
+            # Multiple records for same corpus_item_id, one with missing scheduled_corpus_item_id
+            {
+                "corpus_item_id": "AA",
+                "region": "US",
+                "click_count": 10,
+                "impression_count": 1000,
+            },
+            {
+                "corpus_item_id": "AA",
+                "scheduled_corpus_item_id": "A3",
+                "region": "US",
+                "click_count": 2,
+                "impression_count": 20,
+                "report_count": 1,
+            },
         ],
     )
 
@@ -174,6 +189,17 @@ async def test_gcs_engagement_fetches_region_data(
         corpus_item_id="6A", region="US", click_count=4, impression_count=9
     )
 
+    assert gcs_engagement.get("AA", "US") == Engagement(
+        corpus_item_id="AA",
+        scheduled_corpus_item_id="A3",
+        region="US",
+        click_count=12,
+        impression_count=1020,
+        report_count=1,
+    )
+    assert gcs_engagement.get("AA", "AU") is None
+    assert gcs_engagement.get("AA") is None
+
     # Fixture does not contain data for AU, so None should be returned.
     assert gcs_engagement.get("6A", "AU") is None
 
@@ -231,9 +257,11 @@ async def test_gcs_engagement_metrics(gcs_storage_client, gcs_bucket, metrics_cl
     )
     metrics_client.gauge.assert_any_call("recommendation.engagement.global.clicks", value=120)
     metrics_client.gauge.assert_any_call("recommendation.engagement.global.impressions", value=800)
-    metrics_client.gauge.assert_any_call("recommendation.engagement.us.count", value=3)
-    metrics_client.gauge.assert_any_call("recommendation.engagement.us.clicks", value=8)
-    metrics_client.gauge.assert_any_call("recommendation.engagement.us.impressions", value=23)
+    metrics_client.gauge.assert_any_call("recommendation.engagement.us.count", value=4)
+    metrics_client.gauge.assert_any_call("recommendation.engagement.us.clicks", value=8 + 12)
+    metrics_client.gauge.assert_any_call(
+        "recommendation.engagement.us.impressions", value=23 + 1020
+    )
     metrics_client.timeit.assert_any_call("recommendation.engagement.update.timing")
 
     # Check the last_updated gauge value shows that the engagement was updated just now.
