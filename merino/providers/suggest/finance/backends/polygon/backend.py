@@ -4,6 +4,7 @@ import hashlib
 import logging
 import aiodogstatsd
 from httpx import AsyncClient, Response, HTTPStatusError
+import orjson
 from pydantic import HttpUrl, ValidationError
 from merino.configs import settings
 from typing import Any
@@ -223,12 +224,16 @@ class PolygonBackend(FinanceBackend):
             url_map = await self.bulk_download_and_upload_ticker_images(list(TICKERS))
 
             manifest = self.build_finance_manifest(url_map)
+            manifest_bytes = orjson.dumps(manifest.model_dump(mode="json"))
 
-            success = await self.filemanager.upload_file(manifest)
-            if not success:
+            blob = self.gcs_uploader.upload_content(
+                content=manifest_bytes, destination_name=GCS_BLOB_NAME
+            )
+            if blob is None:
                 logger.error("polygon manifest upload failed.")
         except Exception as e:
             logger.error(f"Error building/uploading manifest: {e}")
+            return None
 
     async def shutdown(self) -> None:
         """Close http client and cache connections."""

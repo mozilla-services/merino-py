@@ -53,24 +53,3 @@ class PolygonFilemanager:
 
         logger.info("Successfully loaded finance manifest file: %s", self.blob_name)
         return GetManifestResultCode.SUCCESS, manifest_content
-
-    async def upload_file(self, manifest: FinanceManifest) -> bool:
-        """Upload a FinanceManifest to GCS as JSON."""
-        try:
-            # Serialize manifest as JSON bytes
-            content_bytes = orjson.dumps(manifest.model_dump(mode="json"))
-
-            blob = Blob(name=self.blob_name, bucket=self.bucket, metadata={})
-
-            # Upload the content to GCS
-            await blob.upload(
-                data=content_bytes,
-                content_type="application/json",
-            )
-
-            logger.info(f"Successfully uploaded manifest to GCS: {self.blob_name}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to upload manifest to GCS: {e}")
-            return False

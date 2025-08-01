@@ -593,17 +593,14 @@ async def test_build_and_upload_manifest_file_success(polygon: PolygonBackend, m
         return_value={"AAPL": "https://cdn.example.com/aapl.png"},
     )
 
-    upload_file_mock = mocker.patch.object(
-        polygon.filemanager,
-        "upload_file",
-        new_callable=AsyncMock,
-        return_value=True,
+    upload_content_mock = mocker.patch.object(
+        polygon.gcs_uploader, "upload_content", return_value=MagicMock()
     )
 
     await polygon.build_and_upload_manifest_file()
 
     polygon_upload_mock.assert_awaited_once()
-    upload_file_mock.assert_awaited_once()
+    upload_content_mock.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -619,14 +616,11 @@ async def test_build_and_upload_manifest_file_upload_fails(
         return_value={"AAPL": "https://cdn.example.com/aapl.png"},
     )
 
-    upload_file_mock = mocker.patch.object(
-        polygon.filemanager,
-        "upload_file",
-        new_callable=AsyncMock,
-        return_value=False,
+    upload_content_mock = mocker.patch.object(
+        polygon.gcs_uploader, "upload_content", return_value=None
     )
 
     await polygon.build_and_upload_manifest_file()
 
-    upload_file_mock.assert_awaited_once()
+    upload_content_mock.assert_called_once()
     assert "polygon manifest upload failed" in caplog.text
