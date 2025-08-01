@@ -252,7 +252,7 @@ def test_upload_content_with_forced_upload_true_and_existing_blob(
 
     assert result == mock_gcs_blob
     assert len(log_records) == 1
-    assert log_records[0].message.startswith(f"Uploading blob: {mock_gcs_blob}")
+    assert log_records[0].message.startswith(f"Uploading blob: {mock_gcs_blob.name}")
 
     mock_gcs_blob.upload_from_string.assert_called_once_with(content, content_type="text/plain")
     mock_gcs_blob.make_public.assert_called_once()

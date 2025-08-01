@@ -193,7 +193,8 @@ async def test_get_icon_url_tld_specific_matching(manifest_provider: Provider, c
                 title="Business Insider ES",
                 icon="https://example.com/bi-es-icon.png",
             ),
-        ]
+        ],
+        partners=[],
     )
 
     with patch(
