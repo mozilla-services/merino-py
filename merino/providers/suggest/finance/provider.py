@@ -165,7 +165,6 @@ class Provider(BaseProvider):
                 detail="Invalid query parameters: `q` is missing",
             )
 
-    # TODO use normalize method
     def normalize_query(self, query: str) -> str:
         """Convert a query string to uppercase and remove leading spaces."""
         return query.lstrip().upper()
