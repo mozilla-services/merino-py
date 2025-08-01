@@ -31,7 +31,6 @@ _TICKER_COMPANY = {
     "KO": "The Coca-Cola Company",
     "LCID": "Lucid Group, Inc.",
     "LLY": "Eli Lilly and Company",
-    "LULU": "Lululemon Athletica Inc.",
     "MA": "Mastercard Incorporated",
     "MCD": "McDonald's Corporation",
     "META": "Meta Platforms, Inc.",
