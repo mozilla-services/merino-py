@@ -166,6 +166,9 @@ class Provider(BaseProvider):
             )
 
     # TODO use normalize method
+    def normalize_query(self, query: str) -> str:
+        """Convert a query string to uppercase and remove leading spaces."""
+        return query.lstrip().upper()
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide finance suggestions."""
@@ -174,8 +177,7 @@ class Provider(BaseProvider):
             if not is_valid_ticker(srequest.query):
                 return []
             else:
-                # Normalize the ticker to upper case since all downstream methods rely on it being upper case.
-                ticker = srequest.query.upper()
+                ticker = srequest.query
                 ticker_summary: TickerSummary | None
                 image_url = self.get_image_url_for_ticker(ticker)
 
