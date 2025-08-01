@@ -227,7 +227,9 @@ class PolygonBackend(FinanceBackend):
             manifest_bytes = orjson.dumps(manifest.model_dump(mode="json"))
 
             blob = self.gcs_uploader.upload_content(
-                content=manifest_bytes, destination_name=GCS_BLOB_NAME
+                content=manifest_bytes,
+                destination_name=GCS_BLOB_NAME,
+                content_type="application/json",
             )
             if blob is None:
                 logger.error("polygon manifest upload failed.")
