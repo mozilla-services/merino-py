@@ -130,7 +130,7 @@ async def get_corpus_sections(
         A mapping from section IDs to Section objects, each with a unique receivedFeedRank.
     """
     corpus_sections = await sections_backend.fetch(surface_id)
-    sid_map: Dict[str, str] = {}
+    sid_map: Dict[str, str | None] = {}
     if scheduled_surface_backend is not None:
         legacy_corpus = await scheduled_surface_backend.fetch(surface_id)
         for item in legacy_corpus:
