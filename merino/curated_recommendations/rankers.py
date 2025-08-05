@@ -115,7 +115,7 @@ def thompson_sampling(
         opens += max(a_prior, 1e-18)
         no_opens += max(b_prior, 1e-18)
 
-        return float( opens / (no_opens + 1.))
+        return float(beta.rvs(opens, no_opens))
 
     # Sort the recommendations from best to worst sampled score & renumber
     sorted_recs = sorted(recs, key=sample_score, reverse=True)
@@ -168,7 +168,7 @@ def section_thompson_sampling(
         no_opens = total_imps - total_clicks + b_prior
 
         # Sample distribution
-        return opens / (no_opens + 1.) # float(beta.rvs(opens, no_opens))
+        return float(beta.rvs(opens, no_opens))
 
     # sort sections by sampled score, highest first
     ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
