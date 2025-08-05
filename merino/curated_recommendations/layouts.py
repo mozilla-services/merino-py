@@ -145,3 +145,58 @@ layout_6_tiles = Layout(
         ),
     ],
 )
+
+# Layout 4: Layout with 8 tiles, with an ad in each row, 2nd & 6th position
+layout_7_tiles_2_ads = Layout(
+    name="7-double-row-2-ad",
+    responsiveLayouts=[
+        ResponsiveLayout(
+            columnCount=4,
+            tiles=[
+                Tile(size=TileSize.LARGE, position=0, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=4, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
+            ],
+        ),
+        ResponsiveLayout(
+            columnCount=3,
+            tiles=[
+                Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=2, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=4, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.SMALL, position=6, hasAd=False, hasExcerpt=False),
+            ],
+        ),
+        ResponsiveLayout(
+            columnCount=2,
+            tiles=[
+                Tile(size=TileSize.LARGE, position=0, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
+            ],
+        ),
+        ResponsiveLayout(
+            columnCount=1,
+            tiles=[
+                Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
+            ],
+        ),
+    ],
+)

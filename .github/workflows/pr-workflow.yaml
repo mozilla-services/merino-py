@@ -9,24 +9,27 @@ jobs:
     uses: ./.github/workflows/tests.yaml
   run-docs-build:
     uses: ./.github/workflows/docs-build.yaml
-  run-docker-image-build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - name: Get info
-        run: |
-          uname -v
-          docker info
-      - name: Create version.json
-        run: |
-          printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' \
-          "$GITHUB_SHA" \
-          "$GITHUB_REF_NAME" \
-          "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
-          "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > version.json
-      - name: Output version.json
-        run: cat version.json
-      - name: Build docker image
-        run: make docker-build
+  run-build-gar-image:
+    uses: ./.github/workflows/build-gar-image.yaml
+    with:
+      image_tag: latest
+    secrets:
+      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
+  run-build-gar-image-locust:
+    uses: ./.github/workflows/build-gar-image-locust.yaml
+    with:
+      image_tag: latest
+    secrets:
+      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
+  run-build-dockerhub-app:
+    uses: ./.github/workflows/build-dockerhub-app-image.yaml
+    with:
+      image_tag: ${{ github.sha }}
+    secrets:
+      DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_REPO }}
+  run-build-dockerhub-locust:
+    uses: ./.github/workflows/build-dockerhub-locust-image.yaml
+    with:
+      image_tag: ${{ github.sha }}
+    secrets:
+      DOCKERHUB_MERINO_LOCUST_REPO: ${{ secrets.DOCKERHUB_MERINO_LOCUST_REPO }}

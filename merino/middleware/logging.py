@@ -13,12 +13,17 @@ from merino.utils.log_data_creators import (
     SuggestLogDataModel,
     create_suggest_log_data,
 )
+from merino.configs import settings
+
 
 # web.suggest.request is used for logs coming from the /suggest endpoint
 suggest_request_logger = logging.getLogger("web.suggest.request")
 
 # The path pattern for the suggest API
 PATTERN: Pattern = re.compile(r"/api/v[1-9]\d*/suggest$")
+
+# Whether to log `web.suggest.request`
+LOG_SUGGEST_REQUEST: bool = settings.logging.log_suggest_request
 
 
 class LoggingMiddleware:
@@ -40,7 +45,8 @@ class LoggingMiddleware:
                 dt: datetime = datetime.fromtimestamp(time.time())
                 # https://mozilla-hub.atlassian.net/browse/DISCO-2489
                 if (
-                    PATTERN.match(request.url.path)
+                    LOG_SUGGEST_REQUEST
+                    and PATTERN.match(request.url.path)
                     and request.query_params.get("providers", "").strip().lower() != "accuweather"
                 ):
                     suggest_log_data: SuggestLogDataModel = create_suggest_log_data(

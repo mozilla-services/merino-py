@@ -62,7 +62,15 @@ class GcsEngagement(EngagementBackend):
             data: The engagement blob string data, with an array of Engagement objects.
         """
         parsed_data = [Engagement(**item) for item in json.loads(data)]
-        self._cache = {(d.corpus_item_id, d.region): d for d in parsed_data}
+        next_cache: EngagementCacheType = {}
+        for engagement in parsed_data:
+            cache_key = (engagement.corpus_item_id, engagement.region)
+            prev_engagement = next_cache.get(cache_key, None)
+            next_cache[cache_key] = (
+                engagement if prev_engagement is None else prev_engagement + engagement
+            )
+        if len(next_cache) > 0:
+            self._cache = next_cache
         self._track_metrics()
 
     def _track_metrics(self) -> None:
@@ -79,10 +87,12 @@ class GcsEngagement(EngagementBackend):
         # Sum clicks and impressions by region.
         clicks: Counter[str] = Counter()
         impressions: Counter[str] = Counter()
+        report_counts: Counter[str] = Counter()
         for (item_id, region), eng in self._cache.items():
             region_name = region.lower() if region is not None else "global"
             clicks[region_name] += eng.click_count
             impressions[region_name] += eng.impression_count
+            report_counts[region_name] += eng.report_count or 0  # report_count can be None
 
         # Emit clicks by region.
         for region, count in clicks.items():
@@ -91,4 +101,9 @@ class GcsEngagement(EngagementBackend):
         for region, count in impressions.items():
             self.metrics_client.gauge(
                 f"{self.metrics_namespace}.{region}.impressions", value=count
+            )
+        # Emit report_counts by region.
+        for region, count in report_counts.items():
+            self.metrics_client.gauge(
+                f"{self.metrics_namespace}.{region}.report_counts", value=count
             )

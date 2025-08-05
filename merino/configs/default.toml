@@ -77,6 +77,10 @@ format = "mozlog"
 # Boolean to allow log propagation.
 can_propagate = false
 
+# MERINO_LOGGING__LOG_SUGGEST_REQUEST
+# Boolean to toggle the `web.suggest.request` logging.
+log_suggest_request = true
+
 [default.governance]
 # MERINO_GOVERNANCE__CRON_INTERVAL_SEC
 # The interval of the background cron job for Merino governance.
@@ -324,8 +328,8 @@ forecast_ttl_sec = 3600 # 1 hr
 cron_interval_sec = 60
 
 # MERINO_PROVIDERS__MANIFEST__RESYNC_INTERVAL_SEC
-# Time between re-syncs of the manifest file, in seconds. Defaults to 24 hours.
-resync_interval_sec = 86400
+# Time between re-syncs of the manifest file, in seconds. Defaults to every hour.
+resync_interval_sec = 3600
 
 [default.accuweather]
 # MERINO_ACCUWEATHER__API_KEY
@@ -360,6 +364,14 @@ url_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
 # AccuWeather responses, as described in https://apidev.accuweather.com/developers/partner-code.
 # Note that this is the name of the partner code parameter, not the partner code itself.
 url_param_partner_code = "partner"
+
+# MERINO_ACCUWEATHER__PARTNER_CODE
+# partner code for accuweather request from the firefox new tab
+partner_code_newtab_value = "web_mozilla_adc"
+
+# MERINO_ACCUWEATHER__URL_PARAM_PARTNER_CODE_FFSUGGEST_VALUE
+# partner code for accuweather request from firefox suggest
+partner_code_ffsuggest_value = "web_mozilla_ffsuggest_adc"
 
 # MERINO_ACCUWEATHER__URL_LOCATION_COMPLETION_PATH
 # The url path for accuweather locations autocomplete.
@@ -628,11 +640,11 @@ cache = "none"
 
 # MERINO_PROVIDERS__POLYGON__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
-enabled_by_default = false
+enabled_by_default = true
 
 # MERINO_PROVIDERS__POLYGON__SCORE
 # The ranking score for this provider as a floating point number.
-score = 0 # TODO
+score = 0.29
 
 # MERINO_PROVIDERS__POLYGON__QUERY_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period when Merino queries
@@ -643,6 +655,17 @@ query_timeout_sec = 5.0
 # A floating point (in seconds) indicating the maximum waiting period for the
 # polygon backend http client to establish a connection to the host.
 connect_timeout_sec = 3.0
+
+# MERINO_PROVIDERS__POLYGON__CRON_INTERVAL_SEC
+# The interval of the PolygonFilemanager cron job (in seconds)
+# The cron job should tick more frequently than `resync_interval_sec` so that
+# the resync failure can be retried soon.
+cron_interval_sec = 60
+
+# MERINO_PROVIDERS__POLYGON__RESYNC_INTERVAL_SEC
+# Time between re-syncs of the polygon manifest file, in seconds.
+# Set to 7 days.
+resync_interval_sec = 604800
 
 # MERINO_PROVIDERS__POLYGON__CIRCUIT_BREAKER_FAILURE_THRESHOLD
 # The circuit breaker will open when the failure is over this threshold.
@@ -665,17 +688,16 @@ index_ticker_ttl_sec = 900 # 15 minutes
 # MERINO_POLYGON__API_KEY
 # The API key to Polygon's API endpoint.
 # In production, this should be set via environment variable as a secret.
-# TODO replace with actual
 api_key = "test"
 
 ## MERINO_POLYGON__URL_BASE
 url_base = "https://api.polygon.io"
 
-# MERINO_POLYGON__URL_TICKER_LAST_QUOTE
-url_ticker_last_quote ="/v2/last/nbbo/{stock_ticker}"
+# MERINO_POLYGON__URL_TICKER_SNAPSHOT
+url_single_ticker_snapshot = "/v2/snapshot/locale/us/markets/stocks/tickers/{ticker}"
 
-# MERINO_POLYGON__URL_INDEX_DAILY_SUMMARY
-url_index_daily_summary = "/v1/open-close/{indices_ticker}/{date}"
+# MERINO_POLYGON__URL_TICKER_OVERVIEW
+url_single_ticker_overview = "/v3/reference/tickers/{ticker}"
 
 # MERINO_ACCUWEATHER__URL_PARAM_API_KEY
 # The name of the query param whose value is the API key, not the key itself.
@@ -711,7 +733,7 @@ cron_interval_seconds = 600
 [default.curated_recommendations.gcs.engagement]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__MAX_SIZE
 # The maximum size in bytes of the GCS engagement blob. If exceeded, an error will be logged.
-max_size = 2_000_000
+max_size = 4_000_000
 
 # MERINO__CURATED_RECOMMENDATIONS__GCS__ENGAGEMENT__BLOB_PREFIX
 # GCS path of the priors JSON file.

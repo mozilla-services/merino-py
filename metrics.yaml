@@ -1,0 +1,15 @@
+version: 1.0
+
+service: Merino
+suggest/accuweather:
+  providers_accuweather_query_weather_report:
+    description: |
+      Measurement of the volume of weather requests
+    type: counter
+    labels:
+      - name: source
+        description: |
+          Origin of the weather request
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []

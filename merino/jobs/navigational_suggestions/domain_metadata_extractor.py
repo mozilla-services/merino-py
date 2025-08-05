@@ -194,6 +194,7 @@ class DomainMetadataExtractor:
         "Too Many Requests",
         "IP blocked",
         "Service unavailable",
+        "Unsupported browser",
     ]
 
     # Constants for favicon URL validation
@@ -627,12 +628,10 @@ class DomainMetadataExtractor:
         domain: str = domain_data["domain"]
         suffix: str = domain_data["suffix"]
 
-        # Normalize domain for custom favicon lookup
         e = tldextract.extract(domain)
-        normalized_domain = f"{e.domain}.{e.suffix}"
 
         # STEP 1: Check custom favicons FIRST (primary source)
-        custom_favicon_url = get_custom_favicon_url(normalized_domain)
+        custom_favicon_url = get_custom_favicon_url(e.domain)
         if custom_favicon_url:
             try:
                 # If URL is already from our CDN, use it directly

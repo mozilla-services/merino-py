@@ -17,6 +17,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
+    layout_6_tiles,
 )
 from merino.curated_recommendations.protocol import (
     Section,
@@ -247,7 +248,29 @@ class TestMapSectionItemToRecommendation:
         rec = map_section_item_to_recommendation(item, 3, section_id)
         assert isinstance(rec, CuratedRecommendation)
         assert rec.receivedRank == 3
-        assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic}": 1.0}
+        for k in rec.features.keys():
+            if k.startswith("t_"):
+                assert "." not in k  # Make sure we're not sending a type but actual value.
+        assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic.value}": 1.0}
+        assert not rec.in_experiment("unknown_experiment")
+
+    def test_basic_mapping_experiment(self):
+        """Map a valid CorpusItem into a CuratedRecommendation."""
+        item = generate_corpus_item()
+        experiment_id = "eid"
+        section_id = "secX"
+        rec = map_section_item_to_recommendation(
+            item, 3, section_id, experiment_flags={experiment_id}
+        )
+        assert isinstance(rec, CuratedRecommendation)
+        assert rec.receivedRank == 3
+        for k in rec.features.keys():
+            if k.startswith("t_"):
+                assert "." not in k  # Make sure we're not sending a type but actual value.
+        assert rec.in_experiment(experiment_id)
+        assert not rec.in_experiment("bla")
+        assert not rec.in_experiment(None)
+        assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic.value}": 1.0}
 
     def test_basic_mapping_no_topic(self):
         """Map a valid CorpusItem into a CuratedRecommendation."""
@@ -269,13 +292,13 @@ class TestMapCorpusSectionToSection:
         sec = map_corpus_section_to_section(cs, 5)
         assert sec.receivedFeedRank == 5
         assert sec.title == cs.title
-        assert sec.layout == layout_4_medium
+        assert sec.layout == layout_6_tiles
         assert sec.iab == cs.iab
         assert len(sec.recommendations) == len(cs.sectionItems)
         for idx, rec in enumerate(sec.recommendations):
             features_compare = {f"s_{cs.externalId}": 1.0}
             if rec.topic is not None:
-                features_compare[f"t_{rec.topic}"] = 1.0
+                features_compare[f"t_{rec.topic.value}"] = 1.0
             assert rec.receivedRank == idx
             assert rec.features == features_compare
 
@@ -451,14 +474,14 @@ class TestGetCorpusSections:
         section_a = result["secA"]
         assert section_a.receivedFeedRank == 5
         assert len(section_a.recommendations) == 2
-        assert section_a.layout == layout_4_medium
+        assert section_a.layout == layout_6_tiles
 
         section_b = result["secB"]
         assert section_b.receivedFeedRank == 6
         assert len(section_b.recommendations) == 1
-        assert section_b.layout == layout_4_medium
+        assert section_b.layout == layout_6_tiles
 
         section_c = result["secC"]
         assert section_c.receivedFeedRank == 7
         assert len(section_c.recommendations) == 3
-        assert section_c.layout == layout_4_medium
+        assert section_c.layout == layout_6_tiles

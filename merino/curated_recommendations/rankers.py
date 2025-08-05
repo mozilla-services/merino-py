@@ -6,7 +6,11 @@ from datetime import datetime, timedelta, timezone
 from merino.curated_recommendations import ConstantPrior
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.prior_backends.protocol import PriorBackend, Prior
+from merino.curated_recommendations.prior_backends.protocol import (
+    PriorBackend,
+    Prior,
+    ExperimentRescaler,
+)
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     SectionConfiguration,
@@ -58,6 +62,7 @@ def thompson_sampling(
     prior_backend: PriorBackend,
     region: str | None = None,
     region_weight: float = REGION_ENGAGEMENT_WEIGHT,
+    rescaler: ExperimentRescaler | None = None,
 ) -> list[CuratedRecommendation]:
     """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
     CTR with exploration of new items using a prior.
@@ -67,6 +72,7 @@ def thompson_sampling(
     :param prior_backend: Provides prior alpha and beta values for Thompson sampling.
     :param region: Optionally, the client's region, e.g. 'US'.
     :param region_weight: In a weighted average, how much to weigh regional engagement.
+    :param rescaler: Class that can up-scale interaction stats for certain items based on experiment size
 
     :return: A re-ordered version of recs, ranked according to the Thompson sampling score.
 
@@ -87,6 +93,7 @@ def thompson_sampling(
     def sample_score(rec: CuratedRecommendation) -> float:
         """Sample beta distributed from weighted regional/global engagement for a recommendation."""
         opens, no_opens = get_opens_no_opens(rec)
+
         prior: Prior = prior_backend.get() or fallback_prior
         a_prior = prior.alpha
         b_prior = prior.beta
@@ -99,6 +106,10 @@ def thompson_sampling(
             no_opens = (region_weight * region_no_opens) + ((1 - region_weight) * no_opens)
             a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
             b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
+
+        if rescaler is not None:
+            # rescale for content associated exclusively with an experiment in a specific region
+            opens, no_opens = rescaler.rescale(rec, opens, no_opens)
 
         # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
         opens += max(a_prior, 1e-18)
@@ -116,12 +127,14 @@ def section_thompson_sampling(
     sections: dict[str, Section],
     engagement_backend: EngagementBackend,
     top_n: int = 6,
+    rescaler: ExperimentRescaler | None = None,
 ) -> dict[str, Section]:
     """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
 
     :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
     :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.
     :param top_n: Number of top items in each section for which to sum engagement in the Thompson sampling score.
+    :param rescaler: Class that can up-scale interaction stats for certain items based on experiment size
 
     :return: Mapping of section IDs to Section objects with updated receivedFeedRank.
 
@@ -136,8 +149,14 @@ def section_thompson_sampling(
         total_imps = 0
         for rec in recs:
             if engagement := engagement_backend.get(rec.corpusItemId):
-                total_clicks += engagement.click_count
-                total_imps += engagement.impression_count
+                clicks = engagement.click_count
+                impressions = engagement.impression_count
+                if rescaler is not None:
+                    # rescale for content associated exclusively with an experiment in a specific region
+                    clicks, impressions = rescaler.rescale(rec, clicks, impressions)
+
+                total_clicks += clicks
+                total_imps += impressions
 
         # constant prior α, β
         prior = ConstantPrior().get()
@@ -170,7 +189,12 @@ def greedy_personalized_section_rank(
     ordered_sections = sorted(sections, key=lambda x: sections[x].receivedFeedRank)
 
     ## order of personal preferences
-    ptopics = [k for k, v in personal_interests.root.items() if isinstance(v, float)]
+    ### only keeps a value if above first coarse threshold. this
+    ### is because there is noise added to every value in client and
+    ## we do not want to rank on the noise
+    ptopics = [
+        k for k, v in personal_interests.root.items() if isinstance(v, float) and v >= 0.0092
+    ]
     ordered_preferences = sorted(ptopics, key=lambda x: personal_interests.root[x], reverse=True)
 
     # decide once for each pref whether it “wins” (prob. 1-epsilon)

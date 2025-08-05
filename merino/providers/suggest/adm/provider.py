@@ -10,6 +10,7 @@ from enum import Enum, unique
 from typing import Any, Final
 
 import tldextract
+from moz_merino_ext.amp import AmpIndexManager
 
 from pydantic import HttpUrl
 from tldextract.tldextract import ExtractResult
@@ -96,9 +97,7 @@ class Provider(BaseProvider):
         self.score = score
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
-        self.suggestion_content = SuggestionContent(
-            suggestions={}, full_keywords=[], results=[], icons={}
-        )
+        self.suggestion_content = SuggestionContent(index_manager=AmpIndexManager(), icons={})  # type: ignore[no-untyped-call]
         self._name = name
         self._enabled_by_default = enabled_by_default
         super().__init__(**kwargs)
@@ -141,8 +140,8 @@ class Provider(BaseProvider):
         return False
 
     def normalize_query(self, query: str) -> str:
-        """Convert a query string to lowercase and remove trailing spaces."""
-        return query.strip().lower()
+        """Convert a query string to lowercase and remove leading spaces."""
+        return query.lstrip().lower()
 
     @staticmethod
     @functools.lru_cache(maxsize=100)
@@ -173,32 +172,31 @@ class Provider(BaseProvider):
         country = srequest.geolocation.country
         if country and form_factor:
             segment = (FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, FormFactor.DESKTOP.value),)
-            if (
-                suggest_look_ups := self.suggestion_content.suggestions.get(country, {})
-                .get(q, {})
-                .get(segment)
-            ) is not None:
-                results_id, fkw_id = suggest_look_ups
-                res = self.suggestion_content.results[results_id]
-                is_sponsored = res.get("iab_category") == IABCategory.SHOPPING
+            idx_id = f"{country}/{segment}"
+            if self.suggestion_content.index_manager.has(idx_id) and (
+                suggest_look_ups := self.suggestion_content.index_manager.query(idx_id, q)
+            ):
+                res = suggest_look_ups[0]
 
-                url: str = res["url"]
+                is_sponsored = res.iab_category == IABCategory.SHOPPING
+
+                url: str = res.url
                 e: ExtractResult = tldextract.extract(url)
                 categories: list[Category] = Provider.serp_categories(
                     domain=f"{e.domain}.{e.suffix}"
                 )
                 suggestion_dict: dict[str, Any] = {
-                    "block_id": res.get("id"),
-                    "full_keyword": self.suggestion_content.full_keywords[fkw_id],
-                    "title": res.get("title"),
+                    "block_id": res.block_id,
+                    "full_keyword": res.full_keyword,
+                    "title": res.title,
                     "url": url,
                     "categories": categories,
-                    "impression_url": res.get("impression_url"),
-                    "click_url": res.get("click_url"),
+                    "impression_url": res.impression_url,
+                    "click_url": res.click_url,
                     "provider": self.name,
-                    "advertiser": res.get("advertiser"),
+                    "advertiser": res.advertiser,
                     "is_sponsored": is_sponsored,
-                    "icon": self.suggestion_content.icons.get(res.get("icon", MISSING_ICON_ID)),
+                    "icon": self.suggestion_content.icons.get(res.icon, MISSING_ICON_ID),
                     "score": self.score,
                 }
                 return [

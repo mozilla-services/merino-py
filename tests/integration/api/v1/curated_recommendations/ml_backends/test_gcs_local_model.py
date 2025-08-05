@@ -42,7 +42,7 @@ def create_gcs_local_model(
         metrics_client=metrics_client,
         metrics_namespace="recommendation.local_model",
         max_size=settings.curated_recommendations.gcs.local_model.max_size,
-        cron_interval_seconds=0.01,
+        cron_interval_seconds=0.002,
         cron_job_name="fetch_local_model",
     )
     # Call initialize to start the cron job in the same event loop
@@ -84,8 +84,9 @@ def blob(gcs_bucket):
                 "model_id": TEST_MODEL_ID,
                 "model_version": 0,
                 "model_data": {
-                    "model_type": ModelType.CLICKS,
+                    "model_type": ModelType.CTR,
                     "rescale": True,
+                    "noise_scale": 0.01,
                     "day_time_weighting": {"days": [], "relative_weight": []},
                     "interest_vector": {},
                 },
@@ -122,8 +123,9 @@ async def test_gcs_local_model_fetches_data(gcs_storage_client, gcs_bucket, metr
     local_model = create_gcs_local_model(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_engagement_is_updated(local_model)
     model_data = ModelData(
-        model_type=ModelType.CLICKS,
+        model_type=ModelType.CTR,
         rescale=True,
+        noise_scale=0.002,
         day_time_weighting=DayTimeWeightingConfig(
             days=[3, 14, 45],
             relative_weight=[1, 1, 1],

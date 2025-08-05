@@ -10,13 +10,13 @@ from urllib.parse import urljoin
 import logging
 import httpx
 import kinto_http
+from moz_merino_ext.amp import AmpIndexManager
 from pydantic import BaseModel
 
 from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.suggest.adm.backends.protocol import (
     SuggestionContent,
-    IndexType,
     SegmentType,
 )
 from merino.utils.http_client import create_http_client
@@ -98,12 +98,10 @@ class RemoteSettingsBackend:
 
         self.icon_processor = icon_processor
         self.last_modified_timestamps = dict()
-        self.suggestion_content = SuggestionContent(
-            suggestions={}, full_keywords=[], results=[], icons={}
-        )
+        self.suggestion_content = SuggestionContent(index_manager=AmpIndexManager(), icons={})  # type: ignore[no-untyped-call]
 
     def _should_skip(self, records: list[dict[str, Any]]) -> bool:
-        """Check whether or not to skip processing records.
+        """Check whether to skip processing records.
         This is an optimization for conditional record processing.
 
         Args:
@@ -124,9 +122,6 @@ class RemoteSettingsBackend:
         Raises:
             RemoteSettingsError: Failed request to Remote Settings.
         """
-        suggestions: defaultdict[str, IndexType] = defaultdict(lambda: defaultdict(dict))
-        full_keywords: list[str] = []
-        results: list[dict[str, Any]] = []
         icons: dict[str, str] = {}
         icons_in_use: set[str] = set()
 
@@ -137,28 +132,23 @@ class RemoteSettingsBackend:
             return self.suggestion_content
 
         attachment_host: str = await self.get_attachment_host()
-        rs_suggestions: dict[
-            str, dict[SegmentType, list[KintoSuggestion]]
+        rs_suggestions: defaultdict[
+            str, defaultdict[SegmentType, str]
         ] = await self.get_suggestions(attachment_host, amp_records)
 
-        fkw_index = 0
         for country, c_suggestions in rs_suggestions.items():
-            for segment, s_suggestions in c_suggestions.items():
-                for suggestion in s_suggestions:
-                    result_id = len(results)
-                    keywords = suggestion.keywords
-                    icons_in_use.add(suggestion.icon)
-                    full_keywords_tuples = suggestion.full_keywords
-                    begin = 0
-                    for full_keyword, n in full_keywords_tuples:
-                        for query in keywords[begin : begin + n]:
-                            # Note that for adM suggestions, each keyword can only be
-                            # mapped to a single suggestion.
-                            suggestions[country][query][segment] = (result_id, fkw_index)
-                        begin += n
-                        full_keywords.append(full_keyword)
-                        fkw_index = len(full_keywords)
-                    results.append(suggestion.model_dump(exclude={"keywords", "full_keywords"}))
+            for segment, raw_suggestions in c_suggestions.items():
+                idx_id = f"{country}/{segment}"
+                try:
+                    self.suggestion_content.index_manager.build(idx_id, raw_suggestions)
+                    icons_in_use = icons_in_use.union(
+                        self.suggestion_content.index_manager.list_icons(idx_id)
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"Unable to build index or get icons for {idx_id}",
+                        extra={"error message": f"{e}"},
+                    )
 
         icon_record = self.filter_records(record_type="icon", records=records)
 
@@ -194,12 +184,7 @@ class RemoteSettingsBackend:
         for record in amp_records:
             self.last_modified_timestamps[record["id"]] = record["last_modified"]
 
-        self.suggestion_content = SuggestionContent(
-            suggestions=suggestions,
-            full_keywords=full_keywords,
-            results=results,
-            icons=icons,
-        )
+        self.suggestion_content.icons = icons
 
         return self.suggestion_content
 
@@ -238,7 +223,7 @@ class RemoteSettingsBackend:
 
     async def get_suggestions(
         self, attachment_host: str, records: list[dict[str, Any]]
-    ) -> dict[str, dict[SegmentType, list[KintoSuggestion]]]:
+    ) -> defaultdict[str, defaultdict[SegmentType, str]]:
         """Get suggestion data from all data records.
 
         Args:
@@ -261,7 +246,7 @@ class RemoteSettingsBackend:
                 for record in records:
                     segment = self.get_segment(record)
                     task: Task = task_group.create_task(
-                        self.get_attachment(
+                        self.get_attachment_raw(
                             url=urljoin(
                                 base=attachment_host,
                                 url=record["attachment"]["location"],
@@ -272,13 +257,13 @@ class RemoteSettingsBackend:
         except ExceptionGroup as error_group:
             raise RemoteSettingsError(error_group.exceptions)
 
-        suggestions: defaultdict[str, dict] = defaultdict(lambda: defaultdict(list))
+        suggestions: defaultdict[str, defaultdict] = defaultdict(defaultdict)
 
         for country, segment, task in tasks:
-            suggestions[country][segment].extend(await task)
+            suggestions[country][segment] = await task
         return suggestions
 
-    async def get_attachment(self, url: str) -> list[KintoSuggestion]:
+    async def get_attachment_raw(self, url: str) -> str:
         """Get an attachment from the Remote Settings server for a given URL.
 
         Args:
@@ -294,13 +279,8 @@ class RemoteSettingsBackend:
                 response.raise_for_status()
             except httpx.HTTPError as error:
                 raise RemoteSettingsError("Failed to get attachment") from error
-            # Dynamic Wikipedia provider supplies Wikipedia suggestions.
-            # Excludes possible indexing of adM Wikipedia suggestions.
-            return [
-                KintoSuggestion(**data)
-                for data in response.json()
-                if data.get("advertiser", "") != "Wikipedia"
-            ]
+
+            return response.text
 
     def filter_records(
         self, record_type: RecordType, records: list[dict[str, Any]]

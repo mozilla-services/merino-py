@@ -45,7 +45,7 @@ class Provider:
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
         self.last_fetch_at = 0.0
-        self.manifest_data = ManifestData(domains=[])
+        self.manifest_data = ManifestData(domains=[], partners=[])
         self.domain_lookup_table = {}
         self.data_fetched_event = asyncio.Event()
         self.metrics_client = get_metrics_client()
@@ -75,7 +75,8 @@ class Provider:
                 case GetManifestResultCode.SUCCESS if data is not None:
                     self.manifest_data = data
                     self.domain_lookup_table = {
-                        domain.domain: idx for idx, domain in enumerate(data.domains)
+                        self._extract_full_domain(str(domain.url)): idx
+                        for idx, domain in enumerate(data.domains)
                     }
                     self.last_fetch_at = time.time()
 
@@ -97,29 +98,53 @@ class Provider:
         return self.manifest_data
 
     def get_icon_url(self, url: str | HttpUrl) -> HttpUrl | None:
-        """Get icon URL for a domain.
+        """Get icon URL for a URL.
 
         Args:
-            url: Full URL to extract domain from (string or HttpUrl)
+            url: Full URL to look up (string or HttpUrl)
 
         Returns:
             Icon URL if found, None otherwise
         """
         try:
             url_str = str(url)
-            # Use tldextract to correctly handle all domain patterns
-            base_domain = tldextract.extract(url_str).domain
+            input_full_domain = self._extract_full_domain(url_str)
 
-            idx = self.domain_lookup_table.get(base_domain, -1)
+            # Look for exact full domain match
+            idx = self.domain_lookup_table.get(input_full_domain, -1)
+
             if idx >= 0 and self.manifest_data is not None:
                 icon_url = self.manifest_data.domains[idx].icon
                 try:
                     return HttpUrl(icon_url)
                 except ValidationError:
-                    # [DISCO-3441] Some icon URLs are empty strings, which are not valid URLs.
+                    domain_for_metrics = tldextract.extract(url_str).domain
                     self.metrics_client.increment(
-                        "manifest.invalid_icon_url", tags={"domain": base_domain}
+                        "manifest.invalid_icon_url", tags={"domain": domain_for_metrics}
                     )
         except Exception as e:
             logger.warning(f"Error getting icon for URL {url}: {e}")
         return None
+
+    def _extract_full_domain(self, url: str) -> str:
+        """Extract the normalized domain (domain.tld) from a URL.
+
+        Ignores:
+        - Protocol (http/https)
+        - www subdomain
+        - Paths, query params, etc.
+
+        Examples:
+        - https://www.google.com -> google.com
+        - http://www.bbc.co.uk/news -> bbc.co.uk
+        - https://go.abc.com -> go.abc.com
+        - https://businessinsider.es -> businessinsider.es
+        """
+        extracted = tldextract.extract(url)
+
+        # Ignore 'www' subdomain, but keep other subdomains
+        subdomain = extracted.subdomain if extracted.subdomain != "www" else ""
+
+        parts = [subdomain, extracted.domain, extracted.suffix]
+        # Filter out empty parts and join with dots
+        return ".".join(part for part in parts if part)

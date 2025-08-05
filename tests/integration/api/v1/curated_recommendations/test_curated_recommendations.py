@@ -40,6 +40,9 @@ from merino.curated_recommendations.ml_backends.protocol import (
     ModelType,
     DayTimeWeightingConfig,
 )
+from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+    SUBSECTION_EXPERIMENT_PERCENT,
+)
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
@@ -52,6 +55,8 @@ from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
 
+ML_EXPERIMENT_SCALE = SUBSECTION_EXPERIMENT_PERCENT
+
 
 class MockEngagementBackend(EngagementBackend):
     """Mock class implementing the protocol for EngagementBackend."""
@@ -59,16 +64,31 @@ class MockEngagementBackend(EngagementBackend):
     def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Return random click and impression counts based on the scheduled corpus id and region."""
         HIGH_CTR_ITEMS = {
-            "b2c10703-5377-4fe8-89d3-32fbd7288187": (1_000_000, 1_000_000),  # ML music 100% CTR
-            "f509393b-c1d6-4500-8ed2-29f8a23f39a7": (1_000_000, 1_000_000),  # ML NFL 100% CTR
-            "2afcef43-4663-446e-9d69-69cbc6966162": (1_000_000, 1_000_000),  # ML Movies 100% CTR
-            "dc4b30c4-170b-4e9f-a068-bdc51474a0fb": (1_000_000, 1_000_000),  # ML Soccer 100% CTR
-            "9261e868-beff-4419-8071-7750d063d642": (1_000_000, 1_000_000),  # ML NBA 100% CTR
+            "b2c10703-5377-4fe8-89d3-32fbd7288187": (
+                1_000_000 * ML_EXPERIMENT_SCALE,
+                1_000_000 * ML_EXPERIMENT_SCALE,
+            ),  # ML music 100% CTR
+            "f509393b-c1d6-4500-8ed2-29f8a23f39a7": (
+                1_000_000 * ML_EXPERIMENT_SCALE,
+                1_000_000 * ML_EXPERIMENT_SCALE,
+            ),  # ML NFL 100% CTR
+            "2afcef43-4663-446e-9d69-69cbc6966162": (
+                1_000_000 * ML_EXPERIMENT_SCALE,
+                1_000_000 * ML_EXPERIMENT_SCALE,
+            ),  # ML Movies 100% CTR
+            "dc4b30c4-170b-4e9f-a068-bdc51474a0fb": (
+                1_000_000 * ML_EXPERIMENT_SCALE,
+                1_000_000 * ML_EXPERIMENT_SCALE,
+            ),  # ML Soccer 100% CTR
+            "9261e868-beff-4419-8071-7750d063d642": (
+                1_000_000 * ML_EXPERIMENT_SCALE,
+                1_000_000 * ML_EXPERIMENT_SCALE,
+            ),  # ML NBA 100% CTR
             "63909b8c-a619-45f3-9ebc-fd8fcaeb72b1": (1_000_000, 1_000_000),  # ML Food 100% CTR
             # The above 6 ML recs have the highest CTR & will be included in top_stories_section
             "41111154-ebb1-45d9-9799-a882f13cd8cc": (
-                990_000,
-                1_000_000,
+                990_000 * ML_EXPERIMENT_SCALE,
+                1_000_000 * ML_EXPERIMENT_SCALE,
             ),  # ML music 99% CTR (highest CTR in Music
             # feed)
             "4095b364-02ff-402c-b58a-792a067fccf2": (1_000_000, 1_000_000),  # Non-ML food 100% CTR
@@ -109,6 +129,7 @@ class MockLocalModelBackend(LocalModelBackend):
         model_data = ModelData(
             model_type=ModelType.CLICKS,
             rescale=True,
+            noise_scale=0.002,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[3, 14, 45],
                 relative_weight=[1, 1, 1],
@@ -208,6 +229,24 @@ def get_max_total_retry_duration() -> float:
     retry_count = settings.curated_recommendations.corpus_api.retry_count
 
     return float(initial * (2**retry_count - 1) + retry_count * jitter)
+
+
+def assert_section_layouts_are_cycled(sections: dict):
+    """Assert that layouts of all sections (excluding 'top_stories_section') are cycled through expected pattern."""
+    layout_cycle = [
+        "4-medium-small-1-ad",
+        "6-small-medium-1-ad",
+        "4-large-small-medium-1-ad",
+    ]
+    cycled_sections = [
+        section for sid, section in sections.items() if sid != "top_stories_section"
+    ]  # Exclude top stories
+
+    # Check layouts were cycled through LAYOUT_CYCLE (no repeating layouts for consecutive sections)
+    for idx, sec in enumerate(cycled_sections):
+        expected_layout = layout_cycle[idx % len(layout_cycle)]
+        actual_layout = sec["layout"]["name"]
+        assert actual_layout == expected_layout
 
 
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
@@ -1226,6 +1265,13 @@ class TestSections:
 
             feeds = data["feeds"]
             sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # the first layouts for the subtopic sections should be a double-row layout, after which it should cycle.
+            layout_names = [sec["layout"]["name"] for sec in sections.values()]
+            assert layout_names[0] == "7-double-row-2-ad"  # top_stories double‐row layout
+            assert layout_names[1] == "6-small-medium-1-ad"  # first ML section
+            assert layout_names[2] == "4-large-small-medium-1-ad"  # second ML section
+
             assert "music" in sections
 
             # assert IAB metadata is present in ML sections (there are 8 of them)
@@ -1274,6 +1320,10 @@ class TestSections:
 
             feeds = data["feeds"]
             sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
+
             # The only sections are topic sections or "top_stories_section"
             assert all(
                 section_name == "top_stories_section" or section_name in Topic
@@ -1356,7 +1406,7 @@ class TestSections:
         "experiment_payload",
         [
             {},  # No experiment
-            {"experimentName": "new-tab-ml-sections", "experimentBranch": "treatment"},
+            {"experimentName": "new-tab-ml-sections", "experimentBranch": "control"},
         ],
     )
     async def test_sections_layouts(self, sections_payload, experiment_payload):
@@ -1380,25 +1430,14 @@ class TestSections:
             first_section = next(
                 (s for s in sections.values() if s["receivedFeedRank"] == 0), None
             )
-            second_section = next(
-                (s for s in sections.values() if s["receivedFeedRank"] == 1), None
-            )
             assert first_section is not None
-            assert second_section is not None
 
-            # Assert layout of the first section.
+            # Assert layout of the first section (Popular Today).
+            assert first_section["title"] == "Popular Today"
             assert first_section["layout"]["name"] == "4-large-small-medium-1-ad"
 
-            valid_layouts = {
-                "4-large-small-medium-1-ad",
-                "4-medium-small-1-ad",
-                "6-small-medium-1-ad",
-            }
-
-            # Check that sections have a layout in the valid_layouts list
-            for sec in sections.values():
-                layout_name = sec["layout"]["name"]
-                assert layout_name in valid_layouts
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
 
             # Assert only sections 1,2,3,5,7,9 (ranks: 0,1,2,4,6,8) have ads
             expected_section_ranks_with_ads = {0, 1, 2, 4, 6, 8}
@@ -1415,8 +1454,15 @@ class TestSections:
                     assert not tiles_with_ads
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "experiment_payload",
+        [
+            {},  # No experiment
+            {"experimentName": "new-tab-ml-sections", "experimentBranch": "treatment"},
+        ],
+    )
     async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
-        self, caplog
+        self, caplog, experiment_payload
     ):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale. Sections requested to be boosted (followed)
@@ -1434,7 +1480,8 @@ class TestSections:
                         {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
                         {"sectionId": "education", "isFollowed": False, "isBlocked": True},
                     ],
-                },
+                }
+                | experiment_payload,
             )
             data = response.json()
 
@@ -1488,8 +1535,14 @@ class TestSections:
             )
             data = response.json()
 
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
+
             # assert that none of the recommendations has a blocked topic.
-            for _, feed in data["feeds"].items():
+            for _, feed in feeds.items():
                 if feed:
                     for recommendation in feed["recommendations"]:
                         assert recommendation["topic"] not in blocked_topics
@@ -1678,6 +1731,12 @@ class TestSections:
             )
             data = response.json()
 
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # Assert layouts are cycled
+            assert_section_layouts_are_cycled(sections)
+
             interest_picker_response = data["interestPicker"]
             if enable_interest_picker:
                 assert interest_picker_response is not None
@@ -1730,10 +1789,9 @@ class TestSections:
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
     @pytest.mark.asyncio
-    async def test_ml_sections_thompson_sampling(self, repeat):
-        """Test that Thompson sampling is applied to ML sections"""
+    async def test_ml_sections_thompson_sampling(self, repeat, engagement_backend):
+        """Statistically verify ML sections order by engagement (higher CTR → lower feed rank)."""
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
             response = await ac.post(
                 "/api/v1/curated-recommendations",
                 json={
@@ -1743,36 +1801,32 @@ class TestSections:
                     "experimentBranch": "treatment",
                 },
             )
-            data = response.json()
-
-            # Check if the response is valid
             assert response.status_code == 200
+            feeds = response.json()["feeds"]
 
-            feeds = data["feeds"]
-            music_recs = feeds["music"]["recommendations"]  # ML feed
+        # collect non-top_stories sections
+        sub_topic_sections = [
+            sec for name, sec in feeds.items() if name != "top_stories_section" and sec is not None
+        ]
 
-            # Check the recs used in top_stories_section are removed from their original ML sections.
-            top_story_ids = {
-                rec["corpusItemId"] for rec in feeds["top_stories_section"]["recommendations"]
-            }
+        # compute avg CTR over the recommendations for each section
+        avg_ctrs = []
+        for sec in sub_topic_sections:
+            recs = sec["recommendations"]
+            ctrs = []
+            for rec in recs:
+                e = engagement_backend.get(rec["corpusItemId"], region=None)
+                if e:
+                    ctrs.append(e.click_count / e.impression_count)
+            avg = sum(ctrs) / len(ctrs) if ctrs else 0.0
+            avg_ctrs.append((sec["receivedFeedRank"], avg))
 
-            for sid, section in feeds.items():
-                if sid != "top_stories_section":
-                    for rec in section["recommendations"]:
-                        assert rec["corpusItemId"] not in top_story_ids
+        # run linear regression: rank vs avg CTR
+        ranks, avgs = zip(*avg_ctrs)
+        slope, _, _, _, _ = linregress(ranks, avgs)
 
-            # The expected ML sectionItem has 100% CTR, and is always present in the ML section part of the response.
-            expected_high_ctr_id = "41111154-ebb1-45d9-9799-a882f13cd8cc"
-            # Find the receivedRank of the high CTR ML sectionItem
-            high_item_rank = next(
-                (
-                    rec["receivedRank"]
-                    for rec in music_recs
-                    if rec["corpusItemId"] == expected_high_ctr_id
-                ),
-                None,
-            )
-            assert high_item_rank < 3
+        # assert that slope is negative: better‑engaged sections get better (lower) ranks
+        assert slope < 0, f"Sections not ordered by engagement (slope={slope})"
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("enable_interest_vector", [True, False])
@@ -1802,7 +1856,7 @@ class TestSections:
             "education-science": 1.0,
             "food": 0.8,
             "government": 0.7,
-            "society": 0.00001,
+            "society": 0.1,
             "model_id": "fake_model_id",
         }
         # make the api call
@@ -1939,7 +1993,7 @@ async def test_curated_recommendations_enriched_with_icons(
             serp_categories=[0],
         )
     ]
-    manifest_provider.domain_lookup_table = {"microsoft": 0}
+    manifest_provider.domain_lookup_table = {"microsoft.com": 0}
 
     mocked_response = {
         "data": {

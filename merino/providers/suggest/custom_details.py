@@ -3,6 +3,7 @@
 from pydantic import BaseModel
 
 from merino.middleware.geolocation import Coordinates
+from merino.providers.suggest.finance.backends.protocol import TickerSummary
 
 
 class AmoDetails(BaseModel):
@@ -30,6 +31,12 @@ class WeatherDetails(BaseModel):
     weather_report_ttl: int
 
 
+class PolygonDetails(BaseModel):
+    """Polygon specific fields."""
+
+    values: list[TickerSummary]
+
+
 class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     """Contain references to custom fields for each provider.
     This object uses the provider name as the key, and references custom schema models.
@@ -39,3 +46,4 @@ class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     amo: AmoDetails | None = None
     geolocation: GeolocationDetails | None = None
     weather: WeatherDetails | None = None
+    polygon: PolygonDetails | None = None

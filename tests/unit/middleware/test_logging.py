@@ -29,3 +29,21 @@ async def test_logging_invalid_scope_type(
     await logging_middleware(scope, receive_mock, send_mock)
 
     assert len(caplog.messages) == 0
+
+
+@pytest.mark.asyncio
+async def test_logging_toggle_suggest_request_logging(
+    mocker: MockerFixture,
+    caplog: LogCaptureFixture,
+    receive_mock: Receive,
+    send_mock: Send,
+) -> None:
+    """Test that no logging action takes place if suggest_request logging is disabled."""
+    mocker.patch("merino.middleware.logging.LOG_SUGGEST_REQUEST", False)
+    caplog.set_level(logging.INFO)
+    scope: Scope = {"type": "http"}
+    logging_middleware: LoggingMiddleware = LoggingMiddleware(mocker.AsyncMock(spec=ASGIApp))
+
+    await logging_middleware(scope, receive_mock, send_mock)
+
+    assert len(caplog.messages) == 0

@@ -12,7 +12,7 @@ from pytest import LogCaptureFixture
 
 from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
-from merino.providers.suggest.adm.backends.protocol import SuggestionContent
+from merino.providers.suggest.adm.backends.remotesettings import FormFactor
 from merino.providers.suggest.adm.provider import NonsponsoredSuggestion, Provider
 from merino.providers.suggest.base import Category
 from tests.types import FilterCaplogFixture
@@ -30,11 +30,24 @@ def test_hidden(adm: Provider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_initialize(adm: Provider, adm_suggestion_content: SuggestionContent) -> None:
+async def test_initialize(adm: Provider) -> None:
     """Test for the initialize() method of the adM provider."""
     await adm.initialize()
 
-    assert adm.suggestion_content == adm_suggestion_content
+    assert adm.suggestion_content.index_manager.stats(f"US/({FormFactor.DESKTOP.value},)") == {
+        "keyword_index_size": 5,
+        "suggestions_count": 1,
+        "icons_count": 1,
+        "advertisers_count": 1,
+        "url_templates_count": 1,
+    }
+    assert adm.suggestion_content.index_manager.stats(f"DE/({FormFactor.PHONE.value},)") == {
+        "keyword_index_size": 7,
+        "advertisers_count": 1,
+        "icons_count": 1,
+        "suggestions_count": 1,
+        "url_templates_count": 1,
+    }
     assert adm.last_fetch_at > 0
 
 
@@ -44,11 +57,11 @@ async def test_initialize(adm: Provider, adm_suggestion_content: SuggestionConte
         ("example", "example"),
         ("EXAMPLE", "example"),
         ("ExAmPlE", "example"),
-        ("example ", "example"),
-        (" example ", "example"),
+        ("example ", "example "),
+        (" example ", "example "),
         ("  example", "example"),
-        ("example   ", "example"),
-        ("   example   ", "example"),
+        ("example  ", "example  "),
+        ("   example   ", "example   "),
     ],
     ids=[
         "normalized",
@@ -97,12 +110,8 @@ async def test_initialize_remote_settings_failure(
     assert records[0].__dict__["error message"] == error_message
     assert adm.last_fetch_at == 0
     # SuggestionContent should be empty as initialize was unsuccessful.
-    assert adm.suggestion_content == SuggestionContent(
-        suggestions={},
-        full_keywords=[],
-        results=[],
-        icons={},
-    )
+    assert adm.suggestion_content.index_manager.list() == []
+    assert adm.suggestion_content.icons == {}
     assert await adm.query(srequest(query, None, None)) == []
 
 

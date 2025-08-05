@@ -32,6 +32,7 @@ class ChunkedRemoteSettingsSuggestionUploader(ChunkedRemoteSettingsUploader):
         dry_run: bool = False,
         suggestion_score_fallback: float | None = None,
         total_item_count: int | None = None,
+        chunk_cls=Chunk,
     ):
         """Initialize the uploader."""
         super(ChunkedRemoteSettingsSuggestionUploader, self).__init__(
@@ -43,6 +44,7 @@ class ChunkedRemoteSettingsSuggestionUploader(ChunkedRemoteSettingsUploader):
             server,
             dry_run,
             total_item_count,
+            chunk_cls=chunk_cls,
         )
         self.suggestion_score_fallback = suggestion_score_fallback
         self.total_item_count = total_item_count
