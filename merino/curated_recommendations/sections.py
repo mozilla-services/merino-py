@@ -117,7 +117,7 @@ async def get_corpus_sections(
     sections_backend: SectionsProtocol,
     surface_id: SurfaceId,
     min_feed_rank: int,
-    scheduled_surface_backend: ScheduledSurfaceProtocol = None
+    scheduled_surface_backend: ScheduledSurfaceProtocol = None,
 ) -> Dict[str, Section]:
     """Fetch editorially curated sections from the sections backend.
 
