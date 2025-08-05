@@ -11,7 +11,8 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SurfaceId,
     CorpusSection,
     CorpusItem,
-    Topic, ScheduledSurfaceProtocol,
+    Topic,
+    ScheduledSurfaceProtocol,
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
@@ -114,9 +115,9 @@ def map_corpus_section_to_section(
 
 async def get_corpus_sections(
     sections_backend: SectionsProtocol,
-    scheduled_surface_backend: ScheduledSurfaceProtocol,
     surface_id: SurfaceId,
     min_feed_rank: int,
+    scheduled_surface_backend: ScheduledSurfaceProtocol = None
 ) -> Dict[str, Section]:
     """Fetch editorially curated sections from the sections backend.
 
@@ -129,10 +130,11 @@ async def get_corpus_sections(
         A mapping from section IDs to Section objects, each with a unique receivedFeedRank.
     """
     corpus_sections = await sections_backend.fetch(surface_id)
-    legacy_corpus = await scheduled_surface_backend.fetch(surface_id)
     sid_map: Dict[str, str] = {}
-    for item in legacy_corpus:
-        sid_map[item.corpusItemId] = item.scheduledCorpusItemId;
+    if scheduled_surface_backend is not None:
+        legacy_corpus = await scheduled_surface_backend.fetch(surface_id)
+        for item in legacy_corpus:
+            sid_map[item.corpusItemId] = item.scheduledCorpusItemId
 
     sections: Dict[str, Section] = {}
 
@@ -145,7 +147,7 @@ async def get_corpus_sections(
     for sname, section in sections.items():
         for r in section.recommendations:
             if r.corpusItemId in sid_map:
-                r.scheduledCorpusItemId = sid_map[r.corpusItemId]
+                r.update_scheduled_corpus_item_id(sid_map[r.corpusItemId])
     return sections
 
 
@@ -307,7 +309,9 @@ async def get_sections(
         A dict mapping section IDs to fully-configured Section models.
     """
     # 1. Get ALL corpus sections
-    corpus_sections_all = await get_corpus_sections(sections_backend, scheduled_surface_backend, surface_id, 1)
+    corpus_sections_all = await get_corpus_sections(
+        sections_backend, surface_id, 1, scheduled_surface_backend=scheduled_surface_backend
+    )
 
     # 2. If ML sections are NOT requested, filter to legacy sections
     subtopic_experiment_enabled = is_ml_sections_experiment(request)

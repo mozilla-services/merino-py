@@ -146,7 +146,7 @@ class CuratedRecommendationsProvider:
             general_feed = self.rank_recommendations(recommendations, request)
 
         response = CuratedRecommendationsResponse(
-            recommendedAt=0,
+            recommendedAt=get_millisecond_epoch_time(),
             surfaceId=surface_id,
             data=general_feed,
             feeds=sections_feeds,
