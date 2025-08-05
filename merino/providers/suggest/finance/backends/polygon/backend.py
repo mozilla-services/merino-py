@@ -208,7 +208,9 @@ class PolygonBackend(FinanceBackend):
             logger.error(f"Failed to build FinanceManifest due to validation error: {e}")
             return FinanceManifest(tickers={})
 
-    async def fetch_manifest_data(self) -> tuple[GetManifestResultCode, FinanceManifest | None]:
+    async def fetch_manifest_data(
+        self,
+    ) -> tuple[GetManifestResultCode, FinanceManifest | None, float | None]:
         """Fetch manifest data from GCS through the filemanager."""
         return await self.filemanager.get_file()
 

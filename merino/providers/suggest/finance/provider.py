@@ -37,7 +37,7 @@ class Provider(BaseProvider):
     resync_interval_sec: int
     cron_interval_sec: int
     last_fetch_at: float
-    last_upload_at: float
+    last_upload_at: float | None
     last_fetch_failure_at: float | None = None
     last_upload_failure_at: float | None = None
 
@@ -64,7 +64,6 @@ class Provider(BaseProvider):
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
         self.last_fetch_at = 0.0
-        self.last_upload_at = 0.0
 
         super().__init__()
 
@@ -94,13 +93,15 @@ class Provider(BaseProvider):
         Does not set manifest_data if non-success code passed with None.
         """
         try:
-            result_code, data = await self.backend.fetch_manifest_data()
+            result_code, data, timestamp = await self.backend.fetch_manifest_data()
 
             match GetManifestResultCode(result_code):
                 case GetManifestResultCode.SUCCESS if data is not None:
                     self.manifest_data = data
                     self.last_fetch_at = time.time()
                     self.last_fetch_failure_at = None
+                    self.last_upload_at = timestamp
+                    logger.info(f"last_upload_at set from fetch: {timestamp}")
 
                 case GetManifestResultCode.FAIL:
                     logger.error("Failed to fetch manifest data from finance backend.")
@@ -126,6 +127,7 @@ class Provider(BaseProvider):
             await self.backend.build_and_upload_manifest_file()
             self.last_upload_at = time.time()
             self.last_upload_failure_at = None
+            logger.info(f"last_upload_at set from upload: {time.time()}")
         except FinanceBackendError as err:
             logger.error("Failed to upload manifest data from finance backend: %s", err)
             self.last_upload_failure_at = time.time()
@@ -154,6 +156,9 @@ class Provider(BaseProvider):
         if self.last_upload_failure_at and (now - self.last_upload_failure_at) < 7200:
             logger.info("Skipping upload: last failure was less than an hour ago.")
             return False
+
+        if self.last_upload_at is None:
+            return True
 
         return (now - self.last_upload_at) >= self.resync_interval_sec
 

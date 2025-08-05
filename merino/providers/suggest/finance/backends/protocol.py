@@ -96,7 +96,9 @@ class FinanceBackend(Protocol):
         """Build a FinanceManifest from ticker -> GCS image URL mappings."""
         ...
 
-    async def fetch_manifest_data(self) -> tuple[GetManifestResultCode, FinanceManifest | None]:
+    async def fetch_manifest_data(
+        self,
+    ) -> tuple[GetManifestResultCode, FinanceManifest | None, float | None]:
         """Fetch manifest data from GCS through the filemanager."""
         ...
 

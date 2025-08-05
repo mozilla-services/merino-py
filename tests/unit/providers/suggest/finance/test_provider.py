@@ -267,7 +267,7 @@ async def test_fetch_manifest_sets_last_fetch_and_clears_failure(provider, mocke
     mocker.patch.object(
         provider.backend,
         "fetch_manifest_data",
-        return_value=(GetManifestResultCode.SUCCESS, mock_manifest),
+        return_value=(GetManifestResultCode.SUCCESS, mock_manifest, time.time()),
     )
     provider.last_fetch_failure_at = time.time() - 500
 
@@ -277,6 +277,7 @@ async def test_fetch_manifest_sets_last_fetch_and_clears_failure(provider, mocke
 
     assert provider.last_fetch_at >= before and provider.last_fetch_at <= after
     assert provider.last_fetch_failure_at is None
+    assert provider.last_upload_at is not None
 
 
 @pytest.mark.asyncio
@@ -285,11 +286,10 @@ async def test_fetch_manifest_sets_last_failure_on_error(provider, mocker):
     mocker.patch.object(
         provider.backend,
         "fetch_manifest_data",
-        return_value=(GetManifestResultCode.FAIL, None),
+        return_value=(GetManifestResultCode.FAIL, None, None),
     )
 
     await provider._fetch_manifest()
-
     assert provider.last_fetch_failure_at is not None
 
 
