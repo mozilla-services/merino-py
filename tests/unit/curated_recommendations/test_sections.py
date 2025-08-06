@@ -38,6 +38,7 @@ from merino.curated_recommendations.sections import (
     get_corpus_sections_for_legacy_topic,
     cycle_layouts_for_ranked_sections,
     LAYOUT_CYCLE,
+    is_ml_sections_experiment_control_b,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -206,6 +207,24 @@ class TestMlSectionsExperiment:
         """Test that ML sections experiment flag matches expected logic"""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch)
         assert is_ml_sections_experiment(req) is expected
+
+
+class TestMlSectionsExperimentControl:
+    """Tests covering is_ml_sections_experiment"""
+
+    @pytest.mark.parametrize(
+        "name,branch,expected",
+        [
+            (ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment", False),
+            (ExperimentName.ML_SECTIONS_EXPERIMENT.value, "control-b", True),
+            (ExperimentName.ML_SECTIONS_EXPERIMENT.value, "control", False),
+            ("other", "treatment", False),
+        ],
+    )
+    def test_flag_logic(self, name, branch, expected):
+        """Test that ML sections experiment flag matches expected logic"""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        assert is_ml_sections_experiment_control_b(req) is expected
 
 
 class TestUpdateReceivedFeedRank:

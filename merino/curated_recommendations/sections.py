@@ -182,6 +182,7 @@ def is_ml_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
         request, ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment"
     )
 
+
 def is_ml_sections_experiment_control_b(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the sections backend experiment is enabled."""
     return is_enrolled_in_experiment(
@@ -190,7 +191,7 @@ def is_ml_sections_experiment_control_b(request: CuratedRecommendationsRequest) 
 
 
 def is_popular_today_double_row_layout(request: CuratedRecommendationsRequest) -> bool:
-    """Return True for the treatment branch of the ML sub-topics experiment, otherwise False."""
+    """Temporarily disable."""
     return is_ml_sections_experiment(request)
 
 
@@ -337,7 +338,9 @@ async def get_sections(
 
     # 6. Split top stories
     top_stories_count = TOP_STORIES_COUNT
-    layout_cycle = LAYOUT_CYCLE_CONTROL if is_ml_sections_experiment_control_b() else LAYOUT_CYCLE
+    layout_cycle = (
+        LAYOUT_CYCLE_CONTROL if is_ml_sections_experiment_control_b(request) else LAYOUT_CYCLE
+    )
     popular_today_layout = layout_4_large
 
     # check if popular today double row experiment is enabled
