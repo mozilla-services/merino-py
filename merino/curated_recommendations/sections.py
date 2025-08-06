@@ -191,7 +191,7 @@ def is_ml_sections_experiment_control_b(request: CuratedRecommendationsRequest) 
 
 
 def is_popular_today_double_row_layout(request: CuratedRecommendationsRequest) -> bool:
-    """Temporarily disable."""
+    """Return True for the treatment branch of the ML sub-topics experiment, otherwise False."""
     return is_ml_sections_experiment(request)
 
 
