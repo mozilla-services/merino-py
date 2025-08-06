@@ -67,7 +67,7 @@ async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
                 # Just return a dummy URL instead of uploading
                 return f"https://dummy-cdn.example.com/{destination_name}"
 
-            def get_most_recent_file(self, exclusion, sort_key):
+            def get_most_recent_file(self, match, sort_key):
                 return None
 
         # Create a domain metadata uploader with our mock uploader

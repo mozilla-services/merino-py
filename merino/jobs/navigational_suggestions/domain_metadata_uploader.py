@@ -55,6 +55,7 @@ class DomainMetadataUploader:
         can be made between the previous file and the new file to be written.
         """
         most_recent = self.uploader.get_most_recent_file(
+            match="top_picks",
             exclusion=self.DESTINATION_TOP_PICK_FILE_NAME,
             sort_key=lambda blob: blob.name,
         )

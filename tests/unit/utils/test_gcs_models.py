@@ -70,7 +70,9 @@ class DummyUploader(BaseContentUploader):
         )
         return blob.public_url
 
-    def get_most_recent_file(self, exclusion: str, sort_key) -> DummyBlob | None:
+    def get_most_recent_file(
+        self, match: str, sort_key, exclusion: str | None
+    ) -> DummyBlob | None:
         """Get most recent file."""
         # For the purpose of testing, return a dummy blob if exclusion is non-empty; otherwise, return None.
         if exclusion:
@@ -105,9 +107,9 @@ def test_dummy_uploader_get_most_recent_file():
     """Test dummy uploader get most recent file."""
     uploader = DummyUploader()
     # Test that when exclusion is provided the uploader returns a DummyBlob
-    blob = uploader.get_most_recent_file("exclude.txt", sort_key=lambda x: x)
+    blob = uploader.get_most_recent_file("match", sort_key=lambda x: x, exclusion="exclude.txt")
     assert blob is not None
     assert blob.public_url == "http://dummy/recent_file"
     # Test that when exclusion is empty the uploader returns None
-    blob_none = uploader.get_most_recent_file("", sort_key=lambda x: x)
+    blob_none = uploader.get_most_recent_file("match", exclusion="", sort_key=lambda x: x)
     assert blob_none is None
