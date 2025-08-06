@@ -134,7 +134,8 @@ async def get_corpus_sections(
     if scheduled_surface_backend is not None:
         legacy_corpus = await scheduled_surface_backend.fetch(surface_id)
         for item in legacy_corpus:
-            sid_map[item.corpusItemId] = item.scheduledCorpusItemId
+            if item.scheduledCorpusItemId is not None:
+                sid_map[item.corpusItemId] = item.scheduledCorpusItemId
 
     sections: Dict[str, Section] = {}
 
@@ -147,7 +148,7 @@ async def get_corpus_sections(
     for sname, section in sections.items():
         for r in section.recommendations:
             if r.corpusItemId in sid_map:
-                r.update_scheduled_corpus_item_id(sid_map[r.corpusItemId])
+                r.update_scheduled_corpus_item_id(sid_map.get(r.corpusItemId) or "")
     return sections
 
 
