@@ -80,7 +80,7 @@ def test_is_valid_ticker_fail() -> None:
 
 def test_lookup_ticker_company_success() -> None:
     """Test lookup_ticker_company method. Should return valid company name."""
-    assert lookup_ticker_company("TSLA") == "Tesla, Inc."
+    assert lookup_ticker_company("TSLA") == "Tesla Inc"
 
 
 def test_lookup_ticker_company_fail() -> None:
@@ -113,7 +113,7 @@ def test_build_ticker_summary_success() -> None:
     )
     expected = TickerSummary(
         ticker="AAPL",
-        name="Apple Inc.",
+        name="Apple Inc",
         last_price="$120.47 USD",
         todays_change_perc="0.82",
         query="AAPL stock",

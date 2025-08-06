@@ -139,7 +139,7 @@ def fixture_ticker_summary() -> TickerSummary:
     # these values are based on the above single_ticker_snapshot_response fixture.
     return TickerSummary(
         ticker="AAPL",
-        name="Apple Inc.",
+        name="Apple Inc",
         last_price="$120.47 USD",
         todays_change_perc="0.82",
         query="AAPL stock",

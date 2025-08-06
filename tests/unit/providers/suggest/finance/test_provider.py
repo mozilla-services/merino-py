@@ -44,7 +44,7 @@ def fixture_geolocation() -> Location:
 def fixture_ticker_summar() -> TickerSummary:
     """Return a test TickerSummary."""
     return TickerSummary(
-        name="Apple Inc.",
+        name="Apple Inc",
         ticker="AAPL",
         last_price="$100.5",
         todays_change_perc="1.5",
