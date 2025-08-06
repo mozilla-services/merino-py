@@ -154,7 +154,7 @@ def test_get_most_recent_file_with_two_files(
 
     excluded_file: str = "excluded.json"
     result = gcs_uploader.get_most_recent_file(
-        exclusion=excluded_file, sort_key=lambda blob: blob.name
+        match="top_picks", exclusion=excluded_file, sort_key=lambda blob: blob.name
     )
 
     # result should be the most recent blob / file
@@ -183,7 +183,7 @@ def test_get_most_recent_file_with_excluded_file(
 
     # call the method with the exclusion argument set to the excluded file
     result = gcs_uploader.get_most_recent_file(
-        exclusion=excluded_file, sort_key=lambda blob: blob.name
+        match="top_picks", exclusion=excluded_file, sort_key=lambda blob: blob.name
     )
 
     # result should be none since the bucket only contains the excluded file

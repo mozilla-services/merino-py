@@ -69,18 +69,28 @@ class GcsUploader(BaseContentUploader):
 
         return destination_blob
 
-    def get_most_recent_file(self, exclusion: str, sort_key: Callable) -> Blob | None:
-        """Get the most recent file from the bucket"""
+    def get_most_recent_file(
+        self,
+        match: str,
+        sort_key: Callable,
+        exclusion: str | None = None,
+    ) -> Blob | None:
+        """Return the most recent .json file from the bucket that contains `match` in the name,
+        excluding any file that exactly matches `exclusion`.
+        """
         bucket: Bucket = self.storage_client.get_bucket(self.bucket_name)
+
         blobs = [
             blob
-            for blob in bucket.list_blobs(delimiter="/", match_glob="*.json")
-            if blob.name != exclusion
+            for blob in bucket.list_blobs(delimiter="/")
+            if match in blob.name
+            and blob.name.endswith(".json")
+            and (not exclusion or blob.name != exclusion)
         ]
 
         if not blobs:
             return None
-        # return the most recent file. This sorts in ascending order, we are getting the last file.
+
         most_recent = sorted(blobs, key=sort_key)[-1]
         return most_recent
 

@@ -116,6 +116,27 @@ test_top_picks_2 = {
     ]
 }
 
+test_top_picks_3 = {
+    "domains": [
+        {
+            "rank": 1,
+            "title": "Def",
+            "domain": "def",
+            "url": "https://def.test",
+            "icon": "",
+            "categories": ["web-browser"],
+            "serp_categories": [0],
+            "similars": ["a", "dfe", "def"],
+        },
+    ]
+}
+
+test_polygon = {
+    "tickers": {
+        "AAPL": "http://www.apple.com",
+    }
+}
+
 
 def test_upload_top_picks(gcs_storage_client, gcs_storage_bucket, mock_favicon_downloader):
     """Test upload_top_picks method of DomainMetaDataUploader. This test also implicitly tests
@@ -202,6 +223,12 @@ def test_get_latest_file_for_diff(gcs_storage_client, gcs_storage_bucket, mock_f
     gcp_uploader.upload_content(json.dumps(test_top_picks_1), "20240101120555_top_picks.json")
     # upload test_top_picks_2 for the 2023... file
     gcp_uploader.upload_content(json.dumps(test_top_picks_2), "20230101120555_top_picks.json")
+    # upload test_top_picks_3 for the 2022... file
+    gcp_uploader.upload_content(
+        json.dumps(test_top_picks_3), "20220101120555_top_picks_latest.json"
+    )
+    # upload test_polygon for the 2022... file
+    gcp_uploader.upload_content(json.dumps(test_polygon), "polygon_latest.json")
 
     # get the latest file
     latest_file = domain_metadata_uploader.get_latest_file_for_diff()
@@ -228,7 +255,10 @@ def test_get_latest_file_for_diff_when_no_file_is_found(
         uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
     )
 
-    # this should return None since we didn't upload anything to our gcs bucket
+    # upload test_polygon
+    gcp_uploader.upload_content(json.dumps(test_polygon), "polygon_latest.json")
+
+    # this should return None since we didn't upload any top picks to our gcs bucket
     latest_file = domain_metadata_uploader.get_latest_file_for_diff()
 
     assert latest_file is None

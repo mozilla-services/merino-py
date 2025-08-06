@@ -53,6 +53,8 @@ class BaseContentUploader(ABC):
         ...
 
     @abstractmethod
-    def get_most_recent_file(self, exclusion: str, sort_key: Callable) -> Blob | None:
+    def get_most_recent_file(
+        self, match: str, sort_key: Callable, exclusion: str | None
+    ) -> Blob | None:
         """Abstract method for getting the most recent file from the GCS bucket."""
         ...
