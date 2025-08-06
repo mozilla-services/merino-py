@@ -117,7 +117,7 @@ async def get_corpus_sections(
     sections_backend: SectionsProtocol,
     surface_id: SurfaceId,
     min_feed_rank: int,
-    scheduled_surface_backend: ScheduledSurfaceProtocol = None,
+    scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
 ) -> Dict[str, Section]:
     """Fetch editorially curated sections from the sections backend.
 
@@ -125,6 +125,7 @@ async def get_corpus_sections(
         sections_backend: Backend interface to fetch corpus sections.
         surface_id: Identifier for which surface to fetch sections.
         min_feed_rank: Starting rank offset for assigning receivedFeedRank.
+        scheduled_surface_backend: Backend interface to fetch scheduled corpus items (temporary)
 
     Returns:
         A mapping from section IDs to Section objects, each with a unique receivedFeedRank.
