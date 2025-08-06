@@ -46,6 +46,8 @@ from merino.curated_recommendations.utils import is_enrolled_in_experiment
 logger = logging.getLogger(__name__)
 
 LAYOUT_CYCLE = [layout_4_large, layout_4_medium, layout_6_tiles]
+LAYOUT_CYCLE_CONTROL = [layout_4_medium, layout_6_tiles, layout_4_large]
+
 TOP_STORIES_COUNT = 6
 
 
@@ -178,6 +180,12 @@ def is_ml_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the sections backend experiment is enabled."""
     return is_enrolled_in_experiment(
         request, ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment"
+    )
+
+def is_ml_sections_experiment_control_b(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the sections backend experiment is enabled."""
+    return is_enrolled_in_experiment(
+        request, ExperimentName.ML_SECTIONS_EXPERIMENT.value, "control-b"
     )
 
 
@@ -329,7 +337,7 @@ async def get_sections(
 
     # 6. Split top stories
     top_stories_count = TOP_STORIES_COUNT
-    layout_cycle = LAYOUT_CYCLE
+    layout_cycle = LAYOUT_CYCLE_CONTROL if is_ml_sections_experiment_control_b() else LAYOUT_CYCLE
     popular_today_layout = layout_4_large
 
     # check if popular today double row experiment is enabled
