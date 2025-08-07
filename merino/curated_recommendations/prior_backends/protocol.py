@@ -47,3 +47,7 @@ class ExperimentRescaler(BaseModel):
         impressions and clicks can be used in place of opens and no_opens
         """
         return opens, no_opens
+
+    def rescale_prior(self, rec: CuratedRecommendation, alpha, beta):
+        """Update priors values based on whether item is unique to the experiment."""
+        return alpha, beta
