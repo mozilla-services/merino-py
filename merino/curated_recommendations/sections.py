@@ -12,6 +12,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusSection,
     CorpusItem,
     Topic,
+    ScheduledSurfaceProtocol,
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
@@ -116,6 +117,7 @@ async def get_corpus_sections(
     sections_backend: SectionsProtocol,
     surface_id: SurfaceId,
     min_feed_rank: int,
+    scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
 ) -> Dict[str, Section]:
     """Fetch editorially curated sections from the sections backend.
 
@@ -123,11 +125,19 @@ async def get_corpus_sections(
         sections_backend: Backend interface to fetch corpus sections.
         surface_id: Identifier for which surface to fetch sections.
         min_feed_rank: Starting rank offset for assigning receivedFeedRank.
+        scheduled_surface_backend: Backend interface to fetch scheduled corpus items (temporary)
 
     Returns:
         A mapping from section IDs to Section objects, each with a unique receivedFeedRank.
     """
     corpus_sections = await sections_backend.fetch(surface_id)
+    sid_map: Dict[str, str | None] = {}
+    if scheduled_surface_backend is not None:
+        legacy_corpus = await scheduled_surface_backend.fetch(surface_id)
+        for item in legacy_corpus:
+            if item.scheduledCorpusItemId is not None:
+                sid_map[item.corpusItemId] = item.scheduledCorpusItemId
+
     sections: Dict[str, Section] = {}
 
     legacy_sections = {topic.value for topic in Topic}
@@ -136,6 +146,10 @@ async def get_corpus_sections(
         sections[cs.externalId] = map_corpus_section_to_section(
             cs, rank, is_legacy_section=cs.externalId in legacy_sections
         )
+    for sname, section in sections.items():
+        for r in section.recommendations:
+            if r.corpusItemId in sid_map:
+                r.update_scheduled_corpus_item_id(sid_map[r.corpusItemId])
     return sections
 
 
@@ -277,6 +291,7 @@ async def get_sections(
     request: CuratedRecommendationsRequest,
     surface_id: SurfaceId,
     sections_backend: SectionsProtocol,
+    scheduled_surface_backend: ScheduledSurfaceProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
     personal_interests: Optional[InferredInterests] = None,
@@ -296,7 +311,12 @@ async def get_sections(
         A dict mapping section IDs to fully-configured Section models.
     """
     # 1. Get ALL corpus sections
-    corpus_sections_all = await get_corpus_sections(sections_backend, surface_id, 1)
+    corpus_sections_all = await get_corpus_sections(
+        sections_backend=sections_backend,
+        surface_id=surface_id,
+        min_feed_rank=1,
+        scheduled_surface_backend=scheduled_surface_backend,
+    )
 
     # 2. If ML sections are NOT requested, filter to legacy sections
     subtopic_experiment_enabled = is_ml_sections_experiment(request)

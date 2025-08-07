@@ -462,13 +462,17 @@ class TestGetCorpusSections:
     @pytest.mark.asyncio
     async def test_fetch_called_with_correct_args(self, sections_backend):
         """Ensure fetch is called once with given surface_id."""
-        await get_corpus_sections(sections_backend, SurfaceId.NEW_TAB_EN_US, 2)
+        await get_corpus_sections(
+            sections_backend=sections_backend, surface_id=SurfaceId.NEW_TAB_EN_US, min_feed_rank=2
+        )
         sections_backend.fetch.assert_awaited_once_with(SurfaceId.NEW_TAB_EN_US)
 
     @pytest.mark.asyncio
     async def test_section_transformation(self, sections_backend, sample_backend_data):
         """Verify mapping logic for get_corpus_sections."""
-        result = await get_corpus_sections(sections_backend, SurfaceId.NEW_TAB_EN_US, 5)
+        result = await get_corpus_sections(
+            sections_backend=sections_backend, surface_id=SurfaceId.NEW_TAB_EN_US, min_feed_rank=5
+        )
 
         assert set(result.keys()) == {cs.externalId for cs in sample_backend_data}
         section_a = result["secA"]
