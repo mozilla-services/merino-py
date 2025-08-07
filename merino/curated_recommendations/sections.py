@@ -149,7 +149,7 @@ async def get_corpus_sections(
     for sname, section in sections.items():
         for r in section.recommendations:
             if r.corpusItemId in sid_map:
-                r.update_scheduled_corpus_item_id(sid_map.get(r.corpusItemId) or "")
+                r.update_scheduled_corpus_item_id(sid_map[r.corpusItemId])
     return sections
 
 
