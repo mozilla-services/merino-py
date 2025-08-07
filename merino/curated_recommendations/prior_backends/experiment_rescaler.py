@@ -33,6 +33,6 @@ class SubsectionsExperimentRescaler(ExperimentRescaler):
         Scale of 4 puts an item with no activity just below the pack of common items that have good activity
         """
         if self.is_experiment_story(rec):
-            return alpha / 4., beta
+            return alpha / 4.0, beta
         else:
             return alpha, beta

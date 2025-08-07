@@ -166,7 +166,9 @@ def section_thompson_sampling(
                 total_imps += impressions
 
                 if rescaler is not None:
-                    a_prior_mod, b_prior_mod = rescaler.rescale_prior(rec, a_prior_per_item, b_prior_per_item)
+                    a_prior_mod, b_prior_mod = rescaler.rescale_prior(
+                        rec, a_prior_per_item, b_prior_per_item
+                    )
                     a_prior_total += a_prior_mod
                     b_prior_total += b_prior_mod
                 else:
