@@ -9,7 +9,7 @@ from typing import Any
 
 from merino.providers.suggest.finance.backends.polygon.utils import (
     build_ticker_summary,
-    is_valid_ticker,
+    _is_valid_ticker,
     lookup_ticker_company,
     extract_ticker_snapshot,
 )
@@ -68,14 +68,14 @@ def fixture_single_ticker_snapshot_response() -> dict[str, Any]:
     }
 
 
-def test_is_valid_ticker_success() -> None:
-    """Test the is_valid_ticker method. Should return True for a valid ticker."""
-    assert is_valid_ticker("AAPL") is True
+def test__is_valid_ticker_success() -> None:
+    """Test the _is_valid_ticker method. Should return True for a valid ticker."""
+    assert _is_valid_ticker("AAPL") is True
 
 
-def test_is_valid_ticker_fail() -> None:
-    """Test the is_valid_ticker method. Should return False for an invalid ticker."""
-    assert is_valid_ticker("BOB") is False
+def test__is_valid_ticker_fail() -> None:
+    """Test the _is_valid_ticker method. Should return False for an invalid ticker."""
+    assert _is_valid_ticker("BOB") is False
 
 
 def test_lookup_ticker_company_success() -> None:

@@ -10,6 +10,9 @@ from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.custom_details import CustomDetails, PolygonDetails
+from merino.providers.suggest.finance.backends.polygon.optin_keyword_ticker_mapping import (
+    get_ticker_for_keyword,
+)
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceBackend,
     FinanceBackendError,
@@ -17,7 +20,7 @@ from merino.providers.suggest.finance.backends.protocol import (
     GetManifestResultCode,
     TickerSummary,
 )
-from merino.providers.suggest.finance.backends.polygon.utils import is_valid_ticker
+from merino.providers.suggest.finance.backends.polygon.utils import get_ticker_if_valid
 from merino.utils import cron
 from merino.configs import settings
 
@@ -170,18 +173,18 @@ class Provider(BaseProvider):
                 detail="Invalid query parameters: `q` is missing",
             )
 
-    def normalize_query(self, query: str) -> str:
-        """Convert a query string to uppercase and remove leading spaces."""
-        return query.lstrip().upper()
-
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide finance suggestions."""
-        # get a stock snapshot if the query param contains a supported ticker else do a search for that ticker
+        # Extract ticker from the query string. Validte for a supported keyword or a stock ticker.
+        ticker: str | None = get_ticker_if_valid(srequest.query) or get_ticker_for_keyword(
+            srequest.query
+        )
+
         try:
-            if not is_valid_ticker(srequest.query):
+            if not ticker:
                 return []
             else:
-                ticker = srequest.query
+                ticker = ticker.upper()
                 ticker_summary: TickerSummary | None
                 image_url = self.get_image_url_for_ticker(ticker)
 
