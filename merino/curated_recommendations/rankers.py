@@ -147,13 +147,13 @@ def section_thompson_sampling(
         recs = sec.recommendations[:top_n]
         total_clicks = 0
         total_imps = 0
-        a_prior_total = 0
-        b_prior_total = 0
+        a_prior_total = 0.0
+        b_prior_total = 0.0
 
         # constant prior α, β
         prior = ConstantPrior().get()
-        a_prior_per_item = prior.alpha
-        b_prior_per_item = prior.beta
+        a_prior_per_item = float(prior.alpha)
+        b_prior_per_item = float(prior.beta)
         for rec in recs:
             if engagement := engagement_backend.get(rec.corpusItemId):
                 clicks = engagement.click_count
@@ -176,8 +176,8 @@ def section_thompson_sampling(
                     b_prior_total += b_prior_per_item
 
         # Sum engagement and priors.
-        opens = max(total_clicks + a_prior_total, 1)
-        no_opens = max(total_imps - total_clicks + b_prior_total, 1)
+        opens = max(total_clicks + a_prior_total, 1.0)
+        no_opens = max(total_imps - total_clicks + b_prior_total, 1.0)
         # Sample distribution
         return float(beta.rvs(opens, no_opens))
 
