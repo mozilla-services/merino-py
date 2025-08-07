@@ -1,4 +1,6 @@
-"""Module containing JSON object with ticker symbol to company name mapping for RUSSELL1000 tickers."""
+"""Module containing JSON object with ticker symbol to company name mapping for RUSSELL1000 tickers.
+This list was sourced from www.barchart.com/stocks/indices/russell/russell1000
+"""
 
 # Source of truth for ticker symbol and company name mapping.
 # NOTE: Should be treated as read-only and runtime.
