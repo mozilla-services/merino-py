@@ -93,7 +93,7 @@ def test_validate_fails_on_missing_query_param(
 
 
 @pytest.mark.asyncio
-async def test_query_ticker_summary_returned(
+async def test_query_ticker_summary_for_ticker_symbol_returned(
     backend_mock: Any,
     provider: Provider,
     ticker_summary: TickerSummary,
@@ -120,13 +120,81 @@ async def test_query_ticker_summary_returned(
 
 
 @pytest.mark.asyncio
-async def test_query_ticker_summary_not_returned(
+async def test_query_ticker_summary_for_ticker_symbol_not_returned(
     provider: Provider,
     geolocation: Location,
 ) -> None:
     """Test that the query method provides no finance suggestion when ticker symbol from query param is not supported"""
     suggestions: list[BaseSuggestion] = await provider.query(
         SuggestionRequest(query="test", geolocation=geolocation)
+    )
+
+    assert suggestions == []
+
+
+@pytest.mark.asyncio
+async def test_query_ticker_summary_for_stock_keyword_returned(
+    backend_mock: Any,
+    provider: Provider,
+    ticker_summary: TickerSummary,
+    geolocation: Location,
+) -> None:
+    """Test that the query method provides a valid finance suggestion when the stock keyword from query param is supported"""
+    expected_suggestions: list[BaseSuggestion] = [
+        BaseSuggestion(
+            title="Finance Suggestion",
+            url=HttpUrl(provider.url),
+            provider=provider.name,
+            is_sponsored=False,
+            score=provider.score,
+            custom_details=CustomDetails(polygon=PolygonDetails(values=[ticker_summary])),
+        ),
+    ]
+    backend_mock.get_ticker_summary.return_value = ticker_summary
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="apple stock", geolocation=geolocation)
+    )
+
+    assert suggestions == expected_suggestions
+
+
+@pytest.mark.asyncio
+async def test_query_ticker_summary_for_stock_keyword_not_returned(
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that the query method provides no finance suggestion when the stock keyword from query param is not supported"""
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="bobs burgers stock", geolocation=geolocation)
+    )
+
+    assert suggestions == []
+
+
+# TODO: Will be updated after ETF tickers are added for the corresponding keywords
+@pytest.mark.asyncio
+async def test_query_ticker_summary_for_etf_keyword_returned(
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that the query method provides a valid finance suggestion when the ETF keyword from query param is supported"""
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="dow jones industrial average", geolocation=geolocation)
+    )
+
+    # TODO: Will be updated after ETF tickers are added for the corresponding keywords
+    assert suggestions == []
+
+
+@pytest.mark.asyncio
+async def test_query_ticker_summary_for_etf_keyword_not_returned(
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that the query method provides no finance suggestion when the ETF keyword from query param is not supported"""
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="bobs burgers ETF stock", geolocation=geolocation)
     )
 
     assert suggestions == []

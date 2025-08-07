@@ -1,29 +1,59 @@
 """Utilities for the Polygon backend"""
 
 from typing import Any
-from types import MappingProxyType
 
 from pydantic import HttpUrl
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
 from merino.providers.suggest.finance.backends.polygon.ticker_company_mapping import (
     _TICKER_COMPANY,
 )
-
-# This will make sure that TICKER_COMPANY variable is read-only and immutable at runtime.
-TICKER_COMPANY = MappingProxyType(_TICKER_COMPANY)
+from merino.providers.suggest.finance.backends.polygon.keyword_ticker_mapping import (
+    ETF_TICKER_KEYWORDS,
+    STOCK_TICKER_KEYWORDS,
+    KEYWORD_TO_ETF_TICKER,
+    KEYWORD_TO_STOCK_TICKER,
+)
 
 # Extracting just the ticker symbols into a separate set.
-TICKERS = set(_TICKER_COMPANY.keys())
+TICKERS = frozenset(_TICKER_COMPANY.keys())
 
 
-def is_valid_ticker(symbol: str) -> bool:
+def _is_valid_ticker(symbol: str) -> bool:
     """Check if the symbol provided is a valid and supported ticker."""
     return symbol.upper() in TICKERS
 
 
+def get_ticker_if_valid(symbol: str) -> str | None:
+    """Validate and return a ticker. Returns None if not a valid ticker symbol."""
+    if _is_valid_ticker(symbol):
+        return symbol.upper()
+    else:
+        return None
+
+
 def lookup_ticker_company(ticker: str) -> str:
     """Get the ticker company."""
-    return TICKER_COMPANY[ticker.upper()]
+    return _TICKER_COMPANY[ticker.upper()]
+
+
+def _is_valid_keyword_for_stock_ticker(keyword: str) -> bool:
+    """Check if the keyword provided is one of the supported keywords for stock tickers."""
+    return keyword in STOCK_TICKER_KEYWORDS
+
+
+def _is_valid_keyword_for_etf_ticker(keyword: str) -> bool:
+    """Check if the keyword provided is one of the supported keywords for ETF tickers."""
+    return keyword in ETF_TICKER_KEYWORDS
+
+
+def get_ticker_for_keyword(keyword: str) -> str | None:
+    """Validate and return a ticker. Should return a ticker for stock keywords or ETF keywords or None."""
+    if _is_valid_keyword_for_stock_ticker(keyword):
+        return KEYWORD_TO_STOCK_TICKER[keyword]
+    if _is_valid_keyword_for_etf_ticker(keyword):
+        return KEYWORD_TO_ETF_TICKER[keyword]
+    else:
+        return None
 
 
 def extract_ticker_snapshot(data: dict[str, Any] | None) -> TickerSnapshot | None:
