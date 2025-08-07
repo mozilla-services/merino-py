@@ -157,9 +157,9 @@ class CuratedRecommendation(CorpusItem):
 
     def update_scheduled_corpus_item_id(self, sid: str):
         """Scheduled corpus id and tile id are updated"""
-            if self.tileId is None:
-                self.tileId = self._integer_hash(sid, MIN_TILE_ID, MAX_TILE_ID)
-            self.scheduledCorpusItemId = sid
+        if self.tileId is None:
+            self.tileId = self._integer_hash(sid, MIN_TILE_ID, MAX_TILE_ID)
+        self.scheduledCorpusItemId = sid
 
     @model_validator(mode="before")
     def set_tileId(cls, values):
