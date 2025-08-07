@@ -312,7 +312,10 @@ async def get_sections(
     """
     # 1. Get ALL corpus sections
     corpus_sections_all = await get_corpus_sections(
-        sections_backend, surface_id, 1, scheduled_surface_backend=scheduled_surface_backend
+        sections_backend=sections_backend,
+        surface_id=surface_id,
+        min_feed_rank=1,
+        scheduled_surface_backend=scheduled_surface_backend,
     )
 
     # 2. If ML sections are NOT requested, filter to legacy sections
