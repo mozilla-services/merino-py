@@ -1,4 +1,4 @@
-"""Module containing Remote settings opt-in keyword for finance suggestions and the corresponding ticker symbol."""
+"""Module containing opt-in keywords for stock and ETF tickers."""
 
 # Keyword to stock ticker mapping. Each keyword maps to its corresponding stock ticker.
 # NOTE: Treat as read-only at runtime.
@@ -324,23 +324,3 @@ KEYWORD_TO_ETF_TICKER = {
 STOCK_TICKER_KEYWORDS = frozenset(KEYWORD_TO_STOCK_TICKER.keys())
 
 ETF_TICKER_KEYWORDS = frozenset(KEYWORD_TO_ETF_TICKER.keys())
-
-
-def _is_valid_keyword_for_stock_ticker(keyword: str) -> bool:
-    """Check if the keyword provided is one of the supported keywords for stock tickers."""
-    return keyword in STOCK_TICKER_KEYWORDS
-
-
-def _is_valid_keyword_for_etf_ticker(keyword: str) -> bool:
-    """Check if the keyword provided is one of the supported keywords for ETF tickers."""
-    return keyword in ETF_TICKER_KEYWORDS
-
-
-def get_ticker_for_keyword(keyword: str) -> str | None:
-    """Validate and return a ticker. Should return a ticker for stock keywords or ETF keywords or None."""
-    if _is_valid_keyword_for_stock_ticker(keyword):
-        return KEYWORD_TO_STOCK_TICKER[keyword]
-    if _is_valid_keyword_for_etf_ticker(keyword):
-        return KEYWORD_TO_ETF_TICKER[keyword]
-    else:
-        return None

@@ -10,9 +10,6 @@ from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.custom_details import CustomDetails, PolygonDetails
-from merino.providers.suggest.finance.backends.polygon.optin_keyword_ticker_mapping import (
-    get_ticker_for_keyword,
-)
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceBackend,
     FinanceBackendError,
@@ -20,7 +17,10 @@ from merino.providers.suggest.finance.backends.protocol import (
     GetManifestResultCode,
     TickerSummary,
 )
-from merino.providers.suggest.finance.backends.polygon.utils import get_ticker_if_valid
+from merino.providers.suggest.finance.backends.polygon.utils import (
+    get_ticker_if_valid,
+    get_ticker_for_keyword,
+)
 from merino.utils import cron
 from merino.configs import settings
 
