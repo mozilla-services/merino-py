@@ -7,8 +7,7 @@ from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, T
 from merino.providers.suggest.finance.backends.polygon.ticker_company_mapping import (
     _TICKER_COMPANY,
 )
-
-from merino.providers.suggest.finance.backends.polygon.optin_keyword_ticker_mapping import (
+from merino.providers.suggest.finance.backends.polygon.keyword_ticker_mapping import (
     ETF_TICKER_KEYWORDS,
     STOCK_TICKER_KEYWORDS,
     KEYWORD_TO_ETF_TICKER,

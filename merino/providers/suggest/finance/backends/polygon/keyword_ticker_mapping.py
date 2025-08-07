@@ -1,4 +1,4 @@
-"""Module containing opt-in keywords for stock and ETF tickers."""
+"""Module containing keywords for stock and ETF tickers."""
 
 # Keyword to stock ticker mapping. Each keyword maps to its corresponding stock ticker.
 # NOTE: Treat as read-only at runtime.
