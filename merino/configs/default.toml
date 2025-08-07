@@ -675,6 +675,10 @@ circuit_breaker_failure_threshold = 10
 # The circuit breaker will stay open for this period of time until the next recovery attempt.
 circuit_breaker_recover_timeout_sec = 30
 
+# MERINO_PROVIDERS__POLYGON__DISABLE_UPSTREAM_REQUESTS
+# This provider config value is only used to disable the requests in the stage environment.
+disable_upstream_requests = false
+
 [default.providers.polygon.cache_ttls]
 # Cache TTLs for finance data.
 

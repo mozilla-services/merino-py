@@ -41,6 +41,7 @@ class Provider(BaseProvider):
     cron_interval_sec: int
     last_fetch_at: float
     last_upload_at: float | None
+    disable_upstream_requests: bool
     last_fetch_failure_at: float | None = None
     last_upload_failure_at: float | None = None
 
@@ -53,6 +54,7 @@ class Provider(BaseProvider):
         query_timeout_sec: float,
         resync_interval_sec: int,
         cron_interval_sec: int,
+        disable_upstream_requests: bool,
         enabled_by_default: bool = False,
     ) -> None:
         self.backend = backend
@@ -67,6 +69,7 @@ class Provider(BaseProvider):
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
         self.last_fetch_at = 0.0
+        self.disable_upstream_requests = disable_upstream_requests
 
         super().__init__()
 
@@ -175,6 +178,10 @@ class Provider(BaseProvider):
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide finance suggestions."""
+        # Should only disable upstream requests in stage environment.
+        if self.disable_upstream_requests:
+            return []
+
         # Extract ticker from the query string. Validte for a supported keyword or a stock ticker.
         ticker: str | None = get_ticker_if_valid(srequest.query) or get_ticker_for_keyword(
             srequest.query

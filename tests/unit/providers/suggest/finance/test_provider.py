@@ -70,6 +70,7 @@ def fixture_provider(backend_mock: Any, statsd_mock: Any) -> Provider:
         query_timeout_sec=0.2,
         cron_interval_sec=60,
         resync_interval_sec=3600,
+        disable_upstream_requests=False,
     )
 
 
