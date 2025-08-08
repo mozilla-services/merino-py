@@ -10,7 +10,7 @@ from typing import Any
 from merino.providers.suggest.finance.backends.polygon.utils import (
     build_ticker_summary,
     lookup_ticker_company,
-    extract_ticker_snapshot,
+    extract_snapshot_if_valid,
     get_ticker_for_keyword,
     _is_valid_ticker as is_valid_ticker,
     _is_valid_keyword_for_stock_ticker as is_valid_keyword_for_stock_ticker,
@@ -134,18 +134,20 @@ def test_get_ticker_for_keyword_for_etf_fail() -> None:
     assert get_ticker_for_keyword("bobs burgers stock index fund") is None
 
 
-def test_extract_ticker_snapshot_success(single_ticker_snapshot_response: dict[str, Any]) -> None:
+def test_extract_snapshot_if_valid_success(
+    single_ticker_snapshot_response: dict[str, Any],
+) -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return TickerSnapshot object."""
     expected = TickerSnapshot(last_price="120.47", todays_change_perc="0.82")
-    actual = extract_ticker_snapshot(single_ticker_snapshot_response)
+    actual = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
     assert actual is not None
     assert actual == expected
 
 
-def test_extract_ticker_snapshot_returns_none() -> None:
+def test_extract_snapshot_if_valid_returns_none() -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return None when snapshot param is None."""
-    assert extract_ticker_snapshot(None) is None
+    assert extract_snapshot_if_valid(None) is None
 
 
 def test_build_ticker_summary_success() -> None:

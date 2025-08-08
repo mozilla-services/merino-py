@@ -1,5 +1,6 @@
 """Utilities for the Polygon backend"""
 
+import logging
 from typing import Any
 
 from pydantic import HttpUrl
@@ -13,6 +14,8 @@ from merino.providers.suggest.finance.backends.polygon.keyword_ticker_mapping im
     KEYWORD_TO_ETF_TICKER,
     KEYWORD_TO_STOCK_TICKER,
 )
+
+logger = logging.getLogger(__name__)
 
 # Extracting just the ticker symbols into a separate set.
 TICKERS = frozenset(_TICKER_COMPANY.keys())
@@ -56,16 +59,23 @@ def get_ticker_for_keyword(keyword: str) -> str | None:
         return None
 
 
-def extract_ticker_snapshot(data: dict[str, Any] | None) -> TickerSnapshot | None:
-    """Extract the TickerSnapshot from the nested JSON response."""
-    if data is None:
-        return None
-    else:
-        ticker_info = data["ticker"]
-        todays_change_perc = f'{ticker_info["todaysChangePerc"]:.2f}'
-        last_price = f'{ticker_info["lastTrade"]["p"]:.2f}'
-
-        return TickerSnapshot(todays_change_perc=todays_change_perc, last_price=last_price)
+def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | None:
+    """Extract the TickerSnapshot from the nested JSON response, if it has the valid json structure."""
+    match data:
+        case None:
+            return None
+        case {
+            "ticker": {
+                "todaysChangePerc": float(todays_change),
+                "lastTrade": {"p": float(last_price)},
+            }
+        }:
+            return TickerSnapshot(
+                todays_change_perc=f"{todays_change:.2f}", last_price=f"{last_price:.2f}"
+            )
+        case _:
+            logger.warning(f"Invalid ticker snapshot json response: {data}")
+            return None
 
 
 def build_ticker_summary(
