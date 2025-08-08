@@ -100,7 +100,7 @@ class PolygonBackend(FinanceBackend):
 
             response.raise_for_status()
         except HTTPStatusError as ex:
-            logger.error(
+            logger.warning(
                 f"Polygon request error for ticker snapshot: {ex.response.status_code} {ex.response.reason_phrase}"
             )
             return None
