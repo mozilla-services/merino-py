@@ -150,6 +150,35 @@ def test_extract_snapshot_if_valid_returns_none() -> None:
     assert extract_snapshot_if_valid(None) is None
 
 
+def test_extract_snapshot_if_valid_returns_none_for_invalid_value_type(
+    single_ticker_snapshot_response: dict[str, Any],
+) -> None:
+    """Test extract_ticker_snapshot_returns_none method. Should return None when
+    snapshot json structure is invalid.
+    """
+    invalid_json_response = single_ticker_snapshot_response
+
+    # modifying values to be int type instead of float
+    invalid_json_response["ticker"]["todaysChangePerc"] = 5
+    invalid_json_response["ticker"]["lastTrade"]["P"] = 5
+
+    assert extract_snapshot_if_valid(invalid_json_response) is None
+
+
+def test_extract_snapshot_if_valid_returns_none_for_missing_property(
+    single_ticker_snapshot_response: dict[str, Any],
+) -> None:
+    """Test extract_ticker_snapshot_returns_none method. Should return None when
+    snapshot json structure is invalid.
+    """
+    invalid_json_response = single_ticker_snapshot_response
+
+    # modifying values to have a missing property
+    del invalid_json_response["ticker"]["todaysChangePerc"]
+
+    assert extract_snapshot_if_valid(invalid_json_response) is None
+
+
 def test_build_ticker_summary_success() -> None:
     """Test build_ticker_summary method."""
     actual = build_ticker_summary(
