@@ -19,7 +19,7 @@ from merino.providers.suggest.finance.backends.protocol import (
 )
 from merino.providers.suggest.finance.backends.polygon.utils import (
     TICKERS,
-    extract_ticker_snapshot,
+    extract_snapshot_if_valid,
     build_ticker_summary,
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
@@ -80,7 +80,7 @@ class PolygonBackend(FinanceBackend):
         This method first calls the fetch for snapshot method, extracts the ticker snapshot
         and builds the ticker summary.
         """
-        snapshot: TickerSnapshot | None = extract_ticker_snapshot(
+        snapshot: TickerSnapshot | None = extract_snapshot_if_valid(
             await self.fetch_ticker_snapshot(ticker)
         )
 
