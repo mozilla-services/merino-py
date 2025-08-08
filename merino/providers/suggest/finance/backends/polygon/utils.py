@@ -74,7 +74,7 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
                 todays_change_perc=f"{todays_change:.2f}", last_price=f"{last_price:.2f}"
             )
         case _:
-            logger.warning(f"Invalid ticker snapshot json response: {data}")
+            logger.warning(f"Polygon invalid ticker snapshot json response: {data}")
             return None
 
 
