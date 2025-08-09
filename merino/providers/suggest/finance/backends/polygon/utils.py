@@ -54,6 +54,7 @@ def get_ticker_for_keyword(keyword: str) -> str | None:
     if _is_valid_keyword_for_stock_ticker(keyword):
         return KEYWORD_TO_STOCK_TICKER[keyword]
     if _is_valid_keyword_for_etf_ticker(keyword):
+        # TODO add logic for etf keywords
         return KEYWORD_TO_ETF_TICKER[keyword]
     else:
         return None
