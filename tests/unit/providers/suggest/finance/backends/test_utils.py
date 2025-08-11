@@ -114,8 +114,8 @@ def test_is_valid_keyword_for_etf_ticker_fail() -> None:
 
 
 def test_get_ticker_for_keyword_for_stock_success() -> None:
-    """Test the get_tickers_for_query method. Should return correct ticker for a valid stock keyword."""
-    assert get_tickers_for_query("jpmorgan chase stock") == "JPM"
+    """Test the get_tickers_for_query method. Should return correct tickers for a valid stock keyword."""
+    assert get_tickers_for_query("jpmorgan chase stock") == ["JPM"]
 
 
 def test_get_ticker_for_keyword_for_stock_fail() -> None:
@@ -126,7 +126,10 @@ def test_get_ticker_for_keyword_for_stock_fail() -> None:
 # TODO: Will be updated once ETF tickers are assigned.
 def test_get_ticker_for_keyword_for_etf_success() -> None:
     """Test the get_tickers_for_query method. Should return correct ticker for a valid ETF keyword."""
-    assert get_tickers_for_query("dow jones industrial average") is None
+    etf_tickers = get_tickers_for_query("dow jones industrial average")
+
+    assert etf_tickers is not None
+    assert set(etf_tickers) == set(["DIA", "DJD", "SCHD"])
 
 
 def test_get_ticker_for_keyword_for_etf_fail() -> None:
@@ -138,7 +141,7 @@ def test_extract_snapshot_if_valid_success(
     single_ticker_snapshot_response: dict[str, Any],
 ) -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return TickerSnapshot object."""
-    expected = TickerSnapshot(last_price="120.47", todays_change_perc="0.82")
+    expected = TickerSnapshot(ticker="AAPL", last_price="120.47", todays_change_perc="0.82")
     actual = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
     assert actual is not None
@@ -182,8 +185,7 @@ def test_extract_snapshot_if_valid_returns_none_for_missing_property(
 def test_build_ticker_summary_success() -> None:
     """Test build_ticker_summary method."""
     actual = build_ticker_summary(
-        ticker="AAPL",
-        snapshot=TickerSnapshot(last_price="120.47", todays_change_perc="0.82"),
+        snapshot=TickerSnapshot(ticker="AAPL", last_price="120.47", todays_change_perc="0.82"),
         image_url=None,
     )
     expected = TickerSummary(

@@ -90,7 +90,9 @@ class PolygonBackend(FinanceBackend):
     def get_ticker_summary(
         self, snapshot: TickerSnapshot, image_url: HttpUrl | None
     ) -> TickerSummary:
-        """Get a ticker summary for an individual ticker snapshot. Simply calls the util function since that is not exposed to the provider."""
+        """Get a ticker summary for an individual ticker snapshot.
+        Simply calls the util function since that is not exposed to the provider.
+        """
         return build_ticker_summary(snapshot, image_url)
 
     async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:

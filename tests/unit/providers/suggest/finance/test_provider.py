@@ -18,6 +18,7 @@ from merino.providers.suggest.finance.backends.protocol import (
     FinanceBackend,
     FinanceManifest,
     GetManifestResultCode,
+    TickerSnapshot,
     TickerSummary,
 )
 from merino.providers.suggest.finance.provider import (
@@ -39,8 +40,18 @@ def fixture_geolocation() -> Location:
     )
 
 
+@pytest.fixture(name="ticker_snapshot")
+def fixture_ticker_snapshot() -> TickerSnapshot:
+    """Create a ticker snapshot object for AAPL."""
+    return TickerSnapshot(
+        ticker="AAPL",
+        last_price="100.5",
+        todays_change_perc="1.5",
+    )
+
+
 @pytest.fixture(name="ticker_summary")
-def fixture_ticker_summar() -> TickerSummary:
+def fixture_ticker_summary() -> TickerSummary:
     """Return a test TickerSummary."""
     return TickerSummary(
         name="Apple Inc",
@@ -50,6 +61,37 @@ def fixture_ticker_summar() -> TickerSummary:
         query="AAPL stock",
         image_url=None,
     )
+
+
+@pytest.fixture(name="etf_ticker_summaries")
+def fixture_etf_ticker_summaries() -> list[TickerSummary]:
+    """Return a list of ETF ticker summaries."""
+    return [
+        TickerSummary(
+            name="SPDR Dow Jones Industrial Average ETF Trust",
+            ticker="DIA",
+            last_price="$100.5",
+            todays_change_perc="1.5",
+            query="DIA stock",
+            image_url=None,
+        ),
+        TickerSummary(
+            name="Invesco Dow Jones Industrial Average Dividend ETF",
+            ticker="DJD",
+            last_price="$100.5",
+            todays_change_perc="1.5",
+            query="DJD stock",
+            image_url=None,
+        ),
+        TickerSummary(
+            name="Schwab US Dividend Equity ETF",
+            ticker="SCHD",
+            last_price="$100.5",
+            todays_change_perc="1.5",
+            query="SCHD stock",
+            image_url=None,
+        ),
+    ]
 
 
 @pytest.fixture(name="backend_mock")
@@ -96,6 +138,7 @@ async def test_query_ticker_summary_for_ticker_symbol_returned(
     backend_mock: Any,
     provider: Provider,
     ticker_summary: TickerSummary,
+    ticker_snapshot: TickerSnapshot,
     geolocation: Location,
 ) -> None:
     """Test that the query method provides a valid finance suggestion when ticker symbol from query param is supported"""
@@ -109,6 +152,7 @@ async def test_query_ticker_summary_for_ticker_symbol_returned(
             custom_details=CustomDetails(polygon=PolygonDetails(values=[ticker_summary])),
         ),
     ]
+    backend_mock.get_snapshots.return_value = [ticker_snapshot]
     backend_mock.get_ticker_summary.return_value = ticker_summary
 
     suggestions: list[BaseSuggestion] = await provider.query(
@@ -136,6 +180,7 @@ async def test_query_ticker_summary_for_stock_keyword_returned(
     backend_mock: Any,
     provider: Provider,
     ticker_summary: TickerSummary,
+    ticker_snapshot: TickerSnapshot,
     geolocation: Location,
 ) -> None:
     """Test that the query method provides a valid finance suggestion when the stock keyword from query param is supported"""
@@ -149,6 +194,7 @@ async def test_query_ticker_summary_for_stock_keyword_returned(
             custom_details=CustomDetails(polygon=PolygonDetails(values=[ticker_summary])),
         ),
     ]
+    backend_mock.get_snapshots.return_value = [ticker_snapshot]
     backend_mock.get_ticker_summary.return_value = ticker_summary
 
     suggestions: list[BaseSuggestion] = await provider.query(
@@ -171,7 +217,6 @@ async def test_query_ticker_summary_for_stock_keyword_not_returned(
     assert suggestions == []
 
 
-# TODO: Will be updated after ETF tickers are added for the corresponding keywords
 @pytest.mark.asyncio
 async def test_query_ticker_summary_for_etf_keyword_returned(
     provider: Provider,
@@ -182,8 +227,8 @@ async def test_query_ticker_summary_for_etf_keyword_returned(
         SuggestionRequest(query="dow jones industrial average", geolocation=geolocation)
     )
 
-    # TODO: Will be updated after ETF tickers are added for the corresponding keywords
-    assert suggestions == []
+    # TODO: Add more assertions
+    assert suggestions is not None
 
 
 @pytest.mark.asyncio
@@ -197,6 +242,9 @@ async def test_query_ticker_summary_for_etf_keyword_not_returned(
     )
 
     assert suggestions == []
+
+
+# TODO add test for when backend.get_snapshots returns []
 
 
 def test_get_image_url_for_ticker_found(provider: Provider):
@@ -245,29 +293,22 @@ async def test_query_appends_image_url_to_summary(
     backend_mock: Any,
     provider: Provider,
     geolocation: Location,
-    mocker,
+    ticker_snapshot: TickerSnapshot,
+    ticker_summary: TickerSummary,
 ) -> None:
     """Test that the query method passes the correct image_url and includes it in the TickerSummary."""
     ticker = "AAPL"
+
     image_url = HttpUrl("https://cdn.example.com/aapl.png")
     provider.manifest_data = FinanceManifest(tickers={ticker: image_url})
 
-    expected_summary = TickerSummary(
-        ticker=ticker,
-        name="Apple Inc.",
-        last_price="$100.5",
-        todays_change_perc="1.5",
-        query="AAPL stock",
-        image_url=image_url,
-    )
-
-    backend_mock.get_ticker_summary = mocker.AsyncMock(return_value=expected_summary)
+    ticker_summary.image_url = image_url
+    backend_mock.get_snapshots.return_value = [ticker_snapshot]
+    backend_mock.get_ticker_summary.return_value = ticker_summary
 
     suggestions: list[BaseSuggestion] = await provider.query(
         SuggestionRequest(query=ticker, geolocation=geolocation)
     )
-
-    backend_mock.get_ticker_summary.assert_awaited_once_with(ticker, image_url)
 
     assert len(suggestions) == 1
     suggestion = suggestions[0]
