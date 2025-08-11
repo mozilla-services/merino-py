@@ -181,27 +181,22 @@ limit 1000
 
         try:
             # Create a set of existing domains for fast lookup
-            existing_domains = {self._normalize_domain(d["domain"]) for d in domains}
+            # Use full domains (including subdomains) to check for exact duplicates only
+            existing_domains = {d["domain"] for d in domains}
 
             # Track which domains are duplicates for logging
             unique_custom_domains: List[str] = []
             duplicates: List[str] = []
-            duplicate_mapping: dict[str, str] = {}  # To show what each custom domain matched with
 
             # Process each custom domain
             for domain_str in CUSTOM_DOMAINS:
-                normalized = self._normalize_domain(domain_str)
-                if normalized not in existing_domains:
+                # Check for exact duplicate (full domain string), not normalized form
+                if domain_str not in existing_domains:
                     unique_custom_domains.append(domain_str)
                     # Add to existing domains to prevent duplicates within custom domains too
-                    existing_domains.add(normalized)
+                    existing_domains.add(domain_str)
                 else:
                     duplicates.append(domain_str)
-                    # Find what this domain matched with from BigQuery
-                    for d in domains:
-                        if self._normalize_domain(d["domain"]) == normalized:
-                            duplicate_mapping[domain_str] = d["domain"]
-                            break
 
             # Add unique custom domains
             start_rank = max(d["rank"] for d in domains) + 1 if domains else 1
@@ -215,14 +210,11 @@ limit 1000
                 f"({len(duplicates)} were duplicates)"
             )
 
-            # Log duplicates with what they matched with
+            # Log duplicates
             if duplicates:
                 log_count = min(10, len(duplicates))
-                dupe_info = [
-                    f"{d} -> {duplicate_mapping.get(d, 'unknown')}" for d in duplicates[:log_count]
-                ]
                 logger.info(
-                    f"Skipped domains: {', '.join(dupe_info)}"
+                    f"Skipped duplicate domains: {', '.join(duplicates[:log_count])}"
                     + (
                         f"... and {len(duplicates) - log_count} more"
                         if len(duplicates) > log_count

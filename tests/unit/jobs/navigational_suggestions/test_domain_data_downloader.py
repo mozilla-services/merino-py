@@ -211,9 +211,15 @@ def test_download_data_exception_handling(mock_bigquery_client, mocker):
         )
     ]
 
-    # Mock the _normalize_domain method to raise an exception
+    # Mock the _parse_custom_domain method to raise an exception
     mocker.patch.object(
-        DomainDataDownloader, "_normalize_domain", side_effect=Exception("Test exception")
+        DomainDataDownloader, "_parse_custom_domain", side_effect=Exception("Test exception")
+    )
+
+    # Mock CUSTOM_DOMAINS to have a test domain
+    mocker.patch(
+        "merino.jobs.navigational_suggestions.domain_data_downloader.CUSTOM_DOMAINS",
+        ["test.com"],
     )
 
     # Patch the logger
@@ -231,3 +237,41 @@ def test_download_data_exception_handling(mock_bigquery_client, mocker):
     # Should still return the domains from BigQuery
     assert len(domains) == 1
     assert domains[0]["domain"] == "example.com"
+
+
+def test_download_data_with_subdomain(mock_bigquery_client, mocker):
+    """Test that custom domains with subdomains should be included in download_data results"""
+    # Mock BigQuery to return example.com
+    mock_bigquery_client.query.return_value.result.return_value = [
+        Row(
+            (1, "example.com", "example.com", "http://example.com", "com", ["Technology"]),
+            {"rank": 0, "domain": 1, "host": 2, "origin": 3, "suffix": 4, "categories": 5},
+        )
+    ]
+
+    mocker.patch(
+        "merino.jobs.navigational_suggestions.domain_data_downloader.CUSTOM_DOMAINS",
+        ["sub.example.com"],
+    )
+
+    domain_data_downloader = DomainDataDownloader("dummy_gcp_project")
+    assert domain_data_downloader.download_data() == [
+        {
+            "rank": 1,
+            "domain": "example.com",
+            "host": "example.com",
+            "origin": "http://example.com",
+            "suffix": "com",
+            "categories": ["Technology"],
+            "source": "top-picks",
+        },
+        {
+            "rank": 2,
+            "domain": "sub.example.com",
+            "host": "sub.example.com",
+            "origin": "http://sub.example.com",
+            "suffix": "com",
+            "categories": ["Inconclusive"],
+            "source": "custom-domains",
+        },
+    ]
