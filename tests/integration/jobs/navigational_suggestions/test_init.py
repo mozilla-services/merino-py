@@ -865,7 +865,7 @@ class TestDomainDataDownloader:
 
         # Verify logging of duplicates
         mock_logger.info.assert_any_call("Added 1 custom domains (1 were duplicates)")
-        mock_logger.info.assert_any_call("Skipped domains: example.com -> example.com")
+        mock_logger.info.assert_any_call("Skipped duplicate domains: example.com")
 
     def test_download_data_with_custom_domain_error(self, mocker):
         """Test that errors during custom domain processing are handled properly."""
