@@ -84,8 +84,6 @@ def test_custom_domains(mock_bigquery_client):
         ), f"All categories should be strings in {domain}"
 
 
-
-
 def test_parse_custom_domain_basic(domain_data_downloader):
     """Test parsing a basic custom domain"""
     result = domain_data_downloader._parse_custom_domain("example.com", 10)

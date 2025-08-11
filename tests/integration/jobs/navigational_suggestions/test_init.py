@@ -829,7 +829,6 @@ class TestDomainDataDownloader:
         downloader = DomainDataDownloader("test-project")
         downloader.client = mock_client
 
-
         mocker.patch.object(
             downloader,
             "_parse_custom_domain",

@@ -13,7 +13,6 @@ from merino.utils.metrics import logger
 class DomainDataDownloader:
     """Download domain data from BigQuery tables"""
 
-
     DOMAIN_DATA_QUERY = """
 with apex_names as (
   select
