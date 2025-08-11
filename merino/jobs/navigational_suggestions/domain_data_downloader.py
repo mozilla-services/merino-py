@@ -13,36 +13,6 @@ from merino.utils.metrics import logger
 class DomainDataDownloader:
     """Download domain data from BigQuery tables"""
 
-    def _normalize_domain(self, domain: str) -> str:
-        """Normalize domain names for comparison by extracting the registered domain.
-        Handles special cases like subdomains, paths, and multi-part TLDs correctly.
-
-        Example:
-            www.example.com -> example.com
-            search.bbc.co.uk -> bbc.co.uk
-            startsiden.no/sok -> startsiden.no
-        """
-        if not domain:
-            return ""
-
-        # Add http:// if no scheme present to make urlparse work properly
-        if "://" not in domain:
-            domain = f"http://{domain}"
-
-        # Handle URL paths (like startsiden.no/sok)
-        parsed = urlparse(domain)
-        hostname = parsed.netloc or parsed.path.split("/")[0]
-
-        # Use tldextract to correctly handle all domain patterns
-        extracted = tldextract.extract(hostname)
-
-        # Build the normalized domain (registered domain without www)
-        if extracted.suffix:
-            # Return the registered domain (domain + suffix)
-            return f"{extracted.domain}.{extracted.suffix}"
-        else:
-            # For cases where suffix might be empty
-            return str(extracted.domain)
 
     DOMAIN_DATA_QUERY = """
 with apex_names as (

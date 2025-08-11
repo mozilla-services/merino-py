@@ -690,30 +690,6 @@ class TestDomainDataDownloader:
 
     @patch("google.auth.default", return_value=(MagicMock(), "test-project"))
     @patch("google.cloud.bigquery.Client")
-    def test_normalize_domain(self, mock_bigquery_client, mock_auth_default):
-        """Test the _normalize_domain method with various inputs."""
-        downloader = DomainDataDownloader("test-project")
-
-        # Test with subdomain
-        assert downloader._normalize_domain("www.example.com") == "example.com"
-
-        # Test with multi-part TLD
-        assert downloader._normalize_domain("bbc.co.uk") == "bbc.co.uk"
-
-        # Test with path
-        assert downloader._normalize_domain("startsiden.no/sok") == "startsiden.no"
-
-        # Test with protocol
-        assert downloader._normalize_domain("https://example.com") == "example.com"
-
-        # Test with empty input
-        assert downloader._normalize_domain("") == ""
-
-        # Test with just a domain name (no TLD)
-        assert downloader._normalize_domain("localhost") == "localhost"
-
-    @patch("google.auth.default", return_value=(MagicMock(), "test-project"))
-    @patch("google.cloud.bigquery.Client")
     def test_parse_custom_domain(self, mock_bigquery_client, mock_auth_default):
         """Test the _parse_custom_domain method with various inputs."""
         downloader = DomainDataDownloader("test-project")
@@ -790,7 +766,6 @@ class TestDomainDataDownloader:
 
         # Create a simplified version of the methods we're testing
         # by mocking them to return known values
-        mocker.patch.object(downloader, "_normalize_domain", side_effect=lambda domain: domain)
 
         mocker.patch.object(
             downloader,
@@ -854,12 +829,6 @@ class TestDomainDataDownloader:
         downloader = DomainDataDownloader("test-project")
         downloader.client = mock_client
 
-        # Use actual implementation for _normalize_domain and _parse_custom_domain
-        mocker.patch.object(
-            downloader,
-            "_normalize_domain",
-            side_effect=lambda domain: domain,  # Simplified for test
-        )
 
         mocker.patch.object(
             downloader,

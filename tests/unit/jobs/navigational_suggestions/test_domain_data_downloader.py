@@ -84,41 +84,6 @@ def test_custom_domains(mock_bigquery_client):
         ), f"All categories should be strings in {domain}"
 
 
-def test_normalize_domain_empty(domain_data_downloader):
-    """Test normalizing an empty domain"""
-    assert domain_data_downloader._normalize_domain("") == ""
-
-
-def test_normalize_domain_without_scheme(domain_data_downloader):
-    """Test normalizing a domain without scheme"""
-    assert domain_data_downloader._normalize_domain("example.com") == "example.com"
-
-
-def test_normalize_domain_with_scheme(domain_data_downloader):
-    """Test normalizing a domain with scheme"""
-    assert domain_data_downloader._normalize_domain("http://example.com") == "example.com"
-
-
-def test_normalize_domain_with_subdomain(domain_data_downloader):
-    """Test normalizing a domain with subdomain"""
-    assert domain_data_downloader._normalize_domain("www.example.com") == "example.com"
-    assert domain_data_downloader._normalize_domain("sub.example.com") == "example.com"
-
-
-def test_normalize_domain_with_path(domain_data_downloader):
-    """Test normalizing a domain with path"""
-    assert domain_data_downloader._normalize_domain("example.com/path") == "example.com"
-
-
-def test_normalize_domain_complex_tld(domain_data_downloader):
-    """Test normalizing a domain with complex TLD"""
-    assert domain_data_downloader._normalize_domain("example.co.uk") == "example.co.uk"
-    assert domain_data_downloader._normalize_domain("www.bbc.co.uk") == "bbc.co.uk"
-
-
-def test_normalize_domain_with_port(domain_data_downloader):
-    """Test normalizing a domain with port"""
-    assert domain_data_downloader._normalize_domain("example.com:8080") == "example.com"
 
 
 def test_parse_custom_domain_basic(domain_data_downloader):
