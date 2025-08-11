@@ -285,6 +285,7 @@ RUSSELL2000_POPULAR_3_ETF_COMPANY = {
     "SMMV": "iShares MSCI USA Small-Cap Min Vol Factor ETF",
 }
 
+# NOTE: This index only has 2 ETF tickers listed on the US market and supported by Polygon.
 HSI_POPULAR_2_ETF_COMPANY = {
     "EWH": "iShares MSCI Hong Kong ETF",
     "KTEC": "KraneShares Hang Seng TECH Index ETF",
@@ -295,6 +296,19 @@ NI225_POPULAR_3_ETF_COMPANY = {
     "FLJP": "Franklin FTSE Japan ETF",
     "DXJ": "WisdomTree Japan Hedged Equity Fund",
 }
+
+ALL_ETF_TICKER_COMPANY_MAPPING = (
+    DOW_JONES_ETF_COMPANY
+    | DOW_JONES_ETF_COMPANY
+    | NASDAQ_ETF_COMPANY
+    | NASDAQ_POPULAR_3_ETF_COMPANY
+    | SP500_ETF_COMPANY
+    | SP500_POPULAR_3_ETF_COMPANY
+    | SP100_POPULAR_3_ETF_COMPANY
+    | RUSSELL2000_POPULAR_3_ETF_COMPANY
+    | HSI_POPULAR_2_ETF_COMPANY
+    | NI225_POPULAR_3_ETF_COMPANY
+)
 
 DOW_JONES_POPULAR_3_ETF = frozenset(DOW_JONES_POPULAR_3_ETF_COMPANY.keys())
 NASDAQ_POPULAR_3_ETF = frozenset(NASDAQ_POPULAR_3_ETF_COMPANY.keys())

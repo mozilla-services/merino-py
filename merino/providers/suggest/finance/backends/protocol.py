@@ -17,6 +17,7 @@ class FinanceBackendError(BackendError):
 class TickerSnapshot(BaseModel):
     """Ticker Snapshot."""
 
+    ticker: str
     todays_change_perc: str
     last_price: str
 
@@ -53,10 +54,18 @@ class FinanceBackend(Protocol):
     directly depend on.
     """
 
-    async def get_ticker_summary(
-        self, ticker: str, image_url: HttpUrl | None
-    ) -> TickerSummary | None:  # pragma: no cover
-        """Get snapshot info for a given ticker from partner.
+    def get_ticker_summary(
+        self, snapshot: TickerSnapshot, image_url: HttpUrl | None
+    ) -> TickerSummary:  # pragma: no cover
+        """Get a ticker summary for an individual ticker snapshot.
+
+        Raises:
+            BackendError: Category of error specific to provider backends.
+        """
+        ...
+
+    async def get_snapshots(self, tickers: list[str]) -> list[TickerSnapshot]:  # pragma: no cover
+        """Get snapshot info for a list of tickers from upstream API.
 
         Raises:
             BackendError: Category of error specific to provider backends.

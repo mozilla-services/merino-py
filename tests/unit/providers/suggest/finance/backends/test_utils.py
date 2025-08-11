@@ -11,7 +11,7 @@ from merino.providers.suggest.finance.backends.polygon.utils import (
     build_ticker_summary,
     lookup_ticker_company,
     extract_snapshot_if_valid,
-    get_ticker_for_keyword,
+    get_tickers_for_query,
     _is_valid_ticker as is_valid_ticker,
     _is_valid_keyword_for_stock_ticker as is_valid_keyword_for_stock_ticker,
     _is_valid_keyword_for_etf_ticker as is_valid_keyword_for_etf_ticker,
@@ -114,24 +114,24 @@ def test_is_valid_keyword_for_etf_ticker_fail() -> None:
 
 
 def test_get_ticker_for_keyword_for_stock_success() -> None:
-    """Test the get_ticker_for_keyword method. Should return correct ticker for a valid stock keyword."""
-    assert get_ticker_for_keyword("jpmorgan chase stock") == "JPM"
+    """Test the get_tickers_for_query method. Should return correct ticker for a valid stock keyword."""
+    assert get_tickers_for_query("jpmorgan chase stock") == "JPM"
 
 
 def test_get_ticker_for_keyword_for_stock_fail() -> None:
-    """Test the get_ticker_for_keyword method. Should return None for an invalid stock keyword."""
-    assert get_ticker_for_keyword("bobs burgers stock") is None
+    """Test the get_tickers_for_query method. Should return None for an invalid stock keyword."""
+    assert get_tickers_for_query("bobs burgers stock") is None
 
 
 # TODO: Will be updated once ETF tickers are assigned.
 def test_get_ticker_for_keyword_for_etf_success() -> None:
-    """Test the get_ticker_for_keyword method. Should return correct ticker for a valid ETF keyword."""
-    assert get_ticker_for_keyword("dow jones industrial average") is None
+    """Test the get_tickers_for_query method. Should return correct ticker for a valid ETF keyword."""
+    assert get_tickers_for_query("dow jones industrial average") is None
 
 
 def test_get_ticker_for_keyword_for_etf_fail() -> None:
-    """Test the get_ticker_for_keyword method. Should return None for an invalid ETF keyword."""
-    assert get_ticker_for_keyword("bobs burgers stock index fund") is None
+    """Test the get_tickers_for_query method. Should return None for an invalid ETF keyword."""
+    assert get_tickers_for_query("bobs burgers stock index fund") is None
 
 
 def test_extract_snapshot_if_valid_success(

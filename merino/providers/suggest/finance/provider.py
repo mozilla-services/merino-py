@@ -18,8 +18,7 @@ from merino.providers.suggest.finance.backends.protocol import (
     TickerSummary,
 )
 from merino.providers.suggest.finance.backends.polygon.utils import (
-    get_ticker_if_valid,
-    get_ticker_for_keyword,
+    get_tickers_for_query,
 )
 from merino.utils import cron
 from merino.configs import settings
@@ -133,33 +132,31 @@ class Provider(BaseProvider):
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide finance suggestions."""
-        # Extract ticker from the query string. Validte for a supported keyword or a stock ticker.
-        ticker: str | None = get_ticker_if_valid(srequest.query) or get_ticker_for_keyword(
-            srequest.query
-        )
+        # Get the list of tickers (0 to 3) for the query string.
+        tickers = get_tickers_for_query(srequest.query)
 
         try:
-            if not ticker:
+            if not tickers:
                 return []
             else:
-                ticker = ticker.upper()
-                ticker_summary: TickerSummary | None
-                image_url = self.get_image_url_for_ticker(ticker)
+                ticker_summaries: list[TickerSummary] = []
+                # Get snapshots for the extracted tickers. Can return 0 to 3 snapshots.
+                ticker_snapshots = await self.backend.get_snapshots(tickers)
 
-                if (
-                    ticker_summary := await self.backend.get_ticker_summary(ticker, image_url)
-                ) is None:
-                    return []
-                else:
-                    return [self.build_suggestion(ticker_summary)]
+                # Build ticker summary for each snapshot and its ticker's image
+                for snapshot in ticker_snapshots:
+                    image_url = self.get_image_url_for_ticker(snapshot.ticker)
+                    ticker_summaries.append(self.backend.get_ticker_summary(snapshot, image_url))
+
+                return [self.build_suggestion(ticker_summaries)]
 
         except Exception as e:
             logger.warning(f"Exception occurred for Polygon provider: {e}")
             return []
 
-    def build_suggestion(self, data: TickerSummary) -> BaseSuggestion:
+    def build_suggestion(self, data: list[TickerSummary]) -> BaseSuggestion:
         """Build the suggestion with custom polygon details since this is a finance suggestion."""
-        custom_details = CustomDetails(polygon=PolygonDetails(values=[data]))
+        custom_details = CustomDetails(polygon=PolygonDetails(values=data))
 
         return BaseSuggestion(
             title="Finance Suggestion",
