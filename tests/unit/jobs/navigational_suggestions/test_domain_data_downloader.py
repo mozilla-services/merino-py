@@ -216,12 +216,6 @@ def test_download_data_exception_handling(mock_bigquery_client, mocker):
         DomainDataDownloader, "_parse_custom_domain", side_effect=Exception("Test exception")
     )
 
-    # Mock CUSTOM_DOMAINS to have a test domain
-    mocker.patch(
-        "merino.jobs.navigational_suggestions.domain_data_downloader.CUSTOM_DOMAINS",
-        ["test.com"],
-    )
-
     # Patch the logger
     mock_logger = mocker.patch(
         "merino.jobs.navigational_suggestions.domain_data_downloader.logger"
