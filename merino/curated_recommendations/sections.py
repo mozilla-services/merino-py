@@ -39,7 +39,7 @@ from merino.curated_recommendations.rankers import (
     boost_followed_sections,
     section_thompson_sampling,
     put_top_stories_first,
-    greedy_personalized_section_rank,
+    greedy_personalized_section_rank, TOP_STORIES_SECTION_KEY,
 )
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
@@ -47,7 +47,8 @@ logger = logging.getLogger(__name__)
 
 LAYOUT_CYCLE = [layout_4_medium, layout_6_tiles, layout_4_large]
 TOP_STORIES_COUNT = 6
-
+DOUBLE_ROW_TOP_STORIES_COUNT = 9
+TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
 
 def map_section_item_to_recommendation(
     item: CorpusItem, rank: int, section_id: str, experiment_flags: set[str] | None = None
@@ -272,6 +273,14 @@ def rank_sections(
 
     return sections
 
+def extract_extra_top_stories(sections: Dict[str, Section], num_items=TOP_STORIES_SECTION_EXTRA_COUNT):
+    # Extract some bonus top stories in a non-invasive way from more low ranked sections.
+    # Get one from each section
+    top_stories_section = sections[TOP_STORIES_SECTION_KEY]
+    for sid, section in sections.items():
+        if section.receivedFeedRank < 4:
+            continue
+
 
 async def get_sections(
     request: CuratedRecommendationsRequest,
@@ -335,7 +344,7 @@ async def get_sections(
     # check if popular today double row experiment is enabled
     # update top story count & layout cycle
     if is_popular_today_double_row_layout(request):
-        top_stories_count = 9
+        top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
         layout_cycle = [layout_6_tiles, layout_4_large, layout_4_medium]
         popular_today_layout = layout_7_tiles_2_ads
 

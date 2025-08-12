@@ -55,6 +55,8 @@ REGION_ENGAGEMENT_WEIGHT = 0.95
 MAX_TOP_REC_SLOTS = 10
 NUM_RECS_PER_TOPIC = 2
 
+TOP_STORIES_SECTION_KEY = "top_stories_section"
+
 
 def thompson_sampling(
     recs: list[CuratedRecommendation],
@@ -240,11 +242,10 @@ def spread_publishers(
 
     return result_recs
 
-
 def put_top_stories_first(sections: dict[str, Section]) -> dict[str, Section]:
     """Rank top_stories_section at the top."""
-    key = "top_stories_section"
-    top_stories = sections.get(key)
+    key = TOP_STORIES_SECTION_KEY
+    top_stories = sections.get(TOP_STORIES_SECTION_KEY)
     # If missing or already first, nothing to do
     if not top_stories or top_stories.receivedFeedRank == 0:
         return sections
