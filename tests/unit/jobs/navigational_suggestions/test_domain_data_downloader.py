@@ -84,43 +84,6 @@ def test_custom_domains(mock_bigquery_client):
         ), f"All categories should be strings in {domain}"
 
 
-def test_normalize_domain_empty(domain_data_downloader):
-    """Test normalizing an empty domain"""
-    assert domain_data_downloader._normalize_domain("") == ""
-
-
-def test_normalize_domain_without_scheme(domain_data_downloader):
-    """Test normalizing a domain without scheme"""
-    assert domain_data_downloader._normalize_domain("example.com") == "example.com"
-
-
-def test_normalize_domain_with_scheme(domain_data_downloader):
-    """Test normalizing a domain with scheme"""
-    assert domain_data_downloader._normalize_domain("http://example.com") == "example.com"
-
-
-def test_normalize_domain_with_subdomain(domain_data_downloader):
-    """Test normalizing a domain with subdomain"""
-    assert domain_data_downloader._normalize_domain("www.example.com") == "example.com"
-    assert domain_data_downloader._normalize_domain("sub.example.com") == "example.com"
-
-
-def test_normalize_domain_with_path(domain_data_downloader):
-    """Test normalizing a domain with path"""
-    assert domain_data_downloader._normalize_domain("example.com/path") == "example.com"
-
-
-def test_normalize_domain_complex_tld(domain_data_downloader):
-    """Test normalizing a domain with complex TLD"""
-    assert domain_data_downloader._normalize_domain("example.co.uk") == "example.co.uk"
-    assert domain_data_downloader._normalize_domain("www.bbc.co.uk") == "bbc.co.uk"
-
-
-def test_normalize_domain_with_port(domain_data_downloader):
-    """Test normalizing a domain with port"""
-    assert domain_data_downloader._normalize_domain("example.com:8080") == "example.com"
-
-
 def test_parse_custom_domain_basic(domain_data_downloader):
     """Test parsing a basic custom domain"""
     result = domain_data_downloader._parse_custom_domain("example.com", 10)
@@ -211,9 +174,9 @@ def test_download_data_exception_handling(mock_bigquery_client, mocker):
         )
     ]
 
-    # Mock the _normalize_domain method to raise an exception
+    # Mock the _parse_custom_domain method to raise an exception
     mocker.patch.object(
-        DomainDataDownloader, "_normalize_domain", side_effect=Exception("Test exception")
+        DomainDataDownloader, "_parse_custom_domain", side_effect=Exception("Test exception")
     )
 
     # Patch the logger
@@ -231,3 +194,41 @@ def test_download_data_exception_handling(mock_bigquery_client, mocker):
     # Should still return the domains from BigQuery
     assert len(domains) == 1
     assert domains[0]["domain"] == "example.com"
+
+
+def test_download_data_with_subdomain(mock_bigquery_client, mocker):
+    """Test that custom domains with subdomains should be included in download_data results"""
+    # Mock BigQuery to return example.com
+    mock_bigquery_client.query.return_value.result.return_value = [
+        Row(
+            (1, "example.com", "example.com", "http://example.com", "com", ["Technology"]),
+            {"rank": 0, "domain": 1, "host": 2, "origin": 3, "suffix": 4, "categories": 5},
+        )
+    ]
+
+    mocker.patch(
+        "merino.jobs.navigational_suggestions.domain_data_downloader.CUSTOM_DOMAINS",
+        ["sub.example.com"],
+    )
+
+    domain_data_downloader = DomainDataDownloader("dummy_gcp_project")
+    assert domain_data_downloader.download_data() == [
+        {
+            "rank": 1,
+            "domain": "example.com",
+            "host": "example.com",
+            "origin": "http://example.com",
+            "suffix": "com",
+            "categories": ["Technology"],
+            "source": "top-picks",
+        },
+        {
+            "rank": 2,
+            "domain": "sub.example.com",
+            "host": "sub.example.com",
+            "origin": "http://sub.example.com",
+            "suffix": "com",
+            "categories": ["Inconclusive"],
+            "source": "custom-domains",
+        },
+    ]

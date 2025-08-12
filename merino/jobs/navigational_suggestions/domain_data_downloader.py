@@ -13,37 +13,6 @@ from merino.utils.metrics import logger
 class DomainDataDownloader:
     """Download domain data from BigQuery tables"""
 
-    def _normalize_domain(self, domain: str) -> str:
-        """Normalize domain names for comparison by extracting the registered domain.
-        Handles special cases like subdomains, paths, and multi-part TLDs correctly.
-
-        Example:
-            www.example.com -> example.com
-            search.bbc.co.uk -> bbc.co.uk
-            startsiden.no/sok -> startsiden.no
-        """
-        if not domain:
-            return ""
-
-        # Add http:// if no scheme present to make urlparse work properly
-        if "://" not in domain:
-            domain = f"http://{domain}"
-
-        # Handle URL paths (like startsiden.no/sok)
-        parsed = urlparse(domain)
-        hostname = parsed.netloc or parsed.path.split("/")[0]
-
-        # Use tldextract to correctly handle all domain patterns
-        extracted = tldextract.extract(hostname)
-
-        # Build the normalized domain (registered domain without www)
-        if extracted.suffix:
-            # Return the registered domain (domain + suffix)
-            return f"{extracted.domain}.{extracted.suffix}"
-        else:
-            # For cases where suffix might be empty
-            return str(extracted.domain)
-
     DOMAIN_DATA_QUERY = """
 with apex_names as (
   select
@@ -181,27 +150,22 @@ limit 1000
 
         try:
             # Create a set of existing domains for fast lookup
-            existing_domains = {self._normalize_domain(d["domain"]) for d in domains}
+            # Use full domains (including subdomains) to check for exact duplicates only
+            existing_domains = {d["domain"] for d in domains}
 
             # Track which domains are duplicates for logging
             unique_custom_domains: List[str] = []
             duplicates: List[str] = []
-            duplicate_mapping: dict[str, str] = {}  # To show what each custom domain matched with
 
             # Process each custom domain
             for domain_str in CUSTOM_DOMAINS:
-                normalized = self._normalize_domain(domain_str)
-                if normalized not in existing_domains:
+                # Check for exact duplicate (full domain string), not normalized form
+                if domain_str not in existing_domains:
                     unique_custom_domains.append(domain_str)
                     # Add to existing domains to prevent duplicates within custom domains too
-                    existing_domains.add(normalized)
+                    existing_domains.add(domain_str)
                 else:
                     duplicates.append(domain_str)
-                    # Find what this domain matched with from BigQuery
-                    for d in domains:
-                        if self._normalize_domain(d["domain"]) == normalized:
-                            duplicate_mapping[domain_str] = d["domain"]
-                            break
 
             # Add unique custom domains
             start_rank = max(d["rank"] for d in domains) + 1 if domains else 1
@@ -215,14 +179,11 @@ limit 1000
                 f"({len(duplicates)} were duplicates)"
             )
 
-            # Log duplicates with what they matched with
+            # Log duplicates
             if duplicates:
                 log_count = min(10, len(duplicates))
-                dupe_info = [
-                    f"{d} -> {duplicate_mapping.get(d, 'unknown')}" for d in duplicates[:log_count]
-                ]
                 logger.info(
-                    f"Skipped domains: {', '.join(dupe_info)}"
+                    f"Skipped duplicate domains: {', '.join(duplicates[:log_count])}"
                     + (
                         f"... and {len(duplicates) - log_count} more"
                         if len(duplicates) > log_count
