@@ -210,7 +210,7 @@ class PolygonBackend(FinanceBackend):
 
     async def fetch_manifest_data(
         self,
-    ) -> tuple[GetManifestResultCode, FinanceManifest | None, float | None]:
+    ) -> tuple[GetManifestResultCode, FinanceManifest | None]:
         """Fetch manifest data from GCS through the filemanager."""
         return await self.filemanager.get_file()
 
@@ -242,4 +242,6 @@ class PolygonBackend(FinanceBackend):
 
     async def shutdown(self) -> None:
         """Close http client and cache connections."""
+        logger.info("Shutting down polygon backend")
         await self.http_client.aclose()
+        logger.info("polygon backend successfully shut down")

@@ -6,7 +6,6 @@
 
 import time
 from typing import Any
-from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import HttpUrl
@@ -304,30 +303,6 @@ def test_should_fetch_skips_after_failure(provider: Provider):
     assert provider._should_fetch() is False
 
 
-def test_should_upload_respects_interval(provider: Provider):
-    """Test that _should_upload returns False if not enough time has passed."""
-    provider.last_upload_at = time.time()
-    provider.last_upload_failure_at = None
-
-    assert provider._should_upload() is False
-
-
-def test_should_upload_skips_after_failure(provider: Provider):
-    """Test that _should_upload returns False if a recent failure occurred."""
-    provider.last_upload_at = time.time() - 8000
-    provider.last_upload_failure_at = time.time() - 60  # within 1hr
-
-    assert provider._should_upload() is False
-
-
-def test_should_upload_after_interval(provider: Provider):
-    """Test that _should_upload returns True after interval has passed."""
-    provider.last_upload_at = time.time() - 8000
-    provider.last_upload_failure_at = None
-
-    assert provider._should_upload() is True
-
-
 @pytest.mark.asyncio
 async def test_fetch_manifest_sets_last_fetch_and_clears_failure(provider, mocker):
     """Ensure _fetch_manifest updates last_fetch_at and clears last_fetch_failure_at on success."""
@@ -335,7 +310,7 @@ async def test_fetch_manifest_sets_last_fetch_and_clears_failure(provider, mocke
     mocker.patch.object(
         provider.backend,
         "fetch_manifest_data",
-        return_value=(GetManifestResultCode.SUCCESS, mock_manifest, time.time()),
+        return_value=(GetManifestResultCode.SUCCESS, mock_manifest),
     )
     provider.last_fetch_failure_at = time.time() - 500
 
@@ -345,7 +320,6 @@ async def test_fetch_manifest_sets_last_fetch_and_clears_failure(provider, mocke
 
     assert provider.last_fetch_at >= before and provider.last_fetch_at <= after
     assert provider.last_fetch_failure_at is None
-    assert provider.last_upload_at is not None
 
 
 @pytest.mark.asyncio
@@ -354,38 +328,8 @@ async def test_fetch_manifest_sets_last_failure_on_error(provider, mocker):
     mocker.patch.object(
         provider.backend,
         "fetch_manifest_data",
-        return_value=(GetManifestResultCode.FAIL, None, None),
+        return_value=(GetManifestResultCode.FAIL, None),
     )
 
     await provider._fetch_manifest()
     assert provider.last_fetch_failure_at is not None
-
-
-@pytest.mark.asyncio
-async def test_upload_manifest_sets_last_upload_and_clears_failure(provider, mocker):
-    """Ensure _upload_manifest updates last_upload_at and clears last_upload_failure_at on success."""
-    mocker.patch.object(provider.backend, "build_and_upload_manifest_file", new_callable=AsyncMock)
-
-    provider.last_upload_failure_at = time.time() - 1000
-
-    before = time.time()
-    await provider._upload_manifest()
-    after = time.time()
-
-    assert provider.last_upload_at >= before and provider.last_upload_at <= after
-    assert provider.last_upload_failure_at is None
-
-
-@pytest.mark.asyncio
-async def test_upload_manifest_sets_last_failure_on_exception(provider, mocker):
-    """Ensure _upload_manifest sets last_upload_failure_at if exception is raised."""
-    mocker.patch.object(
-        provider.backend,
-        "build_and_upload_manifest_file",
-        new_callable=AsyncMock,
-        side_effect=RuntimeError("upload fail"),
-    )
-
-    await provider._upload_manifest()
-
-    assert provider.last_upload_failure_at is not None

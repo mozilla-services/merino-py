@@ -36,13 +36,10 @@ class Provider(BaseProvider):
     score: float
     url: HttpUrl
     cron_task_fetch: asyncio.Task
-    cron_task_upload: asyncio.Task
     resync_interval_sec: int
     cron_interval_sec: int
     last_fetch_at: float
-    last_upload_at: float | None
     last_fetch_failure_at: float | None = None
-    last_upload_failure_at: float | None = None
 
     def __init__(
         self,
@@ -82,29 +79,20 @@ class Provider(BaseProvider):
                 task=self._fetch_manifest,
             )
 
-            cron_job_upload = cron.Job(
-                name="upload_polygon_manifest",
-                interval=self.cron_interval_sec,
-                condition=self._should_upload,
-                task=self._upload_manifest,
-            )
             self.cron_task_fetch = asyncio.create_task(cron_job_fetch())
-            self.cron_task_upload = asyncio.create_task(cron_job_upload())
 
     async def _fetch_manifest(self) -> None:
         """Cron fetch method to re-run after set interval.
         Does not set manifest_data if non-success code passed with None.
         """
         try:
-            result_code, data, timestamp = await self.backend.fetch_manifest_data()
+            result_code, data = await self.backend.fetch_manifest_data()
 
             match GetManifestResultCode(result_code):
                 case GetManifestResultCode.SUCCESS if data is not None:
                     self.manifest_data = data
                     self.last_fetch_at = time.time()
                     self.last_fetch_failure_at = None
-                    self.last_upload_at = timestamp
-                    logger.info(f"last_upload_at set from fetch: {timestamp}")
 
                 case GetManifestResultCode.FAIL:
                     logger.error("Failed to fetch manifest data from finance backend.")
@@ -124,22 +112,6 @@ class Provider(BaseProvider):
         finally:
             self.data_fetched_event.set()
 
-    async def _upload_manifest(self) -> None:
-        """Cron method to upload/update ticker images on GCS. Re-runs after set interval"""
-        try:
-            await self.backend.build_and_upload_manifest_file()
-            self.last_upload_at = time.time()
-            self.last_upload_failure_at = None
-            logger.info(f"last_upload_at set from upload: {time.time()}")
-        except FinanceBackendError as err:
-            logger.error("Failed to upload manifest data from finance backend: %s", err)
-            self.last_upload_failure_at = time.time()
-            return None
-        except Exception as e:
-            logger.exception(f"Unexpected error in cron job 'upload_manifest': {e}")
-            self.last_upload_failure_at = time.time()
-            return None
-
     def _should_fetch(self) -> bool:
         """Determine if we should fetch new data based on time and last failure."""
         now = time.time()
@@ -150,20 +122,6 @@ class Provider(BaseProvider):
             return False
 
         return (now - self.last_fetch_at) >= self.resync_interval_sec
-
-    def _should_upload(self) -> bool:
-        """Determine if we should upload new data based on time and last failure."""
-        now = time.time()
-
-        # If we had a failure recently, wait at least 2 hours before retrying
-        if self.last_upload_failure_at and (now - self.last_upload_failure_at) < 7200:
-            logger.info("Skipping upload: last failure was less than an hour ago.")
-            return False
-
-        if self.last_upload_at is None:
-            return True
-
-        return (now - self.last_upload_at) >= self.resync_interval_sec
 
     def validate(self, srequest: SuggestionRequest) -> None:
         """Validate the suggestion request."""

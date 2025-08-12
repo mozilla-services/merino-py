@@ -98,7 +98,7 @@ class FinanceBackend(Protocol):
 
     async def fetch_manifest_data(
         self,
-    ) -> tuple[GetManifestResultCode, FinanceManifest | None, float | None]:
+    ) -> tuple[GetManifestResultCode, FinanceManifest | None]:
         """Fetch manifest data from GCS through the filemanager."""
         ...
 
