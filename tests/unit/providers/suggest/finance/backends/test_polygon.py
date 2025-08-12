@@ -139,7 +139,7 @@ def fixture_ticker_summary() -> TickerSummary:
     # these values are based on the above single_ticker_snapshot_response fixture.
     return TickerSummary(
         ticker="AAPL",
-        name="Apple Inc.",
+        name="Apple Inc",
         last_price="$120.47 USD",
         todays_change_perc="0.82",
         query="AAPL stock",
@@ -553,23 +553,19 @@ async def test_fetch_manifest_data_success(polygon: PolygonBackend, mocker):
     when the filemanager returns a valid result.
     """
     mock_manifest = FinanceManifest(tickers={"AAPL": "https://cdn.example.com/aapl.png"})
-    fixed_time = 1234567890.0
-
-    mocker.patch("time.time", return_value=fixed_time)
 
     mocker.patch.object(
         polygon.filemanager,
         "get_file",
         new_callable=AsyncMock,
-        return_value=(GetManifestResultCode.SUCCESS, mock_manifest, fixed_time),
+        return_value=(GetManifestResultCode.SUCCESS, mock_manifest),
     )
 
-    result_code, manifest, timestamp = await polygon.fetch_manifest_data()
+    result_code, manifest = await polygon.fetch_manifest_data()
 
     assert result_code == GetManifestResultCode.SUCCESS
     assert isinstance(manifest, FinanceManifest)
     assert "AAPL" in manifest.tickers
-    assert timestamp is not None
 
 
 @pytest.mark.asyncio
@@ -579,14 +575,13 @@ async def test_fetch_manifest_data_fail(polygon: PolygonBackend, mocker):
         polygon.filemanager,
         "get_file",
         new_callable=AsyncMock,
-        return_value=(GetManifestResultCode.FAIL, None, None),
+        return_value=(GetManifestResultCode.FAIL, None),
     )
 
-    result_code, manifest, timestamp = await polygon.fetch_manifest_data()
+    result_code, manifest = await polygon.fetch_manifest_data()
 
     assert result_code == GetManifestResultCode.FAIL
     assert manifest is None
-    assert timestamp is None
 
 
 @pytest.mark.asyncio

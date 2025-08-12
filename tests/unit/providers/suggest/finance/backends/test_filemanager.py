@@ -7,7 +7,6 @@
 import pytest
 import orjson
 from gcloud.aio.storage import Blob
-from datetime import datetime
 
 from merino.providers.suggest.finance.backends.polygon.filemanager import PolygonFilemanager
 from merino.providers.suggest.finance.backends.protocol import (
@@ -28,7 +27,6 @@ async def test_get_file_success(mocker):
 
     mock_blob = mocker.AsyncMock(spec=Blob)
     mock_blob.download.return_value = blob_data
-    mock_blob.updated = "2024-08-01T12:30:45.123456Z"
 
     mock_bucket = mocker.MagicMock()
     mock_bucket.get_blob = mocker.AsyncMock(return_value=mock_blob)
@@ -36,15 +34,11 @@ async def test_get_file_success(mocker):
     filemanager = PolygonFilemanager("mock-bucket", "mock-blob")
     filemanager.bucket = mock_bucket
 
-    result_code, manifest, updated_ts = await filemanager.get_file()
+    result_code, manifest = await filemanager.get_file()
 
     assert result_code == GetManifestResultCode.SUCCESS
     assert isinstance(manifest, FinanceManifest)
     assert "AAPL" in manifest.tickers
-
-    expected_ts = datetime.strptime(mock_blob.updated, "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
-    assert isinstance(updated_ts, float)
-    assert updated_ts == expected_ts
 
 
 @pytest.mark.asyncio
@@ -54,7 +48,6 @@ async def test_get_file_invalid_json(mocker):
     """
     mock_blob = mocker.AsyncMock(spec=Blob)
     mock_blob.download.return_value = b"invalid json"
-    mock_blob.updated = "2024-08-01T12:30:45.123456Z"
 
     mock_bucket = mocker.MagicMock()
     mock_bucket.get_blob = mocker.AsyncMock(return_value=mock_blob)
@@ -62,11 +55,10 @@ async def test_get_file_invalid_json(mocker):
     filemanager = PolygonFilemanager("mock-bucket", "mock-blob")
     filemanager.bucket = mock_bucket
 
-    result_code, manifest, updated_ts = await filemanager.get_file()
+    result_code, manifest = await filemanager.get_file()
 
     assert result_code == GetManifestResultCode.FAIL
     assert manifest is None
-    assert updated_ts is None
 
 
 @pytest.mark.asyncio
@@ -76,7 +68,6 @@ async def test_get_file_validation_error(mocker):
 
     mock_blob = mocker.AsyncMock()
     mock_blob.download.return_value = orjson.dumps(invalid_data)
-    mock_blob.updated = "2024-08-01T12:30:45.123456Z"
 
     mock_bucket = mocker.MagicMock()
     mock_bucket.get_blob = mocker.AsyncMock(return_value=mock_blob)
@@ -84,8 +75,7 @@ async def test_get_file_validation_error(mocker):
     filemanager = PolygonFilemanager("mock-bucket", "mock-blob")
     filemanager.bucket = mock_bucket
 
-    result_code, manifest, updated_ts = await filemanager.get_file()
+    result_code, manifest = await filemanager.get_file()
 
     assert result_code == GetManifestResultCode.FAIL
     assert manifest is None
-    assert updated_ts is None

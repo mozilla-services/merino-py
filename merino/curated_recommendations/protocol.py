@@ -155,6 +155,12 @@ class CuratedRecommendation(CorpusItem):
         """
         return self.experiment_flags is not None and experiment_name in self.experiment_flags
 
+    def update_scheduled_corpus_item_id(self, sid: str | None):
+        """Scheduled corpus id and tile id are updated"""
+        if sid is not None and self.tileId is None:
+            self.tileId = self._integer_hash(sid, MIN_TILE_ID, MAX_TILE_ID)
+        self.scheduledCorpusItemId = sid
+
     @model_validator(mode="before")
     def set_tileId(cls, values):
         """Set the tileId field automatically."""

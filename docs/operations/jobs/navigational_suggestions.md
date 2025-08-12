@@ -104,6 +104,10 @@ $ ./scripts/import_domains.sh DOWNLOADED_FILE.csv
 
 This will add the domains to the `custom_domains.py` file, check if the domain exists, and if not, it adds it. Afterwards, all domains are getting alphabetically sorted.
 
+> Note
+> - Subdomains are supported and treated as distinct domains. For example, `sub.example.com` is different from `example.com` and can be added separately.
+> - Duplicate checks are done by exact domain string, not by apex/normalized form. If a custom domain exactly matches an existing domain, it will be skipped and logged as: `Skipped duplicate domains: <domain>`.
+
 ## Running the Navigational Suggestions job locally
 
 The Navigational Suggestions job can be run locally for development and testing purposes without requiring access to Google Cloud. This is useful for testing changes to the favicon extraction and domain processing logic.

@@ -6,7 +6,6 @@
 
 import time
 from typing import Any
-from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import HttpUrl
@@ -44,7 +43,7 @@ def fixture_geolocation() -> Location:
 def fixture_ticker_summar() -> TickerSummary:
     """Return a test TickerSummary."""
     return TickerSummary(
-        name="Apple Inc.",
+        name="Apple Inc",
         ticker="AAPL",
         last_price="$100.5",
         todays_change_perc="1.5",
@@ -93,7 +92,7 @@ def test_validate_fails_on_missing_query_param(
 
 
 @pytest.mark.asyncio
-async def test_query_ticker_summary_returned(
+async def test_query_ticker_summary_for_ticker_symbol_returned(
     backend_mock: Any,
     provider: Provider,
     ticker_summary: TickerSummary,
@@ -120,13 +119,81 @@ async def test_query_ticker_summary_returned(
 
 
 @pytest.mark.asyncio
-async def test_query_ticker_summary_not_returned(
+async def test_query_ticker_summary_for_ticker_symbol_not_returned(
     provider: Provider,
     geolocation: Location,
 ) -> None:
     """Test that the query method provides no finance suggestion when ticker symbol from query param is not supported"""
     suggestions: list[BaseSuggestion] = await provider.query(
         SuggestionRequest(query="test", geolocation=geolocation)
+    )
+
+    assert suggestions == []
+
+
+@pytest.mark.asyncio
+async def test_query_ticker_summary_for_stock_keyword_returned(
+    backend_mock: Any,
+    provider: Provider,
+    ticker_summary: TickerSummary,
+    geolocation: Location,
+) -> None:
+    """Test that the query method provides a valid finance suggestion when the stock keyword from query param is supported"""
+    expected_suggestions: list[BaseSuggestion] = [
+        BaseSuggestion(
+            title="Finance Suggestion",
+            url=HttpUrl(provider.url),
+            provider=provider.name,
+            is_sponsored=False,
+            score=provider.score,
+            custom_details=CustomDetails(polygon=PolygonDetails(values=[ticker_summary])),
+        ),
+    ]
+    backend_mock.get_ticker_summary.return_value = ticker_summary
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="apple stock", geolocation=geolocation)
+    )
+
+    assert suggestions == expected_suggestions
+
+
+@pytest.mark.asyncio
+async def test_query_ticker_summary_for_stock_keyword_not_returned(
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that the query method provides no finance suggestion when the stock keyword from query param is not supported"""
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="bobs burgers stock", geolocation=geolocation)
+    )
+
+    assert suggestions == []
+
+
+# TODO: Will be updated after ETF tickers are added for the corresponding keywords
+@pytest.mark.asyncio
+async def test_query_ticker_summary_for_etf_keyword_returned(
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that the query method provides a valid finance suggestion when the ETF keyword from query param is supported"""
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="dow jones industrial average", geolocation=geolocation)
+    )
+
+    # TODO: Will be updated after ETF tickers are added for the corresponding keywords
+    assert suggestions == []
+
+
+@pytest.mark.asyncio
+async def test_query_ticker_summary_for_etf_keyword_not_returned(
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that the query method provides no finance suggestion when the ETF keyword from query param is not supported"""
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="bobs burgers ETF stock", geolocation=geolocation)
     )
 
     assert suggestions == []
@@ -236,30 +303,6 @@ def test_should_fetch_skips_after_failure(provider: Provider):
     assert provider._should_fetch() is False
 
 
-def test_should_upload_respects_interval(provider: Provider):
-    """Test that _should_upload returns False if not enough time has passed."""
-    provider.last_upload_at = time.time()
-    provider.last_upload_failure_at = None
-
-    assert provider._should_upload() is False
-
-
-def test_should_upload_skips_after_failure(provider: Provider):
-    """Test that _should_upload returns False if a recent failure occurred."""
-    provider.last_upload_at = time.time() - 8000
-    provider.last_upload_failure_at = time.time() - 60  # within 1hr
-
-    assert provider._should_upload() is False
-
-
-def test_should_upload_after_interval(provider: Provider):
-    """Test that _should_upload returns True after interval has passed."""
-    provider.last_upload_at = time.time() - 8000
-    provider.last_upload_failure_at = None
-
-    assert provider._should_upload() is True
-
-
 @pytest.mark.asyncio
 async def test_fetch_manifest_sets_last_fetch_and_clears_failure(provider, mocker):
     """Ensure _fetch_manifest updates last_fetch_at and clears last_fetch_failure_at on success."""
@@ -267,7 +310,7 @@ async def test_fetch_manifest_sets_last_fetch_and_clears_failure(provider, mocke
     mocker.patch.object(
         provider.backend,
         "fetch_manifest_data",
-        return_value=(GetManifestResultCode.SUCCESS, mock_manifest, time.time()),
+        return_value=(GetManifestResultCode.SUCCESS, mock_manifest),
     )
     provider.last_fetch_failure_at = time.time() - 500
 
@@ -277,7 +320,6 @@ async def test_fetch_manifest_sets_last_fetch_and_clears_failure(provider, mocke
 
     assert provider.last_fetch_at >= before and provider.last_fetch_at <= after
     assert provider.last_fetch_failure_at is None
-    assert provider.last_upload_at is not None
 
 
 @pytest.mark.asyncio
@@ -286,38 +328,8 @@ async def test_fetch_manifest_sets_last_failure_on_error(provider, mocker):
     mocker.patch.object(
         provider.backend,
         "fetch_manifest_data",
-        return_value=(GetManifestResultCode.FAIL, None, None),
+        return_value=(GetManifestResultCode.FAIL, None),
     )
 
     await provider._fetch_manifest()
     assert provider.last_fetch_failure_at is not None
-
-
-@pytest.mark.asyncio
-async def test_upload_manifest_sets_last_upload_and_clears_failure(provider, mocker):
-    """Ensure _upload_manifest updates last_upload_at and clears last_upload_failure_at on success."""
-    mocker.patch.object(provider.backend, "build_and_upload_manifest_file", new_callable=AsyncMock)
-
-    provider.last_upload_failure_at = time.time() - 1000
-
-    before = time.time()
-    await provider._upload_manifest()
-    after = time.time()
-
-    assert provider.last_upload_at >= before and provider.last_upload_at <= after
-    assert provider.last_upload_failure_at is None
-
-
-@pytest.mark.asyncio
-async def test_upload_manifest_sets_last_failure_on_exception(provider, mocker):
-    """Ensure _upload_manifest sets last_upload_failure_at if exception is raised."""
-    mocker.patch.object(
-        provider.backend,
-        "build_and_upload_manifest_file",
-        new_callable=AsyncMock,
-        side_effect=RuntimeError("upload fail"),
-    )
-
-    await provider._upload_manifest()
-
-    assert provider.last_upload_failure_at is not None

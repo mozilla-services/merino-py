@@ -112,7 +112,7 @@ def thompson_sampling(
         if rescaler is not None:
             # rescale for content associated exclusively with an experiment in a specific region
             opens, no_opens = rescaler.rescale(rec, opens, no_opens)
-
+            a_prior, b_prior = rescaler.rescale_prior(rec, a_prior, b_prior)
         # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
         opens += max(a_prior, 1e-18)
         no_opens += max(b_prior, 1e-18)
@@ -149,26 +149,37 @@ def section_thompson_sampling(
         recs = sec.recommendations[:top_n]
         total_clicks = 0
         total_imps = 0
+        a_prior_total = 0.0
+        b_prior_total = 0.0
+
+        # constant prior α, β
+        prior = ConstantPrior().get()
+        a_prior_per_item = float(prior.alpha)
+        b_prior_per_item = float(prior.beta)
         for rec in recs:
             if engagement := engagement_backend.get(rec.corpusItemId):
                 clicks = engagement.click_count
                 impressions = engagement.impression_count
                 if rescaler is not None:
-                    # rescale for content associated exclusively with an experiment in a specific region
+                    # rescale for content associated exclusively with an experiment in a specific experiment
                     clicks, impressions = rescaler.rescale(rec, clicks, impressions)
 
                 total_clicks += clicks
                 total_imps += impressions
 
-        # constant prior α, β
-        prior = ConstantPrior().get()
-        a_prior = top_n * prior.alpha
-        b_prior = top_n * prior.beta
+                if rescaler is not None:
+                    a_prior_mod, b_prior_mod = rescaler.rescale_prior(
+                        rec, a_prior_per_item, b_prior_per_item
+                    )
+                    a_prior_total += a_prior_mod
+                    b_prior_total += b_prior_mod
+                else:
+                    a_prior_total += a_prior_per_item
+                    b_prior_total += b_prior_per_item
 
         # Sum engagement and priors.
-        opens = total_clicks + a_prior
-        no_opens = total_imps - total_clicks + b_prior
-
+        opens = max(total_clicks + a_prior_total, 1.0)
+        no_opens = max(total_imps - total_clicks + b_prior_total, 1.0)
         # Sample distribution
         return float(beta.rvs(opens, no_opens))
 

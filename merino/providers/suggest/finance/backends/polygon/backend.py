@@ -19,7 +19,7 @@ from merino.providers.suggest.finance.backends.protocol import (
 )
 from merino.providers.suggest.finance.backends.polygon.utils import (
     TICKERS,
-    extract_ticker_snapshot,
+    extract_snapshot_if_valid,
     build_ticker_summary,
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
@@ -80,7 +80,7 @@ class PolygonBackend(FinanceBackend):
         This method first calls the fetch for snapshot method, extracts the ticker snapshot
         and builds the ticker summary.
         """
-        snapshot: TickerSnapshot | None = extract_ticker_snapshot(
+        snapshot: TickerSnapshot | None = extract_snapshot_if_valid(
             await self.fetch_ticker_snapshot(ticker)
         )
 
@@ -100,7 +100,7 @@ class PolygonBackend(FinanceBackend):
 
             response.raise_for_status()
         except HTTPStatusError as ex:
-            logger.error(
+            logger.warning(
                 f"Polygon request error for ticker snapshot: {ex.response.status_code} {ex.response.reason_phrase}"
             )
             return None
@@ -210,7 +210,7 @@ class PolygonBackend(FinanceBackend):
 
     async def fetch_manifest_data(
         self,
-    ) -> tuple[GetManifestResultCode, FinanceManifest | None, float | None]:
+    ) -> tuple[GetManifestResultCode, FinanceManifest | None]:
         """Fetch manifest data from GCS through the filemanager."""
         return await self.filemanager.get_file()
 
@@ -242,4 +242,6 @@ class PolygonBackend(FinanceBackend):
 
     async def shutdown(self) -> None:
         """Close http client and cache connections."""
+        logger.info("Shutting down polygon backend")
         await self.http_client.aclose()
+        logger.info("polygon backend successfully shut down")

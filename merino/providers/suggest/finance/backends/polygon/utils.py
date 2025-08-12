@@ -1,87 +1,81 @@
 """Utilities for the Polygon backend"""
 
+import logging
 from typing import Any
-from types import MappingProxyType
 
 from pydantic import HttpUrl
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
+from merino.providers.suggest.finance.backends.polygon.ticker_company_mapping import (
+    _TICKER_COMPANY,
+)
+from merino.providers.suggest.finance.backends.polygon.keyword_ticker_mapping import (
+    ETF_TICKER_KEYWORDS,
+    STOCK_TICKER_KEYWORDS,
+    KEYWORD_TO_ETF_TICKER,
+    KEYWORD_TO_STOCK_TICKER,
+)
 
-# Source of truth for ticker symbol and company name mapping.
-_TICKER_COMPANY = {
-    "AAPL": "Apple Inc.",
-    "AAL": "American Airlines Group Inc.",
-    "ABBV": "AbbVie Inc.",
-    "ADBE": "Adobe Inc.",
-    "AMD": "Advanced Micro Devices, Inc.",
-    "AMZN": "Amazon.com, Inc.",
-    "AVGO": "Broadcom Inc.",
-    "BAC": "Bank of America Corporation",
-    "BA": "The Boeing Company",
-    "BRK.B": "Berkshire Hathaway Inc.",
-    "COIN": "Coinbase Global, Inc.",
-    "COST": "Costco Wholesale Corporation",
-    "CRM": "Salesforce, Inc.",
-    "CVX": "Chevron Corporation",
-    "DIS": "The Walt Disney Company",
-    "GOOGL": "Alphabet Inc.",
-    "HD": "The Home Depot, Inc.",
-    "INTC": "Intel Corporation",
-    "JNJ": "Johnson & Johnson",
-    "JPM": "JPMorgan Chase & Co.",
-    "KO": "The Coca-Cola Company",
-    "LCID": "Lucid Group, Inc.",
-    "LLY": "Eli Lilly and Company",
-    "MA": "Mastercard Incorporated",
-    "MCD": "McDonald's Corporation",
-    "META": "Meta Platforms, Inc.",
-    "MSFT": "Microsoft Corporation",
-    "MU": "Micron Technology, Inc.",
-    "NFLX": "Netflix, Inc.",
-    "NVDA": "NVIDIA Corporation",
-    "PEP": "PepsiCo, Inc.",
-    "PFE": "Pfizer Inc.",
-    "PG": "Procter & Gamble Co.",
-    "PLTR": "Palantir Technologies Inc.",
-    "PLUG": "Plug Power Inc.",
-    "PYPL": "PayPal Holdings, Inc.",
-    "QCOM": "Qualcomm Incorporated",
-    "RBLX": "Roblox Corporation",
-    "SOFI": "SoFi Technologies, Inc.",
-    "TSLA": "Tesla, Inc.",
-    "TXN": "Texas Instruments Incorporated",
-    "UNH": "UnitedHealth Group Incorporated",
-    "V": "Visa Inc.",
-    "WMT": "Walmart Inc.",
-    "XOM": "Exxon Mobil Corporation",
-}
-
-# This will make sure that TICKER_COMPANY variable is read-only and immutable at runtime.
-TICKER_COMPANY = MappingProxyType(_TICKER_COMPANY)
+logger = logging.getLogger(__name__)
 
 # Extracting just the ticker symbols into a separate set.
-TICKERS = set(_TICKER_COMPANY.keys())
+TICKERS = frozenset(_TICKER_COMPANY.keys())
 
 
-def is_valid_ticker(symbol: str) -> bool:
+def _is_valid_ticker(symbol: str) -> bool:
     """Check if the symbol provided is a valid and supported ticker."""
     return symbol.upper() in TICKERS
 
 
+def get_ticker_if_valid(symbol: str) -> str | None:
+    """Validate and return a ticker. Returns None if not a valid ticker symbol."""
+    if _is_valid_ticker(symbol):
+        return symbol.upper()
+    else:
+        return None
+
+
 def lookup_ticker_company(ticker: str) -> str:
     """Get the ticker company."""
-    return TICKER_COMPANY[ticker.upper()]
+    return _TICKER_COMPANY[ticker.upper()]
 
 
-def extract_ticker_snapshot(data: dict[str, Any] | None) -> TickerSnapshot | None:
-    """Extract the TickerSnapshot from the nested JSON response."""
-    if data is None:
-        return None
+def _is_valid_keyword_for_stock_ticker(keyword: str) -> bool:
+    """Check if the keyword provided is one of the supported keywords for stock tickers."""
+    return keyword in STOCK_TICKER_KEYWORDS
+
+
+def _is_valid_keyword_for_etf_ticker(keyword: str) -> bool:
+    """Check if the keyword provided is one of the supported keywords for ETF tickers."""
+    return keyword in ETF_TICKER_KEYWORDS
+
+
+def get_ticker_for_keyword(keyword: str) -> str | None:
+    """Validate and return a ticker. Should return a ticker for stock keywords or ETF keywords or None."""
+    if _is_valid_keyword_for_stock_ticker(keyword):
+        return KEYWORD_TO_STOCK_TICKER[keyword]
+    if _is_valid_keyword_for_etf_ticker(keyword):
+        return KEYWORD_TO_ETF_TICKER[keyword]
     else:
-        ticker_info = data["ticker"]
-        todays_change_perc = f'{ticker_info["todaysChangePerc"]:.2f}'
-        last_price = f'{ticker_info["lastTrade"]["p"]:.2f}'
+        return None
 
-        return TickerSnapshot(todays_change_perc=todays_change_perc, last_price=last_price)
+
+def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | None:
+    """Extract the TickerSnapshot from the nested JSON response, if it has the valid json structure."""
+    match data:
+        case None:
+            return None
+        case {
+            "ticker": {
+                "todaysChangePerc": float(todays_change),
+                "lastTrade": {"p": float(last_price)},
+            }
+        }:
+            return TickerSnapshot(
+                todays_change_perc=f"{todays_change:.2f}", last_price=f"{last_price:.2f}"
+            )
+        case _:
+            logger.warning(f"Polygon invalid ticker snapshot json response: {data}")
+            return None
 
 
 def build_ticker_summary(

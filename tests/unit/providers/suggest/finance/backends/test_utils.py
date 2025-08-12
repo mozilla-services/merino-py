@@ -9,9 +9,12 @@ from typing import Any
 
 from merino.providers.suggest.finance.backends.polygon.utils import (
     build_ticker_summary,
-    is_valid_ticker,
     lookup_ticker_company,
-    extract_ticker_snapshot,
+    extract_snapshot_if_valid,
+    get_ticker_for_keyword,
+    _is_valid_ticker as is_valid_ticker,
+    _is_valid_keyword_for_stock_ticker as is_valid_keyword_for_stock_ticker,
+    _is_valid_keyword_for_etf_ticker as is_valid_keyword_for_etf_ticker,
 )
 
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
@@ -69,18 +72,18 @@ def fixture_single_ticker_snapshot_response() -> dict[str, Any]:
 
 
 def test_is_valid_ticker_success() -> None:
-    """Test the is_valid_ticker method. Should return True for a valid ticker."""
+    """Test the _is_valid_ticker method. Should return True for a valid ticker."""
     assert is_valid_ticker("AAPL") is True
 
 
 def test_is_valid_ticker_fail() -> None:
-    """Test the is_valid_ticker method. Should return False for an invalid ticker."""
+    """Test the _is_valid_ticker method. Should return False for an invalid ticker."""
     assert is_valid_ticker("BOB") is False
 
 
 def test_lookup_ticker_company_success() -> None:
     """Test lookup_ticker_company method. Should return valid company name."""
-    assert lookup_ticker_company("TSLA") == "Tesla, Inc."
+    assert lookup_ticker_company("TSLA") == "Tesla Inc"
 
 
 def test_lookup_ticker_company_fail() -> None:
@@ -90,18 +93,90 @@ def test_lookup_ticker_company_fail() -> None:
     assert error.typename == "KeyError"
 
 
-def test_extract_ticker_snapshot_success(single_ticker_snapshot_response: dict[str, Any]) -> None:
+def test_is_valid_keyword_for_stock_ticker_success() -> None:
+    """Test the _is_valid_keyword_for_stock_ticker method. Should return True for a valid keyword."""
+    assert is_valid_keyword_for_stock_ticker("jpmorgan chase stock") is True
+
+
+def test_is_valid_keyword_for_stock_ticker_fail() -> None:
+    """Test the _is_valid_keyword_for_stock_ticker method. Should return false for an invalid keyword."""
+    assert is_valid_keyword_for_stock_ticker("bobs burgers stock") is False
+
+
+def test_is_valid_keyword_for_etf_ticker_success() -> None:
+    """Test the _is_valid_keyword_for_etf_ticker method. Should return True for a valid keyword."""
+    assert is_valid_keyword_for_etf_ticker("nasdaq composite stock index") is True
+
+
+def test_is_valid_keyword_for_etf_ticker_fail() -> None:
+    """Test the _is_valid_keyword_for_etf_ticker method. Should return False for an invalid keyword."""
+    assert is_valid_keyword_for_etf_ticker("bobs burgers index funds") is False
+
+
+def test_get_ticker_for_keyword_for_stock_success() -> None:
+    """Test the get_ticker_for_keyword method. Should return correct ticker for a valid stock keyword."""
+    assert get_ticker_for_keyword("jpmorgan chase stock") == "JPM"
+
+
+def test_get_ticker_for_keyword_for_stock_fail() -> None:
+    """Test the get_ticker_for_keyword method. Should return None for an invalid stock keyword."""
+    assert get_ticker_for_keyword("bobs burgers stock") is None
+
+
+# TODO: Will be updated once ETF tickers are assigned.
+def test_get_ticker_for_keyword_for_etf_success() -> None:
+    """Test the get_ticker_for_keyword method. Should return correct ticker for a valid ETF keyword."""
+    assert get_ticker_for_keyword("dow jones industrial average") is None
+
+
+def test_get_ticker_for_keyword_for_etf_fail() -> None:
+    """Test the get_ticker_for_keyword method. Should return None for an invalid ETF keyword."""
+    assert get_ticker_for_keyword("bobs burgers stock index fund") is None
+
+
+def test_extract_snapshot_if_valid_success(
+    single_ticker_snapshot_response: dict[str, Any],
+) -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return TickerSnapshot object."""
     expected = TickerSnapshot(last_price="120.47", todays_change_perc="0.82")
-    actual = extract_ticker_snapshot(single_ticker_snapshot_response)
+    actual = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
     assert actual is not None
     assert actual == expected
 
 
-def test_extract_ticker_snapshot_returns_none() -> None:
+def test_extract_snapshot_if_valid_returns_none() -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return None when snapshot param is None."""
-    assert extract_ticker_snapshot(None) is None
+    assert extract_snapshot_if_valid(None) is None
+
+
+def test_extract_snapshot_if_valid_returns_none_for_invalid_value_type(
+    single_ticker_snapshot_response: dict[str, Any],
+) -> None:
+    """Test extract_ticker_snapshot_returns_none method. Should return None when
+    snapshot json structure is invalid.
+    """
+    invalid_json_response = single_ticker_snapshot_response
+
+    # modifying values to be int type instead of float
+    invalid_json_response["ticker"]["todaysChangePerc"] = 5
+    invalid_json_response["ticker"]["lastTrade"]["P"] = 5
+
+    assert extract_snapshot_if_valid(invalid_json_response) is None
+
+
+def test_extract_snapshot_if_valid_returns_none_for_missing_property(
+    single_ticker_snapshot_response: dict[str, Any],
+) -> None:
+    """Test extract_ticker_snapshot_returns_none method. Should return None when
+    snapshot json structure is invalid.
+    """
+    invalid_json_response = single_ticker_snapshot_response
+
+    # modifying values to have a missing property
+    del invalid_json_response["ticker"]["todaysChangePerc"]
+
+    assert extract_snapshot_if_valid(invalid_json_response) is None
 
 
 def test_build_ticker_summary_success() -> None:
@@ -113,7 +188,7 @@ def test_build_ticker_summary_success() -> None:
     )
     expected = TickerSummary(
         ticker="AAPL",
-        name="Apple Inc.",
+        name="Apple Inc",
         last_price="$120.47 USD",
         todays_change_perc="0.82",
         query="AAPL stock",

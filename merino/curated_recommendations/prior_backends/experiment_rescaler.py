@@ -27,3 +27,12 @@ class SubsectionsExperimentRescaler(ExperimentRescaler):
             return opens / self.experiment_relative_size, no_opens / self.experiment_relative_size
         else:
             return opens, no_opens
+
+    def rescale_prior(self, rec: CuratedRecommendation, alpha, beta):
+        """Update priors values based on whether item is unique to the experiment.
+        Scale of 4 puts an item with no activity just below the pack of common items that have good activity
+        """
+        if self.is_experiment_story(rec):
+            return alpha / 4.0, beta
+        else:
+            return alpha, beta
