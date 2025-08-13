@@ -23,6 +23,7 @@ from merino.providers.suggest.finance.backends.polygon.backend import PolygonBac
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceManifest,
     GetManifestResultCode,
+    TickerSnapshot,
     TickerSummary,
 )
 
@@ -133,10 +134,21 @@ def fixture_single_ticker_snapshot_response() -> dict[str, Any]:
     }
 
 
+@pytest.fixture(name="ticker_snapshot")
+def fixture_ticker_snapshot() -> TickerSnapshot:
+    """Create a ticker snapshot object for AAPL."""
+    # these values are based on the above single_ticker_snapshot_response fixture.
+    return TickerSnapshot(
+        ticker="AAPL",
+        last_price="120.47",
+        todays_change_perc="0.82",
+    )
+
+
 @pytest.fixture(name="ticker_summary")
 def fixture_ticker_summary() -> TickerSummary:
     """Create a ticker summary object for AAPL."""
-    # these values are based on the above single_ticker_snapshot_response fixture.
+    # these values are based on the above ticker_snapshot fixture.
     return TickerSummary(
         ticker="AAPL",
         name="Apple Inc",
@@ -215,6 +227,7 @@ async def test_fetch_ticker_snapshot_failure_for_http_500(
 async def test_get_ticker_summary_success(
     polygon: PolygonBackend,
     single_ticker_snapshot_response: dict[str, Any],
+    ticker_snapshot: TickerSnapshot,
     ticker_summary: TickerSummary,
 ) -> None:
     """Test get_ticker_summary method. Should return valid TickerSummary object."""
@@ -231,30 +244,10 @@ async def test_get_ticker_summary_success(
     )
 
     expected = ticker_summary
-    actual = await polygon.get_ticker_summary(ticker, ticker_summary.image_url)
+    actual = polygon.get_ticker_summary(ticker_snapshot, ticker_summary.image_url)
 
     assert actual is not None
     assert actual == expected
-
-
-@pytest.mark.asyncio
-async def test_get_ticker_summary_failure_returns_none(polygon: PolygonBackend) -> None:
-    """Test get_ticker_summary. Should return None when snapshot request returns HTTP 500."""
-    client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
-
-    ticker = "AAPL"
-    base_url = "https://api.polygon.io/apiKey=api_key"
-    snapshot_endpoint = URL_SINGLE_TICKER_SNAPSHOT.format(ticker=ticker)
-
-    client_mock.get.return_value = Response(
-        status_code=500,
-        content=b"",
-        request=Request(method="GET", url=(f"{base_url}{snapshot_endpoint}")),
-    )
-
-    actual = await polygon.get_ticker_summary(ticker, None)
-
-    assert actual is None
 
 
 @pytest.mark.asyncio

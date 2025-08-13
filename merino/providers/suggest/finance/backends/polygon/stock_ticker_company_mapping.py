@@ -2,7 +2,7 @@
 
 # Source of truth for ticker symbol and company name mapping.
 # NOTE: Should be treated as read-only and runtime.
-_TICKER_COMPANY = {
+ALL_STOCK_TICKER_COMPANY_MAPPING = {
     "A": "Agilent Technologies",
     "AA": "Alcoa Corp",
     "AAL": "American Airlines Gp",
@@ -1003,3 +1003,5 @@ _TICKER_COMPANY = {
     "XP": "XP Inc",
     "XPO": "Xpo Inc",
 }  # noqa
+
+ALL_STOCK_TICKERS = frozenset(ALL_STOCK_TICKER_COMPANY_MAPPING.keys())

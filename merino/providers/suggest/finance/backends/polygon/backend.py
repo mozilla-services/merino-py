@@ -17,8 +17,10 @@ from merino.providers.suggest.finance.backends.protocol import (
     TickerSnapshot,
     TickerSummary,
 )
+from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapping import (
+    ALL_STOCK_TICKERS,
+)
 from merino.providers.suggest.finance.backends.polygon.utils import (
-    TICKERS,
     extract_snapshot_if_valid,
     build_ticker_summary,
 )
@@ -73,21 +75,25 @@ class PolygonBackend(FinanceBackend):
             blob_name=GCS_BLOB_NAME,
         )
 
-    async def get_ticker_summary(
-        self, ticker: str, image_url: HttpUrl | None
-    ) -> TickerSummary | None:
-        """Get the ticker summary for the finance suggestion.
-        This method first calls the fetch for snapshot method, extracts the ticker snapshot
-        and builds the ticker summary.
-        """
-        snapshot: TickerSnapshot | None = extract_snapshot_if_valid(
-            await self.fetch_ticker_snapshot(ticker)
-        )
+    async def get_snapshots(self, tickers: list[str]) -> list[TickerSnapshot]:
+        """Get snapshots for the list of tickers."""
+        snapshots: list[TickerSnapshot] = []
 
-        if snapshot is None:
-            return None
-        else:
-            return build_ticker_summary(ticker=ticker, snapshot=snapshot, image_url=image_url)
+        for ticker in tickers:
+            snapshot = extract_snapshot_if_valid(await self.fetch_ticker_snapshot(ticker))
+
+            if snapshot is not None:
+                snapshots.append(snapshot)
+
+        return snapshots
+
+    def get_ticker_summary(
+        self, snapshot: TickerSnapshot, image_url: HttpUrl | None
+    ) -> TickerSummary:
+        """Get a ticker summary for an individual ticker snapshot.
+        Simply calls the util function since that is not exposed to the provider.
+        """
+        return build_ticker_summary(snapshot, image_url)
 
     async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
         """Make a request and fetch the snapshot for this single ticker."""
@@ -223,7 +229,7 @@ class PolygonBackend(FinanceBackend):
         - Uploads the manifest JSON file to the GCS bucket.
         """
         try:
-            url_map = await self.bulk_download_and_upload_ticker_images(list(TICKERS))
+            url_map = await self.bulk_download_and_upload_ticker_images(list(ALL_STOCK_TICKERS))
 
             manifest = self.build_finance_manifest(url_map)
             manifest_bytes = orjson.dumps(manifest.model_dump(mode="json"))
