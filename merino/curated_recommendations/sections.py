@@ -1,9 +1,9 @@
 """Module for building and ranking curated recommendation sections."""
 
 import logging
+from collections import defaultdict
 from copy import deepcopy
-from typing import Dict, List, Optional
-
+from typing import DefaultDict
 
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -48,6 +48,8 @@ logger = logging.getLogger(__name__)
 
 LAYOUT_CYCLE = [layout_4_medium, layout_6_tiles, layout_4_large]
 TOP_STORIES_COUNT = 6
+DOUBLE_ROW_TOP_STORIES_COUNT = 9
+TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
 
 
 def map_section_item_to_recommendation(
@@ -118,7 +120,7 @@ async def get_corpus_sections(
     surface_id: SurfaceId,
     min_feed_rank: int,
     scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
-) -> Dict[str, Section]:
+) -> dict[str, Section]:
     """Fetch editorially curated sections from the sections backend.
 
     Args:
@@ -131,14 +133,14 @@ async def get_corpus_sections(
         A mapping from section IDs to Section objects, each with a unique receivedFeedRank.
     """
     corpus_sections = await sections_backend.fetch(surface_id)
-    sid_map: Dict[str, str | None] = {}
+    sid_map: dict[str, str | None] = {}
     if scheduled_surface_backend is not None:
         legacy_corpus = await scheduled_surface_backend.fetch(surface_id)
         for item in legacy_corpus:
             if item.scheduledCorpusItemId is not None:
                 sid_map[item.corpusItemId] = item.scheduledCorpusItemId
 
-    sections: Dict[str, Section] = {}
+    sections: dict[str, Section] = {}
 
     legacy_sections = {topic.value for topic in Topic}
     for cs in corpus_sections:
@@ -154,9 +156,9 @@ async def get_corpus_sections(
 
 
 def exclude_recommendations_from_blocked_sections(
-    recommendations: List[CuratedRecommendation],
-    requested_sections: List[SectionConfiguration],
-) -> List[CuratedRecommendation]:
+    recommendations: list[CuratedRecommendation],
+    requested_sections: list[SectionConfiguration],
+) -> list[CuratedRecommendation]:
     """Remove recommendations whose topic matches any blocked section.
 
     Args:
@@ -170,7 +172,7 @@ def exclude_recommendations_from_blocked_sections(
     return [rec for rec in recommendations if not rec.topic or rec.topic.value not in blocked_ids]
 
 
-def adjust_ads_in_sections(sections: Dict[str, Section]) -> None:
+def adjust_ads_in_sections(sections: dict[str, Section]) -> None:
     """Disable ads in all sections except the first, second, third, fifth, seventh, and ninth.
 
     Args:
@@ -200,7 +202,7 @@ def is_popular_today_double_row_layout(request: CuratedRecommendationsRequest) -
     return is_ml_sections_experiment(request)
 
 
-def update_received_feed_rank(sections: Dict[str, Section]):
+def update_received_feed_rank(sections: dict[str, Section]):
     """Set receivedFeedRank such that it is incrementing from 0 to len(sections)"""
     for idx, sid in enumerate(sorted(sections, key=lambda k: sections[k].receivedFeedRank)):
         sections[sid].receivedFeedRank = idx
@@ -237,12 +239,12 @@ def cycle_layouts_for_ranked_sections(
 
 
 def rank_sections(
-    sections: Dict[str, Section],
+    sections: dict[str, Section],
     section_configurations: list[SectionConfiguration] | None,
     engagement_backend: EngagementBackend,
     personal_interests: InferredInterests | None,
     experiment_rescaler: ExperimentRescaler | None,
-) -> Dict[str, Section]:
+) -> dict[str, Section]:
     """Apply a series of stable ranking passes to the sections feed, in order of priority.
 
     1. Pin the `top_stories_section` to receivedFeedRank 0 so it's always at the top.
@@ -287,6 +289,42 @@ def rank_sections(
     return sections
 
 
+def get_top_story_list(
+    items: list[CuratedRecommendation],
+    top_count: int,
+    extra_count: int = 0,
+    extra_source_depth: int = 10,
+):
+    """Build a top story list of top_count items from a full list. Adds some extra items from further down
+    in the list of recs with some care to not use the same topic more than once.
+
+    Args:
+     items: Ordered list of stories
+     top_count: Number of most popular top stories to extract from the top of the list
+     extra_count: Number of extra stories to extract from further down
+     extra_source_depth: How deep to search after top stories when finding extras
+
+    Returns: A list of top stories
+    """
+    max_per_topic = 1
+
+    top_stories = items[:top_count]
+    topic_counts: DefaultDict[Topic | None, int] = defaultdict(int)
+    extra_items: list[CuratedRecommendation] = []
+    for rec in items[
+        top_count + extra_source_depth :
+    ]:  # Skip some of the top items which we can leave in sections
+        if len(extra_items) >= extra_count:
+            break
+        if topic_counts[rec.topic] < max_per_topic:
+            topic_counts[rec.topic] += 1
+            extra_items.append(rec)
+    top_stories.extend(extra_items)
+    for idx, rec in enumerate(top_stories):
+        rec.receivedRank = idx
+    return top_stories
+
+
 async def get_sections(
     request: CuratedRecommendationsRequest,
     surface_id: SurfaceId,
@@ -294,9 +332,9 @@ async def get_sections(
     scheduled_surface_backend: ScheduledSurfaceProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
-    personal_interests: Optional[InferredInterests] = None,
-    region: Optional[str] = None,
-) -> Dict[str, Section]:
+    personal_interests: InferredInterests | None = None,
+    region: str | None = None,
+) -> dict[str, Section]:
     """Build, rank, and layout recommendation sections for a "sections" experiment.
 
     Args:
@@ -355,11 +393,13 @@ async def get_sections(
     # check if popular today double row experiment is enabled
     # update top story count & layout cycle
     if is_popular_today_double_row_layout(request):
-        top_stories_count = 9
+        top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
         layout_cycle = [layout_6_tiles, layout_4_large, layout_4_medium]
         popular_today_layout = layout_7_tiles_2_ads
 
-    top_stories = all_ranked_corpus_recommendations[:top_stories_count]
+    top_stories = get_top_story_list(
+        all_ranked_corpus_recommendations, top_stories_count, TOP_STORIES_SECTION_EXTRA_COUNT
+    )
 
     top_stories_rec_ids = {rec.corpusItemId for rec in top_stories}
 
@@ -378,7 +418,7 @@ async def get_sections(
         )
 
     # 9. Initialize sections with top stories
-    sections: Dict[str, Section] = {
+    sections: dict[str, Section] = {
         "top_stories_section": Section(
             receivedFeedRank=0,
             recommendations=top_stories,

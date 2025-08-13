@@ -15,6 +15,7 @@ def generate_recommendations(
     length: int | None = None,
     item_ids: list[str] | None = None,
     time_sensitive_count: int | None = None,
+    topics: list[str] | None = None,
 ) -> list[CuratedRecommendation]:
     """Create dummy recommendations for the tests below.
 
@@ -51,7 +52,7 @@ def generate_recommendations(
             url=HttpUrl("https://littlelarry.com/"),
             title="little larry",
             excerpt="is failing english",
-            topic=random.choice(list(Topic)),
+            topic=topics[i] if topics is not None else random.choice(list(Topic)),
             publisher="cohens",
             isTimeSensitive=i in time_sensitive_indices,
             imageUrl=HttpUrl("https://placehold.co/600x400/"),
