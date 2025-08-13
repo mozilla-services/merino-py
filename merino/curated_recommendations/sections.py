@@ -3,7 +3,7 @@
 import logging
 from collections import defaultdict
 from copy import deepcopy
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, DefaultDict
 
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -309,7 +309,7 @@ def get_top_story_list(
     max_per_topic = 1
 
     top_stories = items[:top_count]
-    topic_counts = defaultdict(int)
+    topic_counts: DefaultDict[Topic | None, int] = defaultdict(int)
     extra_items: List[CuratedRecommendation] = []
     for rec in items[
         top_count + extra_source_depth :
