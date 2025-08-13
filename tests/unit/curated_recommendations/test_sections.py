@@ -417,6 +417,8 @@ class TestGetTopStoryList:
         items = generate_recommendations(5, ["a", "b", "c", "d", "e"])
         result = get_top_story_list(items, top_count=3, extra_count=0)
         assert len(result) == 3
+        for ix, item in enumerate(result):
+            assert item.receivedRank == ix
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
 
     def test_includes_extra_items_no_topic_overlap(self):
@@ -432,6 +434,8 @@ class TestGetTopStoryList:
         assert len(result) == 2 + 3
         assert "a" in top_ids and "b" in top_ids
         assert "d" not in top_ids  # duplicated by "c"
+        for ix, item in enumerate(result):
+            assert item.receivedRank == ix
 
     def test_returns_less_extra_if_not_enough_unique_topics(self):
         """Should return fewer extras if unique topics run out."""
@@ -447,6 +451,8 @@ class TestGetTopStoryList:
             ],  # duplicates prevent full extra_count
         )
         result = get_top_story_list(items, top_count=3, extra_count=3, extra_source_depth=0)
+        for ix, item in enumerate(result):
+            assert item.receivedRank == ix
         assert len(result) == 5
 
     def test_top_count_greater_than_items(self):
@@ -454,6 +460,8 @@ class TestGetTopStoryList:
         items = generate_recommendations(3, ["a", "b", "c"], topics=list(Topic)[:3])
         result = get_top_story_list(items, top_count=5, extra_count=0, extra_source_depth=0)
         assert len(result) == 3
+        for ix, item in enumerate(result):
+            assert item.receivedRank == ix
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
 
     def test_top_count_source_depth(self):
@@ -461,6 +469,8 @@ class TestGetTopStoryList:
         items = generate_recommendations(3, ["a", "b", "c", "d", "e"], topics=list(Topic)[:5])
         result = get_top_story_list(items, top_count=2, extra_count=2, extra_source_depth=1)
         assert len(result) == 4
+        for ix, item in enumerate(result):
+            assert item.receivedRank == ix
         assert [i.corpusItemId for i in result] == ["a", "b", "d", "e"]  # skip one item "c"
 
 

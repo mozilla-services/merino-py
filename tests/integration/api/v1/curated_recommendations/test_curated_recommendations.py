@@ -1851,14 +1851,28 @@ class TestSections:
     @pytest.mark.asyncio
     async def test_sections_model_interest_vector_greedy_ranking(self, monkeypatch):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
-        # define interest vector
-        interests = {
-            "education-science": 1.0,
-            "food": 0.8,
-            "government": 0.7,
-            "society": 0.1,
-            "model_id": "fake_model_id",
-        }
+        # make an api call to get the current sections
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": Locale.EN_US,
+                    "feeds": ["sections"],
+                    # "inferredInterests": interests,
+                },
+            )
+            data = response.json()
+
+        ## sort sections received
+        sorted_sections = sorted(
+            data["feeds"], key=lambda x: data["feeds"][x]["receivedFeedRank"]
+        )[::-1]
+        ## we should get some sections out
+        assert len(sorted_sections) > 3
+
+        # define interest vector, reversed from previous order
+        interests = {sorted_sections[i]: (1 - i / 8) for i in range(4)}
+
         # make the api call
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
