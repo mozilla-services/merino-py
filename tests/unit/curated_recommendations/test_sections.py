@@ -414,7 +414,7 @@ class TestGetTopStoryList:
 
     def test_returns_top_count_items(self):
         """Should return exactly `top_count` items from start of list if extra_count is 0."""
-        items = generate_recommendations(5, ["a", "b", "c", "d", "e"])
+        items = generate_recommendations(item_ids=["a", "b", "c", "d", "e"])
         result = get_top_story_list(items, top_count=3, extra_count=0)
         assert len(result) == 3
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
@@ -422,8 +422,7 @@ class TestGetTopStoryList:
     def test_includes_extra_items_no_topic_overlap(self):
         """Extra items should be chosen without repeating topics from top_count items."""
         items = generate_recommendations(
-            6,
-            ["a", "b", "c", "d", "e", "f"],
+            item_ids=["a", "b", "c", "d", "e", "f"],
             topics=["business", "arts", "business", "business", "food", "government"],
         )
         result = get_top_story_list(items, top_count=2, extra_count=3, extra_source_depth=0)
@@ -439,8 +438,7 @@ class TestGetTopStoryList:
     def test_returns_less_extra_if_not_enough_unique_topics(self):
         """Should return fewer extras if unique topics run out."""
         items = generate_recommendations(
-            5,
-            ["a", "b", "c", "d", "e"],
+            item_ids=["a", "b", "c", "d", "e"],
             topics=[
                 "business",
                 "arts",
@@ -456,14 +454,16 @@ class TestGetTopStoryList:
 
     def test_top_count_greater_than_items(self):
         """If top_count > len(items), should return all items without error."""
-        items = generate_recommendations(3, ["a", "b", "c"], topics=list(Topic)[:3])
+        items = generate_recommendations(item_ids=["a", "b", "c"], topics=list(Topic)[:3])
         result = get_top_story_list(items, top_count=5, extra_count=0, extra_source_depth=0)
         assert len(result) == 3
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
 
     def test_top_count_source_depth(self):
         """Test skipping some items"""
-        items = generate_recommendations(5, ["a", "b", "c", "d", "e"], topics=list(Topic)[:5])
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e"], topics=list(Topic)[:5]
+        )
         result = get_top_story_list(items, top_count=2, extra_count=2, extra_source_depth=1)
         assert len(result) == 4
         for ix, item in enumerate(result):
