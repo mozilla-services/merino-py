@@ -1855,11 +1855,7 @@ class TestSections:
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
                 "/api/v1/curated-recommendations",
-                json={
-                    "locale": Locale.EN_US,
-                    "feeds": ["sections"],
-                    # "inferredInterests": interests,
-                },
+                json={"locale": Locale.EN_US, "feeds": ["sections"]},
             )
             data = response.json()
 
