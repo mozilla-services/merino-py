@@ -1870,7 +1870,7 @@ class TestSections:
                 },
             )
             data = response.json()
-            # expect intests to be sorted by value
+            # expect interests to be sorted by value
             sorted_interests = sorted(
                 [k for k, v in interests.items() if isinstance(v, float)], key=interests.get
             )[::-1]

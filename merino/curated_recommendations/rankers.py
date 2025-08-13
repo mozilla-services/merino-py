@@ -253,6 +253,7 @@ def spread_publishers(
 
     return result_recs
 
+
 def put_top_stories_first(sections: dict[str, Section]) -> dict[str, Section]:
     """Rank top_stories_section at the top."""
     key = TOP_STORIES_SECTION_KEY

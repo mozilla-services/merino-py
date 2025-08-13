@@ -1,9 +1,9 @@
 """Module for building and ranking curated recommendation sections."""
 
 import logging
+from collections import defaultdict
 from copy import deepcopy
 from typing import Dict, List, Optional
-
 
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -40,7 +40,8 @@ from merino.curated_recommendations.rankers import (
     boost_followed_sections,
     section_thompson_sampling,
     put_top_stories_first,
-    greedy_personalized_section_rank, TOP_STORIES_SECTION_KEY,
+    greedy_personalized_section_rank,
+    TOP_STORIES_SECTION_KEY,
 )
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
@@ -50,6 +51,7 @@ LAYOUT_CYCLE = [layout_4_medium, layout_6_tiles, layout_4_large]
 TOP_STORIES_COUNT = 6
 DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
+
 
 def map_section_item_to_recommendation(
     item: CorpusItem, rank: int, section_id: str, experiment_flags: set[str] | None = None
@@ -287,13 +289,53 @@ def rank_sections(
 
     return sections
 
-def extract_extra_top_stories(sections: Dict[str, Section], num_items=TOP_STORIES_SECTION_EXTRA_COUNT):
+
+def extract_extra_top_stories(
+    sections: Dict[str, Section], num_items=TOP_STORIES_SECTION_EXTRA_COUNT
+):
     # Extract some bonus top stories in a non-invasive way from more low ranked sections.
     # Get one from each section
     top_stories_section = sections[TOP_STORIES_SECTION_KEY]
     for sid, section in sections.items():
         if section.receivedFeedRank < 4:
             continue
+
+
+def get_top_story_list(
+    items: List[CuratedRecommendation],
+    top_count: int,
+    extra_count: int = 0,
+    extra_source_depth: int = 10,
+):
+    """
+    Builds a top story list of top_count items from a full list. Adds some extra items from further down
+    in the list of recs with some care to not use the same topic more than once.
+
+    Args:
+     items: Ordered list of stories
+     top_count: Number of most popular top stories to extract from the top of the list
+     extra_count: Number of extra stories to extract from further down
+     extra_source_depth: How deep to search after top stories when finding extras
+
+    Returns: A list of top stories
+    """
+    max_per_topic = 1
+
+    top_stories = items[:top_count]
+    topic_counts = defaultdict(int)
+    extra_items: List[CuratedRecommendation] = []
+    for rec in items[
+        top_count + extra_source_depth :
+    ]:  # Skip some of the top items which we can leave in sections
+        if len(extra_items) >= extra_count:
+            break
+        if topic_counts[rec.topic] < max_per_topic:
+            topic_counts[rec.topic] += 1
+            extra_items.append(rec)
+    top_stories.extend(extra_items)
+    for idx, rec in enumerate(top_stories):
+        rec.receivedRank = idx
+    return top_stories
 
 
 async def get_sections(
@@ -368,7 +410,9 @@ async def get_sections(
         layout_cycle = [layout_6_tiles, layout_4_large, layout_4_medium]
         popular_today_layout = layout_7_tiles_2_ads
 
-    top_stories = all_ranked_corpus_recommendations[:top_stories_count]
+    top_stories = get_top_story_list(
+        all_ranked_corpus_recommendations, top_stories_count, TOP_STORIES_SECTION_EXTRA_COUNT
+    )
 
     top_stories_rec_ids = {rec.corpusItemId for rec in top_stories}
 
