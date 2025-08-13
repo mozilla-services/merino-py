@@ -463,7 +463,7 @@ class TestGetTopStoryList:
 
     def test_top_count_source_depth(self):
         """Test skipping some items"""
-        items = generate_recommendations(3, ["a", "b", "c", "d", "e"], topics=list(Topic)[:5])
+        items = generate_recommendations(5, ["a", "b", "c", "d", "e"], topics=list(Topic)[:5])
         result = get_top_story_list(items, top_count=2, extra_count=2, extra_source_depth=1)
         assert len(result) == 4
         for ix, item in enumerate(result):
