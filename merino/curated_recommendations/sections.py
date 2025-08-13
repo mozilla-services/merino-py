@@ -41,7 +41,6 @@ from merino.curated_recommendations.rankers import (
     section_thompson_sampling,
     put_top_stories_first,
     greedy_personalized_section_rank,
-    TOP_STORIES_SECTION_KEY,
 )
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
@@ -290,25 +289,13 @@ def rank_sections(
     return sections
 
 
-def extract_extra_top_stories(
-    sections: Dict[str, Section], num_items=TOP_STORIES_SECTION_EXTRA_COUNT
-):
-    # Extract some bonus top stories in a non-invasive way from more low ranked sections.
-    # Get one from each section
-    top_stories_section = sections[TOP_STORIES_SECTION_KEY]
-    for sid, section in sections.items():
-        if section.receivedFeedRank < 4:
-            continue
-
-
 def get_top_story_list(
     items: List[CuratedRecommendation],
     top_count: int,
     extra_count: int = 0,
     extra_source_depth: int = 10,
 ):
-    """
-    Builds a top story list of top_count items from a full list. Adds some extra items from further down
+    """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.
 
     Args:
