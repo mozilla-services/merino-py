@@ -1851,6 +1851,8 @@ class TestSections:
     @pytest.mark.asyncio
     async def test_sections_model_interest_vector_greedy_ranking(self, monkeypatch):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
+        np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)
+
         # make an api call to get the current sections
         async with AsyncClient(app=app, base_url="http://test") as ac:
             response = await ac.post(
