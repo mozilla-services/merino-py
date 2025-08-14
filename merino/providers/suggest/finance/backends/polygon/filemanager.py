@@ -24,7 +24,7 @@ class PolygonFilemanager:
     gcs_bucket_path: str
     blob_name: str
     gcs_client: Storage | None = None
-    bucket: Bucket | None = None
+    bucket: Bucket
 
     def __init__(self, gcs_bucket_path: str, blob_name: str) -> None:
         """:param gcs_bucket_path: GCS bucket name to fetch from.
