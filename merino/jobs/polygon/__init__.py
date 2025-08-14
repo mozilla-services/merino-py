@@ -29,7 +29,5 @@ def ingest():
 
         asyncio.run(ingestion.ingest())
     except Exception as ex:
-        # Minimal, sanitized message; traceback but *no locals* (since Rich locals are disabled see line 18)
+        # Minimal, sanitized message; traceback but *no locals*.
         logger.error(f"Ingestion failed: {ex.__class__.__name__}", exc_info=True)
-        # Re-raise so Airflow marks the task as failed
-        raise
