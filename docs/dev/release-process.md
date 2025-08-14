@@ -24,7 +24,7 @@ down).
 [stage_environment]: ../firefox.md#stage
 [production_environment]: ../firefox.md#production
 [activity_circleci_main_workflow]: ./circleci_main_workflow.jpg
-[stage_version]: https://stage.merino.nonprod.cloudops.mozgcp.net/__version__
+[stage_version]: https://merino.services.allizom.org/__version__
 
 ## Release Best Practices
 
