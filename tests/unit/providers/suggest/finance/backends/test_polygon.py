@@ -58,7 +58,7 @@ def fixture_polygon_parameters(
 ) -> dict[str, Any]:
     """Create constructor parameters for Polygon backend module."""
     return {
-        # "api_key": "api_key",
+        "api_key": "api_key",
         "metrics_client": statsd_mock,
         "http_client": mocker.AsyncMock(spec=AsyncClient),
         "metrics_sample_rate": 1,
