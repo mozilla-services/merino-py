@@ -23,7 +23,7 @@ class PolygonIngestion:
         """Return a polygon provider instance"""
         provider = Provider(
             backend=PolygonBackend(
-                api_key=settings.polygon.api_key,
+                # api_key=settings.polygon.api_key,
                 metrics_client=get_metrics_client(),
                 metrics_sample_rate=settings.polygon.metrics_sampling_rate,
                 http_client=create_http_client(
