@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 cli = typer.Typer(
     name="polygon-ingestion",
     help="Commands to download ticker logos, upload to GCS, and generate manifest",
+    pretty_exceptions_enable=True,
+    pretty_exceptions_show_locals=False,  # NOTE: Set to False to avoid api_key exposure.
 )
 
 
@@ -22,6 +24,12 @@ def ingest():
     """Download logos, upload to GCS, and generate manifest."""
     logger.info("Starting Polygon ingestion pipeline...")
 
-    ingestion = PolygonIngestion()
+    try:
+        ingestion = PolygonIngestion()
 
-    asyncio.run(ingestion.ingest())
+        asyncio.run(ingestion.ingest())
+    except Exception as ex:
+        # Minimal, sanitized message; traceback but *no locals* (since Rich locals are disabled see line 18)
+        logger.error(f"Ingestion failed: {ex.__class__.__name__}", exc_info=True)
+        # Re-raise so Airflow marks the task as failed
+        raise

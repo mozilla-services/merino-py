@@ -24,7 +24,7 @@ class PolygonFilemanager:
     gcs_bucket_path: str
     blob_name: str
     gcs_client: Storage | None = None
-    bucket: Bucket | None = None
+    bucket: Bucket
 
     def __init__(self, gcs_bucket_path: str, blob_name: str) -> None:
         """:param gcs_bucket_path: GCS bucket name to fetch from.
@@ -32,23 +32,28 @@ class PolygonFilemanager:
         """
         self.gcs_bucket_path = gcs_bucket_path
         self.blob_name = blob_name
-
-    async def get_bucket(self) -> Bucket:
-        """Lazily instantiate the GCS client and return the configured bucket"""
-        if self.bucket is not None:
-            return self.bucket
-
-        if self.gcs_client is None:
-            self.gcs_client = Storage()
-
+        # TODO: remove below two lines after testing.
+        self.gcs_client = Storage()
         self.bucket = Bucket(storage=self.gcs_client, name=self.gcs_bucket_path)
-        return self.bucket
+
+    # TODO: uncomment after testing.
+    # async def get_bucket(self) -> Bucket:
+    #     """Lazily instantiate the GCS client and return the configured bucket"""
+    #     if self.bucket is not None:
+    #         return self.bucket
+
+    #     if self.gcs_client is None:
+    #         self.gcs_client = Storage()
+
+    #     self.bucket = Bucket(storage=self.gcs_client, name=self.gcs_bucket_path)
+    #     return self.bucket
 
     async def get_file(self) -> tuple[GetManifestResultCode, FinanceManifest | None]:
         """Fetch the manifest file from GCS and parse it into a FinanceManifest"""
         try:
-            bucket = await self.get_bucket()
-            blob: Blob = await bucket.get_blob(self.blob_name)
+            # TODO: uncomment after testing.
+            # bucket = await self.get_bucket()
+            blob: Blob = await self.bucket.get_blob(self.blob_name)
             blob_data = await blob.download()
 
             manifest_content = FinanceManifest.model_validate(orjson.loads(blob_data))
