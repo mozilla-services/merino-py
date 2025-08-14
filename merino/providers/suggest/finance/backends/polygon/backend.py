@@ -52,7 +52,7 @@ class PolygonBackend(FinanceBackend):
 
     def __init__(
         self,
-        # api_key: str,
+        api_key: str,
         url_param_api_key: str,
         url_single_ticker_snapshot: str,
         url_single_ticker_overview: str,
@@ -62,7 +62,7 @@ class PolygonBackend(FinanceBackend):
         metrics_sample_rate: float,
     ) -> None:
         """Initialize the Polygon backend."""
-        # self.api_key = api_key
+        self.api_key = api_key
         self.metrics_client = metrics_client
         self.http_client = http_client
         self.metrics_sample_rate = metrics_sample_rate
@@ -97,7 +97,7 @@ class PolygonBackend(FinanceBackend):
 
     async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
         """Make a request and fetch the snapshot for this single ticker."""
-        params = {self.url_param_api_key: settings.polygon.api_key}
+        params = {self.url_param_api_key: self.api_key}
 
         try:
             response: Response = await self.http_client.get(
@@ -115,7 +115,7 @@ class PolygonBackend(FinanceBackend):
 
     async def get_ticker_image_url(self, ticker: str) -> str | None:
         """Get the logo URL for the ticker (requires API key when fetching)"""
-        params = {self.url_param_api_key: settings.polygon.api_key}
+        params = {self.url_param_api_key: self.api_key}
 
         try:
             response: Response = await self.http_client.get(
@@ -147,7 +147,7 @@ class PolygonBackend(FinanceBackend):
         if not image_url:
             return None
 
-        params = {self.url_param_api_key: settings.polygon.api_key}
+        params = {self.url_param_api_key: self.api_key}
         try:
             response: Response = await self.http_client.get(image_url, params=params)
             response.raise_for_status()
