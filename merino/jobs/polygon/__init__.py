@@ -15,7 +15,7 @@ cli = typer.Typer(
     name="polygon-ingestion",
     help="Commands to download ticker logos, upload to GCS, and generate manifest",
     pretty_exceptions_enable=True,
-    pretty_exceptions_show_locals=False, # NOTE: Set to False to avoid api_key exposure.
+    pretty_exceptions_show_locals=False,  # NOTE: Set to False to avoid api_key exposure.
 )
 
 
