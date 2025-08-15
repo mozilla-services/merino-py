@@ -44,7 +44,7 @@ else
 fi
 
 if [[ "${target}" == "staging" ]]; then
-  endpoint="https://stage.merino.nonprod.cloudops.mozgcp.net/api/v1/suggest"
+  endpoint="https://merino.services.allizom.org/api/v1/suggest"
 elif [[ "${target}" == "prod" ]]; then
   endpoint="https://merino.services.mozilla.com/api/v1/suggest"
 else
