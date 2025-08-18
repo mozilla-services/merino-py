@@ -100,7 +100,9 @@ MIN_TILE_ID = 10000000
 
 class InferredInterests(RootModel[dict[str, float | str]]):
     """Inferred general interests from New Tab article interactions"""
-
+    @staticmethod
+    def empty() -> "InferredInterests":
+        return InferredInterests(root={})
 
 class SectionConfiguration(BaseModel):
     """Configuration settings for a Section"""
