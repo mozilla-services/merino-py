@@ -18,6 +18,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
+    InferredInterests,
 )
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
@@ -132,11 +133,11 @@ class CuratedRecommendationsProvider:
             inferred_local_model = self.local_model_backend.get(surface_id)
 
         if is_sections_experiment:
-            inferred_interests = request.inferredInterests
-            if inferred_local_model.model_matches_interests(request.inferredInterests.root):
-                inferred_interests = inferred_local_model.decode_dp_interests(
-                    request.inferredInterests.root
-                )
+            if (inferred_interests := request.inferredInterests) is not None:
+                if inferred_local_model.model_matches_interests(inferred_interests.root):
+                    inferred_interests = InferredInterests(
+                        inferred_local_model.decode_dp_interests(inferred_interests.root)
+                    )
             sections_feeds = await get_sections(
                 request,
                 surface_id,
