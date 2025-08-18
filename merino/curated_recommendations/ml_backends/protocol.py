@@ -67,7 +67,9 @@ class InferredLocalModel(BaseModel):
 
     model_data: ModelData
 
-    def get_unary_encoded_index(self, encoded_string: str, random_if_uncertain: bool = False) -> int | None:
+    def get_unary_encoded_index(
+        self, encoded_string: str, random_if_uncertain: bool = False
+    ) -> int | None:
         """Decode a unary encoded string with differential privacy added.
         Input must be a string containing 0's and 1's representing a one-hot-encoded
         string length representing the 0-indexed possible values. Since randomness may be added
@@ -92,10 +94,13 @@ class InferredLocalModel(BaseModel):
         """Return whether a user's inferred interests are created with the correct
         model ID for this model.
         """
-        return interests is not None and interests.get(LOCAL_MODEL_MODEL_ID_KEY, None) == self.model_id
+        return (
+            interests is not None
+            and interests.get(LOCAL_MODEL_MODEL_ID_KEY, None) == self.model_id
+        )
 
     def decode_dp_interests(
-            self, interests: dict[str, any], random_if_uncertain: bool = False
+        self, interests: dict[str, any], random_if_uncertain: bool = False
     ) -> dict[str, any]:
         """Decode differentially private (DP) interest values from unary-encoded strings
         into a numeric interest vector.
@@ -131,7 +136,9 @@ class InferredLocalModel(BaseModel):
         result: dict[str, any] = dict()
         result[LOCAL_MODEL_MODEL_ID_KEY] = interests[LOCAL_MODEL_MODEL_ID_KEY]
         for idx, (key, ivconfig) in enumerate(self.model_data.interest_vector.items()):
-            index_interpreted: int | None = self.get_unary_encoded_index(dp_values[idx], random_if_uncertain=random_if_uncertain)
+            index_interpreted: int | None = self.get_unary_encoded_index(
+                dp_values[idx], random_if_uncertain=random_if_uncertain
+            )
             if index_interpreted is not None:
                 # For n thresholds there are n+1 dimensions in the dp string
                 # This is because the 0 index means the values is less than the 0 threshold

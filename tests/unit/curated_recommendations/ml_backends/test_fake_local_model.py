@@ -1,4 +1,5 @@
 """Unit tests for fake local model"""
+
 import numpy as np
 import pytest
 from merino.curated_recommendations.ml_backends.fake_local_model import (
@@ -6,9 +7,13 @@ from merino.curated_recommendations.ml_backends.fake_local_model import (
     FakeLocalModelSections,
     LimitedTopicV0Model,
     CTR_TOPIC_MODEL_ID,
-    CTR_SECTION_MODEL_ID, CTR_LIMITED_TOPIC_MODEL_ID,
+    CTR_SECTION_MODEL_ID,
+    CTR_LIMITED_TOPIC_MODEL_ID,
 )
-from merino.curated_recommendations.ml_backends.protocol import InferredLocalModel, LOCAL_MODEL_MODEL_ID_KEY
+from merino.curated_recommendations.ml_backends.protocol import (
+    InferredLocalModel,
+    LOCAL_MODEL_MODEL_ID_KEY,
+)
 from merino.curated_recommendations.protocol import InferredInterests
 
 TEST_SURFACE = "test_surface"
@@ -74,7 +79,9 @@ def test_model_returns_limited_model(model_limited):
     assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID
     assert result.model_version == 0
     assert result.model_data is not None
-    assert result.model_data.noise_scale >= 0.02  # this needs to be very high. We aren't using it and it shouln't be invokedd
+    assert (
+        result.model_data.noise_scale >= 0.02
+    )  # this needs to be very high. We aren't using it and it shouln't be invokedd
     assert len(result.model_data.interest_vector) > 0
     assert len(result.model_data.day_time_weighting.days) > 0
     assert len(result.model_data.day_time_weighting.relative_weight) > 0
@@ -95,7 +102,7 @@ def test_unary_decoding(model_limited):
     assert idx in {1, 3, 4}
     # non-"0" characters are treated as "1"
     assert model.get_unary_encoded_index("0a00") == 1
-    assert model.get_unary_encoded_index("0000") == None
+    assert model.get_unary_encoded_index("0000") is None
 
 
 def test_model_matches_interests(model_limited):
@@ -140,7 +147,7 @@ def test_decode_dp_interests_low(model_limited):
     interests.root["values"] = values
     updated_inferred_interests = model.decode_dp_interests(interests.root)
     for model_key, model_feature_info in model.model_data.interest_vector.items():
-        assert updated_inferred_interests[model_key] == 0.
+        assert updated_inferred_interests[model_key] == 0.0
 
 
 def test_decode_dp_interests_high(model_limited):
@@ -153,5 +160,7 @@ def test_decode_dp_interests_high(model_limited):
         values.append("0" * len(model_feature_info.thresholds) + "1")  # concat a string
     interests.root["values"] = values
     updated_inferred_interests = model.decode_dp_interests(interests.root)
-    for idx, (model_key, model_feature_info) in enumerate(model.model_data.interest_vector.items()):
+    for idx, (model_key, model_feature_info) in enumerate(
+        model.model_data.interest_vector.items()
+    ):
         assert updated_inferred_interests[model_key] == model_feature_info.thresholds[-1]

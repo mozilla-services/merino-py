@@ -1,4 +1,5 @@
 """Backup local model for testing and in case of GCS failure"""
+
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
@@ -175,12 +176,16 @@ class LimitedTopicV0Model(LocalModelBackend):
         def get_topic(topic: str) -> InterestVectorConfig:
             return InterestVectorConfig(
                 features={f"t_{topic}": 1},
-                thresholds=[0.01, 0.02, 0.03] if topic is not Topic.SPORTS else [0.005, 0.08, 0.02],
+                thresholds=[0.01, 0.02, 0.03]
+                if topic is not Topic.SPORTS
+                else [0.005, 0.08, 0.02],
                 diff_p=0.72,
                 diff_q=0.09,  # These values must be recalculated if number of thresholds or topics change
             )
 
-        category_fields: dict[str, InterestVectorConfig] = {a: get_topic(a) for a in self.limited_topics}
+        category_fields: dict[str, InterestVectorConfig] = {
+            a: get_topic(a) for a in self.limited_topics
+        }
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=False,

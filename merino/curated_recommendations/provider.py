@@ -134,7 +134,9 @@ class CuratedRecommendationsProvider:
         if is_sections_experiment:
             inferred_interests = request.inferredInterests
             if inferred_local_model.model_matches_interests(request.inferredInterests.root):
-                inferred_interests = inferred_local_model.decode_dp_interests(request.inferredInterests.root)
+                inferred_interests = inferred_local_model.decode_dp_interests(
+                    request.inferredInterests.root
+                )
             sections_feeds = await get_sections(
                 request,
                 surface_id,
