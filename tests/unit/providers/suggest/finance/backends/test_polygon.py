@@ -156,6 +156,7 @@ def fixture_ticker_summary() -> TickerSummary:
         todays_change_perc="0.82",
         query="AAPL stock",
         image_url=None,
+        exchange="NASDAQ",
     )
 
 
