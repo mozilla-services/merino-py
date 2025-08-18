@@ -30,6 +30,7 @@ class TickerSummary(BaseModel):
     last_price: str
     todays_change_perc: str
     query: str
+    exchange: str
     image_url: HttpUrl | None
 
 

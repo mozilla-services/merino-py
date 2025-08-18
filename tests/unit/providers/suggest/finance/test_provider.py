@@ -60,6 +60,7 @@ def fixture_ticker_summary() -> TickerSummary:
         todays_change_perc="1.5",
         query="AAPL stock",
         image_url=None,
+        exchange="NASDAQ",
     )
 
 
@@ -74,6 +75,7 @@ def fixture_etf_ticker_summaries() -> list[TickerSummary]:
             todays_change_perc="1.5",
             query="DIA stock",
             image_url=None,
+            exchange="NYSE",
         ),
         TickerSummary(
             name="Invesco Dow Jones Industrial Average Dividend ETF",
@@ -82,6 +84,7 @@ def fixture_etf_ticker_summaries() -> list[TickerSummary]:
             todays_change_perc="1.5",
             query="DJD stock",
             image_url=None,
+            exchange="NYSE",
         ),
         TickerSummary(
             name="Schwab US Dividend Equity ETF",
@@ -90,6 +93,7 @@ def fixture_etf_ticker_summaries() -> list[TickerSummary]:
             todays_change_perc="1.5",
             query="SCHD stock",
             image_url=None,
+            exchange="NYSE",
         ),
     ]
 
