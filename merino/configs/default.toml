@@ -191,7 +191,7 @@ score = 0.25
 
 # MERINO_REMOTE_SETTINGS__COUNTRIES
 # Default countries used to filter out records from remote settings.
-countries = ["US", "GB", "DE", "FR", "PL"]
+countries = ["US", "GB", "DE", "FR", "IT", "PL"]
 
 # MERINO_REMOTE_SETTINGS__FORM_FACTORS
 form_factors = ["desktop"]
