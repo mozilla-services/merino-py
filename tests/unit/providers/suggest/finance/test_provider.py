@@ -114,7 +114,7 @@ def fixture_provider(backend_mock: Any, statsd_mock: Any) -> Provider:
         score=0.3,
         query_timeout_sec=0.2,
         cron_interval_sec=60,
-        resync_interval_sec=3600,
+        resync_interval_sec=86400,
     )
 
 
@@ -334,7 +334,7 @@ def test_should_fetch_respects_interval(provider: Provider):
 
 def test_should_fetch_after_interval(provider: Provider):
     """Test that _should_fetch returns True after interval has passed."""
-    provider.last_fetch_at = time.time() - 4000  # > resync_interval_sec
+    provider.last_fetch_at = time.time() - 87000  # > resync_interval_sec
     provider.last_fetch_failure_at = None
 
     assert provider._should_fetch() is True
@@ -342,7 +342,7 @@ def test_should_fetch_after_interval(provider: Provider):
 
 def test_should_fetch_skips_after_failure(provider: Provider):
     """Test that _should_fetch returns False if a recent failure occurred."""
-    provider.last_fetch_at = time.time() - 4000
+    provider.last_fetch_at = time.time() - 87000
     provider.last_fetch_failure_at = time.time() - 100  # failure < 1hr ago
 
     assert provider._should_fetch() is False

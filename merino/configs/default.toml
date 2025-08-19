@@ -664,8 +664,8 @@ cron_interval_sec = 60
 
 # MERINO_PROVIDERS__POLYGON__RESYNC_INTERVAL_SEC
 # Time between re-syncs of the polygon manifest file, in seconds.
-# Set to 7 days.
-resync_interval_sec = 604800
+# Set to daily.
+resync_interval_sec = 86400
 
 # MERINO_PROVIDERS__POLYGON__CIRCUIT_BREAKER_FAILURE_THRESHOLD
 # The circuit breaker will open when the failure is over this threshold.
