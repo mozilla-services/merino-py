@@ -713,7 +713,7 @@ metrics_sampling_rate = 0.75
 type = "yelp"
 
 # MERINO_PROVIDERS__YELP__BACKEND
-#  The backend of the provider. Either `polygon` or `test`.
+#  The backend of the provider. Either `yelp` or `test`.
 backend = "yelp"
 
 # MERINO_PROVIDERS__YELP__CACHE
