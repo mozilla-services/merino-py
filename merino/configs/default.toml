@@ -39,7 +39,7 @@ query_timeout_sec = 0.2
 # MERINO_RUNTIME__DISABLED_PROVIDERS
 # List containing providers to disable at startup.
 # Prevents a provider from being instantiated.
-disabled_providers = ["amo"]
+disabled_providers = ["amo", "yelp"]
 
 # MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
 default_suggestions_response_ttl_sec = 300 # 5 mins
@@ -705,6 +705,54 @@ url_param_api_key = "apiKey"
 
 # Sampling rate (75%) used by some metrics, can be of int type as well.
 metrics_sampling_rate = 0.75
+
+
+[default.providers.yelp]
+# MERINO_PROVIDERS__YELP__TYPE
+# The type of this provider, should be `yelp`.
+type = "yelp"
+
+# MERINO_PROVIDERS__YELP__BACKEND
+#  The backend of the provider. Either `polygon` or `test`.
+backend = "yelp"
+
+# MERINO_PROVIDERS__YELP__CACHE
+# The store used to yelp data. Either `redis` or `none`.
+# If `redis`, the global Redis settings must be set. See redis.server.
+cache = "none"
+
+# MERINO_PROVIDERS__YELP__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default.
+enabled_by_default = true
+
+# MERINO_PROVIDERS__YELP__SCORE
+# The ranking score for this provider as a floating point number.
+score = 0 # TODO
+
+# MERINO_PROVIDERS__YELP__QUERY_TIMEOUT_SEC
+# A floating point (in seconds) indicating the maximum waiting period when Merino queries
+# for finance data. This will override the default global query timeout.
+query_timeout_sec = 5.0
+
+# MERINO_PROVIDERS__YELP__CONNECT_TIMEOUT_SEC
+# A floating point (in seconds) indicating the maximum waiting period for the
+# polygon backend http client to establish a connection to the host.
+connect_timeout_sec = 3.0
+
+# MERINO_PROVIDERS__YELP__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+
+# MERINO_PROVIDERS__YELP__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
+
+
+[default.yelp]
+# MERINO_YELP__API_KEY
+# The API key to Yelp's API endpoint.
+# In production, this should be set via environment variable as a secret.
+api_key = ""
 
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
