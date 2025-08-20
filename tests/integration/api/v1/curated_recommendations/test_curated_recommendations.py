@@ -1740,6 +1740,7 @@ class TestSections:
             interest_picker_response = data["interestPicker"]
             if enable_interest_picker:
                 assert interest_picker_response is not None
+                assert interest_picker_response["title"] == "Follow topics to fine-tune your experience"
             else:
                 assert interest_picker_response is None
             # Ensure top_stories_section always has receivedFeedRank == 0
@@ -1777,6 +1778,7 @@ class TestSections:
             interest_picker_response = data["interestPicker"]
             if enable_interest_picker:
                 assert interest_picker_response is not None
+                assert interest_picker_response["title"] == "Follow topics to fine-tune your experience"
             else:
                 assert interest_picker_response is None
             # Ensure top_stories_section always has receivedFeedRank == 0
