@@ -85,6 +85,26 @@ A `Manifest` in this context is the site metadata associated with a given provid
 
 Metadata is generally fetched from the site by a `job`, which may call a `Provider._fetch_manifest()` method to create and upload the data to a GCS bucket. If needed later by Merino web services, that bucket will be read and the Manifest data used to construct the `Suggestion`.
 
+`Manifest`s contain a list of `Domain`s and a list of partner dictionaries.
+
+`Domain`s are:
+
+- **rank**: unique numeric ranking for this item.
+- **domain**: the host domain without extension (e.g. for `example.com` the domain would be `example`)
+- **categories**: a list of business categories for this domain (**TODO**: where are these defined?)
+- **url**: the main site URL
+- **title**: site title or brief description
+- **icon**: URL to the icon stored in CDN
+- **serp_categories**: list of numeric category codes (defined by `merino.providers.suggest.base.Category`)
+- **similars**: [Optional] Similar words or common misspellings.
+
+Partners are a set of dictionaries that contain values about **TODO**: ???. The dictionaries may specify values such as:
+
+- **"domain"**: the host name of the partner (e.g. `example.com`)
+- **"url"**: preferred URL to the partner
+- **"original_icon_url"**: non-cached, original source URL for the icon.
+- **"gcs_icon_url"**: URL to the icon stored in CDN
+
 ##### Suggest
 
 Each `Provider` has specific code relating to how the data should be fetched and displayed. Categories of providers can be gathered under a group to take advantage of python subclassing. Once created, the provider can be included in the Merino suggestion groups by updating `merino.providers.suggest.manager._create_provider()`.
@@ -98,7 +118,3 @@ Simple utility scripts that may be useful.
 #### Tests
 
 The bank of tests (Unit and Integration) to validate code changes. All code changes should include appropriate tests.
-
-```
-
-```
