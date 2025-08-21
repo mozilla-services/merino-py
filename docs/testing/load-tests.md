@@ -82,7 +82,7 @@ repository root:
     * Option 2: Select the `Default` load test shape with the following recommended settings:
       * Number of users: 25
       * Spawn rate: 1
-      * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
+      * Host: 'https://merino.services.allizom.org'
         * Set host to 'http://host.docker.internal:8000' to test against a local instance of Merino
       * Duration (Optional): 10m
 * Select "Start Swarming"
@@ -385,7 +385,7 @@ are visualized on charts.
     * UserClasses: MerinoUser
     * Number of users: USERS_PER_WORKER (Consult the [Merino_spreadsheet][merino_spreadsheet] to determine a starting point)
     * Ramp up: RAMP_UP (RAMP_UP = 5/USERS_PER_WORKER)
-    * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
+    * Host: 'https://merino.services.allizom.org'
     * Duration (Optional): 600s
 * Select "Start Swarm"
 
@@ -461,7 +461,7 @@ environment. You can monitor the Merino-py pod counts on [Grafana][grafana].
   ```
 * Set up the load test parameters:
     * ShapeClass: SHAPE_CLASS
-    * Host: 'https://stagepy.merino.nonprod.cloudops.mozgcp.net'
+    * Host: 'https://merino.services.allizom.org'
 * Select "Start Swarm"
 
 #### 3. Stop Load Test

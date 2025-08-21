@@ -10,7 +10,7 @@ services:
       - "8089:8089"
     environment:
       # Set environment variables, see https://docs.locust.io/en/stable/configuration.html#environment-variables
-      LOCUST_HOST: https://stagepy.merino.nonprod.cloudops.mozgcp.net
+      LOCUST_HOST: https://merino.services.allizom.org
       LOCUST_USERCLASS_PICKER: true
       LOCUST_MODERN_UI: true
       LOAD_TESTS__LOGGING_LEVEL: 10

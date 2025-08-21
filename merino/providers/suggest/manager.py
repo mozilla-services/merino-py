@@ -29,6 +29,8 @@ from merino.providers.suggest.wikipedia.backends.elastic import ElasticBackend
 from merino.providers.suggest.wikipedia.backends.fake_backends import FakeWikipediaBackend
 from merino.providers.suggest.wikipedia.provider import Provider as WikipediaProvider
 from merino.providers.suggest.finance.provider import Provider as PolygonProvider
+from merino.providers.suggest.yelp.provider import Provider as YelpProvider
+from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST, WIKIPEDIA_TITLE_BLOCKLIST
 from merino.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
@@ -45,6 +47,7 @@ class ProviderType(str, Enum):
     TOP_PICKS = "top_picks"
     WIKIPEDIA = "wikipedia"
     POLYGON = "polygon"
+    YELP = "yelp"
 
 
 def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
@@ -208,6 +211,18 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 resync_interval_sec=setting.resync_interval_sec,
                 cron_interval_sec=setting.cron_interval_sec,
             )
+        case ProviderType.YELP:
+            return YelpProvider(
+                backend=YelpBackend(
+                    api_key=settings.yelp.api_key,
+                ),
+                metrics_client=get_metrics_client(),
+                score=setting.score,
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+
         case _:
             raise InvalidProviderError(f"Unknown provider type: {setting.type}")
 

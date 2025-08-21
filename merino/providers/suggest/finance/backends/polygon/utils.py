@@ -40,7 +40,12 @@ def _is_valid_ticker(symbol: str) -> bool:
 
 def lookup_ticker_company(ticker: str) -> str:
     """Get the ticker company for ticker symbol. Stock or ETF."""
-    return STOCK_AND_ETF_TICKER_COMPANY_MAPPING[ticker.upper()]
+    return STOCK_AND_ETF_TICKER_COMPANY_MAPPING[ticker.upper()]["company"]
+
+
+def lookup_ticker_exchange(ticker: str) -> str:
+    """Get the ticker exchange for ticker symbol. Stock or ETF."""
+    return STOCK_AND_ETF_TICKER_COMPANY_MAPPING[ticker.upper()]["exchange"]
 
 
 def _is_valid_keyword_for_stock_ticker(keyword: str) -> bool:
@@ -91,6 +96,7 @@ def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) ->
     """Build a ticker summary for a finance suggestion response."""
     ticker = snapshot.ticker
     company = lookup_ticker_company(ticker)
+    exchange = lookup_ticker_exchange(ticker)
     serp_query = f"{ticker} stock"
     last_price = f"${snapshot.last_price} USD"
     todays_change_perc = snapshot.todays_change_perc
@@ -102,4 +108,5 @@ def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) ->
         todays_change_perc=todays_change_perc,
         query=serp_query,
         image_url=image_url,
+        exchange=exchange,
     )

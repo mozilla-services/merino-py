@@ -22,6 +22,10 @@ def ingest():
     """Download logos, upload to GCS, and generate manifest."""
     logger.info("Starting Polygon ingestion pipeline...")
 
-    ingestion = PolygonIngestion()
+    try:
+        ingestion = PolygonIngestion()
 
-    asyncio.run(ingestion.ingest())
+        asyncio.run(ingestion.ingest())
+    except Exception as ex:
+        # Minimal, sanitized message; traceback but *no locals*.
+        logger.error(f"Ingestion failed: {ex.__class__.__name__}", exc_info=True)

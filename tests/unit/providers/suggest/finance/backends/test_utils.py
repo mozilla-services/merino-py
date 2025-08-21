@@ -10,6 +10,7 @@ from typing import Any
 from merino.providers.suggest.finance.backends.polygon.utils import (
     build_ticker_summary,
     lookup_ticker_company,
+    lookup_ticker_exchange,
     extract_snapshot_if_valid,
     get_tickers_for_query,
     _is_valid_ticker as is_valid_ticker,
@@ -90,6 +91,18 @@ def test_lookup_ticker_company_fail() -> None:
     """Test lookup_ticker_company method. Although this use case wouldn't happen at run time but we are still testing for it."""
     with pytest.raises(KeyError) as error:
         _ = lookup_ticker_company("BOB")
+    assert error.typename == "KeyError"
+
+
+def test_lookup_ticker_exchange_success() -> None:
+    """Test lookup_ticker_exchange method. Should return valid exchange name."""
+    assert lookup_ticker_exchange("TSLA") == "NASDAQ"
+
+
+def test_lookup_ticker_exchange_fail() -> None:
+    """Test lookup_ticker_exchange method. Although this use case wouldn't happen at run time but we are still testing for it."""
+    with pytest.raises(KeyError) as error:
+        _ = lookup_ticker_exchange("BOB")
     assert error.typename == "KeyError"
 
 
@@ -195,6 +208,7 @@ def test_build_ticker_summary_success() -> None:
         todays_change_perc="0.82",
         query="AAPL stock",
         image_url=None,
+        exchange="NASDAQ",
     )
 
     assert actual == expected

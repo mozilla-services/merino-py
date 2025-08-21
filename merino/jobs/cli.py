@@ -12,10 +12,13 @@ from merino.jobs.wikipedia_indexer import indexer_cmd
 from merino.jobs.wikipedia_offline_uploader import wiki_offline_uploader_cmd
 from merino.jobs.polygon import cli as polygon_ingestion_cmd
 
-from merino.jobs.skeleton_uploader import skeleton_cmd
+# Include your new jobs module here.
 
+# NOTE: `pretty_exceptions_show_locals` argument is set to False to avoid api_key and secrets exposure.
+cli = typer.Typer(
+    no_args_is_help=True, add_completion=False, pretty_exceptions_show_locals=False
+)
 
-cli = typer.Typer(no_args_is_help=True, add_completion=False)
 # Add the wikipedia-indexer subcommands
 cli.add_typer(indexer_cmd, no_args_is_help=True)
 
@@ -37,7 +40,8 @@ cli.add_typer(wiki_offline_uploader_cmd, no_args_is_help=True)
 # Add the polygon ingest subcommand
 cli.add_typer(polygon_ingestion_cmd, no_args_is_help=True)
 
-cli.add_typer(skeleton_cmd, no_args_is_help=True)
+# Describe this command and link to it.
+# cli.add_typer(skeleton_cmd, no_args_is_help=True)
 
 
 @cli.callback()
