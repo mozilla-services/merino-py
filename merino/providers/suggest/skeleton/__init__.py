@@ -13,23 +13,17 @@ from typing import Protocol
 from merino.providers.suggest.base import (
     BaseSuggestion,
 )
-from merino.providers.suggest.skeleton.backends.manifest import SkeletonManifest
 
-# re-exporting this for convenience
-from merino.providers.suggest.skeleton.provider import SkeletonProvider
+from merino.providers.manifest.backends.protocol import ManifestData
 
 
 class SkeletonBackend(Protocol):
     """Root class for all Skeleton backends"""
 
-    logger: logging.Logger
     # The set of site metadata associated with this provider.
-    manifest_data: SkeletonManifest
+    # manifest_data: ManifestData
 
-    def __init__(self, manifest_data: SkeletonManifest):
-        super().__init__()
-        self.logger = logging.getLogger(__name__)
-        self.manifest_data = manifest_data
+    def __init__(self, manifest_data: ManifestData): ...
 
 
 class SkeletonData(BaseModel):

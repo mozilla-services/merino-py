@@ -3,12 +3,10 @@
 import logging
 
 import aiodogstatsd
-from fastapi import HTTPException
 from pydantic import HttpUrl
 
 from merino.providers.suggest.base import (
     BaseProvider,
-    SuggestionRequest,
 )
 from merino.providers.suggest.skeleton import (
     SkeletonBackend,
@@ -21,7 +19,7 @@ logger = logging.getLogger(__name__)
 class SkeletonProvider(BaseProvider):
     """An example Provider.
 
-    This needs to only define abstract methods specified by `BaseProvider`
+    This needs to only define the abstracted methods specified by `BaseProvider`
 
     """
 
@@ -60,24 +58,20 @@ class SkeletonProvider(BaseProvider):
         self._name = name
         self._query_timeout_sec = query_timeout_sec
         self._enabled_by_default = enabled_by_default
-
         super().__init__()
 
-    # Note: Query will still need to be defined by any class that derives from this class.
-
-    def validate(self, srequest: SuggestionRequest) -> None:
-        """Ensure that the query string is present. This is more than the BaseProvider wants."""
-        if not srequest.query:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid query parameters: `q` is missing",
-            )
-
-    async def initialize(self) -> None:
-        """Perform all the one-off initialization functions required for this Provider.
-
-        This can include things like caching database connections, initializing manifest data, creating cron jobs, etc.
-
-        """
-        # No need to call super().initialize() since it's an abstract method.
-        pass
+    # Note:
+    # The following will need to be implemented by the Provider:
+    #
+    # def validate(self, srequest: SuggestionRequest) -> None:
+    #   """Ensure the content of the `srequest` is valid"""
+    #
+    # async def initialize(self) -> None:
+    #   """Perform all one-off initialization functions required
+    #
+    #   This can include things like establishing or pooling database connections,
+    #   creating cron tasks, etc.
+    #   """
+    #
+    # async def query(self, request: SuggestionRequest) -> list[BaseSuggestion]:
+    #   """Process the incoming request and return a list of the suggestions."

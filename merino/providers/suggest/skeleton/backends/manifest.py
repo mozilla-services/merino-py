@@ -10,11 +10,19 @@ from merino.providers.manifest.backends.protocol import ManifestData
 class SkeletonManifest(ManifestData):
     """Metadata about the Emoji provider (?)"""
 
-    @staticmethod
-    def fetch_manifest_data():
-        """Regularly fetch and update site metadata for this provider."""
-        pass
+    def fetch_manifest_data(self):
+        """Fetch the remote manifest data. Raise an exception if this does not work."""
+        if not self.domains:
+            self.domains = []
+        if not self.partners:
+            self.partners = []
 
     def build_and_upload_manifest_file(self) -> None:
         """Fetch the data and then upload it to GCS. This is called from a merino job"""
         pass
+
+
+# Sadly, you can't create instantiation methods as static methods in python.
+async def fetch_manifest_data() -> SkeletonManifest:
+    """Regularly fetch and update site metadata for this provider."""
+    return SkeletonManifest(domains=[], partners=[])

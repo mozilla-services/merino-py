@@ -45,9 +45,18 @@ A significant portion of work involves fetching and normalizing data.
 
 #### Code
 
+##### Jobs
+
 The ingestion applications are stored under `./merino/jobs/` each provider has it's own application, since each provider is slightly different. For consistency, we use [Typer](https://typer.tiangolo.com/tutorial/) to describe the command,
 
 _**TODO**_ Having weird problems defining(?)/activating(?) Options. Not sure how they're supposed to be passed along.
+
+###### Suggest
+
+Suggest operates by exposing a REST like interface. Code is structured so that:
+
+A **Provider** instantiates it's service (see _initialize()_) and handles the incoming HTTP request (see _query()_).
+Providers instantiate a **Backend**, which resolves individual datum (See _query(str)_) requests and returns a list of `merino.providers.suggest.base.BaseSuggestion`. The Backend is also responsible for managing and updating the **Manifest** data block (see [Manifest](#manifest)) via the `fetch_manifest_data()` and `build_and_upload_manifest_file()` methods.
 
 ##### Configuration
 
@@ -79,11 +88,13 @@ The set of functions called on every request/response by the Merino system.
 
 This is where many of the Merino provider APIs are defined. Things often blend between Web and Jobs, so it can be confusing to sort them out.
 
+<a name="manifest" />
+
 ##### Manifest
 
 A `Manifest` in this context is the site metadata associated with a given provider. This metadata can include things like the site icon, description, weight, and other data elements (_**TODO**_: Need to understand this data better).
 
-Metadata is generally fetched from the site by a `job`, which may call a `Provider._fetch_manifest()` method to create and upload the data to a GCS bucket. If needed later by Merino web services, that bucket will be read and the Manifest data used to construct the `Suggestion`.
+Metadata is generally fetched from the site by a `job`, which may call a `Provider._fetch_manifest()` method to create and upload the data to a GCS bucket. This can be wrapped by the `merino.providers.manifest.backends.protocol.ManifestBackend.fetch()` If needed later by Merino web services, that bucket will be read and the Manifest data used to construct the `Suggestion`.
 
 `Manifest`s contain a list of `Domain`s and a list of partner dictionaries.
 
@@ -104,6 +115,8 @@ Partners are a set of dictionaries that contain values about **TODO**: ???. The 
 - **"url"**: preferred URL to the partner
 - **"original_icon_url"**: non-cached, original source URL for the icon.
 - **"gcs_icon_url"**: URL to the icon stored in CDN
+
+It's important to note that the `Manifest` is a [Pydantic BaseModel](https://docs.pydantic.dev/latest/api/base_model/), and as such, the elements are not directly accessible.
 
 ##### Suggest
 
