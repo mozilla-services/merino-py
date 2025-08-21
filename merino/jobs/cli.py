@@ -15,9 +15,7 @@ from merino.jobs.polygon import cli as polygon_ingestion_cmd
 # Include your new jobs module here.
 
 # NOTE: `pretty_exceptions_show_locals` argument is set to False to avoid api_key and secrets exposure.
-cli = typer.Typer(
-    no_args_is_help=True, add_completion=False, pretty_exceptions_show_locals=False
-)
+cli = typer.Typer(no_args_is_help=True, add_completion=False, pretty_exceptions_show_locals=False)
 
 # Add the wikipedia-indexer subcommands
 cli.add_typer(indexer_cmd, no_args_is_help=True)

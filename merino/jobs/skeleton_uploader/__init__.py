@@ -44,6 +44,8 @@ DEFAULT_LOGGING_LEVEL = "WARNING"
 
 
 class GeneralError(BaseException):
+    """General purpose error. Specialize accordingly."""
+
     msg: str = "An error has occurred"
 
     def __init__(self, msg: str):
@@ -78,9 +80,7 @@ class Options:
 
 def init_logs() -> logging.Logger:
     """Initialize logging based on `PYTHON_LOG` environ)"""
-    level = getattr(
-        logging, os.environ.get("PYTHON_LOG", DEFAULT_LOGGING_LEVEL).upper(), None
-    )
+    level = getattr(logging, os.environ.get("PYTHON_LOG", DEFAULT_LOGGING_LEVEL).upper(), None)
     logging.basicConfig(level=level)
     return logging.getLogger(__name__)
 
@@ -120,9 +120,6 @@ def upload(
     auth: str = options.auth,
     other: str = options.other_option,
 ):
-    import pdb
-
-    pdb.set_trace()
     """Sample Upload function that just prints something. This text is used as the command help."""
     print(f"Uploading...{auth}")
 

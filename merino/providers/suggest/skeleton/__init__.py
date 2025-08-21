@@ -1,7 +1,7 @@
-"""Example Suggest "live" provider"""
+"""Example Suggest "live" provider
 
-"""
 We're extending the Merino FastAPI main, so there's a lot of configuration done elsewhere
+
 """
 
 import logging
@@ -10,11 +10,13 @@ from abc import abstractmethod
 from pydantic import BaseModel, HttpUrl
 from typing import Protocol
 
-from merino.providers.suggest.skeleton.backends.manifest import SkeletonManifest
 from merino.providers.suggest.base import (
-    BaseProvider,
     BaseSuggestion,
 )
+from merino.providers.suggest.skeleton.backends.manifest import SkeletonManifest
+
+# re-exporting this for convenience
+from merino.providers.suggest.skeleton.provider import SkeletonProvider
 
 
 class SkeletonBackend(Protocol):
@@ -45,9 +47,3 @@ class SkeletonData(BaseModel):
     def as_suggestion(self) -> BaseSuggestion:
         """Convert the result into a suggestion for publication"""
         ...
-
-
-class Provider(BaseProvider):
-    """A Sample provider that returns an emoji based on a word or phrase"""
-
-    backend: SkeletonBackend

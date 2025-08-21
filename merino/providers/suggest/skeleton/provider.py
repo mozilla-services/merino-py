@@ -1,22 +1,16 @@
 """Provide a generic response"""
 
-import asyncio
 import logging
-import time
 
 import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
-from typing import Any
 
-from merino.configs import settings
 from merino.providers.suggest.base import (
     BaseProvider,
     SuggestionRequest,
 )
-from merino.providers.manifest.backends.protocol import ManifestData
-from merino.providers.suggest.custom_details import CustomDetails
-from merino.providers.suggest.skeleton.backends.protocol import (
+from merino.providers.suggest.skeleton import (
     SkeletonBackend,
 )
 
@@ -27,7 +21,9 @@ logger = logging.getLogger(__name__)
 class SkeletonProvider(BaseProvider):
     """An example Provider.
 
-    This needs to only define abstract methods specified by `BaseProvider`"""
+    This needs to only define abstract methods specified by `BaseProvider`
+
+    """
 
     # The backend class we should use to process this request. This should be specified
     # by the child class override.

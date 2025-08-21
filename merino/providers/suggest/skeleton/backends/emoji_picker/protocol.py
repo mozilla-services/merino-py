@@ -1,3 +1,9 @@
+"""Protocol definitions for the example "Emoji Picker"
+
+This should include various data type and derivatives that your example class requires.
+
+"""
+
 from merino.providers.suggest.base import BaseSuggestion
 from merino.providers.suggest.skeleton import SkeletonData
 
