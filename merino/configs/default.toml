@@ -754,6 +754,12 @@ circuit_breaker_recover_timeout_sec = 30
 # In production, this should be set via environment variable as a secret.
 api_key = ""
 
+# MERINO_YELP__URL_BASE
+url_base = "https://api.yelp.com/v3"
+# MERINO_YELP__BUSINESS_SEARCH_URL
+# The endpoint that provides Yelp businesses
+url_business_search = "/businesses/search?location={location}&term={term}&limit={limit}&open_now=true"
+
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
 # GCS bucket that contains Airflow data for Merino
