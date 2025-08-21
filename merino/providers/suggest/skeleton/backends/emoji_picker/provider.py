@@ -6,13 +6,14 @@ by Merino, when we get a request to process.
 
 import aiodogstatsd
 
+from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.suggest.skeleton.provider import SkeletonProvider, SkeletonBackend
 from merino.providers.suggest.base import BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.skeleton.backends.emoji_picker.backend import (
     EmojiPickerBackend,
 )
-from merino.providers.suggest.skeleton.backends.emoji_picker.manifest import (
-    EmojiManifest,
+from merino.providers.suggest.skeleton.backends.manifest import (
+    SkeletonManifest,
 )
 
 
@@ -22,12 +23,12 @@ class EmojiProvider(SkeletonProvider):
     customize."""
 
     backend: SkeletonBackend
-    manifest_data: EmojiManifest | None
 
     async def query(self, sreq: SuggestionRequest) -> list[BaseSuggestion]:
         """Fetch the appropriate emojis for the given request."""
         # TODO: Add metric call here.
-        return await EmojiPickerBackend().query(sreq.query)
+        picker: EmojiPickerBackend = EmojiPickerBackend(self.backend.manifest_data)
+        return await picker.query(sreq.query)
 
     def __init__(
         self,
@@ -38,7 +39,10 @@ class EmojiProvider(SkeletonProvider):
         query_timeout_sec: float = 0.5,
         enabled_by_default: bool = False,
     ):
-        self.backend = backend or EmojiPickerBackend()
+        # Define our manifest data here. It's fairly early, but we need that data defined
+        # and included with the backend to ensure that types are properly set.
+        self.manifest_data = SkeletonManifest(domains=[], partners=[])
+        self.backend = backend or EmojiPickerBackend(manifest_data=self.manifest_data)
 
         super().__init__(
             backend=self.backend,
@@ -51,7 +55,6 @@ class EmojiProvider(SkeletonProvider):
 
     def initialize(self):
         """An abstract method to initialize data. This is called on request invocation."""
-        self.manifest_data = EmojiManifest(domains=[], partners=[])
         pass
 
     async def fetch_manifest_data(self):
@@ -59,7 +62,7 @@ class EmojiProvider(SkeletonProvider):
         be called from a merino job.
         """
         if self.manifest_data:
-            self.manifest_data.fetch_manifest_data()
+            self.backend.manifest_data.fetch_manifest_data()
 
     async def build_and_upload_manifest_file(self):
         """This function can be called by the `uv` jobs in order to build the site
@@ -69,5 +72,5 @@ class EmojiProvider(SkeletonProvider):
 
         QQ: Shouldn't this be a class method for `EmojiManifest`?
         """
-        if self.manifest_data:
-            self.manifest_data.build_and_upload_manifest_file()
+        if self.backend.manifest_data:
+            self.backend.manifest_data.build_and_upload_manifest_file()

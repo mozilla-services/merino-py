@@ -19,15 +19,16 @@ uv run merino-jobs skeleton_app
 
 """
 
-import asyncio
 import logging
 import os
+from dynaconf.base import LazySettings
 from typing import Any
 from typing_extensions import Annotated
 
 import typer
 
 from merino.configs import settings as config
+from merino.configs.app_configs.config_logging import configure_logging
 
 # Remote Settings accepts CSV files as the upload, so we need to convert
 # our data into CSV format.
@@ -52,7 +53,11 @@ class GeneralError(BaseException):
 class Options:
     """Specify the options for the Skeleton app."""
 
-    def __init__(self, base_settings):
+    # Ensure that your local variables are declared.
+    auth: str
+    other_option: str
+
+    def __init__(self, base_settings: LazySettings):
         logger.debug("Defining options")
         # """
         self.auth = typer.Option(
@@ -63,7 +68,7 @@ class Options:
         self.other_option = typer.Option("gorp", "--foo", help="Set something else")
         # """
 
-    def get_command(self):
+    def get_command(self) -> typer.Typer:
         """Define the app name and help screen"""
         return typer.Typer(
             name="skeleton_app",
@@ -88,7 +93,6 @@ def _upload(options: Options):
     print(options)
 
 
-# **QQ**: We don't use the `merino/config/app_config/config_logging` calls here because...?
 logger = init_logs()
 
 # initialize our settings
@@ -106,12 +110,8 @@ if not skeleton_settings:
 #"""
 
 rs_settings = config.remote_settings
-
-options = Options(rs_settings)
-
-# logger.debug(options.auth)
-
-skeleton_cmd = options.get_command()
+options: Options = Options(base_settings=rs_settings)
+skeleton_cmd: typer.Typer = options.get_command()
 
 
 # Include this in the `cli.py` file to add the command to the general set.

@@ -4,38 +4,30 @@
 We're extending the Merino FastAPI main, so there's a lot of configuration done elsewhere
 """
 
-import asyncio
 import logging
-import time
 
-import aiodogstatsd
-from fastapi import HTTPException
+from abc import abstractmethod
 from pydantic import BaseModel, HttpUrl
 from typing import Protocol
 
-from merino.configs import settings
-from merino.providers.manifest.backends.protocol import ManifestData
+from merino.providers.suggest.skeleton.backends.manifest import SkeletonManifest
 from merino.providers.suggest.base import (
     BaseProvider,
     BaseSuggestion,
 )
-from merino.providers.suggest.custom_details import CustomDetails
-from merino.utils import cron
-
-
-class SkeletonManifest(ManifestData):
-    """Site metadata description"""
 
 
 class SkeletonBackend(Protocol):
     """Root class for all Skeleton backends"""
 
     logger: logging.Logger
-    manifest_data: SkeletonManifest | None = None
+    # The set of site metadata associated with this provider.
+    manifest_data: SkeletonManifest
 
-    def __init__(self):
+    def __init__(self, manifest_data: SkeletonManifest):
         super().__init__()
         self.logger = logging.getLogger(__name__)
+        self.manifest_data = manifest_data
 
 
 class SkeletonData(BaseModel):
@@ -43,12 +35,13 @@ class SkeletonData(BaseModel):
 
     # Required fields for the Suggestion:
     # Who provided this result?
-    provider = "Example Provider"
+    provider: str = "Example Provider"
     # Where should the user go if they click on this?
-    url = HttpUrl(url="https://example.org")
+    url: HttpUrl = HttpUrl(url="https://example.org")
     # What score should this result get when compared with other suggestions?
-    score = 0.5
+    score: float = 0.5
 
+    @abstractmethod
     def as_suggestion(self) -> BaseSuggestion:
         """Convert the result into a suggestion for publication"""
         ...

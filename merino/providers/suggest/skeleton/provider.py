@@ -33,9 +33,6 @@ class SkeletonProvider(BaseProvider):
     # by the child class override.
     backend: SkeletonBackend
 
-    # The site metadata that should be associated with this provider. Metadata
-    manifest_data: ManifestData
-
     # The metric client for dealing with stats.
     metrics_client: aiodogstatsd.Client
 
