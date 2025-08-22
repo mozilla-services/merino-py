@@ -219,9 +219,7 @@ def remove_top_story_recs(
     return [rec for rec in recommendations if rec.corpusItemId not in top_stories_rec_ids]
 
 
-def cycle_layouts_for_ranked_sections(
-    sections: dict[str, Section], layout_cycle: list[Layout]
-):
+def cycle_layouts_for_ranked_sections(sections: dict[str, Section], layout_cycle: list[Layout]):
     """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section'"""
     # Exclude top_stories_section from layout cycling
     ranked_sections = [
