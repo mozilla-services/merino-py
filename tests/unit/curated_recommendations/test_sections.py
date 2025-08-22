@@ -482,7 +482,7 @@ class TestCycleLayoutsForRankedSections:
         assert all(s.layout == layout_4_medium for s in sections.values())
 
         # Apply layout cycling
-        cycle_layouts_for_ranked_sections(sections)
+        cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
 
         # Check layouts were cycled through LAYOUT_CYCLE
         for idx, section in enumerate(sections.values()):
@@ -497,7 +497,7 @@ class TestCycleLayoutsForRankedSections:
         assert all(s.layout == layout_4_medium for s in sections.values())
 
         # Apply layout cycling
-        cycle_layouts_for_ranked_sections(sections)
+        cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
 
         # top_stories_section layout should remain layout_4_medium
         assert sections["top_stories_section"].layout == layout_4_medium
