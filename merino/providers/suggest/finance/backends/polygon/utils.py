@@ -72,24 +72,25 @@ def get_tickers_for_query(keyword: str) -> list[str] | None:
 
 def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | None:
     """Extract the TickerSnapshot from the nested JSON response, if it has the valid json structure."""
-    match data:
-        case None:
+    if data is None:
+        return None
+
+    try:
+        result = data["results"][0]
+        ticker = result["ticker"]
+        change_percent = result["session"]["change_percent"]
+        price = result["last_trade"]["price"]
+
+        if not isinstance(change_percent, float) or not isinstance(price, float):
+            logger.warning(f"Polygon snapshot response json has incorrect data types: {data}")
             return None
-        case {
-            "ticker": {
-                "ticker": str(ticker),
-                "todaysChangePerc": float(todays_change),
-                "lastTrade": {"p": float(last_price)},
-            }
-        }:
-            return TickerSnapshot(
-                ticker=ticker,
-                todays_change_perc=f"{todays_change:.2f}",
-                last_price=f"{last_price:.2f}",
-            )
-        case _:
-            logger.warning(f"Polygon invalid ticker snapshot json response: {data}")
-            return None
+
+        return TickerSnapshot(
+            ticker=ticker, todays_change_perc=f"{change_percent:.2f}", last_price=f"{price:.2f}"
+        )
+    except (KeyError, IndexError, TypeError):
+        logger.warning(f"Polygon snapshot response json has incorrect shape: {data}")
+        return None
 
 
 def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) -> TickerSummary:
