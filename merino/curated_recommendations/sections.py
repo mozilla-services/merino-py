@@ -46,7 +46,7 @@ from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
 logger = logging.getLogger(__name__)
 
-LAYOUT_CYCLE = [layout_4_medium, layout_6_tiles, layout_4_large]
+LAYOUT_CYCLE = [layout_6_tiles, layout_4_large, layout_4_medium]
 TOP_STORIES_COUNT = 6
 DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
@@ -197,11 +197,6 @@ def is_ml_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
     )
 
 
-def is_popular_today_double_row_layout(request: CuratedRecommendationsRequest) -> bool:
-    """Return True for the treatment branch of the ML sub-topics experiment, otherwise False."""
-    return is_ml_sections_experiment(request)
-
-
 def update_received_feed_rank(sections: dict[str, Section]):
     """Set receivedFeedRank such that it is incrementing from 0 to len(sections)"""
     for idx, sid in enumerate(sorted(sections, key=lambda k: sections[k].receivedFeedRank)):
@@ -224,12 +219,8 @@ def remove_top_story_recs(
     return [rec for rec in recommendations if rec.corpusItemId not in top_stories_rec_ids]
 
 
-def cycle_layouts_for_ranked_sections(
-    sections: dict[str, Section], layout_cycle: list[Layout] | None = None
-):
+def cycle_layouts_for_ranked_sections(sections: dict[str, Section], layout_cycle: list[Layout]):
     """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section'"""
-    if not layout_cycle:
-        layout_cycle = LAYOUT_CYCLE
     # Exclude top_stories_section from layout cycling
     ranked_sections = [
         section for sid, section in sections.items() if sid != "top_stories_section"
@@ -386,16 +377,9 @@ async def get_sections(
     )
 
     # 6. Split top stories
-    top_stories_count = TOP_STORIES_COUNT
-    layout_cycle = LAYOUT_CYCLE
-    popular_today_layout = layout_4_large
-
-    # check if popular today double row experiment is enabled
-    # update top story count & layout cycle
-    if is_popular_today_double_row_layout(request):
-        top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
-        layout_cycle = [layout_6_tiles, layout_4_large, layout_4_medium]
-        popular_today_layout = layout_7_tiles_2_ads
+    # Use 2-row layout as default for Popular Today
+    top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
+    popular_today_layout = layout_7_tiles_2_ads
 
     top_stories = get_top_story_list(
         all_ranked_corpus_recommendations, top_stories_count, TOP_STORIES_SECTION_EXTRA_COUNT
@@ -443,7 +427,7 @@ async def get_sections(
     )
 
     # 13. Apply final layout cycling to ranked sections except top_stories
-    cycle_layouts_for_ranked_sections(sections, layout_cycle)
+    cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
 
     # 14. Apply ad adjustments
     adjust_ads_in_sections(sections)
