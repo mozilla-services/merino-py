@@ -12,60 +12,40 @@ from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mappin
     ALL_ETF_TICKER_COMPANY_MAPPING,
 )
 from merino.providers.suggest.finance.backends.polygon.keyword_ticker_mapping import (
-    ETF_TICKER_KEYWORDS,
-    STOCK_TICKER_KEYWORDS,
-    KEYWORD_TO_ETF_TICKER,
-    KEYWORD_TO_STOCK_TICKER,
+    KEYWORD_TO_STOCK_TICKER_MAPPING,
+    KEYWORD_TO_ETF_TICKER_MAPPING,
 )
 
 logger = logging.getLogger(__name__)
 
-# NOTE: Treat as read-only.
-# This is the comprehnsive list of all the tickers to company mapping
-# for all the tickers we support. Stock and ETF.
-STOCK_AND_ETF_TICKER_COMPANY_MAPPING = (
-    ALL_STOCK_TICKER_COMPANY_MAPPING | ALL_ETF_TICKER_COMPANY_MAPPING
-)
-
-# NOTE: Treat as read-only.
-# This is the comprehnsive list of all the ticker symbols we support.
-ALL_TICKERS = frozenset(STOCK_AND_ETF_TICKER_COMPANY_MAPPING.keys())
-
-
-def _is_valid_ticker(symbol: str) -> bool:
-    """Check if the symbol provided is a valid and supported ticker."""
-    # Check if the symbol provided is a supported ticker. Stock or ETF.
-    return symbol.upper() in ALL_TICKERS
+ALL_TICKER_COMPANY_MAPPING: dict[str, dict] = {
+    **ALL_STOCK_TICKER_COMPANY_MAPPING,
+    **ALL_ETF_TICKER_COMPANY_MAPPING,
+}
 
 
 def lookup_ticker_company(ticker: str) -> str:
-    """Get the ticker company for ticker symbol. Stock or ETF."""
-    return STOCK_AND_ETF_TICKER_COMPANY_MAPPING[ticker.upper()]["company"]
+    """Get the ticker company for a stock or ETF ticker symbol."""
+    return str(ALL_TICKER_COMPANY_MAPPING[ticker]["company"])
 
 
 def lookup_ticker_exchange(ticker: str) -> str:
     """Get the ticker exchange for ticker symbol. Stock or ETF."""
-    return STOCK_AND_ETF_TICKER_COMPANY_MAPPING[ticker.upper()]["exchange"]
-
-
-def _is_valid_keyword_for_stock_ticker(keyword: str) -> bool:
-    """Check if the keyword provided is one of the supported keywords for stock tickers."""
-    return keyword in STOCK_TICKER_KEYWORDS
-
-
-def _is_valid_keyword_for_etf_ticker(keyword: str) -> bool:
-    """Check if the keyword provided is one of the supported keywords for ETF tickers."""
-    return keyword in ETF_TICKER_KEYWORDS
+    return str(ALL_TICKER_COMPANY_MAPPING[ticker]["exchange"])
 
 
 def get_tickers_for_query(keyword: str) -> list[str] | None:
-    """Validate and return a ticker. Should return a ticker for stock keywords or ETF keywords or None."""
-    if _is_valid_ticker(keyword):
-        return [keyword.upper()]
-    if _is_valid_keyword_for_stock_ticker(keyword):
-        return [KEYWORD_TO_STOCK_TICKER[keyword]]
-    if _is_valid_keyword_for_etf_ticker(keyword):
-        return list(KEYWORD_TO_ETF_TICKER[keyword])
+    """Validate and return a list of tickers (1 to 3) or None."""
+    keyword_upper = keyword.upper()
+
+    if keyword_upper in ALL_STOCK_TICKER_COMPANY_MAPPING:
+        return [keyword_upper]
+    if keyword_upper in ALL_ETF_TICKER_COMPANY_MAPPING:
+        return [keyword_upper]
+    if ticker := KEYWORD_TO_STOCK_TICKER_MAPPING.get(keyword):
+        return [ticker]
+    if tickers := KEYWORD_TO_ETF_TICKER_MAPPING.get(keyword):
+        return tickers
 
     return None
 

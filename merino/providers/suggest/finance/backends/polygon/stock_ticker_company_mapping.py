@@ -1003,5 +1003,3 @@ ALL_STOCK_TICKER_COMPANY_MAPPING: dict[str, dict[str, str]] = {
     "XP": {"company": "XP Inc", "exchange": "NASDAQ"},
     "XPO": {"company": "Xpo Inc", "exchange": "NYSE"},
 }  # noqa
-
-ALL_STOCK_TICKERS = frozenset(ALL_STOCK_TICKER_COMPANY_MAPPING.keys())
