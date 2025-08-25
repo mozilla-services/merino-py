@@ -107,8 +107,8 @@ def test_renumber_sections_preserves_order_skips_picker_rank():
 @pytest.mark.parametrize(
     "followed, expected_ranks",
     [
-        (False, {1, 2, 3}),
-        (True, {2, 3}),
+        (False, {1, 2}),  # no followed sections - picker can be right after 1st - 2nd section
+        (True, {2}),  # has followed sections - picker at the 3rd section (2nd rank)
     ],
 )
 def test_get_interest_picker_rank_param(followed: bool, expected_ranks: set[int]):
