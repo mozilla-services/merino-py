@@ -18,15 +18,20 @@ from merino.providers.suggest.finance.backends.polygon.keyword_ticker_mapping im
 
 logger = logging.getLogger(__name__)
 
+ALL_TICKER_COMPANY_MAPPING: dict[str, dict] = {
+    **ALL_STOCK_TICKER_COMPANY_MAPPING,
+    **ALL_ETF_TICKER_COMPANY_MAPPING,
+}
+
 
 def lookup_ticker_company(ticker: str) -> str:
-    """Get the ticker company for ticker symbol. Stock or ETF."""
-    return ALL_STOCK_TICKER_COMPANY_MAPPING[ticker]["company"]
+    """Get the ticker company for a stock or ETF ticker symbol."""
+    return str(ALL_TICKER_COMPANY_MAPPING[ticker]["company"])
 
 
 def lookup_ticker_exchange(ticker: str) -> str:
     """Get the ticker exchange for ticker symbol. Stock or ETF."""
-    return ALL_STOCK_TICKER_COMPANY_MAPPING[ticker]["exchange"]
+    return str(ALL_TICKER_COMPANY_MAPPING[ticker]["exchange"])
 
 
 def get_tickers_for_query(keyword: str) -> list[str] | None:
