@@ -69,9 +69,14 @@ def fixture_single_ticker_snapshot_response() -> dict[str, Any]:
     }
 
 
-def test_lookup_ticker_company_success() -> None:
+def test_lookup_stock_ticker_company_success() -> None:
     """Test lookup_ticker_company method. Should return valid company name."""
     assert lookup_ticker_company("TSLA") == "Tesla Inc"
+
+
+def test_lookup_etf_ticker_company_success() -> None:
+    """Test lookup_ticker_company method. Should return valid company name."""
+    assert lookup_ticker_company("VOO") == "Vanguard S&P 500 ETF"
 
 
 def test_lookup_ticker_company_fail() -> None:
@@ -81,9 +86,14 @@ def test_lookup_ticker_company_fail() -> None:
     assert error.typename == "KeyError"
 
 
-def test_lookup_ticker_exchange_success() -> None:
+def test_lookup_stock_ticker_exchange_success() -> None:
     """Test lookup_ticker_exchange method. Should return valid exchange name."""
     assert lookup_ticker_exchange("TSLA") == "NASDAQ"
+
+
+def test_lookup_etf_ticker_exchange_success() -> None:
+    """Test lookup_ticker_exchange method. Should return valid exchange name."""
+    assert lookup_ticker_exchange("VOO") == "NYSE"
 
 
 def test_lookup_ticker_exchange_fail() -> None:
