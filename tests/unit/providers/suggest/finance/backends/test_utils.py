@@ -13,9 +13,6 @@ from merino.providers.suggest.finance.backends.polygon.utils import (
     lookup_ticker_exchange,
     extract_snapshot_if_valid,
     get_tickers_for_query,
-    _is_valid_ticker as is_valid_ticker,
-    _is_valid_keyword_for_stock_ticker as is_valid_keyword_for_stock_ticker,
-    _is_valid_keyword_for_etf_ticker as is_valid_keyword_for_etf_ticker,
 )
 
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
@@ -72,16 +69,6 @@ def fixture_single_ticker_snapshot_response() -> dict[str, Any]:
     }
 
 
-def test_is_valid_ticker_success() -> None:
-    """Test the _is_valid_ticker method. Should return True for a valid ticker."""
-    assert is_valid_ticker("AAPL") is True
-
-
-def test_is_valid_ticker_fail() -> None:
-    """Test the _is_valid_ticker method. Should return False for an invalid ticker."""
-    assert is_valid_ticker("BOB") is False
-
-
 def test_lookup_ticker_company_success() -> None:
     """Test lookup_ticker_company method. Should return valid company name."""
     assert lookup_ticker_company("TSLA") == "Tesla Inc"
@@ -106,47 +93,27 @@ def test_lookup_ticker_exchange_fail() -> None:
     assert error.typename == "KeyError"
 
 
-def test_is_valid_keyword_for_stock_ticker_success() -> None:
-    """Test the _is_valid_keyword_for_stock_ticker method. Should return True for a valid keyword."""
-    assert is_valid_keyword_for_stock_ticker("jpmorgan chase stock") is True
+def test_get_tickers_for_query() -> None:
+    """Test get_tickers_for_query method for various cases."""
+    # Valid stock ticker.
+    assert get_tickers_for_query("AAPL") == ["AAPL"]
 
+    # Valid ETF ticker.
+    assert get_tickers_for_query("BIS") == ["BIS"]
 
-def test_is_valid_keyword_for_stock_ticker_fail() -> None:
-    """Test the _is_valid_keyword_for_stock_ticker method. Should return false for an invalid keyword."""
-    assert is_valid_keyword_for_stock_ticker("bobs burgers stock") is False
-
-
-def test_is_valid_keyword_for_etf_ticker_success() -> None:
-    """Test the _is_valid_keyword_for_etf_ticker method. Should return True for a valid keyword."""
-    assert is_valid_keyword_for_etf_ticker("nasdaq composite stock index") is True
-
-
-def test_is_valid_keyword_for_etf_ticker_fail() -> None:
-    """Test the _is_valid_keyword_for_etf_ticker method. Should return False for an invalid keyword."""
-    assert is_valid_keyword_for_etf_ticker("bobs burgers index funds") is False
-
-
-def test_get_ticker_for_keyword_for_stock_success() -> None:
-    """Test the get_tickers_for_query method. Should return correct tickers for a valid stock keyword."""
+    # Valid stock keywords.
     assert get_tickers_for_query("jpmorgan chase stock") == ["JPM"]
 
+    # Valid ETF keywords.
+    assert get_tickers_for_query("dow jones industrial average") == ["DIA", "DJD", "SCHD"]
 
-def test_get_ticker_for_keyword_for_stock_fail() -> None:
-    """Test the get_tickers_for_query method. Should return None for an invalid stock keyword."""
+    # Invalid ticker.
+    assert get_tickers_for_query("BOB") is None
+
+    # Invalid stock keywords.
     assert get_tickers_for_query("bobs burgers stock") is None
 
-
-# TODO: Will be updated once ETF tickers are assigned.
-def test_get_ticker_for_keyword_for_etf_success() -> None:
-    """Test the get_tickers_for_query method. Should return correct ticker for a valid ETF keyword."""
-    etf_tickers = get_tickers_for_query("dow jones industrial average")
-
-    assert etf_tickers is not None
-    assert set(etf_tickers) == set(["DIA", "DJD", "SCHD"])
-
-
-def test_get_ticker_for_keyword_for_etf_fail() -> None:
-    """Test the get_tickers_for_query method. Should return None for an invalid ETF keyword."""
+    # Invalid ETF keywords.
     assert get_tickers_for_query("bobs burgers stock index fund") is None
 
 

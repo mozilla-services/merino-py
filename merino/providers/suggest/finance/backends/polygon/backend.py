@@ -18,7 +18,7 @@ from merino.providers.suggest.finance.backends.protocol import (
     TickerSummary,
 )
 from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapping import (
-    ALL_STOCK_TICKERS,
+    ALL_STOCK_TICKER_COMPANY_MAPPING,
 )
 from merino.providers.suggest.finance.backends.polygon.utils import (
     extract_snapshot_if_valid,
@@ -229,7 +229,9 @@ class PolygonBackend(FinanceBackend):
         - Uploads the manifest JSON file to the GCS bucket.
         """
         try:
-            url_map = await self.bulk_download_and_upload_ticker_images(list(ALL_STOCK_TICKERS))
+            url_map = await self.bulk_download_and_upload_ticker_images(
+                list(ALL_STOCK_TICKER_COMPANY_MAPPING.keys())
+            )
 
             manifest = self.build_finance_manifest(url_map)
             manifest_bytes = orjson.dumps(manifest.model_dump(mode="json"))
