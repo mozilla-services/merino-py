@@ -164,3 +164,48 @@ def test_decode_dp_interests_high(model_limited):
         model.model_data.interest_vector.items()
     ):
         assert updated_inferred_interests[model_key] == model_feature_info.thresholds[-1]
+
+
+def test_decode_raises_on_wrong_model_id(model_limited):
+    """Decode should raise if model IDs do not match."""
+    model = model_limited.get("surface")
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = "not-this-model"
+    with pytest.raises(Exception):
+        model.decode_dp_interests(interests.root)
+
+
+def test_decode_raises_when_values_not_list(model_limited):
+    """If 'values' exists but is not a list -> raise."""
+    model = model_limited.get("surface")
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = model.model_id
+    interests.root["values"] = "oops-not-a-list"
+    with pytest.raises(Exception):
+        model.decode_dp_interests(interests.root)
+
+
+def test_decode_returns_flat_when_no_values(model_limited):
+    """If there are no DP values, decode_dp_interests should return the same flat dict."""
+    model = model_limited.get("surface")
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = model.model_id
+    # add some already-decoded floats/strings
+    interests.root["foo"] = 0.123
+    interests.root["bar"] = "baz"
+
+    out = model.decode_dp_interests(interests.root)
+    assert out["foo"] == 0.123
+    assert out["bar"] == "baz"
+    assert out[LOCAL_MODEL_MODEL_ID_KEY] == model.model_id
+
+
+def test_decode_raises_on_length_mismatch(model_limited):
+    """If the number of unary strings doesn't match the configured interest_vector -> raise."""
+    model = model_limited.get("surface")
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = model.model_id
+    # Provide fewer unary strings than interest_vector entries to force the mismatch path
+    interests.root["values"] = ["1"]  # definitely shorter than configured vector
+    with pytest.raises(Exception):
+        model.decode_dp_interests(interests.root)
