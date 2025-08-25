@@ -21,24 +21,26 @@ logger = logging.getLogger(__name__)
 
 def lookup_ticker_company(ticker: str) -> str:
     """Get the ticker company for ticker symbol. Stock or ETF."""
-    return ALL_STOCK_TICKER_COMPANY_MAPPING[ticker.upper()]["company"]
+    return ALL_STOCK_TICKER_COMPANY_MAPPING[ticker]["company"]
 
 
 def lookup_ticker_exchange(ticker: str) -> str:
     """Get the ticker exchange for ticker symbol. Stock or ETF."""
-    return ALL_STOCK_TICKER_COMPANY_MAPPING[ticker.upper()]["exchange"]
+    return ALL_STOCK_TICKER_COMPANY_MAPPING[ticker]["exchange"]
 
 
 def get_tickers_for_query(keyword: str) -> list[str] | None:
     """Validate and return a list of tickers (1 to 3) or None."""
-    if keyword.upper() in ALL_STOCK_TICKER_COMPANY_MAPPING:
-        return [keyword.upper()]
-    if keyword.upper() in ALL_ETF_TICKER_COMPANY_MAPPING:
-        return [keyword.upper()]
+    keyword_upper = keyword.upper()
+
+    if keyword_upper in ALL_STOCK_TICKER_COMPANY_MAPPING:
+        return [keyword_upper]
+    if keyword_upper in ALL_ETF_TICKER_COMPANY_MAPPING:
+        return [keyword_upper]
     if ticker := KEYWORD_TO_STOCK_TICKER_MAPPING.get(keyword):
         return [ticker]
     if tickers := KEYWORD_TO_ETF_TICKER_MAPPING.get(keyword):
-        return list(tickers)
+        return tickers
 
     return None
 
