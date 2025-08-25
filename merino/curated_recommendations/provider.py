@@ -132,9 +132,12 @@ class CuratedRecommendationsProvider:
         if is_sections_experiment and request.inferredInterests:
             inferred_local_model = self.local_model_backend.get(surface_id)
 
-        if is_sections_experiment:
+        if is_sections_experiment:  # and inferred_local_model is not None:
             if (inferred_interests := request.inferredInterests) is not None:
-                if inferred_local_model.model_matches_interests(inferred_interests.root):
+                if (
+                    inferred_local_model is not None
+                    and inferred_local_model.model_matches_interests(inferred_interests.root)
+                ):
                     inferred_interests = InferredInterests(
                         inferred_local_model.decode_dp_interests(inferred_interests.root)
                     )

@@ -1,7 +1,7 @@
 """Protocol and Pydantic models for the Local Model provider backend."""
 
 from enum import Enum
-from typing import Protocol, cast
+from typing import Protocol, cast, Mapping
 
 import numpy as np
 from pydantic import BaseModel
@@ -90,7 +90,11 @@ class InferredLocalModel(BaseModel):
                 return 0
         return None
 
-    def model_matches_interests(self, interests: dict[str, list[str] | str | float] or None):
+    def model_matches_interests(
+        # self, interests: Mapping[str, list[str] | str | float] | None
+        self,
+        interests: Mapping[str, list[str] | str | float] | None,
+    ) -> bool:
         """Return whether a user's inferred interests are created with the correct
         model ID for this model.
         """
@@ -102,8 +106,10 @@ class InferredLocalModel(BaseModel):
         )
 
     def decode_dp_interests(
-        self, interests: dict[str, list[str] | str | float], random_if_uncertain: bool = False
-    ) -> dict[str, list[str] | str | float]:
+        self, interests: Mapping[str, list[str] | str | float], random_if_uncertain: bool = False
+    ) -> dict[str, float | str]:
+        #     self, interests: dict[str, list[str] | str | float], random_if_uncertain: bool = False
+        # ) -> dict[str, list[str] | str | float]:
         """Decode differentially private (DP) interest values from unary-encoded strings
         into a numeric interest vector.
 
@@ -131,14 +137,14 @@ class InferredLocalModel(BaseModel):
             list[str] | None, interests.get(LOCAL_MODEL_DB_VALUES_KEY)
         )
         if dp_values is None:
-            """ No coarse interests to decode. Simply return what we have which has float values"""
-            return interests
+            # No coarse interests to decode. Values are already flat (float|str).
+            return cast(dict[str, float | str], dict(interests))
         if not isinstance(dp_values, list):
             raise Exception("Missing dp model values")
         if len(self.model_data.interest_vector) != len(dp_values):
             raise Exception("Unexpected number of interests")
-        result: dict[str, float | str | list[str]] = dict()
-        result[LOCAL_MODEL_MODEL_ID_KEY] = interests[LOCAL_MODEL_MODEL_ID_KEY]
+        result: dict[str, float | str] = {}
+        result[LOCAL_MODEL_MODEL_ID_KEY] = cast(str, interests[LOCAL_MODEL_MODEL_ID_KEY])
         for idx, (key, ivconfig) in enumerate(self.model_data.interest_vector.items()):
             index_interpreted: int | None = self.get_unary_encoded_index(
                 dp_values[idx], random_if_uncertain=random_if_uncertain
