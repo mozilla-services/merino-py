@@ -53,10 +53,10 @@ class Provider(BaseProvider):
         if not search_term or not location:
             return []
 
-        yelp_business = await self.backend.get_yelp_businesses(search_term, location)
-        if yelp_business:
+        if (yelp_business := await self.backend.get_businesses(search_term, location)) is not None:
             return [self.build_suggestion(yelp_business)]
-        return []
+        else:
+            return []
 
     def build_suggestion(self, data: dict) -> BaseSuggestion | None:
         """Build the suggestion with custom yelp details."""

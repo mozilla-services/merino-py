@@ -15,6 +15,6 @@ class YelpBackendProtocol(Protocol):
         """Close down any open connections."""
         ...
 
-    async def get_yelp_businesses(self, search_term, location) -> dict | None:
+    async def get_businesses(self, search_term, location) -> dict | None:
         """Return Yelp business."""
         ...
