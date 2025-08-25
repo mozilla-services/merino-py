@@ -1,0 +1,22 @@
+"""Silly example emoji picker"""
+
+from merino.providers.suggest.skeleton import (
+    SkeletonBackend,
+)
+from merino.providers.suggest.base import BaseSuggestion
+from merino.providers.manifest.backends.protocol import ManifestData
+from merino.providers.suggest.skeleton.backends.emoji_picker.protocol import EmojiData
+
+
+class EmojiPickerBackend(SkeletonBackend):
+    """Provide the methods specific to this provider for fulfilling the request"""
+
+    def __init__(self, manifest_data: ManifestData):
+        self.manifest_data = manifest_data
+
+    async def query(self, description: str | None = None) -> list[BaseSuggestion]:
+        """Eventually use clever logic in order to return an emoji specific to the
+        passed description string, but for now, just return the default in a list.
+
+        """
+        return [EmojiData().as_suggestion()]
