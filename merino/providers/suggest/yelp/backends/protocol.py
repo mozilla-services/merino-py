@@ -14,3 +14,7 @@ class YelpBackendProtocol(Protocol):
     async def shutdown(self) -> None:  # pragma: no cover
         """Close down any open connections."""
         ...
+
+    async def get_businesses(self, search_term, location) -> dict | None:
+        """Return Yelp business."""
+        ...

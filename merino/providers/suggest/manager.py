@@ -215,6 +215,11 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             return YelpProvider(
                 backend=YelpBackend(
                     api_key=settings.yelp.api_key,
+                    http_client=create_http_client(
+                        base_url=settings.yelp.url_base,
+                        connect_timeout=settings.providers.yelp.connect_timeout_sec,
+                    ),
+                    url_business_search=settings.yelp.url_business_search,
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
