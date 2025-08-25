@@ -234,9 +234,9 @@ def get_max_total_retry_duration() -> float:
 def assert_section_layouts_are_cycled(sections: dict):
     """Assert that layouts of all sections (excluding 'top_stories_section') are cycled through expected pattern."""
     layout_cycle = [
-        "4-medium-small-1-ad",
         "6-small-medium-1-ad",
         "4-large-small-medium-1-ad",
+        "4-medium-small-1-ad",
     ]
     cycled_sections = [
         section for sid, section in sections.items() if sid != "top_stories_section"
@@ -1434,7 +1434,7 @@ class TestSections:
 
             # Assert layout of the first section (Popular Today).
             assert first_section["title"] == "Popular Today"
-            assert first_section["layout"]["name"] == "4-large-small-medium-1-ad"
+            assert first_section["layout"]["name"] == "7-double-row-2-ad"
 
             # Assert layouts are cycled
             assert_section_layouts_are_cycled(sections)
