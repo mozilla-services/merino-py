@@ -62,9 +62,15 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
                 "lastTrade": {"p": float(last_price)},
             }
         }:
+            # Prepending a "+" if the `todays_change` is an above 0 value. We don't need to prepend a "-"
+            # since that is already done by the upstream api response.
+            todays_change_percent = (
+                f"+{todays_change:.2f}" if todays_change > 0 else f"{todays_change:.2f}"
+            )
+
             return TickerSnapshot(
                 ticker=ticker,
-                todays_change_perc=f"{todays_change:.2f}",
+                todays_change_perc=todays_change_percent,
                 last_price=f"{last_price:.2f}",
             )
         case _:
