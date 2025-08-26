@@ -146,7 +146,9 @@ def test_extract_snapshot_if_valid_success(
     single_ticker_snapshot_response: dict[str, Any],
 ) -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return TickerSnapshot object."""
-    expected = TickerSnapshot(ticker="AAPL", last_price="120.47", todays_change_perc="+0.82")
+    expected = TickerSnapshot(
+        ticker="AAPL", last_trade_price="120.47", todays_change_percent="+0.82"
+    )
     actual = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
     assert actual is not None
@@ -190,7 +192,9 @@ def test_extract_snapshot_if_valid_returns_none_for_missing_property(
 def test_build_ticker_summary_success() -> None:
     """Test build_ticker_summary method."""
     actual = build_ticker_summary(
-        snapshot=TickerSnapshot(ticker="AAPL", last_price="120.47", todays_change_perc="+0.82"),
+        snapshot=TickerSnapshot(
+            ticker="AAPL", last_trade_price="120.47", todays_change_percent="+0.82"
+        ),
         image_url=None,
     )
     expected = TickerSummary(

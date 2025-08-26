@@ -45,8 +45,8 @@ def fixture_ticker_snapshot() -> TickerSnapshot:
     """Create a ticker snapshot object for AAPL."""
     return TickerSnapshot(
         ticker="AAPL",
-        last_price="100.5",
-        todays_change_perc="1.5",
+        last_trade_price="100.5",
+        todays_change_percent="1.5",
     )
 
 

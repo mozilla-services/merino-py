@@ -72,7 +72,9 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
         last_trade_price = f"{price:.2f}"
 
         return TickerSnapshot(
-            ticker=ticker, todays_change_perc=todays_change_percent, last_price=last_trade_price
+            ticker=ticker,
+            todays_change_percent=todays_change_percent,
+            last_trade_price=last_trade_price,
         )
     except (KeyError, IndexError, TypeError):
         logger.warning(f"Polygon snapshot response json has incorrect shape: {data}")
@@ -85,8 +87,8 @@ def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) ->
     company = lookup_ticker_company(ticker)
     exchange = lookup_ticker_exchange(ticker)
     serp_query = f"{ticker} stock"
-    last_price = f"${snapshot.last_price} USD"
-    todays_change_perc = snapshot.todays_change_perc
+    last_price = f"${snapshot.last_trade_price} USD"
+    todays_change_perc = snapshot.todays_change_percent
 
     return TickerSummary(
         ticker=ticker,
