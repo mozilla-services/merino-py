@@ -214,8 +214,8 @@ def test_get_latest_dump_fallback_used_when_current_empty(requests_mock):
     requests_mock.get(base_url, text="<html><body>No matches</body></html>")  # nosec
 
     # fallback listing has one match
-    fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20250819/"
-    file_name = "enwiki-20250819-cirrussearch-content.json.gz"
+    fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20250818/"
+    file_name = "enwiki-20250818-cirrussearch-content.json.gz"
     requests_mock.get(
         fallback_url,
         text=f"<html><body><a href='{file_name}'>{file_name}</a></body></html>",
@@ -238,7 +238,7 @@ def test_get_latest_dump_fallback_skips_if_not_newer(requests_mock):
     requests_mock.get(base_url, text="<html><body>No matches</body></html>")  # nosec
 
     # fallback listing has one match, but it's older than GCS
-    fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20250819/"
+    fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20250818/"
     older_file = "enwiki-20240101-cirrussearch-content.json.gz"
     requests_mock.get(
         fallback_url,
