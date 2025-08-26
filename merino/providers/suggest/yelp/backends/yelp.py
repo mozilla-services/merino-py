@@ -32,8 +32,9 @@ class YelpBackend(YelpBackendProtocol):
     async def get_businesses(self, search_term: str, location: str) -> dict | None:
         """Get businesses from Yelp calling its api."""
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        params = {"term": search_term, "location": location, "limit": LIMIT_DEFAULT}
-        url = self.url_business_search.format(**params)
+        url = self.url_business_search.format(
+            term=search_term, location=location, limit=LIMIT_DEFAULT
+        )
         try:
             response: Response = await self.http_client.get(url, headers=headers)
             response.raise_for_status()
