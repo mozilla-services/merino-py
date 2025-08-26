@@ -91,15 +91,12 @@ class InferredLocalModel(BaseModel):
         return None
 
     def model_matches_interests(
-        # self, interests: Mapping[str, list[str] | str | float] | None
         self,
         interests: Mapping[str, list[str] | str | float] | None,
     ) -> bool:
         """Return whether a user's inferred interests are created with the correct
         model ID for this model.
         """
-        if interests is None:
-            return False
         return (
             interests is not None
             and interests.get(LOCAL_MODEL_MODEL_ID_KEY, None) == self.model_id
@@ -108,8 +105,6 @@ class InferredLocalModel(BaseModel):
     def decode_dp_interests(
         self, interests: Mapping[str, list[str] | str | float], random_if_uncertain: bool = False
     ) -> dict[str, float | str]:
-        #     self, interests: dict[str, list[str] | str | float], random_if_uncertain: bool = False
-        # ) -> dict[str, list[str] | str | float]:
         """Decode differentially private (DP) interest values from unary-encoded strings
         into a numeric interest vector.
 
@@ -121,7 +116,7 @@ class InferredLocalModel(BaseModel):
         a floating-point feature score. Differentially private values are mapped to
         model features based on the dictionary keys sorting order.
 
-        :param interests: User if uncertain
+        :param interests: User interest vector in differentially private encoding
         :param random_if_uncertain:
             Whether to randomly select among multiple "1" candidates in a unary
             string. Defaults to False, in which case such features are omitted from the result.

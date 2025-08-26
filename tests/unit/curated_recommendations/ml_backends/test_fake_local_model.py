@@ -81,7 +81,7 @@ def test_model_returns_limited_model(model_limited):
     assert result.model_data is not None
     assert (
         result.model_data.noise_scale >= 0.02
-    )  # this needs to be very high. We aren't using it and it shouln't be invokedd
+    )  # this needs to be very high. We aren't using it and it shouldn't be invoked
     assert len(result.model_data.interest_vector) > 0
     assert len(result.model_data.day_time_weighting.days) > 0
     assert len(result.model_data.day_time_weighting.relative_weight) > 0
@@ -103,6 +103,7 @@ def test_unary_decoding(model_limited):
     # non-"0" characters are treated as "1"
     assert model.get_unary_encoded_index("0a00") == 1
     assert model.get_unary_encoded_index("0000") is None
+    assert model.get_unary_encoded_index("") is None
 
 
 def test_model_matches_interests(model_limited):
