@@ -65,8 +65,14 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
             logger.warning(f"Polygon snapshot response json has incorrect data types: {data}")
             return None
 
+        # Formatting the values to two decimal places and string type.
+        todays_change_percent = (
+            f"+{change_percent:.2f}" if change_percent > 0 else f"{change_percent:.2f}"
+        )
+        last_trade_price = f"{price:.2f}"
+
         return TickerSnapshot(
-            ticker=ticker, todays_change_perc=f"{change_percent:.2f}", last_price=f"{price:.2f}"
+            ticker=ticker, todays_change_perc=todays_change_percent, last_price=last_trade_price
         )
     except (KeyError, IndexError, TypeError):
         logger.warning(f"Polygon snapshot response json has incorrect shape: {data}")

@@ -24,62 +24,63 @@ def fixture_single_ticker_snapshot_response() -> dict[str, Any]:
     return {
         "results": [
             {
-                "market_status": "open",
-                "name": "Apple Inc",
+                "market_status": "late_trading",
+                "name": "Apple Inc.",
                 "ticker": "AAPL",
                 "type": "stocks",
                 "session": {
-                    "change": 2.588,
+                    "change": 2.31,
                     "change_percent": 0.82,
-                    "early_trading_change": 0,
-                    "early_trading_change_percent": 0,
-                    "regular_trading_change": 2.01,
-                    "regular_trading_change_percent": 1.159,
-                    "late_trading_change": 0.578,
-                    "late_trading_change_percent": 0.329,
-                    "close": 175.51,
-                    "high": 176.63,
-                    "low": 175.02,
-                    "open": 176.04,
-                    "volume": 46632535,
-                    "previous_close": 173.5,
-                    "price": 176.0883,
-                    "last_updated": 1753833601079793200,
-                    "vwap": 175.8562,
+                    "early_trading_change": -0.29,
+                    "early_trading_change_percent": -0.128,
+                    "regular_trading_change": 2.15,
+                    "regular_trading_change_percent": 0.946,
+                    "late_trading_change": 0.16,
+                    "late_trading_change_percent": 0.0698,
+                    "close": 229.31,
+                    "high": 229.49,
+                    "low": 224.69,
+                    "open": 226.87,
+                    "volume": 54429562,
+                    "previous_close": 227.16,
+                    "price": 229.47,
+                    "last_updated": 1756240441077677000,
+                    "vwap": 228.20475,
                 },
                 "last_quote": {
-                    "last_updated": 1753833599239197400,
-                    "timeframe": "REAL-TIME",
-                    "ask": 176.09,
-                    "ask_size": 3,
-                    "ask_exchange": 12,
-                    "bid": 176.05,
+                    "last_updated": 1756238399992857900,
+                    "timeframe": "DELAYED",
+                    "ask": 230,
+                    "ask_size": 2,
+                    "ask_exchange": 15,
+                    "bid": 227.5,
                     "bid_size": 1,
-                    "bid_exchange": 12,
+                    "bid_exchange": 15,
                 },
                 "last_trade": {
-                    "last_updated": 1753833599213779700,
-                    "timeframe": "REAL-TIME",
-                    "id": "593866",
+                    "last_updated": 1756239373267552000,
+                    "timeframe": "DELAYED",
+                    "id": "12275",
                     "price": 120.47,
-                    "size": 48,
-                    "exchange": 4,
+                    "size": 9,
+                    "exchange": 15,
                     "conditions": [12, 37],
                 },
                 "last_minute": {
-                    "close": 176.08,
-                    "high": 176.1,
-                    "low": 176.04,
-                    "transactions": 133,
-                    "open": 176.04,
-                    "volume": 25313,
-                    "vwap": 176.0761,
-                    "last_updated": 1753833601079793200,
+                    "close": 229.39,
+                    "high": 229.391,
+                    "low": 229.39,
+                    "transactions": 11,
+                    "open": 229.391,
+                    "volume": 1029,
+                    "vwap": 229.39002,
+                    "last_updated": 1756240441077677000,
                 },
+                "fmv": 229.47,
             }
         ],
         "status": "OK",
-        "request_id": "cef2c957341a8e50b6455a7b8ef9702e",
+        "request_id": "542d40fedaab4caabf414a165726f5dc",
     }
 
 
@@ -166,8 +167,8 @@ def test_extract_snapshot_if_valid_returns_none_for_invalid_value_type(
     invalid_json_response = single_ticker_snapshot_response
 
     # modifying values to be int type instead of float
-    invalid_json_response["ticker"]["todaysChangePerc"] = 5
-    invalid_json_response["ticker"]["lastTrade"]["P"] = 5
+    invalid_json_response["results"][0]["session"]["change_percent"] = 5
+    invalid_json_response["results"][0]["last_trade"]["price"] = 5
 
     assert extract_snapshot_if_valid(invalid_json_response) is None
 
@@ -181,7 +182,7 @@ def test_extract_snapshot_if_valid_returns_none_for_missing_property(
     invalid_json_response = single_ticker_snapshot_response
 
     # modifying values to have a missing property
-    del invalid_json_response["ticker"]["todaysChangePerc"]
+    del invalid_json_response["results"][0]["session"]["change_percent"]
 
     assert extract_snapshot_if_valid(invalid_json_response) is None
 
