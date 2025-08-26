@@ -99,7 +99,7 @@ class FileManager:
             logger.warning(f"Failed to fetch listing from {self.base_url}: {e}")
 
         # 2. Fallback to dated directory (bandaid)
-        fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20250819/"
+        fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20250818/"
         try:
             resp = requests.get(fallback_url)  # nosec
             parser = DirectoryParser(self.file_pattern)
