@@ -45,18 +45,28 @@ class Provider(BaseProvider):
                 detail="Invalid query parameters: `q` is missing",
             )
 
+        geolocation = srequest.geolocation
+        location = geolocation.city if geolocation else None
+        search_term = srequest.query.strip() if srequest.query else ""
+
+        if not search_term or not location:
+            raise HTTPException(
+                status_code=400,
+                detail="Valid query and location are required for Yelp suggestions",
+            )
+
     async def query(self, request: SuggestionRequest):
         """Retrieve yelp suggestions"""
-        search_term = self.process_query()
         geolocation = request.geolocation
-        location = geolocation.city if geolocation else None
-        if not search_term or not location:
-            return []
+        location = geolocation.city
+        search_term = request.query.strip()
 
-        if (yelp_business := await self.backend.get_businesses(search_term, location)) is not None:
+        yelp_business = await self.backend.get_business(search_term, location)
+
+        if yelp_business is not None:
             return [self.build_suggestion(yelp_business)]
-        else:
-            return []
+
+        return []
 
     def build_suggestion(self, data: dict) -> BaseSuggestion | None:
         """Build the suggestion with custom yelp details."""

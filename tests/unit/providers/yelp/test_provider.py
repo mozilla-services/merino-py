@@ -95,6 +95,117 @@ def test_validate_fails_on_missing_query_param(
         provider.validate(SuggestionRequest(query="", geolocation=geolocation))
 
 
+def test_validate_fails_on_empty_query(
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that the validate method raises HTTP 400 exception for empty query."""
+    with pytest.raises(HTTPException) as exc_info:
+        provider.validate(SuggestionRequest(query="", geolocation=geolocation))
+
+    assert exc_info.value.status_code == 400
+    assert "q` is missing" in exc_info.value.detail
+
+
+def test_validate_fails_on_whitespace_query(
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that the validate method raises HTTP 400 exception for whitespace-only query."""
+    with pytest.raises(HTTPException) as exc_info:
+        provider.validate(SuggestionRequest(query="   ", geolocation=geolocation))
+
+    assert exc_info.value.status_code == 400
+    assert "Valid query and location are required" in exc_info.value.detail
+
+
+def test_validate_fails_on_geolocation_without_city(
+    provider: Provider,
+) -> None:
+    """Test that the validate method raises HTTP 400 exception when geolocation has no city."""
+    geolocation_no_city = Location(
+        country="CA",
+        regions=["ON"],
+        city=None,  # Missing city
+        dma=613,
+        postal_code="M5G2B6",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        provider.validate(SuggestionRequest(query="coffee", geolocation=geolocation_no_city))
+
+    assert exc_info.value.status_code == 400
+    assert "Valid query and location are required" in exc_info.value.detail
+
+
+def test_validate_passes_with_valid_request(
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that the validate method passes with valid request."""
+    # Should not raise any exception
+    provider.validate(SuggestionRequest(query="coffee", geolocation=geolocation))
+
+
+@pytest.mark.asyncio
+async def test_query_returns_empty_when_no_business(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that the query method returns empty list when no business is found."""
+    backend_mock.get_business.return_value = None
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="coffee", geolocation=geolocation)
+    )
+
+    assert suggestions == []
+
+
+@pytest.mark.asyncio
+async def test_query_strips_whitespace_from_search_term(
+    backend_mock: Any,
+    provider: Provider,
+    business_data: dict,
+    geolocation: Location,
+) -> None:
+    """Test that the query method strips whitespace from search term."""
+    backend_mock.get_business.return_value = business_data
+
+    await provider.query(SuggestionRequest(query="  coffee  ", geolocation=geolocation))
+
+    # Verify the backend was called with stripped search term
+    backend_mock.get_business.assert_called_once_with("coffee", "Toronto")
+
+
+def test_build_suggestion_removes_url_from_data(
+    provider: Provider,
+    business_data: dict,
+) -> None:
+    """Test that build_suggestion removes URL from data and creates proper suggestion."""
+    # Copy the data to avoid modifying the fixture
+    data_copy = business_data.copy()
+
+    suggestion = provider.build_suggestion(data_copy)
+
+    assert suggestion is not None
+    assert suggestion.title == "Yelp Suggestion"
+    # HttpUrl normalizes URLs by adding trailing slashes
+    assert str(suggestion.url) == "https://example.com/"
+    assert suggestion.provider == "yelp"
+    assert suggestion.is_sponsored is False
+    assert suggestion.score == 0.26
+
+    # Type assertions for mypy
+    assert suggestion.custom_details is not None
+    assert suggestion.custom_details.yelp is not None
+    assert suggestion.custom_details.yelp.name == business_data["name"]
+
+    # Verify URL was removed from the data
+    assert "url" not in data_copy
+
+
 @pytest.mark.asyncio
 async def test_query_business_returned(
     backend_mock: Any,
@@ -113,7 +224,7 @@ async def test_query_business_returned(
             custom_details=CustomDetails(yelp=YelpDetails(**business_data)),
         ),
     ]
-    backend_mock.get_businesses.return_value = business_data
+    backend_mock.get_business.return_value = business_data
 
     suggestions: list[BaseSuggestion] = await provider.query(
         SuggestionRequest(query="cof", geolocation=geolocation)
