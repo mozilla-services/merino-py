@@ -135,6 +135,7 @@ class Provider(BaseProvider):
         # Get the list of tickers (0 to 3) for the query string.
         tickers = get_tickers_for_query(srequest.query)
 
+        # here for overall query method duration timeit
         try:
             if not tickers:
                 return []
@@ -148,10 +149,12 @@ class Provider(BaseProvider):
                     image_url = self.get_image_url_for_ticker(snapshot.ticker)
                     ticker_summaries.append(self.backend.get_ticker_summary(snapshot, image_url))
 
+                # here for provider query success count
                 return [self.build_suggestion(ticker_summaries)]
 
         except Exception as e:
             logger.warning(f"Exception occurred for Polygon provider: {e}")
+            # here for provider query fail count
             return []
 
     def build_suggestion(self, data: list[TickerSummary]) -> BaseSuggestion:

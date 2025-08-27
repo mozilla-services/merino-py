@@ -80,10 +80,12 @@ class PolygonBackend(FinanceBackend):
         snapshots: list[TickerSnapshot] = []
 
         for ticker in tickers:
-            snapshot = extract_snapshot_if_valid(await self.fetch_ticker_snapshot(ticker))
-
-            if snapshot is not None:
+            if (
+                snapshot := extract_snapshot_if_valid(await self.fetch_ticker_snapshot(ticker))
+            ) is not None:
                 snapshots.append(snapshot)
+            else:
+                self.metrics_client.increment("polygon.snapshot.invalid")
 
         return snapshots
 
@@ -100,15 +102,17 @@ class PolygonBackend(FinanceBackend):
         params = {"ticker": ticker, self.url_param_api_key: self.api_key}
 
         try:
-            response: Response = await self.http_client.get(
-                self.url_single_ticker_snapshot, params=params
-            )
+            with self.metrics_client.timeit("polygon.request.snapshot.get"):
+                response: Response = await self.http_client.get(
+                    self.url_single_ticker_snapshot, params=params
+                )
 
             response.raise_for_status()
         except HTTPStatusError as ex:
             logger.warning(
                 f"Polygon request error for ticker snapshot: {ex.response.status_code} {ex.response.reason_phrase}"
             )
+            self.metrics_client.increment("polygon.request.snapshot.get.failed")
             return None
 
         return response.json()
@@ -118,15 +122,17 @@ class PolygonBackend(FinanceBackend):
         params = {self.url_param_api_key: self.api_key}
 
         try:
-            response: Response = await self.http_client.get(
-                self.url_single_ticker_overview.format(ticker=ticker), params=params
-            )
+            with self.metrics_client.timeit("polygon.request.ticker_overview.get"):
+                response: Response = await self.http_client.get(
+                    self.url_single_ticker_overview.format(ticker=ticker), params=params
+                )
             response.raise_for_status()
             result = response.json()
         except HTTPStatusError as ex:
             logger.error(
                 f"Failed to get ticker image for {ticker}: {ex.response.status_code} {ex.response.reason_phrase}"
             )
+            self.metrics_client.increment("polygon.request.ticker_overview.get.failed")
             return None
 
         branding = result.get("results", {}).get("branding", {})
@@ -148,8 +154,10 @@ class PolygonBackend(FinanceBackend):
             return None
 
         params = {self.url_param_api_key: self.api_key}
+
         try:
-            response: Response = await self.http_client.get(image_url, params=params)
+            with self.metrics_client.timeit("polygon.request.company_logo.get"):
+                response: Response = await self.http_client.get(image_url, params=params)
             response.raise_for_status()
 
             content = response.content
@@ -162,6 +170,7 @@ class PolygonBackend(FinanceBackend):
             logger.error(
                 f"Failed to download ticker image for {ticker}: {ex.response.status_code} {ex.response.reason_phrase}"
             )
+            self.metrics_client.increment("polygon.request.company_logo.get.failed")
             return None
 
     async def bulk_download_and_upload_ticker_images(
@@ -178,6 +187,7 @@ class PolygonBackend(FinanceBackend):
 
                 if logo is None:
                     logger.warning(f"No logo found for ticker {ticker}, skipping.")
+                    self.metrics_client.increment("polygon.company_logo.not_found")
                     continue
 
                 content_hash = hashlib.sha256(logo.content).hexdigest()
