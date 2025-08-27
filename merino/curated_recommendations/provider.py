@@ -20,6 +20,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsResponse,
     InferredInterests,
 )
+
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
     spread_publishers,
@@ -33,6 +34,8 @@ from merino.curated_recommendations.utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+LOCAL_MODEL_DB_VALUES_KEY = "values"  # Key to differentially private values
 
 
 class CuratedRecommendationsProvider:
@@ -136,12 +139,29 @@ class CuratedRecommendationsProvider:
             request_interests = request.inferredInterests
             # default: pass through whatever came on the request
             inferred_interests: InferredInterests | None = request_interests
+            interest_id = (
+                request_interests.root["model_id"]
+                if (request_interests is not None and "model_id" in request_interests.root)
+                else None
+            )
             if (
                 request_interests is not None
                 and inferred_local_model is not None
-                and inferred_local_model.model_matches_interests(request_interests.root)
+                and inferred_local_model.model_matches_interests(interest_id)
             ):
-                decoded = inferred_local_model.decode_dp_interests(request_interests.root)
+                dp_values: list[str] | None = cast(
+                    list[str] | None, request_interests.root.get(LOCAL_MODEL_DB_VALUES_KEY)
+                )
+                if dp_values is None:
+                    # No coarse interests to decode. Values are already flat (float|str).
+                    decoded = cast(dict[str, float | str], dict(request_interests))
+                else:
+                    ## Do actual decoding
+                    decoded = inferred_local_model.decode_dp_interests(
+                        dp_values,
+                        interest_id,
+                    )
+                ## Populate with what we decoded
                 inferred_interests = InferredInterests(decoded)
             sections_feeds = await get_sections(
                 request,

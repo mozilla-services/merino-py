@@ -112,7 +112,7 @@ def test_model_matches_interests(model_limited):
 
     interests = InferredInterests.empty()
     interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
-    assert model.model_matches_interests(interests.root)
+    assert model.model_matches_interests(interests.root[LOCAL_MODEL_MODEL_ID_KEY])
 
 
 def test_model_no_match_interests(model_limited):
@@ -120,7 +120,7 @@ def test_model_no_match_interests(model_limited):
     model = model_limited.get(TEST_SURFACE)
     interests = InferredInterests.empty()
     interests.root[LOCAL_MODEL_MODEL_ID_KEY] = "bad id"
-    assert not model.model_matches_interests(interests.root)
+    assert not model.model_matches_interests(interests.root[LOCAL_MODEL_MODEL_ID_KEY])
 
 
 def test_decode_dp_interests_ambiguous(model_limited):
@@ -132,7 +132,9 @@ def test_decode_dp_interests_ambiguous(model_limited):
     for model_key, model_feature_info in model.model_data.interest_vector.items():
         values.append("1" * (len(model_feature_info.thresholds) + 1))  # concat a string
     interests.root["values"] = values
-    updated_inferred_interests = model.decode_dp_interests(interests.root)
+    updated_inferred_interests = model.decode_dp_interests(
+        interests.root["values"], interests.root[LOCAL_MODEL_MODEL_ID_KEY]
+    )
     for model_key, model_feature_info in model.model_data.interest_vector.items():
         assert model_key not in updated_inferred_interests
 
@@ -146,7 +148,9 @@ def test_decode_dp_interests_low(model_limited):
     for model_key, model_feature_info in model.model_data.interest_vector.items():
         values.append("1" + "0" * len(model_feature_info.thresholds))  # concat a string
     interests.root["values"] = values
-    updated_inferred_interests = model.decode_dp_interests(interests.root)
+    updated_inferred_interests = model.decode_dp_interests(
+        interests.root["values"], interests.root[LOCAL_MODEL_MODEL_ID_KEY]
+    )
     for model_key, model_feature_info in model.model_data.interest_vector.items():
         assert updated_inferred_interests[model_key] == 0.0
 
@@ -160,53 +164,61 @@ def test_decode_dp_interests_high(model_limited):
     for model_key, model_feature_info in model.model_data.interest_vector.items():
         values.append("0" * len(model_feature_info.thresholds) + "1")  # concat a string
     interests.root["values"] = values
-    updated_inferred_interests = model.decode_dp_interests(interests.root)
+    updated_inferred_interests = model.decode_dp_interests(
+        interests.root["values"], interests.root[LOCAL_MODEL_MODEL_ID_KEY]
+    )
     for idx, (model_key, model_feature_info) in enumerate(
         model.model_data.interest_vector.items()
     ):
         assert updated_inferred_interests[model_key] == model_feature_info.thresholds[-1]
 
 
-def test_decode_raises_on_wrong_model_id(model_limited):
-    """Decode should raise if model IDs do not match."""
+def test_decode_skipped_when_model_id_mismatch(model_limited):
+    """Caller should not decode when the model id doesn't match."""
     model = model_limited.get("surface")
-    interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = "not-this-model"
-    with pytest.raises(Exception):
-        model.decode_dp_interests(interests.root)
+    wrong_id = "not-this-model"
+    assert not model.model_matches_interests(wrong_id)
 
 
-def test_decode_raises_when_values_not_list(model_limited):
-    """If 'values' exists but is not a list -> raise."""
-    model = model_limited.get("surface")
-    interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = model.model_id
-    interests.root["values"] = "oops-not-a-list"
-    with pytest.raises(Exception):
-        model.decode_dp_interests(interests.root)
+def test_model_matches_interests_none_and_non_str(model_limited):
+    """Ensure model_matches_interests rejects None and non-string ids."""
+    model = model_limited.get(TEST_SURFACE)
+    assert not model.model_matches_interests(None)
+    assert not model.model_matches_interests(3.14159)  # float should not match
 
 
-def test_decode_returns_flat_when_no_values(model_limited):
-    """If there are no DP values, decode_dp_interests should return the same flat dict."""
-    model = model_limited.get("surface")
-    interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = model.model_id
-    # add some already-decoded floats/strings
-    interests.root["foo"] = 0.123
-    interests.root["bar"] = "baz"
-
-    out = model.decode_dp_interests(interests.root)
-    assert out["foo"] == 0.123
-    assert out["bar"] == "baz"
-    assert out[LOCAL_MODEL_MODEL_ID_KEY] == model.model_id
+def test_unary_random_if_uncertain_when_no_ones(model_limited):
+    """When there are no '1' bits and random_if_uncertain=True, returns 0."""
+    model = model_limited.get(TEST_SURFACE)
+    assert model.get_unary_encoded_index("0000", random_if_uncertain=True) == 0
 
 
-def test_decode_raises_on_length_mismatch(model_limited):
-    """If the number of unary strings doesn't match the configured interest_vector -> raise."""
-    model = model_limited.get("surface")
-    interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = model.model_id
-    # Provide fewer unary strings than interest_vector entries to force the mismatch path
-    interests.root["values"] = ["1"]  # definitely shorter than configured vector
-    with pytest.raises(Exception):
-        model.decode_dp_interests(interests.root)
+def test_decode_dp_interests_random_choice_sets_key(model_limited):
+    """With multiple '1' bits and random_if_uncertain=True, we still decode to an allowed value
+    (either 0.0 for index 0 or the corresponding threshold for the chosen index).
+    """
+    model = model_limited.get(TEST_SURFACE)
+    iv = model.model_data.interest_vector
+
+    dp_values = []
+    first_key = next(iter(iv.keys()))
+    first_cfg = iv[first_key]
+    for i, (_k, cfg) in enumerate(iv.items()):
+        n = len(cfg.thresholds) + 1
+        if i == 0:
+            dp_values.append("1010" if n >= 4 else "11")  # multiple ones
+        else:
+            dp_values.append("0" * (n - 1) + "1")  # deterministic high
+
+    np.random.seed(123)
+    out = model.decode_dp_interests(dp_values, model.model_id, random_if_uncertain=True)
+    allowed = {0.0, first_cfg.thresholds[1]} if len(first_cfg.thresholds) >= 2 else {0.0}
+    assert first_key in out
+    assert out[first_key] in allowed
+
+
+def test_decode_dp_interests_empty_list_raises(model_limited):
+    """Empty dp_values should raise due to direct indexing in decode."""
+    model = model_limited.get(TEST_SURFACE)
+    with pytest.raises(IndexError):
+        model.decode_dp_interests([], model.model_id)
