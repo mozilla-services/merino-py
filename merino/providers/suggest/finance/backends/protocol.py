@@ -25,6 +25,7 @@ class TickerSnapshot(BaseModel):
 class TickerSummary(BaseModel):
     """Ticker summary."""
 
+    # TODO: rename these properties
     ticker: str
     name: str
     last_price: str
