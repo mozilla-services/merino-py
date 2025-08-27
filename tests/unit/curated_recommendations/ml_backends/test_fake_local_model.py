@@ -222,3 +222,88 @@ def test_decode_dp_interests_empty_list_raises(model_limited):
     model = model_limited.get(TEST_SURFACE)
     with pytest.raises(IndexError):
         model.decode_dp_interests([], model.model_id)
+
+
+def test_decode_sets_model_id_in_result(model_limited):
+    """decode_dp_interests sets the model_id in the returned dict."""
+    model = model_limited.get(TEST_SURFACE)
+    iv = model.model_data.interest_vector
+    # Make a valid dp_values list: choose the highest index for each feature.
+    dp_values = []
+    for _k, cfg in iv.items():
+        n = len(cfg.thresholds) + 1
+        dp_values.append("0" * (n - 1) + "1")
+    out = model.decode_dp_interests(dp_values, model.model_id)
+    assert out[LOCAL_MODEL_MODEL_ID_KEY] == model.model_id
+
+
+def test_decode_uses_middle_threshold_when_index_is_one_based(model_limited):
+    """decode_dp_interests maps index>0 to thresholds[index-1] (check middle index)."""
+    model = model_limited.get(TEST_SURFACE)
+    iv = model.model_data.interest_vector
+    first_key = next(iter(iv.keys()))
+    first_cfg = iv[first_key]
+    # Build dp_values so first feature uses index 2 (-> thresholds[1]); others pick last.
+    dp_values = []
+    for i, (_k, cfg) in enumerate(iv.items()):
+        n = len(cfg.thresholds) + 1
+        if i == 0:
+            # index 2 -> "0010" when n==4; general form:
+            index = 2
+            dp_values.append("0" * index + "1" + "0" * (n - 1 - index))
+        else:
+            dp_values.append("0" * (n - 1) + "1")
+    out = model.decode_dp_interests(dp_values, model.model_id)
+    assert out[first_key] == first_cfg.thresholds[1]
+
+
+def test_decode_treats_nonzero_char_as_one(model_limited):
+    """Non-'0' characters are treated as '1' during unary decoding."""
+    model = model_limited.get(TEST_SURFACE)
+    iv = model.model_data.interest_vector
+    first_key = next(iter(iv.keys()))
+    first_cfg = iv[first_key]
+    dp_values = []
+    for i, (_k, cfg) in enumerate(iv.items()):
+        n = len(cfg.thresholds) + 1
+        if i == 0:
+            # '0a00' -> index 1 (since 'a' is treated as '1')
+            if n >= 4:
+                dp_values.append("0a00")
+            else:
+                # fallback for smaller n: put 'a' at index 1
+                dp_values.append("0a" + "0" * (n - 2))
+        else:
+            dp_values.append("0" * (n - 1) + "1")
+    out = model.decode_dp_interests(dp_values, model.model_id)
+    assert out[first_key] == first_cfg.thresholds[0]
+
+
+def test_model_matches_interests_rejects_none_and_float(model_limited):
+    """model_matches_interests should reject None and non-string values."""
+    model = model_limited.get(TEST_SURFACE)
+    assert not model.model_matches_interests(None)
+    assert not model.model_matches_interests(3.14)
+
+
+def test_decode_with_multiple_ones_random_branch_sets_valid_value(model_limited):
+    """With multiple '1's and random_if_uncertain=True, decoded value is within allowed set."""
+    model = model_limited.get(TEST_SURFACE)
+    iv = model.model_data.interest_vector
+    first_key = next(iter(iv.keys()))
+    first_cfg = iv[first_key]
+    dp_values = []
+    for i, (_k, cfg) in enumerate(iv.items()):
+        n = len(cfg.thresholds) + 1
+        if i == 0:
+            # multiple ones at indices 0 and 2 (requires n>=3); otherwise use "11"
+            dp_values.append("1010" if n >= 4 else "11")
+        else:
+            dp_values.append("0" * (n - 1) + "1")
+    np.random.seed(123)
+    out = model.decode_dp_interests(dp_values, model.model_id, random_if_uncertain=True)
+    allowed = {0.0}
+    if len(first_cfg.thresholds) >= 2:
+        allowed.add(first_cfg.thresholds[1])
+    assert first_key in out
+    assert out[first_key] in allowed
