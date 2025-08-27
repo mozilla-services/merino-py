@@ -52,30 +52,33 @@ def get_tickers_for_query(keyword: str) -> list[str] | None:
 
 def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | None:
     """Extract the TickerSnapshot from the nested JSON response, if it has the valid json structure."""
-    match data:
-        case None:
-            return None
-        case {
-            "ticker": {
-                "ticker": str(ticker),
-                "todaysChangePerc": float(todays_change),
-                "lastTrade": {"p": float(last_price)},
-            }
-        }:
-            # Prepending a "+" if the `todays_change` is an above 0 value. We don't need to prepend a "-"
-            # since that is already done by the upstream api response.
-            todays_change_percent = (
-                f"+{todays_change:.2f}" if todays_change > 0 else f"{todays_change:.2f}"
-            )
+    if data is None:
+        return None
 
-            return TickerSnapshot(
-                ticker=ticker,
-                todays_change_perc=todays_change_percent,
-                last_price=f"{last_price:.2f}",
-            )
-        case _:
-            logger.warning(f"Polygon invalid ticker snapshot json response: {data}")
+    try:
+        result = data["results"][0]
+        ticker = result["ticker"]
+        change_percent = result["session"]["change_percent"]
+        price = result["last_trade"]["price"]
+
+        if not isinstance(change_percent, float) or not isinstance(price, float):
+            logger.warning(f"Polygon snapshot response json has incorrect data types: {data}")
             return None
+
+        # Formatting the values to two decimal places and string type.
+        todays_change_percent = (
+            f"+{change_percent:.2f}" if change_percent > 0 else f"{change_percent:.2f}"
+        )
+        last_trade_price = f"{price:.2f}"
+
+        return TickerSnapshot(
+            ticker=ticker,
+            todays_change_percent=todays_change_percent,
+            last_trade_price=last_trade_price,
+        )
+    except (KeyError, IndexError, TypeError):
+        logger.warning(f"Polygon snapshot response json has incorrect shape: {data}")
+        return None
 
 
 def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) -> TickerSummary:
@@ -84,8 +87,8 @@ def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) ->
     company = lookup_ticker_company(ticker)
     exchange = lookup_ticker_exchange(ticker)
     serp_query = f"{ticker} stock"
-    last_price = f"${snapshot.last_price} USD"
-    todays_change_perc = snapshot.todays_change_perc
+    last_price = f"${snapshot.last_trade_price} USD"
+    todays_change_perc = snapshot.todays_change_percent
 
     return TickerSummary(
         ticker=ticker,

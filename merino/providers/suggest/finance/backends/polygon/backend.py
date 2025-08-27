@@ -97,11 +97,11 @@ class PolygonBackend(FinanceBackend):
 
     async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
         """Make a request and fetch the snapshot for this single ticker."""
-        params = {self.url_param_api_key: self.api_key}
+        params = {"ticker": ticker, self.url_param_api_key: self.api_key}
 
         try:
             response: Response = await self.http_client.get(
-                self.url_single_ticker_snapshot.format(ticker=ticker), params=params
+                self.url_single_ticker_snapshot, params=params
             )
 
             response.raise_for_status()

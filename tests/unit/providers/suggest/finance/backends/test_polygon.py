@@ -140,8 +140,8 @@ def fixture_ticker_snapshot() -> TickerSnapshot:
     # these values are based on the above single_ticker_snapshot_response fixture.
     return TickerSnapshot(
         ticker="AAPL",
-        last_price="120.47",
-        todays_change_perc="0.82",
+        last_trade_price="120.47",
+        todays_change_percent="0.82",
     )
 
 

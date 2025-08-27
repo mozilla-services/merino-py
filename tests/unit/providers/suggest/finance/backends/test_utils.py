@@ -22,50 +22,65 @@ from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, T
 def fixture_single_ticker_snapshot_response() -> dict[str, Any]:
     """Sample response for single ticker snapshot request."""
     return {
-        "request_id": "657e430f1ae768891f018e08e03598d8",
+        "results": [
+            {
+                "market_status": "late_trading",
+                "name": "Apple Inc.",
+                "ticker": "AAPL",
+                "type": "stocks",
+                "session": {
+                    "change": 2.31,
+                    "change_percent": 0.82,
+                    "early_trading_change": -0.29,
+                    "early_trading_change_percent": -0.128,
+                    "regular_trading_change": 2.15,
+                    "regular_trading_change_percent": 0.946,
+                    "late_trading_change": 0.16,
+                    "late_trading_change_percent": 0.0698,
+                    "close": 229.31,
+                    "high": 229.49,
+                    "low": 224.69,
+                    "open": 226.87,
+                    "volume": 54429562,
+                    "previous_close": 227.16,
+                    "price": 229.47,
+                    "last_updated": 1756240441077677000,
+                    "vwap": 228.20475,
+                },
+                "last_quote": {
+                    "last_updated": 1756238399992857900,
+                    "timeframe": "DELAYED",
+                    "ask": 230,
+                    "ask_size": 2,
+                    "ask_exchange": 15,
+                    "bid": 227.5,
+                    "bid_size": 1,
+                    "bid_exchange": 15,
+                },
+                "last_trade": {
+                    "last_updated": 1756239373267552000,
+                    "timeframe": "DELAYED",
+                    "id": "12275",
+                    "price": 120.47,
+                    "size": 9,
+                    "exchange": 15,
+                    "conditions": [12, 37],
+                },
+                "last_minute": {
+                    "close": 229.39,
+                    "high": 229.391,
+                    "low": 229.39,
+                    "transactions": 11,
+                    "open": 229.391,
+                    "volume": 1029,
+                    "vwap": 229.39002,
+                    "last_updated": 1756240441077677000,
+                },
+                "fmv": 229.47,
+            }
+        ],
         "status": "OK",
-        "ticker": {
-            "day": {
-                "c": 120.4229,
-                "h": 120.53,
-                "l": 118.81,
-                "o": 119.62,
-                "v": 28727868,
-                "vw": 119.725,
-            },
-            "lastQuote": {"P": 120.47, "S": 4, "p": 120.46, "s": 8, "t": 1605195918507251700},
-            "lastTrade": {
-                "c": [14, 41],
-                "i": "4046",
-                "p": 120.47,
-                "s": 236,
-                "t": 1605195918306274000,
-                "x": 10,
-            },
-            "min": {
-                "av": 28724441,
-                "c": 120.4201,
-                "h": 120.468,
-                "l": 120.37,
-                "n": 762,
-                "o": 120.435,
-                "t": 1684428720000,
-                "v": 270796,
-                "vw": 120.4129,
-            },
-            "prevDay": {
-                "c": 119.49,
-                "h": 119.63,
-                "l": 116.44,
-                "o": 117.19,
-                "v": 110597265,
-                "vw": 118.4998,
-            },
-            "ticker": "AAPL",
-            "todaysChange": 0.98,
-            "todaysChangePerc": 0.8201378182667601,
-            "updated": 1605195918306274000,
-        },
+        "request_id": "542d40fedaab4caabf414a165726f5dc",
     }
 
 
@@ -131,7 +146,9 @@ def test_extract_snapshot_if_valid_success(
     single_ticker_snapshot_response: dict[str, Any],
 ) -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return TickerSnapshot object."""
-    expected = TickerSnapshot(ticker="AAPL", last_price="120.47", todays_change_perc="+0.82")
+    expected = TickerSnapshot(
+        ticker="AAPL", last_trade_price="120.47", todays_change_percent="+0.82"
+    )
     actual = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
     assert actual is not None
@@ -152,8 +169,8 @@ def test_extract_snapshot_if_valid_returns_none_for_invalid_value_type(
     invalid_json_response = single_ticker_snapshot_response
 
     # modifying values to be int type instead of float
-    invalid_json_response["ticker"]["todaysChangePerc"] = 5
-    invalid_json_response["ticker"]["lastTrade"]["P"] = 5
+    invalid_json_response["results"][0]["session"]["change_percent"] = 5
+    invalid_json_response["results"][0]["last_trade"]["price"] = 5
 
     assert extract_snapshot_if_valid(invalid_json_response) is None
 
@@ -167,7 +184,7 @@ def test_extract_snapshot_if_valid_returns_none_for_missing_property(
     invalid_json_response = single_ticker_snapshot_response
 
     # modifying values to have a missing property
-    del invalid_json_response["ticker"]["todaysChangePerc"]
+    del invalid_json_response["results"][0]["session"]["change_percent"]
 
     assert extract_snapshot_if_valid(invalid_json_response) is None
 
@@ -175,7 +192,9 @@ def test_extract_snapshot_if_valid_returns_none_for_missing_property(
 def test_build_ticker_summary_success() -> None:
     """Test build_ticker_summary method."""
     actual = build_ticker_summary(
-        snapshot=TickerSnapshot(ticker="AAPL", last_price="120.47", todays_change_perc="+0.82"),
+        snapshot=TickerSnapshot(
+            ticker="AAPL", last_trade_price="120.47", todays_change_percent="+0.82"
+        ),
         image_url=None,
     )
     expected = TickerSummary(
