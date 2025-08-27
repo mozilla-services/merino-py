@@ -18,6 +18,8 @@ class EmojiProvider(SkeletonProvider):
     to override any of the SkeletonProvider(BaseProvider) methods we want to
     customize.
 
+    See the base class for additional functions
+
     """
 
     backend: SkeletonBackend
@@ -70,3 +72,10 @@ class EmojiProvider(SkeletonProvider):
 
         """
         pass
+
+    async def normalize_query(self, query: str) -> str:
+        """ """
+        return super().normalize_query(query)
+
+    async def validate(self, srequest: SuggestionRequest) -> None:
+        return super().validate(srequest)

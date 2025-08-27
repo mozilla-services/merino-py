@@ -4,8 +4,22 @@ This should include various data type and derivatives that your example class re
 
 """
 
+import json
+
 from merino.providers.suggest.base import BaseSuggestion
 from merino.providers.suggest.skeleton import SkeletonData
+
+
+class EmojiSuggestion(BaseSuggestion):
+    """The Returned Suggestion. `BaseSuggestion` is an object description, and backends
+    should provide an instantiated version that can be referenced.
+
+    You may wish to include additional functions that do things like custom rendering, altering
+    data values for publication, etc.
+
+    """
+
+    pass
 
 
 class EmojiData(SkeletonData):
@@ -30,7 +44,7 @@ class EmojiData(SkeletonData):
 
     def as_suggestion(self) -> BaseSuggestion:
         """Normalize whatever data we might be using into a standard Suggestion"""
-        return BaseSuggestion(
+        return EmojiSuggestion(
             title=self.emoji,
             description=self.description,
             url=self.url,

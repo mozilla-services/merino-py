@@ -65,6 +65,7 @@ Configurations for the ingestion processes are stored under `./merino/configs` a
 - `ci.toml` - Continuous Integration configurations (Use only for CI tasks)
 - `default.toml` - Common, core settings. These are over-ridden by the platform specific configurations.
 - `development.toml`, etc. - The platform specific configurations to use. These will eventually be replaced by a single, composed `platform.toml`(name TBD).
+- `default.local.toml` - A locally generated and managed configuration file. This file overrides values stored in `default.toml` and is meant for local dev and testing work, and thus may have key values and other private or specific information. (Do not check in this file. It is inlcuded in `.gitignore` for a reason ;))
 
 Validators for the configuration options are stored in the `./merino/configs/__init__.py` file
 
