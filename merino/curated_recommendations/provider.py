@@ -188,14 +188,10 @@ class CuratedRecommendationsProvider:
                 list[str] | None, request_interests.root.get(LOCAL_MODEL_DB_VALUES_KEY)
             )
             if dp_values is None:
-                # No coarse interests to decode. Values are already flat (float|str).
-                decoded = cast(dict[str, float | str], dict(request_interests))
+                # No coarse interests to decode: pass through the original interests.
+                inferred_interests = request_interests
             else:
-                ## Do actual decoding
-                decoded = inferred_local_model.decode_dp_interests(
-                    dp_values,
-                    interest_id,
-                )
-            ## Populate with what we decoded
-            inferred_interests = InferredInterests(decoded)
+                # Do actual decoding then wrap in a RootModel using the 'root=' keyword.
+                decoded = inferred_local_model.decode_dp_interests(dp_values, interest_id)
+                inferred_interests = InferredInterests(root=decoded)
         return inferred_interests

@@ -2,6 +2,8 @@
 
 import numpy as np
 import pytest
+from types import SimpleNamespace
+
 from merino.curated_recommendations.ml_backends.fake_local_model import (
     FakeLocalModelTopics,
     FakeLocalModelSections,
@@ -15,6 +17,11 @@ from merino.curated_recommendations.ml_backends.protocol import (
     LOCAL_MODEL_MODEL_ID_KEY,
 )
 from merino.curated_recommendations.protocol import InferredInterests
+
+from merino.curated_recommendations.provider import (
+    CuratedRecommendationsProvider,
+    LOCAL_MODEL_DB_VALUES_KEY,
+)
 
 TEST_SURFACE = "test_surface"
 
@@ -335,3 +342,86 @@ def test_model_matches_interests_param(model_limited, input_id, expected):
     """model_matches_interests accepts only the correct string id."""
     model = model_limited.get(TEST_SURFACE)
     assert model.model_matches_interests(input_id) is expected
+
+
+@pytest.fixture
+def inferred_model():
+    """Build a concrete InferredLocalModel for tests."""
+    backend = LimitedTopicV0Model()
+    return backend.get("surface")
+
+
+def make_request(interests: InferredInterests | None):
+    """Return a minimal request-like object carrying inferredInterests."""
+    return SimpleNamespace(inferredInterests=interests)
+
+
+def test_process_returns_none_when_request_has_no_interests(inferred_model):
+    """If request.inferredInterests is None, return None."""
+    req = make_request(None)
+    out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
+    assert out is None
+
+
+def test_process_passes_through_when_no_model():
+    """When inferred_local_model is None, return the same InferredInterests object."""
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+    req = make_request(interests)
+    out = CuratedRecommendationsProvider.process_request_interests(req, inferred_local_model=None)
+    # Pass-through: identity should be preserved
+    assert out is interests
+
+
+def test_process_passes_through_on_model_id_mismatch(inferred_model):
+    """When model_id doesn't match, return the same InferredInterests object."""
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = "not-this-model"
+    interests.root["foo"] = "bar"
+    req = make_request(interests)
+    out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
+    assert out is interests
+    assert out.root["foo"] == "bar"
+
+
+def test_process_decodes_when_values_present(inferred_model):
+    """When model_id matches and values are present, decode into floats."""
+    # Build a valid dp_values array aligned with the model's interest_vector order
+    iv = inferred_model.model_data.interest_vector
+    dp_values = []
+    for _key, cfg in iv.items():
+        n = len(cfg.thresholds) + 1
+        dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
+
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+    interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
+    req = make_request(interests)
+
+    out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
+    assert isinstance(out, InferredInterests)
+    # model_id is preserved
+    assert out.root[LOCAL_MODEL_MODEL_ID_KEY] == CTR_LIMITED_TOPIC_MODEL_ID
+
+    # spot-check a couple of features decode to the last threshold
+    checked = 0
+    for key, cfg in iv.items():
+        assert out.root[key] == cfg.thresholds[-1]
+        checked += 1
+        if checked >= 2:
+            break
+
+
+def test_process_passthrough_when_values_missing_even_with_matching_model(inferred_model):
+    """If model_id matches but no DP values key, pass through the original dict."""
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+    interests.root["foo"] = 0.123
+    interests.root["bar"] = "baz"
+    req = make_request(interests)
+
+    out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
+    # Expect pass-through (no decode invoked)
+    assert out is interests
+    assert out.root["foo"] == 0.123
+    assert out.root["bar"] == "baz"
