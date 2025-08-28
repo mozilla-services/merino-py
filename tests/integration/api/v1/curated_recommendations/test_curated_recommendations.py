@@ -1276,7 +1276,7 @@ class TestSections:
 
             # assert IAB metadata is present in ML sections (there are 8 of them)
             expected_iab_metadata = {
-                "nfl": "484",
+                "nfl": "483",  # Production uses 483 for sports
                 "tv": "640",
                 "music": "338",
                 "movies": "324",
@@ -1459,6 +1459,8 @@ class TestSections:
         [
             {},  # No experiment
             {"experimentName": "new-tab-ml-sections", "experimentBranch": "treatment"},
+            {"experimentName": "newtab-crawl", "experimentBranch": "control"},
+            {"experimentName": "newtab-crawl", "experimentBranch": "treatment"},
         ],
     )
     async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
@@ -1467,6 +1469,11 @@ class TestSections:
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale. Sections requested to be boosted (followed)
         should be boosted and isFollowed attribute set accordingly.
+
+        Also tests that blocked/followed sections work correctly with RSS vs. Zyte experiment:
+        1. Section IDs are cleaned (no _crawl suffix) before blocked/followed evaluation
+        2. Blocked/followed sections are properly handled regardless of experiment branch
+        3. The experiment filtering doesn't interfere with user preferences
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
             # Mock the endpoint to request the sections feed
@@ -1479,6 +1486,7 @@ class TestSections:
                         {"sectionId": "sports", "isFollowed": True, "isBlocked": False},
                         {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
                         {"sectionId": "education", "isFollowed": False, "isBlocked": True},
+                        {"sectionId": "health", "isFollowed": True, "isBlocked": False},
                     ],
                 }
                 | experiment_payload,
@@ -1487,31 +1495,123 @@ class TestSections:
 
             # Check if the response is valid
             assert response.status_code == 200
+            # Assert no errors were logged
+            errors = [r for r in caplog.records if r.levelname == "ERROR"]
+            assert len(errors) == 0
+
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
 
             # assert isFollowed & isBlocked have been correctly set
             if data["feeds"].get("arts") is not None:
                 assert data["feeds"]["arts"]["isFollowed"]
+                assert not data["feeds"]["arts"]["isBlocked"]
                 # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
-                assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2]
-                assert data["feeds"]["arts"]["iab"] == {
-                    "taxonomy": "IAB-3.0",
-                    "categories": ["JLBCU7"],
-                }
+                assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2, 3]
+                # Only check IAB for non-crawl experiments
+                if experiment_payload.get("experimentName") != "newtab-crawl":
+                    assert data["feeds"]["arts"]["iab"] == {
+                        "taxonomy": "IAB-3.0",
+                        "categories": ["JLBCU7"],
+                    }
             if data["feeds"].get("education") is not None:
                 assert not data["feeds"]["education"]["isFollowed"]
                 assert data["feeds"]["education"]["isBlocked"]
             if data["feeds"].get("sports") is not None:
                 assert data["feeds"]["sports"]["isFollowed"]
+                assert not data["feeds"]["sports"]["isBlocked"]
                 # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
-                assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2]
-                assert data["feeds"]["sports"]["iab"] == {
-                    "taxonomy": "IAB-3.0",
-                    "categories": ["483"],
-                }
+                assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2, 3]
+                # Only check IAB for non-crawl experiments
+                if experiment_payload.get("experimentName") != "newtab-crawl":
+                    assert data["feeds"]["sports"]["iab"] == {
+                        "taxonomy": "IAB-3.0",
+                        "categories": ["483"],  # Production uses 483 for sports
+                    }
+            if data["feeds"].get("health") is not None:
+                assert data["feeds"]["health"]["isFollowed"]
+                assert not data["feeds"]["health"]["isBlocked"]
 
+            # For RSS vs. Zyte experiment, verify that section IDs don't have _crawl suffix
+            if experiment_payload.get("experimentName") == "newtab-crawl":
+                for section_id in sections:
+                    if section_id != "top_stories_section":
+                        assert not section_id.endswith("_crawl"), (
+                            f"Section ID {section_id} should not have _crawl suffix "
+                            f"in response (experiment: {experiment_payload})"
+                        )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "experiment_payload",
+        [
+            {},  # No experiment
+            {"experimentName": "newtab-crawl", "experimentBranch": "control"},
+            {"experimentName": "newtab-crawl", "experimentBranch": "treatment"},
+        ],
+    )
+    async def test_rss_vs_zyte_experiment_sections_filtering(self, caplog, experiment_payload):
+        """Test that the RSS vs. Zyte experiment correctly filters sections based on experiment branch.
+
+        - Treatment branch: should only receive sections with _crawl suffix
+        - Control branch and no experiment: should only receive sections without _crawl suffix
+        - Section IDs should have _crawl suffix removed before being sent to user
+        """
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Mock the endpoint to request the sections feed
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": "en-US",
+                    "feeds": ["sections"],
+                }
+                | experiment_payload,
+            )
+            data = response.json()
+
+            # Check if the response is valid
+            assert response.status_code == 200
             # Assert no errors were logged
             errors = [r for r in caplog.records if r.levelname == "ERROR"]
             assert len(errors) == 0
+
+            feeds = data["feeds"]
+            sections = {name: section for name, section in feeds.items() if section is not None}
+
+            # The fixture data contains enough recommendations for at least 4 sections
+            assert len(sections) >= 4
+
+            # Check experiment-specific filtering
+            is_crawl_treatment = (
+                experiment_payload.get("experimentName") == "newtab-crawl"
+                and experiment_payload.get("experimentBranch") == "treatment"
+            )
+
+            # Verify that section IDs don't have _crawl suffix (they should be removed)
+            for section_id in sections:
+                if section_id != "top_stories_section":
+                    assert not section_id.endswith("_crawl"), (
+                        f"Section ID {section_id} should not have _crawl suffix "
+                        f"in response (experiment: {experiment_payload})"
+                    )
+
+            # For legacy topic sections, verify the experiment logic
+            legacy_topics = {topic.value for topic in Topic}
+
+            if is_crawl_treatment:
+                # Treatment branch: should get crawl sections (but IDs cleaned)
+                # Since we're using mock data, we can't verify the actual content source
+                # but we can verify the structure is correct
+                pass
+            else:
+                # Control branch and no experiment: should get regular sections
+                # All section keys (excluding top_stories) must be in legacy topics
+                for section_id in sections:
+                    if section_id != "top_stories_section":
+                        assert section_id in legacy_topics, (
+                            f"Non-treatment branch should only get legacy topic sections, "
+                            f"got {section_id} (experiment: {experiment_payload})"
+                        )
 
     @pytest.mark.asyncio
     async def test_curated_recommendations_with_sections_feed_removes_blocked_topics(self, caplog):

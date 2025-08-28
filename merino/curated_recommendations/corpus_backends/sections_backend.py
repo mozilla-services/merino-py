@@ -129,7 +129,7 @@ class SectionsBackend(SectionsProtocol):
             section_obj = CorpusSection(
                 externalId=section["externalId"],
                 title=section["title"],
-                iab=section["iab"],
+                iab=section.get("iab"),  # Handle optional IAB data
                 sectionItems=[
                     build_corpus_item(
                         section_item["corpusItem"], self.manifest_provider, utm_source
