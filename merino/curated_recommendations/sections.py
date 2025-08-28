@@ -230,16 +230,36 @@ def adjust_ads_in_sections(sections: dict[str, Section]) -> None:
                 tile.hasAd = False
 
 
-def is_ml_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the sections backend experiment is enabled."""
-    return is_enrolled_in_experiment(
+def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if subtopics should be included based on experiments.
+
+    Include subtopics if:
+    - ML sections experiment is enabled (treatment branch), OR
+    - Crawl experiment is in the TREATMENT_CRAWL_PLUS_SUBTOPICS branch
+    """
+    ml_sections_enabled = is_enrolled_in_experiment(
         request, ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment"
+    )
+
+    # Get the crawl experiment branch to check if it includes subtopics
+    crawl_branch = get_crawl_experiment_branch(request)
+
+    # Include subtopics if ml_sections is enabled OR if in crawl-plus-subtopics branch
+    return (
+        ml_sections_enabled
+        or crawl_branch == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
     )
 
 
 def is_popular_today_double_row_layout(request: CuratedRecommendationsRequest) -> bool:
-    """Return True for the treatment branch of the ML sub-topics experiment, otherwise False."""
-    return is_ml_sections_experiment(request)
+    """Return True if the popular today section should use double row layout.
+
+    This is enabled for users in the treatment branch of the ML sections experiment.
+    """
+    # Only check the ML sections experiment for layout purposes
+    return is_enrolled_in_experiment(
+        request, ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment"
+    )
 
 
 def get_crawl_experiment_branch(request: CuratedRecommendationsRequest) -> str | None:
@@ -458,13 +478,8 @@ async def get_sections(
     # 1. Get corpus sections with RSS vs. Zyte experiment filtering
     crawl_branch = get_crawl_experiment_branch(request)
 
-    # Determine if we should include subtopics based on both experiments
-    subtopic_experiment_enabled = is_ml_sections_experiment(request)
-    # Include subtopics if ml_sections is enabled OR if in crawl-plus-subtopics branch
-    include_subtopics = (
-        subtopic_experiment_enabled
-        or crawl_branch == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
-    )
+    # Determine if we should include subtopics based on experiments
+    include_subtopics = is_subtopics_experiment(request)
 
     corpus_sections_all = await get_corpus_sections(
         sections_backend=sections_backend,
@@ -490,7 +505,7 @@ async def get_sections(
         rec for section in corpus_sections.values() for rec in section.recommendations
     ]
 
-    rescaler = SubsectionsExperimentRescaler() if subtopic_experiment_enabled else None
+    rescaler = SubsectionsExperimentRescaler() if include_subtopics else None
 
     # 5. Rank all corpus recommendations globally by engagement to build top_stories_section
     all_ranked_corpus_recommendations = thompson_sampling(

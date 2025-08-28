@@ -29,7 +29,7 @@ from merino.curated_recommendations.protocol import (
 from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
-    is_ml_sections_experiment,
+    is_subtopics_experiment,
     update_received_feed_rank,
     get_sections_with_enough_items,
     get_corpus_sections,
@@ -65,7 +65,7 @@ def generate_corpus_item(corpus_id: str = "id", sched_id: str = "sched") -> Corp
 
 @pytest.fixture
 def sample_backend_data() -> list[CorpusSection]:
-    """Build three corpus sections using legacy topic IDs: 'business' with 2 items, 'sports' with 1 item, 'tech' with 3 items using the helper."""
+    """Build three corpus sections using legacy topic IDs: 'business' with 2 items, 'sports' with 1 item, 'tech' with 3 items."""
     return [
         CorpusSection(
             sectionItems=[
@@ -194,7 +194,7 @@ class TestAdjustAdsInSections:
 
 
 class TestMlSectionsExperiment:
-    """Tests covering is_ml_sections_experiment"""
+    """Tests covering is_subtopics_experiment"""
 
     @pytest.mark.parametrize(
         "name,branch,expected",
@@ -207,7 +207,60 @@ class TestMlSectionsExperiment:
     def test_flag_logic(self, name, branch, expected):
         """Test that ML sections experiment flag matches expected logic"""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch)
-        assert is_ml_sections_experiment(req) is expected
+        assert is_subtopics_experiment(req) is expected
+
+    def test_crawl_experiment_subtopics(self):
+        """Test that crawl experiment affects subtopics inclusion"""
+        # Control branch - should not include subtopics
+        req_control = SimpleNamespace(
+            experimentName=ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+            experimentBranch=CrawlExperimentBranchName.CONTROL.value,
+        )
+        assert is_subtopics_experiment(req_control) is False
+
+        # Treatment crawl (no subtopics) - should not include subtopics
+        req_treatment_no_subtopics = SimpleNamespace(
+            experimentName=ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+        )
+        assert is_subtopics_experiment(req_treatment_no_subtopics) is False
+
+        # Treatment crawl WITH subtopics - should include subtopics
+        req_treatment_with_subtopics = SimpleNamespace(
+            experimentName=ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+        )
+        assert is_subtopics_experiment(req_treatment_with_subtopics) is True
+
+        # Not enrolled in crawl experiment - should return False
+        req_not_enrolled = SimpleNamespace(
+            experimentName="other",
+            experimentBranch="control",
+        )
+        assert is_subtopics_experiment(req_not_enrolled) is False
+
+    def test_both_experiments_interaction(self):
+        """Test that ML sections and crawl experiments work together correctly"""
+        # ML sections enabled - should include subtopics regardless of crawl experiment
+        req_ml_enabled = SimpleNamespace(
+            experimentName=ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+            experimentBranch="treatment",
+        )
+        assert is_subtopics_experiment(req_ml_enabled) is True
+
+        # Crawl subtopics enabled - should include subtopics regardless of ML sections
+        req_crawl_subtopics = SimpleNamespace(
+            experimentName=ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+        )
+        assert is_subtopics_experiment(req_crawl_subtopics) is True
+
+        # Neither enabled - should not include subtopics
+        req_neither = SimpleNamespace(
+            experimentName=ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+            experimentBranch=CrawlExperimentBranchName.CONTROL.value,
+        )
+        assert is_subtopics_experiment(req_neither) is False
 
 
 class TestCrawlExperiment:
