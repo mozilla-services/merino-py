@@ -141,7 +141,7 @@
         "iab": {
           "taxonomy": "IAB-3.0",
           "categories": [
-            "483"
+            "484"
           ]
         },
         "sectionItems": [
@@ -1405,6 +1405,12 @@
         "externalId": "mlb",
         "active": true,
         "title": "MLB",
+        "iab": {
+          "taxonomy": "IAB-3.0",
+          "categories": [
+            "545"
+          ]
+        },
         "sectionItems": [
           {
             "corpusItem": {
