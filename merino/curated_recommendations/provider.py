@@ -4,6 +4,7 @@ import logging
 from typing import cast
 
 from merino.curated_recommendations import LocalModelBackend
+from merino.curated_recommendations.ml_backends.protocol import LOCAL_MODEL_MODEL_ID_KEY
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceProtocol,
     SurfaceId,
@@ -18,7 +19,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
-    InferredInterests,
+    ProcessedInterests,
     InferredLocalModel,
 )
 
@@ -170,41 +171,57 @@ class CuratedRecommendationsProvider:
     @staticmethod
     def process_request_interests(
         request: CuratedRecommendationsRequest, inferred_local_model: InferredLocalModel | None
-    ) -> InferredInterests | None:
-        """Convert the interest vector from the request into an interest vector
-        with keys str and values floats. This does the unary decoding if necessary
+    ) -> ProcessedInterests | None:
+        """Convert the interest vector from the request into a clean internal representation
+        with numeric scores. This does the unary decoding if necessary.
         """
         # print("PROCESS_REQUEsT_INTERESTs")
         request_interests = request.inferredInterests
-        # default: pass through whatever came on the request
-        inferred_interests: InferredInterests | None = request_interests
+
+        if request_interests is None:
+            return None
+
+        # Extract model_id if present
         interest_id = (
             request_interests.root["model_id"]
             if (
-                request_interests is not None
-                and "model_id" in request_interests.root
+                "model_id" in request_interests.root
                 and isinstance(request_interests.root["model_id"], str)
             )
             else None
         )
+
         # print("request_interests", request_interests)
         # print("inferred_lcoal_model", inferred_local_model)
         # print("model_matches", inferred_local_model.model_matches_interests(interest_id))
-        if (
-            request_interests is not None
-            and inferred_local_model is not None
-            and inferred_local_model.model_matches_interests(interest_id)
+
+        # Check if we need to decode DP values
+        if inferred_local_model is not None and inferred_local_model.model_matches_interests(
+            interest_id
         ):
             dp_values: list[str] | None = cast(
                 list[str] | None, request_interests.root.get(LOCAL_MODEL_DB_VALUES_KEY)
             )
-            if dp_values is None:
-                # No coarse interests to decode: pass through the original interests.
-                inferred_interests = request_interests
-                print("DP VALUE IS NONE, PASS THROUGH")
-            else:
-                # Do actual decoding then wrap in a RootModel using the 'root=' keyword.
+            if dp_values is not None:
+                # Decode the DP values
                 decoded = inferred_local_model.decode_dp_interests(dp_values, interest_id)
-                inferred_interests = InferredInterests(root=decoded)
                 print("DECODED!!")
-        return inferred_interests
+                # Extract just the numeric scores
+                scores = {
+                    k: v
+                    for k, v in decoded.items()
+                    if k != LOCAL_MODEL_MODEL_ID_KEY and isinstance(v, (int, float))
+                }
+                return ProcessedInterests(model_id=interest_id, scores=scores)
+            else:
+                print("DP VALUE IS NONE, PASS THROUGH")
+
+        # Either no decoding needed or no model available - extract existing scores
+        scores = {}
+        for key, value in request_interests.root.items():
+            if key not in ["model_id", LOCAL_MODEL_DB_VALUES_KEY] and isinstance(
+                value, (int, float)
+            ):
+                scores[key] = float(value)
+
+        return ProcessedInterests(model_id=interest_id, scores=scores)

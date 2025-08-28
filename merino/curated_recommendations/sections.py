@@ -32,7 +32,7 @@ from merino.curated_recommendations.protocol import (
     Section,
     SectionConfiguration,
     ExperimentName,
-    InferredInterests,
+    ProcessedInterests,
     Layout,
 )
 from merino.curated_recommendations.rankers import (
@@ -242,7 +242,7 @@ def rank_sections(
     sections: dict[str, Section],
     section_configurations: list[SectionConfiguration] | None,
     engagement_backend: EngagementBackend,
-    personal_interests: InferredInterests | None,
+    personal_interests: ProcessedInterests | None,
     experiment_rescaler: ExperimentRescaler | None,
 ) -> dict[str, Section]:
     """Apply a series of stable ranking passes to the sections feed, in order of priority.
@@ -332,7 +332,7 @@ async def get_sections(
     scheduled_surface_backend: ScheduledSurfaceProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
-    personal_interests: InferredInterests | None = None,
+    personal_interests: ProcessedInterests | None = None,
     region: str | None = None,
 ) -> dict[str, Section]:
     """Build, rank, and layout recommendation sections for a "sections" experiment.
