@@ -1276,13 +1276,13 @@ class TestSections:
 
             # assert IAB metadata is present in ML sections (there are 8 of them)
             expected_iab_metadata = {
-                "nfl": "483",
+                "nfl": "484",
                 "tv": "640",
                 "music": "338",
                 "movies": "324",
                 "nba": "547",
                 "soccer": "533",
-                "mlb": None,
+                "mlb": "545",
                 "nhl": "515",
             }
             # Sections have their expected IAB metadata

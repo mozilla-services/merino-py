@@ -65,7 +65,7 @@ def generate_corpus_item(corpus_id: str = "id", sched_id: str = "sched") -> Corp
 
 @pytest.fixture
 def sample_backend_data() -> list[CorpusSection]:
-    """Build three corpus sections: 'secA' with 2 items, 'secB' with 1 item, 'secC' with 3 items using the helper."""
+    """Build three corpus sections using legacy topic IDs: 'business' with 2 items, 'sports' with 1 item, 'tech' with 3 items using the helper."""
     return [
         CorpusSection(
             sectionItems=[
@@ -76,7 +76,7 @@ def sample_backend_data() -> list[CorpusSection]:
             externalId=sec_id,
             iab=IABMetadata(categories=["324"]),
         )
-        for sec_id, count in [("secA", 2), ("secB", 1), ("secC", 3)]
+        for sec_id, count in [("business", 2), ("sports", 1), ("tech", 3)]
     ]
 
 
@@ -355,17 +355,23 @@ class TestCrawlExperiment:
     def test_filter_sections_by_crawl_experiment_empty_input(self):
         """Test that empty corpus sections return empty result"""
         from merino.curated_recommendations.sections import filter_sections_by_crawl_experiment
+        from merino.curated_recommendations.protocol import CrawlExperimentBranchName
 
         # Empty input should return empty output
-        result = filter_sections_by_crawl_experiment([], is_crawl_treatment=True)
+        result = filter_sections_by_crawl_experiment(
+            [], crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value
+        )
         assert result == {}
 
-        result = filter_sections_by_crawl_experiment([], is_crawl_treatment=False)
+        result = filter_sections_by_crawl_experiment(
+            [], crawl_branch=CrawlExperimentBranchName.CONTROL.value
+        )
         assert result == {}
 
     def test_filter_sections_by_crawl_experiment_mixed_sections(self):
         """Test that sections with mixed _crawl and non-_crawl for same topic are handled correctly"""
         from merino.curated_recommendations.sections import filter_sections_by_crawl_experiment
+        from merino.curated_recommendations.protocol import CrawlExperimentBranchName
 
         # Create sections with mixed _crawl and non-_crawl for same topic
         sections = [
@@ -378,7 +384,9 @@ class TestCrawlExperiment:
         ]
 
         # Treatment branch should get only crawl sections
-        result = filter_sections_by_crawl_experiment(sections, is_crawl_treatment=True)
+        result = filter_sections_by_crawl_experiment(
+            sections, crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value
+        )
         assert len(result) == 3
         assert "health" in result
         assert "tech" in result
@@ -404,6 +412,7 @@ class TestCrawlExperiment:
     def test_filter_sections_by_crawl_experiment_malformed_ids(self):
         """Test that malformed section IDs are handled gracefully"""
         from merino.curated_recommendations.sections import filter_sections_by_crawl_experiment
+        from merino.curated_recommendations.protocol import CrawlExperimentBranchName
 
         # Create sections with potentially malformed IDs
         sections = [
@@ -415,19 +424,24 @@ class TestCrawlExperiment:
             MagicMock(externalId=""),  # Empty ID
         ]
 
-        # Treatment branch should get only sections ending with _crawl
-        result = filter_sections_by_crawl_experiment(sections, is_crawl_treatment=True)
-        assert len(result) == 2
+        # Treatment branch should get only sections ending with _crawl that are legacy topics
+        result = filter_sections_by_crawl_experiment(
+            sections, crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value
+        )
+        assert len(result) == 1
         assert "health" in result  # health_crawl -> health
-        assert "" in result  # _crawl -> "" (empty string)
+        # _crawl -> "" is not included because "" is not a legacy topic
 
-        # Control branch should get only sections NOT ending with _crawl
-        result = filter_sections_by_crawl_experiment(sections, is_crawl_treatment=False)
-        assert len(result) == 4
+        # Control branch should get only sections NOT ending with _crawl that are legacy topics
+        result = filter_sections_by_crawl_experiment(
+            sections, crawl_branch=CrawlExperimentBranchName.CONTROL.value
+        )
+        assert len(result) == 1
         assert "health" in result
-        assert "health_extra" in result  # health_crawl_extra -> health_extra (suffix removed)
-        assert "crawl_health" in result
-        assert "_crawl" not in result  # This ends with _crawl
+        # Other sections are not included because they're not legacy topics
+        assert "health_extra" not in result
+        assert "crawl_health" not in result
+        assert "" not in result  # Empty string is not a legacy topic
 
 
 class TestUpdateReceivedFeedRank:
@@ -761,13 +775,13 @@ class TestGetCorpusSections:
         sports.sectionItems = []
         sports.iab = None
 
-        entertainment = MagicMock()
-        entertainment.externalId = "entertainment"
-        entertainment.title = "Entertainment"
-        entertainment.sectionItems = []
-        entertainment.iab = None
+        arts = MagicMock()
+        arts.externalId = "arts"
+        arts.title = "Arts"
+        arts.sectionItems = []
+        arts.iab = None
 
-        crawl_data = [health_crawl, tech_crawl, sports, entertainment]
+        crawl_data = [health_crawl, tech_crawl, sports, arts]
 
         mock_backend.fetch = AsyncMock(return_value=crawl_data)
         return mock_backend
@@ -795,17 +809,17 @@ class TestGetCorpusSections:
         )
 
         assert set(result.keys()) == {cs.externalId for cs in sample_backend_data}
-        section_a = result["secA"]
+        section_a = result["business"]
         assert section_a.receivedFeedRank == 5
         assert len(section_a.recommendations) == 2
         assert section_a.layout == layout_6_tiles
 
-        section_b = result["secB"]
+        section_b = result["sports"]
         assert section_b.receivedFeedRank == 6
         assert len(section_b.recommendations) == 1
         assert section_b.layout == layout_6_tiles
 
-        section_c = result["secC"]
+        section_c = result["tech"]
         assert section_c.receivedFeedRank == 7
         assert len(section_c.recommendations) == 3
         assert section_c.layout == layout_6_tiles
@@ -813,35 +827,40 @@ class TestGetCorpusSections:
     @pytest.mark.asyncio
     async def test_crawl_treatment_filters_correctly(self, sections_backend_with_crawl_data):
         """Test that treatment branch only gets _crawl sections."""
+        from merino.curated_recommendations.protocol import CrawlExperimentBranchName
+
         result = await get_corpus_sections(
             sections_backend=sections_backend_with_crawl_data,
             surface_id=SurfaceId.NEW_TAB_EN_US,
             min_feed_rank=1,
-            is_crawl_treatment=True,
+            crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value,
         )
 
-        # Should only contain _crawl sections
-        assert "health_crawl" in result
-        assert "tech_crawl" in result
+        # Should only contain _crawl sections mapped to their base IDs
+        assert "health" in result  # health_crawl -> health
+        assert "tech" in result  # tech_crawl -> tech
         assert "sports" not in result
-        assert "entertainment" not in result
+        assert "arts" not in result
         assert len(result) == 2
 
     @pytest.mark.asyncio
     async def test_control_branch_filters_correctly(self, sections_backend_with_crawl_data):
         """Test that control branch only gets non-_crawl sections."""
+        from merino.curated_recommendations.protocol import CrawlExperimentBranchName
+
         result = await get_corpus_sections(
             sections_backend=sections_backend_with_crawl_data,
             surface_id=SurfaceId.NEW_TAB_EN_US,
             min_feed_rank=1,
-            is_crawl_treatment=False,
+            crawl_branch=CrawlExperimentBranchName.CONTROL.value,
         )
 
-        # Should only contain non-_crawl sections
+        # Should only contain non-_crawl sections that are legacy topics
         assert "health_crawl" not in result
         assert "tech_crawl" not in result
         assert "sports" in result
-        assert "entertainment" in result
+        # arts is a legacy topic so it should be included
+        assert "arts" in result
         assert len(result) == 2
 
     @pytest.mark.asyncio
@@ -854,9 +873,10 @@ class TestGetCorpusSections:
             # is_crawl_treatment defaults to False
         )
 
-        # Should only contain non-_crawl sections (default behavior)
+        # Should only contain non-_crawl sections that are legacy topics (default behavior)
         assert "health_crawl" not in result
         assert "tech_crawl" not in result
         assert "sports" in result
-        assert "entertainment" in result
+        # arts is a legacy topic so it should be included
+        assert "arts" in result
         assert len(result) == 2

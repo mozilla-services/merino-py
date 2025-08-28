@@ -117,7 +117,7 @@ def map_corpus_section_to_section(
 
 
 async def _process_corpus_sections(
-    corpus_sections: list[CorpusSection],
+    corpus_sections_dict: dict[str, CorpusSection],
     min_feed_rank: int,
     scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
     surface_id: SurfaceId | None = None,
@@ -125,7 +125,7 @@ async def _process_corpus_sections(
     """Process corpus sections into Section objects with scheduled corpus item mapping.
 
     Args:
-        corpus_sections: List of CorpusSection objects to process
+        corpus_sections_dict: Dict mapping section IDs to CorpusSection objects
         min_feed_rank: Starting rank offset for assigning receivedFeedRank
         scheduled_surface_backend: Backend interface to fetch scheduled corpus items
         surface_id: Surface ID for fetching scheduled corpus items (required if scheduled_surface_backend provided)
@@ -143,10 +143,10 @@ async def _process_corpus_sections(
     sections: dict[str, Section] = {}
     legacy_sections = {topic.value for topic in Topic}
 
-    for cs in corpus_sections:
+    for section_id, cs in corpus_sections_dict.items():
         rank = len(sections) + min_feed_rank
-        sections[cs.externalId] = map_corpus_section_to_section(
-            cs, rank, is_legacy_section=cs.externalId in legacy_sections
+        sections[section_id] = map_corpus_section_to_section(
+            cs, rank, is_legacy_section=section_id in legacy_sections
         )
 
     for section in sections.values():
@@ -186,12 +186,9 @@ async def get_corpus_sections(
         raw_corpus_sections, crawl_branch, include_subtopics
     )
 
-    # Convert dict to list for processing
-    corpus_sections_list = list(filtered_corpus_sections.values())
-
-    # Process the sections using the shared logic
+    # Process the sections using the shared logic, passing the dict directly
     return await _process_corpus_sections(
-        corpus_sections_list,
+        filtered_corpus_sections,
         min_feed_rank,
         scheduled_surface_backend,
         surface_id,
