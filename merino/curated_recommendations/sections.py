@@ -251,17 +251,6 @@ def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     )
 
 
-def is_popular_today_double_row_layout(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the popular today section should use double row layout.
-
-    This is enabled for users in the treatment branch of the ML sections experiment.
-    """
-    # Only check the ML sections experiment for layout purposes
-    return is_enrolled_in_experiment(
-        request, ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment"
-    )
-
-
 def get_crawl_experiment_branch(request: CuratedRecommendationsRequest) -> str | None:
     """Return the branch name for the RSS vs. Zyte experiment, or None if not enrolled.
 
