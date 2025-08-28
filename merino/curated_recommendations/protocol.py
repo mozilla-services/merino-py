@@ -99,13 +99,24 @@ MIN_TILE_ID = 10000000
 
 
 class InferredInterests(RootModel[dict[str, float | str | list[str]]]):
-    # class InferredInterests(RootModel[Mapping[str, float | str | list[str]]]):
-    """Inferred general interests from New Tab article interactions"""
+    """Raw inferred interests from client request - may contain encoded or decoded values"""
 
     @staticmethod
     def empty() -> "InferredInterests":
         """Return empty inferred interests"""
         return InferredInterests(root={})
+
+
+class ProcessedInterests(BaseModel):
+    """Internal representation of interests after processing/decoding"""
+
+    model_id: str | None = None
+    scores: dict[str, float] = Field(default_factory=dict)
+
+    @staticmethod
+    def empty() -> "ProcessedInterests":
+        """Return empty processed interests"""
+        return ProcessedInterests()
 
 
 class SectionConfiguration(BaseModel):

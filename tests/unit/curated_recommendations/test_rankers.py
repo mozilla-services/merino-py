@@ -16,7 +16,7 @@ from merino.curated_recommendations.protocol import (
     MIN_TILE_ID,
     Section,
     SectionConfiguration,
-    InferredInterests,
+    ProcessedInterests,
 )
 from merino.curated_recommendations.rankers import (
     spread_publishers,
@@ -648,13 +648,15 @@ class TestGreedyPersonalizedSectionRanker:
         # extract titles and build InferredInterests
         sec_titles = [sec for sec in sections]
         personal_sections = [sec_titles[i] for i in [4, 10, 13, 15]]
-        personal_interests = InferredInterests({k: i for i, k in enumerate(personal_sections)})
+        personal_interests = ProcessedInterests(
+            scores={k: float(i) for i, k in enumerate(personal_sections)}
+        )
         # store original order of sections not in inferredInterests
         original_order = sorted(sections, key=lambda x: sections[x].receivedFeedRank)
         original_order = [
             k
             for k in original_order
-            if k not in personal_sections or personal_interests.root[k] < 0.0092
+            if k not in personal_sections or personal_interests.scores.get(k, 0) < 0.0092
         ]
         # rerank the sections
         reranked_sections = greedy_personalized_section_rank(
@@ -679,7 +681,7 @@ class TestGreedyPersonalizedSectionRanker:
         # store the original ranking
         original_ranking = {sec: sections[sec].receivedFeedRank for sec in sections}
         # inferredinterests is empty
-        personal_interests = InferredInterests({})
+        personal_interests = ProcessedInterests(scores={})
         # rerank the sections
         reranked_sections = greedy_personalized_section_rank(
             sections=sections, personal_interests=personal_interests, epsilon=0.0
@@ -694,7 +696,7 @@ class TestGreedyPersonalizedSectionRanker:
         sections = generate_sections_feed(section_count=16)
         # inferredinterests is empty
         bogus = "asflkjdfoij"
-        personal_interests = InferredInterests({bogus: 1.0})
+        personal_interests = ProcessedInterests(scores={bogus: 1.0})
         # rerank the sections
         reranked_sections = greedy_personalized_section_rank(
             sections=sections, personal_interests=personal_interests, epsilon=0.0

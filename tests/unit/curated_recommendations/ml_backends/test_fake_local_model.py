@@ -16,7 +16,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
     LOCAL_MODEL_MODEL_ID_KEY,
 )
-from merino.curated_recommendations.protocol import InferredInterests
+from merino.curated_recommendations.protocol import InferredInterests, ProcessedInterests
 
 from merino.curated_recommendations.provider import (
     CuratedRecommendationsProvider,
@@ -364,24 +364,26 @@ def test_process_returns_none_when_request_has_no_interests(inferred_model):
 
 
 def test_process_passes_through_when_no_model():
-    """When inferred_local_model is None, return the same InferredInterests object."""
+    """When inferred_local_model is None, return ProcessedInterests with empty scores."""
     interests = InferredInterests.empty()
     interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
     req = make_request(interests)
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_local_model=None)
-    # Pass-through: identity should be preserved
-    assert out is interests
+    assert isinstance(out, ProcessedInterests)
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID
+    assert out.scores == {}
 
 
 def test_process_passes_through_on_model_id_mismatch(inferred_model):
-    """When model_id doesn't match, return the same InferredInterests object."""
+    """When model_id doesn't match, return ProcessedInterests with empty scores."""
     interests = InferredInterests.empty()
     interests.root[LOCAL_MODEL_MODEL_ID_KEY] = "not-this-model"
-    interests.root["foo"] = "bar"
+    interests.root["foo"] = "bar"  # String value, not a score
     req = make_request(interests)
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
-    assert out is interests
-    assert out.root["foo"] == "bar"
+    assert isinstance(out, ProcessedInterests)
+    assert out.model_id == "not-this-model"
+    assert out.scores == {}  # String values are not included in scores
 
 
 def test_process_decodes_when_values_present(inferred_model):
@@ -399,29 +401,29 @@ def test_process_decodes_when_values_present(inferred_model):
     req = make_request(interests)
 
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
-    assert isinstance(out, InferredInterests)
+    assert isinstance(out, ProcessedInterests)
     # model_id is preserved
-    assert out.root[LOCAL_MODEL_MODEL_ID_KEY] == CTR_LIMITED_TOPIC_MODEL_ID
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID
 
     # spot-check a couple of features decode to the last threshold
     checked = 0
     for key, cfg in iv.items():
-        assert out.root[key] == cfg.thresholds[-1]
+        assert out.scores[key] == cfg.thresholds[-1]
         checked += 1
         if checked >= 2:
             break
 
 
 def test_process_passthrough_when_values_missing_even_with_matching_model(inferred_model):
-    """If model_id matches but no DP values key, pass through the original dict."""
+    """If model_id matches but no DP values key, extract existing numeric scores."""
     interests = InferredInterests.empty()
     interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
     interests.root["foo"] = 0.123
-    interests.root["bar"] = "baz"
+    interests.root["bar"] = "baz"  # String, not a score
     req = make_request(interests)
 
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
-    # Expect pass-through (no decode invoked)
-    assert out is interests
-    assert out.root["foo"] == 0.123
-    assert out.root["bar"] == "baz"
+    assert isinstance(out, ProcessedInterests)
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID
+    assert out.scores["foo"] == 0.123
+    assert "bar" not in out.scores  # String values are not included in scores
