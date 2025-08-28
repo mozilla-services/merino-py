@@ -65,6 +65,7 @@ class CuratedRecommendationsProvider:
         surface_id: SurfaceId,
     ) -> bool:
         """Check if the 'sections' experiment is enabled."""
+        print("IS SECTIONS")
         return (
             request.feeds is not None
             and "sections" in request.feeds  # Clients must request "feeds": ["sections"]
@@ -86,6 +87,7 @@ class CuratedRecommendationsProvider:
         @param request: The full API request with all the data
         @return: A re-ranked list of curated recommendations
         """
+        print("rank recommendations!!")
         # 3. Apply Thompson sampling to rank recommendations by engagement
         recommendations = thompson_sampling(
             recommendations,
@@ -113,6 +115,7 @@ class CuratedRecommendationsProvider:
         self, request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
+        print("FEEEEETCH", request)
         surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
         corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
         recommendations = [
@@ -171,14 +174,22 @@ class CuratedRecommendationsProvider:
         """Convert the interest vector from the request into an interest vector
         with keys str and values floats. This does the unary decoding if necessary
         """
+        # print("PROCESS_REQUEsT_INTERESTs")
         request_interests = request.inferredInterests
         # default: pass through whatever came on the request
         inferred_interests: InferredInterests | None = request_interests
         interest_id = (
             request_interests.root["model_id"]
-            if (request_interests is not None and "model_id" in request_interests.root)
+            if (
+                request_interests is not None
+                and "model_id" in request_interests.root
+                and isinstance(request_interests.root["model_id"], str)
+            )
             else None
         )
+        # print("request_interests", request_interests)
+        # print("inferred_lcoal_model", inferred_local_model)
+        # print("model_matches", inferred_local_model.model_matches_interests(interest_id))
         if (
             request_interests is not None
             and inferred_local_model is not None
@@ -190,8 +201,10 @@ class CuratedRecommendationsProvider:
             if dp_values is None:
                 # No coarse interests to decode: pass through the original interests.
                 inferred_interests = request_interests
+                print("DP VALUE IS NONE, PASS THROUGH")
             else:
                 # Do actual decoding then wrap in a RootModel using the 'root=' keyword.
                 decoded = inferred_local_model.decode_dp_interests(dp_values, interest_id)
                 inferred_interests = InferredInterests(root=decoded)
+                print("DECODED!!")
         return inferred_interests

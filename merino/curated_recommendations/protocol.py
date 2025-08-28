@@ -2,7 +2,7 @@
 
 import hashlib
 from enum import unique, Enum
-from typing import Annotated
+from typing import Annotated  # , Mapping
 import logging
 from datetime import datetime
 
@@ -98,7 +98,8 @@ MAX_TILE_ID = (1 << 53) - 1
 MIN_TILE_ID = 10000000
 
 
-class InferredInterests(RootModel[dict[str, float | str]]):
+class InferredInterests(RootModel[dict[str, float | str | list[str]]]):
+    # class InferredInterests(RootModel[Mapping[str, float | str | list[str]]]):
     """Inferred general interests from New Tab article interactions"""
 
     @staticmethod
