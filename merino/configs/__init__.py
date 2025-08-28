@@ -81,6 +81,7 @@ _validators = [
     ),
     Validator("providers.accuweather.cache_ttls.forecast_ttl_sec", is_type_of=int, gte=0),
     Validator("providers.accuweather.cached_ttls.location_key_ttl_sec", is_type_of=int, gte=0),
+    Validator("providers.yelp.cache_ttls.business_search_ttl_sec", is_type_of=int, gte=0),
     Validator("providers.adm.backend", is_in=["remote-settings", "test"]),
     Validator("providers.adm.cron_interval_sec", gt=0),
     Validator("providers.adm.enabled_by_default", is_type_of=bool),

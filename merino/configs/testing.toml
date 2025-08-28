@@ -65,6 +65,10 @@ url_base = "http://test-polygon"
 enabled_by_default = false
 backend="polygon"
 
+[testing.providers.yelp]
+enabled_by_default = false
+backend = "test"
+
 [testing.providers.adm]
 # Whether or not this provider is enabled by default.
 enabled_by_default = true

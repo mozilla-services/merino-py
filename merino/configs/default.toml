@@ -719,7 +719,7 @@ backend = "yelp"
 # MERINO_PROVIDERS__YELP__CACHE
 # The store used to yelp data. Either `redis` or `none`.
 # If `redis`, the global Redis settings must be set. See redis.server.
-cache = "none"
+cache = "redis"
 
 # MERINO_PROVIDERS__YELP__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
@@ -746,6 +746,12 @@ circuit_breaker_failure_threshold = 10
 # MERINO_PROVIDERS__YELP__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
 # The circuit breaker will stay open for this period of time until the next recovery attempt.
 circuit_breaker_recover_timeout_sec = 30
+
+[default.providers.yelp.cache_ttls]
+# Cache TTLs for Yelp business data.
+
+# MERINO_PROVIDERS__YELP__CACHE_TTLS__BUSINESS_SEARCH_TTL_SEC
+business_search_ttl_sec = 86400 # 24 hours
 
 
 [default.yelp]
