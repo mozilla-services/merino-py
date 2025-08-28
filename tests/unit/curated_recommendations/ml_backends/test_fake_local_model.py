@@ -106,73 +106,6 @@ def test_unary_decoding(model_limited):
     assert model.get_unary_encoded_index("") is None
 
 
-def test_model_matches_interests(model_limited):
-    """Check model id's match"""
-    model = model_limited.get(TEST_SURFACE)
-
-    interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
-    assert model.model_matches_interests(interests.root[LOCAL_MODEL_MODEL_ID_KEY])
-
-
-def test_model_no_match_interests(model_limited):
-    """Check model id's don't match"""
-    model = model_limited.get(TEST_SURFACE)
-    interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = "bad id"
-    assert not model.model_matches_interests(interests.root[LOCAL_MODEL_MODEL_ID_KEY])
-
-
-def test_decode_dp_interests_ambiguous(model_limited):
-    """Verify ambiguous interests due to noise"""
-    model = model_limited.get(TEST_SURFACE)
-    interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
-    values = []
-    for model_key, model_feature_info in model.model_data.interest_vector.items():
-        values.append("1" * (len(model_feature_info.thresholds) + 1))  # concat a string
-    interests.root["values"] = values
-    updated_inferred_interests = model.decode_dp_interests(
-        interests.root["values"], interests.root[LOCAL_MODEL_MODEL_ID_KEY]
-    )
-    for model_key, model_feature_info in model.model_data.interest_vector.items():
-        assert model_key not in updated_inferred_interests
-
-
-def test_decode_dp_interests_low(model_limited):
-    """Verify the lowest CTR is decoded"""
-    model = model_limited.get(TEST_SURFACE)
-    interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
-    values = []
-    for model_key, model_feature_info in model.model_data.interest_vector.items():
-        values.append("1" + "0" * len(model_feature_info.thresholds))  # concat a string
-    interests.root["values"] = values
-    updated_inferred_interests = model.decode_dp_interests(
-        interests.root["values"], interests.root[LOCAL_MODEL_MODEL_ID_KEY]
-    )
-    for model_key, model_feature_info in model.model_data.interest_vector.items():
-        assert updated_inferred_interests[model_key] == 0.0
-
-
-def test_decode_dp_interests_high(model_limited):
-    """Verify highest thresholded CTR is decoded"""
-    model = model_limited.get(TEST_SURFACE)
-    interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
-    values = []
-    for model_key, model_feature_info in model.model_data.interest_vector.items():
-        values.append("0" * len(model_feature_info.thresholds) + "1")  # concat a string
-    interests.root["values"] = values
-    updated_inferred_interests = model.decode_dp_interests(
-        interests.root["values"], interests.root[LOCAL_MODEL_MODEL_ID_KEY]
-    )
-    for idx, (model_key, model_feature_info) in enumerate(
-        model.model_data.interest_vector.items()
-    ):
-        assert updated_inferred_interests[model_key] == model_feature_info.thresholds[-1]
-
-
 def test_decode_skipped_when_model_id_mismatch(model_limited):
     """Caller should not decode when the model id doesn't match."""
     model = model_limited.get("surface")
@@ -307,3 +240,98 @@ def test_decode_with_multiple_ones_random_branch_sets_valid_value(model_limited)
         allowed.add(first_cfg.thresholds[1])
     assert first_key in out
     assert out[first_key] in allowed
+
+
+@pytest.mark.parametrize(
+    "pattern_func,assertion_func,rand",
+    [
+        # ambiguous: all ones; no random -> key not present
+        (
+            lambda thresholds: "1" * (len(thresholds) + 1),
+            lambda result, key, thresholds: key not in result,
+            False,
+        ),
+        # lowest value (index 0) -> 0.0
+        (
+            lambda thresholds: "1" + "0" * len(thresholds),
+            lambda result, key, thresholds: result[key] == 0.0,
+            False,
+        ),
+        # highest value (last index) -> thresholds[-1]
+        (
+            lambda thresholds: "0" * len(thresholds) + "1",
+            lambda result, key, thresholds: result[key] == thresholds[-1],
+            False,
+        ),
+        # middle value: pick index 2 if available, else 1, else 0
+        (
+            lambda thresholds: (
+                (lambda i, n: "0" * i + "1" + "0" * (n - 1 - i))(
+                    2 if len(thresholds) >= 2 else (1 if len(thresholds) == 1 else 0),
+                    len(thresholds) + 1,
+                )
+            ),
+            lambda result, key, thresholds: (
+                result[key]
+                == (
+                    0.0
+                    if (2 if len(thresholds) >= 2 else (1 if len(thresholds) == 1 else 0)) == 0
+                    else thresholds[
+                        (2 if len(thresholds) >= 2 else (1 if len(thresholds) == 1 else 0)) - 1
+                    ]
+                )
+            ),
+            False,
+        ),
+        # ambiguous with random -> value is allowed (0.0 or any threshold)
+        (
+            lambda thresholds: "1" * (len(thresholds) + 1),
+            lambda result, key, thresholds: key in result
+            and result[key] in ({0.0} | set(thresholds)),
+            True,
+        ),
+    ],
+    ids=[
+        "ambiguous_no_random",
+        "lowest",
+        "highest",
+        "middle",
+        "ambiguous_with_random",
+    ],
+)
+def test_decode_dp_interests(model_limited, pattern_func, assertion_func, rand):
+    """decode_dp_interests decodes various unary patterns; ambiguous behavior depends on random flag."""
+    model = model_limited.get(TEST_SURFACE)
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+
+    values = []
+    for _key, feature in model.model_data.interest_vector.items():
+        values.append(pattern_func(feature.thresholds))
+    interests.root["values"] = values
+
+    if rand:
+        np.random.seed(123)
+    updated = model.decode_dp_interests(
+        interests.root["values"],
+        interests.root[LOCAL_MODEL_MODEL_ID_KEY],
+        random_if_uncertain=rand,
+    )
+
+    for key, feature in model.model_data.interest_vector.items():
+        assert assertion_func(updated, key, feature.thresholds)
+
+
+@pytest.mark.parametrize(
+    "input_id,expected",
+    [
+        (CTR_LIMITED_TOPIC_MODEL_ID, True),
+        ("bad id", False),
+        (None, False),
+        (3.14, False),
+    ],
+)
+def test_model_matches_interests_param(model_limited, input_id, expected):
+    """model_matches_interests accepts only the correct string id."""
+    model = model_limited.get(TEST_SURFACE)
+    assert model.model_matches_interests(input_id) is expected

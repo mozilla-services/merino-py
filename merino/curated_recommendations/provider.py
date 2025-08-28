@@ -19,6 +19,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
     InferredInterests,
+    InferredLocalModel,
 )
 
 from merino.curated_recommendations.rankers import (
@@ -136,33 +137,7 @@ class CuratedRecommendationsProvider:
             inferred_local_model = self.local_model_backend.get(surface_id)
 
         if is_sections_experiment:
-            request_interests = request.inferredInterests
-            # default: pass through whatever came on the request
-            inferred_interests: InferredInterests | None = request_interests
-            interest_id = (
-                request_interests.root["model_id"]
-                if (request_interests is not None and "model_id" in request_interests.root)
-                else None
-            )
-            if (
-                request_interests is not None
-                and inferred_local_model is not None
-                and inferred_local_model.model_matches_interests(interest_id)
-            ):
-                dp_values: list[str] | None = cast(
-                    list[str] | None, request_interests.root.get(LOCAL_MODEL_DB_VALUES_KEY)
-                )
-                if dp_values is None:
-                    # No coarse interests to decode. Values are already flat (float|str).
-                    decoded = cast(dict[str, float | str], dict(request_interests))
-                else:
-                    ## Do actual decoding
-                    decoded = inferred_local_model.decode_dp_interests(
-                        dp_values,
-                        interest_id,
-                    )
-                ## Populate with what we decoded
-                inferred_interests = InferredInterests(decoded)
+            inferred_interests = self.process_request_interests(request, inferred_local_model)
             sections_feeds = await get_sections(
                 request,
                 surface_id,
@@ -188,3 +163,39 @@ class CuratedRecommendationsProvider:
             response.interestPicker = create_interest_picker(response.feeds)
 
         return response
+
+    @staticmethod
+    def process_request_interests(
+        request: CuratedRecommendationsRequest, inferred_local_model: InferredLocalModel | None
+    ) -> InferredInterests | None:
+        """Convert the interest vector from the request into an interest vector
+        with keys str and values floats. This does the unary decoding if necessary
+        """
+        request_interests = request.inferredInterests
+        # default: pass through whatever came on the request
+        inferred_interests: InferredInterests | None = request_interests
+        interest_id = (
+            request_interests.root["model_id"]
+            if (request_interests is not None and "model_id" in request_interests.root)
+            else None
+        )
+        if (
+            request_interests is not None
+            and inferred_local_model is not None
+            and inferred_local_model.model_matches_interests(interest_id)
+        ):
+            dp_values: list[str] | None = cast(
+                list[str] | None, request_interests.root.get(LOCAL_MODEL_DB_VALUES_KEY)
+            )
+            if dp_values is None:
+                # No coarse interests to decode. Values are already flat (float|str).
+                decoded = cast(dict[str, float | str], dict(request_interests))
+            else:
+                ## Do actual decoding
+                decoded = inferred_local_model.decode_dp_interests(
+                    dp_values,
+                    interest_id,
+                )
+            ## Populate with what we decoded
+            inferred_interests = InferredInterests(decoded)
+        return inferred_interests
