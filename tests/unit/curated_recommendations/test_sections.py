@@ -41,6 +41,7 @@ from merino.curated_recommendations.sections import (
     LAYOUT_CYCLE,
     get_top_story_list,
     is_crawl_section_id,
+    get_legacy_topic_ids,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -658,6 +659,32 @@ class TestGetCorpusSectionsForLegacyTopics:
 
         result = get_corpus_sections_for_legacy_topic(legacy_sections)
         assert result == legacy_sections
+
+
+class TestGetLegacyTopicIds:
+    """Tests for get_legacy_topic_ids."""
+
+    def test_returns_all_legacy_topic_ids(self):
+        """Should return the set of all Topic enum values."""
+        expected = {
+            "business",
+            "career",
+            "arts",
+            "food",
+            "health",
+            "home",
+            "finance",
+            "government",
+            "sports",
+            "tech",
+            "travel",
+            "education",
+            "hobbies",
+            "society-parenting",
+            "education-science",
+            "society",
+        }
+        assert get_legacy_topic_ids() == expected
 
 
 class TestIsCrawlSectionId:
