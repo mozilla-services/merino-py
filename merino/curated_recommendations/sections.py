@@ -119,8 +119,8 @@ def map_corpus_section_to_section(
 async def _process_corpus_sections(
     corpus_sections_dict: dict[str, CorpusSection],
     min_feed_rank: int,
+    surface_id: SurfaceId,
     scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
-    surface_id: SurfaceId = SurfaceId.NEW_TAB_EN_US,
 ) -> dict[str, Section]:
     """Process corpus sections into Section objects with scheduled corpus item mapping.
 
@@ -190,8 +190,8 @@ async def get_corpus_sections(
     return await _process_corpus_sections(
         filtered_corpus_sections,
         min_feed_rank,
-        scheduled_surface_backend,
         surface_id,
+        scheduled_surface_backend,
     )
 
 
