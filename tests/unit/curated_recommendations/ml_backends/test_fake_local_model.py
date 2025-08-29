@@ -87,8 +87,8 @@ def test_model_returns_limited_model(model_limited):
     assert result.model_version == 0
     assert result.model_data is not None
     assert (
-        result.model_data.noise_scale >= 0.02
-    )  # this needs to be very high. We aren't using it and it shouldn't be invoked
+        result.model_data.noise_scale == 0.0
+    )  # This needs to be 0 if we use coarse threshold based vector.
     assert len(result.model_data.interest_vector) > 0
     assert len(result.model_data.day_time_weighting.days) > 0
     assert len(result.model_data.day_time_weighting.relative_weight) > 0
