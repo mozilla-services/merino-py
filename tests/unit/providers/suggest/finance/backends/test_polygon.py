@@ -251,6 +251,7 @@ async def test_get_ticker_summary_success(
     assert actual is not None
     assert actual == expected
 
+
 @pytest.mark.asyncio
 async def test_get_snapshots_success(
     mocker,
