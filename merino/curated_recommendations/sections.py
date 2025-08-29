@@ -32,6 +32,7 @@ from merino.curated_recommendations.protocol import (
     Section,
     SectionConfiguration,
     ExperimentName,
+    CrawlExperimentBranchName,
     InferredInterests,
     Layout,
 )
@@ -115,24 +116,23 @@ def map_corpus_section_to_section(
     )
 
 
-async def get_corpus_sections(
-    sections_backend: SectionsProtocol,
-    surface_id: SurfaceId,
+async def _process_corpus_sections(
+    corpus_sections_dict: dict[str, CorpusSection],
     min_feed_rank: int,
+    surface_id: SurfaceId,
     scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
 ) -> dict[str, Section]:
-    """Fetch editorially curated sections from the sections backend.
+    """Process corpus sections into Section objects with scheduled corpus item mapping.
 
     Args:
-        sections_backend: Backend interface to fetch corpus sections.
-        surface_id: Identifier for which surface to fetch sections.
-        min_feed_rank: Starting rank offset for assigning receivedFeedRank.
-        scheduled_surface_backend: Backend interface to fetch scheduled corpus items (temporary)
+        corpus_sections_dict: Dict mapping section IDs to CorpusSection objects
+        min_feed_rank: Starting rank offset for assigning receivedFeedRank
+        scheduled_surface_backend: Backend interface to fetch scheduled corpus items
+        surface_id: Surface ID for fetching scheduled corpus items
 
     Returns:
-        A mapping from section IDs to Section objects, each with a unique receivedFeedRank.
+        A mapping from section IDs to Section objects, each with a unique receivedFeedRank
     """
-    corpus_sections = await sections_backend.fetch(surface_id)
     sid_map: dict[str, str | None] = {}
     if scheduled_surface_backend is not None:
         legacy_corpus = await scheduled_surface_backend.fetch(surface_id)
@@ -141,18 +141,58 @@ async def get_corpus_sections(
                 sid_map[item.corpusItemId] = item.scheduledCorpusItemId
 
     sections: dict[str, Section] = {}
+    legacy_sections = get_legacy_topic_ids()
 
-    legacy_sections = {topic.value for topic in Topic}
-    for cs in corpus_sections:
+    for section_id, cs in corpus_sections_dict.items():
         rank = len(sections) + min_feed_rank
-        sections[cs.externalId] = map_corpus_section_to_section(
-            cs, rank, is_legacy_section=cs.externalId in legacy_sections
+        sections[section_id] = map_corpus_section_to_section(
+            cs, rank, is_legacy_section=section_id in legacy_sections
         )
-    for sname, section in sections.items():
+
+    for section in sections.values():
         for r in section.recommendations:
             if r.corpusItemId in sid_map:
                 r.update_scheduled_corpus_item_id(sid_map[r.corpusItemId])
+
     return sections
+
+
+async def get_corpus_sections(
+    sections_backend: SectionsProtocol,
+    surface_id: SurfaceId,
+    min_feed_rank: int,
+    crawl_branch: str | None = None,
+    include_subtopics: bool = False,
+    scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
+) -> dict[str, Section]:
+    """Fetch editorially curated sections with optional RSS vs. Zyte experiment filtering.
+
+    Args:
+        sections_backend: Backend interface to fetch corpus sections.
+        surface_id: Identifier for which surface to fetch sections.
+        min_feed_rank: Starting rank offset for assigning receivedFeedRank.
+        crawl_branch: The crawl experiment branch name or None.
+        include_subtopics: Whether to include subtopic sections.
+        scheduled_surface_backend: Backend interface to fetch scheduled corpus items (temporary)
+
+    Returns:
+        A mapping from section IDs to Section objects, each with a unique receivedFeedRank.
+    """
+    # Get raw corpus sections
+    raw_corpus_sections = await sections_backend.fetch(surface_id)
+
+    # Apply RSS vs. Zyte experiment filtering
+    filtered_corpus_sections = filter_sections_by_crawl_experiment(
+        raw_corpus_sections, crawl_branch, include_subtopics
+    )
+
+    # Process the sections using the shared logic, passing the dict directly
+    return await _process_corpus_sections(
+        filtered_corpus_sections,
+        min_feed_rank,
+        surface_id,
+        scheduled_surface_backend,
+    )
 
 
 def exclude_recommendations_from_blocked_sections(
@@ -190,11 +230,47 @@ def adjust_ads_in_sections(sections: dict[str, Section]) -> None:
                 tile.hasAd = False
 
 
-def is_ml_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the sections backend experiment is enabled."""
-    return is_enrolled_in_experiment(
+def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if subtopics should be included based on experiments.
+
+    Include subtopics if:
+    - ML sections experiment is enabled (treatment branch), OR
+    - Crawl experiment is in the TREATMENT_CRAWL_PLUS_SUBTOPICS branch
+    """
+    ml_sections_enabled = is_enrolled_in_experiment(
         request, ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment"
     )
+
+    # Get the crawl experiment branch to check if it includes subtopics
+    crawl_branch = get_crawl_experiment_branch(request)
+
+    # Include subtopics if ml_sections is enabled OR if in crawl-plus-subtopics branch
+    return (
+        ml_sections_enabled
+        or crawl_branch == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
+    )
+
+
+def get_crawl_experiment_branch(request: CuratedRecommendationsRequest) -> str | None:
+    """Return the branch name for the RSS vs. Zyte experiment, or None if not enrolled.
+
+    Branches:
+    - control: Non-crawl legacy topics only
+    - treatment-crawl: Crawl legacy topics only
+    - treatment-crawl-plus-subtopics: Crawl legacy topics + non-crawl subtopics
+    """
+    if request.experimentName != ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value:
+        return None
+    return request.experimentBranch
+
+
+def is_crawl_experiment_treatment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the user is in any treatment branch of the RSS vs. Zyte experiment."""
+    branch = get_crawl_experiment_branch(request)
+    return branch in [
+        CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+        CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+    ]
 
 
 def update_received_feed_rank(sections: dict[str, Section]):
@@ -203,13 +279,79 @@ def update_received_feed_rank(sections: dict[str, Section]):
         sections[sid].receivedFeedRank = idx
 
 
+def get_legacy_topic_ids() -> set[str]:
+    """Get the set of legacy topic IDs."""
+    return {topic.value for topic in Topic}
+
+
 def get_corpus_sections_for_legacy_topic(
     corpus_sections: dict[str, Section],
 ) -> dict[str, Section]:
     """Return corpus sections only those matching legacy topics."""
-    legacy_topics = {topic.value for topic in Topic}
+    legacy_topics = get_legacy_topic_ids()
 
     return {sid: section for sid, section in corpus_sections.items() if sid in legacy_topics}
+
+
+def is_crawl_section_id(section_id: str) -> bool:
+    """Check if a section ID represents a crawl section.
+
+    Args:
+        section_id: The section external ID to check
+
+    Returns:
+        True if the section ID ends with '_crawl', False otherwise
+    """
+    return section_id.endswith("_crawl")
+
+
+def filter_sections_by_crawl_experiment(
+    corpus_sections: list[CorpusSection],
+    crawl_branch: str | None,
+    include_subtopics: bool = False,
+) -> dict[str, CorpusSection]:
+    """Filter sections based on RSS vs. Zyte experiment branch.
+
+    Args:
+        corpus_sections: List of CorpusSection objects
+        crawl_branch: The experiment branch name or None
+        include_subtopics: Whether to include subtopic sections
+
+    Returns:
+        Filtered sections with _crawl suffix removed from keys for crawl sections
+    """
+    legacy_topics = get_legacy_topic_ids()
+    result = {}
+
+    for section in corpus_sections:
+        section_id = section.externalId
+        is_crawl_section = is_crawl_section_id(section_id)
+        base_id = section_id.replace("_crawl", "") if is_crawl_section else section_id
+        is_legacy = base_id in legacy_topics
+
+        # Determine if we should include this section based on the branch
+        if crawl_branch in [
+            CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+        ]:
+            # Treatment branches: use _crawl for legacy, regular for subtopics
+            if is_legacy and is_crawl_section:
+                result[base_id] = section
+            elif (
+                not is_legacy
+                and not is_crawl_section
+                and crawl_branch == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
+            ):
+                # Include non-crawl subtopics only in crawl-plus-subtopics branch
+                result[base_id] = section
+        else:
+            # Control branch or no experiment: use non-_crawl sections
+            if not is_crawl_section:
+                # Include based on whether subtopics are enabled
+                if is_legacy or include_subtopics:
+                    result[base_id] = section
+
+    return result
 
 
 def remove_top_story_recs(
@@ -339,20 +481,24 @@ async def get_sections(
     Returns:
         A dict mapping section IDs to fully-configured Section models.
     """
-    # 1. Get ALL corpus sections
+    # 1. Get corpus sections with RSS vs. Zyte experiment filtering
+    crawl_branch = get_crawl_experiment_branch(request)
+
+    # Determine if we should include subtopics based on experiments
+    include_subtopics = is_subtopics_experiment(request)
+
     corpus_sections_all = await get_corpus_sections(
         sections_backend=sections_backend,
         surface_id=surface_id,
         min_feed_rank=1,
+        crawl_branch=crawl_branch,
+        include_subtopics=include_subtopics,
         scheduled_surface_backend=scheduled_surface_backend,
     )
 
-    # 2. If ML sections are NOT requested, filter to legacy sections
-    subtopic_experiment_enabled = is_ml_sections_experiment(request)
-    if not subtopic_experiment_enabled:
-        corpus_sections = get_corpus_sections_for_legacy_topic(corpus_sections_all)
-    else:
-        corpus_sections = corpus_sections_all
+    # 2. Sections are already properly filtered by get_corpus_sections
+    corpus_sections = corpus_sections_all
+
     # 3. Filter out blocked topics
     if request.sections:
         for cs in corpus_sections.values():
@@ -365,7 +511,7 @@ async def get_sections(
         rec for section in corpus_sections.values() for rec in section.recommendations
     ]
 
-    rescaler = SubsectionsExperimentRescaler() if subtopic_experiment_enabled else None
+    rescaler = SubsectionsExperimentRescaler() if include_subtopics else None
 
     # 5. Rank all corpus recommendations globally by engagement to build top_stories_section
     all_ranked_corpus_recommendations = thompson_sampling(
