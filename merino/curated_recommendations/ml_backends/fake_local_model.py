@@ -12,7 +12,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
 
 CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
 CTR_SECTION_MODEL_ID = "ctr_model_section_1"
-CTR_LIMITED_TOPIC_MODEL_ID = "ctr_4topic_v0"
+CTR_LIMITED_TOPIC_MODEL_ID = "ctr_limited_topic_v0"
 
 SPECIAL_FEATURE_CLICK = "clicks"
 
@@ -162,24 +162,35 @@ class LimitedTopicV0Model(LocalModelBackend):
     Set which model is used at __init__ import
     """
 
-    num_topics = 8
-    limited_topics = list(Topic)[:num_topics]
+    """
+     Based on data analysis these were the most impactful topics from personalization when limited to 6
+     However we could in the future benefit from combining HEALTH_FITNESS with SELF_IMPROVEMENT,
+     PERSONAL_FINANCE and FOOD. This would free up one additional, possibly SCIENCE or PARENTING
+    """
+    limited_topics = [
+        Topic.SPORTS.value,
+        Topic.POLITICS.value,
+        Topic.ARTS.value,
+        Topic.HEALTH_FITNESS.value,
+        Topic.BUSINESS.value,
+        Topic.SELF_IMPROVEMENT.value,
+    ]
+
     model_id = CTR_LIMITED_TOPIC_MODEL_ID
 
     def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
         """Fetch local model for the region
         We could update these thresholds by looking at the percentiles of the CTR
-        and expand to support multiple self-improvement topics to feed into Topic.HEALTH_FITNESS
         """
 
         def get_topic(topic: str) -> InterestVectorConfig:
             return InterestVectorConfig(
-                features={f"t_{topic.lower().replace('TOPIC.','')}": 1},
+                features={f"t_{topic}": 1},
                 thresholds=[0.01, 0.02, 0.03]
                 if topic is not Topic.SPORTS
                 else [0.005, 0.08, 0.02],
-                diff_p=0.72,
-                diff_q=0.09,  # These values must be recalculated if number of thresholds or topics change
+                diff_p=0.84,
+                diff_q=0.05,
             )
 
         category_fields: dict[str, InterestVectorConfig] = {
@@ -188,7 +199,7 @@ class LimitedTopicV0Model(LocalModelBackend):
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=False,
-            noise_scale=0.02,
+            noise_scale=0.0,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[3, 14, 45],
                 relative_weight=[1, 1, 1],
