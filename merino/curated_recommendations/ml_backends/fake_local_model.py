@@ -167,15 +167,14 @@ class LimitedTopicV0Model(LocalModelBackend):
     model_id = CTR_LIMITED_TOPIC_MODEL_ID
 
     def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
-        """Fetch local model for the region"""
-        """
-         We could update these thresholds by looking at the percentiles of the CTR
-         and expand to support multiple self-improvement topics to feed into Topic.HEALTH_FITNESS
+        """Fetch local model for the region
+        We could update these thresholds by looking at the percentiles of the CTR
+        and expand to support multiple self-improvement topics to feed into Topic.HEALTH_FITNESS
         """
 
         def get_topic(topic: str) -> InterestVectorConfig:
             return InterestVectorConfig(
-                features={f"t_{topic}": 1},
+                features={f"t_{topic.lower().replace('TOPIC.','')}": 1},
                 thresholds=[0.01, 0.02, 0.03]
                 if topic is not Topic.SPORTS
                 else [0.005, 0.08, 0.02],

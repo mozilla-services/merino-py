@@ -66,7 +66,6 @@ class CuratedRecommendationsProvider:
         surface_id: SurfaceId,
     ) -> bool:
         """Check if the 'sections' experiment is enabled."""
-        print("IS SECTIONS")
         return (
             request.feeds is not None
             and "sections" in request.feeds  # Clients must request "feeds": ["sections"]
@@ -88,7 +87,6 @@ class CuratedRecommendationsProvider:
         @param request: The full API request with all the data
         @return: A re-ranked list of curated recommendations
         """
-        print("rank recommendations!!")
         # 3. Apply Thompson sampling to rank recommendations by engagement
         recommendations = thompson_sampling(
             recommendations,
@@ -175,7 +173,6 @@ class CuratedRecommendationsProvider:
         """Convert the interest vector from the request into a clean internal representation
         with numeric scores. This does the unary decoding if necessary.
         """
-        # print("PROCESS_REQUEsT_INTERESTs")
         request_interests = request.inferredInterests
 
         if request_interests is None:
@@ -190,11 +187,6 @@ class CuratedRecommendationsProvider:
             )
             else None
         )
-
-        # print("request_interests", request_interests)
-        # print("inferred_lcoal_model", inferred_local_model)
-        # print("model_matches", inferred_local_model.model_matches_interests(interest_id))
-
         # Check if we need to decode DP values
         if inferred_local_model is not None and inferred_local_model.model_matches_interests(
             interest_id
@@ -205,7 +197,6 @@ class CuratedRecommendationsProvider:
             if dp_values is not None:
                 # Decode the DP values
                 decoded = inferred_local_model.decode_dp_interests(dp_values, interest_id)
-                print("DECODED!!")
                 # Extract just the numeric scores
                 scores = {
                     k: v
@@ -213,8 +204,6 @@ class CuratedRecommendationsProvider:
                     if k != LOCAL_MODEL_MODEL_ID_KEY and isinstance(v, (int, float))
                 }
                 return ProcessedInterests(model_id=interest_id, scores=scores)
-            else:
-                print("DP VALUE IS NONE, PASS THROUGH")
 
         # Either no decoding needed or no model available - extract existing scores
         scores = {}
