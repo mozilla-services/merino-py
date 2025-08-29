@@ -40,6 +40,7 @@ from merino.curated_recommendations.sections import (
     cycle_layouts_for_ranked_sections,
     LAYOUT_CYCLE,
     get_top_story_list,
+    is_crawl_section_id,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -657,6 +658,27 @@ class TestGetCorpusSectionsForLegacyTopics:
 
         result = get_corpus_sections_for_legacy_topic(legacy_sections)
         assert result == legacy_sections
+
+
+class TestIsCrawlSectionId:
+    """Tests for is_crawl_section_id."""
+
+    def test_crawl_section_returns_true(self):
+        """Should return True for section IDs ending with '_crawl'."""
+        assert is_crawl_section_id("technology_crawl") is True
+        assert is_crawl_section_id("sports_crawl") is True
+        assert is_crawl_section_id("some_section_crawl") is True
+
+    def test_non_crawl_section_returns_false(self):
+        """Should return False for section IDs not ending with '_crawl'."""
+        assert is_crawl_section_id("technology") is False
+        assert is_crawl_section_id("sports") is False
+        assert is_crawl_section_id("crawl") is False
+        assert is_crawl_section_id("crawl_technology") is False
+
+    def test_empty_string_returns_false(self):
+        """Should return False for empty string."""
+        assert is_crawl_section_id("") is False
 
 
 class TestRemoveTopStoryRecs:

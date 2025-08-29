@@ -120,7 +120,7 @@ async def _process_corpus_sections(
     corpus_sections_dict: dict[str, CorpusSection],
     min_feed_rank: int,
     scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
-    surface_id: SurfaceId | None = None,
+    surface_id: SurfaceId = SurfaceId.NEW_TAB_EN_US,
 ) -> dict[str, Section]:
     """Process corpus sections into Section objects with scheduled corpus item mapping.
 
@@ -128,20 +128,20 @@ async def _process_corpus_sections(
         corpus_sections_dict: Dict mapping section IDs to CorpusSection objects
         min_feed_rank: Starting rank offset for assigning receivedFeedRank
         scheduled_surface_backend: Backend interface to fetch scheduled corpus items
-        surface_id: Surface ID for fetching scheduled corpus items (required if scheduled_surface_backend provided)
+        surface_id: Surface ID for fetching scheduled corpus items
 
     Returns:
         A mapping from section IDs to Section objects, each with a unique receivedFeedRank
     """
     sid_map: dict[str, str | None] = {}
-    if scheduled_surface_backend is not None and surface_id is not None:
+    if scheduled_surface_backend is not None:
         legacy_corpus = await scheduled_surface_backend.fetch(surface_id)
         for item in legacy_corpus:
             if item.scheduledCorpusItemId is not None:
                 sid_map[item.corpusItemId] = item.scheduledCorpusItemId
 
     sections: dict[str, Section] = {}
-    legacy_sections = {topic.value for topic in Topic}
+    legacy_sections = get_legacy_topic_ids()
 
     for section_id, cs in corpus_sections_dict.items():
         rank = len(sections) + min_feed_rank
@@ -279,13 +279,30 @@ def update_received_feed_rank(sections: dict[str, Section]):
         sections[sid].receivedFeedRank = idx
 
 
+def get_legacy_topic_ids() -> set[str]:
+    """Get the set of legacy topic IDs."""
+    return {topic.value for topic in Topic}
+
+
 def get_corpus_sections_for_legacy_topic(
     corpus_sections: dict[str, Section],
 ) -> dict[str, Section]:
     """Return corpus sections only those matching legacy topics."""
-    legacy_topics = {topic.value for topic in Topic}
+    legacy_topics = get_legacy_topic_ids()
 
     return {sid: section for sid, section in corpus_sections.items() if sid in legacy_topics}
+
+
+def is_crawl_section_id(section_id: str) -> bool:
+    """Check if a section ID represents a crawl section.
+
+    Args:
+        section_id: The section external ID to check
+
+    Returns:
+        True if the section ID ends with '_crawl', False otherwise
+    """
+    return section_id.endswith("_crawl")
 
 
 def filter_sections_by_crawl_experiment(
@@ -303,12 +320,12 @@ def filter_sections_by_crawl_experiment(
     Returns:
         Filtered sections with _crawl suffix removed from keys for crawl sections
     """
-    legacy_topics = {topic.value for topic in Topic}
+    legacy_topics = get_legacy_topic_ids()
     result = {}
 
     for section in corpus_sections:
         section_id = section.externalId
-        is_crawl_section = section_id.endswith("_crawl")
+        is_crawl_section = is_crawl_section_id(section_id)
         base_id = section_id.replace("_crawl", "") if is_crawl_section else section_id
         is_legacy = base_id in legacy_topics
 
