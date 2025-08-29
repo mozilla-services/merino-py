@@ -205,7 +205,7 @@ class TestMlSectionsExperiment:
         ],
     )
     def test_flag_logic(self, name, branch, expected):
-        """Test that ML sections experiment flag matches expected logic"""
+        """Test that experiment flag logic matches expected behavior for both ML sections and crawl experiments."""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch)
         assert is_subtopics_experiment(req) is expected
 

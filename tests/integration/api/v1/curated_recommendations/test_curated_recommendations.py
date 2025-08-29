@@ -45,6 +45,7 @@ from merino.curated_recommendations.prior_backends.experiment_rescaler import (
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
+    CrawlExperimentBranchName,
     ExperimentName,
     Layout,
     Locale,
@@ -1254,7 +1255,7 @@ class TestSections:
                 json={
                     "locale": "en-US",
                     "feeds": ["sections"],
-                    "experimentName": "new-tab-ml-sections",
+                    "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
                     "experimentBranch": "treatment",
                 },
             )
@@ -1300,7 +1301,10 @@ class TestSections:
         "experiment_payload",
         [
             {},  # No experiment
-            {"experimentName": "new-tab-ml-sections", "experimentBranch": "control"},
+            {
+                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": "control",
+            },
         ],
     )
     async def test_corpus_sections_feed_content_control(self, experiment_payload):
@@ -1336,7 +1340,10 @@ class TestSections:
         "experiment_payload",
         [
             {},  # No experiment
-            {"experimentName": "new-tab-ml-sections", "experimentBranch": "treatment"},
+            {
+                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
         ],
     )
     async def test_sections_feed_content(self, locale, experiment_payload, caplog):
@@ -1378,7 +1385,10 @@ class TestSections:
             # Check if non-ML experiment, only legacy sections returned
             legacy_topics = {topic.value for topic in Topic}
 
-            if experiment_payload.get("experimentName") != "new-tab-ml-sections":
+            if (
+                experiment_payload.get("experimentName")
+                != ExperimentName.ML_SECTIONS_EXPERIMENT.value
+            ):
                 # Non-ML sections experiment: All section keys (excluding top_stories) must be in legacy topics
                 for sid in sections:
                     if sid != "top_stories_section":
@@ -1406,7 +1416,10 @@ class TestSections:
         "experiment_payload",
         [
             {},  # No experiment
-            {"experimentName": "new-tab-ml-sections", "experimentBranch": "control"},
+            {
+                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": "control",
+            },
         ],
     )
     async def test_sections_layouts(self, sections_payload, experiment_payload):
@@ -1458,9 +1471,18 @@ class TestSections:
         "experiment_payload",
         [
             {},  # No experiment
-            {"experimentName": "new-tab-ml-sections", "experimentBranch": "treatment"},
-            {"experimentName": "newtab-crawl", "experimentBranch": "control"},
-            {"experimentName": "newtab-crawl", "experimentBranch": "treatment"},
+            {
+                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+            {
+                "experimentName": ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
+            },
+            {
+                "experimentName": ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            },
         ],
     )
     async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
@@ -1508,12 +1530,10 @@ class TestSections:
                 assert not data["feeds"]["arts"]["isBlocked"]
                 # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2, 3]
-                # Only check IAB for non-crawl experiments
-                if experiment_payload.get("experimentName") != "newtab-crawl":
-                    assert data["feeds"]["arts"]["iab"] == {
-                        "taxonomy": "IAB-3.0",
-                        "categories": ["JLBCU7"],
-                    }
+                assert data["feeds"]["arts"]["iab"] == {
+                    "taxonomy": "IAB-3.0",
+                    "categories": ["JLBCU7"],
+                }
             if data["feeds"].get("education") is not None:
                 assert not data["feeds"]["education"]["isFollowed"]
                 assert data["feeds"]["education"]["isBlocked"]
@@ -1522,18 +1542,19 @@ class TestSections:
                 assert not data["feeds"]["sports"]["isBlocked"]
                 # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
                 assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2, 3]
-                # Only check IAB for non-crawl experiments
-                if experiment_payload.get("experimentName") != "newtab-crawl":
-                    assert data["feeds"]["sports"]["iab"] == {
-                        "taxonomy": "IAB-3.0",
-                        "categories": ["483"],  # Production uses 483 for sports
-                    }
+                assert data["feeds"]["sports"]["iab"] == {
+                    "taxonomy": "IAB-3.0",
+                    "categories": ["483"],  # Production uses 483 for sports
+                }
             if data["feeds"].get("health") is not None:
                 assert data["feeds"]["health"]["isFollowed"]
                 assert not data["feeds"]["health"]["isBlocked"]
 
             # For RSS vs. Zyte experiment, verify that section IDs don't have _crawl suffix
-            if experiment_payload.get("experimentName") == "newtab-crawl":
+            if (
+                experiment_payload.get("experimentName")
+                == ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value
+            ):
                 for section_id in sections:
                     if section_id != "top_stories_section":
                         assert not section_id.endswith("_crawl"), (
@@ -1546,72 +1567,95 @@ class TestSections:
         "experiment_payload",
         [
             {},  # No experiment
-            {"experimentName": "newtab-crawl", "experimentBranch": "control"},
-            {"experimentName": "newtab-crawl", "experimentBranch": "treatment"},
+            {
+                "experimentName": ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
+            },
+            {
+                "experimentName": ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            },
         ],
     )
-    async def test_rss_vs_zyte_experiment_sections_filtering(self, caplog, experiment_payload):
+    async def test_rss_vs_zyte_experiment_sections_filtering(
+        self, caplog, experiment_payload, sections_response_data
+    ):
         """Test that the RSS vs. Zyte experiment correctly filters sections based on experiment branch.
 
-        - Treatment branch: should only receive sections with _crawl suffix
-        - Control branch and no experiment: should only receive sections without _crawl suffix
-        - Section IDs should have _crawl suffix removed before being sent to user
+        - Treatment: crawl-exclusive corpus items
+        - Control/no-experiment: regular corpus items only
         """
         async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
             response = await ac.post(
                 "/api/v1/curated-recommendations",
-                json={
-                    "locale": "en-US",
-                    "feeds": ["sections"],
-                }
-                | experiment_payload,
+                json={"locale": "en-US", "feeds": ["sections"]} | experiment_payload,
             )
             data = response.json()
-
-            # Check if the response is valid
             assert response.status_code == 200
-            # Assert no errors were logged
-            errors = [r for r in caplog.records if r.levelname == "ERROR"]
-            assert len(errors) == 0
+            assert not [r for r in caplog.records if r.levelname == "ERROR"]
 
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
-
-            # The fixture data contains enough recommendations for at least 4 sections
+            sections = {name: section for name, section in data["feeds"].items() if section}
             assert len(sections) >= 4
 
-            # Check experiment-specific filtering
-            is_crawl_treatment = (
-                experiment_payload.get("experimentName") == "newtab-crawl"
-                and experiment_payload.get("experimentBranch") == "treatment"
-            )
+            for sid in sections:
+                if sid != "top_stories_section":
+                    assert not sid.endswith("_crawl"), f"{sid} shouldn't have _crawl suffix"
 
-            # Verify that section IDs don't have _crawl suffix (they should be removed)
-            for section_id in sections:
-                if section_id != "top_stories_section":
-                    assert not section_id.endswith("_crawl"), (
-                        f"Section ID {section_id} should not have _crawl suffix "
-                        f"in response (experiment: {experiment_payload})"
-                    )
+            crawl_ids = set()
+            regular_ids = set()
+            for section in sections_response_data["data"]["getSections"]:
+                items = section.get("sectionItems", [])
+                target_set = crawl_ids if section["externalId"].endswith("_crawl") else regular_ids
+                for item in items:
+                    target_set.add(item["corpusItem"]["id"])
 
-            # For legacy topic sections, verify the experiment logic
-            legacy_topics = {topic.value for topic in Topic}
+            crawl_only = crawl_ids - regular_ids
+            regular_only = regular_ids - crawl_ids
+
+            response_ids = {
+                rec["corpusItemId"]
+                for sid, section in sections.items()
+                if sid != "top_stories_section"
+                for rec in section.get("recommendations", [])
+                if "corpusItemId" in rec
+            }
+
+            is_crawl_treatment = experiment_payload.get(
+                "experimentName"
+            ) == ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value and experiment_payload.get(
+                "experimentBranch"
+            ) in [
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+            ]
+
+            crawl_count = len(response_ids & crawl_only)
+            regular_count = len(response_ids & regular_only)
 
             if is_crawl_treatment:
-                # Treatment branch: should get crawl sections (but IDs cleaned)
-                # Since we're using mock data, we can't verify the actual content source
-                # but we can verify the structure is correct
-                pass
+                assert crawl_count >= 50, f"Treatment needs 50+ crawl items, got {crawl_count}"
+                assert (
+                    regular_count == 0
+                ), f"Treatment shouldn't have regular items, got {regular_count}"
             else:
-                # Control branch and no experiment: should get regular sections
-                # All section keys (excluding top_stories) must be in legacy topics
-                for section_id in sections:
-                    if section_id != "top_stories_section":
-                        assert section_id in legacy_topics, (
-                            f"Non-treatment branch should only get legacy topic sections, "
-                            f"got {section_id} (experiment: {experiment_payload})"
-                        )
+                assert regular_count >= 50, f"Control needs 50+ regular items, got {regular_count}"
+                assert crawl_count == 0, f"Control shouldn't have crawl items, got {crawl_count}"
+
+            legacy_topics = {topic.value for topic in Topic}
+            is_expected_to_have_subtopics = (
+                experiment_payload.get("experimentBranch")
+                == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
+            )
+
+            if is_expected_to_have_subtopics:
+                non_legacy = [
+                    s for s in sections if s not in legacy_topics and s != "top_stories_section"
+                ]
+                assert non_legacy, "Treatment-crawl-plus-subtopics needs subtopic sections"
+            else:
+                for sid in sections:
+                    if sid != "top_stories_section":
+                        assert sid in legacy_topics, f"Should only have legacy topics, got {sid}"
 
     @pytest.mark.asyncio
     async def test_curated_recommendations_with_sections_feed_removes_blocked_topics(self, caplog):
@@ -1905,7 +1949,7 @@ class TestSections:
                 json={
                     "locale": "en-US",
                     "feeds": ["sections"],
-                    "experimentName": "new-tab-ml-sections",
+                    "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
                     "experimentBranch": "treatment",
                 },
             )
@@ -2015,7 +2059,7 @@ class TestSections:
                 json={
                     "locale": "en-US",
                     "feeds": ["sections"],
-                    "experimentName": "new-tab-ml-sections",
+                    "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
                     "experimentBranch": "treatment",
                 },
             )
@@ -2076,7 +2120,7 @@ class TestSections:
                     "locale": locale,
                     "region": region,
                     "feeds": ["sections"],
-                    "experimentName": "new-tab-ml-sections",
+                    "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
                     "experimentBranch": "treatment",
                 },
             )
