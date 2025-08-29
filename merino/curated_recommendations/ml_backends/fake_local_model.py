@@ -1,5 +1,6 @@
 """Backup local model for testing and in case of GCS failure"""
 
+from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
     LocalModelBackend,
@@ -11,6 +12,8 @@ from merino.curated_recommendations.ml_backends.protocol import (
 
 CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
 CTR_SECTION_MODEL_ID = "ctr_model_section_1"
+CTR_LIMITED_TOPIC_MODEL_ID = "ctr_limited_topic_v0"
+
 SPECIAL_FEATURE_CLICK = "clicks"
 
 BASE_TOPICS = [
@@ -146,6 +149,66 @@ class FakeLocalModelSections(LocalModelBackend):
 
         return InferredLocalModel(
             model_id=CTR_SECTION_MODEL_ID,
+            surface_id=surface_id,
+            model_data=model_data,
+            model_version=0,
+        )
+
+
+# Creates a simple model based on sections. Section features are stored with a s_
+# in telemetry
+class LimitedTopicV0Model(LocalModelBackend):
+    """Class that defines a limited topic model that supports coarse interest vector
+    Set which model is used at __init__ import
+    """
+
+    """
+     Based on data analysis these were the most impactful topics from personalization when limited to 6
+     However we could in the future benefit from combining HEALTH_FITNESS with SELF_IMPROVEMENT,
+     PERSONAL_FINANCE and FOOD. This would free up one additional, possibly SCIENCE or PARENTING
+    """
+    limited_topics = [
+        Topic.SPORTS.value,
+        Topic.POLITICS.value,
+        Topic.ARTS.value,
+        Topic.HEALTH_FITNESS.value,
+        Topic.BUSINESS.value,
+        Topic.SELF_IMPROVEMENT.value,
+    ]
+
+    model_id = CTR_LIMITED_TOPIC_MODEL_ID
+
+    def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
+        """Fetch local model for the region
+        We could update these thresholds by looking at the percentiles of the CTR
+        """
+
+        def get_topic(topic: str) -> InterestVectorConfig:
+            return InterestVectorConfig(
+                features={f"t_{topic}": 1},
+                thresholds=[0.01, 0.02, 0.03]
+                if topic is not Topic.SPORTS
+                else [0.005, 0.08, 0.02],
+                diff_p=0.84,
+                diff_q=0.05,
+            )
+
+        category_fields: dict[str, InterestVectorConfig] = {
+            a: get_topic(a) for a in self.limited_topics
+        }
+        model_data: ModelData = ModelData(
+            model_type=ModelType.CTR,
+            rescale=False,
+            noise_scale=0.0,
+            day_time_weighting=DayTimeWeightingConfig(
+                days=[3, 14, 45],
+                relative_weight=[1, 1, 1],
+            ),
+            interest_vector=category_fields,
+        )
+
+        return InferredLocalModel(
+            model_id=self.model_id,
             surface_id=surface_id,
             model_data=model_data,
             model_version=0,
