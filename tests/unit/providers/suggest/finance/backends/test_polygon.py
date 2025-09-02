@@ -178,6 +178,10 @@ async def test_fetch_ticker_snapshot_success(
     base_url = "https://api.polygon.io/apiKey=api_key"
     snapshot_endpoint = URL_SINGLE_TICKER_SNAPSHOT.format(ticker=ticker)
 
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    timeit_metric_mock = polygon.metrics_client.timeit
+
     client_mock.get.return_value = Response(
         status_code=200,
         content=orjson.dumps(single_ticker_snapshot_response),
@@ -190,6 +194,7 @@ async def test_fetch_ticker_snapshot_success(
     assert actual is not None
     assert actual == expected
     assert actual["ticker"]["ticker"] == "AAPL"
+    timeit_metric_mock.assert_called_once_with("polygon.request.snapshot.get")
 
 
 @pytest.mark.asyncio
@@ -207,6 +212,10 @@ async def test_fetch_ticker_snapshot_failure_for_http_500(
     base_url = "https://api.polygon.io/apiKey=api_key"
     snapshot_endpoint = URL_SINGLE_TICKER_SNAPSHOT.format(ticker=ticker)
 
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    increment_metric_mock = polygon.metrics_client.increment
+
     client_mock.get.return_value = Response(
         status_code=500,
         content=b"",
@@ -223,6 +232,7 @@ async def test_fetch_ticker_snapshot_failure_for_http_500(
 
     assert records[0].message.startswith("Polygon request error")
     assert "500 Internal Server Error" in records[0].message
+    increment_metric_mock.assert_called_once_with("polygon.request.snapshot.get.failed")
 
 
 @pytest.mark.asyncio
@@ -290,7 +300,7 @@ async def test_get_snapshots_success(
     result = await polygon.get_snapshots(tickers)
 
     # Asserts
-    assert result == [ticker_snapshot, ticker_snapshot, ticker_snapshot]
+    assert result == [ticker_snapshot] * 3
 
     assert fetch_mock.await_count == 3
     assert fetch_mock.await_args_list == [call("AAPL"), call("MSFT"), call("TSLA")]
@@ -338,7 +348,7 @@ async def test_get_snapshots_success_and_fail(
     result = await polygon.get_snapshots(tickers)
 
     # Asserts
-    assert result == [ticker_snapshot, ticker_snapshot]
+    assert result == [ticker_snapshot] * 2
 
     assert fetch_mock.await_count == 3
     assert fetch_mock.await_args_list == [call("AAPL"), call("MSFT"), call("TSLA")]
@@ -355,6 +365,10 @@ async def test_get_ticker_image_url_success(polygon: PolygonBackend) -> None:
     ticker = "AAPL"
     image_url = "https://example.com/logo.png"
 
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    timeit_metric_mock = polygon.metrics_client.timeit
+
     client_mock.get.return_value = Response(
         status_code=200,
         content=orjson.dumps({"results": {"branding": {"logo_url": image_url}}}),
@@ -363,6 +377,8 @@ async def test_get_ticker_image_url_success(polygon: PolygonBackend) -> None:
 
     result = await polygon.get_ticker_image_url(ticker)
     assert result == image_url
+
+    timeit_metric_mock.assert_called_once_with("polygon.request.ticker_overview.get")
 
 
 @pytest.mark.asyncio
@@ -402,12 +418,18 @@ async def test_get_ticker_image_url_http_error(polygon: PolygonBackend):
         request=Request("GET", f"https://api.polygon.io/v3/reference/tickers/{ticker}"),
     )
 
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    increment_metric_mock = polygon.metrics_client.increment
+
     client_mock.get.side_effect = HTTPStatusError(
         "Server Error", request=response.request, response=response
     )
 
     result = await polygon.get_ticker_image_url(ticker)
     assert result is None
+
+    increment_metric_mock.assert_called_once_with("polygon.request.ticker_overview.get.failed")
 
 
 @pytest.mark.asyncio
@@ -441,6 +463,10 @@ async def test_download_ticker_image_success(polygon: PolygonBackend, mocker):
         request=Request(method="GET", url=image_url),
     )
 
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    timeit_metric_mock = polygon.metrics_client.timeit
+
     client_mock = cast(AsyncMock, polygon.http_client)
     client_mock.get.return_value = mock_response
 
@@ -449,6 +475,7 @@ async def test_download_ticker_image_success(polygon: PolygonBackend, mocker):
     assert isinstance(image, Image)
     assert image.content == image_content
     assert image.content_type == "image/png"
+    timeit_metric_mock.assert_called_once_with("polygon.request.company_logo.get")
 
 
 @pytest.mark.asyncio
@@ -472,6 +499,10 @@ async def test_download_ticker_image_failure(polygon: PolygonBackend, mocker):
         request=Request("GET", image_url),
     )
 
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    increment_metric_mock = polygon.metrics_client.increment
+
     client_mock = cast(AsyncMock, polygon.http_client)
     client_mock.get.side_effect = HTTPStatusError(
         "Image download failed", request=response.request, response=response
@@ -480,6 +511,7 @@ async def test_download_ticker_image_failure(polygon: PolygonBackend, mocker):
     result = await polygon.download_ticker_image("AAPL")
 
     assert result is None
+    increment_metric_mock.assert_called_once_with("polygon.request.company_logo.get.failed")
 
 
 @pytest.mark.asyncio
