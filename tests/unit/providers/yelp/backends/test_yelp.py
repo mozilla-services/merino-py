@@ -109,6 +109,7 @@ def fixture_yelp_processed_response() -> dict:
                 "is_open_now": False,
             }
         ],
+        "image_url": "https://firefox-settings-attachments.cdn.mozilla.net/main-workspace/quicksuggest-other/6f44101f-8385-471e-b2dd-2b2ed6624637.svg",
     }
 
 
@@ -132,7 +133,6 @@ async def test_get_business_success(
 
     expected = yelp_processed_response
     actual = await yelp.get_business(term, location)
-    assert actual == expected
     assert actual == expected
 
 
