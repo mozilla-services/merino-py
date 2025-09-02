@@ -1551,10 +1551,11 @@ class TestSections:
                 assert not data["feeds"]["health"]["isBlocked"]
 
             # For RSS vs. Zyte experiment, verify that section IDs don't have _crawl suffix
-            if (
-                experiment_payload.get("experimentName")
-                == ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value
-            ):
+            experiment_name = experiment_payload.get("experimentName")
+            if experiment_name in [
+                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+            ]:
                 for section_id in sections:
                     if section_id != "top_stories_section":
                         assert not section_id.endswith("_crawl"), (
@@ -1573,6 +1574,14 @@ class TestSections:
             },
             {
                 "experimentName": ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            },
+            {
+                "experimentName": f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
+            },
+            {
+                "experimentName": f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
                 "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
             },
         ],
@@ -1620,11 +1629,11 @@ class TestSections:
                 if "corpusItemId" in rec
             }
 
-            is_crawl_treatment = experiment_payload.get(
-                "experimentName"
-            ) == ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value and experiment_payload.get(
-                "experimentBranch"
-            ) in [
+            experiment_name = experiment_payload.get("experimentName")
+            is_crawl_treatment = experiment_name in [
+                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+            ] and experiment_payload.get("experimentBranch") in [
                 CrawlExperimentBranchName.TREATMENT_CRAWL.value,
                 CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
             ]
