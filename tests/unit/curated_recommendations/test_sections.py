@@ -286,6 +286,22 @@ class TestCrawlExperiment:
                 CrawlExperimentBranchName.CONTROL.value,
                 False,
             ),
+            # Test with optin- prefix
+            (
+                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                True,
+            ),
+            (
+                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+                True,
+            ),
+            (
+                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                CrawlExperimentBranchName.CONTROL.value,
+                False,
+            ),
             ("other", CrawlExperimentBranchName.TREATMENT_CRAWL.value, False),
         ],
     )
@@ -311,6 +327,22 @@ class TestCrawlExperiment:
             ),
             (
                 ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+            ),
+            # Test with optin- prefix
+            (
+                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                CrawlExperimentBranchName.CONTROL.value,
+                CrawlExperimentBranchName.CONTROL.value,
+            ),
+            (
+                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            ),
+            (
+                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
                 CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
                 CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
             ),

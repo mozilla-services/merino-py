@@ -258,10 +258,17 @@ def get_crawl_experiment_branch(request: CuratedRecommendationsRequest) -> str |
     - control: Non-crawl legacy topics only
     - treatment-crawl: Crawl legacy topics only
     - treatment-crawl-plus-subtopics: Crawl legacy topics + non-crawl subtopics
+
+    Handles both the regular experiment name and the optin- prefixed version for forced enrollment.
     """
-    if request.experimentName != ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value:
-        return None
-    return request.experimentBranch
+    experiment_name = ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value
+    # Check for both the experiment name and the optin- prefixed version (forced enrollment)
+    if (
+        request.experimentName == experiment_name
+        or request.experimentName == f"optin-{experiment_name}"
+    ):
+        return request.experimentBranch
+    return None
 
 
 def is_crawl_experiment_treatment(request: CuratedRecommendationsRequest) -> bool:
