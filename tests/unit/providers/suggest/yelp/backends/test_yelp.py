@@ -122,7 +122,7 @@ async def test_get_business_success(
 
     base_url = "https://api.yelp.com/v3"
     location = "toronto"
-    term = "breakfast &"
+    term = "pancakes"
     endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
 
     client_mock.get.return_value = Response(
@@ -147,7 +147,7 @@ async def test_get_business_bad_response(
 
     base_url = "https://api.yelp.com/v3"
     location = "toronto"
-    term = "breakfast &"
+    term = "pancakes"
     endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
 
     client_mock.get.return_value = Response(
@@ -177,7 +177,7 @@ async def test_get_business_failure_for_http_500(
 
     base_url = "https://api.yelp.com/v3"
     location = "toronto"
-    term = "breakfast &"
+    term = "pancakes"
     endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
 
     client_mock.get.return_value = Response(
@@ -201,11 +201,11 @@ async def test_get_business_failure_for_http_500(
 async def test_cache_key_generation(yelp: YelpBackend) -> None:
     """Test cache key generation method."""
     # Test the actual cache key generation method
-    key1 = yelp.generate_cache_key("coffee", "toronto")
-    key2 = yelp.generate_cache_key("pizza", "new york")
+    key1 = yelp.generate_cache_key("coffeeshops", "toronto")
+    key2 = yelp.generate_cache_key("ramen", "new york")
 
     # Keys should be consistent for same inputs
-    key3 = yelp.generate_cache_key("coffee", "toronto")
+    key3 = yelp.generate_cache_key("coffeeshops", "toronto")
     assert key1 == key3
 
     # Different inputs should generate different keys
@@ -262,7 +262,7 @@ async def test_cache_store_error_handling(
     )
 
     location = "toronto"
-    term = "coffee"
+    term = "coffeeshops"
 
     # Should still return result even if cache store fails
     result = await yelp.get_business(term, location)
@@ -302,3 +302,30 @@ async def test_get_from_cache_decode_error(
     result = await yelp.get_from_cache("test-key")
     assert result is None
     assert "cache decode error" in caplog.text.lower()
+
+
+@pytest.mark.parametrize(
+    "search_term, expected",
+    [
+        # Category matches
+        ("Coffeeshops near me", "coffeeshops"),
+        ("ramen", "ramen"),
+        # Category non matches
+        ("pizza", None),
+        # Bad location matches
+        ("coffeeshops in the neighbourhood", None),
+        ("ramen randomGarbageEndString", None),
+        # Extra whitespace
+        ("   coffeeshops nearby   ", "coffeeshops"),
+    ],
+)
+def test_category_keyword_match(mocker: MockerFixture, search_term: str, expected: str) -> None:
+    """Test that the category keyword match works as expected."""
+    yelp = YelpBackend(
+        api_key="test_key",
+        http_client=mocker.AsyncMock(spec=AsyncClient),
+        url_business_search="test_url",
+        cache_ttl_sec=3600,
+        cache=mocker.AsyncMock(),
+    )
+    assert yelp.match_and_extract_search_term(search_term) == expected

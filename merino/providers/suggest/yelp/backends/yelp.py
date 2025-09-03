@@ -9,6 +9,7 @@ from httpx import AsyncClient, Response, HTTPStatusError
 
 from merino.cache.protocol import CacheAdapter
 from merino.cache.redis import CacheAdapterError
+from merino.providers.suggest.yelp.backends.keyword_mapping import LOCATION_KEYWORDS, CATEGORIES
 from merino.providers.suggest.yelp.backends.protocol import YelpBackendProtocol
 
 LIMIT_DEFAULT = 1
@@ -86,23 +87,26 @@ class YelpBackend(YelpBackendProtocol):
 
     async def get_business(self, search_term: str, location: str) -> dict | None:
         """Get businesses from Yelp calling its api."""
-        # Generate cache key
-        cache_key = self.generate_cache_key(search_term, location)
+        cleaned_search_term = self.match_and_extract_search_term(search_term)
+        if cleaned_search_term:
+            # Generate cache key
+            cache_key = self.generate_cache_key(cleaned_search_term, location)
+            # Try cache first
+            cached_result = await self.get_from_cache(cache_key)
+            if cached_result is not None:
+                return cached_result  # type: ignore[no-any-return]
 
-        # Try cache first
-        cached_result = await self.get_from_cache(cache_key)
-        if cached_result is not None:
-            return cached_result  # type: ignore[no-any-return]
+            # Cache miss - fetch from API
+            logger.debug(f"Yelp cache miss, calling API: {cleaned_search_term}/{location}")
+            api_result = await self.fetch(cleaned_search_term, location)
 
-        # Cache miss - fetch from API
-        logger.debug(f"Yelp cache miss, calling API: {search_term}/{location}")
-        api_result = await self.fetch(search_term, location)
+            # Store in cache if successful
+            if api_result is not None:
+                await self.store_in_cache(cache_key, api_result)
 
-        # Store in cache if successful
-        if api_result is not None:
-            await self.store_in_cache(cache_key, api_result)
+            return api_result
 
-        return api_result
+        return None
 
     async def fetch(self, search_term: str, location: str) -> dict | None:
         """Get businesses from Yelp API."""
@@ -148,6 +152,23 @@ class YelpBackend(YelpBackendProtocol):
         except (KeyError, IndexError):
             logger.warning(f"Yelp business response json has incorrect shape: {response}")
             return None
+
+    @staticmethod
+    def match_and_extract_search_term(search_term: str) -> str | None:
+        """Match and extract search term."""
+        stripped = search_term.casefold().strip()
+
+        # If it ends with a location keyword, strip it
+        for loc_kw in LOCATION_KEYWORDS:
+            if stripped.endswith(loc_kw):
+                stripped = stripped[: -len(loc_kw)].rstrip()
+                break  # only strip once
+
+        # Now check against categories
+        if any(stripped == kw.casefold() for kw in CATEGORIES):
+            return stripped
+
+        return None
 
     async def shutdown(self) -> None:
         """Shutdown any persistent connections. Currently a no-op."""
