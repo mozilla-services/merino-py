@@ -161,7 +161,7 @@ class YelpBackend(YelpBackendProtocol):
         # If it ends with a location keyword, strip it
         for loc_kw in LOCATION_KEYWORDS:
             if stripped.endswith(loc_kw):
-                stripped = stripped[: -len(loc_kw)].rstrip()
+                stripped = stripped.removesuffix(loc_kw).rstrip()
                 break  # only strip once
 
         # Now check against categories
