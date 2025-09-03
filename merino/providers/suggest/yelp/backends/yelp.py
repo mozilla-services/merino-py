@@ -165,7 +165,7 @@ class YelpBackend(YelpBackendProtocol):
                 break  # only strip once
 
         # Now check against categories
-        if any(stripped == kw.casefold() for kw in CATEGORIES):
+        if stripped in CATEGORIES:
             return stripped
 
         return None

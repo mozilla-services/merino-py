@@ -2,11 +2,11 @@
 
 CATEGORIES = frozenset(
     {
-        "Coffeeshops",
-        "Gelato",
-        "Ice Cream & Frozen Yogurt",
-        "Pancakes",
-        "Ramen",
+        "coffeeshops",
+        "gelato",
+        "ice cream & frozen yogurt",
+        "pancakes",
+        "ramen",
     }
 )
 LOCATION_KEYWORDS = frozenset({"around me", "in area", "near by", "near me", "nearby"})

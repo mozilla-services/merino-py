@@ -309,7 +309,7 @@ async def test_get_from_cache_decode_error(
     [
         # Category matches
         ("Coffeeshops near me", "coffeeshops"),
-        ("ramen", "ramen"),
+        ("ice cream & frozen yogurt", "ice cream & frozen yogurt"),
         # Category non matches
         ("pizza", None),
         # Bad location matches
