@@ -14,6 +14,8 @@ from merino.providers.suggest.yelp.backends.protocol import YelpBackendProtocol
 LIMIT_DEFAULT = 1
 logger = logging.getLogger(__name__)
 
+YELP_ICON_URL = "https://firefox-settings-attachments.cdn.mozilla.net/main-workspace/quicksuggest-other/6f44101f-8385-471e-b2dd-2b2ed6624637.svg"
+
 
 class YelpBackend(YelpBackendProtocol):
     """Backend that connects to the Yelp API."""
@@ -140,6 +142,7 @@ class YelpBackend(YelpBackendProtocol):
                 "price": price,
                 "review_count": review_count,
                 "business_hours": business_hours,
+                "image_url": YELP_ICON_URL,
             }
 
         except (KeyError, IndexError):

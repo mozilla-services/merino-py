@@ -46,6 +46,7 @@ class YelpDetails(BaseModel):
     rating: float | None = None
     review_count: int | None = None
     business_hours: list[dict] | None = None
+    image_url: str | None = None
 
 
 class CustomDetails(BaseModel, arbitrary_types_allowed=False):
