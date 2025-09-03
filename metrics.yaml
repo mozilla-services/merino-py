@@ -24,13 +24,13 @@ suggest/polygon:
     alert_policy:
 
   polygon_request_snapshot_get_failed:
-      description: |
-        A counter for failed snapshot v3 get requests
-      type: counter
-      labels: []
-      scope: |
-        The "api/v1/suggest" API endpoint.
-      alert_policy: []
+    description: |
+      A counter for failed snapshot v3 get requests
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
 
   polygon_request_ticker_overview_get:
     description: |
