@@ -2,10 +2,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Unit tests for the Polygon backend module."""
+"""Unit tests for the Yelp backend module."""
 
-from typing import cast
-from unittest.mock import AsyncMock
+from typing import cast, Any
+from unittest.mock import AsyncMock, MagicMock
 
 import orjson
 import pytest
@@ -21,13 +21,14 @@ URL_BUSINESS_SEARCH = settings.yelp.url_business_search
 
 
 @pytest.fixture(name="yelp")
-def fixture_yelp_backend(mocker: MockerFixture) -> YelpBackend:
+def fixture_yelp_backend(mocker: MockerFixture, statsd_mock: Any) -> YelpBackend:
     """Yelp Backend for testing."""
     return YelpBackend(
         api_key="api_key",
         http_client=mocker.AsyncMock(spec=AsyncClient),
         url_business_search=URL_BUSINESS_SEARCH,
         cache_ttl_sec=86400,
+        metrics_client=statsd_mock,
     )
 
 
@@ -117,13 +118,18 @@ def fixture_yelp_processed_response() -> dict:
 async def test_get_business_success(
     yelp: YelpBackend, yelp_response: dict, yelp_processed_response: dict
 ) -> None:
-    """Test get_businesses method returns valid response."""
+    """Test get_businesses method returns valid response and records metrics."""
     client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
 
     base_url = "https://api.yelp.com/v3"
     location = "toronto"
     term = "breakfast &"
     endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
+
+    # Mock metrics client
+    yelp.metrics_client = MagicMock()
+    timeit_metric_mock = yelp.metrics_client.timeit
+    increment_metric_mock = yelp.metrics_client.increment
 
     client_mock.get.return_value = Response(
         status_code=200,
@@ -135,6 +141,11 @@ async def test_get_business_success(
     actual = await yelp.get_business(term, location)
     assert actual == expected
 
+    # Assert metrics were called
+    timeit_metric_mock.assert_called_once_with("yelp.request.business_search.get")
+    increment_metric_mock.assert_any_call("yelp.cache.miss")
+    increment_metric_mock.assert_any_call("yelp.request.business_search.success")
+
 
 @pytest.mark.asyncio
 async def test_get_business_bad_response(
@@ -142,13 +153,17 @@ async def test_get_business_bad_response(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
 ) -> None:
-    """Test get_businesses method returns a bad response."""
+    """Test get_businesses method returns a bad response and records metrics."""
     client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
 
     base_url = "https://api.yelp.com/v3"
     location = "toronto"
     term = "breakfast &"
     endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
+
+    # Mock metrics client
+    yelp.metrics_client = MagicMock()
+    increment_metric_mock = yelp.metrics_client.increment
 
     client_mock.get.return_value = Response(
         status_code=200,
@@ -165,6 +180,10 @@ async def test_get_business_bad_response(
     # Second record should be the error
     assert records[1].message.startswith("Yelp business response json has incorrect shape")
 
+    # Assert metrics were called
+    increment_metric_mock.assert_any_call("yelp.cache.miss")
+    increment_metric_mock.assert_any_call("yelp.business.invalid_response")
+
 
 @pytest.mark.asyncio
 async def test_get_business_failure_for_http_500(
@@ -172,13 +191,17 @@ async def test_get_business_failure_for_http_500(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
 ) -> None:
-    """Test get_businesses method raises a HTTPStatusError 500."""
+    """Test get_businesses method raises a HTTPStatusError 500 and records metrics."""
     client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
 
     base_url = "https://api.yelp.com/v3"
     location = "toronto"
     term = "breakfast &"
     endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
+
+    # Mock metrics client
+    yelp.metrics_client = MagicMock()
+    increment_metric_mock = yelp.metrics_client.increment
 
     client_mock.get.return_value = Response(
         status_code=500,
@@ -195,6 +218,55 @@ async def test_get_business_failure_for_http_500(
     # Second record should be the HTTP error
     assert records[1].message.startswith("Yelp request error")
     assert "500 Internal Server Error" in records[1].message
+
+    # Assert metrics were called
+    increment_metric_mock.assert_any_call("yelp.cache.miss")
+    increment_metric_mock.assert_any_call("yelp.request.business_search.failed")
+
+
+@pytest.mark.asyncio
+async def test_cache_hit_metrics(yelp: YelpBackend, mocker: MockerFixture) -> None:
+    """Test that cache hit metrics are recorded."""
+    # Mock cache to return data
+    cache_mock = mocker.AsyncMock()
+    cache_mock.get.return_value = orjson.dumps({"name": "Test Business"})
+    yelp.cache = cache_mock
+
+    # Mock metrics client
+    yelp.metrics_client = MagicMock()
+    increment_metric_mock = yelp.metrics_client.increment
+
+    result = await yelp.get_business("coffee", "toronto")
+
+    assert result == {"name": "Test Business"}
+    increment_metric_mock.assert_called_once_with("yelp.cache.hit")
+
+
+@pytest.mark.asyncio
+async def test_cache_error_metrics(yelp: YelpBackend, mocker: MockerFixture) -> None:
+    """Test that cache error metrics are recorded."""
+    from merino.cache.redis import CacheAdapterError
+
+    # Mock cache to raise error
+    cache_mock = mocker.AsyncMock()
+    cache_mock.get.side_effect = CacheAdapterError("Redis error")
+    yelp.cache = cache_mock
+
+    # Mock metrics client
+    yelp.metrics_client = MagicMock()
+    increment_metric_mock = yelp.metrics_client.increment
+
+    # Mock successful API response so we don't get additional errors
+    client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        content=orjson.dumps({"businesses": []}),
+        request=Request(method="GET", url="http://test.com"),
+    )
+
+    await yelp.get_business("coffee", "toronto")
+
+    increment_metric_mock.assert_any_call("yelp.cache.error")
 
 
 @pytest.mark.asyncio
@@ -220,7 +292,7 @@ async def test_cache_key_generation(yelp: YelpBackend) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_from_cache_with_redis_cache(mocker: MockerFixture) -> None:
+async def test_get_from_cache_with_redis_cache(mocker: MockerFixture, statsd_mock: Any) -> None:
     """Test get_from_cache with Redis cache adapter."""
     # Mock Redis cache properly
     cache_mock = mocker.AsyncMock()
@@ -231,6 +303,7 @@ async def test_get_from_cache_with_redis_cache(mocker: MockerFixture) -> None:
         http_client=mocker.AsyncMock(spec=AsyncClient),
         url_business_search="test_url",
         cache_ttl_sec=3600,
+        metrics_client=statsd_mock,
         cache=cache_mock,
     )
 
@@ -247,11 +320,15 @@ async def test_cache_store_error_handling(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
 ) -> None:
-    """Test error handling when cache storage fails."""
+    """Test error handling when cache storage fails and records metrics."""
     # Mock the actual cache.set to raise an error (not store_in_cache)
     cache_mock = mocker.AsyncMock()
     cache_mock.set.side_effect = Exception("Redis connection failed")
     yelp.cache = cache_mock
+
+    # Mock metrics client
+    yelp.metrics_client = MagicMock()
+    increment_metric_mock = yelp.metrics_client.increment
 
     # Mock successful API response
     client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
@@ -271,6 +348,9 @@ async def test_cache_store_error_handling(
     # Should log the cache error
     assert "Yelp cache store error" in caplog.text or "cache store error" in caplog.text.lower()
 
+    # Assert metrics were called
+    increment_metric_mock.assert_any_call("yelp.cache.store_error")
+
 
 @pytest.mark.asyncio
 async def test_cache_key_case_insensitive(yelp: YelpBackend) -> None:
@@ -285,9 +365,9 @@ async def test_cache_key_case_insensitive(yelp: YelpBackend) -> None:
 
 @pytest.mark.asyncio
 async def test_get_from_cache_decode_error(
-    mocker: MockerFixture, caplog: LogCaptureFixture
+    mocker: MockerFixture, caplog: LogCaptureFixture, statsd_mock: Any
 ) -> None:
-    """Test error handling when cached data cannot be decoded."""
+    """Test error handling when cached data cannot be decoded and records metrics."""
     cache_mock = mocker.AsyncMock()
     cache_mock.get.return_value = b"invalid json data"
 
@@ -296,9 +376,52 @@ async def test_get_from_cache_decode_error(
         http_client=mocker.AsyncMock(spec=AsyncClient),
         url_business_search="test_url",
         cache_ttl_sec=3600,
+        metrics_client=statsd_mock,
         cache=cache_mock,
     )
+
+    # Mock metrics client
+    yelp.metrics_client = MagicMock()
+    increment_metric_mock = yelp.metrics_client.increment
 
     result = await yelp.get_from_cache("test-key")
     assert result is None
     assert "cache decode error" in caplog.text.lower()
+
+    # Assert both metrics were called - we got a cache hit but couldn't decode the data
+    increment_metric_mock.assert_any_call("yelp.cache.hit")
+    increment_metric_mock.assert_any_call("yelp.cache.decode_error")
+    assert increment_metric_mock.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_cache_set_success_metrics(yelp: YelpBackend, mocker: MockerFixture) -> None:
+    """Test that successful cache set operations record metrics."""
+    cache_mock = mocker.AsyncMock()
+    yelp.cache = cache_mock
+
+    # Mock metrics client
+    yelp.metrics_client = MagicMock()
+    increment_metric_mock = yelp.metrics_client.increment
+
+    await yelp.store_in_cache("test-key", {"test": "data"})
+
+    increment_metric_mock.assert_called_once_with("yelp.cache.set")
+
+
+@pytest.mark.asyncio
+async def test_cache_set_error_metrics(yelp: YelpBackend, mocker: MockerFixture) -> None:
+    """Test that cache set errors record metrics."""
+    from merino.cache.redis import CacheAdapterError
+
+    cache_mock = mocker.AsyncMock()
+    cache_mock.set.side_effect = CacheAdapterError("Redis error")
+    yelp.cache = cache_mock
+
+    # Mock metrics client
+    yelp.metrics_client = MagicMock()
+    increment_metric_mock = yelp.metrics_client.increment
+
+    await yelp.store_in_cache("test-key", {"test": "data"})
+
+    increment_metric_mock.assert_called_once_with("yelp.cache.set_error")
