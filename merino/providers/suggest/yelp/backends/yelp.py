@@ -11,6 +11,7 @@ from merino.cache.protocol import CacheAdapter
 from merino.cache.redis import CacheAdapterError
 from merino.providers.suggest.yelp.backends.keyword_mapping import LOCATION_KEYWORDS, CATEGORIES
 from merino.providers.suggest.yelp.backends.protocol import YelpBackendProtocol
+from merino.providers.suggest.yelp.backends.utils import get_day_of_week
 
 LIMIT_DEFAULT = 1
 logger = logging.getLogger(__name__)
@@ -94,7 +95,7 @@ class YelpBackend(YelpBackendProtocol):
             # Try cache first
             cached_result = await self.get_from_cache(cache_key)
             if cached_result is not None:
-                return cached_result  # type: ignore[no-any-return]
+                return self._with_today_hours(cached_result)
 
             # Cache miss - fetch from API
             logger.debug(f"Yelp cache miss, calling API: {cleaned_search_term}/{location}")
@@ -104,7 +105,7 @@ class YelpBackend(YelpBackendProtocol):
             if api_result is not None:
                 await self.store_in_cache(cache_key, api_result)
 
-            return api_result
+                return self._with_today_hours(api_result)
 
         return None
 
@@ -133,6 +134,7 @@ class YelpBackend(YelpBackendProtocol):
             url = business["url"]
             address = business["location"]["address1"]
             business_hours = business["business_hours"]
+            coordinates = business["coordinates"]
             # extract potentially null fields
             price = business.get("price")
             rating = business.get("rating")
@@ -147,6 +149,7 @@ class YelpBackend(YelpBackendProtocol):
                 "review_count": review_count,
                 "business_hours": business_hours,
                 "image_url": YELP_ICON_URL,
+                "coordinates": coordinates,
             }
 
         except (KeyError, IndexError):
@@ -169,6 +172,24 @@ class YelpBackend(YelpBackendProtocol):
             return stripped
 
         return None
+
+    @staticmethod
+    def _with_today_hours(response: dict) -> dict | None:
+        try:
+            longitude = response["coordinates"]["longitude"]
+            weekday = get_day_of_week(longitude)
+
+            open_hours = response["business_hours"][0]["open"]
+            today_open_hours = open_hours[weekday]
+            start = today_open_hours["start"]
+            end = today_open_hours["end"]
+
+            # copy everything over except for "coordinates"
+            cleaned_response = {k: v for k, v in response.items() if k != "coordinates"}
+            return {**cleaned_response, "business_hours": {"start": start, "end": end}}
+        except (KeyError, IndexError):
+            logger.warning(f"Yelp business hours response has incorrect shape: {response}")
+            return None
 
     async def shutdown(self) -> None:
         """Shutdown any persistent connections. Currently a no-op."""

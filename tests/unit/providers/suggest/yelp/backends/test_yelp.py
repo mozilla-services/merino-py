@@ -94,21 +94,7 @@ def fixture_yelp_processed_response() -> dict:
         "rating": 4.8,
         "price": "$$",
         "review_count": 989,
-        "business_hours": [
-            {
-                "open": [
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 0},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 1},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 2},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 3},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 4},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 5},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 6},
-                ],
-                "hours_type": "REGULAR",
-                "is_open_now": False,
-            }
-        ],
+        "business_hours": {"start": "0700", "end": "1500"},
         "image_url": "https://firefox-settings-attachments.cdn.mozilla.net/main-workspace/quicksuggest-other/6f44101f-8385-471e-b2dd-2b2ed6624637.svg",
     }
 

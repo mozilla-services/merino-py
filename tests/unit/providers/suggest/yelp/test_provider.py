@@ -40,21 +40,7 @@ def fixture_business_data() -> dict:
         "rating": 4.8,
         "price": "$",
         "review_count": 22,
-        "business_hours": [
-            {
-                "open": [
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 0},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 1},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 2},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 3},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 4},
-                    {"is_overnight": False, "start": "0800", "end": "2300", "day": 5},
-                    {"is_overnight": False, "start": "0800", "end": "2300", "day": 6},
-                ],
-                "hours_type": "REGULAR",
-                "is_open_now": True,
-            }
-        ],
+        "business_hours": {"start": "0700", "end": "2300"},
     }
 
 
