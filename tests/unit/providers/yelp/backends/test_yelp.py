@@ -123,7 +123,7 @@ async def test_get_business_success(
 
     base_url = "https://api.yelp.com/v3"
     location = "toronto"
-    term = "pancakes"
+    term = "breakfast &"
     endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
 
     # Mock metrics client
@@ -158,7 +158,7 @@ async def test_get_business_bad_response(
 
     base_url = "https://api.yelp.com/v3"
     location = "toronto"
-    term = "pancakes"
+    term = "breakfast &"
     endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
 
     # Mock metrics client
@@ -196,7 +196,7 @@ async def test_get_business_failure_for_http_500(
 
     base_url = "https://api.yelp.com/v3"
     location = "toronto"
-    term = "pancakes"
+    term = "breakfast &"
     endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
 
     # Mock metrics client
@@ -273,11 +273,11 @@ async def test_cache_error_metrics(yelp: YelpBackend, mocker: MockerFixture) -> 
 async def test_cache_key_generation(yelp: YelpBackend) -> None:
     """Test cache key generation method."""
     # Test the actual cache key generation method
-    key1 = yelp.generate_cache_key("coffeeshops", "toronto")
-    key2 = yelp.generate_cache_key("ramen", "new york")
+    key1 = yelp.generate_cache_key("coffee", "toronto")
+    key2 = yelp.generate_cache_key("pizza", "new york")
 
     # Keys should be consistent for same inputs
-    key3 = yelp.generate_cache_key("coffeeshops", "toronto")
+    key3 = yelp.generate_cache_key("coffee", "toronto")
     assert key1 == key3
 
     # Different inputs should generate different keys
@@ -339,7 +339,7 @@ async def test_cache_store_error_handling(
     )
 
     location = "toronto"
-    term = "coffeeshops"
+    term = "coffee"
 
     # Should still return result even if cache store fails
     result = await yelp.get_business(term, location)

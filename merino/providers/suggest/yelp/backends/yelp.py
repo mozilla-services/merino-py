@@ -95,26 +95,24 @@ class YelpBackend(YelpBackendProtocol):
 
     async def get_business(self, search_term: str, location: str) -> dict | None:
         """Get businesses from Yelp calling its api."""
-        if search_term != "":
-            # Generate cache key
-            cache_key = self.generate_cache_key(search_term, location)
-            # Try cache first
-            cached_result = await self.get_from_cache(cache_key)
-            if cached_result is not None:
-                return cached_result  # type: ignore[no-any-return]
+        # Generate cache key
+        cache_key = self.generate_cache_key(search_term, location)
 
-            # Cache miss - fetch from API
-            logger.debug(f"Yelp cache miss, calling API: {search_term}/{location}")
-            self.metrics_client.increment("yelp.cache.miss")
-            api_result = await self.fetch(search_term, location)
+        # Try cache first
+        cached_result = await self.get_from_cache(cache_key)
+        if cached_result is not None:
+            return cached_result  # type: ignore[no-any-return]
 
-            # Store in cache if successful
-            if api_result is not None:
-                await self.store_in_cache(cache_key, api_result)
+        # Cache miss - fetch from API
+        logger.debug(f"Yelp cache miss, calling API: {search_term}/{location}")
+        self.metrics_client.increment("yelp.cache.miss")
+        api_result = await self.fetch(search_term, location)
 
-                return api_result
+        # Store in cache if successful
+        if api_result is not None:
+            await self.store_in_cache(cache_key, api_result)
 
-        return None
+        return api_result
 
     async def fetch(self, search_term: str, location: str) -> dict | None:
         """Get businesses from Yelp API."""
