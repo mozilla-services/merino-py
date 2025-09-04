@@ -147,7 +147,7 @@ def test_extract_snapshot_if_valid_success(
 ) -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return TickerSnapshot object."""
     expected_market_open = TickerSnapshot(
-        ticker="AAPL", last_trade_price="120.47", todays_change_percent="+0.82"
+        ticker="AAPL", last_trade_price="229.47", todays_change_percent="+0.82"
     )
     actual_market_open = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
@@ -162,7 +162,7 @@ def test_extract_snapshot_if_valid_success(
     # setting the market status to early_trading.
     single_ticker_snapshot_response["results"][0]["market_status"] = "early_trading"
     expected_market_early_trading = TickerSnapshot(
-        ticker="AAPL", last_trade_price="227.16", todays_change_percent="+0.82"
+        ticker="AAPL", last_trade_price="227.16", todays_change_percent="-0.13"
     )
     actual_market_early_trading = extract_snapshot_if_valid(single_ticker_snapshot_response)
 

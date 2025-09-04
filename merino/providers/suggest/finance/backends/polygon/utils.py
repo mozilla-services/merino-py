@@ -59,18 +59,19 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
         result = data["results"][0]
         ticker = result["ticker"]
         market_status = result["market_status"]
+
+        # Default price and change percent values based on if market status is open.
+        # Overriden below if market status changes.
+        price = result["session"]["price"]
         change_percent = result["session"]["change_percent"]
 
-        # Default price value based on if market status is open.
-        # Overriden below if market status changes
-        price = result["last_trade"]["price"]
-
-        # TODO verify early trading change percentage
         if market_status == "early_trading":
             price = result["session"]["previous_close"]
+            change_percent = result["session"]["early_trading_change_percent"]
+
         if market_status == "closed" or market_status == "late_trading":
-            change_percent = result["session"]["regular_trading_change_percent"]
             price = result["session"]["close"]
+            change_percent = result["session"]["regular_trading_change_percent"]
 
         if not isinstance(change_percent, float) or not isinstance(price, float):
             logger.warning(f"Polygon snapshot response json has incorrect data types: {data}")
