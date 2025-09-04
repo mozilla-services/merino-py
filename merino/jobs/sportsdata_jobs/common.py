@@ -18,6 +18,7 @@ import typer
 from merino.configs import settings
 from merino.utils.http_client import create_http_client
 from merino.jobs.sportsdata_jobs.data import Team, Event
+from merino.jobs.sportsdata_jobs.errors import SportDataError, SportDataWarning
 
 
 DEFAULT_LOGGING_LEVEL = "INFO"
@@ -58,29 +59,6 @@ class GameStatus(StrEnum):
     @classmethod
     def is_in_progress(cls, state: str) -> bool:
         return state.lower() in [cls.InProgress, cls.Suspended]
-
-
-# Errors
-class SportDataError(BaseException):
-    message: str
-
-    def __init__(self, message: str):
-        self.message = message
-
-    def __str__(self):
-        name = type(self).__name__
-        return f"{name}: {self.message}"
-
-
-class SportDataWarning(BaseException):
-    message: str
-
-    def __init__(self, message: str):
-        self.message = message
-
-    def __str__(self):
-        name = type(self).__name__
-        return f"{name}: {self.message}"
 
 
 async def fetch_data(client: AsyncClient, url: str) -> Any:

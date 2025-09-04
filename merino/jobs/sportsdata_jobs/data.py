@@ -10,7 +10,8 @@ from redis import ConnectionPool, ConnectionError, Redis, RedisError
 from typing import Any
 
 from merino.utils.http_client import create_http_client
-from merino.jobs.sportsdata_jobs.common import SportDate, SportDataError, SportDataWarning, DataStore, GameStatus
+from merino.jobs.sportsdata_jobs.common import SportDate, DataStore, GameStatus
+from merino.jobs.sportsdata_jobs.errors import SportDataError, SportDataWarning
 from merino.providers.suggest.sports import LOGGING_TAG
 
 
