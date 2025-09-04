@@ -27,22 +27,13 @@ repos:
         args:
           - "--skip"
           - "B101,B104,B311"
-  - repo: "https://github.com/pre-commit/mirrors-mypy"
-    rev: v1.14.1
+  - repo: local
     hooks:
       - id: mypy
-        files: "^merino|^tests"
-        args:
-          [
-            --config-file=pyproject.toml
-          ]
-        additional_dependencies:
-          [
-            "pydantic",
-            "types-geoip2",
-            "types-PyYAML",
-            "types-requests",
-            "types-redis",
-            "types-python-dateutil",
-            "types-Pillow",
-          ]
+        name: mypy
+        entry: uv run mypy
+        args: [merino, tests, --config-file=pyproject.toml]
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
