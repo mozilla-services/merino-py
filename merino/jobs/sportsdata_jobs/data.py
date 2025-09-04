@@ -10,7 +10,7 @@ from redis import ConnectionPool, ConnectionError, Redis, RedisError
 from typing import Any
 
 from merino.utils.http_client import create_http_client
-from merino.jobs.sportsdata_jobs.common import SportDate, SportDataError, DataStore
+from merino.jobs.sportsdata_jobs.common import SportDate, SportDataError, SportDataWarning, DataStore, GameStatus
 from merino.providers.suggest.sports import LOGGING_TAG
 
 
@@ -118,7 +118,7 @@ class Event(BaseModel):
     home_score: int
     away_score: int
     # enum: "Pending", "Final"
-    status: str
+    status: GameStatus
 
     @classmethod
     def parse(cls, sport: Sport, serialized: str):
@@ -129,36 +129,33 @@ class Event(BaseModel):
             raise SportDataError(
                 f"Conflicting team name found in storage: {sport_name}"
             )
+        try:
+            status = GameStatus(parsed.get("status"))
+        except ValueError as ex:
+            logging.debug(f"""{LOGGING_TAG}⚠️ Unknown status: {parsed.get("status")}, ignoring""")
+            raise SportDataWarning("Unknown game status, ignoring")
         self = cls(
             sport=sport,
             date=parsed.get("date"),
             home_team=parsed.get("home_team"),
             away_team=parsed.get("away_team"),
-            score=parsed.get("score", "No score"),
-            status=parsed.get("status"),
+            home_score=parsed.get("home_score"),
+            away_score=parsed.get("away_score"),
+            status=GameStatus(parsed.get("status")),
         )
         return self
 
     def as_str(self) -> str:
         """Serialize to JSON string"""
-        return json.dumps(
-            dict(
-                sport_name=self.sport.name,
-                date=self.date,
-                home_team=self.home_team,
-                away_team=self.away_team,
-                score=self.score or "No score",
-                status=self.status,
-            )
-        )
+        return json.dumps(self)
 
-    def suggest_text(self) -> str:
-        text = f"{self.away_team.name} at {self.home_team.name}"
+    def suggest_text(self, away:Team, home:Team) -> str:
+        text = f"{away.name} at {home.name}"
         match self.status:
             case "Upcoming":
                 text = f"{text} starts {self.date}"
             case "Final":
-                text = f"{text} Final score: {self.score}"
+                text = f"{text} Final score: {self.away_score} - {self.home_score}"
             case _:
-                text = f"{text} currently {self.score}"
+                text = f"{text} currently {self.away_score} - {self.home_score}"
         return text

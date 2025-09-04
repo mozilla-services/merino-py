@@ -7,6 +7,7 @@ import time
 
 from abc import abstractmethod
 from datetime import datetime, timedelta
+from enum import StrEnum
 from dynaconf.base import Settings
 from httpx import AsyncClient
 from pydantic import BaseModel
@@ -29,7 +30,49 @@ ONE_HOUR = ONE_MINUTE * 60
 FOUR_HOURS = ONE_HOUR * 4  # For Team Profiles
 
 
+# Enums
+class GameStatus(StrEnum):
+    """Enum of the normalized, valid, trackable game states.
+
+    See https://support.sportsdata.io/hc/en-us/articles/14287629964567-Process-Guide-Game-Status
+    """
+
+    Scheduled = "scheduled"
+    Delayed = "delayed"  # equivalent to "scheduled"
+    Postponed = "postponed"  # equivalent to "scheduled"
+    InProgress = "inprogress"
+    Suspended = "suspended"  # equivalent to "inprogress"
+    Cancelled = "cancelled"
+    Final = "final"
+    F_OT = "f/ot"  # Equivalent to "final"
+    # other states can be ignored?
+
+    @classmethod
+    def is_final(cls, state: str) -> bool:
+        return state.lower() in [cls.Final, cls.F_OT]
+
+    @classmethod
+    def is_scheduled(cls, state: str) -> bool:
+        return state.lower() in [cls.Scheduled, cls.Delayed, cls.Postponed]
+
+    @classmethod
+    def is_in_progress(cls, state: str) -> bool:
+        return state.lower() in [cls.InProgress, cls.Suspended]
+
+
+# Errors
 class SportDataError(BaseException):
+    message: str
+
+    def __init__(self, message: str):
+        self.message = message
+
+    def __str__(self):
+        name = type(self).__name__
+        return f"{name}: {self.message}"
+
+
+class SportDataWarning(BaseException):
     message: str
 
     def __init__(self, message: str):
@@ -259,7 +302,7 @@ class UCL(Sport):
 
     async def get_teams(self):
         """fetch the Standings data: (4 hour interval)"""
-        # https://api.sportsdata.io/v4/soccer/scores/json/Teams/ucl?key=
+        # e.g. https://api.sportsdata.io/v3/mlb/scores/json/teams?key=
         # Sample:
         """
         [
@@ -329,8 +372,44 @@ class UCL(Sport):
                 ),
             )
 
-    async def get_events(self):
-        """Fetch the events for this sport. (5min interval)"""
+    async def get_schedule(self):
+        """Fetch the list of events for the sport. (5 min interval)"""
+        # Sample:
+        """
+        [
+            {
+                "GameID": 74642,
+                "Season": 2025,
+                "SeasonType": 1,
+                "Status": "Final",
+                "Day": "2025-04-21T00:00:00",
+                "DateTime": "2025-04-21T18:10:00",
+                "AwayTeam": "NYY",
+                "HomeTeam": "CLE",
+                "AwayTeamID": 29,
+                "HomeTeamID": 10,
+                "RescheduledGameID": null,
+                "StadiumID": 10,
+                "IsClosed": true,
+                "Updated": "2025-08-01T19:32:01",
+                "GameEndDateTime": "2025-04-21T20:53:42",
+                "DateTimeUTC": "2025-04-21T22:10:00",
+                "RescheduledFromGameID": null,
+                "SuspensionResumeDay": null,
+                "SuspensionResumeDateTime": null,
+                "SeriesInfo": null
+            },
+            ...
+        ]
+        """
+        season = datetime.now().year
+        url = f"{self.base_url}/SchedulesBasic/{season}?key={self.api_key}"
+        data = await fetch_data(self.http_client, url)
+
+    async def get_scores(self):
+        """Fetch the current scores for the date for this sport. (5min interval)"""
+        # https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/ucl/2025?key=
+
         # Sample:
         """
         [
@@ -374,27 +453,31 @@ class UCL(Sport):
             "PlayoffAggregateScore": null
         },
         """
-        url = f"{self.base_url}/Teams/{self.name}?key={self.api_key}"
+        date = SportDate()
+        url = f"{self.base_url}/ScoresBasic/{date}?key={self.api_key}"
         data = await fetch_data(self.http_client, url)
         start_window = datetime.now() - timedelta(days=-7)
         end_window = datetime.now() + timedelta(days=7)
         for raw in data:
             event_date = datetime.fromisoformat(raw.get("DateTime"))
             if start_window <= event_date <= end_window:
-                event = Event(
-                    sport=self,
-                    date=event_date,
-                    home_team=self.team_key(raw.get("HomeTeamKey")),
-                    away_team=self.team_key(raw.get("AwayTeamKey")),
-                    home_score=int(raw.get("HomeTeamScore")),
-                    away_score=int(raw.get("AwayTeamScore")),
-                    status=raw.get("status"),
-                )
+                try:
+                    event = Event(
+                        sport=self,
+                        date=event_date,
+                        home_team=self.team_key(raw.get("HomeTeamKey")),
+                        away_team=self.team_key(raw.get("AwayTeamKey")),
+                        home_score=int(raw.get("HomeTeamScore")),
+                        away_score=int(raw.get("AwayTeamScore")),
+                        status=raw.get("status"),
+                    )
+                except SportDataWarning:
+                    continue
 
     async def update(self):
         """Fetch and update the Team information."""
         await self.get_teams()
-        await self.get_events()
+        await self.get_schedule()
 
         return timedelta(days=3)
 
