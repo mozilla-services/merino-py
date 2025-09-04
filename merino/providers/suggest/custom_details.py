@@ -45,7 +45,7 @@ class YelpDetails(BaseModel):
     price: str | None = None
     rating: float | None = None
     review_count: int | None = None
-    business_hours: list[dict] | None = None
+    business_hours: dict | None = None
     image_url: str | None = None
 
 

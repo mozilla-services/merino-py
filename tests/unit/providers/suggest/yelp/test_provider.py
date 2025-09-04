@@ -40,21 +40,7 @@ def fixture_business_data() -> dict:
         "rating": 4.8,
         "price": "$",
         "review_count": 22,
-        "business_hours": [
-            {
-                "open": [
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 0},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 1},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 2},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 3},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 4},
-                    {"is_overnight": False, "start": "0800", "end": "2300", "day": 5},
-                    {"is_overnight": False, "start": "0800", "end": "2300", "day": 6},
-                ],
-                "hours_type": "REGULAR",
-                "is_open_now": True,
-            }
-        ],
+        "business_hours": {"start": "0700", "end": "2300"},
     }
 
 
@@ -132,7 +118,7 @@ def test_validate_fails_on_geolocation_without_city(
     )
 
     with pytest.raises(HTTPException) as exc_info:
-        provider.validate(SuggestionRequest(query="coffee", geolocation=geolocation_no_city))
+        provider.validate(SuggestionRequest(query="coffeeshops", geolocation=geolocation_no_city))
 
     assert exc_info.value.status_code == 400
     assert "Valid query and location are required" in exc_info.value.detail
@@ -144,7 +130,7 @@ def test_validate_passes_with_valid_request(
 ) -> None:
     """Test that the validate method passes with valid request."""
     # Should not raise any exception
-    provider.validate(SuggestionRequest(query="coffee", geolocation=geolocation))
+    provider.validate(SuggestionRequest(query="coffeeshops", geolocation=geolocation))
 
 
 @pytest.mark.asyncio
@@ -157,7 +143,7 @@ async def test_query_returns_empty_when_no_business(
     backend_mock.get_business.return_value = None
 
     suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(query="coffee", geolocation=geolocation)
+        SuggestionRequest(query="coffeeshops", geolocation=geolocation)
     )
 
     assert suggestions == []
