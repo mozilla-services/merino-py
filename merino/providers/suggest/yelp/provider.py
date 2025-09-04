@@ -2,7 +2,10 @@
 
 import aiodogstatsd
 from fastapi import HTTPException
-from merino.providers.suggest.base import BaseProvider, SuggestionRequest
+from pydantic import HttpUrl
+
+from merino.providers.suggest.base import BaseProvider, SuggestionRequest, BaseSuggestion
+from merino.providers.suggest.custom_details import CustomDetails, YelpDetails
 from merino.providers.suggest.yelp.backends.protocol import YelpBackendProtocol
 
 
@@ -42,6 +45,45 @@ class Provider(BaseProvider):
                 detail="Invalid query parameters: `q` is missing",
             )
 
+        geolocation = srequest.geolocation
+        location = geolocation.city if geolocation else None
+        search_term = srequest.query.strip() if srequest.query else ""
+
+        if not search_term or not location:
+            raise HTTPException(
+                status_code=400,
+                detail="Valid query and location are required for Yelp suggestions",
+            )
+
     async def query(self, request: SuggestionRequest):
         """Retrieve yelp suggestions"""
+        geolocation = request.geolocation
+        location = geolocation.city
+        search_term = request.query.strip()
+
+        yelp_business = await self.backend.get_business(search_term, location)
+
+        if yelp_business is not None:
+            suggestions = [self.build_suggestion(yelp_business)]
+            self.metrics_client.increment("yelp.suggestions.count", value=len(suggestions))
+            return suggestions
+
+        self.metrics_client.increment("yelp.suggestions.count", value=0)
         return []
+
+    def build_suggestion(self, data: dict) -> BaseSuggestion | None:
+        """Build the suggestion with custom yelp details."""
+        url = data.pop("url")
+        custom_details = CustomDetails(yelp=YelpDetails(**data))
+        return BaseSuggestion(
+            title="Yelp Suggestion",
+            url=HttpUrl(url),
+            provider=self.name,
+            is_sponsored=False,
+            score=0.26,  # need to confirm value
+            custom_details=custom_details,
+        )
+
+    def process_query(self) -> str:
+        """Stub placeholder until we finalize keywords."""
+        return "coffee"

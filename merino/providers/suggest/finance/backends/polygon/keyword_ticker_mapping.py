@@ -12,7 +12,7 @@ from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mappin
 
 # Keyword to stock ticker mapping. Each keyword maps to its corresponding stock ticker.
 # NOTE: Treat as read-only at runtime.
-KEYWORD_TO_STOCK_TICKER = {
+KEYWORD_TO_STOCK_TICKER_MAPPING = {
     "aal stock": "AAL",
     "aapl stock": "AAPL",
     "abbv stock": "ABBV",
@@ -204,7 +204,7 @@ KEYWORD_TO_STOCK_TICKER = {
 
 # Keyword to ETF ticker mapping. Each keyword maps to its corresponding ETF ticker.
 # NOTE: Treat as read-only at runtime.
-KEYWORD_TO_ETF_TICKER = {
+KEYWORD_TO_ETF_TICKER_MAPPING = {
     "100 nasdaq": NASDAQ_POPULAR_3_ETF,
     "529 account": NASDAQ_POPULAR_3_ETF,
     "american stock market today": NASDAQ_POPULAR_3_ETF,
@@ -330,7 +330,3 @@ KEYWORD_TO_ETF_TICKER = {
     "stocks": NASDAQ_POPULAR_3_ETF,
     "venture capital": NASDAQ_POPULAR_3_ETF,
 }
-
-STOCK_TICKER_KEYWORDS = frozenset(KEYWORD_TO_STOCK_TICKER.keys())
-
-ETF_TICKER_KEYWORDS = frozenset(KEYWORD_TO_ETF_TICKER.keys())

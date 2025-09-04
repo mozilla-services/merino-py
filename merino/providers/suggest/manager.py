@@ -212,9 +212,31 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 cron_interval_sec=setting.cron_interval_sec,
             )
         case ProviderType.YELP:
+            cache = (
+                RedisAdapter(
+                    *create_redis_clients(
+                        settings.redis.server,
+                        settings.redis.replica,
+                        settings.redis.max_connections,
+                        settings.redis.socket_connect_timeout_sec,
+                        settings.redis.socket_timeout_sec,
+                    )
+                )
+                if setting.cache == "redis"
+                else NoCacheAdapter()
+            )
+
             return YelpProvider(
                 backend=YelpBackend(
                     api_key=settings.yelp.api_key,
+                    http_client=create_http_client(
+                        base_url=settings.yelp.url_base,
+                        connect_timeout=settings.providers.yelp.connect_timeout_sec,
+                    ),
+                    url_business_search=settings.yelp.url_business_search,
+                    cache_ttl_sec=setting.cache_ttls.business_search_ttl_sec,
+                    metrics_client=get_metrics_client(),
+                    cache=cache,
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,

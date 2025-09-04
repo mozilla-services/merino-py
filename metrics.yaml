@@ -13,3 +13,183 @@ suggest/accuweather:
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
+suggest/polygon:
+  polygon_request_snapshot_get:
+    description: |
+      A gauge to track the latency for snapshot v3 get request
+    type: gauge
+    labels: [] # no labels
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy:
+
+  polygon_request_snapshot_get_failed:
+    description: |
+      A counter for failed snapshot v3 get requests
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  polygon_request_ticker_overview_get:
+    description: |
+      A gauge to track the latency for ticker overview get request
+    type: gauge
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  polygon_request_ticker_overview_get_failed:
+    description: |
+      A counter for failed ticker overview get requests
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  polygon_request_company_logo_get:
+    description: |
+      A gauge to track the latency for company logo get request
+    type: gauge
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  polygon_request_company_logo_get_failed:
+    description: |
+      A counter for failed company logo get requests
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  polygon_company_logo_not_found:
+    description: |
+      A counter for when a requested company logo is not found
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+suggest/yelp:
+  yelp_request_business_search_get:
+    description: |
+      A gauge to track the latency for Yelp business search API requests
+    type: gauge
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_request_business_search_success:
+    description: |
+      A counter for successful Yelp business search API requests
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_request_business_search_failed:
+    description: |
+      A counter for failed Yelp business search API requests
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_cache_hit:
+    description: |
+      A counter for Yelp cache hits
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_cache_miss:
+    description: |
+      A counter for Yelp cache misses
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_cache_set:
+    description: |
+      A counter for successful Yelp cache set operations
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_cache_error:
+    description: |
+      A counter for Yelp cache retrieval errors
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_cache_set_error:
+    description: |
+      A counter for Yelp cache set errors
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_cache_decode_error:
+    description: |
+      A counter for Yelp cache decode errors
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_cache_store_error:
+    description: |
+      A counter for Yelp cache store errors
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_business_invalid_response:
+    description: |
+      A counter for invalid Yelp business API responses
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_suggestions_count:
+    description: |
+      A counter for the number of Yelp suggestions returned
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  yelp_initialization_completed:
+    description: |
+      A counter for completed Yelp provider initializations
+    type: counter
+    labels: []
+    scope: |
+      Provider initialization
+    alert_policy: []

@@ -694,7 +694,7 @@ api_key = "test"
 url_base = "https://api.polygon.io"
 
 # MERINO_POLYGON__URL_TICKER_SNAPSHOT
-url_single_ticker_snapshot = "/v2/snapshot/locale/us/markets/stocks/tickers/{ticker}"
+url_single_ticker_snapshot = "v3/snapshot"
 
 # MERINO_POLYGON__URL_TICKER_OVERVIEW
 url_single_ticker_overview = "/v3/reference/tickers/{ticker}"
@@ -719,7 +719,7 @@ backend = "yelp"
 # MERINO_PROVIDERS__YELP__CACHE
 # The store used to yelp data. Either `redis` or `none`.
 # If `redis`, the global Redis settings must be set. See redis.server.
-cache = "none"
+cache = "redis"
 
 # MERINO_PROVIDERS__YELP__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
@@ -747,12 +747,24 @@ circuit_breaker_failure_threshold = 10
 # The circuit breaker will stay open for this period of time until the next recovery attempt.
 circuit_breaker_recover_timeout_sec = 30
 
+[default.providers.yelp.cache_ttls]
+# Cache TTLs for Yelp business data.
+
+# MERINO_PROVIDERS__YELP__CACHE_TTLS__BUSINESS_SEARCH_TTL_SEC
+business_search_ttl_sec = 86400 # 24 hours
+
 
 [default.yelp]
 # MERINO_YELP__API_KEY
 # The API key to Yelp's API endpoint.
 # In production, this should be set via environment variable as a secret.
 api_key = ""
+
+# MERINO_YELP__URL_BASE
+url_base = "https://api.yelp.com/v3"
+# MERINO_YELP__BUSINESS_SEARCH_URL
+# The endpoint that provides Yelp businesses
+url_business_search = "/businesses/search?location={location}&term={term}&limit={limit}&open_now=true"
 
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME

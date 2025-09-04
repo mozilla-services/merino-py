@@ -18,8 +18,8 @@ class TickerSnapshot(BaseModel):
     """Ticker Snapshot."""
 
     ticker: str
-    todays_change_perc: str
-    last_price: str
+    todays_change_percent: str
+    last_trade_price: str
 
 
 class TickerSummary(BaseModel):
