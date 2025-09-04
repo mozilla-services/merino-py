@@ -4,6 +4,7 @@ import hashlib
 import logging
 from datetime import timedelta
 from typing import Any, Optional
+import aiodogstatsd
 import orjson
 from httpx import AsyncClient, Response, HTTPStatusError
 
@@ -25,6 +26,7 @@ class YelpBackend(YelpBackendProtocol):
     url_business_search: str
     cache: Optional[CacheAdapter]
     cache_ttl_sec: int
+    metrics_client: aiodogstatsd.Client
 
     def __init__(
         self,
@@ -32,6 +34,7 @@ class YelpBackend(YelpBackendProtocol):
         http_client: AsyncClient,
         url_business_search: str,
         cache_ttl_sec: int,  # 24 hours
+        metrics_client: aiodogstatsd.Client,
         cache: Optional[CacheAdapter] = None,
     ) -> None:
         """Initialize the Yelp backend."""
@@ -40,6 +43,7 @@ class YelpBackend(YelpBackendProtocol):
         self.url_business_search = url_business_search
         self.cache_ttl_sec = cache_ttl_sec
         self.cache = cache
+        self.metrics_client = metrics_client
 
     def generate_cache_key(self, search_term: str, location: str) -> str:
         """Generate cache key using consistent hashing approach."""
@@ -59,12 +63,14 @@ class YelpBackend(YelpBackendProtocol):
         try:
             cached_data = await self.cache.get(cache_key)
             if cached_data:
-                logger.debug(f"Yelp cache hit: {cache_key}")
+                self.metrics_client.increment("yelp.cache.hit")
                 return orjson.loads(cached_data)
         except CacheAdapterError as e:
             logger.warning(f"Yelp cache get error for {cache_key}: {e}")
+            self.metrics_client.increment("yelp.cache.error")
         except Exception as e:
             logger.warning(f"Yelp cache decode error for {cache_key}: {e}")
+            self.metrics_client.increment("yelp.cache.decode_error")
 
         return None
 
@@ -79,10 +85,13 @@ class YelpBackend(YelpBackendProtocol):
                 cache_key, cached_value, ttl=timedelta(seconds=self.cache_ttl_sec)
             )
             logger.debug(f"Yelp cached response: {cache_key}")
+            self.metrics_client.increment("yelp.cache.set")
         except CacheAdapterError as e:
             logger.warning(f"Yelp cache set error for {cache_key}: {e}")
+            self.metrics_client.increment("yelp.cache.set_error")
         except Exception as e:
             logger.error(f"Yelp cache store error for {cache_key}: {e}")
+            self.metrics_client.increment("yelp.cache.store_error")
 
     async def get_business(self, search_term: str, location: str) -> dict | None:
         """Get businesses from Yelp calling its api."""
@@ -96,6 +105,7 @@ class YelpBackend(YelpBackendProtocol):
 
         # Cache miss - fetch from API
         logger.debug(f"Yelp cache miss, calling API: {search_term}/{location}")
+        self.metrics_client.increment("yelp.cache.miss")
         api_result = await self.fetch(search_term, location)
 
         # Store in cache if successful
@@ -111,13 +121,23 @@ class YelpBackend(YelpBackendProtocol):
             term=search_term, location=location, limit=LIMIT_DEFAULT
         )
         try:
-            response: Response = await self.http_client.get(url, headers=headers)
+            with self.metrics_client.timeit("yelp.request.business_search.get"):
+                response: Response = await self.http_client.get(url, headers=headers)
+
             response.raise_for_status()
-            return self.process_response(response.json())
+            result = self.process_response(response.json())
+
+            if result is not None:
+                self.metrics_client.increment("yelp.request.business_search.success")
+            else:
+                self.metrics_client.increment("yelp.business.invalid_response")
+
+            return result
         except HTTPStatusError as ex:
             logger.warning(
                 f"Yelp request error: Failed to get businesses for {search_term}/{location}: {ex.response.status_code} {ex.response.reason_phrase}"
             )
+            self.metrics_client.increment("yelp.request.business_search.failed")
         return None
 
     @staticmethod

@@ -64,8 +64,11 @@ class Provider(BaseProvider):
         yelp_business = await self.backend.get_business(search_term, location)
 
         if yelp_business is not None:
-            return [self.build_suggestion(yelp_business)]
+            suggestions = [self.build_suggestion(yelp_business)]
+            self.metrics_client.increment("yelp.suggestions.count", value=len(suggestions))
+            return suggestions
 
+        self.metrics_client.increment("yelp.suggestions.count", value=0)
         return []
 
     def build_suggestion(self, data: dict) -> BaseSuggestion | None:

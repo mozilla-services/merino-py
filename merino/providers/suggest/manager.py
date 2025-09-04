@@ -235,6 +235,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     ),
                     url_business_search=settings.yelp.url_business_search,
                     cache_ttl_sec=setting.cache_ttls.business_search_ttl_sec,
+                    metrics_client=get_metrics_client(),
                     cache=cache,
                 ),
                 metrics_client=get_metrics_client(),
