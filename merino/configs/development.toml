@@ -36,3 +36,5 @@ source_gcp_project = "mozdata"
 # See `jobs.sportsdata_jobs.common` for list of supported sports
 sports = "NBA,NHL,EPL,UCL"
 api_key = "abc123"
+event_storage = "redis://localhost:6379"
+team_storage = "redis://localhost:6379"

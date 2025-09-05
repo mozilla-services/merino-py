@@ -10,7 +10,20 @@ storage system (and will presume a Redis-like storage system)
 
 """
 
-"""Perform nightly data fetch and cleanup"""
+"""
+TODO:
+    * Finish loader
+        * Add in elastic search tooling for keyword search
+        * Build out classes for EPL, NBA, NHL from UCL model (remember, NBA/NHL simpler)
+    * Build out ../providers/suggest/sports/
+        * Get keyword fetcher
+        * build out suggest model
+    * Add tests (unit and integration)
+    * Address TODOs
+    * Document
+
+
+"""
 
 import asyncio
 import logging
@@ -26,11 +39,13 @@ from merino.jobs.sportsdata_jobs.common import (
     Sport,
     SportDataError,
     LOGGING_TAG,
+)
+from merino.jobs.sportsdata_jobs.data import (
     # NFL,
     # MLB,
-    NBA,
-    NHL,
-    EPL,
+    # NBA,
+    # NHL,
+    # EPL,
     UCL,
 )
 from merino.configs import settings
@@ -79,12 +94,12 @@ class SportDataUpdater(BaseModel):
                 #    sport = NFL(settings, self.store)
                 # case "MLB":
                 #    sport = MLB(settings, self.store)
-                case "NBA":
-                    sport = NBA(settings, self.store)
-                case "NHL":
-                    sport = NHL(settings, self.store)
-                case "EPL":
-                    sport = EPL(settings, self.store)
+                # case "NBA":
+                #   sport = NBA(settings, self.store)
+                # case "NHL":
+                #    sport = NHL(settings, self.store)
+                # case "EPL":
+                #    sport = EPL(settings, self.store)
                 case "UCL":
                     sport = UCL(settings, self.store)
                 case _:
