@@ -2,8 +2,10 @@
 
 import hashlib
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime, time
 from typing import Any, Optional
+from zoneinfo import ZoneInfo
+
 import aiodogstatsd
 import orjson
 from httpx import AsyncClient, Response, HTTPStatusError
@@ -11,6 +13,7 @@ from httpx import AsyncClient, Response, HTTPStatusError
 from merino.cache.protocol import CacheAdapter
 from merino.cache.redis import CacheAdapterError
 from merino.providers.suggest.yelp.backends.keyword_mapping import CATEGORIES
+from merino.middleware.geolocation import Location
 from merino.providers.suggest.yelp.backends.protocol import YelpBackendProtocol
 
 LIMIT_DEFAULT = 1
@@ -94,27 +97,28 @@ class YelpBackend(YelpBackendProtocol):
             logger.error(f"Yelp cache store error for {cache_key}: {e}")
             self.metrics_client.increment("yelp.cache.store_error")
 
-    async def get_business(self, search_term: str, location: str) -> dict | None:
+    async def get_business(self, search_term: str, geolocation: Location) -> dict | None:
         """Get businesses from Yelp calling its api."""
-        if search_term in CATEGORIES:
+        city = geolocation.city
+        timezone = geolocation.timezone
+        if city and timezone and search_term in CATEGORIES:
             # Generate cache key
-            cache_key = self.generate_cache_key(search_term, location)
+            cache_key = self.generate_cache_key(search_term, city)
+
             # Try cache first
             cached_result = await self.get_from_cache(cache_key)
-            if cached_result is not None:
-                return cached_result  # type: ignore[no-any-return]
+            if cached_result is not None and self.is_open_now(cached_result, timezone):
+                return self.format_business_hours(cached_result, timezone)
 
             # Cache miss - fetch from API
-            logger.debug(f"Yelp cache miss, calling API: {search_term}/{location}")
+            logger.debug(f"Yelp cache miss, calling API: {search_term}/{city}")
             self.metrics_client.increment("yelp.cache.miss")
-            api_result = await self.fetch(search_term, location)
+            api_result = await self.fetch(search_term, city)
 
             # Store in cache if successful
             if api_result is not None:
                 await self.store_in_cache(cache_key, api_result)
-
-                return api_result
-
+                return self.format_business_hours(api_result, timezone)
         return None
 
     async def fetch(self, search_term: str, location: str) -> dict | None:
@@ -170,6 +174,43 @@ class YelpBackend(YelpBackendProtocol):
 
         except (KeyError, IndexError):
             logger.warning(f"Yelp business response json has incorrect shape: {response}")
+            return None
+
+    @staticmethod
+    def is_open_now(response: Any, timezone: str) -> bool:
+        """Determine whether business is open based on current time."""
+        now = datetime.now(ZoneInfo(timezone))
+        hour = now.hour
+        minute = now.minute
+        time_now = time(hour, minute)
+        try:
+            business_hours = response["business_hours"][0]["open"]
+            # parse time strings into time
+            start_string = business_hours[0]["start"]
+            start_time = time(int(start_string[:2]), int(start_string[2:]))
+            end_string = business_hours[0]["end"]
+            end_time = time(int(end_string[:2]), int(end_string[2:]))
+
+            if start_time == time(0) and end_time == time(0):
+                return True
+            return start_time <= time_now <= end_time
+        except (KeyError, IndexError):
+            logger.warning(f"Yelp business hours has incorrect shape: {response}")
+            return False
+
+    @staticmethod
+    def format_business_hours(response: dict, timezone: str) -> dict | None:
+        """Format response to give only today's business hours."""
+        now = datetime.now(ZoneInfo(timezone))
+        weekday = now.weekday()
+        try:
+            business_hours = response["business_hours"][0]["open"]
+            today_hours = business_hours[weekday]
+            start = today_hours["start"]
+            end = today_hours["end"]
+            return {**response, "business_hours": {"start": start, "end": end}}
+        except (KeyError, IndexError):
+            logger.warning(f"Yelp business hours has incorrect shape: {response}")
             return None
 
     async def shutdown(self) -> None:

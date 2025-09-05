@@ -176,7 +176,7 @@ async def test_query_strips_whitespace_from_search_term(
     await provider.query(SuggestionRequest(query="  coffee  ", geolocation=geolocation))
 
     # Verify the backend was called with stripped search term
-    backend_mock.get_business.assert_called_once_with("coffee", "Toronto")
+    backend_mock.get_business.assert_called_once_with("coffee", geolocation)
 
 
 def test_build_suggestion_removes_url_from_data(
