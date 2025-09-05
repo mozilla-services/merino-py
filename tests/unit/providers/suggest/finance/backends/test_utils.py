@@ -10,11 +10,9 @@ from typing import Any
 from merino.providers.suggest.finance.backends.polygon.utils import (
     build_ticker_summary,
     lookup_ticker_company,
+    lookup_ticker_exchange,
     extract_snapshot_if_valid,
     get_tickers_for_query,
-    _is_valid_ticker as is_valid_ticker,
-    _is_valid_keyword_for_stock_ticker as is_valid_keyword_for_stock_ticker,
-    _is_valid_keyword_for_etf_ticker as is_valid_keyword_for_etf_ticker,
 )
 
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
@@ -24,66 +22,76 @@ from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, T
 def fixture_single_ticker_snapshot_response() -> dict[str, Any]:
     """Sample response for single ticker snapshot request."""
     return {
-        "request_id": "657e430f1ae768891f018e08e03598d8",
+        "results": [
+            {
+                "market_status": "open",
+                "name": "Apple Inc.",
+                "ticker": "AAPL",
+                "type": "stocks",
+                "session": {
+                    "change": 2.31,
+                    "change_percent": 0.82,
+                    "early_trading_change": -0.29,
+                    "early_trading_change_percent": -0.128,
+                    "regular_trading_change": 2.15,
+                    "regular_trading_change_percent": 0.946,
+                    "late_trading_change": 0.16,
+                    "late_trading_change_percent": 0.0698,
+                    "close": 229.31,
+                    "high": 229.49,
+                    "low": 224.69,
+                    "open": 226.87,
+                    "volume": 54429562,
+                    "previous_close": 227.16,
+                    "price": 229.47,
+                    "last_updated": 1756240441077677000,
+                    "vwap": 228.20475,
+                },
+                "last_quote": {
+                    "last_updated": 1756238399992857900,
+                    "timeframe": "DELAYED",
+                    "ask": 230,
+                    "ask_size": 2,
+                    "ask_exchange": 15,
+                    "bid": 227.5,
+                    "bid_size": 1,
+                    "bid_exchange": 15,
+                },
+                "last_trade": {
+                    "last_updated": 1756239373267552000,
+                    "timeframe": "DELAYED",
+                    "id": "12275",
+                    "price": 120.47,
+                    "size": 9,
+                    "exchange": 15,
+                    "conditions": [12, 37],
+                },
+                "last_minute": {
+                    "close": 229.39,
+                    "high": 229.391,
+                    "low": 229.39,
+                    "transactions": 11,
+                    "open": 229.391,
+                    "volume": 1029,
+                    "vwap": 229.39002,
+                    "last_updated": 1756240441077677000,
+                },
+                "fmv": 229.47,
+            }
+        ],
         "status": "OK",
-        "ticker": {
-            "day": {
-                "c": 120.4229,
-                "h": 120.53,
-                "l": 118.81,
-                "o": 119.62,
-                "v": 28727868,
-                "vw": 119.725,
-            },
-            "lastQuote": {"P": 120.47, "S": 4, "p": 120.46, "s": 8, "t": 1605195918507251700},
-            "lastTrade": {
-                "c": [14, 41],
-                "i": "4046",
-                "p": 120.47,
-                "s": 236,
-                "t": 1605195918306274000,
-                "x": 10,
-            },
-            "min": {
-                "av": 28724441,
-                "c": 120.4201,
-                "h": 120.468,
-                "l": 120.37,
-                "n": 762,
-                "o": 120.435,
-                "t": 1684428720000,
-                "v": 270796,
-                "vw": 120.4129,
-            },
-            "prevDay": {
-                "c": 119.49,
-                "h": 119.63,
-                "l": 116.44,
-                "o": 117.19,
-                "v": 110597265,
-                "vw": 118.4998,
-            },
-            "ticker": "AAPL",
-            "todaysChange": 0.98,
-            "todaysChangePerc": 0.8201378182667601,
-            "updated": 1605195918306274000,
-        },
+        "request_id": "542d40fedaab4caabf414a165726f5dc",
     }
 
 
-def test_is_valid_ticker_success() -> None:
-    """Test the _is_valid_ticker method. Should return True for a valid ticker."""
-    assert is_valid_ticker("AAPL") is True
-
-
-def test_is_valid_ticker_fail() -> None:
-    """Test the _is_valid_ticker method. Should return False for an invalid ticker."""
-    assert is_valid_ticker("BOB") is False
-
-
-def test_lookup_ticker_company_success() -> None:
+def test_lookup_stock_ticker_company_success() -> None:
     """Test lookup_ticker_company method. Should return valid company name."""
     assert lookup_ticker_company("TSLA") == "Tesla Inc"
+
+
+def test_lookup_etf_ticker_company_success() -> None:
+    """Test lookup_ticker_company method. Should return valid company name."""
+    assert lookup_ticker_company("VOO") == "Vanguard S&P 500 ETF"
 
 
 def test_lookup_ticker_company_fail() -> None:
@@ -93,47 +101,44 @@ def test_lookup_ticker_company_fail() -> None:
     assert error.typename == "KeyError"
 
 
-def test_is_valid_keyword_for_stock_ticker_success() -> None:
-    """Test the _is_valid_keyword_for_stock_ticker method. Should return True for a valid keyword."""
-    assert is_valid_keyword_for_stock_ticker("jpmorgan chase stock") is True
+def test_lookup_stock_ticker_exchange_success() -> None:
+    """Test lookup_ticker_exchange method. Should return valid exchange name."""
+    assert lookup_ticker_exchange("TSLA") == "NASDAQ"
 
 
-def test_is_valid_keyword_for_stock_ticker_fail() -> None:
-    """Test the _is_valid_keyword_for_stock_ticker method. Should return false for an invalid keyword."""
-    assert is_valid_keyword_for_stock_ticker("bobs burgers stock") is False
+def test_lookup_etf_ticker_exchange_success() -> None:
+    """Test lookup_ticker_exchange method. Should return valid exchange name."""
+    assert lookup_ticker_exchange("VOO") == "NYSE"
 
 
-def test_is_valid_keyword_for_etf_ticker_success() -> None:
-    """Test the _is_valid_keyword_for_etf_ticker method. Should return True for a valid keyword."""
-    assert is_valid_keyword_for_etf_ticker("nasdaq composite stock index") is True
+def test_lookup_ticker_exchange_fail() -> None:
+    """Test lookup_ticker_exchange method. Although this use case wouldn't happen at run time but we are still testing for it."""
+    with pytest.raises(KeyError) as error:
+        _ = lookup_ticker_exchange("BOB")
+    assert error.typename == "KeyError"
 
 
-def test_is_valid_keyword_for_etf_ticker_fail() -> None:
-    """Test the _is_valid_keyword_for_etf_ticker method. Should return False for an invalid keyword."""
-    assert is_valid_keyword_for_etf_ticker("bobs burgers index funds") is False
+def test_get_tickers_for_query() -> None:
+    """Test get_tickers_for_query method for various cases."""
+    # Valid stock ticker.
+    assert get_tickers_for_query("AAPL") == ["AAPL"]
 
+    # Valid ETF ticker.
+    assert get_tickers_for_query("BIS") == ["BIS"]
 
-def test_get_ticker_for_keyword_for_stock_success() -> None:
-    """Test the get_tickers_for_query method. Should return correct tickers for a valid stock keyword."""
+    # Valid stock keywords.
     assert get_tickers_for_query("jpmorgan chase stock") == ["JPM"]
 
+    # Valid ETF keywords.
+    assert get_tickers_for_query("dow jones industrial average") == ["DIA", "DJD", "SCHD"]
 
-def test_get_ticker_for_keyword_for_stock_fail() -> None:
-    """Test the get_tickers_for_query method. Should return None for an invalid stock keyword."""
+    # Invalid ticker.
+    assert get_tickers_for_query("BOB") is None
+
+    # Invalid stock keywords.
     assert get_tickers_for_query("bobs burgers stock") is None
 
-
-# TODO: Will be updated once ETF tickers are assigned.
-def test_get_ticker_for_keyword_for_etf_success() -> None:
-    """Test the get_tickers_for_query method. Should return correct ticker for a valid ETF keyword."""
-    etf_tickers = get_tickers_for_query("dow jones industrial average")
-
-    assert etf_tickers is not None
-    assert set(etf_tickers) == set(["DIA", "DJD", "SCHD"])
-
-
-def test_get_ticker_for_keyword_for_etf_fail() -> None:
-    """Test the get_tickers_for_query method. Should return None for an invalid ETF keyword."""
+    # Invalid ETF keywords.
     assert get_tickers_for_query("bobs burgers stock index fund") is None
 
 
@@ -141,11 +146,39 @@ def test_extract_snapshot_if_valid_success(
     single_ticker_snapshot_response: dict[str, Any],
 ) -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return TickerSnapshot object."""
-    expected = TickerSnapshot(ticker="AAPL", last_price="120.47", todays_change_perc="0.82")
-    actual = extract_snapshot_if_valid(single_ticker_snapshot_response)
+    expected_market_open = TickerSnapshot(
+        ticker="AAPL", last_trade_price="229.47", todays_change_percent="+0.82"
+    )
+    actual_market_open = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
-    assert actual is not None
-    assert actual == expected
+    # setting the market status to closed.
+    single_ticker_snapshot_response["results"][0]["market_status"] = "closed"
+    # the change percent value is 0.946 from the fixture but the function rounds it to 2 decimal places.
+    expected_market_closed = TickerSnapshot(
+        ticker="AAPL", last_trade_price="229.31", todays_change_percent="+0.95"
+    )
+    actual_market_closed = extract_snapshot_if_valid(single_ticker_snapshot_response)
+
+    # setting the market status to early_trading.
+    single_ticker_snapshot_response["results"][0]["market_status"] = "early_trading"
+    expected_market_early_trading = TickerSnapshot(
+        ticker="AAPL", last_trade_price="227.16", todays_change_percent="-0.13"
+    )
+    actual_market_early_trading = extract_snapshot_if_valid(single_ticker_snapshot_response)
+
+    # setting the market status to late_trading.
+    single_ticker_snapshot_response["results"][0]["market_status"] = "late_trading"
+    # the change percent value is 0.946 from the fixture but the function rounds it to 2 decimal places.
+    expected_market_late_trading = TickerSnapshot(
+        ticker="AAPL", last_trade_price="229.31", todays_change_percent="+0.95"
+    )
+    actual_market_late_trading = extract_snapshot_if_valid(single_ticker_snapshot_response)
+
+    assert actual_market_open is not None
+    assert actual_market_open == expected_market_open
+    assert actual_market_early_trading == expected_market_early_trading
+    assert actual_market_late_trading == expected_market_late_trading
+    assert actual_market_closed == expected_market_closed
 
 
 def test_extract_snapshot_if_valid_returns_none() -> None:
@@ -162,8 +195,8 @@ def test_extract_snapshot_if_valid_returns_none_for_invalid_value_type(
     invalid_json_response = single_ticker_snapshot_response
 
     # modifying values to be int type instead of float
-    invalid_json_response["ticker"]["todaysChangePerc"] = 5
-    invalid_json_response["ticker"]["lastTrade"]["P"] = 5
+    invalid_json_response["results"][0]["session"]["change_percent"] = 5
+    invalid_json_response["results"][0]["last_trade"]["price"] = 5
 
     assert extract_snapshot_if_valid(invalid_json_response) is None
 
@@ -177,7 +210,7 @@ def test_extract_snapshot_if_valid_returns_none_for_missing_property(
     invalid_json_response = single_ticker_snapshot_response
 
     # modifying values to have a missing property
-    del invalid_json_response["ticker"]["todaysChangePerc"]
+    del invalid_json_response["results"][0]["session"]["change_percent"]
 
     assert extract_snapshot_if_valid(invalid_json_response) is None
 
@@ -185,16 +218,19 @@ def test_extract_snapshot_if_valid_returns_none_for_missing_property(
 def test_build_ticker_summary_success() -> None:
     """Test build_ticker_summary method."""
     actual = build_ticker_summary(
-        snapshot=TickerSnapshot(ticker="AAPL", last_price="120.47", todays_change_perc="0.82"),
+        snapshot=TickerSnapshot(
+            ticker="AAPL", last_trade_price="120.47", todays_change_percent="+0.82"
+        ),
         image_url=None,
     )
     expected = TickerSummary(
         ticker="AAPL",
         name="Apple Inc",
         last_price="$120.47 USD",
-        todays_change_perc="0.82",
+        todays_change_perc="+0.82",
         query="AAPL stock",
         image_url=None,
+        exchange="NASDAQ",
     )
 
     assert actual == expected

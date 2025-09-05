@@ -81,24 +81,40 @@ class FileManager:
 
     def get_latest_dump(self, latest_gcs: Optional[Blob]) -> Optional[str]:
         """Find the latest export that's newer than the latest on GCS (if any)."""
-        resp = requests.get(self.base_url)  # nosec
-        parser = DirectoryParser(self.file_pattern)
-        parser.feed(str(resp.content))
-        links = parser.file_paths
-        if len(links) == 1:
-            name = links[0]
-            url = urljoin(self.base_url, name)
+        last_gcs_date = self._parse_date(str(latest_gcs.name)) if latest_gcs else dt.min
 
-            link_date = self._parse_date(name)
+        # 1. Try current/
+        try:
+            resp = requests.get(self.base_url)  # nosec
+            parser = DirectoryParser(self.file_pattern)
+            parser.feed(str(resp.content))
+            links = parser.file_paths
+            if len(links) == 1:
+                name = links[0]
+                url = urljoin(self.base_url, name)
+                link_date = self._parse_date(name)
+                if link_date > last_gcs_date:
+                    return url
+        except Exception as e:
+            logger.warning(f"Failed to fetch listing from {self.base_url}: {e}")
 
-            if latest_gcs:
-                last_gcs_date = self._parse_date(str(latest_gcs.name))
-            else:
-                logger.info("")
-                last_gcs_date = dt.min  # treat as oldest possible date for first_run
+        # 2. Fallback to dated directory (bandaid)
+        fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20250818/"
+        try:
+            resp = requests.get(fallback_url)  # nosec
+            parser = DirectoryParser(self.file_pattern)
+            parser.feed(str(resp.content))
+            links = parser.file_paths
+            if len(links) == 1:
+                name = links[0]
+                url = urljoin(fallback_url, name)
+                link_date = self._parse_date(name)
+                if link_date > last_gcs_date:
+                    logger.info(f"Using bandaid fallback dump from {fallback_url}")
+                    return url
+        except Exception as e:
+            logger.warning(f"Fallback fetch failed: {e}")
 
-            if last_gcs_date < link_date:
-                return url
         return None
 
     def _parse_date(self, filename: str) -> dt:

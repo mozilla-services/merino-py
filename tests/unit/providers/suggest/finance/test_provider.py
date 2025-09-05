@@ -45,8 +45,8 @@ def fixture_ticker_snapshot() -> TickerSnapshot:
     """Create a ticker snapshot object for AAPL."""
     return TickerSnapshot(
         ticker="AAPL",
-        last_price="100.5",
-        todays_change_perc="1.5",
+        last_trade_price="100.5",
+        todays_change_percent="1.5",
     )
 
 
@@ -60,6 +60,7 @@ def fixture_ticker_summary() -> TickerSummary:
         todays_change_perc="1.5",
         query="AAPL stock",
         image_url=None,
+        exchange="NASDAQ",
     )
 
 
@@ -74,6 +75,7 @@ def fixture_etf_ticker_summaries() -> list[TickerSummary]:
             todays_change_perc="1.5",
             query="DIA stock",
             image_url=None,
+            exchange="NYSE",
         ),
         TickerSummary(
             name="Invesco Dow Jones Industrial Average Dividend ETF",
@@ -82,6 +84,7 @@ def fixture_etf_ticker_summaries() -> list[TickerSummary]:
             todays_change_perc="1.5",
             query="DJD stock",
             image_url=None,
+            exchange="NYSE",
         ),
         TickerSummary(
             name="Schwab US Dividend Equity ETF",
@@ -90,6 +93,7 @@ def fixture_etf_ticker_summaries() -> list[TickerSummary]:
             todays_change_perc="1.5",
             query="SCHD stock",
             image_url=None,
+            exchange="NYSE",
         ),
     ]
 
@@ -110,7 +114,7 @@ def fixture_provider(backend_mock: Any, statsd_mock: Any) -> Provider:
         score=0.3,
         query_timeout_sec=0.2,
         cron_interval_sec=60,
-        resync_interval_sec=3600,
+        resync_interval_sec=86400,
     )
 
 
@@ -330,7 +334,7 @@ def test_should_fetch_respects_interval(provider: Provider):
 
 def test_should_fetch_after_interval(provider: Provider):
     """Test that _should_fetch returns True after interval has passed."""
-    provider.last_fetch_at = time.time() - 4000  # > resync_interval_sec
+    provider.last_fetch_at = time.time() - 87000  # > resync_interval_sec
     provider.last_fetch_failure_at = None
 
     assert provider._should_fetch() is True
@@ -338,7 +342,7 @@ def test_should_fetch_after_interval(provider: Provider):
 
 def test_should_fetch_skips_after_failure(provider: Provider):
     """Test that _should_fetch returns False if a recent failure occurred."""
-    provider.last_fetch_at = time.time() - 4000
+    provider.last_fetch_at = time.time() - 87000
     provider.last_fetch_failure_at = time.time() - 100  # failure < 1hr ago
 
     assert provider._should_fetch() is False

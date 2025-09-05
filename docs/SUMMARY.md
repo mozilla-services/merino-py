@@ -42,4 +42,6 @@
   - [Adopt Testcontainers for Integration Testing](./adr/0003-test-containers.md)
   - [Default Load Tests](./adr/0004-default-load-tests.md)
   - [Adopt Asynchronous Python Google Cloud Storage Client](./adr/0005-asynchronous-gcs-client.md)
-  - [Suggest Endpoint Split](./adr/0006-suggest-endpoint-split.md)
+  - [Suggest New Provider Integrations Endpoint Split](./adr/0006-suggest-endpoint-split.md)
+  - [Load GCS Data via SyncedGcsBlob in Merino](./adr/0007-synced-gcs-blob.md)
+  - [Extend Merino via Rust Extensions](./adr/0008-merino-extensions.md)
