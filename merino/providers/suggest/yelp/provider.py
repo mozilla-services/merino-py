@@ -6,6 +6,7 @@ from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseProvider, SuggestionRequest, BaseSuggestion
 from merino.providers.suggest.custom_details import CustomDetails, YelpDetails
+from merino.providers.suggest.yelp.backends.keyword_mapping import LOCATION_KEYWORDS
 from merino.providers.suggest.yelp.backends.protocol import YelpBackendProtocol
 
 
@@ -84,6 +85,17 @@ class Provider(BaseProvider):
             custom_details=custom_details,
         )
 
-    def process_query(self) -> str:
-        """Stub placeholder until we finalize keywords."""
-        return "coffee"
+    def normalize_query(self, query: str) -> str:
+        """Check whether the query ends in a location phrase
+        that matches any in LOCATION_KEYWORDS.
+        If so, the location phrase is the removed from the query and stripped of whitespace.
+        """
+        stripped = query.casefold().strip()
+
+        # If it ends with a location keyword, strip it
+        for loc_kw in LOCATION_KEYWORDS:
+            if stripped.endswith(loc_kw):
+                stripped = stripped.removesuffix(loc_kw).rstrip()
+                break  # only strip once
+
+        return stripped

@@ -132,7 +132,7 @@ def test_validate_fails_on_geolocation_without_city(
     )
 
     with pytest.raises(HTTPException) as exc_info:
-        provider.validate(SuggestionRequest(query="coffee", geolocation=geolocation_no_city))
+        provider.validate(SuggestionRequest(query="coffeeshops", geolocation=geolocation_no_city))
 
     assert exc_info.value.status_code == 400
     assert "Valid query and location are required" in exc_info.value.detail
@@ -144,7 +144,7 @@ def test_validate_passes_with_valid_request(
 ) -> None:
     """Test that the validate method passes with valid request."""
     # Should not raise any exception
-    provider.validate(SuggestionRequest(query="coffee", geolocation=geolocation))
+    provider.validate(SuggestionRequest(query="coffeeshops", geolocation=geolocation))
 
 
 @pytest.mark.asyncio
@@ -157,7 +157,7 @@ async def test_query_returns_empty_when_no_business(
     backend_mock.get_business.return_value = None
 
     suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(query="coffee", geolocation=geolocation)
+        SuggestionRequest(query="coffeeshops", geolocation=geolocation)
     )
 
     assert suggestions == []
@@ -231,3 +231,20 @@ async def test_query_business_returned(
     )
 
     assert suggestions == expected_suggestions
+
+
+@pytest.mark.parametrize(
+    "search_term, expected",
+    [
+        # Category matches
+        ("Coffeeshops near me", "coffeeshops"),
+        ("ice cream & frozen yogurt", "ice cream & frozen yogurt"),
+        # Bad location matches
+        ("coffeeshops in the neighbourhood", "coffeeshops in the neighbourhood"),
+        # Extra whitespace
+        ("   coffeeshops nearby   ", "coffeeshops"),
+    ],
+)
+def test_category_keyword_match(provider: Provider, search_term: str, expected: str) -> None:
+    """Test that the category keyword match works as expected."""
+    assert provider.normalize_query(search_term) == expected
