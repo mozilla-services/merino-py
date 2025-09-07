@@ -100,6 +100,7 @@ def fixture_yelp_cache_response() -> dict:
     """Yelp cache response for testing."""
     return {
         "name": "MochaZilla. - Toronto",
+        "city": "Toronto",
         "url": "https://www.yelp.com/biz/mochazilla-toronto",
         "address": "123 Firefox Avenue",
         "rating": 4.8,
@@ -130,6 +131,7 @@ def fixture_yelp_processed_response() -> dict:
     return {
         "name": "MochaZilla. - Toronto",
         "url": "https://www.yelp.com/biz/mochazilla-toronto",
+        "city": "Toronto",
         "address": "123 Firefox Avenue",
         "rating": 4.8,
         "price": "$$",

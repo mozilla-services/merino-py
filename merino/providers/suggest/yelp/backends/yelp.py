@@ -157,6 +157,7 @@ class YelpBackend(YelpBackendProtocol):
             name = business["name"]
             url = business["url"]
             address = business["location"]["address1"]
+            city = business["location"]["city"]
             business_hours = business["business_hours"]
             # extract potentially null fields
             price = business.get("price")
@@ -166,6 +167,7 @@ class YelpBackend(YelpBackendProtocol):
             return {
                 "name": name,
                 "url": url,
+                "city": city,
                 "address": address,
                 "rating": rating,
                 "price": price,

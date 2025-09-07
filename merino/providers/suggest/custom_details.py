@@ -1,11 +1,10 @@
 """Custom Details specific Models"""
 
-from typing import Any
-
 from pydantic import BaseModel
 
 from merino.middleware.geolocation import Coordinates
 from merino.providers.suggest.finance.backends.protocol import TickerSummary
+from merino.providers.suggest.yelp.backends.protocol import YelpBusinessDetails
 
 
 class AmoDetails(BaseModel):
@@ -42,13 +41,7 @@ class PolygonDetails(BaseModel):
 class YelpDetails(BaseModel):
     """Yelp specific fields."""
 
-    name: str
-    address: str | None = None
-    price: str | None = None
-    rating: float | None = None
-    review_count: int | None = None
-    business_hours: dict[str, Any] | None = None
-    image_url: str | None = None
+    values: list[YelpBusinessDetails]
 
 
 class CustomDetails(BaseModel, arbitrary_types_allowed=False):
