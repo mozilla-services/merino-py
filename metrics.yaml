@@ -193,3 +193,23 @@ suggest/yelp:
     scope: |
       Provider initialization
     alert_policy: []
+suggest/google_suggest:
+  google_suggest_request_duration:
+    description: |
+      A histogram to measure the API request duration for Google Suggest requests
+    type: histogram
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+  google_suggest_request_failure:
+    description: |
+      A counter to measure the API request failure count for Google Suggest requests
+    type: counter
+    labels:
+      - name: status_code
+        description: |
+          The HTTP status code of the failure
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
