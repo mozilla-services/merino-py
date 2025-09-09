@@ -8,7 +8,11 @@ import typing
 
 from sentry_sdk.types import Event
 
-from merino.configs.app_configs.config_sentry import REDACTED_TEXT, strip_sensitive_data
+from merino.configs.app_configs.config_sentry import (
+    REDACTED_TEXT,
+    GOOGLE_SUGGEST_PARAMS,
+    strip_sensitive_data,
+)
 
 mock_sentry_hint: dict[str, list] = {"exc_info": [RuntimeError, RuntimeError(), None]}
 
@@ -33,6 +37,7 @@ mock_sentry_event_data: Event = {
                                     "path": "'/api/v1/suggest'",
                                 },
                                 "q": "vars_foo",
+                                "google_suggest_params": "vars_foo",
                                 "providers": "'top_picks,adm'",
                                 "client_variants": "None",
                             },
@@ -48,6 +53,7 @@ mock_sentry_event_data: Event = {
                                         "path": "'/api/v1/suggest'",
                                     },
                                     "q": "vars_values_foo",
+                                    "google_suggest_params": "vars_foo",
                                     "providers": "'top_picks,adm'",
                                     "client_variants": "None",
                                 }
@@ -63,6 +69,7 @@ mock_sentry_event_data: Event = {
                                 "qlen": "6",
                                 "query": "foobar",
                                 "ids": "None",
+                                "google_suggest_params": "vars_foo",
                             },
                         },
                         {
@@ -78,6 +85,7 @@ mock_sentry_event_data: Event = {
                                 "solved_result": [
                                     {
                                         "q": "foobar",
+                                        "google_suggest_params": "vars_foo",
                                         "providers": "'top_picks,adm'",
                                         "client_variants": "None",
                                         "request": {
@@ -96,6 +104,7 @@ mock_sentry_event_data: Event = {
                                         },
                                     ],
                                     "q": "'foobar'",
+                                    "google_suggest_params": "vars_foo",
                                     "providers": "'top_picks,adm'",
                                     "client_variants": "None",
                                 },
@@ -125,6 +134,7 @@ mock_sentry_event_data: Event = {
                             "in_app": True,
                             "vars": {
                                 "q": "what?",
+                                "google_suggest_params": "vars_foo",
                                 "self": "<merino.providers.suggest.wikipedia.backends."
                                 "elastic.ElasticBackend object at 0x7faaebfb0380>",
                                 "suggest": {
@@ -209,35 +219,31 @@ def test_strip_sensitive_data() -> None:
         Event, strip_sensitive_data(mock_sentry_event_data, mock_sentry_hint)
     )
     assert sanitized_event["request"].get("query_string") == REDACTED_TEXT
+    assert GOOGLE_SUGGEST_PARAMS not in sanitized_event["request"]
     assert "exc_info" in mock_sentry_hint
     assert isinstance(mock_sentry_hint["exc_info"][1], RuntimeError)
 
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][0]["vars"]["q"]
-        == REDACTED_TEXT
-    )
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][1]["vars"]["values"]["q"]
-        == REDACTED_TEXT
-    )
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][2]["vars"]["srequest"]
-        == REDACTED_TEXT
-    )
+    stack_frames = sanitized_event["exception"]["values"][0]["stacktrace"]["frames"]
 
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][2]["vars"]["query"]
-        == REDACTED_TEXT
-    )
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][4]["vars"]["q"]
-        == REDACTED_TEXT
-    )
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][4]["vars"]["suggest"]
-        == REDACTED_TEXT
-    )
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][5]["vars"]["body"]
-        == REDACTED_TEXT
-    )
+    assert stack_frames[0]["vars"]["q"] == REDACTED_TEXT
+    assert GOOGLE_SUGGEST_PARAMS not in stack_frames[0]["vars"]
+
+    assert stack_frames[1]["vars"]["values"]["q"] == REDACTED_TEXT
+    assert GOOGLE_SUGGEST_PARAMS not in stack_frames[1]["vars"]["values"]
+
+    assert stack_frames[2]["vars"]["srequest"] == REDACTED_TEXT
+    assert stack_frames[2]["vars"]["query"] == REDACTED_TEXT
+    assert GOOGLE_SUGGEST_PARAMS not in stack_frames[2]["vars"]
+
+    solved_result = stack_frames[3]["vars"]["solved_result"][0]
+    assert solved_result["q"] == REDACTED_TEXT
+    assert GOOGLE_SUGGEST_PARAMS not in solved_result
+    values = stack_frames[3]["vars"]["values"]
+    assert values["q"] == REDACTED_TEXT
+    assert GOOGLE_SUGGEST_PARAMS not in values
+
+    assert stack_frames[4]["vars"]["q"] == REDACTED_TEXT
+    assert stack_frames[4]["vars"]["suggest"] == REDACTED_TEXT
+    assert GOOGLE_SUGGEST_PARAMS not in stack_frames[4]["vars"]
+
+    assert stack_frames[5]["vars"]["body"] == REDACTED_TEXT

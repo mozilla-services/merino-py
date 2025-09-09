@@ -31,6 +31,8 @@ from merino.providers.suggest.wikipedia.provider import Provider as WikipediaPro
 from merino.providers.suggest.finance.provider import Provider as PolygonProvider
 from merino.providers.suggest.yelp.provider import Provider as YelpProvider
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
+from merino.providers.suggest.google_suggest.provider import Provider as GoogleSuggestProvider
+from merino.providers.suggest.google_suggest.backends.google_suggest import GoogleSuggestBackend
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST, WIKIPEDIA_TITLE_BLOCKLIST
 from merino.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
@@ -48,6 +50,7 @@ class ProviderType(str, Enum):
     WIKIPEDIA = "wikipedia"
     POLYGON = "polygon"
     YELP = "yelp"
+    GOOGLE_SUGGEST = "google_suggest"
 
 
 def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
@@ -244,7 +247,19 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,
             )
-
+        case ProviderType.GOOGLE_SUGGEST:
+            return GoogleSuggestProvider(
+                backend=GoogleSuggestBackend(
+                    http_client=create_http_client(
+                        base_url=settings.google_suggest.url_base,
+                    ),
+                    url_suggest_path=settings.google_suggest.url_suggest_path,
+                    metrics_client=get_metrics_client(),
+                ),
+                score=setting.score,
+                name=provider_id,
+                enabled_by_default=setting.enabled_by_default,
+            )
         case _:
             raise InvalidProviderError(f"Unknown provider type: {setting.type}")
 

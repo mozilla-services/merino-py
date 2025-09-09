@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from merino.middleware.geolocation import Coordinates
 from merino.providers.suggest.finance.backends.protocol import TickerSummary
+from merino.providers.suggest.google_suggest.backends.protocol import GoogleSuggestResponse
 from merino.providers.suggest.yelp.backends.protocol import YelpBusinessDetails
 
 
@@ -44,6 +45,12 @@ class YelpDetails(BaseModel):
     values: list[YelpBusinessDetails]
 
 
+class GoogleSuggestDetails(BaseModel):
+    """Google Suggest specific fields."""
+
+    suggestions: GoogleSuggestResponse
+
+
 class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     """Contain references to custom fields for each provider.
     This object uses the provider name as the key, and references custom schema models.
@@ -55,3 +62,4 @@ class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     weather: WeatherDetails | None = None
     polygon: PolygonDetails | None = None
     yelp: YelpDetails | None = None
+    google_suggest: GoogleSuggestDetails | None = None

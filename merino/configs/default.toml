@@ -775,6 +775,25 @@ bucket_name = ""
 # GCP project name where the GCS bucket lives.
 gcp_project = ""
 
+[default.providers.google_suggest]
+# MERINO_PROVIDERS__GOOGLE_SUGGEST__TYPE
+# The type of this provider, should be `google_suggest`.
+type = "google_suggest"
+
+# MERINO_PROVIDERS__GOOGLE_SUGGEST__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default.
+enabled_by_default = false
+
+# MERINO_PROVIDERS__GOOGLE_SUGGEST__SCORE
+# The ranking score for this provider as a floating point number.
+score = 0.3
+
+[default.google_suggest]
+# MERINO_GOOGLE_SUGGEST__URL_BASE
+url_base = "https://www.google.com"
+# MERINO_GOOGLE_SUGGEST__URL_SUGGEST_PATH
+# The endpoint for google suggest.
+url_suggest_path = "/complete/search"
 
 [default.curated_recommendations.gcs.local_model]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__LOCAL_MODEL__MAX_SIZE
