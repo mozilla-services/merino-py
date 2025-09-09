@@ -40,21 +40,8 @@ def fixture_business_data() -> dict:
         "rating": 4.8,
         "price": "$",
         "review_count": 22,
-        "business_hours": [
-            {
-                "open": [
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 0},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 1},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 2},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 3},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 4},
-                    {"is_overnight": False, "start": "0800", "end": "2300", "day": 5},
-                    {"is_overnight": False, "start": "0800", "end": "2300", "day": 6},
-                ],
-                "hours_type": "REGULAR",
-                "is_open_now": True,
-            }
-        ],
+        "business_hours": {"start": "0700", "end": "2300"},
+        "image_url": "https://example.com/image.png",
     }
 
 
@@ -221,7 +208,17 @@ async def test_query_business_returned(
             provider=provider.name,
             is_sponsored=False,
             score=provider.score,
-            custom_details=CustomDetails(yelp=YelpDetails(**business_data)),
+            custom_details=CustomDetails(
+                yelp=YelpDetails(
+                    name=business_data["name"],
+                    address=business_data["address"],
+                    price=business_data["price"],
+                    rating=business_data["rating"],
+                    review_count=business_data["review_count"],
+                    business_hours=business_data["business_hours"],
+                    image_url=business_data["image_url"],
+                )
+            ),
         ),
     ]
     backend_mock.get_business.return_value = business_data
