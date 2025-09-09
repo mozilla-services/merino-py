@@ -134,7 +134,7 @@ async def suggest(
         "location" or "weather" string. For "location" it will get location completion
         suggestion. For "weather" it will return weather suggestions. If omitted, it defaults
         to weather suggestions.
-    - `google_suggest_params`: [Optional] For the `goole_suggest` provider only, use it to send
+    - `google_suggest_params`: [Optional] For the `google_suggest` provider only, use it to send
         all client specified query params over to the Google Suggest endpont.
 
     **Headers:**

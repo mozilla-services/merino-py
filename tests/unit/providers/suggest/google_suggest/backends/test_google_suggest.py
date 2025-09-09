@@ -34,7 +34,7 @@ def fixture_backend(
     mocker: MockerFixture,
     statsd_mock: Any,
 ) -> GoogleSuggestBackend:
-    """Create a Polygon backend module object."""
+    """Create a Google Suggest backend module object."""
     return GoogleSuggestBackend(
         metrics_client=statsd_mock,
         url_suggest_path=settings.google_suggest.url_suggest_path,
@@ -71,7 +71,7 @@ async def test_fetch_google_error(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
 ) -> None:
-    """Test fetch suggestions from the Google Suggest endpoint - success."""
+    """Test fetch suggestions from the Google Suggest endpoint - error."""
     cast(AsyncMock, backend.http_client).get.return_value = Response(
         status_code=500,
         content=None,
