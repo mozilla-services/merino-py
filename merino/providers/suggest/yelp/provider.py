@@ -7,7 +7,10 @@ from pydantic import HttpUrl
 from merino.providers.suggest.base import BaseProvider, SuggestionRequest, BaseSuggestion
 from merino.providers.suggest.custom_details import CustomDetails, YelpDetails
 from merino.providers.suggest.yelp.backends.keyword_mapping import LOCATION_KEYWORDS
-from merino.providers.suggest.yelp.backends.protocol import YelpBackendProtocol
+from merino.providers.suggest.yelp.backends.protocol import (
+    YelpBackendProtocol,
+    YelpBusinessDetails,
+)
 
 
 class Provider(BaseProvider):
@@ -32,6 +35,7 @@ class Provider(BaseProvider):
         self._name = name
         self._query_timeout_sec = query_timeout_sec
         self._enabled_by_default = enabled_by_default
+        self.url = HttpUrl("https://merino.services.mozilla.com/")
         super().__init__()
 
     async def initialize(self) -> None:
@@ -73,11 +77,11 @@ class Provider(BaseProvider):
 
     def build_suggestion(self, data: dict) -> BaseSuggestion | None:
         """Build the suggestion with custom yelp details."""
-        url = data.pop("url")
-        custom_details = CustomDetails(yelp=YelpDetails(**data))
+        values = [YelpBusinessDetails(**data)]
+        custom_details = CustomDetails(yelp=YelpDetails(values=values))
         return BaseSuggestion(
             title="Yelp Suggestion",
-            url=HttpUrl(url),
+            url=self.url,
             provider=self.name,
             is_sponsored=False,
             score=0.26,  # need to confirm value
