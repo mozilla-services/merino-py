@@ -85,7 +85,7 @@ unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
 	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.unit \
 	    MERINO_ENV=testing \
 	    $(UV) run pytest $(UNIT_TEST_DIR) \
-	    --junit-xml=$(UNIT_JUNIT_XML)
+	    --junit-xml=$(UNIT_JUNIT_XML) -vv
 
 .PHONY: unit-test-fixtures
 unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test

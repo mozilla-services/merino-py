@@ -7,17 +7,27 @@
 from typing import cast, Any
 from unittest.mock import AsyncMock, MagicMock
 
+import freezegun
 import orjson
 import pytest
+from freezegun import freeze_time
 from pytest import LogCaptureFixture
 from httpx import AsyncClient, Response, Request
 from pytest_mock import MockerFixture
+
+from merino.middleware.geolocation import Location
 from tests.types import FilterCaplogFixture
 
 from merino.configs import settings
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 
 URL_BUSINESS_SEARCH = settings.yelp.url_business_search
+
+
+@pytest.fixture(name="location")
+def location_fixture() -> Location:
+    """Location for testing."""
+    return Location(city="toronto", timezone="America/New_York")
 
 
 @pytest.fixture(name="yelp")
@@ -68,13 +78,13 @@ def fixture_yelp_response() -> dict:
                 "business_hours": [
                     {
                         "open": [
-                            {"is_overnight": False, "start": "0700", "end": "1500", "day": 0},
-                            {"is_overnight": False, "start": "0700", "end": "1500", "day": 1},
-                            {"is_overnight": False, "start": "0700", "end": "1500", "day": 2},
-                            {"is_overnight": False, "start": "0700", "end": "1500", "day": 3},
-                            {"is_overnight": False, "start": "0700", "end": "1500", "day": 4},
-                            {"is_overnight": False, "start": "0700", "end": "1500", "day": 5},
-                            {"is_overnight": False, "start": "0700", "end": "1500", "day": 6},
+                            {"is_overnight": False, "start": "0000", "end": "2359", "day": 0},
+                            {"is_overnight": False, "start": "0001", "end": "2359", "day": 1},
+                            {"is_overnight": False, "start": "0002", "end": "2359", "day": 2},
+                            {"is_overnight": False, "start": "0915", "end": "0930", "day": 3},
+                            {"is_overnight": False, "start": "0004", "end": "2359", "day": 4},
+                            {"is_overnight": False, "start": "0005", "end": "2359", "day": 5},
+                            {"is_overnight": False, "start": "0006", "end": "2359", "day": 6},
                         ],
                         "hours_type": "REGULAR",
                         "is_open_now": False,
@@ -82,6 +92,35 @@ def fixture_yelp_response() -> dict:
                 ],
             }
         ],
+    }
+
+
+@pytest.fixture(name="yelp_cache_response")
+def fixture_yelp_cache_response() -> dict:
+    """Yelp cache response for testing."""
+    return {
+        "name": "MochaZilla. - Toronto",
+        "url": "https://www.yelp.com/biz/mochazilla-toronto",
+        "address": "123 Firefox Avenue",
+        "rating": 4.8,
+        "price": "$$",
+        "review_count": 989,
+        "business_hours": [
+            {
+                "open": [
+                    {"is_overnight": False, "start": "0000", "end": "2359", "day": 0},
+                    {"is_overnight": False, "start": "0001", "end": "2359", "day": 1},
+                    {"is_overnight": False, "start": "0002", "end": "2359", "day": 2},
+                    {"is_overnight": False, "start": "0915", "end": "0930", "day": 3},
+                    {"is_overnight": False, "start": "0004", "end": "2359", "day": 4},
+                    {"is_overnight": False, "start": "0005", "end": "2359", "day": 5},
+                    {"is_overnight": False, "start": "0006", "end": "2359", "day": 6},
+                ],
+                "hours_type": "REGULAR",
+                "is_open_now": False,
+            }
+        ],
+        "image_url": "https://firefox-settings-attachments.cdn.mozilla.net/main-workspace/quicksuggest-other/6f44101f-8385-471e-b2dd-2b2ed6624637.svg",
     }
 
 
@@ -95,36 +134,22 @@ def fixture_yelp_processed_response() -> dict:
         "rating": 4.8,
         "price": "$$",
         "review_count": 989,
-        "business_hours": [
-            {
-                "open": [
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 0},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 1},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 2},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 3},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 4},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 5},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 6},
-                ],
-                "hours_type": "REGULAR",
-                "is_open_now": False,
-            }
-        ],
+        "business_hours": {"start": "0915", "end": "0930"},
         "image_url": "https://firefox-settings-attachments.cdn.mozilla.net/main-workspace/quicksuggest-other/6f44101f-8385-471e-b2dd-2b2ed6624637.svg",
     }
 
 
+@freezegun.freeze_time("2025-09-04 13:21:34", tz_offset=0)
 @pytest.mark.asyncio
 async def test_get_business_success(
-    yelp: YelpBackend, yelp_response: dict, yelp_processed_response: dict
+    yelp: YelpBackend, location: Location, yelp_response: dict, yelp_processed_response: dict
 ) -> None:
     """Test get_businesses method returns valid response and records metrics."""
     client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
 
     base_url = "https://api.yelp.com/v3"
-    location = "toronto"
     term = "pancakes"
-    endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
+    endpoint = URL_BUSINESS_SEARCH.format(location=location.city, term=term, limit=1)
 
     # Mock metrics client
     yelp.metrics_client = MagicMock()
@@ -150,6 +175,7 @@ async def test_get_business_success(
 @pytest.mark.asyncio
 async def test_get_business_bad_response(
     yelp: YelpBackend,
+    location: Location,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
 ) -> None:
@@ -157,9 +183,8 @@ async def test_get_business_bad_response(
     client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
 
     base_url = "https://api.yelp.com/v3"
-    location = "toronto"
     term = "pancakes"
-    endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
+    endpoint = URL_BUSINESS_SEARCH.format(location=location.city, term=term, limit=1)
 
     # Mock metrics client
     yelp.metrics_client = MagicMock()
@@ -188,6 +213,7 @@ async def test_get_business_bad_response(
 @pytest.mark.asyncio
 async def test_get_business_failure_for_http_500(
     yelp: YelpBackend,
+    location: Location,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
 ) -> None:
@@ -195,9 +221,8 @@ async def test_get_business_failure_for_http_500(
     client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
 
     base_url = "https://api.yelp.com/v3"
-    location = "toronto"
     term = "pancakes"
-    endpoint = URL_BUSINESS_SEARCH.format(location=location, term=term, limit=1)
+    endpoint = URL_BUSINESS_SEARCH.format(location=location.city, term=term, limit=1)
 
     # Mock metrics client
     yelp.metrics_client = MagicMock()
@@ -224,26 +249,36 @@ async def test_get_business_failure_for_http_500(
     increment_metric_mock.assert_any_call("yelp.request.business_search.failed")
 
 
+@freezegun.freeze_time("2025-09-04 13:21:34", tz_offset=0)
 @pytest.mark.asyncio
-async def test_cache_hit_metrics(yelp: YelpBackend, mocker: MockerFixture) -> None:
+async def test_cache_hit_metrics(
+    yelp: YelpBackend,
+    location: Location,
+    mocker: MockerFixture,
+    yelp_cache_response: dict,
+    yelp_processed_response: dict,
+    caplog: LogCaptureFixture,
+) -> None:
     """Test that cache hit metrics are recorded."""
     # Mock cache to return data
     cache_mock = mocker.AsyncMock()
-    cache_mock.get.return_value = orjson.dumps({"name": "Test Business"})
+    cache_mock.get.return_value = orjson.dumps(yelp_cache_response)
     yelp.cache = cache_mock
 
     # Mock metrics client
     yelp.metrics_client = MagicMock()
     increment_metric_mock = yelp.metrics_client.increment
 
-    result = await yelp.get_business("coffeeshops", "toronto")
+    result = await yelp.get_business("coffeeshops", location)
 
-    assert result == {"name": "Test Business"}
+    assert result == yelp_processed_response
     increment_metric_mock.assert_called_once_with("yelp.cache.hit")
 
 
 @pytest.mark.asyncio
-async def test_cache_error_metrics(yelp: YelpBackend, mocker: MockerFixture) -> None:
+async def test_cache_error_metrics(
+    yelp: YelpBackend, location: Location, mocker: MockerFixture
+) -> None:
     """Test that cache error metrics are recorded."""
     from merino.cache.redis import CacheAdapterError
 
@@ -264,7 +299,7 @@ async def test_cache_error_metrics(yelp: YelpBackend, mocker: MockerFixture) -> 
         request=Request(method="GET", url="http://test.com"),
     )
 
-    await yelp.get_business("coffeeshops", "toronto")
+    await yelp.get_business("coffeeshops", location)
 
     increment_metric_mock.assert_any_call("yelp.cache.error")
 
@@ -316,6 +351,7 @@ async def test_get_from_cache_with_redis_cache(mocker: MockerFixture, statsd_moc
 @pytest.mark.asyncio
 async def test_cache_store_error_handling(
     yelp: YelpBackend,
+    location: Location,
     yelp_response: dict,
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
@@ -337,8 +373,6 @@ async def test_cache_store_error_handling(
         content=orjson.dumps(yelp_response),
         request=Request(method="GET", url="http://test.com"),
     )
-
-    location = "toronto"
     term = "coffeeshops"
 
     # Should still return result even if cache store fails
@@ -425,3 +459,70 @@ async def test_cache_set_error_metrics(yelp: YelpBackend, mocker: MockerFixture)
     await yelp.store_in_cache("test-key", {"test": "data"})
 
     increment_metric_mock.assert_called_once_with("yelp.cache.set_error")
+
+
+@pytest.mark.parametrize(
+    "frozen_utc, timezone, business_hours, expected",
+    [
+        (
+            "2025-09-01 17:15:00+00:00",
+            "America/Los_Angeles",
+            [{"start": "0930", "end": "1730"}],
+            True,
+        ),
+        (
+            "2025-09-01 16:30:00+00:00",
+            "America/Los_Angeles",
+            [{"start": "0930", "end": "1730"}],
+            True,
+        ),
+        (
+            "2025-09-01 00:30:00+00:00",
+            "America/Los_Angeles",
+            [
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+            ],
+            True,
+        ),
+        (
+            "2025-09-01 16:29:00+00:00",
+            "America/Los_Angeles",
+            [
+                {"start": "0930", "end": "1730"},
+            ],
+            False,
+        ),
+        (
+            "2025-09-02 00:31:00+00:00",
+            "America/Los_Angeles",
+            [{"start": "0930", "end": "1730"}],
+            False,
+        ),
+        (
+            "2025-09-02 20:00:00+00:00",
+            "America/Los_Angeles",
+            [{"start": "0930", "end": "1730"}, {"start": "0930", "end": "1730"}],
+            True,
+        ),
+    ],
+    ids=[
+        "in-window-10:15",
+        "boundary-start-09:30",
+        "boundary-end-17:30",
+        "before-start-09:29",
+        "after-end-17:31",
+        "open-24h",
+    ],
+)
+def test_is_open_now(
+    frozen_utc: str, timezone: str, business_hours: list, expected: bool, yelp: YelpBackend
+) -> None:
+    """Test is_open_now figures out time in timezone is inbetween business hours."""
+    with freeze_time(frozen_utc):
+        assert yelp.is_open_now(business_hours, timezone) is expected

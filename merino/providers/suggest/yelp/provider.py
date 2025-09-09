@@ -59,10 +59,9 @@ class Provider(BaseProvider):
     async def query(self, request: SuggestionRequest):
         """Retrieve yelp suggestions"""
         geolocation = request.geolocation
-        location = geolocation.city
         search_term = request.query.strip()
 
-        yelp_business = await self.backend.get_business(search_term, location)
+        yelp_business = await self.backend.get_business(search_term, geolocation)
 
         if yelp_business is not None:
             suggestions = [self.build_suggestion(yelp_business)]
