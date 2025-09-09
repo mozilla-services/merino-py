@@ -1,5 +1,7 @@
 """Custom Details specific Models"""
 
+from typing import Any
+
 from pydantic import BaseModel
 
 from merino.middleware.geolocation import Coordinates
@@ -45,7 +47,7 @@ class YelpDetails(BaseModel):
     price: str | None = None
     rating: float | None = None
     review_count: int | None = None
-    business_hours: list[dict] | None = None
+    business_hours: dict[str, Any] | None = None
     image_url: str | None = None
 
 
