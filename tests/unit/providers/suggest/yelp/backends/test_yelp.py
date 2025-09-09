@@ -7,6 +7,7 @@
 from typing import cast, Any
 from unittest.mock import AsyncMock, MagicMock
 
+import freezegun
 import orjson
 import pytest
 from freezegun import freeze_time
@@ -77,13 +78,13 @@ def fixture_yelp_response() -> dict:
                 "business_hours": [
                     {
                         "open": [
-                            {"is_overnight": False, "start": "0001", "end": "2359", "day": 0},
+                            {"is_overnight": False, "start": "0000", "end": "2359", "day": 0},
                             {"is_overnight": False, "start": "0001", "end": "2359", "day": 1},
-                            {"is_overnight": False, "start": "0001", "end": "2359", "day": 2},
-                            {"is_overnight": False, "start": "0001", "end": "2359", "day": 3},
-                            {"is_overnight": False, "start": "0001", "end": "2359", "day": 4},
-                            {"is_overnight": False, "start": "0001", "end": "2359", "day": 5},
-                            {"is_overnight": False, "start": "0001", "end": "2359", "day": 6},
+                            {"is_overnight": False, "start": "0002", "end": "2359", "day": 2},
+                            {"is_overnight": False, "start": "0915", "end": "0930", "day": 3},
+                            {"is_overnight": False, "start": "0004", "end": "2359", "day": 4},
+                            {"is_overnight": False, "start": "0005", "end": "2359", "day": 5},
+                            {"is_overnight": False, "start": "0006", "end": "2359", "day": 6},
                         ],
                         "hours_type": "REGULAR",
                         "is_open_now": False,
@@ -107,13 +108,13 @@ def fixture_yelp_cache_response() -> dict:
         "business_hours": [
             {
                 "open": [
-                    {"is_overnight": False, "start": "0001", "end": "2359", "day": 0},
+                    {"is_overnight": False, "start": "0000", "end": "2359", "day": 0},
                     {"is_overnight": False, "start": "0001", "end": "2359", "day": 1},
-                    {"is_overnight": False, "start": "0001", "end": "2359", "day": 2},
-                    {"is_overnight": False, "start": "0001", "end": "2359", "day": 3},
-                    {"is_overnight": False, "start": "0001", "end": "2359", "day": 4},
-                    {"is_overnight": False, "start": "0001", "end": "2359", "day": 5},
-                    {"is_overnight": False, "start": "0001", "end": "2359", "day": 6},
+                    {"is_overnight": False, "start": "0002", "end": "2359", "day": 2},
+                    {"is_overnight": False, "start": "0915", "end": "0930", "day": 3},
+                    {"is_overnight": False, "start": "0004", "end": "2359", "day": 4},
+                    {"is_overnight": False, "start": "0005", "end": "2359", "day": 5},
+                    {"is_overnight": False, "start": "0006", "end": "2359", "day": 6},
                 ],
                 "hours_type": "REGULAR",
                 "is_open_now": False,
@@ -133,11 +134,12 @@ def fixture_yelp_processed_response() -> dict:
         "rating": 4.8,
         "price": "$$",
         "review_count": 989,
-        "business_hours": {"start": "0001", "end": "2359"},
+        "business_hours": {"start": "0915", "end": "0930"},
         "image_url": "https://firefox-settings-attachments.cdn.mozilla.net/main-workspace/quicksuggest-other/6f44101f-8385-471e-b2dd-2b2ed6624637.svg",
     }
 
 
+@freezegun.freeze_time("2025-09-04 13:21:34", tz_offset=0)
 @pytest.mark.asyncio
 async def test_get_business_success(
     yelp: YelpBackend, location: Location, yelp_response: dict, yelp_processed_response: dict
@@ -247,6 +249,7 @@ async def test_get_business_failure_for_http_500(
     increment_metric_mock.assert_any_call("yelp.request.business_search.failed")
 
 
+@freezegun.freeze_time("2025-09-04 13:21:34", tz_offset=0)
 @pytest.mark.asyncio
 async def test_cache_hit_metrics(
     yelp: YelpBackend,
@@ -459,42 +462,52 @@ async def test_cache_set_error_metrics(yelp: YelpBackend, mocker: MockerFixture)
 
 
 @pytest.mark.parametrize(
-    "frozen_utc, timezone, response, expected",
+    "frozen_utc, timezone, business_hours, expected",
     [
         (
-            "2025-09-04 17:15:00+00:00",
+            "2025-09-01 17:15:00+00:00",
             "America/Los_Angeles",
-            {"business_hours": [{"open": [{"start": "0930", "end": "1730"}]}]},
+            [{"start": "0930", "end": "1730"}],
             True,
         ),
         (
-            "2025-09-04 16:30:00+00:00",
+            "2025-09-01 16:30:00+00:00",
             "America/Los_Angeles",
-            {"business_hours": [{"open": [{"start": "0930", "end": "1730"}]}]},
+            [{"start": "0930", "end": "1730"}],
             True,
         ),
         (
-            "2025-09-05 00:30:00+00:00",
+            "2025-09-01 00:30:00+00:00",
             "America/Los_Angeles",
-            {"business_hours": [{"open": [{"start": "0930", "end": "1730"}]}]},
+            [
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+                {"start": "0930", "end": "1730"},
+            ],
             True,
         ),
         (
-            "2025-09-04 16:29:00+00:00",
+            "2025-09-01 16:29:00+00:00",
             "America/Los_Angeles",
-            {"business_hours": [{"open": [{"start": "0930", "end": "1730"}]}]},
+            [
+                {"start": "0930", "end": "1730"},
+            ],
             False,
         ),
         (
-            "2025-09-05 00:31:00+00:00",
+            "2025-09-02 00:31:00+00:00",
             "America/Los_Angeles",
-            {"business_hours": [{"open": [{"start": "0930", "end": "1730"}]}]},
+            [{"start": "0930", "end": "1730"}],
             False,
         ),
         (
-            "2025-09-04 20:00:00+00:00",
+            "2025-09-02 20:00:00+00:00",
             "America/Los_Angeles",
-            {"business_hours": [{"open": [{"start": "0000", "end": "0000"}]}]},
+            [{"start": "0930", "end": "1730"}, {"start": "0930", "end": "1730"}],
             True,
         ),
     ],
@@ -508,8 +521,8 @@ async def test_cache_set_error_metrics(yelp: YelpBackend, mocker: MockerFixture)
     ],
 )
 def test_is_open_now(
-    frozen_utc: str, timezone: str, response: dict, expected: bool, yelp: YelpBackend
+    frozen_utc: str, timezone: str, business_hours: list, expected: bool, yelp: YelpBackend
 ) -> None:
     """Test is_open_now figures out time in timezone is inbetween business hours."""
     with freeze_time(frozen_utc):
-        assert yelp.is_open_now(response, timezone) is expected
+        assert yelp.is_open_now(business_hours, timezone) is expected

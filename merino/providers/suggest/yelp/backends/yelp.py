@@ -107,7 +107,9 @@ class YelpBackend(YelpBackendProtocol):
 
             # Try cache first
             cached_result = await self.get_from_cache(cache_key)
-            if cached_result is not None and self.is_open_now(cached_result, timezone):
+            if cached_result is not None and self.is_open_now(
+                cached_result["business_hours"][0]["open"], timezone
+            ):
                 return self.format_business_hours(cached_result, timezone)
 
             # Cache miss - fetch from API
@@ -177,29 +179,35 @@ class YelpBackend(YelpBackendProtocol):
             return None
 
     @staticmethod
-    def is_open_now(response: Any, timezone: str) -> bool:
-        """Determine whether business is open based on current time."""
+    def is_open_now(business_hours: list[dict[str, Any]], timezone: str) -> bool:
+        """Determine whether business is open based on current time.
+
+        Args:
+            business_hours: business hours from yelp.
+                ex [{"start": "1100", "end": "1800"}...]
+            timezone: local timezone string of the business
+        """
         now = datetime.now(ZoneInfo(timezone))
+        day = now.weekday()
         hour = now.hour
         minute = now.minute
         time_now = time(hour, minute)
         try:
-            business_hours = response["business_hours"][0]["open"]
             # parse time strings into time
-            start_string = business_hours[0]["start"]
+            start_string = business_hours[day]["start"]
             start_time = time(int(start_string[:2]), int(start_string[2:]))
-            end_string = business_hours[0]["end"]
+            end_string = business_hours[day]["end"]
             end_time = time(int(end_string[:2]), int(end_string[2:]))
 
             if start_time == time(0) and end_time == time(0):
                 return True
             return start_time <= time_now <= end_time
         except (KeyError, IndexError):
-            logger.warning(f"Yelp business hours has incorrect shape: {response}")
+            logger.warning(f"Yelp business hours has incorrect shape: {business_hours}")
             return False
 
     @staticmethod
-    def format_business_hours(response: dict, timezone: str) -> dict | None:
+    def format_business_hours(response: dict[str, Any], timezone: str) -> dict[str, Any] | None:
         """Format response to give only today's business hours."""
         now = datetime.now(ZoneInfo(timezone))
         weekday = now.weekday()
@@ -215,4 +223,6 @@ class YelpBackend(YelpBackendProtocol):
 
     async def shutdown(self) -> None:
         """Shutdown any persistent connections. Currently a no-op."""
-        pass
+        await self.http_client.aclose()
+        if self.cache:
+            await self.cache.close()
