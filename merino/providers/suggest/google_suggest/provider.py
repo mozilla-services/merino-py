@@ -72,7 +72,7 @@ class Provider(BaseProvider):
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide Google Suggest suggestions.
 
-        All the `BackendError` errors, raised from the frontend, are intentionally
+        All the `BackendError` errors, raised from the backend, are intentionally
         unhandled here to drive the circuit breaker. Those exceptions will eventually
         be propagated to the provider consumer (i.e. the API handler) and be handled
         there.
