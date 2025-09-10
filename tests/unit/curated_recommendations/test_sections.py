@@ -19,6 +19,10 @@ from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_6_tiles,
 )
+from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+    CrawlerExperimentRescaler,
+    SubsectionsExperimentRescaler,
+)
 from merino.curated_recommendations.protocol import (
     Section,
     SectionConfiguration,
@@ -355,6 +359,53 @@ class TestCrawlExperiment:
         from merino.curated_recommendations.sections import get_crawl_experiment_branch
 
         assert get_crawl_experiment_branch(req) == expected_branch
+
+    @pytest.mark.parametrize(
+        "name,branch,expected_class",
+        [
+            (
+                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                CrawlExperimentBranchName.CONTROL.value,
+                None,
+            ),
+            (
+                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                CrawlerExperimentRescaler,
+            ),
+            (
+                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+                CrawlerExperimentRescaler,
+            ),
+            (
+                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                CrawlExperimentBranchName.CONTROL.value,
+                None,
+            ),
+            (
+                ExperimentName.ML_SECTIONS_EXPERIMENT,
+                "treatment",
+                SubsectionsExperimentRescaler,
+            ),
+            (
+                ExperimentName.ML_SECTIONS_EXPERIMENT,
+                "control",
+                None,
+            ),
+            ("other", "treatment", None),
+            (None, None, None),
+        ],
+    )
+    def test_get_ranking_rescaler_for_branch(self, name, branch, expected_class):
+        """Test that we get the appropriate rescaler"""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
+
+        if expected_class is not None:
+            assert isinstance(get_ranking_rescaler_for_branch(req), expected_class)
+        else:
+            assert get_ranking_rescaler_for_branch(req) is None
 
     def test_filter_sections_treatment_crawl(self):
         """Test that treatment-crawl branch gets only crawl legacy sections"""

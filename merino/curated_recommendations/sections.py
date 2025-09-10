@@ -24,6 +24,7 @@ from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     SubsectionsExperimentRescaler,
     SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
+    CrawlerExperimentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, ExperimentRescaler
 from merino.curated_recommendations.protocol import (
@@ -280,6 +281,19 @@ def is_crawl_experiment_treatment(request: CuratedRecommendationsRequest) -> boo
     ]
 
 
+def get_ranking_rescaler_for_branch(
+    request: CuratedRecommendationsRequest,
+) -> ExperimentRescaler | None:
+    """Get the correct interactions and prior rescaler for the current experiment"""
+    if is_crawl_experiment_treatment(request):
+        return (
+            CrawlerExperimentRescaler()
+        )  # note is_subtopics_experiment may also be true in this case
+    if is_subtopics_experiment(request):
+        return SubsectionsExperimentRescaler()
+    return None
+
+
 def update_received_feed_rank(sections: dict[str, Section]):
     """Set receivedFeedRank such that it is incrementing from 0 to len(sections)"""
     for idx, sid in enumerate(sorted(sections, key=lambda k: sections[k].receivedFeedRank)):
@@ -494,6 +508,8 @@ async def get_sections(
     # Determine if we should include subtopics based on experiments
     include_subtopics = is_subtopics_experiment(request)
 
+    rescaler = get_ranking_rescaler_for_branch(request)
+
     corpus_sections_all = await get_corpus_sections(
         sections_backend=sections_backend,
         surface_id=surface_id,
@@ -517,8 +533,6 @@ async def get_sections(
     all_corpus_recommendations = [
         rec for section in corpus_sections.values() for rec in section.recommendations
     ]
-
-    rescaler = SubsectionsExperimentRescaler() if include_subtopics else None
 
     # 5. Rank all corpus recommendations globally by engagement to build top_stories_section
     all_ranked_corpus_recommendations = thompson_sampling(
