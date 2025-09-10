@@ -788,6 +788,14 @@ enabled_by_default = false
 # The ranking score for this provider as a floating point number.
 score = 0.3
 
+# MERINO_PROVIDERS__GOOGLE_SUGGEST__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+
+# MERINO_PROVIDERS__GOOGLE_SUGGEST__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
+
 [default.google_suggest]
 # MERINO_GOOGLE_SUGGEST__URL_BASE
 url_base = "https://www.google.com"

@@ -49,3 +49,15 @@ class WeatherCircuitBreaker(CircuitBreaker):
     EXPECTED_EXCEPTION = (AccuweatherError, BackendError)
     # When the breaker is open, use this to simply return an empty suggestion list to the caller.
     FALLBACK_FUNCTION = _suggest_provider_fallback_fn
+
+
+class GoogleSuggestCircuitBreaker(CircuitBreaker):
+    """Circuit Breader for the Google Suggest provider."""
+
+    FAILURE_THRESHOLD = settings.providers.google_suggest.circuit_breaker_failure_threshold
+    RECOVERY_TIMEOUT = settings.providers.google_suggest.circuit_breaker_recover_timeout_sec
+    # This breaker only cares about `BackendError` that could get raised for any
+    # HTTP request failures to the Google Suggest endpoint
+    EXPECTED_EXCEPTION = (BackendError,)
+    # When the breaker is open, use this to simply return an empty suggestion list to the caller.
+    FALLBACK_FUNCTION = _suggest_provider_fallback_fn

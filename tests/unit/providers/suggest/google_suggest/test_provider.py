@@ -8,6 +8,7 @@ import logging
 from typing import Any
 
 from fastapi import HTTPException
+from freezegun import freeze_time
 
 import pytest
 from pytest_mock import MockerFixture
@@ -23,10 +24,28 @@ from merino.providers.suggest.google_suggest.provider import Provider
 from tests.types import FilterCaplogFixture
 
 
+CIRCUIT_BREAKER_FAILURE_THRESHOLD: int = (
+    settings.providers.google_suggest.circuit_breaker_failure_threshold
+)
+CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC: float = (
+    settings.providers.google_suggest.circuit_breaker_recover_timeout_sec
+)
+
+
 @pytest.fixture(name="geolocation")
 def fixture_geolocation() -> Location:
     """Return a test Location."""
     return Location()
+
+
+@pytest.fixture(name="srequest")
+def fixture_srequest(geolocation: Location) -> SuggestionRequest:
+    """Return a test SuggestionRequest."""
+    return SuggestionRequest(
+        query="test",
+        geolocation=geolocation,
+        google_suggest_params="client%30firefox%26q%30test",
+    )
 
 
 @pytest.fixture(name="backend_mock")
@@ -93,7 +112,7 @@ def test_query_with_invalid_params_returns_http_400(
 async def test_query_suggestion_returned(
     backend_mock: Any,
     provider: Provider,
-    geolocation: Location,
+    srequest: SuggestionRequest,
     google_suggest_response: GoogleSuggestResponse,
 ) -> None:
     """Test that the query method provides a valid Google Suggest suggestion."""
@@ -112,32 +131,57 @@ async def test_query_suggestion_returned(
 
     backend_mock.fetch.return_value = google_suggest_response
 
-    suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(
-            query="test",
-            geolocation=geolocation,
-            google_suggest_params="client%30firefox%26q%30test",
-        )
-    )
+    suggestions: list[BaseSuggestion] = await provider.query(srequest)
 
     assert suggestions == expected_suggestions
 
 
 @pytest.mark.asyncio
-async def test_query_suggestion_failed(
+async def test_circuit_breaker_with_backend_error(
     backend_mock: Any,
+    mocker: MockerFixture,
     provider: Provider,
-    geolocation: Location,
+    srequest: SuggestionRequest,
+    google_suggest_response: GoogleSuggestResponse,
 ) -> None:
-    """Test that the query method provides an empty list upon a backend error."""
+    """Test that the provider can behave as expected when the circuit breaker
+    is triggered.
+    """
     backend_mock.fetch.side_effect = BackendError("A backend error")
 
-    suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(
-            query="test",
-            geolocation=geolocation,
-            google_suggest_params="client%30firefox%26q%30test",
-        )
-    )
+    with freeze_time("2025-09-10") as freezer:
+        # Trigger the breaker by calling the endpoint for the `threshold` times.
+        for _ in range(CIRCUIT_BREAKER_FAILURE_THRESHOLD):
+            try:
+                _ = await provider.query(srequest)
+            except BackendError:
+                pass
 
-    assert suggestions == []
+        spy = mocker.spy(backend_mock, "fetch")
+
+        # Make a few more requests and verify all of them get short circuited and served by the fallback function.
+        for _ in range(CIRCUIT_BREAKER_FAILURE_THRESHOLD):
+            # No need for exception handling as it should not be raised anyway.
+            _ = await provider.query(srequest)
+
+        # You shall not pass!
+        spy.assert_not_called()
+
+        # Now tick the timer to advance for the recovery timeout seconds.
+        freezer.tick(CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC + 1.0)
+
+        # Clear the side effect to restore the normal behavior.
+        backend_mock.fetch.side_effect = None
+        backend_mock.fetch.return_value = google_suggest_response
+
+        # The breaker should be `half-open` hence the request should hit the integration point,
+        # and bring the breaker back to the `closed` state.
+        suggestions = await provider.query(srequest)
+
+        spy.assert_called_once()
+        assert len(suggestions) == 1
+
+        # Verify that all the subsequent requests can succeed as well.
+        for _ in range(CIRCUIT_BREAKER_FAILURE_THRESHOLD):
+            suggestions = await provider.query(srequest)
+            assert len(suggestions) == 1
