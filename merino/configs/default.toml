@@ -723,7 +723,7 @@ cache = "redis"
 
 # MERINO_PROVIDERS__YELP__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
-enabled_by_default = true
+enabled_by_default = false
 
 # MERINO_PROVIDERS__YELP__SCORE
 # The ranking score for this provider as a floating point number.
