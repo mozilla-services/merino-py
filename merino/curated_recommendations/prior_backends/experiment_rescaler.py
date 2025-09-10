@@ -6,7 +6,7 @@ from merino.curated_recommendations.prior_backends.protocol import ExperimentRes
 from merino.curated_recommendations.protocol import CuratedRecommendation
 
 SUBTOPIC_TOTAL_PERCENT = 0.06  # This may eventually be computed by an airflow job
-CRAWLED_TOPIC_TOTAL_PERCENT = 0.03
+CRAWLED_TOPIC_TOTAL_PERCENT = 0.06
 SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 
 
