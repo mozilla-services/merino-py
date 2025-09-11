@@ -15,7 +15,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     SectionConfiguration,
     Section,
-    InferredInterests,
+    ProcessedInterests,
 )
 from scipy.stats import beta
 import numpy as np
@@ -190,7 +190,7 @@ def section_thompson_sampling(
 
 def greedy_personalized_section_rank(
     sections: dict[str, Section],
-    personal_interests: InferredInterests,
+    personal_interests: ProcessedInterests,
     epsilon: float = 0.0,
 ) -> dict[str, Section]:
     """Insert the ordered personal interest sections into the top of the section ranking.
@@ -205,10 +205,8 @@ def greedy_personalized_section_rank(
     ### only keeps a value if above first coarse threshold. this
     ### is because there is noise added to every value in client and
     ## we do not want to rank on the noise
-    ptopics = [
-        k for k, v in personal_interests.root.items() if isinstance(v, float) and v >= 0.0092
-    ]
-    ordered_preferences = sorted(ptopics, key=lambda x: personal_interests.root[x], reverse=True)
+    ptopics = [k for k, v in personal_interests.scores.items() if v > 0]
+    ordered_preferences = sorted(ptopics, key=lambda x: personal_interests.scores[x], reverse=True)
 
     # decide once for each pref whether it “wins” (prob. 1-epsilon)
     chosen = [

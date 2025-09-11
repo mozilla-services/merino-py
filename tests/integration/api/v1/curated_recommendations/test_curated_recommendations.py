@@ -41,7 +41,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     DayTimeWeightingConfig,
 )
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
-    SUBSECTION_EXPERIMENT_PERCENT,
+    SUBTOPIC_TOTAL_PERCENT,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
@@ -56,7 +56,7 @@ from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
 
-ML_EXPERIMENT_SCALE = SUBSECTION_EXPERIMENT_PERCENT
+ML_EXPERIMENT_SCALE = SUBTOPIC_TOTAL_PERCENT
 
 
 class MockEngagementBackend(EngagementBackend):

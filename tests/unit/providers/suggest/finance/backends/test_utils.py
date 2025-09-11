@@ -24,7 +24,7 @@ def fixture_single_ticker_snapshot_response() -> dict[str, Any]:
     return {
         "results": [
             {
-                "market_status": "late_trading",
+                "market_status": "open",
                 "name": "Apple Inc.",
                 "ticker": "AAPL",
                 "type": "stocks",
@@ -146,13 +146,39 @@ def test_extract_snapshot_if_valid_success(
     single_ticker_snapshot_response: dict[str, Any],
 ) -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return TickerSnapshot object."""
-    expected = TickerSnapshot(
-        ticker="AAPL", last_trade_price="120.47", todays_change_percent="+0.82"
+    expected_market_open = TickerSnapshot(
+        ticker="AAPL", last_trade_price="229.47", todays_change_percent="+0.82"
     )
-    actual = extract_snapshot_if_valid(single_ticker_snapshot_response)
+    actual_market_open = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
-    assert actual is not None
-    assert actual == expected
+    # setting the market status to closed.
+    single_ticker_snapshot_response["results"][0]["market_status"] = "closed"
+    # the change percent value is 0.946 from the fixture but the function rounds it to 2 decimal places.
+    expected_market_closed = TickerSnapshot(
+        ticker="AAPL", last_trade_price="229.31", todays_change_percent="+0.95"
+    )
+    actual_market_closed = extract_snapshot_if_valid(single_ticker_snapshot_response)
+
+    # setting the market status to early_trading.
+    single_ticker_snapshot_response["results"][0]["market_status"] = "early_trading"
+    expected_market_early_trading = TickerSnapshot(
+        ticker="AAPL", last_trade_price="227.16", todays_change_percent="-0.13"
+    )
+    actual_market_early_trading = extract_snapshot_if_valid(single_ticker_snapshot_response)
+
+    # setting the market status to late_trading.
+    single_ticker_snapshot_response["results"][0]["market_status"] = "late_trading"
+    # the change percent value is 0.946 from the fixture but the function rounds it to 2 decimal places.
+    expected_market_late_trading = TickerSnapshot(
+        ticker="AAPL", last_trade_price="229.31", todays_change_percent="+0.95"
+    )
+    actual_market_late_trading = extract_snapshot_if_valid(single_ticker_snapshot_response)
+
+    assert actual_market_open is not None
+    assert actual_market_open == expected_market_open
+    assert actual_market_early_trading == expected_market_early_trading
+    assert actual_market_late_trading == expected_market_late_trading
+    assert actual_market_closed == expected_market_closed
 
 
 def test_extract_snapshot_if_valid_returns_none() -> None:

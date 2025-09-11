@@ -42,6 +42,7 @@ class Location(BaseModel):
     key: Optional[str] = None
     coordinates: Optional[Coordinates] = None
     city_names: dict[str, str] = {}
+    timezone: Optional[str] = None
 
 
 def get_regions(subdivisions) -> Optional[list[str]]:
@@ -99,6 +100,7 @@ class GeolocationMiddleware:
                     radius=record.location.accuracy_radius,
                 ),
                 city_names=record.city.names,
+                timezone=record.location.time_zone,
             )
             if record
             else Location()

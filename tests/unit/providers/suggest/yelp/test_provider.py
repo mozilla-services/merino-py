@@ -14,6 +14,7 @@ from starlette.exceptions import HTTPException
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import SuggestionRequest, BaseSuggestion
 from merino.providers.suggest.custom_details import CustomDetails, YelpDetails
+from merino.providers.suggest.yelp.backends.protocol import YelpBusinessDetails
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 from merino.providers.suggest.yelp.provider import Provider
 
@@ -36,25 +37,13 @@ def fixture_business_data() -> dict:
     return {
         "name": "MochaZilla",
         "url": "https://example.com",
+        "city": "Toronto",
         "address": "123 Firefox Drive",
         "rating": 4.8,
         "price": "$",
         "review_count": 22,
-        "business_hours": [
-            {
-                "open": [
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 0},
-                    {"is_overnight": False, "start": "0700", "end": "1500", "day": 1},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 2},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 3},
-                    {"is_overnight": False, "start": "0700", "end": "2300", "day": 4},
-                    {"is_overnight": False, "start": "0800", "end": "2300", "day": 5},
-                    {"is_overnight": False, "start": "0800", "end": "2300", "day": 6},
-                ],
-                "hours_type": "REGULAR",
-                "is_open_now": True,
-            }
-        ],
+        "business_hours": {"start": "0700", "end": "2300"},
+        "image_url": "https://example.com/image.png",
     }
 
 
@@ -132,7 +121,7 @@ def test_validate_fails_on_geolocation_without_city(
     )
 
     with pytest.raises(HTTPException) as exc_info:
-        provider.validate(SuggestionRequest(query="coffee", geolocation=geolocation_no_city))
+        provider.validate(SuggestionRequest(query="coffeeshops", geolocation=geolocation_no_city))
 
     assert exc_info.value.status_code == 400
     assert "Valid query and location are required" in exc_info.value.detail
@@ -144,7 +133,7 @@ def test_validate_passes_with_valid_request(
 ) -> None:
     """Test that the validate method passes with valid request."""
     # Should not raise any exception
-    provider.validate(SuggestionRequest(query="coffee", geolocation=geolocation))
+    provider.validate(SuggestionRequest(query="coffeeshops", geolocation=geolocation))
 
 
 @pytest.mark.asyncio
@@ -157,7 +146,7 @@ async def test_query_returns_empty_when_no_business(
     backend_mock.get_business.return_value = None
 
     suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(query="coffee", geolocation=geolocation)
+        SuggestionRequest(query="coffeeshops", geolocation=geolocation)
     )
 
     assert suggestions == []
@@ -176,34 +165,7 @@ async def test_query_strips_whitespace_from_search_term(
     await provider.query(SuggestionRequest(query="  coffee  ", geolocation=geolocation))
 
     # Verify the backend was called with stripped search term
-    backend_mock.get_business.assert_called_once_with("coffee", "Toronto")
-
-
-def test_build_suggestion_removes_url_from_data(
-    provider: Provider,
-    business_data: dict,
-) -> None:
-    """Test that build_suggestion removes URL from data and creates proper suggestion."""
-    # Copy the data to avoid modifying the fixture
-    data_copy = business_data.copy()
-
-    suggestion = provider.build_suggestion(data_copy)
-
-    assert suggestion is not None
-    assert suggestion.title == "Yelp Suggestion"
-    # HttpUrl normalizes URLs by adding trailing slashes
-    assert str(suggestion.url) == "https://example.com/"
-    assert suggestion.provider == "yelp"
-    assert suggestion.is_sponsored is False
-    assert suggestion.score == 0.26
-
-    # Type assertions for mypy
-    assert suggestion.custom_details is not None
-    assert suggestion.custom_details.yelp is not None
-    assert suggestion.custom_details.yelp.name == business_data["name"]
-
-    # Verify URL was removed from the data
-    assert "url" not in data_copy
+    backend_mock.get_business.assert_called_once_with("coffee", geolocation)
 
 
 @pytest.mark.asyncio
@@ -217,11 +179,27 @@ async def test_query_business_returned(
     expected_suggestions: list[BaseSuggestion] = [
         BaseSuggestion(
             title="Yelp Suggestion",
-            url=HttpUrl(business_data["url"]),
+            url=HttpUrl("https://merino.services.mozilla.com/"),
             provider=provider.name,
             is_sponsored=False,
             score=provider.score,
-            custom_details=CustomDetails(yelp=YelpDetails(**business_data)),
+            custom_details=CustomDetails(
+                yelp=YelpDetails(
+                    values=[
+                        YelpBusinessDetails(
+                            name=business_data["name"],
+                            url=business_data["url"],
+                            city=business_data["city"],
+                            address=business_data["address"],
+                            price=business_data["price"],
+                            rating=business_data["rating"],
+                            review_count=business_data["review_count"],
+                            business_hours=business_data["business_hours"],
+                            image_url=business_data["image_url"],
+                        )
+                    ]
+                )
+            ),
         ),
     ]
     backend_mock.get_business.return_value = business_data
@@ -231,3 +209,20 @@ async def test_query_business_returned(
     )
 
     assert suggestions == expected_suggestions
+
+
+@pytest.mark.parametrize(
+    "search_term, expected",
+    [
+        # Category matches
+        ("Coffeeshops near me", "coffeeshops"),
+        ("ice cream & frozen yogurt", "ice cream & frozen yogurt"),
+        # Bad location matches
+        ("coffeeshops in the neighbourhood", "coffeeshops in the neighbourhood"),
+        # Extra whitespace
+        ("   coffeeshops nearby   ", "coffeeshops"),
+    ],
+)
+def test_category_keyword_match(provider: Provider, search_term: str, expected: str) -> None:
+    """Test that the category keyword match works as expected."""
+    assert provider.normalize_query(search_term) == expected
