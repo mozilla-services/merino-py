@@ -198,7 +198,7 @@ async def get_corpus_sections(
         headlines_corpus_section = map_corpus_section_to_section(
             corpus_section=raw_headlines_section,
             rank=0,
-            layout=layout_4_medium,
+            layout=deepcopy(layout_4_large),
             is_legacy_section=False,
         )
 
@@ -425,10 +425,12 @@ def remove_story_recs(
 
 
 def cycle_layouts_for_ranked_sections(sections: dict[str, Section], layout_cycle: list[Layout]):
-    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section'"""
-    # Exclude top_stories_section from layout cycling
+    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section' & 'headlines_section'."""
+    # Exclude top_stories_section & headlines_section(if present) from layout cycling
     ranked_sections = [
-        section for sid, section in sections.items() if sid != "top_stories_section"
+        section
+        for sid, section in sections.items()
+        if sid not in ("headlines_section", "top_stories_section")
     ]
     for idx, section in enumerate(ranked_sections):
         section.layout = deepcopy(layout_cycle[idx % len(layout_cycle)])
@@ -677,6 +679,7 @@ async def get_sections(
     if include_headlines_section:
         sections["headlines_section"] = cast(Section, headlines_corpus_section)
         sections["top_stories_section"].receivedFeedRank = 1
+        sections["top_stories_section"].layout = layout_4_medium
 
     # 11. Add remaining corpus sections
     sections.update(corpus_sections)

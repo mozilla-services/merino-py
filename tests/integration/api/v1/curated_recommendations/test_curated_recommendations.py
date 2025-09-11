@@ -1716,10 +1716,13 @@ class TestSections:
             assert headlines_section["receivedFeedRank"] == 0
             assert headlines_section["title"] == "Headlines"
             assert headlines_section["subtitle"] == "Top Headlines today"
+            assert headlines_section["layout"]["name"] == "4-large-small-medium-1-ad"
 
             # Assert that top_stories section has rank == 1
             top_stories_section = sections.get("top_stories_section")
             assert top_stories_section["receivedFeedRank"] == 1
+            assert top_stories_section["title"] == "Popular Today"
+            assert top_stories_section["layout"]["name"] == "4-medium-small-1-ad"
 
             remaining_sections = sorted(
                 (
