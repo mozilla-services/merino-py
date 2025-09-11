@@ -86,6 +86,8 @@ class ExperimentName(str, Enum):
     ML_SECTIONS_EXPERIMENT = "new-tab-ml-sections"
     # Experiment to compare RSS vs. Zyte content sources for legacy topic sections
     RSS_VS_ZYTE_EXPERIMENT = "new-ranking-for-legacy-topics-in-new-tab-v1"
+    # Experiment to display Daily Briefing section as the first section on New Tab
+    DAILY_BRIEFING_EXPERIMENT = "daily-briefing-v1"
 
 
 @unique
