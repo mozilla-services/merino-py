@@ -961,7 +961,7 @@ class TestPutHeadlinesFirstThenTopStories:
         feed["headlines_section"] = Section(
             receivedFeedRank=3,
             recommendations=[],
-            title="Headlines",
+            title="Your Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
         headlines_section = feed["headlines_section"]
@@ -992,7 +992,7 @@ class TestPutHeadlinesFirstThenTopStories:
         feed["headlines_section"] = Section(
             receivedFeedRank=3,
             recommendations=[],
-            title="Headlines",
+            title="Your Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
         headlines_section = feed["headlines_section"]
@@ -1028,7 +1028,7 @@ class TestSplitHeadlinesSection:
 
     def test_returns_headlines_section_and_remaining_sections_when_present(self):
         """Test if headlines_crawl exists, return it separately and exclude from remaining sections."""
-        headlines = self.generate_corpus_section("headlines_crawl", "Headlines")
+        headlines = self.generate_corpus_section("headlines_crawl", "Your Briefing")
         sports = self.generate_corpus_section("sports")
         tech = self.generate_corpus_section("tech")
 
@@ -1065,24 +1065,28 @@ class TestGetCorpusSections:
         health_crawl = MagicMock()
         health_crawl.externalId = "health_crawl"
         health_crawl.title = "Health (Crawl)"
+        health_crawl.description = None
         health_crawl.sectionItems = []
         health_crawl.iab = None
 
         tech_crawl = MagicMock()
         tech_crawl.externalId = "tech_crawl"
         tech_crawl.title = "Tech (Crawl)"
+        tech_crawl.description = None
         tech_crawl.sectionItems = []
         tech_crawl.iab = None
 
         sports = MagicMock()
         sports.externalId = "sports"
         sports.title = "Sports"
+        sports.description = None
         sports.sectionItems = []
         sports.iab = None
 
         arts = MagicMock()
         arts.externalId = "arts"
         arts.title = "Arts"
+        arts.description = None
         arts.sectionItems = []
         arts.iab = None
 
@@ -1101,12 +1105,14 @@ class TestGetCorpusSections:
         tech_crawl = MagicMock()
         tech_crawl.externalId = "tech_crawl"
         tech_crawl.title = "Tech (Crawl)"
+        tech_crawl.description = None
         tech_crawl.sectionItems = []
         tech_crawl.iab = None
 
         sports = MagicMock()
         sports.externalId = "sports"
         sports.title = "Sports"
+        sports.description = None
         sports.sectionItems = []
         sports.iab = None
 
@@ -1114,6 +1120,7 @@ class TestGetCorpusSections:
         headlines_crawl = MagicMock()
         headlines_crawl.externalId = "headlines_crawl"
         headlines_crawl.title = "Headlines"
+        headlines_crawl.description = "Top Headlines today"
         headlines_crawl.sectionItems = []
         headlines_crawl.iab = {"taxonomy": "IAB-3.0", "categories": ["386", "JLBCU7"]}
 
@@ -1233,7 +1240,8 @@ class TestGetCorpusSections:
 
         # Headlines should be returned separately from the rest of the result
         assert headlines is not None
-        assert headlines.title == "Headlines"
+        assert headlines.title == "Your Briefing"
+        assert headlines.subtitle == "Top Headlines today"
 
         # The remaining result should not contain headlines_section; should contain only non-crawl legacy topics
         assert "headlines_crawl" not in result
@@ -1257,7 +1265,8 @@ class TestGetCorpusSections:
 
         # Headlines should be returned separately from the rest of the result
         assert headlines is not None
-        assert headlines.title == "Headlines"
+        assert headlines.title == "Your Briefing"
+        assert headlines.subtitle == "Top Headlines today"
 
         # Remaining sections should only contain _crawl sections mapped to their base IDs
         assert "sports" not in result

@@ -55,6 +55,7 @@ DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
 HEADLINES_SECTION_KEY = "headlines_section"
 HEADLINES_CRAWL_SECTION_KEY = "headlines_crawl"
+HEADLINES_SECTION_TITLE = "Your Briefing"
 
 
 def map_section_item_to_recommendation(
@@ -194,7 +195,8 @@ async def get_corpus_sections(
 
     # If Headlines section is present, isolate from other sections & map to a corpus section
     if raw_headlines_section:
-        # headlines_id = raw_headlines_section.externalId.replace("_crawl", "")
+        # ML sends "Headlines" for title, update title to display on NewTab
+        raw_headlines_section.title = HEADLINES_SECTION_TITLE
         headlines_corpus_section = map_corpus_section_to_section(
             corpus_section=raw_headlines_section,
             rank=0,
@@ -678,6 +680,7 @@ async def get_sections(
     # 10. If headlines_section experiment enabled, insert headlines_section on top followed by top_stories
     if include_headlines_section:
         sections["headlines_section"] = cast(Section, headlines_corpus_section)
+        sections["headlines_section"].title = "Your Briefing"
         sections["top_stories_section"].receivedFeedRank = 1
         sections["top_stories_section"].layout = layout_4_medium
 
