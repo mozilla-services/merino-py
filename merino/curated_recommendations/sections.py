@@ -43,6 +43,7 @@ from merino.curated_recommendations.rankers import (
     section_thompson_sampling,
     put_top_stories_first,
     greedy_personalized_section_rank,
+    takedown_reported_recommendations,
 )
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
@@ -533,6 +534,13 @@ async def get_sections(
     all_corpus_recommendations = [
         rec for section in corpus_sections.values() for rec in section.recommendations
     ]
+
+    # 5. Remove reported recommendations
+    all_corpus_recommendations = takedown_reported_recommendations(
+        all_corpus_recommendations,
+        engagement_backend=engagement_backend,
+        region=region,
+    )
 
     # 5. Rank all corpus recommendations globally by engagement to build top_stories_section
     all_ranked_corpus_recommendations = thompson_sampling(
