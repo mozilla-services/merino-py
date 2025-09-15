@@ -2,15 +2,13 @@
 
 import json
 import logging
-from datetime import datetime, timedelta
-
-# TODO: Switch to aioredis
-import redis
 from abc import abstractmethod
-from dynaconf.base import Settings
-from pydantic import BaseModel
-
+from datetime import datetime, timedelta
 from typing import Any
+
+from dynaconf.base import Settings
+from elasticsearch import Elasticsearch
+from pydantic import BaseModel
 
 from merino.configs import settings
 from merino.utils.http_client import create_http_client
@@ -21,8 +19,12 @@ from merino.providers.suggest.sports import LOGGING_TAG
 
 
 class DataStore:
-    team_pool: redis.ConnectionPool
-    event_pool: redis.ConnectionPool
+    # Create two indices for now, one for the team data, the other for event data.
+    team_index: str
+    event_index: str
+    meta_index: str
+    client: Elasticsearch
+    timeout_ms: str
     data: dict[str, Any] | None
 
     def __init__(self, settings: Settings) -> None:
@@ -30,15 +32,15 @@ class DataStore:
             # This may collapse into one data store, but for now, store
             # teams and events separately. Teams will require "fuzzy" search
             # and events will have a more well defined key.
-            self.event_pool = redis.ConnectionPool().from_url(settings.dsn)
-            # TODO: self.team_pool = # connect to elastic search
-            # TODO: fetch the meta data from the client and deser it into a dict.
+            self.client = Elasticsearch(
+                hosts=[host.strip() for host in settings.hosts.split(",")],
+                api_key=settings.api_key
+                )
+            self.timeout_ms = f"{settings.timeout_ms or 100}ms"
+            for index in [self.meta_index, self.event_index, self.team_index]:
+                self.client.indices.create(index=index)
             self.data = dict(
                 active=[sport.trim() for sport in settings.sports.sports.split(",")],
-                dsns=dict(
-                    team=settings.sports.team_storage,
-                    event=settings.sports.event_storage,
-                ),
             )
         except AttributeError as ex:
             logging.warning(f"{LOGGING_TAG}⚠️ Could not create DataStore pool: {ex}")
@@ -54,18 +56,22 @@ class DataStore:
         """store the list of teams."""
 
         # TODO: convert to async transactions
-        db = redis.Redis().from_pool(self.team_pool)
+        # Compose a queue of operations
+        # ```
+        #   {"index": { "_index" : $index}}
+        #   { $data }
+        # ```
+        queue=[]
         for team in teams:
             # this can be optimized:
-            db.set(f"team:{team.key}", team.as_str())
-            #store the reference string
-            for word in team.aliases:
-                db.set(f"str:{word.lower()}", "team:{team.key}")
-            # TODO: append team to list for a given locale
-            if team.locale:
-                # get the existing teams if present
-                # append team.key if not already present
-                pass
+            queue.append(f"""{"index":{"_index":"{self.team_index}"}}""")
+            queue.append(team.as_str())
+        #update the meta info for the team.
+        queue.append(f"""{}""")
+        db = self.client.bulk(
+            index=self.team_index,
+            body=[]
+        )
 
 
     async def store_events(self, events: list[Event]):
@@ -85,6 +91,14 @@ class DataStore:
             # SCAN 0 MATCH event:{team}:* count 3
             pass
         pass
+
+    async def fetch_metadata(self, sport_name:str) -> dict[str, Any]:
+        """Return the set of metadata for this sport"""
+        return dict()
+
+    async def update_metadata(self, sport_name:str, data:dict [str, Any]):
+        """Store the metadata for the sport"""
+
 
 
 class Sport(BaseModel):
@@ -164,7 +178,9 @@ class Sport(BaseModel):
 
 
 class Team(BaseModel):
-    # Team long name
+    # Search terms for elastic search
+    terms: str
+    #  Team long name
     name: str
     # Team sport specific unique key
     key: str
@@ -188,6 +204,7 @@ class Team(BaseModel):
                 f"{LOGGING_TAG}: Wrong sport! Expected {sport.name}, found{data_sport}"
             )
         return cls(
+            terms=struct.get("terms"),
             name=struct.get("name"),
             key=struct.get("key"),
             locale=struct.get("locale"),
@@ -361,7 +378,6 @@ class NHL(Sport):
     """Major Hockey League"""
 
     store: DataStore
-
     def __init__(self, *args, **kwargs):
         super().__init__(name="NHL", *args, **kwargs)
 
@@ -374,6 +390,7 @@ class NHL(Sport):
 
 class EPL(Sport):
     """English Premier League"""
+    term_filter:list [str] = ["a", "club", "the", "football", "fc"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(name="EPL", *args, **kwargs)
@@ -398,6 +415,8 @@ class EPL(Sport):
 
 class UCL(Sport):
     """UEFA Champions League"""
+    term_filter:list [str] = ["a", "club", "the", "football", "fc"]
+    storage: DataStore
 
     def __init__(self, *args, **kwargs):
         super().__init__(name="UCL", *args, **kwargs)
@@ -447,7 +466,17 @@ class UCL(Sport):
         data = await fetch_data(self.http_client, url)
         teams = []
         for team_data in data:
+            # build the list of terms we want to search:
+            terms = set()
+            for item in ["Name", "FullName", "AreaName", "City", "Nickname1", "Nickname2", "Nickname3"]:
+                candidate = team_data.get(item)
+                if candidate:
+                    for word in list(" ".split(candidate)):
+                        lword = word.lower()
+                        if word not in self.term_filter:
+                            terms.add(lword)
             team = Team(
+                terms= " ".join(terms),
                 key=self.team_key(team_data.get("Key")),
                 name=team_data.get("Name"),
                 locale=" ".join(

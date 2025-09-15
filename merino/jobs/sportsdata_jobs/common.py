@@ -82,8 +82,9 @@ class Sport(BaseModel):
         )
 
     @abstractmethod
-    async def update(self, settings: Settings, store: DataStore):
+    async def update(self, store: DataStore):
         """Update the data associated with this sport"""
+        # once updated, remember to set the metadata to indicate last update time.
 
 
 class SportDate:

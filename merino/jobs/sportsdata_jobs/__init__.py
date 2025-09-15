@@ -81,7 +81,6 @@ class SportDataUpdater(BaseModel):
 
     def __init__(self, settings: Settings, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.client = AsyncClient()
         self.store = DataStore(settings)
         if not settings.sports:
             raise SportDataError("No sports defined")
@@ -110,13 +109,13 @@ class SportDataUpdater(BaseModel):
     async def update(self) -> bool:
         """Perform sport specific updates."""
         for sport in self.sports.values():
-            sport.update(self.store)
+            await sport.update(store=self.store)
 
     async def refresh_sport(self, sport_name: str, force: bool = False):
         """Refresh the fetched sport data if needed."""
         # Does the stored data require refreshing?
         try:
-            sport = await self.store.fetch(sport_name)
+            sport = await self.store.fetch_meta(sport_name)
             if stored:
                 if force or datetime.fromtimestamp(
                     stored["updated"]
@@ -129,14 +128,14 @@ class SportDataUpdater(BaseModel):
 
     async def nightly(self) -> None:
         """Perform the nightly maintenance tasks"""
-        for sport in self.sports:
+        for sport in self.sports.values():
             # Fetch the meta data for the sport, this includes if the sport is "active"
             # as well as any upcoming events for the sport.
-            await sport.update()
+            await sport.update(store=self.store)
 
     async def hourly(self) -> None:
         """Perform the hourly maintenance tasks"""
-        for sport in self.sports:
+        for sport in self.sports.values():
             if not sport.is_active:
                 continue
             await sport.poll_data()

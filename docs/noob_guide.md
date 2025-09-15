@@ -2,11 +2,24 @@
 
 This guide presumes that you know what [Merino](intro.md), are familiar with programming in Python 3.12+, and are looking to incorporate a new service.
 
+## Setting up a development environment
+
+### ElasticSearch
+
+Merino uses several data stores, including ElasticSearch. You can read
+how to install and run a local only instance by following [this
+guide](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-basic).
+
 ## Types of Merino Services
 
 Merino has two ways to provide suggestions, _off-line_ (which uses user agent locally stored data provided by Remote Settings) and _on-line_ (which provides more timely data by providing live responses to queries).
 
-_off-line_ data sets are generally smaller, since we have limited storage capacity available. These may use the [`csv_rs_uploader`](../merino/jobs/csv_rs_uploader) command. A good example of this is the []`wikipedia_offline_uploader`](../merino/jobs/wikipedia_offline_uploader) job.
+_off-line_ data sets are generally smaller, since we have limited
+storage capacity available. These may use the
+[`csv_rs_uploader`](../merino/jobs/csv_rs_uploader) command. A good
+example of this is the
+[`wikipedia_offline_uploader`](../merino/jobs/wikipedia_offline_uploader)
+job.
 
 _on-line_ data do not necessarily have the same size restrictions, but are instead constrained by time. These services should return a response in less than 200ms.
 
@@ -18,7 +31,7 @@ _on-line_ data do not necessarily have the same size restrictions, but are inste
 ```bash
 > uv run merino-jobs
 
- Usage: merino-jobs [OPTIONS] COMMAND [ARGS]...
+Usage: merino-jobs [OPTIONS] COMMAND [ARGS]...
 
  CLI Entrypoint
 
