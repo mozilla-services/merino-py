@@ -156,7 +156,7 @@ class FakeLocalModelSections(LocalModelBackend):
 
 
 V0_MODEL_P_VALUE = 0.806
-VO_MODEL_Q_VALUE = 0.030
+V0_MODEL_Q_VALUE = 0.030
 
 
 # Creates a simple model based on sections. Section features are stored with a s_
@@ -195,7 +195,7 @@ class LimitedTopicV0Model(LocalModelBackend):
                 if topic is not Topic.SPORTS
                 else [0.005, 0.008, 0.02],
                 diff_p=V0_MODEL_P_VALUE,
-                diff_q=VO_MODEL_Q_VALUE,
+                diff_q=V0_MODEL_Q_VALUE,
             )
 
         category_fields: dict[str, InterestVectorConfig] = {
