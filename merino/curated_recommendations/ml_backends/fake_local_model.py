@@ -155,10 +155,15 @@ class FakeLocalModelSections(LocalModelBackend):
         )
 
 
+V0_MODEL_P_VALUE = 0.806
+V0_MODEL_Q_VALUE = 0.030
+
+
 # Creates a simple model based on sections. Section features are stored with a s_
-# in telemetry
+# in telemetry.
 class LimitedTopicV0Model(LocalModelBackend):
     """Class that defines a limited topic model that supports coarse interest vector
+    This is the first version for the privacy launch, with vetted p/q privacy values
     Set which model is used at __init__ import
     """
 
@@ -188,9 +193,9 @@ class LimitedTopicV0Model(LocalModelBackend):
                 features={f"t_{topic}": 1},
                 thresholds=[0.01, 0.02, 0.03]
                 if topic is not Topic.SPORTS
-                else [0.005, 0.08, 0.02],
-                diff_p=0.84,
-                diff_q=0.05,
+                else [0.005, 0.008, 0.02],
+                diff_p=V0_MODEL_P_VALUE,
+                diff_q=V0_MODEL_Q_VALUE,
             )
 
         category_fields: dict[str, InterestVectorConfig] = {
