@@ -1,6 +1,7 @@
 """Algorithms for ranking curated recommendations."""
 
 import logging
+import math
 from copy import copy
 from datetime import datetime, timedelta, timezone
 
@@ -86,62 +87,46 @@ def takedown_reported_recommendations(
 
     :return: Filtered list of recommendations.
     """
-    # Find recommendations that breach the report threshold (list of tuples)
-    # Each tuple contains relevant data about the recommendation based on corpus_item_id
-    # (report_count/impression_count, raw report_count, raw impression_count, corpus_item_id)
-    reported_recs: list[tuple[float, int, int, str]] = []
 
-    for rec in recs:
+    # Save engagement metrics for logging: {corpusItemId: (report_ratio, reports, impressions)}
+    rec_eng_metrics: dict[str, tuple[float, int, int]] = {}
+
+    def _report_ratio_for(rec: CuratedRecommendation) -> float:
         if engagement := engagement_backend.get(rec.corpusItemId, region):
-            impressions = int(engagement.impression_count or 0)
-            reports = int(engagement.report_count or 0)
+            _impressions = int(engagement.impression_count or 0)
+            _reports = int(engagement.report_count or 0)
+            if _impressions > 0:
+                report_ratio = _reports / _impressions
+                rec_eng_metrics[rec.corpusItemId] = (report_ratio, _reports, _impressions)
+                return report_ratio
+        return -1.0  # treat as safe (won’t breach threshold)
 
-            # Skip; cannot compute the report_ratio if impressions is 0 or bad value
-            if impressions <= 0:
-                continue
-            # Compute the report_ratio
-            report_ratio = reports / impressions
-            # Check if report_ratio breaches the threshold
-            if report_ratio > report_ratio_threshold:
-                reported_recs.append((report_ratio, reports, impressions, rec.corpusItemId))
-
-    # If no reported recs found, nothing to filter
-    if not reported_recs:
+    # Filter first; common case is empty
+    over = [rec for rec in recs if _report_ratio_for(rec) > report_ratio_threshold]
+    if not over:
         return recs
 
     # Compute the safeguard cap, # of recs safe to remove from total list of reported_recs
-    max_recs_to_remove = int(len(recs) * safeguard_cap_takedown_fraction)
-    if max_recs_to_remove <= 0:
-        return recs
+    # rounded up to avoid 0 removals
+    max_recs_to_remove = math.ceil(len(recs) * safeguard_cap_takedown_fraction)
 
-    # Sort the reported recs to finalize which recs to exclude using max_removals
-    reported_recs.sort(
-        key=lambda candidate: (
-            candidate[0],  # report_ratio
-            candidate[2],  # impressions
-            candidate[1],  # reports
-        ),
-        reverse=True,
-    )
+    # Sort only the small over-threshold set by ratio; no tie-breakers.
+    over.sort(key=_report_ratio_for, reverse=True)
 
-    # Select the top N recs (using safeguard cap) to actually exclude
-    candidates_to_remove = reported_recs[:max_recs_to_remove]
-    # Use a set for collecting corpusItemIds (quick lookup when filtering later).
-    # Unpack the tuples, we only need corpus_item_id
-    candidate_rec_ids_to_remove = {
-        corpus_item_id for _, _, _, corpus_item_id in candidates_to_remove
-    }
+    # Select top N to remove
+    recs_to_remove = over[:max_recs_to_remove]
+    removed_rec_ids = {r.corpusItemId for r in recs_to_remove}
 
-    # Log an error per each excluded rec
-    for report_ratio, reports, impressions, corpus_item_id in candidates_to_remove:
+    for rec in recs_to_remove:
+        ratio, reports, impressions = rec_eng_metrics.get(rec.corpusItemId, (-1.0, 0, 0))
         logger.error(
-            f"Excluding reported recommendation: corpus_item_id={corpus_item_id} "
-            f"report_ratio={report_ratio:.6f} reports={reports} impressions={impressions} "
+            f"Excluding reported recommendation: corpus_item_id={rec.corpusItemId} "
+            f"report_ratio={ratio:.6f} reports={reports} impressions={impressions} "
             f"threshold={report_ratio_threshold:.6f} region={region}"
         )
 
-    remaining_recs = [rec for rec in recs if rec.corpusItemId not in candidate_rec_ids_to_remove]
-    return remaining_recs
+    # Return remaining recs
+    return [rec for rec in recs if rec.corpusItemId not in removed_rec_ids]
 
 
 def thompson_sampling(
