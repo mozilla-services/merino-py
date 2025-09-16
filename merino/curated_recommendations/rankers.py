@@ -87,7 +87,6 @@ def takedown_reported_recommendations(
 
     :return: Filtered list of recommendations.
     """
-
     # Save engagement metrics for logging: {corpusItemId: (report_ratio, reports, impressions)}
     rec_eng_metrics: dict[str, tuple[float, int, int]] = {}
 
