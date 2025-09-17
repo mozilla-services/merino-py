@@ -60,4 +60,5 @@ class CrawlerExperimentRescaler(SubsectionsExperimentRescaler):
     def rescale_prior(self, rec: CuratedRecommendation, alpha, beta):
         """Rescales priors based on content"""
         # treat subtopics and topics the same
-        return alpha, beta
+        # all new data comes in with a lower expected CTR in order to not severely disrupt popular items
+        return alpha / 4.0, beta

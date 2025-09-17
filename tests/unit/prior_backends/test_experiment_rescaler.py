@@ -67,9 +67,9 @@ class TestCrawlerExperimentRescaler:
         assert opens == expected_opens
         assert no_opens == expected_no_opens
 
-        alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
-        # no change
-        assert alpha == 10
+        alpha, beta = self.rescaler.rescale_prior(rec, 40, 20)
+
+        assert alpha == 40 / 4  # should scale down
         assert beta == 20
 
     def test_rescale_regular_item(self):
@@ -82,7 +82,7 @@ class TestCrawlerExperimentRescaler:
         assert opens == 100 / CRAWLED_TOPIC_TOTAL_PERCENT
         assert no_opens == 50 / CRAWLED_TOPIC_TOTAL_PERCENT
 
-        alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
-        # no change
-        assert alpha == 10
+        alpha, beta = self.rescaler.rescale_prior(rec, 40, 20)
+
+        assert alpha == 40 / 4  # should scale down
         assert beta == 20
