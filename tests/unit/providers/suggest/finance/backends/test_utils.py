@@ -120,8 +120,12 @@ def test_lookup_ticker_exchange_fail() -> None:
 
 def test_get_tickers_for_query() -> None:
     """Test get_tickers_for_query method for various cases."""
-    # Valid stock ticker.
-    assert get_tickers_for_query("AAPL") == ["AAPL"]
+    # Valid stock ticker but it's on the ticker match block list
+    # so should return None
+    assert get_tickers_for_query("AAPL") is None
+
+    # Valid stock ticker
+    assert get_tickers_for_query("DDOG") == ["DDOG"]
 
     # Valid ETF ticker.
     assert get_tickers_for_query("BIS") == ["BIS"]

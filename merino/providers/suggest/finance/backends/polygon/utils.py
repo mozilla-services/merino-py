@@ -7,9 +7,11 @@ from pydantic import HttpUrl
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
 from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapping import (
     ALL_STOCK_TICKER_COMPANY_MAPPING,
+    STOCK_TICKER_MATCH_BLOCKLIST,
 )
 from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mapping import (
     ALL_ETF_TICKER_COMPANY_MAPPING,
+    ETF_TICKER_MATCH_BLOCKLIST,
 )
 from merino.providers.suggest.finance.backends.polygon.keyword_ticker_mapping import (
     KEYWORD_TO_STOCK_TICKER_MAPPING,
@@ -38,6 +40,11 @@ def get_tickers_for_query(keyword: str) -> list[str] | None:
     """Validate and return a list of tickers (1 to 3) or None."""
     keyword_upper = keyword.upper()
 
+    if (
+        keyword_upper in STOCK_TICKER_MATCH_BLOCKLIST
+        or keyword_upper in ETF_TICKER_MATCH_BLOCKLIST
+    ):
+        return None
     if keyword_upper in ALL_STOCK_TICKER_COMPANY_MAPPING:
         return [keyword_upper]
     if keyword_upper in ALL_ETF_TICKER_COMPANY_MAPPING:
