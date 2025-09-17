@@ -1004,8 +1004,9 @@ ALL_STOCK_TICKER_COMPANY_MAPPING: dict[str, dict[str, str]] = {
     "XPO": {"company": "Xpo Inc", "exchange": "NYSE"},
 }  # noqa
 
-# TODO add comment
-EAGERLY_MATCHED = [
+# Tickers prone to eager matches (short symbols or company name-like); used to avoid
+# aggressive matches on partial queries.
+TICKER_MATCH_BLOCKLIST = [
     # 2 letter tickers
     "AA",
     "AL",
@@ -1107,20 +1108,13 @@ EAGERLY_MATCHED = [
     "GOOGL",
     "HOOD",
     "IBM",
-    "INTC",
     "LYFT",
     "META",
-    "MSFT",
-    "NFLX",
-    "NVDA",
-    "ORCL",
     "PINS",
-    "PYPL",
     "RDDT",
     "ROKU",
     "SNOW",
     "SPOT",
     "TEAM",
-    "TSLA",
     "UBER",
 ]
