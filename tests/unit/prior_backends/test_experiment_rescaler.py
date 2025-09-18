@@ -8,6 +8,7 @@ from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     SubsectionsExperimentRescaler,
     CRAWLED_TOPIC_TOTAL_PERCENT,
     CrawlerExperimentRescaler,
+    PESSIMISTIC_PRIOR_ALPHA_SCALE,
 )
 
 SUBSECTION_EXPERIMENT_PERCENT = 0.25
@@ -67,9 +68,9 @@ class TestCrawlerExperimentRescaler:
         assert opens == expected_opens
         assert no_opens == expected_no_opens
 
-        alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
-        # no change
-        assert alpha == 10
+        alpha, beta = self.rescaler.rescale_prior(rec, 40, 20)
+
+        assert alpha == 40 * PESSIMISTIC_PRIOR_ALPHA_SCALE
         assert beta == 20
 
     def test_rescale_regular_item(self):
@@ -82,7 +83,7 @@ class TestCrawlerExperimentRescaler:
         assert opens == 100 / CRAWLED_TOPIC_TOTAL_PERCENT
         assert no_opens == 50 / CRAWLED_TOPIC_TOTAL_PERCENT
 
-        alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
-        # no change
-        assert alpha == 10
+        alpha, beta = self.rescaler.rescale_prior(rec, 40, 20)
+
+        assert alpha == 40 * PESSIMISTIC_PRIOR_ALPHA_SCALE
         assert beta == 20
