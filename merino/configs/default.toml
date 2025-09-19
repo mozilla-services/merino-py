@@ -850,6 +850,11 @@ url_base = "https://www.google.com"
 # MERINO_GOOGLE_SUGGEST__URL_SUGGEST_PATH
 # The endpoint for google suggest.
 url_suggest_path = "/complete/search"
+# MERINO_GOOGLE_SUGGEST__PROXY_URL
+# The proxy URL that all the Google Suggest requests would go through if specified.
+# No proxying if this URL is left empty. The URL should be fully specified, e.g.
+# "http(s)://{your-proxy-host}:{port}"
+proxy_url = ""
 
 [default.curated_recommendations.gcs.local_model]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__LOCAL_MODEL__MAX_SIZE
