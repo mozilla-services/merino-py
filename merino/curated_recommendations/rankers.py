@@ -1,5 +1,7 @@
 """Algorithms for ranking curated recommendations."""
 
+import logging
+import math
 from copy import copy
 from datetime import datetime, timedelta, timezone
 
@@ -19,6 +21,8 @@ from merino.curated_recommendations.protocol import (
 )
 from scipy.stats import beta
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 def renumber_recommendations(recommendations: list[CuratedRecommendation]) -> None:
@@ -56,6 +60,72 @@ MAX_TOP_REC_SLOTS = 10
 NUM_RECS_PER_TOPIC = 2
 
 TOP_STORIES_SECTION_KEY = "top_stories_section"
+
+# For taking down reported content
+DEFAULT_REPORT_RECS_RATIO_THRESHOLD = 0.01  # using a low number for now (1%); update later
+DEFAULT_SAFEGUARD_CAP_TAKEDOWN_FRACTION = 0.50  # allow at most 50% of recs to be auto-removed
+
+
+def takedown_reported_recommendations(
+    recs: list[CuratedRecommendation],
+    engagement_backend: EngagementBackend,
+    region: str | None = None,
+    report_ratio_threshold: float = DEFAULT_REPORT_RECS_RATIO_THRESHOLD,
+    safeguard_cap_takedown_fraction: float = DEFAULT_SAFEGUARD_CAP_TAKEDOWN_FRACTION,
+) -> list[CuratedRecommendation]:
+    """Takedown highly-reported content & return filtered list of recommendations.
+
+      - Exclude any recommendation which breaches (report_count / impression_count) > threshold.
+      - Apply a safety cap: allow a certain fraction (50%) of all available recommendations to be taken down automatically.
+      - Log an error for the excluded rec, send the error to Sentry.
+
+    :param recs: All recommendations to filter.
+    :param engagement_backend: Provides report_count & impression_count data by corpusItemId.
+    :param region: Optionally, the client's region, e.g. 'US'.
+    :param report_ratio_threshold: Threshold indicating which recommendation should be excluded.
+    :param safeguard_cap_takedown_fraction: Max fraction of recommendations that can be auto-removed.
+
+    :return: Filtered list of recommendations.
+    """
+    # Save engagement metrics for logging: {corpusItemId: (report_ratio, reports, impressions)}
+    rec_eng_metrics: dict[str, tuple[float, int, int]] = {}
+
+    def _report_ratio_for(rec: CuratedRecommendation) -> float:
+        if engagement := engagement_backend.get(rec.corpusItemId, region):
+            _impressions = int(engagement.impression_count or 0)
+            _reports = int(engagement.report_count or 0)
+            if _impressions > 0:
+                report_ratio = _reports / _impressions
+                rec_eng_metrics[rec.corpusItemId] = (report_ratio, _reports, _impressions)
+                return report_ratio
+        return -1.0  # treat as safe (won’t breach threshold)
+
+    # Filter first; common case is empty
+    over = [rec for rec in recs if _report_ratio_for(rec) > report_ratio_threshold]
+    if not over:
+        return recs
+
+    # Compute the safeguard cap, # of recs safe to remove from total list of reported_recs
+    # rounded up to avoid 0 removals
+    max_recs_to_remove = math.ceil(len(recs) * safeguard_cap_takedown_fraction)
+
+    # Sort only the small over-threshold set by ratio; no tie-breakers.
+    over.sort(key=_report_ratio_for, reverse=True)
+
+    # Select top N to remove
+    recs_to_remove = over[:max_recs_to_remove]
+    removed_rec_ids = {r.corpusItemId for r in recs_to_remove}
+
+    for rec in recs_to_remove:
+        ratio, reports, impressions = rec_eng_metrics.get(rec.corpusItemId, (-1.0, 0, 0))
+        logger.error(
+            f"Excluding reported recommendation: corpus_item_id={rec.corpusItemId} "
+            f"report_ratio={ratio:.6f} reports={reports} impressions={impressions} "
+            f"threshold={report_ratio_threshold:.6f} region={region}"
+        )
+
+    # Return remaining recs
+    return [rec for rec in recs if rec.corpusItemId not in removed_rec_ids]
 
 
 def thompson_sampling(
