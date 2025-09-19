@@ -26,7 +26,11 @@ from merino.configs import settings
 @pytest.fixture(name="suggest_request")
 def fixture_suggest_request() -> SuggestRequest:
     """Create a fixture for the test suggest request."""
-    return SuggestRequest(query="test", params="client%30firefox%26q%30test")
+    return SuggestRequest(
+        query="test",
+        params="client%30firefox%26q%30test",
+        session_id="85f6f38b31804147b54f9cfd02eee9e2",
+    )
 
 
 @pytest.fixture(name="backend")

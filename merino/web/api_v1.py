@@ -93,6 +93,7 @@ async def suggest(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
     request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
     google_suggest_params: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
+    sid: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
 ) -> Response:
     """Query Merino for suggestions.
 
@@ -136,6 +137,7 @@ async def suggest(
         to weather suggestions.
     - `google_suggest_params`: [Optional] For the `google_suggest` provider only, use it to send
         all client specified query params over to the Google Suggest endpont.
+    - `sid`: [Optional] A unique identifier for each search/suggest session. Note that this not a UUID for a user.
 
     **Headers:**
 
@@ -223,6 +225,7 @@ async def suggest(
             user_agent=user_agent,
             source=source,
             google_suggest_params=google_suggest_params,
+            session_id=sid,
         )
         p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")

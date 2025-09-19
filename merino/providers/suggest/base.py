@@ -24,6 +24,7 @@ class SuggestionRequest(BaseModel):
     user_agent: UserAgent | None = None
     source: str | None = None
     google_suggest_params: str | None = None
+    session_id: str | None = None
 
 
 class Category(Enum):

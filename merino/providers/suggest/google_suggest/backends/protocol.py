@@ -25,6 +25,9 @@ class SuggestRequest:
     # over to the endpoint as-is.
     params: str
 
+    # A unique identifier for a search/suggest session.
+    session_id: str
+
 
 class GoogleSuggestBackendProtocol(Protocol):
     """Protocol for a Google Suggest backend.
