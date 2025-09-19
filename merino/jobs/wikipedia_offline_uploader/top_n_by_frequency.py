@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """This script extracts the top "N" viewed pages from the most recent daily top
 viewed pages fetched from Wikipedia PageView API. It does so by accumulating
 page views from all the daily inputs in the `wikipedia-top-pages` directory.
@@ -40,10 +39,8 @@ import csv
 import glob
 import json
 import os
-import random
 import re
 from collections import Counter
-from multiprocessing import Pool
 
 # Ignore the internal Wikipedia pages such as "Portal:Current_events",
 # "Special:Search", "Wikipedia:About", "File:HispanTv.svg" etc.
@@ -53,26 +50,21 @@ from multiprocessing import Pool
 INTERNAL_PAGES = re.compile("[0-9A-Za-z]:[0-9A-Za-z]")
 
 
-def process(inputs):
+def process(page: str, ignored_titles: set[str]):
     """Process article and its page views."""
-    top_pages = Counter()
-    for name in inputs:
-        with open(name) as f:
-            dump = json.load(f)
-            for article in dump["items"][0]["articles"]:
-                if (
-                    INTERNAL_PAGES.search(article["article"])
-                    or article["article"].casefold() in process.ignored_titles
-                ):
-                    continue
-                top_pages[article["article"]] += article["views"]
+    top_pages: Counter = Counter()
+
+    with open(page) as f:
+        dump = json.load(f)
+        for article in dump["items"][0]["articles"]:
+            if (
+                INTERNAL_PAGES.search(article["article"])
+                or article["article"].casefold() in ignored_titles
+            ):
+                continue
+            top_pages[article["article"]] += article["views"]
 
     return dict(top_pages)
-
-
-def initializer(ignored_titles):
-    """Initialize for multiprocessing."""
-    process.ignored_titles = ignored_titles
 
 
 def get_top_n_frequency(language, top_n, tempdir) -> list[dict]:
@@ -91,14 +83,11 @@ def get_top_n_frequency(language, top_n, tempdir) -> list[dict]:
             base64.b64decode(item["title"]).decode("utf-8") for item in csv.DictReader(g)
         )
 
-    with Pool(None, initializer, [ignored]) as pool:
         top_pages: Counter = Counter()
         inputs = glob.glob(os.path.join(tempdir, f"{language}*.json"))
-        random.shuffle(inputs)
-        # Chunk the input list into sublists of 7
-        tasks = [inputs[i : i + 7] for i in range(0, len(inputs), 7)]
 
-        for page_views in pool.imap_unordered(process, tasks):
+        for page in inputs:
+            page_views = process(page, ignored)
             for title, views in page_views.items():
                 top_pages[title] += views
 
