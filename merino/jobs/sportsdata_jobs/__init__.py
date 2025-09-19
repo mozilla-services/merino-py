@@ -51,7 +51,12 @@ from merino.jobs.sportsdata_jobs.data import (
 from merino.configs import settings
 
 LOGGING_TAG = "⚾"
-UPDATE_PERIOD = 4 * 60 * 60  # Four hours
+UPDATE_PERIOD_SECS = 60 * 60 * 4  # Four hours
+
+# Retain team information for 2 years
+# DeltaTime only understands weeks, so use 52*2
+TEAM_TTL_WEEKS = 52 * 2
+EVENT_TTL_WEEKS = 2
 
 
 class Options:
@@ -115,12 +120,13 @@ class SportDataUpdater(BaseModel):
         """Refresh the fetched sport data if needed."""
         # Does the stored data require refreshing?
         try:
-            sport = await self.store.fetch_meta(sport_name)
-            if stored:
+            meta = await self.store.fetch_metadata(sport_name)
+            if meta:
                 if force or datetime.fromtimestamp(
-                    stored["updated"]
-                ) <= datetime.now() - timedelta(seconds=0 - UPDATE_PERIOD):
+                    meta.get("updated", 0)
+                ) <= datetime.now() - timedelta(seconds=UPDATE_PERIOD_SECS):
                     logging.debug(f"{LOGGING_TAG} Updating {sport_name}")
+                    # TODO get and write the sport Metadata
                     return
         except:
             logging.debug(f"{LOGGING_TAG}: Refreshing data for {self.name}")

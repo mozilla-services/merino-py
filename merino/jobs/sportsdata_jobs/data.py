@@ -3,7 +3,7 @@
 import json
 import logging
 from abc import abstractmethod
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from dynaconf.base import Settings
@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from merino.configs import settings
 from merino.utils.http_client import create_http_client
+from merino.jobs.sportsdata_jobs import TEAM_TTL_WEEKS
 from merino.jobs.sportsdata_jobs.common import fetch_data, SportDate, GameStatus
 from merino.jobs.sportsdata_jobs.data import Team, Event
 from merino.jobs.sportsdata_jobs.errors import SportDataError, SportDataWarning
@@ -52,7 +53,7 @@ class DataStore:
             return self.data.get("active", [])
         return []
 
-    async def store_teams(self, teams: list[Team]):
+    async def store_teams(self, teams: list[Team], sport_name:str):
         """store the list of teams."""
 
         # TODO: convert to async transactions
@@ -62,23 +63,37 @@ class DataStore:
         #   { $data }
         # ```
         queue=[]
+        # TODO: Chunk this? Will we have more than 5000 teams per sport?
         for team in teams:
             # this can be optimized:
             queue.append(f"""{"index":{"_index":"{self.team_index}"}}""")
             queue.append(team.as_str())
-        #update the meta info for the team.
-        queue.append(f"""{}""")
-        db = self.client.bulk(
+        #update the meta info for the sport teams.
+        queue.append(f"""{"index":{"_index":"{self.meta_index}"}}""")
+        queue.append(json.dumps(dict(
+            sport_name=sport_name,
+            updated=datetime.now(tz=timezone.utc).timestamp()
+        )))
+        result = self.client.bulk(
             index=self.team_index,
             body=[]
         )
+        if "errors" in result:
+            for error in result["errors"]:
+                logging.error(f"{LOGGING_TAG}🚨 Could not store team: {sport_name} - {error}")
+            raise SportDataError(f"Could not load teams for {sport_name}: {result["errors"]}")
 
 
-    async def store_events(self, events: list[Event]):
+
+    async def store_events(self, events: list[Event], teams:list[Team], sport_name:str):
         """Store the event as event:team:team"""
-        db = redis.Redis().from_pool(self.event_pool)
+        queue = []
+        for event in events:
+            queue.append(f"""{"index":{"_index":"{self.event_index}"}}""")
+            queue.append(event.as_str())
         for event in events:
             # TODO: just shove them into memory for now.
+
             db.set(f"event:{event.home_team}:{event.status}", event.as_str())
             db.set(f"event:{event.away_team}:{event.status}", event.as_str())
 
@@ -192,6 +207,8 @@ class Team(BaseModel):
     colors: list[str] | None
     # Last update time.
     updated: datetime
+    # Team Data expiration date:
+    ttl: int
 
     # SerDe methods
     @classmethod
@@ -211,6 +228,7 @@ class Team(BaseModel):
             aliases=struct.get("aliases"),
             colors=struct.get("colors"),
             updated=struct.get("updated"),
+            ttl=struct.get("ttl") or int((datetime.now() + timedelta(weeks=TEAM_TTL_WEEKS)).timestamp())
         )
 
     def as_str(self) -> str:
@@ -221,9 +239,10 @@ class Team(BaseModel):
 class Event(BaseModel):
     # Reference to the associated Sport (DO NOT SERIALIZE!)
     sport: Sport
+    # list of searchable terms for this event.
+    terms: str
     # Event UTC start time
     date: datetime
-
     # the team key for the home team
     home_team: str
     # the team key for the away team
@@ -234,6 +253,8 @@ class Event(BaseModel):
     away_score: int
     # Status of the game
     status: GameStatus
+    # How long to retain an event in seconds
+    ttl: int
 
     @classmethod
     def parse(cls, sport: Sport, serialized: str):
@@ -251,21 +272,36 @@ class Event(BaseModel):
                 f"""{LOGGING_TAG}⚠️ Unknown status: {parsed.get("status")}, ignoring"""
             )
             raise SportDataWarning("Unknown game status, ignoring")
+        home_team = sport.team_key(parsed.get("home_team"))
+        away_team = sport.team_key(parsed.get("away_team"))
+        terms = f"""event {sport_name} {home_team} {away_team}"""
+        ttl = (datetime.now(tz=timezone.utc) + timedelta(weeks=EVENT_TTL_WEEKS)).timestamp()
         self = cls(
             sport=sport,
             date=parsed.get("date"),
-            home_team=sport.team_key(parsed.get("home_team")),
-            away_team=sport.team_key(parsed.get("away_team")),
+            terms=terms,
+            home_team=home_team,
+            away_team=away_team,
             home_score=parsed.get("home_score"),
             away_score=parsed.get("away_score"),
             status=GameStatus(parsed.get("status")),
+            ttl = int(ttl)
         )
         return self
 
     def as_str(self) -> str:
         """Serialize to JSON string"""
         # TODO: Placeholder, strip the `Sport` field
-        return json.dumps(self)
+        return json.dumps(dict(
+            terms = self.terms,
+            date=self.date,
+            sport_name = self.sport.name,
+            home_team = self.home_team,
+            away_team = self.away_team,
+            home_score = self.home_score,
+            away_score = self.away_score,
+            status = self.status,
+        ))
 
     def suggest_text(self, away: Team, home: Team) -> str:
         """TODO: Event suggest format as JSON"""
@@ -422,7 +458,7 @@ class UCL(Sport):
         super().__init__(name="UCL", *args, **kwargs)
         self.base_url = f"https://api.sportsdata.io/v4/soccer/scores/json/"
 
-    async def get_teams(self) -> list[Team]:
+    async def get_teams(self) -> dict[str, Team]:
         """fetch the Standings data: (4 hour interval)"""
         # e.g.
         # https://api.sportsdata.io/v4/soccer/scores/json/Teams/ucl?key=
@@ -464,7 +500,7 @@ class UCL(Sport):
         """
         url = f"{self.base_url}/Teams/{self.name}?key={self.api_key}"
         data = await fetch_data(self.http_client, url)
-        teams = []
+        teams = {}}
         for team_data in data:
             # build the list of terms we want to search:
             terms = set()
@@ -494,6 +530,7 @@ class UCL(Sport):
                     )
                 ),
                 updated=datetime.now(),
+                ttl
                 colors=list(
                     filter(
                         lambda x: x is not None,
@@ -584,7 +621,7 @@ class UCL(Sport):
         teams = await self.get_teams()
         # Note, soccer
         events = await self.get_events()
-        await self.store.store_teams(teams)
-        await self.store.store_events(events)
+        await self.store.store_teams(teams, self.name)
+        await self.store.store_events(events, teams, self.name)
 
         return timedelta(days=3)
