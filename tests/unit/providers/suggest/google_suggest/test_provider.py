@@ -78,7 +78,6 @@ def test_not_hidden_by_default(provider: Provider) -> None:
     "query, params, expected_msg",
     [
         ("test", None, "`google_suggest_params` is missing"),
-        ("", "client%30firefox%26q%30", "`q` should not be empty"),
     ],
 )
 def test_query_with_invalid_params_returns_http_400(

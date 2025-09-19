@@ -61,13 +61,6 @@ class Provider(BaseProvider):
                 detail="Invalid query parameters: `google_suggest_params` is missing",
             )
 
-        if srequest.query == "":
-            logger.warning("HTTP 400: invalid query parameters, `q` should not be empty")
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid query parameters: `q` should not be empty",
-            )
-
     @GoogleSuggestCircuitBreaker(name="google_suggest")  # Expect `BackendError`
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide Google Suggest suggestions.
