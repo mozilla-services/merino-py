@@ -46,8 +46,10 @@ class GoogleSuggestBackend:
 
         try:
             with self.metrics_client.timeit("google_suggest.request.duration"):
+                # this header is set to circumvent rate limiting, see DISCO-3729.
+                headers = {"x-session-id": request.session_id}
                 response: Response = await self.http_client.get(
-                    self.url_suggest_path, params=params
+                    self.url_suggest_path, params=params, headers=headers
                 )
 
             response.raise_for_status()
