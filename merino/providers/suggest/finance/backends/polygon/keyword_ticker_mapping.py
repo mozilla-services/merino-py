@@ -13,8 +13,8 @@ from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mappin
 # Keyword to stock ticker mapping. Each keyword maps to its corresponding stock ticker.
 # NOTE: Treat as read-only at runtime.
 KEYWORD_TO_STOCK_TICKER_MAPPING = {
-    "aa stock": "AA",
-    "stock aa": "AA",
+    # "aa stock": "AA",
+    # "stock aa": "AA",
     "al stock": "AL",
     "stock al": "AL",
     "am stock": "AM",
