@@ -62,9 +62,9 @@ def get_tickers_for_query(query: str) -> list[str] | None:
         return [query_upper]
 
     # If the query is a keyword from either stock or ETF keywords.
-    if ticker := KEYWORD_TO_STOCK_TICKER_MAPPING.get(query_upper):
+    if ticker := KEYWORD_TO_STOCK_TICKER_MAPPING.get(query):
         return [ticker]
-    if tickers := KEYWORD_TO_ETF_TICKER_MAPPING.get(query_upper):
+    if tickers := KEYWORD_TO_ETF_TICKER_MAPPING.get(query):
         return tickers
 
     # If the query has the "stock(s)" keyword in it.
