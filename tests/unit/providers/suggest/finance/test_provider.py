@@ -127,6 +127,9 @@ def test_not_hidden_by_default(provider: Provider) -> None:
     """Test for the hidden method."""
     assert provider.hidden() is False
 
+def test_normalize_query_returns_trimmed_query_string(provider: Provider) -> None:
+    """Test that normalize_query method returns a string with no trailing spaces."""
+    assert provider.normalize_query("   aapl stock   ") == "aapl stock"
 
 def test_validate_fails_on_missing_query_param(
     provider: Provider,
