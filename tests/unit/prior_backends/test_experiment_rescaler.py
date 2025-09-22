@@ -62,6 +62,7 @@ class TestCrawlerExperimentRescaler:
         """Test rescaling of priors for relative experiment size"""
         rec = Mock()
         rec.in_experiment.return_value = True
+        rec.isTimeSensitive = False
         opens, no_opens = self.rescaler.rescale(rec, 100, 50)
         expected_opens = 100 / SUBSECTION_EXPERIMENT_PERCENT
         expected_no_opens = 50 / SUBSECTION_EXPERIMENT_PERCENT
@@ -77,6 +78,7 @@ class TestCrawlerExperimentRescaler:
         """Test when no experiment in request"""
         rec = Mock()
         rec.in_experiment.return_value = False
+        rec.isTimeSensitive = False
 
         opens, no_opens = self.rescaler.rescale(rec, 100, 50)
 
@@ -86,4 +88,20 @@ class TestCrawlerExperimentRescaler:
         alpha, beta = self.rescaler.rescale_prior(rec, 40, 20)
 
         assert alpha == 40 * PESSIMISTIC_PRIOR_ALPHA_SCALE
+        assert beta == 20
+
+    def test_rescale_regular_boosted_item(self):
+        """Test when no experiment in request"""
+        rec = Mock()
+        rec.in_experiment.return_value = False
+        rec.isTimeSensitive = True
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+
+        assert opens == 100 / CRAWLED_TOPIC_TOTAL_PERCENT
+        assert no_opens == 50 / CRAWLED_TOPIC_TOTAL_PERCENT
+
+        alpha, beta = self.rescaler.rescale_prior(rec, 40, 20)
+
+        # alpha, beta are unchanged
+        assert alpha == 40
         assert beta == 20

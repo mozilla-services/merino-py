@@ -64,6 +64,9 @@ class CrawlerExperimentRescaler(SubsectionsExperimentRescaler):
 
     def rescale_prior(self, rec: CuratedRecommendation, alpha, beta):
         """Rescales priors based on content"""
-        # treat subtopics and topics the same
-        # all new data comes in with a lower expected CTR in order to not severely disrupt popular items
+        if rec.isTimeSensitive:
+            # We are using the timeSensitive flag as a means for editors to boost content
+            # The unmodified alpha, beta has an optimistic prior, bringing new content to the top
+            return alpha, beta
+        # Default - data comes in with a lower expected CTR in order to not severely disrupt popular items
         return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta
