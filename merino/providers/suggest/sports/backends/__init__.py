@@ -1,6 +1,20 @@
 """SportsData live query system"""
 
+import logging
+import os
+from datetime import datetime, timedelta, timezone
+from httpx import AsyncClient
+
 from typing import Any
+
+from merino.providers.suggest.sports import DEFAULT_LOGGING_LEVEL
+
+
+async def get_data(client: AsyncClient, url: str) -> Any:
+    """Wrapper for commonly called remote data fetch"""
+    response = await client.get(url)
+    response.raise_for_status()
+    return response.json()
 
 
 class SportSuggestion(dict):

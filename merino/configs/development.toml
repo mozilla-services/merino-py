@@ -34,8 +34,8 @@ source_gcp_project = "mozdata"
 # List of active sports to process.
 # (e.g. "NBA,NHL,EPL,UCL,etc")
 # See `jobs.sportsdata_jobs.common` for list of supported sports
-sports = "NBA,NHL,EPL,UCL"
-api_key = "..."
+sports = "NFL,NBA,NHL,EPL,UCL"
+#api_key = "..."
 # comma delimited list of host:port for the elastic search servers
 storage_hosts = "localhost:9200"
 event_index = "sports_en-us_event"

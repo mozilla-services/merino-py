@@ -1,10 +1,12 @@
 """Sport info provider"""
 
 import logging
-
 from abc import abstractmethod
-from pydantic import BaseModel, HttpUrl
-from typing import Protocol
+from datetime import datetime, timedelta, timezone
+import os
+from typing import Any, Final
+
+from httpx import AsyncClient
 
 from merino.providers.suggest.base import (
     BaseSuggestion,
@@ -12,4 +14,32 @@ from merino.providers.suggest.base import (
 
 from merino.providers.manifest.backends.protocol import ManifestData
 
-from merino.jobs.sportsdata_jobs import LOGGING_TAG
+
+LOGGING_TAG: Final[str] = "⚾"
+DEFAULT_LOGGING_LEVEL = "DEBUG"
+UPDATE_PERIOD_SECS = 60 * 60 * 4  # Four hours
+
+# Retain team information for 2 years
+# DeltaTime only understands weeks, so use 52*2
+TEAM_TTL_WEEKS = 52 * 2
+EVENT_TTL_WEEKS = 2
+
+# INTERVAL PERIODS
+ONE_MINUTE = 60
+FIVE_MINUTES = ONE_MINUTE * 5  # for Standings
+ONE_HOUR = ONE_MINUTE * 60
+FOUR_HOURS = ONE_HOUR * 4  # For Team Profiles
+
+
+def ttl_from_now(delta: timedelta) -> int:
+    """Return the timestamp of the period from now"""
+    return int((datetime.now(tz=timezone.utc) + delta).timestamp())
+
+
+def init_logs() -> logging.Logger:
+    """Initialize logging based on `PYTHON_LOG` environ)"""
+    level = getattr(
+        logging, os.environ.get("PYTHON_LOG", DEFAULT_LOGGING_LEVEL).upper(), None
+    )
+    logging.basicConfig(level=level)
+    return logging.getLogger(__name__)

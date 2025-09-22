@@ -11,7 +11,6 @@ from merino.providers.suggest.base import (
     BaseSuggestion,
 )
 
-from merino.jobs.sportsdata_jobs import LOGGING_TAG
 from merino.providers.manifest.backends.protocol import ManifestData
 
 

@@ -33,30 +33,25 @@ from httpx import AsyncClient
 from dynaconf.base import Settings
 from pydantic import BaseModel
 
-from merino.jobs.sportsdata_jobs.common import (
+from merino.providers.suggest.sports import (
     init_logs,
-    DataStore,
-    Sport,
-    SportDataError,
-    LOGGING_TAG,
 )
-from merino.jobs.sportsdata_jobs.data import (
-    # NFL,
+from merino.providers.suggest.sports.backends.sportsdata.data import Sport
+
+from merino.configs import settings
+from merino.providers.suggest.sports import LOGGING_TAG, UPDATE_PERIOD_SECS
+from merino.providers.suggest.sports.backends.sportsdata.common.data import (
+    ElasticDataStore,
+    NFL,
     # MLB,
     # NBA,
     # NHL,
     # EPL,
     UCL,
 )
-from merino.configs import settings
-
-LOGGING_TAG = "⚾"
-UPDATE_PERIOD_SECS = 60 * 60 * 4  # Four hours
-
-# Retain team information for 2 years
-# DeltaTime only understands weeks, so use 52*2
-TEAM_TTL_WEEKS = 52 * 2
-EVENT_TTL_WEEKS = 2
+from merino.providers.suggest.sports.backends.sportsdata.errors import (
+    SportsDataError, SportsDataWarning
+)
 
 
 class Options:
@@ -78,7 +73,7 @@ class SportDataUpdater(BaseModel):
     # HTTP Client for fetching Data.
     client: AsyncClient
     # Data Storage backend
-    store: DataStore
+    store: ElasticDataStore
     # Collection of known sports
     sports: dict[str, Sport]
     # Copy of the general configuration
@@ -86,16 +81,16 @@ class SportDataUpdater(BaseModel):
 
     def __init__(self, settings: Settings, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.store = DataStore(settings)
         if not settings.sports:
             raise SportDataError("No sports defined")
+        self.store = ElasticDataStore(api_key=settings.sports["api_key"], dsn=settings.sports["dsn"])
 
         for sport_name in [
             sport.strip().upper() for sport in settings.sports.split(",")
         ]:
             match sport_name:
-                # case "NFL":
-                #    sport = NFL(settings, self.store)
+                 case "NFL":
+                    sport = NFL(settings.sports, self.store)
                 # case "MLB":
                 #    sport = MLB(settings, self.store)
                 # case "NBA":
@@ -105,7 +100,7 @@ class SportDataUpdater(BaseModel):
                 # case "EPL":
                 #    sport = EPL(settings, self.store)
                 case "UCL":
-                    sport = UCL(settings, self.store)
+                    sport = UCL(settings.sports, self.store)
                 case _:
                     logger.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
                     continue
