@@ -8,11 +8,11 @@ from pydantic import HttpUrl
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
 from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapping import (
     ALL_STOCK_TICKER_COMPANY_MAPPING,
-    STOCK_TICKER_MATCH_BLOCKLIST,
+    STOCK_TICKER_EAGER_MATCH_BLOCKLIST,
 )
 from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mapping import (
     ALL_ETF_TICKER_COMPANY_MAPPING,
-    ETF_TICKER_MATCH_BLOCKLIST,
+    ETF_TICKER_EAGER_MATCH_BLOCKLIST,
 )
 from merino.providers.suggest.finance.backends.polygon.keyword_ticker_mapping import (
     KEYWORD_TO_STOCK_TICKER_MAPPING,
@@ -46,6 +46,28 @@ def get_tickers_for_query(query: str) -> list[str] | None:
     """Validate and return a list of tickers (1 to 3) or None."""
     query_upper = query.upper()
 
+    # Early exit if the query is one of the eagerly matched tickers.
+    # NOTE: These lists are subsets of `ALL_STOCK_TICKER_COMPANY_MAPPING` and `ALL_ETF_TICKER_COMPANY_MAPPING` lists.
+    if (
+        query_upper in STOCK_TICKER_EAGER_MATCH_BLOCKLIST
+        or query_upper in ETF_TICKER_EAGER_MATCH_BLOCKLIST
+    ):
+        return None
+
+    # If the query is a ticker from either stocks or ETFs tickers.
+    # The above check prevents from eager matching for some tickers.
+    if query_upper in ALL_STOCK_TICKER_COMPANY_MAPPING:
+        return [query_upper]
+    if query_upper in ALL_ETF_TICKER_COMPANY_MAPPING:
+        return [query_upper]
+
+    # If the query is a keyword from either stock or ETF keywords.
+    if ticker := KEYWORD_TO_STOCK_TICKER_MAPPING.get(query_upper):
+        return [ticker]
+    if tickers := KEYWORD_TO_ETF_TICKER_MAPPING.get(query_upper):
+        return tickers
+
+    # If the query has the "stock(s)" keyword in it.
     if stock_query := STOCK_QUERY_PATTERN.match(query_upper):
         keyword = stock_query.group("keyword1") or stock_query.group("keyword2")
         if keyword in ALL_STOCK_TICKER_COMPANY_MAPPING:
@@ -53,17 +75,6 @@ def get_tickers_for_query(query: str) -> list[str] | None:
 
         if keyword in ALL_ETF_TICKER_COMPANY_MAPPING:
             return [keyword]
-
-    if query_upper in STOCK_TICKER_MATCH_BLOCKLIST or query_upper in ETF_TICKER_MATCH_BLOCKLIST:
-        return None
-    if query_upper in ALL_STOCK_TICKER_COMPANY_MAPPING:
-        return [query_upper]
-    if query_upper in ALL_ETF_TICKER_COMPANY_MAPPING:
-        return [query_upper]
-    if ticker := KEYWORD_TO_STOCK_TICKER_MAPPING.get(query_upper):
-        return [ticker]
-    if tickers := KEYWORD_TO_ETF_TICKER_MAPPING.get(query_upper):
-        return tickers
 
     return None
 
