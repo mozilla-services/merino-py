@@ -38,6 +38,7 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Barishal": "Barisal",
     "Belem": "Belém",
     "Białołeka": "Bialoleka",
+    "Biel/Bienne": "Biel",
     "Boca del Rio": "Boca del Río",
     # Bochum is a borough of Hordel
     "Bochum-Hordel": "Hordel",
@@ -51,6 +52,8 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Điện Bàn": "Dien Ban",
     "Dokki": "Giza",
     "Dombivali": "Dombivli",
+    # District in Vienna
+    "Donaustadt": "Vienna",
     "Đông Hà": "Dong Ha",
     "Đồng Nại": "Dong Nai",
     "Ecatepec": "Ecatepec de Morelos",
@@ -89,6 +92,8 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Ko Pha Ngan": "Ko Pha-Ngan",
     "Kushi Nagar": "Kushinagar",
     "Lake Shasta": "Shasta Lake",
+    # District in Madrid
+    "Latina": "Madrid",
     "La'ie": "Laie",
     "Livramento do Brumado": "Livramento de Nossa Senhora",
     "Lyon 03": "Lyon",
@@ -157,11 +162,13 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Santiago de Cali": "Cali",
     "Santiago Metropolitan": "Santiago",
     "San Pedro One": "San Pedro I",
+    "San Vicent del Raspeig": "San Vicente del Raspeig",
     "Selat Panjang": "Selatpanjang",
     "Shikoku-chūō Shi": "Shikokuchuo",
     "Silao": "Silao de la Victoria",
     "Skudai": "Sekudai",
     "Sōsa": "Sosa-shi",
+    "South Dublin": "Dublin",
     # Mueang Sukhothai encompasses Sukhothai Thani
     "Sukhothai Thani": "Mueang Sukhothai",
     "Thành phố Trà Vinh": "Trà Vinh",
@@ -175,6 +182,7 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Yunderup": "South Yunderup",
     "Zacoalco": "Zacoalco de Torres",
     "Zimapan": "Zimapán",
+    "Zürich (Kreis 11)": "Zürich",
 }
 
 SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {
