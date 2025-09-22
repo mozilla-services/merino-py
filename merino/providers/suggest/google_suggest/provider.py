@@ -1,6 +1,7 @@
 """Suggest provider for Google Suggest."""
 
 import logging
+import uuid
 
 import aiodogstatsd
 
@@ -74,6 +75,7 @@ class Provider(BaseProvider):
             SuggestRequest(
                 query=srequest.query,
                 params=cast(str, srequest.google_suggest_params),
+                session_id=srequest.session_id or str(uuid.uuid4()),
             )
         )
 
