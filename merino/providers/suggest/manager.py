@@ -255,6 +255,11 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 backend=GoogleSuggestBackend(
                     http_client=create_http_client(
                         base_url=settings.google_suggest.url_base,
+                        proxies=(
+                            {"https://": settings.google_suggest.proxy_url}
+                            if settings.google_suggest.proxy_url
+                            else None  # no proxying
+                        ),
                     ),
                     url_suggest_path=settings.google_suggest.url_suggest_path,
                     metrics_client=get_metrics_client(),
