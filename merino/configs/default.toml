@@ -39,7 +39,7 @@ query_timeout_sec = 0.2
 # MERINO_RUNTIME__DISABLED_PROVIDERS
 # List containing providers to disable at startup.
 # Prevents a provider from being instantiated.
-disabled_providers = ["amo"]
+disabled_providers = ["amo", "flightaware"]
 
 # MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
 default_suggestions_response_ttl_sec = 300 # 5 mins
@@ -766,6 +766,54 @@ url_base = "https://api.yelp.com/v3"
 # The endpoint that provides Yelp businesses
 url_business_search = "/businesses/search?location={location}&term={term}&limit={limit}&open_now=true"
 
+
+[default.providers.flightaware]
+# MERINO_PROVIDERS__FLIGHTAWARE__TYPE
+# The type of this provider, should be `flightaware`.
+type = "flightaware"
+
+# MERINO_PROVIDERS__FLIGHTAWARE__BACKEND
+#  The backend of the provider. Either `flightaware` or `test`.
+backend = "flightaware"
+
+# MERINO_PROVIDERS__FLIGHTAWARE__CACHE
+# The store used to flightaware data. Either `redis` or `none`.
+# If `redis`, the global Redis settings must be set. See redis.server.
+cache = "none"
+
+# MERINO_PROVIDERS__FLIGHTAWARE__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default.
+enabled_by_default = true
+
+# MERINO_PROVIDERS__FLIGHTAWARE__SCORE
+# The ranking score for this provider as a floating point number.
+score = 0 # TODO
+
+# MERINO_PROVIDERS__FLIGHTAWARE__QUERY_TIMEOUT_SEC
+# A floating point (in seconds) indicating the maximum waiting period when Merino queries
+# for flightaware data. This will override the default global query timeout.
+query_timeout_sec = 5.0
+
+# MERINO_PROVIDERS__FLIGHTAWARE__CONNECT_TIMEOUT_SEC
+# A floating point (in seconds) indicating the maximum waiting period for the
+# flightaware backend http client to establish a connection to the host.
+connect_timeout_sec = 3.0
+
+# MERINO_PROVIDERS__FLIGHTAWARE__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+
+# MERINO_PROVIDERS__FLIGHTAWARE__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
+
+
+[default.flightaware]
+# MERINO_FLIGHTAWARE__API_KEY
+# The API key to Flight Aware's API endpoint.
+# In production, this should be set via environment variable as a secret.
+api_key = ""
+
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
 # GCS bucket that contains Airflow data for Merino
@@ -802,6 +850,11 @@ url_base = "https://www.google.com"
 # MERINO_GOOGLE_SUGGEST__URL_SUGGEST_PATH
 # The endpoint for google suggest.
 url_suggest_path = "/complete/search"
+# MERINO_GOOGLE_SUGGEST__PROXY_URL
+# The proxy URL that all the Google Suggest requests would go through if specified.
+# No proxying if this URL is left empty. The URL should be fully specified, e.g.
+# "http(s)://{your-proxy-host}:{port}"
+proxy_url = ""
 
 [default.curated_recommendations.gcs.local_model]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__LOCAL_MODEL__MAX_SIZE

@@ -9,6 +9,11 @@ SUBTOPIC_TOTAL_PERCENT = 0.06  # This may eventually be computed by an airflow j
 CRAWLED_TOPIC_TOTAL_PERCENT = 0.06
 SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 
+# This is derived using data analysis on scores and existing priors
+# See more at:
+# https://mozilla-hub.atlassian.net/wiki/spaces/FAAMT/pages/1727725665/Thompson+Sampling+of+Subtopic+Sections
+PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.25
+
 
 class SubsectionsExperimentRescaler(ExperimentRescaler):
     """Scales experiment based content on relative size of experiment, as a fractional percentage"""
@@ -36,7 +41,7 @@ class SubsectionsExperimentRescaler(ExperimentRescaler):
         Scale of 4 puts an item with no activity just below the pack of common items that have good activity
         """
         if self.is_subtopic_story(rec):
-            return alpha / 4.0, beta
+            return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta
         else:
             return alpha, beta
 
@@ -59,5 +64,9 @@ class CrawlerExperimentRescaler(SubsectionsExperimentRescaler):
 
     def rescale_prior(self, rec: CuratedRecommendation, alpha, beta):
         """Rescales priors based on content"""
-        # treat subtopics and topics the same
-        return alpha, beta
+        if rec.isTimeSensitive:
+            # We are using the timeSensitive flag as a means for editors to boost content
+            # The unmodified alpha, beta has an optimistic prior, bringing new content to the top
+            return alpha, beta
+        # Default - data comes in with a lower expected CTR in order to not severely disrupt popular items
+        return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta

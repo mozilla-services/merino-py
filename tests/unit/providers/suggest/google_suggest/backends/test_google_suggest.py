@@ -9,7 +9,7 @@ import json
 import pytest
 
 from unittest.mock import AsyncMock
-from httpx import AsyncClient, Request, Response
+from httpx import AsyncClient, ConnectError, ProxyError, Request, Response
 from pytest_mock import MockerFixture
 from typing import Any, cast
 from merino.exceptions import BackendError
@@ -26,7 +26,11 @@ from merino.configs import settings
 @pytest.fixture(name="suggest_request")
 def fixture_suggest_request() -> SuggestRequest:
     """Create a fixture for the test suggest request."""
-    return SuggestRequest(query="test", params="client%30firefox%26q%30test")
+    return SuggestRequest(
+        query="test",
+        params="client%30firefox%26q%30test",
+        session_id="85f6f38b31804147b54f9cfd02eee9e2",
+    )
 
 
 @pytest.fixture(name="backend")
@@ -92,3 +96,35 @@ async def test_fetch_google_error(
     assert len(caplog.records) == 1
 
     assert records[0].message.startswith("Google Suggest request error")
+
+
+@pytest.mark.parametrize(
+    "err, metric_id",
+    [
+        (ConnectError("connect error"), "google_suggest.connect.error"),
+        (ProxyError("proxy error"), "google_suggest.proxy.error"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_fetch_google_proxy_error(
+    backend: GoogleSuggestBackend,
+    suggest_request: SuggestRequest,
+    err: Exception,
+    metric_id: str,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Test fetch suggestions from the Google Suggest endpoint - proxy error."""
+    cast(AsyncMock, backend.http_client).get.side_effect = err
+    with pytest.raises(BackendError):
+        _ = await backend.fetch(suggest_request)
+
+    cast(AsyncMock, backend.metrics_client).increment.assert_called_once_with(metric_id)
+
+    records = filter_caplog(
+        caplog.records, "merino.providers.suggest.google_suggest.backends.google_suggest"
+    )
+
+    assert len(caplog.records) == 1
+
+    assert records[0].message.startswith("Google Suggest")

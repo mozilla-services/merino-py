@@ -7,7 +7,7 @@ from typing import cast
 
 import aiodogstatsd
 
-from httpx import AsyncClient, Response, HTTPStatusError
+from httpx import AsyncClient, Response, HTTPStatusError, ProxyError, ConnectError
 from merino.exceptions import BackendError
 from merino.providers.suggest.google_suggest.backends.protocol import (
     GoogleSuggestResponse,
@@ -46,8 +46,10 @@ class GoogleSuggestBackend:
 
         try:
             with self.metrics_client.timeit("google_suggest.request.duration"):
+                # this header is set to circumvent rate limiting, see DISCO-3729.
+                headers = {"x-session-id": request.session_id}
                 response: Response = await self.http_client.get(
-                    self.url_suggest_path, params=params
+                    self.url_suggest_path, params=params, headers=headers
                 )
 
             response.raise_for_status()
@@ -58,6 +60,14 @@ class GoogleSuggestBackend:
             self.metrics_client.increment(
                 "google_suggest.request.failure", tags={"status_code": ex.response.status_code}
             )
+            raise BackendError(f"Failed to fetch from Google Suggest: {ex}") from ex
+        except ProxyError as ex:
+            logger.warning(f"Google Suggest proxy error: {ex}")
+            self.metrics_client.increment("google_suggest.proxy.error")
+            raise BackendError(f"Failed to fetch from Google Suggest: {ex}") from ex
+        except ConnectError as ex:
+            logger.warning(f"Google Suggest connect error: {ex}")
+            self.metrics_client.increment("google_suggest.connect.error")
             raise BackendError(f"Failed to fetch from Google Suggest: {ex}") from ex
 
         # Needed to explicitly cast because Merino will not process the response but

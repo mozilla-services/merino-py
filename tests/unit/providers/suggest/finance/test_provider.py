@@ -44,7 +44,7 @@ def fixture_geolocation() -> Location:
 def fixture_ticker_snapshot() -> TickerSnapshot:
     """Create a ticker snapshot object for AAPL."""
     return TickerSnapshot(
-        ticker="AAPL",
+        ticker="DDOG",
         last_trade_price="100.5",
         todays_change_percent="1.5",
     )
@@ -55,10 +55,10 @@ def fixture_ticker_summary() -> TickerSummary:
     """Return a test TickerSummary."""
     return TickerSummary(
         name="Apple Inc",
-        ticker="AAPL",
+        ticker="DDOG",
         last_price="$100.5",
         todays_change_perc="1.5",
-        query="AAPL stock",
+        query="DDOG stock",
         image_url=None,
         exchange="NASDAQ",
     )
@@ -160,7 +160,7 @@ async def test_query_ticker_summary_for_ticker_symbol_returned(
     backend_mock.get_ticker_summary.return_value = ticker_summary
 
     suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(query="aapl", geolocation=geolocation)
+        SuggestionRequest(query="ddog", geolocation=geolocation)
     )
 
     assert suggestions == expected_suggestions
@@ -301,7 +301,7 @@ async def test_query_appends_image_url_to_summary(
     ticker_summary: TickerSummary,
 ) -> None:
     """Test that the query method passes the correct image_url and includes it in the TickerSummary."""
-    ticker = "AAPL"
+    ticker = "DDOG"
 
     image_url = HttpUrl("https://cdn.example.com/aapl.png")
     provider.manifest_data = FinanceManifest(tickers={ticker: image_url})

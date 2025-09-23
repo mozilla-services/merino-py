@@ -30,6 +30,8 @@ from merino.providers.suggest.wikipedia.backends.fake_backends import FakeWikipe
 from merino.providers.suggest.wikipedia.provider import Provider as WikipediaProvider
 from merino.providers.suggest.finance.provider import Provider as PolygonProvider
 from merino.providers.suggest.yelp.provider import Provider as YelpProvider
+from merino.providers.suggest.flightaware.provider import Provider as FlightAwareProvider
+from merino.providers.suggest.flightaware.backends.flightaware import FlightAwareBackend
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 from merino.providers.suggest.google_suggest.provider import Provider as GoogleSuggestProvider
 from merino.providers.suggest.google_suggest.backends.google_suggest import GoogleSuggestBackend
@@ -50,6 +52,7 @@ class ProviderType(str, Enum):
     WIKIPEDIA = "wikipedia"
     POLYGON = "polygon"
     YELP = "yelp"
+    FLIGHTAWARE = "flightaware"
     GOOGLE_SUGGEST = "google_suggest"
 
 
@@ -252,12 +255,28 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 backend=GoogleSuggestBackend(
                     http_client=create_http_client(
                         base_url=settings.google_suggest.url_base,
+                        proxies=(
+                            {"https://": settings.google_suggest.proxy_url}
+                            if settings.google_suggest.proxy_url
+                            else None  # no proxying
+                        ),
                     ),
                     url_suggest_path=settings.google_suggest.url_suggest_path,
                     metrics_client=get_metrics_client(),
                 ),
                 score=setting.score,
                 name=provider_id,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.FLIGHTAWARE:
+            return FlightAwareProvider(
+                backend=FlightAwareBackend(
+                    api_key=settings.flightaware.api_key,
+                ),
+                metrics_client=get_metrics_client(),
+                score=setting.score,
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,
             )
         case _:
