@@ -192,7 +192,7 @@ class LimitedTopicV0Model(LocalModelBackend):
             return InterestVectorConfig(
                 features={f"t_{topic}": 1},
                 thresholds=[0.01, 0.02, 0.03]
-                if topic is not Topic.SPORTS
+                if topic is not Topic.SPORTS.value
                 else [0.005, 0.008, 0.02],
                 diff_p=V0_MODEL_P_VALUE,
                 diff_q=V0_MODEL_Q_VALUE,
