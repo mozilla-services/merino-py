@@ -63,7 +63,7 @@ NUM_RECS_PER_TOPIC = 2
 TOP_STORIES_SECTION_KEY = "top_stories_section"
 
 # For taking down reported content
-DEFAULT_REPORT_RECS_RATIO_THRESHOLD = 1e-5  # using a low number for now (0.001%)
+DEFAULT_REPORT_RECS_RATIO_THRESHOLD = 0.001  # using a low number for now (0.1%)
 DEFAULT_SAFEGUARD_CAP_TAKEDOWN_FRACTION = 0.50  # allow at most 50% of recs to be auto-removed
 
 

@@ -2164,13 +2164,13 @@ class TestSections:
     @pytest.mark.parametrize(
         "reports,impressions,should_remove",
         [
-            # Above threshold: 5 / 50 = 0.1 (10% > 0.001%) → should be removed
+            # Above threshold: 5 / 50 = 0.1 (10% > 0.1%) → should be removed
             (5, 50, True),
-            # Below threshold: 1 / 200,000 = 0.000005 (0.0005% < 0.001%) → should stay
+            # Below threshold: 1 / 200,000 = 0.000005 (0.0005% < 0.1%) → should stay
             (1, 200_000, False),
-            # Exactly at threshold: 5 / 500,000 = 0.00001 (0.001% == 0.001%) → should stay
-            (5, 500_000, False),
-            # No reports: 0 / 100 = 0% < 0.001% → should stay
+            # Exactly at threshold: 1 / 1,000 = 0.001 (0.1% == 0.1%) → should stay
+            (1, 1_000, False),
+            # No reports: 0 / 100 = 0 < 0.001 → should stay
             (0, 100, False),
             # No engagement data → treated as safe → should stay
             (None, None, False),
