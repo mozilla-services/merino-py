@@ -80,6 +80,7 @@ class CorpusSection(BaseModel):
 
     sectionItems: list[CorpusItem]
     title: str
+    description: str | None = None
     iab: IABMetadata | None = None
     externalId: str
 
