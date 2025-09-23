@@ -415,7 +415,7 @@ HSI_POPULAR_2_ETF = ["EWH", "KTEC"]
 
 # ETF Tickers prone to eager matches (company name-like or typos for common words); used to avoid
 # aggressive matches on partial queries.
-ETF_TICKER_MATCH_BLOCKLIST = [
+ETF_TICKER_EAGER_MATCH_BLOCKLIST = [
     "BIB",
     "EKG",
     "WEBL",
