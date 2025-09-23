@@ -1,9 +1,13 @@
 """Data Types for Sports"""
 
+# from __future__ import annotations
+
 import asyncio
 import copy
 import json
 import logging
+
+import pdb
 
 from abc import abstractmethod
 from datetime import datetime, timedelta, timezone
@@ -11,7 +15,7 @@ from threading import Lock
 from typing import Any, Final
 
 from dynaconf.base import LazySettings
-from elasticsearch import AsyncElasticsearch
+from elasticsearch import AsyncElasticsearch, BadRequestError
 from httpx import AsyncClient
 from pydantic import BaseModel
 
@@ -25,7 +29,6 @@ from merino.providers.suggest.sports import (
 )
 from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportDataError,
     SportDataWarning,
@@ -33,7 +36,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
 
 SUGGEST_ID: Final[str] = "suggest-on-title"
 MAX_SUGGESTIONS: Final[int] = settings.providers.sports.max_suggestions
-TIMEOUT_MS: Final[str] = f"{settings.providers.sports.request_timeout_ms}ms"
+TIMEOUT_MS: Final[str] = f"{settings.providers.sports.es.request_timeout_ms}ms"
 
 
 class LocalDataStore:
@@ -67,19 +70,38 @@ class ElasticDataStore:
 
     def __init__(self, *, settings: LazySettings) -> None:
         """Initialize a connection to ElasticSearch"""
-        dsn = settings.sports["dsn"]
-        self.client = AsyncElasticsearch(dsn, api_key=settings.sports["api_key"])
-        # build the index based on the platform.
-        self.platform = f"{{lang}}_{settings.sports["platform"]}"
-        self.meta_index = settings.get("meta_index", "sports_meta")
-        self.team_index = settings.get("team_index", "sports_team")
-        logging.info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
-        loop = asyncio.get_event_loop()
-        for index in [self.meta_index, self.team_index]:
-            loop.run_until_complete(self.client.indices.create(index=index))
-        self.data = dict(
-            active=[sport.trim() for sport in settings.sports.sports.split(",")],
+        dsn = settings.providers.sports.es.dsn
+        self.client = AsyncElasticsearch(
+            dsn, api_key=settings.providers.sports.es.api_key
         )
+        # build the index based on the platform.
+        self.platform = f"{{lang}}_{settings.sports.get("platform", "sports")}"
+        self.meta_index = settings.sports.get("meta_index", f"{self.platform}_meta")
+        self.team_index = settings.sports.get("team_index", f"{self.platform}_team")
+        self.data = dict(
+            active=[
+                sport.strip() for sport in settings.providers.sports.sports.split(",")
+            ],
+        )
+        logging.info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
+
+    async def build_indexes(self, settings: LazySettings):
+        """ "Indicies are created externally by terraform.
+        Build them here for stand-alone and testing reasons.
+        """
+        dsn = settings.providers.sports.es.dsn
+        for lang in ["en"]:
+            for index in [self.meta_index, self.team_index]:
+                try:
+                    await self.client.indices.create(index=index.format(lang=lang))
+                except BadRequestError as ex:
+                    if ex.error == "resource_already_exists_exception":
+                        logging.debug(
+                            f"{LOGGING_TAG}🐜 {index.format(lang=lang)} already exists, skipping"
+                        )
+                        continue
+                    pdb.set_trace()
+                    print(ex)
 
     async def shutdown(self):
         await self.client.close()
@@ -108,12 +130,16 @@ class ElasticDataStore:
             ) from ex
 
         if "suggest" in res:
+            # TODO: filter out duplicate events.
             return [doc for doc in res["suggest"][SUGGEST_ID][0]["options"]]
         else:
             return []
 
-    async def store_teams(self, teams: list[Team], sport_name: str):
-        """store the list of teams."""
+    async def store_teams(
+        self, teams: list["Team"], sport_name: str, lang_code: str = "en"
+    ):
+        """Optionally store the list of teams in Elastic Search.
+        Teams should be held in local memory."""
 
         # TODO: convert to async transactions
         # Compose a queue of operations
@@ -123,12 +149,15 @@ class ElasticDataStore:
         # ```
         queue = []
         # TODO: Chunk this? Will we have more than 5000 teams per sport?
+        team_idx = self.team_index.format(lang=lang_code)
+        meta_idx = self.meta_index.format(lang=lang_code)
         for team in teams:
+            idx = self.team_index.format(lang=lang_code)
             # this can be optimized:
-            queue.append(f"""{"index":{"_index":"{self.team_index}"}}""")
+            queue.append(f"""{"index":{"_index":"{team_idx}"}}""")
             queue.append(team.as_str())
         # update the meta info for the sport teams.
-        queue.append(f"""{"index":{"_index":"{self.meta_index}"}}""")
+        queue.append(f"""{"index":{"_index":"{meta_idx}"}}""")
         queue.append(
             json.dumps(
                 dict(
@@ -137,10 +166,8 @@ class ElasticDataStore:
                 )
             )
         )
-        import pdb
-
         pdb.set_trace()
-        result = self.client.bulk(index=self.team_index, body=[])
+        result = self.client.bulk(index=team_idx, body=[])
         if "errors" in result:
             for error in result["errors"]:
                 logging.error(
@@ -151,9 +178,9 @@ class ElasticDataStore:
             )
 
     async def store_events(
-        self, events: list[Event], teams: list[Team], sport_name: str
+        self, events: list["Event"], teams: list["Team"], sport_name: str
     ):
-        """Store the event as event:team:team"""
+        """Store the event as event:home_team:away_team"""
         event_data = {}
 
         for event in events:
@@ -204,28 +231,6 @@ class Team(BaseModel):
     # Team Data expiration date:
     ttl: int
 
-    # SerDe methods
-    @classmethod
-    def parse(cls, sport_name: str, serialized: str):
-        """Deserialize from JSON string"""
-        struct = json.loads(serialized)
-        data_sport = struct.get("key").split(":")[0]
-        if not sport_name == data_sport:
-            raise SportDataError(
-                f"{LOGGING_TAG}: Wrong sport! Expected {sport_name}, found{data_sport}"
-            )
-        return cls(
-            terms=struct.get("terms"),
-            name=struct.get("name"),
-            key=struct.get("key"),
-            locale=struct.get("locale"),
-            aliases=struct.get("aliases"),
-            colors=struct.get("colors"),
-            updated=struct.get("updated"),
-            ttl=struct.get("ttl")
-            or int((datetime.now() + timedelta(weeks=TEAM_TTL_WEEKS)).timestamp()),
-        )
-
     def as_str(self) -> str:
         """Serialize to JSON string"""
         return json.dumps(self)
@@ -236,41 +241,132 @@ class Sport(BaseModel):
 
     api_key: str
     name: str
-    http_client: AsyncClient
     teams: dict[str, Team]
     base_url: str
     event_ttl: timedelta
     team_ttl: timedelta
-    event_store: ElasticDataStore
+    # Commented because Pydantic does not know how to generate a core schema
+    # http_client: AsyncClient
+    # event_store: ElasticDataStore
+    term_filter: list[str]
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
-        super().__init__(key=settings.get("key"), *args, **kwargs)
-        self.base_url = settings.get(
-            "base_url",
-            default=f"https://api.sportsdata.io/v3/{self.name.lower()}/scores/json/",
+        logging.debug(f"{LOGGING_TAG} In sport")
+        # Set defaults for overrides
+        if "event_ttl" not in kwargs:
+            kwargs.update(
+                {
+                    "event_ttl": timedelta(
+                        weeks=settings.get("event_ttl_weeks", EVENT_TTL_WEEKS)
+                    )
+                }
+            )
+        if "team_ttl" not in kwargs:
+            kwargs.update(
+                {
+                    "team_ttl": timedelta(
+                        weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS)
+                    )
+                }
+            )
+        if "term_filter" not in kwargs:
+            kwargs.update({"term_filter": []})
+        super().__init__(
+            *args,
+            **kwargs,
         )
-        self.event_store = ElasticDataStore(
-            api_key=settings["api_key"], dsn=settings["dsn"]
-        )
-        self.event_ttl = timedelta(
-            weeks=settings.get("event_ttl_weeks", EVENT_TTL_WEEKS)
-        )
-        self.team_ttl = timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))
 
     def gen_key(self, key: str) -> str:
-        return f"{self.name}:{key}"
+        return f"{self.name.lower()}:{key.lower()}"
 
     @abstractmethod
     def get_team(self, key: str) -> Team:
         """Return the team based on the key provided"""
 
     @abstractmethod
-    async def update_teams(self):
+    async def update_teams(self, client: AsyncClient):
         """Update team information and store in common storage (usually called nightly)"""
 
     @abstractmethod
-    async def update_events(self):
+    async def update_events(self, client: AsyncClient):
         """Fetch the list of current and upcoming events for this sport"""
+
+    def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[str, Team]:
+        """Create the Team entries from the data source
+
+        This presumes that we are receiving data that complies with the SportsData.io
+        `Team` data dictionary (See https://sportsdata.io/developers/data-dictionary/nfl#team)
+
+        If we ever have a different data provider, this will need to be moved to the
+        SportData provider class.
+        """
+        for team_data in data:
+            # build the list of terms we want to search:
+            terms = set()
+            for item in [
+                "Name",
+                "AreaName",
+                "City",
+                "FullName",
+                "Nickname1",
+                "Nickname2",
+                "Nickname3",
+            ]:
+                candidate = team_data.get(item)
+                if candidate:
+                    for word in list(candidate.split(" ")):
+                        lword = word.lower()
+                        if word not in self.term_filter:
+                            terms.add(lword)
+            logging.debug(f"{LOGGING_TAG} - Team: {team_data.get("Name")}")
+            team = Team(
+                terms=" ".join(terms),
+                key=self.gen_key(team_data["Key"]),
+                name=team_data.get("FullName", team_data["Name"]),
+                locale=" ".join(
+                    [team_data.get("City", ""), team_data.get("AreaName", "")]
+                ).strip(),
+                aliases=list(
+                    filter(
+                        lambda x: x is not None,
+                        [
+                            team_data.get("FullName"),
+                            # Not all teams have nicknames,
+                            team_data.get("Nickname1"),
+                            team_data.get("Nickname2"),
+                            team_data.get("Nickname3"),
+                        ],
+                    )
+                ),
+                updated=datetime.now(),
+                ttl=ttl_from_now(self.team_ttl),
+                colors=list(
+                    filter(
+                        lambda x: x is not None,
+                        [
+                            # Some Teams use "ClubColor#"
+                            team_data.get("PrimaryColor"),
+                            team_data.get("SecondaryColor"),
+                            team_data.get("TertiaryColor"),
+                            team_data.get("QuaternaryColor"),
+                        ],
+                    )
+                ),
+            )
+            self.teams[team.key] = team
+        return self.teams
+
+    def load_events_from_source(self, data: list[dict[str, Any]]) -> list["Event"]:
+        """ "Scan the list of events for any event within the 'current' window.
+
+        This presumes that we are receiving data that complies with the SportsData.io
+        `Team` data dictionary (See https://sportsdata.io/developers/data-dictionary/nfl#team)
+
+        If we ever have a different data provider, this will need to be moved to the
+        SportData provider class.
+
+        """
+        return []
 
 
 class Event(BaseModel):
@@ -328,7 +424,7 @@ class Event(BaseModel):
             home_score=parsed.get("home_score"),
             away_score=parsed.get("away_score"),
             status=GameStatus(parsed.get("status")),
-            ttl=ttl_from_now(sport.event_ttl),
+            ttl=ttl,
         )
         return self
 
@@ -364,50 +460,103 @@ class Event(BaseModel):
 class NFL(Sport):
     """National Football League"""
 
-    season: str
-    week: int
+    season: str | None
+    week: int | None
     teams: dict[str, Team]
     _lock: asyncio.Lock
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(name="NFL", *args, **kwargs)
-        self.teams = {}
-        self.lock = asyncio.Lock()
+    def __init__(self, settings: LazySettings, *args, **kwargs):
+        name = self.__class__.__name__
+        super().__init__(
+            settings=settings,
+            name=name,
+            base_url=settings.providers.sports.sportsdata.get(
+                f"base_url.{name.lower()}",
+                default=f"https://api.sportsdata.io/v3/{name.lower()}/scores/json",
+            ),
+            season=None,
+            week=None,
+            teams={},
+            team_ttl=timedelta(weeks=4),
+            _lock=asyncio.Lock(),
+            *args,
+            **kwargs,
+        )
         # self.event_ttl = timedelta(weeks=2)
         # self.team_ttl = timedelta(weeks=52)
 
     async def get_team(self, name: str) -> Team | None:
-        async with self.lock:
+        async with self._lock:
             return self.teams.get(self.gen_key(name))
 
-    async def update_teams(self):
+    async def update_teams(self, http_client: AsyncClient):
         """NFL requires a nightly "Timeframe" lookup."""
-        logging.debug(f"{LOGGING_TAG} Getting timeframe for {self.name} ")
-        URL = f"{self.base_url}/Timeframes/current?key={self.api_key}"
-        import pdb
-
-        pdb.set_trace()
-        response = await get_data(client=self.http_client, url=URL)
-        print(response)
-        # TODO: parse this out to get the current week and games.
         # see: https://sportsdata.io/developers/api-documentation/nfl#timeframesepl
+        logging.debug(f"{LOGGING_TAG} Getting timeframe for {self.name} ")
+        url = f"{self.base_url}/Timeframes/current?key={self.api_key}"
+        response = await get_data(client=http_client, url=url)
+        # [{
+        #     'SeasonType': 1,
+        #     'Season': 2025,
+        #     'Week': 3,
+        #     'Name': 'Week 3',
+        #     'ShortName': 'Week 3',
+        #     'StartDate': '2025-09-17T00:00:00',
+        #     'EndDate': '2025-09-23T23:59:59',
+        #     'FirstGameStart': '2025-09-18T20:15:00',
+        #     'FirstGameEnd': '2025-09-19T00:15:00',
+        #     'LastGameEnd': '2025-09-23T00:15:00',
+        #     'HasGames': True,
+        #     'HasStarted': True,
+        #     'HasEnded': False,
+        #     'HasFirstGameStarted': True,
+        #     'HasFirstGameEnded': True,
+        #     'HasLastGameEnded': True,
+        #     'ApiSeason': '2025REG',
+        #     'ApiWeek': '3'
+        # }]
+        # TODO: Store this info in meta
+        self.season = response[0].get("ApiSeason")
+        self.week = response[0].get("ApiWeek")
+        # Now get the team information:
+        url = f"{self.base_url}/Teams?key={self.api_key}"
+        pdb.set_trace()
+        response = await get_data(client=http_client, url=url)
+        self.load_teams_from_source(response)
+        print(response)
         # store to elastic search
 
-    async def update_events(self):
+    async def update_events(self, http_client: AsyncClient):
         logging.debug(f"{LOGGING_TAG} Getting Events for {self.name}")
-        URL = (
+        pdb.set_trace()
+        url = (
             f"{self.base_url}/ScoresBasic/{self.season}/{self.week}?key={self.api_key}"
         )
-        # TODO: fetch previous/upcoming week info?
-        response = await get_data(client=self.http_client, url=URL)
+        response = await get_data(client=http_client, url=url)
+        print(response)
         # TODO: Store to thread locked memory.
 
 
 class MLB(Sport):
     """Major League Baseball"""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(name="MLB", *args, **kwargs)
+    def __init__(self, settings: LazySettings, *args, **kwargs):
+        name = self.__class__.__name__
+
+        super().__init__(
+            settings=settings,
+            name=name,
+            base_url=settings.providers.sports.sportsdata.get(
+                f"base_url.{name.lower()}",
+                default=f"https://api.sportsdata.io/v3/{name.lower()}/scores/json",
+            ),
+            season=None,
+            week=None,
+            teams={},
+            _lock=asyncio.Lock(),
+            *args,
+            **kwargs,
+        )
 
     async def get_events(self) -> list[Event]:
         """Fetch the list of events for the sport. (5 min interval)"""
@@ -458,38 +607,49 @@ class MLB(Sport):
         # TODO: Parse events
         return []
 
-    async def update(self, store: ElasticDataStore):
-        # TODO: Fill in update
-        pass
-
 
 class NBA(Sport):
     """National Basketball Association"""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(name="NBA", *args, **kwargs)
-        self.event_ttl = timedelta(days=3)
-
-    async def update(self, store: ElasticDataStore):
-        # TODO: Fill in update
-        pass
-
-        return timedelta(days=3)
+    def __init__(self, settings: LazySettings, *args, **kwargs):
+        name = self.__class__.__name__
+        super().__init__(
+            settings=settings,
+            name=name,
+            base_url=settings.providers.sports.sportsdata.get(
+                "base_url",
+                default=f"https://api.sportsdata.io/v3/{name.lower()}/scores/json/",
+            ),
+            season=None,
+            week=None,
+            teams={},
+            team_ttl=timedelta(weeks=4),
+            event_ttl=timedelta(days=3),
+            _lock=asyncio.Lock(),
+            *args,
+            **kwargs,
+        )
 
 
 class NHL(Sport):
     """Major Hockey League"""
 
-    store: DataStore
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(name="NHL", *args, **kwargs)
-
-    async def update(self, store: DataStore):
-        # TODO: Fill in update
-        pass
-
-        return timedelta(days=3)
+    def __init__(self, settings: LazySettings, *args, **kwargs):
+        name = self.__class__.__name__
+        super().__init__(
+            settings=settings,
+            name=name,
+            base_url=settings.providers.sports.sportsdata.get(
+                f"base_url.{name.lower()}",
+                default=f"https://api.sportsdata.io/v3/{name.lower()}/scores/json",
+            ),
+            season=None,
+            week=None,
+            teams={},
+            _lock=asyncio.Lock(),
+            *args,
+            **kwargs,
+        )
 
 
 class EPL(Sport):
@@ -497,10 +657,23 @@ class EPL(Sport):
 
     term_filter: list[str] = ["a", "club", "the", "football", "fc"]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(name="EPL", *args, **kwargs)
-        # EPL is a league beneath the general "soccer" sport.
-        self.base_url = f"https://api.sportsdata.io/v4/soccer/scores/json"
+    def __init__(self, settings: LazySettings, *args, **kwargs):
+        name = self.__class__.__name__
+
+        super().__init__(
+            settings=settings,
+            name=name,
+            base_url=settings.providers.sports.sportsdata.get(
+                f"base_url.{name.lower()}",
+                default=f"https://api.sportsdata.io/v3/soccer/scores/json/",
+            ),
+            season=None,
+            week=None,
+            teams={},
+            _lock=asyncio.Lock(),
+            *args,
+            **kwargs,
+        )
 
     async def update(self, store: ElasticDataStore):
         """Fetch and update the Team Standing information."""
@@ -509,7 +682,9 @@ class EPL(Sport):
         """
 
         """
-        standings_url = f"{self.base_url}/Standings/{self.name}?key={self.api_key}"
+        standings_url = (
+            f"{self.base_url}/Standings/{self.name.lower()}?key={self.api_key}"
+        )
         response = await self.http_client.get(standings_url)
         response.raise_for_status()
         raw_data = response.json()
@@ -522,11 +697,23 @@ class UCL(Sport):
     """UEFA Champions League"""
 
     term_filter: list[str] = ["a", "club", "the", "football", "fc"]
-    storage: ElasticDataStore
 
     def __init__(self, *args, **kwargs):
-        super().__init__(name="UCL", *args, **kwargs)
-        self.base_url = f"https://api.sportsdata.io/v4/soccer/scores/json/"
+        name = self.__class__.__name__
+        super().__init__(
+            settings=settings,
+            name=name,
+            base_url=settings.providers.sports.sportsdata.get(
+                f"base_url.{name.lower()}",
+                default=f"https://api.sportsdata.io/v3/soccer/scores/json/",
+            ),
+            season=None,
+            week=None,
+            teams={},
+            _lock=asyncio.Lock(),
+            *args,
+            **kwargs,
+        )
 
     async def get_teams(self) -> dict[str, Team]:
         """fetch the Standings data: (4 hour interval)"""
@@ -568,60 +755,9 @@ class UCL(Sport):
         ...
         ]
         """
-        url = f"{self.base_url}/Teams/{self.name}?key={self.api_key}"
+        url = f"{self.base_url}/Teams/{self.name.lower()}?key={self.api_key}"
         data = await get_data(self.http_client, url)
         teams = {}
-        for team_data in data:
-            # build the list of terms we want to search:
-            terms = set()
-            for item in [
-                "Name",
-                "FullName",
-                "AreaName",
-                "City",
-                "Nickname1",
-                "Nickname2",
-                "Nickname3",
-            ]:
-                candidate = team_data.get(item)
-                if candidate:
-                    for word in list(" ".split(candidate)):
-                        lword = word.lower()
-                        if word not in self.term_filter:
-                            terms.add(lword)
-            team = Team(
-                terms=" ".join(terms),
-                key=self.gen_key(team_data.get("Key")),
-                name=team_data.get("Name"),
-                locale=" ".join(
-                    [team_data.get("City"), team_data.get("AreaName")]
-                ).strip(),
-                aliases=list(
-                    filter(
-                        lambda x: x is not None,
-                        [
-                            team_data.get("FullName"),
-                            team_data.get("Nickname1"),
-                            team_data.get("Nickname2"),
-                            team_data.get("Nickname3"),
-                        ],
-                    )
-                ),
-                updated=datetime.now(),
-                ttl=ttl_from_now(self.team_ttl),
-                colors=list(
-                    filter(
-                        lambda x: x is not None,
-                        [
-                            team_data.get("ClubColor1"),
-                            team_data.get("ClubColor2"),
-                            team_data.get("ClubColor3"),
-                        ],
-                    )
-                ),
-            )
-            teams[team.key] = Team
-        return teams
 
     async def get_events(self, teams: dict[Team]):
         """Fetch the current scores for the date for this sport. (5min interval)"""
@@ -670,8 +806,8 @@ class UCL(Sport):
             "PlayoffAggregateScore": null
         },
         """
-        date = SportDate()
-        url = f"{self.base_url}/ScoresBasic/{date}?key={self.api_key}"
+        date = datetime.year
+        url = f"{self.base_url}/SchedulesBasic/{self.name.lower()}/{date}?key={self.api_key}"
         data = await get_data(self.http_client, url)
         start_window = datetime.now() - timedelta(days=-7)
         end_window = datetime.now() + timedelta(days=7)
@@ -693,13 +829,3 @@ class UCL(Sport):
                 except SportDataWarning:
                     continue
         return recent_events
-
-    async def update(self):
-        """Fetch and update the Team information."""
-        teams = await self.get_teams()
-        # Note, soccer
-        events = await self.get_events()
-        await self.store.store_teams(teams, self.name)
-        await self.store.store_events(events, teams, self.name)
-
-        return timedelta(days=3)

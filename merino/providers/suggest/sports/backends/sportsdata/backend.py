@@ -2,7 +2,7 @@
 
 import json
 import re
-from dynaconf.base import Settings
+from dynaconf.base import LazySettings
 from typing import Protocol, Any, AnyStr
 
 from merino.providers.manifest.backends.protocol import ManifestData
@@ -21,19 +21,10 @@ class SportsDataBackend(Protocol):
     data_store: ElasticDataStore
     word_breaker: re.Pattern
 
-    def __init__(self, manifest_data: ManifestData, settings: Settings):
+    def __init__(self, manifest_data: ManifestData, settings: LazySettings):
         self.manifest_data = manifest_data
-        self.data_store = ElasticDataStore(
-            dsn=settings["dsn"], api_key=settings["api_key"]
-        )
+        self.data_store = ElasticDataStore(settings=settings)
         self.word_breaker = re.compile(r"(\w+)")
-
-    def get_events(teams: list[Team]) -> list[Event]:
-        """Search each `Sport`'s local event cache for anything that contains the team ids."""
-        import pdb
-
-        pdb.set_trace()
-        return
 
     async def query(
         self, query_string: str | None = None, language_code: str = "en"
@@ -42,13 +33,7 @@ class SportsDataBackend(Protocol):
         passed description string, but for now, just return the default in a list.
         """
         # break the description into words
-        words = self.word_breaker.findall(query_string)
-        teams = []
-        for word in words:
-            team = await self.data_store.search(word, language_code="en")
-            if team:
-                teams.append(team)
-        if len(teams) > 1:
-            events = self.get_events(teams)
+        if query_string:
+            events = await self.data_store.search(q=query_string, language_code="en")
             return [event.as_suggestion() for event in events]
         return []

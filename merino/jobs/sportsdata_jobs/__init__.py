@@ -83,7 +83,7 @@ class SportDataUpdater(BaseModel):
         super().__init__(*args, **kwargs)
         if not settings.sports:
             raise SportDataError("No sports defined")
-        self.store = ElasticDataStore(api_key=settings.sports["api_key"], dsn=settings.sports["dsn"])
+        self.store = ElasticDataStore(api_key=settings.providers.sports.es.api_key, dsn=settings.providers.sports.es.dsn)
 
         for sport_name in [
             sport.strip().upper() for sport in settings.sports.split(",")

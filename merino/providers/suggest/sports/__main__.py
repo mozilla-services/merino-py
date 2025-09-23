@@ -3,6 +3,7 @@
 import asyncio
 import pdb
 
+from httpx import AsyncClient, Timeout
 from merino.configs import settings
 from merino.providers.suggest.sports import init_logs, LOGGING_TAG
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
@@ -15,17 +16,28 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
 # functions work the way you'd expect.
 async def main():
     log = init_logs()
-    pdb.set_trace()
-    search_store = ElasticDataStore(settings=settings)
+    event_store = ElasticDataStore(settings=settings)
+    # Only call for test or dev builds.
+    await event_store.build_indexes(settings=settings)
     log.debug(f"{LOGGING_TAG}: Starting up...")
+    sport = NFL(
+        settings,
+        event_store=event_store,
+        api_key=settings.providers.sports.sportsdata.api_key,
+    )
+    # Sadly, we can't instantiate the AsyncClient lower.
+    timeout = Timeout(
+        3,
+        connect=settings.providers.sports.sportsdata.get("connect_timeout", 1),
+        read=settings.providers.sports.sportsdata.get("read_timeout", 1),
+    )
+    client = AsyncClient(timeout=timeout)
     pdb.set_trace()
-    sport = NFL(settings)
+    await sport.update_teams(http_client=client)
     pdb.set_trace()
-    await sport.update_teams()
+    await sport.update_events(http_client=client)
     pdb.set_trace()
-    await sport.update_events()
-    pdb.set_trace()
-    res = await search_store.search(q="Giants vs dodgers", language_code="en")
+    res = await event_store.search(q="Giants vs dodgers", language_code="en")
     pdb.set_trace()
     print(res)
 
