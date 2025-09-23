@@ -62,8 +62,22 @@ ML_EXPERIMENT_SCALE = SUBTOPIC_TOTAL_PERCENT
 class MockEngagementBackend(EngagementBackend):
     """Mock class implementing the protocol for EngagementBackend."""
 
+    def __init__(self):
+        # {corpusItemId: (reports, impressions)}
+        self.metrics: dict[str, tuple[int, int]] = {}
+
     def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Return random click and impression counts based on the scheduled corpus id and region."""
+        if corpus_item_id in self.metrics:
+            reports, impressions = self.metrics[corpus_item_id]
+            return Engagement(
+                corpus_item_id=corpus_item_id,
+                region=region,
+                click_count=0,
+                impression_count=impressions,
+                report_count=reports,
+            )
+
         HIGH_CTR_ITEMS = {
             "b2c10703-5377-4fe8-89d3-32fbd7288187": (
                 1_000_000 * ML_EXPERIMENT_SCALE,
@@ -2145,6 +2159,58 @@ class TestSections:
         assert any(
             passed_region(call) == derived_region for call in spy.call_args_list
         ), f"No engagement.get(..., region={repr(derived_region)}) in {spy.call_args_list}"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "reports,impressions,should_remove",
+        [
+            # Above threshold: 5 / 50 = 0.1 (10% > 0.001%) → should be removed
+            (5, 50, True),
+            # Below threshold: 1 / 200,000 = 0.000005 (0.0005% < 0.001%) → should stay
+            (1, 200_000, False),
+            # Exactly at threshold: 5 / 500,000 = 0.00001 (0.001% == 0.001%) → should stay
+            (5, 500_000, False),
+            # No reports: 0 / 100 = 0% < 0.001% → should stay
+            (0, 100, False),
+            # No engagement data → treated as safe → should stay
+            (None, None, False),
+        ],
+    )
+    async def test_takedown_reported_recommendations_parametrized(
+        self, engagement_backend, caplog, reports, impressions, should_remove
+    ):
+        """Verify takedown_reported_recommendations behaves correctly."""
+        corpus_rec_id = "080de671-e4de-4a3d-863f-8c6dd6980069"
+
+        if reports is not None and impressions is not None:
+            engagement_backend.metrics.update({corpus_rec_id: (reports, impressions)})
+
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": "en-US",
+                    "feeds": ["sections"],
+                    "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+                    "experimentBranch": "treatment",
+                },
+            )
+
+        assert response.status_code == 200
+        feeds = response.json()["feeds"]
+
+        response_ids = {
+            rec["corpusItemId"]
+            for sid, section in feeds.items()
+            if section
+            for rec in section.get("recommendations", [])
+        }
+
+        if should_remove:
+            assert corpus_rec_id not in response_ids
+            assert any("Excluding reported recommendation" in r.message for r in caplog.records)
+        else:
+            assert corpus_rec_id in response_ids
 
 
 @pytest.mark.asyncio

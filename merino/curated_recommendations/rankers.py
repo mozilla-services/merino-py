@@ -1,5 +1,6 @@
 """Algorithms for ranking curated recommendations."""
 
+import sentry_sdk
 import logging
 import math
 from copy import copy
@@ -62,7 +63,7 @@ NUM_RECS_PER_TOPIC = 2
 TOP_STORIES_SECTION_KEY = "top_stories_section"
 
 # For taking down reported content
-DEFAULT_REPORT_RECS_RATIO_THRESHOLD = 0.01  # using a low number for now (1%); update later
+DEFAULT_REPORT_RECS_RATIO_THRESHOLD = 1e-5  # using a low number for now (0.001%)
 DEFAULT_SAFEGUARD_CAP_TAKEDOWN_FRACTION = 0.50  # allow at most 50% of recs to be auto-removed
 
 
@@ -118,14 +119,41 @@ def takedown_reported_recommendations(
 
     for rec in recs_to_remove:
         ratio, reports, impressions = rec_eng_metrics.get(rec.corpusItemId, (-1.0, 0, 0))
-        logger.error(
-            f"Excluding reported recommendation: corpus_item_id={rec.corpusItemId} "
-            f"report_ratio={ratio:.6f} reports={reports} impressions={impressions} "
-            f"threshold={report_ratio_threshold:.6f} region={region}"
+        # Log a warning for our backend logs
+        logger.warning(
+            f"Excluding reported recommendation: '{rec.title}' ({rec.url}) was excluded due to high reports",
+            extra={
+                "corpus_item_id": rec.corpusItemId,
+                "report_ratio": ratio,
+                "reports": reports,
+                "impressions": impressions,
+                "threshold": report_ratio_threshold,
+                "region": region,
+            },
+        )
+
+        # Send a structured event to Sentry as a warning 🟡
+        sentry_sdk.capture_message(
+            f"Excluding reported recommendation: '{rec.title}' ({rec.url}) excluded due to high reports",
+            level="warning",
+            scope=lambda scope: scope.set_context(
+                "excluding reported recommendation",
+                {
+                    "corpus_item_id": rec.corpusItemId,
+                    "title": rec.title,
+                    "url": str(rec.url),
+                    "report_ratio": ratio,
+                    "reports": reports,
+                    "impressions": impressions,
+                    "threshold": report_ratio_threshold,
+                    "region": region,
+                },
+            ),
         )
 
     # Return remaining recs
-    return [rec for rec in recs if rec.corpusItemId not in removed_rec_ids]
+    remaining_recs = [rec for rec in recs if rec.corpusItemId not in removed_rec_ids]
+    return remaining_recs
 
 
 def thompson_sampling(

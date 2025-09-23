@@ -536,22 +536,29 @@ async def get_sections(
     ]
 
     # 5. Remove reported recommendations
-    all_corpus_recommendations = takedown_reported_recommendations(
+    all_remaining_corpus_recommendations = takedown_reported_recommendations(
         all_corpus_recommendations,
         engagement_backend=engagement_backend,
         region=region,
     )
 
-    # 5. Rank all corpus recommendations globally by engagement to build top_stories_section
+    # 6. Update corpus_sections to make sure reported takedown recs are not present
+    remaining_ids = {rec.corpusItemId for rec in all_remaining_corpus_recommendations}
+    for cs in corpus_sections.values():
+        cs.recommendations = [
+            rec for rec in cs.recommendations if rec.corpusItemId in remaining_ids
+        ]
+
+    # 7. Rank all corpus recommendations globally by engagement to build top_stories_section
     all_ranked_corpus_recommendations = thompson_sampling(
-        all_corpus_recommendations,
+        all_remaining_corpus_recommendations,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
         region=region,
         rescaler=rescaler,
     )
 
-    # 6. Split top stories
+    # 8. Split top stories
     # Use 2-row layout as default for Popular Today
     top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
     popular_today_layout = layout_7_tiles_2_ads
@@ -562,11 +569,11 @@ async def get_sections(
 
     top_stories_rec_ids = {rec.corpusItemId for rec in top_stories}
 
-    # 7. Remove top story recs from original corpus sections
+    # 9. Remove top story recs from original corpus sections
     for cs in corpus_sections.values():
         cs.recommendations = remove_top_story_recs(cs.recommendations, top_stories_rec_ids)
 
-    # 8. Rank remaining recs in sections by engagement
+    # 10. Rank remaining recs in sections by engagement
     for cs in corpus_sections.values():
         cs.recommendations = thompson_sampling(
             cs.recommendations,
@@ -576,7 +583,7 @@ async def get_sections(
             rescaler=rescaler,
         )
 
-    # 9. Initialize sections with top stories
+    # 11. Initialize sections with top stories
     sections: dict[str, Section] = {
         "top_stories_section": Section(
             receivedFeedRank=0,
@@ -586,13 +593,13 @@ async def get_sections(
         )
     }
 
-    # 10. Add remaining corpus sections
+    # 12. Add remaining corpus sections
     sections.update(corpus_sections)
 
-    # 11. Prune undersized sections
+    # 13. Prune undersized sections
     sections = get_sections_with_enough_items(sections)
 
-    # 12. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
+    # 14. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
     sections = rank_sections(
         sections,
         request.sections,
@@ -601,10 +608,10 @@ async def get_sections(
         experiment_rescaler=rescaler,
     )
 
-    # 13. Apply final layout cycling to ranked sections except top_stories
+    # 15. Apply final layout cycling to ranked sections except top_stories
     cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
 
-    # 14. Apply ad adjustments
+    # 16. Apply ad adjustments
     adjust_ads_in_sections(sections)
 
     return sections
