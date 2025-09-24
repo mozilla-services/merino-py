@@ -539,7 +539,9 @@ async def test_get_suggestions(
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://example.org/target/mozfirefoxaccounts",
             }
-        ]
+        ],
+        indent=None,
+        separators=(",", ":"),
     )
     for country, segment in expected_suggestion_info:
         assert country in suggestions.keys()
@@ -580,7 +582,9 @@ async def test_get_attachment(
     rs_attachment_response: httpx.Response,
 ) -> None:
     """Test that the method returns the proper attachment information."""
-    expected_attachment: str = json.dumps([dict(rs_attachment)])
+    expected_attachment: str = json.dumps(
+        [dict(rs_attachment)], indent=None, separators=(",", ":")
+    )
     url: str = urljoin(
         base="attachment-host",
         url="main-workspace/quicksuggest/6129d437-b3c1-48b5-b343-535e045d341a.json",

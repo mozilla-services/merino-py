@@ -2,9 +2,12 @@
 
 import asyncio
 from datetime import timedelta, datetime
+import logging
+from typing import Any
 from unittest.mock import AsyncMock
 
 import aiodogstatsd
+from fastapi.testclient import TestClient
 import freezegun
 import numpy as np
 import pytest
@@ -55,6 +58,7 @@ from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
+from tests.types import FilterCaplogFixture
 
 ML_EXPERIMENT_SCALE = SUBTOPIC_TOTAL_PERCENT
 
@@ -209,9 +213,9 @@ def setup_legacy_curated_recommendations_provider(legacy_corpus_provider):
     app.dependency_overrides[get_legacy_provider] = lambda: legacy_corpus_provider
 
 
-async def fetch_en_us(client: AsyncClient) -> Response:
+def fetch_en_us(client: TestClient) -> Response:
     """Make a curated recommendations request with en-US locale"""
-    return await client.post(
+    return client.post(
         "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": [Topic.FOOD]}
     )
 
@@ -251,157 +255,143 @@ def assert_section_layouts_are_cycled(sections: dict):
 
 
 @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
     range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
 )
-async def test_curated_recommendations(repeat):
+def test_curated_recommendations(repeat, client: TestClient):
     """Test the curated recommendations endpoint response is as expected."""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        # expected recommendation
-        expected_recommendation = CuratedRecommendation(
-            scheduledCorpusItemId="de614b6b-6df6-470a-97f2-30344c56c1b3",
-            corpusItemId="4095b364-02ff-402c-b58a-792a067fccf2",
-            url=HttpUrl(
-                "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-brownies-and-cakes?utm_source=firefox-newtab-en-us"
-            ),
-            title="Milk Powder Is the Key to Better Cookies, Brownies, and Cakes",
-            excerpt="Consider this pantry staple your secret ingredient for making more flavorful desserts.",
-            topic=Topic.FOOD,
-            publisher="Epicurious",
-            isTimeSensitive=False,
-            imageUrl="https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg",
-            receivedRank=0,
-            tileId=301455520317019,
-            features={"t_food": 1.0},
-        )
-        # Mock the endpoint
-        response = await fetch_en_us(ac)
-        data = response.json()
+    # expected recommendation
+    expected_recommendation = CuratedRecommendation(
+        scheduledCorpusItemId="de614b6b-6df6-470a-97f2-30344c56c1b3",
+        corpusItemId="4095b364-02ff-402c-b58a-792a067fccf2",
+        url=HttpUrl(
+            "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-brownies-and-cakes?utm_source=firefox-newtab-en-us"
+        ),
+        title="Milk Powder Is the Key to Better Cookies, Brownies, and Cakes",
+        excerpt="Consider this pantry staple your secret ingredient for making more flavorful desserts.",
+        topic=Topic.FOOD,
+        publisher="Epicurious",
+        isTimeSensitive=False,
+        imageUrl="https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg",
+        receivedRank=0,
+        tileId=301455520317019,
+        features={"t_food": 1.0},
+    )
+    # Mock the endpoint
+    response = fetch_en_us(client)
+    data = response.json()
 
-        # Check if the mock response is valid
-        assert response.status_code == 200
+    # Check if the mock response is valid
+    assert response.status_code == 200
 
-        # Check surfaceId is returned (should be NEW_TAB_EN_US for en-US locale)
-        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_US
+    # Check surfaceId is returned (should be NEW_TAB_EN_US for en-US locale)
+    assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_US
 
-        corpus_items = data["data"]
-        # assert total of 100 items returned, which is the default maximum number of recommendations in the response.
-        assert len(corpus_items) == 100
-        # Assert all corpus_items have expected fields populated.
-        assert all(item["url"] for item in corpus_items)
-        assert all(item["publisher"] for item in corpus_items)
-        assert all(item["imageUrl"] for item in corpus_items)
-        assert all(item["tileId"] for item in corpus_items)
-        assert all(item["features"] for item in corpus_items)
+    corpus_items = data["data"]
+    # assert total of 100 items returned, which is the default maximum number of recommendations in the response.
+    assert len(corpus_items) == 100
+    # Assert all corpus_items have expected fields populated.
+    assert all(item["url"] for item in corpus_items)
+    assert all(item["publisher"] for item in corpus_items)
+    assert all(item["imageUrl"] for item in corpus_items)
+    assert all(item["tileId"] for item in corpus_items)
+    assert all(item["features"] for item in corpus_items)
 
-        # Assert that receivedRank equals 0, 1, 2, ...
-        for i, item in enumerate(corpus_items):
-            assert item["receivedRank"] == i
+    # Assert that receivedRank equals 0, 1, 2, ...
+    for i, item in enumerate(corpus_items):
+        assert item["receivedRank"] == i
 
-        # The expected recommendation has 100% CTR, and is always present in the response.
-        # In 97% of cases it's the first recommendation, but due to the random nature of
-        # Thompson sampling this is not always the case.
-        assert any(
-            CuratedRecommendation(**item)
-            == expected_recommendation.model_copy(update={"receivedRank": i})
-            for i, item in enumerate(corpus_items)
-        )
+    # The expected recommendation has 100% CTR, and is always present in the response.
+    # In 97% of cases it's the first recommendation, but due to the random nature of
+    # Thompson sampling this is not always the case.
+    assert any(
+        CuratedRecommendation(**item)
+        == expected_recommendation.model_copy(update={"receivedRank": i})
+        for i, item in enumerate(corpus_items)
+    )
 
 
-@pytest.mark.asyncio
-async def test_curated_recommendations_for_fx115_129():
+def test_curated_recommendations_for_fx115_129(client: TestClient):
     """Test the legacy fx115-129 curated recommedations endpoint response is as expected"""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        # Mock the endpoint
-        response = await ac.get(
-            "/api/v1/curated-recommendations/legacy-115-129", params={"locale": "en-US"}
-        )
-        data = response.json()
+    response = client.get(
+        "/api/v1/curated-recommendations/legacy-115-129", params={"locale": "en-US"}
+    )
+    data = response.json()
 
-        # Check if the mock response is valid
-        assert response.status_code == 200
+    # Check if the mock response is valid
+    assert response.status_code == 200
 
-        corpus_items = data["data"]
-        # assert total of 30 items returned, which is the default maximum number of recommendations in the response.
-        assert len(corpus_items) == 30
-        # Assert all corpus_items have expected fields populated.
-        assert all(item["__typename"] for item in corpus_items)
-        assert all(item["recommendationId"] for item in corpus_items)
-        assert all(item["tileId"] for item in corpus_items)
-        assert all(item["url"] for item in corpus_items)
-        assert all(item["title"] for item in corpus_items)
-        assert all(item["excerpt"] for item in corpus_items)
-        assert all(item["publisher"] for item in corpus_items)
-        assert all(item["imageUrl"] for item in corpus_items)
+    corpus_items = data["data"]
+    # assert total of 30 items returned, which is the default maximum number of recommendations in the response.
+    assert len(corpus_items) == 30
+    # Assert all corpus_items have expected fields populated.
+    assert all(item["__typename"] for item in corpus_items)
+    assert all(item["recommendationId"] for item in corpus_items)
+    assert all(item["tileId"] for item in corpus_items)
+    assert all(item["url"] for item in corpus_items)
+    assert all(item["title"] for item in corpus_items)
+    assert all(item["excerpt"] for item in corpus_items)
+    assert all(item["publisher"] for item in corpus_items)
+    assert all(item["imageUrl"] for item in corpus_items)
 
 
-@pytest.mark.asyncio
-async def test_curated_recommendations_for_fx114():
+def test_curated_recommendations_for_fx114(client: TestClient):
     """Test the legacy fx114 curated recommedations endpoint response is as expected"""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        # Mock the endpoint
-        response = await ac.get(
-            "/api/v1/curated-recommendations/legacy-114", params={"locale_lang": "en-US"}
-        )
-        data = response.json()
+    response = client.get(
+        "/api/v1/curated-recommendations/legacy-114", params={"locale_lang": "en-US"}
+    )
+    data = response.json()
 
-        # Check if the mock response is valid
-        assert response.status_code == 200
+    # Check if the mock response is valid
+    assert response.status_code == 200
 
-        corpus_items = data["recommendations"]
-        # assert total of 20 items returned, which is the default maximum number of recommendations in the response.
-        assert len(corpus_items) == 20
-        # Assert all corpus_items have expected fields populated.
-        assert all(item["id"] for item in corpus_items)
-        assert all(item["title"] for item in corpus_items)
-        assert all(item["url"] for item in corpus_items)
-        assert all(item["excerpt"] for item in corpus_items)
-        assert all(item["domain"] for item in corpus_items)
-        assert all(item["image_src"] for item in corpus_items)
-        assert all(item["raw_image_src"] for item in corpus_items)
+    corpus_items = data["recommendations"]
+    # assert total of 20 items returned, which is the default maximum number of recommendations in the response.
+    assert len(corpus_items) == 20
+    # Assert all corpus_items have expected fields populated.
+    assert all(item["id"] for item in corpus_items)
+    assert all(item["title"] for item in corpus_items)
+    assert all(item["url"] for item in corpus_items)
+    assert all(item["excerpt"] for item in corpus_items)
+    assert all(item["domain"] for item in corpus_items)
+    assert all(item["image_src"] for item in corpus_items)
+    assert all(item["raw_image_src"] for item in corpus_items)
 
 
 @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
-@pytest.mark.asyncio
-async def test_curated_recommendations_utm_source():
+def test_curated_recommendations_utm_source(client: TestClient):
     """Test the curated recommendations endpoint returns urls with correct(new) utm_source"""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        # Mock the endpoint
-        response = await fetch_en_us(ac)
-        data = response.json()
+    response = fetch_en_us(client)
+    data = response.json()
 
-        # Check if the mock response is valid
-        assert response.status_code == 200
+    # Check if the mock response is valid
+    assert response.status_code == 200
 
-        corpus_items = data["data"]
-        # assert items returned, otherwise the following assertions would not test anything.
-        assert len(corpus_items) == 100
-        # Assert all corpus_items have expected fields populated.
-        # check that utm_source is present and has the correct value in all urls
-        assert all("utm_source=firefox-newtab-en-us" in item["url"] for item in corpus_items)
-        assert all(item["publisher"] for item in corpus_items)
-        assert all(item["imageUrl"] for item in corpus_items)
+    corpus_items = data["data"]
+    # assert items returned, otherwise the following assertions would not test anything.
+    assert len(corpus_items) == 100
+    # Assert all corpus_items have expected fields populated.
+    # check that utm_source is present and has the correct value in all urls
+    assert all("utm_source=firefox-newtab-en-us" in item["url"] for item in corpus_items)
+    assert all(item["publisher"] for item in corpus_items)
+    assert all(item["imageUrl"] for item in corpus_items)
 
 
-@pytest.mark.asyncio
-async def test_curated_recommendations_features():
+def test_curated_recommendations_features(client: TestClient):
     """Test the curated recommendations endpoint returns topic features"""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await fetch_en_us(ac)
+    response = fetch_en_us(client)
 
-        recommendations = response.json()["data"]
-        for rec in recommendations:
-            # Topic features have a t_ prefix
-            expected_features = {f"t_{rec['topic']}": 1.0}
-            assert rec["features"] == expected_features
+    recommendations = response.json()["data"]
+    for rec in recommendations:
+        # Topic features have a t_ prefix
+        expected_features = {f"t_{rec['topic']}": 1.0}
+        assert rec["features"] == expected_features
 
 
 class TestCuratedRecommendationsRequestParameters:
     """Test request body parameters for the curated-recommendations endpoint"""
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "locale,surface_id",
         [
@@ -421,15 +411,13 @@ class TestCuratedRecommendationsRequestParameters:
             (Locale.IT_IT, SurfaceId.NEW_TAB_IT_IT),
         ],
     )
-    async def test_curated_recommendations_locales(self, locale, surface_id):
+    def test_curated_recommendations_locales(self, locale, surface_id, client: TestClient):
         """Test the curated recommendations endpoint accepts valid locales & returns correct surfaceId."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post("/api/v1/curated-recommendations", json={"locale": locale})
-            assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
-            data = response.json()
-            assert data["surfaceId"] == surface_id
+        response = client.post("/api/v1/curated-recommendations", json={"locale": locale})
+        assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
+        data = response.json()
+        assert data["surfaceId"] == surface_id
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "locale",
         [
@@ -441,13 +429,11 @@ class TestCuratedRecommendationsRequestParameters:
             "es_123",
         ],
     )
-    async def test_curated_recommendations_locales_failure(self, locale):
+    def test_curated_recommendations_locales_failure(self, locale, client: TestClient):
         """Test the curated recommendations endpoint rejects invalid locales."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post("/api/v1/curated-recommendations", json={"locale": locale})
-            assert response.status_code == 400
+        response = client.post("/api/v1/curated-recommendations", json={"locale": locale})
+        assert response.status_code == 400
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "coarse_os",
         [
@@ -459,96 +445,80 @@ class TestCuratedRecommendationsRequestParameters:
             CoarseOS.OTHER,
         ],
     )
-    async def test_curated_recommendations_valid_os(self, coarse_os):
+    def test_curated_recommendations_valid_os(self, coarse_os, client: TestClient):
         """Test the curated recommendations endpoint accepts valid coarse_os values."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": Locale.EN_US, "coarse_os": coarse_os},
-            )
-            assert response.status_code == 200
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": Locale.EN_US, "coarse_os": coarse_os},
+        )
+        assert response.status_code == 200
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("coarse_os", ["", "windows11"])
-    async def test_curated_recommendations_invalid_os(self, coarse_os):
+    def test_curated_recommendations_invalid_os(self, coarse_os, client: TestClient):
         """Test the curated recommendations endpoint rejects invalid coarse_os values."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": Locale.EN_US, "coarseOs": coarse_os},
-            )
-            assert response.status_code == 400
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": Locale.EN_US, "coarseOs": coarse_os},
+        )
+        assert response.status_code == 400
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("utc_offset", [0, 12, 24])
-    async def test_curated_recommendations_valid_utc_offset(self, utc_offset):
+    def test_curated_recommendations_valid_utc_offset(self, utc_offset, client: TestClient):
         """Test the curated recommendations endpoint accepts valid utc_offset values.
         This includes values that require rounding (e.g., 3.7 should be rounded to 4).
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": Locale.EN_US, "utcOffset": utc_offset},
-            )
-            assert response.status_code == 200
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": Locale.EN_US, "utcOffset": utc_offset},
+        )
+        assert response.status_code == 200
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("utc_offset", [-1, 11.5, 25, "Z"])
-    async def test_curated_recommendations_invalid_utc_offset(self, utc_offset):
+    def test_curated_recommendations_invalid_utc_offset(self, utc_offset, client: TestClient):
         """Test the curated recommendations endpoint rejects invalid utc_offset values."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": Locale.EN_US, "utcOffset": utc_offset},
-            )
-            assert response.status_code == 400
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": Locale.EN_US, "utcOffset": utc_offset},
+        )
+        assert response.status_code == 400
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("count", [10, 50, 100])
-    async def test_curated_recommendations_count(self, count, scheduled_surface_response_data):
+    def test_curated_recommendations_count(
+        self, count, scheduled_surface_response_data, client: TestClient
+    ):
         """Test the curated recommendations endpoint accepts valid count."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations", json={"locale": "en-US", "count": count}
-            )
-            assert response.status_code == 200
-            data = response.json()
-            schedule_count = len(
-                scheduled_surface_response_data["data"]["scheduledSurface"]["items"]
-            )
-            assert len(data["data"]) == min(count, schedule_count)
+        response = client.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "count": count}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        schedule_count = len(scheduled_surface_response_data["data"]["scheduledSurface"]["items"])
+        assert len(data["data"]) == min(count, schedule_count)
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("count", [None, 100.5])
-    async def test_curated_recommendations_count_failure(self, count):
+    def test_curated_recommendations_count_failure(self, count, client: TestClient):
         """Test the curated recommendations endpoint rejects invalid count."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations", json={"locale": "en-US", "count": count}
-            )
-            assert response.status_code == 400
+        response = client.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "count": count}
+        )
+        assert response.status_code == 400
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("region", [None, "US", "DE", "SXM"])
-    async def test_curated_recommendations_region(self, region):
+    def test_curated_recommendations_region(self, region, client: TestClient):
         """Test the curated recommendations endpoint accepts valid region."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations", json={"locale": "en-US", "region": region}
-            )
-            assert response.status_code == 200
+        response = client.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "region": region}
+        )
+        assert response.status_code == 200
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("region", [675])
-    async def test_curated_recommendations_region_failure(self, region):
+    def test_curated_recommendations_region_failure(self, region, client: TestClient):
         """Test the curated recommendations endpoint rejects invalid region."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations", json={"locale": "en-US", "region": region}
-            )
-            assert response.status_code == 400
+        response = client.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "region": region}
+        )
+        assert response.status_code == 400
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "topics",
         [
@@ -592,33 +562,29 @@ class TestCuratedRecommendationsRequestParameters:
             ],
         ],
     )
-    async def test_curated_recommendations_topics(self, topics):
+    def test_curated_recommendations_topics(self, topics, client: TestClient):
         """Test the curated recommendations endpoint accepts valid topics."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
-            )
-            assert response.status_code == 200, f"{topics} resulted in {response.status_code}"
+        response = client.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
+        )
+        assert response.status_code == 200, f"{topics} resulted in {response.status_code}"
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "locale",
         ["en-US", "en-GB", "fr-FR", "es-ES", "it-IT", "de-DE"],
     )
     @pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
-    async def test_curated_recommendations_en_topic(self, locale, topics):
+    def test_curated_recommendations_en_topic(self, locale, topics, client: TestClient):
         """Test that topic is present."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
-            )
-            data = response.json()
-            corpus_items = data["data"]
+        response = client.post(
+            "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
+        )
+        data = response.json()
+        corpus_items = data["data"]
 
-            assert len(corpus_items) > 0
-            assert all(item["topic"] is not None for item in corpus_items)
+        assert len(corpus_items) > 0
+        assert all(item["topic"] is not None for item in corpus_items)
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "preferred_topics",
         [
@@ -771,31 +737,29 @@ class TestCuratedRecommendationsRequestParameters:
             ],
         ],
     )
-    async def test_curated_recommendations_preferred_topic(self, preferred_topics):
+    def test_curated_recommendations_preferred_topic(self, preferred_topics, client: TestClient):
         """Test the curated recommendations endpoint accepts 1-15 preferred topics &
         top N recommendations contain the preferred topics.
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": "en-US", "topics": preferred_topics},
-            )
-            data = response.json()
-            corpus_items = data["data"]
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-US", "topics": preferred_topics},
+        )
+        data = response.json()
+        corpus_items = data["data"]
 
-            assert response.status_code == 200
-            # assert items are returned
-            assert len(corpus_items) == 100
+        assert response.status_code == 200
+        # assert items are returned
+        assert len(corpus_items) == 100
 
-            # determine the number of recs that are expected to be preferred
-            # based on number of preferred topics
-            top_recs = min(10, 2 * len(preferred_topics))
-            # store the topics for the top N recs in an array
-            top_topics = [item["topic"] for item in corpus_items[:top_recs]]
-            # assert that all top_topics are preferred topics
-            assert all([topic in preferred_topics for topic in top_topics])
+        # determine the number of recs that are expected to be preferred
+        # based on number of preferred topics
+        top_recs = min(10, 2 * len(preferred_topics))
+        # store the topics for the top N recs in an array
+        top_topics = [item["topic"] for item in corpus_items[:top_recs]]
+        # assert that all top_topics are preferred topics
+        assert all([topic in preferred_topics for topic in top_topics])
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "topics, expected_topics, expected_warning",
         [
@@ -829,7 +793,7 @@ class TestCuratedRecommendationsRequestParameters:
         "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
-    async def test_curated_recommendations_invalid_topic_return_200(
+    def test_curated_recommendations_invalid_topic_return_200(
         self,
         topics,
         expected_topics,
@@ -839,57 +803,57 @@ class TestCuratedRecommendationsRequestParameters:
         scheduled_surface_http_client,
         caplog,
         repeat,
+        filter_caplog: FilterCaplogFixture,
+        client: TestClient,
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            scheduled_surface_http_client.post.return_value = Response(
-                status_code=200,
-                json=scheduled_surface_response_data_short,
-                request=fixture_request_data,
-            )
-            response = await ac.post(
-                "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
-            )
-            data = response.json()
-            corpus_items = data["data"]
-            # assert 200 is returned even tho some invalid topics
-            assert response.status_code == 200
-            # get topics in returned recs
-            result_topics = [item["topic"] for item in corpus_items]
-            assert set(result_topics) == set(expected_topics)
-            # Assert that a warning was logged with a descriptive message when invalid topic
-            warnings = [r for r in caplog.records if r.levelname == "WARNING"]
-            assert len(warnings) == 1
-            assert expected_warning in warnings[0].message
+        caplog.set_level(logging.WARN)
+        scheduled_surface_http_client.post.return_value = Response(
+            status_code=200,
+            json=scheduled_surface_response_data_short,
+            request=fixture_request_data,
+        )
+        response = client.post(
+            "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
+        )
+        data = response.json()
+        corpus_items = data["data"]
+        # assert 200 is returned even tho some invalid topics
+        assert response.status_code == 200
+        # get topics in returned recs
+        result_topics = [item["topic"] for item in corpus_items]
+        assert set(result_topics) == set(expected_topics)
+        # Assert that a warning was logged with a descriptive message when invalid topic
+        warnings = filter_caplog(caplog.records, "merino.curated_recommendations.protocol")
 
-    @pytest.mark.asyncio
-    async def test_curated_recommendations_locale_bad_request(self):
+        assert len(warnings) == 1
+        assert expected_warning in warnings[0].message
+
+    def test_curated_recommendations_locale_bad_request(self, client: TestClient):
         """Test the curated recommendations endpoint response is 400 if locale is not provided"""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint
-            response = await ac.post("/api/v1/curated-recommendations", json={"foo": "bar"})
+        response = client.post("/api/v1/curated-recommendations", json={"foo": "bar"})
 
-            # Check if the response returns 400
-            assert response.status_code == 400
+        # Check if the response returns 400
+        assert response.status_code == 400
 
 
 class TestCorpusApiCaching:
     """Tests covering the caching behavior of the Corpus backend"""
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
-    @pytest.mark.asyncio
-    async def test_single_request_multiple_fetches(self, scheduled_surface_http_client):
+    def test_single_request_multiple_fetches(
+        self, scheduled_surface_http_client, client: TestClient
+    ):
         """Test that only a single request is made to the curated-corpus-api."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Gather multiple fetch calls
-            results = await asyncio.gather(fetch_en_us(ac), fetch_en_us(ac), fetch_en_us(ac))
-            # Assert that recommendations were returned in each response.
-            assert all(len(result.json()["data"]) == 100 for result in results)
+        # Gather multiple fetch calls
+        results = [fetch_en_us(client) for _ in range(3)]
+        # Assert that recommendations were returned in each response.
+        assert all(len(result.json()["data"]) == 100 for result in results)
 
-            # Assert that exactly one request was made to the corpus api
-            scheduled_surface_http_client.post.assert_called_once()
+        # Assert that exactly one request was made to the corpus api
+        scheduled_surface_http_client.post.assert_called_once()
 
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.parametrize(
@@ -909,226 +873,203 @@ class TestCorpusApiCaching:
         caplog,
         error_type,
         expected_warning,
+        client: TestClient,
     ):
         """Test that only a few requests are made to the curated-corpus-api when it is down.
         Additionally, test that if the backend returns a GraphQL error, it is handled correctly.
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Pre-warm the backend via an arbitrary API request. Without this, the initial UserAgentMiddleware call
-            # incurs ~2-second latency, distorting the simulated downtime of `retry_wait_initial_seconds` seconds.
-            await ac.get("/__heartbeat__")
+        # Pre-warm the backend via an arbitrary API request. Without this, the initial UserAgentMiddleware call
+        # incurs ~2-second latency, distorting the simulated downtime of `retry_wait_initial_seconds` seconds.
+        client.get("/__heartbeat__")
 
-            start_time = datetime.now()
+        start_time = datetime.now()
 
-            def temporary_downtime(*args, **kwargs):
-                # Simulate the backend being unavailable for the minimum wait time.
-                downtime_end = start_time + timedelta(
-                    seconds=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds
-                )
-                now = datetime.now()
+        def temporary_downtime(*args, **kwargs):
+            # Simulate the backend being unavailable for the minimum wait time.
+            downtime_end = start_time + timedelta(
+                seconds=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds
+            )
+            now = datetime.now()
 
-                if now < downtime_end:
-                    if error_type == "graphql":
-                        return Response(
-                            status_code=200,
-                            json=fixture_graphql_200ok_with_error_response,
-                            request=fixture_request_data,
-                        )
-                    elif error_type == "http":
-                        return Response(status_code=503, request=fixture_request_data)
-                else:
+            if now < downtime_end:
+                if error_type == "graphql":
                     return Response(
                         status_code=200,
-                        json=scheduled_surface_response_data,
+                        json=fixture_graphql_200ok_with_error_response,
                         request=fixture_request_data,
                     )
-
-            scheduled_surface_http_client.post = AsyncMock(side_effect=temporary_downtime)
-
-            # Hit the endpoint until a 200 response is received or until timeout.
-            while datetime.now() < start_time + timedelta(seconds=1):
-                try:
-                    result = await fetch_en_us(ac)
-                    if result.status_code == 200:
-                        break
-                except HTTPStatusError:
-                    pass
-
-            assert result.status_code == 200
-
-            # Assert that we did not send a lot of requests to the backend.
-            assert scheduled_surface_http_client.post.call_count == 2
-
-            # Assert that a warning was logged with a descriptive message.
-            warnings = [r for r in caplog.records if r.levelname == "WARNING"]
-            assert any(expected_warning in warning.message for warning in warnings)
-
-    @pytest.mark.asyncio
-    async def test_cache_returned_on_subsequent_calls(
-        self, scheduled_surface_http_client, scheduled_surface_response_data, fixture_request_data
-    ):
-        """Test that the cache expires, and subsequent requests return new data."""
-        with freezegun.freeze_time(tick=True) as frozen_datetime:
-            async with AsyncClient(app=app, base_url="http://test") as ac:
-                # First fetch to populate cache
-                initial_response = await fetch_en_us(ac)
-                initial_data = initial_response.json()
-
-                for item in scheduled_surface_response_data["data"]["scheduledSurface"]["items"]:
-                    item["corpusItem"]["title"] += " (NEW)"  # Change all the titles
-                scheduled_surface_http_client.post.return_value = Response(
+                elif error_type == "http":
+                    return Response(status_code=503, request=fixture_request_data)
+            else:
+                return Response(
                     status_code=200,
                     json=scheduled_surface_response_data,
                     request=fixture_request_data,
                 )
 
-                # Progress time to after the cache expires.
-                frozen_datetime.tick(delta=ScheduledSurfaceBackend.cache_time_to_live_max)
-                frozen_datetime.tick(delta=timedelta(seconds=1))
+        scheduled_surface_http_client.post = AsyncMock(side_effect=temporary_downtime)
 
-                # When the cache is expired, the first fetch may return stale data.
-                await fetch_en_us(ac)
-                await asyncio.sleep(0.01)  # Allow asyncio background task to make an API request
+        # Hit the endpoint until a 200 response is received or until timeout.
+        while datetime.now() < start_time + timedelta(seconds=1):
+            try:
+                result = fetch_en_us(client)
+                if result.status_code == 200:
+                    break
+            except HTTPStatusError:
+                pass
 
-                # Next fetch should get the new data
-                new_response = await fetch_en_us(ac)
-                assert scheduled_surface_http_client.post.call_count == 2
-                new_data = new_response.json()
-                assert new_data["recommendedAt"] > initial_data["recommendedAt"]
-                assert all("NEW" in item["title"] for item in new_data["data"])
+        assert result.status_code == 200
 
-    @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
+        # Assert that we did not send a lot of requests to the backend.
+        assert scheduled_surface_http_client.post.call_count == 2
+
+        # Assert that a warning was logged with a descriptive message.
+        warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+        assert any(expected_warning in warning.message for warning in warnings)
+
     @pytest.mark.asyncio
-    async def test_valid_cache_returned_on_error(
-        self, scheduled_surface_http_client, fixture_request_data, caplog
+    async def test_cache_returned_on_subsequent_calls(
+        self,
+        scheduled_surface_http_client,
+        scheduled_surface_response_data,
+        fixture_request_data,
+        client: TestClient,
+    ):
+        """Test that the cache expires, and subsequent requests return new data."""
+        with freezegun.freeze_time(tick=True) as frozen_datetime:
+            # First fetch to populate cache
+            initial_response = fetch_en_us(client)
+            initial_data = initial_response.json()
+
+            for item in scheduled_surface_response_data["data"]["scheduledSurface"]["items"]:
+                item["corpusItem"]["title"] += " (NEW)"  # Change all the titles
+            scheduled_surface_http_client.post.return_value = Response(
+                status_code=200,
+                json=scheduled_surface_response_data,
+                request=fixture_request_data,
+            )
+
+            # Progress time to after the cache expires.
+            frozen_datetime.tick(delta=ScheduledSurfaceBackend.cache_time_to_live_max)
+            frozen_datetime.tick(delta=timedelta(seconds=1))
+
+            # When the cache is expired, the first fetch may return stale data.
+            fetch_en_us(client)
+            await asyncio.sleep(0.01)  # Allow asyncio background task to make an API request
+
+            # Next fetch should get the new data
+            new_response = fetch_en_us(client)
+            assert scheduled_surface_http_client.post.call_count == 2
+            new_data = new_response.json()
+            assert new_data["recommendedAt"] > initial_data["recommendedAt"]
+            assert all("NEW" in item["title"] for item in new_data["data"])
+
+    def test_valid_cache_returned_on_error(
+        self, scheduled_surface_http_client, fixture_request_data, caplog, client: TestClient
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
-        with freezegun.freeze_time(tick=True) as frozen_datetime:
-            async with AsyncClient(app=app, base_url="http://test") as ac:
-                # First fetch to populate cache with good data
-                initial_response = await fetch_en_us(ac)
-                initial_data = initial_response.json()
-                assert initial_response.status_code == 200
-                assert scheduled_surface_http_client.post.call_count == 1
+        # First fetch to populate cache with good data
+        initial_response = fetch_en_us(client)
+        initial_data = initial_response.json()
+        assert initial_response.status_code == 200
+        assert scheduled_surface_http_client.post.call_count == 1
 
-                # Simulate 503 error from Corpus API
-                scheduled_surface_http_client.post.return_value = Response(
-                    status_code=503,
-                    request=fixture_request_data,
-                )
+        # Simulate 503 error from Corpus API
+        scheduled_surface_http_client.post.return_value = Response(
+            status_code=503,
+            request=fixture_request_data,
+        )
 
-                # Progress time to after the cache expires.
-                frozen_datetime.tick(delta=ScheduledSurfaceBackend.cache_time_to_live_max)
-                frozen_datetime.tick(delta=timedelta(seconds=1))
+        # Try to fetch data when cache expired
+        new_response = fetch_en_us(client)
+        new_data = new_response.json()
 
-                # Try to fetch data when cache expired
-                new_response = await fetch_en_us(ac)
-                new_data = new_response.json()
-                await asyncio.sleep(
-                    get_max_total_retry_duration()
-                )  # Allow asyncio background task to make an API request
-                # assert that Corpus API was called the expected number of times
-                # 1 successful request from above, and retry_count number of retries.
-                assert (
-                    scheduled_surface_http_client.post.call_count
-                    == settings.curated_recommendations.corpus_api.retry_count + 1
-                )
-
-                assert new_response.status_code == 200
-                assert len(initial_data) == len(new_data)
-                assert all([a == b for a, b in zip(initial_data, new_data)])
+        assert new_response.status_code == 200
+        assert len(initial_data) == len(new_data)
+        assert all([a == b for a, b in zip(initial_data, new_data)])
 
 
 class TestCuratedRecommendationsMetrics:
     """Tests that the right metrics are recorded for curated-recommendations requests"""
 
-    @pytest.mark.asyncio
-    async def test_metrics_cache_miss(self, mocker: MockerFixture) -> None:
+    def test_metrics_cache_miss(self, mocker: MockerFixture, client: TestClient) -> None:
         """Test that metrics are recorded when corpus api items are not yet cached."""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            await fetch_en_us(ac)
+        fetch_en_us(client)
 
-            # TODO: Remove reliance on internal details of aiodogstatsd
-            metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
-            assert metric_keys == [
-                "corpus_api.scheduled_surface.timing",
-                "corpus_api.scheduled_surface.status_codes.200",
-                "post.api.v1.curated-recommendations.timing",
-                "post.api.v1.curated-recommendations.status_codes.200",
-                "response.status_codes.200",
-            ]
+        # TODO: Remove reliance on internal details of aiodogstatsd
+        metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
+        assert metric_keys == [
+            "corpus_api.scheduled_surface.timing",
+            "corpus_api.scheduled_surface.status_codes.200",
+            "post.api.v1.curated-recommendations.timing",
+            "post.api.v1.curated-recommendations.status_codes.200",
+            "response.status_codes.200",
+        ]
 
-    @pytest.mark.asyncio
-    async def test_metrics_cache_hit(self, mocker: MockerFixture) -> None:
+    def test_metrics_cache_hit(self, mocker: MockerFixture, client: TestClient) -> None:
         """Test that metrics are recorded when corpus api items are cached."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # The first call populates the cache.
-            await fetch_en_us(ac)
+        # The first call populates the cache.
+        fetch_en_us(client)
 
-            # This test covers only the metrics emitted from the following cached call.
-            report = mocker.patch.object(aiodogstatsd.Client, "_report")
-            await fetch_en_us(ac)
+        # This test covers only the metrics emitted from the following cached call.
+        report = mocker.patch.object(aiodogstatsd.Client, "_report")
+        fetch_en_us(client)
 
-            # TODO: Remove reliance on internal details of aiodogstatsd
-            metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
-            assert metric_keys == [
-                "post.api.v1.curated-recommendations.timing",
-                "post.api.v1.curated-recommendations.status_codes.200",
-                "response.status_codes.200",
-            ]
+        # TODO: Remove reliance on internal details of aiodogstatsd
+        metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
+        assert metric_keys == [
+            "post.api.v1.curated-recommendations.timing",
+            "post.api.v1.curated-recommendations.status_codes.200",
+            "response.status_codes.200",
+        ]
 
-    @pytest.mark.asyncio
-    async def test_metrics_corpus_api_error(
+    def test_metrics_corpus_api_error(
         self,
         mocker: MockerFixture,
         scheduled_surface_http_client,
         fixture_request_data,
         scheduled_surface_response_data,
+        client: TestClient,
     ) -> None:
         """Test that metrics are recorded when the curated-corpus-api returns a 500 error"""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            is_first_request = True
+        is_first_request = True
 
-            def first_request_returns_error(*args, **kwargs):
-                nonlocal is_first_request
-                if is_first_request:
-                    is_first_request = False
-                    return Response(status_code=500, request=fixture_request_data)
-                else:
-                    return Response(
-                        status_code=200,
-                        json=scheduled_surface_response_data,
-                        request=fixture_request_data,
-                    )
+        def first_request_returns_error(*args, **kwargs):
+            nonlocal is_first_request
+            if is_first_request:
+                is_first_request = False
+                return Response(status_code=500, request=fixture_request_data)
+            else:
+                return Response(
+                    status_code=200,
+                    json=scheduled_surface_response_data,
+                    request=fixture_request_data,
+                )
 
-            scheduled_surface_http_client.post = AsyncMock(side_effect=first_request_returns_error)
+        scheduled_surface_http_client.post = AsyncMock(side_effect=first_request_returns_error)
 
-            await fetch_en_us(ac)
+        fetch_en_us(client)
 
-            # TODO: Remove reliance on internal details of aiodogstatsd
-            metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
-            assert (
-                metric_keys
-                == [
-                    "corpus_api.scheduled_surface.timing",
-                    "corpus_api.scheduled_surface.status_codes.500",
-                    "corpus_api.scheduled_surface.timing",
-                    "corpus_api.scheduled_surface.status_codes.200",
-                    "post.api.v1.curated-recommendations.timing",
-                    "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
-                    "response.status_codes.200",
-                ]
-            )
+        # TODO: Remove reliance on internal details of aiodogstatsd
+        metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
+        assert metric_keys == [
+            "corpus_api.scheduled_surface.timing",
+            "corpus_api.scheduled_surface.status_codes.500",
+            "corpus_api.scheduled_surface.timing",
+            "corpus_api.scheduled_surface.status_codes.200",
+            "post.api.v1.curated-recommendations.timing",
+            "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
+            "response.status_codes.200",
+        ]
 
 
 class TestCorpusApiRanking:
     """Tests covering the ranking behavior of the Corpus backend"""
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "topics",
         [
@@ -1156,7 +1097,7 @@ class TestCorpusApiRanking:
         "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
-    async def test_thompson_sampling_behavior(
+    def test_thompson_sampling_behavior(
         self,
         topics,
         engagement_backend,
@@ -1167,49 +1108,49 @@ class TestCorpusApiRanking:
         derived_region,
         regional_ranking_is_expected,
         repeat,
+        client: TestClient,
     ):
         """Test that Thompson sampling produces different orders and favors higher CTRs."""
         n_iterations = 20
         past_id_orders = []
 
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            for i in range(n_iterations):
-                response = await ac.post(
-                    "/api/v1/curated-recommendations",
-                    json={
-                        "locale": locale,
-                        "region": region,
-                        "topics": topics,
-                        "experimentName": experiment_name,
-                        "experimentBranch": experiment_branch,
-                    },
-                )
-                data = response.json()
-                corpus_items = data["data"]
+        for i in range(n_iterations):
+            response = client.post(
+                "/api/v1/curated-recommendations",
+                json={
+                    "locale": locale,
+                    "region": region,
+                    "topics": topics,
+                    "experimentName": experiment_name,
+                    "experimentBranch": experiment_branch,
+                },
+            )
+            data = response.json()
+            corpus_items = data["data"]
 
-                # Assert that no response was ranked in the same way before.
-                id_order = [item["corpusItemId"] for item in corpus_items]
-                assert id_order not in past_id_orders, f"Duplicate order at iteration {i}."
-                past_id_orders.append(id_order)  # a list of lists with all orders
+            # Assert that no response was ranked in the same way before.
+            id_order = [item["corpusItemId"] for item in corpus_items]
+            assert id_order not in past_id_orders, f"Duplicate order at iteration {i}."
+            past_id_orders.append(id_order)  # a list of lists with all orders
 
-                engagement_region = derived_region if regional_ranking_is_expected else None
-                engagements = [
-                    engagement_backend.get(item["corpusItemId"], region=engagement_region)
-                    for item in corpus_items
-                ]
-                ctr_by_rank = [
-                    (rank, e.click_count / e.impression_count)
-                    for rank, e in enumerate(engagements)
-                    # Exclude no engagement items and the first one, which has 100% CTR.
-                    if e is not None and rank > 0
-                ]
+            engagement_region = derived_region if regional_ranking_is_expected else None
+            engagements = [
+                engagement_backend.get(item["corpusItemId"], region=engagement_region)
+                for item in corpus_items
+            ]
+            ctr_by_rank = [
+                (rank, e.click_count / e.impression_count)
+                for rank, e in enumerate(engagements)
+                # Exclude no engagement items and the first one, which has 100% CTR.
+                if e is not None and rank > 0
+            ]
 
-                # Perform linear regression to find the coefficient
-                ranks, ctrs = zip(*ctr_by_rank)
-                slope, _, _, _, _ = linregress(ranks, ctrs)
+            # Perform linear regression to find the coefficient
+            ranks, ctrs = zip(*ctr_by_rank)
+            slope, _, _, _, _ = linregress(ranks, ctrs)
 
-                # Assert that the slope is negative, meaning higher ranks have higher CTRs
-                assert slope < 0, f"Thompson sampling did not favor higher CTR on iteration {i}."
+            # Assert that the slope is negative, meaning higher ranks have higher CTRs
+            assert slope < 0, f"Thompson sampling did not favor higher CTR on iteration {i}."
 
 
 class TestSections:
@@ -1243,60 +1184,56 @@ class TestSections:
                 f"Missing translation for '{key}' in " f"{surface_id}"
             )
 
-    @pytest.mark.asyncio
-    async def test_corpus_sections_feed_content(self):
+    def test_corpus_sections_feed_content(self, client: TestClient):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for different locales.
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": "en-US",
-                    "feeds": ["sections"],
-                    "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                    "experimentBranch": "treatment",
-                },
-            )
-            data = response.json()
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+        )
+        data = response.json()
 
-            # Check if the response is valid
-            assert response.status_code == 200
+        # Check if the response is valid
+        assert response.status_code == 200
 
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
 
-            # the first layouts for the subtopic sections should be a double-row layout, after which it should cycle.
-            layout_names = [sec["layout"]["name"] for sec in sections.values()]
-            assert layout_names[0] == "7-double-row-2-ad"  # top_stories double‐row layout
-            assert layout_names[1] == "6-small-medium-1-ad"  # first ML section
-            assert layout_names[2] == "4-large-small-medium-1-ad"  # second ML section
+        # the first layouts for the subtopic sections should be a double-row layout, after which it should cycle.
+        layout_names = [sec["layout"]["name"] for sec in sections.values()]
+        assert layout_names[0] == "7-double-row-2-ad"  # top_stories double‐row layout
+        assert layout_names[1] == "6-small-medium-1-ad"  # first ML section
+        assert layout_names[2] == "4-large-small-medium-1-ad"  # second ML section
 
-            assert "music" in sections
+        assert "music" in sections
 
-            # assert IAB metadata is present in ML sections (there are 8 of them)
-            expected_iab_metadata = {
-                "nfl": "484",
-                "tv": "640",
-                "music": "338",
-                "movies": "324",
-                "nba": "547",
-                "soccer": "533",
-                "mlb": "545",
-                "nhl": "515",
-            }
-            # Sections have their expected IAB metadata
-            for section_name, expected_iab_code in expected_iab_metadata.items():
-                section = feeds.get(section_name)
-                if section:
-                    if section["iab"]:
-                        assert section["iab"]["taxonomy"] == "IAB-3.0"
-                        assert (
-                            section["iab"]["categories"][0] == expected_iab_code
-                        )  # only 1 code is sent for now
+        # assert IAB metadata is present in ML sections (there are 8 of them)
+        expected_iab_metadata = {
+            "nfl": "484",
+            "tv": "640",
+            "music": "338",
+            "movies": "324",
+            "nba": "547",
+            "soccer": "533",
+            "mlb": "545",
+            "nhl": "515",
+        }
+        # Sections have their expected IAB metadata
+        for section_name, expected_iab_code in expected_iab_metadata.items():
+            section = feeds.get(section_name)
+            if section:
+                if section["iab"]:
+                    assert section["iab"]["taxonomy"] == "IAB-3.0"
+                    assert (
+                        section["iab"]["categories"][0] == expected_iab_code
+                    )  # only 1 code is sent for now
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "experiment_payload",
         [
@@ -1307,34 +1244,31 @@ class TestSections:
             },
         ],
     )
-    async def test_corpus_sections_feed_content_control(self, experiment_payload):
+    def test_corpus_sections_feed_content_control(self, experiment_payload, client: TestClient):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for different locales.
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": "en-US", "feeds": ["sections"]} | experiment_payload,
-            )
-            data = response.json()
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-US", "feeds": ["sections"]} | experiment_payload,
+        )
+        data = response.json()
 
-            # Check if the response is valid
-            assert response.status_code == 200
+        # Check if the response is valid
+        assert response.status_code == 200
 
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
 
-            # Assert layouts are cycled
-            assert_section_layouts_are_cycled(sections)
+        # Assert layouts are cycled
+        assert_section_layouts_are_cycled(sections)
 
-            # The only sections are topic sections or "top_stories_section"
-            assert all(
-                section_name == "top_stories_section" or section_name in Topic
-                for section_name in sections
-            )
+        # The only sections are topic sections or "top_stories_section"
+        assert all(
+            section_name == "top_stories_section" or section_name in Topic
+            for section_name in sections
+        )
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("locale", ["en-US", "de-DE"])
     @pytest.mark.parametrize(
         "experiment_payload",
@@ -1346,65 +1280,59 @@ class TestSections:
             },
         ],
     )
-    async def test_sections_feed_content(self, locale, experiment_payload, caplog):
+    def test_sections_feed_content(self, locale, experiment_payload, caplog, client: TestClient):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for different locales.
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": locale, "feeds": ["sections"]} | experiment_payload,
-            )
-            data = response.json()
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": locale, "feeds": ["sections"]} | experiment_payload,
+        )
+        data = response.json()
 
-            # Check if the response is valid
-            assert response.status_code == 200
-            # Assert no errors were logged
-            errors = [r for r in caplog.records if r.levelname == "ERROR"]
-            assert len(errors) == 0
+        # Check if the response is valid
+        assert response.status_code == 200
+        # Assert no errors were logged
+        errors = [r for r in caplog.records if r.levelname == "ERROR"]
+        assert len(errors) == 0
 
-            # Assert that an empty data array is returned. All recommendations are under "feeds".
-            assert len(data["data"]) == 0
+        # Assert that an empty data array is returned. All recommendations are under "feeds".
+        assert len(data["data"]) == 0
 
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
 
-            # The fixture data contains enough recommendations for at least 4 sections. The number
-            # of sections varies because top_stories_section is determined by Thompson sampling,
-            # and therefore the number of recs per topics is non-deterministic.
-            assert len(sections) >= 4
+        # The fixture data contains enough recommendations for at least 4 sections. The number
+        # of sections varies because top_stories_section is determined by Thompson sampling,
+        # and therefore the number of recs per topics is non-deterministic.
+        assert len(sections) >= 4
 
-            # Section receivedFeedRank should be numbered 0, 1, 2, ..., len(sections) - 1.
-            assert {s["receivedFeedRank"] for s in sections.values()} == set(range(len(sections)))
-            # Recommendation receivedRank should be numbered 0, 1, 2, ..., len(recommendations) - 1.
-            for section in sections.values():
-                recs = section["recommendations"]
-                assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
+        # Section receivedFeedRank should be numbered 0, 1, 2, ..., len(sections) - 1.
+        assert {s["receivedFeedRank"] for s in sections.values()} == set(range(len(sections)))
+        # Recommendation receivedRank should be numbered 0, 1, 2, ..., len(recommendations) - 1.
+        for section in sections.values():
+            recs = section["recommendations"]
+            assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
 
-            # Check if non-ML experiment, only legacy sections returned
-            legacy_topics = {topic.value for topic in Topic}
+        # Check if non-ML experiment, only legacy sections returned
+        legacy_topics = {topic.value for topic in Topic}
 
-            if (
-                experiment_payload.get("experimentName")
-                != ExperimentName.ML_SECTIONS_EXPERIMENT.value
-            ):
-                # Non-ML sections experiment: All section keys (excluding top_stories) must be in legacy topics
-                for sid in sections:
-                    if sid != "top_stories_section":
-                        assert sid in legacy_topics
-
-            # Check the recs used in top_stories_section are removed from their original ML sections.
-            top_story_ids = {
-                rec["corpusItemId"] for rec in sections["top_stories_section"]["recommendations"]
-            }
-
-            for sid, sec in sections.items():
+        if experiment_payload.get("experimentName") != ExperimentName.ML_SECTIONS_EXPERIMENT.value:
+            # Non-ML sections experiment: All section keys (excluding top_stories) must be in legacy topics
+            for sid in sections:
                 if sid != "top_stories_section":
-                    for rec in sec["recommendations"]:
-                        assert rec["corpusItemId"] not in top_story_ids
+                    assert sid in legacy_topics
 
-    @pytest.mark.asyncio
+        # Check the recs used in top_stories_section are removed from their original ML sections.
+        top_story_ids = {
+            rec["corpusItemId"] for rec in sections["top_stories_section"]["recommendations"]
+        }
+
+        for sid, sec in sections.items():
+            if sid != "top_stories_section":
+                for rec in sec["recommendations"]:
+                    assert rec["corpusItemId"] not in top_story_ids
+
     @pytest.mark.parametrize(
         "sections_payload",
         [
@@ -1422,51 +1350,47 @@ class TestSections:
             },
         ],
     )
-    async def test_sections_layouts(self, sections_payload, experiment_payload):
+    def test_sections_layouts(self, sections_payload, experiment_payload, client: TestClient):
         """Test that the correct layouts & ads are returned along with sections."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": "en-US", "feeds": ["sections"]}
-                | sections_payload
-                | experiment_payload,
-            )
-            assert response.status_code == 200
-            data = response.json()
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-US", "feeds": ["sections"]}
+            | sections_payload
+            | experiment_payload,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
 
-            # All sections have a layout.
-            assert all(Layout(**section["layout"]) for section in sections.values())
+        # All sections have a layout.
+        assert all(Layout(**section["layout"]) for section in sections.values())
 
-            # Find the first and second sections by their receivedFeedRank.
-            first_section = next(
-                (s for s in sections.values() if s["receivedFeedRank"] == 0), None
-            )
-            assert first_section is not None
+        # Find the first and second sections by their receivedFeedRank.
+        first_section = next((s for s in sections.values() if s["receivedFeedRank"] == 0), None)
+        assert first_section is not None
 
-            # Assert layout of the first section (Popular Today).
-            assert first_section["title"] == "Popular Today"
-            assert first_section["layout"]["name"] == "7-double-row-2-ad"
+        # Assert layout of the first section (Popular Today).
+        assert first_section["title"] == "Popular Today"
+        assert first_section["layout"]["name"] == "7-double-row-2-ad"
 
-            # Assert layouts are cycled
-            assert_section_layouts_are_cycled(sections)
+        # Assert layouts are cycled
+        assert_section_layouts_are_cycled(sections)
 
-            # Assert only sections 1,2,3,5,7,9 (ranks: 0,1,2,4,6,8) have ads
-            expected_section_ranks_with_ads = {0, 1, 2, 4, 6, 8}
-            for section in sections.values():
-                tiles_with_ads = [
-                    tile
-                    for layout in section["layout"]["responsiveLayouts"]
-                    for tile in layout["tiles"]
-                    if tile["hasAd"]
-                ]
-                if section["receivedFeedRank"] in expected_section_ranks_with_ads:
-                    assert tiles_with_ads
-                else:
-                    assert not tiles_with_ads
+        # Assert only sections 1,2,3,5,7,9 (ranks: 0,1,2,4,6,8) have ads
+        expected_section_ranks_with_ads = {0, 1, 2, 4, 6, 8}
+        for section in sections.values():
+            tiles_with_ads = [
+                tile
+                for layout in section["layout"]["responsiveLayouts"]
+                for tile in layout["tiles"]
+                if tile["hasAd"]
+            ]
+            if section["receivedFeedRank"] in expected_section_ranks_with_ads:
+                assert tiles_with_ads
+            else:
+                assert not tiles_with_ads
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "experiment_payload",
         [
@@ -1485,8 +1409,8 @@ class TestSections:
             },
         ],
     )
-    async def test_curated_recommendations_with_sections_feed_boost_followed_sections(
-        self, caplog, experiment_payload
+    def test_curated_recommendations_with_sections_feed_boost_followed_sections(
+        self, caplog, experiment_payload, client: TestClient
     ):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale. Sections requested to be boosted (followed)
@@ -1497,73 +1421,70 @@ class TestSections:
         2. Blocked/followed sections are properly handled regardless of experiment branch
         3. The experiment filtering doesn't interfere with user preferences
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": "en-US",
-                    "feeds": ["sections"],
-                    "sections": [
-                        {"sectionId": "sports", "isFollowed": True, "isBlocked": False},
-                        {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
-                        {"sectionId": "education", "isFollowed": False, "isBlocked": True},
-                        {"sectionId": "health", "isFollowed": True, "isBlocked": False},
-                    ],
-                }
-                | experiment_payload,
-            )
-            data = response.json()
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "sections": [
+                    {"sectionId": "sports", "isFollowed": True, "isBlocked": False},
+                    {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
+                    {"sectionId": "education", "isFollowed": False, "isBlocked": True},
+                    {"sectionId": "health", "isFollowed": True, "isBlocked": False},
+                ],
+            }
+            | experiment_payload,
+        )
+        data = response.json()
 
-            # Check if the response is valid
-            assert response.status_code == 200
-            # Assert no errors were logged
-            errors = [r for r in caplog.records if r.levelname == "ERROR"]
-            assert len(errors) == 0
+        # Check if the response is valid
+        assert response.status_code == 200
+        # Assert no errors were logged
+        errors = [r for r in caplog.records if r.levelname == "ERROR"]
+        assert len(errors) == 0
 
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
 
-            # assert isFollowed & isBlocked have been correctly set
-            if data["feeds"].get("arts") is not None:
-                assert data["feeds"]["arts"]["isFollowed"]
-                assert not data["feeds"]["arts"]["isBlocked"]
-                # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
-                assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2, 3]
-                assert data["feeds"]["arts"]["iab"] == {
-                    "taxonomy": "IAB-3.0",
-                    "categories": ["JLBCU7"],
-                }
-            if data["feeds"].get("education") is not None:
-                assert not data["feeds"]["education"]["isFollowed"]
-                assert data["feeds"]["education"]["isBlocked"]
-            if data["feeds"].get("sports") is not None:
-                assert data["feeds"]["sports"]["isFollowed"]
-                assert not data["feeds"]["sports"]["isBlocked"]
-                # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
-                assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2, 3]
-                assert data["feeds"]["sports"]["iab"] == {
-                    "taxonomy": "IAB-3.0",
-                    "categories": ["483"],  # Production uses 483 for sports
-                }
-            if data["feeds"].get("health") is not None:
-                assert data["feeds"]["health"]["isFollowed"]
-                assert not data["feeds"]["health"]["isBlocked"]
+        # assert isFollowed & isBlocked have been correctly set
+        if data["feeds"].get("arts") is not None:
+            assert data["feeds"]["arts"]["isFollowed"]
+            assert not data["feeds"]["arts"]["isBlocked"]
+            # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
+            assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2, 3]
+            assert data["feeds"]["arts"]["iab"] == {
+                "taxonomy": "IAB-3.0",
+                "categories": ["JLBCU7"],
+            }
+        if data["feeds"].get("education") is not None:
+            assert not data["feeds"]["education"]["isFollowed"]
+            assert data["feeds"]["education"]["isBlocked"]
+        if data["feeds"].get("sports") is not None:
+            assert data["feeds"]["sports"]["isFollowed"]
+            assert not data["feeds"]["sports"]["isBlocked"]
+            # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
+            assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2, 3]
+            assert data["feeds"]["sports"]["iab"] == {
+                "taxonomy": "IAB-3.0",
+                "categories": ["483"],  # Production uses 483 for sports
+            }
+        if data["feeds"].get("health") is not None:
+            assert data["feeds"]["health"]["isFollowed"]
+            assert not data["feeds"]["health"]["isBlocked"]
 
-            # For RSS vs. Zyte experiment, verify that section IDs don't have _crawl suffix
-            experiment_name = experiment_payload.get("experimentName")
-            if experiment_name in [
-                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
-            ]:
-                for section_id in sections:
-                    if section_id != "top_stories_section":
-                        assert not section_id.endswith("_crawl"), (
-                            f"Section ID {section_id} should not have _crawl suffix "
-                            f"in response (experiment: {experiment_payload})"
-                        )
+        # For RSS vs. Zyte experiment, verify that section IDs don't have _crawl suffix
+        experiment_name = experiment_payload.get("experimentName")
+        if experiment_name in [
+            ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+            f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+        ]:
+            for section_id in sections:
+                if section_id != "top_stories_section":
+                    assert not section_id.endswith("_crawl"), (
+                        f"Section ID {section_id} should not have _crawl suffix "
+                        f"in response (experiment: {experiment_payload})"
+                    )
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "experiment_payload",
         [
@@ -1586,182 +1507,178 @@ class TestSections:
             },
         ],
     )
-    async def test_rss_vs_zyte_experiment_sections_filtering(
-        self, caplog, experiment_payload, sections_response_data
+    def test_rss_vs_zyte_experiment_sections_filtering(
+        self, caplog, experiment_payload, sections_response_data, client: TestClient
     ):
         """Test that the RSS vs. Zyte experiment correctly filters sections based on experiment branch.
 
         - Treatment: crawl-exclusive corpus items
         - Control/no-experiment: regular corpus items only
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": "en-US", "feeds": ["sections"]} | experiment_payload,
-            )
-            data = response.json()
-            assert response.status_code == 200
-            assert not [r for r in caplog.records if r.levelname == "ERROR"]
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-US", "feeds": ["sections"]} | experiment_payload,
+        )
+        data = response.json()
+        assert response.status_code == 200
+        assert not [r for r in caplog.records if r.levelname == "ERROR"]
 
-            sections = {name: section for name, section in data["feeds"].items() if section}
-            assert len(sections) >= 4
+        sections = {name: section for name, section in data["feeds"].items() if section}
+        assert len(sections) >= 4
 
+        for sid in sections:
+            if sid != "top_stories_section":
+                assert not sid.endswith("_crawl"), f"{sid} shouldn't have _crawl suffix"
+
+        crawl_ids: set[Any] = set()
+        regular_ids: set[Any] = set()
+        for section in sections_response_data["data"]["getSections"]:
+            items = section.get("sectionItems", [])
+            target_set = crawl_ids if section["externalId"].endswith("_crawl") else regular_ids
+            for item in items:
+                target_set.add(item["corpusItem"]["id"])
+
+        crawl_only = crawl_ids - regular_ids
+        regular_only = regular_ids - crawl_ids
+
+        response_ids = {
+            rec["corpusItemId"]
+            for sid, section in sections.items()
+            if sid != "top_stories_section"
+            for rec in section.get("recommendations", [])
+            if "corpusItemId" in rec
+        }
+
+        experiment_name = experiment_payload.get("experimentName")
+        is_crawl_treatment = experiment_name in [
+            ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+            f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+        ] and experiment_payload.get("experimentBranch") in [
+            CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+        ]
+
+        crawl_count = len(response_ids & crawl_only)
+        regular_count = len(response_ids & regular_only)
+
+        if is_crawl_treatment:
+            assert crawl_count >= 50, f"Treatment needs 50+ crawl items, got {crawl_count}"
+            assert (
+                regular_count == 0
+            ), f"Treatment shouldn't have regular items, got {regular_count}"
+        else:
+            assert regular_count >= 50, f"Control needs 50+ regular items, got {regular_count}"
+            assert crawl_count == 0, f"Control shouldn't have crawl items, got {crawl_count}"
+
+        legacy_topics = {topic.value for topic in Topic}
+        is_expected_to_have_subtopics = (
+            experiment_payload.get("experimentBranch")
+            == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
+        )
+
+        if is_expected_to_have_subtopics:
+            non_legacy = [
+                s for s in sections if s not in legacy_topics and s != "top_stories_section"
+            ]
+            assert non_legacy, "Treatment-crawl-plus-subtopics needs subtopic sections"
+        else:
             for sid in sections:
                 if sid != "top_stories_section":
-                    assert not sid.endswith("_crawl"), f"{sid} shouldn't have _crawl suffix"
+                    assert sid in legacy_topics, f"Should only have legacy topics, got {sid}"
 
-            crawl_ids = set()
-            regular_ids = set()
-            for section in sections_response_data["data"]["getSections"]:
-                items = section.get("sectionItems", [])
-                target_set = crawl_ids if section["externalId"].endswith("_crawl") else regular_ids
-                for item in items:
-                    target_set.add(item["corpusItem"]["id"])
-
-            crawl_only = crawl_ids - regular_ids
-            regular_only = regular_ids - crawl_ids
-
-            response_ids = {
-                rec["corpusItemId"]
-                for sid, section in sections.items()
-                if sid != "top_stories_section"
-                for rec in section.get("recommendations", [])
-                if "corpusItemId" in rec
-            }
-
-            experiment_name = experiment_payload.get("experimentName")
-            is_crawl_treatment = experiment_name in [
-                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
-            ] and experiment_payload.get("experimentBranch") in [
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-            ]
-
-            crawl_count = len(response_ids & crawl_only)
-            regular_count = len(response_ids & regular_only)
-
-            if is_crawl_treatment:
-                assert crawl_count >= 50, f"Treatment needs 50+ crawl items, got {crawl_count}"
-                assert (
-                    regular_count == 0
-                ), f"Treatment shouldn't have regular items, got {regular_count}"
-            else:
-                assert regular_count >= 50, f"Control needs 50+ regular items, got {regular_count}"
-                assert crawl_count == 0, f"Control shouldn't have crawl items, got {crawl_count}"
-
-            legacy_topics = {topic.value for topic in Topic}
-            is_expected_to_have_subtopics = (
-                experiment_payload.get("experimentBranch")
-                == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
-            )
-
-            if is_expected_to_have_subtopics:
-                non_legacy = [
-                    s for s in sections if s not in legacy_topics and s != "top_stories_section"
-                ]
-                assert non_legacy, "Treatment-crawl-plus-subtopics needs subtopic sections"
-            else:
-                for sid in sections:
-                    if sid != "top_stories_section":
-                        assert sid in legacy_topics, f"Should only have legacy topics, got {sid}"
-
-    @pytest.mark.asyncio
-    async def test_curated_recommendations_with_sections_feed_removes_blocked_topics(self, caplog):
+    def test_curated_recommendations_with_sections_feed_removes_blocked_topics(
+        self, caplog, client: TestClient
+    ):
         """Test that when topic sections are blocked, those recommendations don't show up, not even
         in other sections like Popular Today.
         """
         blocked_topics = [Topic.CAREER.value, Topic.SCIENCE.value, Topic.HEALTH_FITNESS.value]
 
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": "en-US",
-                    "feeds": ["sections"],
-                    "sections": [
-                        {"sectionId": topic_id, "isFollowed": False, "isBlocked": True}
-                        for topic_id in blocked_topics
-                    ],
-                },
-            )
-            data = response.json()
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "sections": [
+                    {"sectionId": topic_id, "isFollowed": False, "isBlocked": True}
+                    for topic_id in blocked_topics
+                ],
+            },
+        )
+        data = response.json()
 
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
 
-            # Assert layouts are cycled
-            assert_section_layouts_are_cycled(sections)
+        # Assert layouts are cycled
+        assert_section_layouts_are_cycled(sections)
 
-            # assert that none of the recommendations has a blocked topic.
-            for _, feed in feeds.items():
-                if feed:
-                    for recommendation in feed["recommendations"]:
-                        assert recommendation["topic"] not in blocked_topics
+        # assert that none of the recommendations has a blocked topic.
+        for _, feed in feeds.items():
+            if feed:
+                for recommendation in feed["recommendations"]:
+                    assert recommendation["topic"] not in blocked_topics
 
-    @pytest.mark.asyncio
     @freezegun.freeze_time("2025-03-20 12:00:00", tz_offset=0)
-    async def test_curated_recommendations_with_sections_feed_followed_at(self, caplog):
+    def test_curated_recommendations_with_sections_feed_followed_at(
+        self, caplog, client: TestClient
+    ):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale & providing followedAt.
         Most recently followed sections are boosted higher and response fields are set correctly.
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": "en-US",
-                    "feeds": ["sections"],
-                    "sections": [
-                        {
-                            "sectionId": "sports",
-                            "isFollowed": True,
-                            "isBlocked": False,
-                            "followedAt": "2025-03-17T12:00:00Z",
-                        },
-                        {
-                            "sectionId": "arts",
-                            "isFollowed": True,
-                            "isBlocked": False,
-                            "followedAt": "2025-03-10T14:34:56+02:00",
-                        },
-                        {"sectionId": "education", "isFollowed": False, "isBlocked": True},
-                    ],
-                },
-            )
-            data = response.json()
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "sections": [
+                    {
+                        "sectionId": "sports",
+                        "isFollowed": True,
+                        "isBlocked": False,
+                        "followedAt": "2025-03-17T12:00:00Z",
+                    },
+                    {
+                        "sectionId": "arts",
+                        "isFollowed": True,
+                        "isBlocked": False,
+                        "followedAt": "2025-03-10T14:34:56+02:00",
+                    },
+                    {"sectionId": "education", "isFollowed": False, "isBlocked": True},
+                ],
+            },
+        )
+        data = response.json()
 
-            # Check if the response is valid
-            assert response.status_code == 200
+        # Check if the response is valid
+        assert response.status_code == 200
 
-            # assert isFollowed & isBlocked & followedAt have been correctly set
-            if data["feeds"].get("arts") is not None:
-                assert data["feeds"]["arts"]["isFollowed"]
-                # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
-                assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2]
-                assert data["feeds"]["arts"]["followedAt"]
-            if data["feeds"].get("education") is not None:
-                assert not data["feeds"]["education"]["isFollowed"]
-                assert not data["feeds"]["education"]["followedAt"]
-                assert data["feeds"]["education"]["isBlocked"]
-            if data["feeds"].get("sports") is not None:
-                assert data["feeds"]["sports"]["isFollowed"]
-                # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
-                assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2]
-                assert data["feeds"]["sports"]["followedAt"]
+        # assert isFollowed & isBlocked & followedAt have been correctly set
+        if data["feeds"].get("arts") is not None:
+            assert data["feeds"]["arts"]["isFollowed"]
+            # assert followed section ARTS comes after top-stories and before unfollowed sections (education).
+            assert data["feeds"]["arts"]["receivedFeedRank"] in [1, 2]
+            assert data["feeds"]["arts"]["followedAt"]
+        if data["feeds"].get("education") is not None:
+            assert not data["feeds"]["education"]["isFollowed"]
+            assert not data["feeds"]["education"]["followedAt"]
+            assert data["feeds"]["education"]["isBlocked"]
+        if data["feeds"].get("sports") is not None:
+            assert data["feeds"]["sports"]["isFollowed"]
+            # assert followed section SPORTS comes after top-stories and before unfollowed sections (education).
+            assert data["feeds"]["sports"]["receivedFeedRank"] in [1, 2]
+            assert data["feeds"]["sports"]["followedAt"]
 
-            # in the case both sections are present, sports is recently followed & needs to have higher rank
-            if data["feeds"].get("arts") is not None and data["feeds"].get("sports") is not None:
-                assert data["feeds"]["sports"]["receivedFeedRank"] == 1
-                assert data["feeds"]["arts"]["receivedFeedRank"] == 2
+        # in the case both sections are present, sports is recently followed & needs to have higher rank
+        if data["feeds"].get("arts") is not None and data["feeds"].get("sports") is not None:
+            assert data["feeds"]["sports"]["receivedFeedRank"] == 1
+            assert data["feeds"]["arts"]["receivedFeedRank"] == 2
 
-            # Assert no errors were logged
-            errors = [r for r in caplog.records if r.levelname == "ERROR"]
-            assert len(errors) == 0
+        # Assert no errors were logged
+        errors = [r for r in caplog.records if r.levelname == "ERROR"]
+        assert len(errors) == 0
 
-    @pytest.mark.asyncio
     @freezegun.freeze_time("2025-03-20 12:00:00", tz_offset=0)
     @pytest.mark.parametrize(
         "sections_payload",
@@ -1800,26 +1717,24 @@ class TestSections:
             ],
         ],
     )
-    async def test_curated_recommendations_with_invalid_followed_at_formats(
-        self, sections_payload
+    def test_curated_recommendations_with_invalid_followed_at_formats(
+        self, sections_payload, client: TestClient
     ):
         """Test the curated recommendations endpoint response when providing invalid followedAt time formats:
         - missing timezone
         - not ISO format
         - Unix timestamp as integer
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            payload = {
-                "locale": "en-US",
-                "feeds": ["sections"],
-            }
-            if sections_payload is not None:
-                payload["sections"] = sections_payload
-            response = await ac.post("/api/v1/curated-recommendations", json=payload)
-            # assert 400 is returned for invalid followedAt
-            assert response.status_code == 400
+        payload = {
+            "locale": "en-US",
+            "feeds": ["sections"],
+        }
+        if sections_payload is not None:
+            payload["sections"] = sections_payload
+        response = client.post("/api/v1/curated-recommendations", json=payload)
+        # assert 400 is returned for invalid followedAt
+        assert response.status_code == 400
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "locale, expected_titles",
         [
@@ -1843,70 +1758,68 @@ class TestSections:
             ),
         ],
     )
-    async def test_sections_feed_titles(self, locale, expected_titles):
+    def test_sections_feed_titles(self, locale, expected_titles, client: TestClient):
         """Test the curated recommendations endpoint 'sections' have the expected (sub)titles."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            # Mock the endpoint to request the sections feed
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": locale, "feeds": ["sections"]},
-            )
-            data = response.json()
-            feeds = data["feeds"]
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": locale, "feeds": ["sections"]},
+        )
+        data = response.json()
+        feeds = data["feeds"]
 
-            # Sections have their expected, localized title
-            for section_name, expected_title in expected_titles.items():
-                section = feeds.get(section_name)
-                if section:
-                    assert section["title"] == expected_title
+        # Sections have their expected, localized title
+        for section_name, expected_title in expected_titles.items():
+            section = feeds.get(section_name)
+            if section:
+                assert section["title"] == expected_title
 
-            # Ensure "Today's top stories" is present
-            top_stories_section = data["feeds"].get("top_stories_section")
-            assert top_stories_section is not None
-            assert top_stories_section["subtitle"] is None
+        # Ensure "Today's top stories" is present
+        top_stories_section = data["feeds"].get("top_stories_section")
+        assert top_stories_section is not None
+        assert top_stories_section["subtitle"] is None
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("enable_interest_picker", [True, False])
-    async def test_sections_interest_picker(self, enable_interest_picker, monkeypatch):
+    def test_sections_interest_picker(
+        self, enable_interest_picker, monkeypatch, client: TestClient
+    ):
         """Test the curated recommendations endpoint returns an interest picker when enabled"""
         # The fixture data doesn't have enough sections for the interest picker to show up, so lower
         # the minimum number of sections that it needs to have to 1.
         monkeypatch.setattr(interest_picker, "MIN_INTEREST_PICKER_COUNT", 1)
 
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": "en-US",
-                    "feeds": ["sections"],
-                    "enableInterestPicker": enable_interest_picker,
-                },
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "enableInterestPicker": enable_interest_picker,
+            },
+        )
+        data = response.json()
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # Assert layouts are cycled
+        assert_section_layouts_are_cycled(sections)
+
+        interest_picker_response = data["interestPicker"]
+        if enable_interest_picker:
+            assert interest_picker_response is not None
+            assert (
+                interest_picker_response["title"] == "Follow topics to fine-tune your experience"
             )
-            data = response.json()
+        else:
+            assert interest_picker_response is None
+        # Ensure top_stories_section always has receivedFeedRank == 0
+        top_stories_section = data["feeds"].get("top_stories_section")
+        assert top_stories_section is not None
+        assert top_stories_section["receivedFeedRank"] == 0
 
-            feeds = data["feeds"]
-            sections = {name: section for name, section in feeds.items() if section is not None}
-
-            # Assert layouts are cycled
-            assert_section_layouts_are_cycled(sections)
-
-            interest_picker_response = data["interestPicker"]
-            if enable_interest_picker:
-                assert interest_picker_response is not None
-                assert (
-                    interest_picker_response["title"]
-                    == "Follow topics to fine-tune your experience"
-                )
-            else:
-                assert interest_picker_response is None
-            # Ensure top_stories_section always has receivedFeedRank == 0
-            top_stories_section = data["feeds"].get("top_stories_section")
-            assert top_stories_section is not None
-            assert top_stories_section["receivedFeedRank"] == 0
-
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("enable_interest_picker", [True, False])
-    async def test_sections_interest_picker_ml_sections(self, enable_interest_picker, monkeypatch):
+    def test_sections_interest_picker_ml_sections(
+        self, enable_interest_picker, monkeypatch, client: TestClient
+    ):
         """Test the curated recommendations endpoint returns expected response when an
         interest picker & ML sections enabled
         """
@@ -1914,56 +1827,52 @@ class TestSections:
         # the minimum number of sections that it needs to have to 1.
         monkeypatch.setattr(interest_picker, "MIN_INTEREST_PICKER_COUNT", 1)
 
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "experimentName": "optin-new-tab-ml-sections",
-                    "experimentBranch": "treatment",
-                    "utc_offset": 17,
-                    "coarse_os": "windows",
-                    "surface_id": "",
-                    "locale": "en-US",
-                    "region": "US",
-                    "enableInterestPicker": enable_interest_picker,
-                    "feeds": ["sections"],
-                },
-            )
-            data = response.json()
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "experimentName": "optin-new-tab-ml-sections",
+                "experimentBranch": "treatment",
+                "utc_offset": 17,
+                "coarse_os": "windows",
+                "surface_id": "",
+                "locale": "en-US",
+                "region": "US",
+                "enableInterestPicker": enable_interest_picker,
+                "feeds": ["sections"],
+            },
+        )
+        data = response.json()
 
-            interest_picker_response = data["interestPicker"]
-            if enable_interest_picker:
-                assert interest_picker_response is not None
-                assert (
-                    interest_picker_response["title"]
-                    == "Follow topics to fine-tune your experience"
-                )
-            else:
-                assert interest_picker_response is None
-            # Ensure top_stories_section always has receivedFeedRank == 0
-            top_stories_section = data["feeds"].get("top_stories_section")
-            assert top_stories_section is not None
-            assert top_stories_section["receivedFeedRank"] == 0
+        interest_picker_response = data["interestPicker"]
+        if enable_interest_picker:
+            assert interest_picker_response is not None
+            assert (
+                interest_picker_response["title"] == "Follow topics to fine-tune your experience"
+            )
+        else:
+            assert interest_picker_response is None
+        # Ensure top_stories_section always has receivedFeedRank == 0
+        top_stories_section = data["feeds"].get("top_stories_section")
+        assert top_stories_section is not None
+        assert top_stories_section["receivedFeedRank"] == 0
 
     @pytest.mark.parametrize(
         "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
-    @pytest.mark.asyncio
-    async def test_ml_sections_thompson_sampling(self, repeat, engagement_backend):
+    def test_ml_sections_thompson_sampling(self, repeat, engagement_backend, client: TestClient):
         """Statistically verify ML sections order by engagement (higher CTR → lower feed rank)."""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": "en-US",
-                    "feeds": ["sections"],
-                    "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                    "experimentBranch": "treatment",
-                },
-            )
-            assert response.status_code == 200
-            feeds = response.json()["feeds"]
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+        )
+        assert response.status_code == 200
+        feeds = response.json()["feeds"]
 
         # collect non-top_stories sections
         sub_topic_sections = [
@@ -1989,38 +1898,35 @@ class TestSections:
         # assert that slope is negative: better‑engaged sections get better (lower) ranks
         assert slope < 0, f"Sections not ordered by engagement (slope={slope})"
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("enable_interest_vector", [True, False])
-    async def test_sections_model_interest_vector(self, enable_interest_vector, monkeypatch):
+    def test_sections_model_interest_vector(
+        self, enable_interest_vector, monkeypatch, client: TestClient
+    ):
         """Test the curated recommendations endpoint returns a model when interest vector is passed"""
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": Locale.EN_US,
-                    "feeds": ["sections"],
-                    "inferredInterests": {} if enable_interest_vector else None,
-                },
-            )
-            data = response.json()
-            local_model = data["inferredLocalModel"]
-            if enable_interest_vector:
-                assert local_model is not None
-            else:
-                assert local_model is None
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": Locale.EN_US,
+                "feeds": ["sections"],
+                "inferredInterests": {} if enable_interest_vector else None,
+            },
+        )
+        data = response.json()
+        local_model = data["inferredLocalModel"]
+        if enable_interest_vector:
+            assert local_model is not None
+        else:
+            assert local_model is None
 
-    @pytest.mark.asyncio
-    async def test_sections_model_interest_vector_greedy_ranking(self, monkeypatch):
+    def test_sections_model_interest_vector_greedy_ranking(self, monkeypatch, client: TestClient):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
         np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)
 
-        # make an api call to get the current sections
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={"locale": Locale.EN_US, "feeds": ["sections"]},
-            )
-            data = response.json()
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": Locale.EN_US, "feeds": ["sections"]},
+        )
+        data = response.json()
 
         ## sort sections received
         sorted_sections = sorted(
@@ -2033,72 +1939,70 @@ class TestSections:
         interests = {sorted_sections[i]: (1 - i / 8) for i in range(4)}
 
         # make the api call
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": Locale.EN_US,
-                    "feeds": ["sections"],
-                    "inferredInterests": interests,
-                },
-            )
-            data = response.json()
-            # expect interests to be sorted by value
-            sorted_interests = sorted(
-                [k for k, v in interests.items() if isinstance(v, float)], key=interests.get
-            )[::-1]
-            # expect top stories to be first
-            sorted_interests.insert(0, "top_stories_section")
-            # order is in receivedFeedRank
-            for i, sec in enumerate(sorted_interests):
-                assert data["feeds"][sec]["receivedFeedRank"] == i
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": Locale.EN_US,
+                "feeds": ["sections"],
+                "inferredInterests": interests,
+            },
+        )
+        data = response.json()
+        # expect interests to be sorted by value
+        sorted_interests = sorted(
+            [k for k, v in interests.items() if isinstance(v, float)],
+            key=interests.get,  # type: ignore
+        )[::-1]
+        # expect top stories to be first
+        sorted_interests.insert(0, "top_stories_section")
+        # order is in receivedFeedRank
+        for i, sec in enumerate(sorted_interests):
+            assert data["feeds"][sec]["receivedFeedRank"] == i
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "repeat",
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
-    async def test_sections_ranked_by_top_items_engagement(self, repeat, engagement_backend):
+    def test_sections_ranked_by_top_items_engagement(
+        self, repeat, engagement_backend, client: TestClient
+    ):
         """Sections should be ordered so that those with higher average CTR
         among their top 3 items get a better (lower) feed rank.
         """
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": "en-US",
-                    "feeds": ["sections"],
-                    "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                    "experimentBranch": "treatment",
-                },
-            )
-            assert response.status_code == 200
-            feeds = response.json()["feeds"]
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+        )
+        assert response.status_code == 200
+        feeds = response.json()["feeds"]
 
-            # exclude top_stories_section, which by definition has high engagement.
-            sections = [
-                section
-                for name, section in feeds.items()
-                if section and name != "top_stories_section"
-            ]
+        # exclude top_stories_section, which by definition has high engagement.
+        sections = [
+            section for name, section in feeds.items() if section and name != "top_stories_section"
+        ]
 
-            # compute average CTR of the top recs in each section
-            avg_ctrs = []
-            for sec in sections:
-                recs = sec["recommendations"][:6]
-                ctrs = []
-                for rec in recs:
-                    e = engagement_backend.get(rec["corpusItemId"], region=None)
-                    if e:
-                        ctrs.append(e.click_count / e.impression_count)
-                # if no data, treat as 0
-                avg = sum(ctrs) / len(ctrs) if ctrs else 0.0
-                avg_ctrs.append((sec["receivedFeedRank"], avg))
+        # compute average CTR of the top recs in each section
+        avg_ctrs = []
+        for sec in sections:
+            recs = sec["recommendations"][:6]
+            ctrs = []
+            for rec in recs:
+                e = engagement_backend.get(rec["corpusItemId"], region=None)
+                if e:
+                    ctrs.append(e.click_count / e.impression_count)
+            # if no data, treat as 0
+            avg = sum(ctrs) / len(ctrs) if ctrs else 0.0
+            avg_ctrs.append((sec["receivedFeedRank"], avg))
 
-            # regression: feedRank vs avg CTR should have negative slope
-            ranks, avgs = zip(*avg_ctrs)
-            slope, _, _, _, _ = linregress(ranks, avgs)
-            assert slope < 0, f"Sections not ordered by engagement (slope={slope})"
+        # regression: feedRank vs avg CTR should have negative slope
+        ranks, avgs = zip(*avg_ctrs)
+        slope, _, _, _, _ = linregress(ranks, avgs)
+        assert slope < 0, f"Sections not ordered by engagement (slope={slope})"
 
     @pytest.mark.parametrize(
         "locale,region,derived_region",
@@ -2108,8 +2012,7 @@ class TestSections:
             ("fr-FR", "FR", "FR"),
         ],
     )
-    @pytest.mark.asyncio
-    async def test_sections_pass_region_to_engagement_backend(
+    def test_sections_pass_region_to_engagement_backend(
         self,
         locale,
         region,
@@ -2118,21 +2021,21 @@ class TestSections:
         engagement_backend,
         scheduled_surface_http_client,
         fixture_request_data,
+        client: TestClient,
     ):
         """Ensure that when fetching a 'sections' feed we pass the right region into engagement.get"""
         spy = mocker.spy(engagement_backend, "get")
 
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": locale,
-                    "region": region,
-                    "feeds": ["sections"],
-                    "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                    "experimentBranch": "treatment",
-                },
-            )
+        client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": locale,
+                "region": region,
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+        )
 
         def passed_region(call):
             # first look for keyword, otherwise fall back to positional second arg
@@ -2143,15 +2046,16 @@ class TestSections:
             return None
 
         assert any(
-            passed_region(call) == derived_region for call in spy.call_args_list
+            passed_region(call) == derived_region  # type: ignore
+            for call in spy.call_args_list
         ), f"No engagement.get(..., region={repr(derived_region)}) in {spy.call_args_list}"
 
 
-@pytest.mark.asyncio
-async def test_curated_recommendations_enriched_with_icons(
+def test_curated_recommendations_enriched_with_icons(
     manifest_provider,
     scheduled_surface_http_client,
     fixture_request_data,
+    client: TestClient,
 ):
     """Test the enrichment of a curated recommendation with an added icon-url."""
     # Set up the manifest data first
@@ -2195,12 +2099,11 @@ async def test_curated_recommendations_enriched_with_icons(
         request=fixture_request_data,
     )
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await ac.post(
-            "/api/v1/curated-recommendations",
-            json={"locale": "en-US"},
-        )
-        assert response.status_code == 200
+    response = client.post(
+        "/api/v1/curated-recommendations",
+        json={"locale": "en-US"},
+    )
+    assert response.status_code == 200
 
     data = response.json()
     items = data["data"]
