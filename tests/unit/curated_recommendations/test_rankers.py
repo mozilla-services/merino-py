@@ -1,5 +1,6 @@
 """Unit test for ranker algorithms used to rank curated recommendations."""
 
+import logging
 import uuid
 
 import pytest
@@ -9,7 +10,10 @@ import freezegun
 from freezegun import freeze_time
 
 from pydantic import HttpUrl
+
+from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.curated_recommendations.engagement_backends.protocol import Engagement
 from merino.curated_recommendations.layouts import layout_4_medium, layout_4_large, layout_6_tiles
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
@@ -26,11 +30,112 @@ from merino.curated_recommendations.rankers import (
     renumber_recommendations,
     put_top_stories_first,
     greedy_personalized_section_rank,
+    takedown_reported_recommendations,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
     generate_sections_feed,
 )
+
+
+class MockEngagementBackend(EngagementBackend):
+    """Mock class implementing the protocol for EngagementBackend."""
+
+    def __init__(self, metrics: dict[str, tuple[int, int]]):
+        # {corpusItemId: (reports, impressions)}
+        self.metrics = metrics
+
+    def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
+        """Return a mock Engagement object for a given corpusItemId."""
+        if corpus_item_id not in self.metrics:
+            return None
+        reports, impressions = self.metrics[corpus_item_id]
+        return Engagement(
+            corpus_item_id=corpus_item_id,
+            region=region,
+            click_count=0,
+            impression_count=impressions,
+            report_count=reports,
+        )
+
+
+class TestTakedownReportedRecommendations:
+    """Tests for the takedown_reported_recommendations function."""
+
+    def test_empty_list(self):
+        """Test that takedown_reported_recommendations works with an empty list."""
+        backend = MockEngagementBackend({})
+        assert takedown_reported_recommendations([], backend) == []
+
+    def test_no_engagement_data(self):
+        """Test that takedown_reported_recommendations keep all recommendations if no engagement data."""
+        recs = generate_recommendations(item_ids=["1", "2", "3"])
+        backend = MockEngagementBackend({})
+        remaining_recs = takedown_reported_recommendations(recs, backend)
+        assert remaining_recs == recs
+
+    def test_keep_recs_below_threshold(self):
+        """Test that takedown_reported_recommendations keeps reported recommendations with report_ratio <= threshold."""
+        recs = generate_recommendations(item_ids=["a"])
+        # 1 report / 200 impression = 0.005 < 0.01 threshold
+        backend = MockEngagementBackend({"a": (1, 200)})
+        remaining_recs = takedown_reported_recommendations(
+            recs, backend, report_ratio_threshold=0.01
+        )
+        assert remaining_recs == recs
+
+    def test_remove_recs_above_threshold(self, caplog):
+        """Test that takedown_reported_recommendations removes recommendations with report_ratio > threshold
+        and logs a warning for the excluded recommendation.
+        """
+        recs = generate_recommendations(item_ids=["reported_rec", "good_rec"])
+        # report_ratio_threshold = 1%
+        # "bad" = 5 reports / 50 impressions = 0.10 report_ratio > 0.01 threshold
+        # "good" = 0 reports / 50 impressions = 0.0 report_ratio
+        backend = MockEngagementBackend({"reported_rec": (5, 50), "good_rec": (0, 50)})
+
+        caplog.set_level(logging.WARNING)
+
+        remaining_recs = takedown_reported_recommendations(
+            recs, backend, report_ratio_threshold=0.01
+        )
+        # Assert only "good_rec" is returned in remaining_recs
+        assert [rec.corpusItemId for rec in remaining_recs] == ["good_rec"]
+
+        # Assert a warning was logged about excluding "reported_rec"
+        warnings = [r.message for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("Excluding reported recommendation" in msg for msg in warnings)
+        # Check extra fields logged for the excluded rec
+        rec = next(r for r in caplog.records if r.levelno == logging.WARNING)
+        assert rec.corpus_item_id == "reported_rec"
+        assert rec.reports == 5
+        assert rec.impressions == 50
+
+    def test_safeguard_fraction_applied(self):
+        """Test that takedown_reported_recommendations should only remove up to safeguard fraction,
+        even if more recommendations breach threshold.
+        """
+        recs = generate_recommendations(item_ids=["1", "2", "3", "4"])
+        # All 4 recs breach: 10 reports / 50 impressions = 0.2 report_ratio > 0.01 threshold
+        metrics = {corpus_id: (10, 50) for corpus_id in ["1", "2", "3", "4"]}
+        backend = MockEngagementBackend(metrics)
+        # safeguard_cap_takedown_fraction == 50% => ceil(4 recs * 0.5) = max 2 removals
+        remaining_recs = takedown_reported_recommendations(
+            recs, backend, report_ratio_threshold=0.01, safeguard_cap_takedown_fraction=0.5
+        )
+        # Check that 2 recs were removed, 2 recs should be in the final result
+        assert len(remaining_recs) == 2
+
+    def test_zero_impressions_skipped(self):
+        """Test that takedown_reported_recommendations does not remove recommendations with 0 impressions."""
+        recs = generate_recommendations(item_ids=["1"])
+        # 5 reports / 0 impressions
+        backend = MockEngagementBackend({"1": (5, 0)})
+        remaining_recs = takedown_reported_recommendations(
+            recs, backend, report_ratio_threshold=0.01
+        )
+        # Rec should remain in final result because report_ratio cannot be computed
+        assert [rec.corpusItemId for rec in remaining_recs] == ["1"]
 
 
 class TestRenumberRecommendations:
