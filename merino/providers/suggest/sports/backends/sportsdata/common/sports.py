@@ -1,4 +1,7 @@
-"""Individual Sport Definitions"""
+"""Individual Sport Definitions.
+
+This contains the sport specific calls and data formats which are normalized.
+"""
 
 import asyncio
 import logging

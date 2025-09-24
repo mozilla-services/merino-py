@@ -1,4 +1,4 @@
-"""Data Types for Sports"""
+"""General Data Types for Sports"""
 
 # from __future__ import annotations
 
@@ -25,12 +25,14 @@ from merino.providers.suggest.sports.backends.sportsdata.common import (
     GameStatus,
 )
 
-UTC_TIME_FORMAT: Final[str] = "%Y-%m-%dT%H:%M:%S"
-
 
 class SportDate:
+    """Return the current date in SportsData compliant format.
+
+    Some requests to SportsData use a Y-M-D formatted timestamp as a URL parameter.
+    """
+
     instance: datetime
-    """Return the current date in SportsData compliant format"""
 
     def __init__(self):
         self.instance = datetime.now()
@@ -43,8 +45,12 @@ class SportDate:
         self.instance = datetime.strptime(parse, "%Y-%b-%d")
 
 
-# TODO: refactor up to `.../sports`?
 class Team(BaseModel):
+    """Contain the truncated 'Team' information.
+
+    This data is held in memory.
+    """
+
     # Search terms for elastic search
     terms: str
     #  Team long name
@@ -70,6 +76,7 @@ class Team(BaseModel):
     def from_data(
         cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta
     ):
+        """Convert the rich SportsData.io information set to the reduced info we need."""
         # build the list of terms we want to search:
         terms = set()
         for item in [
@@ -124,7 +131,7 @@ class Team(BaseModel):
         )
 
     def minimal(self) -> dict[str, Any]:
-        """Return the minimal version of the team info used in Events"""
+        """Return the very minimal version of the team info used in Events"""
         return dict(key=self.key, name=self.name, colors=self.colors)
 
 
@@ -165,6 +172,7 @@ class Event(BaseModel):
         return text
 
     def as_json(self) -> dict[str, Any]:
+        """Provide the data as a minimal JSON structure"""
         return dict(
             terms=self.terms,
             sport=self.sport,
@@ -226,6 +234,7 @@ class Sport(BaseModel):
         )
 
     def gen_key(self, key: str) -> str:
+        """Generate the internal sport:team key for unique lookup and storage."""
         return f"{self.name.lower()}:{key.lower()}"
 
     @abstractmethod
@@ -320,9 +329,7 @@ class Sport(BaseModel):
                 sport=self.name,
                 id=event_description["GlobalGameID"],
                 terms=terms,
-                date=datetime.strptime(
-                    event_description["DateTimeUTC"], UTC_TIME_FORMAT
-                ),
+                date=datetime.fromisoformat(event_description["DateTimeUTC"]),
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
                 home_score=event_description["HomeScore"],

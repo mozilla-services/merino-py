@@ -1,11 +1,6 @@
-"""Common data fetch functions for SportsData.io information"""
-
-import logging
-import os
-from datetime import datetime, timedelta, timezone
+"""Common data definitions for SportsData.io information"""
 
 from enum import StrEnum
-from typing import Any
 
 
 # Enums

@@ -8,9 +8,11 @@ from typing import Protocol, Any, AnyStr
 from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.suggest.sports.backends import SportSuggestion
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
-    ElasticDataStore,
     Team,
     Event,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
+    ElasticDataStore,
 )
 
 
@@ -24,7 +26,6 @@ class SportsDataBackend(Protocol):
     def __init__(self, manifest_data: ManifestData, settings: LazySettings):
         self.manifest_data = manifest_data
         self.data_store = ElasticDataStore(settings=settings)
-        self.word_breaker = re.compile(r"(\w+)")
 
     async def query(
         self, query_string: str | None = None, language_code: str = "en"
@@ -34,6 +35,9 @@ class SportsDataBackend(Protocol):
         """
         # break the description into words
         if query_string:
-            events = await self.data_store.search(q=query_string, language_code="en")
-            return [event.as_suggestion() for event in events]
+            events = await self.data_store.search_events(
+                q=query_string, language_code="en"
+            )
+            # TODO: convert to suggestions
+            return events
         return []
