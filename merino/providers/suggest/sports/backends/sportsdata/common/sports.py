@@ -11,11 +11,13 @@ from merino.configs import settings
 from merino.providers.suggest.sports import LOGGING_TAG
 from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
-    ElasticDataStore,
     Event,
     Sport,
     SportDate,
     Team,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
+    ElasticDataStore,
 )
 from merino.providers.suggest.sports.backends.sportsdata.errors import (
     SportsDataError,

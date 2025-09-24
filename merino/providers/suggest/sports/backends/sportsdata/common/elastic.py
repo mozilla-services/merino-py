@@ -12,7 +12,8 @@ from merino.providers.suggest.sports import (
     LOGGING_TAG,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
-    Sport,Event,
+    Sport,
+    Event,
 )
 
 SUGGEST_ID: Final[str] = "suggest-on-title"
@@ -86,16 +87,11 @@ class ElasticDataStore:
         }
 
         try:
+            query = {"match": {"terms": {"query": q}}}
             res = await self.client.search(
-                query={
-                    'match': {
-                        'terms': {
-                            'query': q
-                        }
-                    }
-                }
-#                index=index_id,
-#                suggest=suggest,
+                query=query,
+                #                index=index_id,
+                #                suggest=suggest,
                 timeout=TIMEOUT_MS,
                 source_includes=["team_key"],
             )
