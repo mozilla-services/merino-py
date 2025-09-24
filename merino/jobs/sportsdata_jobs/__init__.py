@@ -30,18 +30,20 @@ import logging
 import typer
 from datetime import datetime, timedelta
 from httpx import AsyncClient
-from dynaconf.base import Settings
+from dynaconf.base import LazySettings
 from pydantic import BaseModel
 
 from merino.providers.suggest.sports import (
     init_logs,
 )
-from merino.providers.suggest.sports.backends.sportsdata.data import Sport
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
 
 from merino.configs import settings
 from merino.providers.suggest.sports import LOGGING_TAG, UPDATE_PERIOD_SECS
-from merino.providers.suggest.sports.backends.sportsdata.common.data import (
+from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     ElasticDataStore,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
     # MLB,
     # NBA,
@@ -50,13 +52,14 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     UCL,
 )
 from merino.providers.suggest.sports.backends.sportsdata.errors import (
-    SportsDataError, SportsDataWarning
+    SportsDataError,
+    SportsDataWarning,
 )
 
 
 class Options:
 
-    def __init__(self, base_settings: Settings):
+    def __init__(self, base_settings: LazySettings):
         logger.debug(f"{LOGGING_TAG} Defining Options")
         # Currently no options to define.
         pass
@@ -77,20 +80,21 @@ class SportDataUpdater(BaseModel):
     # Collection of known sports
     sports: dict[str, Sport]
     # Copy of the general configuration
-    settings: Settings
+    settings: LazySettings
 
-    def __init__(self, settings: Settings, *args, **kwargs) -> None:
+    def __init__(self, settings: LazySettings, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         if not settings.sports:
-            raise SportDataError("No sports defined")
-        self.store = ElasticDataStore(api_key=settings.providers.sports.es.api_key, dsn=settings.providers.sports.es.dsn)
+            raise SportsDataError("No sports defined")
+        self.store = ElasticDataStore(settings=settings)
 
         for sport_name in [
-            sport.strip().upper() for sport in settings.sports.split(",")
+            sport.strip().upper()
+            for sport in settings.providers.sports.sports.split(",")
         ]:
             match sport_name:
-                 case "NFL":
-                    sport = NFL(settings.sports, self.store)
+                case "NFL":
+                    sport = NFL(settings=settings)
                 # case "MLB":
                 #    sport = MLB(settings, self.store)
                 # case "NBA":
@@ -99,8 +103,8 @@ class SportDataUpdater(BaseModel):
                 #    sport = NHL(settings, self.store)
                 # case "EPL":
                 #    sport = EPL(settings, self.store)
-                case "UCL":
-                    sport = UCL(settings.sports, self.store)
+                # case "UCL":
+                #    sport = UCL(settings=settings)
                 case _:
                     logger.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
                     continue
@@ -109,7 +113,8 @@ class SportDataUpdater(BaseModel):
     async def update(self) -> bool:
         """Perform sport specific updates."""
         for sport in self.sports.values():
-            await sport.update(store=self.store)
+            await sport.update_teams(client=self.client)
+            await sport.update_events(client=self.client)
 
     async def refresh_sport(self, sport_name: str, force: bool = False):
         """Refresh the fetched sport data if needed."""
@@ -145,7 +150,7 @@ class SportDataUpdater(BaseModel):
 logger = init_logs()
 sports_settings = getattr(settings.providers, "sportsdata", None)
 if not sports_settings:
-    raise SportDataError(
+    raise SportsDataError(
         "Missing project configuration for `sportsdata`. Did you create it under providers?"
     )
 

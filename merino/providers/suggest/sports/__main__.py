@@ -6,7 +6,7 @@ import pdb
 from httpx import AsyncClient, Timeout
 from merino.configs import settings
 from merino.providers.suggest.sports import init_logs, LOGGING_TAG
-from merino.providers.suggest.sports.backends.sportsdata.common.data import (
+from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     ElasticDataStore,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
@@ -37,8 +37,8 @@ async def main():
     await sport.update_teams(http_client=client)
     await sport.update_events(http_client=client)
     pdb.set_trace()
-    event_store.store_events(sport, language_code="en")
-    res = await event_store.search(q="Giants vs dodgers", language_code="en")
+    await event_store.store_events(sport, language_code="en")
+    res = await event_store.search_events(q="Giants vs dodgers", language_code="en")
     pdb.set_trace()
     print(res)
 

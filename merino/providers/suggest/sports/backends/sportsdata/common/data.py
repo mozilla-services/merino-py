@@ -2,131 +2,30 @@
 
 # from __future__ import annotations
 
-import asyncio
-import copy
 import json
 import logging
-import pdb
 
 from abc import abstractmethod
 from datetime import datetime, timedelta, timezone
-from threading import Lock
 from typing import Any, Final
 
 from dynaconf.base import LazySettings
-from elasticsearch import AsyncElasticsearch, BadRequestError
 from httpx import AsyncClient
 from pydantic import BaseModel
 
 from merino.configs import settings
-from merino.exceptions import BackendError
 from merino.providers.suggest.sports import (
     LOGGING_TAG,
     TEAM_TTL_WEEKS,
     EVENT_TTL_WEEKS,
     ttl_from_now,
 )
-from merino.providers.suggest.sports.backends import get_data
+
 from merino.providers.suggest.sports.backends.sportsdata.common import (
     GameStatus,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common.error import (
-    SportDataError,
-    SportDataWarning,
-)
 
-SUGGEST_ID: Final[str] = "suggest-on-title"
-MAX_SUGGESTIONS: Final[int] = settings.providers.sports.max_suggestions
-TIMEOUT_MS: Final[str] = f"{settings.providers.sports.es.request_timeout_ms}ms"
 UTC_TIME_FORMAT: Final[str] = "%Y-%m-%dT%H:%M:%S"
-
-
-# TODO: break this into it's own file?
-class ElasticBackendError(BackendError):
-    """General error with Elastic Search"""
-
-
-# TODO: Eventually wrap this with DataStore
-class ElasticDataStore:
-    platform: str
-    client: AsyncElasticsearch
-    meta_index: str
-    team_index: str
-
-    def __init__(self, *, settings: LazySettings) -> None:
-        """Initialize a connection to ElasticSearch"""
-        dsn = settings.providers.sports.es.dsn
-        self.client = AsyncElasticsearch(
-            dsn, api_key=settings.providers.sports.es.api_key
-        )
-        # build the index based on the platform.
-        self.platform = f"{{lang}}_{settings.sports.get("platform", "sports")}"
-        self.meta_index = settings.sports.get("meta_index", f"{self.platform}_meta")
-        self.team_index = settings.sports.get("team_index", f"{self.platform}_team")
-        self.data = dict(
-            active=[
-                sport.strip() for sport in settings.providers.sports.sports.split(",")
-            ],
-        )
-        logging.info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
-
-    async def build_indexes(self, settings: LazySettings):
-        """ "Indicies are created externally by terraform.
-        Build them here for stand-alone and testing reasons.
-        """
-        dsn = settings.providers.sports.es.dsn
-        for lang in ["en"]:
-            for index in [self.meta_index, self.team_index]:
-                try:
-                    await self.client.indices.create(index=index.format(lang=lang))
-                except BadRequestError as ex:
-                    if ex.error == "resource_already_exists_exception":
-                        logging.debug(
-                            f"{LOGGING_TAG}🐜 {index.format(lang=lang)} already exists, skipping"
-                        )
-                        continue
-                    pdb.set_trace()
-                    print(ex)
-
-    async def shutdown(self):
-        await self.client.close()
-
-    async def search(self, q: str, language_code: str) -> list[dict[str, Any]]:
-        """Search based on the language and platform template"""
-        index_id = self.platform.format(lang=language_code)
-
-        suggest = {
-            SUGGEST_ID: {
-                "prefix": q,
-                "completion": {"field": "terms", "size": MAX_SUGGESTIONS},
-            }
-        }
-
-        try:
-            res = await self.client.search(
-                index=index_id,
-                suggest=suggest,
-                timeout=TIMEOUT_MS,
-                source_includes=["team_key"],
-            )
-        except Exception as ex:
-            raise BackendError(
-                f"{LOGGING_TAG}🚨 Elasticsearch error for {index_id}: {ex}"
-            ) from ex
-
-        if "suggest" in res:
-            # TODO: filter out duplicate events.
-            return [doc for doc in res["suggest"][SUGGEST_ID][0]["options"]]
-        else:
-            return []
-
-    async def store_events(self, sport: "Sport", language_code: str):
-        """Store the events using the calculated terms"""
-        event_data = {}
-
-        for event in sport.events:
-            # TODO: just shove them into memory for now.
-            event_data[event.terms] = event.as_str()
 
 
 class SportDate:
@@ -225,8 +124,59 @@ class Team(BaseModel):
         )
 
     def minimal(self) -> dict[str, Any]:
-        """Return the minimal version of the team info"""
+        """Return the minimal version of the team info used in Events"""
         return dict(key=self.key, name=self.name, colors=self.colors)
+
+
+class Event(BaseModel):
+    """Root model for a Sporting Event (e.g. a game or match)"""
+
+    # Reference to the associated Sport (DO NOT SERIALIZE!)
+    sport: str
+    # Event Unique Identifier (for elastic)
+    id: int
+    # list of searchable terms for this event.
+    terms: str
+    # Event UTC start time
+    date: datetime
+    # minimal team info for home
+    home_team: dict[str, Any]
+    # minimal team info for home
+    away_team: dict[str, Any]
+    # Score for the "Home" team
+    home_score: int | None
+    # Score for the "Away" team
+    away_score: int | None
+    # Status of the game
+    status: GameStatus
+    # How long to retain an event in seconds
+    ttl: int
+
+    def suggest_text(self, away: Team, home: Team) -> str:
+        """TODO: Event suggest format as JSON"""
+        text = f"{away.name} at {home.name}"
+        match self.status:
+            case GameStatus.Scheduled | GameStatus.Delayed:
+                text = f"{text} starts {self.date}"
+            case GameStatus.Final | GameStatus.F_OT:
+                text = f"{text} Final score: {self.away_score} - {self.home_score}"
+            case _:
+                text = f"{text} {self.status.as_str()}: {self.away_score} - {self.home_score}"
+        return text
+
+    def as_json(self) -> dict[str, Any]:
+        return dict(
+            terms=self.terms,
+            sport=self.sport,
+            id=self.id,
+            date=int(self.date.timestamp()),
+            home_team=self.home_team,
+            away_team=self.away_team,
+            home_score=self.home_score,
+            away_score=self.away_score,
+            status=self.status.as_str(),
+            ttl=self.ttl,
+        )
 
 
 class Sport(BaseModel):
@@ -235,7 +185,7 @@ class Sport(BaseModel):
     api_key: str
     name: str
     teams: dict[str, Team]
-    events: list["Event"]
+    events: list[Event]
     base_url: str
     event_ttl: timedelta
     team_ttl: timedelta
@@ -356,6 +306,7 @@ class Sport(BaseModel):
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
+            # TODO: put this in Event.from_data()?
             date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
                 tzinfo=timezone.utc
             )
@@ -367,6 +318,7 @@ class Sport(BaseModel):
             terms = f"event {home_team.terms} vs {away_team.terms} game match "
             event = Event(
                 sport=self.name,
+                id=event_description["GlobalGameID"],
                 terms=terms,
                 date=datetime.strptime(
                     event_description["DateTimeUTC"], UTC_TIME_FORMAT
@@ -380,54 +332,3 @@ class Sport(BaseModel):
             )
             self.events.append(event)
         return self.events
-
-
-class Event(BaseModel):
-    """Root model for a Sporting Event (e.g. a game or match)"""
-
-    # Reference to the associated Sport (DO NOT SERIALIZE!)
-    sport: str
-    # list of searchable terms for this event.
-    terms: str
-    # Event UTC start time
-    date: datetime
-    # minimal team info for home
-    home_team: dict[str, Any]
-    # minimal team info for home
-    away_team: dict[str, Any]
-    # Score for the "Home" team
-    home_score: int | None
-    # Score for the "Away" team
-    away_score: int | None
-    # Status of the game
-    status: GameStatus
-    # How long to retain an event in seconds
-    ttl: int
-
-    def as_str(self) -> str:
-        """Serialize to JSON string"""
-        # TODO: Placeholder, strip the `Sport` field
-        return json.dumps(
-            dict(
-                terms=self.terms,
-                date=self.date,
-                sport_name=self.sport.name,
-                home_team=self.home_team,
-                away_team=self.away_team,
-                home_score=self.home_score,
-                away_score=self.away_score,
-                status=self.status,
-            )
-        )
-
-    def suggest_text(self, away: Team, home: Team) -> str:
-        """TODO: Event suggest format as JSON"""
-        text = f"{away.name} at {home.name}"
-        match self.status:
-            case GameStatus.Scheduled | GameStatus.Delayed:
-                text = f"{text} starts {self.date}"
-            case GameStatus.Final | GameStatus.F_OT:
-                text = f"{text} Final score: {self.away_score} - {self.home_score}"
-            case _:
-                text = f"{text} {self.status.as_str()}: {self.away_score} - {self.home_score}"
-        return text
