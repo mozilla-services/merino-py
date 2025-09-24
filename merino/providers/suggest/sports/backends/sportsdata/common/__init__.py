@@ -26,16 +26,17 @@ class GameStatus(StrEnum):
     # other states can be ignored?
 
     @classmethod
-    def is_final(cls, state: str) -> bool:
-        return state.lower() in [cls.Final, cls.F_OT]
+    def from_str(cls, state: str):
+        return cls(state.lower())
 
-    @classmethod
-    def is_scheduled(cls, state: str) -> bool:
-        return state.lower() in [cls.Scheduled, cls.Delayed, cls.Postponed]
+    def is_final(self) -> bool:
+        return self in [GameStatus.Final, GameStatus.F_OT]
 
-    @classmethod
-    def is_in_progress(cls, state: str) -> bool:
-        return state.lower() in [cls.InProgress, cls.Suspended]
+    def is_scheduled(self) -> bool:
+        return self in [GameStatus.Scheduled, GameStatus.Delayed, GameStatus.Postponed]
+
+    def is_in_progress(self) -> bool:
+        return self in [GameStatus.InProgress, GameStatus.Suspended]
 
     def as_str(self) -> str:
         """As a somewhat prettier formatted string
@@ -43,19 +44,9 @@ class GameStatus(StrEnum):
         """
 
         match self:
-            case GameStatus.Scheduled:
-                return "scheduled"
-            case GameStatus.Delayed:
-                return "delayed"
-            case GameStatus.Postponed:
-                return "postponed"
             case GameStatus.InProgress:
-                return "in progress"
-            case GameStatus.Suspended:
-                return "suspended"
-            case GameStatus.Cancelled:
-                return "cancelled"
-            case GameStatus.Final:
-                return "final"
+                return "In Progress "
             case GameStatus.F_OT:
                 return "Final - Over Time"
+            case _:
+                return self.name.capitalize()

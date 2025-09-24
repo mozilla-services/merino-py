@@ -106,6 +106,7 @@ _validators = [
     Validator("providers.geolocation.dummy_url", is_type_of=str),
     Validator("providers.geolocation.dummy_title", is_type_of=str),
     Validator("providers.sports.sportsdata.api_key", is_type_of=str),
+    Validator("providers.sports.sportsdata.cache_dir", is_type_of=str),
     # comma delimited list of active sports (e.g. "NFL,NHL,ELP")
     Validator("providers.sports.sports", is_type_of=str),
     # TODO: Break these out into a generic "elastic search" set?

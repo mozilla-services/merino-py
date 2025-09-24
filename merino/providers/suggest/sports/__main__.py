@@ -7,8 +7,10 @@ from httpx import AsyncClient, Timeout
 from merino.configs import settings
 from merino.providers.suggest.sports import init_logs, LOGGING_TAG
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
-    NFL,
     ElasticDataStore,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
+    NFL,
 )
 
 
@@ -32,11 +34,10 @@ async def main():
         read=settings.providers.sports.sportsdata.get("read_timeout", 1),
     )
     client = AsyncClient(timeout=timeout)
-    pdb.set_trace()
     await sport.update_teams(http_client=client)
-    pdb.set_trace()
     await sport.update_events(http_client=client)
     pdb.set_trace()
+    event_store.store_events(sport, language_code="en")
     res = await event_store.search(q="Giants vs dodgers", language_code="en")
     pdb.set_trace()
     print(res)
