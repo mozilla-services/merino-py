@@ -65,6 +65,9 @@ TOP_STORIES_SECTION_KEY = "top_stories_section"
 # For taking down reported content
 DEFAULT_REPORT_RECS_RATIO_THRESHOLD = 0.001  # using a low number for now (0.1%)
 DEFAULT_SAFEGUARD_CAP_TAKEDOWN_FRACTION = 0.50  # allow at most 50% of recs to be auto-removed
+DEFAULT_REPORT_COUNT_THRESHOLD = (
+    20  # allow recommendation to be auto-removed if it has at least 20 reports
+)
 
 
 def takedown_reported_recommendations(
@@ -91,18 +94,20 @@ def takedown_reported_recommendations(
     # Save engagement metrics for logging: {corpusItemId: (report_ratio, reports, impressions)}
     rec_eng_metrics: dict[str, tuple[float, int, int]] = {}
 
-    def _report_ratio_for(rec: CuratedRecommendation) -> float:
+    def _should_remove(rec: CuratedRecommendation) -> bool:
         if engagement := engagement_backend.get(rec.corpusItemId, region):
             _impressions = int(engagement.impression_count or 0)
             _reports = int(engagement.report_count or 0)
             if _impressions > 0:
                 report_ratio = _reports / _impressions
                 rec_eng_metrics[rec.corpusItemId] = (report_ratio, _reports, _impressions)
-                return report_ratio
-        return -1.0  # treat as safe (won’t breach threshold)
+                return (
+                    report_ratio > report_ratio_threshold
+                    and _reports >= DEFAULT_REPORT_COUNT_THRESHOLD
+                )
+        return False
 
-    # Filter first; common case is empty
-    over = [rec for rec in recs if _report_ratio_for(rec) > report_ratio_threshold]
+    over = [rec for rec in recs if _should_remove(rec)]
     if not over:
         return recs
 
@@ -111,7 +116,7 @@ def takedown_reported_recommendations(
     max_recs_to_remove = math.ceil(len(recs) * safeguard_cap_takedown_fraction)
 
     # Sort only the small over-threshold set by ratio; no tie-breakers.
-    over.sort(key=_report_ratio_for, reverse=True)
+    over.sort(key=lambda r: rec_eng_metrics[r.corpusItemId][0], reverse=True)
 
     # Select top N to remove
     recs_to_remove = over[:max_recs_to_remove]

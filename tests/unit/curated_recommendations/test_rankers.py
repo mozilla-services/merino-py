@@ -86,13 +86,14 @@ class TestTakedownReportedRecommendations:
 
     def test_remove_recs_above_threshold(self, caplog):
         """Test that takedown_reported_recommendations removes recommendations with report_ratio > threshold
-        and logs a warning for the excluded recommendation.
+        AND report_count > min threshold and logs a warning for the excluded recommendation.
         """
         recs = generate_recommendations(item_ids=["reported_rec", "good_rec"])
+
         # report_ratio_threshold = 1%
-        # "bad" = 5 reports / 50 impressions = 0.10 report_ratio > 0.01 threshold
+        # "bad" = 25 reports / 50 impressions = 0.50 report_ratio > 0.01 threshold, and 25 >= 20 reports
         # "good" = 0 reports / 50 impressions = 0.0 report_ratio
-        backend = MockEngagementBackend({"reported_rec": (5, 50), "good_rec": (0, 50)})
+        backend = MockEngagementBackend({"reported_rec": (25, 50), "good_rec": (0, 50)})
 
         caplog.set_level(logging.WARNING)
 
@@ -108,16 +109,40 @@ class TestTakedownReportedRecommendations:
         # Check extra fields logged for the excluded rec
         rec = next(r for r in caplog.records if r.levelno == logging.WARNING)
         assert rec.corpus_item_id == "reported_rec"
-        assert rec.reports == 5
+        assert rec.reports == 25
         assert rec.impressions == 50
+
+    def test_breached_report_ratio_but_low_report_count(self):
+        """Test that takedown_reported_recommendations does not remove a recommendation if report_ratio breaches threshold
+        but report_count < minimum report_count (20).
+        """
+        recs = generate_recommendations(item_ids=["low_reports_rec", "good_rec"])
+
+        # low_reports_rec = 10 report / 50 impressions = 0.2 report_ratio > 0.01 threshold, but report_count = 10 < 20
+        # "good" = 0 reports / 50 impressions = 0.0 report_ratio
+        backend = MockEngagementBackend(
+            {
+                "low_reports_rec": (10, 50),
+                "good_rec": (0, 50),
+            }
+        )
+
+        remaining_recs = takedown_reported_recommendations(
+            recs,
+            backend,
+            report_ratio_threshold=0.01,
+        )
+
+        # Both recommendations should remain because low_reports_rec report_count < 20
+        assert remaining_recs == recs
 
     def test_safeguard_fraction_applied(self):
         """Test that takedown_reported_recommendations should only remove up to safeguard fraction,
         even if more recommendations breach threshold.
         """
         recs = generate_recommendations(item_ids=["1", "2", "3", "4"])
-        # All 4 recs breach: 10 reports / 50 impressions = 0.2 report_ratio > 0.01 threshold
-        metrics = {corpus_id: (10, 50) for corpus_id in ["1", "2", "3", "4"]}
+        # All 4 recs breach: 25reports / 50 impressions = 0.5 (50%) report_ratio > 0.01, and 25 >= 20 reports
+        metrics = {corpus_id: (25, 50) for corpus_id in ["1", "2", "3", "4"]}
         backend = MockEngagementBackend(metrics)
         # safeguard_cap_takedown_fraction == 50% => ceil(4 recs * 0.5) = max 2 removals
         remaining_recs = takedown_reported_recommendations(

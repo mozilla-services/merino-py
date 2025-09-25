@@ -2068,20 +2068,30 @@ class TestSections:
     @pytest.mark.parametrize(
         "reports,impressions,should_remove",
         [
-            # Above threshold: 5 / 50 = 0.1 (10% > 0.1%) → should be removed
-            (5, 50, True),
+            # Above threshold: 5 / 50 = 0.1 (10% > 0.1%) but 5 reports < 20 → should stay
+            (5, 50, False),
             # Below threshold: 1 / 200,000 = 0.000005 (0.0005% < 0.1%) → should stay
             (1, 200_000, False),
             # Exactly at threshold: 1 / 1,000 = 0.001 (0.1% == 0.1%) → should stay
             (1, 1_000, False),
             # No reports: 0 / 100 = 0 < 0.001 → should stay
             (0, 100, False),
+            # Above threshold: 20 / 100 = .2 (20% > 0.1%) AND 20 reports → should be removed
+            (20, 100, True),
+            # Above threshold: 35 / 100 = .35 (35% > 0.1%) AND 35 reports → should be removed
+            (35, 100, True),
             # No engagement data → treated as safe → should stay
             (None, None, False),
         ],
     )
     async def test_takedown_reported_recommendations_parametrized(
-        self, engagement_backend, caplog, reports, impressions, should_remove
+        self,
+        engagement_backend,
+        caplog,
+        reports,
+        impressions,
+        should_remove,
+        client: TestClient,
     ):
         """Verify takedown_reported_recommendations behaves correctly."""
         corpus_rec_id = "080de671-e4de-4a3d-863f-8c6dd6980069"
@@ -2089,16 +2099,15 @@ class TestSections:
         if reports is not None and impressions is not None:
             engagement_backend.metrics.update({corpus_rec_id: (reports, impressions)})
 
-        async with AsyncClient(app=app, base_url="http://test") as ac:
-            response = await ac.post(
-                "/api/v1/curated-recommendations",
-                json={
-                    "locale": "en-US",
-                    "feeds": ["sections"],
-                    "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                    "experimentBranch": "treatment",
-                },
-            )
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+        )
 
         assert response.status_code == 200
         feeds = response.json()["feeds"]
