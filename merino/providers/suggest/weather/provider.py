@@ -155,7 +155,7 @@ class Provider(BaseProvider):
         """
         geolocation: Location = srequest.geolocation
         languages: list[str] = srequest.languages if srequest.languages else []
-        source: Optional[str] = srequest.source
+        source: str = srequest.source
         is_location_completion_request = srequest.request_type == "location"
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
@@ -167,7 +167,7 @@ class Provider(BaseProvider):
                         weather_context, search_term=srequest.query
                     )
                 else:
-                    tags = {"source": srequest.source if srequest.source else "newtab"}
+                    tags = {"source": srequest.source}
                     weather_context.geolocation.key = srequest.query
                     self.metrics_client.increment(
                         f"providers.{self.name}.query.weather_report", tags=tags
