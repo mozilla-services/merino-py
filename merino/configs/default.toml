@@ -814,6 +814,18 @@ circuit_breaker_recover_timeout_sec = 30
 # In production, this should be set via environment variable as a secret.
 api_key = ""
 
+# MERINO_FLIGHTAWARE__STORAGE
+# Storage for flight numbers. Should be either `gcs` or `redis`
+storage = "gcs"
+
+# MERINO_FLIGHTAWARE__BASE_URL
+# The base URL of FlightAware API endpoints.
+base_url = "https://aeroapi.flightaware.com/aeroapi"
+
+# MERINO_FLIGHTAWARE__SCHEDULES_URL
+# The URL path of FlightAware schedules endpoint.
+schedules_url_path = "/schedules/{start}/{end}?max_pages=20"
+
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
 # GCS bucket that contains Airflow data for Merino

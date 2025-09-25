@@ -102,6 +102,31 @@ class RedisAdapter:
         except RedisError as exc:
             raise CacheAdapterError(f"Failed to set `{repr(key)}` with error: `{exc}`") from exc
 
+    async def sadd(self, key: str, *values: str) -> int:
+        """Add one or more values to a Redis set.
+
+        Returns:
+            Number of new elements added to the set.
+        """
+        try:
+            return await self.primary.sadd(key, *values)
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to SADD {key} with error: {exc}") from exc
+
+    async def sismember(self, key: str, value: str) -> bool:
+        """Check if a value is a member of a Redis set."""
+        try:
+            return bool(await self.replica.sismember(key, value))
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to SISMEMBER {key} with error: {exc}") from exc
+
+    async def scard(self, key: str) -> int:
+        """Get the number of members in a Redis set."""
+        try:
+            return await self.replica.scard(key)
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to SCARD {key} with error: {exc}") from exc
+
     async def close(self) -> None:
         """Close the Redis connection."""
         if self.primary is self.replica:

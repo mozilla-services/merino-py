@@ -62,3 +62,19 @@ class CacheAdapter(Protocol):
             - `CacheAdapterError` if Redis returns an error.
         """
         ...
+
+    async def sadd(self, key: str, *values: str) -> int:
+        """Add one or more values to a Redis set.
+
+        Returns:
+            Number of new elements added to the set.
+        """
+        ...
+
+    async def sismember(self, key: str, value: str) -> bool:
+        """Check if a value is a member of a Redis set."""
+        ...
+
+    async def scard(self, key: str) -> int:
+        """Get the number of members in a Redis set."""
+        ...
