@@ -86,6 +86,8 @@ class ExperimentName(str, Enum):
     ML_SECTIONS_EXPERIMENT = "new-tab-ml-sections"
     # Experiment to compare RSS vs. Zyte content sources for legacy topic sections
     RSS_VS_ZYTE_EXPERIMENT = "new-ranking-for-legacy-topics-in-new-tab-v1"
+    # Experiment slug for crawling with identical behavior/branches as RSS_VS_ZYTE_EXPERIMENT
+    NEW_TAB_CRAWLING_V2 = "new-tab-crawling-v2"
 
 
 @unique
