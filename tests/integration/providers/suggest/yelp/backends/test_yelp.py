@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 TEST_CACHE_ERROR = "test cache error"
 
+
 @pytest.fixture(name="yelp_parameters")
 def fixture_yelp_parameters(mocker: MockerFixture, statsd_mock: Any) -> dict[str, Any]:
     """TODO"""
