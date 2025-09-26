@@ -62,6 +62,9 @@ NUM_RECS_PER_TOPIC = 2
 
 TOP_STORIES_SECTION_KEY = "top_stories_section"
 
+INFERRED_SCORE_WEIGHT = 4
+FOLLOW_SECTION_SCORE_WEIGHT = 4
+
 # For taking down reported content
 DEFAULT_REPORT_RECS_RATIO_THRESHOLD = 0.001  # using a low number for now (0.1%)
 DEFAULT_SAFEGUARD_CAP_TAKEDOWN_FRACTION = 0.50  # allow at most 50% of recs to be auto-removed
@@ -168,6 +171,7 @@ def thompson_sampling(
     region: str | None = None,
     region_weight: float = REGION_ENGAGEMENT_WEIGHT,
     rescaler: ExperimentRescaler | None = None,
+    personal_interests: ProcessedInterests | None = None,
 ) -> list[CuratedRecommendation]:
     """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
     CTR with exploration of new items using a prior.
@@ -178,6 +182,7 @@ def thompson_sampling(
     :param region: Optionally, the client's region, e.g. 'US'.
     :param region_weight: In a weighted average, how much to weigh regional engagement.
     :param rescaler: Class that can up-scale interaction stats for certain items based on experiment size
+    :param personal_interests User interests
 
     :return: A re-ordered version of recs, ranked according to the Thompson sampling score.
 
@@ -194,6 +199,19 @@ def thompson_sampling(
             return engagement.click_count, engagement.impression_count - engagement.click_count
         else:
             return 0, 0
+
+    def boost_interest(rec: CuratedRecommendation) -> float:
+        if (
+            personal_interests is None
+            or rec.topic is None
+            or rec.topic.value not in personal_interests.normalized_scores
+        ):
+            return 0
+        print(
+            f"score boost for {rec.topic.value} {personal_interests.normalized_scores[rec.topic.value] * 10}"
+        )
+
+        return personal_interests.scores[rec.topic.value] * 4
 
     def sample_score(rec: CuratedRecommendation) -> float:
         """Sample beta distributed from weighted regional/global engagement for a recommendation."""
@@ -220,7 +238,7 @@ def thompson_sampling(
         opens += max(a_prior, 1e-18)
         no_opens += max(b_prior, 1e-18)
 
-        return float(beta.rvs(opens, no_opens))
+        return float(beta.rvs(opens, no_opens)) + boost_interest(rec)
 
     # Sort the recommendations from best to worst sampled score & renumber
     sorted_recs = sorted(recs, key=sample_score, reverse=True)
