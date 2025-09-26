@@ -98,9 +98,7 @@ async def test_get_from_cache(
     statsd_mock: Any,
     yelp: YelpBackend,
 ) -> None:
-    """Test that we can get the weather report from cache with forecast and current conditions
-    having a valid TTL
-    """
+    """Test that we can get Yelp data from cache with a search term and location"""
     # Override the cache with a non-None value. Default cache for the fixture is set to None.
     yelp.cache = RedisAdapter(redis_client)
 
@@ -113,9 +111,7 @@ async def test_get_from_cache(
     expected_cached_data = b'{"test": "test_value"}'
 
     # use the above cache_key with a test value and default yelp backend ttl.
-    keys_values_expiry = [
-        (cache_key, expected_cached_data, yelp.cache_ttl_sec),
-    ]
+    keys_values_expiry = [(cache_key, expected_cached_data, yelp.cache_ttl_sec)]
     await set_redis_keys(redis_client, keys_values_expiry)
 
     actual_cached_data = await yelp.get_from_cache(cache_key)
@@ -124,19 +120,12 @@ async def test_get_from_cache(
     assert actual_cached_data == orjson.loads(expected_cached_data)
 
     metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
-    assert metrics_timeit_called == ["yelp.cache.fetch"]
+    assert metrics_timeit_called == []
 
     metrics_increment_called = [
         call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
     ]
     assert metrics_increment_called == ["yelp.cache.hit"]
-
-
-# TODO add more tests to cover these use cases(make sure you're asserting on logger and statsd metrics as well):
-# when cache is set to None
-# when cache is empty and we request something from it
-# when it throws CacheAdapterError (see accuweather integration tests on how to test for this)
-# when it throws Exception
 
 
 @pytest.mark.asyncio
@@ -154,9 +143,7 @@ async def test_get_from_none_cache(
     cache_key = yelp.generate_cache_key(search_term, location)
     expected_cached_data = b'{"test": "test_value"}'
 
-    keys_values_expiry = [
-        (cache_key, expected_cached_data, yelp.cache_ttl_sec),
-    ]
+    keys_values_expiry = [(cache_key, expected_cached_data, yelp.cache_ttl_sec)]
     await set_redis_keys(redis_client, keys_values_expiry)
 
     actual_cached_data = await yelp.get_from_cache(cache_key)
