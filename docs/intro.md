@@ -88,6 +88,7 @@ subgraph suggestProviders["fa:fa-truck Suggest Providers"]
         toppicksProvider("top-picks")
         weatherProvider("weather")
         wikipediaProvider("wikipedia")
+        financeProvider("finance")
 end
 subgraph suggestBackends["fa:fa-microchip Suggest Backends"]
         remoteSettingsBackend("remote settings")
@@ -95,6 +96,7 @@ subgraph suggestBackends["fa:fa-microchip Suggest Backends"]
         elasticBackend("elastic")
         toppicksBackend("top picks")
         dynamicAmoBackend("dynamic addons")
+        polygonBackend("polygon")
 end
 subgraph curatedRecommendationsBackends["fa:fa-microchip Curated Recommendations Backends"]
         corpusBackend("corpus")
@@ -138,6 +140,8 @@ end
     toppicksProvider --> toppicksBackend
     weatherProvider --> accuweatherBackend
     wikipediaProvider --> elasticBackend
+    financeProvider --> polygonBackend
+    polygonBackend --> polygonApi("fa:fa-globe Polygon API")
     Geolocation --> maxmind
     dynamicAmoBackend --> addonsAPI("fa:fa-globe Addons API")
     elasticBackend --> elasticSearch[("Elasticsearch")]
@@ -150,6 +154,7 @@ end
     fakespotBackend --> gcsFakespotNewTabProducts[("fa:fa-database GCS Fakespot NewTab Products")]
     corpusBackend -..-> curatedCorpusAPI("fa:fa-globe Curated Corpus API")
     offline -..- kinto[("Remote Settings")]
-    remoteSettingsBackend --- kinto
+    remoteSettingsBackend --- merinoRustExtension("fa:fa-puzzle-piece Merino Rust Extension")
+    merinoRustExtension --> kinto
     wikipediaSyncJob -. Syncs Wikipedia entries weekly ..- elasticSearch
 ```
