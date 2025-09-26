@@ -8,24 +8,30 @@
 import orjson
 import logging
 
-# from logging import ERROR, LogRecord
-from typing import Any, AsyncGenerator
-# from unittest.mock import AsyncMock
+from logging import LogRecord
+from typing import Any, AsyncGenerator, cast
+from unittest.mock import AsyncMock
 
 import pytest
 
-# from pytest import LogCaptureFixture
+from pytest import LogCaptureFixture
 import pytest_asyncio
 from httpx import AsyncClient
 from pytest_mock import MockerFixture
 from redis.asyncio import Redis
 from merino.cache.redis import RedisAdapter
+from merino.exceptions import CacheAdapterError
+
 from testcontainers.core.waiting_utils import wait_for_logs
 from testcontainers.redis import AsyncRedisContainer
+
+from tests.types import FilterCaplogFixture
 
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 
 logger = logging.getLogger(__name__)
+
+TEST_CACHE_ERROR = "test cache error"
 
 
 @pytest.fixture(name="yelp_parameters")
@@ -117,20 +123,13 @@ async def test_get_from_cache(
     assert actual_cached_data is not None
     assert actual_cached_data == orjson.loads(expected_cached_data)
 
-    # TODO: uncomment and update the metrics asserts below with the correct ones
+    metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
+    assert metrics_timeit_called == ["yelp.cache.fetch"]
 
-    # metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
-    # assert metrics_timeit_called == ["accuweather.cache.fetch"]
-
-    # metrics_increment_called = [
-    #     call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
-    # ]
-
-    # assert metrics_increment_called == [
-    #     "accuweather.cache.hit.locations",
-    #     "accuweather.cache.hit.currentconditions",
-    #     "accuweather.cache.hit.forecasts",
-    # ]
+    metrics_increment_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_increment_called == ["yelp.cache.hit"]
 
 
 # TODO add more tests to cover these use cases(make sure you're asserting on logger and statsd metrics as well):
@@ -138,3 +137,151 @@ async def test_get_from_cache(
 # when cache is empty and we request something from it
 # when it throws CacheAdapterError (see accuweather integration tests on how to test for this)
 # when it throws Exception
+
+
+@pytest.mark.asyncio
+async def test_get_from_none_cache(
+    redis_client: Redis,
+    statsd_mock: Any,
+    yelp: YelpBackend,
+) -> None:
+    """Test handling a response from a None cache"""
+    yelp.cache = None
+
+    search_term = "starbucks near me"
+    location = "Seattle"
+
+    cache_key = yelp.generate_cache_key(search_term, location)
+    expected_cached_data = b'{"test": "test_value"}'
+
+    keys_values_expiry = [
+        (cache_key, expected_cached_data, yelp.cache_ttl_sec),
+    ]
+    await set_redis_keys(redis_client, keys_values_expiry)
+
+    actual_cached_data = await yelp.get_from_cache(cache_key)
+
+    assert actual_cached_data is None
+
+    metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
+    assert metrics_timeit_called == []
+
+    metrics_increment_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_increment_called == []
+
+
+@pytest.mark.asyncio
+async def test_get_from_empty_cache(
+    redis_client: Redis,
+    statsd_mock: Any,
+    yelp: YelpBackend,
+) -> None:
+    """Test handling a response from an empty cache"""
+    yelp.cache = RedisAdapter(redis_client)
+
+    search_term = "starbucks near me"
+    location = "Seattle"
+
+    cache_key = yelp.generate_cache_key(search_term, location)
+
+    actual_cached_data = await yelp.get_from_cache(cache_key)
+
+    assert actual_cached_data is None
+
+    metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
+    assert metrics_timeit_called == []
+
+    metrics_increment_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_increment_called == []
+
+
+@pytest.mark.asyncio
+async def test_get_from_cache_with_cache_adapter_error(
+    redis_client: Redis,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    statsd_mock: Any,
+    yelp: YelpBackend,
+    mocker: MockerFixture,
+) -> None:
+    """Test handling the CacheAdapterError exception"""
+    yelp.cache = RedisAdapter(redis_client)
+
+    search_term = "starbucks near me"
+    location = "Seattle"
+
+    cache_key = yelp.generate_cache_key(search_term, location)
+
+    redis_error_mock = mocker.patch.object(yelp.cache, "get", new_callable=AsyncMock)
+    redis_error_mock.side_effect = CacheAdapterError(TEST_CACHE_ERROR)
+
+    client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
+
+    # This will fail because nothing is being raised
+    # with pytest.raises(Exception): # TODO update with yelp error
+    #     _ = await yelp.get_from_cache(cache_key)
+
+    await yelp.get_from_cache(cache_key)
+
+    records: list[LogRecord] = filter_caplog(
+        caplog.records, "merino.providers.suggest.yelp.backends.yelp"
+    )
+
+    client_mock.get.assert_not_called()
+
+    assert len(records) == 1
+    assert records[0].message.startswith(f"Yelp cache get error for {cache_key}")
+
+    metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
+    assert metrics_timeit_called == []
+
+    metrics_increment_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_increment_called == ["yelp.cache.error"]
+
+
+@pytest.mark.asyncio
+async def test_get_from_cache_with_general_cache_error(
+    redis_client: Redis,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    statsd_mock: Any,
+    yelp: YelpBackend,
+    mocker: MockerFixture,
+) -> None:
+    """Test handling general cache exceptions"""
+    yelp.cache = RedisAdapter(redis_client)
+
+    search_term = "starbucks near me"
+    location = "Seattle"
+
+    cache_key = yelp.generate_cache_key(search_term, location)
+
+    redis_error_mock = mocker.patch.object(yelp.cache, "get", new_callable=AsyncMock)
+    redis_error_mock.side_effect = Exception(TEST_CACHE_ERROR)  # TODO figure out args
+
+    client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
+
+    await yelp.get_from_cache(cache_key)
+
+    records: list[LogRecord] = filter_caplog(
+        caplog.records, "merino.providers.suggest.yelp.backends.yelp"
+    )
+
+    client_mock.get.assert_not_called()
+
+    assert len(records) == 1
+    assert records[0].message.startswith(f"Yelp cache decode error for {cache_key}")
+
+    metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
+    assert metrics_timeit_called == []
+
+    metrics_increment_called = [
+        call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
+    ]
+    assert metrics_increment_called == ["yelp.cache.decode_error"]
