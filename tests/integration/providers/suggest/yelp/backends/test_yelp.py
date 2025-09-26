@@ -262,7 +262,7 @@ async def test_get_from_cache_with_general_cache_error(
     cache_key = yelp.generate_cache_key(search_term, location)
 
     redis_error_mock = mocker.patch.object(yelp.cache, "get", new_callable=AsyncMock)
-    redis_error_mock.side_effect = Exception(TEST_CACHE_ERROR)  # TODO figure out args
+    redis_error_mock.side_effect = Exception(TEST_CACHE_ERROR)
 
     client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
 
