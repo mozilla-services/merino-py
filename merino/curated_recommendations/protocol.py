@@ -88,6 +88,8 @@ class ExperimentName(str, Enum):
     RSS_VS_ZYTE_EXPERIMENT = "new-ranking-for-legacy-topics-in-new-tab-v1"
     # Experiment to display Daily Briefing section as the first section on New Tab
     DAILY_BRIEFING_EXPERIMENT = "daily-briefing-v1"
+    # Experiment slug for crawling with identical behavior/branches as RSS_VS_ZYTE_EXPERIMENT
+    NEW_TAB_CRAWLING_V2 = "new-tab-crawling-v2"
 
 
 @unique

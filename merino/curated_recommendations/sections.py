@@ -304,12 +304,17 @@ def get_crawl_experiment_branch(request: CuratedRecommendationsRequest) -> str |
 
     Handles both the regular experiment name and the optin- prefixed version for forced enrollment.
     """
-    experiment_name = ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value
-    # Check for both the experiment name and the optin- prefixed version (forced enrollment)
-    if (
-        request.experimentName == experiment_name
-        or request.experimentName == f"optin-{experiment_name}"
-    ):
+    if not request.experimentName:
+        return None
+
+    # Remove optin- prefix if present and check if it matches any crawl experiment
+    experiment_name = request.experimentName.removeprefix("optin-")
+    crawl_experiments = [
+        ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+        ExperimentName.NEW_TAB_CRAWLING_V2.value,
+    ]
+
+    if experiment_name in crawl_experiments:
         return request.experimentBranch
     return None
 
