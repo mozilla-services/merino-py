@@ -13,6 +13,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
 CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
 CTR_SECTION_MODEL_ID = "ctr_model_section_1"
 CTR_LIMITED_TOPIC_MODEL_ID = "ctr_limited_topic_v0"
+CTR_LIMITED_TOPIC_MODEL_ID2 = "ctr_limited_topic_v1"
 
 SPECIAL_FEATURE_CLICK = "clicks"
 
@@ -201,6 +202,73 @@ class LimitedTopicV0Model(LocalModelBackend):
         category_fields: dict[str, InterestVectorConfig] = {
             a: get_topic(a) for a in self.limited_topics
         }
+        model_data: ModelData = ModelData(
+            model_type=ModelType.CTR,
+            rescale=False,
+            noise_scale=0.0,
+            day_time_weighting=DayTimeWeightingConfig(
+                days=[3, 14, 45],
+                relative_weight=[1, 1, 1],
+            ),
+            interest_vector=category_fields,
+        )
+
+        return InferredLocalModel(
+            model_id=self.model_id,
+            surface_id=surface_id,
+            model_data=model_data,
+            model_version=0,
+        )
+
+
+# Creates a simple model based on sections. Section features are stored with a s_
+# in telemetry.
+class LimitedTopicV1Model(LocalModelBackend):
+    """Class that defines a limited topic model that supports coarse interest vector
+    This is the first version for the privacy launch, with vetted p/q privacy values
+    Set which model is used at __init__ import
+    """
+
+    """
+     Based on data analysis these were the most impactful topics from personalization when limited to 5
+     The last dimension is a combination of other topics.
+    """
+    limited_topics = [
+        Topic.SPORTS.value,
+        Topic.POLITICS.value,
+        Topic.ARTS.value,
+        Topic.HEALTH_FITNESS.value,
+        Topic.BUSINESS.value,
+    ]
+    limited_topics_set = set(limited_topics)
+    model_id = CTR_LIMITED_TOPIC_MODEL_ID
+
+    def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
+        """Fetch local model for the region
+        We could update these thresholds by looking at the percentiles of the CTR
+        """
+
+        def get_topic(topic: str) -> InterestVectorConfig:
+            return InterestVectorConfig(
+                features={f"t_{topic}": 1},
+                thresholds=[0.008, 0.016, 0.024]
+                if topic is not Topic.SPORTS.value
+                else [0.005, 0.008, 0.02],
+                diff_p=V0_MODEL_P_VALUE,
+                diff_q=V0_MODEL_Q_VALUE,
+            )
+
+        category_fields: dict[str, InterestVectorConfig] = {
+            a: get_topic(a) for a in self.limited_topics
+        }
+        remainder_topic_list = [topic for topic in Topic if topic not in self.limited_topics_set]
+        category_fields["other"] = InterestVectorConfig(
+            features={f"t_{topic_obj.value}": 1 for topic_obj in remainder_topic_list},
+            thresholds=[0.01, 0.02, 0.03],
+            diff_p=V0_MODEL_P_VALUE,
+            diff_q=V0_MODEL_Q_VALUE,
+        )
+
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=False,

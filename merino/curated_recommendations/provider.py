@@ -190,6 +190,7 @@ class CuratedRecommendationsProvider:
         if inferred_local_model is not None and inferred_local_model.model_matches_interests(
             interest_id
         ):
+            print(inferred_local_model)
             dp_values: list[str] | None = cast(
                 list[str] | None, request_interests.root.get(LOCAL_MODEL_DB_VALUES_KEY)
             )

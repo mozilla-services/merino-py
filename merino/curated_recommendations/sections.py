@@ -548,7 +548,7 @@ async def get_sections(
         cs.recommendations = [
             rec for rec in cs.recommendations if rec.corpusItemId in remaining_ids
         ]
-
+    print(personal_interests)
     # 7. Rank all corpus recommendations globally by engagement to build top_stories_section
     all_ranked_corpus_recommendations = thompson_sampling(
         all_remaining_corpus_recommendations,
@@ -556,8 +556,8 @@ async def get_sections(
         prior_backend=prior_backend,
         region=region,
         rescaler=rescaler,
+        personal_interests=personal_interests,
     )
-
     # 8. Split top stories
     # Use 2-row layout as default for Popular Today
     top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT

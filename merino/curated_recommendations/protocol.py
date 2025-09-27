@@ -6,6 +6,7 @@ from typing import Annotated
 import logging
 from datetime import datetime
 
+import numpy as np
 from pydantic import (
     Field,
     field_validator,
@@ -119,8 +120,23 @@ class InferredInterests(RootModel[dict[str, float | str | list[str]]]):
 class ProcessedInterests(BaseModel):
     """Internal representation of interests after processing/decoding"""
 
+    minimum_value_count_for_normalization: int = 3
     model_id: str | None = None
     scores: dict[str, float] = Field(default_factory=dict)
+    normalized_scores: dict[str, float] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def compute_norm(self):
+        """Set the normalized_scores dictionary with a normalized (1 max based) set
+        of interests if the number of interests we have meet a minimum threshold
+        """
+        if len(self.scores) >= self.minimum_value_count_for_normalization:
+            keys = list(self.scores.keys())
+            values = np.array(list(self.scores.values()), dtype=float)
+
+            normalized = values / (values.max() + 1e-6)
+            object.__setattr__(self, "normalized_scores", dict(zip(keys, normalized)))
+        return self
 
     @staticmethod
     def empty() -> "ProcessedInterests":
