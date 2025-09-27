@@ -171,20 +171,26 @@ class Event(BaseModel):
                 text = f"{text} {self.status.as_str()}: {self.away_score} - {self.home_score}"
         return text
 
-    def as_json(self) -> dict[str, Any]:
-        """Provide the data as a minimal JSON structure"""
-        return dict(
-            terms=self.terms,
-            sport=self.sport,
-            id=self.id,
-            date=int(self.date.timestamp()),
-            home_team=self.home_team,
-            away_team=self.away_team,
-            home_score=self.home_score,
-            away_score=self.away_score,
-            status=self.status.as_str(),
-            ttl=self.ttl,
+    def as_json(self) -> str:
+        """Provide the data as a minimal JSON structure without the terms"""
+        return json.dumps(
+            dict(
+                # terms=self.terms,
+                sport=self.sport,
+                id=self.id,
+                date=int(self.date.timestamp()),
+                home_team=self.home_team,
+                away_team=self.away_team,
+                home_score=self.home_score,
+                away_score=self.away_score,
+                status=self.status.as_str(),
+                ttl=self.ttl,
+            )
         )
+
+    def key(self) -> str:
+        """Generate semi-unique key for this event"""
+        return f"{self.sport}:{self.home_team["key"]}:{self.away_team["key"]}".lower()
 
 
 class Sport(BaseModel):
@@ -324,7 +330,7 @@ class Sport(BaseModel):
                 continue
             home_team = self.teams[event_description["HomeTeam"]]
             away_team = self.teams[event_description["AwayTeam"]]
-            terms = f"event {home_team.terms} vs {away_team.terms} game match "
+            terms = f"{home_team.terms} {away_team.terms}"
             event = Event(
                 sport=self.name,
                 id=event_description["GlobalGameID"],

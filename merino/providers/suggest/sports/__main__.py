@@ -18,9 +18,11 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
 # functions work the way you'd expect.
 async def main():
     log = init_logs()
+    log.debug(f"{LOGGING_TAG}: Building storage...")
     event_store = ElasticDataStore(settings=settings)
     # Only call for test or dev builds.
-    await event_store.build_indexes(settings=settings)
+    log.debug(f"{LOGGING_TAG}: Building indicies...")
+    await event_store.build_indexes(settings=settings, clear=True)
     log.debug(f"{LOGGING_TAG}: Starting up...")
     sport = NFL(
         settings,
@@ -36,10 +38,10 @@ async def main():
     client = AsyncClient(timeout=timeout)
     await sport.update_teams(http_client=client)
     await sport.update_events(http_client=client)
-    pdb.set_trace()
     await event_store.store_events(sport, language_code="en")
-    res = await event_store.search_events(q="Giants vs dodgers", language_code="en")
-    pdb.set_trace()
+    res = await event_store.search_events(q="Minnesota vs steelers", language_code="en")
+    log.debug(f"{LOGGING_TAG}: got results...")
+    await event_store.close()
     print(res)
 
 
