@@ -3,7 +3,7 @@
 import logging
 from collections import defaultdict
 from copy import deepcopy
-from typing import DefaultDict, cast
+from typing import DefaultDict
 
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -692,7 +692,6 @@ async def get_sections(
     # 10. If headlines_section experiment enabled, insert headlines_section on top followed by top_stories
     if is_daily_briefing_experiment(request) and headlines_corpus_section is not None:
         sections["headlines_section"] = headlines_corpus_section
-        sections["headlines_section"].title = "Your Briefing"
         sections["top_stories_section"].layout = layout_4_medium
 
     # 11. Add remaining corpus sections

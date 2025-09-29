@@ -1646,9 +1646,7 @@ class TestSections:
         headlines_section = sections.get("headlines_section")
         if headlines_section is not None:
             assert headlines_section["receivedFeedRank"] == 0
-            assert (
-                headlines_section["title"] == "Your Briefing"
-            )  # "Headlines"s (sent by ML) should be updated to "Your Briefing"
+            assert headlines_section["title"] == "Headlines"
             assert headlines_section["subtitle"] == "Top Headlines today"
             assert headlines_section["layout"]["name"] == "4-large-small-medium-1-ad"
 
