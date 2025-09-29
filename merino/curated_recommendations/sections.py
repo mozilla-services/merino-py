@@ -266,6 +266,13 @@ def adjust_ads_in_sections(sections: dict[str, Section]) -> None:
                 tile.hasAd = False
 
 
+def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the Contextual Ads experiment is enabled."""
+    return is_enrolled_in_experiment(
+        request, ExperimentName.CONTEXTUAL_AD_EXPERIMENT.value, "treatment"
+    )
+
+
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the Daily Briefing Section experiment is enabled."""
     return is_enrolled_in_experiment(
@@ -648,6 +655,9 @@ async def get_sections(
     # Use 2-row layout as default for Popular Today
     top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
     popular_today_layout = layout_7_tiles_2_ads
+
+    if is_contextual_ads_experiment(request):
+        popular_today_layout = layout_4_large
 
     top_stories = get_top_story_list(
         all_ranked_corpus_recommendations, top_stories_count, TOP_STORIES_SECTION_EXTRA_COUNT

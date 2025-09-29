@@ -1369,6 +1369,10 @@ class TestSections:
                 "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
                 "experimentBranch": "control",
             },
+            {
+                "experimentName": ExperimentName.CONTEXTUAL_AD_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
         ],
     )
     def test_sections_layouts(self, sections_payload, experiment_payload, client: TestClient):
@@ -1393,7 +1397,14 @@ class TestSections:
 
         # Assert layout of the first section (Popular Today).
         assert first_section["title"] == "Popular Today"
-        assert first_section["layout"]["name"] == "7-double-row-2-ad"
+        if (
+            experiment_payload.get("experimentName")
+            != ExperimentName.CONTEXTUAL_AD_EXPERIMENT.value
+        ):
+            assert first_section["layout"]["name"] == "7-double-row-2-ad"
+        else:
+            # If contextual ads experiment, Popular Today should be 1 row
+            assert first_section["layout"]["name"] == "4-large-small-medium-1-ad"
 
         # Assert layouts are cycled
         assert_section_layouts_are_cycled(sections)
