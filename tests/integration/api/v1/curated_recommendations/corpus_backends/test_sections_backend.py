@@ -11,7 +11,7 @@ async def test_fetch(sections_backend: SectionsBackend):
     """Test that fetch returns expected sections from the backend."""
     sections = await sections_backend.fetch(SurfaceId.NEW_TAB_EN_US)
     # The test data now includes both regular sections and _crawl versions
-    assert len(sections) == 42
+    assert len(sections) == 43
 
     # Lookup the NFL section by its externalId.
     nfl = next(s for s in sections if s.externalId == "nfl")
@@ -29,3 +29,9 @@ async def test_fetch(sections_backend: SectionsBackend):
     assert music.iab.categories[0] == "338"  # IAB v3.0 code for Music
     # The number of items may vary based on test data
     assert len(music.sectionItems) >= 15
+
+    # Lookup Headlines section
+    headlines = next(s for s in sections if s.externalId == "headlines_crawl")
+    assert headlines is not None
+    assert headlines.title == "Headlines"
+    assert headlines.description == "Top Headlines today"
