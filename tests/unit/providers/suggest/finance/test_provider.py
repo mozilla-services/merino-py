@@ -44,7 +44,7 @@ def fixture_geolocation() -> Location:
 def fixture_ticker_snapshot() -> TickerSnapshot:
     """Create a ticker snapshot object for AAPL."""
     return TickerSnapshot(
-        ticker="AAPL",
+        ticker="DDOG",
         last_trade_price="100.5",
         todays_change_percent="1.5",
     )
@@ -55,10 +55,10 @@ def fixture_ticker_summary() -> TickerSummary:
     """Return a test TickerSummary."""
     return TickerSummary(
         name="Apple Inc",
-        ticker="AAPL",
+        ticker="DDOG",
         last_price="$100.5",
         todays_change_perc="1.5",
-        query="AAPL stock",
+        query="DDOG stock",
         image_url=None,
         exchange="NASDAQ",
     )
@@ -128,6 +128,11 @@ def test_not_hidden_by_default(provider: Provider) -> None:
     assert provider.hidden() is False
 
 
+def test_normalize_query_returns_trimmed_query_string(provider: Provider) -> None:
+    """Test that normalize_query method returns a string with no trailing spaces."""
+    assert provider.normalize_query("   aapl stock   ") == "aapl stock"
+
+
 def test_validate_fails_on_missing_query_param(
     provider: Provider,
     geolocation: Location,
@@ -160,7 +165,7 @@ async def test_query_ticker_summary_for_ticker_symbol_returned(
     backend_mock.get_ticker_summary.return_value = ticker_summary
 
     suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(query="aapl", geolocation=geolocation)
+        SuggestionRequest(query="ddog", geolocation=geolocation)
     )
 
     assert suggestions == expected_suggestions
@@ -301,7 +306,7 @@ async def test_query_appends_image_url_to_summary(
     ticker_summary: TickerSummary,
 ) -> None:
     """Test that the query method passes the correct image_url and includes it in the TickerSummary."""
-    ticker = "AAPL"
+    ticker = "DDOG"
 
     image_url = HttpUrl("https://cdn.example.com/aapl.png")
     provider.manifest_data = FinanceManifest(tickers={ticker: image_url})

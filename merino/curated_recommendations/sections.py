@@ -44,6 +44,7 @@ from merino.curated_recommendations.rankers import (
     put_top_stories_first,
     greedy_personalized_section_rank,
     TOP_STORIES_SECTION_KEY,
+    takedown_reported_recommendations,
 )
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
@@ -55,7 +56,6 @@ DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
 HEADLINES_SECTION_KEY = "headlines_section"
 HEADLINES_CRAWL_SECTION_KEY = "headlines_crawl"
-HEADLINES_SECTION_TITLE = "Your Briefing"
 
 
 def map_section_item_to_recommendation(
@@ -195,8 +195,6 @@ async def get_corpus_sections(
 
     # If Headlines section is present, isolate from other sections & map to a corpus section
     if raw_headlines_section:
-        # ML sends "Headlines" for title, update title to display on NewTab
-        raw_headlines_section.title = HEADLINES_SECTION_TITLE
         headlines_corpus_section = map_corpus_section_to_section(
             corpus_section=raw_headlines_section,
             rank=0,
@@ -623,16 +621,30 @@ async def get_sections(
         rec for section in corpus_sections.values() for rec in section.recommendations
     ]
 
-    # 5. Rank all corpus recommendations globally by engagement to build top_stories_section
-    all_ranked_corpus_recommendations = thompson_sampling(
+    # 5. Remove reported recommendations
+    all_remaining_corpus_recommendations = takedown_reported_recommendations(
         all_corpus_recommendations,
+        engagement_backend=engagement_backend,
+        region=region,
+    )
+
+    # 6. Update corpus_sections to make sure reported takedown recs are not present
+    remaining_ids = {rec.corpusItemId for rec in all_remaining_corpus_recommendations}
+    for cs in corpus_sections.values():
+        cs.recommendations = [
+            rec for rec in cs.recommendations if rec.corpusItemId in remaining_ids
+        ]
+
+    # 7. Rank all corpus recommendations globally by engagement to build top_stories_section
+    all_ranked_corpus_recommendations = thompson_sampling(
+        all_remaining_corpus_recommendations,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
         region=region,
         rescaler=rescaler,
     )
 
-    # 6. Split top stories
+    # 8. Split top stories
     # Use 2-row layout as default for Popular Today
     top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
     popular_today_layout = layout_7_tiles_2_ads
@@ -681,7 +693,6 @@ async def get_sections(
     if include_headlines_section:
         sections["headlines_section"] = cast(Section, headlines_corpus_section)
         sections["headlines_section"].title = "Your Briefing"
-        sections["top_stories_section"].receivedFeedRank = 1
         sections["top_stories_section"].layout = layout_4_medium
 
     # 11. Add remaining corpus sections

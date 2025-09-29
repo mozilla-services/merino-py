@@ -118,28 +118,32 @@ def test_lookup_ticker_exchange_fail() -> None:
     assert error.typename == "KeyError"
 
 
-def test_get_tickers_for_query() -> None:
+@pytest.mark.parametrize(
+    "test_keyword, expected_tickers",
+    [
+        (
+            "AAPL",
+            None,
+        ),  # Valid stock ticker but it's on the ticker match block list, should return None.
+        ("DDOG", ["DDOG"]),
+        ("BIS", ["BIS"]),
+        ("jpmorgan chase stock", ["JPM"]),
+        ("dow jones industrial average", ["DIA", "DJD", "SCHD"]),
+        # Valid "stock(s)" containing keywords.
+        # This tests AAPL ticker which is in the eager match blocklist but should work in this scenario.
+        ("stock aapl", ["AAPL"]),
+        ("stocks aapl", ["AAPL"]),
+        ("aapl stock", ["AAPL"]),
+        ("aapl stocks", ["AAPL"]),
+        # Invalid ticker, stock and ETF keywords
+        ("BOB", None),
+        ("bobs burgers stocks", None),
+        ("bobs burgers stock index fund", None),
+    ],
+)
+def test_get_tickers_for_query(test_keyword, expected_tickers) -> None:
     """Test get_tickers_for_query method for various cases."""
-    # Valid stock ticker.
-    assert get_tickers_for_query("AAPL") == ["AAPL"]
-
-    # Valid ETF ticker.
-    assert get_tickers_for_query("BIS") == ["BIS"]
-
-    # Valid stock keywords.
-    assert get_tickers_for_query("jpmorgan chase stock") == ["JPM"]
-
-    # Valid ETF keywords.
-    assert get_tickers_for_query("dow jones industrial average") == ["DIA", "DJD", "SCHD"]
-
-    # Invalid ticker.
-    assert get_tickers_for_query("BOB") is None
-
-    # Invalid stock keywords.
-    assert get_tickers_for_query("bobs burgers stock") is None
-
-    # Invalid ETF keywords.
-    assert get_tickers_for_query("bobs burgers stock index fund") is None
+    assert get_tickers_for_query(test_keyword) == expected_tickers
 
 
 def test_extract_snapshot_if_valid_success(

@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from types import SimpleNamespace
 
+from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.ml_backends.fake_local_model import (
     FakeLocalModelTopics,
     FakeLocalModelSections,
@@ -92,6 +93,9 @@ def test_model_returns_limited_model(model_limited):
     assert len(result.model_data.interest_vector) > 0
     assert len(result.model_data.day_time_weighting.days) > 0
     assert len(result.model_data.day_time_weighting.relative_weight) > 0
+
+    # test a specific threshold value
+    assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.005
 
 
 def test_unary_decoding(model_limited):

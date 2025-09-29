@@ -130,6 +130,10 @@ class Provider(BaseProvider):
                 detail="Invalid query parameters: `q` is missing",
             )
 
+    def normalize_query(self, query: str) -> str:
+        """Remove trailing spaces from the query string."""
+        return query.strip()
+
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide finance suggestions."""
         # Get the list of tickers (0 to 3) for the query string.

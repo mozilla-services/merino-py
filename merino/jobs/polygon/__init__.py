@@ -2,11 +2,9 @@
 
 import asyncio
 import logging
-from typing import Annotated
 
 import typer
 
-from merino.configs import settings as config
 from merino.jobs.polygon.polygon_ingestion import PolygonIngestion
 
 logger = logging.getLogger(__name__)

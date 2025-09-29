@@ -1240,7 +1240,7 @@ class TestGetCorpusSections:
 
         # Headlines should be returned separately from the rest of the result
         assert headlines is not None
-        assert headlines.title == "Your Briefing"
+        assert headlines.title == "Headlines"
         assert headlines.subtitle == "Top Headlines today"
 
         # The remaining result should not contain headlines_section; should contain only non-crawl legacy topics
@@ -1265,7 +1265,7 @@ class TestGetCorpusSections:
 
         # Headlines should be returned separately from the rest of the result
         assert headlines is not None
-        assert headlines.title == "Your Briefing"
+        assert headlines.title == "Headlines"
         assert headlines.subtitle == "Top Headlines today"
 
         # Remaining sections should only contain _crawl sections mapped to their base IDs

@@ -411,3 +411,32 @@ RUSSELL2000_POPULAR_3_ETF = ["IWM", "VTWO", "SMMV"]
 NI225_POPULAR_3_ETF = ["EWJ", "FLJP", "DXJ"]
 # NOTE: This index only has 2 ETF tickers listed on the US market and supported by Polygon.
 HSI_POPULAR_2_ETF = ["EWH", "KTEC"]
+
+
+# ETF Tickers prone to eager matches (company name-like or typos for common words); used to avoid
+# aggressive matches on partial queries.
+ETF_TICKER_EAGER_MATCH_BLOCKLIST = [
+    "BIB",
+    "EKG",
+    "WEBL",
+    "WEBS",
+    "GRID",
+    "FLAG",
+    "SPY",
+    "ISPY",
+    "RPG",
+    "TOPC",
+    "ROBT",
+    "RWX",
+    "ZZZ",
+    "EGLE",
+    "EMOT",
+    "KNG",
+    "KNGZ",
+    "HNDL",
+    "PUTD",
+    "XTR",
+    "XLG",
+    "FB",
+    "QB",
+]

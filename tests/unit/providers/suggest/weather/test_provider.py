@@ -238,10 +238,3 @@ async def test_fetch_mapping(
         call(name="providers.weather.skip_cities_mapping.total.size", value=2),
         call(name="providers.weather.skip_cities_mapping.unique.size", value=1),
     ]
-
-    records = filter_caplog(caplog.records, "merino.providers.suggest.weather.provider")
-    assert len(records) == 2
-    assert [record.message for record in records] == [
-        "Weather Successful Mapping Values: {('NL', 'Andel'): 'NB'}",
-        "Weather Skip Cities: {('CA', 'BC', 'Vancouver'): 2}",
-    ]

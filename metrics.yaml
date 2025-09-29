@@ -213,3 +213,19 @@ suggest/google_suggest:
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
+  google_suggest_connect_error:
+    description: |
+      A counter to measure the API connect error count for Google Suggest requests
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+  google_suggest_proxy_error:
+    description: |
+      A counter to measure the API proxy error count for Google Suggest requests
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
