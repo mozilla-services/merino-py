@@ -6,13 +6,13 @@ from merino.curated_recommendations.prior_backends.protocol import ExperimentRes
 from merino.curated_recommendations.protocol import CuratedRecommendation
 
 SUBTOPIC_TOTAL_PERCENT = 0.13  # This may eventually be computed by an airflow job
-CRAWLED_TOPIC_TOTAL_PERCENT = 0.13
+CRAWLED_TOPIC_TOTAL_PERCENT = 0.2
 SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 
 # This is derived using data analysis on scores and existing priors
 # See more at:
 # https://mozilla-hub.atlassian.net/wiki/spaces/FAAMT/pages/1727725665/Thompson+Sampling+of+Subtopic+Sections
-PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.20
+PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.25
 
 
 class SubsectionsExperimentRescaler(ExperimentRescaler):
