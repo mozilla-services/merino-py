@@ -267,7 +267,7 @@ class LimitedTopicV1Model(LocalModelBackend):
         remainder_topic_list = [topic for topic in Topic if topic not in self.limited_topics_set]
         category_fields[DEFAULT_INTERESTS_KEY] = InterestVectorConfig(
             features={f"t_{topic_obj.value}": 1 for topic_obj in remainder_topic_list},
-            thresholds=[0.01, 0.02, 0.03],
+            thresholds=[0.008, 0.016, 0.024],
             diff_p=V0_MODEL_P_VALUE,
             diff_q=V0_MODEL_Q_VALUE,
         )

@@ -1,6 +1,5 @@
 """Unit tests for fake local model"""
 
-import numpy as np
 import pytest
 from types import SimpleNamespace
 
@@ -103,18 +102,24 @@ def test_unary_decoding(model_limited):
     # "00100" -> index 2
     model = model_limited.get(TEST_SURFACE)
 
-    assert model.get_unary_encoded_index("00100") == 2
-    # Multiple 1s and random_if_uncertain == False => None
-    assert model.get_unary_encoded_index("01101", random_if_uncertain=False) is None
-    # Make randomness deterministic
-    np.random.seed(123)
-    encoded = "01011"  # candidates at indices 1,3,4
-    idx = model.get_unary_encoded_index(encoded, random_if_uncertain=True)
-    assert idx in {1, 3, 4}
-    # non-"0" characters are treated as "1"
-    assert model.get_unary_encoded_index("0a00") == 1
-    assert model.get_unary_encoded_index("0000") is None
-    assert model.get_unary_encoded_index("") is None
+    assert model.get_unary_encoded_index("00100") == [2]
+
+    # Test too many oness
+    assert model.get_unary_encoded_index("01101", support_two=False) == []
+    assert model.get_unary_encoded_index("01101", support_two=True) == []
+
+    # Test support for two results
+    encoded = "01010"  # candidates at indices 1,3,4
+    idx = model.get_unary_encoded_index(encoded, support_two=True)
+    assert idx == [1, 3]
+    # Test support for two results
+    encoded = "01010"  # candidates at indices 1,3,4
+    assert model.get_unary_encoded_index(encoded, support_two=False) == []
+
+    # non-"0" characters are treated as "1" and empty case
+    assert model.get_unary_encoded_index("0a00") == [1]
+    assert model.get_unary_encoded_index("0000") == []
+    assert model.get_unary_encoded_index("") == []
 
 
 def test_decode_skipped_when_model_id_mismatch(model_limited):
@@ -131,34 +136,10 @@ def test_model_matches_interests_none_and_non_str(model_limited):
     assert not model.model_matches_interests(3.14159)  # float should not match
 
 
-def test_unary_random_if_uncertain_when_no_ones(model_limited):
-    """When there are no '1' bits and random_if_uncertain=True, returns 0."""
+def test_unary_when_no_ones(model_limited):
+    """When there are no '1' bits and returns no items."""
     model = model_limited.get(TEST_SURFACE)
-    assert model.get_unary_encoded_index("0000", random_if_uncertain=True) == 0
-
-
-def test_decode_dp_interests_random_choice_sets_key(model_limited):
-    """With multiple '1' bits and random_if_uncertain=True, we still decode to an allowed value
-    (either 0.0 for index 0 or the corresponding threshold for the chosen index).
-    """
-    model = model_limited.get(TEST_SURFACE)
-    iv = model.model_data.interest_vector
-
-    dp_values = []
-    first_key = next(iter(iv.keys()))
-    first_cfg = iv[first_key]
-    for i, (_k, cfg) in enumerate(iv.items()):
-        n = len(cfg.thresholds) + 1
-        if i == 0:
-            dp_values.append("1010" if n >= 4 else "11")  # multiple ones
-        else:
-            dp_values.append("0" * (n - 1) + "1")  # deterministic high
-
-    np.random.seed(123)
-    out = model.decode_dp_interests(dp_values, model.model_id, random_if_uncertain=True)
-    allowed = {0.0, first_cfg.thresholds[1]} if len(first_cfg.thresholds) >= 2 else {0.0}
-    assert first_key in out
-    assert out[first_key] in allowed
+    assert model.get_unary_encoded_index("0000", support_two=True) == []
 
 
 def test_decode_dp_interests_empty_list_raises(model_limited):
@@ -230,8 +211,8 @@ def test_model_matches_interests_rejects_none_and_float(model_limited):
     assert not model.model_matches_interests(3.14)
 
 
-def test_decode_with_multiple_ones_random_branch_sets_valid_value(model_limited):
-    """With multiple '1's and random_if_uncertain=True, decoded value is within allowed set."""
+def test_decode_with_multiple_ones_sets_valid_value(model_limited):
+    """With multiple '1's decoded value is as expected."""
     model = model_limited.get(TEST_SURFACE)
     iv = model.model_data.interest_vector
     first_key = next(iter(iv.keys()))
@@ -240,27 +221,35 @@ def test_decode_with_multiple_ones_random_branch_sets_valid_value(model_limited)
     for i, (_k, cfg) in enumerate(iv.items()):
         n = len(cfg.thresholds) + 1
         if i == 0:
-            # multiple ones at indices 0 and 2 (requires n>=3); otherwise use "11"
-            dp_values.append("1010" if n >= 4 else "11")
+            # multiple ones at indices 0 and 1
+            dp_values.append("11" + "0" * (n - 2))
         else:
             dp_values.append("0" * (n - 1) + "1")
-    np.random.seed(123)
-    out = model.decode_dp_interests(dp_values, model.model_id, random_if_uncertain=True)
-    allowed = {0.0}
-    if len(first_cfg.thresholds) >= 2:
-        allowed.add(first_cfg.thresholds[1])
+    out = model.decode_dp_interests(dp_values, model.model_id)
     assert first_key in out
-    assert out[first_key] in allowed
+    assert out[first_key] == (0.0 + first_cfg.thresholds[0]) * 0.5
 
 
 @pytest.mark.parametrize(
-    "pattern_func,assertion_func,rand",
+    "pattern_func,assertion_func,support_two",
     [
-        # ambiguous: all ones; no random -> key not present
+        # Two values allowed
+        (
+            lambda thresholds: "011" + (len(thresholds) - 2) * "0",
+            lambda result, key, thresholds: result[key] == (thresholds[0] + thresholds[1]) * 0.5,
+            True,
+        ),
+        # two values not allowed
+        (
+            lambda thresholds: "011" + (len(thresholds) - 2) * "0",
+            lambda result, key, thresholds: key not in result,
+            False,
+        ),
+        # All values set
         (
             lambda thresholds: "1" * (len(thresholds) + 1),
             lambda result, key, thresholds: key not in result,
-            False,
+            True,
         ),
         # lowest value (index 0) -> 0.0
         (
@@ -294,24 +283,18 @@ def test_decode_with_multiple_ones_random_branch_sets_valid_value(model_limited)
             ),
             False,
         ),
-        # ambiguous with random -> value is allowed (0.0 or any threshold)
-        (
-            lambda thresholds: "1" * (len(thresholds) + 1),
-            lambda result, key, thresholds: key in result
-            and result[key] in ({0.0} | set(thresholds)),
-            True,
-        ),
     ],
     ids=[
-        "ambiguous_no_random",
+        "two_values_allowed",
+        "two_values_not_allowed",
+        "all_values_set",
         "lowest",
         "highest",
         "middle",
-        "ambiguous_with_random",
     ],
 )
-def test_decode_dp_interests(model_limited, pattern_func, assertion_func, rand):
-    """decode_dp_interests decodes various unary patterns; ambiguous behavior depends on random flag."""
+def test_decode_dp_interests(model_limited, pattern_func, assertion_func, support_two):
+    """decode_dp_interests decodes various unary patterns."""
     model = model_limited.get(TEST_SURFACE)
     interests = InferredInterests.empty()
     interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
@@ -321,12 +304,10 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, rand):
         values.append(pattern_func(feature.thresholds))
     interests.root["values"] = values
 
-    if rand:
-        np.random.seed(123)
     updated = model.decode_dp_interests(
         interests.root["values"],
         interests.root[LOCAL_MODEL_MODEL_ID_KEY],
-        random_if_uncertain=rand,
+        support_two=support_two,
     )
 
     for key, feature in model.model_data.interest_vector.items():

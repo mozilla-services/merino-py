@@ -97,7 +97,7 @@ class InferredLocalModel(BaseModel):
         return set(self.model_data.interest_vector.keys())
 
     def decode_dp_interests(
-        self, dp_values: list[str], interest_key: float | str | None
+        self, dp_values: list[str], interest_key: float | str | None, support_two: bool = True
     ) -> dict[str, float | str]:
         """Decode differentially private (DP) interest values from unary-encoded strings
         into a numeric interest vector.
@@ -111,6 +111,7 @@ class InferredLocalModel(BaseModel):
         model features based on the dictionary keys sorting order.
 
         :param interests: User interest vector in differentially private encoding
+        :param support_two: Supports two values set due to randomness (return mean as result)
         :returns:
             An updated inferred interests.
         :raises Exception:
@@ -128,7 +129,7 @@ class InferredLocalModel(BaseModel):
         for idx, (key, ivconfig) in enumerate(self.model_data.interest_vector.items()):
             decoded_values: list[float] = [
                 interpret_index(a)
-                for a in self.get_unary_encoded_index(dp_values[idx], support_two=True)
+                for a in self.get_unary_encoded_index(dp_values[idx], support_two=support_two)
             ]
             if len(decoded_values) == 1:
                 # For n thresholds there are n+1 dimensions in the dp string
