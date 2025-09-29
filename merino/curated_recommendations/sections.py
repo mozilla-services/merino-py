@@ -690,8 +690,8 @@ async def get_sections(
     }
 
     # 10. If headlines_section experiment enabled, insert headlines_section on top followed by top_stories
-    if include_headlines_section:
-        sections["headlines_section"] = cast(Section, headlines_corpus_section)
+    if is_daily_briefing_experiment(request) and headlines_corpus_section is not None:
+        sections["headlines_section"] = headlines_corpus_section
         sections["headlines_section"].title = "Your Briefing"
         sections["top_stories_section"].layout = layout_4_medium
 
