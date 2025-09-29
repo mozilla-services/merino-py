@@ -61,6 +61,11 @@ api_key = "test"
 # anyway to make sure the production server isn't accidentally pinged.
 url_base = "http://test-polygon"
 
+[testing.flightaware]
+api_key = "test"
+
+base_url = "http://test-flightaware.com"
+
 [testing.providers.polygon]
 enabled_by_default = false
 backend="polygon"

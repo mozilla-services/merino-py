@@ -19,22 +19,32 @@ from merino.providers.suggest.amo.backends.dynamic import DynamicAmoBackend
 from merino.providers.suggest.amo.backends.static import StaticAmoBackend
 from merino.providers.suggest.amo.provider import Provider as AmoProvider
 from merino.providers.suggest.base import BaseProvider
-from merino.providers.suggest.geolocation.provider import Provider as GeolocationProvider
+from merino.providers.suggest.geolocation.provider import (
+    Provider as GeolocationProvider,
+)
 from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.suggest.top_picks.provider import Provider as TopPicksProvider
 from merino.providers.suggest.weather.backends.accuweather import AccuweatherBackend
 from merino.providers.suggest.weather.backends.fake_backends import FakeWeatherBackend
 from merino.providers.suggest.weather.provider import Provider as WeatherProvider
 from merino.providers.suggest.wikipedia.backends.elastic import ElasticBackend
-from merino.providers.suggest.wikipedia.backends.fake_backends import FakeWikipediaBackend
+from merino.providers.suggest.wikipedia.backends.fake_backends import (
+    FakeWikipediaBackend,
+)
 from merino.providers.suggest.wikipedia.provider import Provider as WikipediaProvider
 from merino.providers.suggest.finance.provider import Provider as PolygonProvider
 from merino.providers.suggest.yelp.provider import Provider as YelpProvider
-from merino.providers.suggest.flightaware.provider import Provider as FlightAwareProvider
+from merino.providers.suggest.flightaware.provider import (
+    Provider as FlightAwareProvider,
+)
 from merino.providers.suggest.flightaware.backends.flightaware import FlightAwareBackend
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
-from merino.providers.suggest.google_suggest.provider import Provider as GoogleSuggestProvider
-from merino.providers.suggest.google_suggest.backends.google_suggest import GoogleSuggestBackend
+from merino.providers.suggest.google_suggest.provider import (
+    Provider as GoogleSuggestProvider,
+)
+from merino.providers.suggest.google_suggest.backends.google_suggest import (
+    GoogleSuggestBackend,
+)
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST, WIKIPEDIA_TITLE_BLOCKLIST
 from merino.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
@@ -272,6 +282,8 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             return FlightAwareProvider(
                 backend=FlightAwareBackend(
                     api_key=settings.flightaware.api_key,
+                    http_client=create_http_client(base_url=settings.flightaware.base_url),
+                    ident_url=settings.flightaware.ident_url_path,
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
