@@ -240,6 +240,27 @@ class TestMlSectionsExperiment:
         )
         assert is_subtopics_experiment(req_treatment_with_subtopics) is True
 
+        # NEW_TAB_CRAWLING_V2 - Control branch - should not include subtopics
+        req_v2_control = SimpleNamespace(
+            experimentName=ExperimentName.NEW_TAB_CRAWLING_V2.value,
+            experimentBranch=CrawlExperimentBranchName.CONTROL.value,
+        )
+        assert is_subtopics_experiment(req_v2_control) is False
+
+        # NEW_TAB_CRAWLING_V2 - Treatment crawl (no subtopics) - should not include subtopics
+        req_v2_treatment_no_subtopics = SimpleNamespace(
+            experimentName=ExperimentName.NEW_TAB_CRAWLING_V2.value,
+            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+        )
+        assert is_subtopics_experiment(req_v2_treatment_no_subtopics) is False
+
+        # NEW_TAB_CRAWLING_V2 - Treatment crawl WITH subtopics - should include subtopics
+        req_v2_treatment_with_subtopics = SimpleNamespace(
+            experimentName=ExperimentName.NEW_TAB_CRAWLING_V2.value,
+            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+        )
+        assert is_subtopics_experiment(req_v2_treatment_with_subtopics) is True
+
         # Not enrolled in crawl experiment - should return False
         req_not_enrolled = SimpleNamespace(
             experimentName="other",
@@ -262,6 +283,13 @@ class TestMlSectionsExperiment:
             experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
         )
         assert is_subtopics_experiment(req_crawl_subtopics) is True
+
+        # NEW_TAB_CRAWLING_V2 Crawl subtopics enabled - should include subtopics regardless of ML sections
+        req_v2_crawl_subtopics = SimpleNamespace(
+            experimentName=ExperimentName.NEW_TAB_CRAWLING_V2.value,
+            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+        )
+        assert is_subtopics_experiment(req_v2_crawl_subtopics) is True
 
         # Neither enabled - should not include subtopics
         req_neither = SimpleNamespace(
@@ -305,6 +333,38 @@ class TestCrawlExperiment:
             ),
             (
                 f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                CrawlExperimentBranchName.CONTROL.value,
+                False,
+            ),
+            # NEW_TAB_CRAWLING_V2 tests
+            (
+                ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                True,
+            ),
+            (
+                ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+                True,
+            ),
+            (
+                ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                CrawlExperimentBranchName.CONTROL.value,
+                False,
+            ),
+            # Test with optin- prefix for NEW_TAB_CRAWLING_V2
+            (
+                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                True,
+            ),
+            (
+                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+                True,
+            ),
+            (
+                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
                 CrawlExperimentBranchName.CONTROL.value,
                 False,
             ),
@@ -352,6 +412,38 @@ class TestCrawlExperiment:
                 CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
                 CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
             ),
+            # NEW_TAB_CRAWLING_V2 tests
+            (
+                ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                CrawlExperimentBranchName.CONTROL.value,
+                CrawlExperimentBranchName.CONTROL.value,
+            ),
+            (
+                ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            ),
+            (
+                ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+            ),
+            # Test with optin- prefix for NEW_TAB_CRAWLING_V2
+            (
+                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
+                CrawlExperimentBranchName.CONTROL.value,
+                CrawlExperimentBranchName.CONTROL.value,
+            ),
+            (
+                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            ),
+            (
+                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+            ),
             ("other", "treatment", None),
         ],
     )
@@ -382,6 +474,27 @@ class TestCrawlExperiment:
             ),
             (
                 f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                CrawlExperimentBranchName.CONTROL.value,
+                None,
+            ),
+            # NEW_TAB_CRAWLING_V2 tests
+            (
+                ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                CrawlExperimentBranchName.CONTROL.value,
+                None,
+            ),
+            (
+                ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                CrawlerExperimentRescaler,
+            ),
+            (
+                ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+                CrawlerExperimentRescaler,
+            ),
+            (
+                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
                 CrawlExperimentBranchName.CONTROL.value,
                 None,
             ),

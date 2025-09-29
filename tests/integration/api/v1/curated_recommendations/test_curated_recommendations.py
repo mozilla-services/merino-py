@@ -1439,6 +1439,14 @@ class TestSections:
                 "experimentName": ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
                 "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
             },
+            {
+                "experimentName": ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
+            },
+            {
+                "experimentName": ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            },
         ],
     )
     def test_curated_recommendations_with_sections_feed_boost_followed_sections(
@@ -1513,6 +1521,8 @@ class TestSections:
         if experiment_name in [
             ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
             f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+            ExperimentName.NEW_TAB_CRAWLING_V2.value,
+            f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
         ]:
             for section_id in sections:
                 if section_id != "top_stories_section":
@@ -1539,6 +1549,22 @@ class TestSections:
             },
             {
                 "experimentName": f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            },
+            {
+                "experimentName": ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
+            },
+            {
+                "experimentName": ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            },
+            {
+                "experimentName": f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
+                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
+            },
+            {
+                "experimentName": f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
                 "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
             },
         ],
@@ -1594,6 +1620,8 @@ class TestSections:
         is_crawl_treatment = experiment_name in [
             ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
             f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+            ExperimentName.NEW_TAB_CRAWLING_V2.value,
+            f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
         ] and experiment_payload.get("experimentBranch") in [
             CrawlExperimentBranchName.TREATMENT_CRAWL.value,
             CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,

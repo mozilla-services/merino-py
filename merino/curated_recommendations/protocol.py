@@ -90,6 +90,8 @@ class ExperimentName(str, Enum):
     CONTEXTUAL_AD_EXPERIMENT = "new-tab-ad-updates-nightly"
     # Experiment to display Daily Briefing section as the first section on New Tab
     DAILY_BRIEFING_EXPERIMENT = "daily-briefing-v1"
+    # Experiment slug for crawling with identical behavior/branches as RSS_VS_ZYTE_EXPERIMENT
+    NEW_TAB_CRAWLING_V2 = "new-tab-crawling-v2"
 
 
 @unique
