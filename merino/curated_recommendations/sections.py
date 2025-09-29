@@ -399,6 +399,7 @@ def rank_sections(
     engagement_backend: EngagementBackend,
     personal_interests: ProcessedInterests | None,
     experiment_rescaler: ExperimentRescaler | None,
+    do_section_personalization_reranking: bool = False,
 ) -> dict[str, Section]:
     """Apply a series of stable ranking passes to the sections feed, in order of priority.
 
@@ -415,6 +416,7 @@ def rank_sections(
         engagement_backend: provides engagement signals for Thompson sampling.
         personal_interests: provides personal interests.
         experiment_rescaler: Rescaler that can rescale based on experiment size
+        do_section_personalization_reranking: Whether to implement section based reranking for personalization
 
     Returns:
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
@@ -425,7 +427,7 @@ def rank_sections(
     )
 
     # 3rd priority: reorder based on inferred interest vector
-    if personal_interests is not None:
+    if do_section_personalization_reranking and personal_interests is not None:
         sections = greedy_personalized_section_rank(sections, personal_interests)
 
     # 2nd priority: boost followed sections, if any
@@ -548,7 +550,6 @@ async def get_sections(
         cs.recommendations = [
             rec for rec in cs.recommendations if rec.corpusItemId in remaining_ids
         ]
-    print(personal_interests)
     # 7. Rank all corpus recommendations globally by engagement to build top_stories_section
     all_ranked_corpus_recommendations = thompson_sampling(
         all_remaining_corpus_recommendations,

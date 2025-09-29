@@ -15,6 +15,9 @@ CTR_SECTION_MODEL_ID = "ctr_model_section_1"
 CTR_LIMITED_TOPIC_MODEL_ID = "ctr_limited_topic_v0"
 CTR_LIMITED_TOPIC_MODEL_ID2 = "ctr_limited_topic_v1"
 
+# Features corresponding to a combination of remaining topics not specified in a feature model
+DEFAULT_INTERESTS_KEY = "other"
+
 SPECIAL_FEATURE_CLICK = "clicks"
 
 BASE_TOPICS = [
@@ -262,7 +265,7 @@ class LimitedTopicV1Model(LocalModelBackend):
             a: get_topic(a) for a in self.limited_topics
         }
         remainder_topic_list = [topic for topic in Topic if topic not in self.limited_topics_set]
-        category_fields["other"] = InterestVectorConfig(
+        category_fields[DEFAULT_INTERESTS_KEY] = InterestVectorConfig(
             features={f"t_{topic_obj.value}": 1 for topic_obj in remainder_topic_list},
             thresholds=[0.01, 0.02, 0.03],
             diff_p=V0_MODEL_P_VALUE,

@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from merino.curated_recommendations import ConstantPrior
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.ml_backends.fake_local_model import DEFAULT_INTERESTS_KEY
 from merino.curated_recommendations.prior_backends.protocol import (
     PriorBackend,
     Prior,
@@ -204,8 +205,11 @@ def thompson_sampling(
         if personal_interests is None or rec.topic is None:
             return 0.0
         if rec.topic.value not in personal_interests.normalized_scores:
-            return personal_interests.normalized_scores.get("other", 0.0) * INFERRED_SCORE_WEIGHT
-        return personal_interests.scores[rec.topic.value] * INFERRED_SCORE_WEIGHT
+            return (
+                personal_interests.normalized_scores.get(DEFAULT_INTERESTS_KEY, 0.0)
+                * INFERRED_SCORE_WEIGHT
+            )
+        return personal_interests.normalized_scores[rec.topic.value] * INFERRED_SCORE_WEIGHT
 
     def sample_score(rec: CuratedRecommendation) -> float:
         """Sample beta distributed from weighted regional/global engagement for a recommendation."""

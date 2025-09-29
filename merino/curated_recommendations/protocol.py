@@ -124,18 +124,25 @@ class ProcessedInterests(BaseModel):
     model_id: str | None = None
     scores: dict[str, float] = Field(default_factory=dict)
     normalized_scores: dict[str, float] = Field(default_factory=dict)
+    expected_keys: set[str] = Field(default_factory=set)
 
     @model_validator(mode="after")
     def compute_norm(self):
         """Set the normalized_scores dictionary with a normalized (1 max based) set
-        of interests if the number of interests we have meet a minimum threshold
+        of interests if the number of interests we have meet a minimum threshold, otherwise
+        leave empty.
+
+        If any key missing from the expected_keys, we set value to an average of the
+        other values.
         """
         if len(self.scores) >= self.minimum_value_count_for_normalization:
             keys = list(self.scores.keys())
             values = np.array(list(self.scores.values()), dtype=float)
-
             normalized = values / (values.max() + 1e-6)
-            object.__setattr__(self, "normalized_scores", dict(zip(keys, normalized)))
+            normalized_dict: dict[str, float] = dict(zip(keys, normalized))
+            for missing_key in self.expected_keys - normalized_dict.keys():  # Set intersection
+                normalized_dict[missing_key] = normalized.mean()
+            object.__setattr__(self, "normalized_scores", normalized_dict)
         return self
 
     @staticmethod

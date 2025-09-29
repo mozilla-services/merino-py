@@ -92,6 +92,10 @@ class InferredLocalModel(BaseModel):
         """
         return interest_key is not None and interest_key == self.model_id
 
+    def get_interest_keys(self) -> set[str]:
+        """Return set of keys, each representing an interest computed by the model"""
+        return set(self.model_data.interest_vector.keys())
+
     def decode_dp_interests(
         self, dp_values: list[str], interest_key: float | str | None
     ) -> dict[str, float | str]:
