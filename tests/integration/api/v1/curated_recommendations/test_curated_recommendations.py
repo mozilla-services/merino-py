@@ -1932,6 +1932,7 @@ class TestSections:
         else:
             assert local_model is None
 
+    @pytest.mark.skip(reason="Section greedy ranking is disabled")
     def test_sections_model_interest_vector_greedy_ranking(self, monkeypatch, client: TestClient):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
         np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)
@@ -1972,6 +1973,36 @@ class TestSections:
         # order is in receivedFeedRank
         for i, sec in enumerate(sorted_interests):
             assert data["feeds"][sec]["receivedFeedRank"] == i
+
+
+    @pytest.mark.skip(reason="Section greedy ranking is disabled")
+    def test_sections_model_interest_vector_greedy_ranking(self, monkeypatch, client: TestClient):
+        """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
+        np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)
+
+        # define interest vector, reversed from previous order
+        interests = {"sports": 1., "arts": 0.0}
+
+        # make the api call
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": Locale.EN_US,
+                "feeds": ["sections"],
+                "inferredInterests": interests,
+            },
+        )
+        data = response.json()
+        # expect interests to be sorted by value
+
+        ## sort sections received
+        sorted_sections = sorted(
+            data["feeds"], key=lambda x: data["feeds"][x]["receivedFeedRank"]
+        )[::-1]
+
+        ## we should get some sections out
+        assert len(sorted_sections) > 3
+        assert sorted_sections[0] == "top_stories_section"
 
     @pytest.mark.parametrize(
         "repeat",

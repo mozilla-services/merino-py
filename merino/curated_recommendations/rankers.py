@@ -63,8 +63,7 @@ NUM_RECS_PER_TOPIC = 2
 
 TOP_STORIES_SECTION_KEY = "top_stories_section"
 
-INFERRED_SCORE_WEIGHT = 4
-FOLLOW_SECTION_SCORE_WEIGHT = 4
+INFERRED_SCORE_WEIGHT = 0.001
 
 # For taking down reported content
 DEFAULT_REPORT_RECS_RATIO_THRESHOLD = 0.001  # using a low number for now (0.1%)

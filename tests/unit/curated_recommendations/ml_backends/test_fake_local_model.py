@@ -7,10 +7,10 @@ from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.ml_backends.fake_local_model import (
     FakeLocalModelTopics,
     FakeLocalModelSections,
-    LimitedTopicV0Model,
+    LimitedTopicV1Model,
     CTR_TOPIC_MODEL_ID,
     CTR_SECTION_MODEL_ID,
-    CTR_LIMITED_TOPIC_MODEL_ID,
+    CTR_LIMITED_TOPIC_MODEL_ID2,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
@@ -35,7 +35,7 @@ def model_topics():
 @pytest.fixture
 def model_limited():
     """Create fake model"""
-    return LimitedTopicV0Model()
+    return LimitedTopicV1Model()
 
 
 def test_model_returns_inferred_local_model_topics(model_topics):
@@ -77,13 +77,13 @@ def test_model_returns_inferred_local_model_sections(model_sections):
 
 
 def test_model_returns_limited_model(model_limited):
-    """Tests fake local model, sections"""
+    """Tests fake local model """
     surface_id = TEST_SURFACE
     result = model_limited.get(surface_id)
 
     assert isinstance(result, InferredLocalModel)
     assert result.surface_id == surface_id
-    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID
+    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
     assert result.model_version == 0
     assert result.model_data is not None
     assert (
@@ -94,8 +94,7 @@ def test_model_returns_limited_model(model_limited):
     assert len(result.model_data.day_time_weighting.relative_weight) > 0
 
     # test a specific threshold value
-    assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.005
-
+    assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.01
 
 def test_unary_decoding(model_limited):
     """Test unary decoding of interest found interest vector values func"""
@@ -297,7 +296,7 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, suppor
     """decode_dp_interests decodes various unary patterns."""
     model = model_limited.get(TEST_SURFACE)
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
 
     values = []
     for _key, feature in model.model_data.interest_vector.items():
@@ -317,7 +316,7 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, suppor
 @pytest.mark.parametrize(
     "input_id,expected",
     [
-        (CTR_LIMITED_TOPIC_MODEL_ID, True),
+        (CTR_LIMITED_TOPIC_MODEL_ID2, True),
         ("bad id", False),
         (None, False),
         (3.14, False),
@@ -332,7 +331,7 @@ def test_model_matches_interests_param(model_limited, input_id, expected):
 @pytest.fixture
 def inferred_model():
     """Build a concrete InferredLocalModel for tests."""
-    backend = LimitedTopicV0Model()
+    backend = LimitedTopicV1Model()
     return backend.get("surface")
 
 
@@ -351,12 +350,13 @@ def test_process_returns_none_when_request_has_no_interests(inferred_model):
 def test_process_passes_through_when_no_model():
     """When inferred_local_model is None, return ProcessedInterests with empty scores."""
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
     req = make_request(interests)
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_local_model=None)
     assert isinstance(out, ProcessedInterests)
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
     assert out.scores == {}
+    assert out.normalized_scores == {}
 
 
 def test_process_passes_through_on_model_id_mismatch(inferred_model):
@@ -369,6 +369,7 @@ def test_process_passes_through_on_model_id_mismatch(inferred_model):
     assert isinstance(out, ProcessedInterests)
     assert out.model_id == "not-this-model"
     assert out.scores == {}  # String values are not included in scores
+    assert out.normalized_scores == {}
 
 
 def test_process_decodes_when_values_present(inferred_model):
@@ -381,19 +382,20 @@ def test_process_decodes_when_values_present(inferred_model):
         dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
 
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
     interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
     req = make_request(interests)
 
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
     assert isinstance(out, ProcessedInterests)
     # model_id is preserved
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
 
     # spot-check a couple of features decode to the last threshold
     checked = 0
     for key, cfg in iv.items():
         assert out.scores[key] == cfg.thresholds[-1]
+        assert abs(out.normalized_scores[key] - 1.) < 0.01
         checked += 1
         if checked >= 2:
             break
@@ -402,13 +404,16 @@ def test_process_decodes_when_values_present(inferred_model):
 def test_process_passthrough_when_values_missing_even_with_matching_model(inferred_model):
     """If model_id matches but no DP values key, extract existing numeric scores."""
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
     interests.root["foo"] = 0.123
     interests.root["bar"] = "baz"  # String, not a score
     req = make_request(interests)
 
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
     assert isinstance(out, ProcessedInterests)
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
     assert out.scores["foo"] == 0.123
+    assert "foo" not in out.normalized_scores
+    assert "bar" not in out.normalized_scores  # String values are not included in scores
     assert "bar" not in out.scores  # String values are not included in scores
+

@@ -185,7 +185,7 @@ class LimitedTopicV0Model(LocalModelBackend):
         Topic.SELF_IMPROVEMENT.value,
     ]
 
-    model_id = CTR_LIMITED_TOPIC_MODEL_ID
+    model_id = CTR_LIMITED_TOPIC_MODEL_ID2
 
     def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
         """Fetch local model for the region
@@ -224,6 +224,8 @@ class LimitedTopicV0Model(LocalModelBackend):
         )
 
 
+V1_THRESHOLDS = [0.01, 0.02, 0.034]
+
 # Creates a simple model based on sections. Section features are stored with a s_
 # in telemetry.
 class LimitedTopicV1Model(LocalModelBackend):
@@ -244,7 +246,7 @@ class LimitedTopicV1Model(LocalModelBackend):
         Topic.BUSINESS.value,
     ]
     limited_topics_set = set(limited_topics)
-    model_id = CTR_LIMITED_TOPIC_MODEL_ID
+    model_id = CTR_LIMITED_TOPIC_MODEL_ID2
 
     def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
         """Fetch local model for the region
@@ -254,9 +256,7 @@ class LimitedTopicV1Model(LocalModelBackend):
         def get_topic(topic: str) -> InterestVectorConfig:
             return InterestVectorConfig(
                 features={f"t_{topic}": 1},
-                thresholds=[0.008, 0.016, 0.024]
-                if topic is not Topic.SPORTS.value
-                else [0.005, 0.008, 0.02],
+                thresholds=V1_THRESHOLDS,
                 diff_p=V0_MODEL_P_VALUE,
                 diff_q=V0_MODEL_Q_VALUE,
             )
@@ -267,7 +267,7 @@ class LimitedTopicV1Model(LocalModelBackend):
         remainder_topic_list = [topic for topic in Topic if topic not in self.limited_topics_set]
         category_fields[DEFAULT_INTERESTS_KEY] = InterestVectorConfig(
             features={f"t_{topic_obj.value}": 1 for topic_obj in remainder_topic_list},
-            thresholds=[0.008, 0.016, 0.024],
+            thresholds=V1_THRESHOLDS,
             diff_p=V0_MODEL_P_VALUE,
             diff_q=V0_MODEL_Q_VALUE,
         )
