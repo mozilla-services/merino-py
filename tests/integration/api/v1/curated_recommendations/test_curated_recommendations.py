@@ -37,6 +37,7 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     Engagement,
 )
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
+from merino.curated_recommendations.ml_backends.fake_local_model import CTR_LIMITED_TOPIC_MODEL_ID2
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
     ModelData,
@@ -193,11 +194,11 @@ def setup_manifest_provider(manifest_provider):
 
 @pytest.fixture(name="corpus_provider")
 def provider(
-    scheduled_surface_backend: ScheduledSurfaceBackend,
-    sections_backend: SectionsProtocol,
-    engagement_backend: EngagementBackend,
-    prior_backend: PriorBackend,
-    local_model_backend: LocalModelBackend,
+        scheduled_surface_backend: ScheduledSurfaceBackend,
+        sections_backend: SectionsProtocol,
+        engagement_backend: EngagementBackend,
+        prior_backend: PriorBackend,
+        local_model_backend: LocalModelBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
@@ -247,7 +248,7 @@ def get_max_total_retry_duration() -> float:
     jitter = settings.curated_recommendations.corpus_api.retry_wait_jitter_seconds
     retry_count = settings.curated_recommendations.corpus_api.retry_count
 
-    return float(initial * (2**retry_count - 1) + retry_count * jitter)
+    return float(initial * (2 ** retry_count - 1) + retry_count * jitter)
 
 
 def assert_section_layouts_are_cycled(sections: dict):
@@ -498,7 +499,7 @@ class TestCuratedRecommendationsRequestParameters:
 
     @pytest.mark.parametrize("count", [10, 50, 100])
     def test_curated_recommendations_count(
-        self, count, scheduled_surface_response_data, client: TestClient
+            self, count, scheduled_surface_response_data, client: TestClient
     ):
         """Test the curated recommendations endpoint accepts valid count."""
         response = client.post(
@@ -779,27 +780,27 @@ class TestCuratedRecommendationsRequestParameters:
         [
             # Valid topic, but must be wrapped in a list
             (
-                "arts",
-                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                "Topics not wrapped in a list: arts",
+                    "arts",
+                    [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                    "Topics not wrapped in a list: arts",
             ),
             # Invalid topic & must be wrapped in a list
             (
-                "invalid-topic",
-                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                "Topics not wrapped in a list: invalid-topic",
+                    "invalid-topic",
+                    [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                    "Topics not wrapped in a list: invalid-topic",
             ),
             # Invalid topic in a list
             (
-                ["not-a-valid-topic"],
-                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                "Invalid topic: not-a-valid-topic",
+                    ["not-a-valid-topic"],
+                    [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
+                    "Invalid topic: not-a-valid-topic",
             ),
             # 2 valid topics, 1 invalid topic
             (
-                ["food", "invalid_topic", "society-parenting"],
-                [Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD, Topic.CAREER],
-                "Invalid topic: invalid_topic",
+                    ["food", "invalid_topic", "society-parenting"],
+                    [Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD, Topic.CAREER],
+                    "Invalid topic: invalid_topic",
             ),
         ],
     )
@@ -808,17 +809,17 @@ class TestCuratedRecommendationsRequestParameters:
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
     def test_curated_recommendations_invalid_topic_return_200(
-        self,
-        topics,
-        expected_topics,
-        expected_warning,
-        scheduled_surface_response_data_short,
-        fixture_request_data,
-        scheduled_surface_http_client,
-        caplog,
-        repeat,
-        filter_caplog: FilterCaplogFixture,
-        client: TestClient,
+            self,
+            topics,
+            expected_topics,
+            expected_warning,
+            scheduled_surface_response_data_short,
+            fixture_request_data,
+            scheduled_surface_http_client,
+            caplog,
+            repeat,
+            filter_caplog: FilterCaplogFixture,
+            client: TestClient,
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
@@ -858,7 +859,7 @@ class TestCorpusApiCaching:
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
     def test_single_request_multiple_fetches(
-        self, scheduled_surface_http_client, client: TestClient
+            self, scheduled_surface_http_client, client: TestClient
     ):
         """Test that only a single request is made to the curated-corpus-api."""
         # Gather multiple fetch calls
@@ -879,15 +880,15 @@ class TestCorpusApiCaching:
     )
     @pytest.mark.asyncio
     async def test_single_request_multiple_failed_fetches(
-        self,
-        scheduled_surface_http_client,
-        fixture_request_data,
-        scheduled_surface_response_data,
-        fixture_graphql_200ok_with_error_response,
-        caplog,
-        error_type,
-        expected_warning,
-        client: TestClient,
+            self,
+            scheduled_surface_http_client,
+            fixture_request_data,
+            scheduled_surface_response_data,
+            fixture_graphql_200ok_with_error_response,
+            caplog,
+            error_type,
+            expected_warning,
+            client: TestClient,
     ):
         """Test that only a few requests are made to the curated-corpus-api when it is down.
         Additionally, test that if the backend returns a GraphQL error, it is handled correctly.
@@ -943,11 +944,11 @@ class TestCorpusApiCaching:
 
     @pytest.mark.asyncio
     async def test_cache_returned_on_subsequent_calls(
-        self,
-        scheduled_surface_http_client,
-        scheduled_surface_response_data,
-        fixture_request_data,
-        client: TestClient,
+            self,
+            scheduled_surface_http_client,
+            scheduled_surface_response_data,
+            fixture_request_data,
+            client: TestClient,
     ):
         """Test that the cache expires, and subsequent requests return new data."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
@@ -979,7 +980,7 @@ class TestCorpusApiCaching:
             assert all("NEW" in item["title"] for item in new_data["data"])
 
     def test_valid_cache_returned_on_error(
-        self, scheduled_surface_http_client, fixture_request_data, caplog, client: TestClient
+            self, scheduled_surface_http_client, fixture_request_data, caplog, client: TestClient
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         # First fetch to populate cache with good data
@@ -1040,12 +1041,12 @@ class TestCuratedRecommendationsMetrics:
         ]
 
     def test_metrics_corpus_api_error(
-        self,
-        mocker: MockerFixture,
-        scheduled_surface_http_client,
-        fixture_request_data,
-        scheduled_surface_response_data,
-        client: TestClient,
+            self,
+            mocker: MockerFixture,
+            scheduled_surface_http_client,
+            fixture_request_data,
+            scheduled_surface_response_data,
+            client: TestClient,
     ) -> None:
         """Test that metrics are recorded when the curated-corpus-api returns a 500 error"""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
@@ -1112,17 +1113,17 @@ class TestCorpusApiRanking:
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
     def test_thompson_sampling_behavior(
-        self,
-        topics,
-        engagement_backend,
-        experiment_name,
-        experiment_branch,
-        locale,
-        region,
-        derived_region,
-        regional_ranking_is_expected,
-        repeat,
-        client: TestClient,
+            self,
+            topics,
+            engagement_backend,
+            experiment_name,
+            experiment_branch,
+            locale,
+            region,
+            derived_region,
+            regional_ranking_is_expected,
+            repeat,
+            client: TestClient,
     ):
         """Test that Thompson sampling produces different orders and favors higher CTRs."""
         n_iterations = 20
@@ -1245,7 +1246,7 @@ class TestSections:
                 if section["iab"]:
                     assert section["iab"]["taxonomy"] == "IAB-3.0"
                     assert (
-                        section["iab"]["categories"][0] == expected_iab_code
+                            section["iab"]["categories"][0] == expected_iab_code
                     )  # only 1 code is sent for now
 
     @pytest.mark.parametrize(
@@ -1369,8 +1370,8 @@ class TestSections:
         response = client.post(
             "/api/v1/curated-recommendations",
             json={"locale": "en-US", "feeds": ["sections"]}
-            | sections_payload
-            | experiment_payload,
+                 | sections_payload
+                 | experiment_payload,
         )
         assert response.status_code == 200
         data = response.json()
@@ -1424,7 +1425,7 @@ class TestSections:
         ],
     )
     def test_curated_recommendations_with_sections_feed_boost_followed_sections(
-        self, caplog, experiment_payload, client: TestClient
+            self, caplog, experiment_payload, client: TestClient
     ):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale. Sections requested to be boosted (followed)
@@ -1438,16 +1439,16 @@ class TestSections:
         response = client.post(
             "/api/v1/curated-recommendations",
             json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "sections": [
-                    {"sectionId": "sports", "isFollowed": True, "isBlocked": False},
-                    {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
-                    {"sectionId": "education", "isFollowed": False, "isBlocked": True},
-                    {"sectionId": "health", "isFollowed": True, "isBlocked": False},
-                ],
-            }
-            | experiment_payload,
+                     "locale": "en-US",
+                     "feeds": ["sections"],
+                     "sections": [
+                         {"sectionId": "sports", "isFollowed": True, "isBlocked": False},
+                         {"sectionId": "arts", "isFollowed": True, "isBlocked": False},
+                         {"sectionId": "education", "isFollowed": False, "isBlocked": True},
+                         {"sectionId": "health", "isFollowed": True, "isBlocked": False},
+                     ],
+                 }
+                 | experiment_payload,
         )
         data = response.json()
 
@@ -1522,7 +1523,7 @@ class TestSections:
         ],
     )
     def test_rss_vs_zyte_experiment_sections_filtering(
-        self, caplog, experiment_payload, sections_response_data, client: TestClient
+            self, caplog, experiment_payload, sections_response_data, client: TestClient
     ):
         """Test that the RSS vs. Zyte experiment correctly filters sections based on experiment branch.
 
@@ -1568,9 +1569,9 @@ class TestSections:
             ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
             f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
         ] and experiment_payload.get("experimentBranch") in [
-            CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-        ]
+                                 CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                                 CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+                             ]
 
         crawl_count = len(response_ids & crawl_only)
         regular_count = len(response_ids & regular_only)
@@ -1578,7 +1579,7 @@ class TestSections:
         if is_crawl_treatment:
             assert crawl_count >= 50, f"Treatment needs 50+ crawl items, got {crawl_count}"
             assert (
-                regular_count == 0
+                    regular_count == 0
             ), f"Treatment shouldn't have regular items, got {regular_count}"
         else:
             assert regular_count >= 50, f"Control needs 50+ regular items, got {regular_count}"
@@ -1586,8 +1587,8 @@ class TestSections:
 
         legacy_topics = {topic.value for topic in Topic}
         is_expected_to_have_subtopics = (
-            experiment_payload.get("experimentBranch")
-            == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
+                experiment_payload.get("experimentBranch")
+                == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
         )
 
         if is_expected_to_have_subtopics:
@@ -1601,7 +1602,7 @@ class TestSections:
                     assert sid in legacy_topics, f"Should only have legacy topics, got {sid}"
 
     def test_curated_recommendations_with_sections_feed_removes_blocked_topics(
-        self, caplog, client: TestClient
+            self, caplog, client: TestClient
     ):
         """Test that when topic sections are blocked, those recommendations don't show up, not even
         in other sections like Popular Today.
@@ -1635,7 +1636,7 @@ class TestSections:
 
     @freezegun.freeze_time("2025-03-20 12:00:00", tz_offset=0)
     def test_curated_recommendations_with_sections_feed_followed_at(
-        self, caplog, client: TestClient
+            self, caplog, client: TestClient
     ):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale & providing followedAt.
@@ -1732,7 +1733,7 @@ class TestSections:
         ],
     )
     def test_curated_recommendations_with_invalid_followed_at_formats(
-        self, sections_payload, client: TestClient
+            self, sections_payload, client: TestClient
     ):
         """Test the curated recommendations endpoint response when providing invalid followedAt time formats:
         - missing timezone
@@ -1753,22 +1754,22 @@ class TestSections:
         "locale, expected_titles",
         [
             (
-                "en-US",
-                {
-                    "top_stories_section": "Popular Today",
-                    "arts": "Entertainment",
-                    "education": "Education",
-                    "sports": "Sports",
-                },
+                    "en-US",
+                    {
+                        "top_stories_section": "Popular Today",
+                        "arts": "Entertainment",
+                        "education": "Education",
+                        "sports": "Sports",
+                    },
             ),
             (
-                "de-DE",
-                {
-                    "top_stories_section": "Meistgelesen",
-                    "Career": "Karriere",
-                    "Education": "Bildung",
-                    "Sports": "Sport",
-                },
+                    "de-DE",
+                    {
+                        "top_stories_section": "Meistgelesen",
+                        "Career": "Karriere",
+                        "Education": "Bildung",
+                        "Sports": "Sport",
+                    },
             ),
         ],
     )
@@ -1794,7 +1795,7 @@ class TestSections:
 
     @pytest.mark.parametrize("enable_interest_picker", [True, False])
     def test_sections_interest_picker(
-        self, enable_interest_picker, monkeypatch, client: TestClient
+            self, enable_interest_picker, monkeypatch, client: TestClient
     ):
         """Test the curated recommendations endpoint returns an interest picker when enabled"""
         # The fixture data doesn't have enough sections for the interest picker to show up, so lower
@@ -1821,7 +1822,7 @@ class TestSections:
         if enable_interest_picker:
             assert interest_picker_response is not None
             assert (
-                interest_picker_response["title"] == "Follow topics to fine-tune your experience"
+                    interest_picker_response["title"] == "Follow topics to fine-tune your experience"
             )
         else:
             assert interest_picker_response is None
@@ -1832,7 +1833,7 @@ class TestSections:
 
     @pytest.mark.parametrize("enable_interest_picker", [True, False])
     def test_sections_interest_picker_ml_sections(
-        self, enable_interest_picker, monkeypatch, client: TestClient
+            self, enable_interest_picker, monkeypatch, client: TestClient
     ):
         """Test the curated recommendations endpoint returns expected response when an
         interest picker & ML sections enabled
@@ -1861,7 +1862,7 @@ class TestSections:
         if enable_interest_picker:
             assert interest_picker_response is not None
             assert (
-                interest_picker_response["title"] == "Follow topics to fine-tune your experience"
+                    interest_picker_response["title"] == "Follow topics to fine-tune your experience"
             )
         else:
             assert interest_picker_response is None
@@ -1914,7 +1915,7 @@ class TestSections:
 
     @pytest.mark.parametrize("enable_interest_vector", [True, False])
     def test_sections_model_interest_vector(
-        self, enable_interest_vector, monkeypatch, client: TestClient
+            self, enable_interest_vector, monkeypatch, client: TestClient
     ):
         """Test the curated recommendations endpoint returns a model when interest vector is passed"""
         response = client.post(
@@ -1932,7 +1933,7 @@ class TestSections:
         else:
             assert local_model is None
 
-    @pytest.mark.skip(reason="Section greedy ranking is disabled")
+    @pytest.mark.skip(reason="Section greedy ranking is temporarily turned off")
     def test_sections_model_interest_vector_greedy_ranking(self, monkeypatch, client: TestClient):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
         np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)
@@ -1974,14 +1975,12 @@ class TestSections:
         for i, sec in enumerate(sorted_interests):
             assert data["feeds"][sec]["receivedFeedRank"] == i
 
-
-    @pytest.mark.skip(reason="Section greedy ranking is disabled")
-    def test_sections_model_interest_vector_greedy_ranking(self, monkeypatch, client: TestClient):
+    def test_sections_model_interest_vector_most_popular(self, monkeypatch, client: TestClient):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
         np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)
 
         # define interest vector, reversed from previous order
-        interests = {"sports": 1., "arts": 0.0}
+        interests = {"sports": 0.0, "other": 0.0, "arts": 0.5, "model_id": CTR_LIMITED_TOPIC_MODEL_ID2}
 
         # make the api call
         response = client.post(
@@ -1993,23 +1992,26 @@ class TestSections:
             },
         )
         data = response.json()
-        # expect interests to be sorted by value
 
         ## sort sections received
-        sorted_sections = sorted(
-            data["feeds"], key=lambda x: data["feeds"][x]["receivedFeedRank"]
-        )[::-1]
+        sections = data["feeds"]
 
         ## we should get some sections out
-        assert len(sorted_sections) > 3
-        assert sorted_sections[0] == "top_stories_section"
+        assert len(sections) > 3
+        assert sections["top_stories_section"]["receivedFeedRank"] == 0
+        assert len(sections["top_stories_section"]["recommendations"]) > 10
+
+        # TODO - Verify this in the future
+        # assert sections["top_stories_section"]["recommendations"][0]["topic"] == "arts"
+
+
 
     @pytest.mark.parametrize(
         "repeat",
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
     def test_sections_ranked_by_top_items_engagement(
-        self, repeat, engagement_backend, client: TestClient
+            self, repeat, engagement_backend, client: TestClient
     ):
         """Sections should be ordered so that those with higher average CTR
         among their top 3 items get a better (lower) feed rank.
@@ -2058,15 +2060,15 @@ class TestSections:
         ],
     )
     def test_sections_pass_region_to_engagement_backend(
-        self,
-        locale,
-        region,
-        derived_region,
-        mocker,
-        engagement_backend,
-        scheduled_surface_http_client,
-        fixture_request_data,
-        client: TestClient,
+            self,
+            locale,
+            region,
+            derived_region,
+            mocker,
+            engagement_backend,
+            scheduled_surface_http_client,
+            fixture_request_data,
+            client: TestClient,
     ):
         """Ensure that when fetching a 'sections' feed we pass the right region into engagement.get"""
         spy = mocker.spy(engagement_backend, "get")
@@ -2116,13 +2118,13 @@ class TestSections:
         ],
     )
     async def test_takedown_reported_recommendations_parametrized(
-        self,
-        engagement_backend,
-        caplog,
-        reports,
-        impressions,
-        should_remove,
-        client: TestClient,
+            self,
+            engagement_backend,
+            caplog,
+            reports,
+            impressions,
+            should_remove,
+            client: TestClient,
     ):
         """Verify takedown_reported_recommendations behaves correctly."""
         corpus_rec_id = "080de671-e4de-4a3d-863f-8c6dd6980069"
@@ -2158,10 +2160,10 @@ class TestSections:
 
 
 def test_curated_recommendations_enriched_with_icons(
-    manifest_provider,
-    scheduled_surface_http_client,
-    fixture_request_data,
-    client: TestClient,
+        manifest_provider,
+        scheduled_surface_http_client,
+        fixture_request_data,
+        client: TestClient,
 ):
     """Test the enrichment of a curated recommendation with an added icon-url."""
     # Set up the manifest data first
@@ -2220,7 +2222,7 @@ def test_curated_recommendations_enriched_with_icons(
 
     assert "iconUrl" in item
     assert (
-        item["iconUrl"] == "https://merino-images.services.mozilla.com/favicons/microsoft-icon.png"
+            item["iconUrl"] == "https://merino-images.services.mozilla.com/favicons/microsoft-icon.png"
     )
 
     # Clean up
