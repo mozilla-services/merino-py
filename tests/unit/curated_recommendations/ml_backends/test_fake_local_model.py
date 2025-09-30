@@ -77,7 +77,7 @@ def test_model_returns_inferred_local_model_sections(model_sections):
 
 
 def test_model_returns_limited_model(model_limited):
-    """Tests fake local model """
+    """Tests fake local model"""
     surface_id = TEST_SURFACE
     result = model_limited.get(surface_id)
 
@@ -95,6 +95,7 @@ def test_model_returns_limited_model(model_limited):
 
     # test a specific threshold value
     assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.01
+
 
 def test_unary_decoding(model_limited):
     """Test unary decoding of interest found interest vector values func"""
@@ -395,7 +396,7 @@ def test_process_decodes_when_values_present(inferred_model):
     checked = 0
     for key, cfg in iv.items():
         assert out.scores[key] == cfg.thresholds[-1]
-        assert abs(out.normalized_scores[key] - 1.) < 0.01
+        assert abs(out.normalized_scores[key] - 1.0) < 0.01
         checked += 1
         if checked >= 2:
             break
@@ -416,4 +417,3 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(inferr
     assert "foo" not in out.normalized_scores
     assert "bar" not in out.normalized_scores  # String values are not included in scores
     assert "bar" not in out.scores  # String values are not included in scores
-

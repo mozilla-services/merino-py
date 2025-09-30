@@ -226,6 +226,7 @@ class LimitedTopicV0Model(LocalModelBackend):
 
 V1_THRESHOLDS = [0.01, 0.02, 0.034]
 
+
 # Creates a simple model based on sections. Section features are stored with a s_
 # in telemetry.
 class LimitedTopicV1Model(LocalModelBackend):
