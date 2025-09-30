@@ -5,8 +5,8 @@ from typing import Any
 from merino.curated_recommendations.prior_backends.protocol import ExperimentRescaler
 from merino.curated_recommendations.protocol import CuratedRecommendation
 
-SUBTOPIC_TOTAL_PERCENT = 0.06  # This may eventually be computed by an airflow job
-CRAWLED_TOPIC_TOTAL_PERCENT = 0.06
+SUBTOPIC_TOTAL_PERCENT = 0.13  # This may eventually be computed by an airflow job
+CRAWLED_TOPIC_TOTAL_PERCENT = 0.2
 SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 
 # This is derived using data analysis on scores and existing priors

@@ -35,7 +35,7 @@ class TestSubsectionsExperimentRescaler:
         assert no_opens == expected_no_opens
 
         alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
-        assert alpha == 10 / 4.0
+        assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE
         assert beta == 20
 
     def test_rescale_when_not_in_experiment(self):

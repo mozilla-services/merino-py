@@ -43,6 +43,7 @@ from merino.curated_recommendations.rankers import (
     section_thompson_sampling,
     put_top_stories_first,
     greedy_personalized_section_rank,
+    TOP_STORIES_SECTION_KEY,
     takedown_reported_recommendations,
 )
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
@@ -53,6 +54,8 @@ LAYOUT_CYCLE = [layout_6_tiles, layout_4_large, layout_4_medium]
 TOP_STORIES_COUNT = 6
 DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
+HEADLINES_SECTION_KEY = "headlines_section"
+HEADLINES_CRAWL_SECTION_KEY = "headlines_crawl"
 
 
 def map_section_item_to_recommendation(
@@ -113,6 +116,7 @@ def map_corpus_section_to_section(
         receivedFeedRank=rank,
         recommendations=recommendations,
         title=corpus_section.title,
+        subtitle=corpus_section.description,
         iab=corpus_section.iab,
         layout=deepcopy(layout),
     )
@@ -166,7 +170,7 @@ async def get_corpus_sections(
     crawl_branch: str | None = None,
     include_subtopics: bool = False,
     scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
-) -> dict[str, Section]:
+) -> tuple[Section | None, dict[str, Section]]:
     """Fetch editorially curated sections with optional RSS vs. Zyte experiment filtering.
 
     Args:
@@ -178,23 +182,53 @@ async def get_corpus_sections(
         scheduled_surface_backend: Backend interface to fetch scheduled corpus items (temporary)
 
     Returns:
-        A mapping from section IDs to Section objects, each with a unique receivedFeedRank.
+        A tuple of headlines section (if present) & a mapping from section IDs to Section objects, each with a unique receivedFeedRank.
     """
     # Get raw corpus sections
     raw_corpus_sections = await sections_backend.fetch(surface_id)
 
+    # Split headlines_section & remaining sections
+    raw_headlines_section, remaining_raw_corpus_sections = split_headlines_section(
+        raw_corpus_sections
+    )
+    headlines_corpus_section: Section | None = None
+
+    # If Headlines section is present, isolate from other sections & map to a corpus section
+    if raw_headlines_section:
+        headlines_corpus_section = map_corpus_section_to_section(
+            corpus_section=raw_headlines_section,
+            rank=0,
+            layout=deepcopy(layout_4_large),
+            is_legacy_section=False,
+        )
+
     # Apply RSS vs. Zyte experiment filtering
     filtered_corpus_sections = filter_sections_by_crawl_experiment(
-        raw_corpus_sections, crawl_branch, include_subtopics
+        remaining_raw_corpus_sections, crawl_branch, include_subtopics
     )
 
     # Process the sections using the shared logic, passing the dict directly
-    return await _process_corpus_sections(
+    corpus_sections = await _process_corpus_sections(
         filtered_corpus_sections,
         min_feed_rank,
         surface_id,
         scheduled_surface_backend,
     )
+    return headlines_corpus_section, corpus_sections
+
+
+def split_headlines_section(
+    corpus_sections: list[CorpusSection],
+) -> tuple[CorpusSection | None, list[CorpusSection]]:
+    """Return the headlines_crawl section separately from everything else."""
+    headlines_section: CorpusSection | None = None
+    remaining_sections: list[CorpusSection] = []
+    for cs in corpus_sections:
+        if cs.externalId == HEADLINES_CRAWL_SECTION_KEY:
+            headlines_section = cs
+        else:
+            remaining_sections.append(cs)
+    return headlines_section, remaining_sections
 
 
 def exclude_recommendations_from_blocked_sections(
@@ -232,6 +266,20 @@ def adjust_ads_in_sections(sections: dict[str, Section]) -> None:
                 tile.hasAd = False
 
 
+def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the Contextual Ads experiment is enabled."""
+    return is_enrolled_in_experiment(
+        request, ExperimentName.CONTEXTUAL_AD_EXPERIMENT.value, "treatment"
+    )
+
+
+def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the Daily Briefing Section experiment is enabled."""
+    return is_enrolled_in_experiment(
+        request, ExperimentName.DAILY_BRIEFING_EXPERIMENT.value, "treatment"
+    )
+
+
 def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if subtopics should be included based on experiments.
 
@@ -263,12 +311,17 @@ def get_crawl_experiment_branch(request: CuratedRecommendationsRequest) -> str |
 
     Handles both the regular experiment name and the optin- prefixed version for forced enrollment.
     """
-    experiment_name = ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value
-    # Check for both the experiment name and the optin- prefixed version (forced enrollment)
-    if (
-        request.experimentName == experiment_name
-        or request.experimentName == f"optin-{experiment_name}"
-    ):
+    if not request.experimentName:
+        return None
+
+    # Remove optin- prefix if present and check if it matches any crawl experiment
+    experiment_name = request.experimentName.removeprefix("optin-")
+    crawl_experiments = [
+        ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+        ExperimentName.NEW_TAB_CRAWLING_V2.value,
+    ]
+
+    if experiment_name in crawl_experiments:
         return request.experimentBranch
     return None
 
@@ -376,21 +429,55 @@ def filter_sections_by_crawl_experiment(
     return result
 
 
-def remove_top_story_recs(
-    recommendations: list[CuratedRecommendation], top_stories_rec_ids
+def remove_story_recs(
+    recommendations: list[CuratedRecommendation], story_rec_ids_to_remove
 ) -> list[CuratedRecommendation]:
-    """Remove recommendations that were included in the top stories section."""
-    return [rec for rec in recommendations if rec.corpusItemId not in top_stories_rec_ids]
+    """Remove recommendations that were included in the top stories section or headlines section."""
+    return [rec for rec in recommendations if rec.corpusItemId not in story_rec_ids_to_remove]
 
 
 def cycle_layouts_for_ranked_sections(sections: dict[str, Section], layout_cycle: list[Layout]):
-    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section'"""
-    # Exclude top_stories_section from layout cycling
+    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section' & 'headlines_section'."""
+    # Exclude top_stories_section & headlines_section(if present) from layout cycling
     ranked_sections = [
-        section for sid, section in sections.items() if sid != "top_stories_section"
+        section
+        for sid, section in sections.items()
+        if sid not in ("headlines_section", "top_stories_section")
     ]
     for idx, section in enumerate(ranked_sections):
         section.layout = deepcopy(layout_cycle[idx % len(layout_cycle)])
+
+
+def put_headlines_first_then_top_stories(sections: dict[str, Section]) -> dict[str, Section]:
+    """Ensure headlines section is on top followed by top_stories section, other sections should have rank 2...N & preserve relative order."""
+    headlines_key = HEADLINES_SECTION_KEY
+    top_stories_key = TOP_STORIES_SECTION_KEY
+
+    headlines_section = sections.get(headlines_key)
+    top_stories_section = sections.get(top_stories_key)
+
+    if not headlines_section:
+        return sections
+
+    # Save & keep relative order for the other sections based on their current ranks
+    remaining_sections = sorted(
+        (sec for sid, sec in sections.items() if sid not in (headlines_key, top_stories_key)),
+        key=lambda s: s.receivedFeedRank,
+    )
+
+    # Assign ranks, start with headlines rank == 0
+    headlines_section.receivedFeedRank = 0
+    # If top_stories is present, assign rank == 1
+    if top_stories_section:
+        top_stories_section.receivedFeedRank = 1
+        rank = 2
+    else:
+        rank = 1
+    # Assign consecutive ranks for the remaining sections
+    for idx, section in enumerate(remaining_sections, start=rank):
+        section.receivedFeedRank = idx
+
+    return sections
 
 
 def rank_sections(
@@ -400,6 +487,7 @@ def rank_sections(
     personal_interests: ProcessedInterests | None,
     experiment_rescaler: ExperimentRescaler | None,
     do_section_personalization_reranking: bool = False,
+    include_headlines_section: bool = False,
 ) -> dict[str, Section]:
     """Apply a series of stable ranking passes to the sections feed, in order of priority.
 
@@ -417,6 +505,7 @@ def rank_sections(
         personal_interests: provides personal interests.
         experiment_rescaler: Rescaler that can rescale based on experiment size
         do_section_personalization_reranking: Whether to implement section based reranking for personalization
+        include_headlines_section: If headlines_section experiment is enabled, don't put top_stories_section on top
 
     Returns:
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
@@ -436,6 +525,10 @@ def rank_sections(
 
     # 1st priority: always keep top stories at the very top
     sections = put_top_stories_first(sections)
+
+    # If headlines_section experiment enabled, put headlines section on top, followed by top_stories
+    if include_headlines_section:
+        put_headlines_first_then_top_stories(sections)
 
     # Sort sections by receivedFeedRank
     sections = {
@@ -513,13 +606,18 @@ async def get_sections(
 
     rescaler = get_ranking_rescaler_for_branch(request)
 
-    corpus_sections_all = await get_corpus_sections(
+    headlines_corpus_section, corpus_sections_all = await get_corpus_sections(
         sections_backend=sections_backend,
         surface_id=surface_id,
         min_feed_rank=1,
         crawl_branch=crawl_branch,
         include_subtopics=include_subtopics,
         scheduled_surface_backend=scheduled_surface_backend,
+    )
+
+    # Determine if we should include headlines section based on daily briefing experiment
+    include_headlines_section = (
+        is_daily_briefing_experiment(request) and headlines_corpus_section is not None
     )
 
     # 2. Sections are already properly filtered by get_corpus_sections
@@ -564,17 +662,30 @@ async def get_sections(
     top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
     popular_today_layout = layout_7_tiles_2_ads
 
+    if is_contextual_ads_experiment(request):
+        popular_today_layout = layout_4_large
+
     top_stories = get_top_story_list(
         all_ranked_corpus_recommendations, top_stories_count, TOP_STORIES_SECTION_EXTRA_COUNT
     )
 
+    # Get the story ids in top_stories section
     top_stories_rec_ids = {rec.corpusItemId for rec in top_stories}
+    # Get the story ids in headlines_section (if present, otherwise empty)
+    headlines_rec_ids = (
+        {rec.corpusItemId for rec in headlines_corpus_section.recommendations}
+        if headlines_corpus_section
+        else {}
+    )
+    # Use set & update() to merge together & ensure no duplicates
+    story_ids_to_remove = set(top_stories_rec_ids)
+    story_ids_to_remove.update(headlines_rec_ids)
 
-    # 9. Remove top story recs from original corpus sections
+    # 7. Remove top story / headlines recs (if present) from original corpus sections
     for cs in corpus_sections.values():
-        cs.recommendations = remove_top_story_recs(cs.recommendations, top_stories_rec_ids)
+        cs.recommendations = remove_story_recs(cs.recommendations, story_ids_to_remove)
 
-    # 10. Rank remaining recs in sections by engagement
+    # 8. Rank remaining recs in sections by engagement
     for cs in corpus_sections.values():
         cs.recommendations = thompson_sampling(
             cs.recommendations,
@@ -584,7 +695,7 @@ async def get_sections(
             rescaler=rescaler,
         )
 
-    # 11. Initialize sections with top stories
+    # 9. Initialize sections with top stories
     sections: dict[str, Section] = {
         "top_stories_section": Section(
             receivedFeedRank=0,
@@ -594,25 +705,31 @@ async def get_sections(
         )
     }
 
-    # 12. Add remaining corpus sections
+    # 10. If headlines_section experiment enabled, insert headlines_section on top followed by top_stories
+    if is_daily_briefing_experiment(request) and headlines_corpus_section is not None:
+        sections["headlines_section"] = headlines_corpus_section
+        sections["top_stories_section"].layout = layout_4_medium
+
+    # 11. Add remaining corpus sections
     sections.update(corpus_sections)
 
-    # 13. Prune undersized sections
+    # 12. Prune undersized sections
     sections = get_sections_with_enough_items(sections)
 
-    # 14. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
+    # 13. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
     sections = rank_sections(
         sections,
         request.sections,
         engagement_backend,
         personal_interests,
         experiment_rescaler=rescaler,
+        include_headlines_section=include_headlines_section,
     )
 
-    # 15. Apply final layout cycling to ranked sections except top_stories
+    # 14. Apply final layout cycling to ranked sections except top_stories
     cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
 
-    # 16. Apply ad adjustments
+    # 15. Apply ad adjustments
     adjust_ads_in_sections(sections)
 
     return sections

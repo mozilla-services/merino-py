@@ -7531,6 +7531,141 @@
         ]
       },
       {
+        "externalId": "headlines_crawl",
+        "active": true,
+        "title": "Headlines",
+        "description": "Top Headlines today",
+        "iab": {
+          "taxonomy": "IAB-3.0",
+          "categories": [
+            "386",
+            "JLBCU7"
+          ]
+        },
+        "sectionItems": [
+          {
+            "corpusItem": {
+              "id": "93afbe7c-5509-47f2-8244-a35d555c2941",
+              "url": "https://www.inverse.com/entertainment/peacemaker-easter-egg-ultra-humanite-dcu-earth-2",
+              "title": "Best Deep-Cut Easter Egg Reboots a Forgotten Superman Villain",
+              "excerpt": "Here\u2019s why one detail about the Ultra-Humanite, a villain from before the dawn of Luthor, might be a big deal.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Inverse",
+              "isTimeSensitive": false,
+              "imageUrl": "https://imgix.bustle.com/uploads/image/2025/8/25/06795c6f/john-cena_1.jpg?w=1200&h=630&fit=crop&crop=faces&fm=jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "5654a9b1-e241-4524-ab3b-5026c2572b1f",
+              "url": "https://getpocket.com/explore/item/earth-s-orbital-shifts-may-have-triggered-ancient-global-warming",
+              "title": "How Earth\u2019s Orbital Shifts May Have Triggered Ancient Global Warming",
+              "excerpt": "A study combining astronomical and geologic data hints at an extraterrestrial cause for extreme climate change 56 million years ago.",
+              "topic": "SCIENCE",
+              "publisher": "Scientific American",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.amazonaws.com/pocket-curatedcorpusapi-prod-images/d906d197-4614-4981-8db6-41d9702375aa.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "839812c2-9aef-4819-b222-42a8cec47350",
+              "url": "https://ew.com/tv/true-crime-shows-peacock/",
+              "title": "The 23 Best True Crime Shows on Peacock to Keep You Guessing",
+              "excerpt": "From pathological liars to corrupt doctors to dangerous cult leaders, there’s something for everyone inside Peacock’s massive true crime library.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Entertainment Weekly",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/5357aaf3-261d-44d7-a22f-a32e35caab0a.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "5e8a706f-aeee-4376-be92-6153de4641f4",
+              "url": "https://www.usatoday.com/story/entertainment/tv/2025/09/10/emmys-2025-predictions-winners/85938562007/",
+              "title": "Who Will Win at the 2025 Emmy Awards (and Who Really Should)",
+              "excerpt": "From “The Studio” to “The Pitt” to “Adolescence,” here are the TV shows that will win big at the 2025 Emmys on Sept. 14 – and those that should.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "USA TODAY",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/5d81d816-dd8b-4f5d-ba53-012c4d4e6297.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "4470c4aa-1596-4853-af9e-2951b936e6cf",
+              "url": "https://www.vulture.com/article/platonic-recap-season-2-episode-7-the-holiday-party.html",
+              "title": "Platonic Recap: Don’t Ask, Don’t Get",
+              "excerpt": "Maybe Charlie took Will’s advice to drop lawyering and do whatever he wanted a little too literally.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Vulture",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/64263212-5e60-4dbd-9821-c3d93b0d273c.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "bfcfb912-8bda-43fb-b4b4-73180d1c679a",
+              "url": "https://www.spin.com/2025/09/armand-hammer-the-alchemist-deliver-mercy/",
+              "title": "Armand Hammer, the Alchemist Deliver ‘Mercy’",
+              "excerpt": "Rap duo Armand Hammer (billy wods and ELUCID) has teamed with producer the Alchemist for a new album...",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Spin",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8a06bdad-43f4-4ec0-a0a9-4fded76e2d93.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "a17cb0dc-10df-4b45-83e2-2a3612c12290",
+              "url": "https://www.nbcsports.com/nba/news/kawhi-leonards-uncle-reportedly-asked-toronto-to-get-the-player-no-show-endorsements-in-2019",
+              "title": "Kawhi Leonard’s Uncle Reportedly Asked Toronto to Get the Player ‘No-Show’ Endorsements in 2019",
+              "excerpt": "Those are the same kind of allegations the NBA is investigating regarding the Clippers and salary cap circumvention.",
+              "topic": "SPORTS",
+              "publisher": "NBC Sports",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/274ce3ad-c196-45f2-823c-bba9b2d85e1d.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "4d48cc8f-e2c8-465b-967c-4a1f5f8abe10",
+              "url": "https://www.nba.com/news/eurobasket-2025-day-13-recap",
+              "title": "EuroBasket 2025: Germany, Finland Reach Semifinals",
+              "excerpt": "Finland holds off a Georgia fightback to win 93-79 and reach the semifinals of EuroBasket for the first time in history.",
+              "topic": "SPORTS",
+              "publisher": "National Basketball Association",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1820ae3b-6f01-4b5b-aa87-a022cd472c33.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "305ed316-f604-4f1e-91be-c65e996f79d5",
+              "url": "https://www.si.com/soccer/how-lamine-yamal-almost-left-barcelona-just-5-million",
+              "title": "Report: How Lamine Yamal Almost Left Barcelona for Just €5 Million",
+              "excerpt": "Paris Saint-Germain were interested in Yamal after another European giant approached the player’s agent.",
+              "topic": "SPORTS",
+              "publisher": "Sports Illustrated",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f6a5bacf-0099-4f74-84b6-935c6f239493.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "37fa6962-abad-4a68-acba-f755d4202bfe",
+              "url": "https://www.theatlantic.com/technology/archive/2025/09/ai-watchdog-faq/684082/",
+              "title": "Introducing AI Watchdog",
+              "excerpt": "An ongoing investigation by The Atlantic to reveal the inner workings of generative AI",
+              "topic": "TECHNOLOGY",
+              "publisher": "The Atlantic",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9b601641-8298-436b-9da7-ce810b77b5ae.gif"
+            }
+          }
+        ]
+      },
+      {
         "externalId": "society_crawl",
         "active": true,
         "title": "Life Hacks",
