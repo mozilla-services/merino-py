@@ -37,7 +37,9 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     Engagement,
 )
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
-from merino.curated_recommendations.ml_backends.fake_local_model import CTR_LIMITED_TOPIC_MODEL_ID2
+from merino.curated_recommendations.ml_backends.static_local_model import (
+    CTR_LIMITED_TOPIC_MODEL_ID2,
+)
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
     ModelData,

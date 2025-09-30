@@ -1,10 +1,10 @@
-"""Unit tests for fake local model"""
+"""Unit tests for static local model"""
 
 import pytest
 from types import SimpleNamespace
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
-from merino.curated_recommendations.ml_backends.fake_local_model import (
+from merino.curated_recommendations.ml_backends.static_local_model import (
     FakeLocalModelTopics,
     FakeLocalModelSections,
     LimitedTopicV1Model,

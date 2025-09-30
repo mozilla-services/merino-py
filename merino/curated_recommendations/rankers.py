@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from merino.curated_recommendations import ConstantPrior
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.ml_backends.fake_local_model import DEFAULT_INTERESTS_KEY
+from merino.curated_recommendations.ml_backends.static_local_model import DEFAULT_INTERESTS_KEY
 from merino.curated_recommendations.prior_backends.protocol import (
     PriorBackend,
     Prior,
