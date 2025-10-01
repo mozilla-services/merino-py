@@ -11,7 +11,12 @@ from merino.cache.redis import RedisAdapter, create_redis_clients
 from merino.configs import settings
 from merino.exceptions import CacheAdapterError
 from merino.utils.gcs.gcs_uploader import GcsUploader
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -77,8 +82,8 @@ def fetch_schedules(client: httpx.Client) -> tuple[set[str], int]:
 
             process_flight_numbers(flight_number_set, scheduled_flights)
 
-            url = data.get("links", {}).get("next", None)
-            page += 1
+            links = data.get("links") or {}
+            url = links.get("next", None)
 
         except httpx.HTTPStatusError as ex:
             logger.error(
