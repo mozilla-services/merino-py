@@ -224,7 +224,7 @@ class LimitedTopicV0Model(LocalModelBackend):
         )
 
 
-V1_THRESHOLDS = [0.01, 0.02, 0.034]
+V1_THRESHOLDS = [0.008, 0.016, 0.024]
 
 
 # Creates a simple model based on sections. Section features are stored with a s_

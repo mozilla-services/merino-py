@@ -1,5 +1,7 @@
 """Unit tests for static local model"""
 
+import math
+
 import pytest
 from types import SimpleNamespace
 
@@ -94,7 +96,7 @@ def test_model_returns_limited_model(model_limited):
     assert len(result.model_data.day_time_weighting.relative_weight) > 0
 
     # test a specific threshold value
-    assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.01
+    assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.008
 
 
 def test_unary_decoding(model_limited):
@@ -373,7 +375,7 @@ def test_process_passes_through_on_model_id_mismatch(inferred_model):
     assert out.normalized_scores == {}
 
 
-def test_process_decodes_when_values_present(inferred_model):
+def test_process_decodes_when_same_values_present(inferred_model):
     """When model_id matches and values are present, decode into floats."""
     # Build a valid dp_values array aligned with the model's interest_vector order
     iv = inferred_model.model_data.interest_vector
@@ -393,13 +395,45 @@ def test_process_decodes_when_values_present(inferred_model):
     assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
 
     # spot-check a couple of features decode to the last threshold
-    checked = 0
     for key, cfg in iv.items():
         assert out.scores[key] == cfg.thresholds[-1]
-        assert abs(out.normalized_scores[key] - 1.0) < 0.01
-        checked += 1
-        if checked >= 2:
-            break
+        assert abs(out.normalized_scores[key] - 1 / math.sqrt(len(iv))) < 0.01  # normalized
+
+
+def test_process_decodes_when_different_present(inferred_model):
+    """When model_id matches and values are present, decode into floats."""
+    # Build a valid dp_values array aligned with the model's interest_vector order
+    iv = inferred_model.model_data.interest_vector
+    dp_values = []
+    for idx, (_key, cfg) in enumerate(iv.items()):
+        n = len(cfg.thresholds) + 1
+        if idx == 0:
+            dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
+        else:
+            dp_values.append("1" + (n - 1) * "0")  # lowest (0) value
+
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
+    interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
+    req = make_request(interests)
+
+    out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
+    assert isinstance(out, ProcessedInterests)
+    # model_id is preserved
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
+    print(dp_values)
+    print("raw")
+    print(out.scores)
+    print("normalized")
+    print(out.normalized_scores)
+    # spot-check a couple of features decode to the last threshold
+    for idx, (key, cfg) in enumerate(iv.items()):
+        if idx == 0:
+            assert out.scores[key] == cfg.thresholds[-1]
+            assert abs(out.normalized_scores[key] - 1) < 0.01  # normalizes to 1
+        else:
+            assert out.scores[key] == 0.0
+            assert abs(out.normalized_scores[key]) < 0.01  # normalizes to 0
 
 
 def test_process_passthrough_when_values_missing_even_with_matching_model(inferred_model):

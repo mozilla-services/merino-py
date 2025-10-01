@@ -486,7 +486,7 @@ def rank_sections(
     engagement_backend: EngagementBackend,
     personal_interests: ProcessedInterests | None,
     experiment_rescaler: ExperimentRescaler | None,
-    do_section_personalization_reranking: bool = False,
+    do_section_personalization_reranking: bool = True,
     include_headlines_section: bool = False,
 ) -> dict[str, Section]:
     """Apply a series of stable ranking passes to the sections feed, in order of priority.
@@ -505,6 +505,7 @@ def rank_sections(
         personal_interests: provides personal interests.
         experiment_rescaler: Rescaler that can rescale based on experiment size
         do_section_personalization_reranking: Whether to implement section based reranking for personalization
+        if interest vector is avialable.
         include_headlines_section: If headlines_section experiment is enabled, don't put top_stories_section on top
 
     Returns:

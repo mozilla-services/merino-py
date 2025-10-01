@@ -134,20 +134,28 @@ class ProcessedInterests(BaseModel):
 
     @model_validator(mode="after")
     def compute_norm(self):
-        """Set the normalized_scores dictionary with a normalized (1 max based) set
-        of interests if the number of interests we have meet a minimum threshold, otherwise
-        leave empty.
+        """Set the normalized_scores dictionary with an L2-normalized (unit length) set
+        of interests if the number of interests we have meets a minimum threshold,
+        otherwise leave empty.
 
-        If any key missing from the expected_keys, we set value to an average of the
-        other values.
+        If any key is missing from the expected_keys, we set its value to the mean
+        of the normalized values.
         """
         if len(self.scores) >= self.minimum_value_count_for_normalization:
             keys = list(self.scores.keys())
             values = np.array(list(self.scores.values()), dtype=float)
-            normalized = values / (values.max() + 1e-6)
+
+            # Compute L2 norm (Euclidean length)
+            norm = np.linalg.norm(values) + 1e-6
+            normalized = values / norm
+
             normalized_dict: dict[str, float] = dict(zip(keys, normalized))
-            for missing_key in self.expected_keys - normalized_dict.keys():  # Set intersection
-                normalized_dict[missing_key] = normalized.mean()
+
+            # Fill in missing expected keys with mean
+            mean_val = normalized.mean()
+            for missing_key in self.expected_keys - normalized_dict.keys():
+                normalized_dict[missing_key] = mean_val
+
             object.__setattr__(self, "normalized_scores", normalized_dict)
         return self
 

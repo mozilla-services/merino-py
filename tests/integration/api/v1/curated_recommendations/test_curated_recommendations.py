@@ -2052,7 +2052,6 @@ class TestSections:
         else:
             assert local_model is None
 
-    @pytest.mark.skip(reason="Section greedy ranking is temporarily turned off")
     def test_sections_model_interest_vector_greedy_ranking(self, monkeypatch, client: TestClient):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
         np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)
