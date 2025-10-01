@@ -8,7 +8,10 @@ import httpx
 import asyncio
 import json
 from unittest.mock import MagicMock, patch
-from merino.jobs.flightaware.fetch_schedules import store_flight_numbers_in_gcs, fetch_schedules
+from merino.jobs.flightaware.fetch_schedules import (
+    store_flight_numbers_in_gcs,
+    fetch_schedules,
+)
 
 
 def test_fetch_with_mock_transport():
@@ -31,7 +34,10 @@ def test_fetch_schedules_with_pagination():
     responses = [
         httpx.Response(
             200,
-            json={"scheduled": [{"ident_iata": "AA123"}], "links": {"next": "/schedules/page2"}},
+            json={
+                "scheduled": [{"ident_iata": "AA123"}],
+                "links": {"next": "/schedules/page2"},
+            },
         ),
         httpx.Response(200, json={"scheduled": [{"ident_iata": "UA456"}], "links": {}}),
     ]
@@ -57,7 +63,10 @@ def test_store_flight_numbers_in_gcs_first_upload():
     mock_uploader = MagicMock()
     mock_uploader.get_most_recent_file.return_value = None
 
-    with patch("merino.jobs.flightaware.fetch_schedules.GcsUploader", return_value=mock_uploader):
+    with patch(
+        "merino.jobs.flightaware.fetch_schedules.GcsUploader",
+        return_value=mock_uploader,
+    ):
         flight_numbers = {"AA123", "UA456"}
         asyncio.run(store_flight_numbers_in_gcs(flight_numbers))
 
@@ -73,7 +82,10 @@ def test_store_flight_numbers_in_gcs_merges_existing():
     mock_uploader = MagicMock()
     mock_uploader.get_most_recent_file.return_value = mock_blob
 
-    with patch("merino.jobs.flightaware.fetch_schedules.GcsUploader", return_value=mock_uploader):
+    with patch(
+        "merino.jobs.flightaware.fetch_schedules.GcsUploader",
+        return_value=mock_uploader,
+    ):
         flight_numbers = {"AA123", "UA456"}  # AA123 is already in the blob
         asyncio.run(store_flight_numbers_in_gcs(flight_numbers))
 
@@ -84,3 +96,25 @@ def test_store_flight_numbers_in_gcs_merges_existing():
     assert "DL789" in uploaded_list
     assert "UA456" in uploaded_list
     assert len(uploaded_list) == 3
+
+
+def test_fetch_schedules_handles_links_null():
+    """Verify fetch_schedules exits gracefully when 'links' is null in the response."""
+
+    def handler(request):
+        return httpx.Response(
+            200,
+            json={
+                "scheduled": [{"ident_iata": "AA123"}],
+                "links": None,
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    client = httpx.Client(transport=transport, base_url="https://aeroapi.flightaware.com/aeroapi")
+
+    flights, calls = fetch_schedules(client)
+
+    # It should have collected the flight and stopped
+    assert flights == {"AA123"}
+    assert calls == 1
