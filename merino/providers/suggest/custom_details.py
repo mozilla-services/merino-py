@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from merino.middleware.geolocation import Coordinates
 from merino.providers.suggest.finance.backends.protocol import TickerSummary
+from merino.providers.suggest.flightaware.backends.protocol import FlightSummary
 from merino.providers.suggest.google_suggest.backends.protocol import GoogleSuggestResponse
 from merino.providers.suggest.yelp.backends.protocol import YelpBusinessDetails
 
@@ -39,6 +40,12 @@ class PolygonDetails(BaseModel):
     values: list[TickerSummary]
 
 
+class FlightAwareDetails(BaseModel):
+    """FlightAware specific fields."""
+
+    values: list[FlightSummary]
+
+
 class YelpDetails(BaseModel):
     """Yelp specific fields."""
 
@@ -63,3 +70,4 @@ class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     polygon: PolygonDetails | None = None
     yelp: YelpDetails | None = None
     google_suggest: GoogleSuggestDetails | None = None
+    flightaware: FlightAwareDetails | None = None

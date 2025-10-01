@@ -820,11 +820,19 @@ storage = "gcs"
 
 # MERINO_FLIGHTAWARE__BASE_URL
 # The base URL of FlightAware API endpoints.
-base_url = "https://aeroapi.flightaware.com/aeroapi"
+base_url = "https://aeroapi.flightaware.com/aeroapi/"
 
 # MERINO_FLIGHTAWARE__SCHEDULES_URL
 # The URL path of FlightAware schedules endpoint.
 schedules_url_path = "/schedules/{start}/{end}?max_pages=20"
+
+# MERINO_FLIGHTAWARE__IDENT_URL
+# The URL path of FlightAware ident endpoint.
+ident_url_path = "flights/{ident}?ident_type=designator&start={start}&end={end}&max_pages=1"
+
+# MERINO_FLIGHTAWARE__LANDING_PAGE_URL
+# The url to the live FlightAware landing page.
+landing_page_url = "https://www.flightaware.com/live/flight/{ident}"
 
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
