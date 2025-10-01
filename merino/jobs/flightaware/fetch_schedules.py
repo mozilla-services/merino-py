@@ -84,6 +84,7 @@ def fetch_schedules(client: httpx.Client) -> tuple[set[str], int]:
 
             links = data.get("links") or {}
             url = links.get("next", None)
+            page += 1
 
         except httpx.HTTPStatusError as ex:
             logger.error(

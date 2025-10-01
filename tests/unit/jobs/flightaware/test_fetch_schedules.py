@@ -114,3 +114,41 @@ def test_fetch_schedules_handles_links_null(caplog):
     assert flights == {"AA123"}
     assert calls == 1
     assert "Page 1: 1 flights" in caplog.text
+
+
+def test_fetch_schedules_increments_page(caplog):
+    """Verify that fetch_schedules increments the page counter on each loop iteration."""
+    caplog.set_level("INFO")
+
+    first_resp = MagicMock()
+    first_resp.json.return_value = {
+        "scheduled": [{"ident_iata": "AA123"}],
+        "links": {"next": "/page2"},
+    }
+    first_resp.raise_for_status.return_value = None
+
+    second_resp = MagicMock()
+    second_resp.json.return_value = {
+        "scheduled": [{"ident_iata": "UA456"}],
+        "links": {},
+    }
+    second_resp.raise_for_status.return_value = None
+
+    responses = [first_resp, second_resp]
+    call_count = {"i": 0}
+
+    def fake_get_with_retry(client, url, headers):
+        resp = responses[call_count["i"]]
+        call_count["i"] += 1
+        return resp
+
+    mock_client = MagicMock()
+
+    with patch.object(fetch_schedules, "_get_with_retry", side_effect=fake_get_with_retry):
+        flights, calls = fetch_schedules.fetch_schedules(mock_client)
+
+    assert flights == {"AA123", "UA456"}
+    assert calls == 2
+
+    assert "Page 1: 1 flights" in caplog.text
+    assert "Page 2: 1 flights" in caplog.text
