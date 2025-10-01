@@ -1,5 +1,6 @@
 """Downloads and uploads ticker images for polygon"""
 
+from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.finance.backends.polygon.backend import PolygonBackend
 from merino.providers.suggest.finance.backends.protocol import FinanceBackend
 from merino.providers.suggest.finance.provider import Provider
@@ -33,11 +34,13 @@ class PolygonIngestion:
                 url_param_api_key=settings.polygon.url_param_api_key,
                 url_single_ticker_snapshot=settings.polygon.url_single_ticker_snapshot,
                 url_single_ticker_overview=settings.polygon.url_single_ticker_overview,
+                ticker_ttl_sec=setting.ticker_ttl_sec,
                 gcs_uploader=GcsUploader(
                     settings.image_gcs.gcs_project,
                     settings.image_gcs.gcs_bucket,
                     settings.image_gcs.cdn_hostname,
                 ),
+                cache=NoCacheAdapter(),
             ),
             metrics_client=get_metrics_client(),
             score=setting.score,
