@@ -6,6 +6,7 @@ from typing import Annotated
 import logging
 from datetime import datetime
 
+import numpy as np
 from pydantic import (
     Field,
     field_validator,
@@ -125,8 +126,38 @@ class InferredInterests(RootModel[dict[str, float | str | list[str]]]):
 class ProcessedInterests(BaseModel):
     """Internal representation of interests after processing/decoding"""
 
+    minimum_value_count_for_normalization: int = 3
     model_id: str | None = None
     scores: dict[str, float] = Field(default_factory=dict)
+    normalized_scores: dict[str, float] = Field(default_factory=dict)
+    expected_keys: set[str] = Field(default_factory=set)
+
+    @model_validator(mode="after")
+    def compute_norm(self):
+        """Set the normalized_scores dictionary with an L2-normalized (unit length) set
+        of interests if the number of interests we have meets a minimum threshold,
+        otherwise leave empty.
+
+        If any key is missing from the expected_keys, we set its value to the mean
+        of the normalized values.
+        """
+        if len(self.scores) >= self.minimum_value_count_for_normalization:
+            keys = list(self.scores.keys())
+            values = np.array(list(self.scores.values()), dtype=float)
+
+            # Compute L2 norm (Euclidean length)
+            norm = np.linalg.norm(values) + 1e-6
+            normalized = values / norm
+
+            normalized_dict: dict[str, float] = dict(zip(keys, normalized))
+
+            # Fill in missing expected keys with mean
+            mean_val = normalized.mean()
+            for missing_key in self.expected_keys - normalized_dict.keys():
+                normalized_dict[missing_key] = mean_val
+
+            object.__setattr__(self, "normalized_scores", normalized_dict)
+        return self
 
     @staticmethod
     def empty() -> "ProcessedInterests":
