@@ -267,11 +267,19 @@ def adjust_ads_in_sections(sections: dict[str, Section]) -> None:
 
 
 def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the Contextual Ads experiment is enabled."""
-    return is_enrolled_in_experiment(
-        request, ExperimentName.CONTEXTUAL_AD_EXPERIMENT.value, "treatment"
+    """Return True if any of the 6 Contextual Ads experiments are enabled."""
+    contextual_ads_experiments = [
+        ExperimentName.CONTEXTUAL_AD_NIGHTLY_EXPERIMENT.value,
+        ExperimentName.CONTEXTUAL_AD_V2_NIGHTLY_EXPERIMENT.value,
+        ExperimentName.CONTEXTUAL_AD_BETA_EXPERIMENT.value,
+        ExperimentName.CONTEXTUAL_AD_V2_BETA_EXPERIMENT.value,
+        ExperimentName.CONTEXTUAL_AD_RELEASE_EXPERIMENT.value,
+        ExperimentName.CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT.value,
+    ]
+    return any(
+        is_enrolled_in_experiment(request, exp_name, "treatment")
+        for exp_name in contextual_ads_experiments
     )
-
 
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the Daily Briefing Section experiment is enabled."""
