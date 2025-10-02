@@ -1,4 +1,5 @@
 import json
+from test.re_tests import u
 
 # IATA code set
 iata = set()
@@ -22,31 +23,25 @@ for airline in data:
             icao_mapping[airline["icao"]] = airline["icao"]
 
 
-def parsing(query: str) -> list:
+def parsing(query: str) -> str:
     """Parses a query to an identified airline and flight number"""
     query = query.strip().lower()
     idx = query.rfind(" ")
-    flight_data = []
     if idx != "-1":
         name = query[:idx].strip()
         try:
             number = int(query[idx:].strip())
         except:
-            # Bad Number
-            return flight_data
+            return "Bad Number"
     else:
-        # No Number
-        return flight_data
+        return "No Number"
     if name.upper() in iata:
-        flight_data = [name.upper(), number]
+        return name.upper() + " " + str(number)
     elif name in name_mapping:
-        flight_data = [name_mapping[name], number]
+        return name_mapping[name] + " " + str(number)
     elif name.upper() in icao_mapping:
-        flight_data = [icao_mapping[name], number]
-    else:
-        # Unidentified Airline
-        pass
-    return flight_data
+        return icao_mapping[name] + " " + str(number)
+    return "Unidentified Airline"
 
 # print(parsing("ac 130"))
 # print(parsing("united airlines 101"))
